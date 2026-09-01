@@ -4,7 +4,7 @@ Source-free public developer releases for AgentLab, an evaluation Harness for
 running, observing, checkpointing, forking, and comparing replaceable Code
 Agents.
 
-Current developer preview: `v0.1.0-alpha.7`.
+Current developer preview: `v0.1.0-alpha.8`.
 
 - Start with [`skills/agentlab-harness-developer/SKILL.md`](skills/agentlab-harness-developer/SKILL.md).
 - On AIWSL, start the current preview with

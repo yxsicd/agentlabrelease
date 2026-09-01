@@ -37,11 +37,14 @@ session implementation.
 
 ## Minimal qualification order
 
-For the AIWSL preview, use the immutable alpha.7 environment kit and the fixed
+For the AIWSL preview, use the immutable alpha.8 environment kit and the fixed
 `aldev` composition. Preserve one content-addressed cache across repetitions:
 online and offline installation are user-selected modes over the same bytes.
 The target needs Docker but does not need host Btrfs tools or a host Btrfs
 mount: the SessionFS companion owns an instance-local sparse Btrfs image volume.
+The MCPGit and sandbox loopback proxies share the main container lifecycle, so
+a main-container restart recreates the exact listeners instead of leaving a
+stale sidecar network namespace.
 
 The shortest path from a checkout of this release repository is:
 
@@ -65,7 +68,7 @@ chmod +x agentlab-harness-quickstart.sh
 ```
 
 The first command downloads each immutable package once, retains it under
-`$HOME/.local/share/agentlab/ald00-alpha7`, installs `ald00`, and requires the
+`$HOME/.local/share/agentlab/ald00-alpha8`, installs `ald00`, and requires the
 runtime health postcondition. The second runs the downloaded deterministic
 TypeScript probe tests with the host's Bun runtime. To rehearse without network
 access after the first acquisition, use:
@@ -87,18 +90,18 @@ sh /tmp/agentlab-bootstrap.sh --current --install-dir "$HOME/.local/bin"
 
 curl -fsSL -o agentlab-aldev-environment-lock.json \
   https://github.com/yxsicd/agentlabrelease/releases/download/aldev/agentlab-aldev-environment-lock.json
-curl -fsSL -o agentlab-environment-kit-v0.1.0-alpha.7.tar.zst \
-  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.7/agentlab-environment-kit-v0.1.0-alpha.7.tar.zst
-curl -fsSL -o agentlab-ts-probe-v0.1.0-alpha.7.tar.zst \
-  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.7/agentlab-ts-probe-v0.1.0-alpha.7.tar.zst
+curl -fsSL -o agentlab-environment-kit-v0.1.0-alpha.8.tar.zst \
+  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.8/agentlab-environment-kit-v0.1.0-alpha.8.tar.zst
+curl -fsSL -o agentlab-ts-probe-v0.1.0-alpha.8.tar.zst \
+  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.8/agentlab-ts-probe-v0.1.0-alpha.8.tar.zst
 printf '%s  %s\n' \
-  31a17e9d7a2ab3ce0f392a76e6f46dbfa513a72e86dc5e205a9739cb3becf951 \
-  agentlab-environment-kit-v0.1.0-alpha.7.tar.zst | sha256sum -c -
+  1974066c5497c7f4d6fb089c74cfbf1a71b486162614133347e515ad4ca6b225 \
+  agentlab-environment-kit-v0.1.0-alpha.8.tar.zst | sha256sum -c -
 printf '%s  %s\n' \
   029074b412bdaaccd069250949eec459861e685a5ef398fbbc30d4c7cbf4d2d3 \
-  agentlab-ts-probe-v0.1.0-alpha.7.tar.zst | sha256sum -c -
-zstd -dc agentlab-environment-kit-v0.1.0-alpha.7.tar.zst | tar -xf -
-zstd -dc agentlab-ts-probe-v0.1.0-alpha.7.tar.zst | tar -xf -
+  agentlab-ts-probe-v0.1.0-alpha.8.tar.zst | sha256sum -c -
+zstd -dc agentlab-environment-kit-v0.1.0-alpha.8.tar.zst | tar -xf -
+zstd -dc agentlab-ts-probe-v0.1.0-alpha.8.tar.zst | tar -xf -
 
 agentlabctl fetch composition \
   --lock agentlab-aldev-environment-lock.json \
@@ -115,7 +118,7 @@ agentlabctl composition install-docker \
 ./agentlab-environment-kit/agentlab-env install \
   --instance ald00 \
   --composition-receipt composition-install-receipt.json \
-  --release-id alpha7
+  --release-id alpha8
 ./agentlab-environment-kit/agentlab-env health \
   --instance ald00 \
   --composition-receipt composition-install-receipt.json

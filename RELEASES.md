@@ -1,14 +1,15 @@
 # Releases
 
-## v0.1.0-alpha.7
+## v0.1.0-alpha.8
 
-Allows the public ALD canary to start without a host environment file when its
-closed descriptor already supplies all required non-secret controller values.
-An explicitly supplied environment file remains owner-private and fail-closed.
-This fixes the first zero-context install discovered while validating alpha.6.
+Moves SessionFS initialization entirely behind Docker volumes, permits a
+descriptor-complete ALD install without a host environment file, and binds the
+MCPGit and sandbox loopback proxies to the main container lifecycle. The
+release was validated by a real ALD install plus separate SessionFS and main
+container restarts; both retained the full runtime postcondition.
 
 This preview is built from AgentLab source commit
-`1fa2b3d0ff3c8245838b2eb6a33b491e6149a7b2`.
+`406269b578ab99c23016a20ff3899ded207661da`.
 
 ## v0.1.0-alpha.6
 

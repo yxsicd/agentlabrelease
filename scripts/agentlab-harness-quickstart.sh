@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-version="v0.1.0-alpha.7"
+version="v0.1.0-alpha.8"
 release_repo="yxsicd/agentlabrelease"
-kit_name="agentlab-environment-kit-v0.1.0-alpha.7.tar.zst"
-probe_name="agentlab-ts-probe-v0.1.0-alpha.7.tar.zst"
-kit_sha="31a17e9d7a2ab3ce0f392a76e6f46dbfa513a72e86dc5e205a9739cb3becf951"
+kit_name="agentlab-environment-kit-v0.1.0-alpha.8.tar.zst"
+probe_name="agentlab-ts-probe-v0.1.0-alpha.8.tar.zst"
+kit_sha="1974066c5497c7f4d6fb089c74cfbf1a71b486162614133347e515ad4ca6b225"
 probe_sha="029074b412bdaaccd069250949eec459861e685a5ef398fbbc30d4c7cbf4d2d3"
 
 usage() {
@@ -19,7 +19,7 @@ Actions:
   probe-self-test  Run the downloaded deterministic TypeScript probe tests with Bun.
 
 The AIWSL developer preview supports only instance ald00. The default root is
-$HOME/.local/share/agentlab/ald00-alpha7; downloaded assets are retained there
+$HOME/.local/share/agentlab/ald00-alpha8; downloaded assets are retained there
 for later offline installation.
 EOF
 }
@@ -31,7 +31,7 @@ if [[ -z "${action}" || "${action}" == "-h" || "${action}" == "--help" ]]; then
 fi
 shift
 
-root="${AGENTLAB_QUICKSTART_ROOT:-${HOME}/.local/share/agentlab/ald00-alpha7}"
+root="${AGENTLAB_QUICKSTART_ROOT:-${HOME}/.local/share/agentlab/ald00-alpha8}"
 instance="ald00"
 while (( $# )); do
   case "$1" in
@@ -194,7 +194,7 @@ if [[ "${action}" == "online-install" || "${action}" == "offline-install" ]]; th
   "${kit_dir}/agentlab-env" install \
     --instance "${instance}" \
     --composition-receipt "${receipt}" \
-    --release-id alpha7-quickstart-v1
+    --release-id alpha8-quickstart-v1
 fi
 
 [[ -s "${receipt}" ]] || {
