@@ -50,5 +50,14 @@ run is captured, indexed, selected, and queried without manual source assembly.
 
 The alpha.5 retained-instance qualification has closed automatic exact capture
 readback, idempotent index registration, index-derived source selection, and
-cross-repository SQL for the deterministic real-Bun TS fixture. It has not yet
-qualified the same chain using the earlier real Gateway LLM activation trace.
+cross-repository SQL for both the deterministic real-Bun fixture and a real
+Gateway LLM trace bound to a real Git Session. The real trace completed four
+rounds, three Participant MCP calls, one provider call, and 14 normalized
+events; the indexed SQL query selected three repositories with six exact
+bindings and returned three difficulty candidates. Re-registering the live
+capture replayed without advancing the index.
+
+This does not yet make difficulty-to-fork dispatch automatic. The selected
+window must still resolve an exact Session/workspace cut, be adjudicated, and
+feed the fork request without maintainer shell assembly. Keep that distinction
+when reporting flywheel completeness.

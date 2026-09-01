@@ -111,6 +111,14 @@ Keep these three qualification surfaces distinct:
   captured repository and exact revision have been registered in the AgentLab
   experiment index.
 
+For a real external-brain activation, do not give the probe the broad ChatMCP
+discovery/control inventory. The owning Harness must provide the attenuated
+nine-tool sandbox Participant endpoint and privately inject the authenticated
+Owner plus exact Git Session. The result may cross into analysis only after the
+Harness independently revalidates operation/request identity, trace context,
+provider/model, allowlist, exact probe actions, and budgets. Never persist the
+private activation envelope.
+
 On the `aldev` preview, the Harness MCP endpoint is port `18083`. Port `18094`
 is the sandbox loopback and is not an LLM endpoint. Discover tools
 progressively: request a bounded summary with a narrow query first, then fetch
@@ -120,3 +128,8 @@ model context and can dominate input-token usage.
 Feed every observed installation or flywheel failure back into this Skill only
 when it changes the reusable public workflow. Source-maintainer commands,
 private credentials, and host-specific repair shortcuts do not belong here.
+
+If a remote build is cancelled, do not assume its compiler descendants exited.
+Inspect for processes bound to the exact disposable worktree target, terminate
+only those descendants, and remove only that target before retrying with a
+shared dependency cache.

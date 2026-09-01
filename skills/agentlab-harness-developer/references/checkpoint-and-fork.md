@@ -26,3 +26,8 @@ must expose the parent cut state, must exclude parent changes after the cut,
 and must continue independently. Record whether the participant was fresh,
 native-preserved, or replaced. A successful fresh-Agent fork does not qualify
 native Agent session restoration.
+
+Reconcile an uncertain continuation before retrying. A failed mutation can
+still advance the child with an audit-only commit, so read the child Git ref and
+the expected file at that exact ref first. Retry only from the reconciled head,
+then prove the child content and its absence from the exact parent cut.
