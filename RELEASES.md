@@ -1,5 +1,15 @@
 # Releases
 
+## v0.1.0-alpha.7
+
+Allows the public ALD canary to start without a host environment file when its
+closed descriptor already supplies all required non-secret controller values.
+An explicitly supplied environment file remains owner-private and fail-closed.
+This fixes the first zero-context install discovered while validating alpha.6.
+
+This preview is built from AgentLab source commit
+`1fa2b3d0ff3c8245838b2eb6a33b491e6149a7b2`.
+
 ## v0.1.0-alpha.6
 
 Moves the AIWSL SessionFS persistence boundary fully inside Docker. A dedicated

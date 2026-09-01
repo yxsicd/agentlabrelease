@@ -1,10 +1,10 @@
 {
   "schema": "agentlab.release_provenance.v1",
-  "version": "0.1.0-alpha.6",
-  "generatedAt": "2026-09-01T16:10:46Z",
+  "version": "0.1.0-alpha.7",
+  "generatedAt": "2026-09-01T16:16:52Z",
   "source": {
     "repository": "https://github.com/yxsicd/dinddocs",
-    "revision": "2473c1e0336807e1a823f0f2d536beef5631c4cd",
+    "revision": "1fa2b3d0ff3c8245838b2eb6a33b491e6149a7b2",
     "branch": "work/agentlab-public-environment",
     "clean": true,
     "pushed": true
@@ -16,7 +16,7 @@
   },
   "distribution": {
     "repository": "https://github.com/yxsicd/agentlabrelease",
-    "tag": "v0.1.0-alpha.6",
+    "tag": "v0.1.0-alpha.7",
     "programTransport": "GitHub Release",
     "largeRuntimeTransport": "independent fixed GitHub Release channels"
   }
