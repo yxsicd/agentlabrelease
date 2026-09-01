@@ -48,11 +48,25 @@ scripts/agentlab-harness-quickstart.sh online-install
 scripts/agentlab-harness-quickstart.sh probe-self-test
 ```
 
+Without a checkout, download the same script from its immutable Git commit and
+verify it before execution:
+
+```bash
+curl -fsSL -o agentlab-harness-quickstart.sh \
+  https://cdn.jsdelivr.net/gh/yxsicd/agentlabrelease@cfd9bcb9701ff23048f0f34c79ec716d86ac515d/scripts/agentlab-harness-quickstart.sh
+printf '%s  %s\n' \
+  e4495f4ad5ddcaf0522457617f305627adb024e8c4d38c68ea4c0e4a30ed1798 \
+  agentlab-harness-quickstart.sh | sha256sum -c -
+chmod +x agentlab-harness-quickstart.sh
+./agentlab-harness-quickstart.sh online-install
+./agentlab-harness-quickstart.sh probe-self-test
+```
+
 The first command downloads each immutable package once, retains it under
 `$HOME/.local/share/agentlab/ald00-alpha5`, installs `ald00`, and requires the
 runtime health postcondition. The second runs the downloaded deterministic
-TypeScript probe tests with the host's Bun runtime. To rehearse without network access
-after the first acquisition, use:
+TypeScript probe tests with the host's Bun runtime. To rehearse without network
+access after the first acquisition, use:
 
 ```bash
 scripts/agentlab-harness-quickstart.sh offline-install
