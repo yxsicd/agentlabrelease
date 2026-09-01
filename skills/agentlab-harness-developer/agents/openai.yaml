@@ -1,0 +1,4 @@
+interface:
+  display_name: "AgentLab Harness Developer"
+  short_description: "Run and analyze reproducible Code Agent evaluations"
+  default_prompt: "Use $agentlab-harness-developer to design or inspect this evaluation campaign."

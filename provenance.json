@@ -1,0 +1,23 @@
+{
+  "schema": "agentlab.release_provenance.v1",
+  "version": "0.1.0-alpha.1",
+  "generatedAt": "2026-09-01T09:23:24Z",
+  "source": {
+    "repository": "https://github.com/yxsicd/dinddocs",
+    "revision": "b556444b1bac902b1fdbf309ab24784087a2486c",
+    "branch": "work/basic-agent-mainline",
+    "clean": true,
+    "pushed": true
+  },
+  "mcpgitCanary": {
+    "repository": "https://github.com/yxsicd/MCPGit",
+    "revision": "c0c3a53fe68904e017de7505bf47436d068938e5",
+    "scope": "isolated executable SQL, Rust and WAsmC route canary"
+  },
+  "distribution": {
+    "repository": "https://github.com/yxsicd/agentlabrelease",
+    "tag": "v0.1.0-alpha.1",
+    "programTransport": "GitHub Release",
+    "largeRuntimeTransport": "independent fixed GitHub Release channels"
+  }
+}

@@ -1,20 +1,18 @@
-# AgentLab Release Packages
+# AgentLab Harness releases
 
-This repository is the publication target for AgentLab release packages.
+Source-free public developer releases for AgentLab, an evaluation Harness for
+running, observing, checkpointing, forking, and comparing replaceable Code
+Agents.
 
-## Purpose
+Current developer preview: `v0.1.0-alpha.1`.
 
-- Store GitHub Releases for AgentLab distributable bundles.
-- Keep release artifacts separate from the main development repository.
-- Provide a stable URL surface for downloading release packages.
+- Start with [`skills/agentlab-harness-developer/SKILL.md`](skills/agentlab-harness-developer/SKILL.md).
+- Read [`RELEASES.md`](RELEASES.md) for version scope and limitations.
+- Verify downloaded files with `manifest.json`, `provenance.json`, and
+  `SHA256SUMS`.
 
-## Release Contract
+AgentLab does not redistribute Codex, Claude Code, OpenCode, DeepSeek Harness,
+or MCPGit. Those remain independently versioned dependencies.
 
-A normal release should include:
-
-- a Git tag such as `agentlab-vYYYYMMDD.N` or a future semver tag;
-- release notes describing source commit, target tier, and validation evidence;
-- uploaded release artifacts such as binary bundles, runtime bundle archives, manifests, or checksums;
-- a manifest that records source repository commit, build profile, artifact names, and validation gates.
-
-Do not use this repository for active source development. Source changes remain in the AgentLab development repository; this repository is for published packages and release metadata.
+`main` is mutable discovery state. Reproducible consumers must pin an immutable
+version tag or full Git commit.
