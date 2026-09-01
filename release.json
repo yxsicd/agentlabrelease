@@ -1,21 +1,21 @@
 {
   "schema": "agentlab.public_release.v1",
-  "version": "0.1.0-alpha.3",
-  "tag": "v0.1.0-alpha.3",
+  "version": "0.1.0-alpha.4",
+  "tag": "v0.1.0-alpha.4",
   "prerelease": true,
   "developerSkill": "skills/agentlab-harness-developer/SKILL.md",
   "manifest": "manifest.json",
   "provenance": "provenance.json",
   "assets": [
     {
-      "name": "agentlab-ts-probe-v0.1.0-alpha.3.tar.zst",
+      "name": "agentlab-ts-probe-v0.1.0-alpha.4.tar.zst",
       "bytes": 29901,
       "sha256": "029074b412bdaaccd069250949eec459861e685a5ef398fbbc30d4c7cbf4d2d3"
     },
     {
-      "name": "agentlab-environment-kit-v0.1.0-alpha.3.tar.zst",
-      "bytes": 41951,
-      "sha256": "27e41289e32a03bcf027f994b087ed3f11fd4e29306fd14f3b7df7b59b7c2deb"
+      "name": "agentlab-environment-kit-v0.1.0-alpha.4.tar.zst",
+      "bytes": 42428,
+      "sha256": "c723e4d4fb9750f8c11b01dcae183e8bd718dfa9a284ae296a8b06ccb06397e9"
     }
   ]
 }

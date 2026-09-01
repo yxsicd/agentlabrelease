@@ -37,7 +37,7 @@ session implementation.
 
 ## Minimal qualification order
 
-For the AIWSL preview, use the immutable alpha.3 environment kit and the fixed
+For the AIWSL preview, use the immutable alpha.4 environment kit and the fixed
 `aldev` composition. Preserve one content-addressed cache across repetitions:
 online and offline installation are user-selected modes over the same bytes.
 
@@ -49,18 +49,18 @@ sh /tmp/agentlab-bootstrap.sh --current --install-dir "$HOME/.local/bin"
 
 curl -fsSL -o agentlab-aldev-environment-lock.json \
   https://github.com/yxsicd/agentlabrelease/releases/download/aldev/agentlab-aldev-environment-lock.json
-curl -fsSL -o agentlab-environment-kit-v0.1.0-alpha.3.tar.zst \
-  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.3/agentlab-environment-kit-v0.1.0-alpha.3.tar.zst
-curl -fsSL -o agentlab-ts-probe-v0.1.0-alpha.3.tar.zst \
-  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.3/agentlab-ts-probe-v0.1.0-alpha.3.tar.zst
+curl -fsSL -o agentlab-environment-kit-v0.1.0-alpha.4.tar.zst \
+  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.4/agentlab-environment-kit-v0.1.0-alpha.4.tar.zst
+curl -fsSL -o agentlab-ts-probe-v0.1.0-alpha.4.tar.zst \
+  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.4/agentlab-ts-probe-v0.1.0-alpha.4.tar.zst
 printf '%s  %s\n' \
-  27e41289e32a03bcf027f994b087ed3f11fd4e29306fd14f3b7df7b59b7c2deb \
-  agentlab-environment-kit-v0.1.0-alpha.3.tar.zst | sha256sum -c -
+  c723e4d4fb9750f8c11b01dcae183e8bd718dfa9a284ae296a8b06ccb06397e9 \
+  agentlab-environment-kit-v0.1.0-alpha.4.tar.zst | sha256sum -c -
 printf '%s  %s\n' \
   029074b412bdaaccd069250949eec459861e685a5ef398fbbc30d4c7cbf4d2d3 \
-  agentlab-ts-probe-v0.1.0-alpha.3.tar.zst | sha256sum -c -
-zstd -dc agentlab-environment-kit-v0.1.0-alpha.3.tar.zst | tar -xf -
-zstd -dc agentlab-ts-probe-v0.1.0-alpha.3.tar.zst | tar -xf -
+  agentlab-ts-probe-v0.1.0-alpha.4.tar.zst | sha256sum -c -
+zstd -dc agentlab-environment-kit-v0.1.0-alpha.4.tar.zst | tar -xf -
+zstd -dc agentlab-ts-probe-v0.1.0-alpha.4.tar.zst | tar -xf -
 
 agentlabctl fetch composition \
   --lock agentlab-aldev-environment-lock.json \
@@ -77,7 +77,7 @@ agentlabctl composition install-docker \
 ./agentlab-environment-kit/agentlab-env install \
   --instance ald00 \
   --composition-receipt composition-install-receipt.json \
-  --release-id alpha3
+  --release-id alpha4
 ./agentlab-environment-kit/agentlab-env health \
   --instance ald00 \
   --composition-receipt composition-install-receipt.json
@@ -88,8 +88,9 @@ composition receipt, extracted kit, and CAS. An offline repetition starts at
 `composition install-docker`; it must not redownload large assets or contact a
 package manager.
 
-The AIWSL preview inherits the operator-owned `/share/.env`; installation may
-verify that file but must never print, copy, or synthesize it. A general new
+The AIWSL preview inherits the operator-owned `/share/.env` and joins it with
+descriptor-owned non-secret MCPGit controller values; installation may verify
+the result but must never print or synthesize secret values. A general new
 deployment should know only the LLM Gateway endpoint and its gateway
 credential; do not fan provider secrets out to every instance.
 

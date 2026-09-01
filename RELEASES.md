@@ -1,5 +1,16 @@
 # Releases
 
+## v0.1.0-alpha.4
+
+Separates the operator-owned runtime/LLM env from descriptor-owned MCPGit
+controller configuration. Direct deployment now renders one private 0600 env
+from both sources while authorization bytes remain only in read-only secret
+mounts. Alpha.3 stopped at this precondition before any `ald00` mutation, so
+its composition receipt and large CAS remain reusable.
+
+This preview is built from AgentLab source commit
+`91dc77c3f7cd1a2dffb42ae37cfee75aadfd43fe`.
+
 ## v0.1.0-alpha.3
 
 Corrects two zero-context installation failures found against alpha.2. The
