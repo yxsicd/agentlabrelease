@@ -13,6 +13,12 @@ deployment staging directories.
 This preview is built from AgentLab source commit
 `2864f6ec51b7dfc3094c42d90638c5cd65f4daad`.
 
+AIWSL acceptance reused the existing CAS and immutable Docker assets. The
+updated online path completed in 58.89 seconds and the directly comparable
+offline reinstall completed in 50.10 seconds, down from the prior 62.94-67.00
+second range. Both finished the exact runtime postcondition; the retained
+deployment is `alpha9-quickstart-v1` with no residual staging directory.
+
 ## v0.1.0-alpha.8
 
 Moves SessionFS initialization entirely behind Docker volumes, permits a

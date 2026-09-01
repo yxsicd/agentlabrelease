@@ -140,6 +140,16 @@ standalone qualification, 34.49 seconds for receipt-bound activation, and
 3.32 seconds for final health. This is a diagnostic baseline, not an SLA.
 Alpha.9 removes the redundant standalone qualification from Quickstart because
 `install` runs the same fail-closed preflight immediately before mutation.
+The first retained-cache alpha.9 validation measured 58.89 seconds for
+`online-install`: 2.335 seconds acquiring the two new small control packages,
+9.325 seconds reusing the CAS composition, 12.478 seconds re-admitting Docker
+assets, 31.607 seconds activating the fresh environment, and about 3 seconds
+for final health. The same destructive rehearsal followed by `offline-install`
+measured 50.10 seconds: cached verification 0.032 seconds, unpack 0.043 seconds,
+Docker composition admission 12.425 seconds, environment activation 32.560
+seconds, and health 4.955 seconds. Preserve these phase boundaries when
+comparing future releases; total time alone cannot distinguish network,
+verification, activation, and postcondition regressions.
 
 Do not diagnose a roughly one-minute cached install as network download time:
 first inspect the timing events and the composition receipt. `status: reused`
