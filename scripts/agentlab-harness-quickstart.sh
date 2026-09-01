@@ -191,7 +191,10 @@ if [[ "${action}" == "online-install" || "${action}" == "offline-install" ]]; th
     --platform linux-x64 \
     --receipt "${receipt}"
   "${kit_dir}/agentlab-env" qualify --instance "${instance}" --composition-receipt "${receipt}"
-  "${kit_dir}/agentlab-env" install --instance "${instance}" --composition-receipt "${receipt}" --release-id alpha5
+  "${kit_dir}/agentlab-env" install \
+    --instance "${instance}" \
+    --composition-receipt "${receipt}" \
+    --release-id alpha5-quickstart-v1
 fi
 
 [[ -s "${receipt}" ]] || {
