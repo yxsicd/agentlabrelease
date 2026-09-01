@@ -1,8 +1,8 @@
 {
   "schema": "agentlab.developer_release.v1",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "stability": "developer-preview",
-  "sourceRevision": "b556444b1bac902b1fdbf309ab24784087a2486c",
+  "sourceRevision": "e068ea9dc25e1618e9b1bdf68eadf9a3f173c953",
   "entrypoint": "skills/agentlab-harness-developer/SKILL.md",
   "capabilities": [
     "replaceable-code-agent",
@@ -12,22 +12,33 @@
     "llm-and-mcp-trace-model",
     "difficulty-window-analysis",
     "tablegit-relation-sql",
-    "typescript-deterministic-probe"
+    "typescript-deterministic-probe",
+    "aiwsl-ald00-environment-lifecycle",
+    "receipt-bound-qualify-install-health"
   ],
   "limitations": [
-    "no-one-command-environment-install",
+    "environment-kit-is-aiwsl-ald00-only",
+    "ald00-reuses-existing-agentlab-owned-mcpgit",
     "no-stable-schema-guarantee",
     "native-agent-session-restore-is-adapter-specific"
   ],
   "controlChannel": "https://github.com/yxsicd/agentlabrelease/releases/tag/alcontrol",
   "assets": [
     {
-      "name": "agentlab-ts-probe-v0.1.0-alpha.1.tar.zst",
+      "name": "agentlab-ts-probe-v0.1.0-alpha.2.tar.zst",
       "mediaType": "application/zstd",
       "purpose": "deterministic external-brain probe source package",
       "bytes": 29901,
       "sha256": "029074b412bdaaccd069250949eec459861e685a5ef398fbbc30d4c7cbf4d2d3",
-      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.1/agentlab-ts-probe-v0.1.0-alpha.1.tar.zst"
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.2/agentlab-ts-probe-v0.1.0-alpha.2.tar.zst"
+    },
+    {
+      "name": "agentlab-environment-kit-v0.1.0-alpha.2.tar.zst",
+      "mediaType": "application/zstd",
+      "purpose": "repo-free AIWSL ald00 environment lifecycle",
+      "bytes": 41912,
+      "sha256": "aff2b7ea60be6cbc6a6e79b74369e160ed187bc8dc070352e68fe753ebb0f8b2",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.2/agentlab-environment-kit-v0.1.0-alpha.2.tar.zst"
     }
   ]
 }

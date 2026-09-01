@@ -37,11 +37,72 @@ session implementation.
 
 ## Minimal qualification order
 
-Run the deterministic TypeScript probe through capture, cut, fork, and continue.
-Require exact lineage and trace readback. Then repeat the same task seed with a
-fresh real Code Agent. Only after that compare native-session preservation or
-additional Agents.
+For the AIWSL preview, use the immutable alpha.2 environment kit and the fixed
+`aldev` composition. Preserve one content-addressed cache across repetitions:
+online and offline installation are user-selected modes over the same bytes.
 
-The alpha release does not provide one-command environment deployment. Use an
-operator-qualified AgentLab environment and retain its composition receipt with
-the campaign evidence.
+```bash
+mkdir -p "$HOME/.cache/agentlab/public-cas-v0.1.0-alpha.2/downloads"
+curl -fsSL -o /tmp/agentlab-bootstrap.sh \
+  https://github.com/yxsicd/agentlabrelease/releases/download/alcontrol/agentlab-bootstrap.sh
+sh /tmp/agentlab-bootstrap.sh --current --install-dir "$HOME/.local/bin"
+
+curl -fsSL -o agentlab-aldev-environment-lock.json \
+  https://github.com/yxsicd/agentlabrelease/releases/download/aldev/agentlab-aldev-environment-lock.json
+curl -fsSL -o agentlab-environment-kit-v0.1.0-alpha.2.tar.zst \
+  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.2/agentlab-environment-kit-v0.1.0-alpha.2.tar.zst
+curl -fsSL -o agentlab-ts-probe-v0.1.0-alpha.2.tar.zst \
+  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.2/agentlab-ts-probe-v0.1.0-alpha.2.tar.zst
+printf '%s  %s\n' \
+  aff2b7ea60be6cbc6a6e79b74369e160ed187bc8dc070352e68fe753ebb0f8b2 \
+  agentlab-environment-kit-v0.1.0-alpha.2.tar.zst | sha256sum -c -
+printf '%s  %s\n' \
+  029074b412bdaaccd069250949eec459861e685a5ef398fbbc30d4c7cbf4d2d3 \
+  agentlab-ts-probe-v0.1.0-alpha.2.tar.zst | sha256sum -c -
+zstd -dc agentlab-environment-kit-v0.1.0-alpha.2.tar.zst | tar -xf -
+zstd -dc agentlab-ts-probe-v0.1.0-alpha.2.tar.zst | tar -xf -
+
+agentlabctl fetch composition \
+  --lock agentlab-aldev-environment-lock.json \
+  --platform linux-x64 \
+  --out-dir acquired-aldev \
+  --cache-dir "$HOME/.cache/agentlab/public-cas-v0.1.0-alpha.2"
+agentlabctl composition install-docker \
+  --dir acquired-aldev --platform linux-x64 \
+  --receipt composition-install-receipt.json
+
+./agentlab-environment-kit/agentlab-env qualify \
+  --instance ald00 \
+  --composition-receipt composition-install-receipt.json \
+  --env-file "$HOME/.agentlab/ald00.env"
+./agentlab-environment-kit/agentlab-env install \
+  --instance ald00 \
+  --composition-receipt composition-install-receipt.json \
+  --env-file "$HOME/.agentlab/ald00.env" \
+  --release-id alpha2
+./agentlab-environment-kit/agentlab-env health \
+  --instance ald00 \
+  --composition-receipt composition-install-receipt.json \
+  --env-file "$HOME/.agentlab/ald00.env"
+```
+
+After the first successful acquisition, retain the lock, acquired directory,
+composition receipt, extracted kit, and CAS. An offline repetition starts at
+`composition install-docker`; it must not redownload large assets or contact a
+package manager.
+
+The private env file is supplied by the operator and must stay outside the
+release and receipts. A new deployment may know only the LLM Gateway endpoint
+and its gateway credential; do not fan provider secrets out to every instance.
+
+After health passes, retain the instance. Run the deterministic TypeScript
+probe through capture, cut, fork, and continue, then use exact-revision SQL to
+derive difficulty windows and the next dispatch. Require exact lineage, trace,
+token/tool evidence, query revision, and result receipt. Repeat with the same
+seed until recovery and query results are stable. Only then attach a fresh real
+Code Agent, beginning with Codex, and compare fresh-Agent continuation before
+native-session preservation.
+
+Feed every observed installation or flywheel failure back into this Skill only
+when it changes the reusable public workflow. Source-maintainer commands,
+private credentials, and host-specific repair shortcuts do not belong here.
