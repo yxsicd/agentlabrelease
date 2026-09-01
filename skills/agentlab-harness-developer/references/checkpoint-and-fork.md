@@ -14,3 +14,15 @@ Do not delete unrelated Agent homes merely to obtain isolation. Prefer a new
 explicit mount or identity when old state cannot influence the participant.
 Native-session restoration must fail closed when version, format, or adapter
 qualification does not match.
+
+For standard sandbox control tools, the outer Harness Session identity is the
+authority. Do not send tenant or owner identity inside tool arguments. Older
+preview servers may also require the same Session id inside the tool-specific
+arguments; treat that as a version-qualified transport compatibility detail,
+not a second identity authority.
+
+Prove a fork with postconditions, not only a successful response: the child
+must expose the parent cut state, must exclude parent changes after the cut,
+and must continue independently. Record whether the participant was fresh,
+native-preserved, or replaced. A successful fresh-Agent fork does not qualify
+native Agent session restoration.

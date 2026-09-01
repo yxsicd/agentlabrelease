@@ -102,6 +102,21 @@ seed until recovery and query results are stable. Only then attach a fresh real
 Code Agent, beginning with Codex, and compare fresh-Agent continuation before
 native-session preservation.
 
+Keep these three qualification surfaces distinct:
+
+- a standalone TS activation proves the real LLM/MCP boundary and emits a
+  bounded trace, but does not by itself prove Git-backed recovery;
+- a Git-backed control run proves checkpoint/fork/continue semantics;
+- revision-pinned Relation SQL proves reproducible analysis only after the
+  captured repository and exact revision have been registered in the AgentLab
+  experiment index.
+
+On the `aldev` preview, the Harness MCP endpoint is port `18083`. Port `18094`
+is the sandbox loopback and is not an LLM endpoint. Discover tools
+progressively: request a bounded summary with a narrow query first, then fetch
+only the selected schemas. Repeated broad tool-list payloads are part of the
+model context and can dominate input-token usage.
+
 Feed every observed installation or flywheel failure back into this Skill only
 when it changes the reusable public workflow. Source-maintainer commands,
 private credentials, and host-specific repair shortcuts do not belong here.
