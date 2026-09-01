@@ -7,6 +7,8 @@ Agents.
 Current developer preview: `v0.1.0-alpha.5`.
 
 - Start with [`skills/agentlab-harness-developer/SKILL.md`](skills/agentlab-harness-developer/SKILL.md).
+- On AIWSL, start the current preview with
+  `scripts/agentlab-harness-quickstart.sh online-install`.
 - Read [`RELEASES.md`](RELEASES.md) for version scope and limitations.
 - Verify downloaded files with `manifest.json`, `provenance.json`, and
   `SHA256SUMS`.

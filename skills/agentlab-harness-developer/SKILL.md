@@ -41,6 +41,28 @@ For the AIWSL preview, use the immutable alpha.5 environment kit and the fixed
 `aldev` composition. Preserve one content-addressed cache across repetitions:
 online and offline installation are user-selected modes over the same bytes.
 
+The shortest path from a checkout of this release repository is:
+
+```bash
+scripts/agentlab-harness-quickstart.sh online-install
+scripts/agentlab-harness-quickstart.sh probe-self-test
+```
+
+The first command downloads each immutable package once, retains it under
+`$HOME/.local/share/agentlab/ald00-alpha5`, installs `ald00`, and requires the
+runtime health postcondition. The second runs the downloaded deterministic
+TypeScript probe tests with the host's Bun runtime. To rehearse without network access
+after the first acquisition, use:
+
+```bash
+scripts/agentlab-harness-quickstart.sh offline-install
+```
+
+`probe-self-test` proves the controllable probe module and installed tool
+surface; it is not a real provider call, checkpoint, Fork, or SQL result. Keep
+the explicit commands below as the auditable fallback and troubleshooting
+surface.
+
 ```bash
 mkdir -p "$HOME/.cache/agentlab/public-cas/downloads"
 curl -fsSL -o /tmp/agentlab-bootstrap.sh \
