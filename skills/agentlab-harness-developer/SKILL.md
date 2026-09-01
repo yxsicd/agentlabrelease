@@ -37,9 +37,11 @@ session implementation.
 
 ## Minimal qualification order
 
-For the AIWSL preview, use the immutable alpha.5 environment kit and the fixed
+For the AIWSL preview, use the immutable alpha.6 environment kit and the fixed
 `aldev` composition. Preserve one content-addressed cache across repetitions:
 online and offline installation are user-selected modes over the same bytes.
+The target needs Docker but does not need host Btrfs tools or a host Btrfs
+mount: the SessionFS companion owns an instance-local sparse Btrfs image volume.
 
 The shortest path from a checkout of this release repository is:
 
@@ -53,9 +55,9 @@ verify it before execution:
 
 ```bash
 curl -fsSL -o agentlab-harness-quickstart.sh \
-  https://cdn.jsdelivr.net/gh/yxsicd/agentlabrelease@668e9b8eca20dade6bb4f6edd9aad41a5254013a/scripts/agentlab-harness-quickstart.sh
+  https://cdn.jsdelivr.net/gh/yxsicd/agentlabrelease@a59e22ec7c89d7f193cdbb7ef32a4e02952e1464/scripts/agentlab-harness-quickstart.sh
 printf '%s  %s\n' \
-  84ca9dd186d2eab50dc7ddff9ec76b85488dd7342061937f7e29897e697f7961 \
+  acfa9fb0dcd39d8246a11fdf1588a5a3e2d7b05554abedde11fb6721c97cef42 \
   agentlab-harness-quickstart.sh | sha256sum -c -
 chmod +x agentlab-harness-quickstart.sh
 ./agentlab-harness-quickstart.sh online-install
@@ -63,7 +65,7 @@ chmod +x agentlab-harness-quickstart.sh
 ```
 
 The first command downloads each immutable package once, retains it under
-`$HOME/.local/share/agentlab/ald00-alpha5`, installs `ald00`, and requires the
+`$HOME/.local/share/agentlab/ald00-alpha6`, installs `ald00`, and requires the
 runtime health postcondition. The second runs the downloaded deterministic
 TypeScript probe tests with the host's Bun runtime. To rehearse without network
 access after the first acquisition, use:
@@ -85,18 +87,18 @@ sh /tmp/agentlab-bootstrap.sh --current --install-dir "$HOME/.local/bin"
 
 curl -fsSL -o agentlab-aldev-environment-lock.json \
   https://github.com/yxsicd/agentlabrelease/releases/download/aldev/agentlab-aldev-environment-lock.json
-curl -fsSL -o agentlab-environment-kit-v0.1.0-alpha.5.tar.zst \
-  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.5/agentlab-environment-kit-v0.1.0-alpha.5.tar.zst
-curl -fsSL -o agentlab-ts-probe-v0.1.0-alpha.5.tar.zst \
-  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.5/agentlab-ts-probe-v0.1.0-alpha.5.tar.zst
+curl -fsSL -o agentlab-environment-kit-v0.1.0-alpha.6.tar.zst \
+  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.6/agentlab-environment-kit-v0.1.0-alpha.6.tar.zst
+curl -fsSL -o agentlab-ts-probe-v0.1.0-alpha.6.tar.zst \
+  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.6/agentlab-ts-probe-v0.1.0-alpha.6.tar.zst
 printf '%s  %s\n' \
-  3a7785bb1449d0ee2c71d8473a36c614caf6e80f44afb689a333855de709904d \
-  agentlab-environment-kit-v0.1.0-alpha.5.tar.zst | sha256sum -c -
+  676bff70f0e3c1e2afcd77c23ae4276bdc75d94977b685b3eb5201bca76fb45d \
+  agentlab-environment-kit-v0.1.0-alpha.6.tar.zst | sha256sum -c -
 printf '%s  %s\n' \
   029074b412bdaaccd069250949eec459861e685a5ef398fbbc30d4c7cbf4d2d3 \
-  agentlab-ts-probe-v0.1.0-alpha.5.tar.zst | sha256sum -c -
-zstd -dc agentlab-environment-kit-v0.1.0-alpha.5.tar.zst | tar -xf -
-zstd -dc agentlab-ts-probe-v0.1.0-alpha.5.tar.zst | tar -xf -
+  agentlab-ts-probe-v0.1.0-alpha.6.tar.zst | sha256sum -c -
+zstd -dc agentlab-environment-kit-v0.1.0-alpha.6.tar.zst | tar -xf -
+zstd -dc agentlab-ts-probe-v0.1.0-alpha.6.tar.zst | tar -xf -
 
 agentlabctl fetch composition \
   --lock agentlab-aldev-environment-lock.json \
@@ -113,7 +115,7 @@ agentlabctl composition install-docker \
 ./agentlab-environment-kit/agentlab-env install \
   --instance ald00 \
   --composition-receipt composition-install-receipt.json \
-  --release-id alpha5
+  --release-id alpha6
 ./agentlab-environment-kit/agentlab-env health \
   --instance ald00 \
   --composition-receipt composition-install-receipt.json
