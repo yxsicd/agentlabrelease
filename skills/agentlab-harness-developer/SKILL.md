@@ -58,9 +58,9 @@ verify it before execution:
 
 ```bash
 curl -fsSL -o agentlab-harness-quickstart.sh \
-  https://cdn.jsdelivr.net/gh/yxsicd/agentlabrelease@eed8145f40505cd9b0791a20f88e8f4c262f392c/scripts/agentlab-harness-quickstart.sh
+  https://cdn.jsdelivr.net/gh/yxsicd/agentlabrelease@e527885033b4121c2706c7a07807e1f2ae18f984/scripts/agentlab-harness-quickstart.sh
 printf '%s  %s\n' \
-  421f6ab44db8e27e3e2d9e5b877d12cae2d351d7885b3729a092151cc1fc71b6 \
+  da2a86c057ef57853486e881ed315e5825bc40a46d8c2f93c6e5408743c5c870 \
   agentlab-harness-quickstart.sh | sha256sum -c -
 chmod +x agentlab-harness-quickstart.sh
 ./agentlab-harness-quickstart.sh online-install
