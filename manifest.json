@@ -1,8 +1,8 @@
 {
   "schema": "agentlab.developer_release.v1",
-  "version": "0.1.0-alpha.8",
+  "version": "0.1.0-alpha.9",
   "stability": "developer-preview",
-  "sourceRevision": "406269b578ab99c23016a20ff3899ded207661da",
+  "sourceRevision": "2864f6ec51b7dfc3094c42d90638c5cd65f4daad",
   "entrypoint": "skills/agentlab-harness-developer/SKILL.md",
   "capabilities": [
     "replaceable-code-agent",
@@ -14,7 +14,9 @@
     "tablegit-relation-sql",
     "typescript-deterministic-probe",
     "aiwsl-ald00-environment-lifecycle",
-    "receipt-bound-qualify-install-health"
+    "receipt-bound-qualify-install-health",
+    "machine-readable-install-timing",
+    "safe-volume-backed-ald-uninstall"
   ],
   "limitations": [
     "environment-kit-is-aiwsl-ald00-only",
@@ -25,20 +27,20 @@
   "controlChannel": "https://github.com/yxsicd/agentlabrelease/releases/tag/alcontrol",
   "assets": [
     {
-      "name": "agentlab-ts-probe-v0.1.0-alpha.8.tar.zst",
+      "name": "agentlab-ts-probe-v0.1.0-alpha.9.tar.zst",
       "mediaType": "application/zstd",
       "purpose": "deterministic external-brain probe source package",
       "bytes": 29901,
       "sha256": "029074b412bdaaccd069250949eec459861e685a5ef398fbbc30d4c7cbf4d2d3",
-      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.8/agentlab-ts-probe-v0.1.0-alpha.8.tar.zst"
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.9/agentlab-ts-probe-v0.1.0-alpha.9.tar.zst"
     },
     {
-      "name": "agentlab-environment-kit-v0.1.0-alpha.8.tar.zst",
+      "name": "agentlab-environment-kit-v0.1.0-alpha.9.tar.zst",
       "mediaType": "application/zstd",
       "purpose": "repo-free AIWSL ald00 environment lifecycle",
-      "bytes": 48434,
-      "sha256": "1974066c5497c7f4d6fb089c74cfbf1a71b486162614133347e515ad4ca6b225",
-      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.8/agentlab-environment-kit-v0.1.0-alpha.8.tar.zst"
+      "bytes": 51198,
+      "sha256": "fcca40e0858bbbde7620ddec83db0dc525c62d597926dc27ef66b6dd54c27a73",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.9/agentlab-environment-kit-v0.1.0-alpha.9.tar.zst"
     }
   ]
 }

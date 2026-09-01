@@ -1,5 +1,18 @@
 # Releases
 
+## v0.1.0-alpha.9
+
+Makes install latency observable and the destructive ALD rehearsal reproducible.
+Quickstart emits machine-readable phase and total timing, avoids the redundant
+standalone qualification that previously added about 13 seconds to every cached
+install, and documents the measured AIWSL baseline. The environment kit now
+includes the exact-confirmation ALD uninstaller with Docker-volume SessionFS
+support, strips irrelevant macOS PAX metadata, and avoids accumulating empty
+deployment staging directories.
+
+This preview is built from AgentLab source commit
+`2864f6ec51b7dfc3094c42d90638c5cd65f4daad`.
+
 ## v0.1.0-alpha.8
 
 Moves SessionFS initialization entirely behind Docker volumes, permits a

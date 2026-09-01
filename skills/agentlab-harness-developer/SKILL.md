@@ -37,7 +37,7 @@ session implementation.
 
 ## Minimal qualification order
 
-For the AIWSL preview, use the immutable alpha.8 environment kit and the fixed
+For the AIWSL preview, use the immutable alpha.9 environment kit and the fixed
 `aldev` composition. Preserve one content-addressed cache across repetitions:
 online and offline installation are user-selected modes over the same bytes.
 The target needs Docker but does not need host Btrfs tools or a host Btrfs
@@ -68,7 +68,7 @@ chmod +x agentlab-harness-quickstart.sh
 ```
 
 The first command downloads each immutable package once, retains it under
-`$HOME/.local/share/agentlab/ald00-alpha8`, installs `ald00`, and requires the
+`$HOME/.local/share/agentlab/ald00-alpha9`, installs `ald00`, and requires the
 runtime health postcondition. The second runs the downloaded deterministic
 TypeScript probe tests with the host's Bun runtime. To rehearse without network
 access after the first acquisition, use:
@@ -90,18 +90,18 @@ sh /tmp/agentlab-bootstrap.sh --current --install-dir "$HOME/.local/bin"
 
 curl -fsSL -o agentlab-aldev-environment-lock.json \
   https://github.com/yxsicd/agentlabrelease/releases/download/aldev/agentlab-aldev-environment-lock.json
-curl -fsSL -o agentlab-environment-kit-v0.1.0-alpha.8.tar.zst \
-  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.8/agentlab-environment-kit-v0.1.0-alpha.8.tar.zst
-curl -fsSL -o agentlab-ts-probe-v0.1.0-alpha.8.tar.zst \
-  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.8/agentlab-ts-probe-v0.1.0-alpha.8.tar.zst
+curl -fsSL -o agentlab-environment-kit-v0.1.0-alpha.9.tar.zst \
+  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.9/agentlab-environment-kit-v0.1.0-alpha.9.tar.zst
+curl -fsSL -o agentlab-ts-probe-v0.1.0-alpha.9.tar.zst \
+  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.9/agentlab-ts-probe-v0.1.0-alpha.9.tar.zst
 printf '%s  %s\n' \
-  1974066c5497c7f4d6fb089c74cfbf1a71b486162614133347e515ad4ca6b225 \
-  agentlab-environment-kit-v0.1.0-alpha.8.tar.zst | sha256sum -c -
+  fcca40e0858bbbde7620ddec83db0dc525c62d597926dc27ef66b6dd54c27a73 \
+  agentlab-environment-kit-v0.1.0-alpha.9.tar.zst | sha256sum -c -
 printf '%s  %s\n' \
   029074b412bdaaccd069250949eec459861e685a5ef398fbbc30d4c7cbf4d2d3 \
-  agentlab-ts-probe-v0.1.0-alpha.8.tar.zst | sha256sum -c -
-zstd -dc agentlab-environment-kit-v0.1.0-alpha.8.tar.zst | tar -xf -
-zstd -dc agentlab-ts-probe-v0.1.0-alpha.8.tar.zst | tar -xf -
+  agentlab-ts-probe-v0.1.0-alpha.9.tar.zst | sha256sum -c -
+zstd -dc agentlab-environment-kit-v0.1.0-alpha.9.tar.zst | tar -xf -
+zstd -dc agentlab-ts-probe-v0.1.0-alpha.9.tar.zst | tar -xf -
 
 agentlabctl fetch composition \
   --lock agentlab-aldev-environment-lock.json \
@@ -112,13 +112,10 @@ agentlabctl composition install-docker \
   --dir acquired-aldev --platform linux-x64 \
   --receipt composition-install-receipt.json
 
-./agentlab-environment-kit/agentlab-env qualify \
-  --instance ald00 \
-  --composition-receipt composition-install-receipt.json
 ./agentlab-environment-kit/agentlab-env install \
   --instance ald00 \
   --composition-receipt composition-install-receipt.json \
-  --release-id alpha8
+  --release-id alpha9
 ./agentlab-environment-kit/agentlab-env health \
   --instance ald00 \
   --composition-receipt composition-install-receipt.json
@@ -128,6 +125,51 @@ After the first successful acquisition, retain the lock, acquired directory,
 composition receipt, extracted kit, and CAS. An offline repetition starts at
 `composition install-docker`; it must not redownload large assets or contact a
 package manager.
+
+## Installation timing and safe repetition
+
+Quickstart emits one `agentlab.quickstart_timing.v1` JSON line per phase and a
+total by default; set `AGENTLAB_TIMING=0` only when compact output matters more
+than diagnosis. `agentlab-env` also emits `agentlab.environment_timing.v1` when
+timing is enabled. Keep these records with the installation receipt.
+
+On the AIWSL x64 canary with all immutable assets already cached, two complete
+alpha.8 measurements were 62.94 and 67.00 seconds. The measured decomposition
+was 11.81 seconds to re-admit the cached composition, 13.30 seconds for a
+standalone qualification, 34.49 seconds for receipt-bound activation, and
+3.32 seconds for final health. This is a diagnostic baseline, not an SLA.
+Alpha.9 removes the redundant standalone qualification from Quickstart because
+`install` runs the same fail-closed preflight immediately before mutation.
+
+Do not diagnose a roughly one-minute cached install as network download time:
+first inspect the timing events and the composition receipt. `status: reused`
+for image, Release, and tools means the time is local verification, preflight,
+SessionFS/container activation, and health. Only `online-install` may add
+variable acquisition time; `offline-install` must not use the network.
+
+For a destructive ALD rehearsal, first run the packaged uninstaller without
+`--execute` and inspect its exact plan. Execution must confirm the instance,
+data volume, and SessionFS image volume explicitly:
+
+```bash
+root="${AGENTLAB_QUICKSTART_ROOT:-$HOME/.local/share/agentlab/ald00-alpha9}"
+uninstall="$root/work/agentlab-environment-kit/scripts/agentlab-ald-uninstall.py"
+config="$root/work/agentlab-environment-kit/release/agentweb/aiwsl-agentlab.json"
+
+"$uninstall" ald00 --config "$config"
+"$uninstall" ald00 --config "$config" \
+  --execute --confirm-instance ald00 \
+  --purge-data --purge-sessionfs --purge-control \
+  --confirm-purge 'PURGE ald00' \
+  --confirm-data-volume vol-data-ald00 \
+  --confirm-sessionfs-image ald00-sessionfs-image
+scripts/agentlab-harness-quickstart.sh offline-install
+```
+
+This removes only ALD instance state. Preserve the cache and content-addressed
+program volumes. The current preview still qualifies against the retained
+ALA00-owned MCPGit dependency; never remove or restart that dependency as part
+of an ALD uninstall/reinstall measurement.
 
 The AIWSL preview inherits the operator-owned `/share/.env` and joins it with
 descriptor-owned non-secret MCPGit controller values; installation may verify
