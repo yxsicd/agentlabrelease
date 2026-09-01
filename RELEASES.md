@@ -1,5 +1,16 @@
 # Releases
 
+## v0.1.0-alpha.5
+
+Corrects first SessionFS initialization: an empty prepared Btrfs directory is
+admitted as new state, while any present entry still requires strict read-only
+validation by the exact candidate `agentlab-sessionfsd`. Alpha.4 stopped before
+container creation and activation, so its receipt, CAS, inactive release, and
+ALD data volume remain reusable.
+
+This preview is built from AgentLab source commit
+`bc268e523f439a4fb6b884e281be5ab48f8072ed`.
+
 ## v0.1.0-alpha.4
 
 Separates the operator-owned runtime/LLM env from descriptor-owned MCPGit
