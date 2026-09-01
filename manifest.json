@@ -1,0 +1,33 @@
+{
+  "schema": "agentlab.developer_release.v1",
+  "version": "0.1.0-alpha.1",
+  "stability": "developer-preview",
+  "sourceRevision": "b556444b1bac902b1fdbf309ab24784087a2486c",
+  "entrypoint": "skills/agentlab-harness-developer/SKILL.md",
+  "capabilities": [
+    "replaceable-code-agent",
+    "task-seed-and-campaign-model",
+    "harness-owned-checkpoint-and-fork",
+    "fresh-agent-continuation",
+    "llm-and-mcp-trace-model",
+    "difficulty-window-analysis",
+    "tablegit-relation-sql",
+    "typescript-deterministic-probe"
+  ],
+  "limitations": [
+    "no-one-command-environment-install",
+    "no-stable-schema-guarantee",
+    "native-agent-session-restore-is-adapter-specific"
+  ],
+  "controlChannel": "https://github.com/yxsicd/agentlabrelease/releases/tag/alcontrol",
+  "assets": [
+    {
+      "name": "agentlab-ts-probe-v0.1.0-alpha.1.tar.zst",
+      "mediaType": "application/zstd",
+      "purpose": "deterministic external-brain probe source package",
+      "bytes": 29901,
+      "sha256": "029074b412bdaaccd069250949eec459861e685a5ef398fbbc30d4c7cbf4d2d3",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.1/agentlab-ts-probe-v0.1.0-alpha.1.tar.zst"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "schema": "agentlab.package_index.v1",
+  "latest": "0.1.0-alpha.1",
+  "versions": [
+    {
+      "version": "0.1.0-alpha.1",
+      "tag": "v0.1.0-alpha.1",
+      "stability": "developer-preview"
+    }
+  ]
+}

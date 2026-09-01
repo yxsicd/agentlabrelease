@@ -1,0 +1,16 @@
+{
+  "schema": "agentlab.public_release.v1",
+  "version": "0.1.0-alpha.1",
+  "tag": "v0.1.0-alpha.1",
+  "prerelease": true,
+  "developerSkill": "skills/agentlab-harness-developer/SKILL.md",
+  "manifest": "manifest.json",
+  "provenance": "provenance.json",
+  "assets": [
+    {
+      "name": "agentlab-ts-probe-v0.1.0-alpha.1.tar.zst",
+      "bytes": 29901,
+      "sha256": "029074b412bdaaccd069250949eec459861e685a5ef398fbbc30d4c7cbf4d2d3"
+    }
+  ]
+}
