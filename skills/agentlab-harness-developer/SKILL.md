@@ -37,53 +37,50 @@ session implementation.
 
 ## Minimal qualification order
 
-For the AIWSL preview, use the immutable alpha.2 environment kit and the fixed
+For the AIWSL preview, use the immutable alpha.3 environment kit and the fixed
 `aldev` composition. Preserve one content-addressed cache across repetitions:
 online and offline installation are user-selected modes over the same bytes.
 
 ```bash
-mkdir -p "$HOME/.cache/agentlab/public-cas-v0.1.0-alpha.2/downloads"
+mkdir -p "$HOME/.cache/agentlab/public-cas/downloads"
 curl -fsSL -o /tmp/agentlab-bootstrap.sh \
   https://github.com/yxsicd/agentlabrelease/releases/download/alcontrol/agentlab-bootstrap.sh
 sh /tmp/agentlab-bootstrap.sh --current --install-dir "$HOME/.local/bin"
 
 curl -fsSL -o agentlab-aldev-environment-lock.json \
   https://github.com/yxsicd/agentlabrelease/releases/download/aldev/agentlab-aldev-environment-lock.json
-curl -fsSL -o agentlab-environment-kit-v0.1.0-alpha.2.tar.zst \
-  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.2/agentlab-environment-kit-v0.1.0-alpha.2.tar.zst
-curl -fsSL -o agentlab-ts-probe-v0.1.0-alpha.2.tar.zst \
-  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.2/agentlab-ts-probe-v0.1.0-alpha.2.tar.zst
+curl -fsSL -o agentlab-environment-kit-v0.1.0-alpha.3.tar.zst \
+  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.3/agentlab-environment-kit-v0.1.0-alpha.3.tar.zst
+curl -fsSL -o agentlab-ts-probe-v0.1.0-alpha.3.tar.zst \
+  https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.3/agentlab-ts-probe-v0.1.0-alpha.3.tar.zst
 printf '%s  %s\n' \
-  aff2b7ea60be6cbc6a6e79b74369e160ed187bc8dc070352e68fe753ebb0f8b2 \
-  agentlab-environment-kit-v0.1.0-alpha.2.tar.zst | sha256sum -c -
+  27e41289e32a03bcf027f994b087ed3f11fd4e29306fd14f3b7df7b59b7c2deb \
+  agentlab-environment-kit-v0.1.0-alpha.3.tar.zst | sha256sum -c -
 printf '%s  %s\n' \
   029074b412bdaaccd069250949eec459861e685a5ef398fbbc30d4c7cbf4d2d3 \
-  agentlab-ts-probe-v0.1.0-alpha.2.tar.zst | sha256sum -c -
-zstd -dc agentlab-environment-kit-v0.1.0-alpha.2.tar.zst | tar -xf -
-zstd -dc agentlab-ts-probe-v0.1.0-alpha.2.tar.zst | tar -xf -
+  agentlab-ts-probe-v0.1.0-alpha.3.tar.zst | sha256sum -c -
+zstd -dc agentlab-environment-kit-v0.1.0-alpha.3.tar.zst | tar -xf -
+zstd -dc agentlab-ts-probe-v0.1.0-alpha.3.tar.zst | tar -xf -
 
 agentlabctl fetch composition \
   --lock agentlab-aldev-environment-lock.json \
   --platform linux-x64 \
   --out-dir acquired-aldev \
-  --cache-dir "$HOME/.cache/agentlab/public-cas-v0.1.0-alpha.2"
+  --cache-dir "$HOME/.cache/agentlab/public-cas"
 agentlabctl composition install-docker \
   --dir acquired-aldev --platform linux-x64 \
   --receipt composition-install-receipt.json
 
 ./agentlab-environment-kit/agentlab-env qualify \
   --instance ald00 \
-  --composition-receipt composition-install-receipt.json \
-  --env-file "$HOME/.agentlab/ald00.env"
+  --composition-receipt composition-install-receipt.json
 ./agentlab-environment-kit/agentlab-env install \
   --instance ald00 \
   --composition-receipt composition-install-receipt.json \
-  --env-file "$HOME/.agentlab/ald00.env" \
-  --release-id alpha2
+  --release-id alpha3
 ./agentlab-environment-kit/agentlab-env health \
   --instance ald00 \
-  --composition-receipt composition-install-receipt.json \
-  --env-file "$HOME/.agentlab/ald00.env"
+  --composition-receipt composition-install-receipt.json
 ```
 
 After the first successful acquisition, retain the lock, acquired directory,
@@ -91,9 +88,10 @@ composition receipt, extracted kit, and CAS. An offline repetition starts at
 `composition install-docker`; it must not redownload large assets or contact a
 package manager.
 
-The private env file is supplied by the operator and must stay outside the
-release and receipts. A new deployment may know only the LLM Gateway endpoint
-and its gateway credential; do not fan provider secrets out to every instance.
+The AIWSL preview inherits the operator-owned `/share/.env`; installation may
+verify that file but must never print, copy, or synthesize it. A general new
+deployment should know only the LLM Gateway endpoint and its gateway
+credential; do not fan provider secrets out to every instance.
 
 After health passes, retain the instance. Run the deterministic TypeScript
 probe through capture, cut, fork, and continue, then use exact-revision SQL to

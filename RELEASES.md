@@ -1,5 +1,17 @@
 # Releases
 
+## v0.1.0-alpha.3
+
+Corrects two zero-context installation failures found against alpha.2. The
+environment entrypoint now resolves both its packaged root layout and its
+source-tree layout, and AIWSL `ald00` inherits the operator-owned `/share/.env`
+instead of requiring a nonexistent per-instance file. Alpha.2 stopped before
+runtime mutation; its verified composition receipt and large CAS remain valid
+and reusable.
+
+This preview is built from AgentLab source commit
+`317c2b210c0d313e322e06068ed633497f5a2dc9`.
+
 ## v0.1.0-alpha.2
 
 Adds the first repo-free AIWSL `ald00` environment lifecycle. A small
