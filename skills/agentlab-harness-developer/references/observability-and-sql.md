@@ -22,6 +22,13 @@ repository id, exact 40-hex revision, schema generation, trace digest, and fork
 lineage. SQL source selection reads this index and binds the recorded exact
 revisions.
 
+Key the current-state row by managed Session repository id, not only by logical
+Session id. Derived comparison repositories may share a logical seed/Session
+identity while remaining distinct SQL sources. A new capture revision updates
+that repository's current row; Git history preserves earlier index states.
+Derive TableGit transaction and operation UUIDv5 values deterministically from
+repository identity and row digest so uncertain retries can replay exactly.
+
 Do not use MCPGit `repository.list` as dynamic Session discovery. It
 intentionally exposes a bounded configured repository registry. Do not scan
 MCPGit storage directories either: an on-disk directory is not evidence that a
@@ -40,3 +47,8 @@ output bytes, and execution receipt. A query against deterministic TS fixture
 data qualifies the analysis boundary; it must not be described as analysis of
 a real Gateway LLM trace. The full flywheel is qualified only when the actual
 run is captured, indexed, selected, and queried without manual source assembly.
+
+The alpha.5 retained-instance qualification has closed automatic exact capture
+readback, idempotent index registration, index-derived source selection, and
+cross-repository SQL for the deterministic real-Bun TS fixture. It has not yet
+qualified the same chain using the earlier real Gateway LLM activation trace.
