@@ -1,5 +1,18 @@
 # Releases
 
+## v0.1.0-alpha.6
+
+Moves the AIWSL SessionFS persistence boundary fully inside Docker. A dedicated
+companion initializes and remounts a sparse Btrfs image held in an
+instance-local named volume; the AgentLab container receives only separate
+control and prepared-export volumes. A fresh host therefore needs Docker, but
+does not need host Btrfs tools, a pre-mounted Btrfs root, or systemd mount
+units. Existing immutable `aldev` image, Release, tools, and TS probe assets are
+reused.
+
+This preview is built from AgentLab source commit
+`2473c1e0336807e1a823f0f2d536beef5631c4cd`.
+
 ## v0.1.0-alpha.5
 
 Corrects first SessionFS initialization: an empty prepared Btrfs directory is

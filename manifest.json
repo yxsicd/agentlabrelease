@@ -1,8 +1,8 @@
 {
   "schema": "agentlab.developer_release.v1",
-  "version": "0.1.0-alpha.5",
+  "version": "0.1.0-alpha.6",
   "stability": "developer-preview",
-  "sourceRevision": "bc268e523f439a4fb6b884e281be5ab48f8072ed",
+  "sourceRevision": "2473c1e0336807e1a823f0f2d536beef5631c4cd",
   "entrypoint": "skills/agentlab-harness-developer/SKILL.md",
   "capabilities": [
     "replaceable-code-agent",
@@ -25,20 +25,20 @@
   "controlChannel": "https://github.com/yxsicd/agentlabrelease/releases/tag/alcontrol",
   "assets": [
     {
-      "name": "agentlab-ts-probe-v0.1.0-alpha.5.tar.zst",
+      "name": "agentlab-ts-probe-v0.1.0-alpha.6.tar.zst",
       "mediaType": "application/zstd",
       "purpose": "deterministic external-brain probe source package",
       "bytes": 29901,
       "sha256": "029074b412bdaaccd069250949eec459861e685a5ef398fbbc30d4c7cbf4d2d3",
-      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.5/agentlab-ts-probe-v0.1.0-alpha.5.tar.zst"
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.6/agentlab-ts-probe-v0.1.0-alpha.6.tar.zst"
     },
     {
-      "name": "agentlab-environment-kit-v0.1.0-alpha.5.tar.zst",
+      "name": "agentlab-environment-kit-v0.1.0-alpha.6.tar.zst",
       "mediaType": "application/zstd",
       "purpose": "repo-free AIWSL ald00 environment lifecycle",
-      "bytes": 42460,
-      "sha256": "3a7785bb1449d0ee2c71d8473a36c614caf6e80f44afb689a333855de709904d",
-      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.5/agentlab-environment-kit-v0.1.0-alpha.5.tar.zst"
+      "bytes": 47585,
+      "sha256": "676bff70f0e3c1e2afcd77c23ae4276bdc75d94977b685b3eb5201bca76fb45d",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.6/agentlab-environment-kit-v0.1.0-alpha.6.tar.zst"
     }
   ]
 }
