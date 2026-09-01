@@ -207,12 +207,24 @@ fi
 }
 
 if [[ "${action}" == "probe-self-test" ]]; then
-  require_command bun
+  bun_bin="$(command -v bun || true)"
+  if [[ -z "${bun_bin}" ]]; then
+    for candidate in "${HOME}/.bun/bin/bun" "${HOME}/bin/bun"; do
+      if [[ -x "${candidate}" ]]; then
+        bun_bin="${candidate}"
+        break
+      fi
+    done
+  fi
+  if [[ -z "${bun_bin}" ]]; then
+    echo "Bun is required for probe-self-test; install it or add it to PATH" >&2
+    exit 2
+  fi
   [[ -f "${probe_dir}/package.json" ]] || {
     echo "TypeScript probe is missing; run online-install or offline-install first" >&2
     exit 1
   }
-  (cd -- "${probe_dir}" && bun test)
+  (cd -- "${probe_dir}" && "${bun_bin}" test)
 else
   "${kit_dir}/agentlab-env" health --instance "${instance}" --composition-receipt "${receipt}"
 fi
