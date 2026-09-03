@@ -86,13 +86,27 @@ scripts/agentlab-harness-quickstart.sh reinstall-instance
 ```
 
 `reinstall-instance` deliberately skips compressed-asset verification,
-unpacking, composition fetch, and `composition install-docker`. It removes only
-the ALD instance data, SessionFS instance state, and deployment control state,
-then reinstalls from the retained exact composition receipt. Use it for
-repeatability and performance loops, not for proving that a fresh host can
-acquire the release. If this narrow path fails a deployment preflight or
-runtime postcondition, repair the retained external dependency rather than
-falling back to an unpinned or weakened configuration.
+unpacking, composition fetch, and `composition install-docker`. It is a runtime
+recreation, not a data reset: preserve the ALD data volume, SessionFS
+image/export/control volumes, the healthy SessionFS companion, and the external
+MCPGit/SafeGit control plane; then force-recreate only the main `ald00` runtime.
+Verify the retained control-plane qualification and SessionFS health before
+mutation, and require main health plus `sandboxrs` readiness afterwards.
+
+Use `reset-instance` only when the task explicitly requires destructive ALD
+data and SessionFS reset. That slower path purges the per-instance volumes and
+runs the full receipt-bound environment installer. Keep runtime reinstall and
+data reset as separate semantics: conflating them increases latency and creates
+avoidable Docker volume lifecycle races. Use the narrow reinstall for
+repeatability/performance loops, not for proving fresh-host acquisition.
+
+On the AIWSL x64 alpha.9 canary, preserving the healthy SessionFS companion and
+recreating only the main runtime reduced three validated reinstall samples to
+11.565, 12.764, and 11.806 seconds end-to-end. Before removing the redundant
+final generic health pass, five validated samples were 13.263--15.154 seconds.
+By contrast, invoking the full environment installer while preserving volumes
+was stable at roughly 30.8--31.4 seconds. Treat these as diagnostic baselines,
+not SLAs; the key optimization is semantic narrowing, not weakening readiness.
 
 The destructive fast path must use explicit error propagation on every
 precondition and uninstall step. Do not rely on Bash `set -e` inside a helper

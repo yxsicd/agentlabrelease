@@ -16,8 +16,9 @@ Actions:
   online-install   Download missing immutable assets, install ald00, and check health.
   offline-install  Use only previously downloaded assets, install ald00, and check health.
   reinstall-instance
-                   Recreate only ald00 instance state using the retained verified
-                   kit, composition receipt, CAS, and external control plane.
+                   Recreate only ald00 main runtime using the retained verified
+                   release, volumes, SessionFS companion, and external control plane.
+  reset-instance    Destructively purge ALD data and SessionFS, then reinstall.
   health           Read-only health check for the installed composition.
   probe-self-test  Run the downloaded deterministic TypeScript probe tests with Bun.
 
@@ -84,7 +85,7 @@ while (( $# )); do
 done
 
 case "${action}" in
-  online-install|offline-install|reinstall-instance|health|probe-self-test) ;;
+  online-install|offline-install|reinstall-instance|reset-instance|health|probe-self-test) ;;
   *)
     echo "unknown action: ${action}" >&2
     usage >&2
@@ -252,32 +253,74 @@ assert a==b"HTTP/1.1 101 Switching Protocols", f"retained MCPGit authorization i
 }
 
 reinstall_instance() {
-  local uninstall config
+  local config deploy_dir compose_args started ended hs ss
   require_prepared_install || return 1
-  uninstall="${kit_dir}/scripts/agentlab-ald-uninstall.py"
   config="${kit_dir}/release/agentweb/aiwsl-agentlab.json"
-  [[ -x "${uninstall}" && -s "${config}" ]] || {
-    echo "prepared uninstall/config surface is incomplete" >&2
+  [[ -s "${config}" ]] || { echo "prepared config is missing" >&2; return 1; }
+  validate_retained_control_plane || return 1
+
+  deploy_dir="${HOME}/.agentlab/deployments/agentlab/${instance}/releases/alpha9-quickstart-v1"
+  [[ -s "${deploy_dir}/bundle.env" && -s "${deploy_dir}/docker-compose.yaml" ]] || {
+    echo "prepared direct deployment is missing; run offline-install once" >&2
+    return 1
+  }
+  docker volume inspect "vol-data-${instance}" >/dev/null 2>&1 || {
+    echo "instance data volume is absent; use reset-instance or offline-install" >&2
+    return 1
+  }
+  for volume in "${instance}-sessionfs-image" "${instance}-sessionfs-export" "${instance}-sessionfs-control"; do
+    docker volume inspect "${volume}" >/dev/null 2>&1 || {
+      echo "retained SessionFS volume is absent (${volume}); use reset-instance" >&2
+      return 1
+    }
+  done
+  [[ "$(docker inspect "${instance}-sessionfs" --format '{{.State.Status}}' 2>/dev/null || true)" == running ]] || {
+    echo "retained SessionFS companion is not running; use reset-instance" >&2
+    return 1
+  }
+  [[ "$(docker inspect "${instance}-sessionfs" --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' 2>/dev/null || true)" == healthy ]] || {
+    echo "retained SessionFS companion is not healthy; use reset-instance" >&2
     return 1
   }
 
-  # Fail before destructive work when the retained external control plane is
-  # not qualified for this exact descriptor. This converts a late readiness
-  # timeout into a bounded precondition failure.
-  validate_retained_control_plane || return 1
+  compose_args=(-f docker-compose.yaml -f docker-compose.sessionfs.yaml -f docker-compose.main-loopbacks.yaml)
+  started="$(now_ns)"
+  (cd "${deploy_dir}" && docker compose --env-file bundle.env "${compose_args[@]}" -p "${instance}" up -d --force-recreate --no-deps "${instance}") || return 1
+  ended="$(now_ns)"
+  emit_timing recreate-main "${started}" "${ended}" 0
 
+  started="$(now_ns)"
+  hs= ss=
+  for _ in $(seq 1 60); do
+    hs="$(docker inspect "${instance}" --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' 2>/dev/null || true)"
+    ss="$(docker exec "${instance}" supervisorctl status sandboxrs 2>/dev/null | awk '{print $2}' || true)"
+    [[ "${hs}" == healthy && "${ss}" == RUNNING ]] && break
+    sleep 0.25
+  done
+  [[ "${hs}" == healthy && "${ss}" == RUNNING ]] || {
+    echo "instance-only readiness timed out (health=${hs:-missing}, sandbox=${ss:-missing})" >&2
+    return 1
+  }
+  ended="$(now_ns)"
+  emit_timing instance-ready "${started}" "${ended}" 0
+}
+
+reset_instance() {
+  local uninstall config
+  require_prepared_install || return 1
+  validate_retained_control_plane || return 1
+  uninstall="${kit_dir}/scripts/agentlab-ald-uninstall.py"
+  config="${kit_dir}/release/agentweb/aiwsl-agentlab.json"
   "${uninstall}" "${instance}" --config "${config}" \
     --execute --confirm-instance "${instance}" \
     --purge-data --purge-sessionfs --purge-control \
     --confirm-purge "PURGE ${instance}" \
     --confirm-data-volume "vol-data-${instance}" \
     --confirm-sessionfs-image "${instance}-sessionfs-image" || return 1
-
   env AGENTLAB_TIMING="${AGENTLAB_TIMING:-1}" \
     "${kit_dir}/agentlab-env" install \
-    --instance "${instance}" \
-    --composition-receipt "${receipt}" \
-    --release-id alpha9-quickstart-v1
+    --instance "${instance}" --composition-receipt "${receipt}" \
+    --release-id alpha9-quickstart-v1 || return 1
 }
 
 acquire_online_assets() {
@@ -350,6 +393,9 @@ if [[ "${action}" == "online-install" || "${action}" == "offline-install" ]]; th
 elif [[ "${action}" == "reinstall-instance" ]]; then
   require_command docker
   run_timed reinstall-instance reinstall_instance
+elif [[ "${action}" == "reset-instance" ]]; then
+  require_command docker
+  run_timed reset-instance reset_instance
 fi
 
 [[ -s "${receipt}" ]] || {
@@ -360,6 +406,13 @@ fi
   echo "environment kit is missing; run online-install or offline-install first" >&2
   exit 1
 }
+
+if [[ "${action}" == "reinstall-instance" ]]; then
+  # The fast path already proves retained SessionFS health before mutation and
+  # main-container health plus sandbox readiness after recreation. Avoid the
+  # generic full health pass here; reset/offline installs still use it.
+  exit 0
+fi
 
 if [[ "${action}" == "probe-self-test" ]]; then
   bun_bin="$(command -v bun || true)"
