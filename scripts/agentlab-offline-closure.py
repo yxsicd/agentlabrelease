@@ -332,9 +332,47 @@ def stage_quickstart(root: pathlib.Path, destination: pathlib.Path, copy: bool) 
             os.symlink(target.name if copy else target, alias)
             target.chmod(0o755)
         linked.append({"source": str(source), "target": str(target), "mode": "copy" if copy else "symlink"})
-    result = {"schema": "agentlab.offline_quickstart_stage.v1", "root": str(destination), "items": linked}
+    scripts = []
+    for script_name, action in (
+        ("offline-install.sh", "offline-install"),
+        ("health.sh", "health"),
+        ("probe-self-test.sh", "probe-self-test"),
+    ):
+        script_path = destination / script_name
+        script_path.write_text(
+            "#!/usr/bin/env bash\n"
+            "set -euo pipefail\n"
+            "root=$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\n"
+            "export PATH=\"$root/bin:$PATH\"\n"
+            f"exec \"$root/downloads/agentlab-harness-quickstart.sh\" {action} --root \"$root\" \"$@\"\n",
+            encoding="utf-8",
+        )
+        script_path.chmod(0o755)
+        scripts.append(str(script_path))
+    runbook = destination / "README.offline.md"
+    runbook.write_text(
+        "# AgentLab offline Quickstart stage\n\n"
+        "This staging root was generated from a verified AgentLab offline closure cache.\n"
+        "It contains symlinks or copies for the assets required by the current Quickstart.\n"
+        "No credentials are included. Private MCPGit/SafeGit/SessionFS material is generated on the target host.\n\n"
+        "Commands:\n\n"
+        "```bash\n"
+        "./offline-install.sh\n"
+        "./health.sh\n"
+        "./probe-self-test.sh\n"
+        "```\n\n"
+        "The installer still targets the Quickstart-supported `ald00` preview instance.\n",
+        encoding="utf-8",
+    )
+    result = {
+        "schema": "agentlab.offline_quickstart_stage.v1",
+        "root": str(destination),
+        "items": linked,
+        "scripts": scripts,
+        "runbook": str(runbook),
+    }
     (destination / "offline-stage.json").write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
-    print(json.dumps({"ok": True, "root": str(destination), "items": len(linked)}, sort_keys=True))
+    print(json.dumps({"ok": True, "root": str(destination), "items": len(linked), "scripts": len(scripts)}, sort_keys=True))
     return result
 
 

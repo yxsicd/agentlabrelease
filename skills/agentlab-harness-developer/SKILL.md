@@ -484,8 +484,10 @@ release-side compatibility CLI for the offline closure. It now supports:
   parallelism, `.part` files, resume, byte-count checks, and SHA256 checks;
 - `verify`: fail closed against the grouped cache layout;
 - `report`: emit exactly one machine-readable JSON report for operators;
-- `stage-quickstart`: create a symlink/copy staging root with `downloads/` and
-  `bin/agentlabctl` for the existing Quickstart offline installer.
+- `stage-quickstart`: create a symlink/copy staging root with `downloads/`,
+  `bin/agentlabctl`, auditable wrapper scripts (`offline-install.sh`,
+  `health.sh`, `probe-self-test.sh`), and a README for the existing Quickstart
+  offline installer.
 
 Validation on hwlinux used the previously fetched 19-asset Linux-x64 cache. The
 new CLI verified all 1,692,135,254 bytes, generated a single JSON report, and
