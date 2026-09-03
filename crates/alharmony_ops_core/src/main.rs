@@ -19,7 +19,7 @@ struct ServiceConfig {
     max_batch: usize,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct TaskScope {
     task_id: String,
     root: PathBuf,
@@ -288,11 +288,12 @@ fn dispatch_batch_http(
         .and_then(|value| value.parse::<usize>().ok())
         .filter(|value| (1..=config.max_batch).contains(value))
         .unwrap_or(1);
+    let task = validate_task_for_operation(operation, params, config)?;
     let started = Instant::now();
     let mut ok_count = 0_usize;
     let mut last = None;
     for _ in 0..count {
-        let receipt = dispatch_http(operation, params, config)?;
+        let receipt = dispatch_http_with_task(operation, params, task.as_ref())?;
         if receipt.ok {
             ok_count += 1;
         }
@@ -326,11 +327,43 @@ fn dispatch_http(
     params: &BTreeMap<String, String>,
     config: &ServiceConfig,
 ) -> Result<Receipt, String> {
+    let task = validate_task_for_operation(operation, params, config)?;
+    dispatch_http_with_task(operation, params, task.as_ref())
+}
+
+fn validate_task_for_operation(
+    operation: &str,
+    params: &BTreeMap<String, String>,
+    config: &ServiceConfig,
+) -> Result<Option<TaskScope>, String> {
+    match operation {
+        "harmony.env.status" => Ok(None),
+        "harmony.project.create" | "harmony.project.verify" => {
+            let root = required_param_path(params, "projectRoot")?;
+            validate_task_paths(config, params, &[("projectRoot", &root)])
+        }
+        "harmony.ohpm.install" | "harmony.build.debug" => {
+            let root = required_param_path(params, "projectRoot")?;
+            let _harmony = required_param_path(params, "harmonyHome")?;
+            validate_task_paths(config, params, &[("projectRoot", &root)])
+        }
+        "harmony.artifact.inspect" => {
+            let artifact = required_param_path(params, "artifact")?;
+            validate_task_paths(config, params, &[("artifact", &artifact)])
+        }
+        _ => Err(format!("unknown operation: {operation}")),
+    }
+}
+
+fn dispatch_http_with_task(
+    operation: &str,
+    params: &BTreeMap<String, String>,
+    task: Option<&TaskScope>,
+) -> Result<Receipt, String> {
     match operation {
         "harmony.env.status" => Ok(env_status(param_path(params, "harmonyHome").as_deref())),
         "harmony.project.create" => {
             let root = required_param_path(params, "projectRoot")?;
-            let task = validate_task_paths(config, params, &[("projectRoot", &root)])?;
             let bundle = params
                 .get("bundleName")
                 .map(String::as_str)
@@ -346,24 +379,20 @@ fn dispatch_http(
         }
         "harmony.project.verify" => {
             let root = required_param_path(params, "projectRoot")?;
-            let task = validate_task_paths(config, params, &[("projectRoot", &root)])?;
             Ok(add_task_evidence(project_verify(&root), task))
         }
         "harmony.ohpm.install" => {
             let root = required_param_path(params, "projectRoot")?;
             let harmony = required_param_path(params, "harmonyHome")?;
-            let task = validate_task_paths(config, params, &[("projectRoot", &root)])?;
             Ok(add_task_evidence(ohpm_install_plan(&root, &harmony), task))
         }
         "harmony.build.debug" => {
             let root = required_param_path(params, "projectRoot")?;
             let harmony = required_param_path(params, "harmonyHome")?;
-            let task = validate_task_paths(config, params, &[("projectRoot", &root)])?;
             Ok(add_task_evidence(build_debug_plan(&root, &harmony), task))
         }
         "harmony.artifact.inspect" => {
             let artifact = required_param_path(params, "artifact")?;
-            let task = validate_task_paths(config, params, &[("artifact", &artifact)])?;
             Ok(add_task_evidence(artifact_inspect(&artifact), task))
         }
         _ => Err(format!("unknown operation: {operation}")),
@@ -414,12 +443,12 @@ fn validate_task_id(task_id: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn add_task_evidence(receipt: Receipt, task: Option<TaskScope>) -> Receipt {
+fn add_task_evidence(receipt: Receipt, task: Option<&TaskScope>) -> Receipt {
     let Some(task) = task else {
         return receipt;
     };
     let mut evidence = BTreeMap::new();
-    evidence.insert("taskId".into(), JsonValue::string(task.task_id));
+    evidence.insert("taskId".into(), JsonValue::string(task.task_id.clone()));
     evidence.insert(
         "taskRoot".into(),
         JsonValue::string(task.root.display().to_string()),

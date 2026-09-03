@@ -807,3 +807,10 @@ receipts include `evidence.task` with `taskId`, task root, and
 HTTP 503 `queueFull` instead of letting a saturated service grow an unbounded
 connection queue. M4 smoke covered in-scope success, cross-scope rejection,
 missing/bad task IDs, and queue-full backpressure.
+
+Batch task isolation was then tightened so `/v1/batch/<operation>` validates the
+`taskId` and path scope once at the batch boundary and reuses the validated
+scope inside the operation loop. This avoids multiplying lexical path
+normalization by `n` while keeping `lastReceipt.evidence.task` intact. M4 smoke
+verified in-scope batch success and out-of-scope batch rejection before hwlinux
+performance retest.
