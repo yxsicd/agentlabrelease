@@ -436,3 +436,37 @@ namespace reached the shared MCPGit loopback health endpoint with HTTP 204.
 The durable `ala00-mcpgit-data` volume and private state were not replaced.
 This proves program-only refresh can avoid rebuilding/re-downloading the base
 image and can preserve MCPGit data/state.
+
+
+## Offline Closure (`aloffline`)
+
+The Linux-x64 offline distribution is described by
+`release/offline/agentlab-offline-linux-x64.json` using
+`agentlab.offline_closure.v1`. The closure deliberately separates dynamic
+channel references from the immutable local snapshot produced at fetch time.
+
+Online resolution follows this rule:
+
+1. pin direct AgentLab control/environment/composition/runtime assets;
+2. resolve the Harmony, `altools`, and `almcpgit` child manifests by their
+   manifest SHA256/byte counts;
+3. flatten them into `agentlab.offline_closure_resolved.v1` with exact asset
+   URL, byte count and SHA256;
+4. download/cache that resolved list;
+5. perform all later installation from the resolved snapshot without channel
+   resolution or network access.
+
+This allows MCPGit program and code-agent channels to evolve independently
+without weakening offline reproducibility: each fetched offline snapshot still
+pins the exact bytes actually downloaded.
+
+Current Linux-x64 closure resolution contains 19 public assets totaling
+1,692,135,254 bytes. It includes control/bootstrap, environment kit/probe,
+AgentLab runtime image, release/developer-tools packs, Harmony SDK, OpenCode,
+Codex, and the split MCPGit base/program/tools/templates mirror. It explicitly
+contains no credentials or private SafeGit/SessionFS projection material.
+
+Use `scripts/agentlab-offline-closure.py resolve` to create a resolved snapshot
+and `verify-cache` to fail closed on any missing/changed cached asset. This is a
+control-layer resolver; bulk fetch should continue to use AgentLab's resumable
+asset fetch primitive rather than ad-hoc unverified curl downloads.
