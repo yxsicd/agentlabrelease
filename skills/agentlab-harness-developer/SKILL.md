@@ -77,6 +77,64 @@ access after the first acquisition, use:
 scripts/agentlab-harness-quickstart.sh offline-install
 ```
 
+Treat a fresh environment as a **release-locked dependency closure**, not as
+"the newest AgentLab container". The environment descriptor, composition lock,
+and the MCPGit official-release lock shipped inside the environment kit are
+authority for the versions that must work together. A previously running
+MCPGit/SafeGit service is not compatible merely because its container is
+healthy or because an older AgentLab instance used it successfully. If the
+deployment preflight rejects the external MCPGit route, qualify or upgrade that
+dependency to the release-pinned version instead of weakening the descriptor.
+
+After unpacking the environment kit, validate its MCPGit lock before repairing
+or bootstrapping a fresh external control plane:
+
+```bash
+kit=./agentlab-environment-kit
+mcpgit_lock="$kit/release/mcpgit/agentlab-dev-official-release.json"
+mcpgit_release="$kit/scripts/agentlab-mcpgit-official-release.py"
+
+python3 "$mcpgit_release" validate --lock "$mcpgit_lock"
+python3 "$mcpgit_release" fetch \
+  --lock "$mcpgit_lock" --platform linux-x64 \
+  --cache-dir "$HOME/.cache/agentlab/mcpgit-official"
+```
+
+Use `--platform linux-arm64` on an arm64 target. Keep the downloaded official
+release cache just like the AgentLab CAS; do not substitute an arbitrary
+`latest` MCPGit build. `assemble` is available in the same helper when the
+target workflow requires a local Docker image assembled from the verified
+official release.
+
+The fail-closed deployment preflight is part of installation, not an optional
+diagnostic. In particular:
+
+- regenerate private MCPGit and SessionFS credential projections from the
+  declared SafeGit authority with the packaged projector/reconcile tools;
+  never copy authorization bytes into a release asset or invent replacements;
+- repair a failed endpoint/route qualification at its owning external runtime;
+  a stale organization route or stale qualification receipt is not evidence of
+  compatibility;
+- on Docker Desktop/WSL and other layered hosts, verify a prerequisite path by
+  mounting the **exact path used by the descriptor** into a disposable
+  container. Do not assume that a similarly named WSL-user, Docker-VM, or host
+  namespace path is the one Docker bind mounts will resolve.
+
+For an MCPGit Gateway route, a useful bounded acceptance test is semantic, not
+just TCP reachability: the target DNS identity should resolve uniquely; an
+upgrade request for the qualified Organization Host without authorization
+should reach that route and be rejected as unauthorized; the same request with
+the projected authorization should complete the WebSocket upgrade. A route
+that resolves but selects an old/shared Gateway is still a failed dependency.
+
+Do not accept `docker ps` health alone as Harness readiness. Installation is
+complete only after the installer itself exits successfully and its final
+postcondition passes. If containers become healthy while installation is still
+running, inspect the bounded startup evidence for MCP seed and sandbox
+readiness rather than declaring success. Then run `health` and
+`probe-self-test`; only after those surfaces pass should a benchmark or real
+Code Agent be attached.
+
 `probe-self-test` proves the controllable probe module and installed tool
 surface; it is not a real provider call, checkpoint, Fork, or SQL result. Keep
 the explicit commands below as the auditable fallback and troubleshooting
@@ -179,7 +237,10 @@ scripts/agentlab-harness-quickstart.sh offline-install
 This removes only ALD instance state. Preserve the cache and content-addressed
 program volumes. The current preview still qualifies against the retained
 ALA00-owned MCPGit dependency; never remove or restart that dependency as part
-of an ALD uninstall/reinstall measurement.
+of an ALD uninstall/reinstall measurement. For a genuinely fresh environment,
+however, validate that retained dependency against the environment kit's
+MCPGit official-release lock before reuse. "Already running" is not a version
+or route-qualification guarantee.
 
 The AIWSL preview inherits the operator-owned `/share/.env` and joins it with
 descriptor-owned non-secret MCPGit controller values; installation may verify
