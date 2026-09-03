@@ -735,3 +735,41 @@ project `ohpm-install-plan` and `build-debug-plan` returned `ok=false`,
 `projectRootExists=false`. Keep the next step focused on `project.create`
 materializing a tiny valid Harmony template and then gated bounded execution for
 `ohpm.install` and `build.debug`.
+
+## Harmony ops HTTP service mode and hwlinux performance ceiling
+
+`616a68e` adds an experimental loopback HTTP service mode to the same
+`alharmony-ops` binary:
+
+```text
+alharmony-ops serve --bind 127.0.0.1:<port> --workers <N>
+GET /health
+GET /v1/ops/<operation>?projectRoot=...&harmonyHome=...&artifact=...
+```
+
+The service is dependency-free and reuses the same P0 receipt dispatch as the
+CLI. It is a preview transport: one request per TCP connection, `Connection:
+close`, fixed worker pool, no keep-alive, no UDS, no batching, and no real
+`ohpm`/`hvigor` mutation yet.
+
+hwlinux source-build deployment at commit `616a68e` used 12 service workers on
+`127.0.0.1:19741` and passed health plus HTTP receipt smoke for
+`artifact.inspect`, `project.verify`, and `ohpm.install` plan. The benchmark
+client was a local Rust close-connection HTTP generator. Stable short-run upper
+bounds observed on loopback were approximately: `/health` 85-88k RPS, p99 about
+1.8-2.0 ms at 64 client threads; `artifact.inspect` 74-77k RPS, p99 about
+2.3-2.8 ms at 64 threads; `project.verify` about 63k RPS, p99 about 3.3 ms at
+64 threads. `ohpm.install` plan was stable through the lower concurrency region
+and reached about 46.9k RPS at 8 threads, but 12+ threads repeatedly entered a
+long-tail/error region in the current close-connection transport. Treat 8-12
+concurrent `ohpm` plan requests as the current stability boundary, not as a
+production target.
+
+The first full matrix also exposed a benchmark design problem: without client
+connect/read/write timeouts, high-concurrency runs can hang while the service is
+already saturated. The follow-up timeout and isolated tests confirmed the
+throughput shape but also showed that frequent service restart/port churn can
+pollute results. Future performance work should add persistent connections or a
+Unix-domain-socket transport, bounded queue/backpressure receipts, and a native
+batch endpoint before retesting. Current results measure the HTTP transport more
+than the Rust operation core.
