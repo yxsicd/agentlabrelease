@@ -40,7 +40,13 @@ session implementation.
 For the AIWSL preview, use the immutable alpha.9 environment kit and the fixed
 `aldev` composition.
 
-This is an **AIWSL target preview**, not yet a generic zero-dependency Linux
+The public Quickstart now self-initializes the immutable Harmony Linux x64
+6.1.1.300 SDK volume when `vol-harmony` is absent. The asset is fetched from a
+GitHub Release with fixed byte count and SHA256, then extracted into a newly
+created Docker volume only after the receipt-bound runtime image is installed.
+An already present operator-owned `vol-harmony` remains untouched.
+
+This remains an **AIWSL-oriented target preview**, not yet a generic zero-dependency Linux
 bootstrap. A genuinely unrelated Linux host may satisfy Docker/x64 requirements
 and download every public asset successfully but still fail the deployment
 preflight because the descriptor intentionally expects target-owned dependencies

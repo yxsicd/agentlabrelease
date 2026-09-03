@@ -7,6 +7,12 @@ kit_name="agentlab-environment-kit-v0.1.0-alpha.9.tar.zst"
 probe_name="agentlab-ts-probe-v0.1.0-alpha.9.tar.zst"
 kit_sha="fcca40e0858bbbde7620ddec83db0dc525c62d597926dc27ef66b6dd54c27a73"
 probe_sha="029074b412bdaaccd069250949eec459861e685a5ef398fbbc30d4c7cbf4d2d3"
+harmony_version="6.1.1.300"
+harmony_name="harmony-linux-x64-6.1.1.300.tar.zst"
+harmony_sha="8fc2199afaea5055c6a3ff762b7b58a9475c5ff7b6c30285336014dc647927c2"
+harmony_bytes="989968633"
+harmony_url="https://github.com/yxsicd/agentlabrelease/releases/download/harmony-linux-x64-6.1.1.300/${harmony_name}"
+harmony_volume="vol-harmony"
 
 usage() {
   cat <<'EOF'
@@ -162,6 +168,7 @@ work="${root}/work"
 lock="${downloads}/agentlab-aldev-environment-lock.json"
 kit="${downloads}/${kit_name}"
 probe="${downloads}/${probe_name}"
+harmony_archive="${downloads}/${harmony_name}"
 receipt="${work}/composition-install-receipt.json"
 kit_dir="${work}/agentlab-environment-kit"
 probe_dir="${work}/external-brain-ts"
@@ -323,6 +330,75 @@ reset_instance() {
     --release-id alpha9-quickstart-v1 || return 1
 }
 
+harmony_volume_exists() {
+  docker volume inspect "${harmony_volume}" >/dev/null 2>&1
+}
+
+install_harmony_volume() {
+  local runtime_image created=0 marker
+  harmony_volume_exists && return 0
+  [[ -f "${harmony_archive}" ]] || {
+    echo "Harmony archive is unavailable: ${harmony_archive}" >&2
+    return 1
+  }
+  [[ "$(sha256_file "${harmony_archive}")" == "${harmony_sha}" ]] || {
+    echo "Harmony archive digest mismatch" >&2
+    return 1
+  }
+  [[ "$(wc -c < "${harmony_archive}" | tr -d ' ')" == "${harmony_bytes}" ]] || {
+    echo "Harmony archive byte count mismatch" >&2
+    return 1
+  }
+  runtime_image="$(python3 - "${receipt}" <<'PY2'
+import json,pathlib,sys
+r=json.loads(pathlib.Path(sys.argv[1]).read_text())
+row=next((x for x in r.get('images',[]) if x.get('slot')=='runtime'),None)
+if not row or not row.get('reference'): raise SystemExit(1)
+print(row['reference'])
+PY2
+)" || return 1
+  docker image inspect "${runtime_image}" >/dev/null 2>&1 || {
+    echo "runtime image must be installed before Harmony volume initialization" >&2
+    return 1
+  }
+  docker volume create "${harmony_volume}" >/dev/null || return 1
+  created=1
+  if ! zstd --long=30 -dc -- "${harmony_archive}" | \
+      docker run --rm -i --network=none -v "${harmony_volume}:/target" \
+        --entrypoint tar "${runtime_image}" -xf - -C /target; then
+    [[ "${created}" == 1 ]] && docker volume rm "${harmony_volume}" >/dev/null 2>&1 || true
+    echo "Harmony volume extraction failed" >&2
+    return 1
+  fi
+  marker="harmony-${harmony_version}-${harmony_sha}"
+  if ! docker run --rm --network=none -v "${harmony_volume}:/target" \
+      --entrypoint sh "${runtime_image}" -ceu \
+      'test -x /target/bin/ohpm; test -x /target/ohpm/bin/ohpm; mkdir -p /target/.agentlab-harmony; printf "%s\n" "$1" > /target/.agentlab-harmony/READY' \
+      sh "${marker}"; then
+    [[ "${created}" == 1 ]] && docker volume rm "${harmony_volume}" >/dev/null 2>&1 || true
+    echo "Harmony volume postcondition failed" >&2
+    return 1
+  fi
+}
+
+acquire_harmony_online() {
+  harmony_volume_exists && return 0
+  download_verified "${harmony_url}" "${harmony_archive}" "${harmony_sha}"
+  [[ "$(wc -c < "${harmony_archive}" | tr -d ' ')" == "${harmony_bytes}" ]] || {
+    echo "Harmony asset byte count mismatch" >&2
+    return 1
+  }
+}
+
+require_harmony_offline() {
+  harmony_volume_exists && return 0
+  require_cached "${harmony_archive}" "${harmony_sha}" || return 1
+  [[ "$(wc -c < "${harmony_archive}" | tr -d ' ')" == "${harmony_bytes}" ]] || {
+    echo "offline Harmony asset byte count mismatch" >&2
+    return 1
+  }
+}
+
 acquire_online_assets() {
   download_verified \
     "https://github.com/${release_repo}/releases/download/${version}/${kit_name}" \
@@ -361,8 +437,10 @@ if [[ "${action}" == "online-install" || "${action}" == "offline-install" ]]; th
   if [[ "${action}" == "online-install" ]]; then
     require_command curl
     run_timed acquire-control-assets acquire_online_assets
+    run_timed acquire-harmony acquire_harmony_online
   else
     run_timed verify-cached-assets verify_offline_assets
+    run_timed verify-harmony require_harmony_offline
   fi
   require_command agentlabctl
 
@@ -382,6 +460,7 @@ if [[ "${action}" == "online-install" || "${action}" == "offline-install" ]]; th
     --dir "${root}/acquired-aldev" \
     --platform linux-x64 \
     --receipt "${receipt}"
+  run_timed install-harmony install_harmony_volume
   # install performs the same fail-closed aggregate preflight immediately
   # before mutation. Running qualify here duplicated that full check and added
   # about 13 seconds to every cached installation.
