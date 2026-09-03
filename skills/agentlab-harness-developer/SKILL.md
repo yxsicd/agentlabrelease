@@ -632,3 +632,47 @@ project from a public HTTPS URL, build an unsigned debug HAP on emulator, deploy
 launch, and capture page-readiness/navigation probe evidence. Physical-device
 or AGC upload flows require explicit external signing/credential setup and are
 not part of the default AgentLab public offline install.
+
+## AgentLab Harmony Ops source pointer and release policy
+
+AgentLab now carries an `alharmony` source-pointer channel for the Harmony
+engineering atomic-operation layer. This is deliberately separate from both the
+HarmonyOS `atomicService` carrier and the upper Web2Atomic pipe.
+
+Machine-readable pointer:
+
+```text
+release/alharmony/agentlab-harmony-ops-source-pointer.json
+```
+
+Primary source authority:
+
+- `https://github.com/yxsorg/asrelease.git`, `origin/main`, commit
+  `374ab3cf2bdd3c31418997adfdd1aaa13ac8f550` for Rust/native Harmony
+  engineering operation and runtime sources.
+- `https://github.com/yxsorg/asrelease.git`,
+  `origin/research/web2atomic-nextgen`, commit
+  `555424b94a02b408b09a4a138f95b3f002a12a8c` for the upper Web2Atomic pipeline.
+
+Content pointers include `web2atomic/crates`, the website-operation harness
+schema, the framework-runtime-profile generated host APIs, native framework and
+native content-cache maintainer Skills, and `web2atomic-kit` as the upper pipe.
+
+Release layering is strict:
+
+1. P0 `alharmony-ops-core`: Rust-owned basic Harmony project/build atoms
+   (`env.status`, `project.create`, `project.verify`, `ohpm.install`,
+   `build.debug`, `artifact.inspect`).
+2. P1 `alharmony-target-ops`: emulator/device/deploy/launch/probe atoms.
+3. P2 `alharmony-release-ops`: packaging, signing, AGC planning, and physical
+   flows behind explicit authority gates.
+4. P3 `alweb2atomic-kit`: upper pipeline that consumes the lower Harmony atoms;
+   it must not define or hide the base project/build layer.
+
+Future Rust service or CLI artifacts for this layer must be published through
+AgentLab release metadata under `alharmony`, then added to `aloffline` only
+after bytes, SHA256, smoke evidence, and a non-destructive readiness or
+install-plan check exist. Do not bake these assets into the AgentLab runtime
+image, and do not include `node_modules`, generated project outputs, AGC
+credentials, signing keys, physical-device identity, cookies, or website
+sessions in public release assets.

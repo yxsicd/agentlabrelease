@@ -1,0 +1,162 @@
+{
+  "schema": "agentlab.harmony_ops_source_pointer.v1",
+  "channel": "alharmony",
+  "status": "source-pointer-only",
+  "createdAt": "2026-09-03T15:48:00Z",
+  "purpose": "Point AgentLab at the asrelease Harmony engineering atomic-operation sources and define how the future Rust service will be published with AgentLab.",
+  "authority": {
+    "sourceRepository": "https://github.com/yxsorg/asrelease.git",
+    "maintainerWorkspace": "M4 Mac: ~/code/asrelease",
+    "primaryHarmonyOpsRef": {
+      "ref": "origin/main",
+      "branch": "main",
+      "observedCommit": "374ab3cf2bdd3c31418997adfdd1aaa13ac8f550",
+      "role": "Rust/native Harmony engineering operation and runtime source authority"
+    },
+    "upperPipelineRef": {
+      "ref": "origin/research/web2atomic-nextgen",
+      "branch": "research/web2atomic-nextgen",
+      "observedCommit": "555424b94a02b408b09a4a138f95b3f002a12a8c",
+      "role": "Web2Atomic upper pipeline, OpenCode adapter, templates, workflow, and release tooling"
+    },
+    "relatedResearchRefs": [
+      {
+        "ref": "origin/research/wasm-runtime-performance",
+        "branch": "research/wasm-runtime-performance",
+        "observedCommit": "eb580581ffd36744835c4e2e60c55050d5101f5e",
+        "role": "WASM/native runtime performance research; not the default release source"
+      },
+      {
+        "ref": "origin/research/composite-experience-ir",
+        "branch": "research/composite-experience-ir",
+        "observedCommit": "2fe6b491b7d4a99f77ed501d415b7f4fc999169a",
+        "role": "Composite experience IR research; not the default release source"
+      }
+    ]
+  },
+  "contentPointers": [
+    {
+      "id": "harmony-rust-workspace",
+      "ref": "origin/main",
+      "path": "web2atomic/crates",
+      "observedFileCount": 77,
+      "releaseRole": "Rust workspace for alharmony-ops-core and future native/runtime carriers",
+      "notableCrates": [
+        "arkweb_cdp",
+        "arkweb_cdp_gateway",
+        "diagnostic_proxy",
+        "native_runtime_bundle",
+        "native_translation",
+        "nativefeed_acquisition",
+        "nativefeed_cli",
+        "nativefeed_compiler",
+        "nativefeed_remote_server",
+        "nativefeed_runtime",
+        "nativefeed_runtime_ffi",
+        "no_key_api"
+      ]
+    },
+    {
+      "id": "operation-harness-schema",
+      "ref": "origin/main",
+      "path": "web2atomic/model-templates/shared/website-operation-harness/schemas/harness.schema.json",
+      "observedFileCount": 1,
+      "releaseRole": "Operation/session/semantic-receipt schema seed for alharmony-ops-core receipts"
+    },
+    {
+      "id": "framework-runtime-profile",
+      "ref": "origin/main",
+      "path": "web2atomic/model-templates/shared/framework-runtime-profile",
+      "observedFileCount": 8,
+      "releaseRole": "Generated host capability declarations for Rust/ArkTS/TypeScript alignment"
+    },
+    {
+      "id": "native-framework-maintainer-skill",
+      "ref": "origin/main",
+      "path": ".agents/skills/asrelease-native-framework",
+      "observedFileCount": 9,
+      "releaseRole": "Maintainer guidance for native framework, operation sessions, placement, and boundaries"
+    },
+    {
+      "id": "native-content-cache-skill",
+      "ref": "origin/main",
+      "path": ".agents/skills/asrelease-native-content-cache",
+      "observedFileCount": 4,
+      "releaseRole": "Maintainer guidance for nativefeed/cache/runtime ownership"
+    },
+    {
+      "id": "web2atomic-upper-pipe",
+      "ref": "origin/research/web2atomic-nextgen",
+      "path": "web2atomic-kit",
+      "observedFileCount": 302,
+      "releaseRole": "Upper pipeline only: TypeScript/OpenCode/templates/workflow/release; consumes Harmony atoms, does not define the base layer"
+    }
+  ],
+  "layering": [
+    {
+      "level": "P0",
+      "payload": "alharmony-ops-core",
+      "status": "planned",
+      "priority": "first",
+      "scope": "Basic Harmony engineering primitives: environment, project, dependency, build, and artifact inspection.",
+      "operations": [
+        "harmony.env.status",
+        "harmony.project.create",
+        "harmony.project.verify",
+        "harmony.ohpm.install",
+        "harmony.build.debug",
+        "harmony.artifact.inspect"
+      ]
+    },
+    {
+      "level": "P1",
+      "payload": "alharmony-target-ops",
+      "status": "planned_after_p0",
+      "scope": "Local target execution after project/build atoms are stable.",
+      "operations": [
+        "harmony.device.list",
+        "harmony.deploy",
+        "harmony.launch",
+        "harmony.probe.readiness"
+      ]
+    },
+    {
+      "level": "P2",
+      "payload": "alharmony-release-ops",
+      "status": "gated_future",
+      "scope": "Packaging, signing, AGC planning, and physical-device flows behind explicit authority gates.",
+      "operations": []
+    },
+    {
+      "level": "P3",
+      "payload": "alweb2atomic-kit",
+      "status": "upper_pipe_future",
+      "scope": "Web2Atomic pipeline consumes Harmony atoms for Web-to-Harmony generation and validation. It must not hide or replace the base project/build layer.",
+      "operations": []
+    }
+  ],
+  "publishPolicy": {
+    "mustPublishWithAgentLab": true,
+    "agentLabReleaseChannel": "alharmony",
+    "offlineClosureGroupWhenReady": "harmony-ops",
+    "defaultPackaging": "small Rust CLI/service payload plus manifest; do not bake into AgentLab runtime image",
+    "allowedFutureAssetKinds": [
+      "rust-cli",
+      "rust-service-binary",
+      "docker-volume-tool",
+      "container-image-if-service-needs-daemon",
+      "schema-and-receipt-pack"
+    ],
+    "forbiddenContents": [
+      "node_modules",
+      "generated project outputs",
+      "AGC credentials",
+      "signing private keys",
+      "certificates/profiles unless explicitly public test fixtures",
+      "physical device identity",
+      "cookies",
+      "website sessions"
+    ],
+    "activationRule": "Do not add executable alharmony assets to aloffline until the Rust service or CLI has a built artifact with bytes, SHA256, smoke evidence, and a non-destructive install-plan/readiness check."
+  }
+}
