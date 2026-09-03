@@ -470,3 +470,30 @@ Use `scripts/agentlab-offline-closure.py resolve` to create a resolved snapshot
 and `verify-cache` to fail closed on any missing/changed cached asset. This is a
 control-layer resolver; bulk fetch should continue to use AgentLab's resumable
 asset fetch primitive rather than ad-hoc unverified curl downloads.
+
+
+### Release-side offline CLI status
+
+Until the `agentlabctl` source tree is available in the current maintenance
+workspace, `scripts/agentlab-offline-closure.py` is the authoritative
+release-side compatibility CLI for the offline closure. It now supports:
+
+- `resolve`: flatten the top-level closure plus child manifests into an
+  immutable resolved snapshot;
+- `fetch`: download all assets into `assets/<group>/<filename>` with bounded
+  parallelism, `.part` files, resume, byte-count checks, and SHA256 checks;
+- `verify`: fail closed against the grouped cache layout;
+- `report`: emit exactly one machine-readable JSON report for operators;
+- `stage-quickstart`: create a symlink/copy staging root with `downloads/` and
+  `bin/agentlabctl` for the existing Quickstart offline installer.
+
+Validation on hwlinux used the previously fetched 19-asset Linux-x64 cache. The
+new CLI verified all 1,692,135,254 bytes, generated a single JSON report, and
+created a seven-item Quickstart staging root without duplicating the large
+Harmony asset. This fixes the earlier proof-of-concept mismatch where
+`verify-cache` assumed a flat directory even though the tested cache layout was
+`assets/<group>/...`.
+
+Do not claim `agentlabctl offline ...` exists until the real `agentlabctl` source
+is recovered and rebuilt. The release-side CLI is the compatibility bridge and
+should later be ported into the Rust binary with the same command semantics.
