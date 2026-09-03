@@ -505,3 +505,5 @@ is recovered and rebuilt. The release-side CLI is the compatibility bridge and
 should later be ported into the Rust binary with the same command semantics.
 
 The offline staging wrappers invoke the Quickstart through `bash` rather than relying on the GitHub-downloaded script retaining executable permissions.
+
+Release-side offline fetch appends the expected SHA256 as a query parameter to GitHub Release URLs. This avoids stale edge-cache bytes after same-name control assets are clobbered; immutable/versioned asset names are still preferred for operator entrypoints.

@@ -23,7 +23,8 @@ import urllib.request
 
 DEFAULT_CLOSURE_URL = (
     "https://github.com/yxsicd/agentlabrelease/releases/download/aloffline/"
-    "agentlab-offline-linux-x64.json"
+    "agentlab-offline-linux-x64.json?agentlab_sha="
+    "91e7d13863b8188188ad16f78a0df45e1d61fc4891dd2f3d0f06415f7e1535ee"
 )
 DEFAULT_RESOLVER_URL = (
     "https://github.com/yxsicd/agentlabrelease/releases/download/aloffline/"
@@ -32,6 +33,15 @@ DEFAULT_RESOLVER_URL = (
 BASE_RELEASE_URL = "https://github.com/yxsicd/agentlabrelease/releases/download"
 RESOLVED_SCHEMA = "agentlab.offline_closure_resolved.v1"
 FETCH_REPORT_SCHEMA = "agentlab.offline_fetch_report.v1"
+
+
+def digest_busted_url(url: str, sha256: str) -> str:
+    parts = urllib.parse.urlsplit(url)
+    query = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
+    query.append(("agentlab_sha", sha256))
+    return urllib.parse.urlunsplit(
+        (parts.scheme, parts.netloc, parts.path, urllib.parse.urlencode(query), parts.fragment)
+    )
 
 
 def sha256_file(path: pathlib.Path) -> str:
@@ -74,7 +84,7 @@ def resolve_closure(source: str | pathlib.Path) -> dict:
     manifests = []
     for ref in closure["manifestRefs"]:
         meta = ref["manifest"]
-        blob = read_url(meta["url"])
+        blob = read_url(digest_busted_url(meta["url"], meta["sha256"]))
         validate_blob(blob, meta, ref["group"] + " manifest")
         manifest = json.loads(blob)
         manifests.append({"group": ref["group"], **meta})
@@ -188,7 +198,7 @@ def curl_fetch(asset: dict, output: pathlib.Path) -> tuple[str, int]:
         "-",
         "-o",
         str(partial),
-        asset["url"],
+        digest_busted_url(asset["url"], asset["sha256"]),
     ]
     proc = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
     if proc.returncode:
