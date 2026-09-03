@@ -490,7 +490,10 @@ release-side compatibility CLI for the offline closure. It now supports:
 Validation on hwlinux used the previously fetched 19-asset Linux-x64 cache. The
 new CLI verified all 1,692,135,254 bytes, generated a single JSON report, and
 created a seven-item Quickstart staging root without duplicating the large
-Harmony asset. This fixes the earlier proof-of-concept mismatch where
+Harmony asset. The published `aloffline` script was then downloaded back from
+GitHub, verified by SHA/size, and run against the same cache; `resolve`,
+`verify`, and `report` passed. A repeat `fetch --root` over the already complete
+cache finished in about 2.04 seconds with 19/19 assets OK and no redownload. This fixes the earlier proof-of-concept mismatch where
 `verify-cache` assumed a flat directory even though the tested cache layout was
 `assets/<group>/...`.
 

@@ -227,7 +227,7 @@ def fetch_assets(root: pathlib.Path, resolved: dict, jobs: int) -> dict:
         for future in concurrent.futures.as_completed(futures):
             item = future.result()
             results.append(item)
-            print(f"{item['group']}\t{item['filename']}\t{item['status']}\t{item.get('bytes', 0)}", flush=True)
+            print(f"{item['group']}\t{item['filename']}\t{item.get('action', '')}\t{item['status']}\t{item.get('bytes', 0)}", flush=True)
     bad = [item for item in results if item["status"] != "ok"]
     report = {
         "schema": FETCH_REPORT_SCHEMA,
