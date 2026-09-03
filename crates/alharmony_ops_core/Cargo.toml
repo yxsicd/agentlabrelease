@@ -1,0 +1,13 @@
+[package]
+name = "alharmony_ops_core"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "alharmony_ops_core"
+path = "src/lib.rs"
+
+[[bin]]
+name = "alharmony-ops"
+path = "src/main.rs"

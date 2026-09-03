@@ -1,2 +1,5 @@
 dist/
 *.part
+# Rust build output
+/target/
+**/target/

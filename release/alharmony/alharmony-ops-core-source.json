@@ -1,0 +1,41 @@
+{
+  "schema": "agentlab.alharmony_ops_core_source.v1",
+  "status": "absorbed-source",
+  "createdAt": "2026-09-03T15:55:00Z",
+  "agentLabCrate": "crates/alharmony_ops_core",
+  "crateName": "alharmony_ops_core",
+  "binaryName": "alharmony-ops",
+  "absorbedFrom": {
+    "repository": "https://github.com/yxsorg/asrelease.git",
+    "ref": "origin/main",
+    "observedCommit": "374ab3cf2bdd3c31418997adfdd1aaa13ac8f550",
+    "paths": [
+      "web2atomic/crates",
+      "web2atomic/model-templates/shared/website-operation-harness",
+      "web2atomic/model-templates/shared/framework-runtime-profile",
+      ".agents/skills/asrelease-native-framework",
+      ".agents/skills/asrelease-native-content-cache"
+    ]
+  },
+  "p0Operations": [
+    "harmony.env.status",
+    "harmony.project.create",
+    "harmony.project.verify",
+    "harmony.ohpm.install",
+    "harmony.build.debug",
+    "harmony.artifact.inspect"
+  ],
+  "boundary": {
+    "web2atomicRole": "upper-pipe-only",
+    "nativeRuntimeRole": "future optional carrier after ops-core stabilizes",
+    "forbiddenPublicContents": [
+      "node_modules",
+      "generated project outputs",
+      "AGC credentials",
+      "signing keys",
+      "physical device identity",
+      "cookies",
+      "website sessions"
+    ]
+  }
+}

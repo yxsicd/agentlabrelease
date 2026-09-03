@@ -676,3 +676,20 @@ install-plan check exist. Do not bake these assets into the AgentLab runtime
 image, and do not include `node_modules`, generated project outputs, AGC
 credentials, signing keys, physical-device identity, cookies, or website
 sessions in public release assets.
+
+## Absorbed Harmony ops-core crate
+
+AgentLab now owns `crates/alharmony_ops_core` as the P0 Rust base layer for
+Harmony engineering atoms.  It was created from the asrelease architecture and
+contract boundary, not by copying the full asrelease repository.  The crate
+currently provides the `alharmony-ops` CLI/library skeleton for
+`harmony.env.status`, `harmony.project.create`, `harmony.project.verify`,
+`harmony.ohpm.install`, `harmony.build.debug`, and
+`harmony.artifact.inspect`.  The first implementation is dependency-free,
+emits typed `agentlab.harmony_ops.receipt.v1` JSON receipts, and keeps
+`ohpm.install` and `build.debug` as non-destructive command plans until command
+execution gates are stabilized.  M4 smoke passed `cargo test`, JSON receipt
+checks for five commands, and a native release build; do not publish the M4
+binary as Linux-x64.  Build platform-specific release assets separately and add
+them to `alharmony`/`aloffline` only after exact bytes, SHA256, smoke evidence,
+and install-plan/readiness evidence exist.

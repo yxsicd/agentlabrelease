@@ -43,3 +43,12 @@ Harmony CLI/SDK substrate for `/opt/harmony` and `vol-harmony`, with smoke paths
 for `hvigorw`, `ohpm`, and `hdc`. Its historical filename mentions Web2Atomic,
 but the new Rust operation service is a separate future payload and must publish
 through `alharmony-ops-core` metadata before entering `aloffline`.
+
+## Absorbed Rust ops-core crate
+
+AgentLab now owns the P0 Rust crate at `crates/alharmony_ops_core`.  It exposes
+`alharmony-ops` as a dependency-free CLI/library skeleton for the basic Harmony
+project/build atoms.  The first implementation emits typed JSON receipts and
+non-destructive command plans; command mutation is intentionally deferred until
+receipt gates are stable.  Platform-specific binaries must be built and
+published as separate `alharmony` assets before entering `aloffline`.

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.local/schemas/alharmony-ops-core/receipt.v1",
+  "title": "AgentLab Harmony Ops Core Receipt",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema", "operation", "ok", "sideEffect", "nextAction"],
+  "properties": {
+    "schema": { "const": "agentlab.harmony_ops.receipt.v1" },
+    "operation": { "type": "string", "minLength": 1 },
+    "ok": { "type": "boolean" },
+    "sideEffect": { "enum": ["read-only", "workspace-write", "local-process", "device-write", "external-write"] },
+    "nextAction": { "type": ["string", "null"] },
+    "recoveryOwner": { "enum": ["agent", "user", "environment", "none"] },
+    "diagnostics": { "type": "array", "items": { "type": "string" } },
+    "evidence": { "type": "object" }
+  }
+}
