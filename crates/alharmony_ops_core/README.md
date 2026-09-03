@@ -77,3 +77,28 @@ more reliable than accept-queue-only backpressure because TCP backlog and accept
 scheduling may let a client connect before the service has accepted the socket.
 When the active request limit is reached, the service returns HTTP 503 with
 `activeRequestLimit`.
+
+## Task lifecycle
+
+Task isolation is now a first-class service lifecycle, not only a path check.
+Start the service with `--task-root <dir>`, then prepare one sandbox per atomic
+unit:
+
+```text
+GET /v1/ops/harmony.task.prepare?taskId=<atom-task-id>
+```
+
+`harmony.task.prepare` creates:
+
+```text
+<task-root>/<taskId>/task.json
+<task-root>/<taskId>/workspace/
+<task-root>/<taskId>/artifacts/
+<task-root>/<taskId>/tmp/
+<task-root>/<taskId>/receipts/events.jsonl
+```
+
+Every path-bearing operation must stay under the task sandbox and writes a
+compact receipt event to that task's `receipts/events.jsonl`. Batch requests
+validate task scope once and log only the final receipt, preserving high
+concurrency while still leaving a task-local audit trail.

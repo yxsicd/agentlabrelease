@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Component, Path, PathBuf};
@@ -6,7 +7,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::TrySendError;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use alharmony_ops_core::{
     artifact_inspect, build_debug_plan, env_status, ohpm_install_plan, project_create_plan,
@@ -410,6 +411,7 @@ fn validate_task_for_operation(
 ) -> Result<Option<TaskScope>, String> {
     match operation {
         "harmony.env.status" => Ok(None),
+        "harmony.task.prepare" => validate_task_prepare(config, params),
         "harmony.project.create" | "harmony.project.verify" => {
             let root = required_param_path(params, "projectRoot")?;
             validate_task_paths(config, params, &[("projectRoot", &root)])
@@ -434,6 +436,14 @@ fn dispatch_http_with_task(
 ) -> Result<Receipt, String> {
     match operation {
         "harmony.env.status" => Ok(env_status(param_path(params, "harmonyHome").as_deref())),
+        "harmony.task.prepare" => {
+            let Some(task) = task else {
+                return Err("task isolation must be enabled for harmony.task.prepare".into());
+            };
+            let receipt = task_prepare(task)?;
+            append_task_receipt(task, &receipt);
+            Ok(receipt)
+        }
         "harmony.project.create" => {
             let root = required_param_path(params, "projectRoot")?;
             let bundle = params
@@ -469,6 +479,155 @@ fn dispatch_http_with_task(
         }
         _ => Err(format!("unknown operation: {operation}")),
     }
+}
+
+fn validate_task_prepare(
+    config: &ServiceConfig,
+    params: &BTreeMap<String, String>,
+) -> Result<Option<TaskScope>, String> {
+    let Some(task_root) = &config.task_root else {
+        return Err("harmony.task.prepare requires service --task-root".into());
+    };
+    let task_id = params
+        .get("taskId")
+        .ok_or_else(|| "missing query parameter: taskId".to_string())?;
+    validate_task_id(task_id)?;
+    Ok(Some(TaskScope {
+        task_id: task_id.clone(),
+        root: normalize_path(&task_root.join(task_id)),
+    }))
+}
+
+fn task_prepare(task: &TaskScope) -> Result<Receipt, String> {
+    for rel in ["workspace", "artifacts", "tmp", "receipts"] {
+        fs::create_dir_all(task.root.join(rel))
+            .map_err(|error| format!("failed to create task sandbox {rel}: {error}"))?;
+    }
+    let mut manifest = BTreeMap::new();
+    manifest.insert("taskId".into(), JsonValue::string(task.task_id.clone()));
+    manifest.insert(
+        "taskRoot".into(),
+        JsonValue::string(task.root.display().to_string()),
+    );
+    manifest.insert(
+        "workspace".into(),
+        JsonValue::string(task.root.join("workspace").display().to_string()),
+    );
+    manifest.insert(
+        "artifacts".into(),
+        JsonValue::string(task.root.join("artifacts").display().to_string()),
+    );
+    manifest.insert(
+        "tmp".into(),
+        JsonValue::string(task.root.join("tmp").display().to_string()),
+    );
+    manifest.insert(
+        "receipts".into(),
+        JsonValue::string(task.root.join("receipts").display().to_string()),
+    );
+    manifest.insert(
+        "preparedAtUnixMillis".into(),
+        JsonValue::Number(now_millis()),
+    );
+    let task_json = json_object_pretty(&manifest);
+    fs::write(task.root.join("task.json"), task_json)
+        .map_err(|error| format!("failed to write task manifest: {error}"))?;
+    let receipt = Receipt::new(
+        "harmony.task.prepare",
+        alharmony_ops_core::SideEffect::WorkspaceWrite,
+    )
+    .evidence("task", JsonValue::Object(manifest))
+    .next("harmony.project.create");
+    Ok(receipt)
+}
+
+fn append_task_receipt(task: &TaskScope, receipt: &Receipt) {
+    let receipts_dir = task.root.join("receipts");
+    if fs::create_dir_all(&receipts_dir).is_err() {
+        return;
+    }
+    let json = compact_json(&receipt.to_json_pretty());
+    let line = format!(
+        r#"{{"tsUnixMillis":{},"operation":"{}","ok":{},"receipt":{}}}
+"#,
+        now_millis(),
+        json_escape(receipt.operation),
+        if receipt.ok { "true" } else { "false" },
+        json
+    );
+    if let Ok(mut file) = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(receipts_dir.join("events.jsonl"))
+    {
+        let _ = file.write_all(line.as_bytes());
+    }
+}
+
+fn compact_json(value: &str) -> String {
+    value.lines().map(str::trim).collect::<String>()
+}
+
+fn json_object_pretty(map: &BTreeMap<String, JsonValue>) -> String {
+    let value = JsonValue::Object(map.clone());
+    let mut out = String::new();
+    write_json_value(&mut out, &value, 0);
+    out.push('\n');
+    out
+}
+
+fn write_json_value(out: &mut String, value: &JsonValue, indent: usize) {
+    match value {
+        JsonValue::Null => out.push_str("null"),
+        JsonValue::Bool(v) => out.push_str(if *v { "true" } else { "false" }),
+        JsonValue::Number(v) => out.push_str(&v.to_string()),
+        JsonValue::String(v) => {
+            out.push('"');
+            out.push_str(&json_escape(v));
+            out.push('"');
+        }
+        JsonValue::Array(items) => {
+            out.push('[');
+            for (idx, item) in items.iter().enumerate() {
+                if idx != 0 {
+                    out.push_str(", ");
+                }
+                write_json_value(out, item, indent);
+            }
+            out.push(']');
+        }
+        JsonValue::Object(map) => {
+            if map.is_empty() {
+                out.push_str("{}");
+                return;
+            }
+            out.push_str("{\n");
+            for (idx, (key, item)) in map.iter().enumerate() {
+                for _ in 0..indent + 1 {
+                    out.push_str("  ");
+                }
+                out.push('"');
+                out.push_str(&json_escape(key));
+                out.push_str("\": ");
+                write_json_value(out, item, indent + 1);
+                if idx + 1 != map.len() {
+                    out.push(',');
+                }
+                out.push('\n');
+            }
+            for _ in 0..indent {
+                out.push_str("  ");
+            }
+            out.push('}');
+        }
+    }
+}
+
+fn now_millis() -> i128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis() as i128)
+        .unwrap_or(0)
 }
 
 fn validate_task_paths(
@@ -526,7 +685,9 @@ fn add_task_evidence(receipt: Receipt, task: Option<&TaskScope>) -> Receipt {
         JsonValue::string(task.root.display().to_string()),
     );
     evidence.insert("pathIsolation".into(), JsonValue::Bool(true));
-    receipt.evidence("task", JsonValue::Object(evidence))
+    let receipt = receipt.evidence("task", JsonValue::Object(evidence));
+    append_task_receipt(task, &receipt);
+    receipt
 }
 
 fn normalize_path(path: &Path) -> PathBuf {

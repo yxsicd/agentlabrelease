@@ -837,3 +837,16 @@ single-request batch wall throughput: no-isolation `project.verify` about
 `ohpm.install` plan about 265.4k ops/sec, isolated `ohpm.install` plan about
 260.6k ops/sec. Treat this as preview transport evidence; no real `ohpm` or
 `hvigor` mutation is enabled.
+
+## Harmony atom task lifecycle
+
+The service now treats each Harmony atom service call sequence as an isolated
+task sandbox. `harmony.task.prepare` requires `--task-root` and `taskId`, creates
+`workspace/`, `artifacts/`, `tmp/`, `receipts/`, and a `task.json` manifest under
+`<task-root>/<taskId>`, then returns a normal receipt with
+`nextAction=harmony.project.create`. Task-scoped operations append compact JSONL
+receipt events to `<task-root>/<taskId>/receipts/events.jsonl`; batch requests
+validate the scope once and only log the final receipt so batch throughput does
+not collapse. M4 smoke verified sandbox creation, manifest creation, receipt log
+validity, normal op logging, batch lastReceipt task evidence, and cross-task
+path rejection.
