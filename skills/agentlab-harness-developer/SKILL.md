@@ -77,6 +77,29 @@ access after the first acquisition, use:
 scripts/agentlab-harness-quickstart.sh offline-install
 ```
 
+For repeated destructive testing on a host whose immutable assets,
+composition receipt, CAS, and external MCPGit/SafeGit control plane have
+already been qualified, prefer the narrower instance-only path:
+
+```bash
+scripts/agentlab-harness-quickstart.sh reinstall-instance
+```
+
+`reinstall-instance` deliberately skips compressed-asset verification,
+unpacking, composition fetch, and `composition install-docker`. It removes only
+the ALD instance data, SessionFS instance state, and deployment control state,
+then reinstalls from the retained exact composition receipt. Use it for
+repeatability and performance loops, not for proving that a fresh host can
+acquire the release. If this narrow path fails a deployment preflight or
+runtime postcondition, repair the retained external dependency rather than
+falling back to an unpinned or weakened configuration.
+
+The destructive fast path must use explicit error propagation on every
+precondition and uninstall step. Do not rely on Bash `set -e` inside a helper
+invoked by a conditional timing wrapper such as `if helper; then ...`: Bash
+suppresses errexit semantics in that context. A failed qualification probe must
+return before the first destructive operation.
+
 Treat a fresh environment as a **release-locked dependency closure**, not as
 "the newest AgentLab container". The environment descriptor, composition lock,
 and the MCPGit official-release lock shipped inside the environment kit are

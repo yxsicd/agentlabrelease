@@ -15,6 +15,9 @@ Usage: agentlab-harness-quickstart.sh ACTION [--root DIR] [--instance ald00]
 Actions:
   online-install   Download missing immutable assets, install ald00, and check health.
   offline-install  Use only previously downloaded assets, install ald00, and check health.
+  reinstall-instance
+                   Recreate only ald00 instance state using the retained verified
+                   kit, composition receipt, CAS, and external control plane.
   health           Read-only health check for the installed composition.
   probe-self-test  Run the downloaded deterministic TypeScript probe tests with Bun.
 
@@ -81,7 +84,7 @@ while (( $# )); do
 done
 
 case "${action}" in
-  online-install|offline-install|health|probe-self-test) ;;
+  online-install|offline-install|reinstall-instance|health|probe-self-test) ;;
   *)
     echo "unknown action: ${action}" >&2
     usage >&2
@@ -174,6 +177,109 @@ unpack_assets() {
   zstd -dc -- "${probe}" | tar -xf - -C "${work}"
 }
 
+require_prepared_install() {
+  [[ -s "${receipt}" ]] || {
+    echo "composition receipt is missing; run online-install or offline-install first" >&2
+    return 1
+  }
+  [[ -x "${kit_dir}/agentlab-env" ]] || {
+    echo "prepared environment kit is missing; run online-install or offline-install first" >&2
+    return 1
+  }
+  [[ -d "${root}/acquired-aldev" ]] || {
+    echo "prepared composition is missing; run online-install or offline-install first" >&2
+    return 1
+  }
+}
+
+validate_retained_control_plane() {
+  local config expected_host expected_url secret_root image_ref target_host target_port docker_network
+  config="${kit_dir}/release/agentweb/aiwsl-agentlab.json"
+  IFS=$'\t' read -r expected_host expected_url secret_root image_ref target_host target_port docker_network < <(
+    python3 - "${config}" "${receipt}" "${instance}" <<'PY'
+import json, pathlib, sys
+config = json.loads(pathlib.Path(sys.argv[1]).read_text())
+receipt = json.loads(pathlib.Path(sys.argv[2]).read_text())
+dep = config["deployments"][sys.argv[3]]
+controller = dep.get("controllerEnvironment") or {}
+loopback = dep.get("mcpgitLoopback") or {}
+images = receipt.get("images") or []
+runtime = next((row for row in images if row.get("slot") == "runtime"), None)
+values = (
+    controller.get("MCPGIT_GLOBAL_ORGANIZATION_HOST"),
+    controller.get("MCPGIT_GLOBAL_SERVICE_URL"),
+    loopback.get("secretHostDir"),
+    runtime.get("reference") if runtime else None,
+    loopback.get("targetHost"),
+    str(loopback.get("targetPort")) if loopback.get("targetPort") is not None else None,
+    config.get("target", {}).get("dockerNetwork") or "armnet",
+)
+if any(not isinstance(value, str) or not value for value in values):
+    raise SystemExit("retained control-plane metadata is incomplete")
+print("\t".join(values))
+PY
+  )
+
+  docker run --rm --pull=never --network=none --entrypoint python3 \
+    -v "${secret_root}:/probe:ro" "${image_ref}" -c \
+    'import json,pathlib,sys; q=json.loads(pathlib.Path("/probe/template-qualification.json").read_text()); orgs=q.get("organizations") or []; scope=orgs[0].get("scope") if orgs else None; assert isinstance(scope,dict); assert scope.get("organizationHost")==sys.argv[1], "retained MCPGit qualification Organization Host differs from descriptor"; assert scope.get("gatewayUrl")==sys.argv[2], "retained MCPGit qualification Gateway URL differs from descriptor"' \
+    "${expected_host}" "${expected_url}" || return 1
+
+  docker run --rm --pull=never --network="${docker_network}" --entrypoint python3 \
+    -v "${secret_root}:/probe:ro" "${image_ref}" -c \
+    'import pathlib,socket,sys
+host=sys.argv[1]
+port=int(sys.argv[2])
+org=sys.argv[3]
+auth=pathlib.Path("/probe/global-service-authorization").read_text().strip()
+addrs={row[4][0] for row in socket.getaddrinfo(host,port,type=socket.SOCK_STREAM)}
+assert len(addrs)==1, f"retained MCPGit target must resolve uniquely: {sorted(addrs)}"
+def probe(extra):
+    s=socket.create_connection((host,port),3)
+    s.settimeout(3)
+    req=("GET /__mcpgit/service-ws HTTP/1.1\r\n"+f"Host: {org}\r\n"+"Connection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==\r\nSec-WebSocket-Protocol: mcpgit.service.ws.v1\r\n"+extra+"\r\n")
+    s.sendall(req.encode("ascii"))
+    f=s.makefile("rb")
+    status=f.readline().strip()
+    f.close()
+    s.close()
+    return status
+u=probe("")
+assert u==b"HTTP/1.1 401 Unauthorized", f"retained MCPGit route is not qualified: {u!r}"
+a=probe("Authorization: "+auth+"\r\n")
+assert a==b"HTTP/1.1 101 Switching Protocols", f"retained MCPGit authorization is not admitted: {a!r}"' \
+    "${target_host}" "${target_port}" "${expected_host}" || return 1
+}
+
+reinstall_instance() {
+  local uninstall config
+  require_prepared_install || return 1
+  uninstall="${kit_dir}/scripts/agentlab-ald-uninstall.py"
+  config="${kit_dir}/release/agentweb/aiwsl-agentlab.json"
+  [[ -x "${uninstall}" && -s "${config}" ]] || {
+    echo "prepared uninstall/config surface is incomplete" >&2
+    return 1
+  }
+
+  # Fail before destructive work when the retained external control plane is
+  # not qualified for this exact descriptor. This converts a late readiness
+  # timeout into a bounded precondition failure.
+  validate_retained_control_plane || return 1
+
+  "${uninstall}" "${instance}" --config "${config}" \
+    --execute --confirm-instance "${instance}" \
+    --purge-data --purge-sessionfs --purge-control \
+    --confirm-purge "PURGE ${instance}" \
+    --confirm-data-volume "vol-data-${instance}" \
+    --confirm-sessionfs-image "${instance}-sessionfs-image" || return 1
+
+  env AGENTLAB_TIMING="${AGENTLAB_TIMING:-1}" \
+    "${kit_dir}/agentlab-env" install \
+    --instance "${instance}" \
+    --composition-receipt "${receipt}" \
+    --release-id alpha9-quickstart-v1
+}
+
 acquire_online_assets() {
   download_verified \
     "https://github.com/${release_repo}/releases/download/${version}/${kit_name}" \
@@ -241,6 +347,9 @@ if [[ "${action}" == "online-install" || "${action}" == "offline-install" ]]; th
     --instance "${instance}" \
     --composition-receipt "${receipt}" \
     --release-id alpha9-quickstart-v1
+elif [[ "${action}" == "reinstall-instance" ]]; then
+  require_command docker
+  run_timed reinstall-instance reinstall_instance
 fi
 
 [[ -s "${receipt}" ]] || {
