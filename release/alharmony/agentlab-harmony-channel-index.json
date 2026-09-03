@@ -1,0 +1,70 @@
+{
+  "schema": "agentlab.harmony_channel_index.v1",
+  "channel": "alharmony",
+  "status": "active-source-pointer-channel",
+  "createdAt": "2026-09-03T15:48:00Z",
+  "updatedAt": "2026-09-03T15:48:00Z",
+  "purpose": "Separate Harmony CLI/SDK substrate assets from the future Rust Harmony atomic-operation service that must be published with AgentLab.",
+  "currentAssets": [
+    {
+      "id": "harmony-sdk-minimal-dev",
+      "status": "existing-release-asset",
+      "kind": "agentlab.harmony-sdk",
+      "filename": "agentlab-harmony-dev-web2atomic-linux-x64.tgz",
+      "manifestFilename": "agentlab-harmony-dev-manifest.json",
+      "platform": "linux-x64",
+      "bytes": 275830845,
+      "sha256": "c49ec6d58743accf2a2c0380455d19bfbf0a8f7dac166b50736be24098635d70",
+      "installVolume": "vol-harmony",
+      "installPath": "/opt/harmony",
+      "role": "Existing Harmony CLI/SDK substrate with hvigorw, ohpm, and hdc smoke paths. Historical filename mentions web2atomic but this is not the Rust ops service."
+    },
+    {
+      "id": "harmony-ops-source-pointer",
+      "status": "current-release-asset",
+      "kind": "agentlab.harmony_ops_source_pointer",
+      "filename": "agentlab-harmony-ops-source-pointer.json",
+      "immutableFilename": "agentlab-harmony-ops-source-pointer-db5abcc.json",
+      "bytes": 6084,
+      "sha256": "5adc12369105dbc372dc7ca4358d6f1eca021ea4dd6fd8cfe4f6ff0c26a26ef2",
+      "role": "Machine-readable pointer to asrelease source refs and future AgentLab release policy for Rust Harmony ops."
+    }
+  ],
+  "plannedPayloads": [
+    {
+      "id": "alharmony-ops-core",
+      "required": true,
+      "publishWithAgentLab": true,
+      "sourcePointer": "agentlab-harmony-ops-source-pointer.json#/contentPointers/harmony-rust-workspace",
+      "scope": "Basic Harmony project/build atoms before Web2Atomic integration.",
+      "operations": [
+        "harmony.env.status",
+        "harmony.project.create",
+        "harmony.project.verify",
+        "harmony.ohpm.install",
+        "harmony.build.debug",
+        "harmony.artifact.inspect"
+      ]
+    },
+    {
+      "id": "alharmony-target-ops",
+      "required": false,
+      "publishWithAgentLab": true,
+      "sourcePointer": "agentlab-harmony-ops-source-pointer.json#/layering/P1",
+      "scope": "Device/emulator/deploy/launch/probe atoms after P0 is stable."
+    },
+    {
+      "id": "alweb2atomic-kit",
+      "required": false,
+      "publishWithAgentLab": true,
+      "sourcePointer": "agentlab-harmony-ops-source-pointer.json#/contentPointers/web2atomic-upper-pipe",
+      "scope": "Upper pipeline that consumes alharmony ops; not the base project/build layer."
+    }
+  ],
+  "offlineClosurePolicy": {
+    "includeHarmonySdk": "already covered through Harmony/vol-harmony assets where applicable",
+    "includeRustOpsWhenReady": true,
+    "offlineGroupWhenReady": "harmony-ops",
+    "gate": "Built executable payload plus exact bytes, SHA256, smoke evidence, and non-destructive install-plan/readiness check."
+  }
+}

@@ -34,3 +34,12 @@ Rust alharmony-ops-core
 Future Rust service/CLI artifacts must be published through AgentLab release
 metadata and then added to the offline closure only after byte/SHA/smoke and
 readiness evidence exists.
+
+## Existing alharmony asset clarification
+
+The pre-existing `agentlab-harmony-dev-web2atomic-linux-x64.tgz` asset is
+classified by its manifest as `agentlab.harmony-sdk`. It is the current minimal
+Harmony CLI/SDK substrate for `/opt/harmony` and `vol-harmony`, with smoke paths
+for `hvigorw`, `ohpm`, and `hdc`. Its historical filename mentions Web2Atomic,
+but the new Rust operation service is a separate future payload and must publish
+through `alharmony-ops-core` metadata before entering `aloffline`.
