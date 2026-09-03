@@ -21,6 +21,7 @@ Usage: agentlab-harness-quickstart.sh ACTION [--root DIR] [--instance ald00]
 Actions:
   online-install   Download missing immutable assets, install ald00, and check health.
   offline-install  Use only previously downloaded assets, install ald00, and check health.
+  install-plan     Read-only preflight report for paths, cached assets, Docker state, and prepared artifacts.
   reinstall-instance
                    Recreate only ald00 main runtime using the retained verified
                    release, volumes, SessionFS companion, and external control plane.
@@ -91,7 +92,7 @@ while (( $# )); do
 done
 
 case "${action}" in
-  online-install|offline-install|reinstall-instance|reset-instance|health|probe-self-test) ;;
+  online-install|offline-install|install-plan|reinstall-instance|reset-instance|health|probe-self-test) ;;
   *)
     echo "unknown action: ${action}" >&2
     usage >&2
@@ -130,7 +131,7 @@ sha256_file() {
 
 verify_file() {
   local path="$1" expected="$2" actual
-  [[ -f "${path}" && ! -L "${path}" ]] || return 1
+  [[ -f "${path}" ]] || return 1
   actual="$(sha256_file "${path}")"
   [[ "${actual}" == "${expected}" ]]
 }
@@ -427,6 +428,102 @@ verify_offline_assets() {
   require_cached "${probe}" "${probe_sha}"
   [[ -s "${lock}" ]] || { echo "offline lock is missing: ${lock}" >&2; return 1; }
 }
+
+install_plan() {
+  python3 - "${root}" "${instance}" "${downloads}" "${work}" "${kit}" "${kit_sha}" "${probe}" "${probe_sha}" "${harmony_archive}" "${harmony_sha}" "${harmony_bytes}" "${lock}" "${receipt}" "${kit_dir}" "${harmony_volume}" <<'PYPLAN'
+import hashlib, json, os, pathlib, shutil, subprocess, sys
+root, instance, downloads, work, kit, kit_sha, probe, probe_sha, harmony, harmony_sha, harmony_bytes, lock, receipt, kit_dir, harmony_volume = sys.argv[1:]
+
+def sha256(path):
+    h=hashlib.sha256()
+    with open(path,'rb') as f:
+        for chunk in iter(lambda:f.read(8<<20), b''):
+            h.update(chunk)
+    return h.hexdigest()
+
+def asset(label, path, expected_sha=None, expected_bytes=None):
+    p=pathlib.Path(path)
+    row={"name":label,"path":str(p),"exists":p.exists(),"isSymlink":p.is_symlink()}
+    if p.exists():
+        row["resolvedPath"]=str(p.resolve()) if p.is_symlink() else str(p)
+        row["bytes"]=p.stat().st_size
+        if expected_bytes is not None:
+            row["expectedBytes"]=int(expected_bytes)
+            row["bytesOk"]=(p.stat().st_size==int(expected_bytes))
+        if expected_sha:
+            got=sha256(p)
+            row["sha256"]=got
+            row["expectedSha256"]=expected_sha
+            row["sha256Ok"]=(got==expected_sha)
+            row["ok"]=row.get("bytesOk", True) and row["sha256Ok"]
+        else:
+            row["ok"]=True
+    else:
+        row["ok"]=False
+    return row
+
+def docker_available():
+    return shutil.which('docker') is not None
+
+def docker_inspect(kind, name):
+    if not docker_available():
+        return {"name":name,"exists":False,"error":"docker_unavailable"}
+    try:
+        if kind == 'volume':
+            r=subprocess.run(['docker','volume','inspect',name],capture_output=True,text=True,timeout=3)
+        else:
+            r=subprocess.run(['docker','inspect',name],capture_output=True,text=True,timeout=3)
+    except Exception as e:
+        return {"name":name,"exists":False,"error":type(e).__name__}
+    if r.returncode != 0:
+        return {"name":name,"exists":False}
+    data=json.loads(r.stdout)[0]
+    row={"name":name,"exists":True}
+    if kind == 'container':
+        state=data.get('State') or {}
+        row.update({"status":state.get('Status'),"health":(state.get('Health') or {}).get('Status'),"image":(data.get('Config') or {}).get('Image')})
+    return row
+
+assets=[
+    asset('environment-kit', kit, kit_sha),
+    asset('typescript-probe', probe, probe_sha),
+    asset('harmony', harmony, harmony_sha, harmony_bytes),
+    asset('environment-lock', lock),
+]
+commands={name: bool(shutil.which(name)) for name in ['tar','zstd','docker','curl','agentlabctl','python3']}
+prepared={
+    'receipt': pathlib.Path(receipt).is_file(),
+    'kitDir': pathlib.Path(kit_dir).is_dir(),
+    'agentlabEnv': pathlib.Path(kit_dir,'agentlab-env').is_file(),
+    'acquiredAlDev': pathlib.Path(root,'acquired-aldev').is_dir(),
+}
+docker={
+    'volumes':[docker_inspect('volume', n) for n in [harmony_volume, f'vol-data-{instance}', f'{instance}-sessionfs-image', f'{instance}-sessionfs-export', f'{instance}-sessionfs-control']],
+    'containers':[docker_inspect('container', n) for n in [instance, f'{instance}-sessionfs', 'ala00-mcpgit', 'ala00-mcpgit-gateway']],
+}
+plan={
+    'schema':'agentlab.quickstart_install_plan.v1',
+    'action':'install-plan',
+    'readOnly':True,
+    'root':root,
+    'instance':instance,
+    'downloads':downloads,
+    'work':work,
+    'commands':commands,
+    'assets':assets,
+    'prepared':prepared,
+    'docker':docker,
+    'okForOfflineInstall': bool(commands.get('tar') and commands.get('zstd') and commands.get('docker') and all(a.get('ok') for a in assets)),
+    'credentialsIncluded':False,
+}
+print(json.dumps(plan,indent=2,sort_keys=True))
+PYPLAN
+}
+
+if [[ "${action}" == "install-plan" ]]; then
+  install_plan
+  exit 0
+fi
 
 if [[ "${action}" == "online-install" || "${action}" == "offline-install" ]]; then
   require_command tar

@@ -334,6 +334,7 @@ def stage_quickstart(root: pathlib.Path, destination: pathlib.Path, copy: bool) 
         linked.append({"source": str(source), "target": str(target), "mode": "copy" if copy else "symlink"})
     scripts = []
     for script_name, action in (
+        ("install-plan.sh", "install-plan"),
         ("offline-install.sh", "offline-install"),
         ("health.sh", "health"),
         ("probe-self-test.sh", "probe-self-test"),
@@ -357,6 +358,7 @@ def stage_quickstart(root: pathlib.Path, destination: pathlib.Path, copy: bool) 
         "No credentials are included. Private MCPGit/SafeGit/SessionFS material is generated on the target host.\n\n"
         "Commands:\n\n"
         "```bash\n"
+        "./install-plan.sh\n"
         "./offline-install.sh\n"
         "./health.sh\n"
         "./probe-self-test.sh\n"

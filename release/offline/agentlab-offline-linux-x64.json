@@ -15,10 +15,10 @@
       "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alcontrol/agentlabctl-e611c39bab87-linux-x64"
     },
     {
-      "bytes": 19385,
+      "bytes": 23345,
       "filename": "agentlab-harness-quickstart.sh",
       "group": "control",
-      "sha256": "42af2a6729324215000f64946fed362ec03bc7927bbb9f3acbbe0e08f1c597f9",
+      "sha256": "90d2efd5ff9a5bdc4407616a8aa856f077672c2bbe1b1d639d2076b78c028d76",
       "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alcontrol/agentlab-harness-quickstart.sh"
     },
     {

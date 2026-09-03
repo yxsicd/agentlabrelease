@@ -485,14 +485,15 @@ release-side compatibility CLI for the offline closure. It now supports:
 - `verify`: fail closed against the grouped cache layout;
 - `report`: emit exactly one machine-readable JSON report for operators;
 - `stage-quickstart`: create a symlink/copy staging root with `downloads/`,
-  `bin/agentlabctl`, auditable wrapper scripts (`offline-install.sh`,
-  `health.sh`, `probe-self-test.sh`), and a README for the existing Quickstart
-  offline installer.
+  `bin/agentlabctl`, auditable wrapper scripts (`install-plan.sh`,
+  `offline-install.sh`, `health.sh`, `probe-self-test.sh`), and a README for
+  the existing Quickstart offline installer.
 
 Validation on hwlinux used the previously fetched 19-asset Linux-x64 cache. The
 new CLI verified all 1,692,135,254 bytes, generated a single JSON report, and
 created a seven-item Quickstart staging root without duplicating the large
-Harmony asset. The published `aloffline` script was then downloaded back from
+Harmony asset; the stage now includes an `install-plan.sh` wrapper for read-only
+preflight before running `offline-install.sh`. The published `aloffline` script was then downloaded back from
 GitHub, verified by SHA/size, and run against the same cache; `resolve`,
 `verify`, and `report` passed. A repeat `fetch --root` over the already complete
 cache finished in about 2.04 seconds with 19/19 assets OK and no redownload. This fixes the earlier proof-of-concept mismatch where
