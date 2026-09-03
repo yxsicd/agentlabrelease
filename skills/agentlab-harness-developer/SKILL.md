@@ -424,3 +424,15 @@ Git remains a base-image responsibility.
 
 This separation is a distribution/runtime rule for AgentLab only. It does not
 change MCPGit upstream tags, manifests, build jobs, or release formats.
+
+
+Full hwlinux canary evidence: the live `ala00-mcpgit` and
+`ala00-mcpgit-gateway` services were force-recreated with
+`mcpgit-offline-base:bookworm-v1-amd64` while the a483 program and 79cf tools
+were supplied by separate read-only Docker volumes. Both services became
+healthy; `ala00`, `ala00-sessionfs`, `ald00`, and `ald00-sessionfs` remained
+healthy; the program/tools mounts reported `RW=false`; and the `ald00`
+namespace reached the shared MCPGit loopback health endpoint with HTTP 204.
+The durable `ala00-mcpgit-data` volume and private state were not replaced.
+This proves program-only refresh can avoid rebuilding/re-downloading the base
+image and can preserve MCPGit data/state.
