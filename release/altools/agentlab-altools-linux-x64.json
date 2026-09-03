@@ -1,0 +1,40 @@
+{
+  "assets": [
+    {
+      "agent": "codex",
+      "bytes": 106704663,
+      "compression": {
+        "format": "zstd",
+        "level": 10
+      },
+      "filename": "agentlab-volume-tool-codex-0.151.0-linux-x64.tar.zst",
+      "mountTarget": "/agent-tools/codex",
+      "platform": "linux-x64",
+      "readySha256": "a2122b809656b5409d00273377606fe29c9c643eeb12750a7443e632ec32bb6c",
+      "schema": "agentlab.volume_tool_release.v1",
+      "sha256": "56b89bba9255110392bf824e478179e1e91e2088953de8b9231c4c230944f156",
+      "upstreamPackage": "@openai/codex@0.151.0-linux-x64",
+      "upstreamPackageSha256": "b3bcf2c11693d7c8155de637dd6562ba19d916ba13471a7c8737de55e5328fc6",
+      "version": "0.151.0"
+    },
+    {
+      "agent": "opencode",
+      "bytes": 51090111,
+      "compression": {
+        "format": "zstd",
+        "level": 10
+      },
+      "filename": "agentlab-volume-tool-opencode-1.18.25-linux-x64.tar.zst",
+      "mountTarget": "/agent-tools/opencode",
+      "platform": "linux-x64",
+      "readySha256": "18e1a314e4ee02eee2b911e5666794aed40b147047c362e44647d94e93258773",
+      "schema": "agentlab.volume_tool_release.v1",
+      "sha256": "e42912c8c82bec135c9277573ce90858eb9575754af5307123c1b5d836f6ceac",
+      "upstreamPackage": "opencode-linux-x64@1.18.25",
+      "upstreamPackageSha256": "3e6d285607b6e9acd1f60ec350cc3954d7351d9dcad970ded390f7b733e34280",
+      "version": "1.18.25"
+    }
+  ],
+  "channel": "altools",
+  "schema": "agentlab.altools_release.v1"
+}

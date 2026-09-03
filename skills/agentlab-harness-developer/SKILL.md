@@ -348,3 +348,34 @@ If a remote build is cancelled, do not assume its compiler descendants exited.
 Inspect for processes bound to the exact disposable worktree target, terminate
 only those descendants, and remove only that target before retrying with a
 shared dependency cache.
+
+
+## Code-agent volume tools (`altools`)
+
+Code agents are distributed as immutable **volume-tool packs**, never as
+install-time npm/curl side effects and never baked into the AgentLab runtime
+image. The public `altools` Release channel currently republishes the exact
+Linux-x64 executables for:
+
+- OpenCode `1.18.25` -> `/agent-tools/opencode` with READY digest
+  `18e1a314e4ee02eee2b911e5666794aed40b147047c362e44647d94e93258773`;
+- Codex `0.151.0` -> `/agent-tools/codex` with READY digest
+  `a2122b809656b5409d00273377606fe29c9c643eeb12750a7443e632ec32bb6c`.
+
+The release index is `release/altools/agentlab-altools-linux-x64.json`. Each
+asset records its upstream npm package and upstream package SHA256, so AgentLab
+is only a distribution/repack layer; the upstream project remains authority.
+Packs use standard-window `zstd -10`, include `.agentlab-agent-tool/READY` and
+`manifest.json`, and materialize into version/digest-specific Docker volumes.
+Runtime containers mount those volumes read-only.
+
+Acceptance evidence on hwlinux: both packs were materialized from their zstd
+archives into fresh Docker volumes, READY digests matched the deployment
+descriptor, and the AgentLab runtime image executed `opencode --version` as
+`1.18.25` and `codex --version` as `codex-cli 0.151.0` without npm/node_modules
+being present at runtime.
+
+Do not substitute whatever OpenCode/Codex happens to be installed on a host.
+The AIWSL host observed during this work had older versions (`1.17.11` and
+`0.142.3`), which is exactly why code-agent tools belong in the offline release
+closure.
