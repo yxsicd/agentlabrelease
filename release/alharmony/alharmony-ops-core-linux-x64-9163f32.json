@@ -1,0 +1,23 @@
+{
+  "schema": "agentlab.alharmony_ops_core_asset.v1",
+  "channel": "alharmony",
+  "status": "developer-preview",
+  "sourceCommit": "9163f32",
+  "platform": "linux-x64",
+  "asset": {
+    "filename": "alharmony-ops-core-linux-x64-9163f32.tar.zst",
+    "bytes": 163083,
+    "sha256": "0a5ef83d2706c98f848eaea3b56dee27124e1df66368be7997d4cf14849eb2cb",
+    "mediaType": "application/zstd"
+  },
+  "binary": {
+    "path": "bin/alharmony-ops",
+    "bytes": 363840,
+    "sha256": "be748ed644d35970eed1f53c91fa9397f8a6d6b99986b5a1f4df9d2420e797dd"
+  },
+  "smoke": {
+    "cargoTest": true,
+    "cargoBuildRelease": true,
+    "linuxFile": "ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=3c8445efe476a2118781c670c52a5035a04e28ec, stripped"
+  }
+}

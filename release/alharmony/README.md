@@ -52,3 +52,12 @@ project/build atoms.  The first implementation emits typed JSON receipts and
 non-destructive command plans; command mutation is intentionally deferred until
 receipt gates are stable.  Platform-specific binaries must be built and
 published as separate `alharmony` assets before entering `aloffline`.
+
+## Published P0 Linux-x64 ops asset
+
+The first `alharmony-ops-core` Linux-x64 developer-preview asset is published in
+`alharmony` as `alharmony-ops-core-linux-x64-9163f32.tar.zst` with manifest
+`alharmony-ops-core-linux-x64-9163f32.json`.  It contains the dependency-free
+`alharmony-ops` binary, receipt schema, package manifest, and README.  In this
+preview, build/dependency operations emit non-destructive command plans; future
+mutating execution requires additional gates.
