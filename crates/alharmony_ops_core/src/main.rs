@@ -359,8 +359,13 @@ fn dispatch_batch_http(
     let started = Instant::now();
     let mut ok_count = 0_usize;
     let mut last = None;
-    for _ in 0..count {
-        let receipt = dispatch_http_with_task(operation, params, task.as_ref())?;
+    for index in 0..count {
+        let receipt_task = if index + 1 == count {
+            task.as_ref()
+        } else {
+            None
+        };
+        let receipt = dispatch_http_with_task(operation, params, receipt_task)?;
         if receipt.ok {
             ok_count += 1;
         }
