@@ -823,3 +823,17 @@ occupy the only active slot, and concurrent requests then return HTTP 503
 `activeRequestLimit` deterministically. Keep both controls: queue capacity limits
 accepted idle connection buildup, while active-request limit protects operation
 execution capacity.
+
+## Harmony ops isolated service preview asset
+
+`30f2402` is the current Linux-x64 service preview baseline after task-isolation
+performance tuning. It keeps the `f3b52e3` keep-alive and batch endpoints, adds
+`--task-root`, `taskId`, `--queue-capacity`, and `--max-active-requests`, and
+optimizes batch task isolation by validating scope once and attaching task
+evidence only to `lastReceipt`. hwlinux clean-build testing passed scope smoke,
+active-request 503 smoke, and batch-10000 performance comparison. Observed
+single-request batch wall throughput: no-isolation `project.verify` about
+77.1k ops/sec, isolated `project.verify` about 75.1k ops/sec; no-isolation
+`ohpm.install` plan about 265.4k ops/sec, isolated `ohpm.install` plan about
+260.6k ops/sec. Treat this as preview transport evidence; no real `ohpm` or
+`hvigor` mutation is enabled.

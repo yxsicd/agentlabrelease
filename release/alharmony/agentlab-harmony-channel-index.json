@@ -34,14 +34,14 @@
       "status": "absorbed-source-in-agentlab"
     },
     {
-      "bytes": 196666,
-      "filename": "alharmony-ops-core-linux-x64-f3b52e3.tar.zst",
-      "id": "alharmony-ops-core-linux-x64-f3b52e3",
+      "bytes": 202297,
+      "filename": "alharmony-ops-core-linux-x64-30f2402.tar.zst",
+      "id": "alharmony-ops-core-linux-x64-30f2402",
       "kind": "agentlab.alharmony_ops_core_binary",
-      "manifestFilename": "alharmony-ops-core-linux-x64-f3b52e3.json",
+      "manifestFilename": "alharmony-ops-core-linux-x64-30f2402.json",
       "platform": "linux-x64",
-      "role": "Linux-x64 Rust CLI/service preview for P0 Harmony engineering atoms, with HTTP keep-alive and batch endpoint.",
-      "sha256": "2fc3385d36c8196d371aa7e1916b433fbe777b595e4f3001a621d5f383924e0e",
+      "role": "Linux-x64 Rust CLI/service preview for P0 Harmony engineering atoms, with batch endpoint, task isolation, bounded accept queue, and active-request backpressure.",
+      "sha256": "be038a7739969c418535fc909a0b61d615a0810e1f1e373495ea7fe264b29e7b",
       "status": "published-developer-preview"
     }
   ],
@@ -54,9 +54,9 @@
   },
   "plannedPayloads": [
     {
-      "currentAsset": "alharmony-ops-core-linux-x64-f3b52e3",
+      "currentAsset": "alharmony-ops-core-linux-x64-30f2402",
       "id": "alharmony-ops-core",
-      "latestFeature": "HTTP keep-alive and batch endpoint",
+      "latestFeature": "task-root path isolation and active-request backpressure",
       "latestFix": "command plans fail closed when projectRoot is missing",
       "operations": [
         "harmony.env.status",
@@ -70,7 +70,7 @@
       "required": true,
       "scope": "Basic Harmony project/build atoms before Web2Atomic integration.",
       "sourcePointer": "agentlab-harmony-ops-source-pointer.json#/contentPointers/harmony-rust-workspace",
-      "status": "published_service_preview"
+      "status": "published_isolated_service_preview"
     },
     {
       "id": "alharmony-target-ops",

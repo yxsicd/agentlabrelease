@@ -82,3 +82,15 @@ still worker-per-connection. Batch requests expose the operation-core ceiling:
 matrix, and focused single-request batch measurements showed about 80.8k ops/sec
 for `project.verify` and about 268k ops/sec for `ohpm.install` plan. Treat this
 as preview transport evidence; no real `ohpm` or `hvigor` mutation is enabled.
+
+## Isolated service preview asset
+
+`30f2402` supersedes `f3b52e3` for current Linux-x64 preview use. The new asset
+`alharmony-ops-core-linux-x64-30f2402.tar.zst` adds `--task-root`, `taskId`,
+`--queue-capacity`, and request-level `--max-active-requests`. Batch endpoints
+validate task scope once at the batch boundary and attach task evidence only to
+the final receipt, avoiding repeated path-normalization overhead. hwlinux tests
+showed task isolation overhead was reduced to roughly 2.6% for `project.verify`
+batch-10000 and 1.9% for `ohpm.install` plan batch-10000; active-request
+backpressure returned HTTP 503 `activeRequestLimit` deterministically while a
+long batch occupied the only active slot.
