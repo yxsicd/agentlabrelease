@@ -693,3 +693,13 @@ checks for five commands, and a native release build; do not publish the M4
 binary as Linux-x64.  Build platform-specific release assets separately and add
 them to `alharmony`/`aloffline` only after exact bytes, SHA256, smoke evidence,
 and install-plan/readiness evidence exist.
+
+## Harmony ops-core project-root guard
+
+hwlinux deep testing of `alharmony-ops-core-linux-x64-9163f32` found that
+`ohpm-install-plan` and `build-debug-plan` could return `ok=true` when the
+Harmony command existed but the project root did not. AgentLab fixed this in
+`a932f4b`: command-plan receipts now include `projectRootExists`, and missing
+project roots fail closed with `recoveryOwner=agent` and
+`nextAction=harmony.project.create`. Publish and offline metadata should prefer
+`alharmony-ops-core-linux-x64-a932f4b` over the earlier `9163f32` binary.

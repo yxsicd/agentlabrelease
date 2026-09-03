@@ -24,7 +24,7 @@ import urllib.request
 DEFAULT_CLOSURE_URL = (
     "https://github.com/yxsicd/agentlabrelease/releases/download/aloffline/"
     "agentlab-offline-linux-x64.json?agentlab_sha="
-    "da30f48d77f7a944e381fd65d7933f26051fd6e7a3c9f57455b6915df7515dda"
+    "e31a51fe55baa708288d547dac926257eae444a31e93c9563d16389e48f9e5a2"
 )
 DEFAULT_RESOLVER_URL = (
     "https://github.com/yxsicd/agentlabrelease/releases/download/aloffline/"

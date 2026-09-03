@@ -61,3 +61,11 @@ The first `alharmony-ops-core` Linux-x64 developer-preview asset is published in
 `alharmony-ops` binary, receipt schema, package manifest, and README.  In this
 preview, build/dependency operations emit non-destructive command plans; future
 mutating execution requires additional gates.
+
+## Project-root guard fix
+
+`a932f4b` supersedes the first `9163f32` ops-core binary for default/offline use.
+The fix adds `projectRootExists` to command-plan receipts and fails closed when
+`ohpm.install` or `build.debug` is planned against a missing project directory.
+Use `alharmony-ops-core-linux-x64-a932f4b.tar.zst` for the current Linux-x64
+preview.
