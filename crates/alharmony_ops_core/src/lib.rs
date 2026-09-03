@@ -330,7 +330,13 @@ fn command_plan(
         "command".into(),
         JsonValue::string(command.display().to_string()),
     );
-    cmd.insert("exists".into(), JsonValue::Bool(command.is_file()));
+    let command_exists = command.is_file();
+    let project_root_exists = project_root.is_dir();
+    cmd.insert("exists".into(), JsonValue::Bool(command_exists));
+    cmd.insert(
+        "projectRootExists".into(),
+        JsonValue::Bool(project_root_exists),
+    );
     cmd.insert(
         "args".into(),
         JsonValue::Array(args.iter().map(|s| JsonValue::string(*s)).collect()),
@@ -341,13 +347,18 @@ fn command_plan(
     let mut receipt =
         Receipt::new(operation, side_effect).evidence("commandPlan", JsonValue::Object(cmd));
     receipt.next_action = next;
-    if !command.is_file() {
+    if !command_exists {
         receipt.ok = false;
         receipt.recovery_owner = RecoveryOwner::Environment;
         receipt
             .diagnostics
             .push("Required Harmony command is missing; run harmony.env.status.".into());
         receipt.next_action = Some("harmony.env.status");
+    } else if !project_root_exists {
+        receipt.ok = false;
+        receipt.recovery_owner = RecoveryOwner::Agent;
+        receipt.diagnostics.push("Project root does not exist; create or select a valid Harmony project before planning a local process operation.".into());
+        receipt.next_action = Some("harmony.project.create");
     }
     receipt
 }
@@ -490,6 +501,27 @@ mod tests {
         let receipt = env_status(None);
         assert!(!receipt.ok);
         assert_eq!(receipt.recovery_owner, RecoveryOwner::Environment);
+    }
+
+    #[test]
+    fn command_plans_fail_when_project_root_is_missing() {
+        let dir = std::env::temp_dir().join(format!("alharmony-sdk-test-{}", std::process::id()));
+        let sdk = dir.join("sdk");
+        fs::create_dir_all(sdk.join("bin")).unwrap();
+        fs::write(sdk.join("bin/ohpm"), b"").unwrap();
+        fs::write(sdk.join("bin/hvigorw"), b"").unwrap();
+        let missing_project = dir.join("missing-project");
+
+        let ohpm = ohpm_install_plan(&missing_project, &sdk);
+        let build = build_debug_plan(&missing_project, &sdk);
+
+        fs::remove_dir_all(&dir).ok();
+        assert!(!ohpm.ok);
+        assert_eq!(ohpm.recovery_owner, RecoveryOwner::Agent);
+        assert_eq!(ohpm.next_action, Some("harmony.project.create"));
+        assert!(!build.ok);
+        assert_eq!(build.recovery_owner, RecoveryOwner::Agent);
+        assert_eq!(build.next_action, Some("harmony.project.create"));
     }
 
     #[test]
