@@ -4,7 +4,7 @@ use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use alharmony_ops_core::{
     artifact_inspect, build_debug_plan, env_status, ohpm_install_plan, project_create_plan,
@@ -207,13 +207,61 @@ fn route_request(request: &str) -> (u16, String) {
     }
     let (path, query) = split_target(target);
     let params = parse_query(query);
-    match path.strip_prefix("/v1/ops/") {
-        Some(operation) => match dispatch_http(operation, &params) {
+    if let Some(operation) = path.strip_prefix("/v1/ops/") {
+        return match dispatch_http(operation, &params) {
             Ok(receipt) => (200, receipt.to_json_pretty()),
             Err(message) => service_error(400, "badOperationRequest", &message),
-        },
-        None => service_error(404, "notFound", "unknown endpoint"),
+        };
     }
+    if let Some(operation) = path.strip_prefix("/v1/batch/") {
+        return match dispatch_batch_http(operation, &params) {
+            Ok(body) => (200, body),
+            Err(message) => service_error(400, "badBatchRequest", &message),
+        };
+    }
+    service_error(404, "notFound", "unknown endpoint")
+}
+
+fn dispatch_batch_http(
+    operation: &str,
+    params: &BTreeMap<String, String>,
+) -> Result<String, String> {
+    let count = params
+        .get("n")
+        .and_then(|value| value.parse::<usize>().ok())
+        .filter(|value| (1..=100_000).contains(value))
+        .unwrap_or(1);
+    let started = Instant::now();
+    let mut ok_count = 0_usize;
+    let mut last = None;
+    for _ in 0..count {
+        let receipt = dispatch_http(operation, params)?;
+        if receipt.ok {
+            ok_count += 1;
+        }
+        last = Some(receipt);
+    }
+    let elapsed_us = started.elapsed().as_micros();
+    let last = last.expect("batch count is never zero");
+    let last_json = last.to_json_pretty();
+    Ok(format!(
+        r#"{{
+  "schema": "agentlab.harmony_ops.batch_receipt.v1",
+  "ok": {},
+  "operation": "{}",
+  "count": {},
+  "okCount": {},
+  "elapsedMicros": {},
+  "lastReceipt": {}
+}}
+"#,
+        if ok_count == count { "true" } else { "false" },
+        json_escape(operation),
+        count,
+        ok_count,
+        elapsed_us,
+        last_json.trim_end()
+    ))
 }
 
 fn dispatch_http(operation: &str, params: &BTreeMap<String, String>) -> Result<Receipt, String> {
@@ -370,7 +418,8 @@ fn usage(code: i32) -> ! {
          ohpm-install-plan --project-root DIR --harmony-home DIR\n\
          build-debug-plan --project-root DIR --harmony-home DIR\n\
          artifact-inspect --artifact FILE\n\n\
-         service endpoints: GET /v1/ops/<operation>?projectRoot=...&harmonyHome=...&artifact=..."
+         service endpoints: GET /v1/ops/<operation>?projectRoot=...&harmonyHome=...&artifact=...
+GET /v1/batch/<operation>?n=<count>&projectRoot=...&harmonyHome=...&artifact=..."
     );
     std::process::exit(code);
 }
