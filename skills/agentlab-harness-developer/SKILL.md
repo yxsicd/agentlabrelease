@@ -507,3 +507,128 @@ should later be ported into the Rust binary with the same command semantics.
 The offline staging wrappers invoke the Quickstart through `bash` rather than relying on the GitHub-downloaded script retaining executable permissions.
 
 Release-side offline fetch appends the expected SHA256 as a query parameter to GitHub Release URLs. This avoids stale edge-cache bytes after same-name control assets are clobbered; immutable/versioned asset names are still preferred for operator entrypoints.
+
+## Web2Atomic / Harmony atomic-service integration boundary
+
+Reference source: `asrelease` branch `origin/research/web2atomic-nextgen`
+(commit `555424b9`) under `web2atomic-kit`. The local `asrelease` main worktree
+may be dirty with Peterhof/Harmony edits, so inspect the nextgen branch through
+a detached worktree or `git show` instead of switching the operator worktree.
+There is no branch literally named `next`; the relevant next-generation branch
+is `research/web2atomic-nextgen`, with
+`wip/web2atomic-nextgen-semantic-journal` as a related work-in-progress branch.
+
+### What Web2Atomic contributes
+
+Web2Atomic is a standalone Agent harness for generating and operating HarmonyOS
+WebUI carriers, not a single HAP-building script. Its public boundary is the
+self-contained `web2atomic-kit` tree:
+
+- deterministic packages: contracts, project, detector, workflow, agc,
+  operations, installer, release;
+- OpenCode adapter and host-side credential shielding;
+- two public templates: `webui-as` for `atomicService` and `webui-app` for
+  normal `app`;
+- public Agent Skills for conversion, diagnosis, signing, and device operation;
+- release tooling that sanitizes, signs, verifies, and publishes one capsule;
+- workflow operations for DevEco/HDC build, deploy, launch, probe, diagnose,
+  configure, rebuild, and retest.
+
+The atomic-service template explicitly sets `bundleType: "atomicService"` and
+carries schema-validated parameters for bundle name, version, labels, site URL,
+translation, purification, cache mode, isolated translation fallback, and
+optional Huawei Account local ID token configuration.
+
+### Evidence from the nextgen branch
+
+A detached M4 worktree at `555424b9` showed the raw Kit is small: about 3.0 MB
+and 302 source/template/skill files before dependency installation. `npm ci`
+expanded dependencies to about 249 MB, so runtime installation must not depend
+on npm/node_modules. The quality smoke passed:
+
+- `npm run test:standalone` passed;
+- `npm run test:unit` passed;
+- `npm run release:sanitize -- --spec release/opencode.json --out ...` passed;
+- `npm run release:verify -- --stage ...` passed.
+
+The sanitized release stage was about 1.8 MB with 127 files: compiled
+`dist/plugin.mjs`, `dist/credential-host.mjs`, Skills, both templates, schemas,
+`release.json`, `inventory.json`, and `SHA256SUMS`. This is the correct payload
+size class for AgentLab distribution.
+
+### AgentLab fusion model
+
+Do not merge Web2Atomic into the AgentLab runtime image. Treat it as a separate
+public tool payload, analogous to `altools` and `almcpgit`:
+
+`AgentLab offline closure -> Web2Atomic capsule/stage -> OpenCode plugin/tools -> DevEco/HDC/Harmony workflow`
+
+The recommended packaging target is one of the following, in this order:
+
+1. **Capsule-first:** preserve Web2Atomic's existing signed capsule model and
+   mirror the verified capsule into AgentLab Release as an offline asset. This
+   keeps Web2Atomic's signing/trust model intact and lets the existing installer
+   consume exactly one local ZIP offline.
+2. **Volume-tool wrapper:** materialize the verified capsule or installed
+   OpenCode plugin into a read-only Docker/host volume under an AgentLab tools
+   mount. Use only if AgentLab needs to run the plugin inside a controlled
+   code-agent container rather than installing it into the host OpenCode config.
+3. **Do not use npm-at-install:** the 249 MB dependency tree is a build-time
+   concern only. Release assets must contain compiled/sanitized payloads or a
+   signed capsule, not `node_modules`.
+
+### Reuse of existing AgentLab release pieces
+
+- `vol-harmony` supplies the Harmony/DevEco-adjacent SDK asset layer. Web2Atomic
+  should discover DevEco/Harmony via explicit paths or mounted volumes, not by
+  downloading SDKs during conversion.
+- `altools` supplies OpenCode/Codex as versioned code-agent program volumes.
+  Web2Atomic's OpenCode plugin should target those known versions or declare a
+  compatibility contract against them.
+- `aloffline` should include the Web2Atomic capsule/stage only after its own
+  sanitize/verify/public-download acceptance passes.
+- `almcpgit` can record generated project/state/evidence, but AGC credentials,
+  signing keys, local device identity, cookies, sessions, and profile material
+  must remain outside public releases.
+
+### Security and authority boundaries
+
+Web2Atomic has stricter product boundaries than a normal template generator;
+keep them intact:
+
+- AGC credentials are injected as opaque refs or local paths and are never
+  copied into AgentLab release assets, Skills, templates, prompts, or MCPGit.
+- Signing private keys, profiles, certificates, project sessions, website
+  cookies, emulator data, and physical-device identifiers are not public release
+  content.
+- Web2Atomic upstream/capsule remains authority for template/plugin bytes;
+  AgentLab may mirror/repack only after byte verification and should record
+  upstream revision, capsule digest, and acceptance evidence.
+- Generated Harmony projects are workspace artifacts with lockfiles, not
+  reusable AgentLab release assets.
+
+### Practical integration phases
+
+P0: Add an AgentLab Web2Atomic mirror manifest, initially pointing at a verified
+sanitized stage or signed capsule from `asrelease` commit `555424b9`. Record
+source commit, stage file count, stage SHA, capsule SHA if available, templates
+included, and tested OpenCode compatibility.
+
+P1: Add the Web2Atomic asset to `aloffline` as an optional `harmony-web2atomic`
+group. The closure should fetch it like `altools`: exact URL, bytes, SHA, no
+credentials.
+
+P2: Add an AgentLab staging helper that exposes Web2Atomic to code agents:
+- host OpenCode path: use Web2Atomic's own installer/capsule offline install;
+- container path: mount the verified plugin/templates/skills as read-only tool
+  content and bind only explicit DevEco/HDC/Harmony paths.
+
+P3: Reuse AgentLab offline report/install-plan to show Web2Atomic readiness:
+OpenCode version, DevEco home, HDC availability, Harmony SDK volume, AGC
+credential status as opaque `present/absent/invalid`, and no secret values.
+
+P4: Only after P0-P3, run a true e2e canary: create a generic `webui-as`
+project from a public HTTPS URL, build an unsigned debug HAP on emulator, deploy,
+launch, and capture page-readiness/navigation probe evidence. Physical-device
+or AGC upload flows require explicit external signing/credential setup and are
+not part of the default AgentLab public offline install.
