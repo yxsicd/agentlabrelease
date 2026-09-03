@@ -69,3 +69,16 @@ The fix adds `projectRootExists` to command-plan receipts and fails closed when
 `ohpm.install` or `build.debug` is planned against a missing project directory.
 Use `alharmony-ops-core-linux-x64-a932f4b.tar.zst` for the current Linux-x64
 preview.
+
+## Service preview asset
+
+`f3b52e3` supersedes `a932f4b` for current Linux-x64 preview use. The new asset
+`alharmony-ops-core-linux-x64-f3b52e3.tar.zst` adds HTTP/1.1 keep-alive support
+and `/v1/batch/<operation>?n=<count>&...` while preserving the P0 non-destructive
+receipt boundary. hwlinux testing showed keep-alive alone did not raise the
+close-connection throughput ceiling materially because the implementation is
+still worker-per-connection. Batch requests expose the operation-core ceiling:
+`project.verify` reached about 549k effective ops/sec in the concurrent batch
+matrix, and focused single-request batch measurements showed about 80.8k ops/sec
+for `project.verify` and about 268k ops/sec for `ohpm.install` plan. Treat this
+as preview transport evidence; no real `ohpm` or `hvigor` mutation is enabled.

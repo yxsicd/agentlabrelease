@@ -773,3 +773,23 @@ pollute results. Future performance work should add persistent connections or a
 Unix-domain-socket transport, bounded queue/backpressure receipts, and a native
 batch endpoint before retesting. Current results measure the HTTP transport more
 than the Rust operation core.
+
+## Harmony ops keep-alive and batch service preview
+
+`a2183da` added HTTP/1.1 keep-alive to the `alharmony-ops serve` preview, and
+`f3b52e3` added `/v1/batch/<operation>?n=<count>&...`. hwlinux keep-alive
+smoke proved one TCP connection could serve `/health -> artifact.inspect ->
+/health`, but the 96-worker keep-alive matrix did not improve throughput over
+the earlier close-connection model: health peaked around 75k RPS, artifact
+around 66.8k RPS, and project.verify around 57.4k RPS before the matrix entered
+a high-concurrency long-tail region. The reason is architectural: the preview
+service remains synchronous worker-per-connection.
+
+Batch testing at `f3b52e3` showed the useful next layer. The partial concurrent
+batch matrix reached about 549k effective `project.verify` ops/sec at batch
+1000 / 12 client threads. Focused single-request batch checks measured
+`project.verify` batch 10000 at about 80.8k internal ops/sec and `ohpm.install`
+plan batch 1000 at about 268k internal ops/sec. `ohpm.install` multi-thread
+batch matrix still hit a long-tail point, so batch is a preview performance
+transport, not a production guarantee. The current published Linux-x64 service
+preview asset is `alharmony-ops-core-linux-x64-f3b52e3.tar.zst`.
