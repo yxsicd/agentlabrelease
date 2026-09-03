@@ -793,3 +793,17 @@ plan batch 1000 at about 268k internal ops/sec. `ohpm.install` multi-thread
 batch matrix still hit a long-tail point, so batch is a preview performance
 transport, not a production guarantee. The current published Linux-x64 service
 preview asset is `alharmony-ops-core-linux-x64-f3b52e3.tar.zst`.
+
+## Harmony ops task isolation and backpressure preview
+
+The next service-control layer adds `--queue-capacity`, `--max-batch`, and
+`--task-root` to `alharmony-ops serve`. When task isolation is enabled,
+path-bearing operations require `taskId` and enforce that `projectRoot` and
+`artifact` stay under `<task-root>/<taskId>` using lexical normalization before
+operation dispatch. The service rejects missing/invalid task IDs, path
+traversal, and cross-task paths as HTTP 400 service errors. Accepted operation
+receipts include `evidence.task` with `taskId`, task root, and
+`pathIsolation=true`. The accept side now uses a bounded sync queue and returns
+HTTP 503 `queueFull` instead of letting a saturated service grow an unbounded
+connection queue. M4 smoke covered in-scope success, cross-scope rejection,
+missing/bad task IDs, and queue-full backpressure.

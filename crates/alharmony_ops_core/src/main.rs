@@ -1,15 +1,29 @@
 use std::collections::BTreeMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::path::PathBuf;
+use std::path::{Component, Path, PathBuf};
+use std::sync::mpsc::TrySendError;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use alharmony_ops_core::{
     artifact_inspect, build_debug_plan, env_status, ohpm_install_plan, project_create_plan,
-    project_verify, Receipt,
+    project_verify, JsonValue, Receipt,
 };
+
+#[derive(Debug)]
+struct ServiceConfig {
+    task_root: Option<PathBuf>,
+    queue_capacity: usize,
+    max_batch: usize,
+}
+
+#[derive(Debug)]
+struct TaskScope {
+    task_id: String,
+    root: PathBuf,
+}
 
 fn main() {
     let mut args = std::env::args().skip(1).collect::<Vec<_>>();
@@ -80,6 +94,16 @@ fn run_service(mut args: Vec<String>) -> ! {
                 .map(|value| value.get())
                 .unwrap_or(4)
         });
+    let queue_capacity = take_value(&mut args, "--queue-capacity")
+        .and_then(|value| value.parse::<usize>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(workers.saturating_mul(4).max(1));
+    let max_batch = take_value(&mut args, "--max-batch")
+        .and_then(|value| value.parse::<usize>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(100_000);
+    let task_root =
+        take_value(&mut args, "--task-root").map(|value| normalize_path(Path::new(&value)));
     if !args.is_empty() {
         eprintln!("unexpected service arguments: {}", args.join(" "));
         std::process::exit(2);
@@ -89,35 +113,54 @@ fn run_service(mut args: Vec<String>) -> ! {
         eprintln!("failed to bind {bind}: {error}");
         std::process::exit(1);
     });
-    eprintln!("alharmony-ops service listening on {bind} with {workers} workers");
+    eprintln!(
+        "alharmony-ops service listening on {bind} with {workers} workers, queue_capacity={queue_capacity}, task_root={}",
+        task_root
+            .as_ref()
+            .map(|value| value.display().to_string())
+            .unwrap_or_else(|| "<disabled>".to_string())
+    );
 
-    let (tx, rx) = mpsc::channel::<TcpStream>();
+    let config = Arc::new(ServiceConfig {
+        task_root,
+        queue_capacity,
+        max_batch,
+    });
+    let (tx, rx) = mpsc::sync_channel::<TcpStream>(queue_capacity);
     let rx = Arc::new(Mutex::new(rx));
     for _ in 0..workers {
         let rx = Arc::clone(&rx);
+        let config = Arc::clone(&config);
         thread::spawn(move || loop {
             let stream = match rx.lock().expect("worker receiver poisoned").recv() {
                 Ok(stream) => stream,
                 Err(_) => return,
             };
-            handle_connection(stream);
+            handle_connection(stream, &config);
         });
     }
 
     for stream in listener.incoming() {
         match stream {
-            Ok(stream) => {
-                if tx.send(stream).is_err() {
-                    break;
+            Ok(mut stream) => match tx.try_send(stream) {
+                Ok(()) => {}
+                Err(TrySendError::Full(returned_stream)) => {
+                    stream = returned_stream;
+                    let body = service_error_body(
+                        "queueFull",
+                        "service queue is full; retry with backoff or lower concurrency",
+                    );
+                    let _ = write_http_response(&mut stream, 503, &body, true);
                 }
-            }
+                Err(TrySendError::Disconnected(_)) => break,
+            },
             Err(error) => eprintln!("accept failed: {error}"),
         }
     }
     std::process::exit(0);
 }
 
-fn handle_connection(mut stream: TcpStream) {
+fn handle_connection(mut stream: TcpStream, config: &ServiceConfig) {
     let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
     let _ = stream.set_write_timeout(Some(Duration::from_secs(5)));
     for _ in 0..1_000_000_u32 {
@@ -125,29 +168,39 @@ fn handle_connection(mut stream: TcpStream) {
             return;
         };
         let close_after_response = request_wants_close(&request);
-        let (status, body) = route_request(&request);
-        let reason = match status {
-            200 => "OK",
-            400 => "Bad Request",
-            404 => "Not Found",
-            _ => "Internal Server Error",
-        };
-        let connection = if close_after_response {
-            "close"
-        } else {
-            "keep-alive"
-        };
-        let response = format!(
-            "HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: {connection}\r\n\r\n{}",
-            body.len(), body
-        );
-        if stream.write_all(response.as_bytes()).is_err() {
+        let (status, body) = route_request(&request, config);
+        if write_http_response(&mut stream, status, &body, close_after_response).is_err() {
             return;
         }
         if close_after_response {
             return;
         }
     }
+}
+
+fn write_http_response(
+    stream: &mut TcpStream,
+    status: u16,
+    body: &str,
+    close_after_response: bool,
+) -> std::io::Result<()> {
+    let reason = match status {
+        200 => "OK",
+        400 => "Bad Request",
+        404 => "Not Found",
+        503 => "Service Unavailable",
+        _ => "Internal Server Error",
+    };
+    let connection = if close_after_response {
+        "close"
+    } else {
+        "keep-alive"
+    };
+    let response = format!(
+        "HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: {connection}\r\n\r\n{}",
+        body.len(), body
+    );
+    stream.write_all(response.as_bytes())
 }
 
 fn read_http_header(stream: &mut TcpStream) -> Option<String> {
@@ -177,7 +230,7 @@ fn request_wants_close(request: &str) -> bool {
     }) || http10
 }
 
-fn route_request(request: &str) -> (u16, String) {
+fn route_request(request: &str, config: &ServiceConfig) -> (u16, String) {
     let Some(line) = request.lines().next() else {
         return service_error(400, "emptyRequest", "request line is missing");
     };
@@ -192,29 +245,18 @@ fn route_request(request: &str) -> (u16, String) {
         );
     }
     if target == "/health" || target == "/v1/health" || target == "/v1/service/status" {
-        return (
-            200,
-            concat!(
-                "{\n",
-                "  \"schema\": \"agentlab.harmony_ops.service_status.v1\",\n",
-                "  \"ok\": true,\n",
-                "  \"service\": \"alharmony-ops\",\n",
-                "  \"receiptSchema\": \"agentlab.harmony_ops.receipt.v1\"\n",
-                "}\n"
-            )
-            .to_string(),
-        );
+        return (200, service_status_body(config));
     }
     let (path, query) = split_target(target);
     let params = parse_query(query);
     if let Some(operation) = path.strip_prefix("/v1/ops/") {
-        return match dispatch_http(operation, &params) {
+        return match dispatch_http(operation, &params, config) {
             Ok(receipt) => (200, receipt.to_json_pretty()),
             Err(message) => service_error(400, "badOperationRequest", &message),
         };
     }
     if let Some(operation) = path.strip_prefix("/v1/batch/") {
-        return match dispatch_batch_http(operation, &params) {
+        return match dispatch_batch_http(operation, &params, config) {
             Ok(body) => (200, body),
             Err(message) => service_error(400, "badBatchRequest", &message),
         };
@@ -222,20 +264,35 @@ fn route_request(request: &str) -> (u16, String) {
     service_error(404, "notFound", "unknown endpoint")
 }
 
+fn service_status_body(config: &ServiceConfig) -> String {
+    let task_root = match &config.task_root {
+        Some(value) => format!("\"{}\"", json_escape(&value.display().to_string())),
+        None => "null".to_string(),
+    };
+    format!(
+        "{{\n  \"schema\": \"agentlab.harmony_ops.service_status.v1\",\n  \"ok\": true,\n  \"service\": \"alharmony-ops\",\n  \"receiptSchema\": \"agentlab.harmony_ops.receipt.v1\",\n  \"queueCapacity\": {},\n  \"maxBatch\": {},\n  \"taskIsolation\": {{\n    \"enabled\": {},\n    \"taskRoot\": {}\n  }}\n}}\n",
+        config.queue_capacity,
+        config.max_batch,
+        if config.task_root.is_some() { "true" } else { "false" },
+        task_root
+    )
+}
+
 fn dispatch_batch_http(
     operation: &str,
     params: &BTreeMap<String, String>,
+    config: &ServiceConfig,
 ) -> Result<String, String> {
     let count = params
         .get("n")
         .and_then(|value| value.parse::<usize>().ok())
-        .filter(|value| (1..=100_000).contains(value))
+        .filter(|value| (1..=config.max_batch).contains(value))
         .unwrap_or(1);
     let started = Instant::now();
     let mut ok_count = 0_usize;
     let mut last = None;
     for _ in 0..count {
-        let receipt = dispatch_http(operation, params)?;
+        let receipt = dispatch_http(operation, params, config)?;
         if receipt.ok {
             ok_count += 1;
         }
@@ -264,11 +321,16 @@ fn dispatch_batch_http(
     ))
 }
 
-fn dispatch_http(operation: &str, params: &BTreeMap<String, String>) -> Result<Receipt, String> {
+fn dispatch_http(
+    operation: &str,
+    params: &BTreeMap<String, String>,
+    config: &ServiceConfig,
+) -> Result<Receipt, String> {
     match operation {
         "harmony.env.status" => Ok(env_status(param_path(params, "harmonyHome").as_deref())),
         "harmony.project.create" => {
             let root = required_param_path(params, "projectRoot")?;
+            let task = validate_task_paths(config, params, &[("projectRoot", &root)])?;
             let bundle = params
                 .get("bundleName")
                 .map(String::as_str)
@@ -277,28 +339,113 @@ fn dispatch_http(operation: &str, params: &BTreeMap<String, String>) -> Result<R
                 .get("appLabel")
                 .map(String::as_str)
                 .unwrap_or("AgentLab Demo");
-            Ok(project_create_plan(&root, bundle, label))
+            Ok(add_task_evidence(
+                project_create_plan(&root, bundle, label),
+                task,
+            ))
         }
         "harmony.project.verify" => {
             let root = required_param_path(params, "projectRoot")?;
-            Ok(project_verify(&root))
+            let task = validate_task_paths(config, params, &[("projectRoot", &root)])?;
+            Ok(add_task_evidence(project_verify(&root), task))
         }
         "harmony.ohpm.install" => {
             let root = required_param_path(params, "projectRoot")?;
             let harmony = required_param_path(params, "harmonyHome")?;
-            Ok(ohpm_install_plan(&root, &harmony))
+            let task = validate_task_paths(config, params, &[("projectRoot", &root)])?;
+            Ok(add_task_evidence(ohpm_install_plan(&root, &harmony), task))
         }
         "harmony.build.debug" => {
             let root = required_param_path(params, "projectRoot")?;
             let harmony = required_param_path(params, "harmonyHome")?;
-            Ok(build_debug_plan(&root, &harmony))
+            let task = validate_task_paths(config, params, &[("projectRoot", &root)])?;
+            Ok(add_task_evidence(build_debug_plan(&root, &harmony), task))
         }
         "harmony.artifact.inspect" => {
             let artifact = required_param_path(params, "artifact")?;
-            Ok(artifact_inspect(&artifact))
+            let task = validate_task_paths(config, params, &[("artifact", &artifact)])?;
+            Ok(add_task_evidence(artifact_inspect(&artifact), task))
         }
         _ => Err(format!("unknown operation: {operation}")),
     }
+}
+
+fn validate_task_paths(
+    config: &ServiceConfig,
+    params: &BTreeMap<String, String>,
+    paths: &[(&str, &PathBuf)],
+) -> Result<Option<TaskScope>, String> {
+    let Some(task_root) = &config.task_root else {
+        return Ok(None);
+    };
+    let task_id = params.get("taskId").ok_or_else(|| {
+        "missing query parameter: taskId when task isolation is enabled".to_string()
+    })?;
+    validate_task_id(task_id)?;
+    let scope_root = normalize_path(&task_root.join(task_id));
+    for (name, path) in paths {
+        let normalized = normalize_path(path);
+        if normalized != scope_root && !normalized.starts_with(&scope_root) {
+            return Err(format!(
+                "{name} must stay under task scope {}",
+                scope_root.display()
+            ));
+        }
+    }
+    Ok(Some(TaskScope {
+        task_id: task_id.clone(),
+        root: scope_root,
+    }))
+}
+
+fn validate_task_id(task_id: &str) -> Result<(), String> {
+    if task_id.is_empty() || task_id.len() > 80 {
+        return Err("taskId must be non-empty and at most 80 bytes".into());
+    }
+    if task_id.contains("..") || task_id.contains('/') || task_id.contains('\\') {
+        return Err("taskId must not contain path traversal or separators".into());
+    }
+    if !task_id
+        .bytes()
+        .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'-' | b'_'))
+    {
+        return Err("taskId may contain only ASCII letters, digits, '.', '-', '_'".into());
+    }
+    Ok(())
+}
+
+fn add_task_evidence(receipt: Receipt, task: Option<TaskScope>) -> Receipt {
+    let Some(task) = task else {
+        return receipt;
+    };
+    let mut evidence = BTreeMap::new();
+    evidence.insert("taskId".into(), JsonValue::string(task.task_id));
+    evidence.insert(
+        "taskRoot".into(),
+        JsonValue::string(task.root.display().to_string()),
+    );
+    evidence.insert("pathIsolation".into(), JsonValue::Bool(true));
+    receipt.evidence("task", JsonValue::Object(evidence))
+}
+
+fn normalize_path(path: &Path) -> PathBuf {
+    let mut out = if path.is_absolute() {
+        PathBuf::from("/")
+    } else {
+        std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+    };
+    for component in path.components() {
+        match component {
+            Component::Prefix(prefix) => out.push(prefix.as_os_str()),
+            Component::RootDir => out = PathBuf::from("/"),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                out.pop();
+            }
+            Component::Normal(value) => out.push(value),
+        }
+    }
+    out
 }
 
 fn split_target(target: &str) -> (&str, &str) {
@@ -363,13 +510,14 @@ fn hex(byte: u8) -> Option<u8> {
 }
 
 fn service_error(status: u16, code: &str, message: &str) -> (u16, String) {
-    (
-        status,
-        format!(
-            "{{\n  \"schema\": \"agentlab.harmony_ops.service_error.v1\",\n  \"ok\": false,\n  \"error\": {{\n    \"code\": \"{}\",\n    \"message\": \"{}\"\n  }}\n}}\n",
-            json_escape(code),
-            json_escape(message)
-        ),
+    (status, service_error_body(code, message))
+}
+
+fn service_error_body(code: &str, message: &str) -> String {
+    format!(
+        "{{\n  \"schema\": \"agentlab.harmony_ops.service_error.v1\",\n  \"ok\": false,\n  \"error\": {{\n    \"code\": \"{}\",\n    \"message\": \"{}\"\n  }}\n}}\n",
+        json_escape(code),
+        json_escape(message)
     )
 }
 
@@ -411,15 +559,16 @@ fn take_value(args: &mut Vec<String>, name: &str) -> Option<String> {
 fn usage(code: i32) -> ! {
     eprintln!(
         "usage: alharmony-ops <serve|env-status|project-create-plan|project-verify|ohpm-install-plan|build-debug-plan|artifact-inspect> [args]\n\n\
-         serve [--bind 127.0.0.1:19731] [--workers N]\n\
+         serve [--bind 127.0.0.1:19731] [--workers N] [--queue-capacity N] [--max-batch N] [--task-root DIR]\n\
          env-status [--harmony-home DIR]\n\
          project-create-plan --project-root DIR [--bundle-name NAME] [--app-label LABEL]\n\
          project-verify --project-root DIR\n\
          ohpm-install-plan --project-root DIR --harmony-home DIR\n\
          build-debug-plan --project-root DIR --harmony-home DIR\n\
          artifact-inspect --artifact FILE\n\n\
-         service endpoints: GET /v1/ops/<operation>?projectRoot=...&harmonyHome=...&artifact=...
-GET /v1/batch/<operation>?n=<count>&projectRoot=...&harmonyHome=...&artifact=..."
+         service endpoints: GET /v1/ops/<operation>?projectRoot=...&harmonyHome=...&artifact=...\n\
+         batch endpoint: GET /v1/batch/<operation>?n=<count>&projectRoot=...&harmonyHome=...&artifact=...\n\
+         task isolation: start with --task-root DIR, then pass taskId=... and keep project/artifact paths under DIR/taskId"
     );
     std::process::exit(code);
 }

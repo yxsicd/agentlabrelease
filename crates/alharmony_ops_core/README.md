@@ -56,3 +56,18 @@ health, 74-77k RPS for `artifact.inspect`, about 63k RPS for `project.verify`,
 and about 46.9k RPS for `ohpm.install` plan before the close-connection model
 entered a long-tail region. Treat those as preview transport measurements, not
 production capacity guarantees.
+
+## Task isolation and backpressure
+
+Service mode supports preview task isolation and explicit backpressure:
+
+```text
+alharmony-ops serve   --bind 127.0.0.1:<port>   --workers <N>   --queue-capacity <N>   --task-root <dir>   --max-batch <N>
+```
+
+When `--task-root` is enabled, path-bearing operations must include `taskId`,
+and `projectRoot` / `artifact` paths must stay under `<task-root>/<taskId>`.
+The service rejects missing or invalid `taskId`, path traversal, and cross-task
+paths before dispatching the operation. Accepted receipts include task evidence.
+When all workers plus the bounded accept queue are full, the service returns
+HTTP 503 with `queueFull` instead of silently growing an unbounded queue.
