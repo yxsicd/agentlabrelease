@@ -864,3 +864,36 @@ receipts with no taskId contamination. Effective throughput across isolated
 atom tasks was about 437.8k `project.verify` ops/sec and 1.35M `ohpm.install`
 plan ops/sec. This proves the desired shape: each atom is a task, each task has
 an isolated sandbox and receipt log, and batch/concurrency can still scale.
+
+## Harmony sandbox E2E build checkpoint
+
+`035f27a` promotes the Harmony ops preview beyond planning for task-isolated
+E2E testing. `harmony.project.create` supports `materialize=true` inside a task
+sandbox and writes a minimal Stage-mode Harmony project with `hvigorfile.ts`,
+`hvigor/hvigor-config.json5`, app/module profiles, ETS EntryAbility/Page, and
+resources. `harmony.ohpm.install` and `harmony.build.debug` support
+`execute=true` only inside task isolation. The build command is intentionally
+CI-safe and unsigned: `hvigorw --no-daemon --no-parallel --no-type-check
+--analyze=false --mode module -p product=default assembleHap`. Earlier manual
+attempts showed why this is necessary: missing `hvigor/hvigor-config.json5`
+blocks hvigor, and daemon mode hit `EMFILE` watcher pressure; no-daemon mode
+built successfully.
+
+hwlinux service E2E at `/tmp/alharmony-service-e2e-035f27a-20260903235659`
+used the real Harmony SDK at `/tmp/alharmony-real-sdk-compat-long30-20260903195333/sdk`
+and completed 12 service operations in one task sandbox: task prepare, project
+materialization, project verify, real `ohpm install`, real unsigned HAP build,
+artifact inspect, then two source edits to `Index.ets` followed by
+verify/build/inspect each time. Results: initial full flow wall time 8,299 ms;
+first edit verify/build/inspect 6,877 ms; second edit verify/build/inspect
+6,942 ms. The three HAP builds produced `entry-default-unsigned.hap`, 14,430
+bytes each, with distinct SHA256 values
+`623889025c103e24230210e0ffc92623181340dc1f0734c94ad4ea4500565580`,
+`b6ae343707cde12192c0d5a95840f93824cda864fe58ba284bef2fea684ec7b4`, and
+`03443384c208f1ba0f2d1006f8cb7d4154fcd93672c843a96bfcf280294aff87`. The task
+receipt log contained 12 events under the task-local `receipts/events.jsonl`.
+Signing was intentionally skipped because no signingConfigs profile was present.
+This proves init/create -> verify -> install -> compile/package unsigned ->
+inspect -> edit/rebuild loops are viable inside the atom task sandbox. The next
+step is to publish a Linux-x64 `035f27a` asset and update `aloffline`, then add
+stronger bounded-process controls before treating execute mode as production.

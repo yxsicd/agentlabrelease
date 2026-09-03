@@ -102,3 +102,22 @@ Every path-bearing operation must stay under the task sandbox and writes a
 compact receipt event to that task's `receipts/events.jsonl`. Batch requests
 validate task scope once and log only the final receipt, preserving high
 concurrency while still leaving a task-local audit trail.
+
+## Task-isolated E2E build preview
+
+Inside service task isolation, `harmony.project.create` can materialize a minimal
+Harmony Stage-mode project when called with `materialize=true`, and
+`harmony.ohpm.install` / `harmony.build.debug` can execute with `execute=true`.
+`build.debug` uses unsigned CI-style packaging:
+
+```text
+hvigorw --no-daemon --no-parallel --no-type-check --analyze=false   --mode module -p product=default assembleHap
+```
+
+A hwlinux E2E run using the real Harmony SDK completed task prepare, project
+create, verify, `ohpm install`, unsigned HAP build, artifact inspect, then two
+source edits and rebuilds. Timings were about 8.30 s for the initial full flow,
+6.88 s for edit-1 verify/build/inspect, and 6.94 s for edit-2
+verify/build/inspect. This remains developer preview: execute mode is allowed
+only in task isolation and still needs stronger process timeout/resource
+controls before production use.
