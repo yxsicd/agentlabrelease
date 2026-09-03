@@ -345,7 +345,7 @@ def stage_quickstart(root: pathlib.Path, destination: pathlib.Path, copy: bool) 
             "set -euo pipefail\n"
             "root=$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\n"
             "export PATH=\"$root/bin:$PATH\"\n"
-            f"exec \"$root/downloads/agentlab-harness-quickstart.sh\" {action} --root \"$root\" \"$@\"\n",
+            f"exec bash \"$root/downloads/agentlab-harness-quickstart.sh\" {action} --root \"$root\" \"$@\"\n",
             encoding="utf-8",
         )
         script_path.chmod(0o755)

@@ -503,3 +503,5 @@ cache finished in about 2.04 seconds with 19/19 assets OK and no redownload. Thi
 Do not claim `agentlabctl offline ...` exists until the real `agentlabctl` source
 is recovered and rebuilt. The release-side CLI is the compatibility bridge and
 should later be ported into the Rust binary with the same command semantics.
+
+The offline staging wrappers invoke the Quickstart through `bash` rather than relying on the GitHub-downloaded script retaining executable permissions.
