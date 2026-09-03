@@ -3,6 +3,7 @@ use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Component, Path, PathBuf};
+use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::TrySendError;
 use std::sync::{mpsc, Arc, Mutex};
@@ -454,10 +455,20 @@ fn dispatch_http_with_task(
                 .get("appLabel")
                 .map(String::as_str)
                 .unwrap_or("AgentLab Demo");
-            Ok(add_task_evidence(
-                project_create_plan(&root, bundle, label),
-                task,
-            ))
+            if param_bool(params, "materialize") || param_bool(params, "execute") {
+                let Some(task) = task else {
+                    return Err("materialized project.create requires task isolation".into());
+                };
+                Ok(add_task_evidence(
+                    project_create_materialized(&root, bundle, label)?,
+                    Some(task),
+                ))
+            } else {
+                Ok(add_task_evidence(
+                    project_create_plan(&root, bundle, label),
+                    task,
+                ))
+            }
         }
         "harmony.project.verify" => {
             let root = required_param_path(params, "projectRoot")?;
@@ -466,12 +477,32 @@ fn dispatch_http_with_task(
         "harmony.ohpm.install" => {
             let root = required_param_path(params, "projectRoot")?;
             let harmony = required_param_path(params, "harmonyHome")?;
-            Ok(add_task_evidence(ohpm_install_plan(&root, &harmony), task))
+            if param_bool(params, "execute") {
+                let Some(task) = task else {
+                    return Err("executing ohpm.install requires task isolation".into());
+                };
+                Ok(add_task_evidence(
+                    execute_ohpm_install(&root, &harmony)?,
+                    Some(task),
+                ))
+            } else {
+                Ok(add_task_evidence(ohpm_install_plan(&root, &harmony), task))
+            }
         }
         "harmony.build.debug" => {
             let root = required_param_path(params, "projectRoot")?;
             let harmony = required_param_path(params, "harmonyHome")?;
-            Ok(add_task_evidence(build_debug_plan(&root, &harmony), task))
+            if param_bool(params, "execute") {
+                let Some(task) = task else {
+                    return Err("executing build.debug requires task isolation".into());
+                };
+                Ok(add_task_evidence(
+                    execute_build_debug(&root, &harmony)?,
+                    Some(task),
+                ))
+            } else {
+                Ok(add_task_evidence(build_debug_plan(&root, &harmony), task))
+            }
         }
         "harmony.artifact.inspect" => {
             let artifact = required_param_path(params, "artifact")?;
@@ -479,6 +510,299 @@ fn dispatch_http_with_task(
         }
         _ => Err(format!("unknown operation: {operation}")),
     }
+}
+
+fn project_create_materialized(
+    project_root: &Path,
+    bundle_name: &str,
+    app_label: &str,
+) -> Result<Receipt, String> {
+    let files = harmony_minimal_project_files(bundle_name, app_label);
+    for (rel, content) in &files {
+        write_project_file(project_root, rel, content)?;
+    }
+    let mut evidence = BTreeMap::new();
+    evidence.insert(
+        "projectRoot".into(),
+        JsonValue::string(project_root.display().to_string()),
+    );
+    evidence.insert("bundleName".into(), JsonValue::string(bundle_name));
+    evidence.insert("appLabel".into(), JsonValue::string(app_label));
+    evidence.insert("materialized".into(), JsonValue::Bool(true));
+    evidence.insert("fileCount".into(), JsonValue::Number(files.len() as i128));
+    evidence.insert(
+        "files".into(),
+        JsonValue::Array(
+            files
+                .iter()
+                .map(|(rel, _)| JsonValue::string(*rel))
+                .collect(),
+        ),
+    );
+    Ok(Receipt::new(
+        "harmony.project.create",
+        alharmony_ops_core::SideEffect::WorkspaceWrite,
+    )
+    .evidence("project", JsonValue::Object(evidence))
+    .next("harmony.project.verify"))
+}
+
+fn write_project_file(project_root: &Path, rel: &str, content: &str) -> Result<(), String> {
+    let path = project_root.join(rel);
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
+    }
+    fs::write(&path, content)
+        .map_err(|error| format!("failed to write {}: {error}", path.display()))
+}
+
+fn harmony_minimal_project_files(
+    bundle_name: &str,
+    app_label: &str,
+) -> Vec<(&'static str, String)> {
+    vec![
+        (
+            "hvigorfile.ts",
+            "import { appTasks } from '@ohos/hvigor-ohos-plugin';\n\nexport default {\n  system: appTasks,\n  plugins: []\n};\n".into(),
+        ),
+        (
+            "hvigor/hvigor-config.json5",
+            "{\n  \"modelVersion\": \"5.0.0\",\n  \"dependencies\": {},\n  \"execution\": {\n    \"daemon\": false,\n    \"parallel\": false,\n    \"incremental\": true,\n    \"typeCheck\": false\n  },\n  \"logging\": {\n    \"level\": \"info\"\n  }\n}\n".into(),
+        ),
+        (
+            "build-profile.json5",
+            format!(
+                "{{\n  \"app\": {{\n    \"signingConfigs\": [],\n    \"products\": [\n      {{\n        \"name\": \"default\",\n        \"signingConfig\": \"default\",\n        \"compatibleSdkVersion\": \"6.0.0(20)\",\n        \"runtimeOS\": \"HarmonyOS\"\n      }}\n    ],\n    \"buildModeSet\": [\n      {{ \"name\": \"debug\" }},\n      {{ \"name\": \"release\" }}\n    ]\n  }},\n  \"modules\": [\n    {{\n      \"name\": \"entry\",\n      \"srcPath\": \"./entry\",\n      \"targets\": [\n        {{ \"name\": \"default\", \"applyToProducts\": [ \"default\" ] }}\n      ]\n    }}\n  ]\n}}\n"
+            ),
+        ),
+        (
+            "oh-package.json5",
+            "{\n  \"modelVersion\": \"5.0.0\",\n  \"dependencies\": {},\n  \"devDependencies\": {}\n}\n".into(),
+        ),
+        (
+            "AppScope/app.json5",
+            format!(
+                "{{\n  \"app\": {{\n    \"bundleName\": \"{}\",\n    \"vendor\": \"agentlab\",\n    \"versionCode\": 1000000,\n    \"versionName\": \"1.0.0\",\n    \"icon\": \"$media:app_icon\",\n    \"label\": \"$string:app_name\"\n  }}\n}}\n",
+                json_escape(bundle_name)
+            ),
+        ),
+        (
+            "AppScope/resources/base/media/app_icon.svg",
+            "<svg width=\"64\" height=\"64\" viewBox=\"0 0 64 64\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"64\" height=\"64\" rx=\"12\" fill=\"#0A59F7\"/></svg>\n".into(),
+        ),
+        (
+            "entry/hvigorfile.ts",
+            "import { hapTasks } from '@ohos/hvigor-ohos-plugin';\n\nexport default {\n  system: hapTasks,\n  plugins: []\n};\n".into(),
+        ),
+        (
+            "entry/build-profile.json5",
+            "{\n  \"apiType\": \"stageMode\",\n  \"buildOption\": {},\n  \"targets\": [\n    { \"name\": \"default\" }\n  ]\n}\n".into(),
+        ),
+        (
+            "entry/oh-package.json5",
+            "{\n  \"name\": \"entry\",\n  \"version\": \"1.0.0\",\n  \"description\": \"AgentLab Harmony E2E entry module\",\n  \"main\": \"\",\n  \"author\": \"agentlab\",\n  \"license\": \"Apache-2.0\",\n  \"dependencies\": {}\n}\n".into(),
+        ),
+        (
+            "entry/src/main/module.json5",
+            "{\n  \"module\": {\n    \"name\": \"entry\",\n    \"type\": \"entry\",\n    \"description\": \"$string:module_desc\",\n    \"mainElement\": \"EntryAbility\",\n    \"deviceTypes\": [ \"default\", \"phone\", \"tablet\" ],\n    \"deliveryWithInstall\": true,\n    \"installationFree\": false,\n    \"pages\": \"$profile:main_pages\",\n    \"abilities\": [\n      {\n        \"name\": \"EntryAbility\",\n        \"srcEntry\": \"./ets/entryability/EntryAbility.ets\",\n        \"description\": \"$string:EntryAbility_desc\",\n        \"icon\": \"$media:icon\",\n        \"label\": \"$string:EntryAbility_label\",\n        \"startWindowIcon\": \"$media:startIcon\",\n        \"startWindowBackground\": \"$color:start_window_background\",\n        \"exported\": true,\n        \"skills\": [\n          {\n            \"entities\": [ \"entity.system.home\" ],\n            \"actions\": [ \"action.system.home\" ]\n          }\n        ]\n      }\n    ]\n  }\n}\n".into(),
+        ),
+        (
+            "entry/src/main/ets/entryability/EntryAbility.ets",
+            "import { AbilityConstant, UIAbility, Want } from '@kit.AbilityKit';\nimport { hilog } from '@kit.PerformanceAnalysisKit';\nimport { window } from '@kit.ArkUI';\n\nexport default class EntryAbility extends UIAbility {\n  onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {\n    hilog.info(0x0000, 'AgentLabE2E', 'Ability onCreate');\n  }\n\n  onWindowStageCreate(windowStage: window.WindowStage): void {\n    windowStage.loadContent('pages/Index');\n  }\n}\n".into(),
+        ),
+        (
+            "entry/src/main/ets/pages/Index.ets",
+            format!(
+                "@Entry\n@Component\nstruct Index {{\n  @State message: string = '{}';\n\n  build() {{\n    Row() {{\n      Column() {{\n        Text(this.message)\n          .fontSize(28)\n          .fontWeight(FontWeight.Bold)\n      }}\n      .width('100%')\n    }}\n    .height('100%')\n  }}\n}}\n",
+                ets_single_quote_escape(app_label)
+            ),
+        ),
+        (
+            "entry/src/main/resources/base/profile/main_pages.json",
+            "{\n  \"src\": [ \"pages/Index\" ]\n}\n".into(),
+        ),
+        (
+            "entry/src/main/resources/base/element/string.json",
+            format!(
+                "{{\n  \"string\": [\n    {{ \"name\": \"app_name\", \"value\": \"{}\" }},\n    {{ \"name\": \"module_desc\", \"value\": \"AgentLab E2E module\" }},\n    {{ \"name\": \"EntryAbility_desc\", \"value\": \"Entry ability\" }},\n    {{ \"name\": \"EntryAbility_label\", \"value\": \"{}\" }}\n  ]\n}}\n",
+                json_escape(app_label),
+                json_escape(app_label)
+            ),
+        ),
+        (
+            "entry/src/main/resources/en_US/element/string.json",
+            format!(
+                "{{\n  \"string\": [\n    {{ \"name\": \"app_name\", \"value\": \"{}\" }},\n    {{ \"name\": \"module_desc\", \"value\": \"AgentLab E2E module\" }},\n    {{ \"name\": \"EntryAbility_desc\", \"value\": \"Entry ability\" }},\n    {{ \"name\": \"EntryAbility_label\", \"value\": \"{}\" }}\n  ]\n}}\n",
+                json_escape(app_label),
+                json_escape(app_label)
+            ),
+        ),
+        (
+            "entry/src/main/resources/base/element/color.json",
+            "{\n  \"color\": [\n    { \"name\": \"start_window_background\", \"value\": \"#FFFFFF\" }\n  ]\n}\n".into(),
+        ),
+        (
+            "entry/src/main/resources/base/media/icon.svg",
+            "<svg width=\"64\" height=\"64\" viewBox=\"0 0 64 64\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"64\" height=\"64\" rx=\"12\" fill=\"#0A59F7\"/></svg>\n".into(),
+        ),
+        (
+            "entry/src/main/resources/base/media/startIcon.svg",
+            "<svg width=\"64\" height=\"64\" viewBox=\"0 0 64 64\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"64\" height=\"64\" rx=\"12\" fill=\"#0A59F7\"/></svg>\n".into(),
+        ),
+    ]
+}
+
+fn ets_single_quote_escape(value: &str) -> String {
+    value.replace('\\', "\\\\").replace('\'', "\\'")
+}
+
+fn execute_ohpm_install(project_root: &Path, harmony_home: &Path) -> Result<Receipt, String> {
+    execute_local_process(
+        "harmony.ohpm.install",
+        project_root,
+        &harmony_home.join("bin/ohpm"),
+        &["install"],
+        Some("harmony.build.debug"),
+    )
+}
+
+fn execute_build_debug(project_root: &Path, harmony_home: &Path) -> Result<Receipt, String> {
+    execute_local_process(
+        "harmony.build.debug",
+        project_root,
+        &harmony_home.join("bin/hvigorw"),
+        &[
+            "--no-daemon",
+            "--no-parallel",
+            "--no-type-check",
+            "--analyze=false",
+            "--mode",
+            "module",
+            "-p",
+            "product=default",
+            "assembleHap",
+        ],
+        Some("harmony.artifact.inspect"),
+    )
+}
+
+fn execute_local_process(
+    operation: &'static str,
+    project_root: &Path,
+    command: &Path,
+    args: &[&str],
+    next_action: Option<&'static str>,
+) -> Result<Receipt, String> {
+    if !project_root.is_dir() {
+        return Err(format!(
+            "projectRoot does not exist: {}",
+            project_root.display()
+        ));
+    }
+    if !command.is_file() {
+        return Err(format!("command does not exist: {}", command.display()));
+    }
+    let started = Instant::now();
+    let output = Command::new(command)
+        .args(args)
+        .current_dir(project_root)
+        .output()
+        .map_err(|error| format!("failed to execute {}: {error}", command.display()))?;
+    let elapsed_ms = started.elapsed().as_millis() as i128;
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    let mut evidence = BTreeMap::new();
+    evidence.insert(
+        "cwd".into(),
+        JsonValue::string(project_root.display().to_string()),
+    );
+    evidence.insert(
+        "command".into(),
+        JsonValue::string(command.display().to_string()),
+    );
+    evidence.insert(
+        "args".into(),
+        JsonValue::Array(args.iter().map(|arg| JsonValue::string(*arg)).collect()),
+    );
+    evidence.insert(
+        "exitCode".into(),
+        JsonValue::Number(output.status.code().unwrap_or(-1) as i128),
+    );
+    evidence.insert("elapsedMillis".into(), JsonValue::Number(elapsed_ms));
+    evidence.insert(
+        "stdoutTail".into(),
+        JsonValue::string(tail_chars(&stdout, 4096)),
+    );
+    evidence.insert(
+        "stderrTail".into(),
+        JsonValue::string(tail_chars(&stderr, 4096)),
+    );
+    let artifacts = find_artifacts(project_root);
+    if !artifacts.is_empty() {
+        evidence.insert("artifacts".into(), JsonValue::Array(artifacts));
+    }
+    let mut receipt = Receipt::new(operation, alharmony_ops_core::SideEffect::LocalProcess)
+        .evidence("execution", JsonValue::Object(evidence));
+    receipt.ok = output.status.success();
+    receipt.next_action = if output.status.success() {
+        next_action
+    } else {
+        Some("harmony.project.verify")
+    };
+    if !output.status.success() {
+        receipt.recovery_owner = alharmony_ops_core::RecoveryOwner::Agent;
+        receipt
+            .diagnostics
+            .push(format!("{operation} command failed"));
+    }
+    Ok(receipt)
+}
+
+fn tail_chars(value: &str, max_chars: usize) -> String {
+    let chars: Vec<char> = value.chars().collect();
+    let start = chars.len().saturating_sub(max_chars);
+    chars[start..].iter().collect()
+}
+
+fn find_artifacts(root: &Path) -> Vec<JsonValue> {
+    let mut out = Vec::new();
+    collect_artifacts(root, &mut out, 0);
+    out
+}
+
+fn collect_artifacts(path: &Path, out: &mut Vec<JsonValue>, depth: usize) {
+    if depth > 24 || out.len() >= 64 {
+        return;
+    }
+    let Ok(read_dir) = fs::read_dir(path) else {
+        return;
+    };
+    for entry in read_dir.flatten() {
+        let p = entry.path();
+        let Ok(meta) = entry.metadata() else {
+            continue;
+        };
+        if meta.is_dir() {
+            collect_artifacts(&p, out, depth + 1);
+        } else if meta.is_file() {
+            let ext = p.extension().and_then(|value| value.to_str()).unwrap_or("");
+            if matches!(ext, "hap" | "app" | "har" | "hsp") {
+                let mut item = BTreeMap::new();
+                item.insert("path".into(), JsonValue::string(p.display().to_string()));
+                item.insert("bytes".into(), JsonValue::Number(meta.len() as i128));
+                item.insert("extension".into(), JsonValue::string(ext));
+                out.push(JsonValue::Object(item));
+            }
+        }
+    }
+}
+
+fn param_bool(params: &BTreeMap<String, String>, name: &str) -> bool {
+    matches!(
+        params.get(name).map(String::as_str),
+        Some("1" | "true" | "yes" | "on")
+    )
 }
 
 fn validate_task_prepare(
@@ -830,7 +1154,9 @@ fn usage(code: i32) -> ! {
          artifact-inspect --artifact FILE\n\n\
          service endpoints: GET /v1/ops/<operation>?projectRoot=...&harmonyHome=...&artifact=...\n\
          batch endpoint: GET /v1/batch/<operation>?n=<count>&projectRoot=...&harmonyHome=...&artifact=...\n\
-         task isolation: start with --task-root DIR, then pass taskId=... and keep project/artifact paths under DIR/taskId"
+         task isolation: start with --task-root DIR, then pass taskId=... and keep project/artifact paths under DIR/taskId
+\
+         execute mode: add materialize=true for project.create and execute=true for ohpm/build inside task sandbox"
     );
     std::process::exit(code);
 }
