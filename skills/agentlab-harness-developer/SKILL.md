@@ -703,3 +703,35 @@ Harmony command existed but the project root did not. AgentLab fixed this in
 project roots fail closed with `recoveryOwner=agent` and
 `nextAction=harmony.project.create`. Publish and offline metadata should prefer
 `alharmony-ops-core-linux-x64-a932f4b` over the earlier `9163f32` binary.
+
+## Harmony ops-core hwlinux deep-test checkpoint
+
+hwlinux testing after `d7f4e2c` verified the current `alharmony-ops-core`
+release path end to end. The initial `9163f32` release package passed 14/14
+receipt/CLI cases across the six P0 operations, including positive and negative
+`env.status`, `project.create`, `project.verify`, `ohpm.install`, `build.debug`,
+`artifact.inspect`, plus unknown-command behavior. Real Harmony SDK package
+compatibility exposed two lessons: the Harmony SDK zstd archive requires
+`zstd --long=30` because its frame window is 1 GiB, and the first command-plan
+implementation did not reject a missing project root when the command existed.
+
+The project-root issue is fixed by `a932f4b`, then published through AgentLab
+metadata commit `d7f4e2c`. The current Linux-x64 asset is
+`alharmony-ops-core-linux-x64-a932f4b.tar.zst`, 163,401 bytes, SHA256
+`0604bdb2af116642f7127703b093cdecc57162649ecbe71787aaef766b5ae29e`; its
+manifest is 949 bytes, SHA256
+`844b75e89f55b5eae29648c9e0c822d3d982cc10b5b45d5ad61f16d62ecfaa2f`; the
+packaged `bin/alharmony-ops` binary SHA256 is
+`60a4407accfb214e5581ba39762c9f736ce7f4ecd91acc8686c1ef693157df47`.
+
+Final hwlinux release smoke downloaded `agentlab-offline-closure-d7f4e2c.py`
+and `agentlab-offline-linux-x64-d7f4e2c.json` from GitHub, resolved 21 assets
+and 1,692,303,564 bytes, incrementally reused 19 existing cache assets,
+downloaded the two current `a932f4b` harmony-ops assets, and verified
+`badCount=0`. The unpacked binary produced correct receipts: existing project
+`ohpm-install-plan` returned `ok=true` with `projectRootExists=true`; missing
+project `ohpm-install-plan` and `build-debug-plan` returned `ok=false`,
+`recoveryOwner=agent`, `nextAction=harmony.project.create`, and
+`projectRootExists=false`. Keep the next step focused on `project.create`
+materializing a tiny valid Harmony template and then gated bounded execution for
+`ohpm.install` and `build.debug`.
