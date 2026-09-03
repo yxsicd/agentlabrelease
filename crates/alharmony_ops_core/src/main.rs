@@ -120,33 +120,61 @@ fn run_service(mut args: Vec<String>) -> ! {
 fn handle_connection(mut stream: TcpStream) {
     let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
     let _ = stream.set_write_timeout(Some(Duration::from_secs(5)));
+    for _ in 0..1_000_000_u32 {
+        let Some(request) = read_http_header(&mut stream) else {
+            return;
+        };
+        let close_after_response = request_wants_close(&request);
+        let (status, body) = route_request(&request);
+        let reason = match status {
+            200 => "OK",
+            400 => "Bad Request",
+            404 => "Not Found",
+            _ => "Internal Server Error",
+        };
+        let connection = if close_after_response {
+            "close"
+        } else {
+            "keep-alive"
+        };
+        let response = format!(
+            "HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: {connection}\r\n\r\n{}",
+            body.len(), body
+        );
+        if stream.write_all(response.as_bytes()).is_err() {
+            return;
+        }
+        if close_after_response {
+            return;
+        }
+    }
+}
+
+fn read_http_header(stream: &mut TcpStream) -> Option<String> {
     let mut buffer = [0_u8; 8192];
     let mut used = 0_usize;
     while used < buffer.len() {
         match stream.read(&mut buffer[used..]) {
-            Ok(0) => break,
+            Ok(0) => return None,
             Ok(n) => {
                 used += n;
                 if buffer[..used].windows(4).any(|w| w == b"\r\n\r\n") {
-                    break;
+                    return Some(String::from_utf8_lossy(&buffer[..used]).into_owned());
                 }
             }
-            Err(_) => return,
+            Err(_) => return None,
         }
     }
-    let request = String::from_utf8_lossy(&buffer[..used]);
-    let (status, body) = route_request(&request);
-    let reason = match status {
-        200 => "OK",
-        400 => "Bad Request",
-        404 => "Not Found",
-        _ => "Internal Server Error",
-    };
-    let response = format!(
-        "HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-        body.len(), body
-    );
-    let _ = stream.write_all(response.as_bytes());
+    Some(String::from_utf8_lossy(&buffer[..used]).into_owned())
+}
+
+fn request_wants_close(request: &str) -> bool {
+    let request_line = request.lines().next().unwrap_or_default();
+    let http10 = request_line.ends_with("HTTP/1.0");
+    request.lines().any(|line| {
+        let lower = line.trim().to_ascii_lowercase();
+        lower == "connection: close"
+    }) || http10
 }
 
 fn route_request(request: &str) -> (u16, String) {
