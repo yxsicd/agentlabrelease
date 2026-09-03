@@ -38,7 +38,17 @@ session implementation.
 ## Minimal qualification order
 
 For the AIWSL preview, use the immutable alpha.9 environment kit and the fixed
-`aldev` composition. Preserve one content-addressed cache across repetitions:
+`aldev` composition.
+
+This is an **AIWSL target preview**, not yet a generic zero-dependency Linux
+bootstrap. A genuinely unrelated Linux host may satisfy Docker/x64 requirements
+and download every public asset successfully but still fail the deployment
+preflight because the descriptor intentionally expects target-owned dependencies
+such as the Harmony SDK volume plus an independently qualified MCPGit/SafeGit
+control plane and its private projections. Treat that as an unsupported-target
+result, not a download failure, and never synthesize empty volumes or credentials
+to make the preflight green.
+ Preserve one content-addressed cache across repetitions:
 online and offline installation are user-selected modes over the same bytes.
 The target needs Docker but does not need host Btrfs tools or a host Btrfs
 mount: the SessionFS companion owns an instance-local sparse Btrfs image volume.
@@ -222,6 +232,14 @@ composition receipt, extracted kit, and CAS. An offline repetition starts at
 package manager.
 
 ## Installation timing and safe repetition
+
+A zero-cache portability probe on an unrelated x64 `hwlinux` host reached the
+fail-closed target preflight in 50.58 seconds: control acquisition 5.05 seconds,
+public composition download 28.14 seconds, Docker admission 15.44 seconds, and
+about 1.93 seconds to reject missing target-owned dependencies. This proves the
+public download/package path independently of AIWSL while also documenting that
+the current descriptor is not a generic Linux bootstrap.
+
 
 Quickstart emits one `agentlab.quickstart_timing.v1` JSON line per phase and a
 total by default; set `AGENTLAB_TIMING=0` only when compact output matters more
