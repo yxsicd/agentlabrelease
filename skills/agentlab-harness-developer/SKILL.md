@@ -814,3 +814,12 @@ scope inside the operation loop. This avoids multiplying lexical path
 normalization by `n` while keeping `lastReceipt.evidence.task` intact. M4 smoke
 verified in-scope batch success and out-of-scope batch rejection before hwlinux
 performance retest.
+
+Accept-queue-only backpressure proved unreliable under hwlinux/M4 smoke because
+TCP backlog can let a client connect and then wait for a worker instead of
+immediately receiving a 503. The service now also supports request-level
+`--max-active-requests` using an atomic active-request guard. A long batch can
+occupy the only active slot, and concurrent requests then return HTTP 503
+`activeRequestLimit` deterministically. Keep both controls: queue capacity limits
+accepted idle connection buildup, while active-request limit protects operation
+execution capacity.

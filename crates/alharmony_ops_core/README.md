@@ -71,3 +71,9 @@ The service rejects missing or invalid `taskId`, path traversal, and cross-task
 paths before dispatching the operation. Accepted receipts include task evidence.
 When all workers plus the bounded accept queue are full, the service returns
 HTTP 503 with `queueFull` instead of silently growing an unbounded queue.
+
+Request-level backpressure is enforced with `--max-active-requests`. This is
+more reliable than accept-queue-only backpressure because TCP backlog and accept
+scheduling may let a client connect before the service has accepted the socket.
+When the active request limit is reached, the service returns HTTP 503 with
+`activeRequestLimit`.

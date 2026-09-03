@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Component, Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::TrySendError;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
@@ -17,6 +18,8 @@ struct ServiceConfig {
     task_root: Option<PathBuf>,
     queue_capacity: usize,
     max_batch: usize,
+    max_active_requests: usize,
+    active_requests: AtomicUsize,
 }
 
 #[derive(Clone, Debug)]
@@ -102,6 +105,10 @@ fn run_service(mut args: Vec<String>) -> ! {
         .and_then(|value| value.parse::<usize>().ok())
         .filter(|value| *value > 0)
         .unwrap_or(100_000);
+    let max_active_requests = take_value(&mut args, "--max-active-requests")
+        .and_then(|value| value.parse::<usize>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(workers);
     let task_root =
         take_value(&mut args, "--task-root").map(|value| normalize_path(Path::new(&value)));
     if !args.is_empty() {
@@ -114,7 +121,7 @@ fn run_service(mut args: Vec<String>) -> ! {
         std::process::exit(1);
     });
     eprintln!(
-        "alharmony-ops service listening on {bind} with {workers} workers, queue_capacity={queue_capacity}, task_root={}",
+        "alharmony-ops service listening on {bind} with {workers} workers, queue_capacity={queue_capacity}, max_active_requests={max_active_requests}, task_root={}",
         task_root
             .as_ref()
             .map(|value| value.display().to_string())
@@ -125,6 +132,8 @@ fn run_service(mut args: Vec<String>) -> ! {
         task_root,
         queue_capacity,
         max_batch,
+        max_active_requests,
+        active_requests: AtomicUsize::new(0),
     });
     let (tx, rx) = mpsc::sync_channel::<TcpStream>(queue_capacity);
     let rx = Arc::new(Mutex::new(rx));
@@ -168,6 +177,14 @@ fn handle_connection(mut stream: TcpStream, config: &ServiceConfig) {
             return;
         };
         let close_after_response = request_wants_close(&request);
+        let Some(_active_guard) = ActiveRequestGuard::try_begin(config) else {
+            let body = service_error_body(
+                "activeRequestLimit",
+                "service active request limit is reached; retry with backoff or lower concurrency",
+            );
+            let _ = write_http_response(&mut stream, 503, &body, true);
+            return;
+        };
         let (status, body) = route_request(&request, config);
         if write_http_response(&mut stream, status, &body, close_after_response).is_err() {
             return;
@@ -175,6 +192,36 @@ fn handle_connection(mut stream: TcpStream, config: &ServiceConfig) {
         if close_after_response {
             return;
         }
+    }
+}
+
+struct ActiveRequestGuard<'a> {
+    active: &'a AtomicUsize,
+}
+
+impl<'a> ActiveRequestGuard<'a> {
+    fn try_begin(config: &'a ServiceConfig) -> Option<Self> {
+        loop {
+            let current = config.active_requests.load(Ordering::Relaxed);
+            if current >= config.max_active_requests {
+                return None;
+            }
+            if config
+                .active_requests
+                .compare_exchange_weak(current, current + 1, Ordering::AcqRel, Ordering::Relaxed)
+                .is_ok()
+            {
+                return Some(Self {
+                    active: &config.active_requests,
+                });
+            }
+        }
+    }
+}
+
+impl Drop for ActiveRequestGuard<'_> {
+    fn drop(&mut self) {
+        self.active.fetch_sub(1, Ordering::AcqRel);
     }
 }
 
@@ -270,10 +317,30 @@ fn service_status_body(config: &ServiceConfig) -> String {
         None => "null".to_string(),
     };
     format!(
-        "{{\n  \"schema\": \"agentlab.harmony_ops.service_status.v1\",\n  \"ok\": true,\n  \"service\": \"alharmony-ops\",\n  \"receiptSchema\": \"agentlab.harmony_ops.receipt.v1\",\n  \"queueCapacity\": {},\n  \"maxBatch\": {},\n  \"taskIsolation\": {{\n    \"enabled\": {},\n    \"taskRoot\": {}\n  }}\n}}\n",
+        "{{
+  \"schema\": \"agentlab.harmony_ops.service_status.v1\",
+  \"ok\": true,
+  \"service\": \"alharmony-ops\",
+  \"receiptSchema\": \"agentlab.harmony_ops.receipt.v1\",
+  \"queueCapacity\": {},
+  \"maxBatch\": {},
+  \"maxActiveRequests\": {},
+  \"activeRequests\": {},
+  \"taskIsolation\": {{
+    \"enabled\": {},
+    \"taskRoot\": {}
+  }}
+}}
+",
         config.queue_capacity,
         config.max_batch,
-        if config.task_root.is_some() { "true" } else { "false" },
+        config.max_active_requests,
+        config.active_requests.load(Ordering::Relaxed),
+        if config.task_root.is_some() {
+            "true"
+        } else {
+            "false"
+        },
         task_root
     )
 }
@@ -588,7 +655,7 @@ fn take_value(args: &mut Vec<String>, name: &str) -> Option<String> {
 fn usage(code: i32) -> ! {
     eprintln!(
         "usage: alharmony-ops <serve|env-status|project-create-plan|project-verify|ohpm-install-plan|build-debug-plan|artifact-inspect> [args]\n\n\
-         serve [--bind 127.0.0.1:19731] [--workers N] [--queue-capacity N] [--max-batch N] [--task-root DIR]\n\
+         serve [--bind 127.0.0.1:19731] [--workers N] [--queue-capacity N] [--max-active-requests N] [--max-batch N] [--task-root DIR]\n\
          env-status [--harmony-home DIR]\n\
          project-create-plan --project-root DIR [--bundle-name NAME] [--app-label LABEL]\n\
          project-verify --project-root DIR\n\
