@@ -1,0 +1,43 @@
+{
+  "schema": "agentlab.alharmony_ops_core_asset.v1",
+  "channel": "alharmony",
+  "status": "developer-preview",
+  "sourceCommit": "89e25e0",
+  "platform": "linux-x64",
+  "asset": {
+    "filename": "alharmony-ops-core-linux-x64-89e25e0.tar.zst",
+    "bytes": 207722,
+    "sha256": "0df9e480b7b05b0de2fc2aab0b42ae4e90223af70a5f8d55515b5a08333ee54e",
+    "mediaType": "application/zstd"
+  },
+  "binary": {
+    "path": "bin/alharmony-ops",
+    "bytes": 466112,
+    "sha256": "1cf8a54b3e500927a8ea99c5c95abd5724f8c6e80143dd98dbf20f9390030c54"
+  },
+  "smoke": {
+    "cargoFmtCheck": true,
+    "cargoTest": true,
+    "cargoBuildRelease": true,
+    "taskLifecycleSmoke": true,
+    "multiTaskConcurrencySmoke": true,
+    "crossTaskRejectionSmoke": true,
+    "linuxFile": "ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=025e6e35b2b4204055eeb2305969c449691ade35, stripped"
+  },
+  "features": [
+    "HTTP service mode",
+    "HTTP/1.1 keep-alive",
+    "batch endpoint",
+    "harmony.task.prepare",
+    "task sandbox lifecycle",
+    "task-local receipt log",
+    "task-root path isolation",
+    "bounded accept queue",
+    "active-request backpressure",
+    "batch scope validation once"
+  ],
+  "evidence": {
+    "path": "evidence/hwlinux-atom-task-concurrency.json",
+    "sha256": "30d05962e3b78a08ff4a3728d9bde3d21922d7b0438ba1f6cee159c4c67f9a5f"
+  }
+}

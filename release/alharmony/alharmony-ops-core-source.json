@@ -28,8 +28,8 @@
   },
   "crateName": "alharmony_ops_core",
   "createdAt": "2026-09-03T15:55:00Z",
-  "latestAgentLabCommit": "30f2402",
-  "latestFeature": "batch scope validation once, task-root path isolation, and active-request backpressure",
+  "latestAgentLabCommit": "89e25e0",
+  "latestFeature": "one sandbox per atom task, task prepare, and task-local receipt logs",
   "latestFix": "command plans fail closed when projectRoot is missing",
   "p0Operations": [
     "harmony.env.status",
@@ -41,15 +41,15 @@
   ],
   "publishedAssets": [
     {
-      "bytes": 202297,
-      "filename": "alharmony-ops-core-linux-x64-30f2402.tar.zst",
-      "manifest": "alharmony-ops-core-linux-x64-30f2402.json",
-      "manifestBytes": 1354,
-      "manifestSha256": "5292848a0645920061399d9e7d685b7a0bc6e3dd78134bd421818a87fa58bb75",
+      "bytes": 207722,
+      "filename": "alharmony-ops-core-linux-x64-89e25e0.tar.zst",
+      "manifest": "alharmony-ops-core-linux-x64-89e25e0.json",
+      "manifestBytes": 1448,
+      "manifestSha256": "bf5929c76454616373b1b1219faad4a44afc277cd0414ae2cb7f259937520824",
       "platform": "linux-x64",
-      "sha256": "be038a7739969c418535fc909a0b61d615a0810e1f1e373495ea7fe264b29e7b"
+      "sha256": "0df9e480b7b05b0de2fc2aab0b42ae4e90223af70a5f8d55515b5a08333ee54e"
     }
   ],
   "schema": "agentlab.alharmony_ops_core_source.v1",
-  "status": "absorbed-source-and-linux-x64-isolated-service-preview-published"
+  "status": "absorbed-source-and-linux-x64-atom-task-lifecycle-preview-published"
 }

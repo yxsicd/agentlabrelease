@@ -94,3 +94,17 @@ showed task isolation overhead was reduced to roughly 2.6% for `project.verify`
 batch-10000 and 1.9% for `ohpm.install` plan batch-10000; active-request
 backpressure returned HTTP 503 `activeRequestLimit` deterministically while a
 long batch occupied the only active slot.
+
+## Atom task lifecycle preview asset
+
+`89e25e0` supersedes `30f2402` for current Linux-x64 preview use. The new asset
+`alharmony-ops-core-linux-x64-89e25e0.tar.zst` adds `harmony.task.prepare`,
+which creates one sandbox per atomic task under `<task-root>/<taskId>` with
+`task.json`, `workspace/`, `artifacts/`, `tmp/`, and `receipts/events.jsonl`.
+Task-scoped operations append compact receipt events to the task-local JSONL
+log; batch requests validate scope once and log only the final receipt. hwlinux
+16-task concurrency testing verified independent sandboxes and logs, cross-task
+path rejection, and parallel batch execution: `project.verify` reached about
+437.8k effective ops/sec and `ohpm.install` plan reached about 1.35M effective
+ops/sec across 16 isolated atom tasks. No real `ohpm` or `hvigor` mutation is
+enabled in this preview.

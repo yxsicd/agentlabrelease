@@ -85,18 +85,18 @@
       "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alimage/chatproxy-agentlab-image-a0ec49f8fd01-linux-x64.docker.tar.zst.json"
     },
     {
-      "bytes": 202297,
-      "filename": "alharmony-ops-core-linux-x64-30f2402.tar.zst",
+      "bytes": 207722,
+      "filename": "alharmony-ops-core-linux-x64-89e25e0.tar.zst",
       "group": "harmony-ops",
-      "sha256": "be038a7739969c418535fc909a0b61d615a0810e1f1e373495ea7fe264b29e7b",
-      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alharmony/alharmony-ops-core-linux-x64-30f2402.tar.zst"
+      "sha256": "0df9e480b7b05b0de2fc2aab0b42ae4e90223af70a5f8d55515b5a08333ee54e",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alharmony/alharmony-ops-core-linux-x64-89e25e0.tar.zst"
     },
     {
-      "bytes": 1354,
-      "filename": "alharmony-ops-core-linux-x64-30f2402.json",
+      "bytes": 1448,
+      "filename": "alharmony-ops-core-linux-x64-89e25e0.json",
       "group": "harmony-ops",
-      "sha256": "5292848a0645920061399d9e7d685b7a0bc6e3dd78134bd421818a87fa58bb75",
-      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alharmony/alharmony-ops-core-linux-x64-30f2402.json"
+      "sha256": "bf5929c76454616373b1b1219faad4a44afc277cd0414ae2cb7f259937520824",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alharmony/alharmony-ops-core-linux-x64-89e25e0.json"
     }
   ],
   "manifestRefs": [

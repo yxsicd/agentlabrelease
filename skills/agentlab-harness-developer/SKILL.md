@@ -850,3 +850,17 @@ validate the scope once and only log the final receipt so batch throughput does
 not collapse. M4 smoke verified sandbox creation, manifest creation, receipt log
 validity, normal op logging, batch lastReceipt task evidence, and cross-task
 path rejection.
+
+## Harmony atom task concurrency checkpoint
+
+`89e25e0` is the current atom-task lifecycle baseline. It adds
+`harmony.task.prepare`, one sandbox per atomic task, task-local `task.json`, and
+`receipts/events.jsonl`. hwlinux clean-build testing prepared 16 atom tasks in
+parallel, created a separate `workspace/project` under every task, rejected a
+cross-task path (`atom01` trying to use `atom00` workspace), then ran parallel
+batch requests for all 16 tasks. Each task log contained exactly its own
+`harmony.task.prepare`, `harmony.project.verify`, and `harmony.ohpm.install`
+receipts with no taskId contamination. Effective throughput across isolated
+atom tasks was about 437.8k `project.verify` ops/sec and 1.35M `ohpm.install`
+plan ops/sec. This proves the desired shape: each atom is a task, each task has
+an isolated sandbox and receipt log, and batch/concurrency can still scale.
