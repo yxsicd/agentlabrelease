@@ -379,3 +379,48 @@ Do not substitute whatever OpenCode/Codex happens to be installed on a host.
 The AIWSL host observed during this work had older versions (`1.17.11` and
 `0.142.3`), which is exactly why code-agent tools belong in the offline release
 closure.
+
+
+## MCPGit distribution mirror (`almcpgit`)
+
+AgentLab MUST NOT change the upstream MCPGit release process. MCPGit upstream
+Release remains authoritative. AgentLab may republish a distribution mirror in
+`almcpgit` for offline installation and transport optimization.
+
+The mirror keeps four lifecycles physically and semantically separate:
+
+1. stable base runtime image;
+2. MCPGit program payload (`mcpgit`, `mcpgitgw`, `mcpgit-safe-recover`);
+3. tools volume (Node/Bun/npm and seeds/runtime helpers);
+4. instance templates.
+
+The public Linux-x64 index is
+`release/almcpgit/agentlab-mcpgit-mirror-linux-x64.json`. Every mirrored asset
+records upstream repository/tag, upstream asset SHA256, resolved MCPGit source
+revision, repacked SHA256 and byte size. Repacking is a pure
+`gzip tar stream -> standard-window zstd -10` transform; acceptance requires
+the decompressed tar stream SHA256 to remain identical to upstream.
+
+### Program-volume rule
+
+Do not bake a newly resolved MCPGit program into a new runtime image merely to
+upgrade MCPGit. Materialize the program tar into a version/digest-specific
+Docker volume and mount it read-only at `/opt/mcpgit/program`. Keep tools as a
+separate read-only volume at `/opt/mcpgit/tools`; keep durable MCPGit state only
+at `/data`.
+
+The desired runtime topology is therefore:
+
+`stable base image + program volume + tools volume + durable data volume`.
+
+On hwlinux this topology was validated directly using the upstream
+`mcpgit-offline-base:bookworm-v1-amd64` image. The mirrored a483 program pack
+was materialized into a fresh volume and both `mcpgit --help` and
+`mcpgitgw --help` executed successfully without rebuilding the image. The
+mirrored tools pack was independently materialized to a second volume; with
+both volumes mounted, Node `v24.19.0`, MCPGit and MCPGit Gateway executed from
+the stable base image. The tools pack intentionally does not duplicate Git;
+Git remains a base-image responsibility.
+
+This separation is a distribution/runtime rule for AgentLab only. It does not
+change MCPGit upstream tags, manifests, build jobs, or release formats.

@@ -1,0 +1,58 @@
+{
+  "assets": [
+    {
+      "bytes": 78619489,
+      "compression": {
+        "format": "zstd",
+        "level": 10
+      },
+      "filename": "mcpgit-base-bookworm-v1-amd64.image.tar.zst",
+      "kind": "base",
+      "sha256": "69e179089d481bfde3ed96b71a789229d3be01efd07b3e55c0542f440bd0a884",
+      "upstreamAsset": "mcpgit-base-bookworm-v1-amd64.image.tar.gz",
+      "upstreamSha256": "89d0f0224774e05c3334302b4f97aa1443c66686b1ba003b822797599acf136e"
+    },
+    {
+      "bytes": 28346237,
+      "compression": {
+        "format": "zstd",
+        "level": 10
+      },
+      "filename": "mcpgit-program-git-a483f90c0ee706dd4b72b1c590bb5167a890c69f-linux-x64.tar.zst",
+      "kind": "program",
+      "sha256": "b6b8ef3cd278290dd88e7d72a65d98c28c85158684d45a62583b40d79f385ded",
+      "upstreamAsset": "mcpgit-program-git-a483f90c0ee706dd4b72b1c590bb5167a890c69f-x86_64-unknown-linux-musl.tar.gz",
+      "upstreamSha256": "87ae9e7958416a7102642b6b98d33d3dc72383b85c17e57a8a734d48f2fc01a2"
+    },
+    {
+      "bytes": 99061284,
+      "compression": {
+        "format": "zstd",
+        "level": 10
+      },
+      "filename": "mcpgit-tools-79cf1cbf34ec-linux-x64.volume.tar.zst",
+      "kind": "tools",
+      "sha256": "790c1c28f64d0f6ab68870bb33e870359e94f15228a52b5f208b083959360017",
+      "upstreamAsset": "mcpgit-tools-sha256-79cf1cbf34ece674014f792a63cd72223b2c879e874808ecb93fd2b48dcabb65.volume.tar.gz",
+      "upstreamSha256": "79cf1cbf34ece674014f792a63cd72223b2c879e874808ecb93fd2b48dcabb65"
+    },
+    {
+      "bytes": 14197,
+      "compression": {
+        "format": "zstd",
+        "level": 10
+      },
+      "filename": "mcpgit-instance-templates-v1.tar.zst",
+      "kind": "templates",
+      "sha256": "aeaebbb21c5d01cb43c0a7a2ebfdb5f132b929d9a88ae3bbfa9cb9b68dc0656f",
+      "upstreamAsset": "mcpgit-instance-templates-v1.tar.gz",
+      "upstreamSha256": "ee0c83017d058345b03ef93d2a904e2913c52d2981f49e70da954cbc46bff4ef"
+    }
+  ],
+  "channel": "almcpgit",
+  "platform": "linux-x64",
+  "resolvedSourceRevision": "a483f90c0ee706dd4b72b1c590bb5167a890c69f",
+  "schema": "agentlab.mcpgit_mirror.v1",
+  "upstreamReleaseTag": "mcpgit-git-a483f90c0ee706dd4b72b1c590bb5167a890c69f-linux-amd64",
+  "upstreamRepository": "yxsicd/mcpgitrelease"
+}
