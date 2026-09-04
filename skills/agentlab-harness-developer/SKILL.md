@@ -1110,6 +1110,47 @@ cache hit 0.724 ms. Binary SHA256: `alharmony-ops`
 This proves two independent owned services can compose while preserving Session
 Fork semantics and build-cache inheritance.
 
+## Real Btrfs SessionFS fast-fork checkpoint
+
+The independent `alsessionfsd` path now has a real Btrfs subvolume backend in
+addition to portable copy-tree compatibility. The public storage lifecycle is
+`session.create` plus `session.fork`: `harmony.task.prepare` asks SessionFS to
+create the initial task root, so a Btrfs-backed task is born as a subvolume and
+is immediately eligible to become a workspace-pool parent. `harmony.task.fork`
+then snapshots that parent, prunes parent-only top-level metadata, resets
+`receipts/` and `tmp/`, and lets Harmony rewrite child lineage/build-state.
+Both prepare and fork receipts propagate `backend`, `fallback`, and
+`copyOnWrite` so callers can distinguish a true CoW fork from compatibility
+copying.
+
+The service supports `--backend auto|copy-tree|btrfs-subvolume` and
+`--storage-root`. The owned storage root is canonicalized and request paths are
+rejected if they leave it or traverse a symlink. `auto` is fail-safe: it
+attempts the Btrfs primitive directly and falls back on failure. In particular,
+an already-existing non-empty ordinary task directory on a Btrfs filesystem is
+never deleted during promotion; hwlinux smoke preserved a sentinel file and
+returned `directory-fallback`, while a new sibling task became a real Btrfs
+subvolume. Explicit `btrfs-subvolume` remains fail-closed.
+
+hwlinux acceptance used a disposable Docker-owned sparse Btrfs image, matching
+the existing AgentLab SessionFS companion storage shape while keeping the host
+ext4 filesystem untouched. Final composed E2E started independent
+`alsessionfsd` and `alharmony-ops`, prepared a parent, wrote workspace/cache
+state, forked a child, verified both roots with `btrfs subvolume show`, verified
+the child receipt log did not inherit the parent prepare event, mutated the
+child, and rechecked the parent. SessionFS prepare was 2,258 us; fork was 8,731
+us with `copiedFiles=0` and `copiedBytes=0`; both receipts reported
+`backend=btrfs-subvolume`, `copyOnWrite=true`, `fallback=false`.
+
+A scale comparison used 10,000 files of 4 KiB each. Three Btrfs forks measured
+59,564 / 44,145 / 29,714 us (median 44,145 us); three copy-tree forks measured
+375,047 / 351,586 / 359,699 us (median 359,699 us), giving about 8.15x median
+speedup. The remaining release work is composition/deployment rather than the
+fork primitive: wire the combined release to a persistent companion-owned
+Btrfs image/export, add one-command start/install handling, and then run the
+same acceptance against that packaged topology and real retained Harmony
+workspace-pool candidates.
+
 ## Harmony project sync atom checkpoint
 
 `harmony.project.sync` now supports complete-package delta merge into a stable

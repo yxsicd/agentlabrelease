@@ -98,6 +98,14 @@ GET /v1/ops/harmony.task.prepare?taskId=<atom-task-id>
 <task-root>/<taskId>/receipts/events.jsonl
 ```
 
+When the service is started with `--fork-backend sessionfs
+--sessionfs-endpoint <url>`, task prepare first calls SessionFS
+`session.create`. On a Btrfs-owned SessionFS root this makes the initial task a
+subvolume, so later `harmony.task.fork` can use a true CoW snapshot instead of
+copying the workspace tree. Prepare/fork receipts expose `backend`, `fallback`,
+and `copyOnWrite`; `auto` remains portable and records any directory/copy-tree
+fallback rather than presenting it as a snapshot.
+
 Every path-bearing operation must stay under the task sandbox and writes a
 compact receipt event to that task's `receipts/events.jsonl`. Batch requests
 validate task scope once and log only the final receipt, preserving high

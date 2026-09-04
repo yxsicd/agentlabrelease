@@ -471,7 +471,7 @@ fn dispatch_http_with_task(
             let Some(task) = task else {
                 return Err("task isolation must be enabled for harmony.task.prepare".into());
             };
-            let receipt = task_prepare(task)?;
+            let receipt = task_prepare(task, config)?;
             append_task_receipt(task, &receipt);
             Ok(receipt)
         }
@@ -2322,6 +2322,21 @@ fn json_number_field(body: &str, key: &str) -> Option<i128> {
     rest.parse::<i128>().ok()
 }
 
+fn json_bool_field(body: &str, key: &str) -> Option<bool> {
+    let pattern = format!("\"{key}\"");
+    let start = body.find(&pattern)? + pattern.len();
+    let rest = &body[start..];
+    let colon = rest.find(':')?;
+    let rest = rest[colon + 1..].trim_start();
+    if rest.starts_with("true") {
+        Some(true)
+    } else if rest.starts_with("false") {
+        Some(false)
+    } else {
+        None
+    }
+}
+
 fn parse_json_string(value: &str) -> Option<String> {
     let mut chars = value.chars();
     if chars.next()? != '"' {
@@ -2564,6 +2579,10 @@ fn task_fork(
     evidence.insert("backend".into(), JsonValue::string(fork_result.backend));
     evidence.insert("fallback".into(), JsonValue::Bool(fork_result.fallback));
     evidence.insert(
+        "copyOnWrite".into(),
+        JsonValue::Bool(fork_result.copy_on_write),
+    );
+    evidence.insert(
         "copiedFiles".into(),
         JsonValue::Number(fork_result.copied_files as i128),
     );
@@ -2602,6 +2621,7 @@ struct ForkStorageResult {
     backend: String,
     strategy: String,
     fallback: bool,
+    copy_on_write: bool,
     copied_files: usize,
     copied_bytes: u64,
     elapsed_micros: u128,
@@ -2670,6 +2690,7 @@ fn fork_task_storage_copy(
             "copy-tree".into()
         },
         fallback,
+        copy_on_write: false,
         copied_files,
         copied_bytes,
         elapsed_micros: started.elapsed().as_micros(),
@@ -2690,7 +2711,8 @@ fn fork_task_storage_sessionfs(
     Ok(ForkStorageResult {
         backend: json_string_field(&body, "backend").unwrap_or_else(|| "sessionfs".into()),
         strategy: "sessionfs".into(),
-        fallback,
+        fallback: json_bool_field(&body, "fallback").unwrap_or(fallback),
+        copy_on_write: json_bool_field(&body, "copyOnWrite").unwrap_or(false),
         copied_files: json_number_field(&body, "copiedFiles").unwrap_or(0).max(0) as usize,
         copied_bytes: json_number_field(&body, "copiedBytes").unwrap_or(0).max(0) as u64,
         elapsed_micros: json_number_field(&body, "elapsedMicros")
@@ -2721,6 +2743,29 @@ fn sessionfs_fork_http(
     if !(body.contains("\"ok\": true") || body.contains("\"ok\":true")) {
         return Err(format!(
             "sessionfs fork did not return ok=true: {}",
+            tail_chars(&body, 512)
+        ));
+    }
+    Ok(body)
+}
+
+fn sessionfs_create_http(endpoint: &str, root: &Path) -> Result<String, String> {
+    let endpoint = endpoint.trim_end_matches('/');
+    let url = format!(
+        "{}/v1/sessions/create?root={}",
+        endpoint,
+        percent_encode(&root.display().to_string())
+    );
+    let (status, body) = http_get(&url)?;
+    if status != 200 {
+        return Err(format!(
+            "sessionfs create returned HTTP {status}: {}",
+            tail_chars(&body, 512)
+        ));
+    }
+    if !(body.contains("\"ok\": true") || body.contains("\"ok\":true")) {
+        return Err(format!(
+            "sessionfs create did not return ok=true: {}",
             tail_chars(&body, 512)
         ));
     }
@@ -2918,7 +2963,80 @@ fn validate_task_prepare(
     }))
 }
 
-fn task_prepare(task: &TaskScope) -> Result<Receipt, String> {
+#[derive(Debug)]
+struct TaskStoragePrepareResult {
+    backend: String,
+    fallback: bool,
+    copy_on_write: bool,
+    reused: bool,
+    elapsed_micros: u128,
+}
+
+fn prepare_task_storage(
+    task_root: &Path,
+    config: &ServiceConfig,
+) -> Result<TaskStoragePrepareResult, String> {
+    let local_directory = |fallback: bool| -> Result<TaskStoragePrepareResult, String> {
+        let started = Instant::now();
+        let reused = task_root.exists();
+        if reused && !task_root.is_dir() {
+            return Err(format!(
+                "task root exists and is not a directory: {}",
+                task_root.display()
+            ));
+        }
+        fs::create_dir_all(task_root)
+            .map_err(|error| format!("failed to create task root: {error}"))?;
+        Ok(TaskStoragePrepareResult {
+            backend: if fallback {
+                "directory-fallback".into()
+            } else {
+                "directory".into()
+            },
+            fallback,
+            copy_on_write: false,
+            reused,
+            elapsed_micros: started.elapsed().as_micros(),
+        })
+    };
+    let from_sessionfs = |body: String| -> TaskStoragePrepareResult {
+        TaskStoragePrepareResult {
+            backend: json_string_field(&body, "backend").unwrap_or_else(|| "sessionfs".into()),
+            fallback: json_bool_field(&body, "fallback").unwrap_or(false),
+            copy_on_write: json_bool_field(&body, "copyOnWrite").unwrap_or(false),
+            reused: json_bool_field(&body, "reused").unwrap_or(false),
+            elapsed_micros: json_number_field(&body, "elapsedMicros")
+                .unwrap_or(0)
+                .max(0) as u128,
+        }
+    };
+    match config.fork_backend.as_str() {
+        "copy-tree" => local_directory(false),
+        "sessionfs" => {
+            let endpoint = config
+                .sessionfs_endpoint
+                .as_deref()
+                .ok_or_else(|| "sessionfs endpoint is not configured".to_string())?;
+            Ok(from_sessionfs(sessionfs_create_http(endpoint, task_root)?))
+        }
+        "auto" => {
+            let Some(endpoint) = config.sessionfs_endpoint.as_deref() else {
+                return local_directory(true);
+            };
+            match sessionfs_create_http(endpoint, task_root) {
+                Ok(body) => Ok(from_sessionfs(body)),
+                Err(error) => {
+                    eprintln!("sessionfs task prepare failed, using directory fallback: {error}");
+                    local_directory(true)
+                }
+            }
+        }
+        other => Err(format!("unsupported fork backend: {other}")),
+    }
+}
+
+fn task_prepare(task: &TaskScope, config: &ServiceConfig) -> Result<Receipt, String> {
+    let storage = prepare_task_storage(&task.root, config)?;
     for rel in [
         "workspace",
         "artifacts",
@@ -2956,13 +3074,32 @@ fn task_prepare(task: &TaskScope) -> Result<Receipt, String> {
         "preparedAtUnixMillis".into(),
         JsonValue::Number(now_millis()),
     );
+    manifest.insert(
+        "storageBackend".into(),
+        JsonValue::string(storage.backend.clone()),
+    );
+    manifest.insert("storageFallback".into(), JsonValue::Bool(storage.fallback));
+    manifest.insert(
+        "storageCopyOnWrite".into(),
+        JsonValue::Bool(storage.copy_on_write),
+    );
     let task_json = json_object_pretty(&manifest);
     fs::write(task.root.join("task.json"), task_json)
         .map_err(|error| format!("failed to write task manifest: {error}"))?;
+    let mut storage_evidence = BTreeMap::new();
+    storage_evidence.insert("backend".into(), JsonValue::string(storage.backend));
+    storage_evidence.insert("fallback".into(), JsonValue::Bool(storage.fallback));
+    storage_evidence.insert("copyOnWrite".into(), JsonValue::Bool(storage.copy_on_write));
+    storage_evidence.insert("reused".into(), JsonValue::Bool(storage.reused));
+    storage_evidence.insert(
+        "elapsedMicros".into(),
+        JsonValue::Number(storage.elapsed_micros as i128),
+    );
     let receipt = Receipt::new(
         "harmony.task.prepare",
         alharmony_ops_core::SideEffect::WorkspaceWrite,
     )
+    .evidence("storage", JsonValue::Object(storage_evidence))
     .evidence("task", JsonValue::Object(manifest))
     .next("harmony.project.create");
     Ok(receipt)
