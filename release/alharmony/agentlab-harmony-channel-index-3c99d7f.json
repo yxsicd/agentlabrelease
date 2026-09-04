@@ -1,0 +1,126 @@
+{
+  "channel": "alharmony",
+  "createdAt": "2026-09-03T15:48:00Z",
+  "currentAssets": [
+    {
+      "bytes": 275830845,
+      "filename": "agentlab-harmony-dev-web2atomic-linux-x64.tgz",
+      "id": "harmony-sdk-minimal-dev",
+      "installPath": "/opt/harmony",
+      "installVolume": "vol-harmony",
+      "kind": "agentlab.harmony-sdk",
+      "manifestFilename": "agentlab-harmony-dev-manifest.json",
+      "platform": "linux-x64",
+      "role": "Existing Harmony CLI/SDK substrate with hvigorw, ohpm, and hdc smoke paths. Historical filename mentions web2atomic but this is not the Rust ops service.",
+      "sha256": "c49ec6d58743accf2a2c0380455d19bfbf0a8f7dac166b50736be24098635d70",
+      "status": "existing-release-asset"
+    },
+    {
+      "bytes": 6084,
+      "filename": "agentlab-harmony-ops-source-pointer.json",
+      "id": "harmony-ops-source-pointer",
+      "immutableFilename": "agentlab-harmony-ops-source-pointer-db5abcc.json",
+      "kind": "agentlab.harmony_ops_source_pointer",
+      "role": "Machine-readable pointer to asrelease source refs and future AgentLab release policy for Rust Harmony ops.",
+      "sha256": "5adc12369105dbc372dc7ca4358d6f1eca021ea4dd6fd8cfe4f6ff0c26a26ef2",
+      "status": "current-release-asset"
+    },
+    {
+      "crate": "crates/alharmony_ops_core",
+      "filename": "alharmony-ops-core-source.json",
+      "id": "alharmony-ops-core-source",
+      "kind": "agentlab.alharmony_ops_core_source",
+      "role": "AgentLab-owned Rust crate source for P0 Harmony project/build atoms. Built executable assets must be published separately per target platform.",
+      "status": "absorbed-source-in-agentlab"
+    },
+    {
+      "bytes": 245868,
+      "filename": "alharmony-ops-core-linux-x64-37ddae9.tar.zst",
+      "id": "alharmony-ops-core-linux-x64-37ddae9",
+      "kind": "agentlab.alharmony_ops_core_binary",
+      "manifestFilename": "alharmony-ops-core-linux-x64-37ddae9.json",
+      "platform": "linux-x64",
+      "role": "Linux-x64 Rust CLI/service preview with task sandbox lifecycle, real unsigned build execute mode, and task-local no-op build cache.",
+      "sha256": "b960b303f06e87bc2c5da4edcf1d271fa4a84a71ae4aea7674d1284f743dd920",
+      "status": "published-developer-preview"
+    },
+    {
+      "bytes": 340521,
+      "currentFilename": "alharmony-combined-linux-x64-current.tar.zst",
+      "currentManifestFilename": "alharmony-combined-linux-x64-current.json",
+      "filename": "alharmony-combined-linux-x64-24b65cb.tar.zst",
+      "id": "alharmony-combined-linux-x64-24b65cb",
+      "kind": "agentlab.alharmony_combined_binary",
+      "manifestFilename": "alharmony-combined-linux-x64-24b65cb.json",
+      "platform": "linux-x64",
+      "role": "Linux-x64 combined developer preview containing alharmony-ops and standalone alsessionfsd for Session Fork workspace pool composition.",
+      "sha256": "eb67b1f2f06d991edfc772ce2c37efdb5ac46fd1a3c67ef922718099a0a87f6f",
+      "status": "published-developer-preview"
+    }
+  ],
+  "offlineClosurePolicy": {
+    "currentOfflineGroup": "harmony-ops",
+    "gate": "Built executable payload plus exact bytes, SHA256, smoke evidence, and non-destructive install-plan/readiness check.",
+    "includeHarmonySdk": "already covered through Harmony/vol-harmony assets where applicable",
+    "includeRustOpsWhenReady": true,
+    "offlineGroupWhenReady": "harmony-ops"
+  },
+  "plannedPayloads": [
+    {
+      "currentAsset": "alharmony-combined-linux-x64-24b65cb",
+      "id": "alharmony-combined-sessionfs-ops",
+      "operations": [
+        "harmony.project.fingerprint",
+        "harmony.workspace.index",
+        "harmony.workspace.match",
+        "harmony.workspace.lease",
+        "harmony.task.fork",
+        "harmony.workspace.release",
+        "harmony.project.sync",
+        "harmony.build.debug",
+        "harmony.workspace.gc"
+      ],
+      "publishWithAgentLab": true,
+      "required": true,
+      "scope": "Combined standalone SessionFS plus Harmony Rust ops service for workspace-pool Session Fork builds.",
+      "status": "published_combined_sessionfs_workspace_pool_preview"
+    },
+    {
+      "currentAsset": "alharmony-ops-core-linux-x64-37ddae9",
+      "id": "alharmony-ops-core",
+      "latestFeature": "task-local build-state and no-op build cache short-circuit",
+      "latestFix": "command plans fail closed when projectRoot is missing",
+      "operations": [
+        "harmony.env.status",
+        "harmony.project.create",
+        "harmony.project.verify",
+        "harmony.ohpm.install",
+        "harmony.build.debug",
+        "harmony.artifact.inspect"
+      ],
+      "publishWithAgentLab": true,
+      "required": true,
+      "scope": "Basic Harmony project/build atoms before Web2Atomic integration.",
+      "sourcePointer": "agentlab-harmony-ops-source-pointer.json#/contentPointers/harmony-rust-workspace",
+      "status": "published_task_local_build_cache_preview"
+    },
+    {
+      "id": "alharmony-target-ops",
+      "publishWithAgentLab": true,
+      "required": false,
+      "scope": "Device/emulator/deploy/launch/probe atoms after P0 is stable.",
+      "sourcePointer": "agentlab-harmony-ops-source-pointer.json#/layering/P1"
+    },
+    {
+      "id": "alweb2atomic-kit",
+      "publishWithAgentLab": true,
+      "required": false,
+      "scope": "Upper pipeline that consumes alharmony ops; not the base project/build layer.",
+      "sourcePointer": "agentlab-harmony-ops-source-pointer.json#/contentPointers/web2atomic-upper-pipe"
+    }
+  ],
+  "purpose": "Separate Harmony CLI/SDK substrate assets from the future Rust Harmony atomic-operation service that must be published with AgentLab.",
+  "schema": "agentlab.harmony_channel_index.v1",
+  "status": "active-source-pointer-channel",
+  "updatedAt": "2026-09-04T11:25:00Z"
+}

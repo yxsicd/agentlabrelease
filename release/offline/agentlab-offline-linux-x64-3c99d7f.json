@@ -1,0 +1,163 @@
+{
+  "directAssets": [
+    {
+      "bytes": 8304,
+      "filename": "agentlab-bootstrap.sh",
+      "group": "control",
+      "sha256": "b93f65693f303de7c76f299e8ffc7bf82861f57fbd4609584a4754749de052e2",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alcontrol/agentlab-bootstrap.sh"
+    },
+    {
+      "bytes": 4079800,
+      "filename": "agentlabctl-e611c39bab87-linux-x64",
+      "group": "control",
+      "sha256": "d62252b83d43d682b800bd8ed862ec890981f16a5177c449ba80a89862464f80",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alcontrol/agentlabctl-e611c39bab87-linux-x64"
+    },
+    {
+      "bytes": 23345,
+      "filename": "agentlab-harness-quickstart.sh",
+      "group": "control",
+      "sha256": "90d2efd5ff9a5bdc4407616a8aa856f077672c2bbe1b1d639d2076b78c028d76",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alcontrol/agentlab-harness-quickstart.sh"
+    },
+    {
+      "bytes": 51198,
+      "filename": "agentlab-environment-kit-v0.1.0-alpha.9.tar.zst",
+      "group": "environment",
+      "sha256": "fcca40e0858bbbde7620ddec83db0dc525c62d597926dc27ef66b6dd54c27a73",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.9/agentlab-environment-kit-v0.1.0-alpha.9.tar.zst"
+    },
+    {
+      "bytes": 29901,
+      "filename": "agentlab-ts-probe-v0.1.0-alpha.9.tar.zst",
+      "group": "environment",
+      "sha256": "029074b412bdaaccd069250949eec459861e685a5ef398fbbc30d4c7cbf4d2d3",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/v0.1.0-alpha.9/agentlab-ts-probe-v0.1.0-alpha.9.tar.zst"
+    },
+    {
+      "bytes": 4356,
+      "filename": "agentlab-aldev-environment-lock.json",
+      "group": "composition",
+      "sha256": "4526ef73a352901e627f0f10ec0d963693836663f5a4971e01c10b077d2eee28",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/aldev/agentlab-aldev-environment-lock.json"
+    },
+    {
+      "bytes": 27322596,
+      "filename": "agentlab-pack-agentlab-release-004bc8a6-sessionfs-compat-linux-x64.tar.zst",
+      "group": "composition",
+      "sha256": "da3d244017d4c90b90d8e2c9475ccb8a057e73ddf6bf44fec13c65789d292656",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/aldev/agentlab-pack-agentlab-release-004bc8a6-sessionfs-compat-linux-x64.tar.zst"
+    },
+    {
+      "bytes": 496,
+      "filename": "agentlab-pack-agentlab-release-004bc8a6-sessionfs-compat-linux-x64.tar.zst.json",
+      "group": "composition",
+      "sha256": "d7ec52c0d0bf8d09cb4128a22005cbeebea9e315b30a0d185b96e72e42ede0a6",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/aldev/agentlab-pack-agentlab-release-004bc8a6-sessionfs-compat-linux-x64.tar.zst.json"
+    },
+    {
+      "bytes": 29154352,
+      "filename": "agentlab-pack-developer-tools-e443b17a-linux-x64.tar.zst",
+      "group": "composition",
+      "sha256": "58bc13e984f7219a560017592bdee11a6874a15099faaa1d40b0f2542d489b6e",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/aldev/agentlab-pack-developer-tools-e443b17a-linux-x64.tar.zst"
+    },
+    {
+      "bytes": 446,
+      "filename": "agentlab-pack-developer-tools-e443b17a-linux-x64.tar.zst.json",
+      "group": "composition",
+      "sha256": "65ef0827478df5e83edcbe493e762dbc56db4a64a3e0cc786343ecf641196188",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/aldev/agentlab-pack-developer-tools-e443b17a-linux-x64.tar.zst.json"
+    },
+    {
+      "bytes": 277659244,
+      "filename": "chatproxy-agentlab-image-a0ec49f8fd01-linux-x64.docker.tar.zst",
+      "group": "runtime",
+      "sha256": "6df2903a64af92337296c62df9d534fc63e520828e031395d73b5fafcf2c3075",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alimage/chatproxy-agentlab-image-a0ec49f8fd01-linux-x64.docker.tar.zst"
+    },
+    {
+      "bytes": 562,
+      "filename": "chatproxy-agentlab-image-a0ec49f8fd01-linux-x64.docker.tar.zst.json",
+      "group": "runtime",
+      "sha256": "bfa2c4e3417ef5d1a1879ce3a6d7371da6574d95f96dbdc88a699acc17a1859a",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alimage/chatproxy-agentlab-image-a0ec49f8fd01-linux-x64.docker.tar.zst.json"
+    },
+    {
+      "bytes": 245868,
+      "filename": "alharmony-ops-core-linux-x64-37ddae9.tar.zst",
+      "group": "harmony-ops",
+      "sha256": "b960b303f06e87bc2c5da4edcf1d271fa4a84a71ae4aea7674d1284f743dd920",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alharmony/alharmony-ops-core-linux-x64-37ddae9.tar.zst"
+    },
+    {
+      "bytes": 1393,
+      "filename": "alharmony-ops-core-linux-x64-37ddae9.json",
+      "group": "harmony-ops",
+      "sha256": "9152c200a7226f9fac8b75b4616574431638ab0692e6cd784c722d78a47945ea",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alharmony/alharmony-ops-core-linux-x64-37ddae9.json"
+    },
+    {
+      "bytes": 340521,
+      "filename": "alharmony-combined-linux-x64-24b65cb.tar.zst",
+      "group": "harmony-ops",
+      "sha256": "eb67b1f2f06d991edfc772ce2c37efdb5ac46fd1a3c67ef922718099a0a87f6f",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alharmony/alharmony-combined-linux-x64-24b65cb.tar.zst"
+    },
+    {
+      "bytes": 1055,
+      "filename": "alharmony-combined-linux-x64-24b65cb.json",
+      "group": "harmony-ops",
+      "sha256": "13824617797b2b4541389c58aa41146dd1eab589ab1429c7454f2416397918a6",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alharmony/alharmony-combined-linux-x64-24b65cb.json"
+    }
+  ],
+  "manifestRefs": [
+    {
+      "adapter": "single-artifact-v1",
+      "group": "harmony",
+      "manifest": {
+        "bytes": 239,
+        "filename": "harmony-linux-x64-6.1.1.300.json",
+        "sha256": "bd1e9ce56a7519443d8280713865c634c3893ecd0a8a766881bb27943a46de85",
+        "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-linux-x64-6.1.1.300/harmony-linux-x64-6.1.1.300.json"
+      },
+      "releaseTag": "harmony-linux-x64-6.1.1.300"
+    },
+    {
+      "adapter": "assets-array-v1",
+      "group": "code-agents",
+      "manifest": {
+        "bytes": 1489,
+        "filename": "agentlab-altools-linux-x64.json",
+        "sha256": "400ec27fce47b7f7f9b6173581dbbb0dbcb94687ab8674126620a87d29fded74",
+        "url": "https://github.com/yxsicd/agentlabrelease/releases/download/altools/agentlab-altools-linux-x64.json"
+      },
+      "releaseTag": "altools"
+    },
+    {
+      "adapter": "assets-array-v1",
+      "group": "mcpgit",
+      "manifest": {
+        "bytes": 2252,
+        "filename": "agentlab-mcpgit-mirror-linux-x64.json",
+        "sha256": "76ca77120f9459f67b929248893bec0a10803d28ab889d3154f2d916c26e8019",
+        "url": "https://github.com/yxsicd/agentlabrelease/releases/download/almcpgit/agentlab-mcpgit-mirror-linux-x64.json"
+      },
+      "releaseTag": "almcpgit"
+    }
+  ],
+  "mode": "channel-resolved-snapshot",
+  "platform": "linux-x64",
+  "policy": {
+    "compressionDefault": "zstd-10-standard-window",
+    "credentialsIncluded": false,
+    "dockerRequiredAtInstall": true,
+    "harmonyOpsCurrent": "alharmony-combined-linux-x64-24b65cb",
+    "resolveThenPin": true,
+    "updatedFor": "standalone SessionFS + Harmony ops workspace pool preview"
+  },
+  "repository": "yxsicd/agentlabrelease",
+  "schema": "agentlab.offline_closure.v1"
+}
