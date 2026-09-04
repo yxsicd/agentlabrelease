@@ -426,7 +426,12 @@ fn validate_task_for_operation(
     config: &ServiceConfig,
 ) -> Result<Option<TaskScope>, String> {
     match operation {
-        "harmony.env.status" | "harmony.workspace.index" | "harmony.workspace.match" => Ok(None),
+        "harmony.env.status"
+        | "harmony.workspace.index"
+        | "harmony.workspace.match"
+        | "harmony.workspace.lease"
+        | "harmony.workspace.release"
+        | "harmony.workspace.gc" => Ok(None),
         "harmony.task.prepare" | "harmony.task.fork" => validate_task_prepare(config, params),
         "harmony.project.create" | "harmony.project.verify" | "harmony.project.patch" => {
             let root = required_param_path(params, "projectRoot")?;
@@ -481,6 +486,9 @@ fn dispatch_http_with_task(
         }
         "harmony.workspace.index" => workspace_index(config),
         "harmony.workspace.match" => workspace_match(config, params),
+        "harmony.workspace.lease" => workspace_lease(config, params),
+        "harmony.workspace.release" => workspace_release(config, params),
+        "harmony.workspace.gc" => workspace_gc(config, params),
         "harmony.project.create" => {
             let root = required_param_path(params, "projectRoot")?;
             let bundle = params
@@ -821,6 +829,250 @@ fn candidate_json(candidate: &WorkspaceCandidate) -> JsonValue {
         JsonValue::Object(partition_numbers_json(&candidate.partition_bytes)),
     );
     JsonValue::Object(item)
+}
+
+fn workspace_lease(
+    config: &ServiceConfig,
+    params: &BTreeMap<String, String>,
+) -> Result<Receipt, String> {
+    let task_root = config
+        .task_root
+        .as_ref()
+        .ok_or_else(|| "workspace lease requires service --task-root".to_string())?;
+    let candidate_task_id = required_param(params, "candidateTaskId")?;
+    validate_task_id(candidate_task_id)?;
+    let lease_id = params
+        .get("leaseId")
+        .map(String::as_str)
+        .unwrap_or(candidate_task_id);
+    validate_task_id(lease_id)?;
+    let ttl_millis = params
+        .get("ttlMillis")
+        .and_then(|value| value.parse::<i128>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(3_600_000);
+    let renew = param_bool(params, "renew");
+    let candidate_root = task_root.join(candidate_task_id);
+    if !candidate_root.join("state/build-state.json").is_file() {
+        return Err(format!(
+            "candidate task has no build state: {candidate_task_id}"
+        ));
+    }
+    let leases_dir = task_root.join("_leases");
+    fs::create_dir_all(&leases_dir)
+        .map_err(|error| format!("failed to create lease dir: {error}"))?;
+    let lease_path = leases_dir.join(format!("{lease_id}.json"));
+    let now = now_millis();
+    let mut replaced_expired = false;
+    if lease_path.is_file() {
+        let body = fs::read_to_string(&lease_path)
+            .map_err(|error| format!("failed to read existing lease: {error}"))?;
+        let expires = json_number_field(&body, "expiresAtUnixMillis").unwrap_or(0);
+        if expires > now && !renew {
+            return Err(format!("active lease already exists: {lease_id}"));
+        }
+        replaced_expired = expires <= now;
+    }
+    let expires_at = now + ttl_millis;
+    let mut lease = BTreeMap::new();
+    lease.insert(
+        "schema".into(),
+        JsonValue::string("agentlab.harmony_ops.workspace_lease.v1"),
+    );
+    lease.insert("leaseId".into(), JsonValue::string(lease_id));
+    lease.insert(
+        "candidateTaskId".into(),
+        JsonValue::string(candidate_task_id),
+    );
+    lease.insert(
+        "candidateTaskRoot".into(),
+        JsonValue::string(candidate_root.display().to_string()),
+    );
+    lease.insert("createdAtUnixMillis".into(), JsonValue::Number(now));
+    lease.insert("expiresAtUnixMillis".into(), JsonValue::Number(expires_at));
+    lease.insert("ttlMillis".into(), JsonValue::Number(ttl_millis));
+    fs::write(&lease_path, json_object_pretty(&lease))
+        .map_err(|error| format!("failed to write lease: {error}"))?;
+    let mut evidence = lease;
+    evidence.insert(
+        "leasePath".into(),
+        JsonValue::string(lease_path.display().to_string()),
+    );
+    evidence.insert("renew".into(), JsonValue::Bool(renew));
+    evidence.insert("replacedExpired".into(), JsonValue::Bool(replaced_expired));
+    Ok(Receipt::new(
+        "harmony.workspace.lease",
+        alharmony_ops_core::SideEffect::WorkspaceWrite,
+    )
+    .evidence("workspaceLease", JsonValue::Object(evidence))
+    .next("harmony.task.fork"))
+}
+
+fn workspace_release(
+    config: &ServiceConfig,
+    params: &BTreeMap<String, String>,
+) -> Result<Receipt, String> {
+    let task_root = config
+        .task_root
+        .as_ref()
+        .ok_or_else(|| "workspace release requires service --task-root".to_string())?;
+    let lease_id = required_param(params, "leaseId")?;
+    validate_task_id(lease_id)?;
+    let lease_path = task_root.join("_leases").join(format!("{lease_id}.json"));
+    let existed = lease_path.is_file();
+    if existed {
+        fs::remove_file(&lease_path).map_err(|error| format!("failed to remove lease: {error}"))?;
+    }
+    let mut evidence = BTreeMap::new();
+    evidence.insert("leaseId".into(), JsonValue::string(lease_id));
+    evidence.insert(
+        "leasePath".into(),
+        JsonValue::string(lease_path.display().to_string()),
+    );
+    evidence.insert("existed".into(), JsonValue::Bool(existed));
+    Ok(Receipt::new(
+        "harmony.workspace.release",
+        alharmony_ops_core::SideEffect::WorkspaceWrite,
+    )
+    .evidence("workspaceRelease", JsonValue::Object(evidence))
+    .next("harmony.workspace.gc"))
+}
+
+fn workspace_gc(
+    config: &ServiceConfig,
+    params: &BTreeMap<String, String>,
+) -> Result<Receipt, String> {
+    let task_root = config
+        .task_root
+        .as_ref()
+        .ok_or_else(|| "workspace gc requires service --task-root".to_string())?;
+    let keep_last = params
+        .get("keepLast")
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(64);
+    let max_delete = params
+        .get("maxDelete")
+        .and_then(|value| value.parse::<usize>().ok())
+        .unwrap_or(16)
+        .min(256);
+    let execute = param_bool(params, "execute");
+    let leased = active_leased_tasks(task_root)?;
+    let mut candidates = workspace_candidates(config)?;
+    candidates.sort_by(|a, b| a.updated_at.cmp(&b.updated_at));
+    let total = candidates.len();
+    let reclaim_window = total.saturating_sub(keep_last);
+    let mut planned = Vec::new();
+    for candidate in candidates.iter().take(reclaim_window) {
+        if planned.len() >= max_delete {
+            break;
+        }
+        if leased.contains(&candidate.task_id) {
+            continue;
+        }
+        planned.push(candidate.task_id.clone());
+    }
+    let mut deleted = 0_usize;
+    let mut deleted_bytes = 0_u64;
+    if execute {
+        for task_id in &planned {
+            validate_task_id(task_id)?;
+            let root = task_root.join(task_id);
+            let bytes = dir_size(&root);
+            if root.is_dir() {
+                fs::remove_dir_all(&root)
+                    .map_err(|error| format!("failed to delete task {task_id}: {error}"))?;
+                deleted += 1;
+                deleted_bytes += bytes;
+            }
+        }
+    }
+    let mut evidence = BTreeMap::new();
+    evidence.insert(
+        "taskRoot".into(),
+        JsonValue::string(task_root.display().to_string()),
+    );
+    evidence.insert("candidateCount".into(), JsonValue::Number(total as i128));
+    evidence.insert(
+        "leasedTaskCount".into(),
+        JsonValue::Number(leased.len() as i128),
+    );
+    evidence.insert("keepLast".into(), JsonValue::Number(keep_last as i128));
+    evidence.insert("maxDelete".into(), JsonValue::Number(max_delete as i128));
+    evidence.insert("execute".into(), JsonValue::Bool(execute));
+    evidence.insert(
+        "plannedDeletes".into(),
+        JsonValue::Array(
+            planned
+                .iter()
+                .map(|task_id| JsonValue::string(task_id))
+                .collect(),
+        ),
+    );
+    evidence.insert(
+        "reclaimWindow".into(),
+        JsonValue::Number(reclaim_window as i128),
+    );
+    evidence.insert("deletedCount".into(), JsonValue::Number(deleted as i128));
+    evidence.insert(
+        "deletedBytes".into(),
+        JsonValue::Number(deleted_bytes as i128),
+    );
+    let side_effect = if execute && deleted > 0 {
+        alharmony_ops_core::SideEffect::WorkspaceWrite
+    } else {
+        alharmony_ops_core::SideEffect::ReadOnly
+    };
+    Ok(Receipt::new("harmony.workspace.gc", side_effect)
+        .evidence("workspaceGc", JsonValue::Object(evidence))
+        .next("harmony.workspace.index"))
+}
+
+fn active_leased_tasks(task_root: &Path) -> Result<BTreeSet<String>, String> {
+    let mut out = BTreeSet::new();
+    let leases_dir = task_root.join("_leases");
+    if !leases_dir.is_dir() {
+        return Ok(out);
+    }
+    let now = now_millis();
+    let read_dir = fs::read_dir(&leases_dir)
+        .map_err(|error| format!("failed to read lease dir {}: {error}", leases_dir.display()))?;
+    for entry in read_dir.flatten() {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let Ok(body) = fs::read_to_string(&path) else {
+            continue;
+        };
+        let expires = json_number_field(&body, "expiresAtUnixMillis").unwrap_or(0);
+        if expires <= now {
+            let _ = fs::remove_file(&path);
+            continue;
+        }
+        if let Some(task_id) = json_string_field(&body, "candidateTaskId") {
+            out.insert(task_id);
+        }
+    }
+    Ok(out)
+}
+
+fn dir_size(path: &Path) -> u64 {
+    let Ok(meta) = fs::metadata(path) else {
+        return 0;
+    };
+    if meta.is_file() {
+        return meta.len();
+    }
+    if !meta.is_dir() {
+        return 0;
+    }
+    let Ok(read_dir) = fs::read_dir(path) else {
+        return 0;
+    };
+    read_dir
+        .flatten()
+        .map(|entry| dir_size(&entry.path()))
+        .sum()
 }
 
 fn project_fingerprint(project_root: &Path, harmony_home: &Path) -> Result<Receipt, String> {
