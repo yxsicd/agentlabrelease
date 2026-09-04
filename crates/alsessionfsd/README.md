@@ -1,6 +1,11 @@
 # alsessionfsd
 
-Standalone AgentLab SessionFS preview service. This crate owns generic session
+Compatibility/test-only AgentLab SessionFS preview service. Production Harmony
+composition now uses mature `agentlab-sessionfsd` over the private AgentLab UDS
+contract through `agentlab-domain-sandboxd`; do not introduce this crate as a
+second production storage authority.
+
+This crate owns generic session
 storage fork/copy semantics and intentionally does not know Harmony, OHPM,
 Hvigor, HAP, or build receipts. The service now has a real Btrfs subvolume
 snapshot backend while retaining safe copy-tree compatibility.

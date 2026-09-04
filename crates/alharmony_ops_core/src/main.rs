@@ -122,8 +122,11 @@ fn run_service(mut args: Vec<String>) -> ! {
         take_value(&mut args, "--task-root").map(|value| normalize_path(Path::new(&value)));
     let fork_backend =
         take_value(&mut args, "--fork-backend").unwrap_or_else(|| "copy-tree".to_string());
-    if !matches!(fork_backend.as_str(), "copy-tree" | "sessionfs" | "auto") {
-        eprintln!("--fork-backend must be one of: auto, copy-tree, sessionfs");
+    if !matches!(
+        fork_backend.as_str(),
+        "copy-tree" | "sessionfs" | "agentlab-sessionfs" | "auto"
+    ) {
+        eprintln!("--fork-backend must be one of: agentlab-sessionfs, auto, copy-tree, sessionfs");
         std::process::exit(2);
     }
     let sessionfs_endpoint = take_value(&mut args, "--sessionfs-endpoint");
@@ -142,6 +145,10 @@ fn run_service(mut args: Vec<String>) -> ! {
         eprintln!("--sandbox-token-file requires --sandbox-endpoint");
         std::process::exit(2);
     }
+    if fork_backend == "agentlab-sessionfs" && sandbox_endpoint.is_none() {
+        eprintln!("--fork-backend agentlab-sessionfs requires --sandbox-endpoint");
+        std::process::exit(2);
+    }
     if let Some(path) = &sandbox_token_file {
         if !path.is_file() {
             eprintln!("sandbox token file does not exist: {}", path.display());
@@ -152,6 +159,14 @@ fn run_service(mut args: Vec<String>) -> ! {
         if let Err(error) = sandbox_startup_preflight(endpoint, sandbox_token_file.as_deref()) {
             eprintln!("AgentLab sandbox startup preflight failed: {error}");
             std::process::exit(1);
+        }
+        if fork_backend == "agentlab-sessionfs" {
+            if let Err(error) =
+                sandbox_sessionfs_startup_preflight(endpoint, sandbox_token_file.as_deref())
+            {
+                eprintln!("AgentLab SessionFS startup preflight failed: {error}");
+                std::process::exit(1);
+            }
         }
     }
     if !args.is_empty() {
@@ -368,6 +383,15 @@ fn service_status_body(config: &ServiceConfig) -> String {
         Some(value) => format!("\"{}\"", json_escape(&value.display().to_string())),
         None => "null".to_string(),
     };
+    let sessionfs_configured =
+        config.fork_backend == "agentlab-sessionfs" || config.sessionfs_endpoint.is_some();
+    let storage_backend = match config.fork_backend.as_str() {
+        "agentlab-sessionfs" => "agentlab-sessionfs-uds",
+        "sessionfs" => "sessionfs-http-preview",
+        "copy-tree" => "copy-tree",
+        "auto" => "auto",
+        _ => "unknown",
+    };
     format!(
         "{{
   \"schema\": \"agentlab.harmony_ops.service_status.v1\",
@@ -384,6 +408,8 @@ fn service_status_body(config: &ServiceConfig) -> String {
   }},
   \"infrastructure\": {{
     \"sessionFsConfigured\": {},
+    \"storageBackend\": \"{}\",
+    \"forkBackend\": \"{}\",
     \"sandboxConfigured\": {},
     \"sandboxTokenFileConfigured\": {},
     \"sandboxStartupVerified\": {},
@@ -402,11 +428,13 @@ fn service_status_body(config: &ServiceConfig) -> String {
             "false"
         },
         task_root,
-        if config.sessionfs_endpoint.is_some() {
+        if sessionfs_configured {
             "true"
         } else {
             "false"
         },
+        storage_backend,
+        json_escape(&config.fork_backend),
         if config.sandbox_endpoint.is_some() {
             "true"
         } else {
@@ -1027,6 +1055,12 @@ fn workspace_gc(
         .get("maxBytes")
         .and_then(|value| value.parse::<u64>().ok());
     let execute = param_bool(params, "execute");
+    if execute && config.fork_backend == "agentlab-sessionfs" {
+        return Err(
+            "workspace gc execution is owned by AgentLab SessionFS; direct task-root deletion is disabled"
+                .into(),
+        );
+    }
     let leased = active_leased_tasks(task_root)?;
     let mut candidates = workspace_candidates(config)?;
     candidates.sort_by_key(|candidate| candidate.updated_at);
@@ -2767,6 +2801,35 @@ fn sandbox_ready_once(endpoint: &str, token_file: Option<&Path>) -> Result<(), S
     Ok(())
 }
 
+fn sandbox_sessionfs_startup_preflight(
+    endpoint: &str,
+    token_file: Option<&Path>,
+) -> Result<(), String> {
+    let headers = sandbox_request_headers_from_file(token_file)?;
+    let (status, body) = http_get_json(endpoint, "/v1/ready", &headers, Duration::from_secs(3))?;
+    if status != 200 {
+        return Err(format!(
+            "AgentLab SessionFS readiness returned HTTP {status}: {}",
+            tail_chars(&body, 512)
+        ));
+    }
+    if json_string_field(&body, "status").as_deref() != Some("ready")
+        || json_string_field(&body, "service").as_deref() != Some("agentlab-domain-sandboxd")
+        || json_string_field(&body, "executor").as_deref() != Some("bwrap")
+        || json_bool_field(&body, "domainTaskRootConfigured") != Some(true)
+        || json_bool_field(&body, "sessionfsConfigured") != Some(true)
+        || json_bool_field(&body, "sessionfsReady") != Some(true)
+        || json_string_field(&body, "storageBackend").as_deref() != Some("agentlab-sessionfs-uds")
+        || json_bool_field(&body, "mcpGitRequired") != Some(false)
+    {
+        return Err(format!(
+            "AgentLab SessionFS readiness did not prove the UDS storage contract: {}",
+            tail_chars(&body, 1024)
+        ));
+    }
+    Ok(())
+}
+
 fn http_post_json(
     endpoint: &str,
     path: &str,
@@ -3040,6 +3103,25 @@ mod sandbox_client_tests {
         assert!(sandbox_request_headers_from_file(Some(&path)).is_err());
         fs::remove_dir_all(root).unwrap();
     }
+
+    #[test]
+    fn service_status_reports_agentlab_sessionfs_as_configured_uds_storage() {
+        let config = ServiceConfig {
+            task_root: Some(PathBuf::from("/domain-tasks")),
+            queue_capacity: 8,
+            max_batch: 32,
+            max_active_requests: 2,
+            active_requests: AtomicUsize::new(0),
+            fork_backend: "agentlab-sessionfs".into(),
+            sessionfs_endpoint: None,
+            sandbox_endpoint: Some("http://127.0.0.1:18092".into()),
+            sandbox_token_file: None,
+        };
+        let body = service_status_body(&config);
+        assert!(body.contains("\"sessionFsConfigured\": true"));
+        assert!(body.contains("\"storageBackend\": \"agentlab-sessionfs-uds\""));
+        assert!(body.contains("\"forkBackend\": \"agentlab-sessionfs\""));
+    }
 }
 
 fn execute_local_process_direct(
@@ -3172,13 +3254,20 @@ fn task_fork(
     if child.root == parent_root {
         return Err("child taskId must differ from parentTaskId".into());
     }
-    if child.root.exists() && !is_empty_dir(&child.root)? {
+    if config.fork_backend != "agentlab-sessionfs"
+        && child.root.exists()
+        && !is_empty_dir(&child.root)?
+    {
         return Err(format!(
             "child task root already exists and is not empty: {}",
             child.root.display()
         ));
     }
-    let fork_result = fork_task_storage(&parent_root, &child.root, config)?;
+    let fork_result = if config.fork_backend == "agentlab-sessionfs" {
+        fork_task_storage_agentlab(parent_task_id, child, config)?
+    } else {
+        fork_task_storage(&parent_root, &child.root, config)?
+    };
     for rel in [
         "workspace",
         "artifacts",
@@ -3381,6 +3470,49 @@ fn fork_task_storage_sessionfs(
         copied_files: json_number_field(&body, "copiedFiles").unwrap_or(0).max(0) as usize,
         copied_bytes: json_number_field(&body, "copiedBytes").unwrap_or(0).max(0) as u64,
         elapsed_micros: json_number_field(&body, "elapsedMicros")
+            .unwrap_or(0)
+            .max(0) as u128,
+    })
+}
+
+fn fork_task_storage_agentlab(
+    parent_task_id: &str,
+    child: &TaskScope,
+    config: &ServiceConfig,
+) -> Result<ForkStorageResult, String> {
+    let endpoint = config
+        .sandbox_endpoint
+        .as_deref()
+        .ok_or_else(|| "AgentLab sandbox endpoint is not configured".to_string())?;
+    let headers = sandbox_request_headers(config)?;
+    let path = format!("/v1/domain-tasks/{}/fork", child.task_id);
+    let body = format!("{{\"parentTaskId\":\"{}\"}}", json_escape(parent_task_id));
+    let (status, response) =
+        http_post_json(endpoint, &path, &headers, &body, Duration::from_secs(60))?;
+    if status != 200 {
+        return Err(format!(
+            "AgentLab SessionFS fork returned HTTP {status}: {}",
+            tail_chars(&response, 1024)
+        ));
+    }
+    let ok = json_bool_field(&response, "ok") == Some(true);
+    let backend = json_string_field(&response, "backend").unwrap_or_default();
+    let copy_on_write = json_bool_field(&response, "copyOnWrite").unwrap_or(false);
+    let fallback = json_bool_field(&response, "fallback").unwrap_or(true);
+    if !ok || backend != "agentlab-sessionfs-uds" || !copy_on_write || fallback {
+        return Err(format!(
+            "AgentLab SessionFS fork did not prove zero-copy UDS storage: {}",
+            tail_chars(&response, 1024)
+        ));
+    }
+    Ok(ForkStorageResult {
+        backend,
+        strategy: "agentlab-sessionfs".into(),
+        fallback: false,
+        copy_on_write: true,
+        copied_files: 0,
+        copied_bytes: 0,
+        elapsed_micros: json_number_field(&response, "elapsedMicros")
             .unwrap_or(0)
             .max(0) as u128,
     })
@@ -3638,9 +3770,10 @@ struct TaskStoragePrepareResult {
 }
 
 fn prepare_task_storage(
-    task_root: &Path,
+    task: &TaskScope,
     config: &ServiceConfig,
 ) -> Result<TaskStoragePrepareResult, String> {
+    let task_root = &task.root;
     let local_directory = |fallback: bool| -> Result<TaskStoragePrepareResult, String> {
         let started = Instant::now();
         let reused = task_root.exists();
@@ -3677,6 +3810,34 @@ fn prepare_task_storage(
     };
     match config.fork_backend.as_str() {
         "copy-tree" => local_directory(false),
+        "agentlab-sessionfs" => {
+            let endpoint = config
+                .sandbox_endpoint
+                .as_deref()
+                .ok_or_else(|| "AgentLab sandbox endpoint is not configured".to_string())?;
+            let headers = sandbox_request_headers(config)?;
+            let path = format!("/v1/domain-tasks/{}/prepare", task.task_id);
+            let (status, body) =
+                http_post_json(endpoint, &path, &headers, "{}", Duration::from_secs(60))?;
+            if status != 200 {
+                return Err(format!(
+                    "AgentLab SessionFS prepare returned HTTP {status}: {}",
+                    tail_chars(&body, 1024)
+                ));
+            }
+            let prepared = from_sessionfs(body.clone());
+            if json_bool_field(&body, "ok") != Some(true)
+                || prepared.backend != "agentlab-sessionfs-uds"
+                || !prepared.copy_on_write
+                || prepared.fallback
+            {
+                return Err(format!(
+                    "AgentLab SessionFS prepare did not prove UDS storage: {}",
+                    tail_chars(&body, 1024)
+                ));
+            }
+            Ok(prepared)
+        }
         "sessionfs" => {
             let endpoint = config
                 .sessionfs_endpoint
@@ -3701,7 +3862,7 @@ fn prepare_task_storage(
 }
 
 fn task_prepare(task: &TaskScope, config: &ServiceConfig) -> Result<Receipt, String> {
-    let storage = prepare_task_storage(&task.root, config)?;
+    let storage = prepare_task_storage(task, config)?;
     for rel in [
         "workspace",
         "artifacts",

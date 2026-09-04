@@ -135,6 +135,7 @@ Then configure the Harmony service:
 ```text
 alharmony-ops serve \
   --task-root /var/lib/alharmony/tasks \
+  --fork-backend agentlab-sessionfs \
   --sandbox-endpoint http://127.0.0.1:18091
 ```
 
@@ -163,6 +164,11 @@ only when the response proves `sandboxed=true` and `executor=bwrap`.
 When `--sandbox-endpoint` is configured, service startup performs a bounded
 readiness check and requires the exact `agentlab-domain-sandboxd` readiness
 contract: bwrap ready, domain task root configured, and MCPGit not required.
+With `--fork-backend agentlab-sessionfs`, startup additionally requires
+`sessionfsConfigured=true`, `sessionfsReady=true`, and
+`storageBackend=agentlab-sessionfs-uds`. Task prepare/fork are then delegated
+to the same private infrastructure service; `alharmony-ops` never receives
+Session/Attempt/Capsule/fence or prepared-mount identities.
 Startup or execution failure never falls back to direct `Command::new`.
 Omitting `--sandbox-endpoint` retains the older local-direct path only for
 explicit compatibility/developer use.
@@ -197,11 +203,23 @@ A suspected lingering Hvigor process was also disproven as a `pgrep -f`
 self-match by a retained process-tree diagnostic; no Node/Hvigor process
 remained after the completed build.
 
-The storage side is still a migration boundary: this release line currently
-uses standalone `alsessionfsd` for task create/fork while the execution side is
-already on AgentLab infrastructure. The next phase replaces that bridge with
-the mature `agentlab-sessionfs` client/daemon contract without changing the
-Harmony operation surface.
+The production storage migration is closed. `--fork-backend agentlab-sessionfs`
+uses `agentlab-domain-sandboxd` as the private facade over mature
+`agentlab-sessionfsd` UDS. Root task prepare performs Create+Prepare; child Fork
+performs Snapshot+Verify+Clone+Prepare. The prepared SessionFS mounts are
+projected into the stable task-relative filesystem contract and are also used
+directly by bwrap. No copy-tree or HTTP SessionFS fallback is allowed in this
+mode.
+
+Final real-SDK evidence is
+`/tmp/alharmony-mature-uds-e2e-20260904/result.json`: parent prepare 148.668 ms,
+mature UDS Fork 280.213 ms with zero files/bytes copied, OHPM 1.245 s, parent
+build 8.614 s, child rebuild 7.872 s, parent and inherited-child cache hits,
+independent receipts, parent isolation, and exact Btrfs ancestry
+parent->snapshot->child. Parent/child HAPs were 14,404 / 14,403 bytes with
+distinct SHA256 after the child-only patch. The outer container used
+`--network none`, no request-time pnpm installation occurred, and no
+`alsessionfsd` preview process was present.
 
 ## Task-isolated E2E build preview
 

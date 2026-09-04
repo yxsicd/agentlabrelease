@@ -1258,31 +1258,42 @@ no sandbox endpoint is configured.
 
 The matching AgentLab source adds the separate
 `agentlab-domain-sandboxd` binary. It exposes only health/readiness/metrics and
-`POST /v1/domain-tasks/:taskId/exec`, resolves physical tasks exclusively below
-`SANDBOX_DOMAIN_TASK_ROOT`, rejects caller physical roots/symlinks/unknown
-stages/empty writable scopes, and does not initialize MCPGit Session backends,
-Agent Runtime, Harness, LLMGW, or a brain. `sandproto` owns its strict private
-readiness/exec DTOs.
+`POST /v1/domain-tasks/:taskId/{prepare|fork|exec}`. Production prepare/fork is
+backed by mature `agentlab-sessionfsd` UDS; the wire never exposes Owner,
+Session, Attempt, Capsule, fence, snapshot, prepared-mount handle, or physical
+storage paths. Exec consumes the authoritative prepared mount plan through
+bwrap. The service does not initialize MCPGit Session backends, Agent Runtime,
+Harness, LLMGW, or a brain. `sandproto` owns the strict private DTOs.
 
-HW Linux validation passed four existing Harmony library tests, seven
+HW Linux validation passed four existing Harmony library tests, eight
 sandbox-client tests, three domain endpoint tests, thirteen sandbox policy
-tests, forty-nine focused bwrap tests, the domain sandbox binary build, and
-formatting/diff gates. The endpoint
+tests, mature `agentlab-sessionfs --features transport-uds` 15/15, the domain
+sandbox/sessionfs daemon builds, and formatting/diff gates. The endpoint
 matrix includes a bearer-auth fail-closed regression: the reduced axum Router
 must explicitly project `AppState` into request extensions because
 `with_state` alone does not feed the shared pre-handler/rate-limit middleware.
 
-The retained real E2E at
+The earlier retained real E2E at
 `/tmp/alharmony-agentlab-infra-e2e-20260904` used Docker-owned loopback Btrfs,
 the real Harmony SDK, authenticated `agentlab-domain-sandboxd`, and
 `alharmony-ops`. It measured OHPM 1.037 s, parent bwrap build 9.154 s, Btrfs
 Fork 51.560 ms with zero copied files/bytes, inherited parent and child cache
 hits, and child patch/rebuild through bwrap in 9.142 s. Parent source/HAP stayed
 unchanged, child artifact identity changed after the patch, and child receipts
-were independently verified. This closes the execution-infrastructure
-integration phase, not the storage migration: task create/fork still uses the
-standalone `alsessionfsd` bridge until the mature `agentlab-sessionfs` UDS
-client/daemon is bound to the same Harmony task lifecycle.
+were independently verified.
+
+The storage migration is now closed in production mode. Use
+`--fork-backend agentlab-sessionfs`; `harmony.task.prepare` calls domain
+`/prepare`, and `harmony.task.fork` calls domain `/fork`. The AgentLab facade
+owns mature Create/Prepare and Snapshot/Verify/Clone/Prepare against
+`agentlab-sessionfsd`, projects stable private task aliases, resets child
+tmp/receipts, and preserves workspace/cache/artifacts/state through Btrfs COW.
+Standalone `alsessionfsd` remains compatibility/test-only. Final evidence at
+`/tmp/alharmony-mature-uds-e2e-20260904/result.json` proves parent prepare
+148.668 ms, Fork 280.213 ms / zero files / zero bytes, OHPM 1.245 s, parent
+build 8.614 s, child rebuild 7.872 s, inherited cache hit, independent receipts,
+parent isolation, exact parent->snapshot->child Btrfs UUID ancestry, and no
+preview `alsessionfsd` process.
 
 Repeated network-disabled acceptance corrected an earlier lifecycle diagnosis.
 The raw failure was a cold Hvigor user home attempting
