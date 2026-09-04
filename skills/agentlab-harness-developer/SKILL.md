@@ -1264,9 +1264,10 @@ stages/empty writable scopes, and does not initialize MCPGit Session backends,
 Agent Runtime, Harness, LLMGW, or a brain. `sandproto` owns its strict private
 readiness/exec DTOs.
 
-HW Linux validation passed four existing Harmony library tests, four new
+HW Linux validation passed four existing Harmony library tests, seven
 sandbox-client tests, three domain endpoint tests, thirteen sandbox policy
-tests, both sandbox binary builds, and formatting/diff gates. The endpoint
+tests, forty-nine focused bwrap tests, the domain sandbox binary build, and
+formatting/diff gates. The endpoint
 matrix includes a bearer-auth fail-closed regression: the reduced axum Router
 must explicitly project `AppState` into request extensions because
 `with_state` alone does not feed the shared pre-handler/rate-limit middleware.
@@ -1282,3 +1283,16 @@ were independently verified. This closes the execution-infrastructure
 integration phase, not the storage migration: task create/fork still uses the
 standalone `alsessionfsd` bridge until the mature `agentlab-sessionfs` UDS
 client/daemon is bound to the same Harmony task lifecycle.
+
+Repeated network-disabled acceptance corrected an earlier lifecycle diagnosis.
+The raw failure was a cold Hvigor user home attempting
+`Installing pnpm@10.28.2...`, not a completed build whose Node process needed to
+be killed. Production composition now mounts an immutable pnpm helper seed at
+`/opt/harmony-seed/hvigor-wrapper-tools`; sandboxed Harmony builds set
+`HVIGOR_USER_HOME=/runtime/deps/hvigor-user-home`, force npm offline, and keep
+mutable package/build caches in the task `runtime-deps` scope. Final evidence
+at `/tmp/alharmony-phase1-seeded-e2e-20260904/result.json` proves parent/child
+bwrap builds around 7.06 s, Btrfs Fork 20.406 ms / zero files / zero bytes,
+parent and child cache hits, no request-time pnpm installation, 14,438-byte HAP
+artifacts, Bearer fail-closed behavior, and no real lingering Hvigor process.
+Do not reintroduce a terminal-marker/kill supervisor for this issue.

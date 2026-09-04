@@ -167,6 +167,14 @@ Startup or execution failure never falls back to direct `Command::new`.
 Omitting `--sandbox-endpoint` retains the older local-direct path only for
 explicit compatibility/developer use.
 
+Hermetic Harmony composition also provides an immutable pnpm 10.28.2 helper
+seed at `/opt/harmony-seed/hvigor-wrapper-tools`. Sandboxed builds set
+`HVIGOR_USER_HOME=/runtime/deps/hvigor-user-home`, link that user home's
+`wrapper/tools` to the immutable seed, and force npm offline. Mutable Hvigor,
+pnpm-store, and project caches therefore live in the task's `runtime-deps`
+scope and are inherited by SessionFS Fork; helper package installation is not
+performed in a build request. Missing or conflicting seed state fails closed.
+
 The first complete hwlinux composition E2E is retained at
 `/tmp/alharmony-agentlab-infra-e2e-20260904`. It used a Docker-owned loopback
 Btrfs root, standalone `alsessionfsd`, authenticated
@@ -178,7 +186,16 @@ remained unchanged. Observed timings were 1.037 s for OHPM, 9.154 s for the
 parent build, 51.560 ms for the Btrfs fork, and 9.142 s for the child rebuild.
 Parent and child artifact fingerprints differed only after the child patch.
 These are dated developer-preview measurements, not general performance
-guarantees.
+guarantees. Repeated hermetic acceptance subsequently exposed that a cold
+Hvigor user home tries to install `pnpm@10.28.2`; with outer networking disabled
+that request correctly timed out. The final corrected evidence at
+`/tmp/alharmony-phase1-seeded-e2e-20260904/result.json` uses the immutable seed
+above and outer `--network none`: parent/child builds were about 7.06 s each,
+Fork was 20.406 ms with zero copied files/bytes, both cache-hit checks passed,
+both HAPs were 14,438 bytes, and build stdout contained no runtime pnpm install.
+A suspected lingering Hvigor process was also disproven as a `pgrep -f`
+self-match by a retained process-tree diagnostic; no Node/Hvigor process
+remained after the completed build.
 
 The storage side is still a migration boundary: this release line currently
 uses standalone `alsessionfsd` for task create/fork while the execution side is

@@ -2515,7 +2515,23 @@ fn execute_sandbox_process(
         shell.push_str(&shell_quote(arg));
     }
     if spec.stage == "harmony-build" {
-        shell = supervised_hvigor_command(&shell);
+        shell = format!(
+            "set -eu; \
+             seed=/opt/harmony-seed/hvigor-wrapper-tools; \
+             test -x \"$seed/node_modules/.bin/pnpm\" || {{ echo harmony-hvigor-seed-missing >&2; exit 126; }}; \
+             export HVIGOR_USER_HOME=/runtime/deps/hvigor-user-home; \
+             export npm_config_offline=true; \
+             export npm_config_update_notifier=false; \
+             mkdir -p \"$HVIGOR_USER_HOME/wrapper\" \"$HVIGOR_USER_HOME/caches\" \"$HVIGOR_USER_HOME/project_caches\"; \
+             if [ -L \"$HVIGOR_USER_HOME/wrapper/tools\" ]; then \
+               [ \"$(readlink \"$HVIGOR_USER_HOME/wrapper/tools\")\" = \"$seed\" ] || {{ echo harmony-hvigor-seed-link-conflict >&2; exit 126; }}; \
+             elif [ -e \"$HVIGOR_USER_HOME/wrapper/tools\" ]; then \
+               echo harmony-hvigor-seed-path-conflict >&2; exit 126; \
+             else \
+               ln -s \"$seed\" \"$HVIGOR_USER_HOME/wrapper/tools\"; \
+             fi; \
+             {shell}"
+        );
     }
     let writable_paths = vec![
         project_rel.clone(),
@@ -2668,88 +2684,6 @@ fn json_string_list(values: &[String]) -> String {
 
 fn sandbox_request_headers(config: &ServiceConfig) -> Result<Vec<(String, String)>, String> {
     sandbox_request_headers_from_file(config.sandbox_token_file.as_deref())
-}
-
-fn posix_shell_quote(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "'\"'\"'"))
-}
-
-fn supervised_hvigor_command(command: &str) -> String {
-    let runner = format!(
-        "printf '%s\\n' \"$$\" > \"$1\"\nstatus=$2\nshift 2\nset +e\n{command}\ncode=$?\nset -e\nprintf '%s\\n' \"$code\" > \"$status\"\nexit \"$code\""
-    );
-    let quoted_runner = posix_shell_quote(&runner);
-    format!(
-        r#"set -eu
-command -v setsid >/dev/null 2>&1 || {{ echo 'setsid is required for supervised Hvigor execution' >&2; exit 127; }}
-marker=$(mktemp /tmp/alharmony-hvigor-marker.XXXXXX)
-pidfile=$(mktemp /tmp/alharmony-hvigor-pid.XXXXXX)
-statusfile=$(mktemp /tmp/alharmony-hvigor-status.XXXXXX)
-hvigor_pid=''
-cleanup_hvigor_supervisor() {{
-  if [ -n "$hvigor_pid" ] && kill -0 "$hvigor_pid" 2>/dev/null; then
-    kill -TERM -- "-$hvigor_pid" 2>/dev/null || kill -TERM "$hvigor_pid" 2>/dev/null || true
-  fi
-  rm -f "$marker" "$pidfile" "$statusfile"
-}}
-trap cleanup_hvigor_supervisor EXIT HUP INT TERM
-setsid sh -c {quoted_runner} sh "$pidfile" "$statusfile" 2>&1 |
-  awk -v marker="$marker" '{{
-    print
-    fflush()
-    if (index($0, "BUILD SUCCESSFUL") > 0) {{
-      print "1" > marker
-      close(marker)
-    }}
-  }}' &
-pipeline_pid=$!
-for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
-  [ -s "$pidfile" ] && break
-  kill -0 "$pipeline_pid" 2>/dev/null || break
-  sleep 0.05
-done
-hvigor_pid=$(cat "$pidfile" 2>/dev/null || true)
-terminal=0
-while kill -0 "$pipeline_pid" 2>/dev/null; do
-  if [ -s "$marker" ]; then terminal=1; break; fi
-  sleep 0.1
-done
-if [ "$terminal" -eq 0 ]; then
-  set +e
-  wait "$pipeline_pid"
-  pipeline_code=$?
-  set -e
-  if [ -s "$marker" ]; then
-    terminal=1
-  else
-    command_code=$(cat "$statusfile" 2>/dev/null || printf '%s' "$pipeline_code")
-    exit "$command_code"
-  fi
-fi
-for _ in 1 2 3 4 5 6 7 8 9 10; do
-  [ -z "$hvigor_pid" ] && break
-  kill -0 "$hvigor_pid" 2>/dev/null || break
-  sleep 0.1
-done
-terminated=0
-if [ -n "$hvigor_pid" ] && kill -0 "$hvigor_pid" 2>/dev/null; then
-  terminated=1
-  kill -TERM -- "-$hvigor_pid" 2>/dev/null || kill -TERM "$hvigor_pid" 2>/dev/null || true
-  for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
-    kill -0 "$hvigor_pid" 2>/dev/null || break
-    sleep 0.1
-  done
-  if kill -0 "$hvigor_pid" 2>/dev/null; then
-    kill -KILL -- "-$hvigor_pid" 2>/dev/null || kill -KILL "$hvigor_pid" 2>/dev/null || true
-  fi
-fi
-set +e
-wait "$pipeline_pid"
-set -e
-find . -type f \( -name '*.hap' -o -name '*.app' -o -name '*.har' -o -name '*.hsp' \) -size +0c -print -quit | grep -q .
-printf '\n__ALHARMONY_HVIGOR_COMPLETION=terminal-marker;terminated=%s\n' "$terminated"
-exit 0"#
-    )
 }
 
 fn sandbox_request_headers_from_file(
@@ -3105,19 +3039,6 @@ mod sandbox_client_tests {
         fs::write(&path, "token with spaces\n").unwrap();
         assert!(sandbox_request_headers_from_file(Some(&path)).is_err());
         fs::remove_dir_all(root).unwrap();
-    }
-
-    #[test]
-    fn supervised_hvigor_command_has_bounded_terminal_cleanup() {
-        let command =
-            supervised_hvigor_command("'/opt/harmony/bin/hvigorw' '--no-daemon' 'assembleHap'");
-        assert!(command.contains("BUILD SUCCESSFUL"));
-        assert!(command.contains("setsid sh -c"));
-        assert!(command.contains("kill -TERM -- \"-$hvigor_pid\""));
-        assert!(command.contains("kill -KILL -- \"-$hvigor_pid\""));
-        assert!(command.contains("__ALHARMONY_HVIGOR_COMPLETION=terminal-marker"));
-        assert!(command.contains("-name '*.hap'"));
-        assert!(!command.contains("mktemp /tmp/alharmony-hvigor.XXXXXX.log"));
     }
 }
 
