@@ -121,3 +121,13 @@ source edits and rebuilds. Timings were about 8.30 s for the initial full flow,
 verify/build/inspect. This remains developer preview: execute mode is allowed
 only in task isolation and still needs stronger process timeout/resource
 controls before production use.
+
+## Memory-backed task roots
+
+Task roots can be placed on tmpfs, for example `/dev/shm`, to keep the generated
+project, build outputs, task temp directory, and receipt log memory-backed. A
+hwlinux A/B test showed this is viable but not a major win for the minimal E2E
+project: `/dev/shm` saved about 1.3% on one edit/build loop and about 0.15% on
+the next, while the initial full flow was about 0.2% slower. Use tmpfs as an
+optional per-task policy when the host disk is slow or projects are IO-heavy;
+for the current minimal project, Hvigor/ArkTS/Node execution dominates.

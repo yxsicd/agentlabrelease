@@ -897,3 +897,26 @@ This proves init/create -> verify -> install -> compile/package unsigned ->
 inspect -> edit/rebuild loops are viable inside the atom task sandbox. The next
 step is to publish a Linux-x64 `035f27a` asset and update `aloffline`, then add
 stronger bounded-process controls before treating execute mode as production.
+
+## Harmony E2E memory / tmpfs acceleration checkpoint
+
+A hwlinux A/B run at `/tmp/alharmony-memory-e2e-20260904051145` compared the same
+`035f27a` service binary and real Harmony SDK with task sandbox and `TMPDIR` on
+root ext4 `/tmp` versus tmpfs `/dev/shm` (16 GiB). Both variants completed the
+same task-isolated service E2E: `harmony.task.prepare`, materialized project
+create, verify, real `ohpm install`, unsigned `hvigor` build/package, artifact
+inspect, then two `Index.ets` edits with verify/build/inspect each. HAP SHA256
+changed on every build in both variants.
+
+Observed timings: ext4 `/tmp` initial full flow 8,180 ms, edit1 7,047 ms, edit2
+6,958 ms; tmpfs `/dev/shm` initial full flow 8,197 ms, edit1 6,956 ms, edit2
+6,948 ms. Savings were -17 ms (-0.21%) initial, +91 ms (+1.29%) edit1, and +10
+ms (+0.15%) edit2. Conclusion: moving only the task sandbox/build output/TMPDIR
+to tmpfs is viable but not material for this small project. The current bottleneck
+is Hvigor/ArkTS/Node execution and SDK/toolchain reads, not task-directory disk
+I/O. Do not make tmpfs the default optimization yet; expose it as an optional
+per-task policy for large projects or slow disks, with memory/quota accounting.
+Further no-IO gains must come from Rust-side in-memory templates, receipt buffering,
+persistent hot build service/caches, or a ram-backed SDK/cache strategy, but real
+Hvigor builds cannot be completely no-IO because they must read source/toolchain
+files and write build artifacts.
