@@ -441,7 +441,7 @@ fn validate_task_for_operation(
                 &[("projectRoot", &root), ("sourceRoot", &source)],
             )
         }
-        "harmony.ohpm.install" | "harmony.build.debug" => {
+        "harmony.ohpm.install" | "harmony.build.debug" | "harmony.project.fingerprint" => {
             let root = required_param_path(params, "projectRoot")?;
             let _harmony = required_param_path(params, "harmonyHome")?;
             validate_task_paths(config, params, &[("projectRoot", &root)])
@@ -528,6 +528,14 @@ fn dispatch_http_with_task(
             let root = required_param_path(params, "projectRoot")?;
             Ok(add_task_evidence(project_verify(&root), task))
         }
+        "harmony.project.fingerprint" => {
+            let root = required_param_path(params, "projectRoot")?;
+            let harmony = required_param_path(params, "harmonyHome")?;
+            Ok(add_task_evidence(
+                project_fingerprint(&root, &harmony)?,
+                task,
+            ))
+        }
         "harmony.ohpm.install" => {
             let root = required_param_path(params, "projectRoot")?;
             let harmony = required_param_path(params, "harmonyHome")?;
@@ -577,6 +585,9 @@ struct WorkspaceCandidate {
     artifact_path: String,
     artifact_bytes: i128,
     updated_at: i128,
+    partition_fingerprints: BTreeMap<String, String>,
+    partition_file_counts: BTreeMap<String, i128>,
+    partition_bytes: BTreeMap<String, i128>,
 }
 
 fn workspace_index(config: &ServiceConfig) -> Result<Receipt, String> {
@@ -621,6 +632,7 @@ fn workspace_match(
     let query_bytes = params
         .get("inputBytes")
         .and_then(|value| value.parse::<i128>().ok());
+    let query_partitions = partition_query_fingerprints(params);
     let mut scored: Vec<(i128, WorkspaceCandidate)> = workspace_candidates(config)?
         .into_iter()
         .map(|candidate| {
@@ -638,6 +650,15 @@ fn workspace_match(
                 let diff = (candidate.input_bytes - bytes).abs();
                 score += (100 - (diff * 100 / denom)).max(0);
             }
+            for (partition, fingerprint) in &query_partitions {
+                if candidate
+                    .partition_fingerprints
+                    .get(partition)
+                    .is_some_and(|candidate_fp| candidate_fp == fingerprint)
+                {
+                    score += partition_weight(partition);
+                }
+            }
             score += (candidate.updated_at / 1_000_000_000_000).max(0).min(10);
             (score, candidate)
         })
@@ -647,6 +668,7 @@ fn workspace_match(
         .iter()
         .filter(|(_, candidate)| candidate.input_fingerprint == input_fingerprint)
         .count();
+    let partition_hint_count = query_partitions.len();
     let mut candidates = Vec::new();
     for (score, candidate) in scored.into_iter().take(max_results) {
         let mut item = match candidate_json(&candidate) {
@@ -657,6 +679,20 @@ fn workspace_match(
         item.insert(
             "exactInputFingerprint".into(),
             JsonValue::Bool(candidate.input_fingerprint == input_fingerprint),
+        );
+        let matched_partitions = query_partitions
+            .iter()
+            .filter(|(partition, fingerprint)| {
+                candidate
+                    .partition_fingerprints
+                    .get(*partition)
+                    .is_some_and(|candidate_fp| candidate_fp == *fingerprint)
+            })
+            .map(|(partition, _)| JsonValue::string(partition))
+            .collect::<Vec<_>>();
+        item.insert(
+            "matchedPartitions".into(),
+            JsonValue::Array(matched_partitions),
         );
         candidates.push(JsonValue::Object(item));
     }
@@ -669,6 +705,14 @@ fn workspace_match(
     evidence.insert(
         "exactMatches".into(),
         JsonValue::Number(exact_matches as i128),
+    );
+    evidence.insert(
+        "partitionHintCount".into(),
+        JsonValue::Number(partition_hint_count as i128),
+    );
+    evidence.insert(
+        "queryPartitions".into(),
+        JsonValue::Object(partition_strings_json(&query_partitions)),
     );
     evidence.insert("candidates".into(), JsonValue::Array(candidates));
     Ok(Receipt::new(
@@ -717,6 +761,9 @@ fn workspace_candidates(config: &ServiceConfig) -> Result<Vec<WorkspaceCandidate
             artifact_path: json_string_field(&body, "artifactPath").unwrap_or_default(),
             artifact_bytes: json_number_field(&body, "artifactBytes").unwrap_or(0),
             updated_at: json_number_field(&body, "updatedAtUnixMillis").unwrap_or(0),
+            partition_fingerprints: parse_partition_string_fields(&body, "Fingerprint"),
+            partition_file_counts: parse_partition_number_fields(&body, "FileCount"),
+            partition_bytes: parse_partition_number_fields(&body, "Bytes"),
         });
     }
     out.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
@@ -761,7 +808,213 @@ fn candidate_json(candidate: &WorkspaceCandidate) -> JsonValue {
         "updatedAtUnixMillis".into(),
         JsonValue::Number(candidate.updated_at),
     );
+    item.insert(
+        "partitionFingerprints".into(),
+        JsonValue::Object(partition_strings_json(&candidate.partition_fingerprints)),
+    );
+    item.insert(
+        "partitionFileCounts".into(),
+        JsonValue::Object(partition_numbers_json(&candidate.partition_file_counts)),
+    );
+    item.insert(
+        "partitionBytes".into(),
+        JsonValue::Object(partition_numbers_json(&candidate.partition_bytes)),
+    );
     JsonValue::Object(item)
+}
+
+fn project_fingerprint(project_root: &Path, harmony_home: &Path) -> Result<Receipt, String> {
+    let input = build_input_fingerprint(project_root, harmony_home)?;
+    let partitions = build_partition_fingerprints(project_root, harmony_home)?;
+    let mut evidence = BTreeMap::new();
+    evidence.insert(
+        "projectRoot".into(),
+        JsonValue::string(project_root.display().to_string()),
+    );
+    evidence.insert(
+        "harmonyHome".into(),
+        JsonValue::string(harmony_home.display().to_string()),
+    );
+    evidence.insert(
+        "inputFingerprint".into(),
+        JsonValue::string(input.fingerprint),
+    );
+    evidence.insert(
+        "inputFileCount".into(),
+        JsonValue::Number(input.file_count as i128),
+    );
+    evidence.insert(
+        "inputBytes".into(),
+        JsonValue::Number(input.total_bytes as i128),
+    );
+    insert_partition_evidence(&mut evidence, &partitions);
+    Ok(Receipt::new(
+        "harmony.project.fingerprint",
+        alharmony_ops_core::SideEffect::ReadOnly,
+    )
+    .evidence("fingerprint", JsonValue::Object(evidence))
+    .next("harmony.workspace.match"))
+}
+
+fn insert_partition_evidence(
+    evidence: &mut BTreeMap<String, JsonValue>,
+    partitions: &BTreeMap<String, FingerprintSummary>,
+) {
+    let mut fp = BTreeMap::new();
+    let mut counts = BTreeMap::new();
+    let mut bytes = BTreeMap::new();
+    for (partition, summary) in partitions {
+        fp.insert(
+            partition.clone(),
+            JsonValue::string(summary.fingerprint.clone()),
+        );
+        counts.insert(
+            partition.clone(),
+            JsonValue::Number(summary.file_count as i128),
+        );
+        bytes.insert(
+            partition.clone(),
+            JsonValue::Number(summary.total_bytes as i128),
+        );
+    }
+    evidence.insert("partitionFingerprints".into(), JsonValue::Object(fp));
+    evidence.insert("partitionFileCounts".into(), JsonValue::Object(counts));
+    evidence.insert("partitionBytes".into(), JsonValue::Object(bytes));
+}
+
+fn build_partition_fingerprints(
+    project_root: &Path,
+    harmony_home: &Path,
+) -> Result<BTreeMap<String, FingerprintSummary>, String> {
+    let mut files: Vec<(String, PathBuf)> = Vec::new();
+    for rel in [
+        "hvigorfile.ts",
+        "hvigor/hvigor-config.json5",
+        "build-profile.json5",
+        "oh-package.json5",
+        "oh-package-lock.json5",
+        "AppScope",
+        "entry/hvigorfile.ts",
+        "entry/build-profile.json5",
+        "entry/oh-package.json5",
+        "entry/oh-package-lock.json5",
+        "entry/src",
+    ] {
+        collect_existing_files(project_root, Path::new(rel), &mut files)?;
+    }
+    let mut by_partition: BTreeMap<String, Vec<(String, PathBuf)>> = BTreeMap::new();
+    for (rel, path) in files {
+        by_partition
+            .entry(classify_project_partition(&rel).to_string())
+            .or_default()
+            .push((rel, path));
+    }
+    let mut sdk = Vec::new();
+    for rel in ["version.txt", "bin/hvigorw", "bin/ohpm"] {
+        let path = harmony_home.join(rel);
+        if path.is_file() {
+            sdk.push((format!("sdk/{rel}"), path));
+        }
+    }
+    if !sdk.is_empty() {
+        by_partition.insert("sdk".into(), sdk);
+    }
+    let mut out = BTreeMap::new();
+    for (partition, entries) in by_partition {
+        out.insert(
+            partition.clone(),
+            fingerprint_entries(&format!("partition:{partition}"), &entries)?,
+        );
+    }
+    Ok(out)
+}
+
+fn known_partitions() -> &'static [&'static str] {
+    &[
+        "arkts",
+        "resources",
+        "profile",
+        "dependencies",
+        "build-script",
+        "other",
+        "sdk",
+    ]
+}
+
+fn partition_field_prefix(partition: &str) -> &'static str {
+    match partition {
+        "arkts" => "arkts",
+        "resources" => "resources",
+        "profile" => "profile",
+        "dependencies" => "dependencies",
+        "build-script" => "buildScript",
+        "other" => "other",
+        "sdk" => "sdk",
+        _ => "unknown",
+    }
+}
+
+fn partition_fingerprint_param(partition: &str) -> String {
+    format!("{}Fingerprint", partition_field_prefix(partition))
+}
+
+fn partition_weight(partition: &str) -> i128 {
+    match partition {
+        "arkts" => 260,
+        "dependencies" => 240,
+        "build-script" => 220,
+        "profile" => 180,
+        "resources" => 160,
+        "sdk" => 120,
+        _ => 80,
+    }
+}
+
+fn partition_query_fingerprints(params: &BTreeMap<String, String>) -> BTreeMap<String, String> {
+    let mut out = BTreeMap::new();
+    for partition in known_partitions() {
+        let key = partition_fingerprint_param(partition);
+        if let Some(value) = params.get(&key) {
+            out.insert((*partition).to_string(), value.clone());
+        }
+    }
+    out
+}
+
+fn parse_partition_string_fields(body: &str, suffix: &str) -> BTreeMap<String, String> {
+    let mut out = BTreeMap::new();
+    for partition in known_partitions() {
+        let key = format!("{}{}", partition_field_prefix(partition), suffix);
+        if let Some(value) = json_string_field(body, &key) {
+            out.insert((*partition).to_string(), value);
+        }
+    }
+    out
+}
+
+fn parse_partition_number_fields(body: &str, suffix: &str) -> BTreeMap<String, i128> {
+    let mut out = BTreeMap::new();
+    for partition in known_partitions() {
+        let key = format!("{}{}", partition_field_prefix(partition), suffix);
+        if let Some(value) = json_number_field(body, &key) {
+            out.insert((*partition).to_string(), value);
+        }
+    }
+    out
+}
+
+fn partition_strings_json(values: &BTreeMap<String, String>) -> BTreeMap<String, JsonValue> {
+    values
+        .iter()
+        .map(|(key, value)| (key.clone(), JsonValue::string(value.clone())))
+        .collect()
+}
+
+fn partition_numbers_json(values: &BTreeMap<String, i128>) -> BTreeMap<String, JsonValue> {
+    values
+        .iter()
+        .map(|(key, value)| (key.clone(), JsonValue::Number(*value)))
+        .collect()
 }
 
 #[derive(Debug)]
@@ -1555,6 +1808,23 @@ fn write_build_state(
         "artifactFingerprint".into(),
         JsonValue::string(artifact_fingerprint.fingerprint.clone()),
     );
+    let partitions = build_partition_fingerprints(project_root, harmony_home)?;
+    insert_partition_evidence(&mut state, &partitions);
+    for (partition, summary) in &partitions {
+        let prefix = partition_field_prefix(partition);
+        state.insert(
+            format!("{prefix}Fingerprint"),
+            JsonValue::string(summary.fingerprint.clone()),
+        );
+        state.insert(
+            format!("{prefix}FileCount"),
+            JsonValue::Number(summary.file_count as i128),
+        );
+        state.insert(
+            format!("{prefix}Bytes"),
+            JsonValue::Number(summary.total_bytes as i128),
+        );
+    }
     state.insert(
         "updatedAtUnixMillis".into(),
         JsonValue::Number(now_millis()),
