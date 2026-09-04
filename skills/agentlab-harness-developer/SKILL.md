@@ -1167,3 +1167,7 @@ lease/GC, and similarity scoring for non-exact packages.
 ## Harmony pool safety checkpoint
 
 `2dca2dd` adds partition-aware matching and `735dff7` adds pool leases plus GC. Use `workspace.match` to select a parent, `workspace.lease` to protect it before `task.fork`, then `workspace.release` after fork. `workspace.gc` skips active leases and protects the newest `keepLast` candidates; dry-run is read-only and deletion requires `execute=true`. hwlinux smoke verified leased A was protected, B was reclaimed first, and A was reclaimable only after release.
+
+## Harmony workspace GC quota checkpoint
+
+`harmony.workspace.gc` now supports `maxBytes`. It still protects active leases and newest `keepLast` candidates, and dry-run remains read-only. M4 smoke: total 12,616 bytes, `maxBytes=7000`, leased oldest A and newest D protected; GC planned and deleted B/C, freed 5,808 bytes, projected 6,808 bytes, leaving A/D.

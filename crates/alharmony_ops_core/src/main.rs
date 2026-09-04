@@ -955,13 +955,25 @@ fn workspace_gc(
         .and_then(|value| value.parse::<usize>().ok())
         .unwrap_or(16)
         .min(256);
+    let max_bytes = params
+        .get("maxBytes")
+        .and_then(|value| value.parse::<u64>().ok());
     let execute = param_bool(params, "execute");
     let leased = active_leased_tasks(task_root)?;
     let mut candidates = workspace_candidates(config)?;
     candidates.sort_by(|a, b| a.updated_at.cmp(&b.updated_at));
     let total = candidates.len();
+    let mut candidate_sizes: BTreeMap<String, u64> = BTreeMap::new();
+    let mut total_bytes = 0_u64;
+    for candidate in &candidates {
+        let size = dir_size(&candidate.task_root);
+        total_bytes = total_bytes.saturating_add(size);
+        candidate_sizes.insert(candidate.task_id.clone(), size);
+    }
     let reclaim_window = total.saturating_sub(keep_last);
     let mut planned = Vec::new();
+    let mut planned_freed_bytes = 0_u64;
+    let mut remaining_bytes = total_bytes;
     for candidate in candidates.iter().take(reclaim_window) {
         if planned.len() >= max_delete {
             break;
@@ -969,7 +981,21 @@ fn workspace_gc(
         if leased.contains(&candidate.task_id) {
             continue;
         }
+        let need_by_count =
+            planned.len() < reclaim_window.saturating_sub(leased.len()).min(max_delete);
+        let need_by_bytes = max_bytes.is_some_and(|limit| remaining_bytes > limit);
+        if !need_by_count && !need_by_bytes {
+            continue;
+        }
+        let size = *candidate_sizes.get(&candidate.task_id).unwrap_or(&0);
         planned.push(candidate.task_id.clone());
+        planned_freed_bytes = planned_freed_bytes.saturating_add(size);
+        remaining_bytes = remaining_bytes.saturating_sub(size);
+        if max_bytes.is_some_and(|limit| remaining_bytes <= limit)
+            && planned.len() >= reclaim_window.saturating_sub(leased.len()).min(max_delete)
+        {
+            break;
+        }
     }
     let mut deleted = 0_usize;
     let mut deleted_bytes = 0_u64;
@@ -977,12 +1003,12 @@ fn workspace_gc(
         for task_id in &planned {
             validate_task_id(task_id)?;
             let root = task_root.join(task_id);
-            let bytes = dir_size(&root);
+            let bytes = *candidate_sizes.get(task_id).unwrap_or(&dir_size(&root));
             if root.is_dir() {
                 fs::remove_dir_all(&root)
                     .map_err(|error| format!("failed to delete task {task_id}: {error}"))?;
                 deleted += 1;
-                deleted_bytes += bytes;
+                deleted_bytes = deleted_bytes.saturating_add(bytes);
             }
         }
     }
@@ -998,6 +1024,13 @@ fn workspace_gc(
     );
     evidence.insert("keepLast".into(), JsonValue::Number(keep_last as i128));
     evidence.insert("maxDelete".into(), JsonValue::Number(max_delete as i128));
+    evidence.insert("totalBytes".into(), JsonValue::Number(total_bytes as i128));
+    evidence.insert(
+        "maxBytes".into(),
+        max_bytes
+            .map(|value| JsonValue::Number(value as i128))
+            .unwrap_or(JsonValue::Null),
+    );
     evidence.insert("execute".into(), JsonValue::Bool(execute));
     evidence.insert(
         "plannedDeletes".into(),
@@ -1011,6 +1044,14 @@ fn workspace_gc(
     evidence.insert(
         "reclaimWindow".into(),
         JsonValue::Number(reclaim_window as i128),
+    );
+    evidence.insert(
+        "plannedFreedBytes".into(),
+        JsonValue::Number(planned_freed_bytes as i128),
+    );
+    evidence.insert(
+        "projectedBytesAfterPlan".into(),
+        JsonValue::Number(total_bytes.saturating_sub(planned_freed_bytes) as i128),
     );
     evidence.insert("deletedCount".into(), JsonValue::Number(deleted as i128));
     evidence.insert(

@@ -242,3 +242,7 @@ an exact fingerprint parent from a two-candidate pool.
 ## Pool safety preview
 
 Workspace reuse now has three safety layers: partition-aware `workspace.match`, short-lived `workspace.lease` before fork, and `workspace.gc` that protects leased tasks and the newest `keepLast` candidates. Dry-run GC is read-only; destructive GC requires `execute=true`.
+
+## Workspace GC quota
+
+`harmony.workspace.gc` supports `maxBytes` in addition to `keepLast` and `maxDelete`. It computes total candidate bytes, plans oldest unleased deletions outside the newest keep window, reports `plannedFreedBytes` and `projectedBytesAfterPlan`, and only deletes with `execute=true`.
