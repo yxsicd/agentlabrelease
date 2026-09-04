@@ -1085,3 +1085,27 @@ M4 composition smoke proved explicit `sessionfs` backend invocation, child
 path/state rewrite, child patch independence, and `auto` fallback to copy-tree
 when no SessionFS endpoint is configured. This preserves standalone deployment
 while enabling fast-fork backend replacement.
+
+## Independent SessionFS composition E2E checkpoint
+
+`db77da4` adds the standalone Rust `alsessionfsd` preview service and wires
+`alharmony-ops` to it through `--fork-backend sessionfs --sessionfs-endpoint`.
+The SessionFS service exposes generic storage operations only and currently uses
+safe `copy-tree-preview`; it deliberately does not know Harmony/Hvigor/HAP. The
+Harmony service remains the owner of `harmony.task.fork`, path/state rewrite,
+build-state refresh, project patch, build cache, and receipts.
+
+hwlinux clean-clone real-SDK E2E ran at
+`/tmp/alharmony-sessionfs-compose-e2e-db77da4-20260904132912`. It built both
+binaries from source, started independent `alsessionfsd` and `alharmony-ops`,
+then executed parent prepare/create/ohpm/build, parent cache hit, sessionfs fork
+to child, child inherited cache hit, child patch, child rebuild, child cache
+hit, and parent cache hit after child. Timings: parent build 7,125.630 ms,
+parent cache hit 0.941 ms, sessionfs fork 13.912 ms wall / 5,322 us backend for
+82 files and 622,987 bytes, child inherited cache hit 0.843 ms, child patch
+0.588 ms, child rebuild 7,233.675 ms, child cache hit 0.834 ms, parent final
+cache hit 0.724 ms. Binary SHA256: `alharmony-ops`
+`2f5df6ddc5cbc18914df91cd515989b15cc83dd7ff0f7c6065b2e6847e2cdc84`,
+`alsessionfsd` `679a1dc31816417ca9c930baf8c196a0fc28d034dbeb73af381aa1d4be3d01d2`.
+This proves two independent owned services can compose while preserving Session
+Fork semantics and build-cache inheritance.
