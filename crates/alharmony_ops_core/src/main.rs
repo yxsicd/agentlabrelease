@@ -426,7 +426,7 @@ fn validate_task_for_operation(
     config: &ServiceConfig,
 ) -> Result<Option<TaskScope>, String> {
     match operation {
-        "harmony.env.status" => Ok(None),
+        "harmony.env.status" | "harmony.workspace.index" | "harmony.workspace.match" => Ok(None),
         "harmony.task.prepare" | "harmony.task.fork" => validate_task_prepare(config, params),
         "harmony.project.create" | "harmony.project.verify" | "harmony.project.patch" => {
             let root = required_param_path(params, "projectRoot")?;
@@ -479,6 +479,8 @@ fn dispatch_http_with_task(
             append_task_receipt(task, &receipt);
             Ok(receipt)
         }
+        "harmony.workspace.index" => workspace_index(config),
+        "harmony.workspace.match" => workspace_match(config, params),
         "harmony.project.create" => {
             let root = required_param_path(params, "projectRoot")?;
             let bundle = params
@@ -562,6 +564,204 @@ fn dispatch_http_with_task(
         }
         _ => Err(format!("unknown operation: {operation}")),
     }
+}
+
+#[derive(Debug)]
+struct WorkspaceCandidate {
+    task_id: String,
+    task_root: PathBuf,
+    project_root: String,
+    input_fingerprint: String,
+    input_file_count: i128,
+    input_bytes: i128,
+    artifact_path: String,
+    artifact_bytes: i128,
+    updated_at: i128,
+}
+
+fn workspace_index(config: &ServiceConfig) -> Result<Receipt, String> {
+    let candidates = workspace_candidates(config)?;
+    let mut evidence = BTreeMap::new();
+    evidence.insert(
+        "candidateCount".into(),
+        JsonValue::Number(candidates.len() as i128),
+    );
+    evidence.insert(
+        "candidates".into(),
+        JsonValue::Array(candidates.iter().take(100).map(candidate_json).collect()),
+    );
+    if let Some(task_root) = &config.task_root {
+        evidence.insert(
+            "taskRoot".into(),
+            JsonValue::string(task_root.display().to_string()),
+        );
+    }
+    Ok(Receipt::new(
+        "harmony.workspace.index",
+        alharmony_ops_core::SideEffect::ReadOnly,
+    )
+    .evidence("workspaceIndex", JsonValue::Object(evidence))
+    .next("harmony.workspace.match"))
+}
+
+fn workspace_match(
+    config: &ServiceConfig,
+    params: &BTreeMap<String, String>,
+) -> Result<Receipt, String> {
+    let input_fingerprint = required_param(params, "inputFingerprint")?;
+    let max_results = params
+        .get("maxResults")
+        .and_then(|value| value.parse::<usize>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(8)
+        .min(50);
+    let query_file_count = params
+        .get("inputFileCount")
+        .and_then(|value| value.parse::<i128>().ok());
+    let query_bytes = params
+        .get("inputBytes")
+        .and_then(|value| value.parse::<i128>().ok());
+    let mut scored: Vec<(i128, WorkspaceCandidate)> = workspace_candidates(config)?
+        .into_iter()
+        .map(|candidate| {
+            let mut score = if candidate.input_fingerprint == input_fingerprint {
+                1000
+            } else {
+                0
+            };
+            if let Some(count) = query_file_count {
+                let diff = (candidate.input_file_count - count).abs();
+                score += (100 - diff).max(0);
+            }
+            if let Some(bytes) = query_bytes {
+                let denom = bytes.max(candidate.input_bytes).max(1);
+                let diff = (candidate.input_bytes - bytes).abs();
+                score += (100 - (diff * 100 / denom)).max(0);
+            }
+            score += (candidate.updated_at / 1_000_000_000_000).max(0).min(10);
+            (score, candidate)
+        })
+        .collect();
+    scored.sort_by(|a, b| b.0.cmp(&a.0));
+    let exact_matches = scored
+        .iter()
+        .filter(|(_, candidate)| candidate.input_fingerprint == input_fingerprint)
+        .count();
+    let mut candidates = Vec::new();
+    for (score, candidate) in scored.into_iter().take(max_results) {
+        let mut item = match candidate_json(&candidate) {
+            JsonValue::Object(map) => map,
+            _ => BTreeMap::new(),
+        };
+        item.insert("score".into(), JsonValue::Number(score));
+        item.insert(
+            "exactInputFingerprint".into(),
+            JsonValue::Bool(candidate.input_fingerprint == input_fingerprint),
+        );
+        candidates.push(JsonValue::Object(item));
+    }
+    let mut evidence = BTreeMap::new();
+    evidence.insert(
+        "inputFingerprint".into(),
+        JsonValue::string(input_fingerprint),
+    );
+    evidence.insert("maxResults".into(), JsonValue::Number(max_results as i128));
+    evidence.insert(
+        "exactMatches".into(),
+        JsonValue::Number(exact_matches as i128),
+    );
+    evidence.insert("candidates".into(), JsonValue::Array(candidates));
+    Ok(Receipt::new(
+        "harmony.workspace.match",
+        alharmony_ops_core::SideEffect::ReadOnly,
+    )
+    .evidence("workspaceMatch", JsonValue::Object(evidence))
+    .next("harmony.task.fork"))
+}
+
+fn workspace_candidates(config: &ServiceConfig) -> Result<Vec<WorkspaceCandidate>, String> {
+    let task_root = config
+        .task_root
+        .as_ref()
+        .ok_or_else(|| "workspace index requires service --task-root".to_string())?;
+    if !task_root.is_dir() {
+        return Ok(Vec::new());
+    }
+    let mut out = Vec::new();
+    let read_dir = fs::read_dir(task_root)
+        .map_err(|error| format!("failed to read taskRoot {}: {error}", task_root.display()))?;
+    for entry in read_dir.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let state_path = path.join("state/build-state.json");
+        if !state_path.is_file() {
+            continue;
+        }
+        let Ok(body) = fs::read_to_string(&state_path) else {
+            continue;
+        };
+        let task_id = json_string_field(&body, "taskId")
+            .unwrap_or_else(|| entry.file_name().to_string_lossy().into_owned());
+        let Some(input_fingerprint) = json_string_field(&body, "inputFingerprint") else {
+            continue;
+        };
+        out.push(WorkspaceCandidate {
+            task_id,
+            task_root: path,
+            project_root: json_string_field(&body, "projectRoot").unwrap_or_default(),
+            input_fingerprint,
+            input_file_count: json_number_field(&body, "inputFileCount").unwrap_or(0),
+            input_bytes: json_number_field(&body, "inputBytes").unwrap_or(0),
+            artifact_path: json_string_field(&body, "artifactPath").unwrap_or_default(),
+            artifact_bytes: json_number_field(&body, "artifactBytes").unwrap_or(0),
+            updated_at: json_number_field(&body, "updatedAtUnixMillis").unwrap_or(0),
+        });
+    }
+    out.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+    Ok(out)
+}
+
+fn candidate_json(candidate: &WorkspaceCandidate) -> JsonValue {
+    let mut item = BTreeMap::new();
+    item.insert(
+        "taskId".into(),
+        JsonValue::string(candidate.task_id.clone()),
+    );
+    item.insert(
+        "taskRoot".into(),
+        JsonValue::string(candidate.task_root.display().to_string()),
+    );
+    item.insert(
+        "projectRoot".into(),
+        JsonValue::string(candidate.project_root.clone()),
+    );
+    item.insert(
+        "inputFingerprint".into(),
+        JsonValue::string(candidate.input_fingerprint.clone()),
+    );
+    item.insert(
+        "inputFileCount".into(),
+        JsonValue::Number(candidate.input_file_count),
+    );
+    item.insert(
+        "inputBytes".into(),
+        JsonValue::Number(candidate.input_bytes),
+    );
+    item.insert(
+        "artifactPath".into(),
+        JsonValue::string(candidate.artifact_path.clone()),
+    );
+    item.insert(
+        "artifactBytes".into(),
+        JsonValue::Number(candidate.artifact_bytes),
+    );
+    item.insert(
+        "updatedAtUnixMillis".into(),
+        JsonValue::Number(candidate.updated_at),
+    );
+    JsonValue::Object(item)
 }
 
 #[derive(Debug)]

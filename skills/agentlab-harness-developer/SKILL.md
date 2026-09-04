@@ -1124,3 +1124,14 @@ files, copied 3 files / 602 bytes, deleted 1 file / 143 bytes, wrote
 3,840 us. A second identical sync was read-only with 18 skipped files in
 1,349 us. This is the bottom atom for full new-package diff-and-merge after a
 Session Fork.
+
+## Harmony workspace index/match checkpoint
+
+`harmony.workspace.index` and `harmony.workspace.match` now provide the minimal
+service-side workspace-pool discovery layer. The index scans task candidates
+with `state/build-state.json`; match ranks candidates for an `inputFingerprint`
+plus optional file-count/byte hints and returns the best parent for
+`harmony.task.fork`. M4 smoke proved a two-candidate pool returns the exact
+fingerprint parent first. This is intentionally a preview: it is exact-fingerprint
+first and should later grow partition/manifests and LRU/lease/GC, but it already
+prevents relying on external shell directory discovery.

@@ -221,3 +221,11 @@ content fingerprints so staging paths do not cause false positives, copies only
 changed files, optionally deletes target-only files with `deleteMissing=true`,
 and writes `state/dirty-partitions.json` for scheduler policy. It preserves
 build outputs, `.hvigor`, `oh_modules`, `node_modules`, and `.git` by default.
+
+## Workspace index and match preview
+
+`harmony.workspace.index` scans the task root for reusable candidates with
+`state/build-state.json`. `harmony.workspace.match` ranks candidates for a given
+`inputFingerprint`, with optional `inputFileCount` and `inputBytes` hints. This
+is the first service-side workspace pool index: exact fingerprint matches are
+preferred, and the result points the scheduler to `harmony.task.fork`.
