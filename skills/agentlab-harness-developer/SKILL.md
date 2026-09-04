@@ -1240,3 +1240,45 @@ child receipts, and parent state unchanged after child mutation. This closes
 the real fast-fork primitive and GitHub binary distribution loop; remaining
 work is persistent companion/start-install integration and acceptance against
 retained production Harmony workspace-pool candidates.
+
+## Harmony ops on AgentLab infrastructure checkpoint
+
+The independent `alharmony-ops` service now has an AgentLab infrastructure
+execution mode rather than copying bwrap or joining AgentLab Runtime. Configure
+`--sandbox-endpoint` and optional `--sandbox-token-file`; service startup must
+receive the exact `agentlab-domain-sandboxd` readiness contract proving
+`executor=bwrap`, a configured domain task root, and `mcpGitRequired=false`.
+After that, `harmony.ohpm.install` and `harmony.build.debug` use fixed
+`harmony-ohpm` / `harmony-build` stages. The project must be below the current
+task's `workspace/`, writable paths are explicit and relative, the toolchain is
+under `/opt/harmony`, and the returned receipt is accepted only with
+`sandboxed=true` plus `executor=bwrap`. A configured sandbox error never falls
+back to direct `Command::new`; the direct path remains compatibility-only when
+no sandbox endpoint is configured.
+
+The matching AgentLab source adds the separate
+`agentlab-domain-sandboxd` binary. It exposes only health/readiness/metrics and
+`POST /v1/domain-tasks/:taskId/exec`, resolves physical tasks exclusively below
+`SANDBOX_DOMAIN_TASK_ROOT`, rejects caller physical roots/symlinks/unknown
+stages/empty writable scopes, and does not initialize MCPGit Session backends,
+Agent Runtime, Harness, LLMGW, or a brain. `sandproto` owns its strict private
+readiness/exec DTOs.
+
+HW Linux validation passed four existing Harmony library tests, four new
+sandbox-client tests, three domain endpoint tests, thirteen sandbox policy
+tests, both sandbox binary builds, and formatting/diff gates. The endpoint
+matrix includes a bearer-auth fail-closed regression: the reduced axum Router
+must explicitly project `AppState` into request extensions because
+`with_state` alone does not feed the shared pre-handler/rate-limit middleware.
+
+The retained real E2E at
+`/tmp/alharmony-agentlab-infra-e2e-20260904` used Docker-owned loopback Btrfs,
+the real Harmony SDK, authenticated `agentlab-domain-sandboxd`, and
+`alharmony-ops`. It measured OHPM 1.037 s, parent bwrap build 9.154 s, Btrfs
+Fork 51.560 ms with zero copied files/bytes, inherited parent and child cache
+hits, and child patch/rebuild through bwrap in 9.142 s. Parent source/HAP stayed
+unchanged, child artifact identity changed after the patch, and child receipts
+were independently verified. This closes the execution-infrastructure
+integration phase, not the storage migration: task create/fork still uses the
+standalone `alsessionfsd` bridge until the mature `agentlab-sessionfs` UDS
+client/daemon is bound to the same Harmony task lifecycle.

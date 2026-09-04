@@ -1,3 +1,4 @@
+use std::cmp::Reverse;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
@@ -15,6 +16,8 @@ use alharmony_ops_core::{
     project_verify, JsonValue, Receipt,
 };
 
+const SANDBOX_HTTP_MAX_RESPONSE_BYTES: usize = 256 * 1024;
+
 #[derive(Debug)]
 struct ServiceConfig {
     task_root: Option<PathBuf>,
@@ -24,6 +27,8 @@ struct ServiceConfig {
     active_requests: AtomicUsize,
     fork_backend: String,
     sessionfs_endpoint: Option<String>,
+    sandbox_endpoint: Option<String>,
+    sandbox_token_file: Option<PathBuf>,
 }
 
 #[derive(Clone, Debug)]
@@ -126,6 +131,29 @@ fn run_service(mut args: Vec<String>) -> ! {
         eprintln!("--fork-backend sessionfs requires --sessionfs-endpoint");
         std::process::exit(2);
     }
+    let sandbox_endpoint = take_value(&mut args, "--sandbox-endpoint");
+    if sandbox_endpoint.is_some() && task_root.is_none() {
+        eprintln!("--sandbox-endpoint requires --task-root");
+        std::process::exit(2);
+    }
+    let sandbox_token_file = take_value(&mut args, "--sandbox-token-file")
+        .map(|value| normalize_path(Path::new(&value)));
+    if sandbox_token_file.is_some() && sandbox_endpoint.is_none() {
+        eprintln!("--sandbox-token-file requires --sandbox-endpoint");
+        std::process::exit(2);
+    }
+    if let Some(path) = &sandbox_token_file {
+        if !path.is_file() {
+            eprintln!("sandbox token file does not exist: {}", path.display());
+            std::process::exit(2);
+        }
+    }
+    if let Some(endpoint) = sandbox_endpoint.as_deref() {
+        if let Err(error) = sandbox_startup_preflight(endpoint, sandbox_token_file.as_deref()) {
+            eprintln!("AgentLab sandbox startup preflight failed: {error}");
+            std::process::exit(1);
+        }
+    }
     if !args.is_empty() {
         eprintln!("unexpected service arguments: {}", args.join(" "));
         std::process::exit(2);
@@ -136,11 +164,16 @@ fn run_service(mut args: Vec<String>) -> ! {
         std::process::exit(1);
     });
     eprintln!(
-        "alharmony-ops service listening on {bind} with {workers} workers, queue_capacity={queue_capacity}, max_active_requests={max_active_requests}, task_root={}",
+        "alharmony-ops service listening on {bind} with {workers} workers, queue_capacity={queue_capacity}, max_active_requests={max_active_requests}, task_root={}, execution_backend={}",
         task_root
             .as_ref()
             .map(|value| value.display().to_string())
-            .unwrap_or_else(|| "<disabled>".to_string())
+            .unwrap_or_else(|| "<disabled>".to_string()),
+        if sandbox_endpoint.is_some() {
+            "agentlab-sandbox"
+        } else {
+            "local-direct"
+        }
     );
 
     let config = Arc::new(ServiceConfig {
@@ -151,6 +184,8 @@ fn run_service(mut args: Vec<String>) -> ! {
         active_requests: AtomicUsize::new(0),
         fork_backend,
         sessionfs_endpoint,
+        sandbox_endpoint,
+        sandbox_token_file,
     });
     let (tx, rx) = mpsc::sync_channel::<TcpStream>(queue_capacity);
     let rx = Arc::new(Mutex::new(rx));
@@ -346,6 +381,14 @@ fn service_status_body(config: &ServiceConfig) -> String {
   \"taskIsolation\": {{
     \"enabled\": {},
     \"taskRoot\": {}
+  }},
+  \"infrastructure\": {{
+    \"sessionFsConfigured\": {},
+    \"sandboxConfigured\": {},
+    \"sandboxTokenFileConfigured\": {},
+    \"sandboxStartupVerified\": {},
+    \"executionBackend\": \"{}\",
+    \"sandboxFallbackAllowed\": false
   }}
 }}
 ",
@@ -358,7 +401,32 @@ fn service_status_body(config: &ServiceConfig) -> String {
         } else {
             "false"
         },
-        task_root
+        task_root,
+        if config.sessionfs_endpoint.is_some() {
+            "true"
+        } else {
+            "false"
+        },
+        if config.sandbox_endpoint.is_some() {
+            "true"
+        } else {
+            "false"
+        },
+        if config.sandbox_token_file.is_some() {
+            "true"
+        } else {
+            "false"
+        },
+        if config.sandbox_endpoint.is_some() {
+            "true"
+        } else {
+            "false"
+        },
+        if config.sandbox_endpoint.is_some() {
+            "agentlab-sandbox"
+        } else {
+            "local-direct"
+        }
     )
 }
 
@@ -552,7 +620,7 @@ fn dispatch_http_with_task(
                     return Err("executing ohpm.install requires task isolation".into());
                 };
                 Ok(add_task_evidence(
-                    execute_ohpm_install(&root, &harmony)?,
+                    execute_ohpm_install(&root, &harmony, task, config)?,
                     Some(task),
                 ))
             } else {
@@ -567,7 +635,7 @@ fn dispatch_http_with_task(
                     return Err("executing build.debug requires task isolation".into());
                 };
                 Ok(add_task_evidence(
-                    execute_build_debug(&root, &harmony, task)?,
+                    execute_build_debug(&root, &harmony, task, config)?,
                     Some(task),
                 ))
             } else {
@@ -667,11 +735,11 @@ fn workspace_match(
                     score += partition_weight(partition);
                 }
             }
-            score += (candidate.updated_at / 1_000_000_000_000).max(0).min(10);
+            score += (candidate.updated_at / 1_000_000_000_000).clamp(0, 10);
             (score, candidate)
         })
         .collect();
-    scored.sort_by(|a, b| b.0.cmp(&a.0));
+    scored.sort_by_key(|(score, _)| Reverse(*score));
     let exact_matches = scored
         .iter()
         .filter(|(_, candidate)| candidate.input_fingerprint == input_fingerprint)
@@ -774,7 +842,7 @@ fn workspace_candidates(config: &ServiceConfig) -> Result<Vec<WorkspaceCandidate
             partition_bytes: parse_partition_number_fields(&body, "Bytes"),
         });
     }
-    out.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+    out.sort_by_key(|candidate| Reverse(candidate.updated_at));
     Ok(out)
 }
 
@@ -961,7 +1029,7 @@ fn workspace_gc(
     let execute = param_bool(params, "execute");
     let leased = active_leased_tasks(task_root)?;
     let mut candidates = workspace_candidates(config)?;
-    candidates.sort_by(|a, b| a.updated_at.cmp(&b.updated_at));
+    candidates.sort_by_key(|candidate| candidate.updated_at);
     let total = candidates.len();
     let mut candidate_sizes: BTreeMap<String, u64> = BTreeMap::new();
     let mut total_bytes = 0_u64;
@@ -1034,12 +1102,7 @@ fn workspace_gc(
     evidence.insert("execute".into(), JsonValue::Bool(execute));
     evidence.insert(
         "plannedDeletes".into(),
-        JsonValue::Array(
-            planned
-                .iter()
-                .map(|task_id| JsonValue::string(task_id))
-                .collect(),
-        ),
+        JsonValue::Array(planned.iter().map(JsonValue::string).collect()),
     );
     evidence.insert(
         "reclaimWindow".into(),
@@ -1798,9 +1861,8 @@ fn harmony_minimal_project_files(
         ),
         (
             "build-profile.json5",
-            format!(
-                "{{\n  \"app\": {{\n    \"signingConfigs\": [],\n    \"products\": [\n      {{\n        \"name\": \"default\",\n        \"signingConfig\": \"default\",\n        \"compatibleSdkVersion\": \"6.0.0(20)\",\n        \"runtimeOS\": \"HarmonyOS\"\n      }}\n    ],\n    \"buildModeSet\": [\n      {{ \"name\": \"debug\" }},\n      {{ \"name\": \"release\" }}\n    ]\n  }},\n  \"modules\": [\n    {{\n      \"name\": \"entry\",\n      \"srcPath\": \"./entry\",\n      \"targets\": [\n        {{ \"name\": \"default\", \"applyToProducts\": [ \"default\" ] }}\n      ]\n    }}\n  ]\n}}\n"
-            ),
+            "{\n  \"app\": {\n    \"signingConfigs\": [],\n    \"products\": [\n      {\n        \"name\": \"default\",\n        \"signingConfig\": \"default\",\n        \"compatibleSdkVersion\": \"6.0.0(20)\",\n        \"runtimeOS\": \"HarmonyOS\"\n      }\n    ],\n    \"buildModeSet\": [\n      { \"name\": \"debug\" },\n      { \"name\": \"release\" }\n    ]\n  },\n  \"modules\": [\n    {\n      \"name\": \"entry\",\n      \"srcPath\": \"./entry\",\n      \"targets\": [\n        { \"name\": \"default\", \"applyToProducts\": [ \"default\" ] }\n      ]\n    }\n  ]\n}\n"
+                .to_string(),
         ),
         (
             "oh-package.json5",
@@ -1883,13 +1945,24 @@ fn ets_single_quote_escape(value: &str) -> String {
     value.replace('\\', "\\\\").replace('\'', "\\'")
 }
 
-fn execute_ohpm_install(project_root: &Path, harmony_home: &Path) -> Result<Receipt, String> {
+fn execute_ohpm_install(
+    project_root: &Path,
+    harmony_home: &Path,
+    task: &TaskScope,
+    config: &ServiceConfig,
+) -> Result<Receipt, String> {
     execute_local_process(
-        "harmony.ohpm.install",
-        project_root,
-        &harmony_home.join("bin/ohpm"),
-        &["install"],
-        Some("harmony.build.debug"),
+        ProcessExecutionSpec {
+            operation: "harmony.ohpm.install",
+            stage: "harmony-ohpm",
+            project_root,
+            command: harmony_home.join("bin/ohpm"),
+            args: &["install"],
+            next_action: Some("harmony.build.debug"),
+            timeout_ms: 120_000,
+        },
+        task,
+        config,
     )
 }
 
@@ -1897,27 +1970,34 @@ fn execute_build_debug(
     project_root: &Path,
     harmony_home: &Path,
     task: &TaskScope,
+    config: &ServiceConfig,
 ) -> Result<Receipt, String> {
     let input = build_input_fingerprint(project_root, harmony_home)?;
     if let Some(receipt) = try_build_cache_hit(project_root, task, &input)? {
         return Ok(receipt);
     }
     let mut receipt = execute_local_process(
-        "harmony.build.debug",
-        project_root,
-        &harmony_home.join("bin/hvigorw"),
-        &[
-            "--no-daemon",
-            "--no-parallel",
-            "--no-type-check",
-            "--analyze=false",
-            "--mode",
-            "module",
-            "-p",
-            "product=default",
-            "assembleHap",
-        ],
-        Some("harmony.artifact.inspect"),
+        ProcessExecutionSpec {
+            operation: "harmony.build.debug",
+            stage: "harmony-build",
+            project_root,
+            command: harmony_home.join("bin/hvigorw"),
+            args: &[
+                "--no-daemon",
+                "--no-parallel",
+                "--no-type-check",
+                "--analyze=false",
+                "--mode",
+                "module",
+                "-p",
+                "product=default",
+                "assembleHap",
+            ],
+            next_action: Some("harmony.artifact.inspect"),
+            timeout_ms: 900_000,
+        },
+        task,
+        config,
     )?;
     let mut cache_evidence = build_cache_evidence(task, &input, false);
     if receipt.ok {
@@ -2373,19 +2453,681 @@ fn is_path_under(path: &Path, root: &Path) -> bool {
     path == root || path.starts_with(root)
 }
 
+struct ProcessExecutionSpec<'a> {
+    operation: &'static str,
+    stage: &'static str,
+    project_root: &'a Path,
+    command: PathBuf,
+    args: &'a [&'a str],
+    next_action: Option<&'static str>,
+    timeout_ms: u64,
+}
+
 fn execute_local_process(
+    spec: ProcessExecutionSpec<'_>,
+    task: &TaskScope,
+    config: &ServiceConfig,
+) -> Result<Receipt, String> {
+    if !spec.project_root.is_dir() {
+        return Err(format!(
+            "projectRoot does not exist: {}",
+            spec.project_root.display()
+        ));
+    }
+    if config.sandbox_endpoint.is_some() {
+        return execute_sandbox_process(&spec, task, config);
+    }
+    execute_local_process_direct(
+        spec.operation,
+        spec.project_root,
+        &spec.command,
+        spec.args,
+        spec.next_action,
+    )
+}
+
+fn execute_sandbox_process(
+    spec: &ProcessExecutionSpec<'_>,
+    task: &TaskScope,
+    config: &ServiceConfig,
+) -> Result<Receipt, String> {
+    let endpoint = config
+        .sandbox_endpoint
+        .as_deref()
+        .ok_or_else(|| "sandbox endpoint is not configured".to_string())?;
+    let project_rel = sandbox_project_relative(task, spec.project_root)?;
+    let command = normalize_path(&spec.command);
+    let sandbox_harmony_root = Path::new("/opt/harmony");
+    if !command.starts_with(sandbox_harmony_root) {
+        return Err(format!(
+            "sandbox execution requires a tool under /opt/harmony: {}",
+            command.display()
+        ));
+    }
+    let sandbox_cwd = format!("/workspace/{project_rel}");
+    let mut shell = format!(
+        "cd -- {} && exec {}",
+        shell_quote(&sandbox_cwd),
+        shell_quote(&command.display().to_string())
+    );
+    for arg in spec.args {
+        shell.push(' ');
+        shell.push_str(&shell_quote(arg));
+    }
+    if spec.stage == "harmony-build" {
+        shell = supervised_hvigor_command(&shell);
+    }
+    let writable_paths = vec![
+        project_rel.clone(),
+        ".al/home".to_string(),
+        ".al/tmp".to_string(),
+        ".al/cache/deps".to_string(),
+    ];
+    let body = format!(
+        "{{\"stage\":\"{}\",\"command\":\"{}\",\"writablePaths\":{},\"timeoutMs\":{}}}",
+        json_escape(spec.stage),
+        json_escape(&shell),
+        json_string_list(&writable_paths),
+        spec.timeout_ms
+    );
+    let path = format!("/v1/domain-tasks/{}/exec", task.task_id);
+    let headers = sandbox_request_headers(config)?;
+    let (http_status, response) = http_post_json(
+        endpoint,
+        &path,
+        &headers,
+        &body,
+        Duration::from_millis(spec.timeout_ms),
+    )?;
+    if http_status != 200 {
+        return Err(format!(
+            "AgentLab sandbox returned HTTP {http_status}: {}",
+            tail_chars(&response, 1024)
+        ));
+    }
+    let sandboxed = json_bool_field(&response, "sandboxed")
+        .ok_or_else(|| "AgentLab sandbox response is missing sandboxed".to_string())?;
+    let executor = json_string_field(&response, "executor")
+        .ok_or_else(|| "AgentLab sandbox response is missing executor".to_string())?;
+    if !sandboxed || executor != "bwrap" {
+        return Err("AgentLab sandbox response did not prove bwrap execution".into());
+    }
+    let ok = json_bool_field(&response, "ok")
+        .ok_or_else(|| "AgentLab sandbox response is missing ok".to_string())?;
+    let status = json_string_field(&response, "status")
+        .ok_or_else(|| "AgentLab sandbox response is missing status".to_string())?;
+    let run_id = json_string_field(&response, "runId")
+        .ok_or_else(|| "AgentLab sandbox response is missing runId".to_string())?;
+    let exit_code = json_number_field(&response, "exitCode")
+        .ok_or_else(|| "AgentLab sandbox response is missing exitCode".to_string())?;
+    let elapsed_ms = json_number_field(&response, "durationMs")
+        .ok_or_else(|| "AgentLab sandbox response is missing durationMs".to_string())?;
+    let stdout = json_string_field(&response, "stdout").unwrap_or_default();
+    let stderr = json_string_field(&response, "stderr").unwrap_or_default();
+    let mut evidence = BTreeMap::new();
+    evidence.insert(
+        "executionBackend".into(),
+        JsonValue::string("agentlab-sandbox"),
+    );
+    evidence.insert("sandboxed".into(), JsonValue::Bool(true));
+    evidence.insert("executor".into(), JsonValue::string(executor));
+    evidence.insert("stage".into(), JsonValue::string(spec.stage));
+    evidence.insert("runId".into(), JsonValue::string(run_id));
+    evidence.insert("status".into(), JsonValue::string(status.clone()));
+    evidence.insert("cwd".into(), JsonValue::string(sandbox_cwd));
+    evidence.insert(
+        "command".into(),
+        JsonValue::string(command.display().to_string()),
+    );
+    evidence.insert(
+        "args".into(),
+        JsonValue::Array(
+            spec.args
+                .iter()
+                .map(|arg| JsonValue::string(*arg))
+                .collect(),
+        ),
+    );
+    evidence.insert("exitCode".into(), JsonValue::Number(exit_code));
+    evidence.insert("elapsedMillis".into(), JsonValue::Number(elapsed_ms));
+    evidence.insert(
+        "stdoutTail".into(),
+        JsonValue::string(tail_chars(&stdout, 4096)),
+    );
+    evidence.insert(
+        "stderrTail".into(),
+        JsonValue::string(tail_chars(&stderr, 4096)),
+    );
+    let artifacts = find_artifacts(spec.project_root);
+    if !artifacts.is_empty() {
+        evidence.insert("artifacts".into(), JsonValue::Array(artifacts));
+    }
+    let success = ok && status == "ok" && exit_code == 0;
+    let mut receipt = Receipt::new(spec.operation, alharmony_ops_core::SideEffect::LocalProcess)
+        .evidence("execution", JsonValue::Object(evidence));
+    receipt.ok = success;
+    receipt.next_action = if success {
+        spec.next_action
+    } else {
+        Some("harmony.project.verify")
+    };
+    if !success {
+        receipt.recovery_owner = alharmony_ops_core::RecoveryOwner::Agent;
+        receipt
+            .diagnostics
+            .push(format!("{} sandbox command {status}", spec.operation));
+    }
+    Ok(receipt)
+}
+
+fn sandbox_project_relative(task: &TaskScope, project_root: &Path) -> Result<String, String> {
+    let workspace = normalize_path(&task.root.join("workspace"));
+    let project = normalize_path(project_root);
+    let relative = project.strip_prefix(&workspace).map_err(|_| {
+        format!(
+            "projectRoot must stay under task workspace {}",
+            workspace.display()
+        )
+    })?;
+    if relative.as_os_str().is_empty() {
+        return Err("sandbox execution requires projectRoot below the task workspace root".into());
+    }
+    let mut parts = Vec::new();
+    for component in relative.components() {
+        let Component::Normal(value) = component else {
+            return Err("projectRoot has unsupported path components".into());
+        };
+        let value = value
+            .to_str()
+            .ok_or_else(|| "projectRoot must be valid UTF-8 for sandbox execution".to_string())?;
+        if value.is_empty() || value == "." || value == ".." {
+            return Err("projectRoot has an unsafe relative component".into());
+        }
+        parts.push(value);
+    }
+    Ok(parts.join("/"))
+}
+
+fn shell_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "'\"'\"'"))
+}
+
+fn json_string_list(values: &[String]) -> String {
+    let mut out = String::from("[");
+    for (index, value) in values.iter().enumerate() {
+        if index != 0 {
+            out.push(',');
+        }
+        out.push('"');
+        out.push_str(&json_escape(value));
+        out.push('"');
+    }
+    out.push(']');
+    out
+}
+
+fn sandbox_request_headers(config: &ServiceConfig) -> Result<Vec<(String, String)>, String> {
+    sandbox_request_headers_from_file(config.sandbox_token_file.as_deref())
+}
+
+fn posix_shell_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "'\"'\"'"))
+}
+
+fn supervised_hvigor_command(command: &str) -> String {
+    let runner = format!(
+        "printf '%s\\n' \"$$\" > \"$1\"\nstatus=$2\nshift 2\nset +e\n{command}\ncode=$?\nset -e\nprintf '%s\\n' \"$code\" > \"$status\"\nexit \"$code\""
+    );
+    let quoted_runner = posix_shell_quote(&runner);
+    format!(
+        r#"set -eu
+command -v setsid >/dev/null 2>&1 || {{ echo 'setsid is required for supervised Hvigor execution' >&2; exit 127; }}
+marker=$(mktemp /tmp/alharmony-hvigor-marker.XXXXXX)
+pidfile=$(mktemp /tmp/alharmony-hvigor-pid.XXXXXX)
+statusfile=$(mktemp /tmp/alharmony-hvigor-status.XXXXXX)
+hvigor_pid=''
+cleanup_hvigor_supervisor() {{
+  if [ -n "$hvigor_pid" ] && kill -0 "$hvigor_pid" 2>/dev/null; then
+    kill -TERM -- "-$hvigor_pid" 2>/dev/null || kill -TERM "$hvigor_pid" 2>/dev/null || true
+  fi
+  rm -f "$marker" "$pidfile" "$statusfile"
+}}
+trap cleanup_hvigor_supervisor EXIT HUP INT TERM
+setsid sh -c {quoted_runner} sh "$pidfile" "$statusfile" 2>&1 |
+  awk -v marker="$marker" '{{
+    print
+    fflush()
+    if (index($0, "BUILD SUCCESSFUL") > 0) {{
+      print "1" > marker
+      close(marker)
+    }}
+  }}' &
+pipeline_pid=$!
+for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+  [ -s "$pidfile" ] && break
+  kill -0 "$pipeline_pid" 2>/dev/null || break
+  sleep 0.05
+done
+hvigor_pid=$(cat "$pidfile" 2>/dev/null || true)
+terminal=0
+while kill -0 "$pipeline_pid" 2>/dev/null; do
+  if [ -s "$marker" ]; then terminal=1; break; fi
+  sleep 0.1
+done
+if [ "$terminal" -eq 0 ]; then
+  set +e
+  wait "$pipeline_pid"
+  pipeline_code=$?
+  set -e
+  if [ -s "$marker" ]; then
+    terminal=1
+  else
+    command_code=$(cat "$statusfile" 2>/dev/null || printf '%s' "$pipeline_code")
+    exit "$command_code"
+  fi
+fi
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  [ -z "$hvigor_pid" ] && break
+  kill -0 "$hvigor_pid" 2>/dev/null || break
+  sleep 0.1
+done
+terminated=0
+if [ -n "$hvigor_pid" ] && kill -0 "$hvigor_pid" 2>/dev/null; then
+  terminated=1
+  kill -TERM -- "-$hvigor_pid" 2>/dev/null || kill -TERM "$hvigor_pid" 2>/dev/null || true
+  for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+    kill -0 "$hvigor_pid" 2>/dev/null || break
+    sleep 0.1
+  done
+  if kill -0 "$hvigor_pid" 2>/dev/null; then
+    kill -KILL -- "-$hvigor_pid" 2>/dev/null || kill -KILL "$hvigor_pid" 2>/dev/null || true
+  fi
+fi
+set +e
+wait "$pipeline_pid"
+set -e
+find . -type f \( -name '*.hap' -o -name '*.app' -o -name '*.har' -o -name '*.hsp' \) -size +0c -print -quit | grep -q .
+printf '\n__ALHARMONY_HVIGOR_COMPLETION=terminal-marker;terminated=%s\n' "$terminated"
+exit 0"#
+    )
+}
+
+fn sandbox_request_headers_from_file(
+    token_file: Option<&Path>,
+) -> Result<Vec<(String, String)>, String> {
+    let Some(path) = token_file else {
+        return Ok(Vec::new());
+    };
+    let token = read_private_sandbox_token(path)?;
+    Ok(vec![("Authorization".into(), format!("Bearer {token}"))])
+}
+
+fn read_private_sandbox_token(path: &Path) -> Result<String, String> {
+    let metadata = fs::symlink_metadata(path)
+        .map_err(|error| format!("failed to inspect sandbox token file: {error}"))?;
+    if metadata.file_type().is_symlink() || !metadata.is_file() {
+        return Err("sandbox token file must be a regular non-symlink file".into());
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if metadata.permissions().mode() & 0o077 != 0 {
+            return Err("sandbox token file must not be accessible by group or others".into());
+        }
+    }
+    let raw = fs::read_to_string(path)
+        .map_err(|error| format!("failed to read sandbox token file: {error}"))?;
+    let token = raw
+        .strip_suffix("\r\n")
+        .or_else(|| raw.strip_suffix('\n'))
+        .unwrap_or(&raw);
+    if token.is_empty()
+        || token != token.trim()
+        || token.contains('\r')
+        || token.contains('\n')
+        || token
+            .chars()
+            .any(|character| character.is_ascii_control() || character.is_ascii_whitespace())
+    {
+        return Err("sandbox token file must contain exactly one non-whitespace token".into());
+    }
+    Ok(token.to_string())
+}
+
+fn sandbox_startup_preflight(endpoint: &str, token_file: Option<&Path>) -> Result<(), String> {
+    let deadline = Instant::now() + Duration::from_secs(10);
+    let mut last_error = match sandbox_ready_once(endpoint, token_file) {
+        Ok(()) => return Ok(()),
+        Err(error) => error,
+    };
+    while Instant::now() < deadline {
+        thread::sleep(Duration::from_millis(100));
+        match sandbox_ready_once(endpoint, token_file) {
+            Ok(()) => return Ok(()),
+            Err(error) => last_error = error,
+        }
+    }
+    Err(last_error)
+}
+
+fn sandbox_ready_once(endpoint: &str, token_file: Option<&Path>) -> Result<(), String> {
+    let headers = sandbox_request_headers_from_file(token_file)?;
+    let (status, body) = http_get_json(endpoint, "/v1/ready", &headers, Duration::from_secs(3))?;
+    if status != 200 {
+        return Err(format!(
+            "sandbox readiness returned HTTP {status}: {}",
+            tail_chars(&body, 512)
+        ));
+    }
+    if json_string_field(&body, "status").as_deref() != Some("ready")
+        || json_string_field(&body, "service").as_deref() != Some("agentlab-domain-sandboxd")
+        || json_string_field(&body, "executor").as_deref() != Some("bwrap")
+        || json_bool_field(&body, "domainTaskRootConfigured") != Some(true)
+        || json_bool_field(&body, "mcpGitRequired") != Some(false)
+    {
+        return Err(format!(
+            "sandbox readiness did not prove the domain bwrap contract: {}",
+            tail_chars(&body, 1024)
+        ));
+    }
+    Ok(())
+}
+
+fn http_post_json(
+    endpoint: &str,
+    path: &str,
+    headers: &[(String, String)],
+    body: &str,
+    operation_timeout: Duration,
+) -> Result<(u16, String), String> {
+    http_json_request(
+        endpoint,
+        path,
+        headers,
+        "POST",
+        Some(body),
+        operation_timeout,
+    )
+}
+
+fn http_get_json(
+    endpoint: &str,
+    path: &str,
+    headers: &[(String, String)],
+    operation_timeout: Duration,
+) -> Result<(u16, String), String> {
+    http_json_request(endpoint, path, headers, "GET", None, operation_timeout)
+}
+
+fn http_json_request(
+    endpoint: &str,
+    path: &str,
+    headers: &[(String, String)],
+    method: &str,
+    body: Option<&str>,
+    operation_timeout: Duration,
+) -> Result<(u16, String), String> {
+    let rest = endpoint
+        .trim_end_matches('/')
+        .strip_prefix("http://")
+        .ok_or_else(|| "only http:// sandbox endpoints are supported".to_string())?;
+    let (authority, base_path) = match rest.split_once('/') {
+        Some((authority, base)) => (authority, format!("/{base}")),
+        None => (rest, String::new()),
+    };
+    if authority.is_empty() {
+        return Err("sandbox endpoint has no authority".into());
+    }
+    let request_path = format!("{}{}", base_path.trim_end_matches('/'), path);
+    let mut stream = TcpStream::connect(authority)
+        .map_err(|error| format!("failed to connect to AgentLab sandbox {authority}: {error}"))?;
+    let io_timeout = operation_timeout
+        .checked_add(Duration::from_secs(10))
+        .unwrap_or(operation_timeout);
+    let _ = stream.set_read_timeout(Some(io_timeout));
+    let _ = stream.set_write_timeout(Some(Duration::from_secs(30)));
+    let mut request =
+        format!("{method} {request_path} HTTP/1.1\r\nHost: {authority}\r\nConnection: close\r\n");
+    if let Some(body) = body {
+        request.push_str("Content-Type: application/json\r\n");
+        request.push_str(&format!("Content-Length: {}\r\n", body.len()));
+    }
+    for (name, value) in headers {
+        if name.is_empty()
+            || name.chars().any(|ch| ch.is_ascii_control() || ch == ':')
+            || value.chars().any(|ch| matches!(ch, '\r' | '\n'))
+        {
+            return Err("sandbox request contains an invalid header".into());
+        }
+        request.push_str(name);
+        request.push_str(": ");
+        request.push_str(value);
+        request.push_str("\r\n");
+    }
+    request.push_str("\r\n");
+    if let Some(body) = body {
+        request.push_str(body);
+    }
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|error| format!("failed to write AgentLab sandbox request: {error}"))?;
+    let mut response = Vec::new();
+    let mut buffer = [0_u8; 8192];
+    loop {
+        let read = stream
+            .read(&mut buffer)
+            .map_err(|error| format!("failed to read AgentLab sandbox response: {error}"))?;
+        if read == 0 {
+            break;
+        }
+        if response.len().saturating_add(read) > SANDBOX_HTTP_MAX_RESPONSE_BYTES {
+            return Err(format!(
+                "AgentLab sandbox response exceeds {} bytes",
+                SANDBOX_HTTP_MAX_RESPONSE_BYTES
+            ));
+        }
+        response.extend_from_slice(&buffer[..read]);
+    }
+    let separator = response
+        .windows(4)
+        .position(|window| window == b"\r\n\r\n")
+        .ok_or_else(|| "AgentLab sandbox response was missing header terminator".to_string())?;
+    let header_bytes = &response[..separator];
+    let body_bytes = &response[separator + 4..];
+    let response_headers = String::from_utf8_lossy(header_bytes);
+    let status = response_headers
+        .lines()
+        .next()
+        .and_then(|line| line.split_whitespace().nth(1))
+        .and_then(|code| code.parse::<u16>().ok())
+        .ok_or_else(|| "AgentLab sandbox response had no HTTP status".to_string())?;
+    let decoded = if response_headers.lines().any(|line| {
+        line.split_once(':').is_some_and(|(name, value)| {
+            name.trim().eq_ignore_ascii_case("transfer-encoding")
+                && value.to_ascii_lowercase().contains("chunked")
+        })
+    }) {
+        decode_chunked_body(body_bytes)?
+    } else {
+        body_bytes.to_vec()
+    };
+    Ok((status, String::from_utf8_lossy(&decoded).into_owned()))
+}
+
+fn decode_chunked_body(mut body: &[u8]) -> Result<Vec<u8>, String> {
+    let mut out = Vec::new();
+    loop {
+        let line_end = body
+            .windows(2)
+            .position(|window| window == b"\r\n")
+            .ok_or_else(|| "invalid chunked sandbox response".to_string())?;
+        let size_line = String::from_utf8_lossy(&body[..line_end]);
+        let size_text = size_line.split(';').next().unwrap_or("").trim();
+        let size = usize::from_str_radix(size_text, 16)
+            .map_err(|_| "invalid chunk size in sandbox response".to_string())?;
+        body = &body[line_end + 2..];
+        if size == 0 {
+            return Ok(out);
+        }
+        if body.len() < size + 2 || &body[size..size + 2] != b"\r\n" {
+            return Err("truncated chunked sandbox response".into());
+        }
+        out.extend_from_slice(&body[..size]);
+        body = &body[size + 2..];
+    }
+}
+
+#[cfg(test)]
+mod sandbox_client_tests {
+    use super::*;
+
+    fn temp_dir(name: &str) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!(
+            "alharmony-sandbox-client-{name}-{}-{nonce}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&path).unwrap();
+        path
+    }
+
+    fn ready_endpoint(body: &str) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let body = body.to_string();
+        thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = [0_u8; 2048];
+            let _ = stream.read(&mut request);
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream.write_all(response.as_bytes()).unwrap();
+        });
+        format!("http://{address}")
+    }
+
+    #[test]
+    fn project_relative_is_bound_to_task_workspace() {
+        let task = TaskScope {
+            task_id: "task-1".into(),
+            root: PathBuf::from("/tmp/alharmony-task-1"),
+        };
+        assert_eq!(
+            sandbox_project_relative(&task, Path::new("/tmp/alharmony-task-1/workspace/project"))
+                .unwrap(),
+            "project"
+        );
+        assert!(
+            sandbox_project_relative(&task, Path::new("/tmp/alharmony-task-1/workspace")).is_err()
+        );
+        assert!(sandbox_project_relative(&task, Path::new("/tmp/another-task/project")).is_err());
+    }
+
+    #[test]
+    fn shell_quote_preserves_single_quotes() {
+        assert_eq!(shell_quote("a'b"), "'a'\"'\"'b'");
+    }
+
+    #[test]
+    fn chunked_response_decoder_is_bounded_and_exact() {
+        let decoded = decode_chunked_body(b"4\r\n{\"ok\r\n7\r\n\":true}\r\n0\r\n\r\n").unwrap();
+        assert_eq!(decoded, b"{\"ok\":true}");
+        assert!(decode_chunked_body(b"4\r\nabc").is_err());
+    }
+
+    #[test]
+    fn startup_readiness_requires_the_domain_bwrap_contract() {
+        let endpoint = ready_endpoint(
+            r#"{"status":"ready","service":"agentlab-domain-sandboxd","executor":"bwrap","domainTaskRootConfigured":true,"mcpGitRequired":false}"#,
+        );
+        sandbox_ready_once(&endpoint, None).unwrap();
+
+        let generic = ready_endpoint(
+            r#"{"status":"ready","service":"sandbox-server","executor":"bwrap","domainTaskRootConfigured":true,"mcpGitRequired":false}"#,
+        );
+        assert!(sandbox_ready_once(&generic, None).is_err());
+    }
+
+    #[test]
+    fn private_token_file_is_loaded_as_bearer_authority() {
+        let root = temp_dir("token-valid");
+        let path = root.join("sandbox.token");
+        fs::write(&path, "private-token\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
+        }
+        let headers = sandbox_request_headers_from_file(Some(&path)).unwrap();
+        assert_eq!(
+            headers,
+            vec![("Authorization".into(), "Bearer private-token".into())]
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn token_file_rejects_weak_permissions_and_symlinks() {
+        use std::os::unix::fs::{symlink, PermissionsExt};
+
+        let root = temp_dir("token-private");
+        let path = root.join("sandbox.token");
+        fs::write(&path, "private-token\n").unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(sandbox_request_headers_from_file(Some(&path)).is_err());
+
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
+        let link = root.join("sandbox-token-link");
+        symlink(&path, &link).unwrap();
+        assert!(sandbox_request_headers_from_file(Some(&link)).is_err());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn token_file_rejects_multiline_or_whitespace_tokens() {
+        let root = temp_dir("token-format");
+        let path = root.join("sandbox.token");
+        fs::write(&path, "token-a\ntoken-b\n").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
+        }
+        assert!(sandbox_request_headers_from_file(Some(&path)).is_err());
+
+        fs::write(&path, "token with spaces\n").unwrap();
+        assert!(sandbox_request_headers_from_file(Some(&path)).is_err());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn supervised_hvigor_command_has_bounded_terminal_cleanup() {
+        let command =
+            supervised_hvigor_command("'/opt/harmony/bin/hvigorw' '--no-daemon' 'assembleHap'");
+        assert!(command.contains("BUILD SUCCESSFUL"));
+        assert!(command.contains("setsid sh -c"));
+        assert!(command.contains("kill -TERM -- \"-$hvigor_pid\""));
+        assert!(command.contains("kill -KILL -- \"-$hvigor_pid\""));
+        assert!(command.contains("__ALHARMONY_HVIGOR_COMPLETION=terminal-marker"));
+        assert!(command.contains("-name '*.hap'"));
+        assert!(!command.contains("mktemp /tmp/alharmony-hvigor.XXXXXX.log"));
+    }
+}
+
+fn execute_local_process_direct(
     operation: &'static str,
     project_root: &Path,
     command: &Path,
     args: &[&str],
     next_action: Option<&'static str>,
 ) -> Result<Receipt, String> {
-    if !project_root.is_dir() {
-        return Err(format!(
-            "projectRoot does not exist: {}",
-            project_root.display()
-        ));
-    }
     if !command.is_file() {
         return Err(format!("command does not exist: {}", command.display()));
     }
@@ -2399,6 +3141,8 @@ fn execute_local_process(
     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
     let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
     let mut evidence = BTreeMap::new();
+    evidence.insert("executionBackend".into(), JsonValue::string("local-direct"));
+    evidence.insert("sandboxed".into(), JsonValue::Bool(false));
     evidence.insert(
         "cwd".into(),
         JsonValue::string(project_root.display().to_string()),
@@ -3385,7 +4129,7 @@ fn take_value(args: &mut Vec<String>, name: &str) -> Option<String> {
 fn usage(code: i32) -> ! {
     eprintln!(
         "usage: alharmony-ops <serve|env-status|project-create-plan|project-verify|ohpm-install-plan|build-debug-plan|artifact-inspect> [args]\n\n\
-         serve [--bind 127.0.0.1:19731] [--workers N] [--queue-capacity N] [--max-active-requests N] [--max-batch N] [--task-root DIR]\n\
+         serve [--bind 127.0.0.1:19731] [--workers N] [--queue-capacity N] [--max-active-requests N] [--max-batch N] [--task-root DIR] [--fork-backend auto|copy-tree|sessionfs] [--sessionfs-endpoint URL] [--sandbox-endpoint URL] [--sandbox-token-file FILE]\n\
          env-status [--harmony-home DIR]\n\
          project-create-plan --project-root DIR [--bundle-name NAME] [--app-label LABEL]\n\
          project-verify --project-root DIR\n\
@@ -3396,7 +4140,8 @@ fn usage(code: i32) -> ! {
          batch endpoint: GET /v1/batch/<operation>?n=<count>&projectRoot=...&harmonyHome=...&artifact=...\n\
          task isolation: start with --task-root DIR, then pass taskId=... and keep project/artifact paths under DIR/taskId
 \
-         execute mode: add materialize=true for project.create and execute=true for ohpm/build inside task sandbox"
+         execute mode: add materialize=true for project.create and execute=true for ohpm/build inside task sandbox\n\
+         AgentLab infrastructure mode: --sandbox-endpoint routes OHPM/Hvigor through private domain-task bwrap execution and never falls back to direct execution"
     );
     std::process::exit(code);
 }

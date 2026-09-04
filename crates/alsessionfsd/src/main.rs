@@ -513,7 +513,7 @@ fn fork_copy_tree(
         }
     }
     for rel in reset {
-        fs::create_dir_all(child.join(&rel))
+        fs::create_dir_all(child.join(rel))
             .map_err(|error| format!("failed to create reset dir {rel}: {error}"))?;
     }
     Ok(())

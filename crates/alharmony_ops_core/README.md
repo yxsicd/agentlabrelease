@@ -111,6 +111,81 @@ compact receipt event to that task's `receipts/events.jsonl`. Batch requests
 validate task scope once and log only the final receipt, preserving high
 concurrency while still leaving a task-local audit trail.
 
+## AgentLab infrastructure execution mode
+
+`alharmony-ops` remains an independent Harmony domain service, but production
+OHPM/Hvigor execution can now reuse AgentLab's bwrap infrastructure instead of
+starting toolchain processes directly:
+
+```text
+alharmony-ops
+  -> agentlab-domain-sandboxd
+     -> existing AgentLab bounded bwrap runtime
+```
+
+Start `agentlab-domain-sandboxd` with one shared task root:
+
+```text
+SANDBOX_DOMAIN_TASK_ROOT=/var/lib/alharmony/tasks \
+agentlab-domain-sandboxd
+```
+
+Then configure the Harmony service:
+
+```text
+alharmony-ops serve \
+  --task-root /var/lib/alharmony/tasks \
+  --sandbox-endpoint http://127.0.0.1:18091
+```
+
+For authenticated composition, add `SANDBOX_REQUIRE_AUTH=1` and
+`SANDBOX_INTERNAL_TOKEN` to the domain sandbox and pass the same credential to
+`alharmony-ops` through a mode-0600 `--sandbox-token-file`. The token value is
+never placed in the operation receipt.
+
+The private domain endpoint accepts only `taskId`, fixed stage, generated
+command, explicit workspace-relative writable paths, and timeout. It never
+accepts a physical task root, MCPGit Owner/Session identity, or arbitrary
+AgentLab workspace operation. The daemon exposes no file/Git/MCPGit routes and
+does not start AgentLab Runtime, Harness, LLMGW, or an Agent brain. Current
+stages are:
+
+```text
+harmony-ohpm
+harmony-build
+```
+
+Both stages fail closed without explicit writable paths. `alharmony-ops`
+requires `projectRoot` to be below `<task-root>/<taskId>/workspace`, converts
+that path to `/workspace/<relative-project>` inside bwrap, and accepts a result
+only when the response proves `sandboxed=true` and `executor=bwrap`.
+
+When `--sandbox-endpoint` is configured, service startup performs a bounded
+readiness check and requires the exact `agentlab-domain-sandboxd` readiness
+contract: bwrap ready, domain task root configured, and MCPGit not required.
+Startup or execution failure never falls back to direct `Command::new`.
+Omitting `--sandbox-endpoint` retains the older local-direct path only for
+explicit compatibility/developer use.
+
+The first complete hwlinux composition E2E is retained at
+`/tmp/alharmony-agentlab-infra-e2e-20260904`. It used a Docker-owned loopback
+Btrfs root, standalone `alsessionfsd`, authenticated
+`agentlab-domain-sandboxd`, the real Harmony SDK, and `alharmony-ops`.
+Unauthenticated readiness returned 401. Parent OHPM and build ran through
+bwrap, Btrfs fork copied zero files/bytes, the child inherited the build cache,
+a child-only source patch rebuilt through bwrap, and the parent source/HAP
+remained unchanged. Observed timings were 1.037 s for OHPM, 9.154 s for the
+parent build, 51.560 ms for the Btrfs fork, and 9.142 s for the child rebuild.
+Parent and child artifact fingerprints differed only after the child patch.
+These are dated developer-preview measurements, not general performance
+guarantees.
+
+The storage side is still a migration boundary: this release line currently
+uses standalone `alsessionfsd` for task create/fork while the execution side is
+already on AgentLab infrastructure. The next phase replaces that bridge with
+the mature `agentlab-sessionfs` client/daemon contract without changing the
+Harmony operation surface.
+
 ## Task-isolated E2E build preview
 
 Inside service task isolation, `harmony.project.create` can materialize a minimal
