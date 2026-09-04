@@ -1067,3 +1067,7 @@ existing AgentLab SessionFS/Btrfs fork path when available, with copy-tree only
 as compatibility fallback. The workspace pool above this atom should maintain
 manifest/fingerprint indexes, active leases, LRU/space GC, and similarity
 ranking; it should not share a mutable workspace directly between tasks.
+
+## Harmony + independent SessionFS composition design
+
+YXS clarified that SessionFS can itself be an independent owned service composed with the Rust build ops. The target is two atomic services: `agentlab-sessionfsd` for forkable storage sessions and `alharmony-ops` for Harmony build semantics. The build service stays independently shippable; SessionFS is a fast fork backend selected by configuration/capability, with copy-tree fallback retained. Workspace-pool should match parent sessions, fork child sessions, apply delta patch/sync, then build and retain candidates. Do not share writable hardlinks or require AgentLab main-container state for the build service.

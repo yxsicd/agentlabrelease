@@ -198,3 +198,7 @@ performs a real rebuild and updates child state. hwlinux E2E proved inherited
 build cache hit at about 0.974 ms after fork, while parent remained unchanged.
 The current backend is copy-tree fallback; SessionFS/Btrfs fork should replace
 it when available.
+
+## Independent SessionFS composition
+
+SessionFS should be composed as an independent service, not embedded as a required AgentLab Harness instance. `agentlab-sessionfsd` owns storage fork/snapshot/quota/GC. `alharmony-ops` owns Harmony project/build atoms, receipts, build-state, and artifact inspection. `harmony.task.fork` remains stable and can use `sessionfs` when configured or `copy-tree-fallback` when standalone.
