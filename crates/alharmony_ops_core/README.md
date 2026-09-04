@@ -131,3 +131,13 @@ project: `/dev/shm` saved about 1.3% on one edit/build loop and about 0.15% on
 the next, while the initial full flow was about 0.2% slower. Use tmpfs as an
 optional per-task policy when the host disk is slow or projects are IO-heavy;
 for the current minimal project, Hvigor/ArkTS/Node execution dominates.
+
+## Build optimization notes
+
+For the minimal task-isolated E2E project, moving only the task root to tmpfs is
+not enough. Measured no-op rebuilds are about 1.86 s, while source-edit rebuilds
+are about 6.9 s. `--parallel` does not help no-op rebuilds, and
+`--optimization-strategy performance` did not improve source-edit rebuilds in
+hwlinux tests. Daemon mode would be attractive for hot builds, but it currently
+fails with Node/chokidar `EMFILE` watcher pressure, so the safe execution default
+stays `--no-daemon --no-parallel --no-type-check --analyze=false`.

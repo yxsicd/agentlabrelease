@@ -920,3 +920,35 @@ Further no-IO gains must come from Rust-side in-memory templates, receipt buffer
 persistent hot build service/caches, or a ram-backed SDK/cache strategy, but real
 Hvigor builds cannot be completely no-IO because they must read source/toolchain
 files and write build artifacts.
+
+## Harmony E2E build optimization analysis checkpoint
+
+A follow-up hwlinux optimization probe decomposed the sandbox E2E build into
+fixed no-op rebuild cost, source-edit rebuild cost, daemon viability, parallel
+mode, and tmpfs impact. The project payload remains tiny (`project` about
+0.74 MB, `entry/build` about 0.41 MB), while the SDK/toolchain side is large
+(`sdk/default` about 9.1 GB, `hvigor` about 232 MB, `tool/node` about 154 MB),
+which explains why task-root tmpfs produced only 0-1.3% improvement.
+
+Measured facts: safe no-daemon no-op rebuild was 1,825-1,874 ms wall with
+Hvigor-reported build time around 1.2 s; a source edit rebuild was about 6,897
+ms wall with Hvigor-reported 4,596 ms, `CompileArkTS` about 3,143 ms, and
+`PackageHap` about 261 ms. `--optimization-strategy performance` did not improve
+the edit rebuild (about 6,984 ms wall, `CompileArkTS` about 3,215 ms). True
+no-op `--parallel` was effectively the same as no-parallel (1,863 ms vs 1,874
+ms). Daemon mode remains blocked on hwlinux by `EMFILE` from Node/chokidar
+watchers; current sysctls were `max_user_watches=65536`, `max_user_instances=128`,
+`max_queued_events=16384`. Therefore daemon/hot-process is still the most
+promising class of optimization, but it first needs watcher/inotify containment
+or an SDK-supported non-watch daemon path. Current default should remain
+`--no-daemon --no-parallel --no-type-check --analyze=false`.
+
+Optimization plan: P0 keep task isolation and no-daemon CI safety; P1 add task
+cache policy and skip/short-circuit rules for no-source-change builds, since a
+no-op rebuild still costs ~1.86 s; P2 investigate a persistent build worker only
+after solving EMFILE/inotify, because that could attack the 2.3 s wall-vs-Hvigor
+wrapper gap and repeated Node/plugin startup; P3 make tmpfs optional per task for
+large projects/slow disks; P4 consider SDK/toolchain hot placement only with
+memory quota because the unpacked SDK is multi-GB. Rust-side template and receipt
+buffering remain useful for concurrency jitter but will not materially reduce
+the 6.9 s source-edit build dominated by ArkTS/Hvigor.
