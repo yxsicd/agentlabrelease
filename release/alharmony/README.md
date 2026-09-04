@@ -125,3 +125,20 @@ fall back to the real no-daemon build.
 ### GitHub release validation
 
 The current combined Linux asset was download-back validated from GitHub Release on hwlinux: SHA matched the manifest, both binaries extracted and started, and workspace partition match plus lease/GC dry-run succeeded.
+
+## Combined real Btrfs SessionFS fast-fork preview (218ce52)
+
+`alharmony-combined-linux-x64-218ce52.tar.zst` supersedes `24b65cb` as the
+current combined Linux-x64 developer preview. `alsessionfsd` now owns a real
+Btrfs subvolume `session.create` / `session.fork` lifecycle plus explicit
+portable fallback, while `alharmony-ops` prepares initial task roots through
+SessionFS and propagates `backend`, `fallback`, and `copyOnWrite` evidence.
+
+The stripped release binaries were rebuilt from a clean GitHub clone at
+`218ce52f27ce6b1a629fe95c2f680bdd309d284d`. A disposable Docker-owned Btrfs
+image proved `harmony.task.prepare -> harmony.task.fork` with prepare 2,247 us
+and fork 8,727 us, `copiedFiles=0`, `copiedBytes=0`, child receipt isolation,
+and parent/child write isolation. A 10,000-file x 4 KiB comparison measured
+median 44,143 us for Btrfs versus 343,540 us for copy-tree, about 7.78x faster.
+Portable ext4 fallback and storage-root symlink confinement were also validated
+against the same stripped release binary.

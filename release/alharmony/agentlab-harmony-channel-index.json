@@ -45,16 +45,16 @@
       "status": "published-developer-preview"
     },
     {
-      "bytes": 340521,
+      "bytes": 389602,
       "currentFilename": "alharmony-combined-linux-x64-current.tar.zst",
       "currentManifestFilename": "alharmony-combined-linux-x64-current.json",
-      "filename": "alharmony-combined-linux-x64-24b65cb.tar.zst",
-      "id": "alharmony-combined-linux-x64-24b65cb",
+      "filename": "alharmony-combined-linux-x64-218ce52.tar.zst",
+      "id": "alharmony-combined-linux-x64-218ce52",
       "kind": "agentlab.alharmony_combined_binary",
-      "manifestFilename": "alharmony-combined-linux-x64-24b65cb.json",
+      "manifestFilename": "alharmony-combined-linux-x64-218ce52.json",
       "platform": "linux-x64",
-      "role": "Linux-x64 combined developer preview containing alharmony-ops and standalone alsessionfsd for Session Fork workspace pool composition.",
-      "sha256": "eb67b1f2f06d991edfc772ce2c37efdb5ac46fd1a3c67ef922718099a0a87f6f",
+      "role": "Linux-x64 combined developer preview containing alharmony-ops and standalone alsessionfsd with real Btrfs SessionFS create/fork, portable fallback, and workspace-pool composition.",
+      "sha256": "0d854c293f76ea3f16c55c61091fc817523a2e574c38e0516e5dea0280010352",
       "status": "published-developer-preview"
     }
   ],
@@ -67,9 +67,10 @@
   },
   "plannedPayloads": [
     {
-      "currentAsset": "alharmony-combined-linux-x64-24b65cb",
+      "currentAsset": "alharmony-combined-linux-x64-218ce52",
       "id": "alharmony-combined-sessionfs-ops",
       "operations": [
+        "harmony.task.prepare",
         "harmony.project.fingerprint",
         "harmony.workspace.index",
         "harmony.workspace.match",
@@ -83,7 +84,7 @@
       "publishWithAgentLab": true,
       "required": true,
       "scope": "Combined standalone SessionFS plus Harmony Rust ops service for workspace-pool Session Fork builds.",
-      "status": "published_combined_sessionfs_workspace_pool_preview"
+      "status": "published_combined_sessionfs_btrfs_fast_fork_preview"
     },
     {
       "currentAsset": "alharmony-ops-core-linux-x64-37ddae9",
@@ -122,5 +123,5 @@
   "purpose": "Separate Harmony CLI/SDK substrate assets from the future Rust Harmony atomic-operation service that must be published with AgentLab.",
   "schema": "agentlab.harmony_channel_index.v1",
   "status": "active-source-pointer-channel",
-  "updatedAt": "2026-09-04T11:25:00Z"
+  "updatedAt": "2026-09-04T13:38:00Z"
 }

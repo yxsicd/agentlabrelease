@@ -99,18 +99,18 @@
       "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alharmony/alharmony-ops-core-linux-x64-37ddae9.json"
     },
     {
-      "bytes": 340521,
-      "filename": "alharmony-combined-linux-x64-24b65cb.tar.zst",
+      "bytes": 389602,
+      "filename": "alharmony-combined-linux-x64-218ce52.tar.zst",
       "group": "harmony-ops",
-      "sha256": "eb67b1f2f06d991edfc772ce2c37efdb5ac46fd1a3c67ef922718099a0a87f6f",
-      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alharmony/alharmony-combined-linux-x64-24b65cb.tar.zst"
+      "sha256": "0d854c293f76ea3f16c55c61091fc817523a2e574c38e0516e5dea0280010352",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alharmony/alharmony-combined-linux-x64-218ce52.tar.zst"
     },
     {
-      "bytes": 1055,
-      "filename": "alharmony-combined-linux-x64-24b65cb.json",
+      "bytes": 1271,
+      "filename": "alharmony-combined-linux-x64-218ce52.json",
       "group": "harmony-ops",
-      "sha256": "13824617797b2b4541389c58aa41146dd1eab589ab1429c7454f2416397918a6",
-      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alharmony/alharmony-combined-linux-x64-24b65cb.json"
+      "sha256": "340ec61104bdfebf157888982b90aa4b6c45ea9027b18faa4f8fc03db0b0f707",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alharmony/alharmony-combined-linux-x64-218ce52.json"
     }
   ],
   "manifestRefs": [
@@ -154,9 +154,9 @@
     "compressionDefault": "zstd-10-standard-window",
     "credentialsIncluded": false,
     "dockerRequiredAtInstall": true,
-    "harmonyOpsCurrent": "alharmony-combined-linux-x64-24b65cb",
+    "harmonyOpsCurrent": "alharmony-combined-linux-x64-218ce52",
     "resolveThenPin": true,
-    "updatedFor": "standalone SessionFS + Harmony ops workspace pool preview"
+    "updatedFor": "real Btrfs SessionFS fast-fork workspace pool preview"
   },
   "repository": "yxsicd/agentlabrelease",
   "schema": "agentlab.offline_closure.v1"
