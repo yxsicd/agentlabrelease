@@ -46,6 +46,8 @@
     },
     {
       "bytes": 340521,
+      "currentFilename": "alharmony-combined-linux-x64-current.tar.zst",
+      "currentManifestFilename": "alharmony-combined-linux-x64-current.json",
       "filename": "alharmony-combined-linux-x64-24b65cb.tar.zst",
       "id": "alharmony-combined-linux-x64-24b65cb",
       "kind": "agentlab.alharmony_combined_binary",
