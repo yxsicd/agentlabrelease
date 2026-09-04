@@ -977,3 +977,14 @@ short-circuit unchanged `harmony.build.debug execute=true` calls. hwlinux
 real-SDK E2E measured first build 7,159.790 ms, no-change cache hit 0.883 ms,
 source-edit rebuild 7,024.604 ms, and second no-change cache hit 0.888 ms. HAP
 SHA remained stable across cache hits and changed after the source edit.
+
+## Harmony project patch atom checkpoint
+
+`harmony.project.patch` is now the stable delta lane for task-owned workspaces.
+It applies exact text replacements to one project-relative file, refuses path
+traversal or cross-task paths, records `changed`, `occurrences`, classified
+partition, and before/after fingerprints, then appends the receipt to the
+current task log. M4 smoke verified ArkTS and resource patches, task-local log
+emission, and path traversal rejection. Use this instead of re-running
+`project.create materialize=true` when an Agent only needs to change generated
+or user code.

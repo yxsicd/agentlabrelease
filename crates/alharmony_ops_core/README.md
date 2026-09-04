@@ -153,3 +153,14 @@ input fingerprint and last artifact fingerprint. A later unchanged build can
 return a read-only cache-hit receipt pointing to the existing unsigned HAP
 instead of starting Hvigor. Any source/config/SDK-wrapper/artifact mismatch falls
 back to the real no-daemon build.
+
+## Project patch atom
+
+`harmony.project.patch` applies a precise task-scoped text delta to an existing
+project workspace instead of re-materializing the project. It requires
+`projectRoot`, project-relative `path`, non-empty `find`, and optional
+`replace`/`replaceAll=true`. The target path must remain under the task-owned
+project root. Receipts report whether the file changed, occurrence count,
+project partition (`arkts`, `resources`, `profile`, `dependencies`,
+`build-script`, or `other`), and before/after file fingerprints. This gives
+upper agents a stable delta channel for preserving Hvigor incremental state.

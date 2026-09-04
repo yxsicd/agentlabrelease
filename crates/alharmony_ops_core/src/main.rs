@@ -413,7 +413,7 @@ fn validate_task_for_operation(
     match operation {
         "harmony.env.status" => Ok(None),
         "harmony.task.prepare" => validate_task_prepare(config, params),
-        "harmony.project.create" | "harmony.project.verify" => {
+        "harmony.project.create" | "harmony.project.verify" | "harmony.project.patch" => {
             let root = required_param_path(params, "projectRoot")?;
             validate_task_paths(config, params, &[("projectRoot", &root)])
         }
@@ -470,6 +470,16 @@ fn dispatch_http_with_task(
                 ))
             }
         }
+        "harmony.project.patch" => {
+            let root = required_param_path(params, "projectRoot")?;
+            let rel = required_param(params, "path")?;
+            let find = required_param(params, "find")?;
+            let replace = params.get("replace").map(String::as_str).unwrap_or("");
+            Ok(add_task_evidence(
+                project_patch_text(&root, rel, find, replace, param_bool(params, "replaceAll"))?,
+                task,
+            ))
+        }
         "harmony.project.verify" => {
             let root = required_param_path(params, "projectRoot")?;
             Ok(add_task_evidence(project_verify(&root), task))
@@ -509,6 +519,142 @@ fn dispatch_http_with_task(
             Ok(add_task_evidence(artifact_inspect(&artifact), task))
         }
         _ => Err(format!("unknown operation: {operation}")),
+    }
+}
+
+fn project_patch_text(
+    project_root: &Path,
+    rel_path: &str,
+    find: &str,
+    replace: &str,
+    replace_all: bool,
+) -> Result<Receipt, String> {
+    if find.is_empty() {
+        return Err("find must be non-empty".into());
+    }
+    validate_project_relative_path(rel_path)?;
+    let target = normalize_path(&project_root.join(rel_path));
+    if !is_path_under(&target, project_root) {
+        return Err(format!(
+            "patch target must stay under projectRoot: {rel_path}"
+        ));
+    }
+    if !target.is_file() {
+        return Err(format!("patch target is not a file: {}", target.display()));
+    }
+    let before = fs::read_to_string(&target)
+        .map_err(|error| format!("failed to read patch target {}: {error}", target.display()))?;
+    let occurrences = before.matches(find).count();
+    if occurrences == 0 {
+        let mut evidence = BTreeMap::new();
+        evidence.insert("path".into(), JsonValue::string(rel_path));
+        evidence.insert(
+            "partition".into(),
+            JsonValue::string(classify_project_partition(rel_path)),
+        );
+        evidence.insert("changed".into(), JsonValue::Bool(false));
+        evidence.insert("occurrences".into(), JsonValue::Number(0));
+        return Ok(Receipt::blocked(
+            "harmony.project.patch",
+            alharmony_ops_core::SideEffect::ReadOnly,
+            alharmony_ops_core::RecoveryOwner::Agent,
+            "find text was not present in the target file",
+            Some("harmony.project.verify"),
+        )
+        .evidence("patch", JsonValue::Object(evidence)));
+    }
+    let before_fp = file_fingerprint(&target)?;
+    let after = if replace_all {
+        before.replace(find, replace)
+    } else {
+        before.replacen(find, replace, 1)
+    };
+    let changed = after != before;
+    if changed {
+        fs::write(&target, after).map_err(|error| {
+            format!("failed to write patch target {}: {error}", target.display())
+        })?;
+    }
+    let after_fp = file_fingerprint(&target)?;
+    let mut evidence = BTreeMap::new();
+    evidence.insert(
+        "projectRoot".into(),
+        JsonValue::string(project_root.display().to_string()),
+    );
+    evidence.insert("path".into(), JsonValue::string(rel_path));
+    evidence.insert(
+        "partition".into(),
+        JsonValue::string(classify_project_partition(rel_path)),
+    );
+    evidence.insert("changed".into(), JsonValue::Bool(changed));
+    evidence.insert("replaceAll".into(), JsonValue::Bool(replace_all));
+    evidence.insert("occurrences".into(), JsonValue::Number(occurrences as i128));
+    evidence.insert(
+        "beforeFingerprint".into(),
+        JsonValue::string(before_fp.fingerprint),
+    );
+    evidence.insert(
+        "afterFingerprint".into(),
+        JsonValue::string(after_fp.fingerprint),
+    );
+    evidence.insert(
+        "afterBytes".into(),
+        JsonValue::Number(after_fp.total_bytes as i128),
+    );
+    let side_effect = if changed {
+        alharmony_ops_core::SideEffect::WorkspaceWrite
+    } else {
+        alharmony_ops_core::SideEffect::ReadOnly
+    };
+    Ok(Receipt::new("harmony.project.patch", side_effect)
+        .evidence("patch", JsonValue::Object(evidence))
+        .next("harmony.project.verify"))
+}
+
+fn required_param<'a>(params: &'a BTreeMap<String, String>, name: &str) -> Result<&'a str, String> {
+    params
+        .get(name)
+        .map(String::as_str)
+        .ok_or_else(|| format!("missing query parameter: {name}"))
+}
+
+fn validate_project_relative_path(rel_path: &str) -> Result<(), String> {
+    if rel_path.is_empty() || rel_path.starts_with('/') || rel_path.starts_with('\\') {
+        return Err("path must be a non-empty project-relative path".into());
+    }
+    let path = Path::new(rel_path);
+    for component in path.components() {
+        match component {
+            Component::Normal(_) | Component::CurDir => {}
+            Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
+                return Err("path must not contain traversal, root, or prefix components".into());
+            }
+        }
+    }
+    Ok(())
+}
+
+fn classify_project_partition(rel_path: &str) -> &'static str {
+    if rel_path.starts_with("entry/src/main/ets/") {
+        "arkts"
+    } else if rel_path.starts_with("entry/src/main/resources/")
+        || rel_path.starts_with("AppScope/resources/")
+    {
+        "resources"
+    } else if rel_path == "entry/src/main/module.json5"
+        || rel_path.ends_with("build-profile.json5")
+        || rel_path == "AppScope/app.json5"
+    {
+        "profile"
+    } else if rel_path.contains("oh-package") {
+        "dependencies"
+    } else if rel_path == "hvigorfile.ts"
+        || rel_path.ends_with("/hvigorfile.ts")
+        || rel_path.starts_with("hvigor/")
+    {
+        "build-script"
+    } else {
+        "other"
     }
 }
 
