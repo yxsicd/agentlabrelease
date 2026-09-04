@@ -186,3 +186,15 @@ from the parent root to the child root. The child can then apply
 without mutating the parent. The current fallback strategy is normal copy-tree;
 future SessionFS/Btrfs fork should replace the copy implementation where
 available.
+
+## Session Fork workspace reuse
+
+The preferred reuse model is Session Fork, not direct mutable sharing. A pool
+selects a parent task whose workspace/build state is closest to the incoming
+request, then `harmony.task.fork` creates a child task from that parent cut.
+The child inherits workspace, artifacts, state, and cache; `harmony.project.patch`
+applies the new delta; `harmony.build.debug` then either hits inherited cache or
+performs a real rebuild and updates child state. hwlinux E2E proved inherited
+build cache hit at about 0.974 ms after fork, while parent remained unchanged.
+The current backend is copy-tree fallback; SessionFS/Btrfs fork should replace
+it when available.

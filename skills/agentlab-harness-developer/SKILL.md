@@ -1035,3 +1035,35 @@ and child receipt log is independent. Current implementation uses safe
 copy-tree fallback because hwlinux ext4 does not support reflink; future
 SessionFS/Btrfs should provide the real fast fork backend while preserving the
 same operation contract.
+
+## Harmony Session Fork E2E checkpoint
+
+`74be098` introduced `harmony.task.fork` and `5ed2026` fixed forked
+`build-state.json` by refreshing the child input/artifact fingerprints after
+path rewrite. This implements the Harmony-side version of AgentLab Session Fork:
+a parent atom task is kept as a cut, a child task inherits parent
+`workspace/`, `artifacts/`, `state/`, and `cache/`, then child-only deltas are
+applied with `harmony.project.patch` before build. The child has an independent
+receipt log and must not mutate the parent cut.
+
+hwlinux real-SDK E2E at `/tmp/alharmony-session-fork-e2e-5ed2026-20260904101352`
+proved the sequence: parent prepare/create/ohpm/build, parent no-op cache hit,
+fork child, child inherited-cache build, child patch, child rebuild, child cache
+hit, parent cache hit after child. Timings: parent build 7,149 ms; parent cache
+hit 0.815 ms; fork child 13.522 ms for 82 files / 618,477 bytes using
+copy-tree fallback; child inherited build cache hit 0.974 ms; child patch 0.473
+ms; child real rebuild 7,258 ms; child cache hit 0.772 ms; parent final cache
+hit 0.742 ms. Parent HAP SHA stayed unchanged; child HAP matched parent before
+patch and changed after patch. This proves the desired high-level model:
+workspace pool selection should produce a parent task, `task.fork` creates the
+new child task, deltas are applied into the child, and build cache/compile state
+is inherited without cross-task contamination.
+
+Current backend caveat: hwlinux ext4 did not support reflink, so this preview
+uses safe copy-tree fallback. Do not use hardlinks for writable build trees
+unless every write path performs break-link semantics, because otherwise child
+builds can mutate parent inodes. The future production backend should call the
+existing AgentLab SessionFS/Btrfs fork path when available, with copy-tree only
+as compatibility fallback. The workspace pool above this atom should maintain
+manifest/fingerprint indexes, active leases, LRU/space GC, and similarity
+ranking; it should not share a mutable workspace directly between tasks.
