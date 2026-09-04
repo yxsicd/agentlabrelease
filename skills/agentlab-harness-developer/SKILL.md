@@ -1020,3 +1020,18 @@ change -> cache hit; harmless metadata/resource-only change -> optionally defer
 or batch; ArkTS/build-script/dependency change -> real build; repeated changes
 inside one task -> coalesce patches before build. This preserves sandbox
 isolation while avoiding random full regeneration.
+
+## Harmony Session Fork workspace-pool checkpoint
+
+YXS identified the right architecture for cross-task incremental builds:
+workspace reuse should be modeled as AgentLab Session Fork, not an ad-hoc shared
+directory. `harmony.task.fork` now creates a child atom task from a parent task
+cut. It copies parent `workspace/`, `artifacts/`, `state/`, and `cache/` into a
+fresh child sandbox, creates an independent `receipts/` log, rewrites
+`state/build-state.json` paths from parent to child, and records fork evidence.
+M4 smoke proved child sees parent cut state, parent stays unchanged after a
+child `harmony.project.patch`, repeated fork to an existing child fails closed,
+and child receipt log is independent. Current implementation uses safe
+copy-tree fallback because hwlinux ext4 does not support reflink; future
+SessionFS/Btrfs should provide the real fast fork backend while preserving the
+same operation contract.

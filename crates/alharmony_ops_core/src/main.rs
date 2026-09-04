@@ -412,7 +412,7 @@ fn validate_task_for_operation(
 ) -> Result<Option<TaskScope>, String> {
     match operation {
         "harmony.env.status" => Ok(None),
-        "harmony.task.prepare" => validate_task_prepare(config, params),
+        "harmony.task.prepare" | "harmony.task.fork" => validate_task_prepare(config, params),
         "harmony.project.create" | "harmony.project.verify" | "harmony.project.patch" => {
             let root = required_param_path(params, "projectRoot")?;
             validate_task_paths(config, params, &[("projectRoot", &root)])
@@ -442,6 +442,15 @@ fn dispatch_http_with_task(
                 return Err("task isolation must be enabled for harmony.task.prepare".into());
             };
             let receipt = task_prepare(task)?;
+            append_task_receipt(task, &receipt);
+            Ok(receipt)
+        }
+        "harmony.task.fork" => {
+            let Some(task) = task else {
+                return Err("task isolation must be enabled for harmony.task.fork".into());
+            };
+            let parent_task_id = required_param(params, "parentTaskId")?;
+            let receipt = task_fork(task, parent_task_id)?;
             append_task_receipt(task, &receipt);
             Ok(receipt)
         }
@@ -1370,6 +1379,209 @@ fn param_bool(params: &BTreeMap<String, String>, name: &str) -> bool {
         params.get(name).map(String::as_str),
         Some("1" | "true" | "yes" | "on")
     )
+}
+
+fn task_fork(child: &TaskScope, parent_task_id: &str) -> Result<Receipt, String> {
+    validate_task_id(parent_task_id)?;
+    let Some(pool_root) = child.root.parent() else {
+        return Err("child task root has no parent pool root".into());
+    };
+    let parent_root = normalize_path(&pool_root.join(parent_task_id));
+    if !parent_root.is_dir() {
+        return Err(format!("parent task does not exist: {parent_task_id}"));
+    }
+    if child.root == parent_root {
+        return Err("child taskId must differ from parentTaskId".into());
+    }
+    if child.root.exists() && !is_empty_dir(&child.root)? {
+        return Err(format!(
+            "child task root already exists and is not empty: {}",
+            child.root.display()
+        ));
+    }
+    for rel in [
+        "workspace",
+        "artifacts",
+        "tmp",
+        "receipts",
+        "state",
+        "cache",
+    ] {
+        fs::create_dir_all(child.root.join(rel))
+            .map_err(|error| format!("failed to create child task dir {rel}: {error}"))?;
+    }
+    let started = Instant::now();
+    let mut copied_files = 0_usize;
+    let mut copied_bytes = 0_u64;
+    for rel in ["workspace", "artifacts", "state", "cache"] {
+        let from = parent_root.join(rel);
+        let to = child.root.join(rel);
+        if from.exists() {
+            copy_tree(&from, &to, &mut copied_files, &mut copied_bytes)?;
+        }
+    }
+    rewrite_forked_state_paths(&child.root, &parent_root, child, parent_task_id)?;
+    let mut manifest = BTreeMap::new();
+    manifest.insert("taskId".into(), JsonValue::string(child.task_id.clone()));
+    manifest.insert("parentTaskId".into(), JsonValue::string(parent_task_id));
+    manifest.insert(
+        "taskRoot".into(),
+        JsonValue::string(child.root.display().to_string()),
+    );
+    manifest.insert(
+        "parentTaskRoot".into(),
+        JsonValue::string(parent_root.display().to_string()),
+    );
+    manifest.insert("forkedAtUnixMillis".into(), JsonValue::Number(now_millis()));
+    manifest.insert(
+        "forkStrategy".into(),
+        JsonValue::string("copy-tree-fallback"),
+    );
+    manifest.insert(
+        "workspace".into(),
+        JsonValue::string(child.root.join("workspace").display().to_string()),
+    );
+    manifest.insert(
+        "artifacts".into(),
+        JsonValue::string(child.root.join("artifacts").display().to_string()),
+    );
+    manifest.insert(
+        "tmp".into(),
+        JsonValue::string(child.root.join("tmp").display().to_string()),
+    );
+    manifest.insert(
+        "receipts".into(),
+        JsonValue::string(child.root.join("receipts").display().to_string()),
+    );
+    manifest.insert(
+        "state".into(),
+        JsonValue::string(child.root.join("state").display().to_string()),
+    );
+    manifest.insert(
+        "cache".into(),
+        JsonValue::string(child.root.join("cache").display().to_string()),
+    );
+    fs::write(child.root.join("task.json"), json_object_pretty(&manifest))
+        .map_err(|error| format!("failed to write child task manifest: {error}"))?;
+    let mut evidence = BTreeMap::new();
+    evidence.insert("parentTaskId".into(), JsonValue::string(parent_task_id));
+    evidence.insert(
+        "childTaskId".into(),
+        JsonValue::string(child.task_id.clone()),
+    );
+    evidence.insert("strategy".into(), JsonValue::string("copy-tree-fallback"));
+    evidence.insert(
+        "copiedFiles".into(),
+        JsonValue::Number(copied_files as i128),
+    );
+    evidence.insert(
+        "copiedBytes".into(),
+        JsonValue::Number(copied_bytes as i128),
+    );
+    evidence.insert(
+        "elapsedMicros".into(),
+        JsonValue::Number(started.elapsed().as_micros() as i128),
+    );
+    evidence.insert(
+        "parentTaskRoot".into(),
+        JsonValue::string(parent_root.display().to_string()),
+    );
+    evidence.insert(
+        "childTaskRoot".into(),
+        JsonValue::string(child.root.display().to_string()),
+    );
+    evidence.insert("sessionForkSemantics".into(), JsonValue::Bool(true));
+    Ok(Receipt::new(
+        "harmony.task.fork",
+        alharmony_ops_core::SideEffect::WorkspaceWrite,
+    )
+    .evidence("fork", JsonValue::Object(evidence))
+    .evidence("task", JsonValue::Object(manifest))
+    .next("harmony.project.patch"))
+}
+
+fn is_empty_dir(path: &Path) -> Result<bool, String> {
+    let mut entries = fs::read_dir(path)
+        .map_err(|error| format!("failed to read child task dir {}: {error}", path.display()))?;
+    Ok(entries.next().is_none())
+}
+
+fn copy_tree(
+    from: &Path,
+    to: &Path,
+    copied_files: &mut usize,
+    copied_bytes: &mut u64,
+) -> Result<(), String> {
+    if from.is_file() {
+        if let Some(parent) = to.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
+        }
+        let bytes = fs::copy(from, to).map_err(|error| {
+            format!(
+                "failed to copy {} to {}: {error}",
+                from.display(),
+                to.display()
+            )
+        })?;
+        *copied_files += 1;
+        *copied_bytes += bytes;
+        return Ok(());
+    }
+    fs::create_dir_all(to)
+        .map_err(|error| format!("failed to create {}: {error}", to.display()))?;
+    let read_dir = fs::read_dir(from)
+        .map_err(|error| format!("failed to read {}: {error}", from.display()))?;
+    for entry in read_dir {
+        let entry = entry.map_err(|error| format!("failed to read directory entry: {error}"))?;
+        let source = entry.path();
+        let target = to.join(entry.file_name());
+        let meta = entry
+            .metadata()
+            .map_err(|error| format!("failed to stat {}: {error}", source.display()))?;
+        if meta.is_dir() {
+            copy_tree(&source, &target, copied_files, copied_bytes)?;
+        } else if meta.is_file() {
+            let bytes = fs::copy(&source, &target).map_err(|error| {
+                format!(
+                    "failed to copy {} to {}: {error}",
+                    source.display(),
+                    target.display()
+                )
+            })?;
+            *copied_files += 1;
+            *copied_bytes += bytes;
+        }
+    }
+    Ok(())
+}
+
+fn rewrite_forked_state_paths(
+    child_root: &Path,
+    parent_root: &Path,
+    child: &TaskScope,
+    parent_task_id: &str,
+) -> Result<(), String> {
+    let state_path = child_root.join("state/build-state.json");
+    if !state_path.is_file() {
+        return Ok(());
+    }
+    let mut body = fs::read_to_string(&state_path)
+        .map_err(|error| format!("failed to read forked build state: {error}"))?;
+    body = body.replace(
+        &parent_root.display().to_string(),
+        &child_root.display().to_string(),
+    );
+    body = body.replace(
+        &format!("\"taskId\": \"{}\"", json_escape(parent_task_id)),
+        &format!("\"taskId\": \"{}\"", json_escape(&child.task_id)),
+    );
+    body = body.replace(
+        &format!("\"taskId\":\"{}\"", json_escape(parent_task_id)),
+        &format!("\"taskId\":\"{}\"", json_escape(&child.task_id)),
+    );
+    fs::write(&state_path, body)
+        .map_err(|error| format!("failed to rewrite forked build state: {error}"))
 }
 
 fn validate_task_prepare(

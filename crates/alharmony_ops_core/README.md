@@ -174,3 +174,15 @@ patch coalescing, and build-cache short-circuiting as the first line of defense.
 Future work should partition build fingerprints into ArkTS, resources, profiles,
 dependencies, build scripts, and SDK wrappers so the scheduler can batch or skip
 builds based on what actually changed.
+
+## Task fork atom
+
+`harmony.task.fork` adapts the AgentLab Session Fork idea to Harmony workspaces.
+It takes `parentTaskId` and child `taskId`, copies the parent task's
+`workspace/`, `artifacts/`, `state/`, and `cache/` into a new child sandbox,
+creates a fresh child `receipts/` log, and rewrites task-local build-state paths
+from the parent root to the child root. The child can then apply
+`harmony.project.patch` deltas and reuse inherited build fingerprints/artifacts
+without mutating the parent. The current fallback strategy is normal copy-tree;
+future SessionFS/Btrfs fork should replace the copy implementation where
+available.
