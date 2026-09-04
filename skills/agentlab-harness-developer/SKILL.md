@@ -988,3 +988,35 @@ current task log. M4 smoke verified ArkTS and resource patches, task-local log
 emission, and path traversal rejection. Use this instead of re-running
 `project.create materialize=true` when an Agent only needs to change generated
 or user code.
+
+## Harmony incremental delta analysis checkpoint
+
+YXS correctly identified that random task/project regeneration destroys useful
+incremental build state. A hwlinux change-impact probe at
+`/tmp/alharmony-incremental-map-37ddae9-20260904090015` kept one stable task
+workspace and changed only targeted files. Results showed current no-daemon
+Hvigor does not yet provide strong file-type savings for the minimal project:
+resource string rebuild 7,001 ms, resource color rebuild 6,853 ms, ETS page
+rebuild 6,942 ms, and EntryAbility rebuild 6,890 ms; all were real rebuilds and
+all produced different HAP hashes. No-change cache hits around those changes
+remained sub-millisecond.
+
+To make delta explicit, AgentLab commit `11defe1` adds `harmony.project.patch`.
+It applies exact task-scoped text replacements to one project-relative file,
+refuses path traversal/cross-task paths, and records changed status, occurrence
+count, classified partition, and before/after fingerprints. hwlinux real-SDK
+E2E at `/tmp/alharmony-project-patch-e2e-11defe1-20260904090239` verified the
+flow: initial build 7,194 ms, no-change cache hit 0.916 ms, `project.patch` on
+`entry/src/main/ets/pages/Index.ets` 0.518 ms with `partition=arkts`, patch
+rebuild 7,096 ms, second no-change cache hit 0.910 ms, and path traversal
+rejection. HAP SHA stayed stable across cache hits and changed after patch.
+
+Conclusion: the immediate architectural gain is stable task affinity plus a
+precise delta lane, not expecting no-daemon Hvigor to infer a tiny affected set.
+Next implementation should split build fingerprints by partition (`arkts`,
+`resources`, `profile`, `dependencies`, `build-script`, SDK wrappers), record
+last changed partitions in task state, and let the scheduler decide: no source
+change -> cache hit; harmless metadata/resource-only change -> optionally defer
+or batch; ArkTS/build-script/dependency change -> real build; repeated changes
+inside one task -> coalesce patches before build. This preserves sandbox
+isolation while avoiding random full regeneration.

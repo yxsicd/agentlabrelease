@@ -164,3 +164,13 @@ project root. Receipts report whether the file changed, occurrence count,
 project partition (`arkts`, `resources`, `profile`, `dependencies`,
 `build-script`, or `other`), and before/after file fingerprints. This gives
 upper agents a stable delta channel for preserving Hvigor incremental state.
+
+## Incremental delta strategy
+
+The service now has a precise delta lane via `harmony.project.patch`, but real
+hwlinux tests show no-daemon Hvigor still rebuilds the minimal project in about
+6.85-7.10 s after resource or ETS changes. Use stable task/workspace affinity,
+patch coalescing, and build-cache short-circuiting as the first line of defense.
+Future work should partition build fingerprints into ArkTS, resources, profiles,
+dependencies, build scripts, and SDK wrappers so the scheduler can batch or skip
+builds based on what actually changed.
