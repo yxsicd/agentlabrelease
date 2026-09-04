@@ -1421,6 +1421,7 @@ fn task_fork(child: &TaskScope, parent_task_id: &str) -> Result<Receipt, String>
         }
     }
     rewrite_forked_state_paths(&child.root, &parent_root, child, parent_task_id)?;
+    let refreshed_state = refresh_forked_build_state(&child.root, child)?;
     let mut manifest = BTreeMap::new();
     manifest.insert("taskId".into(), JsonValue::string(child.task_id.clone()));
     manifest.insert("parentTaskId".into(), JsonValue::string(parent_task_id));
@@ -1491,6 +1492,10 @@ fn task_fork(child: &TaskScope, parent_task_id: &str) -> Result<Receipt, String>
         JsonValue::string(child.root.display().to_string()),
     );
     evidence.insert("sessionForkSemantics".into(), JsonValue::Bool(true));
+    evidence.insert(
+        "buildStateRefreshed".into(),
+        JsonValue::Bool(refreshed_state),
+    );
     Ok(Receipt::new(
         "harmony.task.fork",
         alharmony_ops_core::SideEffect::WorkspaceWrite,
@@ -1498,6 +1503,51 @@ fn task_fork(child: &TaskScope, parent_task_id: &str) -> Result<Receipt, String>
     .evidence("fork", JsonValue::Object(evidence))
     .evidence("task", JsonValue::Object(manifest))
     .next("harmony.project.patch"))
+}
+
+fn refresh_forked_build_state(child_root: &Path, child: &TaskScope) -> Result<bool, String> {
+    let state_path = child_root.join("state/build-state.json");
+    if !state_path.is_file() {
+        return Ok(false);
+    }
+    let body = fs::read_to_string(&state_path)
+        .map_err(|error| format!("failed to read forked build state: {error}"))?;
+    let Some(project_root) = json_string_field(&body, "projectRoot") else {
+        return Ok(false);
+    };
+    let Some(harmony_home) = json_string_field(&body, "harmonyHome") else {
+        return Ok(false);
+    };
+    let Some(artifact_path) = json_string_field(&body, "artifactPath") else {
+        return Ok(false);
+    };
+    let project_root = PathBuf::from(project_root);
+    let harmony_home = PathBuf::from(harmony_home);
+    let artifact_path = PathBuf::from(artifact_path);
+    if !project_root.is_dir() || !artifact_path.is_file() {
+        return Ok(false);
+    }
+    if !is_path_under(&project_root, child_root) || !is_path_under(&artifact_path, &project_root) {
+        return Ok(false);
+    }
+    let meta = fs::metadata(&artifact_path)
+        .map_err(|error| format!("failed to stat forked artifact: {error}"))?;
+    let input = build_input_fingerprint(&project_root, &harmony_home)?;
+    let artifact_fingerprint = file_fingerprint(&artifact_path)?;
+    let artifact = ArtifactSummary {
+        path: artifact_path,
+        bytes: meta.len(),
+        extension: "hap".into(),
+    };
+    write_build_state(
+        child,
+        &project_root,
+        &harmony_home,
+        &input,
+        &artifact,
+        &artifact_fingerprint,
+    )?;
+    Ok(true)
 }
 
 fn is_empty_dir(path: &Path) -> Result<bool, String> {
