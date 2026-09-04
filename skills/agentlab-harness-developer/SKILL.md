@@ -1163,3 +1163,7 @@ optional file-count/byte hints before `harmony.task.fork`. M4 and hwlinux smoke
 both proved a two-candidate pool returns the exact fingerprint parent first.
 This is exact-fingerprint-first only; next work should add partition manifests,
 lease/GC, and similarity scoring for non-exact packages.
+
+## Harmony pool safety checkpoint
+
+`2dca2dd` adds partition-aware matching and `735dff7` adds pool leases plus GC. Use `workspace.match` to select a parent, `workspace.lease` to protect it before `task.fork`, then `workspace.release` after fork. `workspace.gc` skips active leases and protects the newest `keepLast` candidates; dry-run is read-only and deletion requires `execute=true`. hwlinux smoke verified leased A was protected, B was reclaimed first, and A was reclaimable only after release.

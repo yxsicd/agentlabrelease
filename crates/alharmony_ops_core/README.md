@@ -238,3 +238,7 @@ ms, full staged-package sync copied 3 files, deleted 1 stale file, skipped 16
 files, and completed in 1.501 ms wall time before a real child rebuild. The
 first `harmony.workspace.index/match` preview was also Linux-smoked and selected
 an exact fingerprint parent from a two-candidate pool.
+
+## Pool safety preview
+
+Workspace reuse now has three safety layers: partition-aware `workspace.match`, short-lived `workspace.lease` before fork, and `workspace.gc` that protects leased tasks and the newest `keepLast` candidates. Dry-run GC is read-only; destructive GC requires `execute=true`.
