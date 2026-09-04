@@ -108,3 +108,12 @@ path rejection, and parallel batch execution: `project.verify` reached about
 437.8k effective ops/sec and `ohpm.install` plan reached about 1.35M effective
 ops/sec across 16 isolated atom tasks. No real `ohpm` or `hvigor` mutation is
 enabled in this preview.
+
+## Build-cache preview asset
+
+`37ddae9` supersedes `89e25e0` for current Linux-x64 preview use. It keeps the
+atom task sandbox and adds task-local `state/build-state.json` for unsigned HAP
+build caching. hwlinux real-SDK E2E showed first build 7.16 s, no-change cache
+hit 0.883 ms, source-edit rebuild 7.02 s, and second no-change cache hit
+0.888 ms. Cache hits return read-only receipts and skip Hvigor; source changes
+fall back to the real no-daemon build.

@@ -1,0 +1,42 @@
+{
+  "schema": "agentlab.alharmony_ops_core_asset.v1",
+  "channel": "alharmony",
+  "status": "developer-preview",
+  "sourceCommit": "37ddae9",
+  "platform": "linux-x64",
+  "asset": {
+    "filename": "alharmony-ops-core-linux-x64-37ddae9.tar.zst",
+    "bytes": 245868,
+    "sha256": "b960b303f06e87bc2c5da4edcf1d271fa4a84a71ae4aea7674d1284f743dd920",
+    "mediaType": "application/zstd"
+  },
+  "binary": {
+    "path": "bin/alharmony-ops",
+    "bytes": 558000,
+    "sha256": "30c025dc4a7fa4d1d3605e8f7edc819e94f779653310af1a6cc44f35b11c6cb8"
+  },
+  "smoke": {
+    "cargoFmtCheck": true,
+    "cargoTest": true,
+    "cargoBuildRelease": true,
+    "buildCacheE2E": true,
+    "linuxFile": "ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=2a23b2c97739fd9ebd1d9a068daeb883e6a0673c, stripped"
+  },
+  "performance": {
+    "initialBuildWallMs": 7159.790,
+    "noopCacheHitWallMs": 0.883,
+    "editRebuildWallMs": 7024.604,
+    "noopCacheHit2WallMs": 0.888
+  },
+  "features": [
+    "task sandbox lifecycle",
+    "real unsigned build execute mode",
+    "task-local build cache",
+    "no-op build short-circuit",
+    "task-local receipt log"
+  ],
+  "evidence": {
+    "path": "evidence/hwlinux-build-cache-e2e.json",
+    "sha256": "3fd8eb7d131f49699ead81a76e437fc480ac9d9dd384baf5eb0f9a9cd5469e1a"
+  }
+}

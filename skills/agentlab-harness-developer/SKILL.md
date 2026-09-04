@@ -968,3 +968,12 @@ input and the previous unsigned artifact still matches, it returns a read-only
 artifact, or changed source falls back to the real no-daemon unsigned build.
 This targets the measured ~1.86 s no-op rebuild cost while preserving real
 rebuilds for source changes.
+
+## Harmony build-cache release checkpoint
+
+`37ddae9` is the current build-cache preview baseline. It records
+`state/build-state.json` after successful task-isolated unsigned builds and can
+short-circuit unchanged `harmony.build.debug execute=true` calls. hwlinux
+real-SDK E2E measured first build 7,159.790 ms, no-change cache hit 0.883 ms,
+source-edit rebuild 7,024.604 ms, and second no-change cache hit 0.888 ms. HAP
+SHA remained stable across cache hits and changed after the source edit.
