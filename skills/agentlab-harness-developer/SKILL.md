@@ -952,3 +952,19 @@ large projects/slow disks; P4 consider SDK/toolchain hot placement only with
 memory quota because the unpacked SDK is multi-GB. Rust-side template and receipt
 buffering remain useful for concurrency jitter but will not materially reduce
 the 6.9 s source-edit build dominated by ArkTS/Hvigor.
+
+## Harmony task-local build cache checkpoint
+
+The next P1 optimization adds a conservative no-op short-circuit to
+`harmony.build.debug execute=true`. Before launching Hvigor, the service hashes
+the project build inputs (`hvigorfile.ts`, `hvigor/hvigor-config.json5`,
+`build-profile.json5`, `oh-package*.json5`, `AppScope`, `entry` profile/package
+files, `entry/src`) plus small SDK wrapper/version inputs (`version.txt`,
+`bin/hvigorw`, `bin/ohpm`). A successful real build records
+`state/build-state.json` under the task sandbox with input fingerprint,
+artifact path/bytes, and artifact fingerprint. If a later build sees the same
+input and the previous unsigned artifact still matches, it returns a read-only
+`cacheHit=true` receipt and skips Hvigor. Any mismatch, missing state, missing
+artifact, or changed source falls back to the real no-daemon unsigned build.
+This targets the measured ~1.86 s no-op rebuild cost while preserving real
+rebuilds for source changes.

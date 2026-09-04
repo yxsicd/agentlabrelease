@@ -497,7 +497,7 @@ fn dispatch_http_with_task(
                     return Err("executing build.debug requires task isolation".into());
                 };
                 Ok(add_task_evidence(
-                    execute_build_debug(&root, &harmony)?,
+                    execute_build_debug(&root, &harmony, task)?,
                     Some(task),
                 ))
             } else {
@@ -667,8 +667,16 @@ fn execute_ohpm_install(project_root: &Path, harmony_home: &Path) -> Result<Rece
     )
 }
 
-fn execute_build_debug(project_root: &Path, harmony_home: &Path) -> Result<Receipt, String> {
-    execute_local_process(
+fn execute_build_debug(
+    project_root: &Path,
+    harmony_home: &Path,
+    task: &TaskScope,
+) -> Result<Receipt, String> {
+    let input = build_input_fingerprint(project_root, harmony_home)?;
+    if let Some(receipt) = try_build_cache_hit(project_root, task, &input)? {
+        return Ok(receipt);
+    }
+    let mut receipt = execute_local_process(
         "harmony.build.debug",
         project_root,
         &harmony_home.join("bin/hvigorw"),
@@ -684,7 +692,420 @@ fn execute_build_debug(project_root: &Path, harmony_home: &Path) -> Result<Recei
             "assembleHap",
         ],
         Some("harmony.artifact.inspect"),
-    )
+    )?;
+    let mut cache_evidence = build_cache_evidence(task, &input, false);
+    if receipt.ok {
+        if let Some(artifact) = latest_artifact(project_root) {
+            let artifact_fingerprint = file_fingerprint(&artifact.path)?;
+            write_build_state(
+                task,
+                project_root,
+                harmony_home,
+                &input,
+                &artifact,
+                &artifact_fingerprint,
+            )?;
+            cache_evidence.insert("stateUpdated".into(), JsonValue::Bool(true));
+            cache_evidence.insert(
+                "artifactFingerprint".into(),
+                JsonValue::string(artifact_fingerprint.fingerprint.clone()),
+            );
+        } else {
+            cache_evidence.insert("stateUpdated".into(), JsonValue::Bool(false));
+            receipt
+                .diagnostics
+                .push("build succeeded but no Harmony artifact was discovered".into());
+        }
+    } else {
+        cache_evidence.insert("stateUpdated".into(), JsonValue::Bool(false));
+    }
+    Ok(receipt.evidence("buildCache", JsonValue::Object(cache_evidence)))
+}
+
+#[derive(Clone, Debug)]
+struct FingerprintSummary {
+    fingerprint: String,
+    file_count: usize,
+    total_bytes: u64,
+}
+
+#[derive(Clone, Debug)]
+struct ArtifactSummary {
+    path: PathBuf,
+    bytes: u64,
+    extension: String,
+}
+
+fn build_cache_evidence(
+    task: &TaskScope,
+    input: &FingerprintSummary,
+    cache_hit: bool,
+) -> BTreeMap<String, JsonValue> {
+    let mut evidence = BTreeMap::new();
+    evidence.insert("cacheHit".into(), JsonValue::Bool(cache_hit));
+    evidence.insert(
+        "inputFingerprint".into(),
+        JsonValue::string(input.fingerprint.clone()),
+    );
+    evidence.insert(
+        "inputFileCount".into(),
+        JsonValue::Number(input.file_count as i128),
+    );
+    evidence.insert(
+        "inputBytes".into(),
+        JsonValue::Number(input.total_bytes as i128),
+    );
+    evidence.insert(
+        "statePath".into(),
+        JsonValue::string(build_state_path(task).display().to_string()),
+    );
+    evidence
+}
+
+fn try_build_cache_hit(
+    project_root: &Path,
+    task: &TaskScope,
+    input: &FingerprintSummary,
+) -> Result<Option<Receipt>, String> {
+    let state_path = build_state_path(task);
+    let Ok(state) = fs::read_to_string(&state_path) else {
+        return Ok(None);
+    };
+    let Some(prior_input) = json_string_field(&state, "inputFingerprint") else {
+        return Ok(None);
+    };
+    if prior_input != input.fingerprint {
+        return Ok(None);
+    }
+    let Some(artifact_path) = json_string_field(&state, "artifactPath") else {
+        return Ok(None);
+    };
+    let artifact = PathBuf::from(artifact_path);
+    if !artifact.is_file() {
+        return Ok(None);
+    }
+    if !is_path_under(&artifact, project_root) {
+        return Ok(None);
+    }
+    let actual = file_fingerprint(&artifact)?;
+    let Some(expected_artifact_fp) = json_string_field(&state, "artifactFingerprint") else {
+        return Ok(None);
+    };
+    let expected_bytes = json_number_field(&state, "artifactBytes").unwrap_or(-1);
+    if expected_artifact_fp != actual.fingerprint || expected_bytes != actual.total_bytes as i128 {
+        return Ok(None);
+    }
+    let mut cache = build_cache_evidence(task, input, true);
+    cache.insert(
+        "artifactPath".into(),
+        JsonValue::string(artifact.display().to_string()),
+    );
+    cache.insert(
+        "artifactBytes".into(),
+        JsonValue::Number(actual.total_bytes as i128),
+    );
+    cache.insert(
+        "artifactFingerprint".into(),
+        JsonValue::string(actual.fingerprint),
+    );
+    cache.insert("stateMatched".into(), JsonValue::Bool(true));
+    Ok(Some(
+        Receipt::new("harmony.build.debug", alharmony_ops_core::SideEffect::ReadOnly)
+            .evidence("buildCache", JsonValue::Object(cache))
+            .diagnostic("Skipped hvigor because the task build input fingerprint matched the last successful unsigned artifact.")
+            .next("harmony.artifact.inspect"),
+    ))
+}
+
+fn write_build_state(
+    task: &TaskScope,
+    project_root: &Path,
+    harmony_home: &Path,
+    input: &FingerprintSummary,
+    artifact: &ArtifactSummary,
+    artifact_fingerprint: &FingerprintSummary,
+) -> Result<(), String> {
+    let state_dir = task.root.join("state");
+    fs::create_dir_all(&state_dir)
+        .map_err(|error| format!("failed to create build state dir: {error}"))?;
+    let mut state = BTreeMap::new();
+    state.insert(
+        "schema".into(),
+        JsonValue::string("agentlab.harmony_ops.build_state.v1"),
+    );
+    state.insert("operation".into(), JsonValue::string("harmony.build.debug"));
+    state.insert("taskId".into(), JsonValue::string(task.task_id.clone()));
+    state.insert(
+        "taskRoot".into(),
+        JsonValue::string(task.root.display().to_string()),
+    );
+    state.insert(
+        "projectRoot".into(),
+        JsonValue::string(project_root.display().to_string()),
+    );
+    state.insert(
+        "harmonyHome".into(),
+        JsonValue::string(harmony_home.display().to_string()),
+    );
+    state.insert(
+        "inputFingerprint".into(),
+        JsonValue::string(input.fingerprint.clone()),
+    );
+    state.insert(
+        "inputFileCount".into(),
+        JsonValue::Number(input.file_count as i128),
+    );
+    state.insert(
+        "inputBytes".into(),
+        JsonValue::Number(input.total_bytes as i128),
+    );
+    state.insert(
+        "artifactPath".into(),
+        JsonValue::string(artifact.path.display().to_string()),
+    );
+    state.insert(
+        "artifactBytes".into(),
+        JsonValue::Number(artifact.bytes as i128),
+    );
+    state.insert(
+        "artifactExtension".into(),
+        JsonValue::string(artifact.extension.clone()),
+    );
+    state.insert(
+        "artifactFingerprint".into(),
+        JsonValue::string(artifact_fingerprint.fingerprint.clone()),
+    );
+    state.insert(
+        "updatedAtUnixMillis".into(),
+        JsonValue::Number(now_millis()),
+    );
+    fs::write(build_state_path(task), json_object_pretty(&state))
+        .map_err(|error| format!("failed to write build state: {error}"))
+}
+
+fn build_state_path(task: &TaskScope) -> PathBuf {
+    task.root.join("state/build-state.json")
+}
+
+fn build_input_fingerprint(
+    project_root: &Path,
+    harmony_home: &Path,
+) -> Result<FingerprintSummary, String> {
+    let mut entries: Vec<(String, PathBuf)> = Vec::new();
+    for rel in [
+        "hvigorfile.ts",
+        "hvigor/hvigor-config.json5",
+        "build-profile.json5",
+        "oh-package.json5",
+        "oh-package-lock.json5",
+        "AppScope",
+        "entry/hvigorfile.ts",
+        "entry/build-profile.json5",
+        "entry/oh-package.json5",
+        "entry/oh-package-lock.json5",
+        "entry/src",
+    ] {
+        collect_existing_files(project_root, Path::new(rel), &mut entries)?;
+    }
+    for rel in ["version.txt", "bin/hvigorw", "bin/ohpm"] {
+        collect_existing_files(harmony_home, Path::new(rel), &mut entries)?;
+    }
+    fingerprint_entries("build-input", &entries)
+}
+
+fn file_fingerprint(path: &Path) -> Result<FingerprintSummary, String> {
+    fingerprint_entries("file", &[(path.display().to_string(), path.to_path_buf())])
+}
+
+fn collect_existing_files(
+    root: &Path,
+    rel: &Path,
+    out: &mut Vec<(String, PathBuf)>,
+) -> Result<(), String> {
+    let path = root.join(rel);
+    if path.is_file() {
+        out.push((rel.display().to_string(), path));
+    } else if path.is_dir() {
+        collect_dir_files(root, &path, out)?;
+    }
+    Ok(())
+}
+
+fn collect_dir_files(
+    root: &Path,
+    dir: &Path,
+    out: &mut Vec<(String, PathBuf)>,
+) -> Result<(), String> {
+    let read_dir = fs::read_dir(dir)
+        .map_err(|error| format!("failed to read directory {}: {error}", dir.display()))?;
+    for entry in read_dir {
+        let entry = entry.map_err(|error| format!("failed to read directory entry: {error}"))?;
+        let path = entry.path();
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if name == "build" || name == ".hvigor" || name == "node_modules" || name == "oh_modules" {
+            continue;
+        }
+        let meta = entry
+            .metadata()
+            .map_err(|error| format!("failed to stat {}: {error}", path.display()))?;
+        if meta.is_dir() {
+            collect_dir_files(root, &path, out)?;
+        } else if meta.is_file() {
+            let rel = path
+                .strip_prefix(root)
+                .unwrap_or(&path)
+                .display()
+                .to_string();
+            out.push((rel, path));
+        }
+    }
+    Ok(())
+}
+
+fn fingerprint_entries(
+    namespace: &str,
+    entries: &[(String, PathBuf)],
+) -> Result<FingerprintSummary, String> {
+    let mut sorted = entries.to_vec();
+    sorted.sort_by(|a, b| a.0.cmp(&b.0));
+    let mut hash = FNV_OFFSET;
+    update_hash(&mut hash, namespace.as_bytes());
+    let mut total_bytes = 0_u64;
+    let mut file_count = 0_usize;
+    for (rel, path) in sorted {
+        let data = fs::read(&path).map_err(|error| {
+            format!(
+                "failed to read fingerprint input {}: {error}",
+                path.display()
+            )
+        })?;
+        update_hash(&mut hash, rel.as_bytes());
+        update_hash(&mut hash, b"\0");
+        update_hash(&mut hash, data.len().to_string().as_bytes());
+        update_hash(&mut hash, b"\0");
+        update_hash(&mut hash, &data);
+        file_count += 1;
+        total_bytes += data.len() as u64;
+    }
+    Ok(FingerprintSummary {
+        fingerprint: format!("fnv1a64:{hash:016x}"),
+        file_count,
+        total_bytes,
+    })
+}
+
+const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+const FNV_PRIME: u64 = 0x100000001b3;
+
+fn update_hash(hash: &mut u64, bytes: &[u8]) {
+    for byte in bytes {
+        *hash ^= *byte as u64;
+        *hash = hash.wrapping_mul(FNV_PRIME);
+    }
+}
+
+fn latest_artifact(root: &Path) -> Option<ArtifactSummary> {
+    let mut artifacts = Vec::new();
+    collect_artifact_summaries(root, &mut artifacts, 0);
+    artifacts.sort_by_key(|artifact| {
+        fs::metadata(&artifact.path)
+            .and_then(|meta| meta.modified())
+            .ok()
+    });
+    artifacts.pop()
+}
+
+fn collect_artifact_summaries(path: &Path, out: &mut Vec<ArtifactSummary>, depth: usize) {
+    if depth > 24 || out.len() >= 64 {
+        return;
+    }
+    let Ok(read_dir) = fs::read_dir(path) else {
+        return;
+    };
+    for entry in read_dir.flatten() {
+        let p = entry.path();
+        let Ok(meta) = entry.metadata() else {
+            continue;
+        };
+        if meta.is_dir() {
+            collect_artifact_summaries(&p, out, depth + 1);
+        } else if meta.is_file() {
+            let ext = p
+                .extension()
+                .and_then(|value| value.to_str())
+                .unwrap_or("")
+                .to_string();
+            if matches!(ext.as_str(), "hap" | "app" | "har" | "hsp") {
+                out.push(ArtifactSummary {
+                    path: p,
+                    bytes: meta.len(),
+                    extension: ext,
+                });
+            }
+        }
+    }
+}
+
+fn json_string_field(body: &str, key: &str) -> Option<String> {
+    let pattern = format!("\"{key}\"");
+    let start = body.find(&pattern)? + pattern.len();
+    let rest = &body[start..];
+    let colon = rest.find(':')?;
+    let rest = rest[colon + 1..].trim_start();
+    if !rest.starts_with('"') {
+        return None;
+    }
+    parse_json_string(rest)
+}
+
+fn json_number_field(body: &str, key: &str) -> Option<i128> {
+    let pattern = format!("\"{key}\"");
+    let start = body.find(&pattern)? + pattern.len();
+    let rest = &body[start..];
+    let colon = rest.find(':')?;
+    let mut rest = rest[colon + 1..].trim_start();
+    let end = rest
+        .find(|ch: char| !(ch == '-' || ch.is_ascii_digit()))
+        .unwrap_or(rest.len());
+    rest = &rest[..end];
+    rest.parse::<i128>().ok()
+}
+
+fn parse_json_string(value: &str) -> Option<String> {
+    let mut chars = value.chars();
+    if chars.next()? != '"' {
+        return None;
+    }
+    let mut out = String::new();
+    let mut escaped = false;
+    for ch in chars {
+        if escaped {
+            match ch {
+                '"' => out.push('"'),
+                '\\' => out.push('\\'),
+                '/' => out.push('/'),
+                'n' => out.push('\n'),
+                'r' => out.push('\r'),
+                't' => out.push('\t'),
+                other => out.push(other),
+            }
+            escaped = false;
+        } else if ch == '\\' {
+            escaped = true;
+        } else if ch == '"' {
+            return Some(out);
+        } else {
+            out.push(ch);
+        }
+    }
+    None
+}
+
+fn is_path_under(path: &Path, root: &Path) -> bool {
+    let path = normalize_path(path);
+    let root = normalize_path(root);
+    path == root || path.starts_with(root)
 }
 
 fn execute_local_process(
@@ -823,7 +1244,14 @@ fn validate_task_prepare(
 }
 
 fn task_prepare(task: &TaskScope) -> Result<Receipt, String> {
-    for rel in ["workspace", "artifacts", "tmp", "receipts"] {
+    for rel in [
+        "workspace",
+        "artifacts",
+        "tmp",
+        "receipts",
+        "state",
+        "cache",
+    ] {
         fs::create_dir_all(task.root.join(rel))
             .map_err(|error| format!("failed to create task sandbox {rel}: {error}"))?;
     }

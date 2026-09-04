@@ -141,3 +141,15 @@ are about 6.9 s. `--parallel` does not help no-op rebuilds, and
 hwlinux tests. Daemon mode would be attractive for hot builds, but it currently
 fails with Node/chokidar `EMFILE` watcher pressure, so the safe execution default
 stays `--no-daemon --no-parallel --no-type-check --analyze=false`.
+
+## Task-local build cache
+
+`harmony.build.debug execute=true` now computes a conservative task-local build
+input fingerprint before launching Hvigor. The fingerprint covers the generated
+project configuration, `AppScope`, `entry/src`, package/profile files, and the
+SDK wrapper/version inputs used by the build. After a successful unsigned HAP
+build, the service writes `<task-root>/<taskId>/state/build-state.json` with the
+input fingerprint and last artifact fingerprint. A later unchanged build can
+return a read-only cache-hit receipt pointing to the existing unsigned HAP
+instead of starting Hvigor. Any source/config/SDK-wrapper/artifact mismatch falls
+back to the real no-daemon build.
