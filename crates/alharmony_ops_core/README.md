@@ -229,3 +229,12 @@ build outputs, `.hvigor`, `oh_modules`, `node_modules`, and `.git` by default.
 `inputFingerprint`, with optional `inputFileCount` and `inputBytes` hints. This
 is the first service-side workspace pool index: exact fingerprint matches are
 preferred, and the result points the scheduler to `harmony.task.fork`.
+
+## Sync + pool E2E status
+
+`harmony.project.sync` plus independent SessionFS composition was verified on
+hwlinux with the real Harmony SDK: forked child inherited parent cache in 0.835
+ms, full staged-package sync copied 3 files, deleted 1 stale file, skipped 16
+files, and completed in 1.501 ms wall time before a real child rebuild. The
+first `harmony.workspace.index/match` preview was also Linux-smoked and selected
+an exact fingerprint parent from a two-candidate pool.

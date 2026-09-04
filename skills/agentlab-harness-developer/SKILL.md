@@ -1135,3 +1135,31 @@ plus optional file-count/byte hints and returns the best parent for
 fingerprint parent first. This is intentionally a preview: it is exact-fingerprint
 first and should later grow partition/manifests and LRU/lease/GC, but it already
 prevents relying on external shell directory discovery.
+
+## Harmony sync + workspace-pool preview checkpoint
+
+`8501c3d` adds `harmony.project.sync`, the byte-level full-package delta merge
+atom. Both `projectRoot` and `sourceRoot` must be task-scoped. It skips generated
+build/cache/dependency directories, compares content fingerprints across staging
+paths, copies only changed files, optionally deletes target-only files with
+`deleteMissing=true`, and writes `state/dirty-partitions.json`. M4 smoke copied
+3 changed files / 602 bytes, deleted 1 stale file / 143 bytes, skipped 15 files,
+and finished in 3,840 us; repeated identical sync was read-only in 1,349 us.
+
+hwlinux real-SDK composition E2E at
+`/tmp/alharmony-sync-compose-e2e-8501c3d-20260904133931` proved the full path:
+independent `alsessionfsd`, `alharmony-ops --fork-backend sessionfs`, parent
+build 7,179.277 ms, parent cache hit 0.903 ms, sessionfs fork 7.061 ms wall /
+5,309 us backend for 82 files and 618,489 bytes, child inherited cache hit
+0.835 ms, staged-package `project.sync` 1.501 ms wall / 1,031 us core with 3
+copied files, 1 deleted stale file, and 16 skipped files, child rebuild
+7,136.378 ms, child cache hit 0.877 ms, and parent final cache hit 0.809 ms.
+Parent HAP stayed unchanged; child HAP changed after sync/build.
+
+`28b026c` adds the first service-side workspace-pool discovery preview:
+`harmony.workspace.index` scans task candidates with `state/build-state.json`,
+and `harmony.workspace.match` ranks candidates by `inputFingerprint` plus
+optional file-count/byte hints before `harmony.task.fork`. M4 and hwlinux smoke
+both proved a two-candidate pool returns the exact fingerprint parent first.
+This is exact-fingerprint-first only; next work should add partition manifests,
+lease/GC, and similarity scoring for non-exact packages.
