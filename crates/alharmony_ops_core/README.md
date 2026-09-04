@@ -202,3 +202,12 @@ it when available.
 ## Independent SessionFS composition
 
 SessionFS should be composed as an independent service, not embedded as a required AgentLab Harness instance. `agentlab-sessionfsd` owns storage fork/snapshot/quota/GC. `alharmony-ops` owns Harmony project/build atoms, receipts, build-state, and artifact inspection. `harmony.task.fork` remains stable and can use `sessionfs` when configured or `copy-tree-fallback` when standalone.
+
+## SessionFS backend adapter
+
+`harmony.task.fork` now supports a pluggable fork backend. The standalone mode
+uses `copy-tree`; composition mode can call an independent `alsessionfsd` through
+`--fork-backend sessionfs --sessionfs-endpoint http://127.0.0.1:<port>`. The
+public Harmony atom remains `harmony.task.fork`; after the storage fork,
+`alharmony-ops` still rewrites paths and refreshes child build-state/fingerprints
+before allowing inherited cache hits.

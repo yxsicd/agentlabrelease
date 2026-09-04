@@ -5,3 +5,7 @@ version = 4
 [[package]]
 name = "alharmony_ops_core"
 version = "0.1.0"
+
+[[package]]
+name = "alsessionfsd"
+version = "0.1.0"

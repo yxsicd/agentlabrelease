@@ -1071,3 +1071,17 @@ ranking; it should not share a mutable workspace directly between tasks.
 ## Harmony + independent SessionFS composition design
 
 YXS clarified that SessionFS can itself be an independent owned service composed with the Rust build ops. The target is two atomic services: `agentlab-sessionfsd` for forkable storage sessions and `alharmony-ops` for Harmony build semantics. The build service stays independently shippable; SessionFS is a fast fork backend selected by configuration/capability, with copy-tree fallback retained. Workspace-pool should match parent sessions, fork child sessions, apply delta patch/sync, then build and retain candidates. Do not share writable hardlinks or require AgentLab main-container state for the build service.
+
+## Independent SessionFS service implementation checkpoint
+
+AgentLab now has an independent `alsessionfsd` Rust preview service plus a
+Harmony-side adapter. `alsessionfsd` owns generic session storage fork/copy
+semantics and exposes `/health`, `/capabilities`, and
+`/v1/sessions/fork?parentRoot=...&childRoot=...&include=workspace,artifacts,state,cache&reset=receipts,tmp`.
+It deliberately does not understand Harmony, OHPM, Hvigor, HAP, or build
+receipts. `alharmony-ops` remains the owner of `harmony.task.fork` semantics and
+can use `--fork-backend copy-tree|sessionfs|auto` plus `--sessionfs-endpoint`.
+M4 composition smoke proved explicit `sessionfs` backend invocation, child
+path/state rewrite, child patch independence, and `auto` fallback to copy-tree
+when no SessionFS endpoint is configured. This preserves standalone deployment
+while enabling fast-fork backend replacement.

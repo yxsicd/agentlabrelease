@@ -22,6 +22,8 @@ struct ServiceConfig {
     max_batch: usize,
     max_active_requests: usize,
     active_requests: AtomicUsize,
+    fork_backend: String,
+    sessionfs_endpoint: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -113,6 +115,17 @@ fn run_service(mut args: Vec<String>) -> ! {
         .unwrap_or(workers);
     let task_root =
         take_value(&mut args, "--task-root").map(|value| normalize_path(Path::new(&value)));
+    let fork_backend =
+        take_value(&mut args, "--fork-backend").unwrap_or_else(|| "copy-tree".to_string());
+    if !matches!(fork_backend.as_str(), "copy-tree" | "sessionfs" | "auto") {
+        eprintln!("--fork-backend must be one of: auto, copy-tree, sessionfs");
+        std::process::exit(2);
+    }
+    let sessionfs_endpoint = take_value(&mut args, "--sessionfs-endpoint");
+    if fork_backend == "sessionfs" && sessionfs_endpoint.is_none() {
+        eprintln!("--fork-backend sessionfs requires --sessionfs-endpoint");
+        std::process::exit(2);
+    }
     if !args.is_empty() {
         eprintln!("unexpected service arguments: {}", args.join(" "));
         std::process::exit(2);
@@ -136,6 +149,8 @@ fn run_service(mut args: Vec<String>) -> ! {
         max_batch,
         max_active_requests,
         active_requests: AtomicUsize::new(0),
+        fork_backend,
+        sessionfs_endpoint,
     });
     let (tx, rx) = mpsc::sync_channel::<TcpStream>(queue_capacity);
     let rx = Arc::new(Mutex::new(rx));
@@ -367,7 +382,7 @@ fn dispatch_batch_http(
         } else {
             None
         };
-        let receipt = dispatch_http_with_task(operation, params, receipt_task)?;
+        let receipt = dispatch_http_with_task(operation, params, receipt_task, config)?;
         if receipt.ok {
             ok_count += 1;
         }
@@ -402,7 +417,7 @@ fn dispatch_http(
     config: &ServiceConfig,
 ) -> Result<Receipt, String> {
     let task = validate_task_for_operation(operation, params, config)?;
-    dispatch_http_with_task(operation, params, task.as_ref())
+    dispatch_http_with_task(operation, params, task.as_ref(), config)
 }
 
 fn validate_task_for_operation(
@@ -434,6 +449,7 @@ fn dispatch_http_with_task(
     operation: &str,
     params: &BTreeMap<String, String>,
     task: Option<&TaskScope>,
+    config: &ServiceConfig,
 ) -> Result<Receipt, String> {
     match operation {
         "harmony.env.status" => Ok(env_status(param_path(params, "harmonyHome").as_deref())),
@@ -450,7 +466,7 @@ fn dispatch_http_with_task(
                 return Err("task isolation must be enabled for harmony.task.fork".into());
             };
             let parent_task_id = required_param(params, "parentTaskId")?;
-            let receipt = task_fork(task, parent_task_id)?;
+            let receipt = task_fork(task, parent_task_id, config)?;
             append_task_receipt(task, &receipt);
             Ok(receipt)
         }
@@ -1381,7 +1397,11 @@ fn param_bool(params: &BTreeMap<String, String>, name: &str) -> bool {
     )
 }
 
-fn task_fork(child: &TaskScope, parent_task_id: &str) -> Result<Receipt, String> {
+fn task_fork(
+    child: &TaskScope,
+    parent_task_id: &str,
+    config: &ServiceConfig,
+) -> Result<Receipt, String> {
     validate_task_id(parent_task_id)?;
     let Some(pool_root) = child.root.parent() else {
         return Err("child task root has no parent pool root".into());
@@ -1399,6 +1419,7 @@ fn task_fork(child: &TaskScope, parent_task_id: &str) -> Result<Receipt, String>
             child.root.display()
         ));
     }
+    let fork_result = fork_task_storage(&parent_root, &child.root, config)?;
     for rel in [
         "workspace",
         "artifacts",
@@ -1408,17 +1429,7 @@ fn task_fork(child: &TaskScope, parent_task_id: &str) -> Result<Receipt, String>
         "cache",
     ] {
         fs::create_dir_all(child.root.join(rel))
-            .map_err(|error| format!("failed to create child task dir {rel}: {error}"))?;
-    }
-    let started = Instant::now();
-    let mut copied_files = 0_usize;
-    let mut copied_bytes = 0_u64;
-    for rel in ["workspace", "artifacts", "state", "cache"] {
-        let from = parent_root.join(rel);
-        let to = child.root.join(rel);
-        if from.exists() {
-            copy_tree(&from, &to, &mut copied_files, &mut copied_bytes)?;
-        }
+            .map_err(|error| format!("failed to ensure child task dir {rel}: {error}"))?;
     }
     rewrite_forked_state_paths(&child.root, &parent_root, child, parent_task_id)?;
     let refreshed_state = refresh_forked_build_state(&child.root, child)?;
@@ -1436,7 +1447,7 @@ fn task_fork(child: &TaskScope, parent_task_id: &str) -> Result<Receipt, String>
     manifest.insert("forkedAtUnixMillis".into(), JsonValue::Number(now_millis()));
     manifest.insert(
         "forkStrategy".into(),
-        JsonValue::string("copy-tree-fallback"),
+        JsonValue::string(fork_result.strategy.clone()),
     );
     manifest.insert(
         "workspace".into(),
@@ -1470,18 +1481,20 @@ fn task_fork(child: &TaskScope, parent_task_id: &str) -> Result<Receipt, String>
         "childTaskId".into(),
         JsonValue::string(child.task_id.clone()),
     );
-    evidence.insert("strategy".into(), JsonValue::string("copy-tree-fallback"));
+    evidence.insert("strategy".into(), JsonValue::string(fork_result.strategy));
+    evidence.insert("backend".into(), JsonValue::string(fork_result.backend));
+    evidence.insert("fallback".into(), JsonValue::Bool(fork_result.fallback));
     evidence.insert(
         "copiedFiles".into(),
-        JsonValue::Number(copied_files as i128),
+        JsonValue::Number(fork_result.copied_files as i128),
     );
     evidence.insert(
         "copiedBytes".into(),
-        JsonValue::Number(copied_bytes as i128),
+        JsonValue::Number(fork_result.copied_bytes as i128),
     );
     evidence.insert(
         "elapsedMicros".into(),
-        JsonValue::Number(started.elapsed().as_micros() as i128),
+        JsonValue::Number(fork_result.elapsed_micros as i128),
     );
     evidence.insert(
         "parentTaskRoot".into(),
@@ -1503,6 +1516,181 @@ fn task_fork(child: &TaskScope, parent_task_id: &str) -> Result<Receipt, String>
     .evidence("fork", JsonValue::Object(evidence))
     .evidence("task", JsonValue::Object(manifest))
     .next("harmony.project.patch"))
+}
+
+#[derive(Debug)]
+struct ForkStorageResult {
+    backend: String,
+    strategy: String,
+    fallback: bool,
+    copied_files: usize,
+    copied_bytes: u64,
+    elapsed_micros: u128,
+}
+
+fn fork_task_storage(
+    parent_root: &Path,
+    child_root: &Path,
+    config: &ServiceConfig,
+) -> Result<ForkStorageResult, String> {
+    match config.fork_backend.as_str() {
+        "copy-tree" => fork_task_storage_copy(parent_root, child_root, false),
+        "sessionfs" => fork_task_storage_sessionfs(parent_root, child_root, config, false),
+        "auto" => match fork_task_storage_sessionfs(parent_root, child_root, config, false) {
+            Ok(result) => Ok(result),
+            Err(error) => {
+                if child_root.exists() {
+                    fs::remove_dir_all(child_root).map_err(|cleanup_error| {
+                        format!(
+                            "sessionfs fork failed ({error}); failed to clean child root for fallback: {cleanup_error}"
+                        )
+                    })?;
+                }
+                let mut result = fork_task_storage_copy(parent_root, child_root, true)?;
+                result.backend = "copy-tree-fallback".into();
+                Ok(result)
+            }
+        },
+        other => Err(format!("unsupported fork backend: {other}")),
+    }
+}
+
+fn fork_task_storage_copy(
+    parent_root: &Path,
+    child_root: &Path,
+    fallback: bool,
+) -> Result<ForkStorageResult, String> {
+    let started = Instant::now();
+    let mut copied_files = 0_usize;
+    let mut copied_bytes = 0_u64;
+    fs::create_dir_all(child_root)
+        .map_err(|error| format!("failed to create child task root: {error}"))?;
+    for rel in ["workspace", "artifacts", "state", "cache"] {
+        let from = parent_root.join(rel);
+        let to = child_root.join(rel);
+        if from.exists() {
+            copy_tree(&from, &to, &mut copied_files, &mut copied_bytes)?;
+        } else {
+            fs::create_dir_all(&to)
+                .map_err(|error| format!("failed to create {}: {error}", to.display()))?;
+        }
+    }
+    for rel in ["receipts", "tmp"] {
+        fs::create_dir_all(child_root.join(rel))
+            .map_err(|error| format!("failed to create child task dir {rel}: {error}"))?;
+    }
+    Ok(ForkStorageResult {
+        backend: if fallback {
+            "copy-tree-fallback".into()
+        } else {
+            "copy-tree".into()
+        },
+        strategy: if fallback {
+            "copy-tree-fallback".into()
+        } else {
+            "copy-tree".into()
+        },
+        fallback,
+        copied_files,
+        copied_bytes,
+        elapsed_micros: started.elapsed().as_micros(),
+    })
+}
+
+fn fork_task_storage_sessionfs(
+    parent_root: &Path,
+    child_root: &Path,
+    config: &ServiceConfig,
+    fallback: bool,
+) -> Result<ForkStorageResult, String> {
+    let endpoint = config
+        .sessionfs_endpoint
+        .as_deref()
+        .ok_or_else(|| "sessionfs endpoint is not configured".to_string())?;
+    let body = sessionfs_fork_http(endpoint, parent_root, child_root)?;
+    Ok(ForkStorageResult {
+        backend: json_string_field(&body, "backend").unwrap_or_else(|| "sessionfs".into()),
+        strategy: "sessionfs".into(),
+        fallback,
+        copied_files: json_number_field(&body, "copiedFiles").unwrap_or(0).max(0) as usize,
+        copied_bytes: json_number_field(&body, "copiedBytes").unwrap_or(0).max(0) as u64,
+        elapsed_micros: json_number_field(&body, "elapsedMicros")
+            .unwrap_or(0)
+            .max(0) as u128,
+    })
+}
+
+fn sessionfs_fork_http(
+    endpoint: &str,
+    parent_root: &Path,
+    child_root: &Path,
+) -> Result<String, String> {
+    let endpoint = endpoint.trim_end_matches('/');
+    let url = format!(
+        "{}/v1/sessions/fork?parentRoot={}&childRoot={}&include=workspace,artifacts,state,cache&reset=receipts,tmp",
+        endpoint,
+        percent_encode(&parent_root.display().to_string()),
+        percent_encode(&child_root.display().to_string())
+    );
+    let (status, body) = http_get(&url)?;
+    if status != 200 {
+        return Err(format!(
+            "sessionfs fork returned HTTP {status}: {}",
+            tail_chars(&body, 512)
+        ));
+    }
+    if !(body.contains("\"ok\": true") || body.contains("\"ok\":true")) {
+        return Err(format!(
+            "sessionfs fork did not return ok=true: {}",
+            tail_chars(&body, 512)
+        ));
+    }
+    Ok(body)
+}
+
+fn http_get(url: &str) -> Result<(u16, String), String> {
+    let rest = url.strip_prefix("http://").ok_or_else(|| {
+        "only http:// sessionfs endpoints are supported in this preview".to_string()
+    })?;
+    let (authority, path) = match rest.split_once('/') {
+        Some((authority, path)) => (authority, format!("/{path}")),
+        None => (rest, "/".to_string()),
+    };
+    let mut stream = TcpStream::connect(authority)
+        .map_err(|error| format!("failed to connect to sessionfs {authority}: {error}"))?;
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(30)));
+    let _ = stream.set_write_timeout(Some(Duration::from_secs(30)));
+    let request = format!("GET {path} HTTP/1.1\r\nHost: {authority}\r\nConnection: close\r\n\r\n");
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|error| format!("failed to write sessionfs request: {error}"))?;
+    let mut response = String::new();
+    stream
+        .read_to_string(&mut response)
+        .map_err(|error| format!("failed to read sessionfs response: {error}"))?;
+    let Some((headers, body)) = response.split_once("\r\n\r\n") else {
+        return Err("sessionfs response was missing header terminator".into());
+    };
+    let status = headers
+        .lines()
+        .next()
+        .and_then(|line| line.split_whitespace().nth(1))
+        .and_then(|code| code.parse::<u16>().ok())
+        .ok_or_else(|| "sessionfs response had no HTTP status".to_string())?;
+    Ok((status, body.to_string()))
+}
+
+fn percent_encode(value: &str) -> String {
+    let mut out = String::new();
+    for byte in value.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' | b'/' => {
+                out.push(byte as char)
+            }
+            other => out.push_str(&format!("%{other:02X}")),
+        }
+    }
+    out
 }
 
 fn refresh_forked_build_state(child_root: &Path, child: &TaskScope) -> Result<bool, String> {

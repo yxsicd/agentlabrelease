@@ -1,0 +1,10 @@
+[package]
+name = "alsessionfsd"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "AgentLab standalone SessionFS preview service"
+
+[[bin]]
+name = "alsessionfsd"
+path = "src/main.rs"
