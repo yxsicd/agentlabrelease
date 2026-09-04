@@ -117,3 +117,7 @@ build caching. hwlinux real-SDK E2E showed first build 7.16 s, no-change cache
 hit 0.883 ms, source-edit rebuild 7.02 s, and second no-change cache hit
 0.888 ms. Cache hits return read-only receipts and skip Hvigor; source changes
 fall back to the real no-daemon build.
+
+## Combined SessionFS + Harmony ops preview (24b65cb)
+
+`alharmony-combined-linux-x64-24b65cb.tar.zst` contains both `alharmony-ops` and `alsessionfsd`. It is the current developer preview for standalone SessionFS composition, partition-aware workspace match, workspace leases, `project.sync`, task-local build cache, and `workspace.gc maxBytes` quota.
