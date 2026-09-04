@@ -121,3 +121,7 @@ fall back to the real no-daemon build.
 ## Combined SessionFS + Harmony ops preview (24b65cb)
 
 `alharmony-combined-linux-x64-24b65cb.tar.zst` contains both `alharmony-ops` and `alsessionfsd`. It is the current developer preview for standalone SessionFS composition, partition-aware workspace match, workspace leases, `project.sync`, task-local build cache, and `workspace.gc maxBytes` quota.
+
+### GitHub release validation
+
+The current combined Linux asset was download-back validated from GitHub Release on hwlinux: SHA matched the manifest, both binaries extracted and started, and workspace partition match plus lease/GC dry-run succeeded.

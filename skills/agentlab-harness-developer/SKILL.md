@@ -1171,3 +1171,7 @@ lease/GC, and similarity scoring for non-exact packages.
 ## Harmony workspace GC quota checkpoint
 
 `harmony.workspace.gc` now supports `maxBytes`. It still protects active leases and newest `keepLast` candidates, and dry-run remains read-only. M4 smoke: total 12,616 bytes, `maxBytes=7000`, leased oldest A and newest D protected; GC planned and deleted B/C, freed 5,808 bytes, projected 6,808 bytes, leaving A/D.
+
+## Harmony combined GitHub release checkpoint
+
+`63973cc` added the `24b65cb` combined release metadata/package, `3c99d7f` added current aliases, and `af40102` added immutable channel/offline snapshots. GitHub Release `alharmony` now contains `alharmony-combined-linux-x64-24b65cb.tar.zst/json`, `alharmony-combined-linux-x64-current.tar.zst/json`, `agentlab-harmony-channel-index.json`, and `agentlab-harmony-channel-index-3c99d7f.json`. GitHub Release `aloffline` now contains `agentlab-offline-linux-x64.json` and `agentlab-offline-linux-x64-3c99d7f.json`. Linux download-back smoke at `/tmp/alharmony-github-release-smoke-linux-20260904142714` downloaded current assets from GitHub, verified manifest/SHA, extracted both binaries, started independent `alsessionfsd` and `alharmony-ops`, and proved partition match, lease, and GC dry-run.
