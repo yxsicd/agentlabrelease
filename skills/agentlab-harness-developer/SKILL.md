@@ -1109,3 +1109,18 @@ cache hit 0.724 ms. Binary SHA256: `alharmony-ops`
 `alsessionfsd` `679a1dc31816417ca9c930baf8c196a0fc28d034dbeb73af381aa1d4be3d01d2`.
 This proves two independent owned services can compose while preserving Session
 Fork semantics and build-cache inheritance.
+
+## Harmony project sync atom checkpoint
+
+`harmony.project.sync` now supports complete-package delta merge into a stable
+child workspace. It requires task isolation for both `projectRoot` and
+`sourceRoot`, rejects cross-task sources, skips generated build/dependency/cache
+directories, uses content fingerprints for cross-directory comparison, copies
+only changed bytes, and optionally prunes target-only files with
+`deleteMissing=true`. M4 smoke staged an 18-file package, changed two existing
+files, added one ArkTS file, and omitted one resource file; sync skipped 15
+files, copied 3 files / 602 bytes, deleted 1 file / 143 bytes, wrote
+`dirty-partitions.json` with `arkts=2` and `resources=2`, and completed in
+3,840 us. A second identical sync was read-only with 18 skipped files in
+1,349 us. This is the bottom atom for full new-package diff-and-merge after a
+Session Fork.

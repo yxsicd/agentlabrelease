@@ -211,3 +211,13 @@ uses `copy-tree`; composition mode can call an independent `alsessionfsd` throug
 public Harmony atom remains `harmony.task.fork`; after the storage fork,
 `alharmony-ops` still rewrites paths and refreshes child build-state/fingerprints
 before allowing inherited cache hits.
+
+## Project sync atom
+
+`harmony.project.sync` is the byte-level delta lane for full staged project
+packages. Both `projectRoot` and `sourceRoot` must stay inside the same task
+sandbox. The operation scans `sourceRoot`, skips build/cache directories, uses
+content fingerprints so staging paths do not cause false positives, copies only
+changed files, optionally deletes target-only files with `deleteMissing=true`,
+and writes `state/dirty-partitions.json` for scheduler policy. It preserves
+build outputs, `.hvigor`, `oh_modules`, `node_modules`, and `.git` by default.

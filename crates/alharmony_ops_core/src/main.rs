@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -432,6 +432,15 @@ fn validate_task_for_operation(
             let root = required_param_path(params, "projectRoot")?;
             validate_task_paths(config, params, &[("projectRoot", &root)])
         }
+        "harmony.project.sync" => {
+            let root = required_param_path(params, "projectRoot")?;
+            let source = required_param_path(params, "sourceRoot")?;
+            validate_task_paths(
+                config,
+                params,
+                &[("projectRoot", &root), ("sourceRoot", &source)],
+            )
+        }
         "harmony.ohpm.install" | "harmony.build.debug" => {
             let root = required_param_path(params, "projectRoot")?;
             let _harmony = required_param_path(params, "harmonyHome")?;
@@ -505,6 +514,14 @@ fn dispatch_http_with_task(
                 task,
             ))
         }
+        "harmony.project.sync" => {
+            let root = required_param_path(params, "projectRoot")?;
+            let source = required_param_path(params, "sourceRoot")?;
+            Ok(add_task_evidence(
+                project_sync(&root, &source, param_bool(params, "deleteMissing"), task)?,
+                task,
+            ))
+        }
         "harmony.project.verify" => {
             let root = required_param_path(params, "projectRoot")?;
             Ok(add_task_evidence(project_verify(&root), task))
@@ -545,6 +562,298 @@ fn dispatch_http_with_task(
         }
         _ => Err(format!("unknown operation: {operation}")),
     }
+}
+
+#[derive(Debug)]
+struct SyncFile {
+    rel: String,
+    path: PathBuf,
+    bytes: u64,
+    fingerprint: String,
+}
+
+fn project_sync(
+    project_root: &Path,
+    source_root: &Path,
+    delete_missing: bool,
+    task: Option<&TaskScope>,
+) -> Result<Receipt, String> {
+    if !source_root.is_dir() {
+        return Err(format!(
+            "sourceRoot is not a directory: {}",
+            source_root.display()
+        ));
+    }
+    if normalize_path(project_root) == normalize_path(source_root) {
+        return Err("sourceRoot must differ from projectRoot".into());
+    }
+    if is_path_under(source_root, project_root) || is_path_under(project_root, source_root) {
+        return Err("sourceRoot and projectRoot must not contain each other".into());
+    }
+    let started = Instant::now();
+    let source_files = collect_sync_files(source_root)?;
+    let mut source_rels = BTreeSet::new();
+    let mut copied_files = 0_usize;
+    let mut skipped_files = 0_usize;
+    let mut copied_bytes = 0_u64;
+    let mut source_bytes = 0_u64;
+    let mut changed_files: Vec<JsonValue> = Vec::new();
+    let mut partition_counts: BTreeMap<String, i128> = BTreeMap::new();
+
+    for file in &source_files {
+        validate_project_relative_path(&file.rel)?;
+        source_rels.insert(file.rel.clone());
+        source_bytes += file.bytes;
+        let target = normalize_path(&project_root.join(&file.rel));
+        if !is_path_under(&target, project_root) {
+            return Err(format!(
+                "sync target must stay under projectRoot: {}",
+                file.rel
+            ));
+        }
+        let same = if target.is_file() {
+            let target_fp = file_content_fingerprint(&target)?;
+            target_fp.fingerprint == file.fingerprint && target_fp.total_bytes == file.bytes
+        } else {
+            false
+        };
+        if same {
+            skipped_files += 1;
+            continue;
+        }
+        if let Some(parent) = target.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
+        }
+        let bytes = fs::copy(&file.path, &target).map_err(|error| {
+            format!(
+                "failed to sync {} to {}: {error}",
+                file.path.display(),
+                target.display()
+            )
+        })?;
+        copied_files += 1;
+        copied_bytes += bytes;
+        bump_partition(&mut partition_counts, classify_project_partition(&file.rel));
+        push_limited_change(
+            &mut changed_files,
+            &file.rel,
+            "copied",
+            file.bytes,
+            &file.fingerprint,
+        );
+    }
+
+    let mut deleted_files = 0_usize;
+    let mut deleted_bytes = 0_u64;
+    if delete_missing && project_root.is_dir() {
+        let target_files = collect_sync_files(project_root)?;
+        for file in target_files {
+            if source_rels.contains(&file.rel) {
+                continue;
+            }
+            let target = normalize_path(&project_root.join(&file.rel));
+            if !is_path_under(&target, project_root) || !target.is_file() {
+                continue;
+            }
+            fs::remove_file(&target).map_err(|error| {
+                format!("failed to delete stale file {}: {error}", target.display())
+            })?;
+            deleted_files += 1;
+            deleted_bytes += file.bytes;
+            bump_partition(&mut partition_counts, classify_project_partition(&file.rel));
+            push_limited_change(
+                &mut changed_files,
+                &file.rel,
+                "deleted",
+                file.bytes,
+                &file.fingerprint,
+            );
+        }
+    }
+
+    let changed = copied_files > 0 || deleted_files > 0;
+    if let Some(task) = task {
+        write_dirty_partitions(task, &partition_counts, changed_files.len())?;
+    }
+    let mut evidence = BTreeMap::new();
+    evidence.insert(
+        "projectRoot".into(),
+        JsonValue::string(project_root.display().to_string()),
+    );
+    evidence.insert(
+        "sourceRoot".into(),
+        JsonValue::string(source_root.display().to_string()),
+    );
+    evidence.insert("deleteMissing".into(), JsonValue::Bool(delete_missing));
+    evidence.insert("changed".into(), JsonValue::Bool(changed));
+    evidence.insert(
+        "sourceFiles".into(),
+        JsonValue::Number(source_files.len() as i128),
+    );
+    evidence.insert(
+        "sourceBytes".into(),
+        JsonValue::Number(source_bytes as i128),
+    );
+    evidence.insert(
+        "copiedFiles".into(),
+        JsonValue::Number(copied_files as i128),
+    );
+    evidence.insert(
+        "copiedBytes".into(),
+        JsonValue::Number(copied_bytes as i128),
+    );
+    evidence.insert(
+        "skippedFiles".into(),
+        JsonValue::Number(skipped_files as i128),
+    );
+    evidence.insert(
+        "deletedFiles".into(),
+        JsonValue::Number(deleted_files as i128),
+    );
+    evidence.insert(
+        "deletedBytes".into(),
+        JsonValue::Number(deleted_bytes as i128),
+    );
+    evidence.insert(
+        "elapsedMicros".into(),
+        JsonValue::Number(started.elapsed().as_micros() as i128),
+    );
+    evidence.insert(
+        "partitions".into(),
+        JsonValue::Object(partition_count_object(&partition_counts)),
+    );
+    evidence.insert("changedFilesSample".into(), JsonValue::Array(changed_files));
+    let side_effect = if changed {
+        alharmony_ops_core::SideEffect::WorkspaceWrite
+    } else {
+        alharmony_ops_core::SideEffect::ReadOnly
+    };
+    Ok(Receipt::new("harmony.project.sync", side_effect)
+        .evidence("sync", JsonValue::Object(evidence))
+        .next("harmony.project.verify"))
+}
+
+fn collect_sync_files(root: &Path) -> Result<Vec<SyncFile>, String> {
+    let mut out = Vec::new();
+    collect_sync_files_inner(root, root, &mut out)?;
+    out.sort_by(|a, b| a.rel.cmp(&b.rel));
+    Ok(out)
+}
+
+fn collect_sync_files_inner(
+    root: &Path,
+    dir: &Path,
+    out: &mut Vec<SyncFile>,
+) -> Result<(), String> {
+    let read_dir = fs::read_dir(dir)
+        .map_err(|error| format!("failed to read sync directory {}: {error}", dir.display()))?;
+    for entry in read_dir {
+        let entry =
+            entry.map_err(|error| format!("failed to read sync directory entry: {error}"))?;
+        let path = entry.path();
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if should_skip_sync_name(&name) {
+            continue;
+        }
+        let meta = entry
+            .metadata()
+            .map_err(|error| format!("failed to stat {}: {error}", path.display()))?;
+        if meta.is_dir() {
+            collect_sync_files_inner(root, &path, out)?;
+        } else if meta.is_file() {
+            let rel = path
+                .strip_prefix(root)
+                .unwrap_or(&path)
+                .display()
+                .to_string();
+            let fp = file_content_fingerprint(&path)?;
+            out.push(SyncFile {
+                rel,
+                path,
+                bytes: meta.len(),
+                fingerprint: fp.fingerprint,
+            });
+        }
+    }
+    Ok(())
+}
+
+fn should_skip_sync_name(name: &str) -> bool {
+    matches!(
+        name,
+        "build" | ".hvigor" | "node_modules" | "oh_modules" | ".git" | ".DS_Store"
+    )
+}
+
+fn bump_partition(counts: &mut BTreeMap<String, i128>, partition: &str) {
+    *counts.entry(partition.to_string()).or_insert(0) += 1;
+}
+
+fn partition_count_object(counts: &BTreeMap<String, i128>) -> BTreeMap<String, JsonValue> {
+    counts
+        .iter()
+        .map(|(key, value)| (key.clone(), JsonValue::Number(*value)))
+        .collect()
+}
+
+fn push_limited_change(
+    changes: &mut Vec<JsonValue>,
+    path: &str,
+    action: &str,
+    bytes: u64,
+    fingerprint: &str,
+) {
+    if changes.len() >= 128 {
+        return;
+    }
+    let mut item = BTreeMap::new();
+    item.insert("path".into(), JsonValue::string(path));
+    item.insert("action".into(), JsonValue::string(action));
+    item.insert(
+        "partition".into(),
+        JsonValue::string(classify_project_partition(path)),
+    );
+    item.insert("bytes".into(), JsonValue::Number(bytes as i128));
+    item.insert("fingerprint".into(), JsonValue::string(fingerprint));
+    changes.push(JsonValue::Object(item));
+}
+
+fn write_dirty_partitions(
+    task: &TaskScope,
+    counts: &BTreeMap<String, i128>,
+    sampled_changes: usize,
+) -> Result<(), String> {
+    if counts.is_empty() {
+        return Ok(());
+    }
+    let state_dir = task.root.join("state");
+    fs::create_dir_all(&state_dir)
+        .map_err(|error| format!("failed to create dirty state dir: {error}"))?;
+    let mut state = BTreeMap::new();
+    state.insert(
+        "schema".into(),
+        JsonValue::string("agentlab.harmony_ops.dirty_partitions.v1"),
+    );
+    state.insert("taskId".into(), JsonValue::string(task.task_id.clone()));
+    state.insert(
+        "updatedAtUnixMillis".into(),
+        JsonValue::Number(now_millis()),
+    );
+    state.insert(
+        "partitions".into(),
+        JsonValue::Object(partition_count_object(counts)),
+    );
+    state.insert(
+        "sampledChanges".into(),
+        JsonValue::Number(sampled_changes as i128),
+    );
+    fs::write(
+        state_dir.join("dirty-partitions.json"),
+        json_object_pretty(&state),
+    )
+    .map_err(|error| format!("failed to write dirty partition state: {error}"))
 }
 
 fn project_patch_text(
@@ -1086,6 +1395,13 @@ fn build_input_fingerprint(
 
 fn file_fingerprint(path: &Path) -> Result<FingerprintSummary, String> {
     fingerprint_entries("file", &[(path.display().to_string(), path.to_path_buf())])
+}
+
+fn file_content_fingerprint(path: &Path) -> Result<FingerprintSummary, String> {
+    fingerprint_entries(
+        "file-content",
+        &[("content".to_string(), path.to_path_buf())],
+    )
 }
 
 fn collect_existing_files(
