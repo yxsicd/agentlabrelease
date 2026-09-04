@@ -142,3 +142,18 @@ and parent/child write isolation. A 10,000-file x 4 KiB comparison measured
 median 44,143 us for Btrfs versus 343,540 us for copy-tree, about 7.78x faster.
 Portable ext4 fallback and storage-root symlink confinement were also validated
 against the same stripped release binary.
+
+### GitHub release validation for 218ce52
+
+The immutable package/manifest, current aliases, and `2b544d5` immutable
+channel/offline indexes were published to GitHub Releases `alharmony` and
+`aloffline`. hwlinux then downloaded the current package, manifest, channel
+index, and offline index only from GitHub into
+`/tmp/alharmony-github-release-smoke-linux-20260904134339`. The package was
+389,602 bytes with SHA256
+`0d854c293f76ea3f16c55c61091fc817523a2e574c38e0516e5dea0280010352`;
+the manifest, channel current asset, offline current asset, and all five
+embedded payload checksums agreed. The binaries extracted from that downloaded
+package then passed the real Btrfs composed E2E again: prepare 2,194 us, fork
+8,523 us, `copiedFiles=0`, `copiedBytes=0`, CoW true, no fallback, independent
+child receipts, and parent state unchanged after a child write.

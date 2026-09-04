@@ -1216,3 +1216,27 @@ lease/GC, and similarity scoring for non-exact packages.
 ## Harmony combined GitHub release checkpoint
 
 `63973cc` added the `24b65cb` combined release metadata/package, `3c99d7f` added current aliases, and `af40102` added immutable channel/offline snapshots. GitHub Release `alharmony` now contains `alharmony-combined-linux-x64-24b65cb.tar.zst/json`, `alharmony-combined-linux-x64-current.tar.zst/json`, `agentlab-harmony-channel-index.json`, and `agentlab-harmony-channel-index-3c99d7f.json`. GitHub Release `aloffline` now contains `agentlab-offline-linux-x64.json` and `agentlab-offline-linux-x64-3c99d7f.json`. Linux download-back smoke at `/tmp/alharmony-github-release-smoke-linux-20260904142714` downloaded current assets from GitHub, verified manifest/SHA, extracted both binaries, started independent `alsessionfsd` and `alharmony-ops`, and proved partition match, lease, and GC dry-run.
+
+## Real Btrfs fast-fork GitHub release checkpoint
+
+`218ce52` implements the real SessionFS Btrfs create/fork lifecycle and Harmony
+prepare integration. `2b544d5` publishes
+`alharmony-combined-linux-x64-218ce52.tar.zst/json` and advances the current
+Harmony/offline indexes; `d155fad` freezes those indexes as immutable
+`*-2b544d5.json` snapshots. GitHub Releases `alharmony` and `aloffline` contain
+the new immutable assets plus refreshed current aliases/indexes. The immutable
+package is 389,602 bytes with SHA256
+`0d854c293f76ea3f16c55c61091fc817523a2e574c38e0516e5dea0280010352`.
+
+Do not treat upload success as closure. The authoritative download-back smoke
+is `/tmp/alharmony-github-release-smoke-linux-20260904134339` on hwlinux. It
+downloaded current package/manifest/channel/offline assets from GitHub, matched
+package size/SHA and both current pointers, extracted the package, and passed
+every embedded payload checksum. The downloaded stripped binaries then ran a
+fresh companion-shaped Btrfs E2E: `harmony.task.prepare` 2,194 us,
+`harmony.task.fork` 8,523 us, `copiedFiles=0`, `copiedBytes=0`,
+`backend=btrfs-subvolume`, `copyOnWrite=true`, `fallback=false`, independent
+child receipts, and parent state unchanged after child mutation. This closes
+the real fast-fork primitive and GitHub binary distribution loop; remaining
+work is persistent companion/start-install integration and acceptance against
+retained production Harmony workspace-pool candidates.
