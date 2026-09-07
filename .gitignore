@@ -3,3 +3,5 @@ dist/
 # Rust build output
 /target/
 **/target/
+__pycache__/
+*.pyc

@@ -6,6 +6,11 @@ Agents.
 
 Current developer preview: `v0.1.0-alpha.9`.
 
+Component-based publication now uses [reference-only environment releases](docs/component-publication.md).
+The [e921d102 Linux x64 candidate](release/candidates/e921d102-linux-x64/publication.json)
+references independently published packages and records its remaining acceptance
+gates. It does not supersede the current developer preview or stable channels.
+
 - Start with [`skills/agentlab-harness-developer/SKILL.md`](skills/agentlab-harness-developer/SKILL.md).
 - On AIWSL, start the current preview with
   `scripts/agentlab-harness-quickstart.sh online-install`.

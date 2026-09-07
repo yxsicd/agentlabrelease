@@ -1,0 +1,27 @@
+name: Public release validation
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Validate release manifests and tests
+        run: |
+          python3 scripts/validate-release.py
+          python3 -m unittest discover -s tests
+          python3 scripts/validate-composition-release.py
+      - name: Test and build public tools
+        run: |
+          cargo test --locked --workspace
+          cargo build --locked --release --workspace
+      - name: Verify published references and control-tool package smoke
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/validate-composition-release.py --remote --smoke
