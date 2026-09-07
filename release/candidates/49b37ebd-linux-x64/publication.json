@@ -1,0 +1,89 @@
+{
+  "schema": "agentlab.reference_publication.v1",
+  "tag": "candidate-20260907-49b37ebd-linux-x64",
+  "status": "candidate",
+  "platform": "linux-x64",
+  "environmentLockSha256": "484c981da80b635cea5a023bf6a5a5e6d3a6ae89821c0f799a2bc7b7fa78bad9",
+  "sourceRevision": "49b37ebd27381cc905945cef773cf5e76c8260cd",
+  "gates": {
+    "dActivationSameComponentBytes": "passed",
+    "standardSessionExec": "passed",
+    "formalHarmonyHap": "passed",
+    "patchRebuild": "passed",
+    "sandboxRestart": "passed",
+    "checkpointFork": "passed",
+    "nativeRemoteParity": "not_run",
+    "cleanPublicBootstrap": "not_run"
+  },
+  "limitations": [
+    "Native/remote comparative parity, clean public bootstrap and cross-environment promotion remain unqualified.",
+    "The template contract is an application-owned external authority; its digest does not provision organizations or credentials.",
+    "D activated identical component bytes under lock e835afe0aad570f4efc405e61ea1332e166cfd0f6f80e9fb2c02bb7d3872c01f. Public URLs retain the previous candidate component references."
+  ],
+  "assets": [
+    {
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alimage/chatproxy-agentlab-image-a0ec49f8fd01-linux-x64.docker.tar.zst",
+      "bytes": 277659244,
+      "sha256": "6df2903a64af92337296c62df9d534fc63e520828e031395d73b5fafcf2c3075"
+    },
+    {
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/alimage/chatproxy-agentlab-image-a0ec49f8fd01-linux-x64.docker.tar.zst.json",
+      "bytes": 562,
+      "sha256": "bfa2c4e3417ef5d1a1879ce3a6d7371da6574d95f96dbdc88a699acc17a1859a"
+    },
+    {
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/runtime-49b37ebd-linux-x64/agentlab-pack-agentlab-release-49b37ebd-linux-x64.tar.zst",
+      "bytes": 32369562,
+      "sha256": "968b8bb76c6f933550bb1e6521f1de3dd69927c11bda86834ba141ba651abc47"
+    },
+    {
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/runtime-49b37ebd-linux-x64/agentlab-pack-agentlab-release-49b37ebd-linux-x64.tar.zst.json",
+      "bytes": 462,
+      "sha256": "7b33497dc0d26c3b1f83525b096bbb8282432a9835baf8c25c70ab1b37fab216"
+    },
+    {
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/aldev/agentlab-pack-developer-tools-e443b17a-linux-x64.tar.zst",
+      "bytes": 29154352,
+      "sha256": "58bc13e984f7219a560017592bdee11a6874a15099faaa1d40b0f2542d489b6e"
+    },
+    {
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/aldev/agentlab-pack-developer-tools-e443b17a-linux-x64.tar.zst.json",
+      "bytes": 446,
+      "sha256": "65ef0827478df5e83edcbe493e762dbc56db4a64a3e0cc786343ecf641196188"
+    },
+    {
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-linux-x64-6.1.1.300/harmony-linux-x64-6.1.1.300.tar.zst",
+      "bytes": 989968633,
+      "sha256": "8fc2199afaea5055c6a3ff762b7b58a9475c5ff7b6c30285336014dc647927c2"
+    },
+    {
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-linux-x64-6.1.1.300/harmony-linux-x64-6.1.1.300.tar.zst.json",
+      "bytes": 520,
+      "sha256": "c64d227b878bb9a4b000dc09caa30a081ef7454620c025b05f535d3eba55c0d6"
+    },
+    {
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-buildkit-v5-linux-x64/agentlab-pack-harmony-build-kit-buildkit-v5-linux-x64.tar.zst",
+      "bytes": 3511,
+      "sha256": "4106f23863e7524d2e44489fb4199d8493422d12fd1c2fafb298d5a83eac68a5"
+    },
+    {
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-buildkit-v5-linux-x64/agentlab-pack-harmony-build-kit-buildkit-v5-linux-x64.tar.zst.json",
+      "bytes": 470,
+      "sha256": "e6e5be72718e18ff2ca73f8e2c5bcbe4fab83db48fb65f6f3210326688c483db"
+    },
+    {
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-7a7ce65f-linux-x64/agentlabctl-7a7ce65f-linux-x64",
+      "bytes": 4401072,
+      "sha256": "41d91fe85d7a43c78f07f58bd0e33640065f9ca0cac62b0274ea10270e1ee8f2"
+    }
+  ],
+  "smoke": {
+    "control": "https://github.com/yxsicd/agentlabrelease/releases/download/control-7a7ce65f-linux-x64/agentlabctl-7a7ce65f-linux-x64",
+    "pack": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-buildkit-v5-linux-x64/agentlab-pack-harmony-build-kit-buildkit-v5-linux-x64.tar.zst"
+  },
+  "qualification": {
+    "harmonyHapBytes": 11156,
+    "harmonyHapSha256": "f08993a1bbe8add98c4c47008518c7dd978860acbfda2c261b0d306dc6d0c600",
+    "evidenceScope": "cold build, patch and rebuild, process restart, immutable checkpoint Fork and independent artifact inspection"
+  }
+}

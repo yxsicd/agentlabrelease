@@ -11,12 +11,14 @@ versions receive their own release tag. Never overwrite a versioned asset with
 different bytes. Existing alpha environment kits remain historical previews.
 
 The current example is
-[`e921d102-linux-x64`](../release/candidates/e921d102-linux-x64/publication.json).
-It references the runtime image, runtime pack, developer tools, original Harmony
-SDK, Harmony build-kit and installation control binary. It intentionally remains
-a **candidate**: formal Harmony Session execution has a known projection defect,
-and Fork/restart/parity and clean public bootstrap are not qualified. This
-publication does not replace aldev, almain, alprod or alcontrol current.
+[`49b37ebd-linux-x64`](../release/candidates/49b37ebd-linux-x64/publication.json).
+It replaces only the runtime component and preserves every other component URL
+and digest from the previous candidate. Formal Harmony cold build, patch/rebuild,
+process restart, checkpoint Fork, independent HAP inspection and ordinary Session
+exec now pass. The earlier e921d102 candidate and its failed projection evidence
+remain historical. This is still a **candidate**: native/remote comparative parity,
+clean public bootstrap and cross-environment promotion are not qualified. It does
+not replace aldev, almain, alprod or alcontrol current.
 
 The environment lock's template digest identifies an external, application-owned
 template contract. Organization deployment and credential provisioning remain
