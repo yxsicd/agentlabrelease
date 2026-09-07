@@ -11,12 +11,14 @@ versions receive their own release tag. Never overwrite a versioned asset with
 different bytes. Existing alpha environment kits remain historical previews.
 
 The current example is
-[`49b37ebd-linux-x64`](../release/candidates/49b37ebd-linux-x64/publication.json).
+[`08f839f6-linux-x64`](../release/candidates/08f839f6-linux-x64/publication.json).
 It replaces only the runtime component and preserves every other component URL
-and digest from the previous candidate. Formal Harmony cold build, patch/rebuild,
-process restart, checkpoint Fork, independent HAP inspection and ordinary Session
-exec now pass. The earlier e921d102 candidate and its failed projection evidence
-remain historical. This is still a **candidate**: native/remote comparative parity,
+and digest from the previous candidate. The runtime adds the public HTTP + MCP +
+Website Skills surface while preserving the qualified Harmony cold build,
+patch/rebuild, process restart, checkpoint Fork,
+independent HAP inspection and ordinary Session exec. Lease, checkpoint and actual
+execution projection convergence now pass. Earlier candidates and their failed
+evidence remain historical. This is still a **candidate**: native/remote comparative parity,
 clean public bootstrap and cross-environment promotion are not qualified. It does
 not replace aldev, almain, alprod or alcontrol current.
 
