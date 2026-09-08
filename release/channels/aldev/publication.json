@@ -57,6 +57,7 @@
     }
   ],
   "environmentLockSha256": "63049cc88d2c0219d258af97a987c2754dcd196b529c137624c235882c0af5f8",
+  "fixedChannel": "aldev",
   "gates": {
     "checkpointFork": "passed",
     "cleanPublicBootstrap": "passed",
@@ -78,6 +79,7 @@
     "capabilityCount": 6,
     "cleanInstallReceiptSha256": "90b302e3f0ffef6f516aa5251ce77510d0e237ae0a5cd7437640772924a44853",
     "evidenceScope": "clean public acquisition/install; exact D/A/B/C activation; HTTP + MCP + Website Skills; formal Harmony patch/build/restart/Fork",
+    "fixedChannel": "aldev",
     "harmonyBuildCheckpoint": "8ab2588a9c91311b0930df81acddc8c7e297245f",
     "harmonyChildSessionId": "ses_harmony_1788845227_cc01ac20_child",
     "harmonyHapBytes": 11156,
@@ -86,9 +88,14 @@
     "jointValidationSha256": "781dba29a18c8a2059753c1836b4a4afcf7657b0ec5f46f5395fee623a4cc29c",
     "managedConfigRevision": "fd28c570d38464bdb654bc694e74a9d0867684cb",
     "managedConfigRows": 3,
-    "publicSkillUrl": "https://ald02-ai.ru.yxsbase.win/SKILL.md",
-    "serviceBuildRevision": "078d2f66538455bbb689b8debd3252f1da4a66cd"
+    "publicSkillUrl": "https://ala00-ai.ru.yxsbase.win/SKILL.md",
+    "serviceBuildRevision": "078d2f66538455bbb689b8debd3252f1da4a66cd",
+    "standardSessionId": "ses_agentrs_exec_1788845764_cbd321a907"
   },
+  "retainedSameTagReferences": [
+    "https://github.com/yxsicd/agentlabrelease/releases/download/aldev/agentlab-pack-developer-tools-e443b17a-linux-x64.tar.zst",
+    "https://github.com/yxsicd/agentlabrelease/releases/download/aldev/agentlab-pack-developer-tools-e443b17a-linux-x64.tar.zst.json"
+  ],
   "schema": "agentlab.reference_publication.v1",
   "smoke": {
     "control": "https://github.com/yxsicd/agentlabrelease/releases/download/control-7a7ce65f-linux-x64/agentlabctl-7a7ce65f-linux-x64",
@@ -96,5 +103,6 @@
   },
   "sourceRevision": "078d2f66538455bbb689b8debd3252f1da4a66cd",
   "status": "qualified",
-  "tag": "candidate-20260908-078d2f66-linux-x64"
+  "tag": "aldev",
+  "tier": "dev"
 }

@@ -1,0 +1,60 @@
+{
+  "candidate": {
+    "assetCount": 2,
+    "publicationSha256": "d8d135c13b8a611919507e6a20e75f8c92f141e3cc476270c8f15e304b43c79a",
+    "url": "https://github.com/yxsicd/agentlabrelease/releases/tag/candidate-20260908-078d2f66-linux-x64"
+  },
+  "channels": {
+    "aldev": {
+      "componentPayloadsUploadedByPromotion": 0,
+      "historicalAssetsPreserved": 8,
+      "lockAsset": {
+        "bytes": 6182,
+        "name": "agentlab-aldev-environment-lock.json",
+        "sha256": "63049cc88d2c0219d258af97a987c2754dcd196b529c137624c235882c0af5f8"
+      },
+      "prerelease": true,
+      "publicationAsset": {
+        "bytes": 5745,
+        "name": "agentlab-aldev-publication.json",
+        "sha256": "b33b03b8128e26cc617b22c8a9caaf20f0cee3a58a517db5467ef5da5c8c73bb"
+      },
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/tag/aldev"
+    },
+    "almain": {
+      "componentPayloadsUploadedByPromotion": 0,
+      "historicalAssetsPreserved": 8,
+      "lockAsset": {
+        "bytes": 6312,
+        "name": "agentlab-almain-environment-lock.json",
+        "sha256": "d6600ff9039f9fd71689349acc2805a4b80bd75c15f25600e0f9c73e1ee64d14"
+      },
+      "prerelease": true,
+      "publicationAsset": {
+        "bytes": 5447,
+        "name": "agentlab-almain-publication.json",
+        "sha256": "4d553e4f7f1401fe748e6ee236799d9fe8b4275d0c195e39d9439bc3fec0c8f7"
+      },
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/tag/almain"
+    },
+    "alprod": {
+      "componentPayloadsUploadedByPromotion": 0,
+      "historicalAssetsPreserved": 8,
+      "lockAsset": {
+        "bytes": 6313,
+        "name": "agentlab-alprod-environment-lock.json",
+        "sha256": "e68769ee209ac63b241e8a7de9afea3400bd41e72c199a183241b7252111031d"
+      },
+      "prerelease": false,
+      "publicationAsset": {
+        "bytes": 5447,
+        "name": "agentlab-alprod-publication.json",
+        "sha256": "58b57685f8ccf39973556cd62ab42deae35a81a434cbda4664d3d7d832ef5c02"
+      },
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/tag/alprod"
+    }
+  },
+  "ok": true,
+  "schema": "agentlab.fixed_reference_publication_evidence.v1",
+  "sourceRevision": "078d2f66538455bbb689b8debd3252f1da4a66cd"
+}

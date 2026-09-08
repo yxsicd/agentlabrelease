@@ -50,7 +50,13 @@ def validate(publication, lock, lock_bytes):
     by_url = {a["url"]: a for a in assets}
     for asset in assets:
         tag, _ = asset_location(asset["url"])
-        require(tag != publication["tag"], "composition must not host component payloads")
+        retained = set(publication.get("retainedSameTagReferences", []))
+        same_tag_allowed = (
+            publication.get("fixedChannel") == publication["tag"]
+            and publication["tag"] in {"aldev", "almain", "alprod"}
+            and asset["url"] in retained
+        )
+        require(tag != publication["tag"] or same_tag_allowed, "composition must not host component payloads without fixed-channel retention classification")
         require(re.fullmatch(r"[0-9a-f]{64}", asset["sha256"]) is not None, "invalid digest")
         require(type(asset["bytes"]) is int and asset["bytes"] > 0, "invalid size")
     for component in lock["images"] + lock["components"]:
@@ -120,7 +126,9 @@ def main():
     parser.add_argument("--smoke", action="store_true")
     args = parser.parse_args()
     count = 0
-    for path in sorted((ROOT / "release/candidates").glob("*/publication.json")):
+    paths = list((ROOT / "release/candidates").glob("*/publication.json"))
+    paths += list((ROOT / "release/channels").glob("*/publication.json"))
+    for path in sorted(paths):
         publication = json.loads(path.read_text())
         lock_bytes = (path.parent / "environment-lock.json").read_bytes()
         assets = validate(publication, json.loads(lock_bytes), lock_bytes)

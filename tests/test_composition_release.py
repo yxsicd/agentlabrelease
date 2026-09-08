@@ -31,6 +31,12 @@ class ReferenceReleaseTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "host component"):
             self.check()
 
+    def test_candidate_cannot_self_classify_rehosted_payload(self):
+        self.publication["tag"] = "runtime-e921d102-linux-x64"
+        self.publication["retainedSameTagReferences"] = [self.publication["assets"][0]["url"]]
+        with self.assertRaisesRegex(ValueError, "host component"):
+            self.check()
+
     def test_digest_drift_is_rejected(self):
         self.publication["assets"][0]["sha256"] = "0" * 64
         with self.assertRaisesRegex(ValueError, "archive digest"):
