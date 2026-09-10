@@ -34,7 +34,8 @@ for command in curl docker python3 sha256sum tar zstd; do need "${command}"; don
 
 download() {
   local url="$1" out="$2"
-  curl -fL --retry 3 --connect-timeout 20 -o "${out}.partial" "${url}"
+  curl -fL --retry 3 --retry-all-errors --retry-delay 2 \
+    --connect-timeout 20 -o "${out}.partial" "${url}"
   mv -f "${out}.partial" "${out}"
 }
 
@@ -85,12 +86,14 @@ source_short="${source_revision:0:8}"
 control_release="${downloads}/matching-control-release.json"
 control_api="https://api.github.com/repos/${repo}/releases/tags/control-${source_short}-linux-x64"
 if [[ -n "${GITHUB_TOKEN:-}" ]]; then
-  curl -fsSL -H 'Accept: application/vnd.github+json' \
+  curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 \
+    -H 'Accept: application/vnd.github+json' \
     -H "Authorization: Bearer ${GITHUB_TOKEN}" \
     -H 'X-GitHub-Api-Version: 2022-11-28' \
     "${control_api}" -o "${control_release}"
 else
-  curl -fsSL -H 'Accept: application/vnd.github+json' \
+  curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 \
+    -H 'Accept: application/vnd.github+json' \
     -H 'X-GitHub-Api-Version: 2022-11-28' \
     "${control_api}" -o "${control_release}"
 fi
