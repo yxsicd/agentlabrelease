@@ -28,14 +28,14 @@ separate; a public manifest does not supply private infrastructure access.
 
 GitHub Actions runs only in this public release repository. Pull requests
 validate manifests and references, test and build the small Rust tools already
-in this repository, and download the pinned control binary plus small build-kit
-to run pack verify. Main-branch and manual runs additionally consume the public
-fixed `alprod` lock, install its exact Docker image and component volumes with
-the source-matched published `agentlabctl`, deploy the published standalone
-SessionFS and Harmony services, then create, verify, Fork and patch a minimal
-Harmony project while checking parent isolation. The controller is selected
-from the immutable `control-<source>-linux-x64` Release rather than mutable
-`alcontrol/current`, so a fixed v3 lock cannot be paired with an older parser.
+in this repository. Same-repository pull requests, main-branch pushes and manual
+runs additionally consume the public fixed `alprod` lock, install its exact
+Docker image and component volumes with the source-matched published
+`agentlabctl`, deploy the published standalone SessionFS and Harmony services,
+then create, verify, Fork and patch a minimal Harmony project while checking
+parent isolation. The controller is selected from the immutable
+`control-<source>-linux-x64` Release rather than mutable `alcontrol/current`, so
+a fixed v3 lock cannot be paired with an older parser.
 
 The workflow has read-only repository permissions and uses no private source
 checkout, application credentials, private Sessions or production deployment.
