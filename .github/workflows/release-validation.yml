@@ -6,12 +6,17 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+
+concurrency:
+  group: public-release-validation-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Validate release manifests and tests
         run: |
           python3 scripts/validate-release.py
@@ -21,7 +26,22 @@ jobs:
         run: |
           cargo test --locked --workspace
           cargo build --locked --release --workspace
-      - name: Verify published references and control-tool package smoke
+      - name: Revalidate reference-only compositions
+        run: python3 scripts/validate-composition-release.py
+
+  public-install-deploy-smoke:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install archive support
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes zstd
+      - name: Install fixed composition and run the public basic use case
         env:
+          AGENTLAB_RELEASE_CHANNEL: alprod
+          AGENTLAB_RELEASE_REPO: yxsicd/agentlabrelease
           GITHUB_TOKEN: ${{ github.token }}
-        run: python3 scripts/validate-composition-release.py --remote --smoke
+        run: scripts/ci-public-install-deploy-smoke.sh
