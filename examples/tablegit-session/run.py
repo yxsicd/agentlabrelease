@@ -38,6 +38,8 @@ def main():
     network, volume = prefix, prefix + "-data"
     gateway, agent = prefix + "-gateway", prefix + "-store"
     made_containers, made_volumes, made_network = [], [], False
+    capture_worktree_path = None
+    capture_revision = None
     summary = {"schema":"agentlab.public_tablegit_session_demo.v1", "ok":False,
                "scope":"released-session-provisioner-tablegit-lease-projection-recovery",
                "fixedChannelPromoted":False,"fullWhiteboxQualified":False,
@@ -176,7 +178,10 @@ def main():
             port = docker("inspect", "--format", '{{(index (index .NetworkSettings.Ports "8002/tcp") 0).HostPort}}', gateway)
             service = Service("ws://127.0.0.1:"+port+"/__mcpgit/service-ws",
                               (state/"caller.authorization").read_text().strip(), evidence)
+            capture_worktree_path = service.call('table.worktree.open',
+                {'repo':first["binding"]["repositoryId"],'worktree':{'topic_id':'main'}})['worktree_path']
             revision, commits = ingest(service, first["binding"]["repositoryId"], rows, operation_id)
+            capture_revision = revision
             capture_state = (service, revision, rows, objects, inventory)
             save(evidence/"capture-commit-manifest.json", dict(operationId=operation_id,
                 repositoryId=first["binding"]["repositoryId"], sessionId=first["sessionKey"],
@@ -210,6 +215,27 @@ def main():
         summary["error"] = str(error)
         raise
     finally:
+        if capture_worktree_path:
+            try:
+                # Export committed test data before disposing the ephemeral store.
+                # Read its service-resolved repository; do not mutate/inject Workspace.
+                bundle = evidence / "tablegit-capture.bundle"
+                docker("exec", agent, "git", "-C", capture_worktree_path,
+                       "bundle", "create", "/tmp/tablegit-capture.bundle", "--all", label="bundle-export")
+                docker("cp", agent+":/tmp/tablegit-capture.bundle", str(bundle), label="bundle-copy")
+                clone = root / ("bundle-check-"+run_id)
+                run(["git","clone","--quiet",str(bundle),str(clone)],"bundle-cold-clone")
+                restored = run(["git","-C",str(clone),"rev-parse","HEAD"],"bundle-restored-head")
+                if capture_revision and restored != capture_revision:
+                    raise RuntimeError("Restored bundle HEAD differs from committed capture revision")
+                save(evidence/"bundle-recovery.json",dict(sha256=demo.sha256(bundle),
+                    byteLength=bundle.stat().st_size, restoredHead=restored,
+                    expectedCaptureRevision=capture_revision, historyExported=True))
+                summary["checks"]["tablegit_history_exported"] = True
+            except Exception as error:
+                summary["bundleExportError"] = str(error)
+                summary["checks"]["tablegit_history_exported"] = False
+            summary["ok"] = summary["ok"] and summary["checks"]["tablegit_history_exported"]
         for container in made_containers:
             r = subprocess.run(["docker","logs",container],capture_output=True)
             (evidence / (container+".stdout")).write_bytes(r.stdout)

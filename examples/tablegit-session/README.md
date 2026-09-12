@@ -61,3 +61,11 @@ The credential-free candidate-copy Action also ingests the actual portable Mock
 campaign evidence with `--capture-agent-kind mock`, so PR validation exercises
 real TableGit capture/recovery without an external LM credential. Only decisions
 are mocked; the captured operator/SessionFS receipts are real observed outputs.
+
+The artifact also contains `tablegit-capture.bundle` and `bundle-recovery.json`.
+The collector exports the committed, service-resolved test repository before
+cleanup and verifies a fresh clone has the exact capture HEAD. This preserves
+TableGit rows and Git history for later restoration into an independently
+configured MCPGit instance and generic programming/analysis. A failure after
+partial writes still attempts repository export; transport credentials are
+not part of the Git bundle. No physical execution directory is modified.
