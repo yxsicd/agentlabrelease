@@ -1,10 +1,12 @@
 # Create and recover a real TableGit Session
 
 First [install the composition](../README.md#install-the-referenced-components).
+Install the small Service readiness client dependency with
+`sudo apt-get install python3-websocket`.
 Then, from the repository root:
 
 ```bash
-python3 examples/tablegit-session/run.py \
+/usr/bin/python3 examples/tablegit-session/run.py \
   --image chatproxy-agentlab:git-fa05788f-linux-x64 \
   --runtime-volume vol-agentlab-pack-agentlab-release-26008e36-linux-x64-5ba5d112eec0 \
   --root "$HOME/agentlab-demo/tablegit"
@@ -27,6 +29,10 @@ the committed binding and Lease, removes the generated local projection, then
 restarts both MCPGit processes. A fresh process reconstructs the Session and
 checks the exact materialized revision, file digest, Lease revision and
 structured projection state against the first receipt.
+
+Startup and restart wait for a real `repository.list` read through the
+authenticated Service connection. An open port or accepted WebSocket upgrade
+alone does not prove that an organization has a live storage process.
 
 Read `template-lock.json`, `qualification.json`, `session-created.json` and
 `session-recovered.json` in the generated `evidence-*` directory. They contain

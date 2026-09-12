@@ -75,7 +75,7 @@ jobs:
       - name: Install archive support
         run: |
           sudo apt-get update
-          sudo apt-get install --yes zstd btrfs-progs
+          sudo apt-get install --yes zstd btrfs-progs python3-websocket
       - name: Install published composition and run the public basic use case
         env:
           AGENTLAB_RELEASE_CHANNEL: ${{ matrix.channel }}
@@ -115,7 +115,7 @@ jobs:
           print(next(c["volume"] for c in lock["components"] if "agentlab-release-26008e36" in c["volume"]))
           PY
           )
-          python3 examples/tablegit-session/run.py \
+          /usr/bin/python3 examples/tablegit-session/run.py \
             --image "${runtime[0]}" --runtime-volume "${runtime[1]}" \
             --root "$AGENTLAB_CI_ROOT/tablegit-demo"
       - name: Explain verified stateful demo scope

@@ -56,6 +56,39 @@ def main():
     def docker(*arguments, label=None):
         return run(["docker", *arguments], label)
 
+    def wait_route(label):
+        from websocket import create_connection
+        port = docker("inspect", "--format", '{{(index (index .NetworkSettings.Ports "8002/tcp") 0).HostPort}}', gateway)
+        deadline = time.monotonic() + 45
+        while time.monotonic() < deadline:
+            connection = None
+            try:
+                connection = create_connection(
+                    "ws://127.0.0.1:"+port+"/__mcpgit/service-ws", timeout=3,
+                    host="gateway", subprotocols=["mcpgit.service.ws.v1"],
+                    header={"Authorization":(state / "caller.authorization").read_text().strip()})
+                request_id = str(uuid.uuid4())
+                connection.send_binary(json.dumps({"kind":"request","message":{
+                    "protocol":"mcpgit.service.v2","request_id":request_id,
+                    "invocation_id":str(uuid.uuid4()),"method":"repository.list",
+                    "deadline_unix_ms":None,"payload":{}}}).encode())
+                response = json.loads(connection.recv())
+                with (evidence / (label+".jsonl")).open("a") as log:
+                    log.write(json.dumps(response)+"\n")
+                message = response["message"]
+                if (message["request_id"] == request_id and message["outcome"] == "success"
+                    and {"owner-template","session-template"}.issubset(
+                        {item["id"] for item in message["payload"]["repositories"]})):
+                    return
+            except Exception as error:
+                with (evidence / (label+".log")).open("a") as log:
+                    log.write(str(error)+"\n")
+            finally:
+                if connection is not None:
+                    connection.close()
+            time.sleep(.25)
+        raise RuntimeError(label+" repository read did not become ready; see readiness evidence")
+
     def probe(mode, extra, label):
         values = {"MCPGIT_PROVISION_PROBE_MODE":mode,
                   "MCPGIT_PROBE_URL":"ws://127.0.0.1:8002/__mcpgit/service-ws",
@@ -100,7 +133,7 @@ def main():
         revisions = save(evidence / "empty-repository-revisions.json", init_volume(args.image, volume))
         common = ["--network",network,"--mount",f"type=bind,src={bin_dir},dst=/demo-bin,readonly",
                   "--mount",f"type=bind,src={state},dst=/demo,readonly"]
-        docker("run","-d","--name",gateway,"--network-alias","gateway",*common,
+        docker("run","-d","--name",gateway,"--network-alias","gateway","-p","127.0.0.1::8002",*common,
                "--entrypoint","/demo-bin/mcpgitgw",args.image,
                "--config","/demo/gateway.json","--credentials","/demo/credentials.json")
         made_containers.append(gateway)
@@ -112,12 +145,7 @@ def main():
                'export MCPGIT_AGENT_AUTHORIZATION="$(cat /demo/agent.authorization)"; '
                'exec /demo-bin/mcpgit --config /demo/mcpgit.toml --transport streamable-http --bind 0.0.0.0:8001')
         made_containers.append(agent)
-        # Wait for the registered organization, without dispatching any mutation.
-        for attempt in range(60):
-            logs = docker("logs",agent) + docker("logs",gateway)
-            if "registered" in logs.lower():
-                break
-            time.sleep(.5)
+        wait_route("initial-route")
         template = probe("bootstrap-templates", {
             "MCPGIT_PROBE_OWNER_TEMPLATE_REPO":"owner-template",
             "MCPGIT_PROBE_OWNER_TEMPLATE_REVISION":revisions["ownerTemplate"],
@@ -134,7 +162,7 @@ def main():
         first = probe("provision", settings, "session-created")
         docker("restart",agent,label="restart-store")
         docker("restart",gateway,label="restart-gateway")
-        time.sleep(3)
+        wait_route("restarted-route")
         second = probe("restart-readback", settings, "session-recovered")
         checks = summary["checks"]
         checks["template_qualification"] = qualification["status"] == "qualified"
