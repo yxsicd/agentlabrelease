@@ -97,6 +97,12 @@ jobs:
           AGENTLAB_COMPOSITION_DIR: ${{ matrix.composition }}
           GITHUB_TOKEN: ${{ github.token }}
         run: scripts/ci-public-install-deploy-smoke.sh
+      - name: Compile Harmony seed, two source edits, failure and recovery with the published SDK
+        if: matrix.target == 'candidate-copy'
+        run: |
+          python3 examples/harmony-build/run.py \
+            --install-root "$AGENTLAB_CI_ROOT" \
+            --root "$AGENTLAB_CI_ROOT/harmony-build-demo"
       - name: Run preset Mock Agent and independent evaluation
         run: |
           runner=(python3)
@@ -140,6 +146,7 @@ jobs:
             ${{ env.AGENTLAB_CI_ROOT }}/mock-evidence/
             ${{ env.AGENTLAB_CI_ROOT }}/tablegit-demo/evidence-*/
             ${{ env.AGENTLAB_CI_ROOT }}/runs/
+            ${{ env.AGENTLAB_CI_ROOT }}/harmony-build-demo/evidence/
       - name: Unmount test storage
         if: always() && matrix.backend == 'btrfs-subvolume'
         run: |
