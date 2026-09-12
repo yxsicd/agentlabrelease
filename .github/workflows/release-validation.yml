@@ -90,6 +90,13 @@ jobs:
           mkdir "$AGENTLAB_CI_ROOT/mock-storage"
           sudo mount -o loop,user_subvol_rm_allowed "$AGENTLAB_CI_ROOT/mock-storage.btrfs" "$AGENTLAB_CI_ROOT/mock-storage"
           sudo chown "$(id -u):$(id -g)" "$AGENTLAB_CI_ROOT/mock-storage"
+      - name: Repeat installation using the same directory and installed components
+        if: matrix.target == 'candidate-copy'
+        env:
+          AGENTLAB_RELEASE_CHANNEL: ${{ matrix.channel }}
+          AGENTLAB_COMPOSITION_DIR: ${{ matrix.composition }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci-public-install-deploy-smoke.sh
       - name: Run preset Mock Agent and independent evaluation
         run: |
           runner=(python3)
@@ -132,6 +139,7 @@ jobs:
             ${{ env.AGENTLAB_CI_ROOT }}/downloads/*.json
             ${{ env.AGENTLAB_CI_ROOT }}/mock-evidence/
             ${{ env.AGENTLAB_CI_ROOT }}/tablegit-demo/evidence-*/
+            ${{ env.AGENTLAB_CI_ROOT }}/runs/
       - name: Unmount test storage
         if: always() && matrix.backend == 'btrfs-subvolume'
         run: |

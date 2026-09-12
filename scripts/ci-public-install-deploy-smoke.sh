@@ -12,6 +12,10 @@ standalone="${root}/standalone"
 sessionfs="${root}/sessionfs"
 tasks="${sessionfs}/tasks"
 summary="${root}/summary.json"
+run_id="$(python3 -c 'import uuid; print(uuid.uuid4().hex[:12])')"
+parent_task="parent-${run_id}"
+child_task="child-${run_id}"
+receipt_dir="${root}/runs/${run_id}"
 ops_pid=""
 sessionfs_pid=""
 
@@ -19,10 +23,18 @@ mkdir -p "${downloads}" "${composition}" "${cas}" "${install_bin}" \
   "${standalone}" "${tasks}" "${sessionfs}"
 
 cleanup() {
+  local outcome=$?
+  mkdir -p "${receipt_dir}"
+  for file in "${root}"/*.json "${root}"/*.log; do
+    [[ ! -f "${file}" ]] || cp "${file}" "${receipt_dir}/"
+  done
+  printf '{"exitCode":%s}\n' "${outcome}" > "${receipt_dir}/run-exit.json"
   if [[ -n "${ops_pid}" ]]; then kill "${ops_pid}" 2>/dev/null || true; fi
   if [[ -n "${sessionfs_pid}" ]]; then kill "${sessionfs_pid}" 2>/dev/null || true; fi
 }
 trap cleanup EXIT
+# Archive each invocation; a failed rerun must not retain the previous verdict.
+rm -f "${summary}"
 
 need() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -143,7 +155,7 @@ python3 - "${lock}" "${root}/docker-identities" <<'PY'
 import json, pathlib, sys
 lock = json.load(open(sys.argv[1]))
 out = pathlib.Path(sys.argv[2])
-out.mkdir()
+out.mkdir(exist_ok=True)
 (out / "images").write_text("\n".join(row["reference"] for row in lock["images"] if row.get("enabled", True)) + "\n")
 (out / "volumes").write_text("\n".join(row["volume"] for row in lock["components"] if row.get("enabled", True)) + "\n")
 PY
@@ -228,33 +240,34 @@ op() {
   curl "${args[@]}" -o "${out}"
 }
 
-parent_project="${tasks}/parent/workspace/app"
-child_project="${tasks}/child/workspace/app"
-op harmony.task.prepare "${root}/01-prepare.json" "taskId=parent"
+parent_project="${tasks}/${parent_task}/workspace/app"
+child_project="${tasks}/${child_task}/workspace/app"
+op harmony.task.prepare "${root}/01-prepare.json" "taskId=${parent_task}"
 op harmony.project.create "${root}/02-create.json" \
-  "taskId=parent" "projectRoot=${parent_project}" "bundleName=com.agentlab.ci" \
+  "taskId=${parent_task}" "projectRoot=${parent_project}" "bundleName=com.agentlab.ci" \
   "appLabel=AgentLab CI" "materialize=true"
 op harmony.project.verify "${root}/03-verify-parent.json" \
-  "taskId=parent" "projectRoot=${parent_project}"
-op harmony.task.fork "${root}/04-fork.json" "taskId=child" "parentTaskId=parent"
+  "taskId=${parent_task}" "projectRoot=${parent_project}"
+op harmony.task.fork "${root}/04-fork.json" "taskId=${child_task}" "parentTaskId=${parent_task}"
 op harmony.project.patch "${root}/05-patch-child.json" \
-  "taskId=child" "projectRoot=${child_project}" \
+  "taskId=${child_task}" "projectRoot=${child_project}" \
   "path=entry/src/main/ets/pages/Index.ets" "find=AgentLab CI" \
   "replace=AgentLab CI Iterated"
 op harmony.project.verify "${root}/06-verify-child.json" \
-  "taskId=child" "projectRoot=${child_project}"
+  "taskId=${child_task}" "projectRoot=${child_project}"
 
-python3 - "${root}" "${summary}" <<'PY'
+python3 - "${root}" "${summary}" "${parent_project}" "${child_project}" <<'PY'
 import json, pathlib, sys
 root, summary_path = map(pathlib.Path, sys.argv[1:3])
+parent_project, child_project = map(pathlib.Path, sys.argv[3:5])
 files = [root / f"{index:02d}-{name}.json" for index, name in [
     (1, "prepare"), (2, "create"), (3, "verify-parent"),
     (4, "fork"), (5, "patch-child"), (6, "verify-child"),
 ]]
 receipts = [json.loads(path.read_text()) for path in files]
 assert all(row.get("ok") is True for row in receipts)
-parent = root / "sessionfs/tasks/parent/workspace/app/entry/src/main/ets/pages/Index.ets"
-child = root / "sessionfs/tasks/child/workspace/app/entry/src/main/ets/pages/Index.ets"
+parent = parent_project / "entry/src/main/ets/pages/Index.ets"
+child = child_project / "entry/src/main/ets/pages/Index.ets"
 assert "AgentLab CI Iterated" not in parent.read_text()
 assert "AgentLab CI Iterated" in child.read_text()
 lock = json.loads((root / "downloads/environment-lock.json").read_text())
