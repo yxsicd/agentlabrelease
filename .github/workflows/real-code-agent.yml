@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      AGENTLAB_CI_ROOT: ${{ runner.temp }}/agentlab-real-acceptance
+      AGENTLAB_CI_ROOT: /tmp/agentlab-real-acceptance
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_MODEL: ${{ inputs.model }}
     steps:
