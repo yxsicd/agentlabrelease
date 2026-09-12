@@ -12,6 +12,15 @@ session implementation.
 ## Start
 
 Current candidate: [26008e36](../../release/candidates/26008e36-linux-x64/publication.json).
+The [executable public demos](../../examples/README.md) are shared by local
+consumers and GitHub Actions. Start with the published three-protocol demo,
+then run TableGit Session recovery and the portable Mock campaign. Inspect
+their separate receipts: Session provisioning/Lease recovery, successful
+Agent execution, complete whitebox capture and mature SessionFS snapshots
+are distinct assertions. A passing protocol degradation case proves the
+failure contract, not a successful write. Do not infer one combined E2E pass
+from independently passing component demos.
+
 Use the [preset Mock Agent campaign](../../examples/mock-agent/README.md) for
 credential-free basic regression. GitHub Actions installs exact public
 components and tests real standalone Harmony/SessionFS operations on copy-tree
