@@ -74,6 +74,19 @@ class CaptureTests(unittest.TestCase):
             rows,objects,_=capture.collect(root,'session','operation','mock')
             self.assertTrue(all(obj['row']['agentKind']=='mock' for obj in objects))
             self.assertIn('mock.operator_test_result',{obj['row']['method'] for obj in objects})
+    def test_malformed_events_do_not_veto_complete_capture(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/'source';root.mkdir();(root/'gateway').mkdir()
+            (root/'events.jsonl').write_bytes(b'{"type":"start"}\n{"truncated":\n[]\n{"type":"end"}\n')
+            (root/'gateway/0001.response').write_bytes(b'data: {broken\ndata: {"choices":[]}\n')
+            (root/'gateway/0001.request.json').write_bytes(b'\xff')
+            rows,objects,inventory=capture.collect(root,'session','operation')
+            errors=[o for o in objects if o['row']['method']=='capture.parse_error']
+            self.assertEqual(len(errors),4)
+            self.assertTrue({'pi.start','pi.end','gateway.response_event'} <= {o['row']['method'] for o in objects})
+            service=MemoryService();revision,_=capture.ingest(service,'repo',rows,'operation')
+            self.assertTrue(capture.recover(service,'repo',revision,rows,objects,inventory,Path(tmp)/'out')['exactFiles'])
+
     def test_stable_rows_for_same_source(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);self.fixture(root)

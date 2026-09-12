@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import subprocess
 import threading
+import time
+from datetime import datetime, timezone
 import urllib.request
 import urllib.error
 
@@ -106,6 +108,25 @@ class Participant:
         env = {k: os.environ[k] for k in ('PATH', 'LANG', 'LC_ALL', 'TMPDIR') if k in os.environ}
         env.update(HOME=str(self.state.parent), PI_CODING_AGENT_DIR=str(self.state))
         (self.evidence / f'{label}-command.json').write_text(json.dumps(command, indent=2) + '\n')
+        lifecycle = {'label': label, 'startedAt': datetime.now(timezone.utc).isoformat(),
+                     'captureAuthority': 'operator', 'exitCode': None, 'timedOut': False}
+        started = time.monotonic()
+        try:
+            self._run_turn(command, project, env, label, lifecycle)
+        finally:
+            lifecycle.update(endedAt=datetime.now(timezone.utc).isoformat(),
+                             durationMs=round((time.monotonic()-started)*1000))
+            source = project / 'entry/src/main/ets/pages/Index.ets'
+            lifecycle['sourcePresent'] = source.is_file()
+            if source.is_file():
+                (self.evidence / f'{label}-actual-source.ets').write_bytes(source.read_bytes())
+            (self.evidence / f'{label}-lifecycle.json').write_text(json.dumps(lifecycle, indent=2)+'\n')
+        source = project / 'entry/src/main/ets/pages/Index.ets'
+        if marker not in source.read_text():
+            raise RuntimeError(f'{label}: Agent did not change actual source')
+        print(f'{label}: real Pi turn completed', flush=True)
+
+    def _run_turn(self, command, project, env, label, lifecycle):
         with (self.evidence / f'{label}-events.jsonl').open('wb') as out, \
              (self.evidence / f'{label}-stderr.log').open('wb') as err:
             process = subprocess.Popen(command, cwd=project, env=env, stdout=out, stderr=err,
@@ -113,6 +134,7 @@ class Participant:
             try:
                 code = process.wait(timeout=420)
             except subprocess.TimeoutExpired:
+                lifecycle['timedOut'] = True
                 import signal
                 os.killpg(process.pid, signal.SIGTERM)
                 try:
@@ -120,7 +142,9 @@ class Participant:
                 except subprocess.TimeoutExpired:
                     os.killpg(process.pid, signal.SIGKILL)
                     process.wait()
+                lifecycle['exitCode'] = process.returncode
                 raise RuntimeError(f'{label}: participant timeout; partial events retained')
+        lifecycle['exitCode'] = code
         if code:
             raise RuntimeError(f'{label}: Pi exited {code}; inspect participant evidence')
         events = [json.loads(line) for line in (self.evidence / f'{label}-events.jsonl').read_text().splitlines() if line]
@@ -130,11 +154,6 @@ class Participant:
             raise RuntimeError(f'{label}: ' + '; '.join(errors))
         if not any(e.get('type') == 'tool_execution_end' for e in events):
             raise RuntimeError(f'{label}: no completed native tool call')
-        source = project / 'entry/src/main/ets/pages/Index.ets'
-        (self.evidence / f'{label}-actual-source.ets').write_text(source.read_text())
-        if marker not in source.read_text():
-            raise RuntimeError(f'{label}: Agent did not change actual source')
-        print(f'{label}: real Pi turn completed', flush=True)
 
     def close(self):
         self.server.shutdown()
