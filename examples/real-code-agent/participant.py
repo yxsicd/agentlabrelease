@@ -41,6 +41,27 @@ class Participant:
                     owner.requests += 1
                     number = owner.requests
                 stem = capture / f'{number:04d}'
+                started = time.monotonic()
+                receipt = dict(exchangeId=f'{number:04d}',
+                    startedAt=datetime.now(timezone.utc).isoformat(),
+                    status=None, responseBytes=0, upstreamEof=False,
+                    clientDisconnected=False, outcome='in_progress')
+                try:
+                    self.forward(stem, receipt)
+                except Exception as error:
+                    receipt.update(outcome='capture_error', errorClass=type(error).__name__,
+                                   error=str(error))
+                    stem.with_suffix('.error.txt').write_text(str(error))
+                    try:
+                        self.send_error(502, 'Gateway exchange failed')
+                    except OSError:
+                        receipt['clientDisconnected'] = True
+                finally:
+                    receipt.update(endedAt=datetime.now(timezone.utc).isoformat(),
+                                   durationMs=round((time.monotonic()-started)*1000))
+                    stem.with_suffix('.status.json').write_text(json.dumps(receipt, indent=2)+'\n')
+
+            def forward(self, stem, receipt):
                 raw = self.rfile.read(int(self.headers['Content-Length']))
                 # Authentication is transport configuration, not test payload.
                 stem.with_suffix('.request.json').write_bytes(raw)
@@ -55,25 +76,30 @@ class Participant:
                     response = urllib.request.build_opener(NoRedirect).open(request, timeout=180)
                 except urllib.error.HTTPError as error:
                     response = error
-                except Exception as error:
-                    stem.with_suffix('.error.txt').write_text(str(error))
-                    self.send_error(502, 'Upstream gateway connection failed')
-                    return
                 with response:
-                    status = response.status
-                    stem.with_suffix('.status.json').write_text(json.dumps({'status': status}) + '\n')
-                    self.send_response(status)
-                    self.send_header('Content-Type', response.headers.get('Content-Type', 'application/json'))
-                    self.end_headers()
+                    receipt['status'] = response.status
+                    try:
+                        self.send_response(response.status)
+                        self.send_header('Content-Type', response.headers.get('Content-Type', 'application/json'))
+                        self.end_headers()
+                    except OSError:
+                        receipt['clientDisconnected'] = True
                     with stem.with_suffix('.response').open('wb') as output:
                         while True:
                             chunk = response.readline()
                             if not chunk:
+                                receipt.update(upstreamEof=True, outcome='upstream_eof')
                                 break
                             output.write(chunk)
                             output.flush()
-                            self.wfile.write(chunk)
-                            self.wfile.flush()
+                            receipt['responseBytes'] += len(chunk)
+                            if not receipt['clientDisconnected']:
+                                try:
+                                    self.wfile.write(chunk)
+                                    self.wfile.flush()
+                                except OSError:
+                                    # Keep observing upstream after participant cancellation.
+                                    receipt['clientDisconnected'] = True
 
         self.server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
