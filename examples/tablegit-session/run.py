@@ -84,7 +84,7 @@ def main():
                 if (message["request_id"] == request_id and message["outcome"] == "success"
                     and {"owner-template","session-template"}.issubset(
                         {item["id"] for item in message["payload"]["repositories"]})):
-                    return
+                    return "ws://127.0.0.1:"+port+"/__mcpgit/service-ws"
             except Exception as error:
                 with (evidence / (label+".log")).open("a") as log:
                     log.write(str(error)+"\n")
@@ -188,10 +188,11 @@ def main():
                 inventory=inventory, commits=commits, captureRevision=revision, context=capture_context))
         docker("restart",agent,label="restart-store")
         docker("restart",gateway,label="restart-gateway")
-        wait_route("restarted-route")
+        restarted_url = wait_route("restarted-route")
         second = probe("restart-readback", settings, "session-recovered")
         if capture_state:
             service, revision, rows, objects, inventory = capture_state
+            service.url = restarted_url
             recovered = recover(service, first["binding"]["repositoryId"], revision,
                                 rows, objects, inventory, evidence/"recovered-capture")
             save(evidence/"capture-recovery.json", recovered)
