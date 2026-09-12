@@ -48,7 +48,7 @@ jobs:
             composition: release/candidates/26008e36-linux-x64
             backend: btrfs-subvolume
     env:
-      AGENTLAB_CI_ROOT: ${{ runner.temp }}/agentlab-${{ matrix.target }}
+      AGENTLAB_CI_ROOT: /tmp/agentlab-${{ matrix.target }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Install archive support
