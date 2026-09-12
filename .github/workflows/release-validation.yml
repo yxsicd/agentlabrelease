@@ -72,7 +72,13 @@ jobs:
           sudo chown "$(id -u):$(id -g)" "$AGENTLAB_CI_ROOT/mock-storage"
       - name: Run preset Mock Agent and independent evaluation
         run: |
-          python3 scripts/ci-mock-agent-smoke.py \
+          runner=(python3)
+          if [[ '${{ matrix.backend }}' == btrfs-subvolume ]]; then
+            # The standalone Btrfs daemon inspects filesystem metadata, matching
+            # the privileged storage companion used by deployed installations.
+            runner=(sudo python3)
+          fi
+          "${runner[@]}" scripts/ci-mock-agent-smoke.py \
             --bin-dir "$AGENTLAB_CI_ROOT/standalone/bin" \
             --evidence "$AGENTLAB_CI_ROOT/mock-evidence" \
             --storage "$AGENTLAB_CI_ROOT/mock-storage" \
