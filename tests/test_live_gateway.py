@@ -55,7 +55,7 @@ class GatewayCaptureTests(unittest.TestCase):
                 finally:
                     participant.close()
                 self.assertEqual(received['authorization'], 'Bearer synthetic-external-key')
-                self.assertEqual(received['body'], body)
+                self.assertEqual(json.loads(received['body']), {**json.loads(body), 'providerId': 'glm'})
                 self.assertEqual((evidence / 'gateway/0001.request.json').read_bytes(), body)
                 self.assertEqual((evidence / 'gateway/0001.response').read_bytes(), response)
                 for path in root.rglob('*'):

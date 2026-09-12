@@ -4,6 +4,10 @@ The manual **Real Code Agent acceptance** workflow runs trusted `main` with Pi
 0.73.1 and the LM Gateway model selected at dispatch (default `glm-5.3-flash`).
 Set `AGENTLAB_LM_GATEWAY_KEY` as an Actions Secret and optionally set repository
 variable `AGENTLAB_LM_GATEWAY_URL`. This workflow does not run PR code.
+Choose the explicit Gateway provider route too (default `glm`). Model and provider
+are separate: a bare model ID must not accidentally select the Gateway's default
+provider. Evidence retains both Pi's original payload and the upstream payload
+with the operator-selected `providerId`.
 
 The runner installs the referenced AgentLab image, original Harmony SDK and
 build-kit. Pi's locked npm runtime is outside the project Workspace. A control

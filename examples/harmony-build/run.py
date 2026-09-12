@@ -17,6 +17,7 @@ def main():
     parser.add_argument('--agent-bin', type=Path)
     parser.add_argument('--gateway-url', default='https://llm-m4dd.de.yxsbase.win')
     parser.add_argument('--model', default='glm-5.3-flash')
+    parser.add_argument('--provider-route', default='glm')
     args = parser.parse_args()
     root = args.root.resolve()
     root.mkdir(parents=True, exist_ok=False)
@@ -92,7 +93,7 @@ def main():
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             participant = module.Participant(evidence, root / 'participant-state',
-                                             args.agent_bin, args.gateway_url, args.model)
+                                             args.agent_bin, args.gateway_url, args.model, args.provider_route)
             summary['participant'] = {'implementation': 'pi', 'model': args.model}
         call('doctor', 'doctor')
         summary['checks']['publishedToolchainReady'] = True
