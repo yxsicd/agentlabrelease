@@ -1,0 +1,102 @@
+{
+  "assets": [
+    {
+      "bytes": 305740544,
+      "sha256": "f5dddac4b52b81abd2e88f4f8e8eac246b4bfd71ae3eb904141d073a4ee4a477",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/image-fa05788f-linux-x64/chatproxy-agentlab-git-fa05788f-linux-x64.docker.tar.zst"
+    },
+    {
+      "bytes": 552,
+      "sha256": "adc6bc42a323284a4edc4ebadc814475d3a0d8c7bca42da47fdcb0f9ce7b4559",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/image-fa05788f-linux-x64/chatproxy-agentlab-git-fa05788f-linux-x64.docker.tar.zst.json"
+    },
+    {
+      "bytes": 49252041,
+      "sha256": "5ba5d112eec077eb8f9203531ddef5ab8bd4938ae87a68fc6b4e7c999cdffd67",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/runtime-26008e36-linux-x64/agentlab-pack-agentlab-release-26008e36-linux-x64.tar.zst"
+    },
+    {
+      "bytes": 460,
+      "sha256": "3e8ef3169cf087636bd699a77831786355c5f8df4be0afa2709f9aa5e6fa6cad",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/runtime-26008e36-linux-x64/agentlab-pack-agentlab-release-26008e36-linux-x64.tar.zst.json"
+    },
+    {
+      "bytes": 29154352,
+      "sha256": "58bc13e984f7219a560017592bdee11a6874a15099faaa1d40b0f2542d489b6e",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/tools-e443b17a-linux-x64/agentlab-pack-developer-tools-e443b17a-linux-x64.tar.zst"
+    },
+    {
+      "bytes": 558,
+      "sha256": "861a4ca4c09ba34bdf9aed382765d39da0f4c60cc2f0f40fd7dceb3e7d0efb3a",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/tools-e443b17a-linux-x64/agentlab-pack-developer-tools-e443b17a-linux-x64.tar.zst.json"
+    },
+    {
+      "bytes": 989968633,
+      "sha256": "8fc2199afaea5055c6a3ff762b7b58a9475c5ff7b6c30285336014dc647927c2",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-linux-x64-6.1.1.300/harmony-linux-x64-6.1.1.300.tar.zst"
+    },
+    {
+      "bytes": 520,
+      "sha256": "c64d227b878bb9a4b000dc09caa30a081ef7454620c025b05f535d3eba55c0d6",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-linux-x64-6.1.1.300/harmony-linux-x64-6.1.1.300.tar.zst.json"
+    },
+    {
+      "bytes": 3511,
+      "sha256": "4106f23863e7524d2e44489fb4199d8493422d12fd1c2fafb298d5a83eac68a5",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-buildkit-v5-linux-x64/agentlab-pack-harmony-build-kit-buildkit-v5-linux-x64.tar.zst"
+    },
+    {
+      "bytes": 470,
+      "sha256": "e6e5be72718e18ff2ca73f8e2c5bcbe4fab83db48fb65f6f3210326688c483db",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-buildkit-v5-linux-x64/agentlab-pack-harmony-build-kit-buildkit-v5-linux-x64.tar.zst.json"
+    },
+    {
+      "bytes": 4425648,
+      "sha256": "076ee1beee90023660cbda7f9ab90ae01863550783f16d4de4a4e39422343da8",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-ea25616d-linux-x64/agentlabctl-ea25616d-linux-x64"
+    }
+  ],
+  "componentPayloadsUploaded": false,
+  "controllerSourceShort": "ea25616d",
+  "environmentLockSha256": "d41039549375c85ba4efdb7ccb8976dcb371fcdacc45e7074307435ea50d1259",
+  "gates": {
+    "aBCPromotion": "not_run",
+    "dActivation": "passed",
+    "formalHarmonyHapRestartParity": "not_run",
+    "fullWhiteboxCoverage": "failed",
+    "publicInstallMockAgentBtrfs": "not_run",
+    "publicInstallMockAgentCopyTree": "not_run",
+    "runtimePayloadReconstruction": "passed",
+    "sweSeedForkAgentEvaluationReplay": "passed"
+  },
+  "limitations": [
+    "Public CI exercises released standalone Harmony/SessionFS services with a scripted participant, plus Docker composition acquisition and installation. It does not activate the full AgentLab Session/TableGit runtime on GitHub hosted runners.",
+    "D SWE real-agent evaluation passed 10/10; full whitebox coverage remains admission-only and normalized analysis tables are incomplete.",
+    "This coordinated runtime requires AgentLab-owned session-template contract 6; template identity is external authority, not a credential-free bootstrap. No compatibility migration is supplied.",
+    "Immutable Git file facade does not yet resolve files outside the bounded text projection; full workspace bytes remain in SessionFS.",
+    "HAP/restart/parity and A/B/C have not been requalified for this runtime. Fixed channels remain unchanged."
+  ],
+  "platform": "linux-x64",
+  "qualification": {
+    "agent": "pi",
+    "codeAgentEventRows": 1348,
+    "contextRevisions": 20,
+    "evaluatorPassed": 10,
+    "evaluatorTotal": 10,
+    "fixedChannelPromoted": false,
+    "fullWhiteboxQualified": false,
+    "maxPayloadRowBytes": 44800,
+    "model": "glm-5.3-flash",
+    "runtimeObservationRows": 1348,
+    "runtimePayloadRows": 1349,
+    "sweCase": "django__django-10914"
+  },
+  "schema": "agentlab.reference_publication.v1",
+  "smoke": {
+    "control": "https://github.com/yxsicd/agentlabrelease/releases/download/control-ea25616d-linux-x64/agentlabctl-ea25616d-linux-x64",
+    "pack": "https://github.com/yxsicd/agentlabrelease/releases/download/runtime-26008e36-linux-x64/agentlab-pack-agentlab-release-26008e36-linux-x64.tar.zst"
+  },
+  "sourceRevision": "26008e369f650b46be5bc4c7a48d49f99ac90a22",
+  "status": "candidate",
+  "tag": "candidate-20260912-26008e36-linux-x64"
+}

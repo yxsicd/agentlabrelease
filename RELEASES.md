@@ -111,3 +111,16 @@ canary used MCPGit source commit
 This alpha does not claim a one-command clean environment deployment, a stable
 schema, production promotion, or transparent restoration of every Code Agent's
 private native session.
+# Candidate 2026-09-12 — 26008e36
+
+Reference-only runtime candidate with bounded TableGit payload rows, exact
+batch readback, replay-safe native-event publication and real SWE functional
+evidence. The preset Mock Agent Actions matrix covers public Docker composition
+installation, project creation, multiple edits, independently detected Agent
+failure, correction after service restart, Fork, seed replay and parent
+isolation using published standalone Harmony/SessionFS binaries.
+
+The candidate does not advance aldev/almain/alprod. Full whitebox normalized
+coverage, full Session/TableGit bootstrap on GitHub runners, and current-runtime
+HAP/restart/parity plus A/B/C qualification remain open. See the
+[publication record](release/candidates/26008e36-linux-x64/publication.json).
