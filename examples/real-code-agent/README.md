@@ -38,3 +38,41 @@ This is real participant/remote-inference/native-tool/Harmony compiler
 acceptance. It does not claim formal Harness TableGit persistence, SessionFS
 checkpoint/Fork parity, device installation or fixed-channel promotion. A model
 failure is retained and distinguished from installation/compiler failures.
+
+
+## Real capture in TableGit
+
+The same manual Action now starts the pinned disposable MCPGit Gateway/store,
+uses the released AgentLab template/provisioner to create a real Session, and
+imports the actual operator-captured evidence into existing
+`runtime_observations` / `runtime_payload_chunks` tables. Native Pi events and
+Gateway request/SSE events are individually addressable; original JSONL, SSE,
+compiler logs, source and selected HAP bytes remain exactly reconstructable.
+Only the evidence directory is selected: project build trees and Agent runtime
+are not copied into Git. The external Gateway key is not supplied to the
+TableGit step. Collection also runs after a failed model/build step so partial
+or failed test data is preserved rather than discarded.
+
+The Action restarts the real storage processes, reads every committed source row
+at the capture revision, reconstructs each payload and file, and compares sizes,
+hashes and inventory with the actual producer data. Inspect
+`real-tablegit/evidence-*/capture-commit-manifest.json`, `capture-recovery.json`,
+raw RPC requests/receipts and `recovered-capture/` in the artifact. The local
+MemoryService regressions test collector logic only; the Action's MCPGit
+transactions and immutable-revision reads provide real persistence evidence.
+
+This qualifies actual CI source-data capture/recovery. The Harmony project is
+the public demo project; it is not the Workspace of the provisioner fixture.
+It does not establish formal production Attempt admission, SessionFS project
+snapshots or normalized Sandbox/permission/causal/evaluator completeness.
+Native tool reports remain observed Participant data, not trusted side effects.
+Use MCPGit generic programming/analysis over the captured data; no analysis API
+is introduced by this demo.
+
+The artifact also contains `tablegit-capture.bundle` and `bundle-recovery.json`.
+The collector exports the committed, service-resolved test repository before
+cleanup and verifies a fresh clone has the exact capture HEAD. This preserves
+TableGit rows and Git history for later restoration into an independently
+configured MCPGit instance and generic programming/analysis. A failure after
+partial writes still attempts repository export; transport credentials are
+not part of the Git bundle. No physical execution directory is modified.

@@ -45,3 +45,27 @@ This is a Session **control/state recovery** demo. It does not execute an Agent
 turn, run LLM/MCP Gateway observation capture or prove a mature SessionFS binary
 snapshot. Those need the complete Harness campaign; see the explicit
 [coverage boundary](../README.md#coverage-boundary).
+
+
+To also ingest actual captured source data, add
+`--capture-evidence /absolute/path/to/real-agent/evidence` to the existing command.
+This uses the released source-observation/chunk tables, makes bounded real
+TableGit transactions, restarts storage, and reconstructs exact bytes into
+`evidence-*/recovered-capture/`. The capture commit is independent from the
+Workspace Lease revision: storing observations does not pretend to change the
+Workspace snapshot. Selected external evidence/HAP files are retained; build
+Workspace/runtime directories are not selected. This is source capture coverage,
+not a claim that all normalized whitebox relations are complete.
+
+The credential-free candidate-copy Action also ingests the actual portable Mock
+campaign evidence with `--capture-agent-kind mock`, so PR validation exercises
+real TableGit capture/recovery without an external LM credential. Only decisions
+are mocked; the captured operator/SessionFS receipts are real observed outputs.
+
+The artifact also contains `tablegit-capture.bundle` and `bundle-recovery.json`.
+The collector exports the committed, service-resolved test repository before
+cleanup and verifies a fresh clone has the exact capture HEAD. This preserves
+TableGit rows and Git history for later restoration into an independently
+configured MCPGit instance and generic programming/analysis. A failure after
+partial writes still attempts repository export; transport credentials are
+not part of the Git bundle. No physical execution directory is modified.

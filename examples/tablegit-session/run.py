@@ -11,6 +11,7 @@ import time
 import uuid
 
 from fixture import init_volume, write_agent_config
+from capture import Service, collect, ingest, recover
 
 REPO = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location("demo", REPO / "examples/run.py")
@@ -23,6 +24,8 @@ def main():
     p.add_argument("--image", required=True, help="image reference from installed composition")
     p.add_argument("--runtime-volume", required=True, help="runtime volume from installed composition")
     p.add_argument("--root", required=True, type=Path)
+    p.add_argument("--capture-evidence", type=Path, help="Actual operator-captured evidence to persist and reconstruct")
+    p.add_argument("--capture-agent-kind", default="pi", help="Observed participant implementation; not capture authority")
     args = p.parse_args()
     root = args.root.resolve()
     root.mkdir(parents=True, exist_ok=True)
@@ -35,6 +38,8 @@ def main():
     network, volume = prefix, prefix + "-data"
     gateway, agent = prefix + "-gateway", prefix + "-store"
     made_containers, made_volumes, made_network = [], [], False
+    capture_worktree_path = None
+    capture_revision = None
     summary = {"schema":"agentlab.public_tablegit_session_demo.v1", "ok":False,
                "scope":"released-session-provisioner-tablegit-lease-projection-recovery",
                "fixedChannelPromoted":False,"fullWhiteboxQualified":False,
@@ -79,7 +84,7 @@ def main():
                 if (message["request_id"] == request_id and message["outcome"] == "success"
                     and {"owner-template","session-template"}.issubset(
                         {item["id"] for item in message["payload"]["repositories"]})):
-                    return
+                    return "ws://127.0.0.1:"+port+"/__mcpgit/service-ws"
             except Exception as error:
                 with (evidence / (label+".log")).open("a") as log:
                     log.write(str(error)+"\n")
@@ -160,10 +165,39 @@ def main():
                     "MCPGIT_PROBE_TEMPLATE_QUALIFICATION_FILE":"/demo/qualification.json",
                     "MCPGIT_PROBE_PROJECTION_ROOT":"/tmp/agentlab-mcpgit-e2e-public-demo"}
         first = probe("provision", settings, "session-created")
+        capture_state = None
+        if args.capture_evidence:
+            operation_id = str(uuid.uuid4())
+            capture_context = dict(producerRevision=os.environ.get("GITHUB_SHA"),
+                githubRunId=os.environ.get("GITHUB_RUN_ID"), githubRunAttempt=os.environ.get("GITHUB_RUN_ATTEMPT"),
+                collectorSha256=demo.sha256(Path(__file__).with_name("capture.py")),
+                runtimeImage=args.image, runtimeVolume=args.runtime_volume,
+                templateContractDigest=template["contractDigest"], mcpgit=lock)
+            rows, objects, inventory = collect(args.capture_evidence, first["sessionKey"],
+                operation_id, args.capture_agent_kind, capture_context)
+            port = docker("inspect", "--format", '{{(index (index .NetworkSettings.Ports "8002/tcp") 0).HostPort}}', gateway)
+            service = Service("ws://127.0.0.1:"+port+"/__mcpgit/service-ws",
+                              (state/"caller.authorization").read_text().strip(), evidence)
+            capture_worktree_path = service.call('table.worktree.open',
+                {'repo':first["binding"]["repositoryId"],'worktree':{'topic_id':'main'}})['worktree_path']
+            revision, commits = ingest(service, first["binding"]["repositoryId"], rows, operation_id)
+            capture_revision = revision
+            capture_state = (service, revision, rows, objects, inventory)
+            save(evidence/"capture-commit-manifest.json", dict(operationId=operation_id,
+                repositoryId=first["binding"]["repositoryId"], sessionId=first["sessionKey"],
+                inventory=inventory, commits=commits, captureRevision=revision, context=capture_context))
         docker("restart",agent,label="restart-store")
         docker("restart",gateway,label="restart-gateway")
-        wait_route("restarted-route")
+        restarted_url = wait_route("restarted-route")
         second = probe("restart-readback", settings, "session-recovered")
+        if capture_state:
+            service, revision, rows, objects, inventory = capture_state
+            service.url = restarted_url
+            recovered = recover(service, first["binding"]["repositoryId"], revision,
+                                rows, objects, inventory, evidence/"recovered-capture")
+            save(evidence/"capture-recovery.json", recovered)
+            summary["capture"] = recovered
+            summary["checks"]["real_capture_committed_and_recovered"] = recovered["exactFiles"]
         checks = summary["checks"]
         checks["template_qualification"] = qualification["status"] == "qualified"
         checks["concurrent_session_creation_replayed"] = first["concurrentReplay"] is True
@@ -182,6 +216,27 @@ def main():
         summary["error"] = str(error)
         raise
     finally:
+        if capture_worktree_path:
+            try:
+                # Export committed test data before disposing the ephemeral store.
+                # Read its service-resolved repository; do not mutate/inject Workspace.
+                bundle = evidence / "tablegit-capture.bundle"
+                docker("exec", agent, "git", "-C", capture_worktree_path,
+                       "bundle", "create", "/tmp/tablegit-capture.bundle", "--all", label="bundle-export")
+                docker("cp", agent+":/tmp/tablegit-capture.bundle", str(bundle), label="bundle-copy")
+                clone = root / ("bundle-check-"+run_id)
+                run(["git","clone","--quiet",str(bundle),str(clone)],"bundle-cold-clone")
+                restored = run(["git","-C",str(clone),"rev-parse","HEAD"],"bundle-restored-head")
+                if capture_revision and restored != capture_revision:
+                    raise RuntimeError("Restored bundle HEAD differs from committed capture revision")
+                save(evidence/"bundle-recovery.json",dict(sha256=demo.sha256(bundle),
+                    byteLength=bundle.stat().st_size, restoredHead=restored,
+                    expectedCaptureRevision=capture_revision, historyExported=True))
+                summary["checks"]["tablegit_history_exported"] = True
+            except Exception as error:
+                summary["bundleExportError"] = str(error)
+                summary["checks"]["tablegit_history_exported"] = False
+            summary["ok"] = summary["ok"] and summary["checks"]["tablegit_history_exported"]
         for container in made_containers:
             r = subprocess.run(["docker","logs",container],capture_output=True)
             (evidence / (container+".stdout")).write_bytes(r.stdout)

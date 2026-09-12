@@ -33,7 +33,7 @@ jobs:
       - name: Install archive support
         run: |
           sudo apt-get update
-          sudo apt-get install --yes zstd
+          sudo apt-get install --yes zstd python3-websocket
       - name: Install the separately contained Pi runtime
         run: |
           mkdir -p "$RUNNER_TEMP/pi-runtime"
@@ -41,6 +41,7 @@ jobs:
           npm ci --prefix "$RUNNER_TEMP/pi-runtime"
           "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" --version
       - name: Acquire and install published AgentLab components
+        id: install
         env:
           AGENTLAB_RELEASE_CHANNEL: candidate-20260912-26008e36-linux-x64
           AGENTLAB_COMPOSITION_DIR: release/candidates/26008e36-linux-x64
@@ -56,6 +57,20 @@ jobs:
             --agent-bin "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" \
             --gateway-url "$AGENTLAB_LM_GATEWAY_URL" --model "$AGENTLAB_MODEL" \
             --provider-route "$AGENTLAB_PROVIDER_ROUTE"
+      - name: Persist actual capture to TableGit and recover after storage restart
+        if: always() && steps.install.outcome == 'success'
+        run: |
+          mapfile -t runtime < <(python3 - <<'PYCODE'
+          import json
+          lock = json.load(open("release/candidates/26008e36-linux-x64/environment-lock.json"))
+          print(lock["images"][0]["reference"])
+          print(next(c["volume"] for c in lock["components"] if "agentlab-release-26008e36" in c["volume"]))
+          PYCODE
+          )
+          /usr/bin/python3 examples/tablegit-session/run.py \
+            --image "${runtime[0]}" --runtime-volume "${runtime[1]}" \
+            --root "$AGENTLAB_CI_ROOT/real-tablegit" \
+            --capture-evidence "$AGENTLAB_CI_ROOT/real-agent/evidence"
       - name: Explain actual acceptance results
         if: always()
         run: python3 scripts/demo-summary.py "$AGENTLAB_CI_ROOT" >> "$GITHUB_STEP_SUMMARY"
@@ -68,5 +83,6 @@ jobs:
           path: |
             ${{ env.AGENTLAB_CI_ROOT }}/real-agent/evidence/
             ${{ env.AGENTLAB_CI_ROOT }}/runs/
+            ${{ env.AGENTLAB_CI_ROOT }}/real-tablegit/evidence-*/
             ${{ env.AGENTLAB_CI_ROOT }}/*.json
             ${{ env.AGENTLAB_CI_ROOT }}/*.log
