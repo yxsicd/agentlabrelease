@@ -74,8 +74,8 @@
     "dActivation": "passed",
     "formalHarmonyHapRestartParity": "not_run",
     "fullWhiteboxCoverage": "failed",
-    "publicInstallMockAgentBtrfs": "not_run",
-    "publicInstallMockAgentCopyTree": "not_run",
+    "publicInstallMockAgentBtrfs": "passed",
+    "publicInstallMockAgentCopyTree": "passed",
     "runtimePayloadReconstruction": "passed",
     "sweSeedForkAgentEvaluationReplay": "passed"
   },
@@ -96,6 +96,61 @@
     "evaluatorTotal": 10,
     "fixedChannelPromoted": false,
     "fullWhiteboxQualified": false,
+    "githubActions": {
+      "artifacts": [
+        {
+          "digest": "sha256:9e795b48a625699ea51860d5147e9d2f3a46ecef98a3e258562de31f1c519989",
+          "expired": false,
+          "id": 10297116969,
+          "name": "basic-capabilities-candidate-btrfs"
+        },
+        {
+          "digest": "sha256:9a6e200aa88aa08eef5dc99401256076d6ac99ba7fdc6d831f873f883b050fe0",
+          "expired": false,
+          "id": 10296812486,
+          "name": "basic-capabilities-alprod"
+        },
+        {
+          "digest": "sha256:0286eb89d453861a9acbd4032c5ff4747a8805b3afd551833af51a5a676812d1",
+          "expired": false,
+          "id": 10296597117,
+          "name": "basic-capabilities-candidate-copy"
+        }
+      ],
+      "jobsPassed": 4,
+      "results": {
+        "basic-capabilities-alprod": {
+          "backend": "copy-tree",
+          "binaries": {
+            "alharmony-ops": "a240162357fcb47bb855fc333e9f605594614a14db8bea2a94108b82c51f0cab",
+            "alsessionfsd": "52b47c3575e9e43013ccdbfb283127c6bfb58cf18ae6aae4c31f81996b03ec7a"
+          },
+          "checks": 17,
+          "summarySha256": "561a628f25745e23c00e12d995dd3bcbc12d0ba7474a81bce7b32b4617764f57"
+        },
+        "basic-capabilities-candidate-btrfs": {
+          "backend": "btrfs-subvolume",
+          "binaries": {
+            "alharmony-ops": "a240162357fcb47bb855fc333e9f605594614a14db8bea2a94108b82c51f0cab",
+            "alsessionfsd": "52b47c3575e9e43013ccdbfb283127c6bfb58cf18ae6aae4c31f81996b03ec7a"
+          },
+          "checks": 18,
+          "summarySha256": "5936e77a73d35bf5c93a9784d0fcf1960914bd6f4917b6a0aeef7d16f2cb158e"
+        },
+        "basic-capabilities-candidate-copy": {
+          "backend": "copy-tree",
+          "binaries": {
+            "alharmony-ops": "a240162357fcb47bb855fc333e9f605594614a14db8bea2a94108b82c51f0cab",
+            "alsessionfsd": "52b47c3575e9e43013ccdbfb283127c6bfb58cf18ae6aae4c31f81996b03ec7a"
+          },
+          "checks": 17,
+          "summarySha256": "561a628f25745e23c00e12d995dd3bcbc12d0ba7474a81bce7b32b4617764f57"
+        }
+      },
+      "runId": 34689872013,
+      "testedRevision": "8b9dcf389796d1d17d119a17ccbe1df2171c9f8c",
+      "url": "https://github.com/yxsicd/agentlabrelease/actions/runs/34689872013"
+    },
     "maxPayloadRowBytes": 44800,
     "model": "glm-5.3-flash",
     "portableSessionfs": {
@@ -108,6 +163,24 @@
       "sha256": "52b47c3575e9e43013ccdbfb283127c6bfb58cf18ae6aae4c31f81996b03ec7a",
       "sourceRevision": "a4d9fb7cf341e9d161713e4088e107bdfaaccc2d"
     },
+    "retainedFailureRuns": [
+      {
+        "cause": "Job env used unavailable runner context; fixed matrix-owned path.",
+        "runId": 34689398707
+      },
+      {
+        "cause": "Standalone SessionFS rejected a valid nested Btrfs directory.",
+        "runId": 34689451879
+      },
+      {
+        "cause": "Root retry reproduced the same path-detection defect; permission hypothesis rejected.",
+        "runId": 34689567417
+      },
+      {
+        "cause": "Source regression fixed; CI still consumed the old published binary before independent component publication.",
+        "runId": 34689780151
+      }
+    ],
     "runtimeObservationRows": 1348,
     "runtimePayloadRows": 1349,
     "sweCase": "django__django-10914"
