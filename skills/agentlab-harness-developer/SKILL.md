@@ -1355,3 +1355,14 @@ Malformed JSON/JSONL/SSE records produce `capture.parse_error` observations with
 source occurrence, parser error and complete offending bytes. Other valid events
 continue ingestion; all original files remain exactly recoverable. Parse errors
 are evidence of incomplete structured decoding, not successful Agent execution.
+
+### Gateway exchange capture closure
+
+Each operator-owned proxy exchange has a terminal status receipt: start/end UTC,
+monotonic duration, upstream HTTP status, exact response bytes, upstream EOF,
+client disconnect and capture error. EOF means transport completion, not model
+success. On participant disconnect the proxy continues saving the upstream body;
+closing the proxy waits for active handlers before evidence ingestion. Errors
+retain partial response and explicit terminal failure rather than a false EOF.
+These receipts use the existing `gateway.status` source observations and payload
+chunks, without introducing analysis endpoints or subject-reported authority.

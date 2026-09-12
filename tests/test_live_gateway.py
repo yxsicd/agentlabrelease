@@ -3,6 +3,8 @@ import importlib.util
 import json
 import os
 import shutil
+import socket
+import struct
 from pathlib import Path
 import tempfile
 import threading
@@ -37,6 +39,41 @@ class GatewayCaptureTests(unittest.TestCase):
             self.assertTrue(lifecycle['sourcePresent'])
             self.assertGreaterEqual(lifecycle['durationMs'],0)
             self.assertLessEqual(lifecycle['startedAt'],lifecycle['endedAt'])
+
+    def test_disconnect_still_captures_complete_upstream(self):
+        release=threading.Event()
+        body=b'data: {"delta":"first"}\n'+b'data: {"delta":"remaining"}\n'*4000
+        class Upstream(http.server.BaseHTTPRequestHandler):
+            def log_message(self,*args): pass
+            def do_POST(self):
+                self.rfile.read(int(self.headers['Content-Length']))
+                self.send_response(200);self.end_headers()
+                self.wfile.write(body[:24]);self.wfile.flush()
+                release.wait(5)
+                self.wfile.write(body[24:])
+        server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Upstream)
+        thread=threading.Thread(target=server.serve_forever);thread.start()
+        try:
+            with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ,
+                    {'AGENTLAB_LM_GATEWAY_KEY':'synthetic-external-key'}):
+                root=Path(tmp);evidence=root/'evidence';evidence.mkdir()
+                participant=MODULE.Participant(evidence,root/'state','/bin/true',
+                    f'http://127.0.0.1:{server.server_port}','test-model')
+                try:
+                    client=socket.create_connection(('127.0.0.1',participant.server.server_port),timeout=5)
+                    client.sendall(b'POST /v1/chat/completions HTTP/1.1\r\nHost: localhost\r\nContent-Length: 2\r\n\r\n{}')
+                    client.recv(1024)
+                    client.setsockopt(socket.SOL_SOCKET,socket.SO_LINGER,struct.pack('ii',1,0))
+                    client.close();release.set()
+                finally:
+                    release.set();participant.close()
+                self.assertEqual((evidence/'gateway/0001.response').read_bytes(),body)
+                receipt=json.loads((evidence/'gateway/0001.status.json').read_text())
+                self.assertTrue(receipt['clientDisconnected'])
+                self.assertTrue(receipt['upstreamEof'])
+                self.assertEqual(receipt['responseBytes'],len(body))
+        finally:
+            release.set();server.shutdown();server.server_close();thread.join()
 
     def test_stream_is_preserved_and_external_auth_is_not_captured(self):
         received = {}
@@ -79,6 +116,11 @@ class GatewayCaptureTests(unittest.TestCase):
                 self.assertEqual(json.loads(received['body']), {**json.loads(body), 'providerId': 'glm'})
                 self.assertEqual((evidence / 'gateway/0001.request.json').read_bytes(), body)
                 self.assertEqual((evidence / 'gateway/0001.response').read_bytes(), response)
+                receipt=json.loads((evidence/'gateway/0001.status.json').read_text())
+                self.assertEqual(receipt['responseBytes'],len(response))
+                self.assertTrue(receipt['upstreamEof'])
+                self.assertEqual(receipt['outcome'],'upstream_eof')
+                self.assertGreaterEqual(receipt['durationMs'],0)
                 for path in root.rglob('*'):
                     if path.is_file():
                         self.assertNotIn(b'synthetic-external-key', path.read_bytes())
