@@ -36,6 +36,9 @@ component packages, installs their Docker image/volumes, and runs a portable
 Harmony/SessionFS smoke case. The SDK accounts for most download space. The
 composition receipt and component identities remain under `$AGENTLAB_CI_ROOT`.
 Unchanged components are referenced from their existing releases.
+The command can be repeated in the same directory: installed components are
+reused, each smoke campaign receives fresh task IDs, and its receipts remain
+under `runs/`. Actions runs this installation twice for the candidate.
 
 ## Read the evidence
 
