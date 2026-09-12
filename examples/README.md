@@ -14,6 +14,7 @@ stateful examples. Pin this repository to the full commit you intend to test.
 | [HTTP + MCP + Website Skills](service-protocol/README.md) | Discover from one SKILL URL, initialize MCP, list and call tools, compare HTTP | The published service implements its discovery and mapping contracts, including proxies and unavailable dependencies |
 | [TableGit Session recovery](tablegit-session/README.md) | Bootstrap business tables, create a Session, publish Lease/projection state, restart storage, reconstruct | The released provisioner recovers the same Session, file digest and Lease from real committed TableGit data |
 | [Mock Agent campaign](mock-agent/README.md) | Create a Harmony seed, Fork, edit, make a mistake, restart, correct and replay | A separate evaluator detects actual service outcomes and parent isolation, despite an optimistic participant |
+| [Harmony native compilation](harmony-build/README.md) | Initialize an ArkTS project, compile, edit twice, reject invalid source and recover | Real offline unsigned HAP files match compiler receipts and contain each iteration's bytecode marker |
 
 The test operator controls the Harness. The Mock Agent is a replaceable
 participant. A participant's success claim is retained as evidence and never
@@ -63,6 +64,6 @@ storage service. Their passing results cannot be combined into a claim that
 this complete chain passed.
 
 Still separate: a real-agent SWE benchmark, complete normalized whitebox
-relations, HAP compilation/device acceptance, mature SessionFS exact snapshots
+relations, Harmony device acceptance, mature SessionFS exact snapshots
 with Fork/restart parity, and D/A/B/C fixed-channel promotion. CI does not alter
 fixed channels or publish component packages.

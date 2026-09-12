@@ -5,6 +5,11 @@ description: Design, run, inspect, checkpoint, fork, and compare Code Agent eval
 
 # AgentLab Harness Developer
 
+Public release validation includes the executable Harmony compilation demo at
+`examples/harmony-build/README.md`: published SDK/build-kit, initialized ArkTS seed,
+two edits and real unsigned HAP rebuilds, invalid-source rejection and recovery.
+This CI scope is independent of formal Harness/device/fixed-channel qualification.
+
 Use released AgentLab interfaces and receipts to evaluate replaceable Code
 Agents. Never assume access to the maintenance repository or an Agent's private
 session implementation.
