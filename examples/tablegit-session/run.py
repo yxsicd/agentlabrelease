@@ -12,6 +12,7 @@ import uuid
 
 from fixture import init_volume, write_agent_config
 from capture import Service, collect, ingest, recover
+from template_contract import inventory_digest
 
 REPO = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location("demo", REPO / "examples/run.py")
@@ -219,7 +220,8 @@ def main():
         checks["operation_prestate_recovered"] = second["persistedPreStateReadback"] is True
         checks["sdk_template_inventory"] = (len(template["session"]["tables"]) == sdk["sessionTables"]
             and len(template["ownerGlobal"]["tables"]) == sdk["ownerTables"]
-            and template["contractDigest"] == sdk["templateContractDigest"])
+            and inventory_digest(template) == sdk["templateInventoryDigest"])
+        summary["templateInventoryDigest"] = inventory_digest(template)
         summary["sessionSdk"] = sdk
         summary["sessionTables"] = len(template["session"]["tables"])
         summary["ownerTables"] = len(template["ownerGlobal"]["tables"])

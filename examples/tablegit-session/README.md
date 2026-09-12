@@ -73,4 +73,10 @@ not part of the Git bundle. No physical execution directory is modified.
 The SDK program is selected by `release/ci/session-sdk.json`, independently of
 the runtime pack. The same resolved Session Binding selects capture writes and
 history export. The demo checks all46 Session/12 Owner definitions and their
-contract digest, so an older helper cannot silently qualify the new candidate.
+schema inventory digest, so an older helper cannot silently qualify the new candidate.
+
+`contractDigest` identifies a deployment lock including repository IDs and exact
+commits. It is qualified within that environment. `templateInventoryDigest`
+identifies only sorted table paths and definitions, so new repositories can
+use the same schemas without a false cross-environment mismatch. The complete
+portable inventory is published at `release/ci/session-template-inventory.json`.

@@ -1,0 +1,3378 @@
+{
+  "schema": "agentlab.template-inventory.v1",
+  "session": [
+    {
+      "path": "data/tables/agentlab/v2/execution_checkpoints",
+      "definition": {
+        "key_field": "operationId",
+        "required_fields": [
+          "attemptId",
+          "baseRevision",
+          "capsuleOnly",
+          "checkpointId",
+          "delta",
+          "exitCode",
+          "operationId",
+          "requestDigest",
+          "runtimeStatus",
+          "schema",
+          "sessionId",
+          "workspaceRevision",
+          "workspaceSnapshot"
+        ],
+        "indexes": [
+          {
+            "name": "by_session",
+            "field": "sessionId"
+          },
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_checkpoint",
+            "field": "checkpointId"
+          },
+          {
+            "name": "by_runtime_status",
+            "field": "runtimeStatus"
+          }
+        ],
+        "description": "AgentLab append-only execution checkpoint facts"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v2/mcp_server_config",
+      "definition": {
+        "key_field": "name",
+        "required_fields": [
+          "config",
+          "name",
+          "schema"
+        ],
+        "indexes": [
+          {
+            "name": "by_schema",
+            "field": "schema"
+          }
+        ],
+        "description": "AgentLab managed MCP server configuration"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v2/session_authority",
+      "definition": {
+        "key_field": "sessionKey",
+        "required_fields": [
+          "logicalSessionId",
+          "ownerId",
+          "ownerKey",
+          "ownerKind",
+          "repositoryId",
+          "schema",
+          "sessionKey",
+          "status",
+          "tenantId"
+        ],
+        "indexes": [
+          {
+            "name": "by_logicalSessionId",
+            "field": "logicalSessionId"
+          },
+          {
+            "name": "by_ownerKey",
+            "field": "ownerKey"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          }
+        ],
+        "description": "AgentLab Session authority"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v2/session_projection_state",
+      "definition": {
+        "key_field": "sessionKey",
+        "required_fields": [
+          "controlPaths",
+          "logicalSessionId",
+          "projectPaths",
+          "repositoryId",
+          "schema",
+          "sessionKey",
+          "status"
+        ],
+        "indexes": [
+          {
+            "name": "by_logicalSessionId",
+            "field": "logicalSessionId"
+          },
+          {
+            "name": "by_repositoryId",
+            "field": "repositoryId"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          }
+        ],
+        "description": "AgentLab Session projection membership"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v2/workspace_bindings",
+      "definition": {
+        "key_field": "bindingId",
+        "required_fields": [
+          "bindingId",
+          "logicalSessionId",
+          "personId",
+          "repositoryId",
+          "schema",
+          "sessionKey",
+          "status",
+          "workspaceKind"
+        ],
+        "indexes": [
+          {
+            "name": "by_sessionKey",
+            "field": "sessionKey"
+          },
+          {
+            "name": "by_repositoryId",
+            "field": "repositoryId"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          }
+        ],
+        "description": "AgentLab Session workspace bindings"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/agent_implementations",
+      "definition": {
+        "key_field": "implementationId",
+        "required_fields": [
+          "adapterContractRef",
+          "capabilityDeclarationRef",
+          "createdAtUnixMs",
+          "implementationId",
+          "implementationVersion",
+          "participantKind",
+          "schema",
+          "sourceDigest",
+          "sourceRef",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_participant",
+            "field": "participantKind"
+          },
+          {
+            "name": "by_version",
+            "field": "implementationVersion"
+          },
+          {
+            "name": "by_source",
+            "field": "sourceDigest"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Immutable Agent implementation identity independent from runtime instances, Attempts, and providers"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/agent_instances",
+      "definition": {
+        "key_field": "agentInstanceId",
+        "required_fields": [
+          "agentInstanceId",
+          "implementationId",
+          "launchedAtUnixMs",
+          "runtimeBuildRef",
+          "schema",
+          "status",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_implementation",
+            "field": "implementationId"
+          },
+          {
+            "name": "by_runtime",
+            "field": "runtimeBuildRef"
+          },
+          {
+            "name": "by_parent",
+            "field": "parentAgentInstanceId"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Concrete replaceable Agent process or remote instance with no implicit Attempt ownership"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/attempt_participants",
+      "definition": {
+        "key_field": "participationId",
+        "required_fields": [
+          "adapterId",
+          "adapterProtocolVersion",
+          "adapterVersion",
+          "agentInstanceId",
+          "attemptId",
+          "capabilityProfileRef",
+          "executionProfileRef",
+          "joinedAtUnixMs",
+          "participationId",
+          "role",
+          "schema",
+          "status",
+          "topology",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_instance",
+            "field": "agentInstanceId"
+          },
+          {
+            "name": "by_role",
+            "field": "role"
+          },
+          {
+            "name": "by_supervision_mode",
+            "field": "supervisionMode"
+          },
+          {
+            "name": "by_topology",
+            "field": "topology"
+          },
+          {
+            "name": "by_adapter",
+            "field": "adapterId"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Attempt-scoped Participant, supervisor, reviewer, or evaluator role mapped through a versioned adapter"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/attempts",
+      "definition": {
+        "key_field": "attemptId",
+        "required_fields": [
+          "attemptId",
+          "baseWorkspaceRevision",
+          "goalOutcome",
+          "mode",
+          "ownerCatalogRevision",
+          "runId",
+          "runSpecId",
+          "schema",
+          "sessionId",
+          "startedAtUnixMs",
+          "status",
+          "taskRef",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_session",
+            "field": "sessionId"
+          },
+          {
+            "name": "by_run",
+            "field": "runId"
+          },
+          {
+            "name": "by_run_spec",
+            "field": "runSpecId"
+          },
+          {
+            "name": "by_catalog_revision",
+            "field": "ownerCatalogRevision"
+          },
+          {
+            "name": "by_task",
+            "field": "taskRef"
+          },
+          {
+            "name": "by_mode",
+            "field": "mode"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_goal_outcome",
+            "field": "goalOutcome"
+          },
+          {
+            "name": "by_started_at",
+            "field": "startedAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab Attempt comparison units with explicit goal outcomes"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/capture_coverage",
+      "definition": {
+        "key_field": "captureCoverageId",
+        "required_fields": [
+          "attemptId",
+          "authority",
+          "captureCoverageId",
+          "captureRunId",
+          "completeness",
+          "expected",
+          "gapCount",
+          "lastProducerSequence",
+          "observed",
+          "producerId",
+          "producerVersion",
+          "recordedAtUnixMs",
+          "schema",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_capture_run",
+            "field": "captureRunId"
+          },
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_authority",
+            "field": "authority"
+          },
+          {
+            "name": "by_producer",
+            "field": "producerId"
+          },
+          {
+            "name": "by_expected",
+            "field": "expected"
+          },
+          {
+            "name": "by_observed",
+            "field": "observed"
+          },
+          {
+            "name": "by_completeness",
+            "field": "completeness"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "One queryable coverage row per expected capture authority and producer"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/capture_gaps",
+      "definition": {
+        "key_field": "captureGapId",
+        "required_fields": [
+          "attemptId",
+          "authority",
+          "captureGapId",
+          "captureRunId",
+          "detectedAtUnixMs",
+          "firstMissingSequence",
+          "gapKind",
+          "producerId",
+          "schema",
+          "status",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_capture_run",
+            "field": "captureRunId"
+          },
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_authority",
+            "field": "authority"
+          },
+          {
+            "name": "by_producer",
+            "field": "producerId"
+          },
+          {
+            "name": "by_kind",
+            "field": "gapKind"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Explicit white-box loss, opacity, cursor gap, or producer failure range"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/capture_runs",
+      "definition": {
+        "key_field": "captureRunId",
+        "required_fields": [
+          "attemptId",
+          "captureRunId",
+          "completeness",
+          "gapCount",
+          "policyRef",
+          "producerId",
+          "producerVersion",
+          "schema",
+          "startedAtUnixMs",
+          "status",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_policy",
+            "field": "policyRef"
+          },
+          {
+            "name": "by_producer",
+            "field": "producerId"
+          },
+          {
+            "name": "by_completeness",
+            "field": "completeness"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Attempt capture manifest distinguishing no activity from missing, partial, or failed capture"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/causal_relations",
+      "definition": {
+        "key_field": "relationId",
+        "required_fields": [
+          "attemptId",
+          "createdAtUnixMs",
+          "fromId",
+          "fromKind",
+          "relationId",
+          "relationType",
+          "schema",
+          "sourceKind",
+          "sourceRevision",
+          "toId",
+          "toKind",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_type",
+            "field": "relationType"
+          },
+          {
+            "name": "by_from",
+            "field": "fromId"
+          },
+          {
+            "name": "by_to",
+            "field": "toId"
+          },
+          {
+            "name": "by_source",
+            "field": "sourceKind"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Non-redundant evidence-backed retry, repair, fork, derive, supersede, takeover, or comparison edge"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/code_agent_events",
+      "definition": {
+        "key_field": "nativeEventId",
+        "required_fields": [
+          "adapterId",
+          "attemptId",
+          "captureAuthority",
+          "captureRunId",
+          "method",
+          "nativeEventId",
+          "participationId",
+          "payloadDigest",
+          "producerId",
+          "producerVersion",
+          "schema",
+          "sequence",
+          "sourceObservationId",
+          "sourceOperationId",
+          "sourceOrdinal",
+          "sourceRevision",
+          "status",
+          "turnId",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_participation",
+            "field": "participationId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_capture_run",
+            "field": "captureRunId"
+          },
+          {
+            "name": "by_sequence",
+            "field": "sequence"
+          },
+          {
+            "name": "by_adapter",
+            "field": "adapterId"
+          },
+          {
+            "name": "by_method",
+            "field": "method"
+          },
+          {
+            "name": "by_source_observation",
+            "field": "sourceObservationId"
+          },
+          {
+            "name": "by_item_type",
+            "field": "itemType"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Exact Harness-observed native Code Agent item stream, independent of adapter implementation"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/context_changes",
+      "definition": {
+        "key_field": "contextChangeId",
+        "required_fields": [
+          "attemptId",
+          "capturedAtUnixMs",
+          "changeDigest",
+          "changeKind",
+          "contextChangeId",
+          "estimatedTokenDelta",
+          "messagesAdded",
+          "messagesRemoved",
+          "participationId",
+          "schema",
+          "sequence",
+          "skillsAdded",
+          "skillsRemoved",
+          "snapshotId",
+          "toolsAdded",
+          "toolsRemoved",
+          "turnId",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_participation",
+            "field": "participationId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_snapshot",
+            "field": "snapshotId"
+          },
+          {
+            "name": "by_previous_snapshot",
+            "field": "previousSnapshotId"
+          },
+          {
+            "name": "by_sequence",
+            "field": "sequence"
+          },
+          {
+            "name": "by_kind",
+            "field": "changeKind"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab per-proposal context deltas for causal and token-growth analysis"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/context_documents",
+      "definition": {
+        "key_field": "contextDocumentId",
+        "required_fields": [
+          "approvalPolicy",
+          "attachments",
+          "attemptId",
+          "captureRunId",
+          "contentDigest",
+          "contextDocumentId",
+          "environment",
+          "estimatedTokens",
+          "instructions",
+          "mappingStatus",
+          "messages",
+          "nativeSourceDigest",
+          "nativeSourceRef",
+          "participationId",
+          "revisionOrdinal",
+          "roundId",
+          "runtime",
+          "schema",
+          "skills",
+          "toolDefinitions",
+          "turnId",
+          "unresolvedFields",
+          "updatedAtUnixMs",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_participation",
+            "field": "participationId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_round",
+            "field": "roundId"
+          },
+          {
+            "name": "by_capture_run",
+            "field": "captureRunId"
+          },
+          {
+            "name": "by_updated_at",
+            "field": "updatedAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab mutable structured proposal context; each update of the same row is an exact Git-revision snapshot"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/context_snapshots",
+      "definition": {
+        "key_field": "contextSnapshotId",
+        "required_fields": [
+          "attemptId",
+          "captureRunId",
+          "capturedAtUnixMs",
+          "completeness",
+          "contextDocumentId",
+          "contextDocumentRevision",
+          "contextSnapshotId",
+          "conversationRevision",
+          "estimatedInputTokens",
+          "manifestDigest",
+          "mappingStatus",
+          "messageCount",
+          "nativeSourceDigest",
+          "nativeSourceRef",
+          "participationId",
+          "providerId",
+          "requestedModelId",
+          "resolvedModelId",
+          "roundId",
+          "schema",
+          "skillCount",
+          "toolCatalogDigest",
+          "toolCount",
+          "turnId",
+          "unresolvedFields",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_participation",
+            "field": "participationId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_document",
+            "field": "contextDocumentId"
+          },
+          {
+            "name": "by_capture_run",
+            "field": "captureRunId"
+          },
+          {
+            "name": "by_model",
+            "field": "resolvedModelId"
+          },
+          {
+            "name": "by_completeness",
+            "field": "completeness"
+          },
+          {
+            "name": "by_captured_at",
+            "field": "capturedAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab exact proposal context dependency manifests"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/control_actions",
+      "definition": {
+        "key_field": "controlActionId",
+        "required_fields": [
+          "actionKind",
+          "actorKind",
+          "actorRef",
+          "attemptId",
+          "controlActionId",
+          "occurredAtUnixMs",
+          "operationId",
+          "outcome",
+          "requestDigest",
+          "requestRef",
+          "schema",
+          "targetId",
+          "targetKind",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_actor_kind",
+            "field": "actorKind"
+          },
+          {
+            "name": "by_actor",
+            "field": "actorRef"
+          },
+          {
+            "name": "by_action",
+            "field": "actionKind"
+          },
+          {
+            "name": "by_operation",
+            "field": "operationId"
+          },
+          {
+            "name": "by_target",
+            "field": "targetId"
+          },
+          {
+            "name": "by_outcome",
+            "field": "outcome"
+          },
+          {
+            "name": "by_occurred_at",
+            "field": "occurredAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Every Harness control mutation by script, adaptive Agent, human operator, or system policy with before/after evidence"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/credential_leases",
+      "definition": {
+        "key_field": "credentialLeaseId",
+        "required_fields": [
+          "attemptId",
+          "audience",
+          "brokerId",
+          "capabilityProfileRef",
+          "credentialLeaseId",
+          "expiresAtUnixMs",
+          "issuedAtUnixMs",
+          "leaseDigest",
+          "participationId",
+          "quotaRef",
+          "schema",
+          "status",
+          "usageCount",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_participation",
+            "field": "participationId"
+          },
+          {
+            "name": "by_audience",
+            "field": "audience"
+          },
+          {
+            "name": "by_broker",
+            "field": "brokerId"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_expiry",
+            "field": "expiresAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Opaque Attempt-bound credential lease lifecycle; secret material is forbidden"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/evaluation_payload_chunks",
+      "definition": {
+        "key_field": "payloadChunkId",
+        "required_fields": [
+          "byteLength",
+          "byteOffset",
+          "bytesBase64",
+          "chunkDigest",
+          "evaluationId",
+          "ordinal",
+          "payloadByteLength",
+          "payloadChunkCount",
+          "payloadChunkId",
+          "payloadDigest",
+          "schema",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_evaluation",
+            "field": "evaluationId"
+          },
+          {
+            "name": "by_ordinal",
+            "field": "ordinal"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Byte-exact independent evaluator receipt and rubric; verdicts remain separately indexed"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/evaluation_results",
+      "definition": {
+        "key_field": "evaluationResultId",
+        "required_fields": [
+          "attemptId",
+          "criterionId",
+          "criterionKind",
+          "evaluationId",
+          "evaluationResultId",
+          "evidenceDigest",
+          "evidenceRef",
+          "schema",
+          "verdict",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_evaluation",
+            "field": "evaluationId"
+          },
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_criterion",
+            "field": "criterionId"
+          },
+          {
+            "name": "by_kind",
+            "field": "criterionKind"
+          },
+          {
+            "name": "by_verdict",
+            "field": "verdict"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Criterion-level independent evaluation result for diagnosis and comparison"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/evaluations",
+      "definition": {
+        "key_field": "evaluationId",
+        "required_fields": [
+          "attemptId",
+          "completedAtUnixMs",
+          "criteriaDigest",
+          "durationMs",
+          "environmentProfileRef",
+          "evaluationId",
+          "evaluatorId",
+          "evaluatorRevision",
+          "evidenceDigest",
+          "evidenceRef",
+          "method",
+          "rubricRef",
+          "runId",
+          "schema",
+          "startedAtUnixMs",
+          "targetId",
+          "targetKind",
+          "verdict",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_run",
+            "field": "runId"
+          },
+          {
+            "name": "by_target_kind",
+            "field": "targetKind"
+          },
+          {
+            "name": "by_target",
+            "field": "targetId"
+          },
+          {
+            "name": "by_evaluator",
+            "field": "evaluatorId"
+          },
+          {
+            "name": "by_method",
+            "field": "method"
+          },
+          {
+            "name": "by_verdict",
+            "field": "verdict"
+          },
+          {
+            "name": "by_completed_at",
+            "field": "completedAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab independent evaluation facts with artifact references"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/evidence_analyses",
+      "definition": {
+        "key_field": "evidenceAnalysisId",
+        "required_fields": [
+          "analysisKind",
+          "analyzerId",
+          "analyzerVersion",
+          "attemptId",
+          "evidenceAnalysisId",
+          "evidenceObjectId",
+          "featureCount",
+          "inputDigest",
+          "inputRevision",
+          "parametersDigest",
+          "schema",
+          "startedAtUnixMs",
+          "status",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_evidence",
+            "field": "evidenceObjectId"
+          },
+          {
+            "name": "by_input_revision",
+            "field": "inputRevision"
+          },
+          {
+            "name": "by_analyzer",
+            "field": "analyzerId"
+          },
+          {
+            "name": "by_kind",
+            "field": "analysisKind"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_started_at",
+            "field": "startedAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab structured analysis derived from exact SessionFS-referenced or Session-Git-owned evidence bytes"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/evidence_objects",
+      "definition": {
+        "key_field": "evidenceObjectId",
+        "required_fields": [
+          "attemptId",
+          "byteLength",
+          "createdAtUnixMs",
+          "evidenceObjectId",
+          "mediaType",
+          "purpose",
+          "retentionClass",
+          "schema",
+          "sha256",
+          "sourceId",
+          "sourceKind",
+          "status",
+          "storageAuthority",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_source",
+            "field": "sourceId"
+          },
+          {
+            "name": "by_purpose",
+            "field": "purpose"
+          },
+          {
+            "name": "by_authority",
+            "field": "storageAuthority"
+          },
+          {
+            "name": "by_media_type",
+            "field": "mediaType"
+          },
+          {
+            "name": "by_digest",
+            "field": "sha256"
+          },
+          {
+            "name": "by_retention",
+            "field": "retentionClass"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab selected evidence objects: bounded external evidence may use an immutable Object in this Session TableGit Row Aggregate, while Workspace bytes remain SessionFS snapshot references"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/llm_events",
+      "definition": {
+        "key_field": "llmEventId",
+        "required_fields": [
+          "attemptId",
+          "captureAuthority",
+          "captureRunId",
+          "eventKind",
+          "llmEventId",
+          "occurredAtUnixMs",
+          "participationId",
+          "producerId",
+          "producerSequence",
+          "producerVersion",
+          "providerCallId",
+          "recordedAtUnixMs",
+          "schema",
+          "sequence",
+          "spanId",
+          "stage",
+          "status",
+          "traceId",
+          "turnId",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_provider_call",
+            "field": "providerCallId"
+          },
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_participation",
+            "field": "participationId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_stage",
+            "field": "stage"
+          },
+          {
+            "name": "by_kind",
+            "field": "eventKind"
+          },
+          {
+            "name": "by_capture_authority",
+            "field": "captureAuthority"
+          },
+          {
+            "name": "by_producer",
+            "field": "producerId"
+          },
+          {
+            "name": "by_trace",
+            "field": "traceId"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_occurred_at",
+            "field": "occurredAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab observable LLM gateway lifecycle and stream events"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/llm_output_items",
+      "definition": {
+        "key_field": "outputItemId",
+        "required_fields": [
+          "attemptId",
+          "captureAuthority",
+          "captureRunId",
+          "contentDigest",
+          "contentRef",
+          "itemKind",
+          "ordinal",
+          "outputItemId",
+          "participationId",
+          "producerId",
+          "producerSequence",
+          "producerVersion",
+          "providerCallId",
+          "providerExposed",
+          "recordedAtUnixMs",
+          "schema",
+          "spanId",
+          "status",
+          "traceId",
+          "turnId",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_provider_call",
+            "field": "providerCallId"
+          },
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_participation",
+            "field": "participationId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_kind",
+            "field": "itemKind"
+          },
+          {
+            "name": "by_tool_call",
+            "field": "toolCallId"
+          },
+          {
+            "name": "by_capture_authority",
+            "field": "captureAuthority"
+          },
+          {
+            "name": "by_producer",
+            "field": "producerId"
+          },
+          {
+            "name": "by_trace",
+            "field": "traceId"
+          },
+          {
+            "name": "by_ordinal",
+            "field": "ordinal"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab normalized provider-exposed output items"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/llm_payload_chunks",
+      "definition": {
+        "key_field": "payloadChunkId",
+        "required_fields": [
+          "byteLength",
+          "byteOffset",
+          "bytesBase64",
+          "chunkDigest",
+          "observedAtUnixMs",
+          "ordinal",
+          "payloadChunkId",
+          "payloadId",
+          "producerId",
+          "producerVersion",
+          "providerCallId",
+          "schema",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_payload",
+            "field": "payloadId"
+          },
+          {
+            "name": "by_provider_call",
+            "field": "providerCallId"
+          },
+          {
+            "name": "by_ordinal",
+            "field": "ordinal"
+          },
+          {
+            "name": "by_observed_at",
+            "field": "observedAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Immutable ordered chunks for byte-exact LLM payload reconstruction; bytes are not an analysis index"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/llm_payloads",
+      "definition": {
+        "key_field": "payloadId",
+        "required_fields": [
+          "attemptId",
+          "byteLength",
+          "captureRunId",
+          "chunkCount",
+          "createdAtUnixMs",
+          "encoding",
+          "mediaType",
+          "payloadId",
+          "payloadKind",
+          "producerId",
+          "producerVersion",
+          "providerCallId",
+          "schema",
+          "status",
+          "updatedAtUnixMs",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_provider_call",
+            "field": "providerCallId"
+          },
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_capture_run",
+            "field": "captureRunId"
+          },
+          {
+            "name": "by_kind",
+            "field": "payloadKind"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_created_at",
+            "field": "createdAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "LLM request and response payload manifests; analysis resolves metadata here and exact bytes through ordered chunks"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/mcp_calls",
+      "definition": {
+        "key_field": "mcpCallId",
+        "required_fields": [
+          "attemptId",
+          "captureAuthority",
+          "captureRunId",
+          "mcpCallId",
+          "mcpSessionId",
+          "method",
+          "outcomeCertainty",
+          "participationId",
+          "producerId",
+          "producerSequence",
+          "producerVersion",
+          "protocolVersion",
+          "recordedAtUnixMs",
+          "requestDigest",
+          "requestId",
+          "requestRef",
+          "retryOrdinal",
+          "schema",
+          "serverId",
+          "sideEffect",
+          "spanId",
+          "startedAtUnixMs",
+          "status",
+          "traceId",
+          "turnId",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_participation",
+            "field": "participationId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_session",
+            "field": "mcpSessionId"
+          },
+          {
+            "name": "by_provider_call",
+            "field": "providerCallId"
+          },
+          {
+            "name": "by_tool_call",
+            "field": "toolCallId"
+          },
+          {
+            "name": "by_server",
+            "field": "serverId"
+          },
+          {
+            "name": "by_method",
+            "field": "method"
+          },
+          {
+            "name": "by_tool",
+            "field": "toolName"
+          },
+          {
+            "name": "by_capture_authority",
+            "field": "captureAuthority"
+          },
+          {
+            "name": "by_producer",
+            "field": "producerId"
+          },
+          {
+            "name": "by_trace",
+            "field": "traceId"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_started_at",
+            "field": "startedAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab MCP request-response lifecycle and tool transport facts"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/mcp_payload_chunks",
+      "definition": {
+        "key_field": "payloadChunkId",
+        "required_fields": [
+          "byteLength",
+          "byteOffset",
+          "bytesBase64",
+          "chunkDigest",
+          "mcpCallId",
+          "observedAtUnixMs",
+          "ordinal",
+          "payloadChunkId",
+          "payloadId",
+          "producerId",
+          "producerVersion",
+          "schema",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_payload",
+            "field": "payloadId"
+          },
+          {
+            "name": "by_mcp_call",
+            "field": "mcpCallId"
+          },
+          {
+            "name": "by_ordinal",
+            "field": "ordinal"
+          },
+          {
+            "name": "by_observed_at",
+            "field": "observedAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Immutable ordered chunks for byte-exact MCP payload reconstruction; bytes are not an analysis index"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/mcp_payloads",
+      "definition": {
+        "key_field": "payloadId",
+        "required_fields": [
+          "attemptId",
+          "byteLength",
+          "captureRunId",
+          "chunkCount",
+          "completedAtUnixMs",
+          "contentDigest",
+          "createdAtUnixMs",
+          "encoding",
+          "mcpCallId",
+          "mediaType",
+          "parseStatus",
+          "payloadId",
+          "payloadKind",
+          "producerId",
+          "producerVersion",
+          "schema",
+          "status",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_mcp_call",
+            "field": "mcpCallId"
+          },
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_capture_run",
+            "field": "captureRunId"
+          },
+          {
+            "name": "by_kind",
+            "field": "payloadKind"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_digest",
+            "field": "contentDigest"
+          },
+          {
+            "name": "by_created_at",
+            "field": "createdAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Exact MCP request, response, and error payload manifests"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/mcp_sessions",
+      "definition": {
+        "key_field": "mcpSessionId",
+        "required_fields": [
+          "attemptId",
+          "captureAuthority",
+          "captureRunId",
+          "initializedAtUnixMs",
+          "mcpSessionId",
+          "participationId",
+          "producerId",
+          "producerVersion",
+          "protocolVersion",
+          "schema",
+          "serverBuildRef",
+          "serverId",
+          "status",
+          "toolCatalogDigest",
+          "transport",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_participation",
+            "field": "participationId"
+          },
+          {
+            "name": "by_server",
+            "field": "serverId"
+          },
+          {
+            "name": "by_protocol",
+            "field": "protocolVersion"
+          },
+          {
+            "name": "by_catalog",
+            "field": "toolCatalogDigest"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Initialized MCP transport and exact capability/tool catalog snapshot"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/observations",
+      "definition": {
+        "key_field": "observationId",
+        "required_fields": [
+          "attemptId",
+          "classification",
+          "contentDigest",
+          "contentRef",
+          "kind",
+          "observationId",
+          "observedAtUnixMs",
+          "schema",
+          "sourceId",
+          "sourceKind",
+          "status",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_source",
+            "field": "sourceId"
+          },
+          {
+            "name": "by_kind",
+            "field": "kind"
+          },
+          {
+            "name": "by_classification",
+            "field": "classification"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_observed_at",
+            "field": "observedAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab independently meaningful observations visible to agents or evaluators"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/operations",
+      "definition": {
+        "key_field": "operationId",
+        "required_fields": [
+          "attemptId",
+          "kind",
+          "operationId",
+          "requestDigest",
+          "schema",
+          "sideEffect",
+          "startedAtUnixMs",
+          "status",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_kind",
+            "field": "kind"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_started_at",
+            "field": "startedAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab side-effect and idempotency operation lifecycle"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/participant_claims",
+      "definition": {
+        "key_field": "claimId",
+        "required_fields": [
+          "attemptId",
+          "claimDigest",
+          "claimId",
+          "claimKind",
+          "claimRef",
+          "claimedAtUnixMs",
+          "participationId",
+          "schema",
+          "turnId",
+          "verificationState",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_participation",
+            "field": "participationId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_kind",
+            "field": "claimKind"
+          },
+          {
+            "name": "by_verification",
+            "field": "verificationState"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Participant-visible completion or diagnosis claim kept separate from independent Evaluation truth"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/permission_decisions",
+      "definition": {
+        "key_field": "permissionDecisionId",
+        "required_fields": [
+          "action",
+          "attemptId",
+          "captureAuthority",
+          "decidedAtUnixMs",
+          "decision",
+          "participationId",
+          "permissionDecisionId",
+          "policyRef",
+          "producerId",
+          "producerVersion",
+          "reasonCode",
+          "resourceRef",
+          "schema",
+          "subjectId",
+          "subjectKind",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_participation",
+            "field": "participationId"
+          },
+          {
+            "name": "by_subject",
+            "field": "subjectId"
+          },
+          {
+            "name": "by_action",
+            "field": "action"
+          },
+          {
+            "name": "by_policy",
+            "field": "policyRef"
+          },
+          {
+            "name": "by_decision",
+            "field": "decision"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Effective policy admission decision without embedding credentials or private policy bytes"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/provider_calls",
+      "definition": {
+        "key_field": "providerCallId",
+        "required_fields": [
+          "apiDialect",
+          "attemptId",
+          "captureAuthority",
+          "captureRunId",
+          "completeness",
+          "contextDocumentId",
+          "contextDocumentRevision",
+          "contextSnapshotId",
+          "effectiveParametersRef",
+          "gatewayRouteRef",
+          "participationId",
+          "producerId",
+          "producerSequence",
+          "producerVersion",
+          "providerCallId",
+          "providerId",
+          "recordedAtUnixMs",
+          "requestDigest",
+          "requestRef",
+          "requestedModelId",
+          "resolvedModelId",
+          "retryOrdinal",
+          "schema",
+          "sequence",
+          "spanId",
+          "startedAtUnixMs",
+          "status",
+          "traceId",
+          "turnId",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_participation",
+            "field": "participationId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_capture_run",
+            "field": "captureRunId"
+          },
+          {
+            "name": "by_context",
+            "field": "contextSnapshotId"
+          },
+          {
+            "name": "by_context_document",
+            "field": "contextDocumentId"
+          },
+          {
+            "name": "by_provider",
+            "field": "providerId"
+          },
+          {
+            "name": "by_model",
+            "field": "resolvedModelId"
+          },
+          {
+            "name": "by_capture_authority",
+            "field": "captureAuthority"
+          },
+          {
+            "name": "by_producer",
+            "field": "producerId"
+          },
+          {
+            "name": "by_trace",
+            "field": "traceId"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_started_at",
+            "field": "startedAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab observable provider calls with queryable usage and latency"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/runtime_observations",
+      "definition": {
+        "key_field": "observationId",
+        "required_fields": [
+          "agentKind",
+          "externalTurnId",
+          "observationId",
+          "operationId",
+          "ordinal",
+          "payloadByteLength",
+          "payloadChunkCount",
+          "payloadDigest",
+          "payloadId",
+          "schema",
+          "sessionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_operation",
+            "field": "operationId"
+          },
+          {
+            "name": "by_session",
+            "field": "sessionId"
+          },
+          {
+            "name": "by_method",
+            "field": "method"
+          },
+          {
+            "name": "by_item_type",
+            "field": "itemType"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_sequence",
+            "field": "sequence"
+          }
+        ],
+        "description": "One Harness-observed adapter event per row; analysis refers to this immutable source"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/runtime_payload_chunks",
+      "definition": {
+        "key_field": "payloadChunkId",
+        "required_fields": [
+          "byteLength",
+          "byteOffset",
+          "operationId",
+          "ordinal",
+          "payloadChunkId",
+          "payloadId",
+          "schema",
+          "textUtf8"
+        ],
+        "indexes": [
+          {
+            "name": "by_operation",
+            "field": "operationId"
+          },
+          {
+            "name": "by_payload",
+            "field": "payloadId"
+          }
+        ],
+        "description": "Lossless bodies owned by one runtime observation or terminal summary"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/runtime_turns",
+      "definition": {
+        "key_field": "operationId",
+        "required_fields": [
+          "agentKind",
+          "agentProfile",
+          "baseRevision",
+          "durationMs",
+          "exitCode",
+          "externalThreadId",
+          "externalTurnId",
+          "modelId",
+          "observationCount",
+          "observationsPresent",
+          "operationId",
+          "payloadByteLength",
+          "payloadChunkCount",
+          "payloadDigest",
+          "payloadId",
+          "protocol",
+          "protocolVerified",
+          "providerId",
+          "recoveryState",
+          "requestDigest",
+          "resultDigest",
+          "resultSchema",
+          "schema",
+          "sessionId",
+          "status"
+        ],
+        "indexes": [
+          {
+            "name": "by_session",
+            "field": "sessionId"
+          },
+          {
+            "name": "by_agent",
+            "field": "agentKind"
+          },
+          {
+            "name": "by_provider",
+            "field": "providerId"
+          },
+          {
+            "name": "by_model",
+            "field": "modelId"
+          },
+          {
+            "name": "by_thread",
+            "field": "externalThreadId"
+          },
+          {
+            "name": "by_turn",
+            "field": "externalTurnId"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_recovery_state",
+            "field": "recoveryState"
+          }
+        ],
+        "description": "AgentLab structured Code Agent runtime turn facts"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/state_vectors",
+      "definition": {
+        "key_field": "stateVectorId",
+        "required_fields": [
+          "attemptId",
+          "captureRunId",
+          "completeness",
+          "producerId",
+          "producerVersion",
+          "schema",
+          "sealedAtUnixMs",
+          "sequence",
+          "sessionFactsRevision",
+          "sessionFsSnapshotRef",
+          "stateVectorId",
+          "status",
+          "vectorDigest",
+          "workspaceLeaseRevision",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_sequence",
+            "field": "sequence"
+          },
+          {
+            "name": "by_workspace_lease",
+            "field": "workspaceLeaseRevision"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_producer",
+            "field": "producerId"
+          },
+          {
+            "name": "by_digest",
+            "field": "vectorDigest"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Sealed analysis identity referencing the prior exact TableGit fact revision plus SessionFS, Workspace Lease, checkpoint, context, and per-authority capture coverage without a self-referential commit"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/tool_calls",
+      "definition": {
+        "key_field": "toolCallId",
+        "required_fields": [
+          "attemptId",
+          "captureAuthority",
+          "captureRunId",
+          "contextSnapshotId",
+          "inputDigest",
+          "inputRef",
+          "outcomeCertainty",
+          "participationId",
+          "producerId",
+          "producerSequence",
+          "producerVersion",
+          "recordedAtUnixMs",
+          "schema",
+          "sequence",
+          "sideEffect",
+          "spanId",
+          "startedAtUnixMs",
+          "status",
+          "toolCallId",
+          "toolName",
+          "toolSchemaDigest",
+          "traceId",
+          "turnId",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_participation",
+            "field": "participationId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_provider_call",
+            "field": "providerCallId"
+          },
+          {
+            "name": "by_context",
+            "field": "contextSnapshotId"
+          },
+          {
+            "name": "by_operation",
+            "field": "operationId"
+          },
+          {
+            "name": "by_tool",
+            "field": "toolName"
+          },
+          {
+            "name": "by_capture_authority",
+            "field": "captureAuthority"
+          },
+          {
+            "name": "by_producer",
+            "field": "producerId"
+          },
+          {
+            "name": "by_trace",
+            "field": "traceId"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_started_at",
+            "field": "startedAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab observable tool-call lifecycle with bounded payload references"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/turns",
+      "definition": {
+        "key_field": "turnId",
+        "required_fields": [
+          "attemptId",
+          "ingressKind",
+          "ingressRef",
+          "participationId",
+          "schema",
+          "sequence",
+          "startedAtUnixMs",
+          "status",
+          "turnId",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_participation",
+            "field": "participationId"
+          },
+          {
+            "name": "by_sequence",
+            "field": "sequence"
+          },
+          {
+            "name": "by_ingress_kind",
+            "field": "ingressKind"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Canonical observable interaction boundary; provider rounds remain separate calls within a Turn"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/workspace_changes",
+      "definition": {
+        "key_field": "workspaceChangeId",
+        "required_fields": [
+          "attemptId",
+          "byteDelta",
+          "changeKind",
+          "executable",
+          "fileClass",
+          "generated",
+          "ignored",
+          "path",
+          "schema",
+          "workspaceChangeId",
+          "workspaceTransitionId",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_transition",
+            "field": "workspaceTransitionId"
+          },
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_path",
+            "field": "path"
+          },
+          {
+            "name": "by_kind",
+            "field": "changeKind"
+          },
+          {
+            "name": "by_file_class",
+            "field": "fileClass"
+          },
+          {
+            "name": "by_language",
+            "field": "language"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Path-level structured Workspace delta derived from exact SessionFS snapshots"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/workspace_snapshots",
+      "definition": {
+        "key_field": "workspaceSnapshotId",
+        "required_fields": [
+          "attemptId",
+          "capsuleDigest",
+          "captureAuthority",
+          "deltaBytes",
+          "exclusionDigest",
+          "fileCount",
+          "logicalBytes",
+          "mountDigest",
+          "pinState",
+          "producerId",
+          "producerVersion",
+          "retentionClass",
+          "schema",
+          "sessionFsSnapshotRef",
+          "status",
+          "verifiedAtUnixMs",
+          "workspaceLeaseRevision",
+          "workspaceRevision",
+          "workspaceSnapshotId",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_parent",
+            "field": "parentSnapshotId"
+          },
+          {
+            "name": "by_workspace_revision",
+            "field": "workspaceRevision"
+          },
+          {
+            "name": "by_lease_revision",
+            "field": "workspaceLeaseRevision"
+          },
+          {
+            "name": "by_producer",
+            "field": "producerId"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Verified SessionFS Workspace snapshot metadata; Workspace bytes never enter TableGit"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/workspace_transitions",
+      "definition": {
+        "key_field": "workspaceTransitionId",
+        "required_fields": [
+          "addedPaths",
+          "afterWorkspaceSnapshotId",
+          "attemptId",
+          "authority",
+          "beforeWorkspaceSnapshotId",
+          "captureAuthority",
+          "captureRunId",
+          "causeId",
+          "causeKind",
+          "changedBytes",
+          "completedAtUnixMs",
+          "deletedPaths",
+          "producerId",
+          "producerSequence",
+          "producerVersion",
+          "recordedAtUnixMs",
+          "schema",
+          "status",
+          "traceId",
+          "updatedPaths",
+          "workspaceTransitionId",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_turn",
+            "field": "turnId"
+          },
+          {
+            "name": "by_cause",
+            "field": "causeId"
+          },
+          {
+            "name": "by_authority",
+            "field": "authority"
+          },
+          {
+            "name": "by_before_snapshot",
+            "field": "beforeWorkspaceSnapshotId"
+          },
+          {
+            "name": "by_after_snapshot",
+            "field": "afterWorkspaceSnapshotId"
+          },
+          {
+            "name": "by_capture_authority",
+            "field": "captureAuthority"
+          },
+          {
+            "name": "by_producer",
+            "field": "producerId"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_completed_at",
+            "field": "completedAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab causal attribution for Git and SessionFS workspace changes"
+      }
+    }
+  ],
+  "ownerGlobal": [
+    {
+      "path": "data/tables/agentlab/v2/session_directory",
+      "definition": {
+        "key_field": "sessionKey",
+        "required_fields": [
+          "logicalSessionId",
+          "ownerKey",
+          "repositoryId",
+          "schema",
+          "sessionKey",
+          "sessionRevision",
+          "status"
+        ],
+        "indexes": [
+          {
+            "name": "by_logicalSessionId",
+            "field": "logicalSessionId"
+          },
+          {
+            "name": "by_repositoryId",
+            "field": "repositoryId"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          }
+        ],
+        "description": "AgentLab owner-scoped Session directory"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/analysis_results",
+      "definition": {
+        "key_field": "analysisResultId",
+        "required_fields": [
+          "analysisResultId",
+          "analysisRunId",
+          "createdAtUnixMs",
+          "dimension",
+          "dimensionValue",
+          "evidenceRef",
+          "experimentId",
+          "metricId",
+          "schema",
+          "sourceRevisionVectorDigest",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_run",
+            "field": "analysisRunId"
+          },
+          {
+            "name": "by_experiment",
+            "field": "experimentId"
+          },
+          {
+            "name": "by_metric",
+            "field": "metricId"
+          },
+          {
+            "name": "by_dimension",
+            "field": "dimension"
+          },
+          {
+            "name": "by_dimension_value",
+            "field": "dimensionValue"
+          },
+          {
+            "name": "by_created_at",
+            "field": "createdAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab tidy analysis results ready for charts and dashboards"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/analysis_runs",
+      "definition": {
+        "key_field": "analysisRunId",
+        "required_fields": [
+          "analysisKind",
+          "analysisRunId",
+          "analyzerId",
+          "analyzerVersion",
+          "experimentId",
+          "schema",
+          "sourceRevisionVectorDigest",
+          "startedAtUnixMs",
+          "status",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_experiment",
+            "field": "experimentId"
+          },
+          {
+            "name": "by_kind",
+            "field": "analysisKind"
+          },
+          {
+            "name": "by_analyzer",
+            "field": "analyzerId"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_started_at",
+            "field": "startedAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab reproducible analysis executions"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/comparison_groups",
+      "definition": {
+        "key_field": "comparisonGroupId",
+        "required_fields": [
+          "comparisonGroupId",
+          "comparisonKind",
+          "controlledDimensions",
+          "createdAtUnixMs",
+          "experimentId",
+          "policyRef",
+          "schema",
+          "seedId",
+          "status",
+          "variedDimensions",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_experiment",
+            "field": "experimentId"
+          },
+          {
+            "name": "by_seed",
+            "field": "seedId"
+          },
+          {
+            "name": "by_kind",
+            "field": "comparisonKind"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Explicit controlled/counterfactual comparison membership without collapsing topology strata"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/comparison_members",
+      "definition": {
+        "key_field": "comparisonMemberId",
+        "required_fields": [
+          "comparisonGroupId",
+          "comparisonMemberId",
+          "experimentId",
+          "ordinal",
+          "role",
+          "runId",
+          "schema",
+          "selectedRevision",
+          "stratum",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_group",
+            "field": "comparisonGroupId"
+          },
+          {
+            "name": "by_experiment",
+            "field": "experimentId"
+          },
+          {
+            "name": "by_run",
+            "field": "runId"
+          },
+          {
+            "name": "by_role",
+            "field": "role"
+          },
+          {
+            "name": "by_stratum",
+            "field": "stratum"
+          },
+          {
+            "name": "by_ordinal",
+            "field": "ordinal"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "One exact Run revision per comparison role and topology stratum"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/derivations",
+      "definition": {
+        "key_field": "derivationId",
+        "required_fields": [
+          "childInitialStateVectorRef",
+          "childRunId",
+          "contextPolicy",
+          "createdAtUnixMs",
+          "derivationId",
+          "environmentPolicy",
+          "experimentId",
+          "invariantsRef",
+          "mutationOperator",
+          "operationId",
+          "parametersRef",
+          "parentRunId",
+          "parentStateVectorRef",
+          "randomSeed",
+          "recipeId",
+          "recipeVersion",
+          "schema",
+          "seedId",
+          "status",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_experiment",
+            "field": "experimentId"
+          },
+          {
+            "name": "by_seed",
+            "field": "seedId"
+          },
+          {
+            "name": "by_parent",
+            "field": "parentRunId"
+          },
+          {
+            "name": "by_child",
+            "field": "childRunId"
+          },
+          {
+            "name": "by_recipe",
+            "field": "recipeId"
+          },
+          {
+            "name": "by_operator",
+            "field": "mutationOperator"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Replayable seed/Fork derivation recipe with exact parent and child state vectors"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/difficulty_episodes",
+      "definition": {
+        "key_field": "difficultyEpisodeId",
+        "required_fields": [
+          "attemptId",
+          "confidence",
+          "createdAtUnixMs",
+          "detectorId",
+          "detectorVersion",
+          "difficultyEpisodeId",
+          "elapsedMs",
+          "endStateVectorRef",
+          "endTurnId",
+          "evidenceRef",
+          "experimentId",
+          "kind",
+          "providerCallCount",
+          "resolutionKind",
+          "reviewState",
+          "rootCause",
+          "runId",
+          "schema",
+          "seedId",
+          "sourceRevisionVectorDigest",
+          "startStateVectorRef",
+          "startTurnId",
+          "tokenCost",
+          "toolCallCount",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_experiment",
+            "field": "experimentId"
+          },
+          {
+            "name": "by_seed",
+            "field": "seedId"
+          },
+          {
+            "name": "by_run",
+            "field": "runId"
+          },
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_kind",
+            "field": "kind"
+          },
+          {
+            "name": "by_root_cause",
+            "field": "rootCause"
+          },
+          {
+            "name": "by_resolution",
+            "field": "resolutionKind"
+          },
+          {
+            "name": "by_review_state",
+            "field": "reviewState"
+          },
+          {
+            "name": "by_confidence",
+            "field": "confidence"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Reviewable difficulty interval with cost, causal evidence, root cause, and resolution"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/experiments",
+      "definition": {
+        "key_field": "experimentId",
+        "required_fields": [
+          "comparisonPolicyRef",
+          "createdAtUnixMs",
+          "designRef",
+          "experimentId",
+          "name",
+          "purposeRef",
+          "schema",
+          "seedId",
+          "status",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_seed",
+            "field": "seedId"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_created_at",
+            "field": "createdAtUnixMs"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Cross-Session experiment intent and comparison design"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/metric_definitions",
+      "definition": {
+        "key_field": "metricId",
+        "required_fields": [
+          "aggregation",
+          "createdAtUnixMs",
+          "definitionDigest",
+          "definitionRef",
+          "description",
+          "direction",
+          "metricId",
+          "name",
+          "schema",
+          "unit",
+          "valueType",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_name",
+            "field": "name"
+          },
+          {
+            "name": "by_unit",
+            "field": "unit"
+          },
+          {
+            "name": "by_aggregation",
+            "field": "aggregation"
+          },
+          {
+            "name": "by_digest",
+            "field": "definitionDigest"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Versioned metric semantics for comparable analysis and visualization"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/run_specs",
+      "definition": {
+        "key_field": "runSpecId",
+        "required_fields": [
+          "budgetRef",
+          "capabilityProfileRef",
+          "capturePolicyRef",
+          "createdAtUnixMs",
+          "credentialPolicyRef",
+          "environmentProfileRef",
+          "evaluatorRef",
+          "experimentId",
+          "gatewayRouteRef",
+          "initialWorkspaceSnapshotRef",
+          "modelRouteRef",
+          "participantImplementationRef",
+          "participantTopology",
+          "policyRef",
+          "rubricRef",
+          "runSpecId",
+          "schema",
+          "seedId",
+          "specDigest",
+          "toolCatalogRef",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_experiment",
+            "field": "experimentId"
+          },
+          {
+            "name": "by_seed",
+            "field": "seedId"
+          },
+          {
+            "name": "by_participant",
+            "field": "participantImplementationRef"
+          },
+          {
+            "name": "by_topology",
+            "field": "participantTopology"
+          },
+          {
+            "name": "by_model_route",
+            "field": "modelRouteRef"
+          },
+          {
+            "name": "by_digest",
+            "field": "specDigest"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "Immutable reproducible Run input across task, participant, model, tools, policy, environment, state, evaluator, budget, and capture"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/runs",
+      "definition": {
+        "key_field": "runId",
+        "required_fields": [
+          "createdAtUnixMs",
+          "experimentId",
+          "repositoryId",
+          "runId",
+          "runSpecId",
+          "schema",
+          "selectedRevision",
+          "sessionId",
+          "status",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_experiment",
+            "field": "experimentId"
+          },
+          {
+            "name": "by_run_spec",
+            "field": "runSpecId"
+          },
+          {
+            "name": "by_session",
+            "field": "sessionId"
+          },
+          {
+            "name": "by_attempt",
+            "field": "attemptId"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "One admitted execution bound to one immutable RunSpec and one exact Session repository revision"
+      }
+    },
+    {
+      "path": "data/tables/agentlab/v3/task_seeds",
+      "definition": {
+        "key_field": "seedId",
+        "required_fields": [
+          "acceptanceDigest",
+          "acceptanceRef",
+          "createdAtUnixMs",
+          "environmentProfileRef",
+          "initialWorkspaceSnapshotRef",
+          "licenseRef",
+          "provenanceRef",
+          "schema",
+          "seedDigest",
+          "seedId",
+          "sourceRevision",
+          "status",
+          "taskKind",
+          "taskRef",
+          "toolchainProfileRef",
+          "writableScopeRef",
+          "writeOperationId",
+          "writeTransactionId"
+        ],
+        "indexes": [
+          {
+            "name": "by_task_kind",
+            "field": "taskKind"
+          },
+          {
+            "name": "by_task",
+            "field": "taskRef"
+          },
+          {
+            "name": "by_source_revision",
+            "field": "sourceRevision"
+          },
+          {
+            "name": "by_status",
+            "field": "status"
+          },
+          {
+            "name": "by_write_transaction",
+            "field": "writeTransactionId"
+          },
+          {
+            "name": "by_write_operation",
+            "field": "writeOperationId"
+          }
+        ],
+        "description": "AgentLab reusable exact task seeds"
+      }
+    }
+  ]
+}

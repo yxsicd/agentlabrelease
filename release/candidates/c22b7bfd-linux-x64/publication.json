@@ -105,7 +105,14 @@
     "sessionTables": 46,
     "ownerTables": 12,
     "fullWhiteboxQualified": false,
-    "fixedChannelPromoted": false
+    "fixedChannelPromoted": false,
+    "templateInventoryDigest": "ce5420c470445e55c2d501d122b3b4deab6adaf0e66505d437039a8b84e2e47a",
+    "failedPublicRuns": [
+      {
+        "runId": 34709450690,
+        "cause": "New inventory check incorrectly compared deployment-specific template lock digest to a fresh fixture lock. Data persistence and recovery passed."
+      }
+    ]
   },
   "limitations": [
     "Public source capture is distinct from normalized production whitebox coverage.",
@@ -121,6 +128,7 @@
     "sha256": "2cde4be71c9d2b00f93154a9d4e968a72d939162cef033d78f6e8d25e888f1b0",
     "sessionTables": 46,
     "ownerTables": 12,
-    "templateContractDigest": "70fd5320999dd483dd7a33590834e35fa72ac1f100e2254d72f13b1817944af7"
+    "templateInventoryDigest": "ce5420c470445e55c2d501d122b3b4deab6adaf0e66505d437039a8b84e2e47a",
+    "templateInventory": "./session-template-inventory.json"
   }
 }
