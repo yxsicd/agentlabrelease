@@ -43,8 +43,8 @@ jobs:
       - name: Acquire and install published AgentLab components
         id: install
         env:
-          AGENTLAB_RELEASE_CHANNEL: candidate-20260912-26008e36-linux-x64
-          AGENTLAB_COMPOSITION_DIR: release/candidates/26008e36-linux-x64
+          AGENTLAB_RELEASE_CHANNEL: candidate-20260912-c22b7bfd-linux-x64
+          AGENTLAB_COMPOSITION_DIR: release/candidates/c22b7bfd-linux-x64
           GITHUB_TOKEN: ${{ github.token }}
         run: scripts/ci-public-install-deploy-smoke.sh
       - name: Run real Pi with the public LM Gateway and independently compile every edit
@@ -62,9 +62,9 @@ jobs:
         run: |
           mapfile -t runtime < <(python3 - <<'PYCODE'
           import json
-          lock = json.load(open("release/candidates/26008e36-linux-x64/environment-lock.json"))
+          lock = json.load(open("release/candidates/c22b7bfd-linux-x64/environment-lock.json"))
           print(lock["images"][0]["reference"])
-          print(next(c["volume"] for c in lock["components"] if "agentlab-release-26008e36" in c["volume"]))
+          print(next(c["volume"] for c in lock["components"] if c["slot"] == "release"))
           PYCODE
           )
           /usr/bin/python3 examples/tablegit-session/run.py \

@@ -1,0 +1,11 @@
+{
+  "schema": "agentlab.demo_dependency.v1",
+  "sourceRevision": "c22b7bfd867a25bbea2bfdf6053fe8c8bd668007",
+  "platform": "linux-x64",
+  "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/session-sdk-c22b7bfd-linux-x64/agentlab-session-sdk-c22b7bfd-linux-x64",
+  "bytes": 5203248,
+  "sha256": "2cde4be71c9d2b00f93154a9d4e968a72d939162cef033d78f6e8d25e888f1b0",
+  "sessionTables": 46,
+  "ownerTables": 12,
+  "templateContractDigest": "70fd5320999dd483dd7a33590834e35fa72ac1f100e2254d72f13b1817944af7"
+}

@@ -4,11 +4,11 @@ Source-free public developer releases for AgentLab, an evaluation Harness for
 running, observing, checkpointing, forking, and comparing replaceable Code
 Agents.
 
-Current runtime candidate: `candidate-20260912-26008e36-linux-x64`.
+Current runtime candidate: `candidate-20260912-c22b7bfd-linux-x64`.
 The historical environment-kit preview remains `v0.1.0-alpha.9`.
 
 Component-based publication now uses [reference-only environment releases](docs/component-publication.md).
-The [26008e36 Linux x64 candidate](release/candidates/26008e36-linux-x64/publication.json)
+The [c22b7bfd Linux x64 candidate](release/candidates/c22b7bfd-linux-x64/publication.json)
 references independently published packages and records its remaining acceptance
 gates. It does not supersede the current developer preview or stable channels.
 

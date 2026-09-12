@@ -1,8 +1,8 @@
 {
   "schema": "agentlab.demo_dependency.v1",
-  "sourceRevision": "26008e369f650b46be5bc4c7a48d49f99ac90a22",
+  "sourceRevision": "c22b7bfd867a25bbea2bfdf6053fe8c8bd668007",
   "platform": "linux-x64",
-  "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/runtime-26008e36-linux-x64/agentlab-pack-agentlab-release-26008e36-linux-x64.tar.zst",
-  "sha256": "5ba5d112eec077eb8f9203531ddef5ab8bd4938ae87a68fc6b4e7c999cdffd67",
-  "bytes": 49252041
+  "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/runtime-c22b7bfd-linux-x64/agentlab-pack-agentlab-release-c22b7bfd-linux-x64.tar.zst",
+  "sha256": "f5605170494f6f0a9f07e0c777eebc5d5cb0e04737fce57ce25c016cb3bb548a",
+  "bytes": 49249127
 }

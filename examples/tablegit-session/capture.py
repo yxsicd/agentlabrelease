@@ -141,8 +141,7 @@ class Service:
         return message['payload']
 
 
-def ingest(service,repo,rows,operation_id):
-    worktree={'topic_id':'main'}
+def ingest(service,repo,rows,operation_id,worktree):
     revision=service.call('table.worktree.open',{'repo':repo,'worktree':worktree})['revision']
     commits=[]
     for start in range(0,len(rows),PAGE):

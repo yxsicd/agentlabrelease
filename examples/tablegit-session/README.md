@@ -8,7 +8,7 @@ Then, from the repository root:
 ```bash
 /usr/bin/python3 examples/tablegit-session/run.py \
   --image chatproxy-agentlab:git-fa05788f-linux-x64 \
-  --runtime-volume vol-agentlab-pack-agentlab-release-26008e36-linux-x64-5ba5d112eec0 \
+  --runtime-volume vol-agentlab-pack-agentlab-release-c22b7bfd-linux-x64-f5605170494f \
   --root "$HOME/agentlab-demo/tablegit"
 ```
 
@@ -16,7 +16,7 @@ The example creates an isolated Docker network, MCPGit Gateway and organization,
 and empty repositories with a disposable test operator. `fixture.py` seeds only
 infrastructure repositories and this test identity. AgentLab's business tables,
 Session binding, operation pre-state, Lease and projection state are created by
-the **released `agentlab-mcpgit-template-probe`**, using AgentLab's production
+the **independently released Session SDK program**, using AgentLab's production
 provisioner and the normal MCPGit Service SDK.
 
 MCPGit is independently downloaded from its original immutable release and
@@ -69,3 +69,8 @@ TableGit rows and Git history for later restoration into an independently
 configured MCPGit instance and generic programming/analysis. A failure after
 partial writes still attempts repository export; transport credentials are
 not part of the Git bundle. No physical execution directory is modified.
+
+The SDK program is selected by `release/ci/session-sdk.json`, independently of
+the runtime pack. The same resolved Session Binding selects capture writes and
+history export. The demo checks all46 Session/12 Owner definitions and their
+contract digest, so an older helper cannot silently qualify the new candidate.

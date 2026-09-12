@@ -60,12 +60,12 @@ jobs:
             composition: ''
             backend: copy-tree
           - target: candidate-copy
-            channel: candidate-20260912-26008e36-linux-x64
-            composition: release/candidates/26008e36-linux-x64
+            channel: candidate-20260912-c22b7bfd-linux-x64
+            composition: release/candidates/c22b7bfd-linux-x64
             backend: copy-tree
           - target: candidate-btrfs
-            channel: candidate-20260912-26008e36-linux-x64
-            composition: release/candidates/26008e36-linux-x64
+            channel: candidate-20260912-c22b7bfd-linux-x64
+            composition: release/candidates/c22b7bfd-linux-x64
             backend: btrfs-subvolume
     env:
       AGENTLAB_CI_ROOT: /tmp/agentlab-${{ matrix.target }}
@@ -122,9 +122,9 @@ jobs:
         run: |
           mapfile -t runtime < <(python3 - <<'PY'
           import json
-          lock = json.load(open("release/candidates/26008e36-linux-x64/environment-lock.json"))
+          lock = json.load(open("release/candidates/c22b7bfd-linux-x64/environment-lock.json"))
           print(lock["images"][0]["reference"])
-          print(next(c["volume"] for c in lock["components"] if "agentlab-release-26008e36" in c["volume"]))
+          print(next(c["volume"] for c in lock["components"] if c["slot"] == "release"))
           PY
           )
           /usr/bin/python3 examples/tablegit-session/run.py \

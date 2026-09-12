@@ -23,6 +23,8 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--image", required=True, help="image reference from installed composition")
     p.add_argument("--runtime-volume", required=True, help="runtime volume from installed composition")
+    p.add_argument("--sdk-program", type=Path, default=REPO / "release/ci/session-sdk.json",
+                   help="immutable released Session SDK program lock")
     p.add_argument("--root", required=True, type=Path)
     p.add_argument("--capture-evidence", type=Path, help="Actual operator-captured evidence to persist and reconstruct")
     p.add_argument("--capture-agent-kind", default="pi", help="Observed participant implementation; not capture authority")
@@ -105,11 +107,16 @@ def main():
         result = docker("run", "--rm", "--network", "container:"+gateway,
                         "--mount", f"type=bind,src={state},dst=/demo,readonly",
                         "--mount", f"type=volume,src={args.runtime_volume},dst=/agentlab-release,readonly",
-                        *env, "--entrypoint", "/agentlab-release/bin/agentlab-mcpgit-template-probe",
+                        "--mount", f"type=bind,src={sdk_binary},dst=/session-sdk/provision,readonly",
+                        *env, "--entrypoint", "/session-sdk/provision",
                         args.image, label=label)
         return save(evidence / (label + ".json"), json.loads(result))
 
     try:
+        sdk_binary = root / "downloads/session-sdk"
+        sdk = demo.acquire(args.sdk_program, sdk_binary)
+        sdk_binary.chmod(0o755)
+        save(evidence / "session-sdk.json", sdk)
         lock = demo.acquire(REPO / "release/ci/mcpgit-program.json", root / "downloads/mcpgit.tar.gz")
         summary["mcpgit"] = lock
         program = root / "program"
@@ -171,16 +178,17 @@ def main():
             capture_context = dict(producerRevision=os.environ.get("GITHUB_SHA"),
                 githubRunId=os.environ.get("GITHUB_RUN_ID"), githubRunAttempt=os.environ.get("GITHUB_RUN_ATTEMPT"),
                 collectorSha256=demo.sha256(Path(__file__).with_name("capture.py")),
-                runtimeImage=args.image, runtimeVolume=args.runtime_volume,
+                runtimeImage=args.image, runtimeVolume=args.runtime_volume, sessionSdk=sdk,
                 templateContractDigest=template["contractDigest"], mcpgit=lock)
             rows, objects, inventory = collect(args.capture_evidence, first["sessionKey"],
                 operation_id, args.capture_agent_kind, capture_context)
             port = docker("inspect", "--format", '{{(index (index .NetworkSettings.Ports "8002/tcp") 0).HostPort}}', gateway)
             service = Service("ws://127.0.0.1:"+port+"/__mcpgit/service-ws",
                               (state/"caller.authorization").read_text().strip(), evidence)
+            capture_worktree = {"topic_id":first["binding"]["topicId"]}
             capture_worktree_path = service.call('table.worktree.open',
-                {'repo':first["binding"]["repositoryId"],'worktree':{'topic_id':'main'}})['worktree_path']
-            revision, commits = ingest(service, first["binding"]["repositoryId"], rows, operation_id)
+                {'repo':first["binding"]["repositoryId"],'worktree':capture_worktree})['worktree_path']
+            revision, commits = ingest(service, first["binding"]["repositoryId"], rows, operation_id, capture_worktree)
             capture_revision = revision
             capture_state = (service, revision, rows, objects, inventory)
             save(evidence/"capture-commit-manifest.json", dict(operationId=operation_id,
@@ -209,6 +217,10 @@ def main():
         checks["lease_revision_recovered"] = first["leaseRevision"] == second["leaseRevision"]
         checks["projection_state_in_table"] = second["projectionState"]["exactCommittedReadback"] is True
         checks["operation_prestate_recovered"] = second["persistedPreStateReadback"] is True
+        checks["sdk_template_inventory"] = (len(template["session"]["tables"]) == sdk["sessionTables"]
+            and len(template["ownerGlobal"]["tables"]) == sdk["ownerTables"]
+            and template["contractDigest"] == sdk["templateContractDigest"])
+        summary["sessionSdk"] = sdk
         summary["sessionTables"] = len(template["session"]["tables"])
         summary["ownerTables"] = len(template["ownerGlobal"]["tables"])
         summary["ok"] = all(checks.values())

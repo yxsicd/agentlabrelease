@@ -1,0 +1,172 @@
+{
+  "componentGraph": {
+    "nodes": [
+      {
+        "binding": {
+          "kind": "image-slot",
+          "slot": "runtime"
+        },
+        "id": "image-runtime",
+        "platform": "linux-x64",
+        "provides": {
+          "container.runtime": 1
+        },
+        "requires": {},
+        "version": "chatproxy-agentlab:git-fa05788f-linux-x64"
+      },
+      {
+        "binding": {
+          "kind": "pack-slot",
+          "slot": "release"
+        },
+        "id": "component-release",
+        "platform": "linux-x64",
+        "provides": {
+          "agentlab.runtime": 1,
+          "agentlab.template-qualification-reader": 2
+        },
+        "requires": {
+          "mcpgit.session-template-contract": {
+            "min": 7,
+            "maxExclusive": 8
+          }
+        },
+        "upgradePolicy": "coordinated",
+        "version": "c22b7bfd"
+      },
+      {
+        "binding": {
+          "kind": "pack-slot",
+          "slot": "tools"
+        },
+        "id": "component-tools",
+        "platform": "linux-x64",
+        "provides": {},
+        "requires": {},
+        "version": "e443b17a"
+      },
+      {
+        "binding": {
+          "kind": "pack-slot",
+          "slot": "harmony-cli"
+        },
+        "id": "component-harmony-cli",
+        "platform": "linux-x64",
+        "provides": {},
+        "requires": {},
+        "version": "6.1.1.300"
+      },
+      {
+        "binding": {
+          "kind": "pack-slot",
+          "slot": "harmony-build-kit"
+        },
+        "id": "component-harmony-build-kit",
+        "platform": "linux-x64",
+        "provides": {},
+        "requires": {},
+        "version": "buildkit-v5"
+      },
+      {
+        "binding": {
+          "authority": "mcpgit-template-lock",
+          "identitySha256": "70fd5320999dd483dd7a33590834e35fa72ac1f100e2254d72f13b1817944af7",
+          "kind": "external-authority"
+        },
+        "id": "mcpgit-template-authority",
+        "platform": "linux-x64",
+        "provides": {
+          "mcpgit.session-template-contract": 7
+        },
+        "requires": {
+          "agentlab.template-qualification-reader": {
+            "maxExclusive": 3,
+            "min": 2
+          }
+        },
+        "upgradePolicy": "coordinated",
+        "version": "semantic-v7-6209ae27"
+      }
+    ],
+    "resolvedContracts": {
+      "linux-x64": {
+        "container.runtime": 1,
+        "agentlab.runtime": 1,
+        "agentlab.template-qualification-reader": 2,
+        "mcpgit.session-template-contract": 7
+      }
+    },
+    "schema": "agentlab.component_graph.v1"
+  },
+  "components": [
+    {
+      "archiveSha256": "f5605170494f6f0a9f07e0c777eebc5d5cb0e04737fce57ce25c016cb3bb548a",
+      "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/runtime-c22b7bfd-linux-x64/agentlab-pack-agentlab-release-c22b7bfd-linux-x64.tar.zst",
+      "descriptor": "https://github.com/yxsicd/agentlabrelease/releases/download/runtime-c22b7bfd-linux-x64/agentlab-pack-agentlab-release-c22b7bfd-linux-x64.tar.zst.json",
+      "enabled": true,
+      "mountTarget": "/agentlab-release",
+      "packId": "agentlab-release",
+      "platform": "linux-x64",
+      "required": true,
+      "slot": "release",
+      "version": "c22b7bfd",
+      "volume": "vol-agentlab-pack-agentlab-release-c22b7bfd-linux-x64-f5605170494f"
+    },
+    {
+      "archiveSha256": "58bc13e984f7219a560017592bdee11a6874a15099faaa1d40b0f2542d489b6e",
+      "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/tools-e443b17a-linux-x64/agentlab-pack-developer-tools-e443b17a-linux-x64.tar.zst",
+      "descriptor": "https://github.com/yxsicd/agentlabrelease/releases/download/tools-e443b17a-linux-x64/agentlab-pack-developer-tools-e443b17a-linux-x64.tar.zst.json",
+      "enabled": true,
+      "mountTarget": "/tools",
+      "packId": "developer-tools",
+      "platform": "linux-x64",
+      "required": false,
+      "slot": "tools",
+      "version": "e443b17a",
+      "volume": "vol-agentlab-pack-developer-tools-e443b17a-linux-x64-58bc13e984f7"
+    },
+    {
+      "archiveSha256": "8fc2199afaea5055c6a3ff762b7b58a9475c5ff7b6c30285336014dc647927c2",
+      "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-linux-x64-6.1.1.300/harmony-linux-x64-6.1.1.300.tar.zst",
+      "descriptor": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-linux-x64-6.1.1.300/harmony-linux-x64-6.1.1.300.tar.zst.json",
+      "enabled": true,
+      "installMode": "adopted-archive",
+      "mountTarget": "/opt/harmony",
+      "packId": "harmony-cli",
+      "platform": "linux-x64",
+      "required": true,
+      "slot": "harmony-cli",
+      "version": "6.1.1.300",
+      "volume": "vol-agentlab-pack-harmony-cli-6.1.1.300-linux-x64-8fc2199afaea"
+    },
+    {
+      "archiveSha256": "4106f23863e7524d2e44489fb4199d8493422d12fd1c2fafb298d5a83eac68a5",
+      "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-buildkit-v5-linux-x64/agentlab-pack-harmony-build-kit-buildkit-v5-linux-x64.tar.zst",
+      "descriptor": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-buildkit-v5-linux-x64/agentlab-pack-harmony-build-kit-buildkit-v5-linux-x64.tar.zst.json",
+      "enabled": true,
+      "mountTarget": "/toolchains/harmony-build-kit",
+      "packId": "harmony-build-kit",
+      "platform": "linux-x64",
+      "required": false,
+      "slot": "harmony-build-kit",
+      "version": "buildkit-v5",
+      "volume": "vol-agentlab-pack-harmony-build-kit-buildkit-v5-linux-x64-4106f23863e7"
+    }
+  ],
+  "images": [
+    {
+      "archiveSha256": "f5dddac4b52b81abd2e88f4f8e8eac246b4bfd71ae3eb904141d073a4ee4a477",
+      "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/image-fa05788f-linux-x64/chatproxy-agentlab-git-fa05788f-linux-x64.docker.tar.zst",
+      "descriptor": "https://github.com/yxsicd/agentlabrelease/releases/download/image-fa05788f-linux-x64/chatproxy-agentlab-git-fa05788f-linux-x64.docker.tar.zst.json",
+      "enabled": true,
+      "imageId": "sha256:2128b0fdba2e7e3297533869ce0533944f348ea7f5b0fa1dc9832ba825a0bd74",
+      "platform": "linux-x64",
+      "reference": "chatproxy-agentlab:git-fa05788f-linux-x64",
+      "required": true,
+      "slot": "runtime"
+    }
+  ],
+  "schema": "agentlab.environment_lock.v3",
+  "sourceRevision": "c22b7bfd867a25bbea2bfdf6053fe8c8bd668007",
+  "tier": "dev"
+}

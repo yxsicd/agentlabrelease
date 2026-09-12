@@ -28,8 +28,8 @@ Run from the repository root:
 
 ```bash
 export AGENTLAB_CI_ROOT="$HOME/agentlab-demo/install"
-export AGENTLAB_RELEASE_CHANNEL=candidate-20260912-26008e36-linux-x64
-export AGENTLAB_COMPOSITION_DIR=release/candidates/26008e36-linux-x64
+export AGENTLAB_RELEASE_CHANNEL=candidate-20260912-c22b7bfd-linux-x64
+export AGENTLAB_COMPOSITION_DIR=release/candidates/c22b7bfd-linux-x64
 bash scripts/ci-public-install-deploy-smoke.sh
 ```
 

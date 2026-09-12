@@ -37,7 +37,7 @@ class CaptureTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)/'source';root.mkdir();self.fixture(root)
             rows,objects,inventory=capture.collect(root,'session','operation')
-            service=MemoryService();revision,commits=capture.ingest(service,'repo',rows,'operation')
+            service=MemoryService();revision,commits=capture.ingest(service,'repo',rows,'operation',{'topic_id':None})
             result=capture.recover(service,'repo',revision,rows,objects,inventory,Path(tmp)/'recovered')
             self.assertTrue(result['exactFiles']);self.assertFalse(result['fullWhiteboxQualified'])
             methods={obj['row']['method'] for obj in objects}
@@ -49,7 +49,7 @@ class CaptureTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)/'source';root.mkdir();self.fixture(root)
             rows,objects,inventory=capture.collect(root,'session','operation')
-            service=MemoryService();revision,_=capture.ingest(service,'repo',rows,'operation')
+            service=MemoryService();revision,_=capture.ingest(service,'repo',rows,'operation',{'topic_id':None})
             key=next(k for k in service.rows if k[0]==capture.CHUNKS)
             service.rows[key]={**service.rows[key],'textUtf8':'changed'}
             with self.assertRaises(RuntimeError):
@@ -84,8 +84,20 @@ class CaptureTests(unittest.TestCase):
             errors=[o for o in objects if o['row']['method']=='capture.parse_error']
             self.assertEqual(len(errors),4)
             self.assertTrue({'pi.start','pi.end','gateway.response_event'} <= {o['row']['method'] for o in objects})
-            service=MemoryService();revision,_=capture.ingest(service,'repo',rows,'operation')
+            service=MemoryService();revision,_=capture.ingest(service,'repo',rows,'operation',{'topic_id':None})
             self.assertTrue(capture.recover(service,'repo',revision,rows,objects,inventory,Path(tmp)/'out')['exactFiles'])
+
+    def test_capture_reuses_resolved_topic_across_transactions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);self.fixture(root)
+            rows,_,_=capture.collect(root,'session','operation')
+            service=MemoryService()
+            worktree={'topic_id':'90000000-0000-4000-8000-000000000001'}
+            capture.ingest(service,'repo',rows,'operation',worktree)
+            selected=[p['worktree'] for m,p in service.requests
+                      if m in ('table.worktree.open','table.transact_many')]
+            self.assertGreater(len(selected),1)
+            self.assertTrue(all(w==worktree for w in selected))
 
     def test_stable_rows_for_same_source(self):
         with tempfile.TemporaryDirectory() as tmp:
