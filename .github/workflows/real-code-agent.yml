@@ -7,6 +7,11 @@ on:
         required: true
         default: glm-5.3-flash
         type: string
+      provider_route:
+        description: Explicit LM Gateway provider route
+        required: true
+        default: glm
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -22,6 +27,7 @@ jobs:
       AGENTLAB_CI_ROOT: /tmp/agentlab-real-acceptance
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_MODEL: ${{ inputs.model }}
+      AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Install archive support
@@ -48,7 +54,8 @@ jobs:
             --install-root "$AGENTLAB_CI_ROOT" \
             --root "$AGENTLAB_CI_ROOT/real-agent" \
             --agent-bin "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" \
-            --gateway-url "$AGENTLAB_LM_GATEWAY_URL" --model "$AGENTLAB_MODEL"
+            --gateway-url "$AGENTLAB_LM_GATEWAY_URL" --model "$AGENTLAB_MODEL" \
+            --provider-route "$AGENTLAB_PROVIDER_ROUTE"
       - name: Explain actual acceptance results
         if: always()
         run: python3 scripts/demo-summary.py "$AGENTLAB_CI_ROOT" >> "$GITHUB_STEP_SUMMARY"

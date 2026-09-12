@@ -15,12 +15,13 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class Participant:
-    def __init__(self, evidence, state, binary, gateway, model):
+    def __init__(self, evidence, state, binary, gateway, model, route='glm'):
         self.evidence = evidence
         self.state = state
         self.binary = str(Path(binary).resolve())
         self.gateway = gateway.rstrip('/')
         self.model = model
+        self.route = route
         self.key = os.environ['AGENTLAB_LM_GATEWAY_KEY']
         self.requests = 0
         self.lock = threading.Lock()
@@ -41,7 +42,11 @@ class Participant:
                 raw = self.rfile.read(int(self.headers['Content-Length']))
                 # Authentication is transport configuration, not test payload.
                 stem.with_suffix('.request.json').write_bytes(raw)
-                request = urllib.request.Request(owner.gateway + self.path, data=raw,
+                wire = json.loads(raw)
+                wire['providerId'] = owner.route
+                upstream = json.dumps(wire).encode()
+                stem.with_suffix('.upstream-request.json').write_bytes(upstream)
+                request = urllib.request.Request(owner.gateway + self.path, data=upstream,
                           headers={'Authorization': 'Bearer ' + owner.key,
                                    'Content-Type': 'application/json'}, method='POST')
                 try:
@@ -80,7 +85,8 @@ class Participant:
         (state / 'models.json').write_text(json.dumps(models, indent=2) + '\n')
         (evidence / 'participant.json').write_text(json.dumps({
             'implementation': 'pi', 'packageVersion': '0.73.1', 'model': model,
-            'gateway': gateway, 'captureAuthority': 'operator-owned local forwarding proxy',
+            'gateway': gateway, 'providerRoute': route,
+            'captureAuthority': 'operator-owned local forwarding proxy',
             'externalCredentialInParticipant': False}, indent=2) + '\n')
 
     def turn(self, label, project, marker, repair=False):
@@ -118,6 +124,10 @@ class Participant:
         if code:
             raise RuntimeError(f'{label}: Pi exited {code}; inspect participant evidence')
         events = [json.loads(line) for line in (self.evidence / f'{label}-events.jsonl').read_text().splitlines() if line]
+        errors = [e['message'].get('errorMessage', 'Model request failed') for e in events
+                  if e.get('type') == 'message_end' and e.get('message', {}).get('stopReason') == 'error']
+        if errors:
+            raise RuntimeError(f'{label}: ' + '; '.join(errors))
         if not any(e.get('type') == 'tool_execution_end' for e in events):
             raise RuntimeError(f'{label}: no completed native tool call')
         source = project / 'entry/src/main/ets/pages/Index.ets'
