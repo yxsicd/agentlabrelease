@@ -14,6 +14,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--install-root', type=Path, required=True)
     parser.add_argument('--root', type=Path, required=True)
+    parser.add_argument('--agent-bin', type=Path)
+    parser.add_argument('--gateway-url', default='https://llm-m4dd.de.yxsbase.win')
+    parser.add_argument('--model', default='glm-5.3-flash')
     args = parser.parse_args()
     root = args.root.resolve()
     root.mkdir(parents=True, exist_ok=False)
@@ -80,13 +83,26 @@ def main():
         return digest
 
     source = project / 'entry/src/main/ets/pages/Index.ets'
+    participant = None
     try:
+        if args.agent_bin:
+            import importlib.util
+            spec = importlib.util.spec_from_file_location('live_participant',
+                Path(__file__).parent.parent / 'real-code-agent/participant.py')
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            participant = module.Participant(evidence, root / 'participant-state',
+                                             args.agent_bin, args.gateway_url, args.model)
+            summary['participant'] = {'implementation': 'pi', 'model': args.model}
         call('doctor', 'doctor')
         summary['checks']['publishedToolchainReady'] = True
         original = source.read_text()
         hashes = [build('seed-build', 'Native Build Verified')]
         for number, marker in enumerate(('Public Iteration One', 'Public Iteration Two'), 1):
-            source.write_text(original.replace('Native Build Verified', marker))
+            if participant:
+                participant.turn(f'agent-iteration-{number}', project, marker)
+            else:
+                source.write_text(original.replace('Native Build Verified', marker))
             (evidence / f'iteration-{number}.ets').write_text(source.read_text())
             hashes.append(build(f'iteration-{number}-build', marker))
         summary['checks']['eachEditChangesCompiledHap'] = len(set(hashes)) == 3
@@ -99,13 +115,20 @@ def main():
         if failed['status'] != 'failed' or failed['artifacts']:
             raise RuntimeError('Invalid source reported stale artifacts as success')
         summary['checks']['invalidSourceRejected'] = True
-        source.write_text(original.replace('Native Build Verified', 'Public Iteration Two'))
+        if participant:
+            participant.turn('agent-repair', project, 'Public Iteration Two', repair=True)
+            summary['checks']['realAgentMultiTurnAndRepair'] = True
+        else:
+            source.write_text(original.replace('Native Build Verified', 'Public Iteration Two'))
         build('recovered-build', 'Public Iteration Two')
         summary['ok'] = True
     except Exception as error:
         summary['error'] = str(error)
         raise
     finally:
+        if participant:
+            summary['gatewayRequestCount'] = participant.requests
+            participant.close()
         (evidence / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
 
 

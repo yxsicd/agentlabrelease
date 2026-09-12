@@ -1,0 +1,65 @@
+name: Real Code Agent acceptance
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Model exposed by the LM Gateway
+        required: true
+        default: glm-5.3-flash
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: real-code-agent-acceptance
+  cancel-in-progress: false
+jobs:
+  pi-harmony:
+    # External credentials are never exposed to PR or arbitrary branch code.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      AGENTLAB_CI_ROOT: ${{ runner.temp }}/agentlab-real-acceptance
+      AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
+      AGENTLAB_MODEL: ${{ inputs.model }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install archive support
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes zstd
+      - name: Install the separately contained Pi runtime
+        run: |
+          mkdir -p "$RUNNER_TEMP/pi-runtime"
+          cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
+          npm ci --prefix "$RUNNER_TEMP/pi-runtime"
+          "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" --version
+      - name: Acquire and install published AgentLab components
+        env:
+          AGENTLAB_RELEASE_CHANNEL: candidate-20260912-26008e36-linux-x64
+          AGENTLAB_COMPOSITION_DIR: release/candidates/26008e36-linux-x64
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci-public-install-deploy-smoke.sh
+      - name: Run real Pi with the public LM Gateway and independently compile every edit
+        env:
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+        run: |
+          python3 examples/harmony-build/run.py \
+            --install-root "$AGENTLAB_CI_ROOT" \
+            --root "$AGENTLAB_CI_ROOT/real-agent" \
+            --agent-bin "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" \
+            --gateway-url "$AGENTLAB_LM_GATEWAY_URL" --model "$AGENTLAB_MODEL"
+      - name: Explain actual acceptance results
+        if: always()
+        run: python3 scripts/demo-summary.py "$AGENTLAB_CI_ROOT" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve complete controlled test evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: real-pi-harmony-acceptance
+          if-no-files-found: error
+          path: |
+            ${{ env.AGENTLAB_CI_ROOT }}/real-agent/evidence/
+            ${{ env.AGENTLAB_CI_ROOT }}/runs/
+            ${{ env.AGENTLAB_CI_ROOT }}/*.json
+            ${{ env.AGENTLAB_CI_ROOT }}/*.log

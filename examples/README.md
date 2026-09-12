@@ -15,6 +15,7 @@ stateful examples. Pin this repository to the full commit you intend to test.
 | [TableGit Session recovery](tablegit-session/README.md) | Bootstrap business tables, create a Session, publish Lease/projection state, restart storage, reconstruct | The released provisioner recovers the same Session, file digest and Lease from real committed TableGit data |
 | [Mock Agent campaign](mock-agent/README.md) | Create a Harmony seed, Fork, edit, make a mistake, restart, correct and replay | A separate evaluator detects actual service outcomes and parent isolation, despite an optimistic participant |
 | [Harmony native compilation](harmony-build/README.md) | Initialize an ArkTS project, compile, edit twice, reject invalid source and recover | Real offline unsigned HAP files match compiler receipts and contain each iteration's bytecode marker |
+| [Real Code Agent acceptance](real-code-agent/README.md) | Pi calls a real LM Gateway, edits twice and repairs invalid ArkTS | Independent builds verify the actual Agent changes; full inference and native tool evidence are retained |
 
 The test operator controls the Harness. The Mock Agent is a replaceable
 participant. A participant's success claim is retained as evidence and never
