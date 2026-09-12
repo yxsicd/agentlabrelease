@@ -54,6 +54,13 @@ class CaptureTests(unittest.TestCase):
     def test_no_fake_success_without_capture(self):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(ValueError):capture.collect(Path(tmp),'session','operation')
+    def test_mock_source_preserves_implementation_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/'events.jsonl').write_text('{"kind":"operator_test_result","verdict":"failed"}\n')
+            rows,objects,_=capture.collect(root,'session','operation','mock')
+            self.assertTrue(all(obj['row']['agentKind']=='mock' for obj in objects))
+            self.assertIn('mock.operator_test_result',{obj['row']['method'] for obj in objects})
     def test_stable_rows_for_same_source(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);self.fixture(root)

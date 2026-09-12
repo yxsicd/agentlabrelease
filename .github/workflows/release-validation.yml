@@ -129,7 +129,8 @@ jobs:
           )
           /usr/bin/python3 examples/tablegit-session/run.py \
             --image "${runtime[0]}" --runtime-volume "${runtime[1]}" \
-            --root "$AGENTLAB_CI_ROOT/tablegit-demo"
+            --root "$AGENTLAB_CI_ROOT/tablegit-demo" \
+            --capture-evidence "$AGENTLAB_CI_ROOT/mock-evidence" --capture-agent-kind mock
       - name: Explain verified stateful demo scope
         if: always()
         run: python3 scripts/demo-summary.py "$AGENTLAB_CI_ROOT" >> "$GITHUB_STEP_SUMMARY"

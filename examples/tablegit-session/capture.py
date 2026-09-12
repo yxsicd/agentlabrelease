@@ -28,7 +28,7 @@ def ident(*parts):
     return str(uuid.uuid5(uuid.NAMESPACE_OID, '\0'.join(parts)))
 
 
-def collect(root, session_id, operation_id):
+def collect(root, session_id, operation_id, agent_kind="pi"):
     root = Path(root)
     rows, objects = [], []
     inventory = []
@@ -38,7 +38,7 @@ def collect(root, session_id, operation_id):
         raw = canonical(value)
         parts = [raw[i:i+CHUNK_BYTES] for i in range(0, len(raw), CHUNK_BYTES)]
         row = dict(schema='agentlab.runtime_observation.v1', observationId=key,
-            operationId=operation_id, sessionId=session_id, agentKind='pi', externalTurnId=source,
+            operationId=operation_id, sessionId=session_id, agentKind=agent_kind, externalTurnId=source,
             ordinal=ordinal, sequence=ordinal, method=method, status=status,
             itemType=value.get('type', value.get('sourceKind', 'evidence')),
             payloadId=key, payloadDigest='sha256:'+sha(raw), payloadByteLength=len(raw),
@@ -77,11 +77,11 @@ def collect(root, session_id, operation_id):
                     observe(dict(sourceKind='llm_gateway',path=relative,
                         exchangeId=path.name.split('.')[0],streamOrdinal=line_number,document=value),
                         'gateway.response_event',relative+':'+str(line_number))
-        if path.name.endswith('-events.jsonl'):
+        if path.name.endswith('-events.jsonl') or path.name=='events.jsonl':
             for line_number,line in enumerate(raw.splitlines(),1):
                 if line.strip():
                     value=json.loads(line)
-                    observe(value,'pi.'+str(value.get('type','unknown')),relative+':'+str(line_number))
+                    observe(value,agent_kind+'.'+str(value.get('type',value.get('kind','unknown'))),relative+':'+str(line_number))
     if not inventory:
         raise ValueError('No captured evidence files; missing capture is not a successful run')
     return rows,objects,inventory

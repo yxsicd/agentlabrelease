@@ -56,3 +56,8 @@ Workspace Lease revision: storing observations does not pretend to change the
 Workspace snapshot. Selected external evidence/HAP files are retained; build
 Workspace/runtime directories are not selected. This is source capture coverage,
 not a claim that all normalized whitebox relations are complete.
+
+The credential-free candidate-copy Action also ingests the actual portable Mock
+campaign evidence with `--capture-agent-kind mock`, so PR validation exercises
+real TableGit capture/recovery without an external LM credential. Only decisions
+are mocked; the captured operator/SessionFS receipts are real observed outputs.

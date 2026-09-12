@@ -25,6 +25,7 @@ def main():
     p.add_argument("--runtime-volume", required=True, help="runtime volume from installed composition")
     p.add_argument("--root", required=True, type=Path)
     p.add_argument("--capture-evidence", type=Path, help="Actual operator-captured evidence to persist and reconstruct")
+    p.add_argument("--capture-agent-kind", default="pi", help="Observed participant implementation; not capture authority")
     args = p.parse_args()
     root = args.root.resolve()
     root.mkdir(parents=True, exist_ok=True)
@@ -165,7 +166,7 @@ def main():
         capture_state = None
         if args.capture_evidence:
             operation_id = str(uuid.uuid4())
-            rows, objects, inventory = collect(args.capture_evidence, first["sessionKey"], operation_id)
+            rows, objects, inventory = collect(args.capture_evidence, first["sessionKey"], operation_id, args.capture_agent_kind)
             port = docker("inspect", "--format", '{{(index (index .NetworkSettings.Ports "8002/tcp") 0).HostPort}}', gateway)
             service = Service("ws://127.0.0.1:"+port+"/__mcpgit/service-ws",
                               (state/"caller.authorization").read_text().strip(), evidence)
