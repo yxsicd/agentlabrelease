@@ -3,6 +3,9 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import sys
+import types
+from unittest.mock import patch
 
 spec=importlib.util.spec_from_file_location('capture',Path(__file__).parents[1]/'examples/tablegit-session/capture.py')
 capture=importlib.util.module_from_spec(spec);spec.loader.exec_module(capture)
@@ -51,6 +54,16 @@ class CaptureTests(unittest.TestCase):
             service.rows[key]={**service.rows[key],'textUtf8':'changed'}
             with self.assertRaises(RuntimeError):
                 capture.recover(service,'repo',revision,rows,objects,inventory,Path(tmp)/'out')
+    def test_unknown_outcome_retains_request_before_dispatch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            module=types.SimpleNamespace(create_connection=lambda *args,**kwargs: (_ for _ in ()).throw(TimeoutError('test outage')))
+            service=capture.Service('ws://example.invalid','Bearer test-transport-credential',Path(tmp))
+            with patch.dict(sys.modules,{'websocket':module}):
+                with self.assertRaises(TimeoutError):service.call('table.transact',{'transaction_id':'exact-operation'})
+            record=json.loads((Path(tmp)/'capture-rpc-0001.json').read_text())
+            self.assertEqual(record['request']['message']['payload']['transaction_id'],'exact-operation')
+            self.assertTrue(record['transportError']['outcomeUnknown'])
+            self.assertNotIn('test-transport-credential',json.dumps(record))
     def test_no_fake_success_without_capture(self):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(ValueError):capture.collect(Path(tmp),'session','operation')

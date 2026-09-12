@@ -28,7 +28,7 @@ def ident(*parts):
     return str(uuid.uuid5(uuid.NAMESPACE_OID, '\0'.join(parts)))
 
 
-def collect(root, session_id, operation_id, agent_kind="pi"):
+def collect(root, session_id, operation_id, agent_kind="pi", context=None):
     root = Path(root)
     rows, objects = [], []
     inventory = []
@@ -82,6 +82,10 @@ def collect(root, session_id, operation_id, agent_kind="pi"):
                 if line.strip():
                     value=json.loads(line)
                     observe(value,agent_kind+'.'+str(value.get('type',value.get('kind','unknown'))),relative+':'+str(line_number))
+    observe(dict(sourceKind='operator_capture_provenance',sessionId=session_id,
+        operationId=operation_id,participantKind=agent_kind,context=context or {},
+        inventoryDigest=sha(canonical(inventory)),fileCount=len(inventory)),
+        'capture.provenance','operator')
     if not inventory:
         raise ValueError('No captured evidence files; missing capture is not a successful run')
     return rows,objects,inventory
@@ -97,16 +101,25 @@ class Service:
         envelope={'kind':'request','message':{'protocol':'mcpgit.service.v2',
             'request_id':request_id,'invocation_id':str(uuid.uuid4()),'method':method,
             'deadline_unix_ms':int(time.time()*1000)+120000,'payload':payload}}
-        connection=create_connection(self.url,timeout=120,host='gateway',
-            subprotocols=['mcpgit.service.ws.v1'],header={'Authorization':self.authorization})
+        self.counter+=1
+        path=self.evidence/f'capture-rpc-{self.counter:04d}.json'
+        record={'request':envelope}
+        # Preserve operation identity before dispatch, including unknown outcomes.
+        path.write_bytes(canonical(record)+b'\n')
+        connection=None
         try:
+            connection=create_connection(self.url,timeout=120,host='gateway',
+                subprotocols=['mcpgit.service.ws.v1'],header={'Authorization':self.authorization})
             connection.send_binary(canonical(envelope))
             result=json.loads(connection.recv())
+            record['response']=result
+        except Exception as error:
+            record['transportError']={'class':type(error).__name__,'message':str(error),
+                                      'outcomeUnknown':True}
+            raise
         finally:
-            connection.close()
-        self.counter+=1
-        (self.evidence/f'capture-rpc-{self.counter:04d}.json').write_bytes(canonical(
-            {'request':envelope,'response':result})+b'\n')
+            if connection is not None: connection.close()
+            path.write_bytes(canonical(record)+b'\n')
         message=result['message']
         if message['request_id']!=request_id or message['outcome']!='success':
             raise RuntimeError(f'{method}: see capture RPC evidence')

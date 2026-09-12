@@ -166,7 +166,13 @@ def main():
         capture_state = None
         if args.capture_evidence:
             operation_id = str(uuid.uuid4())
-            rows, objects, inventory = collect(args.capture_evidence, first["sessionKey"], operation_id, args.capture_agent_kind)
+            capture_context = dict(producerRevision=os.environ.get("GITHUB_SHA"),
+                githubRunId=os.environ.get("GITHUB_RUN_ID"), githubRunAttempt=os.environ.get("GITHUB_RUN_ATTEMPT"),
+                collectorSha256=demo.sha256(Path(__file__).with_name("capture.py")),
+                runtimeImage=args.image, runtimeVolume=args.runtime_volume,
+                templateContractDigest=template["contractDigest"], mcpgit=lock)
+            rows, objects, inventory = collect(args.capture_evidence, first["sessionKey"],
+                operation_id, args.capture_agent_kind, capture_context)
             port = docker("inspect", "--format", '{{(index (index .NetworkSettings.Ports "8002/tcp") 0).HostPort}}', gateway)
             service = Service("ws://127.0.0.1:"+port+"/__mcpgit/service-ws",
                               (state/"caller.authorization").read_text().strip(), evidence)
@@ -174,7 +180,7 @@ def main():
             capture_state = (service, revision, rows, objects, inventory)
             save(evidence/"capture-commit-manifest.json", dict(operationId=operation_id,
                 repositoryId=first["binding"]["repositoryId"], sessionId=first["sessionKey"],
-                inventory=inventory, commits=commits, captureRevision=revision))
+                inventory=inventory, commits=commits, captureRevision=revision, context=capture_context))
         docker("restart",agent,label="restart-store")
         docker("restart",gateway,label="restart-gateway")
         wait_route("restarted-route")
