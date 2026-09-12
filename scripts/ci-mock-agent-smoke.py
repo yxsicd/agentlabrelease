@@ -87,7 +87,11 @@ class Campaign:
     def stop_services(self):
         for proc in reversed(self.processes):
             proc.terminate()
-            proc.wait(timeout=10)
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=5)
         self.processes.clear()
 
     def call(self, actor, operation, arguments):

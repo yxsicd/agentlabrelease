@@ -12,10 +12,11 @@ The [26008e36 Linux x64 candidate](release/candidates/26008e36-linux-x64/publica
 references independently published packages and records its remaining acceptance
 gates. It does not supersede the current developer preview or stable channels.
 
-GitHub Actions verifies public installation and a [preset Mock Agent campaign](examples/mock-agent/README.md):
-multi-turn changes, failure detection, recovery after service restart, seed Fork
-and parent isolation, on copy-tree and Btrfs. This portable CI tier is distinct
-from full Session/TableGit qualification and real-agent SWE evaluation.
+GitHub Actions runs the same [executable demos](examples/README.md) you can run
+locally: public component installation, HTTP/MCP/Website Skills discovery and
+mapping, real TableGit Session recovery, and a preset Mock Agent campaign on
+copy-tree and Btrfs. Each retains its exact evidence and states its coverage;
+these separate checks do not qualify the complete whitebox evaluation chain.
 
 - Start with [`skills/agentlab-harness-developer/SKILL.md`](skills/agentlab-harness-developer/SKILL.md).
 - On AIWSL, start the current preview with
