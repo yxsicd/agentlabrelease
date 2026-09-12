@@ -2,6 +2,7 @@ import http.server
 import importlib.util
 import json
 import os
+import shutil
 from pathlib import Path
 import tempfile
 import threading
@@ -17,6 +18,26 @@ SPEC.loader.exec_module(MODULE)
 
 
 class GatewayCaptureTests(unittest.TestCase):
+    def test_failed_participant_retains_actual_source_and_lifecycle(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ,
+                {'AGENTLAB_LM_GATEWAY_KEY': 'synthetic-external-key'}):
+            root=Path(tmp);evidence=root/'evidence';evidence.mkdir()
+            project=root/'project';source=project/'entry/src/main/ets/pages/Index.ets'
+            source.parent.mkdir(parents=True);source.write_bytes(b'partially edited source\r\n')
+            participant=MODULE.Participant(evidence,root/'state',shutil.which('false'),'http://127.0.0.1:1','test-model')
+            try:
+                with self.assertRaisesRegex(RuntimeError,'Pi exited 1'):
+                    participant.turn('failed',project,'not reached')
+            finally:
+                participant.close()
+            self.assertEqual((evidence/'failed-actual-source.ets').read_bytes(),source.read_bytes())
+            lifecycle=json.loads((evidence/'failed-lifecycle.json').read_text())
+            self.assertEqual(lifecycle['exitCode'],1)
+            self.assertFalse(lifecycle['timedOut'])
+            self.assertTrue(lifecycle['sourcePresent'])
+            self.assertGreaterEqual(lifecycle['durationMs'],0)
+            self.assertLessEqual(lifecycle['startedAt'],lifecycle['endedAt'])
+
     def test_stream_is_preserved_and_external_auth_is_not_captured(self):
         received = {}
         response = b'data: {"choices":[]}\n\ndata: [DONE]\n\n'

@@ -1344,3 +1344,14 @@ bwrap builds around 7.06 s, Btrfs Fork 20.406 ms / zero files / zero bytes,
 parent and child cache hits, no request-time pnpm installation, 14,438-byte HAP
 artifacts, Bearer fail-closed behavior, and no real lingering Hvigor process.
 Do not reintroduce a terminal-marker/kill supervisor for this issue.
+
+### Failed participant capture closure
+
+The public real-agent launcher records operator-owned turn lifecycle timestamps,
+duration, process exit code, timeout and source presence. Final page source is
+copied byte for byte even when the participant fails or times out. A missing
+source is recorded as missing, without manufacturing a successful result.
+Malformed JSON/JSONL/SSE records produce `capture.parse_error` observations with
+source occurrence, parser error and complete offending bytes. Other valid events
+continue ingestion; all original files remain exactly recoverable. Parse errors
+are evidence of incomplete structured decoding, not successful Agent execution.

@@ -53,6 +53,18 @@ def collect(root, session_id, operation_id, agent_kind="pi", context=None):
             rows.append((CHUNKS,chunk['payloadChunkId'],chunk))
         rows.append((OBS,key,row))
         objects.append({'row':row,'chunks':chunk_rows,'value':value,'rawFile':method=='capture.file'})
+    def decode(raw, source):
+        try:
+            value = json.loads(raw)
+            if not isinstance(value, dict):
+                raise ValueError('Expected an event object')
+            return value
+        except (ValueError, UnicodeError) as error:
+            observe(dict(sourceKind='operator_parse_error', source=source,
+                         errorClass=type(error).__name__, error=str(error),
+                         bytesBase64=base64.b64encode(raw).decode()),
+                    'capture.parse_error', source, status='parse_error')
+            return None
     for path in sorted(root.rglob('*')):
         if not path.is_file():
             continue
@@ -64,7 +76,8 @@ def collect(root, session_id, operation_id, agent_kind="pi", context=None):
             sha256=sha(raw),bytesBase64=base64.b64encode(raw).decode()),
             'capture.file',relative)
         if path.parent.name == 'gateway' and path.suffix == '.json':
-            value=json.loads(raw)
+            value=decode(raw,relative)
+            if value is None: continue
             method=('gateway.status' if path.name.endswith('.status.json') else
                     'gateway.upstream_request' if path.name.endswith('.upstream-request.json') else
                     'gateway.request')
@@ -73,14 +86,16 @@ def collect(root, session_id, operation_id, agent_kind="pi", context=None):
         if path.parent.name == 'gateway' and path.suffix == '.response':
             for line_number,line in enumerate(raw.splitlines(),1):
                 if line.startswith(b'data:') and line[5:].strip() != b'[DONE]':
-                    value=json.loads(line[5:].strip())
+                    value=decode(line[5:].strip(),relative+':'+str(line_number))
+                    if value is None: continue
                     observe(dict(sourceKind='llm_gateway',path=relative,
                         exchangeId=path.name.split('.')[0],streamOrdinal=line_number,document=value),
                         'gateway.response_event',relative+':'+str(line_number))
         if path.name.endswith('-events.jsonl') or path.name=='events.jsonl':
             for line_number,line in enumerate(raw.splitlines(),1):
                 if line.strip():
-                    value=json.loads(line)
+                    value=decode(line,relative+':'+str(line_number))
+                    if value is None: continue
                     observe(value,agent_kind+'.'+str(value.get('type',value.get('kind','unknown'))),relative+':'+str(line_number))
     observe(dict(sourceKind='operator_capture_provenance',sessionId=session_id,
         operationId=operation_id,participantKind=agent_kind,context=context or {},
