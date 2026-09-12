@@ -45,3 +45,14 @@ This is a Session **control/state recovery** demo. It does not execute an Agent
 turn, run LLM/MCP Gateway observation capture or prove a mature SessionFS binary
 snapshot. Those need the complete Harness campaign; see the explicit
 [coverage boundary](../README.md#coverage-boundary).
+
+
+To also ingest actual captured source data, add
+`--capture-evidence /absolute/path/to/real-agent/evidence` to the existing command.
+This uses the released source-observation/chunk tables, makes bounded real
+TableGit transactions, restarts storage, and reconstructs exact bytes into
+`evidence-*/recovered-capture/`. The capture commit is independent from the
+Workspace Lease revision: storing observations does not pretend to change the
+Workspace snapshot. Selected external evidence/HAP files are retained; build
+Workspace/runtime directories are not selected. This is source capture coverage,
+not a claim that all normalized whitebox relations are complete.

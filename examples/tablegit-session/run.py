@@ -11,6 +11,7 @@ import time
 import uuid
 
 from fixture import init_volume, write_agent_config
+from capture import Service, collect, ingest, recover
 
 REPO = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location("demo", REPO / "examples/run.py")
@@ -23,6 +24,7 @@ def main():
     p.add_argument("--image", required=True, help="image reference from installed composition")
     p.add_argument("--runtime-volume", required=True, help="runtime volume from installed composition")
     p.add_argument("--root", required=True, type=Path)
+    p.add_argument("--capture-evidence", type=Path, help="Actual operator-captured evidence to persist and reconstruct")
     args = p.parse_args()
     root = args.root.resolve()
     root.mkdir(parents=True, exist_ok=True)
@@ -160,10 +162,29 @@ def main():
                     "MCPGIT_PROBE_TEMPLATE_QUALIFICATION_FILE":"/demo/qualification.json",
                     "MCPGIT_PROBE_PROJECTION_ROOT":"/tmp/agentlab-mcpgit-e2e-public-demo"}
         first = probe("provision", settings, "session-created")
+        capture_state = None
+        if args.capture_evidence:
+            operation_id = str(uuid.uuid4())
+            rows, objects, inventory = collect(args.capture_evidence, first["sessionKey"], operation_id)
+            port = docker("inspect", "--format", '{{(index (index .NetworkSettings.Ports "8002/tcp") 0).HostPort}}', gateway)
+            service = Service("ws://127.0.0.1:"+port+"/__mcpgit/service-ws",
+                              (state/"caller.authorization").read_text().strip(), evidence)
+            revision, commits = ingest(service, first["binding"]["repositoryId"], rows, operation_id)
+            capture_state = (service, revision, rows, objects, inventory)
+            save(evidence/"capture-commit-manifest.json", dict(operationId=operation_id,
+                repositoryId=first["binding"]["repositoryId"], sessionId=first["sessionKey"],
+                inventory=inventory, commits=commits, captureRevision=revision))
         docker("restart",agent,label="restart-store")
         docker("restart",gateway,label="restart-gateway")
         wait_route("restarted-route")
         second = probe("restart-readback", settings, "session-recovered")
+        if capture_state:
+            service, revision, rows, objects, inventory = capture_state
+            recovered = recover(service, first["binding"]["repositoryId"], revision,
+                                rows, objects, inventory, evidence/"recovered-capture")
+            save(evidence/"capture-recovery.json", recovered)
+            summary["capture"] = recovered
+            summary["checks"]["real_capture_committed_and_recovered"] = recovered["exactFiles"]
         checks = summary["checks"]
         checks["template_qualification"] = qualification["status"] == "qualified"
         checks["concurrent_session_creation_replayed"] = first["concurrentReplay"] is True

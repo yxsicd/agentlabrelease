@@ -14,6 +14,15 @@ Use released AgentLab interfaces and receipts to evaluate replaceable Code
 Agents. Never assume access to the maintenance repository or an Agent's private
 session implementation.
 
+
+The real Code Agent Action also ingests its actual collected data into the
+released `runtime_observations` / `runtime_payload_chunks` tables and validates
+immutable-revision readback plus byte-exact reconstruction after storage restart.
+Read `examples/real-code-agent/README.md` for the exact scope: this is CI source
+capture, not formal production Attempt/Workspace SessionFS or normalized full
+whitebox qualification. Retain failed/partial data too. Use generic MCPGit
+programming/analysis after collection; no analysis endpoint is required.
+
 ## Start
 
 Current candidate: [26008e36](../../release/candidates/26008e36-linux-x64/publication.json).
