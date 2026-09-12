@@ -1,0 +1,10 @@
+{
+  "schema": "agentlab.standalone_component.v1",
+  "component": "alsessionfsd",
+  "sourceRevision": "a4d9fb7cf341e9d161713e4088e107bdfaaccc2d",
+  "platform": "linux-x64",
+  "linkage": "static-musl",
+  "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/sessionfs-a4d9fb7-linux-x64/alsessionfsd-a4d9fb7-linux-x64",
+  "sha256": "52b47c3575e9e43013ccdbfb283127c6bfb58cf18ae6aae4c31f81996b03ec7a",
+  "bytes": 590496
+}

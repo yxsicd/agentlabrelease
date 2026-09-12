@@ -175,6 +175,22 @@ assert manifest["bytes"] == len(archive)
 assert manifest["sha256"] == hashlib.sha256(archive).hexdigest()
 PY
 zstd -dc "${harmony_archive}" | tar -xf - -C "${standalone}"
+# SessionFS advances independently: retain the unchanged Harmony binary from
+# its existing package and acquire only the corrected standalone component.
+readarray -t storage_component < <(python3 - <<'PY'
+import json
+d = json.load(open("release/ci/standalone-sessionfs.json"))
+assert d["schema"] == "agentlab.standalone_component.v1"
+assert d["platform"] == "linux-x64" and d["component"] == "alsessionfsd"
+print(d["artifact"])
+print(d["sha256"])
+print(d["bytes"])
+PY
+)
+download "${storage_component[0]}" "${standalone}/bin/alsessionfsd"
+[[ "$(wc -c < "${standalone}/bin/alsessionfsd")" == "${storage_component[2]}" ]]
+printf '%s  %s\n' "${storage_component[1]}" "${standalone}/bin/alsessionfsd" | sha256sum -c -
+cp release/ci/standalone-sessionfs.json "${downloads}/standalone-sessionfs.json"
 chmod +x "${standalone}/bin/alsessionfsd" "${standalone}/bin/alharmony-ops"
 
 "${standalone}/bin/alsessionfsd" serve \

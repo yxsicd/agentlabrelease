@@ -54,6 +54,16 @@
       "bytes": 4425648,
       "sha256": "076ee1beee90023660cbda7f9ab90ae01863550783f16d4de4a4e39422343da8",
       "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-ea25616d-linux-x64/agentlabctl-ea25616d-linux-x64"
+    },
+    {
+      "bytes": 590496,
+      "sha256": "52b47c3575e9e43013ccdbfb283127c6bfb58cf18ae6aae4c31f81996b03ec7a",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/sessionfs-a4d9fb7-linux-x64/alsessionfsd-a4d9fb7-linux-x64"
+    },
+    {
+      "bytes": 436,
+      "sha256": "b5a6ab809d9bfbc90ce1ef836be9816f94e2cec991dae48dbcaac002f35a649b",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/sessionfs-a4d9fb7-linux-x64/alsessionfsd-a4d9fb7-linux-x64.json"
     }
   ],
   "componentPayloadsUploaded": false,
@@ -79,6 +89,7 @@
   "platform": "linux-x64",
   "qualification": {
     "agent": "pi",
+    "btrfsRegression": "Nested task directories must be recognized as Btrfs by inspect-internal rootid; filesystem show rejects valid non-mountpoint paths.",
     "codeAgentEventRows": 1348,
     "contextRevisions": 20,
     "evaluatorPassed": 10,
@@ -87,6 +98,16 @@
     "fullWhiteboxQualified": false,
     "maxPayloadRowBytes": 44800,
     "model": "glm-5.3-flash",
+    "portableSessionfs": {
+      "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/sessionfs-a4d9fb7-linux-x64/alsessionfsd-a4d9fb7-linux-x64",
+      "bytes": 590496,
+      "component": "alsessionfsd",
+      "linkage": "static-musl",
+      "platform": "linux-x64",
+      "schema": "agentlab.standalone_component.v1",
+      "sha256": "52b47c3575e9e43013ccdbfb283127c6bfb58cf18ae6aae4c31f81996b03ec7a",
+      "sourceRevision": "a4d9fb7cf341e9d161713e4088e107bdfaaccc2d"
+    },
     "runtimeObservationRows": 1348,
     "runtimePayloadRows": 1349,
     "sweCase": "django__django-10914"
