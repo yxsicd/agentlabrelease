@@ -530,8 +530,10 @@ fn btrfs_filesystem_ready(path: &Path) -> bool {
     if !path.is_dir() {
         return false;
     }
+    // `filesystem show` resolves mount points/devices, not arbitrary nested
+    // directories. Query the containing subvolume through the path instead.
     Command::new("btrfs")
-        .args(["filesystem", "show"])
+        .args(["inspect-internal", "rootid"])
         .arg(path)
         .output()
         .is_ok_and(|output| output.status.success())

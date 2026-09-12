@@ -11,6 +11,12 @@ an invalid edit, restarts both services, corrects the edit with a fresh Agent,
 and forks the unchanged seed again. The same scenario runs on copy-tree and
 real Btrfs subvolumes. No LLM credentials or Agent-specific runtime are needed.
 
+The Btrfs regression deliberately puts task roots below an ordinary nested
+directory on the mounted filesystem. `btrfs filesystem show` only accepts
+mount/device identities and incorrectly rejects this valid path. SessionFS
+uses `btrfs inspect-internal rootid` to query the containing subvolume instead;
+the actual create/snapshot operations still determine mutation success.
+
 ```sh
 cargo build --locked --release --workspace
 python3 scripts/ci-mock-agent-smoke.py --bin-dir target/release \
