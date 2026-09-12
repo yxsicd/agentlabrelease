@@ -3,7 +3,7 @@ set -euo pipefail
 
 repo="${AGENTLAB_RELEASE_REPO:-yxsicd/agentlabrelease}"
 channel="${AGENTLAB_RELEASE_CHANNEL:-alprod}"
-root="${RUNNER_TEMP:-/tmp}/agentlab-public-smoke-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}"
+root="${AGENTLAB_CI_ROOT:-${RUNNER_TEMP:-/tmp}/agentlab-public-smoke-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}}"
 downloads="${root}/downloads"
 composition="${root}/composition"
 cas="${root}/cas"
@@ -42,8 +42,13 @@ download() {
 release_url="https://github.com/${repo}/releases/download"
 lock="${downloads}/environment-lock.json"
 publication="${downloads}/publication.json"
-download "${release_url}/${channel}/agentlab-${channel}-environment-lock.json" "${lock}"
-download "${release_url}/${channel}/agentlab-${channel}-publication.json" "${publication}"
+if [[ -n "${AGENTLAB_COMPOSITION_DIR:-}" ]]; then
+  cp "${AGENTLAB_COMPOSITION_DIR}/environment-lock.json" "${lock}"
+  cp "${AGENTLAB_COMPOSITION_DIR}/publication.json" "${publication}"
+else
+  download "${release_url}/${channel}/agentlab-${channel}-environment-lock.json" "${lock}"
+  download "${release_url}/${channel}/agentlab-${channel}-publication.json" "${publication}"
+fi
 
 python3 - "${repo}" "${channel}" "${lock}" "${publication}" <<'PY'
 import hashlib, json, pathlib, sys, urllib.parse
@@ -55,14 +60,18 @@ lock = json.loads(lock_bytes)
 publication = json.loads(publication_path.read_bytes())
 
 assert lock["schema"] == "agentlab.environment_lock.v3"
-assert lock["tier"] == "prod"
-assert publication["schema"] == "agentlab.reference_publication.v2"
-assert publication["status"] == "fixed"
-assert publication["tag"] == channel
+if publication["status"] == "candidate":
+    assert publication["schema"] == "agentlab.reference_publication.v1"
+    assert publication["tag"] == channel
+else:
+    assert lock["tier"] == "prod"
+    assert publication["schema"] == "agentlab.reference_publication.v2"
+    assert publication["status"] == "fixed"
+    assert publication["tag"] == channel
+    assert all(value == "passed" for value in publication["gates"].values())
 assert publication["sourceRevision"] == lock["sourceRevision"]
 assert publication["environmentLockSha256"] == hashlib.sha256(lock_bytes).hexdigest()
 assert publication["componentPayloadsUploaded"] is False
-assert all(value == "passed" for value in publication["gates"].values())
 
 expected_prefix = f"/{repo}/releases/download/"
 for component in lock["images"] + lock["components"]:
@@ -73,7 +82,7 @@ for component in lock["images"] + lock["components"]:
         assert not parsed.query and not parsed.fragment
 
 print(json.dumps({
-    "schema": "agentlab.public_fixed_channel_admission.v1",
+    "schema": "agentlab.public_composition_admission.v1",
     "ok": True,
     "channel": channel,
     "sourceRevision": lock["sourceRevision"],
@@ -83,6 +92,11 @@ PY
 
 source_revision="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["sourceRevision"])' "${lock}")"
 source_short="${source_revision:0:8}"
+# A component-only candidate can reuse the exact published controller declared
+# by its publication. Controller version and runtime version are independent.
+if [[ -n "${AGENTLAB_COMPOSITION_DIR:-}" ]]; then
+  source_short="$(python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); print(p["controllerSourceShort"])' "${publication}")"
+fi
 control_release="${downloads}/matching-control-release.json"
 control_api="https://api.github.com/repos/${repo}/releases/tags/control-${source_short}-linux-x64"
 if [[ -n "${GITHUB_TOKEN:-}" ]]; then
@@ -136,19 +150,15 @@ PY
 while IFS= read -r image; do [[ -z "${image}" ]] || docker image inspect "${image}" >/dev/null; done < "${root}/docker-identities/images"
 while IFS= read -r volume; do [[ -z "${volume}" ]] || docker volume inspect "${volume}" >/dev/null; done < "${root}/docker-identities/volumes"
 
-harmony_index="${downloads}/harmony-index.json"
 harmony_manifest="${downloads}/harmony-combined.json"
 harmony_archive="${downloads}/harmony-combined.tar.zst"
-download "${release_url}/alharmony/agentlab-harmony-channel-index.json" "${harmony_index}"
-readarray -t harmony < <(python3 - "${harmony_index}" <<'PY'
+# The standalone portable tier is pinned separately from the main runtime.
+readarray -t harmony < <(python3 - <<'PY'
 import json, sys
-index = json.load(open(sys.argv[1]))
-assert index["schema"] == "agentlab.harmony_channel_index.v1"
-asset = next(row for row in index["currentAssets"] if row["kind"] == "agentlab.alharmony_combined_binary")
-print(asset["currentManifestFilename"])
-print(asset["currentFilename"])
-print(asset["sha256"])
-print(asset["bytes"])
+print("alharmony-combined-linux-x64-218ce52.json")
+print("alharmony-combined-linux-x64-218ce52.tar.zst")
+print("0d854c293f76ea3f16c55c61091fc817523a2e574c38e0516e5dea0280010352")
+print(389602)
 PY
 )
 download "${release_url}/alharmony/${harmony[0]}" "${harmony_manifest}"
@@ -165,6 +175,22 @@ assert manifest["bytes"] == len(archive)
 assert manifest["sha256"] == hashlib.sha256(archive).hexdigest()
 PY
 zstd -dc "${harmony_archive}" | tar -xf - -C "${standalone}"
+# SessionFS advances independently: retain the unchanged Harmony binary from
+# its existing package and acquire only the corrected standalone component.
+readarray -t storage_component < <(python3 - <<'PY'
+import json
+d = json.load(open("release/ci/standalone-sessionfs.json"))
+assert d["schema"] == "agentlab.standalone_component.v1"
+assert d["platform"] == "linux-x64" and d["component"] == "alsessionfsd"
+print(d["artifact"])
+print(d["sha256"])
+print(d["bytes"])
+PY
+)
+download "${storage_component[0]}" "${standalone}/bin/alsessionfsd"
+[[ "$(wc -c < "${standalone}/bin/alsessionfsd")" == "${storage_component[2]}" ]]
+printf '%s  %s\n' "${storage_component[1]}" "${standalone}/bin/alsessionfsd" | sha256sum -c -
+cp release/ci/standalone-sessionfs.json "${downloads}/standalone-sessionfs.json"
 chmod +x "${standalone}/bin/alsessionfsd" "${standalone}/bin/alharmony-ops"
 
 "${standalone}/bin/alsessionfsd" serve \
@@ -235,10 +261,10 @@ lock = json.loads((root / "downloads/environment-lock.json").read_text())
 summary = {
     "schema": "agentlab.public_install_deploy_smoke.v1",
     "ok": True,
-    "fixedChannel": lock["tier"],
+    "compositionTier": lock["tier"],
     "sourceRevision": lock["sourceRevision"],
     "checks": {
-        "fixedChannelAdmitted": True,
+        "compositionAdmitted": True,
         "compositionDownloaded": True,
         "dockerCompositionInstalled": True,
         "sessionFsDeployed": True,

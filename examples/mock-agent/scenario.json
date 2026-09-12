@@ -1,0 +1,21 @@
+{
+  "schema": "agentlab.mock_agent_scenario.v1",
+  "id": "harmony-multi-turn-recovery",
+  "turns": [
+    {"id": "create-seed", "task": "parent", "actions": [
+      {"operation": "harmony.project.create", "arguments": {"bundleName": "com.agentlab.mock", "appLabel": "AgentLab Mock Seed", "materialize": "true"}},
+      {"operation": "harmony.project.verify", "arguments": {}}
+    ]},
+    {"id": "edit-child", "task": "child", "actions": [
+      {"operation": "harmony.project.patch", "arguments": {"path": "entry/src/main/ets/pages/Index.ets", "find": "AgentLab Mock Seed", "replace": "AgentLab Mock Round One"}}
+    ]},
+    {"id": "agent-mistake", "task": "child", "actions": [
+      {"operation": "harmony.project.patch", "arguments": {"path": "entry/src/main/ets/pages/Index.ets", "find": "Text that is absent", "replace": "Incorrect result"}}
+    ]},
+    {"id": "correct-after-restart", "task": "child", "actions": [
+      {"operation": "harmony.project.verify", "arguments": {}},
+      {"operation": "harmony.project.patch", "arguments": {"path": "entry/src/main/ets/pages/Index.ets", "find": "AgentLab Mock Round One", "replace": "AgentLab Mock Round Two"}},
+      {"operation": "harmony.project.verify", "arguments": {}}
+    ]}
+  ]
+}

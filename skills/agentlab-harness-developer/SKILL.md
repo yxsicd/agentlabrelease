@@ -11,6 +11,21 @@ session implementation.
 
 ## Start
 
+Current candidate: [26008e36](../../release/candidates/26008e36-linux-x64/publication.json).
+Use the [preset Mock Agent campaign](../../examples/mock-agent/README.md) for
+credential-free basic regression. GitHub Actions installs exact public
+components and tests real standalone Harmony/SessionFS operations on copy-tree
+and Btrfs. Mock only participant decisions; the supervisor independently records
+calls, observes files, evaluates results, and controls Fork/restart. A participant
+claim is not a test verdict. Retain raw test data and failure evidence without
+redaction. Controlled benchmark data is not production user data.
+
+This candidate's real Pi/GLM SWE run passed 10/10 evaluator tests on D, but full
+whitebox coverage and normalized analysis tables remain incomplete. Portable
+Mock CI does not qualify full Session/TableGit or replace D/A/B/C, Harmony HAP,
+restart/parity and fixed-channel gates. Runtime/template contract 6 is a
+coordinated deployment with independently provisioned AgentLab-owned tables.
+
 1. Read [evaluation-model.md](references/evaluation-model.md) before defining a
    task seed or comparison matrix.
 2. Read [checkpoint-and-fork.md](references/checkpoint-and-fork.md) before
@@ -28,9 +43,8 @@ session implementation.
   observable state even when a later fork deliberately starts a fresh Agent.
 - Bind every run to exact task, environment, Agent, model, adapter, and source
   identities. Do not compare labels such as `latest`.
-- Preserve raw LLM and MCP/tool events as analyzable structured data. Redaction
-  may remove secrets but must not turn the evidence stream into opaque
-  ciphertext.
+- Preserve complete controlled-test LLM and MCP/tool events as analyzable
+  structured data. Do not redact or truncate whitebox test evidence.
 - Treat a difficulty point as an analysis result with evidence, not simply a
   failed final answer.
 - Keep MCPGit and external Code Agent versions independent from AgentLab.

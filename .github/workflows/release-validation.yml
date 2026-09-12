@@ -26,19 +26,78 @@ jobs:
         run: |
           cargo test --locked --workspace
           cargo build --locked --release --workspace
+          python3 -m unittest discover -s tests -p test_mock_agent.py
   public-install-deploy-smoke:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: alprod
+            channel: alprod
+            composition: ''
+            backend: copy-tree
+          - target: candidate-copy
+            channel: candidate-20260912-26008e36-linux-x64
+            composition: release/candidates/26008e36-linux-x64
+            backend: copy-tree
+          - target: candidate-btrfs
+            channel: candidate-20260912-26008e36-linux-x64
+            composition: release/candidates/26008e36-linux-x64
+            backend: btrfs-subvolume
+    env:
+      AGENTLAB_CI_ROOT: /tmp/agentlab-${{ matrix.target }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Install archive support
         run: |
           sudo apt-get update
-          sudo apt-get install --yes zstd
-      - name: Install fixed composition and run the public basic use case
+          sudo apt-get install --yes zstd btrfs-progs
+      - name: Install published composition and run the public basic use case
         env:
-          AGENTLAB_RELEASE_CHANNEL: alprod
+          AGENTLAB_RELEASE_CHANNEL: ${{ matrix.channel }}
+          AGENTLAB_COMPOSITION_DIR: ${{ matrix.composition }}
           AGENTLAB_RELEASE_REPO: yxsicd/agentlabrelease
           GITHUB_TOKEN: ${{ github.token }}
         run: scripts/ci-public-install-deploy-smoke.sh
+      - name: Prepare isolated Btrfs image
+        if: matrix.backend == 'btrfs-subvolume'
+        run: |
+          truncate -s 1G "$AGENTLAB_CI_ROOT/mock-storage.btrfs"
+          mkfs.btrfs -f "$AGENTLAB_CI_ROOT/mock-storage.btrfs"
+          mkdir "$AGENTLAB_CI_ROOT/mock-storage"
+          sudo mount -o loop,user_subvol_rm_allowed "$AGENTLAB_CI_ROOT/mock-storage.btrfs" "$AGENTLAB_CI_ROOT/mock-storage"
+          sudo chown "$(id -u):$(id -g)" "$AGENTLAB_CI_ROOT/mock-storage"
+      - name: Run preset Mock Agent and independent evaluation
+        run: |
+          runner=(python3)
+          if [[ '${{ matrix.backend }}' == btrfs-subvolume ]]; then
+            # The standalone Btrfs daemon inspects filesystem metadata, matching
+            # the privileged storage companion used by deployed installations.
+            runner=(sudo python3)
+          fi
+          "${runner[@]}" scripts/ci-mock-agent-smoke.py \
+            --bin-dir "$AGENTLAB_CI_ROOT/standalone/bin" \
+            --evidence "$AGENTLAB_CI_ROOT/mock-evidence" \
+            --storage "$AGENTLAB_CI_ROOT/mock-storage" \
+            --backend '${{ matrix.backend }}'
+          cat "$AGENTLAB_CI_ROOT/mock-evidence/summary.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain success and failure evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: basic-capabilities-${{ matrix.target }}
+          if-no-files-found: error
+          path: |
+            ${{ env.AGENTLAB_CI_ROOT }}/*.json
+            ${{ env.AGENTLAB_CI_ROOT }}/*.log
+            ${{ env.AGENTLAB_CI_ROOT }}/downloads/*.json
+            ${{ env.AGENTLAB_CI_ROOT }}/mock-evidence/
+      - name: Unmount test storage
+        if: always() && matrix.backend == 'btrfs-subvolume'
+        run: |
+          if mountpoint -q "$AGENTLAB_CI_ROOT/mock-storage"; then
+            sudo umount "$AGENTLAB_CI_ROOT/mock-storage"
+          fi
