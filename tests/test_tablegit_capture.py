@@ -15,7 +15,7 @@ class MemoryService:
     def call(self,method,payload):
         self.requests.append((method,payload))
         if method=='table.worktree.open': return {'revision':self.revision}
-        if method=='table.transact':
+        if method=='table.transact_many':
             assert payload['expected_revision']==self.revision
             for table in payload['tables']:
                 for op in table['operations']: self.rows[(table['path'],op['key'])]=op['row']
@@ -59,7 +59,7 @@ class CaptureTests(unittest.TestCase):
             module=types.SimpleNamespace(create_connection=lambda *args,**kwargs: (_ for _ in ()).throw(TimeoutError('test outage')))
             service=capture.Service('ws://example.invalid','Bearer test-transport-credential',Path(tmp))
             with patch.dict(sys.modules,{'websocket':module}):
-                with self.assertRaises(TimeoutError):service.call('table.transact',{'transaction_id':'exact-operation'})
+                with self.assertRaises(TimeoutError):service.call('table.transact_many',{'transaction_id':'exact-operation'})
             record=json.loads((Path(tmp)/'capture-rpc-0001.json').read_text())
             self.assertEqual(record['request']['message']['payload']['transaction_id'],'exact-operation')
             self.assertTrue(record['transportError']['outcomeUnknown'])

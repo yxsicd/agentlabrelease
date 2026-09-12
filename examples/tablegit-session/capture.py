@@ -140,7 +140,7 @@ def ingest(service,repo,rows,operation_id):
             'transaction_id':transaction,'idempotency_key':transaction,'actor':None,
             'tables':[{'path':table,'operations':operations} for table,operations in group.items()],
             'message':'Harness-owned real Code Agent CI capture'}
-        result=service.call('table.transact',request)
+        result=service.call('table.transact_many',request)
         if not result['applied'] or result.get('conflicts'):
             raise RuntimeError('Capture transaction did not apply; preserve exact request and reconcile')
         revision=result['revision']
