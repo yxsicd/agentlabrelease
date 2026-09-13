@@ -73,31 +73,41 @@ def main():
   return Participant(pe,runtime/'state',wrapper,os.environ['AGENTLAB_LM_GATEWAY_URL'],os.environ.get('AGENTLAB_MODEL','glm-5.3-flash'))
  parent=None;fork=None
  try:
-  baseline=oracle('baseline',project,2);reference=oracle('reference',a.reference,2)
-  if seed.get('acceptanceChecks'):assert set(reference['checks'])==set(seed['acceptanceChecks']['2'])
-  wrong=root/'wrong';shutil.copytree(a.reference/'common',wrong/'common');shutil.copytree(a.reference/'features',wrong/'features')
-  file=wrong/paths[0]
-  if a.scenario=='navigation':file.write_text(file.read_text().replace('this.pathStack.replacePath','this.pathStack.pushPath'))
-  elif a.scenario=='feedback':file.write_text(file.read_text().replace('this.submitError = err.message;', 'this.submitError = err.message; this.resetAllStatus();'))
-  elif a.scenario=='debounce':file.write_text(file.read_text().replace('lastClickTime < wait', 'lastClickTime <= wait'))
-  elif a.scenario=='image-url':file.write_text(file.read_text().replace('!/^https?:\\/\\//i.test(value)', 'false').replace("(parsed.protocol === 'http:' || parsed.protocol === 'https:')",'true').replace('parsed.hostname.length > 0','true'))
-  else:file.write_text(file.read_text().replace('clearTimeout(this.delayTimer);', 'void this.delayTimer;'))
-  negative=oracle({'feedback':'wrong-reset','loading':'wrong-cancel','navigation':'wrong-stack','debounce':'wrong-boundary','image-url':'wrong-protocol'}[a.scenario],wrong,2)
-  assert not any(result.get('error') for result in (baseline,reference,negative)), 'Calibration infrastructure error is not a negative behavior verdict'
-  summary['calibration']=dict(baselineFails=not baseline['pass'],referencePasses=reference['pass'],wrongOutcomeFails=not negative['pass'])
   if a.scenario in ('debounce','image-url'):
-   extra=root/'wrong-extra';shutil.copytree(a.reference/'common',extra/'common');shutil.copytree(a.reference/'features',extra/'features')
-   if a.scenario=='debounce':
-    file=extra/paths[0];file.write_text(file.read_text().replace('        return;', '        lastClickTime = now;\n        return;'));label='wrong-window'
-   else:
-    file=extra/paths[1];file.write_text(file.read_text().replace('if (UrlUtil.isNetUrl(url))','if (false)'));label='wrong-dispatch'
-   summary['calibration'][label+'Fails']=not oracle(label,extra,2)['pass']
-  if a.scenario=='loading':
-   wrong_fallback=root/'wrong-fallback';shutil.copytree(a.reference/'common',wrong_fallback/'common');file=wrong_fallback/paths[1];file.write_text(file.read_text().replace('    return this.sm;\n  }','    return this.lg;\n  }'));summary['calibration']['wrongFallbackFails']=not oracle('wrong-fallback',wrong_fallback,2)['pass']
-  if a.scenario=='feedback':
-   duplicate=root/'wrong-duplicate';shutil.copytree(a.reference/'common',duplicate/'common');file=duplicate/paths[0];file.write_text(file.read_text().replace('this.submitting || !this.feedbackData.canSubmit','!this.feedbackData.canSubmit'));summary['calibration']['wrongDuplicateFails']=not oracle('wrong-duplicate',duplicate,2)['pass']
-   wrong_initial=root/'wrong-initial';shutil.copytree(a.reference/'common',wrong_initial/'common');file=wrong_initial/paths[0];file.write_text(file.read_text().replace('@State submitting: boolean = false','@State submitting: boolean = true'));summary['calibration']['wrongInitializerFails']=not oracle('wrong-initial',wrong_initial,2)['pass']
-  assert all(summary['calibration'].values())
+   calibration_root=root/'utility-calibration'
+   command=['node',str(Path(__file__).with_name('calibrate-utilities.cjs')),str(project),str(a.reference),str(calibration_root),a.scenario]
+   result=subprocess.run(command,capture_output=True)
+   (e/'utility-calibration.stdout.json').write_bytes(result.stdout);(e/'utility-calibration.stderr.log').write_bytes(result.stderr)
+   if result.returncode:
+    if calibration_root.exists():shutil.copytree(calibration_root,e/'failed-utility-calibration')
+    raise RuntimeError('Harness utility calibration failed; complete receipts retained')
+   calibration=json.loads((calibration_root/'summary.json').read_text())['cases'][a.scenario]
+   for variant in calibration['variants']:
+    for stage in (1,2):
+     source=calibration_root/a.scenario/(variant+'-stage-'+str(stage)+'.json')
+     target=e/(variant+'-oracle.stdout.json' if stage==2 else 'calibration-stage1-'+variant+'.json')
+     shutil.copy2(source,target);shutil.copy2(Path(str(source)+'.stderr'),Path(str(target)+'.stderr'))
+   reference=json.loads((e/'reference-oracle.stdout.json').read_text())
+   if seed.get('acceptanceChecks'):assert set(reference['checks'])==set(seed['acceptanceChecks']['2'])
+   summary['calibration']={variant+'MatchesContract':True for variant in calibration['variants']}
+  else:
+   baseline=oracle('baseline',project,2);reference=oracle('reference',a.reference,2)
+   if seed.get('acceptanceChecks'):assert set(reference['checks'])==set(seed['acceptanceChecks']['2'])
+   wrong=root/'wrong';shutil.copytree(a.reference/'common',wrong/'common');shutil.copytree(a.reference/'features',wrong/'features')
+   file=wrong/paths[0]
+   if a.scenario=='navigation':file.write_text(file.read_text().replace('this.pathStack.replacePath','this.pathStack.pushPath'))
+   elif a.scenario=='feedback':file.write_text(file.read_text().replace('this.submitError = err.message;', 'this.submitError = err.message; this.resetAllStatus();'))
+   else:file.write_text(file.read_text().replace('clearTimeout(this.delayTimer);', 'void this.delayTimer;'))
+   negative=oracle({'feedback':'wrong-reset','loading':'wrong-cancel','navigation':'wrong-stack','debounce':'wrong-boundary','image-url':'wrong-protocol'}[a.scenario],wrong,2)
+   assert not any(result.get('error') for result in (baseline,reference,negative)), 'Calibration infrastructure error is not a negative behavior verdict'
+   summary['calibration']=dict(baselineFails=not baseline['pass'],referencePasses=reference['pass'],wrongOutcomeFails=not negative['pass'])
+   if a.scenario=='loading':
+    wrong_fallback=root/'wrong-fallback';shutil.copytree(a.reference/'common',wrong_fallback/'common');file=wrong_fallback/paths[1];file.write_text(file.read_text().replace('    return this.sm;\n  }','    return this.lg;\n  }'));summary['calibration']['wrongFallbackFails']=not oracle('wrong-fallback',wrong_fallback,2)['pass']
+   if a.scenario=='feedback':
+    duplicate=root/'wrong-duplicate';shutil.copytree(a.reference/'common',duplicate/'common');file=duplicate/paths[0];file.write_text(file.read_text().replace('this.submitting || !this.feedbackData.canSubmit','!this.feedbackData.canSubmit'));summary['calibration']['wrongDuplicateFails']=not oracle('wrong-duplicate',duplicate,2)['pass']
+    wrong_initial=root/'wrong-initial';shutil.copytree(a.reference/'common',wrong_initial/'common');file=wrong_initial/paths[0];file.write_text(file.read_text().replace('@State submitting: boolean = false','@State submitting: boolean = true'));summary['calibration']['wrongInitializerFails']=not oracle('wrong-initial',wrong_initial,2)['pass']
+   assert all(summary['calibration'].values())
+
   if not build('prepare',project,True):raise RuntimeError('Harness dependency preparation failed')
   parent=subject('parent-agent');cut('initial',project)
   try:parent.turn('turn-1',project,prompt=demands[0])

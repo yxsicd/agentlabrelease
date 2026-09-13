@@ -1,9 +1,10 @@
 // Local/CI calibration only. No subject dispatch and no assessed workspace repair.
 const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process'),crypto=require('node:crypto');
-const [source,reference,output]=process.argv.slice(2);if(!source||!reference||!output)throw Error('usage: SOURCE REFERENCE FRESH_OUTPUT');
+const [source,reference,output,selected]=process.argv.slice(2);if(!source||!reference||!output)throw Error('usage: SOURCE REFERENCE FRESH_OUTPUT');
 fs.mkdirSync(output);const working=output+'-variants';fs.mkdirSync(working);const digest=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const summary={schema:'agentlab.utility_calibration.v1',sourceRevision:cp.execFileSync('git',['-C',source,'rev-parse','HEAD'],{encoding:'utf8'}).trim(),cases:{},actualAgentQualified:false,fullPhoneBuildQualified:false};
-for(const scenario of ['debounce','image-url']){
+if(selected&&!['debounce','image-url'].includes(selected))throw Error('Unsupported utility scenario');
+for(const scenario of selected?[selected]:['debounce','image-url']){
  const root=path.join(output,scenario);fs.mkdirSync(root);
  const oracle=path.join(__dirname,scenario+'.cjs');
  const variants={baseline:{directory:source,expected:false},reference:{directory:reference,expected:true}};

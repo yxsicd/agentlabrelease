@@ -113,3 +113,10 @@ instance Skill rows, freeze demands/oracle digests, and export a new immutable
 knowledge cut. Full phone builds and live Agent results qualify separate runtime
 instances. Never label utility evidence with the calibrated loading-timer lesson;
 scenario-specific lesson extraction must use the observed contract.
+
+
+The real utility subject runner invokes the same `calibrate-utilities.cjs` recipe
+as local/CI calibration, selecting its scenario. Keep mutation definitions and
+source selection in that single implementation. Missing files/parser/runtime
+errors are Harness calibration failures, never successful negative verdicts.
+Preserve partial calibration receipts before propagating a failed recipe.
