@@ -17,13 +17,12 @@ decorators, ArkUI nodes and complete parse-error text/spans. IDs use source path
 syntax role, scope/name and occurrence rather than byte offsets; spans still
 reflect the exact source cut. Calls are unresolved syntax observations.
 
-First fixed code-workshop run parses556 files:555 without syntax errors and one
+The initial fixed code-workshop run parsed556 files:555 without syntax errors and one
 with five recovery/error nodes at `products/tv/src/main/ets/component/BarItem.ets`.
 The unsupported form is leading-dot style statements inside `stateStyles` object
-value blocks. Preserve this as grammar coverage debt, not source/Agent failure.
+value blocks. This was grammar coverage debt, not source/Agent failure; the repair below closes it.
 Do not rewrite source with regular expressions to manufacture clean parsing.
-Adapt the grammar with a minimal regression fixture and regenerated parser when
-this gap is addressed. Clean syntax does not imply type or runtime correctness.
+The minimal regression fixture and regenerated parser are now committed. Clean syntax does not imply type or runtime correctness.
 
 The knowledge flywheel now invokes this Rust binary and imports selected-scenario
 AST facts into TableGit. Its current TableGit orchestration is still Python;

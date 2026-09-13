@@ -1,15 +1,15 @@
 {
   "schema": "agentlab.knowledge_export.v1",
   "repository": "session",
-  "revision": "467b159f8fb2ef7c9b4bae80b193c7e564c58cdb",
+  "revision": "70b1137322bca97c9c274a3e8b39d278f5027c50",
   "tables": {
     "maintainer_skills": {
       "rowCount": 26,
-      "sha256": "d1f2ea04bf391de7887c03660e8dfec51d2d71155f694f29fc2e47a4c0d10fd3"
+      "sha256": "46bb60627e59db74a492409e006038fb99dc10942148e2d3ca557e4d650104ba"
     },
     "program_facts": {
       "rowCount": 701,
-      "sha256": "516be27eb9dea1b3955b01a12567e53031a38d7e278ccaab0448fa9fe67d9ebc"
+      "sha256": "34a613a22db559edec35415f56370b04c1ee29636740f24f2e42ae8cf3961931"
     },
     "evaluation_cases": {
       "rowCount": 7,
