@@ -32,7 +32,7 @@ def main():
   if row.get('kind')=='compiler-file':
    raw=b''.join(base64.b64decode(tables[PAYLOAD][key]['value']) for key in row['chunkIds']);assert len(raw)==row['byteCount'] and hashlib.sha256(raw).hexdigest()==row['sha256']
  # Read back every exported row before relocating duplicate historical seed data.
- for name in tables:assert {r['id']:r for r in map(json.loads,(runtime/(name+'.jsonl')).read_text().splitlines())}==tables[name]
+ for name in tables:assert {r['id']:r for r in store.jsonl_rows((runtime/(name+'.jsonl')).read_bytes())}==tables[name]
  pending=[];findings=[];existing_findings=store.scan(s,repo,rev,PREFIX+'program_facts')
  for table in ('program_facts','evaluation_cases'):
   existing=store.scan(s,repo,rev,PREFIX+table)
@@ -44,7 +44,7 @@ def main():
  for row in tables[OBS].values():
   if row.get('kind')!='assessment-summary':continue
   ref=dict(repository=repo,table=PREFIX+OBS,id=row['id'],revision=receipt['revision'],archiveUrl=a.runtime_archive_url)
-  finding=dict(id='finding-'+('feedback' if row['taskId']=='case-feedback-subject-v1' else 'navigation')+'-'+row['producerRun'],kind='assessment-finding',producerRun=row['producerRun'],producerRevision=row['producerRevision'],sourceRevision=row['sourceRevision'],taskId=row['taskId'],harnessCompleted=row['harnessCompleted'],subjectTaskSucceeded=row['subjectTaskSucceeded'],formalSessionFSForkQualified=False,scope='Actual controller/caller methods, full phone compile and selected-source fresh-Agent fork',runtimeEvidenceRef=ref)
+  finding=dict(id='finding-'+('feedback' if row['taskId']=='case-feedback-subject-v1' else 'navigation')+'-'+row['producerRun'],kind='assessment-finding',producerRun=row['producerRun'],producerRevision=row['producerRevision'],sourceRevision=row['sourceRevision'],taskId=row['taskId'],harnessCompleted=row['harnessCompleted'],subjectTaskSucceeded=row['subjectTaskSucceeded'],formalSessionFSForkQualified=False,scope=row.get('assessmentScope','Actual navigation controller/caller methods, full phone compile and selected-source fresh-Agent fork'),runtimeEvidenceRef=ref)
   old=existing_findings.get(finding['id'])
   if old is None:pending.append(('program_facts',dict(op='insert',operation_id=str(uuid.uuid4()),key=finding['id'],row=finding)))
   elif old['row']!=finding:pending.append(('program_facts',dict(op='update',operation_id=str(uuid.uuid4()),key=finding['id'],expected_row_version=old['row_version'],field_updates=[dict(op='set',field='/'+k,value=v) for k,v in finding.items() if old['row'].get(k)!=v])))

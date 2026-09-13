@@ -61,7 +61,7 @@ def construct(source,out):
  inventory=dict(id='source-code-workshop',kind='inventory',path='.',sourceRevision=revision,codeFiles=len(code),codeLines=sum(len((source/p).read_bytes().splitlines()) for p in code),method='git tracked source inventory',coverage='AST parses whole source; selected scenario AST rows imported; syntax coverage receipt and full corpus evidence retained',buildQualified=False)
  binary=Path(__file__).resolve().parents[3]/'target/debug/agentlab-code-analysis'
  ast_dir=out/'ast';subprocess.run([str(binary),str(source),str(ast_dir)],check=True,capture_output=True,text=True)
- ast_rows=[json.loads(line) for line in (ast_dir/'program_facts.jsonl').read_text().splitlines()]
+ ast_rows=store.jsonl_rows((ast_dir/'program_facts.jsonl').read_bytes())
  inventory['astReceipt']=json.loads((ast_dir/'analysis.json').read_text())
  facts=[inventory];skills=[];cases=[]
  # Verify the local file dependency and package entry before resolving an alias.

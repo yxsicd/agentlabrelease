@@ -93,12 +93,16 @@ def export(service,repo,revision,destination,prefix=''):
     (destination/'export.json').write_text(json.dumps(receipt,indent=2)+'\n')
     return receipt
 
+def jsonl_rows(raw):
+    """Frame JSONL on LF bytes; Unicode separators inside strings are data."""
+    return [json.loads(line) for line in raw.split(b"\n") if line.strip()]
+
 def load_snapshot(directory):
     directory=Path(directory);receipt=json.loads((directory/'export.json').read_text());tables={}
     for table in TABLES:
         raw=(directory/(table+'.jsonl')).read_bytes()
         assert hashlib.sha256(raw).hexdigest()==receipt['tables'][table]['sha256']
-        rows=[json.loads(line) for line in raw.splitlines()];assert len(rows)==receipt['tables'][table]['rowCount']
+        rows=jsonl_rows(raw);assert len(rows)==receipt['tables'][table]['rowCount']
         assert len({r['id'] for r in rows})==len(rows)
         tables[table]=rows
     return tables

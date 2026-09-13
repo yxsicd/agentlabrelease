@@ -22,7 +22,7 @@ def main():
  subprocess.run(['git','clone','--no-hardlinks',str(a.source.resolve()),str(project)],check=True,capture_output=True)
  assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=project,text=True).strip()==PIN
  lock=json.loads((a.install_root/'downloads/environment-lock.json').read_text());dump(e/'environment-lock.json',lock)
- seed=json.loads(next(line for line in (Path(__file__).resolve().parents[1]/'seeds/harmony-code-workshop/evaluation_cases.jsonl').read_text().splitlines() if json.loads(line)['id']==scenario['caseId']));assert seed['demands']==demands
+ seed=json.loads(next(line for line in (Path(__file__).resolve().parents[1]/'seeds/harmony-code-workshop/evaluation_cases.jsonl').read_text().split('\n') if line.strip() and json.loads(line)['id']==scenario['caseId']));assert seed['demands']==demands
  dump(e/'frozen-task.json',seed)
  if seed.get('oracleDigest'):assert hashlib.sha256(Path(__file__).with_name(scenario['oracle']).read_bytes()).hexdigest()==seed['oracleDigest']
  summary=dict(schema='agentlab.'+a.scenario+'_subject.v1',taskId=scenario['caseId'],assessmentScope=scenario['scope'],sourceRevision=PIN,demands=demands,sourceForkQualified=False,formalSessionFSForkQualified=False,uiDeviceQualified=False,phases={},ok=False,subjectTaskSucceeded=False)

@@ -91,3 +91,33 @@ rejected in stage two. Freeze oracle digest and named stage checks in TableGit.
 Existing frozen cases and instance guidance are not rewritten by seed creation.
 Raw AST output remains recoverable; normalized observed syntax facts link to
 the exact source analysis receipt and file cut in runtime tables.
+
+## Completed feedback experiment
+
+[Action 34758919730](https://github.com/yxsicd/agentlabrelease/actions/runs/34758919730)
+ran Pi 0.73.1 with glm-5.3-flash against the frozen feedback case: 14 first-turn,
+15 parent second-turn and 15 fresh-Agent second-turn checks passed, with three
+full phone HAP builds. All 26 controlled gateway requests returned HTTP 200;
+32 completed native tools include two reported errors, retained in the raw evidence.
+The published HAP asset size and SHA-256 were independently verified. This covers
+submitted methods, reactive declarations, controlled Promise outcomes and a
+selected-source branch comparison. Formal SessionFS restore, device UI and strict
+HarmonyOS 6.0 remain outside this experiment's demonstrated scope.
+
+Runtime JSONL framing uses LF bytes; Unicode separators inside strings are data.
+Gateway phase indices link supervisor lifecycle intervals and request receipts.
+Historical re-ingestion adds analysis coverage without regressing latest guidance.
+
+The complete [navigation + feedback runtime snapshot](https://github.com/yxsicd/agentlabrelease/releases/download/evidence-feedback-subject-34758919730/harmony-flywheel-runtime-20260913-feedback.tar.zst)
+contains export.json with table definitions, committed revision, row counts and
+SHA-256, plus one stable-order JSONL per runtime table. Extract it and use
+`import-runtime.py` with an explicit new table prefix. The separate three initial
+knowledge JSONLs remain the fast campaign bootstrap. Do not interpret this
+construction-fixture namespace as the installed Harness canonical session schema.
+
+The historical fresh feedback branch encountered missing Git in the slim Node
+image; a second error came from its own Git-index parsing script. Both remain
+in that run's native evidence. Future assessments build a Node + Git participant
+image with the shared `participant-runtime.sh`; a main Action smoke job records
+image identity and verifies Node/Git with networking disabled. This environment
+repair does not retroactively change the historical run's participant image.

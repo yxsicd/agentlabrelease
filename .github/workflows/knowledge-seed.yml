@@ -116,3 +116,16 @@ jobs:
           path: |
             ${{ env.AGENTLAB_CI_ROOT }}/builder/evidence/
             ${{ env.AGENTLAB_CI_ROOT }}/store/evidence-*/
+
+  participant-runtime:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build contained participant runtime and verify Git outside project
+        run: bash examples/knowledge-seed/subject/participant-runtime.sh "$RUNNER_TEMP/participant-runtime" agentlab-subject-participant:"$GITHUB_RUN_ID"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: participant-runtime-preflight
+          path: ${{ runner.temp }}/participant-runtime/

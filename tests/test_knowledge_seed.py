@@ -42,6 +42,21 @@ store_spec=importlib.util.spec_from_file_location('knowledge_store',Path(__file_
 store=importlib.util.module_from_spec(store_spec);store_spec.loader.exec_module(store)
 
 class SnapshotTest(unittest.TestCase):
+    def test_jsonl_unicode_separators_are_payload_and_crlf_is_supported(self):
+        import json
+        rows=[{'id':'a','body':'first\u0085second\u2028third\u2029fourth'}, {'id':'b','body':'next'}]
+        for ending in ('\n','\r\n'):
+            raw=''.join(json.dumps(row,ensure_ascii=False)+ending for row in rows).encode()
+            self.assertEqual(store.jsonl_rows(raw),rows)
+            with tempfile.TemporaryDirectory() as temp:
+                root=Path(temp);receipt={'tables':{}}
+                import hashlib
+                for table in store.TABLES:
+                    (root/(table+'.jsonl')).write_bytes(raw)
+                    receipt['tables'][table]={'sha256':hashlib.sha256(raw).hexdigest(),'rowCount':2}
+                (root/'export.json').write_text(json.dumps(receipt))
+                self.assertEqual(store.load_snapshot(root),{table:rows for table in store.TABLES})
+
     def test_wide_knowledge_rows_keep_fields_without_index_overflow(self):
         class Create:
             def __init__(self):self.definitions=[]
@@ -104,3 +119,18 @@ class ImageClassificationOracleTest(unittest.TestCase):
             self.assertEqual(len(results['reference']['cases']),14)
             mismatch=next(c for c in results['wrong-prefix']['cases'] if c['input']=='https://')
             self.assertEqual([d['actual'] for d in mismatch['decisions']],[False,True])
+
+
+class AssessmentGuidanceTest(unittest.TestCase):
+    def test_first_capture_repeat_archived_refs_and_older_campaign(self):
+        spec=importlib.util.spec_from_file_location('subject_ingest',Path(__file__).parents[1]/'examples/knowledge-seed/subject/ingest.py')
+        ingest=importlib.util.module_from_spec(spec);spec.loader.exec_module(ingest)
+        summary={'ok':True,'subjectTaskSucceeded':True};key='subject-20-summary'
+        ref={'id':key,'table':'runtime_observations'}
+        first=ingest.assessment_guidance({},[ref],key,summary,'scope','next','20')
+        self.assertEqual(first['latestSummaryRef'],ref)
+        self.assertEqual(ingest.assessment_guidance(first,[ref],key,summary,'scope','next','20'),first)
+        archived={**first,'latestSummaryRef':{**ref,'revision':'cut','archiveUrl':'asset'},'observedToolErrors':['operator tool missing']}
+        self.assertEqual(ingest.assessment_guidance(archived,[archived['latestSummaryRef']],key,summary,'scope','next','20'),archived)
+        old_ref={'id':'subject-10-summary','table':'runtime_observations'}
+        self.assertEqual(ingest.assessment_guidance(archived,[old_ref],old_ref['id'],summary,'older','next','10'),archived)

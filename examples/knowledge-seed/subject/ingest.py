@@ -1,14 +1,38 @@
 """Capture full assessment evidence in runtime tables; knowledge seeds retain feedback."""
 import argparse,base64,hashlib,json,sys,uuid
+from datetime import datetime
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]));import store
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'tablegit-session'));from capture import Service
 PREFIX='flywheel/harmony-v3/'
 OBS='runtime_observations'
 PAYLOAD='runtime_payload_chunks'
+def gateway_phases(evidence):
+ lifecycles=[]
+ for path in sorted(evidence.glob('*/*-lifecycle.json')):
+  row=json.loads(path.read_text())
+  if row.get('startedAt') and row.get('endedAt'):
+   lifecycles.append((path.relative_to(evidence).as_posix(),row))
+ result={}
+ for path in sorted(evidence.glob('*/gateway/*.status.json')):
+  receipt=json.loads(path.read_text());participant=path.relative_to(evidence).parts[0]
+  started=datetime.fromisoformat(receipt['startedAt'])
+  matches=[(name,row) for name,row in lifecycles if name.split('/')[0]==participant and datetime.fromisoformat(row['startedAt'])<=started<=datetime.fromisoformat(row['endedAt'])]
+  result[(participant,int(path.name.split('.')[0]))]=dict(phase=matches[0][1]['label'] if len(matches)==1 else None,phaseAttribution='supervisor-lifecycle-interval' if len(matches)==1 else 'ambiguous' if matches else 'unmatched',phaseReceiptPath=path.relative_to(evidence).as_posix(),phaseLifecyclePaths=[name for name,_ in matches])
+ return result
+def assessment_guidance(previous,refs,summary_id,summary,scope,stage_next,run):
+ previous_id=previous.get('latestSummaryId')
+ if previous_id and int(previous_id.split('-')[1])>int(run):
+  return {**previous,'stageNext':stage_next}
+ guidance=dict(previous) if previous_id==summary_id else {}
+ guidance.update(stageNext=stage_next,latestSummaryId=summary_id,subjectTaskSucceeded=summary['subjectTaskSucceeded'],harnessCompleted=summary['ok'],scope=scope,next='Diagnose failed Agent outcomes from gateway/source evidence; formal SessionFS and device remain separate')
+ guidance['latestSummaryRef']=next(ref for ref in refs if ref['id']==summary_id)
+ return guidance
+
 def main():
  p=argparse.ArgumentParser();p.add_argument('--evidence',type=Path,required=True);p.add_argument('--development',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--run',required=True);p.add_argument('--revision',required=True);p.add_argument('--create-runtime-tables',action='store_true');a=p.parse_args();a.root.mkdir();(a.root/'rpc').mkdir();config=json.loads(a.development.read_text());s=Service(config['url'],Path(config['authorizationFile']).read_text().strip(),a.root/'rpc');repo=config['repo'];wt={'topic_id':None};rev=s.call('table.worktree.open',dict(repo=repo,worktree=wt))['revision'];summary=json.loads((a.evidence/'summary.json').read_text());task_id=json.loads((a.evidence/'frozen-task.json').read_text())['id'];assessment_name='feedback' if task_id=='case-feedback-subject-v1' else 'navigation';scope=summary.get('assessmentScope','Actual controller/caller methods and full phone compile; source-only fresh-Agent branch');pre='subject-'+a.run+'-';lineage=dict(producerRun=a.run,producerRevision=a.revision,taskId=task_id,sourceRevision=summary['sourceRevision'],captureAuthority='supervisor-owned-collector',evidenceRunUrl='https://github.com/yxsicd/agentlabrelease/actions/runs/'+a.run)
- facts=[dict(id=pre+'summary',kind='assessment-summary',harnessCompleted=summary['ok'],subjectTaskSucceeded=summary['subjectTaskSucceeded'],sourceForkQualified=summary['sourceForkQualified'],formalSessionFSForkQualified=False,calibration=summary.get('calibration'),phaseIds=[pre+'phase-'+x for x in summary['phases']],**lineage)];chunks={};files={}
+ phase_map=gateway_phases(a.evidence)
+ facts=[dict(id=pre+'summary',kind='assessment-summary',assessmentScope=scope,harnessCompleted=summary['ok'],subjectTaskSucceeded=summary['subjectTaskSucceeded'],sourceForkQualified=summary['sourceForkQualified'],formalSessionFSForkQualified=False,calibration=summary.get('calibration'),phaseIds=[pre+'phase-'+x for x in summary['phases']],**lineage)];chunks={};files={}
  for path in sorted(a.evidence.rglob('*')):
   if not path.is_file():continue
   name=path.relative_to(a.evidence).as_posix();raw=path.read_bytes();digest=hashlib.sha256(raw).hexdigest();ids=[]
@@ -31,21 +55,21 @@ def main():
    facts.append(dict(id=cut_key,kind='source-cut',sourceCutId=observed['id'],fileCount=len(observed['files']),scope='selected-source-only',manifestFileId=key,**lineage))
    for ordinal,fingerprint in enumerate(observed['files']):facts.append(dict(id=cut_key+'-file-'+str(ordinal),kind='source-file-fingerprint',sourceCutId=observed['id'],cutObservationId=cut_key,**fingerprint,**lineage))
   if name.endswith('events.jsonl'):
-   for number,line in enumerate(raw.splitlines(),1):
+   for number,line in enumerate(raw.split(b'\n'),1):
     if not line.strip():continue
     try:event=json.loads(line)
     except ValueError:continue
     facts.append(dict(id=pre+'native-'+hashlib.sha256(name.encode()).hexdigest()[:12]+'-'+str(number),kind='native-event-index',phase=Path(name).name.removesuffix('-events.jsonl'),eventType=event.get('type'),toolName=event.get('toolName'),toolCallId=event.get('toolCallId'),reportedIsError=event.get('isError'),participant=name.split('/')[0],nativeFileId=key,lineNumber=number,observationAuthority='participant-adapter',**lineage))
   if '/gateway/' in name and name.endswith(('.request.json','.upstream-request.json')):
-   wire=json.loads(raw)
-   facts.append(dict(id=pre+'request-'+hashlib.sha256(name.encode()).hexdigest()[:16],kind='gateway-request-index',exchangeOrdinal=int(Path(name).name.split('.')[0]),participant=name.split('/')[0],model=wire.get('model'),providerRoute=wire.get('providerId'),direction='upstream' if name.endswith('.upstream-request.json') else 'participant',messageCount=len(wire.get('messages',[])),toolCount=len(wire.get('tools',[])),wireFileId=key,**lineage))
+   wire=json.loads(raw);phase_fields=phase_map.get((name.split('/')[0],int(Path(name).name.split('.')[0])),dict(phase=None,phaseAttribution='missing-receipt'))
+   facts.append(dict(id=pre+'request-'+hashlib.sha256(name.encode()).hexdigest()[:16],kind='gateway-request-index',exchangeOrdinal=int(Path(name).name.split('.')[0]),participant=name.split('/')[0],model=wire.get('model'),providerRoute=wire.get('providerId'),direction='upstream' if name.endswith('.upstream-request.json') else 'participant',messageCount=len(wire.get('messages',[])),toolCount=len(wire.get('tools',[])),wireFileId=key,**phase_fields,**lineage))
    for number,tool in enumerate(wire.get('tools',[])):
     function=tool.get('function',{})
-    facts.append(dict(id=pre+'tool-definition-'+hashlib.sha256(name.encode()).hexdigest()[:16]+'-'+str(number),kind='gateway-tool-definition',exchangeOrdinal=int(Path(name).name.split('.')[0]),direction='upstream' if name.endswith('.upstream-request.json') else 'participant',toolName=function.get('name'),inputSchema=function.get('parameters'),wireFileId=key,jsonPointer='/tools/'+str(number),**lineage))
+    facts.append(dict(id=pre+'tool-definition-'+hashlib.sha256(name.encode()).hexdigest()[:16]+'-'+str(number),kind='gateway-tool-definition',exchangeOrdinal=int(Path(name).name.split('.')[0]),direction='upstream' if name.endswith('.upstream-request.json') else 'participant',toolName=function.get('name'),inputSchema=function.get('parameters'),wireFileId=key,jsonPointer='/tools/'+str(number),**phase_fields,**lineage))
    for number,message in enumerate(wire.get('messages',[])):
-    facts.append(dict(id=pre+'message-'+hashlib.sha256(name.encode()).hexdigest()[:16]+'-'+str(number),kind='gateway-context-message-index',exchangeOrdinal=int(Path(name).name.split('.')[0]),messageOrdinal=number,direction='upstream' if name.endswith('.upstream-request.json') else 'participant',role=message.get('role'),toolCallId=message.get('tool_call_id'),toolCallCount=len(message.get('tool_calls',[])),wireFileId=key,jsonPointer='/messages/'+str(number),**lineage))
+    facts.append(dict(id=pre+'message-'+hashlib.sha256(name.encode()).hexdigest()[:16]+'-'+str(number),kind='gateway-context-message-index',exchangeOrdinal=int(Path(name).name.split('.')[0]),messageOrdinal=number,direction='upstream' if name.endswith('.upstream-request.json') else 'participant',role=message.get('role'),toolCallId=message.get('tool_call_id'),toolCallCount=len(message.get('tool_calls',[])),wireFileId=key,jsonPointer='/messages/'+str(number),**phase_fields,**lineage))
   if '/gateway/' in name and name.endswith('.status.json'):
-   facts.append(dict(id=pre+'gateway-'+name.replace('/','-'),kind='gateway-exchange',participant=name.split('/')[0],exchange=json.loads(raw),wireFileId=key,**lineage))
+   facts.append(dict(id=pre+'gateway-'+name.replace('/','-'),kind='gateway-exchange',participant=name.split('/')[0],exchange=json.loads(raw),wireFileId=key,**phase_map.get((name.split('/')[0],int(Path(name).name.split('.')[0])),dict(phase=None,phaseAttribution='missing-receipt')),**lineage))
  # Content-addressed payloads are separate from searchable observations.
  publication=a.evidence/'binary-publication.json'
  if publication.exists():
@@ -67,8 +91,7 @@ def main():
   existing_skills[goal_id]=goal
  for row in existing_skills.values():
   if row.get('objectId')!=task_id:continue
-  row=dict(row);row['evaluationEvidenceIds']=list(dict.fromkeys(row.get('evaluationEvidenceIds',[])+[pre+'summary']));stage_next={'goal':'Maintain bounded acceptance against named checks and explicit qualification limits.','repository-analysis':'Compare actual outcome and state contracts against frozen source semantics.','program-analysis':'Analyze tracked deltas, actual backend calls and original static facts; keep static versus executed scope distinct.','seed-extraction':'Derive the next variants from failed checks without rewriting this assessed demand.','calibration':'Retain original/reference/negative calibration and distinguish actual-method execution from UI rendering.','evaluation':'Compare parent/fresh-Agent phases, gateway context and source-cut identity; formal SessionFS remains separate.'};prior_refs={ref['id']:ref for ref in row.get('evaluationEvidenceRefs',[])};row['evaluationEvidenceRefs']=[prior_refs.get(key,dict(repository=repo,table=PREFIX+OBS,id=key)) for key in row['evaluationEvidenceIds']];row['evaluationGuidance']=dict(stageNext=stage_next.get(row['stage']),latestSummaryId=pre+'summary',subjectTaskSucceeded=summary['subjectTaskSucceeded'],harnessCompleted=summary['ok'],scope=scope,next='Diagnose failed Agent outcomes from gateway/source evidence; formal SessionFS and device remain separate');latest_ref=prior_refs.get(pre+'summary');
-  if latest_ref:row['evaluationGuidance']['latestSummaryRef']=latest_ref
+  row=dict(row);row['evaluationEvidenceIds']=list(dict.fromkeys(row.get('evaluationEvidenceIds',[])+[pre+'summary']));stage_next={'goal':'Maintain bounded acceptance against named checks and explicit qualification limits.','repository-analysis':'Compare actual outcome and state contracts against frozen source semantics.','program-analysis':'Analyze tracked deltas, actual backend calls and original static facts; keep static versus executed scope distinct.','seed-extraction':'Derive the next variants from failed checks without rewriting this assessed demand.','calibration':'Retain original/reference/negative calibration and distinguish actual-method execution from UI rendering.','evaluation':'Compare parent/fresh-Agent phases, gateway context and source-cut identity; formal SessionFS remains separate.'};prior_refs={ref['id']:ref for ref in row.get('evaluationEvidenceRefs',[])};row['evaluationEvidenceRefs']=[prior_refs.get(key,dict(repository=repo,table=PREFIX+OBS,id=key)) for key in row['evaluationEvidenceIds']];row['evaluationGuidance']=assessment_guidance(row.get('evaluationGuidance',{}),row['evaluationEvidenceRefs'],pre+'summary',summary,scope,stage_next.get(row['stage']),a.run)
   skills.append(row)
  runtime={OBS:facts+cases,PAYLOAD:list(chunks.values())}
  if a.create_runtime_tables:
@@ -100,5 +123,5 @@ def main():
   assert raw==b''.join(base64.b64decode(payloads[row['chunkId']]['value']) for row in parts)
  receipt=store.export(s,repo,rev,a.root/'export',PREFIX);assert receipt==store.export(s,repo,rev,a.root/'export-repeated',PREFIX)
  assert store.import_snapshot(s,repo,wt,a.root/'export',PREFIX)==(rev,0)
- result=dict(ok=True,repository=repo,observationTable=PREFIX+OBS,payloadTable=PREFIX+PAYLOAD,revision=rev,fileCount=len(files),allFilesExact=True,stableExport=True,reimportUnchanged=True,subjectTaskSucceeded=summary['subjectTaskSucceeded']);(a.root/'receipt.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result))
+ result=dict(ok=True,repository=repo,observationTable=PREFIX+OBS,payloadTable=PREFIX+PAYLOAD,revision=rev,fileCount=len(files),gatewayPhaseCounts={phase:sum(item['phase']==phase for item in phase_map.values()) for phase in sorted({item['phase'] for item in phase_map.values() if item['phase']})},unattributedGatewayExchanges=sum(item['phase'] is None for item in phase_map.values()),allFilesExact=True,stableExport=True,reimportUnchanged=True,subjectTaskSucceeded=summary['subjectTaskSucceeded']);(a.root/'receipt.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result))
 if __name__=='__main__':main()

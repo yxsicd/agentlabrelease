@@ -8,7 +8,7 @@ from ingest import OBS,PAYLOAD
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--development',type=Path,required=True);p.add_argument('--directory',type=Path,required=True);p.add_argument('--prefix',required=True);p.add_argument('--evidence',type=Path,required=True);p.add_argument('--create-tables',action='store_true');a=p.parse_args();a.evidence.mkdir();config=json.loads(a.development.read_text());s=Service(config['url'],Path(config['authorizationFile']).read_text().strip(),a.evidence);repo=config['repo'];wt={'topic_id':None};rev=s.call('table.worktree.open',dict(repo=repo,worktree=wt))['revision'];receipt=json.loads((a.directory/'export.json').read_text());expected={}
  for name in (OBS,PAYLOAD):
-  raw=(a.directory/(name+'.jsonl')).read_bytes();meta=receipt['tables'][name];assert hashlib.sha256(raw).hexdigest()==meta['sha256'];rows=[json.loads(line) for line in raw.splitlines()];expected[name]={row['id']:row for row in rows};assert len(rows)==len(expected[name])==meta['rowCount']
+  raw=(a.directory/(name+'.jsonl')).read_bytes();meta=receipt['tables'][name];assert hashlib.sha256(raw).hexdigest()==meta['sha256'];rows=store.jsonl_rows(raw);expected[name]={row['id']:row for row in rows};assert len(rows)==len(expected[name])==meta['rowCount']
   if a.create_tables:rev=s.call('table.create',dict(repo=repo,worktree=wt,path=a.prefix+name,expected_revision=rev,definition=meta['definition'],message='Create published runtime replay table'))['revision']
  pending=[]
  for name,rows in expected.items():

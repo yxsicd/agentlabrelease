@@ -65,3 +65,33 @@ Preserve negative calibration for wrong reset, duplicate requests and wrong
 initial state, plus raw/normalized source evidence. The demonstration backend is
 an explicit Promise seam; full phone compilation and UI rendering are distinct.
 Return stage-specific construction/evaluation guidance to instance Skill rows.
+
+### Reliable history framing and phase attribution
+
+Read JSONL using LF record boundaries, accepting CRLF as JSON whitespace.
+Unicode U+0085/U+2028/U+2029 inside strings remain payload; text splitlines()
+can invent malformed records. Preserve original bytes and use the shared
+store.jsonl_rows reader for snapshot analysis/import verification.
+
+Attribute controlled gateway exchanges using supervisor lifecycle time intervals
+and record the exact status/lifecycle receipts. Retain explicit unmatched or
+ambiguous attribution rather than guessing from message content. Re-ingesting
+an older campaign preserves historical rows but must not replace latest instance
+guidance from a newer campaign. Prove unchanged repeat import at the committed cut.
+
+### Participant dependency floor
+
+An assessed Agent may fail normally; a missing standard project tool is an
+operator environment deficiency. Feedback's fresh branch recorded missing Git
+and a separate Agent-authored Git-index parser bounds error. Preserve both raw
+failures and their distinct attribution. Provision Node, Git and HTTPS trust in
+the participant image, outside project files; use the shared participant-runtime.sh
+preflight in local development, every main knowledge Action and real assessment.
+Retain resolved image identity and tool versions. Do not retroactively relabel
+an already assessed participant environment or repair its submitted code.
+
+Initial assessment guidance must include its summary reference on the first
+write. Repeating the same campaign preserves archived cut references and
+subsequent evidence-linked maintainer findings; replaying older campaigns keeps
+the newer latest summary. The shared guidance builder has first-write, same-run,
+archived-reference and older-run regression coverage.
