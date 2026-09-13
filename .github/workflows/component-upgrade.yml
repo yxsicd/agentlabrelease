@@ -13,8 +13,11 @@ on:
         description: Optional explicit base lock URL if the publication does not declare it
         default: ""
       donor_release:
-        description: Published candidate or qualified cut containing the replacement
-        required: true
+        description: Optional published candidate or qualified cut containing the replacement
+        default: ""
+      replacement_url:
+        description: Explicit component_update.v1 descriptor URL; use instead of donor_release
+        default: ""
       component:
         description: 'session-sdk, control, pack:release, pack:tools, pack:harmony-cli, pack:harmony-build-kit, image:runtime'
         required: true
@@ -32,10 +35,15 @@ jobs:
           DONOR: ${{ inputs.donor_release }}
           BASE_PUBLICATION_URL: ${{ inputs.base_publication_url }}
           BASE_LOCK_URL: ${{ inputs.base_lock_url }}
+          REPLACEMENT_URL: ${{ inputs.replacement_url }}
         run: |
           python3 - <<'PY'
           import json, os, pathlib, urllib.parse, urllib.request
-          for role,tag in [('base',os.environ['BASE']),('donor',os.environ['DONOR'])]:
+          replacement=os.environ['REPLACEMENT_URL']
+          assert bool(replacement) != bool(os.environ['DONOR']), 'select replacement_url or donor_release'
+          if replacement:
+              (pathlib.Path(os.environ['RUNNER_TEMP'])/'replacement.json').write_bytes(urllib.request.urlopen(replacement,timeout=30).read())
+          for role,tag in [('base',os.environ['BASE'])]+([] if replacement else [('donor',os.environ['DONOR'])]):
               assert pathlib.Path(tag).name == tag
               root=pathlib.Path(os.environ['RUNNER_TEMP'])/role
               root.mkdir()
@@ -52,8 +60,14 @@ jobs:
       - name: Compose and validate only the selected replacement
         env:
           COMPONENT: ${{ inputs.component }}
+          REPLACEMENT_URL: ${{ inputs.replacement_url }}
         run: |
-          python3 scripts/component-upgrade.py --base "$RUNNER_TEMP/base" --donor "$RUNNER_TEMP/donor" \
+          if [ -n "$REPLACEMENT_URL" ]; then
+            SOURCE=(--replacement "$RUNNER_TEMP/replacement.json")
+          else
+            SOURCE=(--donor "$RUNNER_TEMP/donor")
+          fi
+          python3 scripts/component-upgrade.py --base "$RUNNER_TEMP/base" "${SOURCE[@]}" \
             --component "$COMPONENT" --tag "candidate-component-$GITHUB_RUN_ID" --output "$RUNNER_TEMP/candidate"
           python3 - <<'PY'
           import importlib.util,json,os,pathlib
@@ -77,4 +91,5 @@ jobs:
           path: |
             ${{ runner.temp }}/base/
             ${{ runner.temp }}/donor/
+            ${{ runner.temp }}/replacement.json
             ${{ runner.temp }}/candidate/

@@ -23,6 +23,38 @@ def load(directory):
     return publication, lock
 
 
+
+def replacement_donor(base, manifest, component):
+    """A component producer declares one row, its contracts and published assets."""
+    if manifest['schema'] != 'agentlab.component_update.v1' or manifest['component'] != component:
+        raise ValueError('component update descriptor does not match selected role')
+    pub, lock = copy.deepcopy(base)
+    value = copy.deepcopy(manifest['value'])
+    if component == 'session-sdk':
+        pub['sessionSdk'] = value
+    elif component == 'control':
+        pub['smoke']['control'] = value['artifact']
+        pub['controllerSourceShort'] = value['sourceRevision'][:8]
+    else:
+        kind,slot = component.split(':',1)
+        collection = {'pack':'components','image':'images'}[kind]
+        matches = [i for i,row in enumerate(lock[collection]) if row['slot']==slot and row['platform']==pub['platform']]
+        if len(matches)!=1: raise ValueError('component update slot is missing or ambiguous')
+        lock[collection][matches[0]] = value
+        node = copy.deepcopy(manifest['graphNode'])
+        binding = {'kind':'pack-slot' if kind=='pack' else 'image-slot','slot':slot}
+        if node['binding'] != binding or node['platform'] != pub['platform']:
+            raise ValueError('component update contract binding differs')
+        matches = [i for i,n in enumerate(lock['componentGraph']['nodes']) if n['binding']==binding and n['platform']==pub['platform']]
+        if len(matches)!=1: raise ValueError('component contract slot is missing or ambiguous')
+        lock['componentGraph']['nodes'][matches[0]] = node
+        if component=='pack:release':
+            pub['sourceRevision'] = lock['sourceRevision'] = manifest['sourceRevision']
+    assets = {a['url']:a for a in pub['assets']}
+    assets.update({a['url']:copy.deepcopy(a) for a in manifest['assets']})
+    pub['assets'] = list(assets.values())
+    return pub,lock
+
 def compose(base, donor, component, tag):
     original, old_lock = base
     replacement, donor_lock = donor
@@ -99,11 +131,16 @@ def compose(base, donor, component, tag):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ('base','donor','output'): parser.add_argument('--'+name, type=Path, required=True)
+    for name in ('base','output'): parser.add_argument('--'+name, type=Path, required=True)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument('--donor', type=Path)
+    source.add_argument('--replacement', type=Path, help='component producer update descriptor')
     parser.add_argument('--component', required=True, help='session-sdk, control, pack:<slot>, image:<slot>')
     parser.add_argument('--tag', required=True)
     args = parser.parse_args()
-    pub, lock, raw, receipt = compose(load(args.base), load(args.donor), args.component, args.tag)
+    base = load(args.base)
+    donor = load(args.donor) if args.donor else replacement_donor(base,json.loads(args.replacement.read_bytes()),args.component)
+    pub, lock, raw, receipt = compose(base, donor, args.component, args.tag)
     args.output.mkdir(parents=True, exist_ok=False)
     (args.output/'environment-lock.json').write_bytes(raw)
     for name,value in [('publication',pub),('component-upgrade',receipt)]:

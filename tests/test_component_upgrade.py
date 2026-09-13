@@ -59,3 +59,19 @@ class ComponentUpgradeTests(unittest.TestCase):
             self.assertEqual(pub['sessionSdk'],self.base[0]['sessionSdk'])
             self.assertEqual(pub['sourceRevision'],self.base[0]['sourceRevision'])
             self.assertEqual(lock['sourceRevision'],self.base[1]['sourceRevision'])
+
+    def test_direct_component_descriptor_does_not_require_a_donor_solution(self):
+        base = upgrade.load(ROOT/'release/candidates/c22b7bfd-linux-x64')
+        pub = self.base[0]
+        manifest = dict(schema='agentlab.component_update.v1',component='session-sdk',
+                        value=pub['sessionSdk'],assets=[a for a in pub['assets'] if a['url']==pub['sessionSdk']['artifact']])
+        donor = upgrade.replacement_donor(base,manifest,'session-sdk')
+        result,lock,_,_ = upgrade.compose(base,donor,'session-sdk','candidate-direct-sdk')
+        self.assertEqual(lock,base[1])
+        self.assertEqual(result['sessionSdk'],pub['sessionSdk'])
+
+    def test_direct_component_contract_must_bind_selected_slot(self):
+        manifest = dict(schema='agentlab.component_update.v1',component='pack:tools',
+                        value=self.base[1]['components'][1],assets=[],graphNode=self.base[1]['componentGraph']['nodes'][1])
+        with self.assertRaisesRegex(ValueError,'binding differs'):
+            upgrade.replacement_donor(self.base,manifest,'pack:tools')

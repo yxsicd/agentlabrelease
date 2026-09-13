@@ -114,3 +114,15 @@ python3 scripts/component-upgrade.py --base release/channels/aldev \
   --donor /path/to/published-composition --component session-sdk \
   --tag candidate-sdk-upgrade --output /tmp/agentlab-sdk-upgrade
 ```
+
+A newly released component does **not** require a donor solution. Its producer
+publishes an `agentlab.component_update.v1` JSON descriptor alongside its own
+package. Set `replacement_url` instead of `donor_release`. The descriptor has
+`component`, `value` (one SDK/controller/image/pack identity), and `assets`
+(published URL/bytes/SHA references). Packs and images also declare `graphNode`
+with their binding, platform, provided and required contracts. Runtime pack
+updates declare `sourceRevision`. The producer owns these declarations;
+the composition tool resolves the resulting whole graph. Deployment bindings
+remain owned by the base. The executable SDK example is
+[`session-sdk-c075105a.json`](../release/components/session-sdk-c075105a.json).
+Use `--replacement <descriptor.json>` instead of `--donor` locally.
