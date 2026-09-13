@@ -103,7 +103,7 @@ jobs:
         run: |
           if [[ ! -f "$AGENTLAB_CI_ROOT/assessment/evidence/binary-manifest.json" ]]; then exit 0; fi
           tag="evidence-$AGENTLAB_ASSESSMENT_SCENARIO-subject-$GITHUB_RUN_ID"
-          gh release create "$tag" --target "$GITHUB_SHA" --prerelease --title "$AGENTLAB_ASSESSMENT_SCENARIO subject evidence $GITHUB_RUN_ID" --notes "Real Pi / glm-5.3-flash staged assessment. Successful unsigned HAP binaries; inspect behavior verdicts independently. Source-only fresh-Agent fork, no formal SessionFS/device/fixed promotion." "$AGENTLAB_CI_ROOT/assessment/full-hap/"*.hap "$AGENTLAB_CI_ROOT/assessment/evidence/binary-manifest.json"
+          gh release create "$tag" --prerelease --title "$AGENTLAB_ASSESSMENT_SCENARIO subject evidence $GITHUB_RUN_ID" --notes "Real Pi / glm-5.3-flash staged assessment. Successful unsigned HAP binaries; inspect behavior verdicts independently. Source-only fresh-Agent fork, no formal SessionFS/device/fixed promotion." "$AGENTLAB_CI_ROOT/assessment/full-hap/"*.hap "$AGENTLAB_CI_ROOT/assessment/evidence/binary-manifest.json"
           python3 - <<'PY'
           import os,json
           from pathlib import Path
@@ -149,7 +149,7 @@ jobs:
         run: |
           tag="evidence-$AGENTLAB_ASSESSMENT_SCENARIO-subject-$GITHUB_RUN_ID"
           if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --target "$GITHUB_SHA" --prerelease --title "Source subject evidence $GITHUB_RUN_ID" --notes "Captured source run $AGENTLAB_CAPTURE_RUN_ID; persistence run $GITHUB_RUN_ID. Raw evidence and typed runtime tables; inspect Agent, build and method verdicts independently."
+            gh release create "$tag" --prerelease --title "Source subject evidence $GITHUB_RUN_ID" --notes "Captured source run $AGENTLAB_CAPTURE_RUN_ID; persistence run $GITHUB_RUN_ID. Raw evidence and typed runtime tables; inspect Agent, build and method verdicts independently."
           fi
           gh release upload "$tag" "$AGENTLAB_CI_ROOT/raw-evidence.tar.zst"
       - name: Persist actual runtime, historical contexts and experience in released TableGit
