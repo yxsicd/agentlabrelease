@@ -39,3 +39,12 @@ jobs:
             ${{ env.AGENTLAB_CI_ROOT }}/case/materialization.json
             ${{ env.AGENTLAB_CI_ROOT }}/case/reference.patch
             ${{ env.AGENTLAB_CI_ROOT }}/case/before/
+      - name: Preserve complete original project HAP outside structured snapshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: harmony-full-source-hap
+          path: ${{ env.AGENTLAB_CI_ROOT }}/case/full-hap/
+          compression-level: 0
+          retention-days: 90
+          if-no-files-found: warn

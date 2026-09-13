@@ -43,7 +43,7 @@ def main():
     for path in sorted(a.evidence.rglob('*')):
         if not path.is_file():continue
         name=path.relative_to(a.evidence).as_posix()
-        if any(p in {'.hvigor','node_modules','oh_modules','build'} for p in path.relative_to(a.evidence).parts):continue
+        if name.startswith('slice-input/') and any(p in {'.hvigor','node_modules','oh_modules','build'} for p in path.relative_to(a.evidence).parts):continue
         raw=path.read_bytes();digest=hashlib.sha256(raw).hexdigest()
         file_id=prefix+'file-'+hashlib.sha256(name.encode()).hexdigest()[:20]
         chunks=[]
@@ -75,7 +75,7 @@ def main():
         if prefix+'summary' not in ids:
             ids.append(prefix+'summary')
         row['compilationEvidenceIds']=ids
-        row['compilationGuidance']={'latestSummaryId':prefix+'summary','fullSourceBuildQualified':summary['fullSourceBuildQualified'],'sliceCompilationQualified':summary['sliceCompilationQualified'],'fullSourceBlocker':summary.get('fullSourceBlocker'),'consumerAndDeviceQualified':False,'next':'Resolve full dependency seed and execute original consumers'}
+        row['compilationGuidance']={'latestSummaryId':prefix+'summary','fullSourceBuildQualified':summary['fullSourceBuildQualified'],'sliceCompilationQualified':summary['sliceCompilationQualified'],'fullSourceBlocker':summary.get('fullSourceBlocker'),'consumerAndDeviceQualified':False,'next':'Inspect preparation/full-source compiler evidence and execute original consumers'}
         changed.append(row)
     for table,rows in [('program_facts',facts),('evaluation_cases',cases),('maintainer_skills',changed)]:
         existing=store.scan(service,repo,revision,PREFIX+table);ops=[]

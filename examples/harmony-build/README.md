@@ -49,3 +49,18 @@ SWE seeds retain official provenance. Generated Harmony seeds retain AgentLab
 provenance and never claim to be official benchmark problems. Formal seed/Fork
 qualification must bind TableGit seed/demand identities and SessionFS Workspace
 cuts before claiming complete replay or causal failure attribution.
+
+## Fixed-source original controller probe
+
+The `harmony-controllers.yml` Action uses the independently updated build-kit v6
+composition. Rust materializes patches against the pinned code-workshop source.
+The runner calls SDK OHPM `install --all --lockfile_stable_order` with network
+available, then probes the declared phone module with Docker network disabled.
+It retains package-manager logs/manifests/locks, full-source compiler failures,
+and separate typed-slice/invalid-type/recovery verdicts. A green slice job does
+not qualify the full original project: inspect `fullSourceBuildQualified`.
+
+Compiler evidence is maintained in the development TableGit with
+`examples/knowledge-seed/flywheel/ingest-controller-build.py`, then exported in
+three stable per-table snapshots. Dependency manifests remain lossless evidence;
+vendor caches and intermediate build binaries are excluded from this export.

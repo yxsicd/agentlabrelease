@@ -85,6 +85,20 @@ def main():
         full,item=call('whole-source-probe','patched-source','phone')
         summary['fullSourceBuildQualified']=full.returncode==0 and bool(item.get('compiler',{}).get('artifacts'))
         summary['fullSourceBlocker']=None if summary['fullSourceBuildQualified'] else item.get('compiler',{}).get('error','See complete compiler logs')
+        if summary['fullSourceBuildQualified']:
+            binaries=root/'full-hap';binaries.mkdir()
+            verified=[]
+            for entry in item['compiler']['artifacts']:
+                hap=root/'patched-source'/entry['path']
+                digest=hashlib.sha256(hap.read_bytes()).hexdigest()
+                if digest!=entry['sha256'] or hap.stat().st_size!=entry['bytes']:raise RuntimeError('Full HAP receipt mismatch')
+                with zipfile.ZipFile(hap) as z:
+                    if z.testzip() or 'module.json' not in z.namelist() or not any(n.endswith('.abc') for n in z.namelist()):raise RuntimeError('Invalid full HAP')
+                shutil.copy2(hap,binaries/hap.name)
+                verified.append(dict(entry,artifactName='harmony-full-source-hap',artifactPath=hap.name,
+                                     storage='github-actions-artifact',reconstruction='external-binary-download-and-sha256'))
+            item['verifiedArtifacts']=verified
+            (e/'full-hap-manifest.json').write_text(json.dumps(verified,indent=2)+'\n')
         source=root/'workspace/hello/entry/src/main/ets/pages/Index.ets';original=source.read_text()
         shutil.copytree(root/'workspace/hello',e/'slice-input')
         build('typed-controller-build');summary['sliceCompilationQualified']=True
