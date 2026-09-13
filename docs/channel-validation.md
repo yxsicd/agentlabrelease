@@ -25,9 +25,10 @@ Mock and real TableGit recovery. Runtime and provisioning SDK are selected from
 that artifact, never from the current global demo pins. Each check retains its
 log and verdict, including failures; the qualification receipt is bound to the
 composition identity and GitHub run. Cached reinstall, Harmony and repeated
-cold recovery adapters are also connected. Btrfs, dedicated parity and real
-Agent tier adapters are still pending; their checks remain `not_run`, so deeper
-tiers cannot qualify accidentally. This workflow does not activate channels.
+cold recovery adapters are also connected. Btrfs and a separate Mock restart/Fork parity campaign are connected too.
+Parity here means the public standalone campaign, not formal device parity.
+The real Agent tier adapter is still pending; its check remains `not_run`, so
+prod cannot qualify accidentally. This workflow does not activate channels.
 
 Next complete the dedicated deeper-tier adapters and activate only the selected
 channel after its required checks pass. Publish immutable lock/qualification metadata before changing a single

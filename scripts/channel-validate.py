@@ -36,6 +36,9 @@ def execute(plan, source, root, run=subprocess.run):
         'mock_copy_tree': mock,
         'tablegit_recovery': tablegit,
         'cached_reinstall': install,
+        'mock_btrfs': ['bash', 'scripts/channel-btrfs-check.sh', str(root)],
+        'restart_fork_parity': [str(root/'parity-evidence') if a == str(root/'mock-evidence')
+                                else str(root/'parity-storage') if a == str(root/'mock-storage') else a for a in mock],
         'harmony_iterations': ['python3', 'examples/harmony-build/run.py', '--install-root', str(root),
                                '--root', str(root/'harmony-build-demo')],
         'repeat_cold_recovery': [str(root/'tablegit-repeat') if a == str(root/'tablegit-demo') else a for a in tablegit],

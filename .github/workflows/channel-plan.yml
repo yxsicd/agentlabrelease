@@ -81,6 +81,8 @@ jobs:
             /tmp/agentlab-channel-validation/*.log
             /tmp/agentlab-channel-validation/runs/
             /tmp/agentlab-channel-validation/mock-evidence/
+            /tmp/agentlab-channel-validation/btrfs-evidence/
+            /tmp/agentlab-channel-validation/parity-evidence/
             /tmp/agentlab-channel-validation/protocol/evidence/
             /tmp/agentlab-channel-validation/tablegit-demo/evidence-*/
             /tmp/agentlab-channel-validation/tablegit-repeat/evidence-*/
