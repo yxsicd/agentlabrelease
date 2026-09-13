@@ -32,6 +32,13 @@ Harness Lease initialization error after Mock/Harmony/Pi succeeded; preserve
 those failures and use the corrected independently pinned SDK for recovery.
 No fixed-channel or device promotion follows from this recovery demo.
 
+## Channel validation
+
+Read [channel-validation.md](../../docs/channel-validation.md) for the selective
+`aldev → almain → alprod` policy. Fresh-runner validation freezes one exact
+composition. The plan workflow checks lineage and required coverage; it does
+not activate channels or certify that listed tests ran.
+
 ## Start
 
 Current candidate: [40ecdf4b](../../release/candidates/40ecdf4b-linux-x64/publication.json).

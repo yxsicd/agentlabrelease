@@ -1,6 +1,12 @@
 # Component references and public CI
 
-The current runtime candidate is
+Current candidate: [40ecdf4b / SDKc075105a](../release/candidates/40ecdf4b-linux-x64/publication.json).
+Channel policy and implementation boundaries are in [channel-validation.md](channel-validation.md).
+Promote selectively from aldev to almain to alprod, preserving component bytes.
+The plan workflow is the frozen-input foundation; actual tier job wiring and
+channel activation remain unfinished. The material below is historical context.
+
+Historical runtime candidate:
 [`26008e36-linux-x64`](../release/candidates/26008e36-linux-x64/publication.json).
 Its environment release references component archives; it uploads no duplicate
 payloads. The new runtime and previously unpublished `fa05788f` base image have

@@ -1,0 +1,53 @@
+name: Freeze channel validation plan
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Channel to validate; planning does not activate it
+        type: choice
+        options: [aldev, almain, alprod]
+        default: aldev
+      candidate:
+        description: Candidate directory name for aldev only
+        type: string
+        default: 40ecdf4b-linux-x64
+permissions:
+  contents: read
+jobs:
+  freeze:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Select and freeze the upstream reference cut
+        env:
+          TARGET: ${{ inputs.target }}
+          CANDIDATE: ${{ inputs.candidate }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/channel-source"
+          python3 - <<'PY'
+          import os, pathlib, shutil, urllib.request
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])/'channel-source'
+          target=os.environ['TARGET']
+          if target=='aldev':
+              name=os.environ['CANDIDATE']
+              assert pathlib.Path(name).name==name
+              source=pathlib.Path('release/candidates')/name
+              for f in ['environment-lock.json','publication.json']:shutil.copyfile(source/f,root/f)
+          else:
+              parent={'almain':'aldev','alprod':'almain'}[target]
+              base='https://github.com/'+os.environ['GITHUB_REPOSITORY']+'/releases/download/'+parent+'/'
+              for f in ['environment-lock.json','publication.json']:
+                  (root/f).write_bytes(urllib.request.urlopen(base+'agentlab-'+parent+'-'+f,timeout=30).read())
+          PY
+          python3 scripts/channel-plan.py --target "$TARGET" \
+            --publication "$RUNNER_TEMP/channel-source/publication.json" \
+            --lock "$RUNNER_TEMP/channel-source/environment-lock.json" \
+            --output "$RUNNER_TEMP/channel-source/plan.json"
+      - name: Retain the frozen plan and original source metadata
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: channel-validation-plan
+          path: ${{ runner.temp }}/channel-source/
+          if-no-files-found: error
