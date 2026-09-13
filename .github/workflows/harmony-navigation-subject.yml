@@ -4,7 +4,7 @@ on:
     inputs:
       scenario:
         type: choice
-        options: [navigation, feedback, loading, debounce, image-url]
+        options: [navigation, feedback, loading, debounce, image-url, cache-durability]
         default: navigation
         description: Frozen TableGit case; independently calibrated submitted methods
       capture_run_id:
@@ -35,7 +35,7 @@ jobs:
           tag="evidence-$AGENTLAB_ASSESSMENT_SCENARIO-subject-$GITHUB_RUN_ID"
           gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$tag" -f sha="$GITHUB_SHA"
       - name: Restore immutable scenario capture for persistence replay
-        if: inputs.capture_run_id != '' && contains(fromJSON('["loading","debounce","image-url"]'), inputs.scenario)
+        if: inputs.capture_run_id != '' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -113,7 +113,7 @@ jobs:
           (e/'binary-publication.json').write_text(json.dumps(rows,indent=2)+'\n')
           PY
       - name: Preserve raw evidence and build typed actual-run entities
-        if: always() && contains(fromJSON('["loading","debounce","image-url"]'), inputs.scenario)
+        if: always() && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -131,7 +131,7 @@ jobs:
           shutil.copytree(root/'normalized-runtime/knowledge',inputs/'knowledge')
           evidence=root/'assessment/evidence'
           scenario=os.environ['AGENTLAB_ASSESSMENT_SCENARIO'];lesson=json.loads(subprocess.check_output(['target/debug/agentlab-experience','contract',scenario]))
-          names={'loading':['baseline','reference','wrong-cancel','wrong-fallback'],'debounce':['baseline','reference','wrong-boundary','wrong-window'],'image-url':['baseline','reference','wrong-protocol','wrong-dispatch']}[scenario]
+          names={'loading':['baseline','reference','wrong-cancel','wrong-fallback'],'debounce':['baseline','reference','wrong-boundary','wrong-window'],'image-url':['baseline','reference','wrong-protocol','wrong-dispatch'],'cache-durability':['baseline','reference','lost-flush','lost-model-await']}[scenario]
           variants={}
           for name in names:
             file=evidence/(name+'-oracle.stdout.json');raw=file.read_bytes();observed=json.loads(raw)
@@ -143,7 +143,7 @@ jobs:
           (cal/'calibration.json').write_text(json.dumps(dict(sourceRevision='7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6',sourceDigest=hashlib.sha256(source.read_bytes()).hexdigest(),oracleDigest=json.loads((evidence/'frozen-task.json').read_text())['oracleDigest'],scope=task['assessmentScope'],lesson=lesson,variants=variants),indent=2)+'\n')
           PY
       - name: Publish raw archive independently from typed normalization
-        if: always() && contains(fromJSON('["loading","debounce","image-url"]'), inputs.scenario)
+        if: always() && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -153,7 +153,7 @@ jobs:
           fi
           gh release upload "$tag" "$AGENTLAB_CI_ROOT/raw-evidence.tar.zst"
       - name: Persist actual runtime, historical contexts and experience in released TableGit
-        if: always() && contains(fromJSON('["loading","debounce","image-url"]'), inputs.scenario)
+        if: always() && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario)
         run: |
           python3 scripts/channel-input.py --source "$AGENTLAB_COMPOSITION_DIR" --output "$RUNNER_TEMP/tablegit-inputs"
           mapfile -t runtime < <(python3 - <<'PY'
@@ -165,7 +165,7 @@ jobs:
           )
           /usr/bin/python3 examples/tablegit-session/run.py --image "${runtime[0]}" --runtime-volume "${runtime[1]}" --sdk-program "$AGENTLAB_COMPOSITION_DIR/session-sdk.json" --root "$AGENTLAB_CI_ROOT/store" --asset-model-export "$AGENTLAB_CI_ROOT/normalized-runtime/instances/$AGENTLAB_CAPTURE_RUN_ID" --asset-instance-id "$AGENTLAB_CAPTURE_RUN_ID" --experience-real-inputs "$AGENTLAB_CI_ROOT/evaluation-inputs"
       - name: Publish complete TableGit history and analysis evidence
-        if: always() && contains(fromJSON('["loading","debounce","image-url"]'), inputs.scenario)
+        if: always() && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -192,7 +192,7 @@ jobs:
           compression-level: 0
           path: ${{ env.AGENTLAB_CI_ROOT }}/assessment/full-hap/*.hap
       - name: Preserve typed entities and TableGit failures
-        if: always() && contains(fromJSON('["loading","debounce","image-url"]'), inputs.scenario)
+        if: always() && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ${{ inputs.scenario }}-tablegit-evidence

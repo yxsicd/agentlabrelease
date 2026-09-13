@@ -178,3 +178,13 @@ receive a loading lifecycle lesson. Replay can restore raw Release archives or
 the original complete subject artifact without redispatching the Agent or build.
 Qualification requires independently verified typed import, context history,
 frozen-knowledge preservation and candidate lineage.
+
+### Cache durability across four modules
+
+Select `cache-durability` in the real Harmony assessment workflow. Its frozen
+contract is read directly from the three-table knowledge exchange snapshot.
+Turn1 checks durable helper/service completion and write errors; turn2 additionally
+checks model settlement and fresh-network versus offline-cache policy. The same
+local calibration runs8 variant/stage reports, with8 turn1 and10 turn2 checks.
+Reference full phone compilation is verified separately from participant patches.
+The selected-source fresh-Agent branch is not formal SessionFS Fork.

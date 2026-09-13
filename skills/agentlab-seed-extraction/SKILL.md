@@ -33,7 +33,7 @@ Rust-materialized reference, lost-flush and lost-model-await variants. Archive
 full sources, AST rows and ordered settlement events. The contract separates
 network failure fallback from persistence failure: await the write outcome, log
 a failed write, retain fresh network data. A helper must expose write failures.
-This is a calibrated candidate, not a frozen operational seed: a new frozen operational contract and actual subject execution are separate.
+The candidate and its frozen operational child are separate rows. A new frozen operational contract and actual subject execution are separate.
 Full phone compilation and archived TableGit program/semantic queries are now
 verified for the reference; preserve their exact receipts.
 Do not promote it based on JavaScript seam execution alone.
@@ -46,3 +46,9 @@ loop by re-querying and writing a new cut into otherwise unchanged rows.
 Staged calibration has8 checks in turn1 and10 in turn2. Missing model await is
 a turn2 negative and must pass turn1; preserve network fallback, synchronous
 put failure propagation and neighboring record entries alongside durability.
+
+The frozen `case-cache-durability-subject-v1` consumes demands/paths from the
+TableGit export directly; the runner has no second hand-maintained cache
+contract. Local, CI and real runs share staged calibration. Operational evidence
+returns through captured runtime/context and calibrated lesson tables; it does
+not rewrite the frozen candidate or method inputs.

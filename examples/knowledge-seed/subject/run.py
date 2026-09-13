@@ -20,7 +20,10 @@ DEBOUNCE_DEMANDS=[
 IMAGE_URL_DEMANDS=[
  'Fix UrlUtil.isNetUrl to recognize only valid HTTP/HTTPS URLs with a nonempty host. Preserve mixed-case schemes and query/fragment URLs; reject missing hosts, invalid ports, whitespace, relative paths and file/data URLs. Use the existing @kit.ArkTS URL API and preserve maskUrl behavior. Keep valid ArkTS; do not install dependencies or change build configuration.',
  'Preserve all previous URL classification behavior. Verify ImageUtil.getImgResource uses the shared predicate: valid network strings remain byte-for-byte unchanged, local paths and malformed network strings route to rawfile, empty input routes to the placeholder. Preserve ImageComponent and ImagePreview use of the shared predicate. Do not install dependencies or change build configuration.']
+# Cache contract is consumed directly from the frozen TableGit exchange snapshot.
+CACHE_CASE=next(json.loads(line) for line in (Path(__file__).resolve().parents[1]/'seeds/harmony-code-workshop/evaluation_cases.jsonl').read_text().split('\n') if line.strip() and json.loads(line)['id']=='case-cache-durability-subject-v1')
 SCENARIOS={
+ 'cache-durability':dict(paths=CACHE_CASE['paths'],demands=CACHE_CASE['demands'],caseId=CACHE_CASE['id'],oracle='cache-durability.cjs',scope=CACHE_CASE['assessmentScope']),
  'debounce':dict(paths=['common/src/main/ets/util/DebounceUtil.ets','features/componentlibrary/src/main/ets/view/ComponentBaseView.ets','common/src/main/ets/util/index.ets'],demands=DEBOUNCE_DEMANDS,caseId='case-debounce-subject-v1',oracle='debounce.cjs',scope='Actual independent click handlers and accepted-click windows; full phone compile and selected-source fresh-Agent branch'),
  'image-url':dict(paths=['common/src/main/ets/util/UrlUtil.ets','common/src/main/ets/util/ImageUtil.ets','common/src/main/ets/component/ImageComponent.ets','features/devpractices/src/main/ets/view/ImagePreview.ets'],demands=IMAGE_URL_DEMANDS,caseId='case-image-url-subject-v1',oracle='image-url.cjs',scope='Actual URL predicate and ImageUtil resource dispatch; modeled platform parser/resource seams, full phone compile and selected-source fresh-Agent branch'),
  'loading':dict(paths=['common/src/main/ets/view/DelayedLoadingView.ets','common/src/main/ets/util/BreakpointSystem.ets','common/src/main/ets/view/LoadingView.ets'],demands=LOADING_DEMANDS,caseId='case-loading-subject-v1',oracle='loading.cjs',scope='Actual loading lifecycle/shared breakpoint methods and full phone compile; selected-source fresh-Agent branch'),
@@ -73,7 +76,23 @@ def main():
   return Participant(pe,runtime/'state',wrapper,os.environ['AGENTLAB_LM_GATEWAY_URL'],os.environ.get('AGENTLAB_MODEL','glm-5.3-flash'))
  parent=None;fork=None
  try:
-  if a.scenario in ('debounce','image-url'):
+  if a.scenario=='cache-durability':
+   calibration_root=root/'cache-calibration'
+   result=subprocess.run(['node',str(Path(__file__).with_name('calibrate-cache.cjs')),str(project),str(a.reference),str(calibration_root)],capture_output=True)
+   (e/'cache-calibration.stdout.json').write_bytes(result.stdout);(e/'cache-calibration.stderr.log').write_bytes(result.stderr)
+   if result.returncode:
+    if calibration_root.exists():shutil.copytree(calibration_root,e/'failed-cache-calibration')
+    raise RuntimeError('Harness cache calibration failed; receipts retained')
+   calibration=json.loads((calibration_root/'summary.json').read_text())['receipts']
+   for variant in calibration:
+    for stage in (1,2):
+     source=calibration_root/(variant+'-stage-'+str(stage)+'.json')
+     target=e/(variant+'-oracle.stdout.json' if stage==2 else 'calibration-stage1-'+variant+'.json')
+     shutil.copy2(source,target);shutil.copy2(calibration_root/(variant+'-stage-'+str(stage)+'.stderr'),Path(str(target)+'.stderr'))
+   reference=json.loads((e/'reference-oracle.stdout.json').read_text())
+   assert set(reference['checks'])==set(seed['acceptanceChecks']['2'])
+   summary['calibration']={variant+'MatchesContract':True for variant in calibration}
+  elif a.scenario in ('debounce','image-url'):
    calibration_root=root/'utility-calibration'
    command=['node',str(Path(__file__).with_name('calibrate-utilities.cjs')),str(project),str(a.reference),str(calibration_root),a.scenario]
    result=subprocess.run(command,capture_output=True)

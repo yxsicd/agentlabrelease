@@ -1,183 +1,13 @@
 {
   "schema": "agentlab.asset_exchange.v1",
-  "assetClass": "reusable-knowledge",
   "repository": "session",
-  "revision": "f2c0d8363faa79b7267a69381da6d2f7dc3c7be8",
-  "tablePrefix": "assets/knowledge/utilities-final-20260913/",
+  "revision": "601151f11ca1b0fc48ba2f5044b33cfcc908387a",
   "tables": {
-    "evaluation_cases": {
-      "rowCount": 15,
-      "sha256": "be4fac3dc5a3f91abb4f127df877358f2c9547a974ec118e61cc2c2e87eec94c",
-      "definition": {
-        "description": "AgentLab reusable-knowledge analytical evaluation_cases",
-        "fields": {
-          "acceptance": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "array"
-          },
-          "acceptanceChecks": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "object"
-          },
-          "analysisIds": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "array"
-          },
-          "assessmentScope": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "string"
-          },
-          "assetClass": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "string"
-          },
-          "calibrationAdapter": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "string"
-          },
-          "calibrationContract": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "object"
-          },
-          "calibrationOracleId": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "string"
-          },
-          "demands": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "array"
-          },
-          "forkMode": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "string"
-          },
-          "id": {
-            "projection": "default",
-            "required": true,
-            "role": "key",
-            "source": null,
-            "type": "string"
-          },
-          "kind": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "string"
-          },
-          "oracleDigest": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "string"
-          },
-          "parentCaseId": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "string"
-          },
-          "paths": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "array"
-          },
-          "skillIds": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "array"
-          },
-          "sourceRevision": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "string"
-          },
-          "title": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "string"
-          },
-          "turns": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "array"
-          },
-          "variantExpectations": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "object"
-          }
-        },
-        "indexes": [
-          {
-            "field": "assetClass",
-            "name": "by_assetClass"
-          },
-          {
-            "field": "kind",
-            "name": "by_kind"
-          },
-          {
-            "field": "sourceRevision",
-            "name": "by_sourceRevision"
-          }
-        ],
-        "key_field": "id",
-        "required_fields": [
-          "id"
-        ],
-        "schema": "mcpgit.table.v2"
-      }
-    },
     "maintainer_skills": {
-      "rowCount": 56,
-      "sha256": "eed05f5cc6666ba11f10520a88d3b916be6e1ba5e3284f9fad910d96d4966ecc",
+      "rowCount": 68,
+      "sha256": "ae61adf6acfcc151cf502e97efc0fee5bedb3ab18cbb2f294e12353bc23fb072",
       "definition": {
-        "description": "AgentLab reusable-knowledge analytical maintainer_skills",
+        "description": "AgentLab engineering knowledge: maintainer_skills",
         "fields": {
           "analysisEvidenceIds": {
             "projection": "default",
@@ -322,8 +152,24 @@
         },
         "indexes": [
           {
-            "field": "assetClass",
-            "name": "by_assetClass"
+            "field": "skillLayer",
+            "name": "by_skillLayer"
+          },
+          {
+            "field": "role",
+            "name": "by_role"
+          },
+          {
+            "field": "stage",
+            "name": "by_stage"
+          },
+          {
+            "field": "objectId",
+            "name": "by_objectId"
+          },
+          {
+            "field": "methodSkillId",
+            "name": "by_methodSkillId"
           },
           {
             "field": "sourceRevision",
@@ -332,10 +178,6 @@
           {
             "field": "status",
             "name": "by_status"
-          },
-          {
-            "field": "role",
-            "name": "by_role"
           }
         ],
         "key_field": "id",
@@ -346,10 +188,10 @@
       }
     },
     "program_facts": {
-      "rowCount": 724,
-      "sha256": "b3df095b658123e0772bb29a9e9999369bad23ae5398cd8229eadfe0e8f0bd14",
+      "rowCount": 923,
+      "sha256": "7881c9a03df06df3dd56f1915d3be78447624ce39b41bf369320f84a98e27d14",
       "definition": {
-        "description": "AgentLab reusable-knowledge analytical program_facts",
+        "description": "AgentLab engineering knowledge: program_facts",
         "fields": {
           "assetClass": {
             "projection": "default",
@@ -365,6 +207,13 @@
             "source": null,
             "type": "object"
           },
+          "bindingKind": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "string"
+          },
           "byteLength": {
             "projection": "default",
             "required": false,
@@ -377,7 +226,7 @@
             "required": false,
             "role": "value",
             "source": null,
-            "type": "string"
+            "type": "text"
           },
           "codeFiles": {
             "projection": "default",
@@ -400,6 +249,13 @@
             "source": null,
             "type": "string"
           },
+          "decorators": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "array"
+          },
           "evidencePaths": {
             "projection": "default",
             "required": false,
@@ -421,12 +277,19 @@
             "source": null,
             "type": "string"
           },
-          "interpretation": {
+          "initializerExpression": {
             "projection": "default",
             "required": false,
             "role": "value",
             "source": null,
             "type": "string"
+          },
+          "interpretation": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "text"
           },
           "kind": {
             "projection": "default",
@@ -457,6 +320,13 @@
             "type": "integer"
           },
           "method": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "string"
+          },
+          "name": {
             "projection": "default",
             "required": false,
             "role": "value",
@@ -588,13 +458,203 @@
             "role": "value",
             "source": null,
             "type": "string"
+          },
+          "typeExpression": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "string"
           }
         },
         "indexes": [
           {
-            "field": "assetClass",
-            "name": "by_assetClass"
+            "field": "kind",
+            "name": "by_kind"
           },
+          {
+            "field": "path",
+            "name": "by_path"
+          },
+          {
+            "field": "targetPath",
+            "name": "by_targetPath"
+          },
+          {
+            "field": "symbol",
+            "name": "by_symbol"
+          },
+          {
+            "field": "sourceRevision",
+            "name": "by_sourceRevision"
+          },
+          {
+            "field": "taskId",
+            "name": "by_taskId"
+          }
+        ],
+        "key_field": "id",
+        "required_fields": [
+          "id"
+        ],
+        "schema": "mcpgit.table.v2"
+      }
+    },
+    "evaluation_cases": {
+      "rowCount": 17,
+      "sha256": "d0a7db721c9083526bf943cd3ff52265f0fe9e35c2de2db26f1d5bc1d8dd8c4e",
+      "definition": {
+        "description": "AgentLab engineering knowledge: evaluation_cases",
+        "fields": {
+          "acceptance": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "array"
+          },
+          "acceptanceChecks": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "object"
+          },
+          "analysisIds": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "array"
+          },
+          "assessmentScope": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "string"
+          },
+          "assetClass": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "string"
+          },
+          "calibrationAdapter": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "string"
+          },
+          "calibrationContract": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "object"
+          },
+          "calibrationOracleId": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "string"
+          },
+          "demands": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "array"
+          },
+          "forkMode": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "string"
+          },
+          "id": {
+            "projection": "default",
+            "required": true,
+            "role": "key",
+            "source": null,
+            "type": "string"
+          },
+          "kind": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "string"
+          },
+          "oracleDigest": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "string"
+          },
+          "parentCaseId": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "string"
+          },
+          "paths": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "array"
+          },
+          "skillIds": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "array"
+          },
+          "sourceRevision": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "string"
+          },
+          "status": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "string"
+          },
+          "title": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "string"
+          },
+          "turns": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "array"
+          },
+          "variantExpectations": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "object"
+          }
+        },
+        "indexes": [
           {
             "field": "kind",
             "name": "by_kind"
@@ -602,6 +662,10 @@
           {
             "field": "sourceRevision",
             "name": "by_sourceRevision"
+          },
+          {
+            "field": "status",
+            "name": "by_status"
           }
         ],
         "key_field": "id",
@@ -611,5 +675,7 @@
         "schema": "mcpgit.table.v2"
       }
     }
-  }
+  },
+  "tablePrefix": "assets/knowledge/cache-final-20260913/",
+  "assetClass": "reusable-knowledge"
 }
