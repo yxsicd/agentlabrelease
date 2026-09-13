@@ -43,6 +43,7 @@ def main():
     made_containers, made_volumes, made_network = [], [], False
     capture_worktree_path = None
     capture_revision = None
+    knowledge_state = None
     summary = {"schema":"agentlab.public_tablegit_session_demo.v1", "ok":False,
                "scope":"released-session-provisioner-tablegit-lease-projection-recovery",
                "fixedChannelPromoted":False,"fullWhiteboxQualified":False,
@@ -203,6 +204,14 @@ def main():
             save(evidence/"capture-commit-manifest.json", dict(operationId=operation_id,
                 repositoryId=first["binding"]["repositoryId"], sessionId=first["sessionKey"],
                 inventory=inventory, commits=commits, captureRevision=revision, context=capture_context))
+        if args.capture_evidence and (args.capture_evidence/'knowledge-package.json').exists():
+            knowledge_spec=importlib.util.spec_from_file_location('knowledge_store',REPO/'examples/knowledge-seed/store.py')
+            knowledge=importlib.util.module_from_spec(knowledge_spec);knowledge_spec.loader.exec_module(knowledge)
+            package=json.loads((args.capture_evidence/'knowledge-package.json').read_text())
+            cuts=knowledge.persist(service,first['binding']['repositoryId'],capture_worktree,package)
+            capture_revision=cuts['updatedRevision']
+            knowledge_state=(knowledge,package,cuts)
+            save(evidence/'knowledge-cuts.json',cuts)
         docker("restart",agent,label="restart-store")
         docker("restart",gateway,label="restart-gateway")
         restarted_url = wait_route("restarted-route")
@@ -215,6 +224,11 @@ def main():
             save(evidence/"capture-recovery.json", recovered)
             summary["capture"] = recovered
             summary["checks"]["real_capture_committed_and_recovered"] = recovered["exactFiles"]
+        if knowledge_state:
+            knowledge,package,cuts=knowledge_state
+            result=knowledge.verify(service,first['binding']['repositoryId'],package,cuts)
+            save(evidence/'knowledge-recovery.json',result)
+            summary['checks']['knowledge_rows_history_after_restart']=True
         checks = summary["checks"]
         checks["template_qualification"] = qualification["status"] == "qualified"
         checks["concurrent_session_creation_replayed"] = first["concurrentReplay"] is True

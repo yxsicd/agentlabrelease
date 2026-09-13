@@ -1413,3 +1413,13 @@ deterministic hello/counter/form seed and demand oracles, then the real Agent
 Action with a selected implementation/scenario. Keep complete partial/failed
 capture and independently reconstruct TableGit. Public SWE source capture does
 not establish a formal SessionFS snapshot of its benchmark container.
+
+### Engineering knowledge seeds
+
+Use [the executable knowledge experiment](../../examples/knowledge-seed/README.md)
+for source facts, stable Markdown Skill business rows, task calibration and
+historical readback. The deterministic builder is Mock, not a claimed Harmony
+analyzer. Preserve unresolved syntactic edges and independent mutation verdicts.
+Keep source, knowledge and assessment cuts distinct; feedback changes the next
+knowledge cut rather than rewriting an active assessment. No duplicated live
+SKILL directory/row authority or MCPGit business-source changes are required.
