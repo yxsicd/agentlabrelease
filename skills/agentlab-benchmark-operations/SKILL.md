@@ -23,3 +23,17 @@ Produce target-instance guidance for this stage as TableGit Skill rows,
 separate from the structured facts/tasks/results. Follow
 [the two-layer methodology](../agentlab-skill-methodology/SKILL.md) for
 method/source lineage and independent layer/role fields.
+
+### Actual staged navigation assessment
+
+Use [the subject experiment](../../examples/knowledge-seed/subject/README.md).
+Calibrate actual submitted methods/caller bodies without applying reference
+transforms to subject code. Freeze the operational contract in TableGit before
+assessment; use an explicit named outcome field if required by the independent
+oracle. Preserve baseline/reference/wrong-stack outputs. Keep reference/oracle
+and trusted gateway capture outside the participant filesystem mounts. Pi native
+events are adapter observations, distinct from supervisor-owned gateway bytes
+and source cuts. Separate valid Agent inability from Harness launch/build faults.
+An exact selected-source cut and fresh-Agent branch comparison is source-only
+lineage; it does not qualify formal SessionFS binary restore or device rendering.
+Maintain generic method lessons and derived case instance Skills independently.

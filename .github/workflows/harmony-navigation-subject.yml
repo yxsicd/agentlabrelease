@@ -1,0 +1,70 @@
+name: Real staged Harmony navigation assessment
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  assess:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      AGENTLAB_CI_ROOT: /tmp/agentlab-navigation
+      AGENTLAB_COMPOSITION_DIR: release/candidates/harmony-buildkit-v6-linux-x64
+      AGENTLAB_RELEASE_CHANNEL: candidate-20260913-harmony-buildkit-v6-linux-x64
+      AGENTLAB_MODEL: glm-5.3-flash
+      AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Pin source and calibrate reference outside assessed Workspace
+        run: |
+          git clone --depth 1 https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git "$RUNNER_TEMP/source"
+          git -C "$RUNNER_TEMP/source" fetch --depth 1 origin 7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6
+          git -C "$RUNNER_TEMP/source" checkout --detach FETCH_HEAD
+          cargo run --locked -p agentlab_code_analysis --bin agentlab-harmony-materialize -- "$RUNNER_TEMP/source" "$RUNNER_TEMP/reference" examples/harmony-build/seed
+      - name: Install contained participant and independent oracle runtimes
+        run: |
+          mkdir -p "$RUNNER_TEMP/pi-runtime" "$RUNNER_TEMP/oracle-runtime"
+          cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
+          cp examples/knowledge-seed/subject/runtime/package*.json "$RUNNER_TEMP/oracle-runtime/"
+          npm ci --prefix "$RUNNER_TEMP/pi-runtime"
+          npm ci --prefix "$RUNNER_TEMP/oracle-runtime" --ignore-scripts
+          docker pull node:22-bookworm-slim
+          docker image inspect node:22-bookworm-slim > "$RUNNER_TEMP/participant-image.json"
+          echo "AGENTLAB_PARTICIPANT_IMAGE=$(docker image inspect node:22-bookworm-slim --format '{{index .RepoDigests 0}}')" >> "$GITHUB_ENV"
+          echo "AGENTLAB_ORACLE_TYPESCRIPT=$RUNNER_TEMP/oracle-runtime/node_modules/typescript" >> "$GITHUB_ENV"
+      - name: Install published AgentLab SDK and build-kit
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes zstd
+          scripts/ci-public-install-deploy-smoke.sh
+      - name: Real parent two turns and fresh-Agent source fork; retain Agent failures
+        env:
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+        run: |
+          python3 examples/knowledge-seed/subject/run.py --source "$RUNNER_TEMP/source" --reference "$RUNNER_TEMP/reference/patched-source" --root "$AGENTLAB_CI_ROOT/assessment" --install-root "$AGENTLAB_CI_ROOT" --pi-runtime "$RUNNER_TEMP/pi-runtime" --image "$AGENTLAB_PARTICIPANT_IMAGE"
+          cp "$RUNNER_TEMP/participant-image.json" "$AGENTLAB_CI_ROOT/assessment/evidence/participant-image.json"
+      - name: Publish full successful build binaries as experiment evidence
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ ! -f "$AGENTLAB_CI_ROOT/assessment/evidence/binary-manifest.json" ]]; then exit 0; fi
+          tag="evidence-navigation-subject-$GITHUB_RUN_ID"
+          gh release create "$tag" --target "$GITHUB_SHA" --prerelease --title "Navigation subject evidence $GITHUB_RUN_ID" --notes "Real Pi / glm-5.3-flash staged assessment. Successful unsigned HAP binaries; inspect behavior verdicts independently. Source-only fresh-Agent fork, no formal SessionFS/device/fixed promotion." "$AGENTLAB_CI_ROOT/assessment/full-hap/"*.hap "$AGENTLAB_CI_ROOT/assessment/evidence/binary-manifest.json"
+          python3 - <<'PY'
+          import os,json
+          from pathlib import Path
+          e=Path(os.environ['AGENTLAB_CI_ROOT'])/'assessment/evidence'
+          rows=json.loads((e/'binary-manifest.json').read_text())
+          for row in rows:row['uri']='https://github.com/'+os.environ['GITHUB_REPOSITORY']+'/releases/download/evidence-navigation-subject-'+os.environ['GITHUB_RUN_ID']+'/'+row['filename']
+          (e/'binary-publication.json').write_text(json.dumps(rows,indent=2)+'\n')
+          PY
+      - name: Preserve complete supervisor capture, partial/failed Agent events and source cuts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: navigation-subject-evidence
+          path: ${{ env.AGENTLAB_CI_ROOT }}/assessment/evidence/
