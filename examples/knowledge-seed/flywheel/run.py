@@ -61,6 +61,7 @@ def main():
   results[mode]=json.loads(result.stdout)
  if results['baseline']['pass'] or not results['reference']['pass'] or results['wrong-boundary']['pass']:raise RuntimeError('Oracle calibration failed')
  # Complete operator results are structured, not participant-reported success.
+ tables['program_facts'].append(dict(id='oracle-debounce',kind='oracle',sourceRevision=PIN,code=Path(__file__).with_name('debounce.js').read_text(),request={'runtime':subprocess.check_output(['node','--version'],text=True).strip(),'sourcePath':SPECS[-1][2][0],'modes':['baseline','reference','wrong-boundary'],'captureAuthority':'operator-owned construction runner'},result=results,interpretation='Exact isolated-method calibration; not an assessed Code Agent or Harmony compiler'))
  tables['evaluation_cases'].append(dict(id='calibration-debounce',kind='calibration',title='Isolated method calibration',sourceRevision=PIN,paths=SPECS[-1][2],status='isolated-method-qualified',calibration=results,buildQualified=False))
  if not a.development:
   package={'tables':tables,'updates':[dict(table='maintainer_skills',id='skill-debounce',fields={'body':tables['maintainer_skills'][-1]['body']+'\nOperator isolated oracle confirms the shared-timestamp collision; per-handler reference passes. No HAP qualification.\n'})],'calibrated':False,'scope':'real Harmony source; one isolated method calibrated, four proposed tasks'}
@@ -90,7 +91,7 @@ def main():
  result=service.call('table.relations.query',request);dump(e/'dependency-analysis.json',result)
  analysis=dict(id='analysis-relative-imports',kind='analysis',sourceRevision=revision,code=sql,request=request,result=result,interpretation='Selected-file lexical relative import paths; aliases and symbol calls unresolved')
  updates=[]
- for table,rows in [('program_facts',[analysis]),('maintainer_skills',[dict(tables['maintainer_skills'][-1],body=tables['maintainer_skills'][-1]['body']+'\nIsolated oracle proves the shared timestamp suppresses unrelated callbacks. Per-handler state passes independence, suppression, boundary and retained-demand checks. This is method-level validation, not HAP compilation.\n',status='isolated-method-supported')]),('evaluation_cases',[dict(tables['evaluation_cases'][4],status='isolated-method-qualified',analysisIds=[analysis['id']],calibration=results)]+[dict(r,analysisIds=[analysis['id']]) for r in tables['evaluation_cases'][:4]])]:
+ for table,rows in [('program_facts',[analysis]+[r for r in tables['program_facts'] if r['kind']=='oracle']),('maintainer_skills',[dict(tables['maintainer_skills'][-1],body=tables['maintainer_skills'][-1]['body']+'\nIsolated oracle proves the shared timestamp suppresses unrelated callbacks. Per-handler state passes independence, suppression, boundary and retained-demand checks. This is method-level validation, not HAP compilation.\n',status='isolated-method-supported')]),('evaluation_cases',[dict(tables['evaluation_cases'][4],status='isolated-method-qualified',analysisIds=[analysis['id']],calibration=results)]+[dict(r,analysisIds=[analysis['id']]) for r in tables['evaluation_cases'][:4]])]:
   existing=store.scan(service,repo,revision,PREFIX+table);ops=[]
   for row in rows:
    old=existing.get(row['id'])
@@ -103,5 +104,6 @@ def main():
  again,changed=store.import_snapshot(service,repo,wt,a.root/'export',PREFIX);assert again==revision and changed==0
  before=store.read(service,repo,baseline,PREFIX+'maintainer_skills');after=store.read(service,repo,revision,PREFIX+'maintainer_skills')
  dump(e/'summary.json',dict(ok=True,sourceRevision=PIN,baselineRevision=baseline,finalRevision=revision,tablePrefix=PREFIX,counts={k:v['rowCount'] for k,v in final['tables'].items()},stableExport=True,repeatedImportNoChanges=True,knowledgeChanged=before!=after,calibration=results,harmonyBuildQualified=False,formalSessionFSQualified=False,subjectAgentRun=False))
+ dump(a.root/'authority.json',dict(repo=repo,tablePrefix=PREFIX,baselineRevision=baseline,finalRevision=revision,sourceRevision=PIN,snapshot=str(a.root/'export')))
  print(json.dumps(json.loads((e/'summary.json').read_text()),ensure_ascii=False))
 if __name__=='__main__':main()

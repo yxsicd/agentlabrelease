@@ -93,7 +93,7 @@ maintenance cut, preserving the current assessment inputs.
 ## First real Harmony construction round
 
 `seeds/harmony-code-workshop/` is a three-table snapshot exported from real
-TableGit namespace `flywheel/harmony/`: five semantic Skills, 92 program/analysis
+TableGit namespace `flywheel/harmony/`: five semantic Skills, 93 program/analysis
 facts and six task/calibration rows. Source is pinned to code-workshop commit
 `7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6`. Imports are lexical paths in 15 selected
 files; external package aliases and symbol/runtime calls remain unresolved.
