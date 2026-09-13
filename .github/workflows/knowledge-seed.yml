@@ -26,7 +26,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           sudo apt-get update
-          sudo apt-get install --yes zstd
+          sudo apt-get install --yes zstd python3-websocket
           scripts/ci-public-install-deploy-smoke.sh
       - name: Persist knowledge rows, revise stable Skills and recover both versions
         if: steps.install.outcome == 'success'
