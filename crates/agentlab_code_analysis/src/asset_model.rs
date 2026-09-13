@@ -1,0 +1,601 @@
+//! Analysis-oriented asset exchange. Raw files remain byte-exact instance evidence.
+use serde_json::{json, Map, Value};
+use sha2::{Digest, Sha256};
+use std::collections::{BTreeMap, BTreeSet};
+use std::fs::{self, File};
+use std::io::{BufRead, BufReader, Write};
+use std::path::{Path, PathBuf};
+type Tables = BTreeMap<String, BTreeMap<String, Value>>;
+fn hash(bytes: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(bytes))
+}
+fn rows(path: &Path) -> Vec<Value> {
+    BufReader::new(File::open(path).unwrap())
+        .split(b'\n')
+        .filter_map(|l| {
+            let l = l.unwrap();
+            if l.iter().all(u8::is_ascii_whitespace) {
+                None
+            } else {
+                Some(serde_json::from_slice(&l).unwrap())
+            }
+        })
+        .collect()
+}
+fn put(tables: &mut Tables, table: &str, row: Value) {
+    let id = row["id"].as_str().unwrap().to_owned();
+    let old = tables
+        .entry(table.into())
+        .or_default()
+        .insert(id, row.clone());
+    if let Some(old) = old {
+        assert_eq!(old, row, "Conflicting stable identity in {table}");
+    }
+}
+fn export(path: &Path, class: &str, tables: &Tables) -> Value {
+    fs::create_dir_all(path).unwrap();
+    let mut metas = Map::new();
+    for (name, rows) in tables {
+        let mut raw = Vec::new();
+        let mut fields = Map::new();
+        for row in rows.values() {
+            serde_json::to_writer(&mut raw, row).unwrap();
+            raw.push(b'\n');
+            for (key, v) in row.as_object().unwrap() {
+                let ty = match v {
+                    Value::Null => continue,
+                    Value::Bool(_) => "boolean",
+                    Value::Number(n) if n.is_i64() || n.is_u64() => "integer",
+                    Value::Number(_) => "number",
+                    Value::Array(_) => "array",
+                    Value::String(_) if key == "body" => "markdown",
+                    Value::Object(_) => "object",
+                    _ => "string",
+                };
+                if let Some(old) = fields.get(key) {
+                    assert_eq!(old["type"], ty, "Type conflict {name}.{key}");
+                }
+                fields.insert(key.clone(), json!({"type":ty,"required":key=="id"}));
+            }
+        }
+        fs::write(path.join(format!("{name}.jsonl")), &raw).unwrap();
+        let indexes: Vec<Value> = [
+            "assetClass",
+            "runId",
+            "kind",
+            "attemptId",
+            "phaseId",
+            "requestId",
+            "contextVersionId",
+            "logicalMessageId",
+            "toolCallId",
+            "fileId",
+            "sourceAnalysisId",
+            "sourceRevision",
+            "status",
+            "role",
+            "ordinal",
+        ]
+        .iter()
+        .filter(|k| {
+            fields.get(**k).is_some_and(|f| {
+                matches!(f["type"].as_str(), Some("string" | "integer" | "boolean"))
+            })
+        })
+        .map(|k| json!({"name":format!("by_{k}"),"field":k}))
+        .collect();
+        metas.insert(name.clone(),json!({"rowCount":rows.len(),"sha256":hash(&raw),"definition":{"key_field":"id","fields":fields,"required_fields":["id"],"indexes":indexes,"description":format!("AgentLab {class} analytical {name}")}}));
+    }
+    let receipt = json!({"schema":"agentlab.asset_exchange.v1","assetClass":class,"tables":metas});
+    fs::write(
+        path.join("export.json"),
+        serde_json::to_vec_pretty(&receipt).unwrap(),
+    )
+    .unwrap();
+    receipt
+}
+const DETACHED: &[&str] = &[
+    "evaluationGuidance",
+    "evaluationEvidenceIds",
+    "evaluationEvidenceRefs",
+    "compilationGuidance",
+    "compilationEvidenceIds",
+    "compilationSummaryId",
+    "latestCompilationQualificationId",
+    "buildQualified",
+    "fullSourceBuildQualified",
+    "sliceBuildQualified",
+    "formalSessionFSQualified",
+    "uiRenderingQualified",
+    "fullTaskQualified",
+    "subjectAgentRun",
+    "sliceCompilationQualified",
+];
+fn knowledge(source: &Path) -> (Tables, Tables) {
+    let mut reusable = Tables::new();
+    let mut execution = Tables::new();
+    let mut retained = BTreeSet::new();
+    for table in ["maintainer_skills", "program_facts", "evaluation_cases"] {
+        reusable.entry(table.into()).or_default();
+        for mut row in rows(&source.join(format!("{table}.jsonl"))) {
+            let original = row.clone();
+            let id = row["id"].as_str().unwrap().to_owned();
+            if row.get("producerRun").is_some() {
+                put(
+                    &mut execution,
+                    "construction_records",
+                    json!({"id":format!("{table}-{id}"),"assetClass":"evaluation-instance","sourceTable":table,"runId":row["producerRun"],"kind":row["kind"],"record":original}),
+                );
+                continue;
+            }
+            if row["kind"] == "oracle" && row.get("result").is_some() {
+                let result = row.as_object_mut().unwrap().remove("result").unwrap();
+                put(
+                    &mut execution,
+                    "construction_records",
+                    json!({"id":format!("oracle-result-{id}"),"assetClass":"evaluation-instance","sourceTable":table,"knowledgeId":id,"kind":"oracle-calibration-result","sourceRevision":row["sourceRevision"],"record":result}),
+                );
+            }
+            if row["kind"] == "calibration" {
+                let result = row.as_object_mut().unwrap().remove("calibration").unwrap();
+                let expectations: Map<String, Value> = result
+                    .as_object()
+                    .unwrap()
+                    .keys()
+                    .map(|variant| (variant.clone(), json!(variant == "reference")))
+                    .collect();
+                row["kind"] = json!("calibration-contract");
+                row["variantExpectations"] = json!(expectations);
+                row.as_object_mut().unwrap().remove("buildQualified");
+                row.as_object_mut().unwrap().remove("status");
+                put(
+                    &mut execution,
+                    "construction_records",
+                    json!({"id":format!("calibration-result-{id}"),"assetClass":"evaluation-instance","sourceTable":table,"knowledgeId":id,"kind":"case-calibration-result","record":original}),
+                );
+            }
+            let mut detached = Map::new();
+            for key in DETACHED {
+                if let Some(v) = row.as_object_mut().unwrap().remove(*key) {
+                    detached.insert((*key).into(), v);
+                }
+            }
+            if !detached.is_empty() {
+                put(
+                    &mut execution,
+                    "skill_feedback",
+                    json!({"id":format!("{table}-{id}"),"assetClass":"evaluation-instance","sourceTable":table,"knowledgeId":id,"feedback":detached,"originalRow":original}),
+                );
+            }
+            if let Some(body) = row.get_mut("body") {
+                if let Some(text) = body.as_str() {
+                    let paragraphs: Vec<&str> = text
+                        .split("\n\n")
+                        .filter(|p| !p.starts_with("When present, read compilationEvidenceIds"))
+                        .collect();
+                    let note="Read operational qualification and run feedback from separate evaluation-instance tables; this reusable Skill does not carry latest-run state.";
+                    let cleaned = paragraphs.join("\n\n");
+                    *body = json!(if cleaned.ends_with(note) {
+                        cleaned
+                    } else {
+                        format!("{cleaned}\n\n{note}")
+                    });
+                }
+            }
+            row["assetClass"] = json!("reusable-knowledge");
+            retained.insert(id);
+            put(&mut reusable, table, row);
+        }
+    }
+    for row in reusable.get_mut("maintainer_skills").unwrap().values_mut() {
+        if let Some(ids) = row.get_mut("factIds").and_then(Value::as_array_mut) {
+            ids.retain(|id| retained.contains(id.as_str().unwrap()));
+        }
+    }
+    (reusable, execution)
+}
+fn json(path: &Path) -> Value {
+    serde_json::from_slice(&fs::read(path).unwrap()).unwrap()
+}
+fn relative(path: &Path, root: &Path) -> String {
+    path.strip_prefix(root)
+        .unwrap()
+        .to_string_lossy()
+        .replace('\\', "/")
+}
+fn files(root: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    for entry in fs::read_dir(root).unwrap() {
+        let p = entry.unwrap().path();
+        if p.is_dir() {
+            out.extend(files(&p));
+        } else {
+            out.push(p);
+        }
+    }
+    out.sort();
+    out
+}
+fn phase_for(path: &str) -> String {
+    path.rsplit('/')
+        .next()
+        .unwrap()
+        .trim_end_matches("-events.jsonl")
+        .into()
+}
+fn instance(root: &Path, run: &str, archive: &str) -> Tables {
+    let mut t = Tables::new();
+    let summary = json(&root.join("summary.json"));
+    let task = json(&root.join("frozen-task.json"));
+    let mut run_summary = summary.clone();
+    run_summary.as_object_mut().unwrap().remove("phases");
+    put(
+        &mut t,
+        "runs",
+        json!({"id":run,"assetClass":"evaluation-instance","runId":run,"taskId":task["id"],"sourceRevision":summary["sourceRevision"],"summary":run_summary,"frozenTask":task}),
+    );
+    let paths = files(root);
+    let mut phases = Vec::new();
+    for p in &paths {
+        if p.to_string_lossy().ends_with("-lifecycle.json") {
+            let r = json(p);
+            let rel = relative(p, root);
+            let participant = rel.split('/').next().unwrap();
+            let label = r["label"].as_str().unwrap();
+            let phase_id = format!("{participant}-{label}");
+            phases.push((participant.to_owned(), phase_id.clone(), r.clone()));
+            put(
+                &mut t,
+                "phases",
+                json!({"id":phase_id,"assetClass":"evaluation-instance","runId":run,"attemptId":participant,"phaseId":phase_id,"label":label,"startedAt":r["startedAt"],"endedAt":r["endedAt"],"lifecycle":r,"authority":"supervisor-lifecycle"}),
+            );
+        }
+    }
+    let mut requests = Vec::new();
+    for p in &paths {
+        let rel = relative(p, root);
+        let raw = fs::read(p).unwrap();
+        let file_id = hash(rel.as_bytes());
+        put(
+            &mut t,
+            "evidence_files",
+            json!({"id":file_id,"assetClass":"evaluation-instance","runId":run,"path":rel,"sha256":hash(&raw),"byteCount":raw.len(),"archiveUri":archive,"archivePath":format!("raw/{run}/{rel}"),"storage":"external-instance-evidence"}),
+        );
+        if rel.contains("/gateway/") && rel.ends_with(".status.json") {
+            let status: Value = serde_json::from_slice(&raw).unwrap();
+            let participant = rel.split('/').next().unwrap();
+            let ordinal = rel.rsplit('/').next().unwrap().split('.').next().unwrap();
+            let id = format!("{participant}-{ordinal}");
+            let phase = phases
+                .iter()
+                .filter(|(a, _, r)| {
+                    a == participant
+                        && r["startedAt"].as_str() <= status["startedAt"].as_str()
+                        && status["startedAt"].as_str() <= r["endedAt"].as_str()
+                })
+                .collect::<Vec<_>>();
+            let phase_id = if phase.len() == 1 {
+                Some(phase[0].1.as_str())
+            } else {
+                None
+            };
+            let req = p.with_file_name(format!("{ordinal}.request.json"));
+            let request = json(&req);
+            let upstream = p.with_file_name(format!("{ordinal}.upstream-request.json"));
+            let mut params = request.clone();
+            params.as_object_mut().unwrap().remove("messages");
+            params.as_object_mut().unwrap().remove("tools");
+            put(
+                &mut t,
+                "llm_requests",
+                json!({"id":id,"assetClass":"evaluation-instance","runId":run,"attemptId":participant,"requestId":id,"phaseId":phase_id,"ordinal":ordinal.parse::<u64>().unwrap(),"model":request["model"],"startedAt":status["startedAt"],"endedAt":status["endedAt"],"status":status["status"],"wallMs":status["durationMs"].as_f64().map(|x|x.round() as i64),"parameters":params,"outcome":status["outcome"],"statusFileId":file_id,"authority":"controlled-gateway"}),
+            );
+            for (direction, wire) in [
+                ("participant", request),
+                (
+                    "upstream",
+                    if upstream.exists() {
+                        json(&upstream)
+                    } else {
+                        Value::Null
+                    },
+                ),
+            ] {
+                if wire.is_null() {
+                    continue;
+                }
+                requests.push((
+                    participant.to_owned(),
+                    direction.to_owned(),
+                    id.clone(),
+                    phase_id.map(str::to_owned),
+                    status["startedAt"].as_str().unwrap().to_owned(),
+                    wire,
+                ));
+            }
+        }
+        if rel.contains("/gateway/") && rel.ends_with(".response") {
+            let participant = rel.split('/').next().unwrap();
+            let ordinal = rel.rsplit('/').next().unwrap().split('.').next().unwrap();
+            let request_id = format!("{participant}-{ordinal}");
+            for (line, data) in raw.split(|b| *b == b'\n').enumerate() {
+                if let Some(data) = data.strip_prefix(b"data:") {
+                    let frame: Value = serde_json::from_slice(data).unwrap_or_else(
+                        |_| json!({"wireText":String::from_utf8_lossy(data).trim()}),
+                    );
+                    put(
+                        &mut t,
+                        "llm_response_events",
+                        json!({"id":format!("{request_id}-{line}"),"assetClass":"evaluation-instance","runId":run,"attemptId":participant,"requestId":request_id,"ordinal":line,"fileId":file_id,"frame":frame,"authority":"controlled-gateway"}),
+                    );
+                }
+            }
+        }
+        if rel.ends_with("-events.jsonl") {
+            let participant = rel.split('/').next().unwrap();
+            let phase = phase_for(&rel);
+            let phase_id = format!("{participant}-{phase}");
+            let mut message_seq = 0;
+            let mut message_id = String::new();
+            for (line, event) in BufReader::new(File::open(p).unwrap())
+                .split(b'\n')
+                .enumerate()
+            {
+                let event = event.unwrap();
+                if event.iter().all(u8::is_ascii_whitespace) {
+                    continue;
+                }
+                let event: Value = serde_json::from_slice(&event).unwrap();
+                let base = json!({"assetClass":"evaluation-instance","runId":run,"attemptId":participant,"phaseId":phase_id,"fileId":file_id,"lineNumber":line+1,"authority":"participant-adapter"});
+                match event["type"].as_str().unwrap() {
+                    "message_start" => {
+                        message_seq += 1;
+                        message_id = format!("{phase_id}-message-{message_seq}");
+                    }
+                    "message_end" => {
+                        if message_id.is_empty() {
+                            message_seq += 1;
+                            message_id = format!("{phase_id}-message-{message_seq}");
+                        }
+                        let mut row = base.clone();
+                        row["id"] = json!(format!("{phase_id}-final-{line}"));
+                        row["messageId"] = json!(message_id);
+                        row["role"] = event["message"]["role"].clone();
+                        row["message"] = event["message"].clone();
+                        put(&mut t, "native_messages", row);
+                    }
+                    "message_update" => {
+                        let mut delta = event["assistantMessageEvent"].clone();
+                        delta.as_object_mut().unwrap().remove("partial");
+                        let mut row = base.clone();
+                        row["id"] = json!(format!("{phase_id}-stream-{line}"));
+                        row["messageId"] = json!(message_id);
+                        row["ordinal"] = json!(line);
+                        row["kind"] = delta["type"].clone();
+                        row["delta"] = delta;
+                        put(&mut t, "message_stream", row);
+                    }
+                    "tool_execution_start" | "tool_execution_end" | "tool_execution_update" => {
+                        let tool = event["toolCallId"].as_str().unwrap();
+                        let mut row = base.clone();
+                        row["id"] = json!(format!("{phase_id}-tool-{line}"));
+                        row["toolCallId"] = json!(format!("{participant}-{tool}"));
+                        row["nativeToolCallId"] = json!(tool);
+                        row["toolName"] = event["toolName"].clone();
+                        row["kind"] = event["type"].clone();
+                        row["arguments"] = event["args"].clone();
+                        row["result"] = event["result"].clone();
+                        row["isError"] = event["isError"].clone();
+                        let mut details = event;
+                        for key in [
+                            "type",
+                            "toolCallId",
+                            "toolName",
+                            "args",
+                            "result",
+                            "isError",
+                        ] {
+                            details.as_object_mut().unwrap().remove(key);
+                        }
+                        row["details"] = details;
+                        put(&mut t, "tool_events", row);
+                    }
+                    _ => {
+                        let mut row = base;
+                        row["id"] = json!(format!("{phase_id}-event-{line}"));
+                        row["kind"] = event["type"].clone();
+                        row["event"] = event;
+                        put(&mut t, "agent_events", row);
+                    }
+                }
+            }
+        }
+        if rel.ends_with("-oracle.stdout.json") {
+            let oracle: Value = serde_json::from_slice(&raw).unwrap();
+            if let Some(analysis) = oracle.get("sourceAnalysis") {
+                put(
+                    &mut t,
+                    "source_analyses",
+                    json!({"id":file_id,"assetClass":"evaluation-instance","runId":run,"fileId":file_id,"sourceRevision":analysis["sourceCut"]["sha256"],"observedSourceCut":analysis["sourceCut"],"grammar":analysis["grammar"],"grammarDigest":analysis["grammarDigest"],"syntaxHasErrors":analysis["syntaxHasErrors"]}),
+                );
+                for fact in analysis["rows"].as_array().unwrap() {
+                    let mut row = fact.clone();
+                    row["id"] = json!(format!("{file_id}-{}", fact["id"].as_str().unwrap()));
+                    row["sourceAnalysisId"] = json!(file_id);
+                    row["assetClass"] = json!("evaluation-instance");
+                    row["runId"] = json!(run);
+                    put(&mut t, "source_facts", row);
+                }
+            }
+        }
+    }
+    requests.sort_by(|a, b| (&a.4, &a.0, &a.1, &a.2).cmp(&(&b.4, &b.0, &b.1, &b.2)));
+    let mut previous: BTreeMap<(String, String), String> = BTreeMap::new();
+    let mut bodies: BTreeMap<(String, String), Vec<String>> = BTreeMap::new();
+    for (sequence, (attempt, direction, request_id, phase_id, started_at, wire)) in
+        requests.iter().enumerate()
+    {
+        let key = (attempt.clone(), direction.clone());
+        let version = format!("{request_id}-{direction}");
+        let mut ids = Vec::new();
+        for (ordinal, message) in wire["messages"].as_array().unwrap().iter().enumerate() {
+            let content_id = hash(&serde_json::to_vec(message).unwrap());
+            ids.push(content_id.clone());
+            put(
+                &mut t,
+                "message_contents",
+                json!({"id":content_id,"assetClass":"evaluation-instance","runId":run,"role":message["role"],"message":message}),
+            );
+            if let Some(calls) = message["tool_calls"].as_array() {
+                for (call_ordinal, call) in calls.iter().enumerate() {
+                    put(
+                        &mut t,
+                        "llm_tool_calls",
+                        json!({"id":format!("{version}-{ordinal}-{call_ordinal}"),"assetClass":"evaluation-instance","runId":run,"attemptId":attempt,"requestId":request_id,"contextVersionId":version,"messageId":content_id,"toolCallId":format!("{attempt}-{}",call["id"].as_str().unwrap()),"toolName":call["function"]["name"],"argumentsText":call["function"]["arguments"],"arguments":call["function"]["arguments"].as_str().and_then(|s|serde_json::from_str::<Value>(s).ok()),"direction":direction}),
+                    );
+                }
+            }
+            let logical = format!("{attempt}-{direction}-{ordinal}");
+            let before = bodies.get(&key).and_then(|v| v.get(ordinal));
+            if before != Some(&content_id) {
+                put(
+                    &mut t,
+                    "context_changes",
+                    json!({"id":format!("{version}-{ordinal}"),"assetClass":"evaluation-instance","runId":run,"attemptId":attempt,"requestId":request_id,"contextVersionId":version,"logicalMessageId":logical,"ordinal":ordinal,"kind":if before.is_some(){"replace"}else{"add"},"beforeMessageId":before,"afterMessageId":content_id}),
+                );
+            }
+        }
+        if let Some(old) = bodies.get(&key) {
+            for (ordinal, before) in old.iter().enumerate().skip(ids.len()) {
+                put(
+                    &mut t,
+                    "context_changes",
+                    json!({"id":format!("{version}-{ordinal}"),"assetClass":"evaluation-instance","runId":run,"attemptId":attempt,"requestId":request_id,"contextVersionId":version,"logicalMessageId":format!("{attempt}-{direction}-{ordinal}"),"ordinal":ordinal,"kind":"remove","beforeMessageId":before,"afterMessageId":null}),
+                );
+            }
+        }
+        put(
+            &mut t,
+            "context_versions",
+            json!({"id":version,"assetClass":"evaluation-instance","runId":run,"attemptId":attempt,"requestId":request_id,"phaseId":phase_id,"direction":direction,"sequence":sequence,"startedAt":started_at,"previousVersionId":previous.get(&key),"messageIds":ids}),
+        );
+        for (ordinal, tool) in wire["tools"]
+            .as_array()
+            .unwrap_or(&vec![])
+            .iter()
+            .enumerate()
+        {
+            put(
+                &mut t,
+                "request_tools",
+                json!({"id":format!("{version}-{ordinal}"),"assetClass":"evaluation-instance","runId":run,"requestId":request_id,"contextVersionId":version,"ordinal":ordinal,"toolName":tool["function"]["name"],"definition":tool}),
+            );
+        }
+        previous.insert(key.clone(), version);
+        bodies.insert(key, ids);
+    }
+    let mut executions: BTreeMap<String, Value> = BTreeMap::new();
+    if let Some(events) = t.get("tool_events") {
+        let mut ordered: Vec<&Value> = events.values().collect();
+        ordered.sort_by_key(|e| e["lineNumber"].as_u64().unwrap());
+        for event in ordered {
+            let id = event["toolCallId"].as_str().unwrap();
+            let entry=executions.entry(id.into()).or_insert_with(||json!({"id":id,"assetClass":"evaluation-instance","runId":run,"attemptId":event["attemptId"],"phaseId":event["phaseId"],"toolCallId":id,"nativeToolCallId":event["nativeToolCallId"],"toolName":event["toolName"],"authority":"participant-adapter"}));
+            match event["kind"].as_str().unwrap() {
+                "tool_execution_start" => {
+                    entry["arguments"] = event["arguments"].clone();
+                    entry["startEventId"] = event["id"].clone();
+                    entry["status"] = json!("started");
+                }
+                "tool_execution_end" => {
+                    entry["result"] = event["result"].clone();
+                    entry["endEventId"] = event["id"].clone();
+                    entry["isError"] = event["isError"].clone();
+                    entry["status"] = json!(if event["isError"] == true {
+                        "completed-error"
+                    } else {
+                        "completed"
+                    });
+                }
+                _ => {}
+            }
+        }
+    }
+    for row in executions.into_values() {
+        put(&mut t, "tool_calls", row);
+    }
+    for attempt in ["parent-agent", "fork-agent"]
+        .into_iter()
+        .filter(|a| root.join(a).is_dir())
+    {
+        put(
+            &mut t,
+            "attempts",
+            json!({"id":attempt,"assetClass":"evaluation-instance","runId":run,"role":"assessed-agent","parentAttemptId":if attempt=="fork-agent"{Some("parent-agent")}else{None},"forkScope":if attempt=="fork-agent"{Some("selected-source-only")}else{None},"formalSessionFSQualified":false}),
+        );
+    }
+    for (phase, result) in summary["phases"].as_object().unwrap() {
+        put(
+            &mut t,
+            "assessments",
+            json!({"id":phase,"assetClass":"evaluation-instance","runId":run,"phaseId":format!("{}-{phase}",if phase.starts_with("fresh"){"fork-agent"}else{"parent-agent"}),"buildPassed":result["build"],"behaviorPassed":result["behavior"]["pass"],"sourceCut":result["sourceCut"]}),
+        );
+        if let Some(checks) = result["behavior"]["checks"].as_object() {
+            for (check, passed) in checks {
+                put(
+                    &mut t,
+                    "checks",
+                    json!({"id":format!("{phase}-{check}"),"assetClass":"evaluation-instance","runId":run,"phaseId":format!("{}-{phase}",if phase.starts_with("fresh"){"fork-agent"}else{"parent-agent"}),"check":check,"passed":passed}),
+                );
+            }
+        }
+    }
+    for p in &paths {
+        let rel = relative(p, root);
+        if rel.ends_with("/source-cut.json") {
+            let cut = json(p);
+            put(
+                &mut t,
+                "workspace_cuts",
+                json!({"id":rel,"assetClass":"evaluation-instance","runId":run,"scope":"selected-source-only","cut":cut}),
+            );
+        }
+    }
+    if root.join("binary-publication.json").exists() {
+        for binary in json(&root.join("binary-publication.json"))
+            .as_array()
+            .unwrap()
+        {
+            put(
+                &mut t,
+                "artifacts",
+                json!({"id":binary["sha256"],"assetClass":"evaluation-instance","runId":run,"label":binary["label"],"sha256":binary["sha256"],"bytes":binary["bytes"],"uri":binary["uri"]}),
+            );
+        }
+    }
+    t
+}
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    assert!(
+        args.len() >= 4,
+        "agentlab-asset-model KNOWLEDGE OUTPUT RAW_ARCHIVE_URI [RUN=EVIDENCE ...]"
+    );
+    let out = Path::new(&args[2]);
+    assert!(!out.exists(), "Use a new output directory");
+    let (knowledge, construction) = knowledge(Path::new(&args[1]));
+    let mut manifest = json!({"schema":"agentlab.asset_catalog.v1","knowledge":export(&out.join("knowledge"),"reusable-knowledge",&knowledge),"construction":export(&out.join("instances/construction"),"evaluation-instance",&construction),"instances":{}});
+    for arg in &args[4..] {
+        let (run, root) = arg.split_once('=').unwrap();
+        let tables = instance(Path::new(root), run, &args[3]);
+        manifest["instances"][run] = export(
+            &out.join(format!("instances/{run}")),
+            "evaluation-instance",
+            &tables,
+        );
+    }
+    let mut file = File::create(out.join("catalog.json")).unwrap();
+    file.write_all(&serde_json::to_vec_pretty(&manifest).unwrap())
+        .unwrap();
+    println!("{}", serde_json::to_string(&manifest).unwrap());
+}

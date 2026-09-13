@@ -32,42 +32,11 @@ fixes inside the assessed Workspace.
 Tracked source deltas are captured against the original PIN, independently of
 participant Git commits. Workspace Git objects must be self-contained after
 container isolation; do not use alternates pointing outside the mounts.
-`ingest.py` stores individual checks, stack calls, stages, gateway/message/tool
-indices in `runtime_observations`, and byte-exact content-addressed bytes in
-`runtime_payload_chunks`, under this construction fixture namespace. Each
-instance stage receives evidence-linked evaluationGuidance after a completed run.
-
-The initial seed remains exactly three stable-order files: `maintainer_skills`,
-`program_facts`, `evaluation_cases`. It contains reusable knowledge, task
-definitions and compact findings with explicit runtime table/cut/row/archive
-references. Full assessment history is a separate TableGit runtime export,
-published as an experiment Release asset. It is not silently imported as initial
-knowledge. These fixture schemas are owned by AgentLab, not MCPGit.
-
-Use `ingest.py --create-runtime-tables` once for a new construction fixture, then
-without that flag for subsequent runs. Every captured file is independently
-reconstructed from ordered part rows and payload chunks. `finalize.py` reads back
-the full runtime export before relocating duplicate legacy seed rows; historical
-cuts and runtime bytes remain available. Export rows in stable key order.
-
-To restore the full runtime evidence (rather than the initial knowledge seed):
-
-```sh
-python subject/import-runtime.py --development /path/to/development.json \
-  --directory /path/to/extracted/runtime --prefix replay/navigation/ \
-  --evidence /path/to/import-evidence --create-tables
-```
-
-Run from `examples/knowledge-seed`. On an unchanged repeat, omit
-`--create-tables`; no rows or committed revision should change. The runtime
-archive manifest includes exact table definitions and SHA-256 for each sorted
-JSONL. This construction-fixture export is distinct from the installed Harness
-Session table schema.
-
-The first two real successful runs and complete TableGit runtime export are
-available in [the experiment Release](https://github.com/yxsicd/agentlabrelease/releases/tag/evidence-navigation-subject-34755514333).
-Its `navigation-tablegit-runtime-20260913.tar.zst` contains both runtime tables
-and their versioned export manifest; HAPs are separate assets.
+Current data modeling follows [ASSETS.md](ASSETS.md): reusable knowledge and
+execution-instance assets are separate, with analytical entity tables and context
+Git history. `ingest.py` imports only an execution instance. Raw files remain
+complete in an independent evidence bundle. The older block-based runtime archives
+are historical receipts, not the current modeling template.
 
 ## Feedback instance
 

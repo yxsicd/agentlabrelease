@@ -70,6 +70,10 @@ jobs:
           shutil.copytree(pathlib.Path(os.environ['RUNNER_TEMP'])/'prior/builder/evidence',target)
           with open(os.environ['GITHUB_OUTPUT'],'a') as out:out.write('producer_revision='+prior['head_sha']+'\n')
           PY
+      - name: Build analysis-oriented synthetic instance with Rust
+        run: |
+          cargo build --locked -p agentlab_code_analysis --bin agentlab-asset-model
+          target/debug/agentlab-asset-model examples/knowledge-seed/subject/fixture/knowledge "$AGENTLAB_CI_ROOT/asset-model" https://example.invalid/synthetic-evidence.tar.zst fixture=examples/knowledge-seed/subject/fixture/evidence
       - name: Materialize receipt-bound SDK inputs
         run: python3 scripts/channel-input.py --source release/candidates/40ecdf4b-linux-x64 --output "$GITHUB_OUTPUT"
       - name: Install released AgentLab components
@@ -107,7 +111,7 @@ jobs:
           )
           /usr/bin/python3 examples/tablegit-session/run.py --image "${runtime[0]}" --runtime-volume "${runtime[1]}" \
             --sdk-program release/candidates/40ecdf4b-linux-x64/session-sdk.json \
-            --root "$AGENTLAB_CI_ROOT/store" --capture-evidence "$AGENTLAB_CI_ROOT/builder/evidence" --capture-agent-kind "knowledge-builder-${{ inputs.builder || 'mock' }}"
+            --root "$AGENTLAB_CI_ROOT/store" --capture-evidence "$AGENTLAB_CI_ROOT/builder/evidence" --capture-agent-kind "knowledge-builder-${{ inputs.builder || 'mock' }}" --asset-model-export "$AGENTLAB_CI_ROOT/asset-model/instances/fixture"
       - name: Preserve calibration failures, raw capture and historical readback
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

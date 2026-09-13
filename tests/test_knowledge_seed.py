@@ -119,18 +119,3 @@ class ImageClassificationOracleTest(unittest.TestCase):
             self.assertEqual(len(results['reference']['cases']),14)
             mismatch=next(c for c in results['wrong-prefix']['cases'] if c['input']=='https://')
             self.assertEqual([d['actual'] for d in mismatch['decisions']],[False,True])
-
-
-class AssessmentGuidanceTest(unittest.TestCase):
-    def test_first_capture_repeat_archived_refs_and_older_campaign(self):
-        spec=importlib.util.spec_from_file_location('subject_ingest',Path(__file__).parents[1]/'examples/knowledge-seed/subject/ingest.py')
-        ingest=importlib.util.module_from_spec(spec);spec.loader.exec_module(ingest)
-        summary={'ok':True,'subjectTaskSucceeded':True};key='subject-20-summary'
-        ref={'id':key,'table':'runtime_observations'}
-        first=ingest.assessment_guidance({},[ref],key,summary,'scope','next','20')
-        self.assertEqual(first['latestSummaryRef'],ref)
-        self.assertEqual(ingest.assessment_guidance(first,[ref],key,summary,'scope','next','20'),first)
-        archived={**first,'latestSummaryRef':{**ref,'revision':'cut','archiveUrl':'asset'},'observedToolErrors':['operator tool missing']}
-        self.assertEqual(ingest.assessment_guidance(archived,[archived['latestSummaryRef']],key,summary,'scope','next','20'),archived)
-        old_ref={'id':'subject-10-summary','table':'runtime_observations'}
-        self.assertEqual(ingest.assessment_guidance(archived,[old_ref],old_ref['id'],summary,'older','next','10'),archived)

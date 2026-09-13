@@ -70,10 +70,22 @@
       "path": "skills/agentlab-harness-developer/SKILL.md",
       "layer": "method",
       "objectScope": "generic"
+    },
+    {
+      "id": "agentlab-asset-model",
+      "role": "maintenance",
+      "layer": "method",
+      "stage": "asset-model",
+      "objectScope": "generic",
+      "path": "skills/agentlab-asset-model/SKILL.md"
     }
   ],
   "layers": {
     "method": "Reusable stage recipe maintained at a Release Git commit.",
     "instance": "Target-specific guidance maintained as TableGit business rows."
+  },
+  "assetClasses": {
+    "reusable-knowledge": "Method, target knowledge, program analysis and reusable task/calibration contracts.",
+    "evaluation-instance": "Concrete execution, calibration output, feedback and complete raw evidence."
   }
 }

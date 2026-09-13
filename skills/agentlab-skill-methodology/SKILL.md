@@ -76,22 +76,16 @@ causing repeat capture to advance a commit without semantic changes. Normalize
 our compiler history consistently and prove the same producer capture twice
 returns the same TableGit revision, not only identical exported rows.
 
-### Knowledge and operational evidence remain separate
+### Asset lifetime is a separate axis
 
-Keep reusable method guidance in Release and source/case-specific guidance in
-TableGit instance rows, with independent method revision, source revision, role
-and stage. Record findings for goal, repository semantics, program analysis,
-seed extraction, calibration and evaluation separately.
+Read [asset modeling](../agentlab-asset-model/SKILL.md). Method versus target
+instance is independent from reusable knowledge versus execution-instance assets.
+A target-codebase semantic Skill is reusable; a particular campaign's feedback
+is operational data. Keep the three knowledge tables separate from concrete run
+results, latest-run pointers, calibration output and raw evidence. Operational
+ingestion never updates reusable guidance automatically. Promote lessons explicitly.
 
-The three initial knowledge snapshots contain Skills, analysis facts and frozen
-tasks; full historical gateway/native/source/build captures belong in runtime
-observation and payload tables. Preserve every raw byte. Return compact findings
-and explicit table/cut/row plus published archive references to the knowledge
-seed. Publish the complete runtime export independently when reproducible raw
-evidence is needed. Never inflate the seed with repeated cumulative event payloads.
-Use stable IDs and stable export order; prove file reconstruction and unchanged
-repeat import before publishing. See [the executable experiment](../../examples/knowledge-seed/subject/README.md).
-
-Choose explicit indexes for actual queries (run, phase, kind, tool, file, cut and
-ordinal); do not auto-index every scalar field. Structured retention and indexing
-are different concerns. Keep full data while selecting useful query projections.
+Use typed analytical entity tables, content-versioned messages and durable context
+head Git history. Preserve original files independently; storage chunks are not
+business observations. Export each asset class from an exact TableGit cut with
+stable row order and demonstrate targeted analysis plus unchanged repeat import.

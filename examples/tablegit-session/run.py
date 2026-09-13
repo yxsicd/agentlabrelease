@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import secrets
 import subprocess
+import sys
 import time
 import uuid
 
@@ -28,6 +29,7 @@ def main():
                    help="immutable released Session SDK program lock")
     p.add_argument("--root", required=True, type=Path)
     p.add_argument("--capture-evidence", type=Path, help="Actual operator-captured evidence to persist and reconstruct")
+    p.add_argument("--asset-model-export", type=Path, help="Synthetic analysis-oriented instance exchange to import and replay")
     p.add_argument("--capture-agent-kind", default="pi", help="Observed participant implementation; not capture authority")
     args = p.parse_args()
     root = args.root.resolve()
@@ -246,10 +248,29 @@ def main():
             assert (repeated_revision,repeated_changes)==(published_revision,0)
             published_export=knowledge.export(service,first['binding']['repositoryId'],published_revision,evidence/'published-harmony-export',seed_prefix)
             source_export=json.loads((published/'export.json').read_text())
-            assert published_export['tables']==source_export['tables']
+            assert published_export['tables']=={name:{key:meta[key] for key in ('rowCount','sha256')} for name,meta in source_export['tables'].items()}
             save(evidence/'published-harmony-import.json',dict(sourceExport=source_export,importRevision=published_revision,insertedRows=changed,exactRows=True,stableExport=True,repeatedImportUnchanged=True))
             summary['checks']['published_harmony_seed_exact_import_and_repeat']=True
             capture_revision=published_revision
+        if args.asset_model_export:
+            config=state/'asset-model-development.json'
+            save(config,dict(url=service.url,repo=first['binding']['repositoryId'],authorizationFile=str(state/'caller.authorization')))
+            receipts=[]
+            for iteration in (1,2):
+                destination=evidence/('asset-model-import-'+str(iteration))
+                command=[sys.executable,str(REPO/'examples/knowledge-seed/subject/import-assets.py'),'--development',str(config),'--directory',str(args.asset_model_export),'--prefix','assets/instances/fixture/','--evidence',str(destination),'--replay-context']
+                if iteration==1:command.append('--create-tables')
+                result=subprocess.run(command,capture_output=True)
+                (evidence/('asset-model-'+str(iteration)+'.stdout')).write_bytes(result.stdout)
+                (evidence/('asset-model-'+str(iteration)+'.stderr')).write_bytes(result.stderr)
+                if result.returncode:raise RuntimeError('Asset model import failed; preserve output')
+                receipts.append(json.loads((destination/'receipt.json').read_text()))
+            assert receipts[0]['revision']==receipts[1]['revision']
+            assert receipts[1]['insertedOrUpdatedRows']==0
+            assert all(item['exact'] for item in receipts[1]['contextHistory'])
+            summary['checks']['instance_asset_tables_and_context_git_history']=True
+            summary['checks']['instance_asset_repeat_unchanged']=True
+            capture_revision=receipts[-1]['revision']
         checks = summary["checks"]
         checks["template_qualification"] = qualification["status"] == "qualified"
         checks["concurrent_session_creation_replayed"] = first["concurrentReplay"] is True

@@ -1,0 +1,5 @@
+{"type":"message_start","message":{"role":"assistant"}}
+{"type":"message_update","assistantMessageEvent":{"type":"text_delta","delta":"ok","partial":{"content":"cumulative snapshot"}},"message":{"content":"cumulative snapshot"}}
+{"type":"message_end","message":{"role":"assistant","content":"ok"}}
+{"type":"tool_execution_start","toolCallId":"call","toolName":"bash","args":{"command":"git"}}
+{"type":"tool_execution_end","toolCallId":"call","toolName":"bash","isError":true,"result":{"content":"git missing"}}
