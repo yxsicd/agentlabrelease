@@ -68,9 +68,9 @@ in TableGit; do not independently edit its exported JSONLs.
 ## Challenge backlog
 
 The current five candidates are feedback, delayed loading, navigation, image URL
-classification and independent click throttling. Extend functional calibration
-for feedback/navigation, then full consumer behavior and real build coverage for
-all five. Next establish a genuine multi-round subject run and checkpoint/Fork
+classification and independent click throttling. All five now have isolated calibration. Extend full consumer behavior and real
+build coverage for all five; feedback UI and navigation caller outcome mapping
+remain unqualified. Next establish a genuine multi-round subject run and checkpoint/Fork
 counterfactual comparison. Finally repeat on an independent Harmony project,
 measure scoring agreement and assemble the method/report delivery.
 

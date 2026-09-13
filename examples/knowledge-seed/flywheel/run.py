@@ -17,7 +17,7 @@ PREFIX='flywheel/harmony-v3/'
 SPECS=[
  ('feedback','Feedback submission and reset', ['common/src/main/ets/component/FeedbackSheet.ets','common/src/main/ets/model/FeedbackData.ets','common/src/main/ets/util/SubmitInfoUtil.ets'], ['Make feedback submission preserve selections until success and show a retryable failure.','Prevent duplicate submissions and preserve the previous success/reset behavior.'], ['Rejected submission preserves state; retry succeeds.','Repeated click creates one submission; success clears state.']),
  ('delayed-loading','Loading lifecycle across breakpoints', ['common/src/main/ets/view/DelayedLoadingView.ets','common/src/main/ets/view/LoadingView.ets','common/src/main/ets/util/BreakpointSystem.ets'], ['Make repeated loading appearances start a fresh delayed indicator and cancel old timers.','Allow breakpoint changes while loading without stale indicator callbacks.'], ['Disappear/reappear does not show a stale indicator.','Small/large delay and cancellation checks pass.']),
- ('navigation','Navigation replacement and error outcome', ['common/src/main/ets/routermanager/PageContext.ets','common/src/main/ets/model/PageEnum.ets','common/src/main/ets/util/Logger.ets'], ['Expose a usable navigation operation outcome while preserving stack and animation behavior.','Propagate failure outcomes to one actual caller without losing successful navigation behavior.'], ['Push/replace/pop postconditions checked with a stack oracle.','Failure reaches caller; previous success checks remain passing.']),
+ ('navigation','Navigation replacement and error outcome', ['common/src/main/ets/routermanager/PageContext.ets','common/src/main/ets/model/PageEnum.ets','common/src/main/ets/util/Logger.ets','features/devpractices/src/main/ets/view/PracticeHomeView.ets'], ['Expose a usable navigation operation outcome while preserving stack and animation behavior.','Propagate failure outcomes to one actual caller without losing successful navigation behavior.'], ['Push/replace/pop postconditions checked with a stack oracle.','Failure reaches caller; previous success checks remain passing.']),
  ('image-url','Consistent remote image classification', ['common/src/main/ets/util/UrlUtil.ets','common/src/main/ets/component/ImageComponent.ets','features/devpractices/src/main/ets/view/ImagePreview.ets'], ['Define and apply consistent HTTP/HTTPS image URL handling across component and preview.','Add malformed/relative/local URL behavior while preserving remote preview.'], ['Both consumers agree on URL cases.','Local/malformed inputs and previous remote cases are covered.']),
  ('debounce','Independent click throttling across consumers', ['common/src/main/ets/util/DebounceUtil.ets','features/componentlibrary/src/main/ets/view/ComponentBaseView.ets','common/src/main/ets/util/index.ets'], ['Give each returned click handler its own timing state; unrelated handlers must not suppress one another.','Preserve suppression inside the wait window, allow the exact boundary, and keep independent handlers after the change.'], ['Two handlers at the same instant both execute.','Repeated same handler is suppressed; exact wait boundary executes.'])]
 
@@ -44,7 +44,7 @@ def instance_skills(key,title,paths,turns,checks,revision):
  'repository-analysis':'Observed contract: '+OBSERVATIONS[key]+'\n\nRead these pinned files before changing behavior: '+', '.join(paths)+'. Preserve the observed contract unless the task explicitly changes it.',
  'program-analysis':'Analyze '+', '.join(paths)+'. Trace AST module references, symbols, syntactic call/assignment locations and the common package/barrel chain in program_facts. Use the archived import SQL at its input cut. Package path resolution is not symbol/type/runtime call resolution; do not infer the latter from these facts.',
  'seed-extraction':'Derive staged demands from this contract: '+OBSERVATIONS[key]+'\n\nCurrent candidate turns: '+json.dumps(turns,ensure_ascii=False)+'. Link case-'+key+' and the analysis facts. Vary timing/failure/input boundaries only with independently specified oracles.',
- 'calibration':'Calibrate case-'+key+' using '+json.dumps(checks,ensure_ascii=False)+'. Build an independent baseline/reference/wrong-variant oracle. Current executable isolated oracles cover debounce, delayed-loading and image-url; feedback/navigation remain proposed. The image oracle verifies consumer call seams but does not execute their full bodies. ArkUI rendering, HAP build and real subject success remain unqualified.',
+ 'calibration':'Calibrate case-'+key+' using '+json.dumps(checks,ensure_ascii=False)+'. Build an independent baseline/reference/wrong-variant oracle. All five scenarios have executable isolated oracles; complete cross-file task/HAP and subject acceptance remain outstanding. The image oracle verifies consumer call seams but does not execute their full bodies. ArkUI rendering, HAP build and real subject success remain unqualified.',
  'evaluation':'Consume the frozen case-'+key+' source, knowledge and task cuts. Present only its demands, not the operator reference transform, to the subject. Execute staged demands '+json.dumps(turns,ensure_ascii=False)+'. Grade '+json.dumps(checks,ensure_ascii=False)+' and record Harness-owned calls/output/checkpoints. A construction oracle pass does not constitute subject evaluation.'}
  for stage,body in bodies.items():
   rid='skill-'+key if stage=='repository-analysis' else 'skill-'+stage+'-'+key
@@ -164,14 +164,34 @@ def main():
   if row['id']=='case-image-url': row.update(status='isolated-seam-qualified',calibration=image)
  for row in tables['maintainer_skills']:
   if row['objectId'] in ('case-debounce','case-delayed-loading','case-image-url') and row['stage']=='calibration':row['status']='isolated-seam-supported' if row['objectId']=='case-image-url' else 'isolated-method-supported'
+ remaining={}
+ for key,wrong,description in [('feedback','wrong-reset','Original submit/reset methods with operator-controlled Promise failure; UI error rendering and real backend not qualified'),('navigation','wrong-stack','Original PageContext bodies with explicit stack model; real caller only source-verified, outcome mapping and platform stack not qualified')]:
+  modes=['baseline','reference',wrong];variants={}
+  for mode in modes:
+   result=subprocess.run(['node',str(Path(__file__).with_name(key+'.js')),str(a.source),mode],capture_output=True,text=True)
+   (e/(key+'-'+mode+'.stdout')).write_text(result.stdout);(e/(key+'-'+mode+'.stderr')).write_text(result.stderr)
+   if result.returncode:raise RuntimeError('Preserved '+key+' oracle failure')
+   variants[mode]=json.loads(result.stdout)
+  if variants['baseline']['pass'] or not variants['reference']['pass'] or variants[wrong]['pass']:raise RuntimeError(key+' oracle calibration failed')
+  remaining[key]=variants
+  spec=next(x for x in SPECS if x[0]==key)
+  tables['program_facts'].append(dict(id='oracle-'+key,kind='oracle',sourceRevision=PIN,code=Path(__file__).with_name(key+'.js').read_text(),request={'sourcePaths':spec[2],'runtime':subprocess.check_output(['node','--version'],text=True).strip(),'captureAuthority':'operator-owned construction runner'},result=variants,interpretation=description))
+  tables['evaluation_cases'].append(dict(id='calibration-'+key,kind='calibration',title=key+' controller calibration',sourceRevision=PIN,paths=spec[2],status='isolated-controller-qualified',calibration=variants,buildQualified=False))
+  for row in tables['evaluation_cases']:
+   if row['id']=='case-'+key:row.update(status='isolated-controller-qualified',calibration=variants)
+  for row in tables['maintainer_skills']:
+   if row['objectId']=='case-'+key:
+    row['factIds'].append('oracle-'+key)
+    row['body']+='\nCalibration oracle-'+key+': baseline fails new demand, reference passes, '+wrong+' fails targeted behavior. '+description+'. Reproduce with node examples/knowledge-seed/flywheel/'+key+'.js <pinned-source> <mode>. Next validate the actual consumer/UI and real Harmony build before full task assessment.\n'
+    if row['stage']=='calibration':row['status']='isolated-controller-supported'
  # Complete operator results are structured, not participant-reported success.
  tables['program_facts'].append(dict(id='oracle-debounce',kind='oracle',sourceRevision=PIN,code=Path(__file__).with_name('debounce.js').read_text(),request={'runtime':subprocess.check_output(['node','--version'],text=True).strip(),'sourcePath':SPECS[-1][2][0],'modes':['baseline','reference','wrong-boundary'],'captureAuthority':'operator-owned construction runner'},result=results,interpretation='Exact isolated-method calibration; not an assessed Code Agent or Harmony compiler'))
  tables['evaluation_cases'].append(dict(id='calibration-debounce',kind='calibration',title='Isolated method calibration',sourceRevision=PIN,paths=SPECS[-1][2],status='isolated-method-qualified',calibration=results,buildQualified=False))
  if not a.development:
-  package={'tables':tables,'updates':[dict(table='maintainer_skills',id='skill-debounce',fields={'body':next(r['body'] for r in tables['maintainer_skills'] if r['id']=='skill-debounce')+'\nOperator isolated oracle confirms the shared-timestamp collision; per-handler reference passes. No HAP qualification.\n'})],'calibrated':False,'scope':'real Harmony source; three isolated scenarios calibrated, two proposed tasks'}
+  package={'tables':tables,'updates':[dict(table='maintainer_skills',id='skill-debounce',fields={'body':next(r['body'] for r in tables['maintainer_skills'] if r['id']=='skill-debounce')+'\nOperator isolated oracle confirms the shared-timestamp collision; per-handler reference passes. No HAP qualification.\n'})],'calibrated':False,'scope':'real Harmony source; five isolated scenarios calibrated; complete cross-file/HAP subject tasks unqualified'}
   dump(e/'knowledge-package.json',package)
   dump(e/'isolated-calibration.json',results)
-  print(json.dumps({'sourceRevision':PIN,'taskCandidates':5,'isolatedCalibration':True,'calibratedMethods':3,'harmonyBuildQualified':False}))
+  print(json.dumps({'sourceRevision':PIN,'taskCandidates':5,'isolatedCalibration':True,'calibratedMethods':5,'harmonyBuildQualified':False}))
   return
  config=json.loads(a.development.read_text());service=Service(config['url'],Path(config['authorizationFile']).read_text().strip(),e/'rpc')
  (e/'rpc').mkdir(exist_ok=True)
@@ -212,7 +232,7 @@ def main():
  repeated=store.export(service,repo,revision,a.root/'export-repeated',PREFIX);assert final==repeated
  again,changed=store.import_snapshot(service,repo,wt,a.root/'export',PREFIX);assert again==revision and changed==0
  before=store.read(service,repo,baseline,PREFIX+'maintainer_skills');after=store.read(service,repo,revision,PREFIX+'maintainer_skills')
- dump(e/'summary.json',dict(ok=True,sourceRevision=PIN,baselineRevision=baseline,finalRevision=revision,tablePrefix=PREFIX,counts={k:v['rowCount'] for k,v in final['tables'].items()},stableExport=True,repeatedImportNoChanges=True,knowledgeChanged=before!=after,instanceSkillLayers=sorted({r['skillLayer'] for r in after.values()}),instanceRoles=sorted({r['role'] for r in after.values()}),calibration=results,loadingCalibration=loading,imageCalibration=image,harmonyBuildQualified=False,formalSessionFSQualified=False,subjectAgentRun=False))
+ dump(e/'summary.json',dict(ok=True,sourceRevision=PIN,baselineRevision=baseline,finalRevision=revision,tablePrefix=PREFIX,counts={k:v['rowCount'] for k,v in final['tables'].items()},stableExport=True,repeatedImportNoChanges=True,knowledgeChanged=before!=after,instanceSkillLayers=sorted({r['skillLayer'] for r in after.values()}),instanceRoles=sorted({r['role'] for r in after.values()}),calibration=results,loadingCalibration=loading,imageCalibration=image,controllerCalibration=remaining,harmonyBuildQualified=False,formalSessionFSQualified=False,subjectAgentRun=False))
  dump(a.root/'authority.json',dict(repo=repo,tablePrefix=PREFIX,baselineRevision=baseline,finalRevision=revision,sourceRevision=PIN,snapshot=str(a.root/'export')))
  print(json.dumps(json.loads((e/'summary.json').read_text()),ensure_ascii=False))
 if __name__=='__main__':main()

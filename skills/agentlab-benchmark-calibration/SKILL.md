@@ -30,3 +30,12 @@ Produce target-instance guidance for this stage as TableGit Skill rows,
 separate from the structured facts/tasks/results. Follow
 [the two-layer methodology](../agentlab-skill-methodology/SKILL.md) for
 method/source lineage and independent layer/role fields.
+
+For asynchronous submission, independently control deferred resolution/rejection;
+check duplicate requests while pending, retained state on failure, observable
+failure, release/retry and success reset. Observe rejected chains without turning
+an unhandled rejection into an apparent pass. Preserve exact operator seams.
+For navigation outcome extensions, validate stack and animation behavior as well
+as success/failure returns. A wrong push-for-replace variant can pass return tests
+while corrupting the stack. Source-verifying a caller is not implementing or
+executing its outcome mapping; leave that turn explicitly unqualified.
