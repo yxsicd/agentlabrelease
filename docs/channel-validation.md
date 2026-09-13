@@ -50,6 +50,10 @@ gh workflow run channel-plan.yml --ref main -f target=alprod -f upstream_release
 
 Qualified cuts contain only lock/publication/qualification metadata. Original
 component URLs, hashes, images, SDK and controller identities remain unchanged.
+Standalone Harmony/SessionFS and MCPGit validation dependencies are frozen
+separately with `validationDependenciesSha256`, carried through selected upstream
+cuts, and checked when closing results. TableGit capture context records these
+identities plus target channel and source publication/lock digests.
 An older qualified upstream cut can be selected even if the fixed channel has
 advanced. Qualification is distinct from activating the fixed channel.
 
@@ -64,7 +68,9 @@ Immutable lock/qualification assets are published before a single channel
 publication pointer changes. The pointer explicitly references the immutable
 lock URI and digest; consumers read the pointer first, then that lock. They do
 not combine two mutable channel assets. Old lock assets remain available for
-existing references. Activation reads the pointer back to verify the exact
-selected metadata. Rollback explicitly selects a previously qualified cut
+existing references. Before switching, activation saves the previous pointer as a content-addressed
+Release asset and declares its explicit URI/hash for rollback. Repeated execution
+checks already-active metadata or an already-uploaded snapshot before proceeding.
+Activation reads the pointer back to verify the exact selected metadata. Rollback explicitly selects a previously qualified cut
 without rebuilding components. Public standalone parity and actual host/device
 deployment evidence remain distinct.
