@@ -34,7 +34,12 @@ def main():
         command('image-pull',['docker','pull',image])
         command('subject-start',['docker','run','-d','--name',container,'--entrypoint','sleep',image,'infinity'])
         actual=subprocess.check_output(['docker','exec','-w','/testbed',container,'git','rev-parse','HEAD']).decode().strip()
-        if actual!=row['base_commit']: raise RuntimeError('official image baseline differs')
+        ancestry=subprocess.run(['docker','exec','-w','/testbed',container,'git','merge-base','--is-ancestor',row['base_commit'],actual],capture_output=True)
+        if ancestry.returncode: raise RuntimeError('official task base is not an ancestor of prepared image cut: '+actual)
+        preparation=subprocess.check_output(['docker','exec','-w','/testbed',container,'git','diff','--binary',row['base_commit'],actual])
+        (evidence/'official-preparation.patch').write_bytes(preparation)
+        image_identity=json.loads(subprocess.check_output(['docker','image','inspect',image]))[0]
+        (evidence/'workspace-baseline.json').write_text(json.dumps(dict(taskBaseCommit=row['base_commit'],executionBaseCommit=actual,taskBaseAncestorVerified=True,image=image,imageId=image_identity['Id'],repoDigests=image_identity.get('RepoDigests',[])),indent=2)+'\n')
         module_path=Path(__file__).parents[1]/'real-code-agent/participant.py'
         spec=importlib.util.spec_from_file_location('participant',module_path);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
         participant=m.Participant(evidence,a.root/'participant-state',a.agent_python,a.gateway,a.model,implementation='mini-swe-agent')
@@ -49,8 +54,8 @@ def main():
             if result.returncode not in ([0,1] if allow_diff else [0]):
                 raise RuntimeError('Workspace patch observation failed: '+result.stderr.decode())
             return result.stdout
-        patch=capture_patch(git,row['base_commit'])
-        (evidence/'patch-observation.json').write_text(json.dumps(dict(baseline=row['base_commit'],
+        patch=capture_patch(git,actual)
+        (evidence/'patch-observation.json').write_text(json.dumps(dict(baseline=actual,taskBaseCommit=row['base_commit'],
             actualHead=git(['rev-parse','HEAD']).decode().strip(),commands=observed_commands,
             scope='Tracked changes since frozen base and non-ignored new files; not a full binary Workspace snapshot'),indent=2)+'\n')
         (evidence/'actual.patch').write_bytes(patch)
