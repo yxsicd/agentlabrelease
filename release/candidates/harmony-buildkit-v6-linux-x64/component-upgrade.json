@@ -1,0 +1,34 @@
+{
+  "schema": "agentlab.component_upgrade.v1",
+  "component": "pack:harmony-build-kit",
+  "basePublicationSha256": "57dc9c4c4e8f86f27ca7f704d17fe29d9392e8579576ddc94ba9c178ead12818",
+  "before": {
+    "archiveSha256": "4106f23863e7524d2e44489fb4199d8493422d12fd1c2fafb298d5a83eac68a5",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-buildkit-v5-linux-x64/agentlab-pack-harmony-build-kit-buildkit-v5-linux-x64.tar.zst",
+    "descriptor": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-buildkit-v5-linux-x64/agentlab-pack-harmony-build-kit-buildkit-v5-linux-x64.tar.zst.json",
+    "enabled": true,
+    "mountTarget": "/toolchains/harmony-build-kit",
+    "packId": "harmony-build-kit",
+    "platform": "linux-x64",
+    "required": false,
+    "slot": "harmony-build-kit",
+    "version": "buildkit-v5",
+    "volume": "vol-agentlab-pack-harmony-build-kit-buildkit-v5-linux-x64-4106f23863e7"
+  },
+  "after": {
+    "archiveSha256": "afa6504c29991acc63535039086f4043cfcccb32660feaeeaf8bc3e8cac63b76",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-buildkit-v6-linux-x64/agentlab-pack-harmony-build-kit-buildkit-v6-linux-x64.tar.zst",
+    "descriptor": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-buildkit-v6-linux-x64/agentlab-pack-harmony-build-kit-buildkit-v6-linux-x64.tar.zst.json",
+    "enabled": true,
+    "mountTarget": "/toolchains/harmony-build-kit",
+    "packId": "harmony-build-kit",
+    "platform": "linux-x64",
+    "required": false,
+    "slot": "harmony-build-kit",
+    "version": "buildkit-v6",
+    "volume": "vol-agentlab-pack-harmony-build-kit-buildkit-v6-linux-x64-afa6504c2999"
+  },
+  "rebuildComponents": false,
+  "replacementDescriptorSha256": "f8db4f10877a46e5d85d8349bcb381013d8852dc3fba2037ca93aca5e1c7a975",
+  "replacementDescriptorUrl": null
+}

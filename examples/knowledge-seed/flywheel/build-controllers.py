@@ -43,6 +43,28 @@ def main():
             if (reports/'result.json').exists():item['compiler']=json.loads((reports/'result.json').read_text())
         summary['phases'][label]=item
         return r,item
+    def prepare():
+        command=[arg for arg in base if arg!='--network=none']+['prepare-deps','--project','/case/patched-source']
+        (e/'dependency-preparation-command.json').write_text(json.dumps(command,indent=2)+'\n')
+        start=time.monotonic();r=subprocess.run(command,capture_output=True,timeout=660)
+        (e/'dependency-preparation-stdout.log').write_bytes(r.stdout)
+        (e/'dependency-preparation-stderr.log').write_bytes(r.stderr)
+        summary['phases']['dependency-preparation']={'exitCode':r.returncode,'wallSeconds':time.monotonic()-start}
+        reports=root/'patched-source/.native-dependencies'
+        if reports.exists():shutil.copytree(reports,e/'dependency-preparation')
+        # Keep package-manager inputs/locks and resolved package identities, not vendor build/cache binaries.
+        manifests=[]
+        import os
+        for directory,children,files in os.walk(root/'patched-source'):
+            children[:]=sorted(n for n in children if n not in {'node_modules','.git','.hvigor','build','.native-build'})
+            for name in ('oh-package.json5','oh-package-lock.json5'):
+                if name in files:
+                    path=Path(directory)/name;relative=path.relative_to(root/'patched-source')
+                    target=e/'dependency-manifests'/relative;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(path,target)
+                    manifests.append({'path':relative.as_posix(),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
+        (e/'dependency-manifests.json').write_text(json.dumps(manifests,indent=2)+'\n')
+        summary['dependenciesPrepared']=r.returncode==0
+
     def build(label):
         result,item=call(label,'workspace/hello','entry')
         if result.returncode:raise RuntimeError(label+' failed; complete logs retained')
@@ -59,6 +81,7 @@ def main():
         item['verifiedArtifacts']=artifacts
     try:
         # Preserve the full-project result independently; slice success cannot overwrite it.
+        prepare()
         full,item=call('whole-source-probe','patched-source','phone')
         summary['fullSourceBuildQualified']=full.returncode==0 and bool(item.get('compiler',{}).get('artifacts'))
         summary['fullSourceBlocker']=None if summary['fullSourceBuildQualified'] else item.get('compiler',{}).get('error','See complete compiler logs')

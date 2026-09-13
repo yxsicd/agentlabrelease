@@ -64,3 +64,8 @@ compilationGuidance on instance rows. Generated guidance references those fields
 When an analysis flow owns only some fields, compare/update that projection and
 skip empty patches; whole-row inequality can be caused by another owned producer's
 fields. This keeps ordinary analysis and compiler capture internally consistent.
+
+Original Harmony compilation separates published SDK OHPM dependency preparation
+from network-disabled builds. Archive preparation commands, logs, manifests and
+locks; resolve module outputs through build-profile srcPath. A prepared dependency
+is not a full-project compiler verdict, and a slice pass cannot overwrite it.

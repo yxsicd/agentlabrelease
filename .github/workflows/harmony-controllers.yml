@@ -10,8 +10,8 @@ jobs:
     timeout-minutes: 40
     env:
       AGENTLAB_CI_ROOT: /tmp/agentlab-harmony-controllers
-      AGENTLAB_RELEASE_CHANNEL: candidate-20260913-40ecdf4b-sdk-c075105a-linux-x64
-      AGENTLAB_COMPOSITION_DIR: release/candidates/40ecdf4b-linux-x64
+      AGENTLAB_RELEASE_CHANNEL: candidate-20260913-harmony-buildkit-v6-linux-x64
+      AGENTLAB_COMPOSITION_DIR: release/candidates/harmony-buildkit-v6-linux-x64
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Fetch pinned challenge source and materialize real patches and derived slice
