@@ -28,6 +28,12 @@ jobs:
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Reserve immutable experiment source ref before long capture
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="evidence-$AGENTLAB_ASSESSMENT_SCENARIO-subject-$GITHUB_RUN_ID"
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$tag" -f sha="$GITHUB_SHA"
       - name: Restore immutable scenario capture for persistence replay
         if: inputs.capture_run_id != '' && contains(fromJSON('["loading","debounce","image-url"]'), inputs.scenario)
         env:
@@ -172,6 +178,13 @@ jobs:
         with:
           name: ${{ inputs.scenario || 'navigation' }}-subject-evidence
           path: ${{ env.AGENTLAB_CI_ROOT }}/assessment/evidence/
+      - name: Preserve full HAP binaries even when Release publication fails
+        if: always() && inputs.capture_run_id == ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ inputs.scenario || 'navigation' }}-full-hap-evidence
+          compression-level: 0
+          path: ${{ env.AGENTLAB_CI_ROOT }}/assessment/full-hap/*.hap
       - name: Preserve typed entities and TableGit failures
         if: always() && contains(fromJSON('["loading","debounce","image-url"]'), inputs.scenario)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

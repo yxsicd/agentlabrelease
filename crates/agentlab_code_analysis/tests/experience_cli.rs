@@ -162,7 +162,12 @@ fn utility_lessons_promote_their_own_identity_and_scope() {
             .as_object()
             .unwrap()
             .iter()
-            .map(|(name, expected)| (name.clone(), json!({"pass":expected})))
+            .map(|(name, expected)| {
+                (
+                    name.clone(),
+                    json!({"pass":expected,"checks":{"retained-behavior":true}}),
+                )
+            })
             .collect();
         let calibration = root.join(format!("{scenario}.json"));
         fs::write(
@@ -184,6 +189,24 @@ fn utility_lessons_promote_their_own_identity_and_scope() {
             .unwrap()
             .status
             .success());
+        let validation_rows = rows(&experience.join("lesson_validations.jsonl"));
+        assert_eq!(
+            validation_rows
+                .iter()
+                .filter(|r| r["kind"] == "variant-verdict")
+                .count(),
+            4
+        );
+        let evidence_rows = rows(&experience.join("lesson_evidence.jsonl"));
+        assert_eq!(
+            evidence_rows
+                .iter()
+                .filter(
+                    |r| r["kind"] == "calibration-check-observation" && r["observedPass"] == true
+                )
+                .count(),
+            4
+        );
         let output = root.join(format!("{scenario}-promotion"));
         assert!(Command::new(binary)
             .arg("promote")

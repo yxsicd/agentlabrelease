@@ -75,6 +75,21 @@ pub fn export(path: &Path, class: &str, tables: &Tables) -> Value {
                 ("behaviorPassed", "boolean"),
                 ("sourceCut", "string"),
             ],
+            "lesson_evidence" => &[
+                ("variant", "string"),
+                ("check", "string"),
+                ("observedPass", "boolean"),
+                ("validationId", "string"),
+                ("receipt", "object"),
+                ("sourceDigest", "string"),
+                ("oracleDigest", "string"),
+            ],
+            "lesson_validations" => &[
+                ("variant", "string"),
+                ("expectedPass", "boolean"),
+                ("observedPass", "boolean"),
+                ("receipt", "object"),
+            ],
             "attempts" => &[("parentAttemptId", "string"), ("forkScope", "string")],
             "llm_requests" => &[
                 ("phaseId", "string"),
@@ -126,6 +141,10 @@ pub fn export(path: &Path, class: &str, tables: &Tables) -> Value {
             "lessonId",
             "scope",
             "targetId",
+            "variant",
+            "check",
+            "validationId",
+            "observedPass",
         ]
         .iter()
         .filter(|k| {

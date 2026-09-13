@@ -120,3 +120,18 @@ as local/CI calibration, selecting its scenario. Keep mutation definitions and
 source selection in that single implementation. Missing files/parser/runtime
 errors are Harness calibration failures, never successful negative verdicts.
 Preserve partial calibration receipts before propagating a failed recipe.
+
+### Streaming and publication qualification
+
+HTTP 200 and transport EOF do not qualify completed inference. The trusted
+capture records semanticComplete and streamError independently from native
+Agent stop events. Accept a non-null finish_reason or [DONE]; preserve truncated
+reasoning and classify missing terminal frames as Harness/provider interruption.
+Do not infer Agent inability from these exchanges.
+
+Reserve the evidence tag at the exact workflow source SHA before a long capture
+so advancing main cannot invalidate late Release publication. Always retain full
+HAP files as an independent Action artifact, including when Release publication
+fails. Build report hashes without retained binaries do not qualify binary restore.
+Calibration variants and individual checks are typed queryable rows, linked to
+full raw receipts by identity and digest; avoid repeated full AST payloads.

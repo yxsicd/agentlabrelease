@@ -60,7 +60,7 @@ class Participant:
                 started = time.monotonic()
                 receipt = dict(exchangeId=f'{number:04d}',
                     startedAt=datetime.now(timezone.utc).isoformat(),
-                    status=None, responseBytes=0, upstreamEof=False,
+                    status=None, responseBytes=0, upstreamEof=False, semanticComplete=False, streamError=None,
                     clientDisconnected=False, outcome='in_progress')
                 try:
                     self.forward(stem, receipt)
@@ -104,8 +104,21 @@ class Participant:
                         while True:
                             chunk = response.readline()
                             if not chunk:
-                                receipt.update(upstreamEof=True, outcome='upstream_eof')
+                                receipt.update(upstreamEof=True, outcome=('stream_error' if receipt['streamError'] else 'completed' if receipt['semanticComplete'] or not wire.get('stream') else 'incomplete_stream'))
                                 break
+                            if wire.get('stream') and chunk.startswith(b'data:'):
+                                data = chunk[5:].strip()
+                                if data == b'[DONE]':
+                                    receipt['semanticComplete'] = True
+                                else:
+                                    try:
+                                        event = json.loads(data)
+                                        if event.get('error'):
+                                            receipt['streamError'] = event['error']
+                                        if any(isinstance(c.get('finish_reason'), str) for c in event.get('choices', [])):
+                                            receipt['semanticComplete'] = True
+                                    except (ValueError, TypeError):
+                                        pass
                             output.write(chunk)
                             output.flush()
                             receipt['responseBytes'] += len(chunk)

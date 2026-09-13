@@ -157,6 +157,26 @@ fn main() {
             "lesson_validations",
             json!({"id":validation_id,"assetClass":"evaluation-instance","lessonId":id,"kind":"positive-negative-calibration","passed":passed,"scope":lesson["scope"],"evidenceId":evidence_id,"expected":lesson["expected"],"oracleDigest":calibration["oracleDigest"],"sourceDigest":calibration["sourceDigest"],"harmonyBuildQualified":false,"uiQualified":false}),
         );
+        // Bounded calibration entities remain directly queryable; raw receipts
+        // keep complete submitted bodies/AST outside these analytical rows.
+        for (variant, expected) in lesson["expected"].as_object().unwrap() {
+            let observed = &calibration["variants"][variant];
+            let variant_id = format!("{id}-variant-{variant}");
+            put(
+                &mut t,
+                "lesson_validations",
+                json!({"id":variant_id,"assetClass":"evaluation-instance","lessonId":id,"kind":"variant-verdict","variant":variant,"expectedPass":expected,"observedPass":observed["pass"],"passed":observed["pass"]==*expected&&observed["error"].is_null(),"scope":lesson["scope"],"evidenceId":evidence_id,"receipt":observed["receipt"]}),
+            );
+            if let Some(checks) = observed["checks"].as_object() {
+                for (check, observed_pass) in checks {
+                    put(
+                        &mut t,
+                        "lesson_evidence",
+                        json!({"id":format!("{variant_id}-check-{}",hash(check.as_bytes())),"assetClass":"evaluation-instance","lessonId":id,"kind":"calibration-check-observation","authority":"operator-owned-oracle","variant":variant,"check":check,"observedPass":observed_pass,"validationId":variant_id,"receipt":observed["receipt"],"sourceDigest":calibration["sourceDigest"],"oracleDigest":calibration["oracleDigest"]}),
+                    );
+                }
+            }
+        }
         assert!(!Path::new(&a[5]).exists());
         println!("{}", export(Path::new(&a[5]), "evaluation-instance", &t));
     } else {
