@@ -37,3 +37,19 @@ and source cuts. Separate valid Agent inability from Harness launch/build faults
 An exact selected-source cut and fresh-Agent branch comparison is source-only
 lineage; it does not qualify formal SessionFS binary restore or device rendering.
 Maintain generic method lessons and derived case instance Skills independently.
+
+### Knowledge and operational evidence remain separate
+
+Keep reusable method guidance in Release and source/case-specific guidance in
+TableGit instance rows, with independent method revision, source revision, role
+and stage. Record findings for goal, repository semantics, program analysis,
+seed extraction, calibration and evaluation separately.
+
+The three initial knowledge snapshots contain Skills, analysis facts and frozen
+tasks; full historical gateway/native/source/build captures belong in runtime
+observation and payload tables. Preserve every raw byte. Return compact findings
+and explicit table/cut/row plus published archive references to the knowledge
+seed. Publish the complete runtime export independently when reproducible raw
+evidence is needed. Never inflate the seed with repeated cumulative event payloads.
+Use stable IDs and stable export order; prove file reconstruction and unchanged
+repeat import before publishing. See [the executable experiment](../../examples/knowledge-seed/subject/README.md).

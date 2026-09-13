@@ -75,3 +75,23 @@ retain exact producer bytes. Floating elapsed seconds drifted on serialization,
 causing repeat capture to advance a commit without semantic changes. Normalize
 our compiler history consistently and prove the same producer capture twice
 returns the same TableGit revision, not only identical exported rows.
+
+### Knowledge and operational evidence remain separate
+
+Keep reusable method guidance in Release and source/case-specific guidance in
+TableGit instance rows, with independent method revision, source revision, role
+and stage. Record findings for goal, repository semantics, program analysis,
+seed extraction, calibration and evaluation separately.
+
+The three initial knowledge snapshots contain Skills, analysis facts and frozen
+tasks; full historical gateway/native/source/build captures belong in runtime
+observation and payload tables. Preserve every raw byte. Return compact findings
+and explicit table/cut/row plus published archive references to the knowledge
+seed. Publish the complete runtime export independently when reproducible raw
+evidence is needed. Never inflate the seed with repeated cumulative event payloads.
+Use stable IDs and stable export order; prove file reconstruction and unchanged
+repeat import before publishing. See [the executable experiment](../../examples/knowledge-seed/subject/README.md).
+
+Choose explicit indexes for actual queries (run, phase, kind, tool, file, cut and
+ordinal); do not auto-index every scalar field. Structured retention and indexing
+are different concerns. Keep full data while selecting useful query projections.

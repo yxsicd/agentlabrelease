@@ -235,6 +235,21 @@ def main():
             capture_revision=final_revision
             save(evidence/'knowledge-roundtrip.json',roundtrip)
             summary['checks']['knowledge_analysis_archived_and_jsonl_roundtrip']=True
+            # Consume the shipped Harmony seed, rather than only a freshly built fixture.
+            published=REPO/'examples/knowledge-seed/seeds/harmony-code-workshop'
+            seed_prefix='published-harmony/'
+            published_revision,changed=knowledge.import_snapshot(service,first['binding']['repositoryId'],capture_worktree,published,seed_prefix,True)
+            expected=knowledge.load_snapshot(published)
+            for table,seed_rows in expected.items():
+                assert knowledge.read(service,first['binding']['repositoryId'],published_revision,seed_prefix+table)=={row['id']:row for row in seed_rows}
+            repeated_revision,repeated_changes=knowledge.import_snapshot(service,first['binding']['repositoryId'],capture_worktree,published,seed_prefix)
+            assert (repeated_revision,repeated_changes)==(published_revision,0)
+            published_export=knowledge.export(service,first['binding']['repositoryId'],published_revision,evidence/'published-harmony-export',seed_prefix)
+            source_export=json.loads((published/'export.json').read_text())
+            assert published_export['tables']==source_export['tables']
+            save(evidence/'published-harmony-import.json',dict(sourceExport=source_export,importRevision=published_revision,insertedRows=changed,exactRows=True,stableExport=True,repeatedImportUnchanged=True))
+            summary['checks']['published_harmony_seed_exact_import_and_repeat']=True
+            capture_revision=published_revision
         checks = summary["checks"]
         checks["template_qualification"] = qualification["status"] == "qualified"
         checks["concurrent_session_creation_replayed"] = first["concurrentReplay"] is True
