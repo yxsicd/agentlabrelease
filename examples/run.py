@@ -25,7 +25,7 @@ def acquire(lock_path, destination):
                 and sha256(destination) == lock["sha256"])
     if not valid():
         partial = destination.with_suffix(".partial")
-        subprocess.run(["curl", "-fL", "--retry", "3", "--connect-timeout", "20",
+        subprocess.run(["curl", "-fL", "--retry", "3", "--retry-all-errors", "--connect-timeout", "20",
                         "--output", str(partial), lock["artifact"]], check=True)
         if partial.stat().st_size != lock["bytes"] or sha256(partial) != lock["sha256"]:
             raise RuntimeError("download does not match the committed dependency lock")

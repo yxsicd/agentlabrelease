@@ -70,3 +70,9 @@ lessons. Frozen operational knowledge must remain unchanged after promotion.
 Replay raw Release archives or original subject artifacts without redispatching
 Agent/build; preserve original capture identity and HAP URIs. Temporary mutation
 source trees stay outside exported calibration receipts and reusable JSONLs.
+
+
+A fresh runner can encounter a connection reset while downloading an already
+published dependency. Retain the failed acquisition receipt; retry transport
+errors in the shared downloader rather than changing locks or treating the
+network failure as an assessed Agent failure. Keep dependency identities fixed.
