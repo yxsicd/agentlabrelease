@@ -234,5 +234,13 @@ fn preserves_multiple_observed_sources_and_empty_agent_capture() {
             "string"
         );
     }
+    assert_eq!(
+        manifest["tables"]["context_changes"]["definition"]["fields"]["beforeMessageId"]["type"],
+        "string"
+    );
+    assert_eq!(
+        manifest["tables"]["tool_calls"]["definition"]["fields"]["isError"]["type"],
+        "boolean"
+    );
     fs::remove_dir_all(root).unwrap();
 }

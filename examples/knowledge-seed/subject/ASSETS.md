@@ -65,3 +65,10 @@ Historical source head/commit maps export as `source_context_heads` and
 `source_context_commits`. They preserve source provenance; a new repository
 replays context versions into its own heads/commits rather than treating foreign
 commit IDs as local history. Repeated import reuses only that target's own maps.
+
+Nullable reference columns and empty entity tables keep owned analytical column
+types. Context before/after message IDs, check outcomes, tool result/error fields
+and phase/attempt references do not disappear from definitions when a campaign
+only appends messages or has no tool errors. Runtime exports retain null values;
+explicit known types live with the Rust exchange schema, shared by local and
+Action execution. Regression tests cover a null-only reference and empty checks.

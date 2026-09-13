@@ -43,6 +43,49 @@ pub fn export(path: &Path, class: &str, tables: &Tables) -> Value {
             "assetClass".into(),
             json!({"type":"string","required":false}),
         );
+        // Owned nullable/empty-entity columns cannot depend on this run's values.
+        let contracts: &[(&str, &str)] = match name.as_str() {
+            "context_changes" => &[
+                ("beforeMessageId", "string"),
+                ("afterMessageId", "string"),
+                ("kind", "string"),
+                ("ordinal", "integer"),
+            ],
+            "context_versions" => &[
+                ("attemptId", "string"),
+                ("direction", "string"),
+                ("sequence", "integer"),
+                ("messageIds", "array"),
+            ],
+            "message_contents" => &[("role", "string"), ("message", "object")],
+            "tool_calls" => &[
+                ("isError", "boolean"),
+                ("phaseId", "string"),
+                ("arguments", "object"),
+                ("result", "object"),
+            ],
+            "checks" => &[
+                ("phaseId", "string"),
+                ("check", "string"),
+                ("passed", "boolean"),
+            ],
+            "assessments" => &[
+                ("phaseId", "string"),
+                ("buildPassed", "boolean"),
+                ("behaviorPassed", "boolean"),
+                ("sourceCut", "string"),
+            ],
+            "attempts" => &[("parentAttemptId", "string"), ("forkScope", "string")],
+            "llm_requests" => &[
+                ("phaseId", "string"),
+                ("status", "integer"),
+                ("model", "string"),
+            ],
+            _ => &[],
+        };
+        for (key, ty) in contracts {
+            fields.insert((*key).into(), json!({"type":ty,"required":false}));
+        }
         for row in rows.values() {
             serde_json::to_writer(&mut raw, row).unwrap();
             raw.push(b'\n');
@@ -101,4 +144,38 @@ pub fn export(path: &Path, class: &str, tables: &Tables) -> Value {
     )
     .unwrap();
     receipt
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn null_only_references_and_empty_checks_keep_owned_types() {
+        let path = std::env::temp_dir().join(format!(
+            "al-null-schema-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let mut tables = Tables::new();
+        put(
+            &mut tables,
+            "context_changes",
+            json!({"id":"append","assetClass":"evaluation-instance","beforeMessageId":null,"afterMessageId":"message"}),
+        );
+        tables.entry("checks".into()).or_default();
+        let receipt = export(&path, "evaluation-instance", &tables);
+        assert_eq!(
+            receipt["tables"]["context_changes"]["definition"]["fields"]["beforeMessageId"]["type"],
+            "string"
+        );
+        assert_eq!(
+            receipt["tables"]["checks"]["definition"]["fields"]["passed"]["type"],
+            "boolean"
+        );
+        assert!(rows(&path.join("context_changes.jsonl"))[0]["beforeMessageId"].is_null());
+        fs::remove_dir_all(path).unwrap();
+    }
 }
