@@ -37,8 +37,9 @@ No fixed-channel or device promotion follows from this recovery demo.
 Read [channel-validation.md](../../docs/channel-validation.md) for the selective
 `aldev → almain → alprod` policy. Fresh-runner validation freezes one exact
 composition. The plan workflow checks lineage, then a separate fresh runner executes frozen
-component demos and retains target-bound check receipts. Unconnected deeper
-tier checks remain not_run and prevent qualification. It does not activate channels.
+component demos and retains target-bound check receipts. Prod invokes the real-Agent workflow against the same frozen composition, then
+closes all required verdicts. Selective promotion prepares immutable metadata;
+fixed activation is explicit and retains formal deployment gates.
 
 ## Start
 
