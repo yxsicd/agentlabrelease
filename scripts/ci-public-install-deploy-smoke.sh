@@ -113,12 +113,8 @@ print(json.dumps({
 PY
 
 source_revision="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["sourceRevision"])' "${lock}")"
-source_short="${source_revision:0:8}"
-# A component-only candidate can reuse the exact published controller declared
-# by its publication. Controller version and runtime version are independent.
-if [[ -n "${AGENTLAB_COMPOSITION_DIR:-}" ]]; then
-  source_short="$(python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); print(p["controllerSourceShort"])' "${publication}")"
-fi
+# Runtime and controller are independent in every acquisition mode.
+source_short="$(python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); print(p.get("controllerSourceShort",p["sourceRevision"][:8]))' "${publication}")"
 control_release="${downloads}/matching-control-release.json"
 control_api="https://api.github.com/repos/${repo}/releases/tags/control-${source_short}-linux-x64"
 if [[ -n "${GITHUB_TOKEN:-}" ]]; then
