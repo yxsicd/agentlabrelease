@@ -58,8 +58,14 @@ if [[ -n "${AGENTLAB_COMPOSITION_DIR:-}" ]]; then
   cp "${AGENTLAB_COMPOSITION_DIR}/environment-lock.json" "${lock}"
   cp "${AGENTLAB_COMPOSITION_DIR}/publication.json" "${publication}"
 else
-  download "${release_url}/${channel}/agentlab-${channel}-environment-lock.json" "${lock}"
   download "${release_url}/${channel}/agentlab-${channel}-publication.json" "${publication}"
+  lock_url="$(python3 - "$publication" "${release_url}/${channel}/agentlab-${channel}-publication.json" <<'PYURL'
+import json, sys, urllib.parse
+p=json.load(open(sys.argv[1]))
+print(urllib.parse.urljoin(sys.argv[2], p['environmentLockUrl']) if p.get('environmentLockUrl') else sys.argv[2].replace('-publication.json', '-environment-lock.json'))
+PYURL
+  )"
+  download "$lock_url" "${lock}"
 fi
 
 python3 - "${repo}" "${channel}" "${lock}" "${publication}" <<'PY'
@@ -75,6 +81,10 @@ assert lock["schema"] == "agentlab.environment_lock.v3"
 if publication["status"] == "candidate":
     assert publication["schema"] == "agentlab.reference_publication.v1"
     assert publication["tag"] == channel
+elif publication["schema"] == "agentlab.reference_publication.v3":
+    assert publication["status"] == "qualified"
+    assert publication["tag"] == channel
+    assert all(value == "passed" for value in publication["gates"].values())
 else:
     assert lock["tier"] == "prod"
     assert publication["schema"] == "agentlab.reference_publication.v2"

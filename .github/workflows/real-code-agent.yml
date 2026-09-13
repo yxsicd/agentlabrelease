@@ -12,13 +12,33 @@ on:
         required: true
         default: glm
         type: string
+      plan_run_id:
+        description: Frozen channel-plan run to consume (optional for standalone acceptance)
+        required: false
+        default: ""
+        type: string
       capture_run_id:
         description: Reuse complete or partial capture from a previous trusted main run without redispatching Pi
         required: false
         default: ""
         type: string
+  workflow_call:
+    inputs:
+      plan_run_id:
+        type: string
+        required: true
+      model:
+        type: string
+        default: glm-5.3-flash
+      provider_route:
+        type: string
+        default: glm
+    secrets:
+      AGENTLAB_LM_GATEWAY_KEY:
+        required: true
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: real-code-agent-acceptance
   cancel-in-progress: false
@@ -35,6 +55,20 @@ jobs:
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Load one frozen composition
+        id: composition
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLAN_RUN_ID: ${{ inputs.plan_run_id }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/real-composition"
+          if [[ -n "$PLAN_RUN_ID" ]]; then
+            gh run download "$PLAN_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+              --name channel-validation-plan --dir "$RUNNER_TEMP/real-composition"
+          else
+            cp release/candidates/40ecdf4b-linux-x64/{publication,environment-lock}.json "$RUNNER_TEMP/real-composition/"
+          fi
+          python3 scripts/channel-input.py --source "$RUNNER_TEMP/real-composition" --output "$GITHUB_OUTPUT"
       - name: Install archive support
         run: |
           sudo apt-get update
@@ -74,11 +108,12 @@ jobs:
       - name: Acquire and install published AgentLab components
         id: install
         env:
-          AGENTLAB_RELEASE_CHANNEL: candidate-20260913-40ecdf4b-sdk-c075105a-linux-x64
-          AGENTLAB_COMPOSITION_DIR: release/candidates/40ecdf4b-linux-x64
+          AGENTLAB_RELEASE_CHANNEL: ${{ steps.composition.outputs.channel }}
+          AGENTLAB_COMPOSITION_DIR: ${{ runner.temp }}/real-composition
           GITHUB_TOKEN: ${{ github.token }}
         run: scripts/ci-public-install-deploy-smoke.sh
-      - name: Run real Pi with the public LM Gateway and independently compile every edit
+      - id: subject
+        name: Run real Pi with the public LM Gateway and independently compile every edit
         if: inputs.capture_run_id == ''
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
@@ -89,7 +124,8 @@ jobs:
             --agent-bin "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" \
             --gateway-url "$AGENTLAB_LM_GATEWAY_URL" --model "$AGENTLAB_MODEL" \
             --provider-route "$AGENTLAB_PROVIDER_ROUTE"
-      - name: Persist actual capture to TableGit and recover after storage restart
+      - id: persistence
+        name: Persist actual capture to TableGit and recover after storage restart
         if: always() && steps.install.outcome == 'success'
         env:
           AGENTLAB_CAPTURE_PRODUCER_REVISION: ${{ steps.replay.outputs.producer_revision }}
@@ -97,15 +133,25 @@ jobs:
         run: |
           mapfile -t runtime < <(python3 - <<'PYCODE'
           import json
-          lock = json.load(open("release/candidates/40ecdf4b-linux-x64/environment-lock.json"))
+          import os
+          lock = json.load(open(os.environ["RUNNER_TEMP"] + "/real-composition/environment-lock.json"))
           print(lock["images"][0]["reference"])
           print(next(c["volume"] for c in lock["components"] if c["slot"] == "release"))
           PYCODE
           )
           /usr/bin/python3 examples/tablegit-session/run.py \
             --image "${runtime[0]}" --runtime-volume "${runtime[1]}" \
+            --sdk-program "$RUNNER_TEMP/real-composition/session-sdk.json" \
             --root "$AGENTLAB_CI_ROOT/real-tablegit" \
             --capture-evidence "$AGENTLAB_CI_ROOT/real-agent/evidence"
+      - name: Record the actual frozen-plan real-Agent check
+        if: always() && inputs.plan_run_id != ''
+        env:
+          SUBJECT_OUTCOME: ${{ steps.subject.outcome }}
+          PERSISTENCE_OUTCOME: ${{ steps.persistence.outcome }}
+          CAPTURE_RUN_ID: ${{ inputs.capture_run_id }}
+        run: |
+          python3 scripts/channel-real-receipt.py --source "$RUNNER_TEMP/real-composition" --root "$AGENTLAB_CI_ROOT"
       - name: Explain actual acceptance results
         if: always()
         run: python3 scripts/demo-summary.py "$AGENTLAB_CI_ROOT" >> "$GITHUB_STEP_SUMMARY"

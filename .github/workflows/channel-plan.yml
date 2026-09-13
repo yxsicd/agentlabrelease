@@ -7,12 +7,17 @@ on:
         type: choice
         options: [aldev, almain, alprod]
         default: aldev
+      upstream_release:
+        description: Optional immutable qualified upstream release tag; blank selects the fixed upstream channel
+        type: string
+        default: ""
       candidate:
         description: Candidate directory name for aldev only
         type: string
         default: 40ecdf4b-linux-x64
 permissions:
   contents: read
+  actions: read
 jobs:
   freeze:
     if: github.ref == 'refs/heads/main'
@@ -23,6 +28,7 @@ jobs:
         env:
           TARGET: ${{ inputs.target }}
           CANDIDATE: ${{ inputs.candidate }}
+          UPSTREAM_RELEASE: ${{ inputs.upstream_release }}
         run: |
           mkdir -p "$RUNNER_TEMP/channel-source"
           python3 - <<'PY'
@@ -36,9 +42,19 @@ jobs:
               for f in ['environment-lock.json','publication.json']:shutil.copyfile(source/f,root/f)
           else:
               parent={'almain':'aldev','alprod':'almain'}[target]
-              base='https://github.com/'+os.environ['GITHUB_REPOSITORY']+'/releases/download/'+parent+'/'
-              for f in ['environment-lock.json','publication.json']:
-                  (root/f).write_bytes(urllib.request.urlopen(base+'agentlab-'+parent+'-'+f,timeout=30).read())
+              selected=os.environ['UPSTREAM_RELEASE'] or parent
+              base='https://github.com/'+os.environ['GITHUB_REPOSITORY']+'/releases/download/'+selected+'/'
+              name='publication.json' if os.environ['UPSTREAM_RELEASE'] else 'agentlab-'+parent+'-publication.json'
+              raw=urllib.request.urlopen(base+name,timeout=30).read()
+              (root/'publication.json').write_bytes(raw)
+              import json, urllib.parse
+              publication=json.loads(raw)
+              uri=publication.get('environmentLockUrl')
+              if uri:
+                  url=urllib.parse.urljoin(base+name,uri)
+              else:
+                  url=base+'agentlab-'+parent+'-environment-lock.json'
+              (root/'environment-lock.json').write_bytes(urllib.request.urlopen(url,timeout=30).read())
           PY
           python3 scripts/channel-plan.py --target "$TARGET" \
             --publication "$RUNNER_TEMP/channel-source/publication.json" \
@@ -87,3 +103,28 @@ jobs:
             /tmp/agentlab-channel-validation/tablegit-demo/evidence-*/
             /tmp/agentlab-channel-validation/tablegit-repeat/evidence-*/
             /tmp/agentlab-channel-validation/harmony-build-demo/evidence/
+  real-agent:
+    needs: freeze
+    if: inputs.target == 'alprod'
+    uses: ./.github/workflows/real-code-agent.yml
+    with:
+      plan_run_id: ${{ github.run_id }}
+    secrets: inherit
+  qualify:
+    needs: [freeze, validate, real-agent]
+    if: always() && needs.freeze.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: ${{ runner.temp }}/channel-results
+      - name: Close the required-check verdicts against the original plan
+        run: python3 scripts/channel-qualify.py --root "$RUNNER_TEMP/channel-results"
+      - name: Preserve final qualification, including incomplete and failed results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: channel-qualification
+          path: ${{ runner.temp }}/channel-results/qualification.json
+          if-no-files-found: error

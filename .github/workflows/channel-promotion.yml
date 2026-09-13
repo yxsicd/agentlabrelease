@@ -1,0 +1,74 @@
+name: Prepare or activate qualified channel
+on:
+  workflow_dispatch:
+    inputs:
+      qualification_run_id:
+        description: Successful frozen channel qualification run to select
+        type: string
+        required: true
+      activate:
+        description: Explicitly switch the fixed pointer after existing deployment gates pass
+        type: boolean
+        default: false
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: channel-promotion
+  cancel-in-progress: false
+jobs:
+  promote:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Load and prepare the selected successful cut
+        id: cut
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.qualification_run_id }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN" > "$RUNNER_TEMP/source-run.json"
+          python3 - <<'PY'
+          import json, os
+          run=json.load(open(os.environ['RUNNER_TEMP']+'/source-run.json'))
+          assert run['head_branch']=='main' and run['path']=='.github/workflows/channel-plan.yml' and run['conclusion']=='success'
+          PY
+          gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" --name channel-validation-plan --dir "$RUNNER_TEMP/source"
+          gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" --name channel-qualification --dir "$RUNNER_TEMP/result"
+          tag=$(python3 scripts/channel-promotion.py --source "$RUNNER_TEMP/source" \
+            --qualification "$RUNNER_TEMP/result/qualification.json" --repository "$GITHUB_REPOSITORY" --output "$RUNNER_TEMP/cut")
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - name: Publish immutable qualification metadata without duplicating component packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CUT_TAG: ${{ steps.cut.outputs.tag }}
+        run: |
+          if gh release view "$CUT_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release download "$CUT_TAG" --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/existing"
+            for file in environment-lock.json publication.json qualification.json; do
+              cmp "$RUNNER_TEMP/cut/$file" "$RUNNER_TEMP/existing/$file"
+            done
+          else
+            gh release create "$CUT_TAG" "$RUNNER_TEMP/cut/"*.json --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --title "$CUT_TAG" --notes "Qualified reference composition; component packages reused. Fixed channel not automatically activated."
+          fi
+      - name: Prepare and verify the explicit fixed-pointer switch
+        if: inputs.activate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/channel-activate.py --cut "$RUNNER_TEMP/cut" --repository "$GITHUB_REPOSITORY" --output "$RUNNER_TEMP/activation"
+          channel=$(python3 -c 'import json,os; print(json.load(open(os.environ["RUNNER_TEMP"]+"/cut/publication.json"))["tag"])')
+          gh release upload "$channel" "$RUNNER_TEMP/activation/agentlab-$channel-publication.json" --repo "$GITHUB_REPOSITORY" --clobber
+          gh release download "$channel" --repo "$GITHUB_REPOSITORY" --pattern "agentlab-$channel-publication.json" --dir "$RUNNER_TEMP/readback"
+          cmp "$RUNNER_TEMP/activation/agentlab-$channel-publication.json" "$RUNNER_TEMP/readback/agentlab-$channel-publication.json"
+      - name: Retain prepared metadata and activation result
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: channel-promotion
+          path: |
+            ${{ runner.temp }}/cut/
+            ${{ runner.temp }}/activation/
+            ${{ runner.temp }}/source-run.json
