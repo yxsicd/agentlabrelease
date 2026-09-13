@@ -229,18 +229,29 @@ fn instance(root: &Path, run: &str, archive: &str) -> Tables {
             for line in response_raw.split(|b| *b == b'\n') {
                 if let Some(data) = line.strip_prefix(b"data:") {
                     let data = String::from_utf8_lossy(data);
-                    if data.trim() == "[DONE]" { semantic_complete = true; }
-                    else if let Ok(event) = serde_json::from_str::<Value>(data.trim()) {
-                        semantic_complete |= event["choices"].as_array().is_some_and(|choices| choices.iter().any(|c| c["finish_reason"].is_string()));
-                        if !event["error"].is_null() { stream_error = event["error"].clone(); }
+                    if data.trim() == "[DONE]" {
+                        semantic_complete = true;
+                    } else if let Ok(event) = serde_json::from_str::<Value>(data.trim()) {
+                        semantic_complete |= event["choices"].as_array().is_some_and(|choices| {
+                            choices.iter().any(|c| c["finish_reason"].is_string())
+                        });
+                        if !event["error"].is_null() {
+                            stream_error = event["error"].clone();
+                        }
                     }
                 }
             }
             let completion = if request["stream"] == true {
-                if !stream_error.is_null() { "stream_error" }
-                else if semantic_complete { "completed" }
-                else { "incomplete_stream" }
-            } else { status["outcome"].as_str().unwrap_or("unknown") };
+                if !stream_error.is_null() {
+                    "stream_error"
+                } else if semantic_complete {
+                    "completed"
+                } else {
+                    "incomplete_stream"
+                }
+            } else {
+                status["outcome"].as_str().unwrap_or("unknown")
+            };
             put(
                 &mut t,
                 "llm_requests",

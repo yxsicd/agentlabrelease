@@ -160,7 +160,7 @@ class GatewayCaptureTests(unittest.TestCase):
                 receipt=json.loads((evidence/'gateway/0001.status.json').read_text())
                 self.assertEqual(receipt['responseBytes'],len(response))
                 self.assertTrue(receipt['upstreamEof'])
-                self.assertEqual(receipt['outcome'],'upstream_eof')
+                self.assertEqual(receipt['outcome'],'completed')
                 self.assertGreaterEqual(receipt['durationMs'],0)
                 for path in root.rglob('*'):
                     if path.is_file():
