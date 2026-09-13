@@ -1,14 +1,14 @@
 // Local/CI calibration only. No subject dispatch and no assessed workspace repair.
 const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process'),crypto=require('node:crypto');
 const [source,reference,output]=process.argv.slice(2);if(!source||!reference||!output)throw Error('usage: SOURCE REFERENCE FRESH_OUTPUT');
-fs.mkdirSync(output);const digest=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+fs.mkdirSync(output);const working=output+'-variants';fs.mkdirSync(working);const digest=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const summary={schema:'agentlab.utility_calibration.v1',sourceRevision:cp.execFileSync('git',['-C',source,'rev-parse','HEAD'],{encoding:'utf8'}).trim(),cases:{},actualAgentQualified:false,fullPhoneBuildQualified:false};
 for(const scenario of ['debounce','image-url']){
  const root=path.join(output,scenario);fs.mkdirSync(root);
  const oracle=path.join(__dirname,scenario+'.cjs');
  const variants={baseline:{directory:source,expected:false},reference:{directory:reference,expected:true}};
  const definitions=scenario==='debounce'?[['wrong-boundary','common/src/main/ets/util/DebounceUtil.ets','lastClickTime < wait','lastClickTime <= wait'],['wrong-window','common/src/main/ets/util/DebounceUtil.ets','        return;','        lastClickTime = now;\n        return;']]:[['wrong-protocol','common/src/main/ets/util/UrlUtil.ets',"parsed.hostname.length > 0","true"],['wrong-dispatch','common/src/main/ets/util/ImageUtil.ets','if (UrlUtil.isNetUrl(url))','if (false)']];
- for(const [name,file,before,after] of definitions){const directory=path.join(root,name);fs.mkdirSync(directory);for(const subtree of ['common','features'])fs.cpSync(path.join(reference,subtree),path.join(directory,subtree),{recursive:true});const target=path.join(directory,file),raw=fs.readFileSync(target,'utf8');if(!raw.includes(before))throw Error('Negative mutation anchor missing '+name);fs.writeFileSync(target,raw.replace(before,after));variants[name]={directory,expected:false};}
+ for(const [name,file,before,after] of definitions){const directory=path.join(working,scenario,name);fs.mkdirSync(directory,{recursive:true});const observedFiles=scenario==='debounce'?['common/src/main/ets/util/DebounceUtil.ets','features/componentlibrary/src/main/ets/view/ComponentBaseView.ets']:['common/src/main/ets/util/UrlUtil.ets','common/src/main/ets/util/ImageUtil.ets','common/src/main/ets/component/ImageComponent.ets','features/devpractices/src/main/ets/view/ImagePreview.ets'];for(const file of observedFiles){const target=path.join(directory,file);fs.mkdirSync(path.dirname(target),{recursive:true});fs.copyFileSync(path.join(reference,file),target);}const target=path.join(directory,file),raw=fs.readFileSync(target,'utf8');if(!raw.includes(before))throw Error('Negative mutation anchor missing '+name);fs.writeFileSync(target,raw.replace(before,after));variants[name]={directory,expected:false};}
  // A missing-host parser result isolates the predicate guard: the platform seam
  // normally rejects https:// before this guard. Use a malformed protocol variant
  // instead, keeping the actual body and the same modeled parser for every variant.
