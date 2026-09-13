@@ -168,3 +168,29 @@ from syntax parsing. See the Rust crate README for the one stateStyles grammar
 coverage gap and subsequent type/call/dataflow work.
 
 New maintainers start with [the apprentice workflow](../../skills/agentlab-skill-methodology/references/apprentice-workflow.md), then follow method and target-instance Skills for the selected stage.
+
+## Real typed-controller materialization and compilation
+
+`agentlab-harmony-materialize` is a Rust fixed-source reference generator, not a
+generic refactoring engine. It archives committed source bytes, patches actual
+FeedbackSheet/PageContext/PracticeHomeView and emits before/after hashes plus a
+reusable reference.patch. Original source SDK targets stay unchanged. It also
+creates a bounded Stage project with original typed controller/reset bodies,
+FeedbackData, PageEnum and Logger. Host UI, async backend and Toast replacements
+are explicitly listed in materialization.json; slice compilation cannot qualify
+the full source or device interactions.
+
+```sh
+cargo run --locked -p agentlab_code_analysis --bin agentlab-harmony-materialize -- "$PINNED_SOURCE" "$CASE_ROOT" examples/harmony-build/seed
+python3 examples/knowledge-seed/flywheel/build-controllers.py --install-root "$INSTALL_ROOT" --root "$CASE_ROOT"
+```
+
+Dispatch harmony-controllers.yml on main. The same local/CI runner preserves the
+full patched project build result, then compiles real typed controllers, requires
+rejection of an invalid State field type despite the previous HAP, restores the
+source and recompiles. Complete native build logs, inputs, patches, receipts and
+HAP bytes remain artifacts on failure too. Current offline build-kit requires an
+OHPM dependency seed for dependent projects; the original code-workshop has such
+dependencies. Inspect fullSourceBlocker separately from sliceCompilationQualified.
+Neither a slice pass nor a source-verified caller proves full original UI behavior,
+real assessed-Agent execution or formal SessionFS/Fork acceptance.

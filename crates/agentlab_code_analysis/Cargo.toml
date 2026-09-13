@@ -3,10 +3,15 @@ name = "agentlab_code_analysis"
 version = "0.1.0"
 edition = "2021"
 publish = false
+default-run = "agentlab-code-analysis"
 
 [[bin]]
 name = "agentlab-code-analysis"
 path = "src/main.rs"
+
+[[bin]]
+name = "agentlab-harmony-materialize"
+path = "src/harmony_materialize.rs"
 
 [dependencies]
 tree-sitter = "=0.27.0"

@@ -1,0 +1,41 @@
+name: Fixed-source Harmony controller compilation
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compile:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      AGENTLAB_CI_ROOT: /tmp/agentlab-harmony-controllers
+      AGENTLAB_RELEASE_CHANNEL: candidate-20260913-40ecdf4b-sdk-c075105a-linux-x64
+      AGENTLAB_COMPOSITION_DIR: release/candidates/40ecdf4b-linux-x64
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Fetch pinned challenge source and materialize real patches and derived slice
+        run: |
+          git clone --no-checkout --depth 1 https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git "$RUNNER_TEMP/source"
+          git -C "$RUNNER_TEMP/source" fetch --depth 1 origin 7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6
+          git -C "$RUNNER_TEMP/source" checkout --detach FETCH_HEAD
+          cargo run --locked -p agentlab_code_analysis --bin agentlab-harmony-materialize -- "$RUNNER_TEMP/source" "$AGENTLAB_CI_ROOT/case" examples/harmony-build/seed
+      - name: Install published components
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes zstd
+          scripts/ci-public-install-deploy-smoke.sh
+      - name: Probe full source, compile typed controllers, reject invalid type and recover
+        run: python3 examples/knowledge-seed/flywheel/build-controllers.py --install-root "$AGENTLAB_CI_ROOT" --root "$AGENTLAB_CI_ROOT/case"
+      - name: Preserve full failures, source patches, slice inputs, logs and HAP bytes
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: harmony-controller-compilation
+          path: |
+            ${{ env.AGENTLAB_CI_ROOT }}/case/evidence/
+            ${{ env.AGENTLAB_CI_ROOT }}/case/materialization.json
+            ${{ env.AGENTLAB_CI_ROOT }}/case/reference.patch
+            ${{ env.AGENTLAB_CI_ROOT }}/case/before/

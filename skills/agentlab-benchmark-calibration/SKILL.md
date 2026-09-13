@@ -39,3 +39,11 @@ For navigation outcome extensions, validate stack and animation behavior as well
 as success/failure returns. A wrong push-for-replace variant can pass return tests
 while corrupting the stack. Source-verifying a caller is not implementing or
 executing its outcome mapping; leave that turn explicitly unqualified.
+
+Typed controller integration uses the Rust materializer and harmony-controllers
+Action documented in the knowledge example. Preserve original-source patches and
+SDK targets, probe the full project, then use an explicitly derived slice when
+the environment cannot yet build its dependencies. Real compiler receipts/HAP
+checks, invalid-type rejection and repair qualify the slice only. Keep dependency
+seed gaps and replaced host/backend/UI behavior in structured records and instance
+Skills; a passing derived build never overwrites the full-project failure.
