@@ -37,3 +37,33 @@ class AgentDraftTest(unittest.TestCase):
             self.assertFalse(result['semanticKnowledgeVerified'])
             self.assertTrue(all(u['fields']['body']=='Caller-aware maintainer workflow' for u in result['updates']))
             with self.assertRaises(ValueError): adapter.apply_draft(package,{'skills':[{'id':'invented','body':'x'}]})
+
+store_spec=importlib.util.spec_from_file_location('knowledge_store',Path(__file__).parents[1]/'examples/knowledge-seed/store.py')
+store=importlib.util.module_from_spec(store_spec);store_spec.loader.exec_module(store)
+
+class SnapshotTest(unittest.TestCase):
+    def test_paging_stays_at_one_revision(self):
+        class Pages:
+            def call(self,method,payload):
+                self_revision=payload['view']['revision']
+                offset=payload['offset']
+                return {'revision':self_revision,'dirty':False,'truncated':offset==0,'rows':[{'key':str(offset),'row':{'id':str(offset)},'deleted':False,'row_version':4}]}
+        self.assertEqual(set(store.read(Pages(),'repo','cut','table')),{'0','1'})
+
+    def test_snapshot_reimport_uses_actual_versions_and_skips_equal_rows(self):
+        class Rows:
+            def __init__(self,tables): self.tables=tables;self.operations=[]
+            def call(self,method,payload):
+                if method=='table.worktree.open': return {'revision':'cut'}
+                if method=='table.query':return {'revision':'cut','dirty':False,'truncated':False,'rows':[{'key':k,'row':row,'deleted':False,'row_version':9} for k,row in self.tables[payload['path']].items()]}
+                if method=='table.transact_many':
+                    self.operations.extend(payload['tables']);return {'applied':True,'conflicts':[],'revision':'new-cut'}
+                raise AssertionError(method)
+        with tempfile.TemporaryDirectory() as temp:
+            tables={t:{'x':{'id':'x','body':'new'}} for t in store.TABLES}
+            source=Rows(tables);store.export(source,'repo','cut',temp)
+            same=Rows(tables);self.assertEqual(store.import_snapshot(same,'repo',{},temp),('cut',0));self.assertFalse(same.operations)
+            different={t:dict(rows) for t,rows in tables.items()};different['maintainer_skills']={'x':{'id':'x','body':'old'}};different['program_facts']['obsolete']={'id':'obsolete'}
+            target=Rows(different);self.assertEqual(store.import_snapshot(target,'repo',{},temp),('new-cut',2))
+            ops=[op for group in target.operations for op in group['operations']]
+            self.assertEqual({op['op'] for op in ops},{'update','delete'});self.assertTrue(all(op['expected_row_version']==9 for op in ops))
