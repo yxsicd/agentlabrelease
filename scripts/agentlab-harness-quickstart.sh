@@ -409,8 +409,21 @@ acquire_online_assets() {
     "${probe}" "${probe_sha}"
   if [[ ! -s "${lock}" ]]; then
     temporary_lock="${lock}.partial.$$"
-    curl -fL --retry 3 --connect-timeout 20 -o "${temporary_lock}" \
-      "https://github.com/${release_repo}/releases/download/aldev/agentlab-aldev-environment-lock.json"
+    publication="${downloads}/agentlab-aldev-publication.json"
+    publication_url="https://github.com/${release_repo}/releases/download/aldev/agentlab-aldev-publication.json"
+    curl -fL --retry 3 --connect-timeout 20 -o "$publication" "$publication_url"
+    lock_url="$(python3 - "$publication" "$publication_url" <<'PYLOCK'
+import json, sys, urllib.parse
+publication=json.load(open(sys.argv[1]))
+print(urllib.parse.urljoin(sys.argv[2], publication['environmentLockUrl']))
+PYLOCK
+    )"
+    curl -fL --retry 3 --connect-timeout 20 -o "${temporary_lock}" "$lock_url"
+    python3 - "$publication" "$temporary_lock" <<'PYLOCK'
+import hashlib, json, pathlib, sys
+publication=json.load(open(sys.argv[1]))
+assert hashlib.sha256(pathlib.Path(sys.argv[2]).read_bytes()).hexdigest()==publication['environmentLockSha256']
+PYLOCK
     mv -f -- "${temporary_lock}" "${lock}"
   fi
   if ! command -v agentlabctl >/dev/null 2>&1; then
