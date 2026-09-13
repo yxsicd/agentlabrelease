@@ -29,7 +29,7 @@ def persist(service,repo,worktree,package):
     baseline=revision
     grouped={}
     for update in package['updates']:
-        grouped.setdefault(update['table'],[]).append(dict(op='update',operation_id=str(uuid.uuid4()),key=update['id'],expected_row_version=1,field_updates=[dict(op='set',field=k,value=v) for k,v in update['fields'].items()]))
+        grouped.setdefault(update['table'],[]).append(dict(op='update',operation_id=str(uuid.uuid4()),key=update['id'],expected_row_version=1,field_updates=[dict(op='set',field='/'+k.replace('~','~0').replace('/','~1'),value=v) for k,v in update['fields'].items()]))
     transact([dict(path=t,operations=ops) for t,ops in grouped.items()])
     return dict(baselineRevision=baseline,updatedRevision=revision)
 

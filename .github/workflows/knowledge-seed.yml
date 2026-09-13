@@ -2,6 +2,10 @@ name: Engineering knowledge seed experiment
 on:
   workflow_dispatch:
     inputs:
+      capture_run_id:
+        type: string
+        default: ''
+        description: Re-ingest prior knowledge evidence without Agent redispatch
       builder:
         type: choice
         options: [mock, mini]
@@ -23,7 +27,26 @@ jobs:
       - name: Validate calibration and stable identities
         run: python3 -m unittest discover -s tests -p 'test_knowledge_seed.py'
       - name: Build structure, Skill rows, task and independent mutation calibration
+        if: inputs.capture_run_id == ''
         run: python3 examples/knowledge-seed/run.py --root "$AGENTLAB_CI_ROOT/builder"
+      - name: Restore original builder capture without redispatch
+        id: replay
+        if: inputs.capture_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CAPTURE_RUN_ID: ${{ inputs.capture_run_id }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN_ID" > "$RUNNER_TEMP/source-run.json"
+          gh run download "$CAPTURE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name engineering-knowledge-seed --dir "$RUNNER_TEMP/prior"
+          python3 - <<'PY'
+          import pathlib,json,os,shutil
+          prior=json.load(open(os.environ['RUNNER_TEMP']+'/source-run.json'))
+          assert prior['head_branch']=='main' and prior['path']=='.github/workflows/knowledge-seed.yml'
+          target=pathlib.Path(os.environ['AGENTLAB_CI_ROOT'])/'builder/evidence'
+          target.parent.mkdir(parents=True,exist_ok=True)
+          shutil.copytree(pathlib.Path(os.environ['RUNNER_TEMP'])/'prior/builder/evidence',target)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:out.write('producer_revision='+prior['head_sha']+'\n')
+          PY
       - name: Materialize receipt-bound SDK inputs
         run: python3 scripts/channel-input.py --source release/candidates/40ecdf4b-linux-x64 --output "$GITHUB_OUTPUT"
       - name: Install released AgentLab components
@@ -35,12 +58,12 @@ jobs:
           sudo apt-get install --yes zstd python3-websocket
           scripts/ci-public-install-deploy-smoke.sh
       - name: Install isolated builder runtime
-        if: inputs.builder == 'mini'
+        if: inputs.builder == 'mini' && inputs.capture_run_id == ''
         run: |
           python3 -m venv "$RUNNER_TEMP/mini-runtime"
           "$RUNNER_TEMP/mini-runtime/bin/pip" install -r examples/real-code-agent/participant/mini-requirements.lock
       - name: Build maintainer knowledge with a real Agent
-        if: inputs.builder == 'mini'
+        if: inputs.builder == 'mini' && inputs.capture_run_id == ''
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
           AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
@@ -48,6 +71,9 @@ jobs:
           python3 examples/knowledge-seed/agent_builder.py --root "$AGENTLAB_CI_ROOT/builder"             --agent-python "$RUNNER_TEMP/mini-runtime/bin/python" --gateway "$AGENTLAB_LM_GATEWAY_URL"
       - name: Persist knowledge rows, revise stable Skills and recover both versions
         if: steps.install.outcome == 'success'
+        env:
+          AGENTLAB_CAPTURE_PRODUCER_REVISION: ${{ steps.replay.outputs.producer_revision }}
+          AGENTLAB_CAPTURE_RUN_ID: ${{ inputs.capture_run_id }}
         run: |
           mapfile -t runtime < <(python3 - <<'PY'
           import json
