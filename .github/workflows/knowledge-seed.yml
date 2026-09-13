@@ -13,6 +13,11 @@ on:
         type: string
         default: ''
         description: Re-ingest prior knowledge evidence without Agent redispatch
+      source:
+        type: choice
+        options: [fixture, harmony]
+        default: fixture
+        description: Fixed Python fixture or pinned real Harmony code-workshop analysis
       builder:
         type: choice
         options: [mock, mini]
@@ -34,8 +39,15 @@ jobs:
       - name: Validate calibration and stable identities
         run: python3 -m unittest discover -s tests -p 'test_knowledge_seed.py'
       - name: Build structure, Skill rows, task and independent mutation calibration
-        if: inputs.capture_run_id == ''
+        if: inputs.capture_run_id == '' && inputs.source != 'harmony'
         run: python3 examples/knowledge-seed/run.py --root "$AGENTLAB_CI_ROOT/builder"
+      - name: Construct and independently calibrate pinned Harmony knowledge
+        if: inputs.capture_run_id == '' && inputs.source == 'harmony'
+        run: |
+          git clone --no-checkout --depth 1 https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git "$RUNNER_TEMP/harmony-source"
+          git -C "$RUNNER_TEMP/harmony-source" fetch --depth 1 origin 7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6
+          git -C "$RUNNER_TEMP/harmony-source" checkout --detach FETCH_HEAD
+          python3 examples/knowledge-seed/flywheel/run.py --source "$RUNNER_TEMP/harmony-source" --root "$AGENTLAB_CI_ROOT/builder"
       - name: Restore original builder capture without redispatch
         id: replay
         if: inputs.capture_run_id != ''

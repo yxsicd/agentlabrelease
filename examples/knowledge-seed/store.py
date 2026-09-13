@@ -74,11 +74,12 @@ def verify(service,repo,package,cuts):
     for t in TABLES: assert read(service,repo,cuts['updatedRevision'],t)==expected[t]
     return dict(**cuts,exactHistoricalRows=True,exactUpdatedRows=True,stableSkillIds=True,fullWhiteboxQualified=False)
 
-def export(service,repo,revision,destination):
+def export(service,repo,revision,destination,prefix=''):
     destination=Path(destination);destination.mkdir(parents=True,exist_ok=True)
     receipt=dict(schema='agentlab.knowledge_export.v1',repository=repo,revision=revision,tables={})
+    if prefix: receipt['tablePrefix']=prefix
     for table in TABLES:
-        rows=read(service,repo,revision,table)
+        rows=read(service,repo,revision,prefix+table)
         raw=''.join(json.dumps(rows[k],ensure_ascii=False,sort_keys=True,separators=(',',':'))+'\n' for k in sorted(rows)).encode()
         (destination/(table+'.jsonl')).write_bytes(raw)
         receipt['tables'][table]=dict(rowCount=len(rows),sha256=hashlib.sha256(raw).hexdigest())

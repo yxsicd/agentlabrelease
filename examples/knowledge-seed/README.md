@@ -89,3 +89,40 @@ The target codebase maintainer Skills are business rows in `maintainer_skills`;
 the three JSONL files remain exported data snapshots, not copies of the process
 library or a second editable authority. Assessment feedback informs a later
 maintenance cut, preserving the current assessment inputs.
+
+## First real Harmony construction round
+
+`seeds/harmony-code-workshop/` is a three-table snapshot exported from real
+TableGit namespace `flywheel/harmony/`: five semantic Skills, 92 program/analysis
+facts and six task/calibration rows. Source is pinned to code-workshop commit
+`7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6`. Imports are lexical paths in 15 selected
+files; external package aliases and symbol/runtime calls remain unresolved.
+
+Five candidates cover feedback, delayed loading, navigation, image URLs and
+independent click handlers. Only click-handler behavior has an isolated-method
+oracle: original shared state fails independence, per-handler reference passes,
+and a wrong boundary fails. It executes an explicitly type-erased original
+method in Node, not an ArkTS build, emulator or full assessed-Agent run. Four
+other tasks are candidates without functional calibration. Complete results
+and fixed-cut SQL dependency query/results are stored as TableGit rows.
+
+Run a development round against a retained local service (all evidence and
+credentials stay outside the checkout):
+
+```sh
+python3 examples/knowledge-seed/flywheel/run.py --source "$PINNED_SOURCE" \
+  --root "$ROUND_ROOT" --development "$DEVELOPMENT_JSON"
+```
+
+Omit `--development` to construct a captured proposal for the released Session
+fixture. Dispatch `knowledge-seed.yml` with `source=harmony`, `builder=mock` to
+fetch the exact source, independently calibrate it, and verify released TableGit
+history, analysis archive and export/import on a fresh runner. Mock identifies
+the construction route; the subject Code Agent is not run by this experiment.
+The existing fixture SQL is a generic call-candidate join, not Harmony import
+resolution; the development round separately archives the import-path query.
+
+Feedback improves the next knowledge cut, preserving the original cut. Keep
+source, semantic knowledge, calibration and assessment identities separate.
+SDK/HAP, real subject behavior and formal SessionFS Fork remain independent
+acceptance steps. This round does not claim the full challenge is solved.
