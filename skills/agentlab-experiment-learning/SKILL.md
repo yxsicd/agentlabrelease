@@ -96,3 +96,8 @@ hide a conflict. Join publication.artifactId to artifacts.id and phaseId to
 assessments/phases. Download every published occurrence and verify bytes against
 its referenced content, even when hashes repeat. This is external deliverable
 preservation, separate from SessionFS build-workspace snapshot qualification.
+
+The Recover published experiment binaries Action restores captured publication
+metadata, downloads every URI and checks exact bytes/SHA256 without Agent or
+rebuild. Use scripts/verify-binary-publication.py locally with the same manifest.
+Its recovery receipt is external-deliverable qualification, not SessionFS restore.

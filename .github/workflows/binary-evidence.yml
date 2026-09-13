@@ -1,0 +1,35 @@
+name: Recover published experiment binaries
+on:
+  workflow_dispatch:
+    inputs:
+      evidence_tag:
+        type: string
+        required: true
+        description: Immutable experiment Release tag with captured binary-publication.json
+permissions:
+  contents: read
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      AGENTLAB_EVIDENCE_TAG: ${{ inputs.evidence_tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Restore original capture without Agent or build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$AGENTLAB_EVIDENCE_TAG" --pattern raw-evidence.tar.zst --dir "$RUNNER_TEMP/capture"
+          tar --zstd -xf "$RUNNER_TEMP/capture/raw-evidence.tar.zst" -C "$RUNNER_TEMP/capture"
+      - name: Download and verify every publication, including repeated content
+        run: |
+          mapfile -t manifests < <(find "$RUNNER_TEMP/capture/raw" -name binary-publication.json)
+          test "${#manifests[@]}" = 1
+          python3 scripts/verify-binary-publication.py --manifest "${manifests[0]}" --downloads "$RUNNER_TEMP/binaries" --receipt "$RUNNER_TEMP/recovery/receipt.json"
+      - name: Preserve recovery qualification separately from SessionFS
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: external-binary-recovery
+          path: ${{ runner.temp }}/recovery/
