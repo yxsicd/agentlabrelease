@@ -69,3 +69,9 @@ Original Harmony compilation separates published SDK OHPM dependency preparation
 from network-disabled builds. Archive preparation commands, logs, manifests and
 locks; resolve module outputs through build-profile srcPath. A prepared dependency
 is not a full-project compiler verdict, and a slice pass cannot overwrite it.
+
+Store structured compiler elapsed time as integer wallMs. Raw JSON/log files
+retain exact producer bytes. Floating elapsed seconds drifted on serialization,
+causing repeat capture to advance a commit without semantic changes. Normalize
+our compiler history consistently and prove the same producer capture twice
+returns the same TableGit revision, not only identical exported rows.

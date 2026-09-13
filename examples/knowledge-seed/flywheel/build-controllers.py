@@ -36,7 +36,7 @@ def main():
         (e/(label+'-command.json')).write_text(json.dumps(command,indent=2)+'\n')
         start=time.monotonic();r=subprocess.run(command,capture_output=True,timeout=240)
         (e/(label+'-stdout.log')).write_bytes(r.stdout);(e/(label+'-stderr.log')).write_bytes(r.stderr)
-        item={'exitCode':r.returncode,'wallSeconds':time.monotonic()-start}
+        item={'exitCode':r.returncode,'wallMs':round((time.monotonic()-start)*1000)}
         reports=root/project/'.native-build'
         if reports.exists():
             shutil.copytree(reports,e/label)
@@ -49,7 +49,7 @@ def main():
         start=time.monotonic();r=subprocess.run(command,capture_output=True,timeout=660)
         (e/'dependency-preparation-stdout.log').write_bytes(r.stdout)
         (e/'dependency-preparation-stderr.log').write_bytes(r.stderr)
-        summary['phases']['dependency-preparation']={'exitCode':r.returncode,'wallSeconds':time.monotonic()-start}
+        summary['phases']['dependency-preparation']={'exitCode':r.returncode,'wallMs':round((time.monotonic()-start)*1000)}
         reports=root/'patched-source/.native-dependencies'
         if reports.exists():shutil.copytree(reports,e/'dependency-preparation')
         # Keep package-manager inputs/locks and resolved package identities, not vendor build/cache binaries.

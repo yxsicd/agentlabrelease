@@ -15,6 +15,14 @@ from capture import Service
 PREFIX='flywheel/harmony-v3/'
 
 
+def structured_metrics(value):
+    """Use integer durations in query rows; raw producer files remain byte exact."""
+    if isinstance(value,list):return [structured_metrics(x) for x in value]
+    if isinstance(value,dict):
+        return {('wallMs' if k=='wallSeconds' else k):(round(v*1000) if k=='wallSeconds' else structured_metrics(v)) for k,v in value.items()}
+    return value
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--evidence',type=Path,required=True)
@@ -23,7 +31,7 @@ def main():
     p.add_argument('--producer-run',required=True)
     p.add_argument('--producer-revision',required=True)
     a=p.parse_args();a.root.mkdir(parents=True,exist_ok=True)
-    summary=json.loads((a.evidence/'summary.json').read_text())
+    summary=structured_metrics(json.loads((a.evidence/'summary.json').read_text()))
     config=json.loads(a.development.read_text());rpc=a.root/'rpc';rpc.mkdir(exist_ok=True)
     service=Service(config['url'],Path(config['authorizationFile']).read_text().strip(),rpc)
     repo=config['repo'];wt={'topic_id':None}
@@ -47,8 +55,8 @@ def main():
     publication=a.evidence/'external-binary-publication.json'
     if publication.exists():
         for entry in json.loads(publication.read_text())['artifacts']:
-            facts.append(dict(id=prefix+'published-binary-'+entry['sha256'],kind='published-compiler-artifact',
-                              **lineage,**entry))
+            facts.append({**lineage,**entry,'id':prefix+'published-binary-'+entry['sha256'],
+                          'kind':'published-compiler-artifact'})
     files={};byte_chunks={}
     # Native intermediate caches are not archived. Inputs/logs/receipts and final HAPs are.
     for path in sorted(a.evidence.rglob('*')):
@@ -68,6 +76,13 @@ def main():
                           fileRole='final-unsigned-hap' if name.endswith('.hap') else 'input-log-or-receipt',**lineage))
         files[file_id]=(raw,chunks)
     facts.extend(byte_chunks.values())
+    # Close the same metric representation across our historical compiler rows.
+    current_ids={row['id'] for row in facts}
+    for row in store.read(service,repo,revision,PREFIX+'program_facts').values():
+        if row['id'] not in current_ids and row.get('kind') in {'compiler-phase','compilation-summary'}:
+            normalized=structured_metrics(row)
+            if normalized!=row:facts.append(normalized)
+
     cases=[dict(id=prefix+'evaluation-'+key,kind='qualification',taskId='case-'+key,**lineage,
                 status='typed-slice-qualified' if summary['sliceCompilationQualified'] else 'typed-slice-failed',
                 compilationSummaryId=prefix+'summary',fullTaskQualified=False,subjectAgentRun=False)
@@ -93,8 +108,12 @@ def main():
         for row in rows:
             old=existing.get(row['id'])
             if old and old['row']==row:continue
-            op=dict(op='update',operation_id=str(uuid.uuid4()),key=row['id'],expected_row_version=old['row_version'],
-                    field_updates=[dict(op='set',field='/'+k,value=v) for k,v in row.items() if old['row'].get(k)!=v]) if old else dict(op='insert',operation_id=str(uuid.uuid4()),key=row['id'],row=row)
+            if old:
+                updates=[dict(op='set',field='/'+k,value=v) for k,v in row.items() if k not in old['row'] or old['row'][k]!=v]
+                if 'wallSeconds' in old['row'] and 'wallSeconds' not in row:updates.append(dict(op='unset',field='/wallSeconds'))
+                if not updates:continue
+                op=dict(op='update',operation_id=str(uuid.uuid4()),key=row['id'],expected_row_version=old['row_version'],field_updates=updates)
+            else:op=dict(op='insert',operation_id=str(uuid.uuid4()),key=row['id'],row=row)
             ops.append(op)
         for start in range(0,len(ops),32):
             revision=store.transact(service,repo,wt,revision,[dict(path=PREFIX+table,operations=ops[start:start+32])],'Archive complete controller compiler evidence')
