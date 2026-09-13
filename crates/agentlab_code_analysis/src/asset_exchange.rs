@@ -127,6 +127,8 @@ pub fn export(path: &Path, class: &str, tables: &Tables) -> Value {
         let indexes: Vec<Value> = [
             "assetClass",
             "runId",
+            "artifactId",
+            "sha256",
             "kind",
             "attemptId",
             "phaseId",

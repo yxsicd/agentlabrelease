@@ -84,3 +84,15 @@ methods and AST facts remain complete in runtime evidence/source tables. Do not
 embed every variant's whole source/AST into one lesson-evidence row: that duplicates
 observations and can exceed the TableGit transport frame. No bytes are removed;
 the small manifest references the independently preserved complete raw receipt.
+
+### Binary content and publication are different analytical entities
+
+`artifacts` represents immutable binary content (SHA256 and byte count).
+`artifact_publications` represents each captured build/publication occurrence,
+with run, phase, label, URI and artifactId. Two turns may produce identical
+bytes at different URLs; preserve both occurrences and one content row.
+Never attach phase/URL to a SHA-keyed content row or disable identity checks to
+hide a conflict. Join publication.artifactId to artifacts.id and phaseId to
+assessments/phases. Download every published occurrence and verify bytes against
+its referenced content, even when hashes repeat. This is external deliverable
+preservation, separate from SessionFS build-workspace snapshot qualification.

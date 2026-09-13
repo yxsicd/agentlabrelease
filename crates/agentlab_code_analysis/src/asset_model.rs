@@ -552,7 +552,19 @@ fn instance(root: &Path, run: &str, archive: &str) -> Tables {
             put(
                 &mut t,
                 "artifacts",
-                json!({"id":binary["sha256"],"assetClass":"evaluation-instance","runId":run,"label":binary["label"],"sha256":binary["sha256"],"bytes":binary["bytes"],"uri":binary["uri"]}),
+                json!({"id":binary["sha256"],"assetClass":"evaluation-instance","sha256":binary["sha256"],"bytes":binary["bytes"]}),
+            );
+            let label = binary["label"].as_str().unwrap();
+            let phase = label.strip_suffix("-build").unwrap_or(label);
+            let occurrence = hash(
+                serde_json::to_vec(&json!([run, label, binary["uri"]]))
+                    .unwrap()
+                    .as_slice(),
+            );
+            put(
+                &mut t,
+                "artifact_publications",
+                json!({"id":occurrence,"assetClass":"evaluation-instance","runId":run,"phaseId":format!("{}-{phase}", if phase.starts_with("fresh") {"fork-agent"} else {"parent-agent"}),"label":label,"artifactId":binary["sha256"],"uri":binary["uri"]}),
             );
         }
     }

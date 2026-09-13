@@ -95,6 +95,13 @@ fn separates_assets_restores_context_and_keeps_raw_evidence() {
         events.iter().map(|r| format!("{r}\n")).collect::<String>(),
     )
     .unwrap();
+    write(
+        &e.join("binary-publication.json"),
+        json!([
+            {"label":"turn-1-build","sha256":"identical-content","bytes":123,"uri":"https://example/first.hap"},
+            {"label":"parent-turn-2-build","sha256":"identical-content","bytes":123,"uri":"https://example/second.hap"}
+        ]),
+    );
     for name in ["first", "second"] {
         assert!(Command::new(env!("CARGO_BIN_EXE_agentlab-asset-model"))
             .args([
@@ -133,6 +140,16 @@ fn separates_assets_restores_context_and_keeps_raw_evidence() {
         .iter()
         .any(|r| r["record"]["calibration"]["baseline"]["raw"] == "complete baseline"));
     let instance = output.join("instances/run");
+    let artifacts = rows(&instance.join("artifacts.jsonl"));
+    let publications = rows(&instance.join("artifact_publications.jsonl"));
+    assert_eq!(artifacts.len(), 1);
+    assert_eq!(publications.len(), 2);
+    assert_eq!(publications[0]["artifactId"], artifacts[0]["id"]);
+    assert_eq!(publications[1]["artifactId"], artifacts[0]["id"]);
+    assert_ne!(publications[0]["id"], publications[1]["id"]);
+    assert!(artifacts[0].get("uri").is_none());
+    assert!(artifacts[0].get("label").is_none());
+
     assert_eq!(rows(&instance.join("message_contents.jsonl")).len(), 2);
     assert_eq!(rows(&instance.join("context_versions.jsonl")).len(), 4);
     assert_eq!(
