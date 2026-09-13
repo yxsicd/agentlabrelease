@@ -13,12 +13,12 @@ def persist(service,repo,worktree,package):
     revision=service.call('table.worktree.open',dict(repo=repo,worktree=worktree))['revision']
     for table in TABLES:
         rows=package['tables'][table]
-        fields={}
+        fields={'id':{'type':'string','required':True}}
         for row in rows:
             for key,value in row.items():
                 kind='boolean' if isinstance(value,bool) else 'integer' if isinstance(value,int) else 'array' if isinstance(value,list) else 'markdown' if key=='body' else 'string'
                 fields[key]={'type':kind,'required':True}
-        revision=service.call('table.create',dict(repo=repo,worktree=worktree,path=table,expected_revision=revision,definition=dict(key_field='id',fields=fields,required_fields=['id'],indexes=[dict(name='by_'+key,field=key) for key,value in fields.items() if value['type'] in ('string','integer','boolean') and key!='title'],description='AgentLab engineering knowledge: '+table),message='Create engineering knowledge table'))['revision']
+        revision=service.call('table.create',dict(repo=repo,worktree=worktree,path=table,expected_revision=revision,definition=dict(key_field='id',fields=fields,required_fields=list(fields),indexes=[dict(name='by_'+key,field=key) for key,value in fields.items() if value['type'] in ('string','integer','boolean') and key!='title'],description='AgentLab engineering knowledge: '+table),message='Create engineering knowledge table'))['revision']
     def transact(operations):
         nonlocal revision
         txn=str(uuid.uuid4())
