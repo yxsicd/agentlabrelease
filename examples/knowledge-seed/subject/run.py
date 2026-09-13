@@ -80,7 +80,7 @@ def main():
   if a.scenario=='navigation':file.write_text(file.read_text().replace('this.pathStack.replacePath','this.pathStack.pushPath'))
   elif a.scenario=='feedback':file.write_text(file.read_text().replace('this.submitError = err.message;', 'this.submitError = err.message; this.resetAllStatus();'))
   elif a.scenario=='debounce':file.write_text(file.read_text().replace('lastClickTime < wait', 'lastClickTime <= wait'))
-  elif a.scenario=='image-url':file.write_text(file.read_text().replace('!/^https?:\\/\\//i.test(value)', 'false').replace("(parsed.protocol === 'http:' || parsed.protocol === 'https:')",'true'))
+  elif a.scenario=='image-url':file.write_text(file.read_text().replace('!/^https?:\\/\\//i.test(value)', 'false').replace("(parsed.protocol === 'http:' || parsed.protocol === 'https:')",'true').replace('parsed.hostname.length > 0','true'))
   else:file.write_text(file.read_text().replace('clearTimeout(this.delayTimer);', 'void this.delayTimer;'))
   negative=oracle({'feedback':'wrong-reset','loading':'wrong-cancel','navigation':'wrong-stack','debounce':'wrong-boundary','image-url':'wrong-protocol'}[a.scenario],wrong,2)
   assert not any(result.get('error') for result in (baseline,reference,negative)), 'Calibration infrastructure error is not a negative behavior verdict'
