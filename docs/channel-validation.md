@@ -57,12 +57,12 @@ identities plus target channel and source publication/lock digests.
 An older qualified upstream cut can be selected even if the fixed channel has
 advanced. Qualification is distinct from activating the fixed channel.
 
-`activate=true` explicitly requests a fixed-pointer switch. Retained
-`dActivation`, `formalHarmonyHapRestartParity` and `aBCPromotion` deployment
-gates must have passed; full normalized whitebox coverage is not an extra
-public-release prerequisite. Unpassed deployment gates remain visible in the
-qualified publication. This preserves the existing formal gates while allowing
-public fresh-runner validation to proceed.
+`activate=true` explicitly requests a fixed-pointer switch after the target
+channel's required GitHub Actions checks pass. D is an optional local quick-test
+environment. D/A/B/C promotion and formal device deployment do not block public
+dev/main/prod activation. Historical deployment observations remain in the
+publication for diagnosis; they are not release prerequisites. Full normalized
+whitebox coverage also remains a development goal, not an extra public gate.
 
 Immutable lock/qualification assets are published before a single channel
 publication pointer changes. The pointer explicitly references the immutable

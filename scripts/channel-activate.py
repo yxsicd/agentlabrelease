@@ -1,19 +1,24 @@
 #!/usr/bin/env python3
-"""Prepare one explicit fixed pointer after retained formal deployment gates pass."""
+"""Prepare one explicit fixed pointer after target GitHub Actions qualification passes."""
 import argparse
 import json
 import hashlib
+import importlib.util
 from pathlib import Path
 
 
 def pointer(publication):
-    gates = publication['deploymentGates']
-    required = ['dActivation', 'formalHarmonyHapRestartParity', 'aBCPromotion']
-    missing = [gate for gate in required if gates.get(gate) != 'passed']
+    spec=importlib.util.spec_from_file_location('channel_plan', Path(__file__).with_name('channel-plan.py'))
+    planner=importlib.util.module_from_spec(spec); spec.loader.exec_module(planner)
+    channel=publication['tag']
+    if publication['status'] != 'qualified' or channel not in planner.CHECKS:
+        raise ValueError('fixed activation requires a qualified channel cut')
+    missing=[check for check in planner.CHECKS[channel] if publication['gates'].get(check) != 'passed']
     if missing:
-        raise ValueError('fixed activation blocked by retained deployment gates: '+', '.join(missing))
+        raise ValueError('fixed activation requires passed GitHub Actions checks: '+', '.join(missing))
     result = dict(publication)
     result['activated'] = True
+    result['activationPolicy'] = 'github-actions-qualified-v1'
     return result
 
 if __name__ == '__main__':

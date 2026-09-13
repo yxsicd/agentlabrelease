@@ -47,12 +47,16 @@ class ChannelPromotionTests(unittest.TestCase):
         self.assertTrue(qualifier.qualify(plan,self.baseline,real)['qualified'])
         real['targetChannel']='alprod'
         with self.assertRaises(ValueError):qualifier.qualify(plan,self.baseline,real)
-    def test_fixed_gate_preserved_without_full_whitebox_requirement(self):
+    def test_fixed_activation_uses_channel_actions_not_deployment_gates(self):
         pub=promoter.prepare(self.plan,qualifier.qualify(self.plan,self.baseline),self.raw,'owner/repo')[1]
-        with self.assertRaisesRegex(ValueError,'formalHarmony'):activation.pointer(pub)
-        pub['deploymentGates'].update(dActivation='passed',formalHarmonyHapRestartParity='passed',aBCPromotion='passed')
         self.assertTrue(activation.pointer(pub)['activated'])
+        self.assertEqual(pub['deploymentGates']['formalHarmonyHapRestartParity'],'not_run')
         self.assertEqual(pub['deploymentGates']['fullWhiteboxCoverage'],'not_run')
+        pub['gates']['tablegit_recovery']='failed'
+        with self.assertRaisesRegex(ValueError,'tablegit_recovery'):activation.pointer(pub)
+        pub['gates']['tablegit_recovery']='passed'
+        pub['tag']='alprod'
+        with self.assertRaisesRegex(ValueError,'real_agent'):activation.pointer(pub)
 
     def test_validation_dependencies_follow_selected_upstream_cut(self):
         dependencies={'standaloneHarmony':{'artifact':'fixed-url','sha256':'old-hash'}}

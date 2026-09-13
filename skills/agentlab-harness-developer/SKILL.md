@@ -39,7 +39,8 @@ Read [channel-validation.md](../../docs/channel-validation.md) for the selective
 composition. The plan workflow checks lineage, then a separate fresh runner executes frozen
 component demos and retains target-bound check receipts. Prod invokes the real-Agent workflow against the same frozen composition, then
 closes all required verdicts. Selective promotion prepares immutable metadata;
-fixed activation is explicit and retains formal deployment gates.
+fixed activation is explicit and uses the target GitHub Actions qualification.
+D is optional local quick testing; D/A/B/C and device deployment are independent.
 
 ## Start
 
@@ -64,8 +65,8 @@ redaction. Controlled benchmark data is not production user data.
 The prior C22 real Pi/GLM SWE run passed 10/10 evaluator tests on D. The new
 40ecdf4b candidate closes independent controller capture, formal SessionFS Fork
 and paired restart on that SWE lineage; full whitebox coverage remains incomplete. Portable
-Mock CI does not qualify full Session/TableGit or replace D/A/B/C, Harmony HAP,
-restart/parity and fixed-channel gates. Runtime/template contract 11 is a
+Mock CI does not qualify full Session/TableGit or formal device deployment.
+Public fixed channels use their GitHub Actions checks; D/A/B/C is independent. Runtime/template contract 11 is a
 coordinated deployment with independently provisioned AgentLab-owned tables.
 
 1. Read [evaluation-model.md](references/evaluation-model.md) before defining a
