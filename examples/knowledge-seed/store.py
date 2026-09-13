@@ -98,21 +98,59 @@ def analyze(service,repo,worktree,revision):
     if operations: revision=transact(service,repo,worktree,revision,[dict(path='evaluation_cases',operations=operations)],'Bind cases to archived analysis')
     return revision,result
 
+def import_snapshot(service,repo,worktree,directory,prefix='',create_tables=False):
+    tables=load_snapshot(directory)
+    revision=service.call('table.worktree.open',dict(repo=repo,worktree=worktree))['revision']
+    if create_tables: revision=create(service,repo,worktree,revision,tables,prefix)
+    pending=[]
+    for table in TABLES:
+        path=prefix+table
+        response=service.call('table.query',dict(repo=repo,view={'kind':'committed','revision':revision},path=path,limit=1000))
+        if response['truncated'] or response['dirty']: raise RuntimeError('Import must read the complete target cut')
+        existing={r['key']:r for r in response['rows'] if not r['deleted']}
+        desired={r['id']:r for r in tables[table]}
+        for key,row in desired.items():
+            previous=existing.get(key)
+            if previous is None: op=dict(op='insert',operation_id=str(uuid.uuid4()),key=key,row=row)
+            elif previous['row']==row: continue
+            else:
+                updates=[dict(op='set',field='/'+k.replace('~','~0').replace('/','~1'),value=v) for k,v in row.items() if previous['row'].get(k)!=v]
+                updates += [dict(op='unset',field='/'+k.replace('~','~0').replace('/','~1')) for k in previous['row'] if k not in row]
+                op=dict(op='update',operation_id=str(uuid.uuid4()),key=key,expected_row_version=previous['row_version'],field_updates=updates)
+            pending.append((path,op))
+        for key,previous in existing.items():
+            if key not in desired: pending.append((path,dict(op='delete',operation_id=str(uuid.uuid4()),key=key,expected_row_version=previous['row_version'])))
+    for start in range(0,len(pending),32):
+        grouped={}
+        for path,op in pending[start:start+32]: grouped.setdefault(path,[]).append(op)
+        revision=transact(service,repo,worktree,revision,[dict(path=t,operations=ops) for t,ops in grouped.items()],'Import fixed knowledge snapshot')
+    return revision,len(pending)
+
 def roundtrip(service,repo,worktree,revision,destination):
     original=export(service,repo,revision,destination)
     tables=load_snapshot(destination)
-    opened=service.call('table.worktree.open',dict(repo=repo,worktree=worktree))['revision']
-    # Import to fresh tables in the same disposable repository; independently query them.
     prefix='roundtrip/'
-    current=create(service,repo,worktree,opened,tables,prefix)
-    rows=[dict(path=prefix+t,operations=[dict(op='insert',operation_id=str(uuid.uuid4()),key=r['id'],row=r) for r in tables[t]]) for t in TABLES if tables[t]]
-    current=transact(service,repo,worktree,current,rows,'Reimport per-table JSONL snapshot')
-    for table in TABLES:
-        assert read(service,repo,current,prefix+table)=={r['id']:r for r in tables[table]}
-    # Repeated import compares authoritative rows, not a process-local marker.
-    unchanged=all(read(service,repo,current,prefix+t)=={r['id']:r for r in tables[t]} for t in TABLES)
-    assert unchanged
-    # Re-export original frozen cut: byte stable despite subsequent commits.
+    current,changed=import_snapshot(service,repo,worktree,destination,prefix,True)
+    for table in TABLES: assert read(service,repo,current,prefix+table)=={r['id']:r for r in tables[table]}
+    repeated_revision,repeated_changes=import_snapshot(service,repo,worktree,destination,prefix)
+    assert repeated_revision==current and repeated_changes==0
     repeated=export(service,repo,revision,Path(destination).parent/'export-repeated')
     assert original==repeated
-    return current,dict(sourceRevision=revision,importRevision=current,exactRows=True,stableExport=True,repeatedImportNoChanges=unchanged)
+    return current,dict(sourceRevision=revision,importRevision=current,exactRows=True,stableExport=True,repeatedImportNoChanges=True,importedRows=changed)
+
+if __name__=='__main__':
+    import argparse,sys
+    sys.path.insert(0,str(Path(__file__).parents[1]/'tablegit-session'))
+    from capture import Service
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('mode',choices=['import','export','analyze']);p.add_argument('--url',required=True);p.add_argument('--authorization-file',type=Path,required=True);p.add_argument('--repo',required=True);p.add_argument('--topic');p.add_argument('--revision');p.add_argument('--directory',type=Path,required=True);p.add_argument('--create-tables',action='store_true');a=p.parse_args()
+    a.directory.mkdir(parents=True,exist_ok=True)
+    service=Service(a.url,a.authorization_file.read_text().strip(),a.directory)
+    worktree={'topic_id':a.topic}
+    if a.mode=='import': result=import_snapshot(service,a.repo,worktree,a.directory,create_tables=a.create_tables)
+    elif a.mode=='export':
+        if not a.revision: p.error('export requires --revision')
+        result=export(service,a.repo,a.revision,a.directory)
+    else:
+        if not a.revision: p.error('analyze requires --revision')
+        result=analyze(service,a.repo,worktree,a.revision)
+    print(json.dumps(result,ensure_ascii=False))
