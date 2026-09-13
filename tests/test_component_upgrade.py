@@ -75,3 +75,10 @@ class ComponentUpgradeTests(unittest.TestCase):
                         value=self.base[1]['components'][1],assets=[],graphNode=self.base[1]['componentGraph']['nodes'][1])
         with self.assertRaisesRegex(ValueError,'binding differs'):
             upgrade.replacement_donor(self.base,manifest,'pack:tools')
+
+    def test_descriptor_relative_metadata_resolves_at_its_original_url(self):
+        pub = self.base[0]
+        manifest = dict(schema='agentlab.component_update.v1',component='session-sdk',
+                        value=pub['sessionSdk'],assets=[])
+        donor = upgrade.replacement_donor(self.base,manifest,'session-sdk','https://example.com/a/b/update.json')
+        self.assertEqual(donor[0]['sessionSdk']['templateInventory'],'https://example.com/a/b/session-template-inventory.json')

@@ -126,3 +126,9 @@ the composition tool resolves the resulting whole graph. Deployment bindings
 remain owned by the base. The executable SDK example is
 [`session-sdk-c075105a.json`](../release/components/session-sdk-c075105a.json).
 Use `--replacement <descriptor.json>` instead of `--donor` locally.
+
+Pass `--replacement-url <original-url>` for locally downloaded descriptors with
+relative metadata references. The workflow supplies this automatically. Relative
+metadata follows the descriptor URL, and the receipt preserves its exact source
+digest. Auxiliary template inventory is metadata, not a duplicated component
+archive.

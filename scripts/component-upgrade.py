@@ -5,6 +5,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import urllib.parse
 from pathlib import Path
 
 
@@ -24,12 +25,15 @@ def load(directory):
 
 
 
-def replacement_donor(base, manifest, component):
+def replacement_donor(base, manifest, component, origin=None):
     """A component producer declares one row, its contracts and published assets."""
     if manifest['schema'] != 'agentlab.component_update.v1' or manifest['component'] != component:
         raise ValueError('component update descriptor does not match selected role')
     pub, lock = copy.deepcopy(base)
     value = copy.deepcopy(manifest['value'])
+    if origin:
+        for field in ('artifact','descriptor','templateInventory'):
+            if field in value: value[field] = urllib.parse.urljoin(origin,value[field])
     if component == 'session-sdk':
         pub['sessionSdk'] = value
     elif component == 'control':
@@ -137,10 +141,15 @@ if __name__ == '__main__':
     source.add_argument('--replacement', type=Path, help='component producer update descriptor')
     parser.add_argument('--component', required=True, help='session-sdk, control, pack:<slot>, image:<slot>')
     parser.add_argument('--tag', required=True)
+    parser.add_argument('--replacement-url', help='original descriptor URL for relative metadata references')
     args = parser.parse_args()
     base = load(args.base)
-    donor = load(args.donor) if args.donor else replacement_donor(base,json.loads(args.replacement.read_bytes()),args.component)
+    donor = load(args.donor) if args.donor else replacement_donor(base,json.loads(args.replacement.read_bytes()),args.component,args.replacement_url)
     pub, lock, raw, receipt = compose(base, donor, args.component, args.tag)
+    if args.replacement:
+        receipt.pop('donorPublicationSha256')
+        receipt['replacementDescriptorSha256'] = hashlib.sha256(args.replacement.read_bytes()).hexdigest()
+        receipt['replacementDescriptorUrl'] = args.replacement_url
     args.output.mkdir(parents=True, exist_ok=False)
     (args.output/'environment-lock.json').write_bytes(raw)
     for name,value in [('publication',pub),('component-upgrade',receipt)]:

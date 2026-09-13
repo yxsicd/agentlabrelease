@@ -1395,3 +1395,9 @@ image slot. Follow [the executable upgrade workflow](../../docs/component-public
 Submit its candidate release to `channel-plan.yml` via `candidate_release`.
 Qualification belongs to the composition, not just the changed package;
 selectively promote identical component references through dev/main/prod.
+
+New components can publish `agentlab.component_update.v1` descriptors beside
+individual packages. Use `replacement_url` instead of a donor composition;
+the composer retains the original descriptor digest and resolves relative
+metadata against that descriptor URL. Contract declarations belong to the
+component producer; whole-composition qualification belongs to AgentLab.

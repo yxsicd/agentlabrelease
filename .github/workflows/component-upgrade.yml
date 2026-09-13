@@ -63,7 +63,7 @@ jobs:
           REPLACEMENT_URL: ${{ inputs.replacement_url }}
         run: |
           if [ -n "$REPLACEMENT_URL" ]; then
-            SOURCE=(--replacement "$RUNNER_TEMP/replacement.json")
+            SOURCE=(--replacement "$RUNNER_TEMP/replacement.json" --replacement-url "$REPLACEMENT_URL")
           else
             SOURCE=(--donor "$RUNNER_TEMP/donor")
           fi
