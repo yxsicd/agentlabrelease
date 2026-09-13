@@ -3,8 +3,11 @@
 Current candidate: [40ecdf4b / SDKc075105a](../release/candidates/40ecdf4b-linux-x64/publication.json).
 Channel policy and implementation boundaries are in [channel-validation.md](channel-validation.md).
 Promote selectively from aldev to almain to alprod, preserving component bytes.
-The plan workflow is the frozen-input foundation; actual tier job wiring and
-channel activation remain unfinished. The material below is historical context.
+The dev/main/prod fixed channels now select runtime40ecdf4b and SDKc075105a,
+with identical immutable component references. All three GitHub qualification
+tiers and explicit activation have passed. D is optional local quick testing;
+D/A/B/C and device deployment do not gate these public channels.
+The material below is historical context.
 
 Historical runtime candidate:
 [`26008e36-linux-x64`](../release/candidates/26008e36-linux-x64/publication.json).
