@@ -53,6 +53,10 @@ def build(root, source=None):
         task['status']='calibrated'
         (project/'price.py').write_text('def price(quantity):\n    return quantity * 10\n')
     updates=[dict(table='knowledge_skills',id=s['id'],fields={'body':s['body']+' Preserve boundary behavior and prior requirements; calibration must reject boundary and regression mutations.','status':'verified_fixture' if calibrated else 'candidate','feedbackEvaluationIds':[e['id'] for e in tables['knowledge_evaluations']]}) for s in skills]
+    facts=[dict(r,kind=kind) for name,kind in [('knowledge_nodes','symbol'),('knowledge_edges','call'),('knowledge_links','skill_link')] for r in tables[name]]
+    cases=[dict(r,kind=kind,sourceRevision=revision) for name,kind in [('knowledge_tasks','task'),('knowledge_evaluations','calibration')] for r in tables[name]]
+    tables={'maintainer_skills':skills,'program_facts':facts,'evaluation_cases':cases}
+    for update in updates: update['table']='maintainer_skills'
     package=dict(schema='agentlab.knowledge_seed.v1',builder='deterministic_mock',builderSeedSha256=hashlib.sha256(seed_bytes).hexdigest(),sourceRevision=revision,tables=tables,updates=updates,calibrated=calibrated,scope='Python AST fixture; no Harmony analysis or strong-Agent claim')
     (evidence/'knowledge-package.json').write_text(json.dumps(package,indent=2)+'\n')
     (evidence/'participant.json').write_text(json.dumps({'implementation':'knowledge-builder-mock'})+'\n')

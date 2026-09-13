@@ -229,6 +229,12 @@ def main():
             result=knowledge.verify(service,first['binding']['repositoryId'],package,cuts)
             save(evidence/'knowledge-recovery.json',result)
             summary['checks']['knowledge_rows_history_after_restart']=True
+            analysis_revision,analysis=knowledge.analyze(service,first['binding']['repositoryId'],capture_worktree,cuts['updatedRevision'])
+            save(evidence/'knowledge-analysis.json',analysis)
+            final_revision,roundtrip=knowledge.roundtrip(service,first['binding']['repositoryId'],capture_worktree,analysis_revision,evidence/'export')
+            capture_revision=final_revision
+            save(evidence/'knowledge-roundtrip.json',roundtrip)
+            summary['checks']['knowledge_analysis_archived_and_jsonl_roundtrip']=True
         checks = summary["checks"]
         checks["template_qualification"] = qualification["status"] == "qualified"
         checks["concurrent_session_creation_replayed"] = first["concurrentReplay"] is True

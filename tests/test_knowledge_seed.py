@@ -10,19 +10,19 @@ class KnowledgeSeedTest(unittest.TestCase):
     def test_calibration_rejects_boundary_and_history_loss(self):
         with tempfile.TemporaryDirectory() as temp:
             p=m.build(Path(temp)/'first')
-            self.assertEqual([e['passed'] for e in p['tables']['knowledge_evaluations']],[False,True,False,False])
+            self.assertEqual([e['passed'] for e in [r for r in p['tables']['evaluation_cases'] if r['kind']=='calibration']],[False,True,False,False])
             self.assertTrue(p['calibrated'])
-            self.assertEqual({s['id'] for s in p['tables']['knowledge_skills']},{u['id'] for u in p['updates']})
+            self.assertEqual({s['id'] for s in p['tables']['maintainer_skills']},{u['id'] for u in p['updates']})
             q=m.build(Path(temp)/'second')
-            self.assertEqual([n['id'] for n in p['tables']['knowledge_nodes']],[n['id'] for n in q['tables']['knowledge_nodes']])
-            self.assertTrue(all(e['resolution']=='syntactic_unresolved' for e in p['tables']['knowledge_edges']))
+            self.assertEqual([n['id'] for n in [r for r in p['tables']['program_facts'] if r['kind']=='symbol']],[n['id'] for n in [r for r in q['tables']['program_facts'] if r['kind']=='symbol']])
+            self.assertTrue(all(e['resolution']=='syntactic_unresolved' for e in [r for r in p['tables']['program_facts'] if r['kind']=='call']))
 
     def test_external_source_does_not_claim_calibrated_tasks(self):
         with tempfile.TemporaryDirectory() as temp:
             source=Path(temp)/'src';source.mkdir();(source/'example.py').write_text('def f():\n    return g()\n')
             p=m.build(Path(temp)/'run',source)
-            self.assertFalse(p['calibrated']);self.assertEqual(p['tables']['knowledge_tasks'],[])
-            self.assertEqual(p['tables']['knowledge_edges'][0]['targetName'],'g')
+            self.assertFalse(p['calibrated']);self.assertEqual([r for r in p['tables']['evaluation_cases'] if r['kind']=='task'],[])
+            self.assertEqual([r for r in p['tables']['program_facts'] if r['kind']=='call'][0]['targetName'],'g')
 
 class AgentDraftTest(unittest.TestCase):
     def test_agent_proposal_preserves_operator_facts_and_ids(self):
@@ -31,7 +31,7 @@ class AgentDraftTest(unittest.TestCase):
         adapter=importlib.util.module_from_spec(spec);spec.loader.exec_module(adapter)
         with tempfile.TemporaryDirectory() as temp:
             package=m.build(Path(temp)/'run');facts=copy.deepcopy(package['tables'])
-            proposal={'skills':[{'id':s['id'],'body':'Caller-aware maintainer workflow'} for s in facts['knowledge_skills']]}
+            proposal={'skills':[{'id':s['id'],'body':'Caller-aware maintainer workflow'} for s in facts['maintainer_skills']]}
             result=adapter.apply_draft(package,proposal)
             self.assertEqual(result['tables'],facts)
             self.assertFalse(result['semanticKnowledgeVerified'])

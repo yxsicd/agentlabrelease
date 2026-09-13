@@ -8,7 +8,7 @@ import shutil
 
 
 def apply_draft(package,draft):
-    known={s['id']:s for s in package['tables']['knowledge_skills']}
+    known={s['id']:s for s in package['tables']['maintainer_skills']}
     proposals=draft['skills']
     if set(s['id'] for s in proposals)!=set(known) or len(proposals)!=len(known):
         raise ValueError('Builder must address the frozen source-bound Skill identities')
