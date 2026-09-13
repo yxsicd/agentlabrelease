@@ -50,11 +50,22 @@ class GatewayCaptureTests(unittest.TestCase):
             evidence=root/'evidence';evidence.mkdir()
             binary=root/'runtime/bin/python'
             participant=MODULE.Participant(evidence,root/'state',binary,'http://127.0.0.1:1',
-                                           'test-model',implementation='mini-swe-agent')
+                                           'test-model')
             try:
                 prefix=subprocess.check_output([participant.binary,'-c','import sys; print(sys.prefix)']).decode().strip()
                 self.assertEqual(Path(prefix).resolve(),(root/'runtime').resolve())
             finally:participant.close()
+
+    def test_missing_mini_runtime_is_harness_failure_before_proxy_dispatch(self):
+        with tempfile.TemporaryDirectory() as tmp,patch.dict(os.environ,
+                {'AGENTLAB_LM_GATEWAY_KEY':'synthetic-key'}):
+            root=Path(tmp);evidence=root/'evidence';evidence.mkdir()
+            with patch.object(MODULE.subprocess,'run',return_value=subprocess.CompletedProcess([],1,b'',b'missing test runtime')):
+                with self.assertRaisesRegex(RuntimeError,'preflight failed before dispatch'):
+                    MODULE.Participant(evidence,root/'state',sys.executable,'http://127.0.0.1:1',
+                                       'test-model',implementation='mini-swe-agent')
+            self.assertEqual(json.loads((evidence/'runtime-probe.json').read_text())['exitCode'],1)
+            self.assertFalse((evidence/'gateway').exists())
 
     def test_disconnect_still_captures_complete_upstream(self):
         release=threading.Event()

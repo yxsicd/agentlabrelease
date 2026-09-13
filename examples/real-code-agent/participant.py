@@ -22,6 +22,20 @@ class Participant:
         self.evidence = evidence
         self.state = state
         self.binary = str(Path(binary).absolute())
+        if implementation == 'mini-swe-agent':
+            probe = subprocess.run([self.binary, '-c',
+                'import sys,json,minisweagent; from minisweagent.agents.default import DefaultAgent; '
+                'from minisweagent.environments.local import LocalEnvironment; '
+                'from minisweagent.models.litellm_model import LitellmModel; '
+                'print(json.dumps(dict(prefix=sys.prefix,version=minisweagent.__version__)))'],
+                capture_output=True,timeout=60,
+                env={k:os.environ[k] for k in ('PATH','LANG','LC_ALL','TMPDIR') if k in os.environ})
+            (evidence/'runtime-probe-stdout.log').write_bytes(probe.stdout)
+            (evidence/'runtime-probe-stderr.log').write_bytes(probe.stderr)
+            (evidence/'runtime-probe.json').write_text(json.dumps(dict(implementation=implementation,
+                executable=self.binary,exitCode=probe.returncode,captureAuthority='operator'),indent=2)+'\n')
+            if probe.returncode:
+                raise RuntimeError('Harness participant runtime preflight failed before dispatch')
         self.gateway = gateway.rstrip('/')
         self.model = model
         self.route = route
