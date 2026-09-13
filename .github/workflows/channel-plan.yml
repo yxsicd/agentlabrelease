@@ -51,3 +51,37 @@ jobs:
           name: channel-validation-plan
           path: ${{ runner.temp }}/channel-source/
           if-no-files-found: error
+  validate:
+    needs: freeze
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: channel-validation-plan
+          path: ${{ runner.temp }}/channel-source
+      - name: Install demo prerequisites on the fresh runner
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes zstd btrfs-progs python3-websocket python3-yaml
+      - name: Execute the frozen composition and collect target-bound verdicts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/channel-validate.py --source "$RUNNER_TEMP/channel-source" --root /tmp/agentlab-channel-validation
+      - name: Preserve actual results and failed checks
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: channel-validation-evidence
+          if-no-files-found: error
+          path: |
+            /tmp/agentlab-channel-validation/*.json
+            /tmp/agentlab-channel-validation/*.log
+            /tmp/agentlab-channel-validation/runs/
+            /tmp/agentlab-channel-validation/mock-evidence/
+            /tmp/agentlab-channel-validation/protocol/evidence/
+            /tmp/agentlab-channel-validation/tablegit-demo/evidence-*/
+            /tmp/agentlab-channel-validation/tablegit-repeat/evidence-*/
+            /tmp/agentlab-channel-validation/harmony-build-demo/evidence/

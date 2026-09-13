@@ -38,6 +38,7 @@ def main():
     parser.add_argument("scenario", choices=["protocol"])
     parser.add_argument("--root", type=Path, required=True,
                         help="dedicated demo directory; archives remain cached here")
+    parser.add_argument("--runtime-program", type=Path, default=REPO / "release/ci/harness-runtime.json")
     args = parser.parse_args()
     if platform.system() != "Linux" or platform.machine() not in ("x86_64", "amd64"):
         parser.error("this published runtime is Linux x64; use a Linux x64 host or CI")
@@ -47,7 +48,7 @@ def main():
     receipt = {"schema":"agentlab.public_demo_run.v1", "scenario":args.scenario,
                "ok":False,"evidence":str(evidence),"fixedChannelPromoted":False}
     try:
-        lock = acquire(REPO / "release/ci/harness-runtime.json", root / "downloads/runtime.tar.zst")
+        lock = acquire(args.runtime_program, root / "downloads/runtime.tar.zst")
         receipt["runtime"] = lock
         runtime = root / "runtime"
         runtime.mkdir(exist_ok=True)

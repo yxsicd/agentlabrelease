@@ -19,14 +19,18 @@ must remain inspectable for promotion and rollback.
 
 Required baseline sets are executable in `scripts/channel-plan.py`. Feature
 checks add to a selected dev plan; they do not substitute for its baseline.
-`Freeze channel validation plan` freezes candidate/upstream metadata, checks the
-promotion path and retains original inputs. It does not run the listed checks
-or activate a channel. Existing public/basic and real-Agent workflows remain
-actual acceptance evidence until their jobs consume this plan directly.
+`Freeze channel validation plan` now downloads its frozen input artifact on a
+separate fresh runner and executes clean install, protocol discovery, copy-tree
+Mock and real TableGit recovery. Runtime and provisioning SDK are selected from
+that artifact, never from the current global demo pins. Each check retains its
+log and verdict, including failures; the qualification receipt is bound to the
+composition identity and GitHub run. Cached reinstall, Harmony and repeated
+cold recovery adapters are also connected. Btrfs, dedicated parity and real
+Agent tier adapters are still pending; their checks remain `not_run`, so deeper
+tiers cannot qualify accidentally. This workflow does not activate channels.
 
-Next connect those executable demos to the frozen plan, collect one target-bound
-qualification receipt, and activate only the selected channel after its checks
-pass. Publish immutable lock/qualification metadata before changing a single
+Next complete the dedicated deeper-tier adapters and activate only the selected
+channel after its required checks pass. Publish immutable lock/qualification metadata before changing a single
 channel pointer, so readers cannot combine a new publication with an old lock.
 Rollback selects a previously qualified composition without rebuilding it.
 Public fresh-runner qualification and actual host/device deployment evidence

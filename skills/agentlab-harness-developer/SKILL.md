@@ -36,8 +36,9 @@ No fixed-channel or device promotion follows from this recovery demo.
 
 Read [channel-validation.md](../../docs/channel-validation.md) for the selective
 `aldev → almain → alprod` policy. Fresh-runner validation freezes one exact
-composition. The plan workflow checks lineage and required coverage; it does
-not activate channels or certify that listed tests ran.
+composition. The plan workflow checks lineage, then a separate fresh runner executes frozen
+component demos and retains target-bound check receipts. Unconnected deeper
+tier checks remain not_run and prevent qualification. It does not activate channels.
 
 ## Start
 
