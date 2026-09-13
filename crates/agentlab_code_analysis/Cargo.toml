@@ -37,3 +37,7 @@ path = "src/asset_model.rs"
 [[bin]]
 name = "agentlab-experience"
 path = "src/experience.rs"
+
+[[bin]]
+name = "agentlab-cache-seed"
+path = "src/cache_seed.rs"

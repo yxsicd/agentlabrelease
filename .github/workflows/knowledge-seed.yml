@@ -153,8 +153,15 @@ jobs:
           git clone --no-checkout --depth 1 https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git "$RUNNER_TEMP/source"
           git -C "$RUNNER_TEMP/source" fetch --depth 1 origin 7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6
           git -C "$RUNNER_TEMP/source" checkout --detach FETCH_HEAD
-          cargo build --locked -p agentlab_code_analysis --bin agentlab-source-probe --bin agentlab-harmony-materialize
+          cargo build --locked -p agentlab_code_analysis --bin agentlab-source-probe --bin agentlab-harmony-materialize --bin agentlab-cache-seed
           target/debug/agentlab-harmony-materialize "$RUNNER_TEMP/source" "$RUNNER_TEMP/reference" examples/harmony-build/seed
+      - name: Prepare cross-file candidate with Rust and verify stable row ordering
+        run: |
+          target/debug/agentlab-cache-seed "$RUNNER_TEMP/source" examples/knowledge-seed/seeds/harmony-code-workshop "$PWD" "$RUNNER_TEMP/cache-prepared-1"
+          target/debug/agentlab-cache-seed "$RUNNER_TEMP/source" examples/knowledge-seed/seeds/harmony-code-workshop "$PWD" "$RUNNER_TEMP/cache-prepared-2"
+          for table in maintainer_skills program_facts evaluation_cases; do
+            cmp "$RUNNER_TEMP/cache-prepared-1/$table.jsonl" "$RUNNER_TEMP/cache-prepared-2/$table.jsonl"
+          done
       - name: Install operator-only TypeScript runtime
         run: |
           mkdir "$RUNNER_TEMP/oracle-runtime"
@@ -178,3 +185,4 @@ jobs:
           path: |
             ${{ runner.temp }}/utility-calibration/
             ${{ runner.temp }}/cache-calibration/
+            ${{ runner.temp }}/cache-prepared-1/

@@ -72,3 +72,29 @@ and phase/attempt references do not disappear from definitions when a campaign
 only appends messages or has no tool errors. Runtime exports retain null values;
 explicit known types live with the Rust exchange schema, shared by local and
 Action execution. Regression tests cover a null-only reference and empty checks.
+
+## Cross-file candidate development
+
+`agentlab-cache-seed SOURCE BASE_SNAPSHOT RELEASE_REPO FRESH_OUTPUT` reads four
+modules from exact committed Harmony revision, adds their Rust syntax facts,
+six method-bound target Skills and a two-turn candidate. It exports one sorted
+JSONL per table. The preparation is not development authority or a frozen seed.
+
+Maintain those rows and archive actual queries in a fresh development namespace:
+
+```sh
+python3 examples/knowledge-seed/subject/maintain-cache.py \
+  --development /private/development.json --prepared /tmp/cache-prepared \
+  --root /tmp/cache-maintenance --prefix assets/knowledge/cache-development-next/ --create-tables
+```
+
+This orchestration uses generic TableGit operations. It archives complete typed
+program and semantic SQL results at one input cut, binds the task to both
+analysis rows, and exports the committed tables. Do not commit actual RPC/run
+records in this public repository. Complete phone build and new snapshot freeze
+remain separate gates. Repeated preparation must be byte-identical; stable IDs
+and ordered rows keep exports reviewable.
+
+For later iterations reuse the development prefix and omit `--create-tables`.
+Prepared rows are updated by stable ID and expected row version; previously
+archived query evidence remains available through TableGit commit history.
