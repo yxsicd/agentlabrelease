@@ -1423,3 +1423,14 @@ analyzer. Preserve unresolved syntactic edges and independent mutation verdicts.
 Keep source, knowledge and assessment cuts distinct; feedback changes the next
 knowledge cut rather than rewriting an active assessment. No duplicated live
 SKILL directory/row authority or MCPGit business-source changes are required.
+
+### TableGit knowledge development and per-table snapshots
+
+Develop knowledge in three AL business tables: maintainer_skills, program_facts
+and evaluation_cases. Execute and archive revision-bound analysis code/results in
+program_facts; bind cases to those analysis records. Use the local import/analyze/
+export commands in the knowledge example. Publish one stable JSONL file per table,
+not a mixed-table file or a mutable JSONL/DB pair. Re-import reads durable target
+rows and versions, reconciling inserts/updates/deletes; unchanged snapshots do not
+advance history. Prove cold history, SQL analysis, fresh import and byte-stable
+export in the public Action. This fixture scope does not qualify real Harmony.

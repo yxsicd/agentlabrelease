@@ -2,12 +2,41 @@
   "schema": "agentlab.knowledge_builder_seed.v1",
   "role": "benchmark_builder",
   "sources": [
-    {"repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git", "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"},
-    {"repository": "https://gitcode.com/HarmonyOS_Samples/guide-snippets.git", "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525"}
+    {
+      "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+      "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+    },
+    {
+      "repository": "https://gitcode.com/HarmonyOS_Samples/guide-snippets.git",
+      "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525"
+    }
   ],
-  "vocabulary": ["module ownership", "cross-file calls", "state propagation", "routing", "lifecycle", "persistence", "asynchronous failure", "resource dependency", "boundary behavior", "historical regression"],
-  "workflow": ["extract source-bound facts", "draft narrow maintainer Skill rows", "link Skills to structure facts", "generate multi-turn candidate tasks", "calibrate reference and wrong implementations", "freeze accepted assessment cut", "feed evaluation evidence into the next knowledge cut"],
-  "requiredOutputs": ["knowledge_skills", "knowledge_nodes", "knowledge_edges", "knowledge_links", "knowledge_tasks", "knowledge_evaluations"],
+  "vocabulary": [
+    "module ownership",
+    "cross-file calls",
+    "state propagation",
+    "routing",
+    "lifecycle",
+    "persistence",
+    "asynchronous failure",
+    "resource dependency",
+    "boundary behavior",
+    "historical regression"
+  ],
+  "workflow": [
+    "extract source-bound facts",
+    "draft narrow maintainer Skill rows",
+    "link Skills to structure facts",
+    "generate multi-turn candidate tasks",
+    "calibrate reference and wrong implementations",
+    "freeze accepted assessment cut",
+    "feed evaluation evidence into the next knowledge cut"
+  ],
+  "requiredOutputs": [
+    "maintainer_skills",
+    "program_facts",
+    "evaluation_cases"
+  ],
   "captureAuthority": "operator_owned_harness",
   "strongBuilderAdapterImplemented": false
 }

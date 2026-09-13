@@ -1,37 +1,57 @@
-# Engineering knowledge seed
+# TableGit engineering knowledge development
 
-Run `python3 examples/knowledge-seed/run.py --root /tmp/knowledge-experiment`.
-The `knowledge-seed.yml` Action uses published AgentLab Session provisioning and
-MCPGit services, not a local database substitute. It creates six AgentLab-owned
-business tables: knowledge_skills, knowledge_nodes, knowledge_edges,
-knowledge_links, knowledge_tasks and knowledge_evaluations. Markdown knowledge
-lives in stable Skill rows. The Action inserts an initial cut, updates those same
-rows, restarts storage and independently queries both immutable versions.
+TableGit is the current development authority. Released snapshots contain three
+JSONL files, one row per line and one file per business table:
 
-The deterministic builder is a replaceable Mock participant. It parses a small
-cross-file Python fixture, records syntactic call facts without claiming resolved
-semantic dependencies, constructs a discount task and verifies baseline failure,
-reference success, boundary mutation failure and regression mutation failure.
-All compiler/test output and source observations are captured without redaction.
-`--source PATH` can extract Python facts from an existing project; it does not
-invent calibrated tasks for that source.
+- `maintainer_skills.jsonl`: maintainer Markdown knowledge and evidence references.
+- `program_facts.jsonl`: typed symbols, calls, links and archived analysis records.
+- `evaluation_cases.jsonl`: typed tasks and calibration results.
 
-The Action also accepts `builder=mini` to run the real captured builder using
-its isolated runtime and operator Gateway. It reads the source/fact/vocabulary
-seed and proposes Markdown for the frozen Skill identities. Source facts remain
-operator-generated. Semantic draft quality is not declared verified merely because
-the Agent submits. Model transport and tool evidence enter the same capture path.
+Rows have stable IDs; export sorts IDs and JSON fields, adds no volatile timestamps
+and retains all content. `export.json` binds the three data files to an exact
+repository cut and records counts/digests. No mutable file/DB dual authority.
 
-This first executable tier establishes the data/iteration contract. It does not
-claim Harmony analysis, a qualified strong-model Harmony builder, native MCPGit SkillDocument
-format, full SessionFS Workspace capture or an autonomous improving flywheel.
-The Markdown business-row representation is canonical for this experiment;
-knowledge-package.json is the builder's captured proposal, not a second live
-knowledge authority.
+## Local development
 
-Next adapters must bind both HarmonyOS_Samples repositories to exact commits,
-extract ArkTS symbols and dependencies, have a strong builder consume the facts
-and vocabulary seed, then independently calibrate candidate tasks before freezing
-assessment inputs. Evaluation feedback revises the same Skill identities in the
-next cut; active assessment versions remain frozen. The release repository owns
-public adapters and workflows; AgentLab owns execution, lineage and capture.
+Use an existing MCPGit Service repository and operator authorization file. The
+Service client is the same released WebSocket adapter used by the public demo.
+
+```sh
+python3 examples/knowledge-seed/store.py import --url "$SERVICE_URL" \
+  --authorization-file "$AUTH_FILE" --repo "$REPO_ID" --topic "$TOPIC_ID" \
+  --directory ./seed-snapshot --create-tables
+python3 examples/knowledge-seed/store.py analyze --url "$SERVICE_URL" \
+  --authorization-file "$AUTH_FILE" --repo "$REPO_ID" --topic "$TOPIC_ID" \
+  --revision "$KNOWLEDGE_CUT" --directory /tmp/knowledge-analysis
+python3 examples/knowledge-seed/store.py export --url "$SERVICE_URL" \
+  --authorization-file "$AUTH_FILE" --repo "$REPO_ID" \
+  --revision "$FINAL_CUT" --directory ./seed-snapshot
+```
+
+Omit `--create-tables` for imports into established tables. Import reads committed
+rows and actual row versions, then batches inserts, field updates and deletions.
+Identical snapshots do not create a new commit. Direct TableGit transactions are
+used for development edits; JSONL is exported only from a fixed publication cut.
+Keep authorization and raw Session evidence outside the release checkout.
+
+## Executable experiment
+
+`knowledge-seed.yml` bootstraps a deterministic two-file Python fixture into real
+AgentLab Session tables, revises stable Skill rows and proves both cuts after
+storage restart. It executes read-only `table.relations.query` SQL over the
+program facts, archives the request, code, input revision and complete typed result
+as an analysis row, and links task records to that row. Name-matched call candidates
+remain syntactic candidates, not proven runtime dispatch.
+
+Then it exports three JSONL files, imports them to fresh tables, independently
+compares rows, repeats the import with zero operations, and re-exports the original
+cut byte-stably. Compiler/test failures and full source capture are retained.
+`builder=mini` is an optional captured Agent builder; semantic draft correctness
+is separate from submission. The current fixture is not real Harmony analysis,
+qualified complex-task generation or full Workspace SessionFS capture.
+
+The builder seed pins the two HarmonyOS_Samples repositories and vocabulary.
+Next source adapters must generate actual ArkTS facts; task construction must
+consume archived analysis before independently calibrating reference and wrong
+implementations. Feedback revises subsequent knowledge cuts; assessment inputs
+stay frozen. MCPGit remains generic infrastructure; all three schemas are AL-owned.
