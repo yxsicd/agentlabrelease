@@ -93,17 +93,22 @@ maintenance cut, preserving the current assessment inputs.
 ## First real Harmony construction round
 
 `seeds/harmony-code-workshop/` is a three-table snapshot exported from real
-TableGit namespace `flywheel/harmony/`: five semantic Skills, 93 program/analysis
-facts and six task/calibration rows. Source is pinned to code-workshop commit
-`7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6`. Imports are lexical paths in 15 selected
-files; external package aliases and symbol/runtime calls remain unresolved.
+TableGit namespace `flywheel/harmony-v2/`: 26 instance Skills, 123 program/analysis
+facts and seven task/calibration rows. Previous namespace cuts are archived evidence;
+this snapshot is the current instance authority export. Source is pinned to code-workshop commit
+`7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6`. Imports are lexical paths in 19 selected
+files. Two local common-package bindings are checked against package dependency
+files and entry metadata; external aliases and symbol/runtime calls remain
+unresolved. A SQL join archives four possible consumer/barrel/export paths,
+without claiming four resolved imported-symbol calls.
 
 Five candidates cover feedback, delayed loading, navigation, image URLs and
-independent click handlers. Only click-handler behavior has an isolated-method
+independent click handlers. Click-handler behavior has an isolated-method
 oracle: original shared state fails independence, per-handler reference passes,
 and a wrong boundary fails. It executes an explicitly type-erased original
-method in Node, not an ArkTS build, emulator or full assessed-Agent run. Four
-other tasks are candidates without functional calibration. Complete results
+method in Node, not an ArkTS build, emulator or full assessed-Agent run. Delayed-loading lifecycle also has an isolated original/reference/wrong-cancel
+oracle with explicit scheduler/breakpoint stubs. Three other tasks remain
+candidates without functional calibration. Complete results
 and fixed-cut SQL dependency query/results are stored as TableGit rows.
 
 Run a development round against a retained local service (all evidence and
@@ -126,3 +131,18 @@ Feedback improves the next knowledge cut, preserving the original cut. Keep
 source, semantic knowledge, calibration and assessment identities separate.
 SDK/HAP, real subject behavior and formal SessionFS Fork remain independent
 acceptance steps. This round does not claim the full challenge is solved.
+
+## Method and instance layers
+
+Read [the methodology Skill](../../skills/agentlab-skill-methodology/SKILL.md).
+Each of five scenarios has semantic, program-analysis, seed-extraction,
+calibration and evaluation instance Skills, plus one challenge-goal instance.
+The 26 rows carry skillLayer, role, stage, objectId, methodSkillId, exact Release
+methodRevision/methodDigest, sourceRevision and evidence/case references.
+Evaluation rows have role=operations; they are still instance Skills maintained
+in the same business table. Release method recipes remain a separate layer.
+
+The two method oracles independently calibrate construction demands. They do
+not execute a real assessed Agent, render ArkUI or qualify HAP/SessionFS. The
+first pre-v2 real Harmony Action34749535447 passed released Session history and
+104-row export/import; v2 coverage requires its own fresh Action verdict.
