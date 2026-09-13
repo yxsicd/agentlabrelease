@@ -118,3 +118,24 @@ Collection success and Agent task success remain separate verdicts. This case
 qualifies no device UI, strict HarmonyOS 6.0, formal SessionFS Fork or fixed-channel
 promotion. All failures remain evidence and are classified from controlled
 captures, not the participant's self-report.
+
+### Preserve captures when repairing the collection pipeline
+
+Use the same Action with `scenario: loading` and `capture_run_id` set to the
+completed capture run. It restores the published raw capture, retains its original
+run identity and frozen oracle digest, and repeats only released SDK/TableGit
+persistence on a clean runner. The new evidence Release records both capture
+and replay run; existing HAPs and Agent outcomes remain the original artifacts.
+SDK inputs derive from the selected composition's publication through the shared
+channel-input loader. Initial and restarted Service URLs come from the same
+route-readiness function rather than a second port assumption.
+
+[Capture 34766874819](https://github.com/yxsicd/agentlabrelease/actions/runs/34766874819)
+produced three successful whole-phone builds. Its parent second turn failed the
+known-delay regression check: changing the final fallback from lg to sm without
+an explicit lg branch changes lg's delay from 400 to 350. First turn and the fresh
+Agent branch passed. The initial TableGit step referenced an SDK lock that had not
+been derived in that workflow. Preserve this failed collection attempt and repair
+its inputs; do not rerun or change the assessed Agent to erase its valid failure.
+Failed checks and native tool errors have separate SQL analyses and observed
+lesson/evidence rows. Observed failures do not become verified promotion rules.

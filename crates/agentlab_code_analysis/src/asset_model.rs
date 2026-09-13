@@ -158,6 +158,7 @@ fn instance(root: &Path, run: &str, archive: &str) -> Tables {
         "context_versions",
         "message_contents",
         "context_changes",
+        "checks",
     ] {
         t.entry(name.into()).or_default();
     }

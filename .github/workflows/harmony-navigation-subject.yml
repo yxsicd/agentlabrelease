@@ -7,6 +7,10 @@ on:
         options: [navigation, feedback, loading]
         default: navigation
         description: Frozen TableGit case; independently calibrated submitted methods
+      capture_run_id:
+        type: string
+        default: ''
+        description: Replay only TableGit persistence from a completed loading capture; no new Agent or HAP
 permissions:
   contents: write
 jobs:
@@ -19,11 +23,37 @@ jobs:
       AGENTLAB_COMPOSITION_DIR: release/candidates/harmony-buildkit-v6-linux-x64
       AGENTLAB_RELEASE_CHANNEL: candidate-20260913-harmony-buildkit-v6-linux-x64
       AGENTLAB_ASSESSMENT_SCENARIO: ${{ inputs.scenario || 'navigation' }}
+      AGENTLAB_CAPTURE_RUN_ID: ${{ inputs.capture_run_id || github.run_id }}
       AGENTLAB_MODEL: glm-5.3-flash
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Restore immutable loading capture for persistence replay
+        if: inputs.capture_run_id != '' && inputs.scenario == 'loading'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$AGENTLAB_CI_ROOT"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$AGENTLAB_CAPTURE_RUN_ID" > "$AGENTLAB_CI_ROOT/capture-source.json"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          v=json.loads((Path(os.environ['AGENTLAB_CI_ROOT'])/'capture-source.json').read_text())
+          assert v['status']=='completed' and v['head_branch']=='main'
+          assert v['path']=='.github/workflows/harmony-navigation-subject.yml'
+          PY
+          gh release download "evidence-loading-subject-$AGENTLAB_CAPTURE_RUN_ID" --pattern raw-evidence.tar.zst --dir "$RUNNER_TEMP/capture"
+          tar --zstd -xf "$RUNNER_TEMP/capture/raw-evidence.tar.zst" -C "$AGENTLAB_CI_ROOT"
+          python3 - <<'PY'
+          import json,os,shutil
+          from pathlib import Path
+          r=Path(os.environ['AGENTLAB_CI_ROOT']);e=r/'raw'/os.environ['AGENTLAB_CAPTURE_RUN_ID']
+          assert json.loads((e/'frozen-task.json').read_text())['id']=='case-loading-subject-v1'
+          shutil.copytree(e,r/'assessment/evidence')
+          shutil.rmtree(r/'raw')
+          PY
       - name: Pin source and calibrate reference outside assessed Workspace
+        if: inputs.capture_run_id == ''
         run: |
           git clone --depth 1 https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git "$RUNNER_TEMP/source"
           git -C "$RUNNER_TEMP/source" fetch --depth 1 origin 7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6
@@ -32,6 +62,7 @@ jobs:
           cargo build --locked -p agentlab_code_analysis --bin agentlab-source-probe
           echo "AGENTLAB_SOURCE_PROBE=$GITHUB_WORKSPACE/target/debug/agentlab-source-probe" >> "$GITHUB_ENV"
       - name: Install contained participant and independent oracle runtimes
+        if: inputs.capture_run_id == ''
         run: |
           mkdir -p "$RUNNER_TEMP/pi-runtime" "$RUNNER_TEMP/oracle-runtime"
           cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
@@ -49,6 +80,7 @@ jobs:
           sudo apt-get install --yes zstd python3-websocket
           scripts/ci-public-install-deploy-smoke.sh
       - name: Real parent two turns and fresh-Agent source fork; retain Agent failures
+        if: inputs.capture_run_id == ''
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
         run: |
@@ -56,7 +88,7 @@ jobs:
           cp "$RUNNER_TEMP/participant-image.json" "$AGENTLAB_CI_ROOT/assessment/evidence/participant-image.json"
           cp "$RUNNER_TEMP/participant-runtime-preflight.txt" "$AGENTLAB_CI_ROOT/assessment/evidence/participant-runtime-preflight.txt"
       - name: Publish full successful build binaries as experiment evidence
-        if: always()
+        if: always() && inputs.capture_run_id == ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -79,14 +111,14 @@ jobs:
           test -f "$AGENTLAB_CI_ROOT/assessment/evidence/frozen-task.json"
           tag="evidence-loading-subject-$GITHUB_RUN_ID"
           if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --target "$GITHUB_SHA" --prerelease --title "Loading subject evidence $GITHUB_RUN_ID" --notes "Real staged loading assessment; raw evidence and typed runtime tables. Inspect Agent, build and method qualifications independently."
+            gh release create "$tag" --target "$GITHUB_SHA" --prerelease --title "Loading subject evidence $GITHUB_RUN_ID" --notes "Captured loading run $AGENTLAB_CAPTURE_RUN_ID; persistence run $GITHUB_RUN_ID. Raw evidence and typed runtime tables; inspect Agent, build and method verdicts independently."
           fi
           mkdir -p "$AGENTLAB_CI_ROOT/raw"
-          ln -s "$AGENTLAB_CI_ROOT/assessment/evidence" "$AGENTLAB_CI_ROOT/raw/$GITHUB_RUN_ID"
-          tar -h -C "$AGENTLAB_CI_ROOT" -cf - "raw/$GITHUB_RUN_ID" | zstd -q -o "$AGENTLAB_CI_ROOT/raw-evidence.tar.zst"
+          ln -s "$AGENTLAB_CI_ROOT/assessment/evidence" "$AGENTLAB_CI_ROOT/raw/$AGENTLAB_CAPTURE_RUN_ID"
+          tar -h -C "$AGENTLAB_CI_ROOT" -cf - "raw/$AGENTLAB_CAPTURE_RUN_ID" | zstd -q -o "$AGENTLAB_CI_ROOT/raw-evidence.tar.zst"
           gh release upload "$tag" "$AGENTLAB_CI_ROOT/raw-evidence.tar.zst"
           cargo build --locked -p agentlab_code_analysis --bin agentlab-asset-model --bin agentlab-experience
-          target/debug/agentlab-asset-model examples/knowledge-seed/seeds/harmony-code-workshop "$AGENTLAB_CI_ROOT/normalized-runtime" "https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/raw-evidence.tar.zst" "$GITHUB_RUN_ID=$AGENTLAB_CI_ROOT/assessment/evidence"
+          target/debug/agentlab-asset-model examples/knowledge-seed/seeds/harmony-code-workshop "$AGENTLAB_CI_ROOT/normalized-runtime" "https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/raw-evidence.tar.zst" "$AGENTLAB_CAPTURE_RUN_ID=$AGENTLAB_CI_ROOT/assessment/evidence"
           python3 - <<'PY'
           import json,os,hashlib,shutil
           from pathlib import Path
@@ -94,13 +126,14 @@ jobs:
           shutil.copytree(root/'normalized-runtime/knowledge',inputs/'knowledge')
           evidence=root/'assessment/evidence'
           variants={name:json.loads((evidence/(name+'-oracle.stdout.json')).read_text()) for name in ['baseline','reference','wrong-cancel','wrong-fallback']}
-          source=Path(os.environ['RUNNER_TEMP'])/'source/common/src/main/ets/view/DelayedLoadingView.ets'
-          oracle=Path('examples/knowledge-seed/subject/loading.cjs')
-          (cal/'calibration.json').write_text(json.dumps(dict(sourceRevision='7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6',sourceDigest=hashlib.sha256(source.read_bytes()).hexdigest(),oracleDigest=hashlib.sha256(oracle.read_bytes()).hexdigest(),scope='actual submitted lifecycle/shared breakpoint methods; timer/enum seam',variants=variants),indent=2)+'\n')
+          source=evidence/'initial/common/src/main/ets/view/DelayedLoadingView.ets'
+          if (root/'capture-source.json').exists():shutil.copy2(root/'capture-source.json',inputs/'capture-source.json')
+          (cal/'calibration.json').write_text(json.dumps(dict(sourceRevision='7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6',sourceDigest=hashlib.sha256(source.read_bytes()).hexdigest(),oracleDigest=json.loads((evidence/'frozen-task.json').read_text())['oracleDigest'],scope='actual submitted lifecycle/shared breakpoint methods; timer/enum seam',variants=variants),indent=2)+'\n')
           PY
       - name: Persist actual runtime, historical contexts and experience in released TableGit
         if: always() && inputs.scenario == 'loading'
         run: |
+          python3 scripts/channel-input.py --source "$AGENTLAB_COMPOSITION_DIR" --output "$RUNNER_TEMP/tablegit-inputs"
           mapfile -t runtime < <(python3 - <<'PY'
           import json
           lock=json.load(open('release/candidates/harmony-buildkit-v6-linux-x64/environment-lock.json'))
@@ -108,7 +141,7 @@ jobs:
           print(next(c['volume'] for c in lock['components'] if c['slot']=='release'))
           PY
           )
-          /usr/bin/python3 examples/tablegit-session/run.py --image "${runtime[0]}" --runtime-volume "${runtime[1]}" --sdk-program release/candidates/40ecdf4b-linux-x64/session-sdk.json --root "$AGENTLAB_CI_ROOT/store" --asset-model-export "$AGENTLAB_CI_ROOT/normalized-runtime/instances/$GITHUB_RUN_ID" --asset-instance-id "$GITHUB_RUN_ID" --experience-real-inputs "$AGENTLAB_CI_ROOT/evaluation-inputs"
+          /usr/bin/python3 examples/tablegit-session/run.py --image "${runtime[0]}" --runtime-volume "${runtime[1]}" --sdk-program "$AGENTLAB_COMPOSITION_DIR/session-sdk.json" --root "$AGENTLAB_CI_ROOT/store" --asset-model-export "$AGENTLAB_CI_ROOT/normalized-runtime/instances/$AGENTLAB_CAPTURE_RUN_ID" --asset-instance-id "$AGENTLAB_CAPTURE_RUN_ID" --experience-real-inputs "$AGENTLAB_CI_ROOT/evaluation-inputs"
       - name: Publish complete TableGit history and analysis evidence
         if: always() && inputs.scenario == 'loading'
         env:

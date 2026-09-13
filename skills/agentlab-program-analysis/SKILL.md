@@ -64,3 +64,10 @@ even where local fact IDs coincide. An import seam is source evidence, not
 executed UI or resolved runtime call coverage. Calibrate wrong cancellation and
 unknown fallback before the staged real Agent case. Invalid source and an Agent
 that never reaches tools remain valid failed outcomes with empty typed tables.
+
+When changing a shared helper's default return, identify known values that were
+implicitly served by that return. Retest every known value at every later turn.
+The loading capture's parent lost the lg branch while adding unknown-to-sm
+fallback; a fresh branch retained it. Archive both the failed named check and
+submitted helper source before drawing this conclusion. Compile success alone
+does not detect this semantic regression.

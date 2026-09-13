@@ -166,7 +166,7 @@ def main():
                'export MCPGIT_AGENT_AUTHORIZATION="$(cat /demo/agent.authorization)"; '
                'exec /demo-bin/mcpgit --config /demo/mcpgit.toml --transport streamable-http --bind 0.0.0.0:8001')
         made_containers.append(agent)
-        wait_route("initial-route")
+        initial_service_url=wait_route("initial-route")
         template = probe("bootstrap-templates", {
             "MCPGIT_PROBE_OWNER_TEMPLATE_REPO":"owner-template",
             "MCPGIT_PROBE_OWNER_TEMPLATE_REVISION":revisions["ownerTemplate"],
@@ -183,8 +183,7 @@ def main():
         first = probe("provision", settings, "session-created")
         capture_state = None
         if args.asset_model_export and not args.capture_evidence:
-            port = run(["docker","inspect",gateway,"--format", '{{(index (index .NetworkSettings.Ports "8000/tcp") 0).HostPort}}'],"asset-service-port")
-            service=Service("ws://127.0.0.1:"+port+"/__mcpgit/service-ws",(state/"caller.authorization").read_text().strip(),evidence)
+            service=Service(initial_service_url,(state/"caller.authorization").read_text().strip(),evidence)
             capture_worktree={"topic_id":None}
             capture_worktree_path=service.call('table.worktree.open',dict(repo=first['binding']['repositoryId'],worktree=capture_worktree))['worktree_path']
         if args.capture_evidence:

@@ -41,10 +41,11 @@ fn validates_negative_variant_and_promotes_only_explicit_verified_lesson() {
     let instance = root.join("instance");
     fs::create_dir(&instance).unwrap();
     fs::write(instance.join("tool_calls.jsonl"),format!("{}\n",json!({"id":"reported-error","isError":true,"authority":"participant-adapter","result":{"content":"a complete error"}}))).unwrap();
+    fs::write(instance.join("checks.jsonl"),format!("{}\n",json!({"id":"known-delay","check":"allKnownDelays","passed":false,"runId":"run","phaseId":"parent-turn-2"}))).unwrap();
     let analysis = root.join("analysis.json");
     fs::write(
         &analysis,
-        json!({"request":{"bindings":[{"revision":"input-cut"}]},"result":{"rows":[[]]}})
+        json!({"request":{"bindings":[{"revision":"input-cut"}]},"result":{"rows":[[]]},"outcomeRequest":{"bindings":[{"revision":"input-cut"}],"sql":"query"},"outcomeResult":{"rows":[[]]}})
             .to_string(),
     )
     .unwrap();
@@ -65,6 +66,9 @@ fn validates_negative_variant_and_promotes_only_explicit_verified_lesson() {
     assert!(lessons
         .iter()
         .any(|r| r["status"] == "observed" && r["attribution"] == "unknown"));
+    assert!(lessons.iter().any(|r| r["kind"] == "assessed-check-failure"
+        && r["status"] == "observed"
+        && r["checkId"] == "known-delay"));
     let knowledge = root.join("knowledge");
     fs::create_dir(&knowledge).unwrap();
     for name in ["maintainer_skills", "program_facts", "evaluation_cases"] {

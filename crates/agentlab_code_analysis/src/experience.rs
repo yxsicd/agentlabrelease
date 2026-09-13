@@ -67,6 +67,31 @@ fn main() {
         t.entry("experiment_lessons".into()).or_default();
         t.entry("lesson_validations".into()).or_default();
         t.entry("lesson_evidence".into()).or_default();
+        if analysis["outcomeRequest"].is_object() {
+            let outcome_id = hash(&serde_json::to_vec(&analysis["outcomeRequest"]).unwrap());
+            put(
+                &mut t,
+                "analysis_records",
+                json!({"id":outcome_id,"assetClass":"evaluation-instance","kind":"failed-check-query","inputRevision":analysis["outcomeRequest"]["bindings"][0]["revision"],"request":analysis["outcomeRequest"],"result":analysis["outcomeResult"]}),
+            );
+            for check in rows(&instance.join("checks.jsonl")) {
+                if check["passed"] != false {
+                    continue;
+                }
+                let id = format!("failed-check-{}", check["id"].as_str().unwrap());
+                let evidence = format!("{id}-observation");
+                put(
+                    &mut t,
+                    "experiment_lessons",
+                    json!({"id":id,"assetClass":"evaluation-instance","kind":"assessed-check-failure","status":"observed","runId":check["runId"],"phaseId":check["phaseId"],"checkId":check["id"],"phenomenon":check["check"],"scope":"one-submitted-code-check","attribution":"assessed-source-outcome","analysisId":outcome_id,"evidenceIds":[evidence],"validationIds":[],"targetIds":[]}),
+                );
+                put(
+                    &mut t,
+                    "lesson_evidence",
+                    json!({"id":evidence,"assetClass":"evaluation-instance","lessonId":id,"kind":"independent-check-failure","authority":"operator-owned-oracle","sourceTable":"checks","sourceRowId":check["id"],"inputRevision":analysis["outcomeRequest"]["bindings"][0]["revision"],"record":check}),
+                );
+            }
+        }
         for call in rows(&instance.join("tool_calls.jsonl")) {
             if call["isError"] != true {
                 continue;
