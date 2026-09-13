@@ -2,6 +2,7 @@
 name: agentlab-benchmark-operations
 description: Run fixed published task seeds through AgentLab and retain complete operational evaluation evidence.
 metadata:
+  agentlab-layer: method
   agentlab-role: operations
   agentlab-stage: evaluation
 ---
@@ -17,3 +18,8 @@ Pin the participant implementation, adapter, model, environment and task. Keep A
 Run frozen acceptance checks. Report task/build outcomes, turn counts, timing and supported process metrics; distinguish failed Agent performance from Harness errors and incomplete observation. Only claim SessionFS checkpoint/Fork restoration where exact receipts prove it. Use generic MCPGit analysis rather than adding an analysis API.
 
 Store operational observations/results in the installed Harness tables and Workspace state in SessionFS. Return evidence-linked findings to maintenance for the next seed/knowledge version; do not rewrite the frozen assessed case or update Release seed files from the running assessment.
+
+Produce target-instance guidance for this stage as TableGit Skill rows,
+separate from the structured facts/tasks/results. Follow
+[the two-layer methodology](../agentlab-skill-methodology/SKILL.md) for
+method/source lineage and independent layer/role fields.

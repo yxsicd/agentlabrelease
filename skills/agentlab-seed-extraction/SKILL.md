@@ -2,6 +2,7 @@
 name: agentlab-seed-extraction
 description: Generate evidence-linked multi-turn task seeds from semantic Skills and program facts.
 metadata:
+  agentlab-layer: method
   agentlab-role: maintenance
   agentlab-stage: seed-extraction
 ---
@@ -17,3 +18,8 @@ Use a strong construction Agent or deterministic generator as appropriate. Captu
 Start with dependency-supported scenarios, not arbitrary mutations. A multi-turn seed should include meaningful continuation or changed requirements and regressions that earlier decisions can influence. Preserve exact checkpoints for counterfactual Fork comparisons when the installed Harness supports them.
 
 Send candidates to [benchmark calibration](../agentlab-benchmark-calibration/SKILL.md). Maintain proposed/unbuildable/ambiguous cases with their failure evidence instead of deleting them. Freeze calibrated cases for [operations](../agentlab-benchmark-operations/SKILL.md); feedback creates a later knowledge cut.
+
+Produce target-instance guidance for this stage as TableGit Skill rows,
+separate from the structured facts/tasks/results. Follow
+[the two-layer methodology](../agentlab-skill-methodology/SKILL.md) for
+method/source lineage and independent layer/role fields.

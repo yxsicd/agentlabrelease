@@ -2,6 +2,7 @@
 name: agentlab-program-analysis
 description: Maintain revision-bound program structure and analysis evidence used to generate evaluation seeds.
 metadata:
+  agentlab-layer: method
   agentlab-role: maintenance
   agentlab-stage: program-analysis
 ---
@@ -17,3 +18,8 @@ Run generic MCPGit table programming/search/SQL over fixed input cuts. Archive c
 Analyze candidate dependency chains and impact surfaces, then hand them to [seed extraction](../agentlab-seed-extraction/SKILL.md). State coverage and gaps such as reflection, dynamic loading, generated code and missing build dependencies only when they affect this source analysis.
 
 Store source/facts/analysis structurally in TableGit. Build trees and temporary binaries belong to SessionFS Workspace snapshots; do not put multi-GB compiler output into Git. Export with [the three-table workflow](../../examples/knowledge-seed/README.md).
+
+Produce target-instance guidance for this stage as TableGit Skill rows,
+separate from the structured facts/tasks/results. Follow
+[the two-layer methodology](../agentlab-skill-methodology/SKILL.md) for
+method/source lineage and independent layer/role fields.

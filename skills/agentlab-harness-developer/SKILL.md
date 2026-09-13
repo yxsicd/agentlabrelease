@@ -1,6 +1,8 @@
 ---
 name: agentlab-harness-developer
 description: Design, run, inspect, checkpoint, fork, and compare Code Agent evaluation campaigns using a released AgentLab Harness. Do not use for maintaining AgentLab source or administering production infrastructure.
+metadata:
+  agentlab-layer: method
 ---
 
 # AgentLab Harness Developer
@@ -1439,3 +1441,8 @@ not a mixed-table file or a mutable JSONL/DB pair. Re-import reads durable targe
 rows and versions, reconciling inserts/updates/deletes; unchanged snapshots do not
 advance history. Prove cold history, SQL analysis, fresh import and byte-stable
 export in the public Action. This fixture scope does not qualify real Harmony.
+
+Produce target-instance guidance for this stage as TableGit Skill rows,
+separate from the structured facts/tasks/results. Follow
+[the two-layer methodology](../agentlab-skill-methodology/SKILL.md) for
+method/source lineage and independent layer/role fields.

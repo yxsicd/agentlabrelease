@@ -31,6 +31,7 @@ for skill in registry["skills"]:
     assert skill["id"] not in seen, skill["id"]
     seen.add(skill["id"])
     assert skill["role"] in registry["roles"], skill["id"]
+    assert skill["layer"] in registry["layers"], skill["id"]
     path = ROOT / skill["path"]
     assert path.name == "SKILL.md" and path.is_file(), skill["path"]
     body = path.read_text()
@@ -40,7 +41,7 @@ for skill in registry["skills"]:
             continue
         assert (path.parent / target.split("#", 1)[0]).is_file(), (skill["id"], target)
 assert {s["stage"] for s in registry["skills"] if s["role"] == "maintenance"} == {
-    "goal", "repository-analysis", "program-analysis", "seed-extraction", "calibration"
+    "methodology", "goal", "repository-analysis", "program-analysis", "seed-extraction", "calibration"
 }
 
 print(json.dumps({"schema": "agentlab.release_validation.v1", "version": manifest["version"], "ok": True}))

@@ -2,6 +2,7 @@
 name: agentlab-benchmark-goal
 description: Translate a benchmark challenge into maintained objectives and measurable acceptance criteria.
 metadata:
+  agentlab-layer: method
   agentlab-role: maintenance
   agentlab-stage: goal
 ---
@@ -21,3 +22,8 @@ The two recommended source repositories are input corpora, not two ready-made ta
 Maintain goal criteria and repository-specific guidance as stable `maintainer_skills` rows. Put measured inventory, analysis code/results and gap observations in `program_facts`; put candidate tasks and calibration in `evaluation_cases`. Label proposed, source-supported and experimentally calibrated claims separately.
 
 Follow the codebase-analysis, program-analysis, seed-extraction and benchmark-calibration routes in [the registry](../registry.json). Their outputs support this goal; fixture CI success alone does not satisfy it.
+
+Produce target-instance guidance for this stage as TableGit Skill rows,
+separate from the structured facts/tasks/results. Follow
+[the two-layer methodology](../agentlab-skill-methodology/SKILL.md) for
+method/source lineage and independent layer/role fields.

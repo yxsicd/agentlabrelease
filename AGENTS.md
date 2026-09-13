@@ -3,6 +3,9 @@
 This repository contains released AgentLab packages and consumer guidance, not
 the private maintenance workspace.
 
+Start with `skills/agentlab-skill-methodology/SKILL.md` for method/instance
+layers, independent of maintenance/operations roles.
+
 Select maintenance versus operations via `skills/registry.json`. Maintenance
 Skills own benchmark methods and seed publication; operations consume fixed
 snapshots and return evidence for the next maintenance cut.

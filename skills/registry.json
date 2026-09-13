@@ -8,46 +8,72 @@
   },
   "skills": [
     {
+      "id": "agentlab-skill-methodology",
+      "role": "maintenance",
+      "layer": "method",
+      "stage": "methodology",
+      "objectScope": "generic",
+      "path": "skills/agentlab-skill-methodology/SKILL.md"
+    },
+    {
       "id": "agentlab-benchmark-goal",
       "role": "maintenance",
       "stage": "goal",
-      "path": "skills/agentlab-benchmark-goal/SKILL.md"
+      "path": "skills/agentlab-benchmark-goal/SKILL.md",
+      "layer": "method",
+      "objectScope": "generic"
     },
     {
       "id": "agentlab-codebase-analysis",
       "role": "maintenance",
       "stage": "repository-analysis",
-      "path": "skills/agentlab-codebase-analysis/SKILL.md"
+      "path": "skills/agentlab-codebase-analysis/SKILL.md",
+      "layer": "method",
+      "objectScope": "generic"
     },
     {
       "id": "agentlab-program-analysis",
       "role": "maintenance",
       "stage": "program-analysis",
-      "path": "skills/agentlab-program-analysis/SKILL.md"
+      "path": "skills/agentlab-program-analysis/SKILL.md",
+      "layer": "method",
+      "objectScope": "generic"
     },
     {
       "id": "agentlab-seed-extraction",
       "role": "maintenance",
       "stage": "seed-extraction",
-      "path": "skills/agentlab-seed-extraction/SKILL.md"
+      "path": "skills/agentlab-seed-extraction/SKILL.md",
+      "layer": "method",
+      "objectScope": "generic"
     },
     {
       "id": "agentlab-benchmark-calibration",
       "role": "maintenance",
       "stage": "calibration",
-      "path": "skills/agentlab-benchmark-calibration/SKILL.md"
+      "path": "skills/agentlab-benchmark-calibration/SKILL.md",
+      "layer": "method",
+      "objectScope": "generic"
     },
     {
       "id": "agentlab-benchmark-operations",
       "role": "operations",
       "stage": "evaluation",
-      "path": "skills/agentlab-benchmark-operations/SKILL.md"
+      "path": "skills/agentlab-benchmark-operations/SKILL.md",
+      "layer": "method",
+      "objectScope": "generic"
     },
     {
       "id": "agentlab-harness-developer",
       "role": "operations",
       "stage": "harness",
-      "path": "skills/agentlab-harness-developer/SKILL.md"
+      "path": "skills/agentlab-harness-developer/SKILL.md",
+      "layer": "method",
+      "objectScope": "generic"
     }
-  ]
+  ],
+  "layers": {
+    "method": "Reusable stage recipe maintained at a Release Git commit.",
+    "instance": "Target-specific guidance maintained as TableGit business rows."
+  }
 }

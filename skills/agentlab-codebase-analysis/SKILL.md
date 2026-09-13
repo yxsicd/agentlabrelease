@@ -2,6 +2,7 @@
 name: agentlab-codebase-analysis
 description: Maintain evidence-backed semantic knowledge of a target repository for benchmark construction.
 metadata:
+  agentlab-layer: method
   agentlab-role: maintenance
   agentlab-stage: repository-analysis
 ---
@@ -17,3 +18,8 @@ Every claim needs a source location or analysis record. Distinguish observed beh
 Use [program analysis](../agentlab-program-analysis/SKILL.md) for structure and [seed extraction](../agentlab-seed-extraction/SKILL.md) to turn grounded knowledge into tasks. Archive searches and generic TableGit analysis requests, exact input cuts and complete results in `program_facts`.
 
 Develop in TableGit. Export a fixed cut with the existing [three-table workflow](../../examples/knowledge-seed/README.md), one stable JSONL per table. Release files are publication snapshots, not a second live authority.
+
+Produce target-instance guidance for this stage as TableGit Skill rows,
+separate from the structured facts/tasks/results. Follow
+[the two-layer methodology](../agentlab-skill-methodology/SKILL.md) for
+method/source lineage and independent layer/role fields.

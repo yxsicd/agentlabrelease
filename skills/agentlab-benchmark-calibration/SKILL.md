@@ -2,6 +2,7 @@
 name: agentlab-benchmark-calibration
 description: Independently calibrate task seeds and maintain grading quality before operational evaluation.
 metadata:
+  agentlab-layer: method
   agentlab-role: maintenance
   agentlab-stage: calibration
 ---
@@ -17,3 +18,8 @@ Define metric denominators and event sources: task success, build success, user 
 Use [the knowledge experiment](../../examples/knowledge-seed/README.md) as the runnable fixture calibration/SQL/history/import demo; [SWE](../../examples/swe-bench/README.md) and [Harmony](../../examples/harmony-build/README.md) provide existing campaign examples. Record each demo's actual coverage.
 
 Publish calibrated seeds from a fixed TableGit cut, one deterministically ordered JSONL per table. Do not alter active assessment inputs after seeing a subject outcome. Operational results become feedback for a new maintenance cut.
+
+Produce target-instance guidance for this stage as TableGit Skill rows,
+separate from the structured facts/tasks/results. Follow
+[the two-layer methodology](../agentlab-skill-methodology/SKILL.md) for
+method/source lineage and independent layer/role fields.
