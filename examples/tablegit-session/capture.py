@@ -28,8 +28,18 @@ def ident(*parts):
     return str(uuid.uuid5(uuid.NAMESPACE_OID, '\0'.join(parts)))
 
 
-def collect(root, session_id, operation_id, agent_kind="pi", context=None):
+def collect(root, session_id, operation_id, agent_kind=None, context=None):
     root = Path(root)
+    if agent_kind is None:
+        agent_kind="unknown"
+        receipt=root/"participant.json"
+        if receipt.is_file():
+            try:
+                value=json.loads(receipt.read_bytes())
+                if isinstance(value,dict) and isinstance(value.get("implementation"),str):
+                    agent_kind=value["implementation"]
+            except (ValueError,UnicodeDecodeError):
+                pass  # Preserve raw receipt; missing identity is explicit, never guessed.
     rows, objects = [], []
     inventory = []
     def observe(value, method, source, status='observed'):

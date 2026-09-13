@@ -61,6 +61,10 @@ def main():
                     '--dataset_name',catalog['dataset'],'--instance_ids',a.instance,
                     '--predictions_path',str(predictions),'--max_workers','1','--run_id',kind,'--timeout','600'],cwd=evidence)
             reports=list((evidence/'logs/run_evaluation'/kind).rglob('report.json'))
+            if not reports and kind=='agent' and not value.strip():
+                summary['agentResolved']=False
+                summary['agentEvaluationReason']='Official evaluator skipped empty projected patch'
+                continue
             if len(reports)!=1: raise RuntimeError(kind+' evaluator report missing')
             report=json.loads(reports[0].read_text())[a.instance]
             summary['harnessHealthy' if kind=='reference' else 'agentResolved']=report['resolved']

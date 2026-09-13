@@ -27,6 +27,7 @@ class MemoryService:
 
 class CaptureTests(unittest.TestCase):
     def fixture(self,root):
+        (root/'participant.json').write_text('{"implementation":"pi","captureAuthority":"operator"}')
         (root/'gateway').mkdir()
         (root/'gateway/0001.request.json').write_text(json.dumps({'messages':[{'role':'user','content':'完整输入'}]}))
         (root/'gateway/0001.response').write_bytes(b'data: {"choices":[{"delta":{"content":"OK"}}]}\n\ndata: [DONE]\n')
@@ -83,9 +84,18 @@ class CaptureTests(unittest.TestCase):
             rows,objects,inventory=capture.collect(root,'session','operation')
             errors=[o for o in objects if o['row']['method']=='capture.parse_error']
             self.assertEqual(len(errors),4)
-            self.assertTrue({'pi.start','pi.end','gateway.response_event'} <= {o['row']['method'] for o in objects})
+            self.assertTrue({'unknown.start','unknown.end','gateway.response_event'} <= {o['row']['method'] for o in objects})
             service=MemoryService();revision,_=capture.ingest(service,'repo',rows,'operation',{'topic_id':None})
             self.assertTrue(capture.recover(service,'repo',revision,rows,objects,inventory,Path(tmp)/'out')['exactFiles'])
+
+    def test_operator_receipt_identifies_mini_not_native_claims(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/'participant.json').write_text('{"implementation":"mini-swe-agent"}')
+            (root/'events.jsonl').write_text('{"type":"tool_execution_end","implementation":"pi"}\n')
+            _,objects,_=capture.collect(root,'session','operation')
+            self.assertTrue(all(o['row']['agentKind']=='mini-swe-agent' for o in objects))
+            self.assertIn('mini-swe-agent.tool_execution_end',{o['row']['method'] for o in objects})
 
     def test_capture_reuses_resolved_topic_across_transactions(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -105,3 +115,4 @@ class CaptureTests(unittest.TestCase):
             self.assertEqual(capture.collect(root,'session','operation'),capture.collect(root,'session','operation'))
 
 if __name__=='__main__': unittest.main()
+
