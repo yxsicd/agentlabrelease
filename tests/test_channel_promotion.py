@@ -9,6 +9,8 @@ def module(name):
     spec=importlib.util.spec_from_file_location(name, ROOT/'scripts'/('channel-'+name+'.py'))
     result=importlib.util.module_from_spec(spec);spec.loader.exec_module(result);return result
 planner=module('plan');qualifier=module('qualify');promoter=module('promotion');activation=module('activate')
+spec=importlib.util.spec_from_file_location('composition', ROOT/'scripts/validate-composition-release.py')
+composition=importlib.util.module_from_spec(spec);spec.loader.exec_module(composition)
 
 class ChannelPromotionTests(unittest.TestCase):
     def setUp(self):
@@ -29,6 +31,7 @@ class ChannelPromotionTests(unittest.TestCase):
         self.assertEqual(main['compositionIdentity'],self.plan['compositionIdentity'])
         self.assertFalse(pub['activated'])
         self.assertIn(tag,pub['environmentLockUrl'])
+        composition.validate(pub,json.loads(self.raw),self.raw)
     def test_incomplete_or_other_composition_never_qualifies(self):
         self.baseline['checks'].pop('tablegit_recovery')
         qualification=qualifier.qualify(self.plan,self.baseline)

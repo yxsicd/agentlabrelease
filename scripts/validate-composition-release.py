@@ -36,7 +36,7 @@ def asset_location(url):
 
 
 def validate(publication, lock, lock_bytes):
-    require(publication["schema"] == "agentlab.reference_publication.v1", "publication schema")
+    require(publication["schema"] in {"agentlab.reference_publication.v1", "agentlab.reference_publication.v3"}, "publication schema")
     require(publication["environmentLockSha256"] == sha(lock_bytes), "lock digest drift")
     require(lock["schema"] == "agentlab.environment_lock.v3", "lock schema")
     require(publication["status"] in {"candidate", "qualified"}, "publication status")
@@ -44,6 +44,13 @@ def validate(publication, lock, lock_bytes):
     require(gates and all(v in {"passed", "failed", "not_run"} for v in gates.values()), "gate status")
     if publication["status"] == "qualified":
         require(all(v == "passed" for v in gates.values()), "qualified publication has unpassed gates")
+    if publication["schema"] == "agentlab.reference_publication.v3":
+        require(publication["tag"] in {"aldev", "almain", "alprod"}, "qualified channel name")
+        lock_tag, lock_name = asset_location(publication["environmentLockUrl"])
+        qualification_tag, _ = asset_location(publication["qualificationUrl"])
+        require(lock_tag == qualification_tag == publication["qualifiedReleaseTag"], "qualified cut reference drift")
+        require(lock_name == "environment-lock.json", "qualified lock reference")
+        require(all(v in {"passed", "failed", "not_run"} for v in publication["deploymentGates"].values()), "deployment gate status")
     assets = publication["assets"]
     urls = [a["url"] for a in assets]
     require(len(urls) == len(set(urls)), "duplicate reference")
