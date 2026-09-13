@@ -1,0 +1,70 @@
+name: Compose single-component upgrade
+on:
+  workflow_dispatch:
+    inputs:
+      base_release:
+        description: Published base channel or immutable qualified cut
+        default: aldev
+        required: true
+      donor_release:
+        description: Published candidate or qualified cut containing the replacement
+        required: true
+      component:
+        description: 'session-sdk, control, pack:release, pack:tools, pack:harmony-cli, pack:harmony-build-kit, image:runtime'
+        required: true
+permissions:
+  contents: write
+jobs:
+  compose:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Acquire explicit published compositions
+        env:
+          BASE: ${{ inputs.base_release }}
+          DONOR: ${{ inputs.donor_release }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, urllib.parse, urllib.request
+          for role,tag in [('base',os.environ['BASE']),('donor',os.environ['DONOR'])]:
+              assert pathlib.Path(tag).name == tag
+              root=pathlib.Path(os.environ['RUNNER_TEMP'])/role
+              root.mkdir()
+              base='https://github.com/'+os.environ['GITHUB_REPOSITORY']+'/releases/download/'+tag+'/'
+              name='agentlab-'+tag+'-publication.json' if tag in ['aldev','almain','alprod'] else 'publication.json'
+              raw=urllib.request.urlopen(base+name,timeout=30).read()
+              (root/'publication.json').write_bytes(raw)
+              pub=json.loads(raw)
+              url=urllib.parse.urljoin(base+name,pub.get('environmentLockUrl','./environment-lock.json'))
+              (root/'environment-lock.json').write_bytes(urllib.request.urlopen(url,timeout=30).read())
+          PY
+      - name: Compose and validate only the selected replacement
+        env:
+          COMPONENT: ${{ inputs.component }}
+        run: |
+          python3 scripts/component-upgrade.py --base "$RUNNER_TEMP/base" --donor "$RUNNER_TEMP/donor" \
+            --component "$COMPONENT" --tag "candidate-component-$GITHUB_RUN_ID" --output "$RUNNER_TEMP/candidate"
+          python3 - <<'PY'
+          import importlib.util,json,os,pathlib
+          spec=importlib.util.spec_from_file_location('validate','scripts/validate-composition-release.py')
+          m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          pub=json.loads((pathlib.Path(os.environ['RUNNER_TEMP'])/'candidate/publication.json').read_text())
+          m.remote_assets(pub['assets'])
+          PY
+      - name: Publish reference-only candidate metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "candidate-component-$GITHUB_RUN_ID" "$RUNNER_TEMP/candidate/"*.json \
+            --prerelease --title "Single-component candidate $GITHUB_RUN_ID" \
+            --notes "Reference-only composition; unqualified until channel-plan.yml passes. No component payload rebuilt or copied."
+      - name: Preserve source and upgrade evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: component-upgrade-evidence
+          path: |
+            ${{ runner.temp }}/base/
+            ${{ runner.temp }}/donor/
+            ${{ runner.temp }}/candidate/

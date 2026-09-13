@@ -1386,3 +1386,12 @@ closing the proxy waits for active handlers before evidence ingestion. Errors
 retain partial response and explicit terminal failure rather than a false EOF.
 These receipts use the existing `gateway.status` source observations and payload
 chunks, without introducing analysis endpoints or subject-reported authority.
+
+### Independent component updates
+
+Use `component-upgrade.yml` to derive a reference-only candidate from a published
+base and donor composition, selecting exactly one SDK, controller, pack slot or
+image slot. Follow [the executable upgrade workflow](../../docs/component-publication.md#routine-single-component-upgrade).
+Submit its candidate release to `channel-plan.yml` via `candidate_release`.
+Qualification belongs to the composition, not just the changed package;
+selectively promote identical component references through dev/main/prod.

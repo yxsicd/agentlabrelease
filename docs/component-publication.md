@@ -88,3 +88,29 @@ cargo build --locked --release --workspace
 python3 scripts/validate-composition-release.py --remote --smoke
 scripts/ci-public-install-deploy-smoke.sh
 ```
+
+## Routine single-component upgrade
+
+Run **Compose single-component upgrade** with a published `base_release`, a
+published `donor_release` containing the new component, and one `component`:
+`session-sdk`, `control`, `pack:<slot>` or `image:<slot>`. The donor is an
+existing versioned composition, not a request to select “latest”. This produces
+`candidate-component-<run-id>` with metadata only. Unchanged component references
+and base deployment bindings are retained. Real contract mismatches stop
+composition; explicitly prepare a coordinated composition when needed.
+
+Next run **Freeze channel validation plan**, target `aldev`, setting
+`candidate_release` to that tag. After qualification, use the existing explicit
+prepare/activate workflow. Selectively promote the same composition to `almain`
+and `alprod`; each tier executes its own checks. No D/A/B/C dependency is added.
+The upgrade receipt records the base and donor identities and before/after
+component data. Old qualification is removed, all new candidate checks start
+`not_run`, and an unchanged replacement creates no release.
+
+Local equivalent:
+
+```sh
+python3 scripts/component-upgrade.py --base release/channels/aldev \
+  --donor /path/to/published-composition --component session-sdk \
+  --tag candidate-sdk-upgrade --output /tmp/agentlab-sdk-upgrade
+```

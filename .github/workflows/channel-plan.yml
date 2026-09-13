@@ -11,6 +11,10 @@ on:
         description: Optional immutable qualified upstream release tag; blank selects the fixed upstream channel
         type: string
         default: ""
+      candidate_release:
+        description: Optional reference-only candidate release from component-upgrade.yml
+        type: string
+        default: ""
       candidate:
         description: Candidate directory name for aldev only
         type: string
@@ -27,6 +31,7 @@ jobs:
       - name: Select and freeze the upstream reference cut
         env:
           TARGET: ${{ inputs.target }}
+          CANDIDATE_RELEASE: ${{ inputs.candidate_release }}
           CANDIDATE: ${{ inputs.candidate }}
           UPSTREAM_RELEASE: ${{ inputs.upstream_release }}
         run: |
@@ -35,7 +40,13 @@ jobs:
           import os, pathlib, shutil, urllib.request
           root=pathlib.Path(os.environ['RUNNER_TEMP'])/'channel-source'
           target=os.environ['TARGET']
-          if target=='aldev':
+          if target=='aldev' and os.environ['CANDIDATE_RELEASE']:
+              tag=os.environ['CANDIDATE_RELEASE']
+              assert pathlib.Path(tag).name==tag and tag.startswith('candidate-')
+              base='https://github.com/'+os.environ['GITHUB_REPOSITORY']+'/releases/download/'+tag+'/'
+              for f in ['environment-lock.json','publication.json']:
+                  (root/f).write_bytes(urllib.request.urlopen(base+f,timeout=30).read())
+          elif target=='aldev':
               name=os.environ['CANDIDATE']
               assert pathlib.Path(name).name==name
               source=pathlib.Path('release/candidates')/name
