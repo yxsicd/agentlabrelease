@@ -26,3 +26,10 @@ preparation diff and image digest, and freezes the prepared execution cut before
 launch. Final patch extraction uses that frozen cut even if the Agent commits;
 new non-ignored files are included without modifying its Git index. It must not
 require task base, prepared HEAD and changing evidence HEAD to be equal.
+
+Set `capture_run_id` to a prior SWE campaign and select the same case(s) to prove
+current structured ingestion/cold reconstruction without redispatching the Agent.
+Original capture bytes and producer revision remain unchanged. Such a replay is
+capture recovery evidence, never a fresh Agent evaluation or a repaired solution.
+Seeds, baselines, participant bindings and evaluator reports additionally appear
+as method-typed source observations, alongside exact raw file reconstruction.

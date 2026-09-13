@@ -2,6 +2,10 @@ name: SWE seed campaign
 on:
   workflow_dispatch:
     inputs:
+      capture_run_id:
+        description: Reingest original source capture without redispatching the Agent
+        type: string
+        default: ""
       instance:
         type: choice
         description: Official SWE-bench Lite seed; all runs the curated set
@@ -9,6 +13,7 @@ on:
         default: psf__requests-1963
 permissions:
   contents: read
+  actions: read
 jobs:
   select:
     if: github.ref == 'refs/heads/main'
@@ -60,7 +65,31 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: scripts/ci-public-install-deploy-smoke.sh
+      - name: Restore original controlled source capture without Agent execution
+        id: replay
+        if: inputs.capture_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CAPTURE_RUN_ID: ${{ inputs.capture_run_id }}
+          INSTANCE: ${{ matrix.instance }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN_ID" > "$RUNNER_TEMP/source-run.json"
+          gh run download "$CAPTURE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name "swe-$INSTANCE" --dir "$RUNNER_TEMP/prior-capture"
+          python3 - <<'PY'
+          import json,os,pathlib,shutil
+          prior=json.load(open(os.environ['RUNNER_TEMP']+'/source-run.json'))
+          assert prior['head_branch']=='main' and prior['path']=='.github/workflows/swe-campaign.yml'
+          source=pathlib.Path(os.environ['RUNNER_TEMP'])/'prior-capture/real-agent/evidence'
+          target=pathlib.Path(os.environ['AGENTLAB_CI_ROOT'])/'real-agent/evidence'
+          target.parent.mkdir(parents=True)
+          shutil.copytree(source,target)
+          receipt=dict(originalRunId=prior['id'],originalProducerRevision=prior['head_sha'],subjectRedispatched=False,originalCaptureModified=False)
+          (target.parents[1]/'capture-replay.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:out.write('producer_revision='+prior['head_sha']+'\n')
+          PY
       - name: Evaluate actual Agent patch and independent reference patch
+        if: inputs.capture_run_id == ''
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
           INSTANCE: ${{ matrix.instance }}
@@ -70,6 +99,9 @@ jobs:
             --instance "$INSTANCE" --gateway "$AGENTLAB_LM_GATEWAY_URL"
       - name: Persist full evidence to TableGit and prove cold reconstruction
         if: always() && steps.install.outcome == 'success'
+        env:
+          AGENTLAB_CAPTURE_PRODUCER_REVISION: ${{ steps.replay.outputs.producer_revision }}
+          AGENTLAB_CAPTURE_RUN_ID: ${{ inputs.capture_run_id }}
         run: |
           mapfile -t runtime < <(python3 - <<'PY'
           import json
