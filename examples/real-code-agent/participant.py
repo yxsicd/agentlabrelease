@@ -21,7 +21,7 @@ class Participant:
         self.implementation = implementation
         self.evidence = evidence
         self.state = state
-        self.binary = str(Path(binary).resolve())
+        self.binary = str(Path(binary).absolute())
         self.gateway = gateway.rstrip('/')
         self.model = model
         self.route = route

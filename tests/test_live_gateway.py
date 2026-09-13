@@ -5,6 +5,8 @@ import os
 import shutil
 import socket
 import struct
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import threading
@@ -39,6 +41,20 @@ class GatewayCaptureTests(unittest.TestCase):
             self.assertTrue(lifecycle['sourcePresent'])
             self.assertGreaterEqual(lifecycle['durationMs'],0)
             self.assertLessEqual(lifecycle['startedAt'],lifecycle['endedAt'])
+
+    def test_python_virtualenv_executable_retains_its_runtime_prefix(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ,
+                {'AGENTLAB_LM_GATEWAY_KEY':'synthetic-external-key'}):
+            root=Path(tmp)
+            subprocess.run([sys.executable,'-m','venv','--without-pip',str(root/'runtime')],check=True)
+            evidence=root/'evidence';evidence.mkdir()
+            binary=root/'runtime/bin/python'
+            participant=MODULE.Participant(evidence,root/'state',binary,'http://127.0.0.1:1',
+                                           'test-model',implementation='mini-swe-agent')
+            try:
+                prefix=subprocess.check_output([participant.binary,'-c','import sys; print(sys.prefix)']).decode().strip()
+                self.assertEqual(Path(prefix).resolve(),(root/'runtime').resolve())
+            finally:participant.close()
 
     def test_disconnect_still_captures_complete_upstream(self):
         release=threading.Event()
