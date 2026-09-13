@@ -58,8 +58,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Evaluate retained gates before any fixed-pointer mutation.
           python3 scripts/channel-activate.py --cut "$RUNNER_TEMP/cut" --repository "$GITHUB_REPOSITORY" --output "$RUNNER_TEMP/activation"
           channel=$(python3 -c 'import json,os; print(json.load(open(os.environ["RUNNER_TEMP"]+"/cut/publication.json"))["tag"])')
+          gh release download "$channel" --repo "$GITHUB_REPOSITORY" --pattern "agentlab-$channel-publication.json" --dir "$RUNNER_TEMP/previous"
+          python3 scripts/channel-activate.py --cut "$RUNNER_TEMP/cut" --repository "$GITHUB_REPOSITORY" --output "$RUNNER_TEMP/activation" \
+            --previous "$RUNNER_TEMP/previous/agentlab-$channel-publication.json"
+          cut_tag=$(python3 -c 'import json,os; print(json.load(open(os.environ["RUNNER_TEMP"]+"/cut/publication.json"))["qualifiedReleaseTag"])')
+          gh release upload "$cut_tag" "$RUNNER_TEMP/activation/previous-publication-"*.json --repo "$GITHUB_REPOSITORY"
           gh release upload "$channel" "$RUNNER_TEMP/activation/agentlab-$channel-publication.json" --repo "$GITHUB_REPOSITORY" --clobber
           gh release download "$channel" --repo "$GITHUB_REPOSITORY" --pattern "agentlab-$channel-publication.json" --dir "$RUNNER_TEMP/readback"
           cmp "$RUNNER_TEMP/activation/agentlab-$channel-publication.json" "$RUNNER_TEMP/readback/agentlab-$channel-publication.json"
