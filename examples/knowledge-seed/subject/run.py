@@ -75,7 +75,7 @@ def main():
  try:
   baseline=oracle('baseline',project,2);reference=oracle('reference',a.reference,2)
   if seed.get('acceptanceChecks'):assert set(reference['checks'])==set(seed['acceptanceChecks']['2'])
-  wrong=root/'wrong';shutil.copytree(a.reference/'common',wrong/'common');shutil.copytree(a.reference/'features/devpractices',wrong/'features/devpractices')
+  wrong=root/'wrong';shutil.copytree(a.reference/'common',wrong/'common');shutil.copytree(a.reference/'features',wrong/'features')
   file=wrong/paths[0]
   if a.scenario=='navigation':file.write_text(file.read_text().replace('this.pathStack.replacePath','this.pathStack.pushPath'))
   elif a.scenario=='feedback':file.write_text(file.read_text().replace('this.submitError = err.message;', 'this.submitError = err.message; this.resetAllStatus();'))
@@ -83,6 +83,7 @@ def main():
   elif a.scenario=='image-url':file.write_text(file.read_text().replace('!/^https?:\\/\\//i.test(value)', 'false').replace("(parsed.protocol === 'http:' || parsed.protocol === 'https:')",'true'))
   else:file.write_text(file.read_text().replace('clearTimeout(this.delayTimer);', 'void this.delayTimer;'))
   negative=oracle({'feedback':'wrong-reset','loading':'wrong-cancel','navigation':'wrong-stack','debounce':'wrong-boundary','image-url':'wrong-protocol'}[a.scenario],wrong,2)
+  assert not any(result.get('error') for result in (baseline,reference,negative)), 'Calibration infrastructure error is not a negative behavior verdict'
   summary['calibration']=dict(baselineFails=not baseline['pass'],referencePasses=reference['pass'],wrongOutcomeFails=not negative['pass'])
   if a.scenario in ('debounce','image-url'):
    extra=root/'wrong-extra';shutil.copytree(a.reference/'common',extra/'common');shutil.copytree(a.reference/'features',extra/'features')
