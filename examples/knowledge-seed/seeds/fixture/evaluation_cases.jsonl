@@ -1,0 +1,5 @@
+{"analysisIds":["analysis-call-candidates"],"id":"04c456b54fcde31a38854c20","kind":"task","requirement":"For quantity >= 3 apply a 20% discount, preserving checkout delegation and smaller quantities.","skillIds":["b5b7cd10e214edf01712493e","a7694cb02a081b1af8371e96"],"sourceRevision":"owned-fixture","status":"calibrated"}
+{"authority":"operator_owned_harness","exitCode":1,"id":"a507ac226b15ac6d53cf6481","kind":"calibration","passed":false,"sourceRevision":"owned-fixture","taskId":"04c456b54fcde31a38854c20","variant":"wrong_boundary"}
+{"authority":"operator_owned_harness","exitCode":0,"id":"e8026a243cbb90c9e2ff29ea","kind":"calibration","passed":true,"sourceRevision":"owned-fixture","taskId":"04c456b54fcde31a38854c20","variant":"reference"}
+{"authority":"operator_owned_harness","exitCode":1,"id":"e8bea95f3e7016bddc77a055","kind":"calibration","passed":false,"sourceRevision":"owned-fixture","taskId":"04c456b54fcde31a38854c20","variant":"lost_history"}
+{"authority":"operator_owned_harness","exitCode":1,"id":"feb221d2e3be0c44d7991286","kind":"calibration","passed":false,"sourceRevision":"owned-fixture","taskId":"04c456b54fcde31a38854c20","variant":"baseline"}

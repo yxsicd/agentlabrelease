@@ -1,0 +1,19 @@
+{
+  "schema": "agentlab.knowledge_export.v1",
+  "repository": "session",
+  "revision": "3dd02f6e4a1d9c3c005afdb8261171f139b1d47a",
+  "tables": {
+    "maintainer_skills": {
+      "rowCount": 2,
+      "sha256": "e69edebf8a48f8fc0ab924392fcd4f29cb8783314681749f15666d704e6a8648"
+    },
+    "program_facts": {
+      "rowCount": 6,
+      "sha256": "b8a88a87d2a02c98852c713f94a7c1cc18bf7b8e2f41bc41567752ff4266d466"
+    },
+    "evaluation_cases": {
+      "rowCount": 5,
+      "sha256": "10b14234ff83d34b1533c6caea989416e84cc01da7a29ff2a306cadbaff9e53c"
+    }
+  }
+}

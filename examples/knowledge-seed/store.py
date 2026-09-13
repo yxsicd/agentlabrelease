@@ -148,9 +148,12 @@ if __name__=='__main__':
     import argparse,sys
     sys.path.insert(0,str(Path(__file__).parents[1]/'tablegit-session'))
     from capture import Service
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('mode',choices=['import','export','analyze']);p.add_argument('--url',required=True);p.add_argument('--authorization-file',type=Path,required=True);p.add_argument('--repo',required=True);p.add_argument('--topic');p.add_argument('--revision');p.add_argument('--directory',type=Path,required=True);p.add_argument('--create-tables',action='store_true');a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('mode',choices=['import','export','analyze']);p.add_argument('--url',required=True);p.add_argument('--authorization-file',type=Path,required=True);p.add_argument('--repo',required=True);p.add_argument('--topic');p.add_argument('--revision');p.add_argument('--directory',type=Path,required=True);p.add_argument('--create-tables',action='store_true');p.add_argument('--evidence-directory',type=Path);a=p.parse_args()
     a.directory.mkdir(parents=True,exist_ok=True)
-    service=Service(a.url,a.authorization_file.read_text().strip(),a.directory)
+    import tempfile
+    evidence=a.evidence_directory or Path(tempfile.mkdtemp(prefix='agentlab-knowledge-rpc-'))
+    evidence.mkdir(parents=True,exist_ok=True)
+    service=Service(a.url,a.authorization_file.read_text().strip(),evidence)
     worktree={'topic_id':a.topic}
     if a.mode=='import': result=import_snapshot(service,a.repo,worktree,a.directory,create_tables=a.create_tables)
     elif a.mode=='export':
@@ -159,4 +162,4 @@ if __name__=='__main__':
     else:
         if not a.revision: p.error('analyze requires --revision')
         result=analyze(service,a.repo,worktree,a.revision)
-    print(json.dumps(result,ensure_ascii=False))
+    print(json.dumps(dict(result=result,evidenceDirectory=str(evidence)),ensure_ascii=False))

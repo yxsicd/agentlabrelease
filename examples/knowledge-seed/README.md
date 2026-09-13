@@ -55,3 +55,27 @@ Next source adapters must generate actual ArkTS facts; task construction must
 consume archived analysis before independently calibrating reference and wrong
 implementations. Feedback revises subsequent knowledge cuts; assessment inputs
 stay frozen. MCPGit remains generic infrastructure; all three schemas are AL-owned.
+
+## Verified local TableGit development
+
+`local.py` creates an independent real MCPGit Service using a locally installed
+ARM64 image, maintains the three tables, restarts storage, archives SQL analysis
+and performs export/reimport. This is TableGit development validation, separate
+from the release-pinned AL Session qualification Action.
+
+```sh
+python3 -m venv /tmp/knowledge-runtime
+/tmp/knowledge-runtime/bin/pip install websocket-client==1.8.0
+/tmp/knowledge-runtime/bin/python examples/knowledge-seed/local.py \
+  --image "$LOCAL_MCPGIT_IMAGE" --root /tmp/knowledge-development --keep
+```
+
+`--keep` retains the development containers/volume. Connection details and the
+operator authorization file remain in the private local state directory. Without
+it, the test removes its own infrastructure after preserving evidence. Startup
+and post-restart use one route discovery/readiness function, including refreshing
+dynamically allocated Docker ports. No existing AL instance is modified.
+
+[The initial fixture snapshot](seeds/fixture/export.json) was exported from real
+TableGit after archived SQL analysis, not hand-edited. It contains13 rows in three
+JSONL files. This is a small Python fixture; it does not claim real Harmony tasks.
