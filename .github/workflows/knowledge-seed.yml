@@ -1,5 +1,12 @@
 name: Engineering knowledge seed experiment
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'examples/knowledge-seed/**'
+      - 'examples/tablegit-session/**'
+      - 'tests/test_knowledge_seed.py'
+      - '.github/workflows/knowledge-seed.yml'
   workflow_dispatch:
     inputs:
       capture_run_id:

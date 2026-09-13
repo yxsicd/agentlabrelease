@@ -14,11 +14,19 @@ SQL="""SELECT json_extract(e.row_json,'$.sourceId') AS caller,
  AND json_extract(n.row_json,'$.kind')='symbol'
  ORDER BY caller,candidate_target"""
 
+def scan(service,repo,revision,table):
+    rows={};offset=0
+    while True:
+        result=service.call('table.query',dict(repo=repo,view={'kind':'committed','revision':revision},path=table,offset=offset,limit=1000))
+        if result['dirty'] or result['revision']!=revision:
+            raise RuntimeError('Knowledge scan must stay at one committed cut')
+        rows.update({r['key']:r for r in result['rows'] if not r['deleted']})
+        if not result['truncated']: return rows
+        if not result['rows']: raise RuntimeError('Table page cannot make progress')
+        offset+=len(result['rows'])
+
 def read(service,repo,revision,table):
-    result=service.call('table.query',dict(repo=repo,view={'kind':'committed','revision':revision},path=table,limit=1000))
-    if result['truncated'] or result['dirty'] or result['revision']!=revision:
-        raise RuntimeError('Knowledge read must be complete and revision-bound')
-    return {r['key']:r['row'] for r in result['rows'] if not r['deleted']}
+    return {key:item['row'] for key,item in scan(service,repo,revision,table).items()}
 
 def transact(service,repo,worktree,revision,tables,message):
     txn=str(uuid.uuid4())
@@ -105,9 +113,7 @@ def import_snapshot(service,repo,worktree,directory,prefix='',create_tables=Fals
     pending=[]
     for table in TABLES:
         path=prefix+table
-        response=service.call('table.query',dict(repo=repo,view={'kind':'committed','revision':revision},path=path,limit=1000))
-        if response['truncated'] or response['dirty']: raise RuntimeError('Import must read the complete target cut')
-        existing={r['key']:r for r in response['rows'] if not r['deleted']}
+        existing=scan(service,repo,revision,path)
         desired={r['id']:r for r in tables[table]}
         for key,row in desired.items():
             previous=existing.get(key)
