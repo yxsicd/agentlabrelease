@@ -23,3 +23,17 @@ class KnowledgeSeedTest(unittest.TestCase):
             p=m.build(Path(temp)/'run',source)
             self.assertFalse(p['calibrated']);self.assertEqual(p['tables']['knowledge_tasks'],[])
             self.assertEqual(p['tables']['knowledge_edges'][0]['targetName'],'g')
+
+class AgentDraftTest(unittest.TestCase):
+    def test_agent_proposal_preserves_operator_facts_and_ids(self):
+        import copy
+        spec=importlib.util.spec_from_file_location('agent_builder',Path(__file__).parents[1]/'examples/knowledge-seed/agent_builder.py')
+        adapter=importlib.util.module_from_spec(spec);spec.loader.exec_module(adapter)
+        with tempfile.TemporaryDirectory() as temp:
+            package=m.build(Path(temp)/'run');facts=copy.deepcopy(package['tables'])
+            proposal={'skills':[{'id':s['id'],'body':'Caller-aware maintainer workflow'} for s in facts['knowledge_skills']]}
+            result=adapter.apply_draft(package,proposal)
+            self.assertEqual(result['tables'],facts)
+            self.assertFalse(result['semanticKnowledgeVerified'])
+            self.assertTrue(all(u['fields']['body']=='Caller-aware maintainer workflow' for u in result['updates']))
+            with self.assertRaises(ValueError): adapter.apply_draft(package,{'skills':[{'id':'invented','body':'x'}]})

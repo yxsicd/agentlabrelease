@@ -16,8 +16,14 @@ All compiler/test output and source observations are captured without redaction.
 `--source PATH` can extract Python facts from an existing project; it does not
 invent calibrated tasks for that source.
 
+The Action also accepts `builder=mini` to run the real captured builder using
+its isolated runtime and operator Gateway. It reads the source/fact/vocabulary
+seed and proposes Markdown for the frozen Skill identities. Source facts remain
+operator-generated. Semantic draft quality is not declared verified merely because
+the Agent submits. Model transport and tool evidence enter the same capture path.
+
 This first executable tier establishes the data/iteration contract. It does not
-claim Harmony analysis, a strong Agent builder, native MCPGit SkillDocument
+claim Harmony analysis, a qualified strong-model Harmony builder, native MCPGit SkillDocument
 format, full SessionFS Workspace capture or an autonomous improving flywheel.
 The Markdown business-row representation is canonical for this experiment;
 knowledge-package.json is the builder's captured proposal, not a second live
