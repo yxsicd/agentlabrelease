@@ -58,7 +58,7 @@ fn separates_assets_restores_context_and_keeps_raw_evidence() {
     let e = root.join("evidence");
     write(
         &e.join("summary.json"),
-        json!({"sourceRevision":"source","ok":true,"phases":{"turn-1":{"build":true,"behavior":{"pass":true,"checks":{"accepted":true}}}}}),
+        json!({"sourceRevision":"source","ok":true,"phases":{"turn-1-launch-error":"participant timeout; partial retained","turn-1":{"build":true,"behavior":{"pass":true,"checks":{"accepted":true}}}}}),
     );
     write(
         &e.join("frozen-task.json"),
@@ -66,7 +66,7 @@ fn separates_assets_restores_context_and_keeps_raw_evidence() {
     );
     write(
         &e.join("parent-agent/turn-1-lifecycle.json"),
-        json!({"label":"turn-1","startedAt":"2026-01-01T00:00:00Z","endedAt":"2026-01-01T00:01:00Z"}),
+        json!({"label":"turn-1","timedOut":true,"startedAt":"2026-01-01T00:00:00Z","endedAt":"2026-01-01T00:01:00Z"}),
     );
     for (ordinal, text) in [(1, "old\u{2028}text"), (2, "new text")] {
         let g = e.join("parent-agent/gateway");
@@ -140,6 +140,13 @@ fn separates_assets_restores_context_and_keeps_raw_evidence() {
         .iter()
         .any(|r| r["record"]["calibration"]["baseline"]["raw"] == "complete baseline"));
     let instance = output.join("instances/run");
+    let failures = rows(&instance.join("phase_failures.jsonl"));
+    assert_eq!(failures.len(), 1);
+    assert_eq!(failures[0]["kind"], "participant-budget-timeout");
+    assert_eq!(failures[0]["phaseId"], "parent-agent-turn-1");
+    let assessments = rows(&instance.join("assessments.jsonl"));
+    assert_eq!(assessments.len(), 1);
+    assert_eq!(assessments[0]["phaseId"], failures[0]["phaseId"]);
     let artifacts = rows(&instance.join("artifacts.jsonl"));
     let publications = rows(&instance.join("artifact_publications.jsonl"));
     assert_eq!(artifacts.len(), 1);

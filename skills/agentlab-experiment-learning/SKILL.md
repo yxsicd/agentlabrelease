@@ -105,3 +105,13 @@ Its recovery receipt is external-deliverable qualification, not SessionFS restor
 Recovery receipts also preserve failed download exit codes and partial byte
 counts. A transport failure leaves an explicit unsuccessful receipt; it never
 becomes a missing observation or a claim that original HAP bytes were corrupt.
+
+### Outcome versus participant budget failure
+
+Keep `assessments` for real behavior/build results and `phase_failures` for
+captured launch errors/timeouts. Resolve phaseId from observed phase rows; retain
+phaseLabel and a null reference when no unique phase exists. Never manufacture
+an extra assessment for a `*-launch-error` summary message. Participant-budget
+failure and task correctness are separate observations: successful checks after
+interruption do not prove the Agent completed within its budget. Preserve the
+original message/lifecycle and join failures, checks and publications to phases.

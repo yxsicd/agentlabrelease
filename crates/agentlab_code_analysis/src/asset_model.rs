@@ -518,17 +518,31 @@ fn instance(root: &Path, run: &str, archive: &str) -> Tables {
         );
     }
     for (phase, result) in summary["phases"].as_object().unwrap() {
+        let label = phase.strip_suffix("-launch-error").unwrap_or(phase);
+        let phase_id = phase_reference(&t, label);
+        if !result.is_object() {
+            let timed_out = phase_id
+                .as_ref()
+                .and_then(|id| t.get("phases")?.get(id))
+                .is_some_and(|row| row["lifecycle"]["timedOut"] == true);
+            put(
+                &mut t,
+                "phase_failures",
+                json!({"id":phase,"assetClass":"evaluation-instance","runId":run,"phaseId":phase_id,"phaseLabel":label,"kind":if timed_out {"participant-budget-timeout"} else {"participant-launch-error"},"message":result.as_str().map(str::to_owned).unwrap_or_else(|| result.to_string()),"authority":"supervisor-lifecycle"}),
+            );
+            continue;
+        }
         put(
             &mut t,
             "assessments",
-            json!({"id":phase,"assetClass":"evaluation-instance","runId":run,"phaseId":format!("{}-{phase}",if phase.starts_with("fresh"){"fork-agent"}else{"parent-agent"}),"buildPassed":result["build"],"behaviorPassed":result["behavior"]["pass"],"sourceCut":result["sourceCut"]}),
+            json!({"id":phase,"assetClass":"evaluation-instance","runId":run,"phaseId":phase_id,"phaseLabel":label,"buildPassed":result["build"],"behaviorPassed":result["behavior"]["pass"],"sourceCut":result["sourceCut"]}),
         );
         if let Some(checks) = result["behavior"]["checks"].as_object() {
             for (check, passed) in checks {
                 put(
                     &mut t,
                     "checks",
-                    json!({"id":format!("{phase}-{check}"),"assetClass":"evaluation-instance","runId":run,"phaseId":format!("{}-{phase}",if phase.starts_with("fresh"){"fork-agent"}else{"parent-agent"}),"check":check,"passed":passed}),
+                    json!({"id":format!("{phase}-{check}"),"assetClass":"evaluation-instance","runId":run,"phaseId":phase_id,"phaseLabel":label,"check":check,"passed":passed}),
                 );
             }
         }
@@ -556,6 +570,7 @@ fn instance(root: &Path, run: &str, archive: &str) -> Tables {
             );
             let label = binary["label"].as_str().unwrap();
             let phase = label.strip_suffix("-build").unwrap_or(label);
+            let phase_id = phase_reference(&t, phase);
             let occurrence = hash(
                 serde_json::to_vec(&json!([run, label, binary["uri"]]))
                     .unwrap()
@@ -564,11 +579,23 @@ fn instance(root: &Path, run: &str, archive: &str) -> Tables {
             put(
                 &mut t,
                 "artifact_publications",
-                json!({"id":occurrence,"assetClass":"evaluation-instance","runId":run,"phaseId":format!("{}-{phase}", if phase.starts_with("fresh") {"fork-agent"} else {"parent-agent"}),"label":label,"artifactId":binary["sha256"],"uri":binary["uri"]}),
+                json!({"id":occurrence,"assetClass":"evaluation-instance","runId":run,"phaseId":phase_id,"phaseLabel":phase,"label":label,"artifactId":binary["sha256"],"uri":binary["uri"]}),
             );
         }
     }
     t
+}
+fn phase_reference(t: &Tables, label: &str) -> Option<String> {
+    let mut matches = t
+        .get("phases")?
+        .values()
+        .filter(|row| row["label"].as_str() == Some(label));
+    let id = matches.next()?["id"].as_str()?.to_owned();
+    if matches.next().is_some() {
+        None
+    } else {
+        Some(id)
+    }
 }
 fn main() {
     let args: Vec<String> = std::env::args().collect();

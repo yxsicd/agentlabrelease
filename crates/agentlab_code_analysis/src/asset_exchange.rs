@@ -90,6 +90,9 @@ pub fn export(path: &Path, class: &str, tables: &Tables) -> Value {
                 ("observedPass", "boolean"),
                 ("receipt", "object"),
             ],
+            "phase_failures" | "artifact_publications" | "assessments" | "checks" => {
+                &[("phaseId", "string"), ("phaseLabel", "string")]
+            }
             "attempts" => &[("parentAttemptId", "string"), ("forkScope", "string")],
             "llm_requests" => &[
                 ("streamError", "object"),
