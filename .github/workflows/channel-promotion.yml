@@ -20,6 +20,7 @@ jobs:
   promote:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Load and prepare the selected successful cut
@@ -89,6 +90,25 @@ jobs:
           gh release upload "$channel" "$RUNNER_TEMP/activation/agentlab-$channel-publication.json" --repo "$GITHUB_REPOSITORY" --clobber
           gh release download "$channel" --repo "$GITHUB_REPOSITORY" --pattern "agentlab-$channel-publication.json" --dir "$RUNNER_TEMP/readback"
           cmp "$RUNNER_TEMP/activation/agentlab-$channel-publication.json" "$RUNNER_TEMP/readback/agentlab-$channel-publication.json"
+      - name: Consume the activated public pointer on this fresh runner
+        if: inputs.activate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          AGENTLAB_CI_ROOT: /tmp/agentlab-activation-smoke
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes zstd python3-websocket
+          export AGENTLAB_RELEASE_CHANNEL=$(python3 -c 'import json,os; print(json.load(open(os.environ["RUNNER_TEMP"]+"/cut/publication.json"))["tag"])')
+          scripts/ci-public-install-deploy-smoke.sh
+      - name: Preserve the public pointer installation evidence
+        if: always() && inputs.activate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: channel-install-smoke
+          path: |
+            /tmp/agentlab-activation-smoke/*.json
+            /tmp/agentlab-activation-smoke/*.log
+            /tmp/agentlab-activation-smoke/runs/
       - name: Retain prepared metadata and activation result
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
