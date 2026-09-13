@@ -38,6 +38,17 @@ def main():
                 sliceCompilationQualified=summary['sliceCompilationQualified'])]
     for phase,result in summary['phases'].items():
         facts.append(dict(id=prefix+'phase-'+phase,kind='compiler-phase',phase=phase,**lineage,**result))
+    binary_manifest=a.evidence/'full-hap-manifest.json'
+    if binary_manifest.exists():
+        for entry in json.loads(binary_manifest.read_text()):
+            facts.append(dict(id=prefix+'binary-'+entry['sha256'],kind='compiler-artifact',
+                              **lineage,**entry,retentionDays=90,
+                              downloadWorkflowRun=a.producer_run))
+    publication=a.evidence/'external-binary-publication.json'
+    if publication.exists():
+        for entry in json.loads(publication.read_text())['artifacts']:
+            facts.append(dict(id=prefix+'published-binary-'+entry['sha256'],kind='published-compiler-artifact',
+                              **lineage,**entry))
     files={};byte_chunks={}
     # Native intermediate caches are not archived. Inputs/logs/receipts and final HAPs are.
     for path in sorted(a.evidence.rglob('*')):

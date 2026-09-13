@@ -64,3 +64,8 @@ Compiler evidence is maintained in the development TableGit with
 `examples/knowledge-seed/flywheel/ingest-controller-build.py`, then exported in
 three stable per-table snapshots. Dependency manifests remain lossless evidence;
 vendor caches and intermediate build binaries are excluded from this export.
+
+Verified full-source HAPs are automatically published by this main-only manual
+Action to independent `evidence-harmony-controllers-<run>` prereleases. The
+external-binary-publication receipt links the exact SHA/size to a durable Release
+asset. These are experiment evidence releases, not fixed-channel activation.

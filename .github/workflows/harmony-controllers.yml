@@ -2,7 +2,7 @@ name: Fixed-source Harmony controller compilation
 on:
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   compile:
     if: github.ref == 'refs/heads/main'
@@ -29,6 +29,29 @@ jobs:
           scripts/ci-public-install-deploy-smoke.sh
       - name: Probe full source, compile typed controllers, reject invalid type and recover
         run: python3 examples/knowledge-seed/flywheel/build-controllers.py --install-root "$AGENTLAB_CI_ROOT" --root "$AGENTLAB_CI_ROOT/case"
+      - name: Publish verified original HAP as durable experiment evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ ! -f "$AGENTLAB_CI_ROOT/case/evidence/full-hap-manifest.json" ]]; then
+            echo 'Full source did not qualify; no HAP publication.'
+            exit 0
+          fi
+          evidence_tag="evidence-harmony-controllers-$GITHUB_RUN_ID"
+          gh release create "$evidence_tag" --target "$GITHUB_SHA" --prerelease \
+            --title "Harmony controller compilation evidence $GITHUB_RUN_ID" \
+            --notes "Verified unsigned original phone HAP from this main-only experiment. Compilation evidence; device/UI, assessed-Agent and fixed-channel qualification are separate." \
+            "$AGENTLAB_CI_ROOT/case/full-hap/"*.hap \
+            "$AGENTLAB_CI_ROOT/case/evidence/full-hap-manifest.json"
+          python3 - <<'PYRECEIPT'
+          import json, os
+          from pathlib import Path
+          root=Path(os.environ['AGENTLAB_CI_ROOT'])/'case/evidence'
+          run=os.environ['GITHUB_RUN_ID'];tag='evidence-harmony-controllers-'+run
+          items=json.loads((root/'full-hap-manifest.json').read_text())
+          artifacts=[dict(uri='https://github.com/'+os.environ['GITHUB_REPOSITORY']+'/releases/download/'+tag+'/'+x['artifactPath'],bytes=x['bytes'],sha256=x['sha256'],module=x['module'],storage='github-release',publicationAuthority='main-workflow-supervisor',producerRun=run,producerRevision=os.environ['GITHUB_SHA']) for x in items]
+          (root/'external-binary-publication.json').write_text(json.dumps(dict(schema='agentlab.external_binary_publication.v1',releaseTag=tag,artifacts=artifacts),indent=2)+'\n')
+          PYRECEIPT
       - name: Preserve full failures, source patches, slice inputs, logs and HAP bytes
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
