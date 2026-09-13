@@ -151,8 +151,60 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   }
 
 "#);
+    let manager_path = "common/src/main/ets/storagemanager/PreferenceManager.ets";
+    let manager = git(source, &["show", &format!("{PIN}:{manager_path}")])?;
+    let patched_manager = manager.replace(
+        "  public setValue<T>(",
+        r#"  public async setDurableValue<T>(key: string, value: T): Promise<void> {
+    if (!this.preferences) {
+      this.initPreference(PREFERENCES_NAME);
+    }
+    if (!this.preferences) {
+      throw new Error('Preferences store unavailable');
+    }
+    this.preferences.putSync(key, JSON.stringify(value));
+    await this.preferences.flush();
+  }
+
+  public setValue<T>("#,
+    );
+    let helper_path = "common/src/main/ets/storagemanager/PreferenceCacheHelper.ets";
+    let helper = git(source, &["show", &format!("{PIN}:{helper_path}")])?;
+    let helper_start = helper
+        .find("  public static setSubValue<T>(")
+        .ok_or("Cache helper method")?;
+    let patched_helper = format!(
+        "{}{}",
+        &helper[..helper_start],
+        r#"  public static async setSubValue<T>(storageKey: string, subKey: string, data: T): Promise<void> {
+    const manager: PreferenceManager = PreferenceManager.getInstance();
+    const record: Record<string, T> = manager.getValue<Record<string, T>>(storageKey) ?? {};
+    record[subKey] = data;
+    await manager.setDurableValue(storageKey, record);
+  }
+}
+"#
+    );
+    let model_path = "features/devpractices/src/main/ets/model/SampleModel.ets";
+    let model = git(source, &["show", &format!("{PIN}:{model_path}")])?;
+    let model_old = section(&model, "  public getSamplePage(", "  public getSampleList(")?;
+    let patched_model = model.replace(model_old, r#"  public getSamplePage(currentPage: number, pageSize: number): Promise<PageData<SampleData>> {
+    return this.service.getSamplePage(currentPage, pageSize).then(async (data: PageData<SampleData>) => {
+      try {
+        await this.service.setSamplePageToPreference(data);
+      } catch (error) {
+        Logger.error(TAG, `Fresh network data retained after cache write failure: ${error}`);
+      }
+      return data;
+    }, () => this.service.getSamplePageByPreference(currentPage, pageSize));
+  }
+
+"#);
     let mut reference_patch = String::new();
     for (name, original, patched) in [
+        (manager_path, &manager, &patched_manager),
+        (helper_path, &helper, &patched_helper),
+        (model_path, &model, &patched_model),
         (debounce_path, &debounce, &patched_debounce),
         (url_path, &url_source, &patched_url),
         (feedback_path, &feedback, &patched_feedback),

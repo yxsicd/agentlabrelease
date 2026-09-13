@@ -23,3 +23,16 @@ Produce target-instance guidance for this stage as TableGit Skill rows,
 separate from the structured facts/tasks/results. Follow
 [the two-layer methodology](../agentlab-skill-methodology/SKILL.md) for
 method/source lineage and independent layer/role fields.
+
+### Cross-file durability candidate
+
+`subject/cache-durability.cjs` executes submitted PreferenceManager,
+PreferenceCacheHelper, SampleService and SampleModel modules with controlled
+Preferences and network seams. `subject/calibrate-cache.cjs` compares baseline,
+Rust-materialized reference, lost-flush and lost-model-await variants. Archive
+full sources, AST rows and ordered settlement events. The contract separates
+network failure fallback from persistence failure: await the write outcome, log
+a failed write, retain fresh network data. A helper must expose write failures.
+This is a calibrated candidate, not a frozen operational seed: full phone build,
+TableGit derivation/query evidence and a fresh knowledge cut are still required.
+Do not promote it based on JavaScript seam execution alone.

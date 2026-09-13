@@ -165,9 +165,16 @@ jobs:
           export AGENTLAB_ORACLE_TYPESCRIPT="$RUNNER_TEMP/oracle-runtime/node_modules/typescript"
           export AGENTLAB_SOURCE_PROBE="$PWD/target/debug/agentlab-source-probe"
           node examples/knowledge-seed/subject/calibrate-utilities.cjs "$RUNNER_TEMP/source" "$RUNNER_TEMP/reference/patched-source" "$RUNNER_TEMP/utility-calibration"
+      - name: Calibrate cross-file cache durability candidate
+        run: |
+          export AGENTLAB_ORACLE_TYPESCRIPT="$RUNNER_TEMP/oracle-runtime/node_modules/typescript"
+          export AGENTLAB_SOURCE_PROBE="$PWD/target/debug/agentlab-source-probe"
+          node examples/knowledge-seed/subject/calibrate-cache.cjs "$RUNNER_TEMP/source" "$RUNNER_TEMP/reference/patched-source" "$RUNNER_TEMP/cache-calibration"
       - name: Preserve every baseline/reference/negative oracle receipt
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: actual-utility-calibration
-          path: ${{ runner.temp }}/utility-calibration/
+          path: |
+            ${{ runner.temp }}/utility-calibration/
+            ${{ runner.temp }}/cache-calibration/
