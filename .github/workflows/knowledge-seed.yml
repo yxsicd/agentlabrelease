@@ -16,6 +16,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Build structure, Skill rows, task and independent mutation calibration
         run: python3 examples/knowledge-seed/run.py --root "$AGENTLAB_CI_ROOT/builder"
+      - name: Materialize receipt-bound SDK inputs
+        run: python3 scripts/channel-input.py --source release/candidates/40ecdf4b-linux-x64 --output "$GITHUB_OUTPUT"
       - name: Install released AgentLab components
         id: install
         env:
