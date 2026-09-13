@@ -6,6 +6,12 @@ on:
         description: Published base channel or immutable qualified cut
         default: aldev
         required: true
+      base_publication_url:
+        description: Optional explicit base publication URL for nonstandard asset names
+        default: ""
+      base_lock_url:
+        description: Optional explicit base lock URL if the publication does not declare it
+        default: ""
       donor_release:
         description: Published candidate or qualified cut containing the replacement
         required: true
@@ -24,6 +30,8 @@ jobs:
         env:
           BASE: ${{ inputs.base_release }}
           DONOR: ${{ inputs.donor_release }}
+          BASE_PUBLICATION_URL: ${{ inputs.base_publication_url }}
+          BASE_LOCK_URL: ${{ inputs.base_lock_url }}
         run: |
           python3 - <<'PY'
           import json, os, pathlib, urllib.parse, urllib.request
@@ -33,10 +41,12 @@ jobs:
               root.mkdir()
               base='https://github.com/'+os.environ['GITHUB_REPOSITORY']+'/releases/download/'+tag+'/'
               name='agentlab-'+tag+'-publication.json' if tag in ['aldev','almain','alprod'] else 'publication.json'
-              raw=urllib.request.urlopen(base+name,timeout=30).read()
+              publication_url=os.environ['BASE_PUBLICATION_URL'] if role=='base' and os.environ['BASE_PUBLICATION_URL'] else base+name
+              raw=urllib.request.urlopen(publication_url,timeout=30).read()
               (root/'publication.json').write_bytes(raw)
               pub=json.loads(raw)
-              url=urllib.parse.urljoin(base+name,pub.get('environmentLockUrl','./environment-lock.json'))
+              explicit=os.environ['BASE_LOCK_URL'] if role=='base' else ''
+              url=explicit or urllib.parse.urljoin(publication_url,pub.get('environmentLockUrl','./environment-lock.json'))
               (root/'environment-lock.json').write_bytes(urllib.request.urlopen(url,timeout=30).read())
           PY
       - name: Compose and validate only the selected replacement
