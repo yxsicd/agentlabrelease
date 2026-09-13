@@ -44,7 +44,7 @@ def main():
  for row in tables[OBS].values():
   if row.get('kind')!='assessment-summary':continue
   ref=dict(repository=repo,table=PREFIX+OBS,id=row['id'],revision=receipt['revision'],archiveUrl=a.runtime_archive_url)
-  finding=dict(id='finding-navigation-'+row['producerRun'],kind='assessment-finding',producerRun=row['producerRun'],producerRevision=row['producerRevision'],sourceRevision=row['sourceRevision'],taskId=row['taskId'],harnessCompleted=row['harnessCompleted'],subjectTaskSucceeded=row['subjectTaskSucceeded'],formalSessionFSForkQualified=False,scope='Actual controller/caller methods, full phone compile and selected-source fresh-Agent fork',runtimeEvidenceRef=ref)
+  finding=dict(id='finding-'+('feedback' if row['taskId']=='case-feedback-subject-v1' else 'navigation')+'-'+row['producerRun'],kind='assessment-finding',producerRun=row['producerRun'],producerRevision=row['producerRevision'],sourceRevision=row['sourceRevision'],taskId=row['taskId'],harnessCompleted=row['harnessCompleted'],subjectTaskSucceeded=row['subjectTaskSucceeded'],formalSessionFSForkQualified=False,scope='Actual controller/caller methods, full phone compile and selected-source fresh-Agent fork',runtimeEvidenceRef=ref)
   old=existing_findings.get(finding['id'])
   if old is None:pending.append(('program_facts',dict(op='insert',operation_id=str(uuid.uuid4()),key=finding['id'],row=finding)))
   elif old['row']!=finding:pending.append(('program_facts',dict(op='update',operation_id=str(uuid.uuid4()),key=finding['id'],expected_row_version=old['row_version'],field_updates=[dict(op='set',field='/'+k,value=v) for k,v in finding.items() if old['row'].get(k)!=v])))
@@ -54,7 +54,7 @@ def main():
   pending.append(('program_facts',dict(op='update',operation_id=str(uuid.uuid4()),key=key,expected_row_version=old['row_version'],field_updates=[dict(op='set',field='/runtimeArchiveRef',value=dict(repository=repo,observationTable=PREFIX+OBS,payloadTable=PREFIX+PAYLOAD,revision=receipt['revision'],archiveUrl=a.runtime_archive_url,producerRun=old['row']['producerRun']))])))
  for key,old in store.scan(s,repo,rev,PREFIX+'maintainer_skills').items():
   row=old['row']
-  if row.get('objectId')!='case-navigation-subject-v1':continue
+  if row.get('objectId')not in ('case-navigation-subject-v1','case-feedback-subject-v1'):continue
   refs=[dict(repository=repo,table=PREFIX+OBS,id=k,revision=receipt['revision'],archiveUrl=a.runtime_archive_url) for k in row['evaluationEvidenceIds']]
   guidance=dict(row['evaluationGuidance']);guidance['latestSummaryRef']=next(ref for ref in refs if ref['id']==guidance['latestSummaryId'])
   pending.append(('maintainer_skills',dict(op='update',operation_id=str(uuid.uuid4()),key=key,expected_row_version=old['row_version'],field_updates=[dict(op='set',field='/evaluationEvidenceRefs',value=refs),dict(op='set',field='/evaluationGuidance',value=guidance),dict(op='set',field='/factIds',value=list(dict.fromkeys(row.get('factIds',[]))))])))

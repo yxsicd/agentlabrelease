@@ -98,6 +98,19 @@ impl Collector<'_> {
                     json!({"symbol":name,"qualifiedName":scope,"owner":owner}),
                 );
             }
+            "public_field_definition" => {
+                let name = field(node, "name", self.source);
+                let mut cursor = node.walk();
+                let decorators: Vec<_> = node
+                    .named_children(&mut cursor)
+                    .filter(|child| child.kind() == "decorator")
+                    .map(|child| text(child, self.source).to_owned())
+                    .collect();
+                let type_expression = field(node, "type", self.source);
+                self.emit(node, "property", &format!("{owner}::{name}"), json!({
+                    "name":name,"owner":owner,"typeExpression":type_expression.trim_start_matches(':').trim(),
+                    "initializerExpression":field(node,"value",self.source),"decorators":decorators}));
+            }
             "call_expression" => {
                 let target = field(node, "function", self.source);
                 self.emit(node,"call",&format!("{owner}::{target}"),json!({"targetExpression":target,"owner":owner,"resolution":"syntactic-unresolved"}));
@@ -160,6 +173,27 @@ pub fn analyze(path: &str, source: &[u8], revision: &str) -> Result<Analysis, St
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn reactive_fields_preserve_actual_initializers_and_owners() {
+        let source=b"@Component struct Demo { @State submitting: boolean = true; @State submitError: string = ''; other: boolean = false; build() { Text('test') } }";
+        let result = analyze("Demo.ets", source, "workspace-cut").unwrap();
+        assert!(!result.has_errors);
+        let submitting = result
+            .rows
+            .iter()
+            .find(|row| row["kind"] == "property" && row["name"] == "submitting")
+            .unwrap();
+        assert_eq!(submitting["owner"], "Demo");
+        assert_eq!(submitting["typeExpression"], "boolean");
+        assert_eq!(submitting["initializerExpression"], "true");
+        assert_eq!(submitting["decorators"], json!(["@State"]));
+        let other = result
+            .rows
+            .iter()
+            .find(|row| row["kind"] == "property" && row["name"] == "other")
+            .unwrap();
+        assert_eq!(other["decorators"], json!([]));
+    }
     #[test]
     fn state_styles_gap_is_fixed_without_breaking_normal_objects() {
         let source=b"@Component struct Demo { build() { Button() {}.stateStyles({ pressed: { .backgroundColor(Color.Red).borderWidth(2) }, normal: { .opacity(1) } }) } }";

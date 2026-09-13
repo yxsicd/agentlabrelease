@@ -7,7 +7,7 @@ PREFIX='flywheel/harmony-v3/'
 OBS='runtime_observations'
 PAYLOAD='runtime_payload_chunks'
 def main():
- p=argparse.ArgumentParser();p.add_argument('--evidence',type=Path,required=True);p.add_argument('--development',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--run',required=True);p.add_argument('--revision',required=True);p.add_argument('--create-runtime-tables',action='store_true');a=p.parse_args();a.root.mkdir();(a.root/'rpc').mkdir();config=json.loads(a.development.read_text());s=Service(config['url'],Path(config['authorizationFile']).read_text().strip(),a.root/'rpc');repo=config['repo'];wt={'topic_id':None};rev=s.call('table.worktree.open',dict(repo=repo,worktree=wt))['revision'];summary=json.loads((a.evidence/'summary.json').read_text());pre='subject-'+a.run+'-';lineage=dict(producerRun=a.run,producerRevision=a.revision,taskId='case-navigation-subject-v1',sourceRevision=summary['sourceRevision'],captureAuthority='supervisor-owned-collector',evidenceRunUrl='https://github.com/yxsicd/agentlabrelease/actions/runs/'+a.run)
+ p=argparse.ArgumentParser();p.add_argument('--evidence',type=Path,required=True);p.add_argument('--development',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--run',required=True);p.add_argument('--revision',required=True);p.add_argument('--create-runtime-tables',action='store_true');a=p.parse_args();a.root.mkdir();(a.root/'rpc').mkdir();config=json.loads(a.development.read_text());s=Service(config['url'],Path(config['authorizationFile']).read_text().strip(),a.root/'rpc');repo=config['repo'];wt={'topic_id':None};rev=s.call('table.worktree.open',dict(repo=repo,worktree=wt))['revision'];summary=json.loads((a.evidence/'summary.json').read_text());task_id=json.loads((a.evidence/'frozen-task.json').read_text())['id'];assessment_name='feedback' if task_id=='case-feedback-subject-v1' else 'navigation';scope=summary.get('assessmentScope','Actual controller/caller methods and full phone compile; source-only fresh-Agent branch');pre='subject-'+a.run+'-';lineage=dict(producerRun=a.run,producerRevision=a.revision,taskId=task_id,sourceRevision=summary['sourceRevision'],captureAuthority='supervisor-owned-collector',evidenceRunUrl='https://github.com/yxsicd/agentlabrelease/actions/runs/'+a.run)
  facts=[dict(id=pre+'summary',kind='assessment-summary',harnessCompleted=summary['ok'],subjectTaskSucceeded=summary['subjectTaskSucceeded'],sourceForkQualified=summary['sourceForkQualified'],formalSessionFSForkQualified=False,calibration=summary.get('calibration'),phaseIds=[pre+'phase-'+x for x in summary['phases']],**lineage)];chunks={};files={}
  for path in sorted(a.evidence.rglob('*')):
   if not path.is_file():continue
@@ -18,6 +18,14 @@ def main():
   key=pre+'file-'+hashlib.sha256(name.encode()).hexdigest()[:20]
   facts.append(dict(id=key,kind='assessment-file',path=name,fileRole=role,sha256=digest,byteCount=len(raw),partCount=len(ids),**lineage));files[key]=(raw,ids)
   for ordinal,chunk in enumerate(ids):facts.append(dict(id=key+'-part-'+str(ordinal),kind='assessment-file-part',fileId=key,ordinal=ordinal,chunkId=chunk,**lineage))
+  if name.endswith('-oracle.stdout.json'):
+   oracle=json.loads(raw);analysis=oracle.get('sourceAnalysis')
+   if analysis:
+    analysis_id=key+'-source-analysis'
+    facts.append(dict(id=analysis_id,kind='source-analysis-receipt',observedSourceCut=analysis['sourceCut'],grammar=analysis['grammar'],grammarDigest=analysis['grammarDigest'],syntaxHasErrors=analysis['syntaxHasErrors'],rowCount=len(analysis['rows']),wireFileId=key,**lineage))
+    for syntax in analysis['rows']:
+     syntax=dict(syntax);fact_id=syntax.pop('id');fact_kind=syntax.pop('kind');observed=syntax.pop('sourceRevision')
+     facts.append(dict(id=analysis_id+'-'+fact_id,kind='source-syntax-fact',factKind=fact_kind,observedSourceCut=observed,sourceAnalysisId=analysis_id,**syntax,**lineage))
   if name.endswith('/source-cut.json'):
    observed=json.loads(raw);cut_key=pre+'cut-'+hashlib.sha256(name.encode()).hexdigest()[:16]
    facts.append(dict(id=cut_key,kind='source-cut',sourceCutId=observed['id'],fileCount=len(observed['files']),scope='selected-source-only',manifestFileId=key,**lineage))
@@ -48,18 +56,18 @@ def main():
   behavior=result.get('behavior',{})
   cases.append(dict(id=pre+'phase-'+label,kind='assessment-phase',phase=label,buildPassed=result.get('build'),behaviorPassed=behavior.get('pass'),sourceCut=result.get('sourceCut'),oracleError=behavior.get('error'),**lineage))
   for check,passed in behavior.get('checks',{}).items():facts.append(dict(id=pre+'check-'+label+'-'+check,kind='assessment-check',phase=label,check=check,passed=passed,**lineage))
-  for number,call in enumerate(behavior.get('calls',[])):facts.append(dict(id=pre+'stack-call-'+label+'-'+str(number),kind='navigation-stack-call',phase=label,ordinal=number,operation=call['op'],arguments=call['args'],**lineage))
+  for number,call in enumerate(behavior.get('calls',[])):facts.append(dict(id=pre+'stack-call-'+label+'-'+str(number),kind='feedback-submit-call' if assessment_name=='feedback' else 'navigation-stack-call',phase=label,ordinal=number,operation=call['op'],arguments=call['args'],**lineage))
  skills=[]
  existing_skills=store.read(s,repo,rev,PREFIX+'maintainer_skills')
- goal_id='skill-goal-navigation-subject-v1'
+ goal_id='skill-goal-'+assessment_name+'-subject-v1'
  if goal_id not in existing_skills:
   method=Path(__file__).resolve().parents[3]/'skills/agentlab-benchmark-goal/SKILL.md'
   import subprocess
-  goal=dict(id=goal_id,title='Navigation subject acceptance goal',body='# Bounded navigation assessment goal\n\nAccept actual navigation outcomes, one caller lifecycle and three whole phone builds. Compare parent continuation with a fresh Agent from the same selected-source cut. Do not promote these tests into UI/device or formal SessionFS claims. Frozen demand and actual check rows own the criteria.',skillLayer='instance',role='maintenance',stage='goal',objectId='case-navigation-subject-v1',sourceRevision=summary['sourceRevision'],caseIds=['case-navigation-subject-v1'],methodSkillId='agentlab-benchmark-goal',methodRevision=subprocess.check_output(['git','log','-1','--format=%H','--',str(method)],text=True).strip(),methodDigest=hashlib.sha256(method.read_bytes()).hexdigest())
+  goal=dict(id=goal_id,title=assessment_name.title()+' subject acceptance goal',body='# Bounded actual assessment goal\n\n'+scope+'\n\nFrozen demands and actual check rows own the criteria.',skillLayer='instance',role='maintenance',stage='goal',objectId=task_id,sourceRevision=summary['sourceRevision'],caseIds=[task_id],methodSkillId='agentlab-benchmark-goal',methodRevision=subprocess.check_output(['git','log','-1','--format=%H','--',str(method)],text=True).strip(),methodDigest=hashlib.sha256(method.read_bytes()).hexdigest())
   existing_skills[goal_id]=goal
  for row in existing_skills.values():
-  if row.get('objectId')!='case-navigation-subject-v1':continue
-  row=dict(row);row['evaluationEvidenceIds']=list(dict.fromkeys(row.get('evaluationEvidenceIds',[])+[pre+'summary']));stage_next={'goal':'Maintain bounded acceptance against named checks and explicit qualification limits.','repository-analysis':'Compare actual outcome contracts and caller changes against frozen source semantics.','program-analysis':'Analyze tracked deltas, actual stack calls and original static facts; keep static versus executed scope distinct.','seed-extraction':'Derive the next variants from failed checks without rewriting this assessed demand.','calibration':'Retain original/reference/wrong-stack calibration and distinguish actual caller execution from UI rendering.','evaluation':'Compare parent/fresh-Agent phases, gateway context and source-cut identity; formal SessionFS remains separate.'};prior_refs={ref['id']:ref for ref in row.get('evaluationEvidenceRefs',[])};row['evaluationEvidenceRefs']=[prior_refs.get(key,dict(repository=repo,table=PREFIX+OBS,id=key)) for key in row['evaluationEvidenceIds']];row['evaluationGuidance']=dict(stageNext=stage_next.get(row['stage']),latestSummaryId=pre+'summary',subjectTaskSucceeded=summary['subjectTaskSucceeded'],harnessCompleted=summary['ok'],scope='Actual controller/caller methods and full phone compile; source-only fresh-Agent branch',next='Diagnose failed Agent outcomes from gateway/source evidence; formal SessionFS and device remain separate');latest_ref=prior_refs.get(pre+'summary');
+  if row.get('objectId')!=task_id:continue
+  row=dict(row);row['evaluationEvidenceIds']=list(dict.fromkeys(row.get('evaluationEvidenceIds',[])+[pre+'summary']));stage_next={'goal':'Maintain bounded acceptance against named checks and explicit qualification limits.','repository-analysis':'Compare actual outcome and state contracts against frozen source semantics.','program-analysis':'Analyze tracked deltas, actual backend calls and original static facts; keep static versus executed scope distinct.','seed-extraction':'Derive the next variants from failed checks without rewriting this assessed demand.','calibration':'Retain original/reference/negative calibration and distinguish actual-method execution from UI rendering.','evaluation':'Compare parent/fresh-Agent phases, gateway context and source-cut identity; formal SessionFS remains separate.'};prior_refs={ref['id']:ref for ref in row.get('evaluationEvidenceRefs',[])};row['evaluationEvidenceRefs']=[prior_refs.get(key,dict(repository=repo,table=PREFIX+OBS,id=key)) for key in row['evaluationEvidenceIds']];row['evaluationGuidance']=dict(stageNext=stage_next.get(row['stage']),latestSummaryId=pre+'summary',subjectTaskSucceeded=summary['subjectTaskSucceeded'],harnessCompleted=summary['ok'],scope=scope,next='Diagnose failed Agent outcomes from gateway/source evidence; formal SessionFS and device remain separate');latest_ref=prior_refs.get(pre+'summary');
   if latest_ref:row['evaluationGuidance']['latestSummaryRef']=latest_ref
   skills.append(row)
  runtime={OBS:facts+cases,PAYLOAD:list(chunks.values())}
@@ -84,7 +92,7 @@ def main():
     op=dict(op='update',operation_id=str(uuid.uuid4()),key=row['id'],expected_row_version=old['row_version'],field_updates=updates)
    else:op=dict(op='insert',operation_id=str(uuid.uuid4()),key=row['id'],row=row)
    ops.append(op)
-  for start in range(0,len(ops),32):rev=store.transact(s,repo,wt,rev,[dict(path=PREFIX+table,operations=ops[start:start+32])],'Capture actual staged assessment and next-instance feedback')
+  for start in range(0,len(ops),128):rev=store.transact(s,repo,wt,rev,[dict(path=PREFIX+table,operations=ops[start:start+128])],'Capture actual staged assessment and next-instance feedback')
  durable=store.read(s,repo,rev,PREFIX+OBS);payloads=store.read(s,repo,rev,PREFIX+PAYLOAD)
  for file_id,(raw,ids) in files.items():
   parts=sorted((row for row in durable.values() if row.get('kind')=='assessment-file-part' and row['fileId']==file_id),key=lambda x:x['ordinal'])

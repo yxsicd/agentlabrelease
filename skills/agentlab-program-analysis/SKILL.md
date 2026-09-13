@@ -40,3 +40,15 @@ using their actual versions; archive old cuts and do not merely insert facts on
 the first run. Test fixtures need process-local uniqueness under parallel tests.
 
 When expanding the selected corpus, validate established dependency paths while allowing additional legitimate paths. A fixed result count confuses broader coverage with regression; archive the query/input cut and describe the observed path count without claiming symbol resolution.
+
+### Feedback multi-round instance
+
+Use [the shared subject runner](../../examples/knowledge-seed/subject/README.md)
+with the frozen feedback case. Distinguish stage-one failure/retry state from
+stage-two duplicate suppression. Verify actual reactive field declarations with
+Rust ArkTS property facts; fixture initialization is not proof of submitted
+initializers or decorators. Execute submitted methods without reference repair.
+Preserve negative calibration for wrong reset, duplicate requests and wrong
+initial state, plus raw/normalized source evidence. The demonstration backend is
+an explicit Promise seam; full phone compilation and UI rendering are distinct.
+Return stage-specific construction/evaluation guidance to instance Skill rows.

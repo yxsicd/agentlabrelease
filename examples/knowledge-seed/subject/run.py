@@ -8,24 +8,33 @@ PATHS=['common/src/main/ets/routermanager/PageContext.ets','common/src/main/ets/
 DEMANDS=[
  'Expose boolean success/failure outcomes for PageContext navigation operations, including its interface. Preserve stack ownership, push/replace/pop/clear semantics, parameters, animation defaults and error logging. Keep valid ArkTS.',
  'Preserve all previous navigation behavior. In PracticeHomeView use @State navigationFailed: boolean = false; aboutToAppear must set it from the actual replacePage failure outcome and clear it on success. Preserve caller parameters and false animation. Do not install dependencies or change build configuration.']
+FEEDBACK_DEMANDS=[
+ "In FeedbackSheet preserve choices, input and open sheet while submitting and on rejection; reset and close only after success. Add @State submitting: boolean = false and @State submitError: string = ''; record the rejection message, release submitting on both outcomes and clear the error when retry starts. Preserve original submit parameters and invalid-input blocking. Keep valid ArkTS; do not install dependencies or change build configuration.",
+ "Preserve all previous feedback failure/retry/reset behavior. While a submission is pending, repeated handleSubmit calls must produce exactly one SubmitInfoUtil request. Keep pending state and original parameters; after rejection a retry must be allowed and after success invalid input must remain blocked. Do not install dependencies or change build configuration."]
+SCENARIOS={
+ 'navigation':dict(paths=PATHS,demands=DEMANDS,caseId='case-navigation-subject-v1',oracle='navigation.cjs',scope='Actual navigation controller/caller methods and full phone compile; selected-source fresh-Agent branch'),
+ 'feedback':dict(paths=['common/src/main/ets/component/FeedbackSheet.ets','common/src/main/ets/model/FeedbackData.ets','common/src/main/ets/util/SubmitInfoUtil.ets','common/src/main/ets/component/Toast.ets'],demands=FEEDBACK_DEMANDS,caseId='case-feedback-subject-v1',oracle='feedback.cjs',scope='Actual feedback submit/reset methods with controlled Promise backend and full phone compile; selected-source fresh-Agent branch')}
 def dump(path,value):path.write_text(json.dumps(value,indent=2)+'\n')
 def main():
- p=argparse.ArgumentParser();p.add_argument('--source',type=Path,required=True);p.add_argument('--reference',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--install-root',type=Path,required=True);p.add_argument('--pi-runtime',type=Path,required=True);p.add_argument('--image',required=True);a=p.parse_args()
+ p=argparse.ArgumentParser();p.add_argument('--scenario',choices=SCENARIOS,default='navigation');p.add_argument('--source',type=Path,required=True);p.add_argument('--reference',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--install-root',type=Path,required=True);p.add_argument('--pi-runtime',type=Path,required=True);p.add_argument('--image',required=True);a=p.parse_args()
+ scenario=SCENARIOS[a.scenario];paths=scenario['paths'];demands=scenario['demands']
  root=a.root.resolve();root.mkdir();e=root/'evidence';e.mkdir();project=root/'workspace'
  subprocess.run(['git','clone','--no-hardlinks',str(a.source.resolve()),str(project)],check=True,capture_output=True)
  assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=project,text=True).strip()==PIN
  lock=json.loads((a.install_root/'downloads/environment-lock.json').read_text());dump(e/'environment-lock.json',lock)
- seed=json.loads(next(line for line in (Path(__file__).resolve().parents[1]/'seeds/harmony-code-workshop/evaluation_cases.jsonl').read_text().splitlines() if json.loads(line)['id']=='case-navigation-subject-v1'));assert seed['demands']==DEMANDS
+ seed=json.loads(next(line for line in (Path(__file__).resolve().parents[1]/'seeds/harmony-code-workshop/evaluation_cases.jsonl').read_text().splitlines() if json.loads(line)['id']==scenario['caseId']));assert seed['demands']==demands
  dump(e/'frozen-task.json',seed)
- summary=dict(schema='agentlab.navigation_subject.v1',sourceRevision=PIN,demands=DEMANDS,sourceForkQualified=False,formalSessionFSForkQualified=False,uiDeviceQualified=False,phases={},ok=False,subjectTaskSucceeded=False)
+ if seed.get('oracleDigest'):assert hashlib.sha256(Path(__file__).with_name(scenario['oracle']).read_bytes()).hexdigest()==seed['oracleDigest']
+ summary=dict(schema='agentlab.'+a.scenario+'_subject.v1',taskId=scenario['caseId'],assessmentScope=scenario['scope'],sourceRevision=PIN,demands=demands,sourceForkQualified=False,formalSessionFSForkQualified=False,uiDeviceQualified=False,phases={},ok=False,subjectTaskSucceeded=False)
  def oracle(label,directory,stage):
-  command=['node',str(Path(__file__).with_name('navigation.cjs')),str(directory),str(stage)]
+  command=['node',str(Path(__file__).with_name(scenario['oracle'])),str(directory),str(stage)]
   r=subprocess.run(command,capture_output=True);(e/(label+'-oracle.stdout.json')).write_bytes(r.stdout);(e/(label+'-oracle.stderr.log')).write_bytes(r.stderr)
   if r.returncode:raise RuntimeError('Harness oracle infrastructure error')
   return json.loads(r.stdout)
  def cut(label,directory):
   out=e/label;out.mkdir();rows=[]
-  for name in PATHS:
+  for name in paths:
+   if not (directory/name).is_file():rows.append(dict(path=name,absent=True));continue
    raw=(directory/name).read_bytes();target=out/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(raw);rows.append(dict(path=name,sha256=hashlib.sha256(raw).hexdigest(),bytes=len(raw)))
   delta=subprocess.run(['git','diff','--binary',PIN],cwd=directory,capture_output=True,check=True);(out/'workspace-tracked-delta.patch').write_bytes(delta.stdout)
   status=subprocess.run(['git','status','--porcelain'],cwd=directory,capture_output=True,check=True);(out/'workspace-status.txt').write_bytes(status.stdout)
@@ -53,12 +62,20 @@ def main():
  parent=None;fork=None
  try:
   baseline=oracle('baseline',project,2);reference=oracle('reference',a.reference,2)
+  if seed.get('acceptanceChecks'):assert set(reference['checks'])==set(seed['acceptanceChecks']['2'])
   wrong=root/'wrong';shutil.copytree(a.reference/'common',wrong/'common');shutil.copytree(a.reference/'features/devpractices',wrong/'features/devpractices')
-  file=wrong/PATHS[0];file.write_text(file.read_text().replace('this.pathStack.replacePath','this.pathStack.pushPath'));negative=oracle('wrong-stack',wrong,2)
-  summary['calibration']=dict(baselineFails=not baseline['pass'],referencePasses=reference['pass'],wrongStackFails=not negative['pass']);assert all(summary['calibration'].values())
+  file=wrong/paths[0]
+  if a.scenario=='navigation':file.write_text(file.read_text().replace('this.pathStack.replacePath','this.pathStack.pushPath'))
+  else:file.write_text(file.read_text().replace('this.submitError = err.message;', 'this.submitError = err.message; this.resetAllStatus();'))
+  negative=oracle('wrong-reset' if a.scenario=='feedback' else 'wrong-stack',wrong,2)
+  summary['calibration']=dict(baselineFails=not baseline['pass'],referencePasses=reference['pass'],wrongOutcomeFails=not negative['pass'])
+  if a.scenario=='feedback':
+   duplicate=root/'wrong-duplicate';shutil.copytree(a.reference/'common',duplicate/'common');file=duplicate/paths[0];file.write_text(file.read_text().replace('this.submitting || !this.feedbackData.canSubmit','!this.feedbackData.canSubmit'));summary['calibration']['wrongDuplicateFails']=not oracle('wrong-duplicate',duplicate,2)['pass']
+   wrong_initial=root/'wrong-initial';shutil.copytree(a.reference/'common',wrong_initial/'common');file=wrong_initial/paths[0];file.write_text(file.read_text().replace('@State submitting: boolean = false','@State submitting: boolean = true'));summary['calibration']['wrongInitializerFails']=not oracle('wrong-initial',wrong_initial,2)['pass']
+  assert all(summary['calibration'].values())
   if not build('prepare',project,True):raise RuntimeError('Harness dependency preparation failed')
   parent=subject('parent-agent');cut('initial',project)
-  try:parent.turn('turn-1',project,prompt=DEMANDS[0])
+  try:parent.turn('turn-1',project,prompt=demands[0])
   except RuntimeError as error:summary['phases']['turn-1-launch-error']=str(error)
   stage1=oracle('turn-1',project,1);built1=build('turn-1-build',project);cut_id=cut('turn-1-cut',project);summary['phases']['turn-1']=dict(behavior=stage1,build=built1,sourceCut=cut_id)
   # Restore source from the operator cut onto original code; no reference fixes.
@@ -67,7 +84,7 @@ def main():
   for label,directory,participant in [('parent-turn-2',project,parent),('fresh-fork-turn-2',branch,None)]:
    if participant is None:fork=subject('fork-agent');participant=fork
    if directory==branch and not build('fork-prepare',directory,True):raise RuntimeError('Harness fork dependency preparation failed')
-   try:participant.turn(label,directory,prompt=DEMANDS[1])
+   try:participant.turn(label,directory,prompt=demands[1])
    except RuntimeError as error:summary['phases'][label+'-launch-error']=str(error)
    result=oracle(label,directory,2);compiled=build(label+'-build',directory);summary['phases'][label]=dict(behavior=result,build=compiled,sourceCut=cut(label+'-cut',directory))
   summary['subjectTaskSucceeded']=all(summary['phases'][x]['behavior']['pass'] and summary['phases'][x]['build'] for x in ['turn-1','parent-turn-2','fresh-fork-turn-2']);summary['ok']=True

@@ -53,3 +53,15 @@ seed. Publish the complete runtime export independently when reproducible raw
 evidence is needed. Never inflate the seed with repeated cumulative event payloads.
 Use stable IDs and stable export order; prove file reconstruction and unchanged
 repeat import before publishing. See [the executable experiment](../../examples/knowledge-seed/subject/README.md).
+
+### Feedback multi-round instance
+
+Use [the shared subject runner](../../examples/knowledge-seed/subject/README.md)
+with the frozen feedback case. Distinguish stage-one failure/retry state from
+stage-two duplicate suppression. Verify actual reactive field declarations with
+Rust ArkTS property facts; fixture initialization is not proof of submitted
+initializers or decorators. Execute submitted methods without reference repair.
+Preserve negative calibration for wrong reset, duplicate requests and wrong
+initial state, plus raw/normalized source evidence. The demonstration backend is
+an explicit Promise seam; full phone compilation and UI rendering are distinct.
+Return stage-specific construction/evaluation guidance to instance Skill rows.

@@ -68,3 +68,26 @@ The first two real successful runs and complete TableGit runtime export are
 available in [the experiment Release](https://github.com/yxsicd/agentlabrelease/releases/tag/evidence-navigation-subject-34755514333).
 Its `navigation-tablegit-runtime-20260913.tar.zst` contains both runtime tables
 and their versioned export manifest; HAPs are separate assets.
+
+## Feedback instance
+
+Dispatch the subject Action with `scenario: feedback` (or pass `--scenario feedback`
+to the same local runner). `case-feedback-subject-v1` freezes two staged demands:
+first preserve state through failure, expose pending/error state and allow retry;
+then suppress duplicate requests while pending. The actual submit/reset methods
+execute against an explicitly controlled Promise seam for the existing demonstration
+SubmitInfoUtil. This does not create or advertise a real feedback backend.
+
+Rust `agentlab-source-probe` reads exact observed source bytes and emits ArkTS
+property facts, including owner, decorators, type and initializer. The oracle
+checks actual reactive declarations rather than trusting fixture-assigned values.
+Build it with `cargo build --locked -p agentlab_code_analysis --bin agentlab-source-probe`
+and set `AGENTLAB_SOURCE_PROBE` to the binary, outside participant Workspace.
+Invalid/deleted submitted source is a failed Agent outcome with evidence.
+
+Baseline, reference, wrong-reset, wrong-duplicate and wrong-initializer are calibrated
+before dispatch. Duplicate-only failure is intentionally accepted in stage one and
+rejected in stage two. Freeze oracle digest and named stage checks in TableGit.
+Existing frozen cases and instance guidance are not rewritten by seed creation.
+Raw AST output remains recoverable; normalized observed syntax facts link to
+the exact source analysis receipt and file cut in runtime tables.
