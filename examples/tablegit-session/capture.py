@@ -85,6 +85,19 @@ def collect(root, session_id, operation_id, agent_kind=None, context=None):
         observe(dict(sourceKind='operator_captured_file',path=relative,byteLength=len(raw),
             sha256=sha(raw),bytesBase64=base64.b64encode(raw).decode()),
             'capture.file',relative)
+        role=None
+        if path.name=='participant.json': role='participant.binding'
+        elif path.name=='workspace-baseline.json': role='workspace.baseline'
+        elif path.name=='official.json' and 'seeds' in path.parts: role='seed.official'
+        elif path.name=='scenario.json': role='seed.generated'
+        elif path.name.endswith('-source-oracle.json'): role='evaluation.source_contract'
+        elif path.name=='summary.json': role='evaluation.summary'
+        elif path.name=='report.json' and 'run_evaluation' in path.parts: role='evaluation.official_report'
+        elif path.name=='runtime-probe.json': role='participant.runtime_probe'
+        if role:
+            value=decode(raw,relative)
+            if value is not None:
+                observe(dict(type=role,sourcePath=relative,sourceSha256=sha(raw),document=value),role,relative)
         if path.parent.name == 'gateway' and path.suffix == '.json':
             value=decode(raw,relative)
             if value is None: continue

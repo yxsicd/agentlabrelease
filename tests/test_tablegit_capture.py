@@ -97,6 +97,19 @@ class CaptureTests(unittest.TestCase):
             self.assertTrue(all(o['row']['agentKind']=='mini-swe-agent' for o in objects))
             self.assertIn('mini-swe-agent.tool_execution_end',{o['row']['method'] for o in objects})
 
+    def test_benchmark_seed_and_verdict_are_queryable_structured_observations(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);seed=root/'seeds/case';seed.mkdir(parents=True)
+            definition={'instance_id':'case','base_commit':'a'*40,'problem_statement':'完整任务','patch':'完整补丁'}
+            (seed/'official.json').write_text(json.dumps(definition))
+            (root/'summary.json').write_text('{"agentResolved":false,"harnessHealthy":true}')
+            _,objects,_=capture.collect(root,'session','operation')
+            methods={o['row']['method']:o for o in objects}
+            self.assertIn('seed.official',methods);self.assertIn('evaluation.summary',methods)
+            raw=b''.join(c['textUtf8'].encode() for c in methods['seed.official']['chunks'])
+            self.assertEqual(json.loads(raw)['document'],definition)
+            self.assertEqual(methods['seed.official']['row']['itemType'],'seed.official')
+
     def test_capture_reuses_resolved_topic_across_transactions(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);self.fixture(root)
