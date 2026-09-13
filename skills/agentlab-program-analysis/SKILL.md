@@ -23,3 +23,13 @@ Produce target-instance guidance for this stage as TableGit Skill rows,
 separate from the structured facts/tasks/results. Follow
 [the two-layer methodology](../agentlab-skill-methodology/SKILL.md) for
 method/source lineage and independent layer/role fields.
+
+## Current Rust ArkTS analyzer
+
+Use crates/agentlab_code_analysis (agentlab-code-analysis), pinned Tree-sitter
+0.27.0 and tree-sitter-arkts0.2.0. It lowers CST nodes to module/symbol/call,
+assignment/decorator/ArkUI facts with exact source spans. Multiline imports are
+AST-derived, not lexical regex matches. Tree-sitter is not a semantic type AST;
+calls and assignments remain unresolved. Read the crate README for command and
+coverage. The fixed code-workshop corpus has one stateStyles grammar gap; save
+its full error evidence and adapt grammar rather than rewriting source bytes.

@@ -13,7 +13,7 @@ import store
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'tablegit-session'))
 from capture import Service
 PIN='7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6'
-PREFIX='flywheel/harmony-v2/'
+PREFIX='flywheel/harmony-v3/'
 SPECS=[
  ('feedback','Feedback submission and reset', ['common/src/main/ets/component/FeedbackSheet.ets','common/src/main/ets/model/FeedbackData.ets','common/src/main/ets/util/SubmitInfoUtil.ets'], ['Make feedback submission preserve selections until success and show a retryable failure.','Prevent duplicate submissions and preserve the previous success/reset behavior.'], ['Rejected submission preserves state; retry succeeds.','Repeated click creates one submission; success clears state.']),
  ('delayed-loading','Loading lifecycle across breakpoints', ['common/src/main/ets/view/DelayedLoadingView.ets','common/src/main/ets/view/LoadingView.ets','common/src/main/ets/util/BreakpointSystem.ets'], ['Make repeated loading appearances start a fresh delayed indicator and cancel old timers.','Allow breakpoint changes while loading without stale indicator callbacks.'], ['Disappear/reappear does not show a stale indicator.','Small/large delay and cancellation checks pass.']),
@@ -42,7 +42,7 @@ def instance_skills(key,title,paths,turns,checks,revision):
  rows=[]
  bodies={
  'repository-analysis':'Observed contract: '+OBSERVATIONS[key]+'\n\nRead these pinned files before changing behavior: '+', '.join(paths)+'. Preserve the observed contract unless the task explicitly changes it.',
- 'program-analysis':'Analyze '+', '.join(paths)+'. Trace direct relative imports and the common package/barrel chain in program_facts. Use the archived import SQL at its input cut. Package path resolution is not symbol/type/runtime call resolution; do not infer the latter from these facts.',
+ 'program-analysis':'Analyze '+', '.join(paths)+'. Trace AST module references, symbols, syntactic call/assignment locations and the common package/barrel chain in program_facts. Use the archived import SQL at its input cut. Package path resolution is not symbol/type/runtime call resolution; do not infer the latter from these facts.',
  'seed-extraction':'Derive staged demands from this contract: '+OBSERVATIONS[key]+'\n\nCurrent candidate turns: '+json.dumps(turns,ensure_ascii=False)+'. Link case-'+key+' and the analysis facts. Vary timing/failure/input boundaries only with independently specified oracles.',
  'calibration':'Calibrate case-'+key+' using '+json.dumps(checks,ensure_ascii=False)+'. Build an independent baseline/reference/wrong-variant oracle. Current executable method oracle exists only for debounce and delayed-loading; other cases remain proposed. ArkUI rendering, HAP build and real subject success remain unqualified.',
  'evaluation':'Consume the frozen case-'+key+' source, knowledge and task cuts. Present only its demands, not the operator reference transform, to the subject. Execute staged demands '+json.dumps(turns,ensure_ascii=False)+'. Grade '+json.dumps(checks,ensure_ascii=False)+' and record Harness-owned calls/output/checkpoints. A construction oracle pass does not constitute subject evaluation.'}
@@ -58,7 +58,11 @@ def construct(source,out):
  if revision!=PIN: raise ValueError('Use the pinned code-workshop source')
  files=subprocess.check_output(['git','ls-files'],cwd=source,text=True).splitlines()
  code=[p for p in files if Path(p).suffix in ('.ets','.ts','.js','.cpp','.h')]
- inventory=dict(id='source-code-workshop',kind='inventory',path='.',sourceRevision=revision,codeFiles=len(code),codeLines=sum(len((source/p).read_bytes().splitlines()) for p in code),method='git tracked source inventory',coverage='inventory whole source; lexical imports only selected task files',buildQualified=False)
+ inventory=dict(id='source-code-workshop',kind='inventory',path='.',sourceRevision=revision,codeFiles=len(code),codeLines=sum(len((source/p).read_bytes().splitlines()) for p in code),method='git tracked source inventory',coverage='AST parses whole source; selected scenario AST rows imported; one unsupported stateStyles file retained in full parser evidence',buildQualified=False)
+ binary=Path(__file__).resolve().parents[3]/'target/debug/agentlab-code-analysis'
+ ast_dir=out/'ast';subprocess.run([str(binary),str(source),str(ast_dir)],check=True,capture_output=True,text=True)
+ ast_rows=[json.loads(line) for line in (ast_dir/'program_facts.jsonl').read_text().splitlines()]
+ inventory['astReceipt']=json.loads((ast_dir/'analysis.json').read_text())
  facts=[inventory];skills=[];cases=[]
  # Verify the local file dependency and package entry before resolving an alias.
  bindings={}
@@ -73,10 +77,10 @@ def construct(source,out):
  for path in chosen:
   text=(source/path).read_text();lines=text.splitlines()
   facts.append(dict(id=ident('file',path),kind='file',path=path,sourceRevision=revision,sha256=hashlib.sha256(text.encode()).hexdigest(),lineCount=len(lines),method='source bytes'))
-  for number,line in enumerate(lines,1):
-   m=re.search(r"(?:import|export).*?from\s+['\"]([^'\"]+)['\"]",line)
-   if not m: continue
-   spec=m[1];target='';status='external-or-alias-unresolved'
+  for ast in [r for r in ast_rows if r['path']==path]:
+   if ast['kind']!='module-reference':
+    facts.append(ast);continue
+   spec=ast['specifier'];target='';status='external-or-alias-unresolved'
    if spec.startswith('.'):
     base=(source/path).parent/spec
     for candidate in [base,Path(str(base)+'.ets'),Path(str(base)+'.ts'),base/'index.ets']:
@@ -84,7 +88,7 @@ def construct(source,out):
    if spec=='@ohos/common':
     for module,target_entry in bindings.items():
      if path.startswith(module+'/'):target=target_entry;status='package-entry-resolved'
-   facts.append(dict(id=ident('import',path+':'+str(number)),kind='import',path=path,line=number,specifier=spec,targetPath=target,resolution=status,sourceRevision=revision,method='single-line lexical import; not symbol or runtime resolution'))
+   facts.append(dict(ast,kind='import',line=ast['span']['startLine'],targetPath=target,resolution=status))
  for key,title,paths,turns,checks in SPECS:
   skills.extend(instance_skills(key,title,paths,turns,checks,revision))
   cases.append(dict(id='case-'+key,kind='task',title=title,sourceRevision=revision,skillIds=['skill-'+key],paths=paths,turns=turns,acceptance=checks,analysisIds=[],status='candidate',calibration={},buildQualified=False))
@@ -150,7 +154,7 @@ def main():
  sql="SELECT json_extract(row_json,'$.path') AS source, json_extract(row_json,'$.targetPath') AS target FROM facts WHERE json_extract(row_json,'$.kind')='import' AND json_extract(row_json,'$.resolution') IN ('relative-file-resolved','package-entry-resolved') ORDER BY source,target"
  request=dict(bindings=[dict(alias='facts',repo=repo,path=PREFIX+'program_facts',revision=revision)],sql=sql,parameters=[])
  result=service.call('table.relations.query',request);dump(e/'dependency-analysis.json',result)
- analysis=dict(id='analysis-relative-imports',kind='analysis',sourceRevision=PIN,code=sql,request=request,result=result,interpretation='Selected-file lexical paths plus verified local common package entry; external aliases and symbol/runtime calls unresolved')
+ analysis=dict(id='analysis-relative-imports',kind='analysis',sourceRevision=PIN,code=sql,request=request,result=result,interpretation='Selected-file AST module references plus verified local common package entry; external aliases and symbol/runtime calls unresolved')
  graph_sql="SELECT json_extract(e.row_json,'$.path') AS consumer, json_extract(b.row_json,'$.path') AS entry, json_extract(c.row_json,'$.path') AS barrel, json_extract(c.row_json,'$.targetPath') AS leaf FROM facts e JOIN facts b ON json_extract(e.row_json,'$.targetPath')=json_extract(b.row_json,'$.path') JOIN facts c ON json_extract(b.row_json,'$.targetPath')=json_extract(c.row_json,'$.path') WHERE json_extract(e.row_json,'$.kind')='import' AND json_extract(b.row_json,'$.kind')='import' AND json_extract(c.row_json,'$.kind')='import' AND json_extract(e.row_json,'$.resolution')='package-entry-resolved' AND json_extract(c.row_json,'$.targetPath') IN ('common/src/main/ets/util/DebounceUtil.ets','common/src/main/ets/util/UrlUtil.ets') ORDER BY consumer,leaf"
  graph_request=dict(bindings=[dict(alias='facts',repo=repo,path=PREFIX+'program_facts',revision=baseline)],sql=graph_sql,parameters=[])
  graph_result=service.call('table.relations.query',graph_request);dump(e/'barrel-analysis.json',graph_result)

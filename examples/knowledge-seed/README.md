@@ -93,11 +93,11 @@ maintenance cut, preserving the current assessment inputs.
 ## First real Harmony construction round
 
 `seeds/harmony-code-workshop/` is a three-table snapshot exported from real
-TableGit namespace `flywheel/harmony-v2/`: 26 instance Skills, 123 program/analysis
+TableGit namespace `flywheel/harmony-v3/`: 26 instance Skills, 701 program/analysis
 facts and seven task/calibration rows. Previous namespace cuts are archived evidence;
 this snapshot is the current instance authority export. Source is pinned to code-workshop commit
-`7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6`. Imports are lexical paths in 19 selected
-files. Two local common-package bindings are checked against package dependency
+`7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6`. The Rust analyzer parses all556 ArkTS/TypeScript files and imports AST facts
+for19 selected scenario files. Imports include multiline syntax. Two local common-package bindings are checked against package dependency
 files and entry metadata; external aliases and symbol/runtime calls remain
 unresolved. A SQL join archives four possible consumer/barrel/export paths,
 without claiming four resolved imported-symbol calls.
@@ -146,3 +146,13 @@ The two method oracles independently calibrate construction demands. They do
 not execute a real assessed Agent, render ArkUI or qualify HAP/SessionFS. The
 first pre-v2 real Harmony Action34749535447 passed released Session history and
 104-row export/import; v2 coverage requires its own fresh Action verdict.
+
+## Rust analysis boundary
+
+The flywheel requires the built `target/debug/agentlab-code-analysis` binary.
+Build it with `cargo build --locked -p agentlab_code_analysis`; the Harmony Action
+does this before construction. AST extraction is Rust. The existing Python
+orchestrator still maintains methods and TableGit transport; it no longer regex
+parses import/export statements. Local package path enrichment remains separate
+from syntax parsing. See the Rust crate README for the one stateStyles grammar
+coverage gap and subsequent type/call/dataflow work.

@@ -3,6 +3,9 @@ on:
   push:
     branches: [main]
     paths:
+      - 'crates/agentlab_code_analysis/**'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
       - 'examples/knowledge-seed/**'
       - 'examples/tablegit-session/**'
       - 'tests/test_knowledge_seed.py'
@@ -47,6 +50,7 @@ jobs:
           git clone --no-checkout --depth 1 https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git "$RUNNER_TEMP/harmony-source"
           git -C "$RUNNER_TEMP/harmony-source" fetch --depth 1 origin 7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6
           git -C "$RUNNER_TEMP/harmony-source" checkout --detach FETCH_HEAD
+          cargo build --locked -p agentlab_code_analysis
           python3 examples/knowledge-seed/flywheel/run.py --source "$RUNNER_TEMP/harmony-source" --root "$AGENTLAB_CI_ROOT/builder"
       - name: Restore original builder capture without redispatch
         id: replay

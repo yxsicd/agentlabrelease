@@ -3,6 +3,7 @@ resolver = "2"
 members = [
   "crates/alharmony_ops_core",
   "crates/alsessionfsd",
+  "crates/agentlab_code_analysis",
 ]
 
 [profile.release]

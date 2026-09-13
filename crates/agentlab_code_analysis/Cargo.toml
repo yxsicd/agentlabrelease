@@ -1,0 +1,15 @@
+[package]
+name = "agentlab_code_analysis"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "agentlab-code-analysis"
+path = "src/main.rs"
+
+[dependencies]
+tree-sitter = "=0.27.0"
+tree-sitter-arkts = "=0.2.0"
+serde_json = "1"
+sha2 = "0.10"
