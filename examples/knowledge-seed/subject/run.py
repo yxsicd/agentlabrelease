@@ -12,7 +12,7 @@ def dump(path,value):path.write_text(json.dumps(value,indent=2)+'\n')
 def main():
  p=argparse.ArgumentParser();p.add_argument('--source',type=Path,required=True);p.add_argument('--reference',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--install-root',type=Path,required=True);p.add_argument('--pi-runtime',type=Path,required=True);p.add_argument('--image',required=True);a=p.parse_args()
  root=a.root.resolve();root.mkdir();e=root/'evidence';e.mkdir();project=root/'workspace'
- subprocess.run(['git','clone','--shared',str(a.source.resolve()),str(project)],check=True,capture_output=True)
+ subprocess.run(['git','clone','--no-hardlinks',str(a.source.resolve()),str(project)],check=True,capture_output=True)
  assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=project,text=True).strip()==PIN
  lock=json.loads((a.install_root/'downloads/environment-lock.json').read_text());dump(e/'environment-lock.json',lock)
  seed=json.loads(next(line for line in (Path(__file__).resolve().parents[1]/'seeds/harmony-code-workshop/evaluation_cases.jsonl').read_text().splitlines() if json.loads(line)['id']=='case-navigation-subject-v1'));assert seed['demands']==DEMANDS
@@ -27,6 +27,8 @@ def main():
   out=e/label;out.mkdir();rows=[]
   for name in PATHS:
    raw=(directory/name).read_bytes();target=out/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(raw);rows.append(dict(path=name,sha256=hashlib.sha256(raw).hexdigest(),bytes=len(raw)))
+  delta=subprocess.run(['git','diff','--binary',PIN],cwd=directory,capture_output=True,check=True);(out/'workspace-tracked-delta.patch').write_bytes(delta.stdout)
+  status=subprocess.run(['git','status','--porcelain'],cwd=directory,capture_output=True,check=True);(out/'workspace-status.txt').write_bytes(status.stdout)
   identity=hashlib.sha256(json.dumps(rows,sort_keys=True).encode()).hexdigest();dump(out/'source-cut.json',dict(kind='source-only-cut',id=identity,files=rows));return identity
  sdk=next(x for x in lock['components'] if x['slot']=='harmony-cli');kit=next(x for x in lock['components'] if x['slot']=='harmony-build-kit')
  base=['docker','run','--rm','--network=none','--mount',f'type=volume,src={sdk["volume"]},dst=/toolchains/harmony,readonly','--mount',f'type=volume,src={kit["volume"]},dst=/toolchains/harmony-build-kit,readonly','--mount',f'type=bind,src={root},dst=/case','--env','HARMONY_TOOLCHAIN_ROOT=/toolchains/harmony','--env','HARMONY_BUILD_CACHE=/runtime/toolchain-cache/subject','--entrypoint','/usr/bin/python3',lock['images'][0]['reference'],'/toolchains/harmony-build-kit/bin/harmony']
@@ -60,7 +62,7 @@ def main():
   except RuntimeError as error:summary['phases']['turn-1-launch-error']=str(error)
   stage1=oracle('turn-1',project,1);built1=build('turn-1-build',project);cut_id=cut('turn-1-cut',project);summary['phases']['turn-1']=dict(behavior=stage1,build=built1,sourceCut=cut_id)
   # Restore source from the operator cut onto original code; no reference fixes.
-  branch=root/'fork-workspace';shutil.copytree(project,branch,ignore=shutil.ignore_patterns('oh_modules','node_modules','build','.hvigor','.git','.native-build','.native-dependencies'))
+  branch=root/'fork-workspace';shutil.copytree(project,branch,ignore=shutil.ignore_patterns('oh_modules','node_modules','build','.hvigor','.native-build','.native-dependencies'))
   assert cut('fork-input',branch)==cut_id;summary['sourceForkQualified']=True
   for label,directory,participant in [('parent-turn-2',project,parent),('fresh-fork-turn-2',branch,None)]:
    if participant is None:fork=subject('fork-agent');participant=fork

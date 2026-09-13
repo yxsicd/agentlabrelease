@@ -28,3 +28,10 @@ Maintain method Skills in Release, derived instance Skills/facts/cases in live
 TableGit, then export one stable JSONL per table. Failed Agent results become
 analysis and next-instance guidance; they never trigger supervisor reference
 fixes inside the assessed Workspace.
+
+Tracked source deltas are captured against the original PIN, independently of
+participant Git commits. Workspace Git objects must be self-contained after
+container isolation; do not use alternates pointing outside the mounts.
+`ingest.py` stores individual checks, stack calls, stages, gateway/message/tool
+indices and byte-exact raw files in the existing three TableGit tables. Each
+instance stage receives evidence-linked evaluationGuidance after a completed run.
