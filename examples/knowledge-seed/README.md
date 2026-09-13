@@ -194,3 +194,13 @@ OHPM dependency seed for dependent projects; the original code-workshop has such
 dependencies. Inspect fullSourceBlocker separately from sliceCompilationQualified.
 Neither a slice pass nor a source-verified caller proves full original UI behavior,
 real assessed-Agent execution or formal SessionFS/Fork acceptance.
+
+After downloading controller evidence, use ingest-controller-build.py with
+--evidence, --development, --root, --producer-run and --producer-revision to
+maintain compiler phases, file manifests and lossless byte chunks in TableGit.
+It reconstructs every retained input/log/final HAP from the committed cut, then
+proves stable export and unchanged import. Intermediate caches/build directories
+are excluded; final tiny HAP outputs are retained, not Workspace build snapshots.
+All feedback/navigation instance Skills receive structured compilationEvidenceIds
+and compilationGuidance. Ordinary analysis rounds preserve these separate compiler
+fields; regenerated semantic prose does not become their authority.

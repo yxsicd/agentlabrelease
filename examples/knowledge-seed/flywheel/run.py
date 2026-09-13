@@ -48,7 +48,7 @@ def instance_skills(key,title,paths,turns,checks,revision):
  'evaluation':'Consume the frozen case-'+key+' source, knowledge and task cuts. Present only its demands, not the operator reference transform, to the subject. Execute staged demands '+json.dumps(turns,ensure_ascii=False)+'. Grade '+json.dumps(checks,ensure_ascii=False)+' and record Harness-owned calls/output/checkpoints. A construction oracle pass does not constitute subject evaluation.'}
  for stage,body in bodies.items():
   rid='skill-'+key if stage=='repository-analysis' else 'skill-'+stage+'-'+key
-  rows.append(dict(id=rid,title=title+' / '+stage,body='# '+title+'\n\n'+body+'\n',**common,**lineage(stage,'case-'+key,'operations' if stage=='evaluation' else 'maintenance')))
+  rows.append(dict(id=rid,title=title+' / '+stage,body='# '+title+'\n\n'+body+'\n\nWhen present, read compilationEvidenceIds and compilationGuidance for independent compiler results, full-source dependency blockers and the exact slice/consumer acceptance boundary.\n',**common,**lineage(stage,'case-'+key,'operations' if stage=='evaluation' else 'maintenance')))
  return rows
 
 def ident(kind,path): return kind+'-'+hashlib.sha256(path.encode()).hexdigest()[:24]
