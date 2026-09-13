@@ -42,9 +42,16 @@ def main():
   for check,passed in behavior.get('checks',{}).items():facts.append(dict(id=pre+'check-'+label+'-'+check,kind='assessment-check',phase=label,check=check,passed=passed,**lineage))
   for number,call in enumerate(behavior.get('calls',[])):facts.append(dict(id=pre+'stack-call-'+label+'-'+str(number),kind='navigation-stack-call',phase=label,ordinal=number,operation=call['op'],arguments=call['args'],**lineage))
  skills=[]
- for row in store.read(s,repo,rev,PREFIX+'maintainer_skills').values():
+ existing_skills=store.read(s,repo,rev,PREFIX+'maintainer_skills')
+ goal_id='skill-goal-navigation-subject-v1'
+ if goal_id not in existing_skills:
+  method=Path(__file__).resolve().parents[3]/'skills/agentlab-benchmark-goal/SKILL.md'
+  import subprocess
+  goal=dict(id=goal_id,title='Navigation subject acceptance goal',body='# Bounded navigation assessment goal\n\nAccept actual navigation outcomes, one caller lifecycle and three whole phone builds. Compare parent continuation with a fresh Agent from the same selected-source cut. Do not promote these tests into UI/device or formal SessionFS claims. Frozen demand and actual check rows own the criteria.',skillLayer='instance',role='maintenance',stage='goal',objectId='case-navigation-subject-v1',sourceRevision=summary['sourceRevision'],caseIds=['case-navigation-subject-v1'],methodSkillId='agentlab-benchmark-goal',methodRevision=subprocess.check_output(['git','log','-1','--format=%H','--',str(method)],text=True).strip(),methodDigest=hashlib.sha256(method.read_bytes()).hexdigest())
+  existing_skills[goal_id]=goal
+ for row in existing_skills.values():
   if row.get('objectId')!='case-navigation-subject-v1':continue
-  row=dict(row);row['evaluationEvidenceIds']=list(dict.fromkeys(row.get('evaluationEvidenceIds',[])+[pre+'summary']));row['evaluationGuidance']=dict(latestSummaryId=pre+'summary',subjectTaskSucceeded=summary['subjectTaskSucceeded'],harnessCompleted=summary['ok'],scope='Actual controller/caller methods and full phone compile; source-only fresh-Agent branch',next='Diagnose failed Agent outcomes from gateway/source evidence; formal SessionFS and device remain separate');skills.append(row)
+  row=dict(row);row['evaluationEvidenceIds']=list(dict.fromkeys(row.get('evaluationEvidenceIds',[])+[pre+'summary']));stage_next={'goal':'Maintain bounded acceptance against named checks and explicit qualification limits.','repository-analysis':'Compare actual outcome contracts and caller changes against frozen source semantics.','program-analysis':'Analyze tracked deltas, actual stack calls and original static facts; keep static versus executed scope distinct.','seed-extraction':'Derive the next variants from failed checks without rewriting this assessed demand.','calibration':'Retain original/reference/wrong-stack calibration and distinguish actual caller execution from UI rendering.','evaluation':'Compare parent/fresh-Agent phases, gateway context and source-cut identity; formal SessionFS remains separate.'};row['evaluationGuidance']=dict(stageNext=stage_next.get(row['stage']),latestSummaryId=pre+'summary',subjectTaskSucceeded=summary['subjectTaskSucceeded'],harnessCompleted=summary['ok'],scope='Actual controller/caller methods and full phone compile; source-only fresh-Agent branch',next='Diagnose failed Agent outcomes from gateway/source evidence; formal SessionFS and device remain separate');skills.append(row)
  for table,rows in [('program_facts',facts),('evaluation_cases',cases),('maintainer_skills',skills)]:
   existing=store.scan(s,repo,rev,PREFIX+table);ops=[]
   for row in rows:
