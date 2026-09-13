@@ -5,6 +5,12 @@ from pathlib import Path
 import uuid
 
 TABLES=('maintainer_skills','program_facts','evaluation_cases')
+# Retain all fields; secondary indexes serve explicit query patterns.
+INDEX_FIELDS={
+ 'maintainer_skills':('skillLayer','role','stage','objectId','methodSkillId','sourceRevision','status'),
+ 'program_facts':('kind','path','sourceId','targetPath','symbol','targetName','sourceRevision','producerRun','taskId','phase'),
+ 'evaluation_cases':('kind','sourceRevision','taskId','producerRun','phase','subjectTaskSucceeded','status'),
+}
 SQL="""SELECT json_extract(e.row_json,'$.sourceId') AS caller,
  json_extract(n.row_json,'$.id') AS candidate_target,
  json_extract(n.row_json,'$.path') AS target_path
@@ -48,12 +54,13 @@ def create(service,repo,worktree,revision,tables,prefix=''):
         fields={'id':{'type':'string','required':True}}
         for row in tables[table]:
             for key,value in row.items():
+                if value is None: continue
                 kind='boolean' if isinstance(value,bool) else 'integer' if isinstance(value,int) else 'array' if isinstance(value,list) else 'object' if isinstance(value,dict) else 'markdown' if key=='body' else 'string'
                 fields[key]={'type':kind,'required':key=='id'}
         if table=='program_facts':
             fields.update({k:{'type':v,'required':False} for k,v in [('code','text'),('request','object'),('result','object'),('interpretation','text')]})
         if table=='evaluation_cases': fields['analysisIds']={'type':'array','required':False}
-        revision=service.call('table.create',dict(repo=repo,worktree=worktree,path=prefix+table,expected_revision=revision,definition=dict(key_field='id',fields=fields,required_fields=['id'],indexes=[dict(name='by_'+key,field=key) for key,value in fields.items() if value['type'] in ('string','integer','boolean') and key!='title'],description='AgentLab engineering knowledge: '+table),message='Create engineering knowledge table'))['revision']
+        revision=service.call('table.create',dict(repo=repo,worktree=worktree,path=prefix+table,expected_revision=revision,definition=dict(key_field='id',fields=fields,required_fields=['id'],indexes=[dict(name='by_'+key,field=key) for key in INDEX_FIELDS[table] if key in fields and fields[key]['type'] in ('string','integer','boolean')],description='AgentLab engineering knowledge: '+table),message='Create engineering knowledge table'))['revision']
     return revision
 
 def persist(service,repo,worktree,package):

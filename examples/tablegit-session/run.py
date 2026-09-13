@@ -277,6 +277,7 @@ def main():
             try:
                 # Export committed test data before disposing the ephemeral store.
                 # Read its service-resolved repository; do not mutate/inject Workspace.
+                export_revision=run(["docker","exec",agent,"git","-C",capture_worktree_path,"rev-parse","HEAD"],"bundle-source-head")
                 bundle = evidence / "tablegit-capture.bundle"
                 docker("exec", agent, "git", "-C", capture_worktree_path,
                        "bundle", "create", "/tmp/tablegit-capture.bundle", "--all", label="bundle-export")
@@ -284,11 +285,13 @@ def main():
                 clone = root / ("bundle-check-"+run_id)
                 run(["git","clone","--quiet",str(bundle),str(clone)],"bundle-cold-clone")
                 restored = run(["git","-C",str(clone),"rev-parse","HEAD"],"bundle-restored-head")
-                if capture_revision and restored != capture_revision:
-                    raise RuntimeError("Restored bundle HEAD differs from committed capture revision")
+                if restored != export_revision:
+                    raise RuntimeError("Restored bundle HEAD differs from observed export revision")
+                if capture_revision:
+                    run(["git","-C",str(clone),"merge-base","--is-ancestor",capture_revision,restored],"bundle-capture-history-present")
                 save(evidence/"bundle-recovery.json",dict(sha256=demo.sha256(bundle),
                     byteLength=bundle.stat().st_size, restoredHead=restored,
-                    expectedCaptureRevision=capture_revision, historyExported=True))
+                    expectedCaptureRevision=capture_revision, exportRevision=export_revision, captureHistoryPresent=True, historyExported=True))
                 summary["checks"]["tablegit_history_exported"] = True
             except Exception as error:
                 summary["bundleExportError"] = str(error)

@@ -42,6 +42,20 @@ store_spec=importlib.util.spec_from_file_location('knowledge_store',Path(__file_
 store=importlib.util.module_from_spec(store_spec);store_spec.loader.exec_module(store)
 
 class SnapshotTest(unittest.TestCase):
+    def test_wide_knowledge_rows_keep_fields_without_index_overflow(self):
+        class Create:
+            def __init__(self):self.definitions=[]
+            def call(self,method,payload):
+                self.definitions.append(payload['definition'])
+                self_outer.assertLessEqual(len(payload['definition']['indexes']),32)
+                return {'revision':'created'}
+        self_outer=self;service=Create()
+        wide=dict(id='wide',kind='analysis',**{'metric'+str(n):n for n in range(64)})
+        store.create(service,'repo',{},'cut',{table:[wide] for table in store.TABLES})
+        for definition in service.definitions:
+            self.assertTrue(set(wide)<=set(definition['fields']))
+            self.assertTrue(all(index['field'] in definition['fields'] for index in definition['indexes']))
+
     def test_paging_stays_at_one_revision(self):
         class Pages:
             def call(self,method,payload):
