@@ -222,10 +222,29 @@ fn instance(root: &Path, run: &str, archive: &str) -> Tables {
             let mut params = request.clone();
             params.as_object_mut().unwrap().remove("messages");
             params.as_object_mut().unwrap().remove("tools");
+            let response_path = p.with_file_name(format!("{ordinal}.response"));
+            let response_raw = fs::read(&response_path).unwrap_or_default();
+            let mut semantic_complete = false;
+            let mut stream_error = Value::Null;
+            for line in response_raw.split(|b| *b == b'\n') {
+                if let Some(data) = line.strip_prefix(b"data:") {
+                    let data = String::from_utf8_lossy(data);
+                    if data.trim() == "[DONE]" { semantic_complete = true; }
+                    else if let Ok(event) = serde_json::from_str::<Value>(data.trim()) {
+                        semantic_complete |= event["choices"].as_array().is_some_and(|choices| choices.iter().any(|c| c["finish_reason"].is_string()));
+                        if !event["error"].is_null() { stream_error = event["error"].clone(); }
+                    }
+                }
+            }
+            let completion = if request["stream"] == true {
+                if !stream_error.is_null() { "stream_error" }
+                else if semantic_complete { "completed" }
+                else { "incomplete_stream" }
+            } else { status["outcome"].as_str().unwrap_or("unknown") };
             put(
                 &mut t,
                 "llm_requests",
-                json!({"id":id,"assetClass":"evaluation-instance","runId":run,"attemptId":participant,"requestId":id,"phaseId":phase_id,"ordinal":ordinal.parse::<u64>().unwrap(),"model":request["model"],"startedAt":status["startedAt"],"endedAt":status["endedAt"],"status":status["status"],"wallMs":status["durationMs"].as_f64().map(|x|x.round() as i64),"parameters":params,"outcome":status["outcome"],"statusFileId":file_id,"authority":"controlled-gateway"}),
+                json!({"id":id,"assetClass":"evaluation-instance","runId":run,"attemptId":participant,"requestId":id,"phaseId":phase_id,"ordinal":ordinal.parse::<u64>().unwrap(),"model":request["model"],"startedAt":status["startedAt"],"endedAt":status["endedAt"],"status":status["status"],"wallMs":status["durationMs"].as_f64().map(|x|x.round() as i64),"parameters":params,"outcome":completion,"transportOutcome":status["outcome"],"semanticComplete":semantic_complete,"streamError":stream_error,"responseByteCount":response_raw.len(),"statusFileId":file_id,"authority":"controlled-gateway"}),
             );
             for (direction, wire) in [
                 ("participant", request),

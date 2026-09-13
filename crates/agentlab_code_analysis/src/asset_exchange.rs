@@ -92,6 +92,8 @@ pub fn export(path: &Path, class: &str, tables: &Tables) -> Value {
             ],
             "attempts" => &[("parentAttemptId", "string"), ("forkScope", "string")],
             "llm_requests" => &[
+                ("streamError", "object"),
+                ("semanticComplete", "boolean"),
                 ("phaseId", "string"),
                 ("status", "integer"),
                 ("model", "string"),
