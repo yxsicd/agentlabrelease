@@ -93,7 +93,13 @@ def construct(source,out):
 
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--source',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--development',type=Path);a=p.parse_args()
- a.root.mkdir(parents=True,exist_ok=True);e=a.root/'evidence';e.mkdir(exist_ok=True)
+ a.root.mkdir(parents=True,exist_ok=True);e=a.root/'evidence'
+ if e.exists() and any(e.iterdir()):
+  archive=a.root/'history'/str(uuid.uuid4());archive.mkdir(parents=True)
+  for name in ['evidence','export','export-repeated']:
+   previous=a.root/name
+   if previous.exists(): previous.rename(archive/name)
+ e.mkdir(exist_ok=True)
  tables=construct(a.source,e);dump(e/'construction-proposal.json',tables)
  results={}
  for mode in ['baseline','reference','wrong-boundary']:
