@@ -58,3 +58,9 @@ For a new maintainer, follow [the apprentice workflow](references/apprentice-wor
 to reproduce a round, update the correct layer and leave a usable handoff. Each
 round accumulates executable guidance and evidence references, not a second
 copy of structured results in prose.
+
+Independent compiler evidence stays in structured compilationEvidenceIds and
+compilationGuidance on instance rows. Generated guidance references those fields.
+When an analysis flow owns only some fields, compare/update that projection and
+skip empty patches; whole-row inequality can be caused by another owned producer's
+fields. This keeps ordinary analysis and compiler capture internally consistent.

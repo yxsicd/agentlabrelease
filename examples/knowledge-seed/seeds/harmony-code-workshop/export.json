@@ -1,19 +1,19 @@
 {
   "schema": "agentlab.knowledge_export.v1",
   "repository": "session",
-  "revision": "4e4241f7fd3d902e29baf2770cd573ac6b76d7e9",
+  "revision": "296faecc96eb8eeba78f941bd37a561bc4f2b129",
   "tables": {
     "maintainer_skills": {
       "rowCount": 26,
-      "sha256": "311e3faa05ba2f089652a2ca4bc01689ccad509ea60c05a4eabaf5efe1515a3d"
+      "sha256": "71704c36435c90b1323d3a28b794a1a03070d2a1a6d4e3d363c1e5b70565443e"
     },
     "program_facts": {
-      "rowCount": 719,
-      "sha256": "aa495a817a0dcd4cdd2510fc10349f032193f1572420c3e59e4e60ff294e4403"
+      "rowCount": 834,
+      "sha256": "381bb04d43e6bf4994fd4b7f6851ffa75ab9b5d970a6c162c6b584d50a56a0fc"
     },
     "evaluation_cases": {
-      "rowCount": 10,
-      "sha256": "33a2930b684026907f05404929ec5ffdc87876f713cd22505dabfd1915798d08"
+      "rowCount": 12,
+      "sha256": "7c2a09aeadc94f832f56a33dcb512dc767ee44cabe07589594e47800779314ad"
     }
   },
   "tablePrefix": "flywheel/harmony-v3/"

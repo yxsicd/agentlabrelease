@@ -50,9 +50,11 @@ def main():
         if report['status']!='succeeded' or not report['artifacts']:raise RuntimeError('No compiler artifact')
         for entry in report['artifacts']:
             hap=root/'workspace/hello'/entry['path'];raw=hap.read_bytes()
-            if hashlib.sha256(raw).hexdigest()!=entry['sha256']:raise RuntimeError('HAP receipt mismatch')
+            if hashlib.sha256(raw).hexdigest()!=entry['sha256'] or len(raw)!=entry['bytes']:raise RuntimeError('HAP receipt mismatch')
             with zipfile.ZipFile(hap) as z:
                 if z.testzip() or not any(n.endswith('.abc') for n in z.namelist()):raise RuntimeError('Invalid HAP')
+                abc=b''.join(z.read(n) for n in z.namelist() if n.endswith('.abc'))
+                if summary['materialization']['sliceMarker'].encode() not in abc:raise RuntimeError('HAP lacks materialized controller marker')
             shutil.copy2(hap,e/(label+'.hap'));artifacts.append(entry)
         item['verifiedArtifacts']=artifacts
     try:

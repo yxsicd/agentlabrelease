@@ -61,6 +61,13 @@ def main():
                 status='typed-slice-qualified' if summary['sliceCompilationQualified'] else 'typed-slice-failed',
                 compilationSummaryId=prefix+'summary',fullTaskQualified=False,subjectAgentRun=False)
            for key in ['feedback','navigation']]
+    tasks=store.read(service,repo,revision,PREFIX+'evaluation_cases')
+    for key in ['feedback','navigation']:
+        row=dict(tasks['case-'+key]);ids=list(row.get('compilationEvidenceIds',[]))
+        if prefix+'summary' not in ids:ids.append(prefix+'summary')
+        row.update(compilationEvidenceIds=ids,latestCompilationQualificationId=prefix+'evaluation-'+key,
+                   sliceBuildQualified=summary['sliceCompilationQualified'],fullSourceBuildQualified=summary['fullSourceBuildQualified'])
+        cases.append(row)
     skills=store.read(service,repo,revision,PREFIX+'maintainer_skills');changed=[]
     for row in skills.values():
         if row.get('objectId') not in ['case-feedback','case-navigation']:continue

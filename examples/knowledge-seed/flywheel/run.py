@@ -227,7 +227,9 @@ def main():
   for row in rows:
    old=existing.get(row['id'])
    if old and old['row']==row: continue
-   op=dict(op='update',operation_id=str(uuid.uuid4()),key=row['id'],expected_row_version=old['row_version'],field_updates=[dict(op='set',field='/'+k,value=v) for k,v in row.items() if old['row'].get(k)!=v]) if old else dict(op='insert',operation_id=str(uuid.uuid4()),key=row['id'],row=row)
+   updates=[dict(op='set',field='/'+k,value=v) for k,v in row.items() if not old or k not in old['row'] or old['row'][k]!=v]
+   if old and not updates:continue
+   op=dict(op='update',operation_id=str(uuid.uuid4()),key=row['id'],expected_row_version=old['row_version'],field_updates=updates) if old else dict(op='insert',operation_id=str(uuid.uuid4()),key=row['id'],row=row)
    ops.append(op)
   if ops: revision=store.transact(service,repo,wt,revision,[dict(path=PREFIX+table,operations=ops)],'Archive analysis and feed calibration back into knowledge')
  final=store.export(service,repo,revision,a.root/'export',PREFIX)
