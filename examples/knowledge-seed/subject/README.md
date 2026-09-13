@@ -146,3 +146,31 @@ promotion; repeated import changes zero rows, and promotion verifies every
 frozen row unchanged. This is separate from runtime instances, experiences and
 candidates. The raw capture's case/oracle identity remains the original cut;
 replay rebuilds target-owned context and input-knowledge cuts.
+
+## Independent click and image URL instances
+
+The real subject Action accepts `debounce` and `image-url`. Both use two frozen
+demands, actual-method oracles, the same Pi/gateway capture, first-turn source cut,
+fresh-Agent branch and three full phone builds. The image case additionally
+captures ImageUtil, whose resource-dispatch body actually executes. Component and
+preview platform/UI bodies remain source-checked only; Node URL models the
+@kit.ArkTS parser seam and does not qualify Harmony platform parsing.
+
+Before dispatch, run the two-stage utility calibration locally:
+
+```sh
+cargo build --locked -p agentlab_code_analysis --bin agentlab-source-probe --bin agentlab-harmony-materialize
+# SOURCE must be the pinned code-workshop checkout; REFERENCE and OUTPUT fresh.
+target/debug/agentlab-harmony-materialize "$SOURCE" "$REFERENCE" examples/harmony-build/seed
+export AGENTLAB_SOURCE_PROBE="$PWD/target/debug/agentlab-source-probe"
+export AGENTLAB_ORACLE_TYPESCRIPT="/absolute/operator-runtime/node_modules/typescript"
+node examples/knowledge-seed/subject/calibrate-utilities.cjs "$SOURCE" "$REFERENCE/patched-source" "$OUTPUT"
+```
+
+The `utility-calibration` job in the knowledge Action performs this entire recipe
+on a fresh runner and preserves all 16 positive/negative stage receipts. Wrong
+resource dispatch passes stage one but fails stage two. Full subject evidence is
+preserved in the subject Action artifact and successful HAPs in its experiment
+Release. Automatic TableGit runtime replay/lesson promotion is currently wired
+for loading only; utility runtime collection must not be described as complete
+until its scenario-specific persistence and promotion path has been verified.

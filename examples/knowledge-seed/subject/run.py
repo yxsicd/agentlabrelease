@@ -14,7 +14,15 @@ FEEDBACK_DEMANDS=[
 LOADING_DEMANDS=[
  'In DelayedLoadingView make each aboutToAppear start hidden and cancel any previous pending timer before scheduling a new one. aboutToDisappear must cancel pending work and release delayTimer to -1. Preserve @State showLoading: boolean = false, delayTimer: number = -1 and the existing delays for all five known breakpoints. Keep valid ArkTS; do not install dependencies or change build configuration.',
  'Preserve all previous delayed-loading behavior. In shared BreakpointType.getValue make unknown breakpoint values fall back to sm, preserving xs/sm/md/lg/xl and constructor optional xs/xl fallbacks. DelayedLoadingView must use the small delay for an unknown breakpoint; LoadingView must continue using the shared helper and existing resource mapping. Do not install dependencies or change build configuration.']
+DEBOUNCE_DEMANDS=[
+ 'Fix DebounceUtil.debounce so every returned handler owns an independent accepted-click timestamp. The first call must execute immediately even at clock zero. Preserve the default 1000ms wait, suppress only its own repeats, accept at the exact wait boundary, and do not extend the accepted-click window on suppressed calls. Preserve ComponentBaseView click payloads and codelab forwarding. Keep valid ArkTS; do not install dependencies or change build configuration.',
+ 'Preserve all previous debounce behavior. Verify repeated suppressed clicks cannot postpone acceptance: with wait 100, accepted at time 2000, suppressed at 2050 and 2099, acceptance must occur at 2100 and next at 2200. Preserve independent component handlers, codelab forwarding and the default wait. Do not install dependencies or change build configuration.']
+IMAGE_URL_DEMANDS=[
+ 'Fix UrlUtil.isNetUrl to recognize only valid HTTP/HTTPS URLs with a nonempty host. Preserve mixed-case schemes and query/fragment URLs; reject missing hosts, invalid ports, whitespace, relative paths and file/data URLs. Use the existing @kit.ArkTS URL API and preserve maskUrl behavior. Keep valid ArkTS; do not install dependencies or change build configuration.',
+ 'Preserve all previous URL classification behavior. Verify ImageUtil.getImgResource uses the shared predicate: valid network strings remain byte-for-byte unchanged, local paths and malformed network strings route to rawfile, empty input routes to the placeholder. Preserve ImageComponent and ImagePreview use of the shared predicate. Do not install dependencies or change build configuration.']
 SCENARIOS={
+ 'debounce':dict(paths=['common/src/main/ets/util/DebounceUtil.ets','features/componentlibrary/src/main/ets/view/ComponentBaseView.ets','common/src/main/ets/util/index.ets'],demands=DEBOUNCE_DEMANDS,caseId='case-debounce-subject-v1',oracle='debounce.cjs',scope='Actual independent click handlers and accepted-click windows; full phone compile and selected-source fresh-Agent branch'),
+ 'image-url':dict(paths=['common/src/main/ets/util/UrlUtil.ets','common/src/main/ets/util/ImageUtil.ets','common/src/main/ets/component/ImageComponent.ets','features/devpractices/src/main/ets/view/ImagePreview.ets'],demands=IMAGE_URL_DEMANDS,caseId='case-image-url-subject-v1',oracle='image-url.cjs',scope='Actual URL predicate and ImageUtil resource dispatch; modeled platform parser/resource seams, full phone compile and selected-source fresh-Agent branch'),
  'loading':dict(paths=['common/src/main/ets/view/DelayedLoadingView.ets','common/src/main/ets/util/BreakpointSystem.ets','common/src/main/ets/view/LoadingView.ets'],demands=LOADING_DEMANDS,caseId='case-loading-subject-v1',oracle='loading.cjs',scope='Actual loading lifecycle/shared breakpoint methods and full phone compile; selected-source fresh-Agent branch'),
  'navigation':dict(paths=PATHS,demands=DEMANDS,caseId='case-navigation-subject-v1',oracle='navigation.cjs',scope='Actual navigation controller/caller methods and full phone compile; selected-source fresh-Agent branch'),
  'feedback':dict(paths=['common/src/main/ets/component/FeedbackSheet.ets','common/src/main/ets/model/FeedbackData.ets','common/src/main/ets/util/SubmitInfoUtil.ets','common/src/main/ets/component/Toast.ets'],demands=FEEDBACK_DEMANDS,caseId='case-feedback-subject-v1',oracle='feedback.cjs',scope='Actual feedback submit/reset methods with controlled Promise backend and full phone compile; selected-source fresh-Agent branch')}
@@ -71,9 +79,18 @@ def main():
   file=wrong/paths[0]
   if a.scenario=='navigation':file.write_text(file.read_text().replace('this.pathStack.replacePath','this.pathStack.pushPath'))
   elif a.scenario=='feedback':file.write_text(file.read_text().replace('this.submitError = err.message;', 'this.submitError = err.message; this.resetAllStatus();'))
+  elif a.scenario=='debounce':file.write_text(file.read_text().replace('lastClickTime < wait', 'lastClickTime <= wait'))
+  elif a.scenario=='image-url':file.write_text(file.read_text().replace('!/^https?:\\/\\//i.test(value)', 'false').replace("(parsed.protocol === 'http:' || parsed.protocol === 'https:')",'true'))
   else:file.write_text(file.read_text().replace('clearTimeout(this.delayTimer);', 'void this.delayTimer;'))
-  negative=oracle('wrong-reset' if a.scenario=='feedback' else 'wrong-cancel' if a.scenario=='loading' else 'wrong-stack',wrong,2)
+  negative=oracle({'feedback':'wrong-reset','loading':'wrong-cancel','navigation':'wrong-stack','debounce':'wrong-boundary','image-url':'wrong-protocol'}[a.scenario],wrong,2)
   summary['calibration']=dict(baselineFails=not baseline['pass'],referencePasses=reference['pass'],wrongOutcomeFails=not negative['pass'])
+  if a.scenario in ('debounce','image-url'):
+   extra=root/'wrong-extra';shutil.copytree(a.reference/'common',extra/'common');shutil.copytree(a.reference/'features',extra/'features')
+   if a.scenario=='debounce':
+    file=extra/paths[0];file.write_text(file.read_text().replace('        return;', '        lastClickTime = now;\n        return;'));label='wrong-window'
+   else:
+    file=extra/paths[1];file.write_text(file.read_text().replace('if (UrlUtil.isNetUrl(url))','if (false)'));label='wrong-dispatch'
+   summary['calibration'][label+'Fails']=not oracle(label,extra,2)['pass']
   if a.scenario=='loading':
    wrong_fallback=root/'wrong-fallback';shutil.copytree(a.reference/'common',wrong_fallback/'common');file=wrong_fallback/paths[1];file.write_text(file.read_text().replace('    return this.sm;\n  }','    return this.lg;\n  }'));summary['calibration']['wrongFallbackFails']=not oracle('wrong-fallback',wrong_fallback,2)['pass']
   if a.scenario=='feedback':

@@ -4,7 +4,7 @@ on:
     inputs:
       scenario:
         type: choice
-        options: [navigation, feedback, loading]
+        options: [navigation, feedback, loading, debounce, image-url]
         default: navigation
         description: Frozen TableGit case; independently calibrated submitted methods
       capture_run_id:

@@ -141,3 +141,33 @@ jobs:
         with:
           name: participant-runtime-preflight
           path: ${{ runner.temp }}/participant-runtime/
+
+  utility-calibration:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pin real source and build Rust AST/reference tools
+        run: |
+          git clone --no-checkout --depth 1 https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git "$RUNNER_TEMP/source"
+          git -C "$RUNNER_TEMP/source" fetch --depth 1 origin 7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6
+          git -C "$RUNNER_TEMP/source" checkout --detach FETCH_HEAD
+          cargo build --locked -p agentlab_code_analysis --bin agentlab-source-probe --bin agentlab-harmony-materialize
+          target/debug/agentlab-harmony-materialize "$RUNNER_TEMP/source" "$RUNNER_TEMP/reference" examples/harmony-build/seed
+      - name: Install operator-only TypeScript runtime
+        run: |
+          mkdir "$RUNNER_TEMP/oracle-runtime"
+          cp examples/knowledge-seed/subject/runtime/package*.json "$RUNNER_TEMP/oracle-runtime/"
+          npm ci --prefix "$RUNNER_TEMP/oracle-runtime"
+      - name: Calibrate actual utilities and caller bodies in both stages
+        run: |
+          export AGENTLAB_ORACLE_TYPESCRIPT="$RUNNER_TEMP/oracle-runtime/node_modules/typescript"
+          export AGENTLAB_SOURCE_PROBE="$PWD/target/debug/agentlab-source-probe"
+          node examples/knowledge-seed/subject/calibrate-utilities.cjs "$RUNNER_TEMP/source" "$RUNNER_TEMP/reference/patched-source" "$RUNNER_TEMP/utility-calibration"
+      - name: Preserve every baseline/reference/negative oracle receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: actual-utility-calibration
+          path: ${{ runner.temp }}/utility-calibration/

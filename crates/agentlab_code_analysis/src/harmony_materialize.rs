@@ -118,8 +118,43 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let breakpoint = git(source, &["show", &format!("{PIN}:{breakpoint_path}")])?;
     let patched_loading=loading.replace("  aboutToAppear(): void {", "  aboutToAppear(): void {\n    if (this.delayTimer !== -1) { clearTimeout(this.delayTimer); }\n    this.showLoading = false;");
     let patched_breakpoint=breakpoint.replace("    return this.lg;", "    if (currentBreakpoint === WidthBreakpoint.WIDTH_LG) { return this.lg; }\n    return this.sm;");
+    let debounce_path = "common/src/main/ets/util/DebounceUtil.ets";
+    let debounce = git(source, &["show", &format!("{PIN}:{debounce_path}")])?;
+    let patched_debounce = debounce
+        .replace("  private static lastClickTime: number = 0;", "")
+        .replace(
+            "    return () => {",
+            "    let lastClickTime: number = -Infinity;\n    return () => {",
+        )
+        .replace("DebounceUtil.lastClickTime", "lastClickTime")
+        .replace(
+            "        lastClickTime = now;\n        return;",
+            "        return;",
+        );
+    let url_path = "common/src/main/ets/util/UrlUtil.ets";
+    let url_source = git(source, &["show", &format!("{PIN}:{url_path}")])?;
+    let old_url = section(
+        &url_source,
+        "  public static isNetUrl(",
+        "  public static maskUrl(",
+    )?;
+    let patched_url = url_source.replace(old_url, r#"  public static isNetUrl(value: string): boolean {
+    if (typeof value !== 'string' || /\s/.test(value) || !/^https?:\/\//i.test(value)) {
+      return false;
+    }
+    try {
+      const parsed = url.URL.parseURL(value);
+      return parsed.hostname.length > 0 && (parsed.protocol === 'http:' || parsed.protocol === 'https:');
+    } catch {
+      return false;
+    }
+  }
+
+"#);
     let mut reference_patch = String::new();
     for (name, original, patched) in [
+        (debounce_path, &debounce, &patched_debounce),
+        (url_path, &url_source, &patched_url),
         (feedback_path, &feedback, &patched_feedback),
         (navigation_path, &navigation, &patched_navigation),
         (caller_path, &caller, &patched_caller),

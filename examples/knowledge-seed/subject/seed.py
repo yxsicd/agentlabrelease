@@ -9,18 +9,21 @@ PREFIX='assets/knowledge/contracts/'
 def main():
  p=argparse.ArgumentParser();p.add_argument('--scenario',choices=runner.SCENARIOS,default='navigation');p.add_argument('--prefix',default=PREFIX);p.add_argument('--development',type=Path,required=True);p.add_argument('--root',type=Path,required=True);a=p.parse_args();a.root.mkdir();(a.root/'rpc').mkdir();c=json.loads(a.development.read_text());s=Service(c['url'],Path(c['authorizationFile']).read_text().strip(),a.root/'rpc');repo=c['repo'];prefix=a.prefix;wt={'topic_id':None};rev=s.call('table.worktree.open',dict(repo=repo,worktree=wt))['revision']
  scenario=runner.SCENARIOS[a.scenario];parent_id='case-delayed-loading' if a.scenario=='loading' else 'case-'+a.scenario
- tasks=store.read(s,repo,rev,prefix+'evaluation_cases');base=tasks[parent_id];case={**base,'id':scenario['caseId'],'kind':'task','assetClass':'reusable-knowledge','parentCaseId':parent_id,'demands':scenario['demands'],'sourceRevision':PIN,'calibrationAdapter':'subject/'+scenario['oracle']+' actual methods; TypeScript transpile; controlled backend', 'assessmentScope':scenario['scope'],'forkMode':'selected-source-cut/fresh-agent','formalSessionFSQualified':False,'uiRenderingQualified':False};case.pop('compilationEvidenceIds',None)
+ tasks=store.read(s,repo,rev,prefix+'evaluation_cases');base=tasks[parent_id];case={**base,'id':scenario['caseId'],'kind':'task','assetClass':'reusable-knowledge','parentCaseId':parent_id,'paths':scenario['paths'],'demands':scenario['demands'],'sourceRevision':PIN,'calibrationAdapter':'subject/'+scenario['oracle']+' actual methods; TypeScript transpile; controlled backend', 'assessmentScope':scenario['scope'],'forkMode':'selected-source-cut/fresh-agent','formalSessionFSQualified':False,'uiRenderingQualified':False};case.pop('compilationEvidenceIds',None)
  case['oracleDigest']=hashlib.sha256(Path(__file__).with_name(scenario['oracle']).read_bytes()).hexdigest()
- if a.scenario=='loading':
+ if a.scenario in ('loading','debounce','image-url'):
   code="SELECT json_extract(row_json,'$.id') AS fact_id,json_extract(row_json,'$.path') AS path,json_extract(row_json,'$.targetPath') AS target FROM facts WHERE json_extract(row_json,'$.kind')='import' AND json_extract(row_json,'$.path') IN ('common/src/main/ets/view/DelayedLoadingView.ets','common/src/main/ets/view/LoadingView.ets') ORDER BY path,target"
+  if a.scenario!='loading':
+   paths=','.join("'"+x+"'" for x in scenario['paths'])
+   code="SELECT json_extract(row_json,'$.id') AS fact_id,json_extract(row_json,'$.path') AS path,json_extract(row_json,'$.targetPath') AS target FROM facts WHERE json_extract(row_json,'$.kind')='import' AND json_extract(row_json,'$.path') IN ("+paths+") ORDER BY path,target"
   request=dict(bindings=[dict(alias='facts',repo=repo,path=prefix+'program_facts',revision=rev)],sql=code,parameters=[])
   result=s.call('table.relations.query',request);assert len(result['rows'])>=3
-  analysis=dict(id='analysis-loading-subject-v1',kind='analysis',assetClass='reusable-knowledge',sourceRevision=PIN,code=code,request=request,result=result,interpretation='Fixed-source resolved import paths support loading/shared breakpoint task; not runtime call or UI coverage')
+  analysis=dict(id='analysis-'+a.scenario+'-subject-v1',kind='analysis',assetClass='reusable-knowledge',sourceRevision=PIN,code=code,request=request,result=result,interpretation='Fixed-source import facts support the '+a.scenario+' task; runtime body coverage is established separately by the actual oracle')
   existing_analysis=store.read(s,repo,rev,prefix+'program_facts').get(analysis['id'])
   if existing_analysis is None:rev=store.transact(s,repo,wt,rev,[dict(path=prefix+'program_facts',operations=[dict(op='insert',operation_id=str(uuid.uuid4()),key=analysis['id'],row=analysis)])],'Archive loading seed dependency analysis')
   else:assert existing_analysis['sourceRevision']==PIN and existing_analysis['code']==code
   case['analysisIds']=[analysis['id']]
-  case['calibrationContract']=dict(variantExpectations={'baseline':False,'reference':True,'wrong-cancel':False,'wrong-fallback':False})
+  case['calibrationContract']=dict(variantExpectations={'loading':{'baseline':False,'reference':True,'wrong-cancel':False,'wrong-fallback':False},'debounce':{'baseline':False,'reference':True,'wrong-boundary':False,'wrong-window':False},'image-url':{'baseline':False,'reference':True,'wrong-protocol':False,'wrong-dispatch':False}}[a.scenario])
  rows=[('evaluation_cases',case)]
  for row in store.read(s,repo,rev,prefix+'maintainer_skills').values():
   if row.get('objectId')!=parent_id:continue

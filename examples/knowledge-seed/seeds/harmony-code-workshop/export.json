@@ -2,12 +2,12 @@
   "schema": "agentlab.asset_exchange.v1",
   "assetClass": "reusable-knowledge",
   "repository": "session",
-  "revision": "eb43ff687a7898cdf1f1cff3a7386ec770912703",
-  "tablePrefix": "assets/knowledge/loading-initial-20260913/",
+  "revision": "1329621ab595cf8c52f02e7ca678f3deef706c29",
+  "tablePrefix": "assets/knowledge/utilities-initial-20260913/",
   "tables": {
     "evaluation_cases": {
-      "rowCount": 13,
-      "sha256": "70f8bcd3ee58d19542ebd20c951bd1cf442de553574f5dd6150d93721e13161b",
+      "rowCount": 15,
+      "sha256": "9d7a6987ffdac07e13445f44a1b154616b2e4721fc9132ce2520c9f5ca6b2501",
       "definition": {
         "description": "AgentLab reusable-knowledge analytical evaluation_cases",
         "fields": {
@@ -174,8 +174,8 @@
       }
     },
     "maintainer_skills": {
-      "rowCount": 44,
-      "sha256": "47bf553d379782ef5111f6e95e0926bce7d0056625f0295877bb14705b4cde3c",
+      "rowCount": 56,
+      "sha256": "e4ee2b1e3ae1545801f0c0fea1867935ade73c9737d31fc3a85f2e6878b41bc5",
       "definition": {
         "description": "AgentLab reusable-knowledge analytical maintainer_skills",
         "fields": {
@@ -346,8 +346,8 @@
       }
     },
     "program_facts": {
-      "rowCount": 722,
-      "sha256": "157ad5f1157acee0897a634a1d33366b82b168d7172ca82ad61bd6123451b36f",
+      "rowCount": 724,
+      "sha256": "b3df095b658123e0772bb29a9e9999369bad23ae5398cd8229eadfe0e8f0bd14",
       "definition": {
         "description": "AgentLab reusable-knowledge analytical program_facts",
         "fields": {
