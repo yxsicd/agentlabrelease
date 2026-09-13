@@ -56,7 +56,8 @@ concurrency:
   group: real-code-agent-acceptance
   cancel-in-progress: false
 jobs:
-  pi-harmony:
+  participant-harmony:
+    name: ${{ inputs.agent || 'pi' }} / ${{ inputs.scenario || 'hello' }}
     # External credentials are never exposed to PR or arbitrary branch code.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -99,8 +100,10 @@ jobs:
           CAPTURE_RUN_ID: ${{ inputs.capture_run_id }}
         run: |
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN_ID" > "$RUNNER_TEMP/prior-run.json"
+          SOURCE_ARTIFACT=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN_ID/artifacts" \
+            --jq '.artifacts[] | select(.name == "real-code-agent-acceptance" or .name == "real-pi-harmony-acceptance") | .name')
           gh run download "$CAPTURE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
-            --name real-pi-harmony-acceptance --dir "$RUNNER_TEMP/prior-capture"
+            --name "$SOURCE_ARTIFACT" --dir "$RUNNER_TEMP/prior-capture"
           python3 - <<'PYCODE'
           import json, os, pathlib, shutil
           prior = json.load(open(os.environ["RUNNER_TEMP"] + "/prior-run.json"))
@@ -138,7 +141,7 @@ jobs:
           AGENTLAB_STANDALONE_SESSIONFS_LOCK: ${{ runner.temp }}/real-composition/standalone-sessionfs.json
         run: scripts/ci-public-install-deploy-smoke.sh
       - id: subject
-        name: Run real Pi with the public LM Gateway and independently compile every edit
+        name: Run real ${{ inputs.agent || 'pi' }} with the LM Gateway and independently compile every edit
         if: inputs.capture_run_id == ''
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
@@ -191,7 +194,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: real-pi-harmony-acceptance
+          name: real-code-agent-acceptance
           if-no-files-found: error
           path: |
             ${{ env.AGENTLAB_CI_ROOT }}/real-agent/evidence/

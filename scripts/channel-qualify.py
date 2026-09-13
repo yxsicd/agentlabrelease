@@ -39,8 +39,9 @@ if __name__ == '__main__':
         compositionIdentity=plan['compositionIdentity'], sourceLockSha256=plan['sourceLockSha256'],
         targetChannel=plan['targetChannel'], validationDependenciesSha256=plan.get('validationDependenciesSha256'),
         checks={}, githubRunId=None, producerRevision=None)
-    path = args.root/'real-pi-harmony-acceptance/channel-real-check.json'
-    real = json.loads(path.read_text()) if path.exists() else None
+    receipts=list(args.root.glob('*/channel-real-check.json'))
+    if len(receipts)>1: raise ValueError('multiple real-Agent receipts for one required check')
+    real=json.loads(receipts[0].read_text()) if receipts else None
     result = qualify(plan, baseline, real)
     (args.root/'qualification.json').write_text(json.dumps(result, indent=2)+'\n')
     print(json.dumps(result))

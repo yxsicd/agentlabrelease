@@ -82,7 +82,7 @@ jobs:
           assert prior['head_branch']=='main' and prior['path']=='.github/workflows/swe-campaign.yml'
           source=pathlib.Path(os.environ['RUNNER_TEMP'])/'prior-capture/real-agent/evidence'
           target=pathlib.Path(os.environ['AGENTLAB_CI_ROOT'])/'real-agent/evidence'
-          target.parent.mkdir(parents=True)
+          target.parent.mkdir(parents=True,exist_ok=True)
           shutil.copytree(source,target)
           receipt=dict(originalRunId=prior['id'],originalProducerRevision=prior['head_sha'],subjectRedispatched=False,originalCaptureModified=False)
           (target.parents[1]/'capture-replay.json').write_text(json.dumps(receipt,indent=2)+'\n')
