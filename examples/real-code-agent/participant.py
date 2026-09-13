@@ -1,5 +1,6 @@
 """Operator-owned gateway capture and a replaceable Pi participant launcher."""
 import http.server
+import base64
 import json
 import os
 from pathlib import Path
@@ -195,7 +196,17 @@ class Participant:
         lifecycle['exitCode'] = code
         if code:
             raise RuntimeError(f'{label}: {"Pi" if self.implementation=="pi" else self.implementation} exited {code}; inspect participant evidence')
-        events = [json.loads(line) for line in (self.evidence / f'{label}-events.jsonl').read_text().splitlines() if line]
+        events, parse_errors = [], []
+        for number,line in enumerate((self.evidence / f'{label}-events.jsonl').read_bytes().splitlines(),1):
+            if not line.strip(): continue
+            try:
+                event=json.loads(line)
+                if not isinstance(event,dict): raise ValueError('native event must be an object')
+                events.append(event)
+            except (ValueError,UnicodeDecodeError) as error:
+                parse_errors.append(dict(line=number,error=str(error),rawBase64=base64.b64encode(line).decode()))
+        if parse_errors:
+            (self.evidence / f'{label}-native-parse-errors.json').write_text(json.dumps(parse_errors,indent=2)+'\n')
         errors = [e['message'].get('errorMessage', 'Model request failed') for e in events
                   if e.get('type') == 'message_end' and e.get('message', {}).get('stopReason') == 'error']
         if errors:

@@ -67,6 +67,20 @@ class GatewayCaptureTests(unittest.TestCase):
             self.assertEqual(json.loads((evidence/'runtime-probe.json').read_text())['exitCode'],1)
             self.assertFalse((evidence/'gateway').exists())
 
+    def test_native_banner_is_retained_without_vetoing_completed_tools(self):
+        with tempfile.TemporaryDirectory() as tmp,patch.dict(os.environ,
+                {'AGENTLAB_LM_GATEWAY_KEY':'synthetic-key'}):
+            root=Path(tmp);evidence=root/'evidence';evidence.mkdir()
+            participant=MODULE.Participant(evidence,root/'state',sys.executable,'http://127.0.0.1:1','test-model')
+            try:
+                participant._run_turn([sys.executable,'-c',
+                    "import json; print('native startup diagnostic'); print(json.dumps(dict(type='tool_execution_end')))"],
+                    root,{'PATH':os.environ['PATH']},'banner',{})
+            finally:participant.close()
+            self.assertIn(b'native startup diagnostic',(evidence/'banner-events.jsonl').read_bytes())
+            errors=json.loads((evidence/'banner-native-parse-errors.json').read_text())
+            self.assertEqual(len(errors),1)
+
     def test_disconnect_still_captures_complete_upstream(self):
         release=threading.Event()
         body=b'data: {"delta":"first"}\n'+b'data: {"delta":"remaining"}\n'*4000

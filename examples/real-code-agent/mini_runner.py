@@ -1,31 +1,37 @@
 #!/usr/bin/env python3
 """Thin mini-SWE-agent adapter. The parent Harness owns Gateway capture and verdicts."""
 import argparse
+import contextlib
+import sys
 import json
 import shlex
 from pathlib import Path
-from minisweagent.agents.default import DefaultAgent
-from minisweagent.environments.local import LocalEnvironment
-from minisweagent.models.litellm_model import LitellmModel
+EVENT_STREAM=sys.stdout
+with contextlib.redirect_stdout(sys.stderr):
+    from minisweagent.agents.default import DefaultAgent
+    from minisweagent.environments.local import LocalEnvironment
+    from minisweagent.models.litellm_model import LitellmModel
+
+
+def emit(value):
+    print(json.dumps(value),file=EVENT_STREAM,flush=True)
 
 
 class RecordedEnvironment(LocalEnvironment):
     container = None
     def execute(self, action, **kwargs):
-        print(json.dumps({'type':'tool_execution_start','implementation':'mini-swe-agent','action':action}),flush=True)
+        emit({'type':'tool_execution_start','implementation':'mini-swe-agent','action':action})
         try:
             executed = action
             if self.container:
                 executed = dict(action,command=shlex.join(['docker','exec','-w','/testbed',self.container,'bash','-lc',action['command']]))
-                print(json.dumps({'type':'adapter_execution','actualAction':executed}),flush=True)
+                emit({'type':'adapter_execution','actualAction':executed})
             result = super().execute(executed, **kwargs)
         except Exception as error:
-            print(json.dumps({'type':'tool_execution_end','implementation':'mini-swe-agent',
-                              'action':action,'exceptionClass':type(error).__name__,
-                              'exception':str(error)}),flush=True)
+            emit({'type':'tool_execution_end','implementation':'mini-swe-agent',
+                  'action':action,'exceptionClass':type(error).__name__,'exception':str(error)})
             raise
-        print(json.dumps({'type':'tool_execution_end','implementation':'mini-swe-agent',
-                          'action':action,'result':result}),flush=True)
+        emit({'type':'tool_execution_end','implementation':'mini-swe-agent','action':action,'result':result})
         return result
 
 
@@ -48,8 +54,9 @@ def main():
                         'echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT. Do not only describe edits.',
         instance_template='{{task}}',step_limit=30,cost_limit=0,
         wall_time_limit_seconds=360,output_path=args.trajectory)
-    result=agent.run(args.prompt)
-    print(json.dumps({'type':'participant_exit','implementation':'mini-swe-agent','result':result}),flush=True)
+    with contextlib.redirect_stdout(sys.stderr):
+        result=agent.run(args.prompt)
+    emit({'type':'participant_exit','implementation':'mini-swe-agent','result':result})
     if result.get('exit_status')!='Submitted':
         raise RuntimeError('mini-SWE-agent did not submit: '+str(result))
 
