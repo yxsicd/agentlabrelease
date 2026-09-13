@@ -79,3 +79,13 @@ dynamically allocated Docker ports. No existing AL instance is modified.
 [The initial fixture snapshot](seeds/fixture/export.json) was exported from real
 TableGit after archived SQL analysis, not hand-edited. It contains13 rows in three
 JSONL files. This is a small Python fixture; it does not claim real Harmony tasks.
+
+## Maintained process Skills versus runtime knowledge
+
+[The Release Skill registry](../../skills/registry.json) separates maintenance
+(goal, semantic analysis, program analysis, seed extraction and calibration)
+from operations (fixed-snapshot evaluation). These are reusable process recipes.
+The target codebase maintainer Skills are business rows in `maintainer_skills`;
+the three JSONL files remain exported data snapshots, not copies of the process
+library or a second editable authority. Assessment feedback informs a later
+maintenance cut, preserving the current assessment inputs.

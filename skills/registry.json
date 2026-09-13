@@ -1,0 +1,53 @@
+{
+  "schema": "agentlab.skill_registry.v1",
+  "libraryAuthority": "Release Git commit",
+  "knowledgeAuthority": "TableGit committed rows; JSONL files are publication snapshots",
+  "roles": {
+    "maintenance": "Maintain goals, methods, target knowledge and calibrated seed snapshots.",
+    "operations": "Consume fixed versions, execute campaigns and record feedback."
+  },
+  "skills": [
+    {
+      "id": "agentlab-benchmark-goal",
+      "role": "maintenance",
+      "stage": "goal",
+      "path": "skills/agentlab-benchmark-goal/SKILL.md"
+    },
+    {
+      "id": "agentlab-codebase-analysis",
+      "role": "maintenance",
+      "stage": "repository-analysis",
+      "path": "skills/agentlab-codebase-analysis/SKILL.md"
+    },
+    {
+      "id": "agentlab-program-analysis",
+      "role": "maintenance",
+      "stage": "program-analysis",
+      "path": "skills/agentlab-program-analysis/SKILL.md"
+    },
+    {
+      "id": "agentlab-seed-extraction",
+      "role": "maintenance",
+      "stage": "seed-extraction",
+      "path": "skills/agentlab-seed-extraction/SKILL.md"
+    },
+    {
+      "id": "agentlab-benchmark-calibration",
+      "role": "maintenance",
+      "stage": "calibration",
+      "path": "skills/agentlab-benchmark-calibration/SKILL.md"
+    },
+    {
+      "id": "agentlab-benchmark-operations",
+      "role": "operations",
+      "stage": "evaluation",
+      "path": "skills/agentlab-benchmark-operations/SKILL.md"
+    },
+    {
+      "id": "agentlab-harness-developer",
+      "role": "operations",
+      "stage": "harness",
+      "path": "skills/agentlab-harness-developer/SKILL.md"
+    }
+  ]
+}

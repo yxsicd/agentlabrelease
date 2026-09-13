@@ -18,6 +18,7 @@ mapping, real TableGit Session recovery, and a preset Mock Agent campaign on
 copy-tree and Btrfs. Each retains its exact evidence and states its coverage;
 these separate checks do not qualify the complete whitebox evaluation chain.
 
+- Choose benchmark maintenance or operations using [`skills/registry.json`](skills/registry.json).
 - Start with [`skills/agentlab-harness-developer/SKILL.md`](skills/agentlab-harness-developer/SKILL.md).
 - On AIWSL, start the current preview with
   `scripts/agentlab-harness-quickstart.sh online-install`.

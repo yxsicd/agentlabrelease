@@ -3,6 +3,10 @@
 This repository contains released AgentLab packages and consumer guidance, not
 the private maintenance workspace.
 
+Select maintenance versus operations via `skills/registry.json`. Maintenance
+Skills own benchmark methods and seed publication; operations consume fixed
+snapshots and return evidence for the next maintenance cut.
+
 Read `skills/agentlab-harness-developer/SKILL.md` completely before designing or
 running an Agent evaluation. Treat manifests and receipts as authority; never
 infer a capability from a filename, running container, or unpinned `main`.

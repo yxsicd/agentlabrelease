@@ -5,6 +5,11 @@ description: Design, run, inspect, checkpoint, fork, and compare Code Agent eval
 
 # AgentLab Harness Developer
 
+This is an operations Skill. For benchmark goals, repository analysis, task
+construction or calibration, select the maintenance route in
+[the Skill registry](../registry.json). Operations consume fixed calibrated
+snapshots; feedback enters a later maintenance cut.
+
 Public release validation includes the executable Harmony compilation demo at
 `examples/harmony-build/README.md`: published SDK/build-kit, initialized ArkTS seed,
 two edits and real unsigned HAP rebuilds, invalid-source rejection and recovery.
