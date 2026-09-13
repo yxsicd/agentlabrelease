@@ -1,0 +1,39 @@
+name: Harmony generated scenario campaign
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compile:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [hello, counter, form]
+    env:
+      AGENTLAB_CI_ROOT: /tmp/agentlab-harmony-campaign
+      AGENTLAB_RELEASE_CHANNEL: candidate-20260913-40ecdf4b-sdk-c075105a-linux-x64
+      AGENTLAB_COMPOSITION_DIR: release/candidates/40ecdf4b-linux-x64
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install published components
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes zstd
+          scripts/ci-public-install-deploy-smoke.sh
+      - name: Compile seed, two requirement deltas, invalid source and repaired source
+        env:
+          SCENARIO: ${{ matrix.scenario }}
+        run: |
+          python3 examples/harmony-build/run.py --install-root "$AGENTLAB_CI_ROOT" \
+            --root "$AGENTLAB_CI_ROOT/case" --scenario "$SCENARIO"
+      - name: Retain generated demand, source oracles, compiler logs and HAP bytes
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: harmony-${{ matrix.scenario }}
+          path: ${{ env.AGENTLAB_CI_ROOT }}/case/evidence/

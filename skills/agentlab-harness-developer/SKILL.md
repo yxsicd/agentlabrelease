@@ -1401,3 +1401,15 @@ individual packages. Use `replacement_url` instead of a donor composition;
 the composer retains the original descriptor digest and resolves relative
 metadata against that descriptor URL. Contract declarations belong to the
 component producer; whole-composition qualification belongs to AgentLab.
+
+### Reference Agents and generated campaigns
+
+Pi and pinned mini-SWE-agent are replaceable reference participants. Choose Mini
+for its small upstream agent loop and Bash-only action surface; keep the runtime
+outside Workspace. Use `swe-campaign.yml` for four content-bound official SWE Lite
+seeds across Django, Requests and SymPy. Reference-patch grading qualifies the
+benchmark separately from Agent resolution. Use `harmony-campaign.yml` to qualify
+deterministic hello/counter/form seed and demand oracles, then the real Agent
+Action with a selected implementation/scenario. Keep complete partial/failed
+capture and independently reconstruct TableGit. Public SWE source capture does
+not establish a formal SessionFS snapshot of its benchmark container.

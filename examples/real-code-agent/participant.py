@@ -17,7 +17,8 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class Participant:
-    def __init__(self, evidence, state, binary, gateway, model, route='glm'):
+    def __init__(self, evidence, state, binary, gateway, model, route='glm', implementation='pi'):
+        self.implementation = implementation
         self.evidence = evidence
         self.state = state
         self.binary = str(Path(binary).resolve())
@@ -112,24 +113,31 @@ class Participant:
                         'contextWindow': 128000, 'maxTokens': 8192}]}}}
         (state / 'models.json').write_text(json.dumps(models, indent=2) + '\n')
         (evidence / 'participant.json').write_text(json.dumps({
-            'implementation': 'pi', 'packageVersion': '0.73.1', 'model': model,
+            'implementation': implementation, 'packageVersion': '0.73.1' if implementation=='pi' else '2.4.6', 'model': model,
             'gateway': gateway, 'providerRoute': route,
             'captureAuthority': 'operator-owned local forwarding proxy',
             'externalCredentialInParticipant': False}, indent=2) + '\n')
 
-    def turn(self, label, project, marker, repair=False):
-        prompt = (f'Work in the current Harmony ArkTS project. Read the page source and '
+    def turn(self, label, project, marker=None, repair=False, prompt=None, container=None, requirement=None):
+        prompt = prompt or (f'Work in the current Harmony ArkTS project. Read the page source and '
                   f'{"repair its invalid trailing text, then " if repair else ""}'
                   f'change its displayed Text to exactly "{marker}". Keep the Stage application '
                   'structure and valid ArkTS syntax. Use your file tools to perform the edit. '
                   'Do not install dependencies or change build configuration. '
                   'The independent operator compiles and evaluates the actual files afterwards. '
                   'Briefly describe your change when done.')
+        if requirement: prompt += '\nAdditional requirement: '+requirement
         (self.evidence / f'{label}-prompt.txt').write_text(prompt)
         command = [self.binary, '--print', '--mode', 'json', '--provider', 'agentlab-ci',
                    '--model', self.model, '--thinking', 'off', '--no-extensions',
                    '--no-skills', '--no-context-files',
                    '--session', str(self.evidence / 'pi-session.jsonl'), prompt]
+        if self.implementation == 'mini-swe-agent':
+            command = [self.binary, str(Path(__file__).with_name('mini_runner.py')),
+                       '--base-url', f'http://127.0.0.1:{self.server.server_port}/v1',
+                       '--model', self.model, '--trajectory',
+                       str(self.evidence / f'{label}-mini-trajectory.json'), prompt]
+            if container: command += ['--container',container]
         # Only the operator-side proxy has the external credential.
         env = {k: os.environ[k] for k in ('PATH', 'LANG', 'LC_ALL', 'TMPDIR') if k in os.environ}
         env.update(HOME=str(self.state.parent), PI_CODING_AGENT_DIR=str(self.state))
@@ -148,9 +156,9 @@ class Participant:
                 (self.evidence / f'{label}-actual-source.ets').write_bytes(source.read_bytes())
             (self.evidence / f'{label}-lifecycle.json').write_text(json.dumps(lifecycle, indent=2)+'\n')
         source = project / 'entry/src/main/ets/pages/Index.ets'
-        if marker not in source.read_text():
+        if marker is not None and marker not in source.read_text():
             raise RuntimeError(f'{label}: Agent did not change actual source')
-        print(f'{label}: real Pi turn completed', flush=True)
+        print(f'{label}: real {self.implementation} turn completed', flush=True)
 
     def _run_turn(self, command, project, env, label, lifecycle):
         with (self.evidence / f'{label}-events.jsonl').open('wb') as out, \
@@ -172,7 +180,7 @@ class Participant:
                 raise RuntimeError(f'{label}: participant timeout; partial events retained')
         lifecycle['exitCode'] = code
         if code:
-            raise RuntimeError(f'{label}: Pi exited {code}; inspect participant evidence')
+            raise RuntimeError(f'{label}: {"Pi" if self.implementation=="pi" else self.implementation} exited {code}; inspect participant evidence')
         events = [json.loads(line) for line in (self.evidence / f'{label}-events.jsonl').read_text().splitlines() if line]
         errors = [e['message'].get('errorMessage', 'Model request failed') for e in events
                   if e.get('type') == 'message_end' and e.get('message', {}).get('stopReason') == 'error']

@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import time
 import zipfile
+from scenarios import NAMES, demands, render, verify, manifest
 
 
 def main():
@@ -15,9 +16,11 @@ def main():
     parser.add_argument('--install-root', type=Path, required=True)
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--agent-bin', type=Path)
+    parser.add_argument('--agent-implementation', choices=['pi','mini-swe-agent'], default='pi')
     parser.add_argument('--gateway-url', default='https://llm-m4dd.de.yxsbase.win')
     parser.add_argument('--model', default='glm-5.3-flash')
     parser.add_argument('--provider-route', default='glm')
+    parser.add_argument('--scenario', choices=NAMES, default='hello')
     args = parser.parse_args()
     root = args.root.resolve()
     root.mkdir(parents=True, exist_ok=False)
@@ -25,6 +28,8 @@ def main():
     shutil.copytree(Path(__file__).parent / 'seed', project)
     evidence = root / 'evidence'
     evidence.mkdir()
+    (project/'entry/src/main/ets/pages/Index.ets').write_text(render(args.scenario,0,'Native Build Verified'))
+    (evidence/'scenario.json').write_text(json.dumps(manifest(args.scenario),indent=2)+'\n')
     lock = json.loads((args.install_root / 'downloads/environment-lock.json').read_text())
     image = lock['images'][0]['reference']
     sdk = next(c for c in lock['components'] if c['slot'] == 'harmony-cli')
@@ -93,34 +98,40 @@ def main():
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             participant = module.Participant(evidence, root / 'participant-state',
-                                             args.agent_bin, args.gateway_url, args.model, args.provider_route)
-            summary['participant'] = {'implementation': 'pi', 'model': args.model}
+                                             args.agent_bin, args.gateway_url, args.model, args.provider_route, args.agent_implementation)
+            summary['participant'] = {'implementation': args.agent_implementation, 'model': args.model}
         call('doctor', 'doctor')
         summary['checks']['publishedToolchainReady'] = True
         original = source.read_text()
         hashes = [build('seed-build', 'Native Build Verified')]
         for number, marker in enumerate(('Public Iteration One', 'Public Iteration Two'), 1):
             if participant:
-                participant.turn(f'agent-iteration-{number}', project, marker)
+                participant.turn(f'agent-iteration-{number}', project, marker,requirement=demands(args.scenario,number))
             else:
-                source.write_text(original.replace('Native Build Verified', marker))
+                source.write_text(render(args.scenario,number,marker))
             (evidence / f'iteration-{number}.ets').write_text(source.read_text())
+            oracle=verify(args.scenario,number,source.read_text())
+            (evidence/f'iteration-{number}-source-oracle.json').write_text(json.dumps(oracle,indent=2)+'\n')
+            if not oracle['passed']: raise RuntimeError('Agent did not satisfy scenario source contract')
             hashes.append(build(f'iteration-{number}-build', marker))
         summary['checks']['eachEditChangesCompiledHap'] = len(set(hashes)) == 3
         if not summary['checks']['eachEditChangesCompiledHap']:
             raise RuntimeError('Changed source reused an old compiled HAP')
         # A stale HAP must not hide an invalid-source compiler failure.
-        source.write_text(original + '\nTHIS IS INVALID ARKTS !!!\n')
+        source.write_text(source.read_text() + '\nTHIS IS INVALID ARKTS !!!\n')
         call('invalid-source', 'build', expect_success=False)
         failed = json.loads((project / '.native-build/result.json').read_text())
         if failed['status'] != 'failed' or failed['artifacts']:
             raise RuntimeError('Invalid source reported stale artifacts as success')
         summary['checks']['invalidSourceRejected'] = True
         if participant:
-            participant.turn('agent-repair', project, 'Public Iteration Two', repair=True)
+            participant.turn('agent-repair', project, 'Public Iteration Two', repair=True,requirement=demands(args.scenario,2))
             summary['checks']['realAgentMultiTurnAndRepair'] = True
         else:
-            source.write_text(original.replace('Native Build Verified', 'Public Iteration Two'))
+            source.write_text(render(args.scenario,2,'Public Iteration Two'))
+        repaired=verify(args.scenario,2,source.read_text())
+        (evidence/'repair-source-oracle.json').write_text(json.dumps(repaired,indent=2)+'\n')
+        if not repaired['passed']: raise RuntimeError('Repair lost scenario features')
         build('recovered-build', 'Public Iteration Two')
         summary['ok'] = True
     except Exception as error:

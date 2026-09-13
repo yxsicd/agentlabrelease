@@ -1,0 +1,39 @@
+{
+  "schema": "agentlab.swe_seed_catalog.v1",
+  "dataset": "princeton-nlp/SWE-bench_Lite",
+  "split": "test",
+  "cases": [
+    {
+      "instanceId": "django__django-10914",
+      "repo": "django/django",
+      "baseCommit": "e7fd69d051eaa67cb17f172a39b57253e9cb831a",
+      "version": "3.0",
+      "sourceRecordSha256": "ff1b14ded51c884d2b6c364be2e695c02cbc1d2ba6c28c79f9ac3e90a108e1dd",
+      "problem": "Set default FILE_UPLOAD_PERMISSION to 0o644."
+    },
+    {
+      "instanceId": "django__django-11099",
+      "repo": "django/django",
+      "baseCommit": "d26b2424437dabeeca94d7900b37d2df4410da0c",
+      "version": "3.0",
+      "sourceRecordSha256": "43659e304b1df570cf882967c200ce9cbd63b54439b166c235123c967ec421c0",
+      "problem": "UsernameValidator allows trailing newline in usernames"
+    },
+    {
+      "instanceId": "psf__requests-1963",
+      "repo": "psf/requests",
+      "baseCommit": "110048f9837f8441ea536804115e80b69f400277",
+      "version": "2.3",
+      "sourceRecordSha256": "cee29107d124ae88a1572a53636bef7710d122e9df31ba0925ee291d757a8196",
+      "problem": "`Session.resolve_redirects` copies the original request for all subsequent requests, can cause incorrect method selection"
+    },
+    {
+      "instanceId": "sympy__sympy-11400",
+      "repo": "sympy/sympy",
+      "baseCommit": "8dcb12a6cf500e8738d6729ab954a261758f49ca",
+      "version": "1.0",
+      "sourceRecordSha256": "7a5bcca051e4025b6e65207adb8b6ff8c51c04464307f36a8eff70f19a360429",
+      "problem": "ccode(sinc(x)) doesn't work"
+    }
+  ]
+}

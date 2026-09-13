@@ -86,3 +86,20 @@ Session persistence/storage restart/reconstruction with the current pinned SDK.
 `capture-replay.json` and capture context preserve the original run/source and
 record the new recovery run separately. This is recovery of an existing test,
 not a fresh Agent evaluation. Empty input runs the complete fresh-agent demo.
+
+## Second reference implementation
+
+The manual Action selects `agent=pi` or `agent=mini-swe-agent` (pinned2.4.6).
+Mini uses the upstream DefaultAgent and Bash environment through a thin adapter;
+its runtime and dependencies are installed outside the project. Both participants
+use the same operator-owned Gateway proxy, lifecycle capture, independent compiler
+and TableGit reconstruction. Native adapter events are corroborating evidence,
+not subject-granted capture authority. Default prod reference remains Pi.
+
+Select `scenario=counter` or `form` for generated multi-turn demands. Counter
+adds Increment then Reset; form adds input binding then Clear. Source contracts
+plus actual HAP compilation determine acceptance. The operator adds an invalid
+trailer to the edited source and verifies failure, then checks repair preserved
+all requested features. This proves compilation/source contracts, not device UI
+interaction. `harmony-campaign.yml` independently tests all three scenario oracles
+with deterministic edits before subject performance is interpreted.

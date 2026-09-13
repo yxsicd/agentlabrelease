@@ -2,6 +2,16 @@ name: Real Code Agent acceptance
 on:
   workflow_dispatch:
     inputs:
+      agent:
+        description: Replaceable participant implementation
+        type: choice
+        options: [pi, mini-swe-agent]
+        default: pi
+      scenario:
+        description: Harmony demand sequence
+        type: choice
+        options: [hello, counter, form]
+        default: hello
       model:
         description: Model exposed by the LM Gateway
         required: true
@@ -24,6 +34,9 @@ on:
         type: string
   workflow_call:
     inputs:
+      agent:
+        type: string
+        default: pi
       plan_run_id:
         type: string
         required: true
@@ -51,6 +64,8 @@ jobs:
     env:
       AGENTLAB_CI_ROOT: /tmp/agentlab-real-acceptance
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
+      AGENTLAB_SCENARIO: ${{ inputs.scenario || 'hello' }}
+      AGENTLAB_AGENT: ${{ inputs.agent || 'pi' }}
       AGENTLAB_MODEL: ${{ inputs.model }}
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
     steps:
@@ -102,12 +117,17 @@ jobs:
               out.write("producer_revision=" + prior["head_sha"] + "\n")
           PYCODE
       - name: Install the separately contained Pi runtime
-        if: inputs.capture_run_id == ''
+        if: inputs.capture_run_id == '' && inputs.agent != 'mini-swe-agent'
         run: |
           mkdir -p "$RUNNER_TEMP/pi-runtime"
           cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
           npm ci --prefix "$RUNNER_TEMP/pi-runtime"
           "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" --version
+      - name: Install disposable mini-SWE-agent runtime outside Workspace
+        if: inputs.capture_run_id == '' && inputs.agent == 'mini-swe-agent'
+        run: |
+          python3 -m venv "$RUNNER_TEMP/mini-runtime"
+          "$RUNNER_TEMP/mini-runtime/bin/pip" install -r examples/real-code-agent/participant/mini-requirements.lock
       - name: Acquire and install published AgentLab components
         id: install
         env:
@@ -123,12 +143,17 @@ jobs:
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
         run: |
+          if [[ "$AGENTLAB_AGENT" == 'mini-swe-agent' ]]; then
+            AGENT_BIN="$RUNNER_TEMP/mini-runtime/bin/python"
+          else
+            AGENT_BIN="$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi"
+          fi
           python3 examples/harmony-build/run.py \
             --install-root "$AGENTLAB_CI_ROOT" \
             --root "$AGENTLAB_CI_ROOT/real-agent" \
-            --agent-bin "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" \
+            --agent-bin "$AGENT_BIN" --agent-implementation "$AGENTLAB_AGENT" \
             --gateway-url "$AGENTLAB_LM_GATEWAY_URL" --model "$AGENTLAB_MODEL" \
-            --provider-route "$AGENTLAB_PROVIDER_ROUTE"
+            --provider-route "$AGENTLAB_PROVIDER_ROUTE" --scenario "$AGENTLAB_SCENARIO"
       - id: persistence
         name: Persist actual capture to TableGit and recover after storage restart
         if: always() && steps.install.outcome == 'success'

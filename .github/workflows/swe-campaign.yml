@@ -1,0 +1,93 @@
+name: SWE seed campaign
+on:
+  workflow_dispatch:
+    inputs:
+      instance:
+        type: choice
+        description: Official SWE-bench Lite seed; all runs the curated set
+        options: [psf__requests-1963, django__django-10914, django__django-11099, sympy__sympy-11400, all]
+        default: psf__requests-1963
+permissions:
+  contents: read
+jobs:
+  select:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      cases: ${{ steps.cases.outputs.cases }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - id: cases
+        env:
+          INSTANCE: ${{ inputs.instance }}
+        run: |
+          python3 - <<'PY'
+          import json,os
+          ids=[r['instanceId'] for r in json.load(open('examples/swe-bench/catalog.json'))['cases']]
+          selected=ids if os.environ['INSTANCE']=='all' else [os.environ['INSTANCE']]
+          assert set(selected)<=set(ids)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:out.write('cases='+json.dumps(selected)+'\n')
+          PY
+  evaluate:
+    needs: select
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        instance: ${{ fromJSON(needs.select.outputs.cases) }}
+    env:
+      AGENTLAB_CI_ROOT: /tmp/agentlab-swe-acceptance
+      AGENTLAB_RELEASE_CHANNEL: candidate-20260913-40ecdf4b-sdk-c075105a-linux-x64
+      AGENTLAB_COMPOSITION_DIR: release/candidates/40ecdf4b-linux-x64
+      AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install separate benchmark and Agent runtimes
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes zstd python3-websocket
+          python3 -m venv "$RUNNER_TEMP/mini-runtime"
+          "$RUNNER_TEMP/mini-runtime/bin/pip" install -r examples/real-code-agent/participant/mini-requirements.lock
+          python3 -m venv "$RUNNER_TEMP/swe-runtime"
+          "$RUNNER_TEMP/swe-runtime/bin/pip" install -r examples/swe-bench/requirements.lock
+      - name: Materialize selected release inputs
+        run: |
+          python3 scripts/channel-input.py --source release/candidates/40ecdf4b-linux-x64 --output "$GITHUB_OUTPUT"
+      - name: Install published Harness components
+        id: install
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci-public-install-deploy-smoke.sh
+      - name: Evaluate actual Agent patch and independent reference patch
+        env:
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+          INSTANCE: ${{ matrix.instance }}
+        run: |
+          "$RUNNER_TEMP/swe-runtime/bin/python" examples/swe-bench/run.py \
+            --root "$AGENTLAB_CI_ROOT/real-agent" --agent-python "$RUNNER_TEMP/mini-runtime/bin/python" \
+            --instance "$INSTANCE" --gateway "$AGENTLAB_LM_GATEWAY_URL"
+      - name: Persist full evidence to TableGit and prove cold reconstruction
+        if: always() && steps.install.outcome == 'success'
+        run: |
+          mapfile -t runtime < <(python3 - <<'PY'
+          import json
+          lock=json.load(open('release/candidates/40ecdf4b-linux-x64/environment-lock.json'))
+          print(lock['images'][0]['reference'])
+          print(next(c['volume'] for c in lock['components'] if c['slot']=='release'))
+          PY
+          )
+          /usr/bin/python3 examples/tablegit-session/run.py --image "${runtime[0]}" --runtime-volume "${runtime[1]}" \
+            --sdk-program release/candidates/40ecdf4b-linux-x64/session-sdk.json \
+            --root "$AGENTLAB_CI_ROOT/real-tablegit" --capture-evidence "$AGENTLAB_CI_ROOT/real-agent/evidence"
+      - name: Preserve successes, unresolved Agents and Harness failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: swe-${{ matrix.instance }}
+          path: |
+            ${{ env.AGENTLAB_CI_ROOT }}/real-agent/evidence/
+            ${{ env.AGENTLAB_CI_ROOT }}/real-tablegit/evidence-*/
+            ${{ env.AGENTLAB_CI_ROOT }}/*.json
+            ${{ env.AGENTLAB_CI_ROOT }}/*.log
