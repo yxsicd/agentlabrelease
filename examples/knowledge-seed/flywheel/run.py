@@ -44,7 +44,7 @@ def instance_skills(key,title,paths,turns,checks,revision):
  'repository-analysis':'Observed contract: '+OBSERVATIONS[key]+'\n\nRead these pinned files before changing behavior: '+', '.join(paths)+'. Preserve the observed contract unless the task explicitly changes it.',
  'program-analysis':'Analyze '+', '.join(paths)+'. Trace AST module references, symbols, syntactic call/assignment locations and the common package/barrel chain in program_facts. Use the archived import SQL at its input cut. Package path resolution is not symbol/type/runtime call resolution; do not infer the latter from these facts.',
  'seed-extraction':'Derive staged demands from this contract: '+OBSERVATIONS[key]+'\n\nCurrent candidate turns: '+json.dumps(turns,ensure_ascii=False)+'. Link case-'+key+' and the analysis facts. Vary timing/failure/input boundaries only with independently specified oracles.',
- 'calibration':'Calibrate case-'+key+' using '+json.dumps(checks,ensure_ascii=False)+'. Build an independent baseline/reference/wrong-variant oracle. Current executable method oracle exists only for debounce and delayed-loading; other cases remain proposed. ArkUI rendering, HAP build and real subject success remain unqualified.',
+ 'calibration':'Calibrate case-'+key+' using '+json.dumps(checks,ensure_ascii=False)+'. Build an independent baseline/reference/wrong-variant oracle. Current executable isolated oracles cover debounce, delayed-loading and image-url; feedback/navigation remain proposed. The image oracle verifies consumer call seams but does not execute their full bodies. ArkUI rendering, HAP build and real subject success remain unqualified.',
  'evaluation':'Consume the frozen case-'+key+' source, knowledge and task cuts. Present only its demands, not the operator reference transform, to the subject. Execute staged demands '+json.dumps(turns,ensure_ascii=False)+'. Grade '+json.dumps(checks,ensure_ascii=False)+' and record Harness-owned calls/output/checkpoints. A construction oracle pass does not constitute subject evaluation.'}
  for stage,body in bodies.items():
   rid='skill-'+key if stage=='repository-analysis' else 'skill-'+stage+'-'+key
@@ -147,16 +147,31 @@ def main():
  if loading['baseline']['pass'] or not loading['reference']['pass'] or loading['wrong-cancel']['pass']:raise RuntimeError('Loading oracle calibration failed')
  tables['program_facts'].append(dict(id='oracle-loading',kind='oracle',sourceRevision=PIN,code=Path(__file__).with_name('loading.js').read_text(),request={'runtime':subprocess.check_output(['node','--version'],text=True).strip(),'sourcePath':SPECS[1][2][0],'captureAuthority':'operator-owned construction runner'},result=loading,interpretation='Isolated lifecycle calibration with explicit timer/breakpoint stubs; not rendering or HAP'))
  tables['evaluation_cases'].append(dict(id='calibration-loading',kind='calibration',title='Isolated lifecycle calibration',sourceRevision=PIN,paths=SPECS[1][2],status='isolated-method-qualified',calibration=loading,buildQualified=False))
+ image={}
+ for mode in ['baseline','reference','wrong-prefix']:
+  result=subprocess.run(['node',str(Path(__file__).with_name('image-url.js')),str(a.source),mode],capture_output=True,text=True)
+  (e/('image-url-'+mode+'.stdout')).write_text(result.stdout);(e/('image-url-'+mode+'.stderr')).write_text(result.stderr)
+  if result.returncode: raise RuntimeError('Preserved image URL oracle failure')
+  image[mode]=json.loads(result.stdout)
+ if image['baseline']['pass'] or not image['reference']['pass'] or image['wrong-prefix']['pass']:raise RuntimeError('Image URL oracle calibration failed')
+ tables['program_facts'].append(dict(id='oracle-image-url',kind='oracle',sourceRevision=PIN,code=Path(__file__).with_name('image-url.js').read_text(),request={'sourcePaths':SPECS[3][2],'runtime':subprocess.check_output(['node','--version'],text=True).strip(),'captureAuthority':'operator-owned construction runner'},result=image,interpretation='Explicit classification fixture labels and source-verified consumer seams; consumer bodies, Harmony URL runtime and HAP not executed'))
+ tables['evaluation_cases'].append(dict(id='calibration-image-url',kind='calibration',title='Image classification seam calibration',sourceRevision=PIN,paths=SPECS[3][2],status='isolated-seam-qualified',calibration=image,buildQualified=False))
  for row in tables['maintainer_skills']:
-  if row['objectId'] in ('case-debounce','case-delayed-loading') and row['stage']=='calibration':row['status']='isolated-method-supported'
+  if row['objectId']=='case-image-url':
+   row['factIds'].append('oracle-image-url')
+   row['body']+='\nCalibration evidence oracle-image-url:14 explicit input cases across both consumer decision seams; original prefix-only classification fails malformed inputs, reference passes, stale preview classification fails. Full consumer lifecycle, ArkTS URL runtime and HAP remain unqualified.\n'
+ for row in tables['evaluation_cases']:
+  if row['id']=='case-image-url': row.update(status='isolated-seam-qualified',calibration=image)
+ for row in tables['maintainer_skills']:
+  if row['objectId'] in ('case-debounce','case-delayed-loading','case-image-url') and row['stage']=='calibration':row['status']='isolated-seam-supported' if row['objectId']=='case-image-url' else 'isolated-method-supported'
  # Complete operator results are structured, not participant-reported success.
  tables['program_facts'].append(dict(id='oracle-debounce',kind='oracle',sourceRevision=PIN,code=Path(__file__).with_name('debounce.js').read_text(),request={'runtime':subprocess.check_output(['node','--version'],text=True).strip(),'sourcePath':SPECS[-1][2][0],'modes':['baseline','reference','wrong-boundary'],'captureAuthority':'operator-owned construction runner'},result=results,interpretation='Exact isolated-method calibration; not an assessed Code Agent or Harmony compiler'))
  tables['evaluation_cases'].append(dict(id='calibration-debounce',kind='calibration',title='Isolated method calibration',sourceRevision=PIN,paths=SPECS[-1][2],status='isolated-method-qualified',calibration=results,buildQualified=False))
  if not a.development:
-  package={'tables':tables,'updates':[dict(table='maintainer_skills',id='skill-debounce',fields={'body':next(r['body'] for r in tables['maintainer_skills'] if r['id']=='skill-debounce')+'\nOperator isolated oracle confirms the shared-timestamp collision; per-handler reference passes. No HAP qualification.\n'})],'calibrated':False,'scope':'real Harmony source; two isolated methods calibrated, three proposed tasks'}
+  package={'tables':tables,'updates':[dict(table='maintainer_skills',id='skill-debounce',fields={'body':next(r['body'] for r in tables['maintainer_skills'] if r['id']=='skill-debounce')+'\nOperator isolated oracle confirms the shared-timestamp collision; per-handler reference passes. No HAP qualification.\n'})],'calibrated':False,'scope':'real Harmony source; three isolated scenarios calibrated, two proposed tasks'}
   dump(e/'knowledge-package.json',package)
   dump(e/'isolated-calibration.json',results)
-  print(json.dumps({'sourceRevision':PIN,'taskCandidates':5,'isolatedCalibration':True,'calibratedMethods':2,'harmonyBuildQualified':False}))
+  print(json.dumps({'sourceRevision':PIN,'taskCandidates':5,'isolatedCalibration':True,'calibratedMethods':3,'harmonyBuildQualified':False}))
   return
  config=json.loads(a.development.read_text());service=Service(config['url'],Path(config['authorizationFile']).read_text().strip(),e/'rpc')
  (e/'rpc').mkdir(exist_ok=True)
@@ -197,7 +212,7 @@ def main():
  repeated=store.export(service,repo,revision,a.root/'export-repeated',PREFIX);assert final==repeated
  again,changed=store.import_snapshot(service,repo,wt,a.root/'export',PREFIX);assert again==revision and changed==0
  before=store.read(service,repo,baseline,PREFIX+'maintainer_skills');after=store.read(service,repo,revision,PREFIX+'maintainer_skills')
- dump(e/'summary.json',dict(ok=True,sourceRevision=PIN,baselineRevision=baseline,finalRevision=revision,tablePrefix=PREFIX,counts={k:v['rowCount'] for k,v in final['tables'].items()},stableExport=True,repeatedImportNoChanges=True,knowledgeChanged=before!=after,instanceSkillLayers=sorted({r['skillLayer'] for r in after.values()}),instanceRoles=sorted({r['role'] for r in after.values()}),calibration=results,loadingCalibration=loading,harmonyBuildQualified=False,formalSessionFSQualified=False,subjectAgentRun=False))
+ dump(e/'summary.json',dict(ok=True,sourceRevision=PIN,baselineRevision=baseline,finalRevision=revision,tablePrefix=PREFIX,counts={k:v['rowCount'] for k,v in final['tables'].items()},stableExport=True,repeatedImportNoChanges=True,knowledgeChanged=before!=after,instanceSkillLayers=sorted({r['skillLayer'] for r in after.values()}),instanceRoles=sorted({r['role'] for r in after.values()}),calibration=results,loadingCalibration=loading,imageCalibration=image,harmonyBuildQualified=False,formalSessionFSQualified=False,subjectAgentRun=False))
  dump(a.root/'authority.json',dict(repo=repo,tablePrefix=PREFIX,baselineRevision=baseline,finalRevision=revision,sourceRevision=PIN,snapshot=str(a.root/'export')))
  print(json.dumps(json.loads((e/'summary.json').read_text()),ensure_ascii=False))
 if __name__=='__main__':main()

@@ -93,8 +93,8 @@ maintenance cut, preserving the current assessment inputs.
 ## First real Harmony construction round
 
 `seeds/harmony-code-workshop/` is a three-table snapshot exported from real
-TableGit namespace `flywheel/harmony-v3/`: 26 instance Skills, 701 program/analysis
-facts and seven task/calibration rows. Previous namespace cuts are archived evidence;
+TableGit namespace `flywheel/harmony-v3/`: 26 instance Skills, 702 program/analysis
+facts and eight task/calibration rows. Previous namespace cuts are archived evidence;
 this snapshot is the current instance authority export. Source is pinned to code-workshop commit
 `7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6`. The Rust analyzer parses all556 ArkTS/TypeScript files and imports AST facts
 for19 selected scenario files. Imports include multiline syntax. Two local common-package bindings are checked against package dependency
@@ -107,7 +107,10 @@ independent click handlers. Click-handler behavior has an isolated-method
 oracle: original shared state fails independence, per-handler reference passes,
 and a wrong boundary fails. It executes an explicitly type-erased original
 method in Node, not an ArkTS build, emulator or full assessed-Agent run. Delayed-loading lifecycle also has an isolated original/reference/wrong-cancel
-oracle with explicit scheduler/breakpoint stubs. Three other tasks remain
+oracle with explicit scheduler/breakpoint stubs. Image classification now has14 explicit inputs, a type-erased original utility
+method and source-verified consumer seams: prefix-only original fails malformed
+inputs, reference passes, stale preview classification fails. Full consumer
+bodies and Harmony URL runtime do not execute. Feedback/navigation remain
 candidates without functional calibration. Complete results
 and fixed-cut SQL dependency query/results are stored as TableGit rows.
 
@@ -142,7 +145,7 @@ methodRevision/methodDigest, sourceRevision and evidence/case references.
 Evaluation rows have role=operations; they are still instance Skills maintained
 in the same business table. Release method recipes remain a separate layer.
 
-The two method oracles independently calibrate construction demands. They do
+The three isolated oracles independently calibrate construction demands. They do
 not execute a real assessed Agent, render ArkUI or qualify HAP/SessionFS. The
 first pre-v2 real Harmony Action34749535447 passed released Session history and
 104-row export/import; v2 coverage requires its own fresh Action verdict.
@@ -156,3 +159,5 @@ orchestrator still maintains methods and TableGit transport; it no longer regex
 parses import/export statements. Local package path enrichment remains separate
 from syntax parsing. See the Rust crate README for the one stateStyles grammar
 coverage gap and subsequent type/call/dataflow work.
+
+New maintainers start with [the apprentice workflow](../../skills/agentlab-skill-methodology/references/apprentice-workflow.md), then follow method and target-instance Skills for the selected stage.

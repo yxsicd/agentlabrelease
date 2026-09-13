@@ -19,6 +19,13 @@ Use [the knowledge experiment](../../examples/knowledge-seed/README.md) as the r
 
 Publish calibrated seeds from a fixed TableGit cut, one deterministically ordered JSONL per table. Do not alter active assessment inputs after seeing a subject outcome. Operational results become feedback for a new maintenance cut.
 
+For shared predicates, specify expected input labels independently of the
+reference implementation and test a stale consumer variant. Verify real source
+call sites, while recording whether whole consumer bodies actually execute.
+An isolated seam test can expose inconsistent routing but does not qualify the
+platform URL parser, UI lifecycle or build. Keep these boundaries in the target
+calibration/evaluation Skills; the image URL oracle is a concrete example.
+
 Produce target-instance guidance for this stage as TableGit Skill rows,
 separate from the structured facts/tasks/results. Follow
 [the two-layer methodology](../agentlab-skill-methodology/SKILL.md) for

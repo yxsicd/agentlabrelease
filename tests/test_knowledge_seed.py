@@ -67,3 +67,26 @@ class SnapshotTest(unittest.TestCase):
             target=Rows(different);self.assertEqual(store.import_snapshot(target,'repo',{},temp),('new-cut',2))
             ops=[op for group in target.operations for op in group['operations']]
             self.assertEqual({op['op'] for op in ops},{'update','delete'});self.assertTrue(all(op['expected_row_version']==9 for op in ops))
+
+
+class ImageClassificationOracleTest(unittest.TestCase):
+    def test_reference_rejects_malformed_inputs_and_stale_consumer(self):
+        import subprocess,json
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            files={
+                'common/src/main/ets/util/UrlUtil.ets': "export class UrlUtil {\n  public static isNetUrl(url: string): boolean {\n    if (typeof url !== 'string') return false;\n    const lowerCaseUrl: string = url.toLowerCase();\n    return lowerCaseUrl.startsWith('https://') || lowerCaseUrl.startsWith('http://');\n  }\n  public static maskUrl(urlStr: string): string {return urlStr;}\n}",
+                'common/src/main/ets/component/ImageComponent.ets': 'if (UrlUtil.isNetUrl(this.src)) {}',
+                'features/devpractices/src/main/ets/view/ImagePreview.ets': 'if (UrlUtil.isNetUrl(this.url)) {}'
+            }
+            for name,body in files.items():
+                p=root/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(body)
+            script=Path(__file__).parents[1]/'examples/knowledge-seed/flywheel/image-url.js'
+            results={mode:json.loads(subprocess.check_output(['node',str(script),str(root),mode],text=True)) for mode in ['baseline','reference','wrong-prefix']}
+            self.assertFalse(results['baseline']['pass'])
+            self.assertTrue(results['reference']['pass'])
+            self.assertFalse(results['wrong-prefix']['pass'])
+            self.assertFalse(results['reference']['consumerBodiesExecuted'])
+            self.assertEqual(len(results['reference']['cases']),14)
+            mismatch=next(c for c in results['wrong-prefix']['cases'] if c['input']=='https://')
+            self.assertEqual([d['actual'] for d in mismatch['decisions']],[False,True])

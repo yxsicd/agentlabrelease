@@ -53,3 +53,8 @@ knowledge to MCPGit source or invent analysis endpoints.
 Read [the registry](../registry.json) to select a method stage and role. The
 [real Harmony demo](../../examples/knowledge-seed/README.md) produces instances;
 its limited lexical/method calibration is not full HAP, Fork or Agent acceptance.
+
+For a new maintainer, follow [the apprentice workflow](references/apprentice-workflow.md)
+to reproduce a round, update the correct layer and leave a usable handoff. Each
+round accumulates executable guidance and evidence references, not a second
+copy of structured results in prose.
