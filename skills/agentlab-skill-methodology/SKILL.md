@@ -89,3 +89,12 @@ Use typed analytical entity tables, content-versioned messages and durable conte
 head Git history. Preserve original files independently; storage chunks are not
 business observations. Export each asset class from an exact TableGit cut with
 stable row order and demonstrate targeted analysis plus unchanged repeat import.
+
+### Close each experiment into maintained experience
+
+Follow [experiment learning](../agentlab-experiment-learning/SKILL.md): archive
+analysis code/input cut/result, maintain evidence-linked lessons and validations
+in the instance, then explicitly promote scope-bound verified knowledge. Public
+Action exports the candidate from committed TableGit and proves active knowledge
+is unchanged; maintenance imports/exports accepted candidates before source Git
+publication. Improvements also become executable regressions where applicable.

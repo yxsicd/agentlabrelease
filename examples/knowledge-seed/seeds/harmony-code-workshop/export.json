@@ -2,12 +2,12 @@
   "schema": "agentlab.asset_exchange.v1",
   "assetClass": "reusable-knowledge",
   "repository": "session",
-  "revision": "a69ae729a02d1229523fa4d78bff71e1e6c5cb35",
-  "tablePrefix": "assets/knowledge/",
+  "revision": "625b914e77dc9cf65c2db61b746b01bd40ea162a",
+  "tablePrefix": "assets/knowledge/contracts/",
   "tables": {
     "evaluation_cases": {
       "rowCount": 12,
-      "sha256": "783b264107f088707faa2ef4908ba07e79415eb5162b421d4ed3d388cbe6ab3c",
+      "sha256": "0e04574dcc353b19b87276a61cc62b57b767a58481c8a1feaae209224673defa",
       "definition": {
         "description": "AgentLab reusable-knowledge analytical evaluation_cases",
         "fields": {
@@ -46,19 +46,19 @@
             "source": null,
             "type": "string"
           },
-          "calibration": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "object"
-          },
           "calibrationAdapter": {
             "projection": "default",
             "required": false,
             "role": "value",
             "source": null,
             "type": "string"
+          },
+          "calibrationContract": {
+            "projection": "default",
+            "required": false,
+            "role": "value",
+            "source": null,
+            "type": "object"
           },
           "calibrationOracleId": {
             "projection": "default",
@@ -130,13 +130,6 @@
             "source": null,
             "type": "string"
           },
-          "status": {
-            "projection": "default",
-            "required": false,
-            "role": "value",
-            "source": null,
-            "type": "string"
-          },
           "title": {
             "projection": "default",
             "required": false,
@@ -171,10 +164,6 @@
           {
             "field": "sourceRevision",
             "name": "by_sourceRevision"
-          },
-          {
-            "field": "status",
-            "name": "by_status"
           }
         ],
         "key_field": "id",

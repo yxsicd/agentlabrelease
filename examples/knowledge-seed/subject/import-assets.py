@@ -31,7 +31,7 @@ def main():
         for key,row in tables[name].items():
             old=current.get(key)
             if old and old['row']==row:continue
-            if old:op=dict(op='update',operation_id=str(uuid.uuid4()),key=key,expected_row_version=old['row_version'],field_updates=[dict(op='set',field='/'+k,value=v) for k,v in row.items() if old['row'].get(k)!=v])
+            if old:op=dict(op='update',operation_id=str(uuid.uuid4()),key=key,expected_row_version=old['row_version'],field_updates=[dict(op='set',field='/'+k.replace('~','~0').replace('/','~1'),value=v) for k,v in row.items() if old['row'].get(k)!=v]+[dict(op='unset',field='/'+k.replace('~','~0').replace('/','~1')) for k in old['row'] if k not in row])
             else:op=dict(op='insert',operation_id=str(uuid.uuid4()),key=key,row=row)
             pending.append((name,op))
     rev=apply(s,repo,wt,rev,a.prefix,pending,'Import separated analytical assets')

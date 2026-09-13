@@ -41,7 +41,7 @@ for skill in registry["skills"]:
             continue
         assert (path.parent / target.split("#", 1)[0]).is_file(), (skill["id"], target)
 assert {s["stage"] for s in registry["skills"] if s["role"] == "maintenance"} == {
-    "methodology", "goal", "repository-analysis", "program-analysis", "seed-extraction", "calibration", "asset-model"
+    "methodology", "goal", "repository-analysis", "program-analysis", "seed-extraction", "calibration", "asset-model", "experiment-learning"
 }
 
 print(json.dumps({"schema": "agentlab.release_validation.v1", "version": manifest["version"], "ok": True}))

@@ -78,6 +78,14 @@
       "stage": "asset-model",
       "objectScope": "generic",
       "path": "skills/agentlab-asset-model/SKILL.md"
+    },
+    {
+      "id": "agentlab-experiment-learning",
+      "role": "maintenance",
+      "layer": "method",
+      "stage": "experiment-learning",
+      "objectScope": "generic",
+      "path": "skills/agentlab-experiment-learning/SKILL.md"
     }
   ],
   "layers": {

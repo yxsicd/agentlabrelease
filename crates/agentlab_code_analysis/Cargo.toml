@@ -33,3 +33,7 @@ tree-sitter-arkts = "=0.2.0"
 [[bin]]
 name = "agentlab-asset-model"
 path = "src/asset_model.rs"
+
+[[bin]]
+name = "agentlab-experience"
+path = "src/experience.rs"

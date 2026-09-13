@@ -30,8 +30,11 @@ def main():
     p.add_argument("--root", required=True, type=Path)
     p.add_argument("--capture-evidence", type=Path, help="Actual operator-captured evidence to persist and reconstruct")
     p.add_argument("--asset-model-export", type=Path, help="Synthetic analysis-oriented instance exchange to import and replay")
+    p.add_argument("--experience-inputs", type=Path, help="Rust binary, calibration and clean reusable snapshot for the experience demo")
     p.add_argument("--capture-agent-kind", default="pi", help="Observed participant implementation; not capture authority")
     args = p.parse_args()
+    if args.experience_inputs and not args.asset_model_export:
+        p.error('--experience-inputs requires --asset-model-export')
     root = args.root.resolve()
     root.mkdir(parents=True, exist_ok=True)
     run_id = uuid.uuid4().hex[:12]
@@ -271,6 +274,29 @@ def main():
             summary['checks']['instance_asset_tables_and_context_git_history']=True
             summary['checks']['instance_asset_repeat_unchanged']=True
             capture_revision=receipts[-1]['revision']
+            if args.experience_inputs:
+                if not knowledge_state:
+                    raise RuntimeError('Experience demo requires a captured knowledge package')
+                experience_root=evidence/'experience'
+                command=[sys.executable,str(REPO/'examples/knowledge-seed/experience/run.py'),
+                    '--development',str(config),'--instance',str(args.asset_model_export),
+                    '--instance-prefix','assets/instances/fixture/','--lesson-prefix','assets/experiences/fixture/',
+                    '--knowledge-prefix','assets/promotion-candidates/fixture/',
+                    '--knowledge',str(args.experience_inputs/'reusable-model/knowledge'),
+                    '--binary',str(REPO/'target/debug/agentlab-experience'),
+                    '--calibration',str(args.experience_inputs/'loading-calibration'),'--root',str(experience_root)]
+                result=subprocess.run(command,capture_output=True)
+                (evidence/'experience.stdout').write_bytes(result.stdout)
+                (evidence/'experience.stderr').write_bytes(result.stderr)
+                if result.returncode:raise RuntimeError('Experience campaign failed; preserve output')
+                experience=json.loads((experience_root/'summary.json').read_text())
+                summary['checks']['experience_query_lessons_and_explicit_promotion']=experience['ok']
+                # The experiment does not mutate the active published knowledge namespace.
+                current_revision=service.call('table.worktree.open',dict(repo=first['binding']['repositoryId'],worktree={'topic_id':None}))['revision']
+                for table,seed_rows in expected.items():
+                    assert knowledge.read(service,first['binding']['repositoryId'],current_revision,seed_prefix+table)=={row['id']:row for row in seed_rows}
+                summary['checks']['experience_active_knowledge_unchanged']=True
+                capture_revision=current_revision
         checks = summary["checks"]
         checks["template_qualification"] = qualification["status"] == "qualified"
         checks["concurrent_session_creation_replayed"] = first["concurrentReplay"] is True

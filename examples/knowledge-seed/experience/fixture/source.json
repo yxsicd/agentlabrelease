@@ -1,0 +1,8 @@
+{
+  "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos",
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "path": "common/src/main/ets/view/DelayedLoadingView.ets",
+  "sha256": "873a0fc8a4e1e6e312828efef3391b155845dcea35a170bb0a39d5cd892dd252",
+  "license": "Apache-2.0",
+  "scope": "Pinned unmodified source; isolated lifecycle calibration only"
+}

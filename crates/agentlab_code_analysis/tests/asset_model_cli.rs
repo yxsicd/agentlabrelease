@@ -39,7 +39,7 @@ fn separates_assets_restores_context_and_keeps_raw_evidence() {
         ),
         (
             "evaluation_cases",
-            json!({"id":"case","kind":"task","demands":["fix"]}),
+            json!({"id":"case","kind":"task","demands":["fix"],"calibration":{"baseline":{"pass":false,"raw":"complete baseline"},"reference":{"pass":true}},"status":"previous-run-qualified"}),
         ),
     ] {
         fs::write(seed.join(format!("{table}.jsonl")), format!("{row}\n")).unwrap();
@@ -119,8 +119,19 @@ fn separates_assets_restores_context_and_keeps_raw_evidence() {
     );
     assert_eq!(
         rows(&output.join("instances/construction/construction_records.jsonl")).len(),
-        1
+        2
     );
+    let cases = rows(&output.join("knowledge/evaluation_cases.jsonl"));
+    assert!(cases[0].get("calibration").is_none());
+    assert!(cases[0].get("status").is_none());
+    assert_eq!(
+        cases[0]["calibrationContract"]["variantExpectations"]["reference"],
+        true
+    );
+    let records = rows(&output.join("instances/construction/construction_records.jsonl"));
+    assert!(records
+        .iter()
+        .any(|r| r["record"]["calibration"]["baseline"]["raw"] == "complete baseline"));
     let instance = output.join("instances/run");
     assert_eq!(rows(&instance.join("message_contents.jsonl")).len(), 2);
     assert_eq!(rows(&instance.join("context_versions.jsonl")).len(), 4);
