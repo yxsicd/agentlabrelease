@@ -33,6 +33,16 @@ Rust-materialized reference, lost-flush and lost-model-await variants. Archive
 full sources, AST rows and ordered settlement events. The contract separates
 network failure fallback from persistence failure: await the write outcome, log
 a failed write, retain fresh network data. A helper must expose write failures.
-This is a calibrated candidate, not a frozen operational seed: full phone build,
-TableGit derivation/query evidence and a fresh knowledge cut are still required.
+This is a calibrated candidate, not a frozen operational seed: a new frozen operational contract and actual subject execution are separate.
+Full phone compilation and archived TableGit program/semantic queries are now
+verified for the reference; preserve their exact receipts.
 Do not promote it based on JavaScript seam execution alone.
+
+`agentlab-cache-seed` prepares the committed four-module candidate in Rust.
+`subject/maintain-cache.py` owns development TableGit import/update, generic
+program and semantic SQL, and committed three-table export. With unchanged
+prepared rows reuse existing analysis records; do not create a revision feedback
+loop by re-querying and writing a new cut into otherwise unchanged rows.
+Staged calibration has8 checks in turn1 and10 in turn2. Missing model await is
+a turn2 negative and must pass turn1; preserve network fallback, synchronous
+put failure propagation and neighboring record entries alongside durability.

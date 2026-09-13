@@ -1,6 +1,11 @@
 name: Fixed-source Harmony controller compilation
 on:
   workflow_dispatch:
+    inputs:
+      capture_run_id:
+        type: string
+        default: ''
+        description: Recover original compilation artifacts without rebuilding
 permissions:
   contents: write
 jobs:
@@ -14,13 +19,39 @@ jobs:
       AGENTLAB_COMPOSITION_DIR: release/candidates/harmony-buildkit-v6-linux-x64
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Reserve publication source ref before compilation or recovery
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="evidence-harmony-controllers-$GITHUB_RUN_ID"
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$tag" -f sha="$GITHUB_SHA"
+      - name: Restore original compiled artifacts without rebuilding
+        if: inputs.capture_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AGENTLAB_ORIGINAL_RUN: ${{ inputs.capture_run_id }}
+        run: |
+          mkdir -p "$AGENTLAB_CI_ROOT/case/full-hap"
+          gh run download "$AGENTLAB_ORIGINAL_RUN" --name harmony-controller-compilation --dir "$AGENTLAB_CI_ROOT/case"
+          gh run download "$AGENTLAB_ORIGINAL_RUN" --name harmony-full-source-hap --dir "$AGENTLAB_CI_ROOT/case/full-hap"
+          python3 - <<'PYVERIFY'
+          import hashlib,json,os
+          from pathlib import Path
+          root=Path(os.environ['AGENTLAB_CI_ROOT'])/'case'
+          for item in json.loads((root/'evidence/full-hap-manifest.json').read_text()):
+              binary=root/'full-hap'/item['artifactPath']
+              assert binary.stat().st_size==item['bytes']
+              assert hashlib.file_digest(binary.open('rb'),'sha256').hexdigest()==item['sha256']
+          PYVERIFY
       - name: Fetch pinned challenge source and materialize real patches and derived slice
+        if: inputs.capture_run_id == ''
         run: |
           git clone --no-checkout --depth 1 https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git "$RUNNER_TEMP/source"
           git -C "$RUNNER_TEMP/source" fetch --depth 1 origin 7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6
           git -C "$RUNNER_TEMP/source" checkout --detach FETCH_HEAD
           cargo run --locked -p agentlab_code_analysis --bin agentlab-harmony-materialize -- "$RUNNER_TEMP/source" "$AGENTLAB_CI_ROOT/case" examples/harmony-build/seed
       - name: Install published components
+        if: inputs.capture_run_id == ''
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -28,17 +59,19 @@ jobs:
           sudo apt-get install --yes zstd
           scripts/ci-public-install-deploy-smoke.sh
       - name: Probe full source, compile typed controllers, reject invalid type and recover
+        if: inputs.capture_run_id == ''
         run: python3 examples/knowledge-seed/flywheel/build-controllers.py --install-root "$AGENTLAB_CI_ROOT" --root "$AGENTLAB_CI_ROOT/case"
       - name: Publish verified original HAP as durable experiment evidence
         env:
           GH_TOKEN: ${{ github.token }}
+          AGENTLAB_ORIGINAL_RUN: ${{ inputs.capture_run_id }}
         run: |
           if [[ ! -f "$AGENTLAB_CI_ROOT/case/evidence/full-hap-manifest.json" ]]; then
             echo 'Full source did not qualify; no HAP publication.'
             exit 0
           fi
           evidence_tag="evidence-harmony-controllers-$GITHUB_RUN_ID"
-          gh release create "$evidence_tag" --target "$GITHUB_SHA" --prerelease \
+          gh release create "$evidence_tag" --prerelease \
             --title "Harmony controller compilation evidence $GITHUB_RUN_ID" \
             --notes "Verified unsigned original phone HAP from this main-only experiment. Compilation evidence; device/UI, assessed-Agent and fixed-channel qualification are separate." \
             "$AGENTLAB_CI_ROOT/case/full-hap/"*.hap \
@@ -49,7 +82,7 @@ jobs:
           root=Path(os.environ['AGENTLAB_CI_ROOT'])/'case/evidence'
           run=os.environ['GITHUB_RUN_ID'];tag='evidence-harmony-controllers-'+run
           items=json.loads((root/'full-hap-manifest.json').read_text())
-          artifacts=[dict(uri='https://github.com/'+os.environ['GITHUB_REPOSITORY']+'/releases/download/'+tag+'/'+x['artifactPath'],bytes=x['bytes'],sha256=x['sha256'],module=x['module'],storage='github-release',publicationAuthority='main-workflow-supervisor',producerRun=run,producerRevision=os.environ['GITHUB_SHA']) for x in items]
+          artifacts=[dict(uri='https://github.com/'+os.environ['GITHUB_REPOSITORY']+'/releases/download/'+tag+'/'+x['artifactPath'],bytes=x['bytes'],sha256=x['sha256'],module=x['module'],storage='github-release',publicationAuthority='main-workflow-supervisor',producerRun=os.environ.get('AGENTLAB_ORIGINAL_RUN') or run,publicationRun=run,publicationRevision=os.environ['GITHUB_SHA']) for x in items]
           (root/'external-binary-publication.json').write_text(json.dumps(dict(schema='agentlab.external_binary_publication.v1',releaseTag=tag,artifacts=artifacts),indent=2)+'\n')
           PYRECEIPT
       - name: Preserve full failures, source patches, slice inputs, logs and HAP bytes
