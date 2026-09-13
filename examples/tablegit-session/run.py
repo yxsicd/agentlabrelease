@@ -307,11 +307,37 @@ def main():
                 summary['checks']['experience_active_knowledge_unchanged']=True
                 capture_revision=current_revision
             if args.experience_real_inputs:
+                knowledge_spec=importlib.util.spec_from_file_location('knowledge_store',REPO/'examples/knowledge-seed/store.py')
+                knowledge=importlib.util.module_from_spec(knowledge_spec);knowledge_spec.loader.exec_module(knowledge)
+                frozen_prefix='assets/knowledge/'+args.asset_instance_id+'/'
+                frozen_receipts=[]
+                for iteration in (1,2):
+                    destination=evidence/('frozen-knowledge-import-'+str(iteration))
+                    command=[sys.executable,str(REPO/'examples/knowledge-seed/subject/import-assets.py'),
+                        '--development',str(config),'--directory',str(args.experience_real_inputs/'knowledge'),
+                        '--prefix',frozen_prefix,'--evidence',str(destination)]
+                    if iteration==1:command.append('--create-tables')
+                    result=subprocess.run(command,capture_output=True)
+                    (evidence/('frozen-knowledge-'+str(iteration)+'.stdout')).write_bytes(result.stdout)
+                    (evidence/('frozen-knowledge-'+str(iteration)+'.stderr')).write_bytes(result.stderr)
+                    if result.returncode:raise RuntimeError('Frozen knowledge import failed; preserve output')
+                    frozen_receipts.append(json.loads((destination/'receipt.json').read_text()))
+                assert frozen_receipts[0]['revision']==frozen_receipts[1]['revision'] and frozen_receipts[1]['insertedOrUpdatedRows']==0
+                frozen_export=evidence/'frozen-knowledge-export'
+                result=subprocess.run([sys.executable,str(REPO/'examples/knowledge-seed/subject/finalize.py'),
+                    '--development',str(config),'--directory',str(args.experience_real_inputs/'knowledge'),
+                    '--prefix',frozen_prefix,'--root',str(frozen_export)],capture_output=True)
+                (evidence/'frozen-knowledge-export.stdout').write_bytes(result.stdout)
+                (evidence/'frozen-knowledge-export.stderr').write_bytes(result.stderr)
+                if result.returncode:raise RuntimeError('Committed knowledge export failed; preserve output')
+                frozen_rows=knowledge.load_snapshot(frozen_export)
+                assert frozen_rows==knowledge.load_snapshot(args.experience_real_inputs/'knowledge')
+                summary['checks']['frozen_knowledge_committed_export_and_repeat']=True
                 command=[sys.executable,str(REPO/'examples/knowledge-seed/experience/run.py'),
                     '--development',str(config),'--instance',str(args.asset_model_export),
                     '--instance-prefix',instance_prefix,'--lesson-prefix','assets/experiences/'+args.asset_instance_id+'/',
                     '--knowledge-prefix','assets/promotion-candidates/'+args.asset_instance_id+'/',
-                    '--knowledge',str(args.experience_real_inputs/'knowledge'),
+                    '--knowledge',str(frozen_export),
                     '--binary',str(REPO/'target/debug/agentlab-experience'),
                     '--calibration',str(args.experience_real_inputs/'calibration'),
                     '--observation-kind','real-source-campaign','--root',str(evidence/'experience')]
@@ -320,6 +346,10 @@ def main():
                 if result.returncode:raise RuntimeError('Real-source experience persistence failed; preserve output')
                 summary['checks']['real_source_experience_committed']=json.loads((evidence/'experience/summary.json').read_text())['ok']
                 capture_revision=service.call('table.worktree.open',dict(repo=first['binding']['repositoryId'],worktree={'topic_id':None}))['revision']
+                for table,rows in frozen_rows.items():
+                    assert knowledge.read(service,first['binding']['repositoryId'],capture_revision,frozen_prefix+table)=={r['id']:r for r in rows}
+                save(evidence/'frozen-knowledge-preservation.json',dict(ok=True,prefix=frozen_prefix,inputRevision=frozen_receipts[-1]['revision'],afterPromotionRevision=capture_revision,allRowsUnchanged=True,sourceExport=json.loads((frozen_export/'export.json').read_text())))
+                summary['checks']['real_source_frozen_knowledge_unchanged_after_promotion']=True
         checks = summary["checks"]
         checks["template_qualification"] = qualification["status"] == "qualified"
         checks["concurrent_session_creation_replayed"] = first["concurrentReplay"] is True

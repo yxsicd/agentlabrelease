@@ -139,3 +139,10 @@ been derived in that workflow. Preserve this failed collection attempt and repai
 its inputs; do not rerun or change the assessed Agent to erase its valid failure.
 Failed checks and native tool errors have separate SQL analyses and observed
 lesson/evidence rows. Observed failures do not become verified promotion rules.
+
+For a real capture replay, all three frozen input tables first import to
+`assets/knowledge/<capture-id>/`. Their exact committed export supplies lesson
+promotion; repeated import changes zero rows, and promotion verifies every
+frozen row unchanged. This is separate from runtime instances, experiences and
+candidates. The raw capture's case/oracle identity remains the original cut;
+replay rebuilds target-owned context and input-knowledge cuts.
