@@ -90,8 +90,13 @@ fn main() {
             && calibration["variants"]["wrong-cancel"]["pass"] == false;
         put(
             &mut t,
+            "analysis_records",
+            json!({"id":"loading-variant-comparison","assetClass":"evaluation-instance","kind":"calibration-comparison","code":"baseline.pass == false && reference.pass == true && wrong-cancel.pass == false","sourceRevision":calibration["sourceRevision"],"sourceDigest":calibration["sourceDigest"],"oracleDigest":calibration["oracleDigest"],"result":{"passed":passed},"evidenceIds":["loading-calibration"]}),
+        );
+        put(
+            &mut t,
             "experiment_lessons",
-            json!({"id":id,"assetClass":"evaluation-instance","kind":"calibrated-method-lesson","status":if passed {"verified"} else {"rejected"},"scope":"isolated-loading-lifecycle","phenomenon":"Repeated appearance can leave an old timer and stale visibility","attribution":"tested-code-lifecycle","cause":"Scheduling a new timer without cancelling the previous one retains pending work","change":"Cancel the previous timer and reset visibility before scheduling on appearance","analysisId":analysis_id,"sourceRevision":calibration["sourceRevision"],"evidenceIds":["loading-calibration"],"validationIds":["loading-variants"],"targetIds":["lesson-loading-lifecycle","skill-loading-lifecycle-method"]}),
+            json!({"id":id,"assetClass":"evaluation-instance","kind":"calibrated-method-lesson","status":if passed {"verified"} else {"rejected"},"scope":"isolated-loading-lifecycle","phenomenon":"Repeated appearance can leave an old timer and stale visibility","attribution":"tested-code-lifecycle","cause":"Scheduling a new timer without cancelling the previous one retains pending work","change":"Cancel the previous timer and reset visibility before scheduling on appearance","analysisId":"loading-variant-comparison","sourceRevision":calibration["sourceRevision"],"evidenceIds":["loading-calibration"],"validationIds":["loading-variants"],"targetIds":["lesson-loading-lifecycle","skill-loading-lifecycle-method"]}),
         );
         put(
             &mut t,
