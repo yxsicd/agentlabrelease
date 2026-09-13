@@ -176,8 +176,10 @@ def main():
         capture_state = None
         if args.capture_evidence:
             operation_id = str(uuid.uuid4())
-            capture_context = dict(producerRevision=os.environ.get("GITHUB_SHA"),
-                githubRunId=os.environ.get("GITHUB_RUN_ID"), githubRunAttempt=os.environ.get("GITHUB_RUN_ATTEMPT"),
+            capture_context = dict(producerRevision=os.environ.get("AGENTLAB_CAPTURE_PRODUCER_REVISION") or os.environ.get("GITHUB_SHA"),
+                githubRunId=os.environ.get("AGENTLAB_CAPTURE_RUN_ID") or os.environ.get("GITHUB_RUN_ID"),
+                captureReplayRunId=os.environ.get("GITHUB_RUN_ID") if os.environ.get("AGENTLAB_CAPTURE_RUN_ID") else None,
+                githubRunAttempt=os.environ.get("GITHUB_RUN_ATTEMPT"),
                 collectorSha256=demo.sha256(Path(__file__).with_name("capture.py")),
                 runtimeImage=args.image, runtimeVolume=args.runtime_volume, sessionSdk=sdk,
                 templateContractDigest=template["contractDigest"], mcpgit=lock)

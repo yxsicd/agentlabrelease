@@ -12,6 +12,11 @@ on:
         required: true
         default: glm
         type: string
+      capture_run_id:
+        description: Reuse complete or partial capture from a previous trusted main run without redispatching Pi
+        required: false
+        default: ""
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -34,7 +39,33 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes zstd python3-websocket
+      - name: Restore a previous capture with original producer identity
+        if: inputs.capture_run_id != ''
+        id: replay
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CAPTURE_RUN_ID: ${{ inputs.capture_run_id }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN_ID" > "$RUNNER_TEMP/prior-run.json"
+          gh run download "$CAPTURE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name real-pi-harmony-acceptance --dir "$RUNNER_TEMP/prior-capture"
+          python3 - <<'PYCODE'
+          import json, os, pathlib, shutil
+          prior = json.load(open(os.environ["RUNNER_TEMP"] + "/prior-run.json"))
+          assert prior["head_branch"] == "main" and prior["name"] == "Real Code Agent acceptance"
+          source = pathlib.Path(os.environ["RUNNER_TEMP"]) / "prior-capture/real-agent/evidence"
+          target = pathlib.Path(os.environ["AGENTLAB_CI_ROOT"]) / "real-agent/evidence"
+          target.parent.mkdir(parents=True, exist_ok=True)
+          shutil.copytree(source, target)
+          receipt = dict(schema="agentlab.ci-capture-replay.v1", originalRunId=prior["id"],
+                         originalProducerRevision=prior["head_sha"], replayRunId=os.environ["GITHUB_RUN_ID"],
+                         subjectRedispatched=False, originalCaptureModified=False)
+          (target.parents[1] / "capture-replay.json").write_text(json.dumps(receipt, indent=2) + "\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write("producer_revision=" + prior["head_sha"] + "\n")
+          PYCODE
       - name: Install the separately contained Pi runtime
+        if: inputs.capture_run_id == ''
         run: |
           mkdir -p "$RUNNER_TEMP/pi-runtime"
           cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
@@ -43,11 +74,12 @@ jobs:
       - name: Acquire and install published AgentLab components
         id: install
         env:
-          AGENTLAB_RELEASE_CHANNEL: candidate-20260913-40ecdf4b-linux-x64
+          AGENTLAB_RELEASE_CHANNEL: candidate-20260913-40ecdf4b-sdk-c075105a-linux-x64
           AGENTLAB_COMPOSITION_DIR: release/candidates/40ecdf4b-linux-x64
           GITHUB_TOKEN: ${{ github.token }}
         run: scripts/ci-public-install-deploy-smoke.sh
       - name: Run real Pi with the public LM Gateway and independently compile every edit
+        if: inputs.capture_run_id == ''
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
         run: |
@@ -59,6 +91,9 @@ jobs:
             --provider-route "$AGENTLAB_PROVIDER_ROUTE"
       - name: Persist actual capture to TableGit and recover after storage restart
         if: always() && steps.install.outcome == 'success'
+        env:
+          AGENTLAB_CAPTURE_PRODUCER_REVISION: ${{ steps.replay.outputs.producer_revision }}
+          AGENTLAB_CAPTURE_RUN_ID: ${{ inputs.capture_run_id }}
         run: |
           mapfile -t runtime < <(python3 - <<'PYCODE'
           import json

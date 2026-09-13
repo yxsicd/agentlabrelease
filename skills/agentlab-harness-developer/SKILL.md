@@ -23,6 +23,15 @@ capture, not formal production Attempt/Workspace SessionFS or normalized full
 whitebox qualification. Retain failed/partial data too. Use generic MCPGit
 programming/analysis after collection; no analysis endpoint is required.
 
+## Capture recovery
+
+The real Action accepts `capture_run_id` to recover an existing trusted main
+run's original full capture without redispatching Pi. Original producer run/
+revision and recovery run remain distinct. Initial40ecdf4b Actions found a
+Harness Lease initialization error after Mock/Harmony/Pi succeeded; preserve
+those failures and use the corrected independently pinned SDK for recovery.
+No fixed-channel or device promotion follows from this recovery demo.
+
 ## Start
 
 Current candidate: [40ecdf4b](../../release/candidates/40ecdf4b-linux-x64/publication.json).

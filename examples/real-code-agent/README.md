@@ -76,3 +76,13 @@ TableGit rows and Git history for later restoration into an independently
 configured MCPGit instance and generic programming/analysis. A failure after
 partial writes still attempts repository export; transport credentials are
 not part of the Git bundle. No physical execution directory is modified.
+
+## Resume capture persistence
+
+When Pi/compilation completed but TableGit persistence failed, dispatch this
+workflow with `capture_run_id` set to the previous run ID. The Action downloads
+that run's full controlled capture, skips Pi and model calls, and repeats real
+Session persistence/storage restart/reconstruction with the current pinned SDK.
+`capture-replay.json` and capture context preserve the original run/source and
+record the new recovery run separately. This is recovery of an existing test,
+not a fresh Agent evaluation. Empty input runs the complete fresh-agent demo.

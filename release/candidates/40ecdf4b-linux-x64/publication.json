@@ -1,7 +1,7 @@
 {
   "schema": "agentlab.reference_publication.v1",
   "status": "candidate",
-  "tag": "candidate-20260913-40ecdf4b-linux-x64",
+  "tag": "candidate-20260913-40ecdf4b-sdk-c075105a-linux-x64",
   "platform": "linux-x64",
   "sourceRevision": "40ecdf4b774572ee2d0e6dc0dc1332fba755fbd6",
   "controllerSourceShort": "ea25616d",
@@ -74,9 +74,9 @@
       "url": "https://github.com/yxsicd/agentlabrelease/releases/download/sessionfs-a4d9fb7-linux-x64/alsessionfsd-a4d9fb7-linux-x64.json"
     },
     {
-      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/session-sdk-40ecdf4b-linux-x64/agentlab-session-sdk-40ecdf4b-qualified-linux-x64",
-      "bytes": 5215536,
-      "sha256": "7b779ef439d49c8fd10074b6734a9b05b35821f580f443e7f2035b7786aa3721"
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/session-sdk-c075105a-linux-x64/agentlab-session-sdk-c075105a-linux-x64",
+      "bytes": 5219632,
+      "sha256": "15fe671317f0f4ee7a79b54776aca4d62f629c5b571063c3fc20a05fe24475c3"
     }
   ],
   "smoke": {
@@ -115,20 +115,32 @@
       "textSamplesHashed": 1,
       "binarySamplesHashed": 1,
       "binaryFilesCounted": 42
-    }
+    },
+    "failedPublicRuns": [
+      {
+        "runId": 34738975790,
+        "cause": "Lease initialization matched server display text exactly; missing-table validation prefix incorrectly became fatal contract error."
+      },
+      {
+        "runId": 34738979597,
+        "cause": "Pi/Harmony completed; the same Lease initialization error prevented capture persistence."
+      }
+    ],
+    "sdkInitializationRegression": "passed against CI-pinned MCPGit; concurrent creation and cold Lease/projection recovery"
   },
   "limitations": [
     "Public CI source capture is distinct from normalized production whitebox coverage.",
     "This candidate uses the coherently rebuilt runtime and independently pinned provisioning SDK; external components are reused.",
-    "Existing Harmony device/atomic-service/parity and A/B/C/fixed gates are not cleared by these demos."
+    "Existing Harmony device/atomic-service/parity and A/B/C/fixed gates are not cleared by these demos.",
+    "Runtime source40ecdf4b and corrected provisioning SDK sourcec075105a are separately pinned; full runtime rotation for the initialization correction has not been qualified."
   ],
   "sessionSdk": {
     "schema": "agentlab.demo_dependency.v1",
-    "sourceRevision": "40ecdf4b774572ee2d0e6dc0dc1332fba755fbd6",
+    "sourceRevision": "c075105a7ea7f37ef036ea016a71149f7d83c112",
     "platform": "linux-x64",
-    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/session-sdk-40ecdf4b-linux-x64/agentlab-session-sdk-40ecdf4b-qualified-linux-x64",
-    "bytes": 5215536,
-    "sha256": "7b779ef439d49c8fd10074b6734a9b05b35821f580f443e7f2035b7786aa3721",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/session-sdk-c075105a-linux-x64/agentlab-session-sdk-c075105a-linux-x64",
+    "bytes": 5219632,
+    "sha256": "15fe671317f0f4ee7a79b54776aca4d62f629c5b571063c3fc20a05fe24475c3",
     "sessionTables": 47,
     "ownerTables": 12,
     "templateInventoryDigest": "1edc616ae673112a6d09c0dbb446a15745e69808f5d5c0d251cb76c16a6e7b38",
