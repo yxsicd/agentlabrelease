@@ -8,6 +8,7 @@ from pathlib import Path
 import subprocess
 import sys
 from seeds import fetch
+from workspace_patch import capture_patch
 from swebench.harness.test_spec.test_spec import make_test_spec
 
 
@@ -40,7 +41,18 @@ def main():
         # Keep partial Agent failure and still evaluate the actual patch independently.
         try: participant.turn('swe-task',a.root,prompt=row['problem_statement'],container=container)
         except Exception as error: summary['participantError']=str(error)
-        patch=subprocess.check_output(['docker','exec','-w','/testbed',container,'git','diff','--binary','HEAD'])
+        observed_commands=[]
+        def git(args,allow_diff=False):
+            argv=['docker','exec','-w','/testbed',container,'git']+args
+            observed_commands.append(argv)
+            result=subprocess.run(argv,capture_output=True,timeout=120)
+            if result.returncode not in ([0,1] if allow_diff else [0]):
+                raise RuntimeError('Workspace patch observation failed: '+result.stderr.decode())
+            return result.stdout
+        patch=capture_patch(git,row['base_commit'])
+        (evidence/'patch-observation.json').write_text(json.dumps(dict(baseline=row['base_commit'],
+            actualHead=git(['rev-parse','HEAD']).decode().strip(),commands=observed_commands,
+            scope='Tracked changes since frozen base and non-ignored new files; not a full binary Workspace snapshot'),indent=2)+'\n')
         (evidence/'actual.patch').write_bytes(patch)
         for kind,value in [('agent',patch.decode()),('reference',row['patch'])]:
             predictions=evidence/(kind+'-predictions.jsonl')

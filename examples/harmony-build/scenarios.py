@@ -33,11 +33,11 @@ def render(name,stage,marker):
 def verify(name,stage,source):
     patterns=[]
     if name=='counter':
-        patterns=[r'@State\s+count',r'Text\([^\n]*this\.count',r'Button\([^\n]*Increment',r'this\.count\s*(\+\+|\+=\s*1|=\s*this\.count\s*\+\s*1)']
-        if stage==2: patterns += [r'Button\([^\n]*Reset',r'this\.count\s*=\s*0']
+        patterns=[r'@State\s+count',r'Text\([^)]*this\.count',r'Button\(\s*[\'\"]Increment[\'\"]\s*\)',r'this\.count\s*(\+\+|\+=\s*1|=\s*this\.count\s*\+\s*1)']
+        if stage==2: patterns += [r'Button\(\s*[\'\"]Reset[\'\"]\s*\)',r'this\.count\s*=\s*0']
     if name=='form':
-        patterns=[r'@State\s+name',r'Text\(this\.name',r'TextInput\(',r'\.onChange\(',r'this\.name\s*=']
-        if stage==2: patterns += [r'Button\([^\n]*Clear',r'this\.name\s*=\s*[\'\"]{2}']
+        patterns=[r'@State\s+name',r'Text\(\s*this\.name\s*\)',r'TextInput\(',r'\.onChange\(',r'this\.name\s*=']
+        if stage==2: patterns += [r'Button\(\s*[\'\"]Clear[\'\"]\s*\)',r'this\.name\s*=\s*[\'\"]{2}']
     results=[dict(pattern=p,matched=re.search(p,source) is not None) for p in patterns]
     return dict(scenario=name,stage=stage,checks=results,passed=all(r['matched'] for r in results),scope='Source contract plus independent HAP compilation; no device interaction claim')
 

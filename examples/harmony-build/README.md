@@ -26,3 +26,26 @@ This proves native unsigned HAP compilation of a project without external OHPM
 dependencies. It does not prove device installation, atomic-service deployment,
 formal Harness Session execution, SessionFS checkpoint/Fork parity or fixed-channel
 promotion. Those scopes have their own tests.
+
+## Generated requirements and oracle design
+
+Three initial families (`hello`, `counter`, `form`) derive from a deterministic
+Stage project. Each records the initial source SHA and two explicit demand deltas.
+`scenarios.py` provides reference renders only for qualifying the case generator;
+real participants receive requirements and edit their own Workspace. Source
+contracts tolerate whitespace; actual HAP compilation/hashes and failure/recovery
+checks supplement them. Injected syntax failure preserves the Participant's last
+successful source. Repair must retain all stage-two features.
+
+Next families should add one capability at a time: component extraction/navigation,
+local persistence/restart, mock HTTP loading/error/retry, resources/localization,
+and Native/atomic-service lifecycle. Generate bounded combinations of family,
+parameters and fault type rather than unrestricted random projects. Every family
+needs a reference implementation that passes independent tests before Agent
+results are interpreted. Device interaction/lifecycle oracles are a separate
+acceptance tier; source-pattern checks alone cannot prove click behavior.
+
+SWE seeds retain official provenance. Generated Harmony seeds retain AgentLab
+provenance and never claim to be official benchmark problems. Formal seed/Fork
+qualification must bind TableGit seed/demand identities and SessionFS Workspace
+cuts before claiming complete replay or causal failure attribution.
