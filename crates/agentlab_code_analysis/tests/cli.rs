@@ -5,6 +5,7 @@ use std::{
     process::Command,
     time::{SystemTime, UNIX_EPOCH},
 };
+static NEXT_FIXTURE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 struct Fixture(std::path::PathBuf);
 impl Fixture {
     fn new() -> Self {
@@ -12,7 +13,11 @@ impl Fixture {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path = std::env::temp_dir().join(format!("al-rust-ast-{}-{stamp}", std::process::id()));
+        let path = std::env::temp_dir().join(format!(
+            "al-rust-ast-{}-{stamp}-{}",
+            std::process::id(),
+            NEXT_FIXTURE.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        ));
         fs::create_dir_all(&path).unwrap();
         git(&path, &["init", "-q"]);
         Self(path)

@@ -26,6 +26,14 @@ jobs:
         run: |
           cargo fmt --all --check
           cargo test --locked -p agentlab_code_analysis
+      - name: Verify committed parser can be regenerated from pinned grammar tools
+        run: |
+          mkdir -p "$RUNNER_TEMP/parser-tools"
+          cp crates/agentlab_code_analysis/grammar/package.json crates/agentlab_code_analysis/grammar/package-lock.json "$RUNNER_TEMP/parser-tools/"
+          npm ci --prefix "$RUNNER_TEMP/parser-tools" --no-audit --no-fund
+          cd crates/agentlab_code_analysis/grammar
+          NODE_PATH="$RUNNER_TEMP/parser-tools/node_modules" "$RUNNER_TEMP/parser-tools/node_modules/.bin/tree-sitter" generate
+          git diff --exit-code -- src
   pinned-harmony-syntax-coverage:
     needs: rust-local-contract
     runs-on: ubuntu-latest

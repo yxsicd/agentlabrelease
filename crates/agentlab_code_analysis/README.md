@@ -1,7 +1,7 @@
 # Rust ArkTS program analysis
 
 `agentlab-code-analysis` parses committed `.ets/.ts` bytes using pinned Rust
-Tree-sitter 0.27.0 and ArkTS grammar 0.2.0. No Python runtime is needed for this
+Tree-sitter 0.27.0 and an AgentLab extension of ArkTS grammar 0.2.0. No Python runtime is needed for this
 analyzer. Tree-sitter provides a concrete syntax tree; this crate lowers it to
 structured program facts, not a type-checked semantic AST.
 
@@ -54,3 +54,17 @@ The separate knowledge-seed Action tests TableGit/history/import integration;
 run34750910500 passed733-row roundtrip and recovered17 files/9640588 bytes.
 A successful syntax-coverage job can contain declared grammar gaps. Inspect
 analysis.json; it is not a claim of full ArkTS or HAP qualification.
+
+## stateStyles grammar repair
+
+The explicit grammar extension under grammar/ resolves the earlier stateStyles
+object-value leading-dot blocks. Original upstream still fails the minimal
+fixture; the extension passes, ordinary objects stay valid and malformed style
+syntax stays reported. Fixed code-workshop now has556/556 syntax-clean files,
+17188 facts and no parse-error nodes. The original failure artifacts are retained.
+The receipt includes a digest of grammar/scanner source. This corpus result is
+not universal ArkTS, type/call/dataflow, HAP or subject-Agent qualification.
+The public Action regenerates the committed parser with pinned tools and checks
+it has no diff. Six Rust tests now pass including the baseline/extension check.
+Parallel CLI fixtures use a process-local counter as well as time/PID so tests
+do not race over the same Git directory on hosts with coarse clocks.

@@ -1,0 +1,1 @@
+{"grammars":[{"name":"agentlab_arkts","camelcase":"AgentLabArkTS","scope":"source.ets","path":".","file-types":["ets"]}],"metadata":{"version":"0.1.0","license":"MIT"},"bindings":{"rust":true}}

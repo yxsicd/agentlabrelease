@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     output.write_all(&bytes)?;
     output.flush()?;
     let receipt = json!({"schema":"agentlab.ast_analysis.v1","sourceRevision":revision,
-        "analyzer":"agentlab-code-analysis@0.1.0","parser":"tree-sitter@0.27.0","grammar":"tree-sitter-arkts@0.2.0",
+        "analyzer":"agentlab-code-analysis@0.1.0","parser":"tree-sitter@0.27.0","grammar":agentlab_code_analysis::GRAMMAR,"grammarDigest":agentlab_code_analysis::GRAMMAR_DIGEST,
         "files":files,"filesWithSyntaxErrors":errors,"erroredPaths":errored_paths,"rows":rows.len(),"kinds":kinds,
         "sha256":digest(&bytes),"coverage":"CST-derived syntax facts; no type, call-target or dataflow resolution","syntaxClean":errors==0,"fullArkTSQualified":false});
     fs::write(

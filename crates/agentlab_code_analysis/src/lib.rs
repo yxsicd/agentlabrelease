@@ -2,6 +2,13 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use tree_sitter::{Node, Parser};
+extern "C" {
+    fn tree_sitter_agentlab_arkts() -> *const ();
+}
+const LANGUAGE: tree_sitter_language::LanguageFn =
+    unsafe { tree_sitter_language::LanguageFn::from_raw(tree_sitter_agentlab_arkts) };
+pub const GRAMMAR: &str = "agentlab-arkts@0.1.0 (tree-sitter-arkts@0.2.0 + stateStyles)";
+pub const GRAMMAR_DIGEST: &str = env!("AGENTLAB_GRAMMAR_DIGEST");
 
 pub fn digest(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
@@ -41,7 +48,7 @@ impl Collector<'_> {
         *ordinal += 1;
         let mut row = json!({"id":id,"kind":kind,"path":self.path,
             "sourceRevision":self.revision,"syntaxKind":node.kind(),"span":span(node),
-            "method":"tree-sitter-arkts@0.2.0","syntaxHasErrors":node.has_error()});
+            "method":GRAMMAR,"syntaxHasErrors":node.has_error()});
         row.as_object_mut()
             .unwrap()
             .extend(extra.as_object().unwrap().clone());
@@ -123,7 +130,7 @@ pub fn analyze(path: &str, source: &[u8], revision: &str) -> Result<Analysis, St
     std::str::from_utf8(source).map_err(|e| e.to_string())?;
     let mut parser = Parser::new();
     parser
-        .set_language(&tree_sitter_arkts::LANGUAGE.into())
+        .set_language(&LANGUAGE.into())
         .map_err(|e| e.to_string())?;
     let tree = parser
         .parse(source, None)
@@ -140,7 +147,7 @@ pub fn analyze(path: &str, source: &[u8], revision: &str) -> Result<Analysis, St
     collector.rows.push(
         json!({"id":format!("ast-file-{}",&digest(path.as_bytes())[..24]),"kind":"parse-file",
         "path":path,"sourceRevision":revision,"sha256":digest(source),"byteLength":source.len(),
-        "syntaxHasErrors":root.has_error(),"method":"tree-sitter-arkts@0.2.0"}),
+        "syntaxHasErrors":root.has_error(),"method":GRAMMAR}),
     );
     collector
         .rows
@@ -153,6 +160,35 @@ pub fn analyze(path: &str, source: &[u8], revision: &str) -> Result<Analysis, St
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn state_styles_gap_is_fixed_without_breaking_normal_objects() {
+        let source=b"@Component struct Demo { build() { Button() {}.stateStyles({ pressed: { .backgroundColor(Color.Red).borderWidth(2) }, normal: { .opacity(1) } }) } }";
+        let mut baseline = Parser::new();
+        baseline
+            .set_language(&tree_sitter_arkts::LANGUAGE.into())
+            .unwrap();
+        assert!(baseline
+            .parse(source, None)
+            .unwrap()
+            .root_node()
+            .has_error());
+        let fixed = analyze("Demo.ets", source, "cut").unwrap();
+        assert!(!fixed.has_errors);
+        assert!(fixed
+            .rows
+            .iter()
+            .any(|r| r["kind"] == "call" && r["targetExpression"] == "backgroundColor"));
+        assert!(
+            !analyze(
+                "Normal.ts",
+                b"const o = { pressed: { color: 'red', width: 2 } };",
+                "cut"
+            )
+            .unwrap()
+            .has_errors
+        );
+        assert!(analyze("Bad.ets",b"@Component struct Bad { build() { Button() {}.stateStyles({ pressed: { .color( } }) } }","cut").unwrap().has_errors);
+    }
     #[test]
     fn multiline_import_and_arkui_are_parsed() {
         let source=b"import {\n A,\n B\n} from './module';\n@Component\nstruct Demo {\n @State value: string = '';\n build() { Column() { Text(this.value) } }\n}";

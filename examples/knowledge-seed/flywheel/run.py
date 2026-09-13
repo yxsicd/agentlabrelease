@@ -58,7 +58,7 @@ def construct(source,out):
  if revision!=PIN: raise ValueError('Use the pinned code-workshop source')
  files=subprocess.check_output(['git','ls-files'],cwd=source,text=True).splitlines()
  code=[p for p in files if Path(p).suffix in ('.ets','.ts','.js','.cpp','.h')]
- inventory=dict(id='source-code-workshop',kind='inventory',path='.',sourceRevision=revision,codeFiles=len(code),codeLines=sum(len((source/p).read_bytes().splitlines()) for p in code),method='git tracked source inventory',coverage='AST parses whole source; selected scenario AST rows imported; one unsupported stateStyles file retained in full parser evidence',buildQualified=False)
+ inventory=dict(id='source-code-workshop',kind='inventory',path='.',sourceRevision=revision,codeFiles=len(code),codeLines=sum(len((source/p).read_bytes().splitlines()) for p in code),method='git tracked source inventory',coverage='AST parses whole source; selected scenario AST rows imported; syntax coverage receipt and full corpus evidence retained',buildQualified=False)
  binary=Path(__file__).resolve().parents[3]/'target/debug/agentlab-code-analysis'
  ast_dir=out/'ast';subprocess.run([str(binary),str(source),str(ast_dir)],check=True,capture_output=True,text=True)
  ast_rows=[json.loads(line) for line in (ast_dir/'program_facts.jsonl').read_text().splitlines()]
@@ -94,6 +94,30 @@ def construct(source,out):
   cases.append(dict(id='case-'+key,kind='task',title=title,sourceRevision=revision,skillIds=['skill-'+key],paths=paths,turns=turns,acceptance=checks,analysisIds=[],status='candidate',calibration={},buildQualified=False))
  skills.append(dict(id='skill-harmony-goal',title='Harmony challenge instance goal',body='# Harmony benchmark goal\n\nUse the code-workshop project at the pinned source; inventory exceeds20k code lines, but build scope and SDK acceptance must be independently checked. Maintain five cross-file candidates and multi-turn process/final metrics. This source targets6.1 whereas the challenge names6.0; do not silently equate them. Guide-snippets is a companion corpus of many projects, not one20k-line project. Track method calibration separately from HAP, real Agent and SessionFS acceptance.\n',sourceRevision=revision,factIds=['source-code-workshop'],caseIds=['case-'+x[0] for x in SPECS],analysisIds=['analysis-relative-imports','analysis-common-barrel'],status='source-supported',**lineage('goal','harmony-challenge')))
  return dict(maintainer_skills=skills,program_facts=facts,evaluation_cases=cases)
+
+def maintain_facts(service,repo,worktree,revision,tables):
+ pending=[]
+ for table,rows in [('program_facts',tables['program_facts']),('evaluation_cases',[r for r in tables['evaluation_cases'] if r['kind']=='calibration'])]:
+  existing=store.scan(service,repo,revision,PREFIX+table)
+  for row in rows:
+   old=existing.get(row['id'])
+   if old and old['row']==row:continue
+   if old:
+    fields=[dict(op='set',field='/'+k.replace('~','~0').replace('/','~1'),value=v) for k,v in row.items() if old['row'].get(k)!=v]
+    fields += [dict(op='unset',field='/'+k.replace('~','~0').replace('/','~1')) for k in old['row'] if k not in row]
+    op=dict(op='update',operation_id=str(uuid.uuid4()),key=row['id'],expected_row_version=old['row_version'],field_updates=fields)
+   else:op=dict(op='insert',operation_id=str(uuid.uuid4()),key=row['id'],row=row)
+   pending.append((PREFIX+table,op))
+  if table=='program_facts':
+   desired={r['id'] for r in rows}
+   for key,old in existing.items():
+    if key.startswith('ast-') and key not in desired:
+     pending.append((PREFIX+table,dict(op='delete',operation_id=str(uuid.uuid4()),key=key,expected_row_version=old['row_version'])))
+ for start in range(0,len(pending),32):
+  grouped={}
+  for path,op in pending[start:start+32]:grouped.setdefault(path,[]).append(op)
+  revision=store.transact(service,repo,worktree,revision,[dict(path=path,operations=ops) for path,ops in grouped.items()],'Maintain current parser facts and calibration evidence')
+ return revision
 
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--source',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--development',type=Path);a=p.parse_args()
@@ -149,7 +173,7 @@ def main():
    revision=store.transact(service,repo,wt,revision,[dict(path=PREFIX+table,operations=[dict(op='insert',operation_id=str(uuid.uuid4()),key=r['id'],row=r) for r in tables[table]])],'Maintain source-backed Skills and candidate seeds')
   dump(a.root/'authority.json',dict(repo=repo,tablePrefix=PREFIX,baselineRevision=revision))
  else:
-  revision=service.call('table.worktree.open',dict(repo=repo,worktree=wt))['revision']
+  revision=maintain_facts(service,repo,wt,revision,tables)
  baseline=revision
  sql="SELECT json_extract(row_json,'$.path') AS source, json_extract(row_json,'$.targetPath') AS target FROM facts WHERE json_extract(row_json,'$.kind')='import' AND json_extract(row_json,'$.resolution') IN ('relative-file-resolved','package-entry-resolved') ORDER BY source,target"
  request=dict(bindings=[dict(alias='facts',repo=repo,path=PREFIX+'program_facts',revision=revision)],sql=sql,parameters=[])

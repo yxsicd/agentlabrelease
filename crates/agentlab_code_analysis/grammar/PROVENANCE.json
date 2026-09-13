@@ -1,0 +1,12 @@
+{
+  "schema": "agentlab.grammar_patch.v1",
+  "upstreamCrate": "tree-sitter-arkts",
+  "upstreamVersion": "0.2.0",
+  "upstreamRepository": "https://github.com/harmony-contrib/tree-sitter-arkts",
+  "upstreamRevision": "9c7395bd9534cce840dd7115fd79be6c6ff45872",
+  "license": "MIT",
+  "extension": "pair values may contain nonempty ArkUI leading-dot style blocks",
+  "scannerChange": "symbol prefix and include path only",
+  "generator": "tree-sitter-cli@0.27.0",
+  "baseGrammar": "tree-sitter-javascript@0.23.1"
+}
