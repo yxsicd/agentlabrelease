@@ -130,7 +130,12 @@ jobs:
           evidence=root/'assessment/evidence'
           scenario=os.environ['AGENTLAB_ASSESSMENT_SCENARIO'];lesson=json.loads(subprocess.check_output(['target/debug/agentlab-experience','contract',scenario]))
           names={'loading':['baseline','reference','wrong-cancel','wrong-fallback'],'debounce':['baseline','reference','wrong-boundary','wrong-window'],'image-url':['baseline','reference','wrong-protocol','wrong-dispatch']}[scenario]
-          variants={name:json.loads((evidence/(name+'-oracle.stdout.json')).read_text()) for name in names}
+          variants={}
+          for name in names:
+            file=evidence/(name+'-oracle.stdout.json');raw=file.read_bytes();observed=json.loads(raw)
+            variants[name]=dict(passValue=observed['pass'],checks=observed.get('checks',{}),receipt=dict(captureRunId=os.environ['AGENTLAB_CAPTURE_RUN_ID'],path=file.name,bytes=len(raw),sha256=hashlib.sha256(raw).hexdigest()))
+            variants[name]['pass']=variants[name].pop('passValue')
+            if observed.get('error'):variants[name]['error']=observed['error']
           task=json.loads((evidence/'frozen-task.json').read_text());source=evidence/'initial'/task['paths'][0]
           if (root/'capture-source.json').exists():shutil.copy2(root/'capture-source.json',inputs/'capture-source.json')
           (cal/'calibration.json').write_text(json.dumps(dict(sourceRevision='7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6',sourceDigest=hashlib.sha256(source.read_bytes()).hexdigest(),oracleDigest=json.loads((evidence/'frozen-task.json').read_text())['oracleDigest'],scope=task['assessmentScope'],lesson=lesson,variants=variants),indent=2)+'\n')

@@ -76,3 +76,11 @@ A fresh runner can encounter a connection reset while downloading an already
 published dependency. Retain the failed acquisition receipt; retry transport
 errors in the shared downloader rather than changing locks or treating the
 network failure as an assessed Agent failure. Keep dependency identities fixed.
+
+
+Keep calibration manifests analytical: variant verdict/checks plus exact raw
+receipt path, capture identity, SHA256 and bytes. Full oracle output, submitted
+methods and AST facts remain complete in runtime evidence/source tables. Do not
+embed every variant's whole source/AST into one lesson-evidence row: that duplicates
+observations and can exceed the TableGit transport frame. No bytes are removed;
+the small manifest references the independently preserved complete raw receipt.
