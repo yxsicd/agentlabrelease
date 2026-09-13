@@ -27,6 +27,7 @@ def main():
     p.add_argument('--instance-prefix', required=True)
     p.add_argument('--lesson-prefix', required=True)
     p.add_argument('--knowledge-prefix', required=True)
+    p.add_argument('--observation-kind', choices=['synthetic-tool-observation','real-source-campaign'],default='synthetic-tool-observation')
     a = p.parse_args()
     a.root.mkdir()
     rpc = a.root / 'rpc'
@@ -71,7 +72,7 @@ def main():
     promotion_import = a.root / 'promotion-import'
     run('import-promotion', [sys.executable, importer, '--development', a.development, '--directory', candidate, '--prefix', a.knowledge_prefix, '--evidence', promotion_import, '--create-tables'])
     run('export-promotion', [sys.executable, HERE.parent / 'subject/finalize.py', '--development', a.development, '--directory', candidate, '--prefix', a.knowledge_prefix, '--root', a.root / 'promotion-export'])
-    summary = dict(schema='agentlab.experience_campaign.v1', ok=True, analysisInputRevision=cut, lessonRevision=receipts[1]['revision'], observations=len(observations), verifiedLessonId='loading-reappearance-cancels-old-timer', unchangedRepeatedImport=True, promotionExplicit=True, promotionAppliedToActiveKnowledge=False, promotionSourceExport=json.loads((committed / 'export.json').read_text()), promotionExport=json.loads((a.root / 'promotion-export/export.json').read_text()), scope='isolated loading lifecycle calibration; synthetic tool observation', realAgentQualified=False, harmonyBuildQualified=False, uiQualified=False)
+    summary = dict(schema='agentlab.experience_campaign.v1', ok=True, analysisInputRevision=cut, lessonRevision=receipts[1]['revision'], observations=len(observations), verifiedLessonId='loading-reappearance-cancels-old-timer', unchangedRepeatedImport=True, promotionExplicit=True, promotionAppliedToActiveKnowledge=False, promotionSourceExport=json.loads((committed / 'export.json').read_text()), promotionExport=json.loads((a.root / 'promotion-export/export.json').read_text()), scope='loading lifecycle calibration; '+a.observation_kind, observationKind=a.observation_kind, qualificationAuthority='Instance runs/assessments carry actual Agent and build verdicts; this summary qualifies only committed lessons and explicit promotion', uiQualified=False)
     (a.root / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
 
 

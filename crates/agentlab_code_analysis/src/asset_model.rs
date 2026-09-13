@@ -153,6 +153,14 @@ fn phase_for(path: &str) -> String {
 }
 fn instance(root: &Path, run: &str, archive: &str) -> Tables {
     let mut t = Tables::new();
+    for name in [
+        "tool_calls",
+        "context_versions",
+        "message_contents",
+        "context_changes",
+    ] {
+        t.entry(name.into()).or_default();
+    }
     let summary = json(&root.join("summary.json"));
     let task = json(&root.join("frozen-task.json"));
     let mut run_summary = summary.clone();
@@ -340,16 +348,32 @@ fn instance(root: &Path, run: &str, archive: &str) -> Tables {
         }
         if rel.ends_with("-oracle.stdout.json") {
             let oracle: Value = serde_json::from_slice(&raw).unwrap();
-            if let Some(analysis) = oracle.get("sourceAnalysis") {
+            let analyses: Vec<&Value> = oracle
+                .get("sourceAnalysis")
+                .into_iter()
+                .chain(
+                    oracle
+                        .get("sourceAnalyses")
+                        .and_then(Value::as_array)
+                        .into_iter()
+                        .flatten(),
+                )
+                .collect();
+            for (index, analysis) in analyses.iter().enumerate() {
+                let analysis_id = if oracle.get("sourceAnalyses").is_some() {
+                    format!("{file_id}-{index}")
+                } else {
+                    file_id.clone()
+                };
                 put(
                     &mut t,
                     "source_analyses",
-                    json!({"id":file_id,"assetClass":"evaluation-instance","runId":run,"fileId":file_id,"sourceRevision":analysis["sourceCut"]["sha256"],"observedSourceCut":analysis["sourceCut"],"grammar":analysis["grammar"],"grammarDigest":analysis["grammarDigest"],"syntaxHasErrors":analysis["syntaxHasErrors"]}),
+                    json!({"id":analysis_id,"assetClass":"evaluation-instance","runId":run,"fileId":file_id,"sourceRevision":analysis["sourceCut"],"observedSourceCut":analysis["sourceCut"],"grammar":analysis["grammar"],"grammarDigest":analysis["grammarDigest"],"syntaxHasErrors":analysis["syntaxHasErrors"]}),
                 );
                 for fact in analysis["rows"].as_array().unwrap() {
                     let mut row = fact.clone();
-                    row["id"] = json!(format!("{file_id}-{}", fact["id"].as_str().unwrap()));
-                    row["sourceAnalysisId"] = json!(file_id);
+                    row["id"] = json!(format!("{analysis_id}-{}", fact["id"].as_str().unwrap()));
+                    row["sourceAnalysisId"] = json!(analysis_id);
                     row["assetClass"] = json!("evaluation-instance");
                     row["runId"] = json!(run);
                     put(&mut t, "source_facts", row);

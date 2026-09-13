@@ -31,9 +31,11 @@ def main():
     p.add_argument("--capture-evidence", type=Path, help="Actual operator-captured evidence to persist and reconstruct")
     p.add_argument("--asset-model-export", type=Path, help="Synthetic analysis-oriented instance exchange to import and replay")
     p.add_argument("--experience-inputs", type=Path, help="Rust binary, calibration and clean reusable snapshot for the experience demo")
+    p.add_argument("--experience-real-inputs", type=Path, help="Executed actual-method calibration and frozen reusable knowledge for a real source campaign")
+    p.add_argument("--asset-instance-id", default='fixture')
     p.add_argument("--capture-agent-kind", default="pi", help="Observed participant implementation; not capture authority")
     args = p.parse_args()
-    if args.experience_inputs and not args.asset_model_export:
+    if (args.experience_inputs or args.experience_real_inputs) and not args.asset_model_export:
         p.error('--experience-inputs requires --asset-model-export')
     root = args.root.resolve()
     root.mkdir(parents=True, exist_ok=True)
@@ -180,6 +182,11 @@ def main():
                     "MCPGIT_PROBE_PROJECTION_ROOT":"/tmp/agentlab-mcpgit-e2e-public-demo"}
         first = probe("provision", settings, "session-created")
         capture_state = None
+        if args.asset_model_export and not args.capture_evidence:
+            port = run(["docker","inspect",gateway,"--format", '{{(index (index .NetworkSettings.Ports "8000/tcp") 0).HostPort}}'],"asset-service-port")
+            service=Service("ws://127.0.0.1:"+port+"/__mcpgit/service-ws",(state/"caller.authorization").read_text().strip(),evidence)
+            capture_worktree={"topic_id":None}
+            capture_worktree_path=service.call('table.worktree.open',dict(repo=first['binding']['repositoryId'],worktree=capture_worktree))['worktree_path']
         if args.capture_evidence:
             operation_id = str(uuid.uuid4())
             capture_context = dict(producerRevision=os.environ.get("AGENTLAB_CAPTURE_PRODUCER_REVISION") or os.environ.get("GITHUB_SHA"),
@@ -220,6 +227,8 @@ def main():
         docker("restart",agent,label="restart-store")
         docker("restart",gateway,label="restart-gateway")
         restarted_url = wait_route("restarted-route")
+        if args.asset_model_export:
+            service.url=restarted_url
         second = probe("restart-readback", settings, "session-recovered")
         if capture_state:
             service, revision, rows, objects, inventory = capture_state
@@ -256,12 +265,13 @@ def main():
             summary['checks']['published_harmony_seed_exact_import_and_repeat']=True
             capture_revision=published_revision
         if args.asset_model_export:
+            instance_prefix='assets/instances/'+args.asset_instance_id+'/'
             config=state/'asset-model-development.json'
             save(config,dict(url=service.url,repo=first['binding']['repositoryId'],authorizationFile=str(state/'caller.authorization')))
             receipts=[]
             for iteration in (1,2):
                 destination=evidence/('asset-model-import-'+str(iteration))
-                command=[sys.executable,str(REPO/'examples/knowledge-seed/subject/import-assets.py'),'--development',str(config),'--directory',str(args.asset_model_export),'--prefix','assets/instances/fixture/','--evidence',str(destination),'--replay-context']
+                command=[sys.executable,str(REPO/'examples/knowledge-seed/subject/import-assets.py'),'--development',str(config),'--directory',str(args.asset_model_export),'--prefix',instance_prefix,'--evidence',str(destination),'--replay-context']
                 if iteration==1:command.append('--create-tables')
                 result=subprocess.run(command,capture_output=True)
                 (evidence/('asset-model-'+str(iteration)+'.stdout')).write_bytes(result.stdout)
@@ -297,6 +307,20 @@ def main():
                     assert knowledge.read(service,first['binding']['repositoryId'],current_revision,seed_prefix+table)=={row['id']:row for row in seed_rows}
                 summary['checks']['experience_active_knowledge_unchanged']=True
                 capture_revision=current_revision
+            if args.experience_real_inputs:
+                command=[sys.executable,str(REPO/'examples/knowledge-seed/experience/run.py'),
+                    '--development',str(config),'--instance',str(args.asset_model_export),
+                    '--instance-prefix',instance_prefix,'--lesson-prefix','assets/experiences/'+args.asset_instance_id+'/',
+                    '--knowledge-prefix','assets/promotion-candidates/'+args.asset_instance_id+'/',
+                    '--knowledge',str(args.experience_real_inputs/'knowledge'),
+                    '--binary',str(REPO/'target/debug/agentlab-experience'),
+                    '--calibration',str(args.experience_real_inputs/'calibration'),
+                    '--observation-kind','real-source-campaign','--root',str(evidence/'experience')]
+                result=subprocess.run(command,capture_output=True)
+                (evidence/'experience.stdout').write_bytes(result.stdout);(evidence/'experience.stderr').write_bytes(result.stderr)
+                if result.returncode:raise RuntimeError('Real-source experience persistence failed; preserve output')
+                summary['checks']['real_source_experience_committed']=json.loads((evidence/'experience/summary.json').read_text())['ok']
+                capture_revision=service.call('table.worktree.open',dict(repo=first['binding']['repositoryId'],worktree={'topic_id':None}))['revision']
         checks = summary["checks"]
         checks["template_qualification"] = qualification["status"] == "qualified"
         checks["concurrent_session_creation_replayed"] = first["concurrentReplay"] is True

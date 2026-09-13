@@ -90,3 +90,31 @@ in that run's native evidence. Future assessments build a Node + Git participant
 image with the shared `participant-runtime.sh`; a main Action smoke job records
 image identity and verifies Node/Git with networking disabled. This environment
 repair does not retroactively change the historical run's participant image.
+
+## Delayed-loading instance and captured learning
+
+Dispatch `scenario: loading`. The frozen `case-loading-subject-v1` asks first for
+visibility reset, cancellation of an earlier pending timer, and release on
+disappearance; second for unknown breakpoint fallback to the small breakpoint.
+The oracle executes submitted DelayedLoadingView lifecycle methods, actual
+top-level delay constants and the actual shared BreakpointType implementation.
+Only timer scheduling and platform enum values are controlled. Rust AST spans
+select the submitted methods and bindings; no reference transformation repairs
+the Agent's code. Baseline, reference, wrong cancellation and wrong fallback must
+calibrate before execution. LoadingView's shared-helper import is source-verified;
+its UI body is not executed by the oracle.
+
+The parent runs two demands, and a fresh Agent runs demand two from the identical
+first-turn selected-source cut. Each actual phase compiles the whole phone project.
+The Action additionally publishes complete raw evidence, imports typed runtime
+tables into a fresh released TableGit service, reconstructs each context from
+Git history, repeats import unchanged, archives tool-error SQL and commits
+lessons plus a separately exported promotion candidate. Raw bytes and final HAPs
+are external evidence assets; build caches are not placed in Git. Reusable
+knowledge, runtime instances, experience records and promotion candidates have
+separate prefixes. A candidate does not silently rewrite frozen knowledge.
+
+Collection success and Agent task success remain separate verdicts. This case
+qualifies no device UI, strict HarmonyOS 6.0, formal SessionFS Fork or fixed-channel
+promotion. All failures remain evidence and are classified from controlled
+captures, not the participant's self-report.

@@ -52,3 +52,15 @@ Preserve negative calibration for wrong reset, duplicate requests and wrong
 initial state, plus raw/normalized source evidence. The demonstration backend is
 an explicit Promise seam; full phone compilation and UI rendering are distinct.
 Return stage-specific construction/evaluation guidance to instance Skill rows.
+
+### Loading lifecycle and shared-helper analysis
+
+Rust binding facts preserve declaration kind, owner, type, initializer and exact
+byte span. Execute submitted top-level delay constants as well as lifecycle
+methods; injected reference constants can hide incorrect Agent changes. Execute
+the submitted shared BreakpointType implementation with a controlled platform
+enum. Preserve source analyses for the lifecycle, helper and caller separately,
+even where local fact IDs coincide. An import seam is source evidence, not
+executed UI or resolved runtime call coverage. Calibrate wrong cancellation and
+unknown fallback before the staged real Agent case. Invalid source and an Agent
+that never reaches tools remain valid failed outcomes with empty typed tables.

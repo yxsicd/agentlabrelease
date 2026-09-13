@@ -179,3 +179,60 @@ fn separates_assets_restores_context_and_keeps_raw_evidence() {
     }
     fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn preserves_multiple_observed_sources_and_empty_agent_capture() {
+    let root = std::env::temp_dir().join(format!(
+        "al-multiple-source-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    let seed = root.join("seed");
+    fs::create_dir_all(&seed).unwrap();
+    for table in ["maintainer_skills", "program_facts", "evaluation_cases"] {
+        fs::write(seed.join(format!("{table}.jsonl")), "").unwrap();
+    }
+    let e = root.join("evidence");
+    write(&e.join("summary.json"), json!({"ok":false,"phases":{}}));
+    write(&e.join("frozen-task.json"), json!({"id":"case"}));
+    write(
+        &e.join("baseline-oracle.stdout.json"),
+        json!({"sourceAnalyses":[{"sourceCut":"sha256:one","rows":[{"id":"property","kind":"property","name":"showLoading"}]},{"sourceCut":"sha256:two","rows":[{"id":"property","kind":"property","name":"sm"}]}]}),
+    );
+    let out = root.join("out");
+    assert!(Command::new(env!("CARGO_BIN_EXE_agentlab-asset-model"))
+        .args([
+            seed.as_os_str(),
+            out.as_os_str(),
+            std::ffi::OsStr::new("https://example/raw"),
+            std::ffi::OsStr::new(&format!("failed={}", e.display()))
+        ])
+        .output()
+        .unwrap()
+        .status
+        .success());
+    let instance = out.join("instances/failed");
+    assert_eq!(rows(&instance.join("source_analyses.jsonl")).len(), 2);
+    assert_eq!(rows(&instance.join("source_facts.jsonl")).len(), 2);
+    assert_eq!(
+        rows(&instance.join("source_analyses.jsonl"))[0]["sourceRevision"],
+        "sha256:one"
+    );
+    let manifest: Value =
+        serde_json::from_slice(&fs::read(instance.join("export.json")).unwrap()).unwrap();
+    for name in [
+        "tool_calls",
+        "context_versions",
+        "message_contents",
+        "context_changes",
+    ] {
+        assert_eq!(manifest["tables"][name]["rowCount"], 0);
+        assert_eq!(
+            manifest["tables"][name]["definition"]["fields"]["id"]["type"],
+            "string"
+        );
+    }
+    fs::remove_dir_all(root).unwrap();
+}

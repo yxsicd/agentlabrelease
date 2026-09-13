@@ -11,7 +11,11 @@ DEMANDS=[
 FEEDBACK_DEMANDS=[
  "In FeedbackSheet preserve choices, input and open sheet while submitting and on rejection; reset and close only after success. Add @State submitting: boolean = false and @State submitError: string = ''; record the rejection message, release submitting on both outcomes and clear the error when retry starts. Preserve original submit parameters and invalid-input blocking. Keep valid ArkTS; do not install dependencies or change build configuration.",
  "Preserve all previous feedback failure/retry/reset behavior. While a submission is pending, repeated handleSubmit calls must produce exactly one SubmitInfoUtil request. Keep pending state and original parameters; after rejection a retry must be allowed and after success invalid input must remain blocked. Do not install dependencies or change build configuration."]
+LOADING_DEMANDS=[
+ 'In DelayedLoadingView make each aboutToAppear start hidden and cancel any previous pending timer before scheduling a new one. aboutToDisappear must cancel pending work and release delayTimer to -1. Preserve @State showLoading: boolean = false, delayTimer: number = -1 and the existing delays for all five known breakpoints. Keep valid ArkTS; do not install dependencies or change build configuration.',
+ 'Preserve all previous delayed-loading behavior. In shared BreakpointType.getValue make unknown breakpoint values fall back to sm, preserving xs/sm/md/lg/xl and constructor optional xs/xl fallbacks. DelayedLoadingView must use the small delay for an unknown breakpoint; LoadingView must continue using the shared helper and existing resource mapping. Do not install dependencies or change build configuration.']
 SCENARIOS={
+ 'loading':dict(paths=['common/src/main/ets/view/DelayedLoadingView.ets','common/src/main/ets/util/BreakpointSystem.ets','common/src/main/ets/view/LoadingView.ets'],demands=LOADING_DEMANDS,caseId='case-loading-subject-v1',oracle='loading.cjs',scope='Actual loading lifecycle/shared breakpoint methods and full phone compile; selected-source fresh-Agent branch'),
  'navigation':dict(paths=PATHS,demands=DEMANDS,caseId='case-navigation-subject-v1',oracle='navigation.cjs',scope='Actual navigation controller/caller methods and full phone compile; selected-source fresh-Agent branch'),
  'feedback':dict(paths=['common/src/main/ets/component/FeedbackSheet.ets','common/src/main/ets/model/FeedbackData.ets','common/src/main/ets/util/SubmitInfoUtil.ets','common/src/main/ets/component/Toast.ets'],demands=FEEDBACK_DEMANDS,caseId='case-feedback-subject-v1',oracle='feedback.cjs',scope='Actual feedback submit/reset methods with controlled Promise backend and full phone compile; selected-source fresh-Agent branch')}
 def dump(path,value):path.write_text(json.dumps(value,indent=2)+'\n')
@@ -66,9 +70,12 @@ def main():
   wrong=root/'wrong';shutil.copytree(a.reference/'common',wrong/'common');shutil.copytree(a.reference/'features/devpractices',wrong/'features/devpractices')
   file=wrong/paths[0]
   if a.scenario=='navigation':file.write_text(file.read_text().replace('this.pathStack.replacePath','this.pathStack.pushPath'))
-  else:file.write_text(file.read_text().replace('this.submitError = err.message;', 'this.submitError = err.message; this.resetAllStatus();'))
-  negative=oracle('wrong-reset' if a.scenario=='feedback' else 'wrong-stack',wrong,2)
+  elif a.scenario=='feedback':file.write_text(file.read_text().replace('this.submitError = err.message;', 'this.submitError = err.message; this.resetAllStatus();'))
+  else:file.write_text(file.read_text().replace('clearTimeout(this.delayTimer);', 'void this.delayTimer;'))
+  negative=oracle('wrong-reset' if a.scenario=='feedback' else 'wrong-cancel' if a.scenario=='loading' else 'wrong-stack',wrong,2)
   summary['calibration']=dict(baselineFails=not baseline['pass'],referencePasses=reference['pass'],wrongOutcomeFails=not negative['pass'])
+  if a.scenario=='loading':
+   wrong_fallback=root/'wrong-fallback';shutil.copytree(a.reference/'common',wrong_fallback/'common');file=wrong_fallback/paths[1];file.write_text(file.read_text().replace('    return this.sm;\n  }','    return this.lg;\n  }'));summary['calibration']['wrongFallbackFails']=not oracle('wrong-fallback',wrong_fallback,2)['pass']
   if a.scenario=='feedback':
    duplicate=root/'wrong-duplicate';shutil.copytree(a.reference/'common',duplicate/'common');file=duplicate/paths[0];file.write_text(file.read_text().replace('this.submitting || !this.feedbackData.canSubmit','!this.feedbackData.canSubmit'));summary['calibration']['wrongDuplicateFails']=not oracle('wrong-duplicate',duplicate,2)['pass']
    wrong_initial=root/'wrong-initial';shutil.copytree(a.reference/'common',wrong_initial/'common');file=wrong_initial/paths[0];file.write_text(file.read_text().replace('@State submitting: boolean = false','@State submitting: boolean = true'));summary['calibration']['wrongInitializerFails']=not oracle('wrong-initial',wrong_initial,2)['pass']

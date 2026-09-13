@@ -112,11 +112,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .replace("    this.samplePageContext.replacePage(","    this.navigationFailed = !this.samplePageContext.replacePage(")
         .replace("HdsNavigation(this.samplePageContext.navPathStack) {\n    }","HdsNavigation(this.samplePageContext.navPathStack) {\n      if (this.navigationFailed) {\n        Text('Navigation failed; retry by reopening this view')\n      }\n    }");
     let mut patches = Vec::new();
+    let loading_path = "common/src/main/ets/view/DelayedLoadingView.ets";
+    let breakpoint_path = "common/src/main/ets/util/BreakpointSystem.ets";
+    let loading = git(source, &["show", &format!("{PIN}:{loading_path}")])?;
+    let breakpoint = git(source, &["show", &format!("{PIN}:{breakpoint_path}")])?;
+    let patched_loading=loading.replace("  aboutToAppear(): void {", "  aboutToAppear(): void {\n    if (this.delayTimer !== -1) { clearTimeout(this.delayTimer); }\n    this.showLoading = false;");
+    let patched_breakpoint=breakpoint.replace("    return this.lg;", "    if (currentBreakpoint === WidthBreakpoint.WIDTH_LG) { return this.lg; }\n    return this.sm;");
     let mut reference_patch = String::new();
     for (name, original, patched) in [
         (feedback_path, &feedback, &patched_feedback),
         (navigation_path, &navigation, &patched_navigation),
         (caller_path, &caller, &patched_caller),
+        (loading_path, &loading, &patched_loading),
+        (breakpoint_path, &breakpoint, &patched_breakpoint),
     ] {
         let before = root.join("before").join(name);
         fs::create_dir_all(before.parent().ok_or("Before path")?)?;

@@ -38,6 +38,11 @@ pub fn export(path: &Path, class: &str, tables: &Tables) -> Value {
     for (name, rows) in tables {
         let mut raw = Vec::new();
         let mut fields = Map::new();
+        fields.insert("id".into(), json!({"type":"string","required":true}));
+        fields.insert(
+            "assetClass".into(),
+            json!({"type":"string","required":false}),
+        );
         for row in rows.values() {
             serde_json::to_writer(&mut raw, row).unwrap();
             raw.push(b'\n');

@@ -98,6 +98,10 @@ impl Collector<'_> {
                     json!({"symbol":name,"qualifiedName":scope,"owner":owner}),
                 );
             }
+            "variable_declarator" => {
+                let name = field(node, "name", self.source);
+                self.emit(node,"binding",&format!("{owner}::{name}"),json!({"name":name,"owner":owner,"typeExpression":field(node,"type",self.source).trim_start_matches(':').trim(),"initializerExpression":field(node,"value",self.source),"bindingKind":node.parent().and_then(|p|p.child(0)).map(|n|text(n,self.source)).unwrap_or("const")}));
+            }
             "public_field_definition" => {
                 let name = field(node, "name", self.source);
                 let mut cursor = node.walk();
