@@ -171,16 +171,15 @@ while IFS= read -r volume; do [[ -z "${volume}" ]] || docker volume inspect "${v
 harmony_manifest="${downloads}/harmony-combined.json"
 harmony_archive="${downloads}/harmony-combined.tar.zst"
 # The standalone portable tier is pinned separately from the main runtime.
-readarray -t harmony < <(python3 - <<'PY'
+harmony_lock="${AGENTLAB_STANDALONE_HARMONY_LOCK:-release/ci/standalone-harmony.json}"
+readarray -t harmony < <(python3 - "$harmony_lock" <<'PY'
 import json, sys
-print("alharmony-combined-linux-x64-218ce52.json")
-print("alharmony-combined-linux-x64-218ce52.tar.zst")
-print("0d854c293f76ea3f16c55c61091fc817523a2e574c38e0516e5dea0280010352")
-print(389602)
+d=json.load(open(sys.argv[1]))
+for key in ['descriptor','artifact','sha256','bytes']:print(d[key])
 PY
 )
-download "${release_url}/alharmony/${harmony[0]}" "${harmony_manifest}"
-download "${release_url}/alharmony/${harmony[1]}" "${harmony_archive}"
+download "${harmony[0]}" "${harmony_manifest}"
+download "${harmony[1]}" "${harmony_archive}"
 [[ "$(wc -c < "${harmony_archive}")" == "${harmony[3]}" ]]
 printf '%s  %s\n' "${harmony[2]}" "${harmony_archive}" | sha256sum -c -
 python3 - "${harmony_manifest}" "${harmony_archive}" <<'PY'
@@ -195,9 +194,10 @@ PY
 zstd -dc "${harmony_archive}" | tar -xf - -C "${standalone}"
 # SessionFS advances independently: retain the unchanged Harmony binary from
 # its existing package and acquire only the corrected standalone component.
-readarray -t storage_component < <(python3 - <<'PY'
-import json
-d = json.load(open("release/ci/standalone-sessionfs.json"))
+storage_lock="${AGENTLAB_STANDALONE_SESSIONFS_LOCK:-release/ci/standalone-sessionfs.json}"
+readarray -t storage_component < <(python3 - "$storage_lock" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
 assert d["schema"] == "agentlab.standalone_component.v1"
 assert d["platform"] == "linux-x64" and d["component"] == "alsessionfsd"
 print(d["artifact"])
@@ -208,7 +208,7 @@ PY
 download "${storage_component[0]}" "${standalone}/bin/alsessionfsd"
 [[ "$(wc -c < "${standalone}/bin/alsessionfsd")" == "${storage_component[2]}" ]]
 printf '%s  %s\n' "${storage_component[1]}" "${standalone}/bin/alsessionfsd" | sha256sum -c -
-cp release/ci/standalone-sessionfs.json "${downloads}/standalone-sessionfs.json"
+cp "$storage_lock" "${downloads}/standalone-sessionfs.json"
 chmod +x "${standalone}/bin/alsessionfsd" "${standalone}/bin/alharmony-ops"
 
 "${standalone}/bin/alsessionfsd" serve \

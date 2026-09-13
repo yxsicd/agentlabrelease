@@ -16,6 +16,7 @@ if __name__ == '__main__':
     record = dict(schema='agentlab.channel-real-check.v1', compositionIdentity=plan['compositionIdentity'],
                   sourceLockSha256=plan['sourceLockSha256'], targetChannel=plan['targetChannel'],
                   githubRunId=os.environ.get('GITHUB_RUN_ID'), producerRevision=os.environ.get('GITHUB_SHA'),
+                  validationDependenciesSha256=plan.get('validationDependenciesSha256'),
                   check='real_agent', status='passed' if subject == persistence == 'success' and fresh else 'failed',
                   subjectOutcome=subject, persistenceOutcome=persistence, freshSubjectExecution=fresh)
     args.root.mkdir(parents=True, exist_ok=True)

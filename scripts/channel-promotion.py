@@ -13,7 +13,7 @@ planner = importlib.util.module_from_spec(spec); spec.loader.exec_module(planner
 
 def prepare(plan, qualification, raw_lock, repository):
     original = plan['publication']
-    actual = planner.plan(plan['targetChannel'], original, json.loads(raw_lock), raw_lock)
+    actual = planner.plan(plan['targetChannel'], original, json.loads(raw_lock), raw_lock, plan.get('validationDependencies'))
     if actual != plan:
         raise ValueError('source plan changed')
     for field in ['targetChannel', 'compositionIdentity', 'sourceLockSha256', 'sourcePublicationSha256']:
@@ -22,6 +22,8 @@ def prepare(plan, qualification, raw_lock, repository):
     if not qualification['qualified'] or any(qualification['checks'].get(c, {}).get('status') != 'passed'
                                              for c in plan['requiredChecks']):
         raise ValueError('required checks have not passed')
+    if qualification.get('validationDependenciesSha256') != plan.get('validationDependenciesSha256'):
+        raise ValueError('qualification differs from validation dependencies')
     run = str(qualification['githubRunId'])
     if not run.isdigit():
         raise ValueError('qualification has no durable GitHub run')
@@ -37,6 +39,9 @@ def prepare(plan, qualification, raw_lock, repository):
                        sourceChannelOrCandidate=plan['sourceChannelOrCandidate'],
                        sourcePublicationSha256=plan['sourcePublicationSha256'],
                        activated=False)
+    if plan.get('validationDependencies') is not None:
+        publication['validationDependencies'] = copy.deepcopy(plan['validationDependencies'])
+        publication['validationDependenciesSha256'] = plan['validationDependenciesSha256']
     return tag, publication
 
 

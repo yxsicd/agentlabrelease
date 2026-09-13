@@ -118,7 +118,7 @@ def main():
         sdk = demo.acquire(args.sdk_program, sdk_binary)
         sdk_binary.chmod(0o755)
         save(evidence / "session-sdk.json", sdk)
-        lock = demo.acquire(REPO / "release/ci/mcpgit-program.json", root / "downloads/mcpgit.tar.gz")
+        lock = demo.acquire(Path(os.environ.get("AGENTLAB_MCPGIT_PROGRAM_LOCK", str(REPO / "release/ci/mcpgit-program.json"))), root / "downloads/mcpgit.tar.gz")
         summary["mcpgit"] = lock
         program = root / "program"
         program.mkdir(exist_ok=True)
@@ -183,6 +183,12 @@ def main():
                 collectorSha256=demo.sha256(Path(__file__).with_name("capture.py")),
                 runtimeImage=args.image, runtimeVolume=args.runtime_volume, sessionSdk=sdk,
                 templateContractDigest=template["contractDigest"], mcpgit=lock)
+            plan_file = os.environ.get("AGENTLAB_CHANNEL_PLAN_FILE")
+            if plan_file:
+                selected_plan = json.loads(Path(plan_file).read_text())
+                for key in ['compositionIdentity', 'sourceLockSha256', 'sourcePublicationSha256',
+                            'validationDependenciesSha256', 'targetChannel', 'sourceChannelOrCandidate']:
+                    capture_context[key] = selected_plan.get(key)
             rows, objects, inventory = collect(args.capture_evidence, first["sessionKey"],
                 operation_id, args.capture_agent_kind, capture_context)
             port = docker("inspect", "--format", '{{(index (index .NetworkSettings.Ports "8002/tcp") 0).HostPort}}', gateway)

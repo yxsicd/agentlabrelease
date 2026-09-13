@@ -9,10 +9,13 @@ def qualify(plan, baseline, real=None):
     result = dict(schema='agentlab.channel-qualification.v1', targetChannel=plan['targetChannel'],
                   compositionIdentity=plan['compositionIdentity'], sourceLockSha256=plan['sourceLockSha256'],
                   sourcePublicationSha256=plan['sourcePublicationSha256'], requiredChecks=plan['requiredChecks'],
+                  validationDependenciesSha256=plan.get('validationDependenciesSha256'),
                   checks={}, qualified=False, activated=False)
     for receipt in [baseline, real]:
         if receipt is None:
             continue
+        if receipt.get('validationDependenciesSha256') != plan.get('validationDependenciesSha256'):
+            raise ValueError('check receipt belongs to other validation dependencies')
         for key in ['compositionIdentity', 'sourceLockSha256', 'targetChannel']:
             if receipt[key] != plan[key]:
                 raise ValueError('check receipt belongs to another '+key)
@@ -34,7 +37,8 @@ if __name__ == '__main__':
     path = args.root/'channel-validation-evidence/channel-qualification.json'
     baseline = json.loads(path.read_text()) if path.exists() else dict(
         compositionIdentity=plan['compositionIdentity'], sourceLockSha256=plan['sourceLockSha256'],
-        targetChannel=plan['targetChannel'], checks={}, githubRunId=None, producerRevision=None)
+        targetChannel=plan['targetChannel'], validationDependenciesSha256=plan.get('validationDependenciesSha256'),
+        checks={}, githubRunId=None, producerRevision=None)
     path = args.root/'real-pi-harmony-acceptance/channel-real-check.json'
     real = json.loads(path.read_text()) if path.exists() else None
     result = qualify(plan, baseline, real)

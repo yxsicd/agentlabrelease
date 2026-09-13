@@ -50,3 +50,17 @@ class ChannelPromotionTests(unittest.TestCase):
         pub['deploymentGates'].update(dActivation='passed',formalHarmonyHapRestartParity='passed',aBCPromotion='passed')
         self.assertTrue(activation.pointer(pub)['activated'])
         self.assertEqual(pub['deploymentGates']['fullWhiteboxCoverage'],'not_run')
+
+    def test_validation_dependencies_follow_selected_upstream_cut(self):
+        dependencies={'standaloneHarmony':{'artifact':'fixed-url','sha256':'old-hash'}}
+        plan=planner.plan('aldev',self.publication,json.loads(self.raw),self.raw,dependencies)
+        baseline=copy.deepcopy(self.baseline)
+        baseline['validationDependenciesSha256']=plan['validationDependenciesSha256']
+        qualification=qualifier.qualify(plan,baseline)
+        pub=promoter.prepare(plan,qualification,self.raw,'owner/repo')[1]
+        main=planner.plan('almain',pub,json.loads(self.raw),self.raw)
+        self.assertEqual(main['validationDependencies'],plan['validationDependencies'])
+        dependencies['standaloneHarmony']['sha256']='new-hash'
+        self.assertEqual(main['validationDependencies']['standaloneHarmony']['sha256'],'old-hash')
+        baseline['validationDependenciesSha256']='different'
+        with self.assertRaises(ValueError):qualifier.qualify(plan,baseline)

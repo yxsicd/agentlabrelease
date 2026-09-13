@@ -20,7 +20,7 @@ def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
 
-def plan(target, publication, lock, raw_lock):
+def plan(target, publication, lock, raw_lock, validation_dependencies=None):
     if target not in CHECKS:
         raise ValueError('unknown target channel')
     source = publication['tag']
@@ -41,12 +41,17 @@ def plan(target, publication, lock, raw_lock):
     identity = dict(images=frozen['images'], components=frozen['components'],
                     componentGraph=frozen['componentGraph'], sourceRevision=frozen['sourceRevision'],
                     sessionSdk=publication.get('sessionSdk'), control=publication['smoke']['control'])
-    return dict(schema='agentlab.channel-validation-plan.v1', targetChannel=target,
+    result = dict(schema='agentlab.channel-validation-plan.v1', targetChannel=target,
                 sourceChannelOrCandidate=source, sourcePublicationSha256=digest(publication),
                 sourceLockSha256=hashlib.sha256(raw_lock).hexdigest(), compositionIdentity=digest(identity),
                 publication=copy.deepcopy(publication), environmentLock=frozen,
                 requiredChecks=list(CHECKS[target]), freshRunnerRequired=True,
                 rebuildComponents=False, automaticPromotion=False, activated=False)
+    dependencies = validation_dependencies if validation_dependencies is not None else publication.get('validationDependencies')
+    if dependencies is not None:
+        result['validationDependencies'] = copy.deepcopy(dependencies)
+        result['validationDependenciesSha256'] = digest(dependencies)
+    return result
 
 
 if __name__ == '__main__':
@@ -55,9 +60,11 @@ if __name__ == '__main__':
     parser.add_argument('--publication', type=Path, required=True)
     parser.add_argument('--lock', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--validation-dependencies', type=Path)
     args = parser.parse_args()
     raw = args.lock.read_bytes()
-    result = plan(args.target, json.loads(args.publication.read_bytes()), json.loads(raw), raw)
+    result = plan(args.target, json.loads(args.publication.read_bytes()), json.loads(raw), raw,
+                  json.loads(args.validation_dependencies.read_text()) if args.validation_dependencies else None)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps({k:result[k] for k in ['targetChannel','compositionIdentity','requiredChecks','activated']}))

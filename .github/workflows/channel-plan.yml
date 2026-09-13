@@ -55,11 +55,19 @@ jobs:
               else:
                   url=base+'agentlab-'+parent+'-environment-lock.json'
               (root/'environment-lock.json').write_bytes(urllib.request.urlopen(url,timeout=30).read())
+          import json
+          pub=json.loads((root/'publication.json').read_text())
+          dependencies=pub.get('validationDependencies') or {
+              'standaloneHarmony':json.load(open('release/ci/standalone-harmony.json')),
+              'standaloneSessionFs':json.load(open('release/ci/standalone-sessionfs.json')),
+              'mcpgit':json.load(open('release/ci/mcpgit-program.json'))}
+          (root/'validation-dependencies.json').write_text(json.dumps(dependencies,indent=2)+'\n')
           PY
           python3 scripts/channel-plan.py --target "$TARGET" \
             --publication "$RUNNER_TEMP/channel-source/publication.json" \
             --lock "$RUNNER_TEMP/channel-source/environment-lock.json" \
-            --output "$RUNNER_TEMP/channel-source/plan.json"
+            --output "$RUNNER_TEMP/channel-source/plan.json" \
+            --validation-dependencies "$RUNNER_TEMP/channel-source/validation-dependencies.json"
       - name: Retain the frozen plan and original source metadata
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

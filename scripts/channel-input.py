@@ -15,8 +15,12 @@ def load(source):
         spec = importlib.util.spec_from_file_location('channel_plan', Path(__file__).with_name('channel-plan.py'))
         module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
         frozen = json.loads(path.read_text())
-        if module.plan(frozen['targetChannel'], publication, lock, raw) != frozen:
+        if module.plan(frozen['targetChannel'], publication, lock, raw, frozen.get('validationDependencies')) != frozen:
             raise ValueError('composition differs from frozen plan')
+    dependencies = json.loads(path.read_text()).get('validationDependencies', {}) if path.exists() else {}
+    for key, name in [('standaloneHarmony','standalone-harmony.json'), ('standaloneSessionFs','standalone-sessionfs.json'), ('mcpgit','mcpgit-program.json')]:
+        if key in dependencies:
+            (source/name).write_text(json.dumps(dependencies[key], indent=2)+'\n')
     (source/'session-sdk.json').write_text(json.dumps(publication['sessionSdk'], indent=2)+'\n')
     return publication, lock
 
@@ -28,3 +32,4 @@ if __name__ == '__main__':
     publication, _ = load(args.source)
     with args.output.open('a') as stream:
         stream.write('channel='+publication['tag']+'\n')
+        stream.write('plan_file='+str(args.source/'plan.json')+'\n' if (args.source/'plan.json').exists() else 'plan_file=\n')

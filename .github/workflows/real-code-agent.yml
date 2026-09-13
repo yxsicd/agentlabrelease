@@ -68,6 +68,9 @@ jobs:
           else
             cp release/candidates/40ecdf4b-linux-x64/{publication,environment-lock}.json "$RUNNER_TEMP/real-composition/"
           fi
+          for file in standalone-harmony.json standalone-sessionfs.json mcpgit-program.json; do
+            cp "release/ci/$file" "$RUNNER_TEMP/real-composition/$file"
+          done
           python3 scripts/channel-input.py --source "$RUNNER_TEMP/real-composition" --output "$GITHUB_OUTPUT"
       - name: Install archive support
         run: |
@@ -111,6 +114,8 @@ jobs:
           AGENTLAB_RELEASE_CHANNEL: ${{ steps.composition.outputs.channel }}
           AGENTLAB_COMPOSITION_DIR: ${{ runner.temp }}/real-composition
           GITHUB_TOKEN: ${{ github.token }}
+          AGENTLAB_STANDALONE_HARMONY_LOCK: ${{ runner.temp }}/real-composition/standalone-harmony.json
+          AGENTLAB_STANDALONE_SESSIONFS_LOCK: ${{ runner.temp }}/real-composition/standalone-sessionfs.json
         run: scripts/ci-public-install-deploy-smoke.sh
       - id: subject
         name: Run real Pi with the public LM Gateway and independently compile every edit
@@ -128,6 +133,8 @@ jobs:
         name: Persist actual capture to TableGit and recover after storage restart
         if: always() && steps.install.outcome == 'success'
         env:
+          AGENTLAB_CHANNEL_PLAN_FILE: ${{ steps.composition.outputs.plan_file }}
+          AGENTLAB_MCPGIT_PROGRAM_LOCK: ${{ runner.temp }}/real-composition/mcpgit-program.json
           AGENTLAB_CAPTURE_PRODUCER_REVISION: ${{ steps.replay.outputs.producer_revision }}
           AGENTLAB_CAPTURE_RUN_ID: ${{ inputs.capture_run_id }}
         run: |

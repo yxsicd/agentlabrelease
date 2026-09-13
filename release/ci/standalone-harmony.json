@@ -1,0 +1,8 @@
+{
+  "schema": "agentlab.demo_dependency.v1",
+  "platform": "linux-x64",
+  "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/alharmony/alharmony-combined-linux-x64-218ce52.tar.zst",
+  "descriptor": "https://github.com/yxsicd/agentlabrelease/releases/download/alharmony/alharmony-combined-linux-x64-218ce52.json",
+  "sha256": "0d854c293f76ea3f16c55c61091fc817523a2e574c38e0516e5dea0280010352",
+  "bytes": 389602
+}

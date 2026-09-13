@@ -12,6 +12,10 @@ import time
 def execute(plan, source, root, run=subprocess.run):
     root.mkdir(parents=True, exist_ok=True)
     publication, lock = plan['publication'], plan['environmentLock']
+    dependencies = plan.get('validationDependencies', {})
+    for key, name in [('standaloneHarmony','standalone-harmony.json'), ('standaloneSessionFs','standalone-sessionfs.json'), ('mcpgit','mcpgit-program.json')]:
+        if key in dependencies:
+            (source/name).write_text(json.dumps(dependencies[key], indent=2)+'\n')
     sdk = source / 'session-sdk.json'
     sdk.write_text(json.dumps(publication['sessionSdk']))
     pack = publication['smoke']['pack']
@@ -20,7 +24,11 @@ def execute(plan, source, root, run=subprocess.run):
     runtime.write_text(json.dumps(dict(artifact=pack, bytes=asset['bytes'], sha256=asset['sha256'])))
     env = dict(os.environ, AGENTLAB_CI_ROOT=str(root),
                AGENTLAB_RELEASE_CHANNEL=plan['sourceChannelOrCandidate'],
-               AGENTLAB_COMPOSITION_DIR=str(source))
+               AGENTLAB_COMPOSITION_DIR=str(source),
+               AGENTLAB_CHANNEL_PLAN_FILE=str(source/'plan.json'),
+               AGENTLAB_STANDALONE_HARMONY_LOCK=str(source/'standalone-harmony.json') if dependencies else 'release/ci/standalone-harmony.json',
+               AGENTLAB_STANDALONE_SESSIONFS_LOCK=str(source/'standalone-sessionfs.json') if dependencies else 'release/ci/standalone-sessionfs.json',
+               AGENTLAB_MCPGIT_PROGRAM_LOCK=str(source/'mcpgit-program.json') if dependencies else 'release/ci/mcpgit-program.json')
     image = lock['images'][0]['reference']
     volume = next(c['volume'] for c in lock['components'] if c['slot'] == 'release')
     install = ['bash', 'scripts/ci-public-install-deploy-smoke.sh']
@@ -46,6 +54,7 @@ def execute(plan, source, root, run=subprocess.run):
     receipt = dict(schema='agentlab.channel-validation.v1', targetChannel=plan['targetChannel'],
                    compositionIdentity=plan['compositionIdentity'], sourceLockSha256=plan['sourceLockSha256'],
                    githubRunId=os.environ.get('GITHUB_RUN_ID'), producerRevision=os.environ.get('GITHUB_SHA'),
+                   validationDependenciesSha256=plan.get('validationDependenciesSha256'),
                    checks={}, qualified=False, activated=False)
     def save():
         receipt['qualified'] = all(receipt['checks'].get(c, {}).get('status') == 'passed' for c in plan['requiredChecks'])
@@ -81,7 +90,7 @@ if __name__ == '__main__':
     module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
     frozen = json.loads((source/'plan.json').read_text())
     actual = module.plan(frozen['targetChannel'], json.loads((source/'publication.json').read_text()),
-                         json.loads((source/'environment-lock.json').read_text()), (source/'environment-lock.json').read_bytes())
+                         json.loads((source/'environment-lock.json').read_text()), (source/'environment-lock.json').read_bytes(), frozen.get('validationDependencies'))
     if actual != frozen:
         raise ValueError('downloaded inputs differ from frozen plan')
     result = execute(frozen, source, args.root.resolve())
