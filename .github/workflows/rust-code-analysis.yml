@@ -1,0 +1,50 @@
+name: Rust code analysis demo
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'crates/agentlab_code_analysis/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/rust-code-analysis.yml'
+  pull_request:
+    paths:
+      - 'crates/agentlab_code_analysis/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/rust-code-analysis.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rust-local-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Run the same Rust unit and CLI integration tests used locally
+        run: |
+          cargo fmt --all --check
+          cargo test --locked -p agentlab_code_analysis
+  pinned-harmony-syntax-coverage:
+    needs: rust-local-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Fetch exact public code-workshop source
+        run: |
+          git clone --no-checkout --depth 1 https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git "$RUNNER_TEMP/harmony-source"
+          git -C "$RUNNER_TEMP/harmony-source" fetch --depth 1 origin 7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6
+          git -C "$RUNNER_TEMP/harmony-source" checkout --detach FETCH_HEAD
+      - name: Run the released-source Rust analyzer directly without Python
+        run: |
+          cargo run --locked -p agentlab_code_analysis -- "$RUNNER_TEMP/harmony-source" "$RUNNER_TEMP/ast-evidence"
+          printf 'Rust syntax coverage completed; inspect analysis.json for unresolved grammar gaps. This is not HAP or subject-Agent acceptance.\n' >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve complete syntax facts and coverage including parse errors
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: rust-harmony-ast-evidence
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/ast-evidence/

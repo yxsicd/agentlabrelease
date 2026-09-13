@@ -31,3 +31,26 @@ that transport/method-construction code is separate from this Rust analyzer.
 Full source syntax facts remain in the captured AST evidence. Type resolution,
 resolved calls, control/dataflow and whole-corpus TableGit ingestion are further
 capabilities, not claims of this version.
+
+## Local iteration and public Action
+
+Run the same checks used by `rust-code-analysis.yml`:
+
+```sh
+cargo fmt --all --check
+cargo test --locked -p agentlab_code_analysis
+cargo run --locked -p agentlab_code_analysis -- /path/to/source-repo /tmp/ast-evidence
+```
+
+Five tests cover syntax extraction plus real Git/CLI execution: multiline
+imports/ArkUI, comment exclusion and method ownership, whitespace-stable IDs,
+fixed committed source independent from dirty/untracked Workspace files,
+byte-identical repeated exports and retained invalid-syntax evidence.
+
+The independent Rust Action runs on main pushes, relevant pull requests and
+manual dispatch. After Rust tests it fetches the fixed public Harmony source,
+runs this CLI directly with no Python and retains complete facts/coverage.
+The separate knowledge-seed Action tests TableGit/history/import integration;
+run34750910500 passed733-row roundtrip and recovered17 files/9640588 bytes.
+A successful syntax-coverage job can contain declared grammar gaps. Inspect
+analysis.json; it is not a claim of full ArkTS or HAP qualification.
