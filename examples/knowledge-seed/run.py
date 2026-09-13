@@ -20,6 +20,8 @@ def build(root, source=None):
         import shutil
         shutil.copytree(source,project,dirs_exist_ok=True)
     evidence=root/'evidence';evidence.mkdir()
+    seed_bytes=Path(__file__).with_name('builder-seed.json').read_bytes()
+    (evidence/'builder-seed.json').write_bytes(seed_bytes)
     revision=subprocess.run(['git','-C',str(project),'rev-parse','HEAD'],capture_output=True,text=True).stdout.strip() or 'owned-fixture'
     nodes=[];edges=[];skills=[];links=[]
     for path in sorted(project.rglob('*.py')):
@@ -29,7 +31,7 @@ def build(root, source=None):
             if isinstance(symbol,(ast.FunctionDef,ast.AsyncFunctionDef)):
                 key=identity(relative,symbol.name);nodes.append(dict(id=key,path=relative,symbol=symbol.name,line=symbol.lineno,sourceSha256=digest,sourceRevision=revision))
                 sid=identity('skill',relative,symbol.name)
-                skills.append(dict(id=sid,title=f'Maintain {relative}:{symbol.name}',scope=relative,body=f'Inspect {symbol.name} and its callers before changing its return contract. Verify downstream tests.',sourceRevision=revision,status='candidate'))
+                skills.append(dict(id=sid,title=f'Maintain {relative}:{symbol.name}',scope=relative,body=f'Inspect {symbol.name} and its callers before changing its return contract. Verify downstream tests.',sourceRevision=revision,status='candidate',feedbackEvaluationIds=[]))
                 links.append(dict(id=identity(sid,key),skillId=sid,nodeId=key,relation='maintains'))
                 for call in ast.walk(symbol):
                     if isinstance(call,ast.Call):
@@ -50,8 +52,8 @@ def build(root, source=None):
         assert calibrated
         task['status']='calibrated'
         (project/'price.py').write_text('def price(quantity):\n    return quantity * 10\n')
-    updates=[dict(table='knowledge_skills',id=s['id'],fields={'body':s['body']+' Preserve boundary behavior and prior requirements; calibration must reject boundary and regression mutations.','status':'verified_fixture' if calibrated else 'candidate'}) for s in skills]
-    package=dict(schema='agentlab.knowledge_seed.v1',builder='deterministic_mock',sourceRevision=revision,tables=tables,updates=updates,calibrated=calibrated,scope='Python AST fixture; no Harmony analysis or strong-Agent claim')
+    updates=[dict(table='knowledge_skills',id=s['id'],fields={'body':s['body']+' Preserve boundary behavior and prior requirements; calibration must reject boundary and regression mutations.','status':'verified_fixture' if calibrated else 'candidate','feedbackEvaluationIds':[e['id'] for e in tables['knowledge_evaluations']]}) for s in skills]
+    package=dict(schema='agentlab.knowledge_seed.v1',builder='deterministic_mock',builderSeedSha256=hashlib.sha256(seed_bytes).hexdigest(),sourceRevision=revision,tables=tables,updates=updates,calibrated=calibrated,scope='Python AST fixture; no Harmony analysis or strong-Agent claim')
     (evidence/'knowledge-package.json').write_text(json.dumps(package,indent=2)+'\n')
     (evidence/'participant.json').write_text(json.dumps({'implementation':'knowledge-builder-mock'})+'\n')
     return package

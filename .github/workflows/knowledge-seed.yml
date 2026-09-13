@@ -14,6 +14,8 @@ jobs:
       AGENTLAB_COMPOSITION_DIR: release/candidates/40ecdf4b-linux-x64
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Validate calibration and stable identities
+        run: python3 -m unittest discover -s tests -p 'test_knowledge_seed.py'
       - name: Build structure, Skill rows, task and independent mutation calibration
         run: python3 examples/knowledge-seed/run.py --root "$AGENTLAB_CI_ROOT/builder"
       - name: Materialize receipt-bound SDK inputs
