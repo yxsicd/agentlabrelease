@@ -25,7 +25,7 @@ programming/analysis after collection; no analysis endpoint is required.
 
 ## Start
 
-Current candidate: [c22b7bfd](../../release/candidates/c22b7bfd-linux-x64/publication.json).
+Current candidate: [40ecdf4b](../../release/candidates/40ecdf4b-linux-x64/publication.json).
 The [executable public demos](../../examples/README.md) are shared by local
 consumers and GitHub Actions. Start with the published three-protocol demo,
 then run TableGit Session recovery and the portable Mock campaign. Inspect
@@ -43,10 +43,11 @@ calls, observes files, evaluates results, and controls Fork/restart. A participa
 claim is not a test verdict. Retain raw test data and failure evidence without
 redaction. Controlled benchmark data is not production user data.
 
-This candidate's real Pi/GLM SWE run passed 10/10 evaluator tests on D, but full
-whitebox coverage and normalized analysis tables remain incomplete. Portable
+The prior C22 real Pi/GLM SWE run passed 10/10 evaluator tests on D. The new
+40ecdf4b candidate closes independent controller capture, formal SessionFS Fork
+and paired restart on that SWE lineage; full whitebox coverage remains incomplete. Portable
 Mock CI does not qualify full Session/TableGit or replace D/A/B/C, Harmony HAP,
-restart/parity and fixed-channel gates. Runtime/template contract 7 is a
+restart/parity and fixed-channel gates. Runtime/template contract 11 is a
 coordinated deployment with independently provisioned AgentLab-owned tables.
 
 1. Read [evaluation-model.md](references/evaluation-model.md) before defining a
