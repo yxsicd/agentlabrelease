@@ -123,3 +123,113 @@ fn validates_negative_variant_and_promotes_only_explicit_verified_lesson() {
         .success());
     fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn utility_lessons_promote_their_own_identity_and_scope() {
+    let root = std::env::temp_dir().join(format!(
+        "al-utility-experience-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&root).unwrap();
+    let binary = env!("CARGO_BIN_EXE_agentlab-experience");
+    let instance = root.join("instance");
+    fs::create_dir(&instance).unwrap();
+    for name in ["tool_calls", "checks"] {
+        fs::write(instance.join(format!("{name}.jsonl")), "").unwrap();
+    }
+    let analysis = root.join("analysis.json");
+    fs::write(
+        &analysis,
+        json!({"request":{"bindings":[{"revision":"input-cut"}]},"result":{"rows":[]}}).to_string(),
+    )
+    .unwrap();
+    let knowledge = root.join("knowledge");
+    fs::create_dir(&knowledge).unwrap();
+    for name in ["maintainer_skills", "program_facts", "evaluation_cases"] {
+        fs::write(knowledge.join(format!("{name}.jsonl")), "").unwrap();
+    }
+    for scenario in ["debounce", "image-url"] {
+        let response = Command::new(binary)
+            .args(["contract", scenario])
+            .output()
+            .unwrap();
+        assert!(response.status.success());
+        let contract: Value = serde_json::from_slice(&response.stdout).unwrap();
+        let variants: serde_json::Map<String, Value> = contract["expected"]
+            .as_object()
+            .unwrap()
+            .iter()
+            .map(|(name, expected)| (name.clone(), json!({"pass":expected})))
+            .collect();
+        let calibration = root.join(format!("{scenario}.json"));
+        fs::write(
+            &calibration,
+            json!({"sourceRevision":"source-cut","lesson":contract,"variants":variants})
+                .to_string(),
+        )
+        .unwrap();
+        let experience = root.join(format!("{scenario}-experience"));
+        assert!(Command::new(binary)
+            .arg("observe")
+            .args([
+                instance.clone(),
+                analysis.clone(),
+                calibration.clone(),
+                experience.clone()
+            ])
+            .output()
+            .unwrap()
+            .status
+            .success());
+        let output = root.join(format!("{scenario}-promotion"));
+        assert!(Command::new(binary)
+            .arg("promote")
+            .args([experience.clone(), knowledge.clone(), output.clone()])
+            .arg(contract["id"].as_str().unwrap())
+            .output()
+            .unwrap()
+            .status
+            .success());
+        let facts = rows(&output.join("program_facts.jsonl"));
+        assert_eq!(facts.len(), 1);
+        assert_eq!(facts[0]["id"], contract["factId"]);
+        assert_eq!(facts[0]["scope"], contract["scope"]);
+        assert_ne!(facts[0]["id"], "lesson-loading-lifecycle");
+        let mut rejected: Value = serde_json::from_slice(&fs::read(&calibration).unwrap()).unwrap();
+        let negative = if scenario == "debounce" {
+            "wrong-window"
+        } else {
+            "wrong-dispatch"
+        };
+        rejected["variants"][negative]["pass"] = json!(true);
+        fs::write(&calibration, rejected.to_string()).unwrap();
+        let failure = root.join(format!("{scenario}-rejected"));
+        assert!(Command::new(binary)
+            .arg("observe")
+            .args([
+                instance.clone(),
+                analysis.clone(),
+                calibration.clone(),
+                failure.clone()
+            ])
+            .output()
+            .unwrap()
+            .status
+            .success());
+        assert!(!Command::new(binary)
+            .arg("promote")
+            .args([
+                failure,
+                knowledge.clone(),
+                root.join(format!("{scenario}-bad-promotion"))
+            ])
+            .arg(contract["id"].as_str().unwrap())
+            .output()
+            .unwrap()
+            .status
+            .success());
+    }
+}

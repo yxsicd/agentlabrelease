@@ -54,3 +54,19 @@ demo a real Agent run, an automatic task generator, or a completed flywheel.
 For a new maintainer: read goal, semantic/program-analysis and seed/calibration
 Skills, reproduce the fixed experiment, inspect its lesson evidence, update the
 appropriate method versus target layer, verify regressions, and leave HANDOFF.
+
+
+### Scenario-owned calibration contracts
+
+`agentlab-experience contract loading|debounce|image-url` emits the owned lesson
+identity, variant expectations, scope, target IDs and reusable guidance. Freeze
+this contract with the independently executed calibration in the runtime instance.
+Observe every declared baseline/reference/negative outcome, archive generic
+failed-check and tool-error SQL, and promote the explicit committed lesson.
+Promotion derives its fact/Skill identity and qualification from that durable
+contract; never reuse loading conclusions for click or image evidence. Source
+Agent failures remain observations, separate from verified calibration-method
+lessons. Frozen operational knowledge must remain unchanged after promotion.
+Replay raw Release archives or original subject artifacts without redispatching
+Agent/build; preserve original capture identity and HAP URIs. Temporary mutation
+source trees stay outside exported calibration receipts and reusable JSONLs.

@@ -10,7 +10,7 @@ on:
       capture_run_id:
         type: string
         default: ''
-        description: Replay only TableGit persistence from a completed loading capture; no new Agent or HAP
+        description: Replay only TableGit persistence from a completed source capture; no new Agent or HAP
 permissions:
   contents: write
 jobs:
@@ -28,8 +28,8 @@ jobs:
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - name: Restore immutable loading capture for persistence replay
-        if: inputs.capture_run_id != '' && inputs.scenario == 'loading'
+      - name: Restore immutable scenario capture for persistence replay
+        if: inputs.capture_run_id != '' && contains(fromJSON('["loading","debounce","image-url"]'), inputs.scenario)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -42,13 +42,16 @@ jobs:
           assert v['status']=='completed' and v['head_branch']=='main'
           assert v['path']=='.github/workflows/harmony-navigation-subject.yml'
           PY
-          gh release download "evidence-loading-subject-$AGENTLAB_CAPTURE_RUN_ID" --pattern raw-evidence.tar.zst --dir "$RUNNER_TEMP/capture"
-          tar --zstd -xf "$RUNNER_TEMP/capture/raw-evidence.tar.zst" -C "$AGENTLAB_CI_ROOT"
+          if gh release download "evidence-$AGENTLAB_ASSESSMENT_SCENARIO-subject-$AGENTLAB_CAPTURE_RUN_ID" --pattern raw-evidence.tar.zst --dir "$RUNNER_TEMP/capture"; then
+            tar --zstd -xf "$RUNNER_TEMP/capture/raw-evidence.tar.zst" -C "$AGENTLAB_CI_ROOT"
+          else
+            gh run download "$AGENTLAB_CAPTURE_RUN_ID" --name "$AGENTLAB_ASSESSMENT_SCENARIO-subject-evidence" --dir "$AGENTLAB_CI_ROOT/raw/$AGENTLAB_CAPTURE_RUN_ID"
+          fi
           python3 - <<'PY'
           import json,os,shutil
           from pathlib import Path
           r=Path(os.environ['AGENTLAB_CI_ROOT']);e=r/'raw'/os.environ['AGENTLAB_CAPTURE_RUN_ID']
-          assert json.loads((e/'frozen-task.json').read_text())['id']=='case-loading-subject-v1'
+          assert json.loads((e/'frozen-task.json').read_text())['id']=='case-'+os.environ['AGENTLAB_ASSESSMENT_SCENARIO']+'-subject-v1'
           shutil.copytree(e,r/'assessment/evidence')
           shutil.rmtree(r/'raw')
           PY
@@ -104,14 +107,14 @@ jobs:
           (e/'binary-publication.json').write_text(json.dumps(rows,indent=2)+'\n')
           PY
       - name: Preserve raw evidence and build typed actual-run entities
-        if: always() && inputs.scenario == 'loading'
+        if: always() && contains(fromJSON('["loading","debounce","image-url"]'), inputs.scenario)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           test -f "$AGENTLAB_CI_ROOT/assessment/evidence/frozen-task.json"
-          tag="evidence-loading-subject-$GITHUB_RUN_ID"
+          tag="evidence-$AGENTLAB_ASSESSMENT_SCENARIO-subject-$GITHUB_RUN_ID"
           if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --target "$GITHUB_SHA" --prerelease --title "Loading subject evidence $GITHUB_RUN_ID" --notes "Captured loading run $AGENTLAB_CAPTURE_RUN_ID; persistence run $GITHUB_RUN_ID. Raw evidence and typed runtime tables; inspect Agent, build and method verdicts independently."
+            gh release create "$tag" --target "$GITHUB_SHA" --prerelease --title "Source subject evidence $GITHUB_RUN_ID" --notes "Captured source run $AGENTLAB_CAPTURE_RUN_ID; persistence run $GITHUB_RUN_ID. Raw evidence and typed runtime tables; inspect Agent, build and method verdicts independently."
           fi
           mkdir -p "$AGENTLAB_CI_ROOT/raw"
           ln -s "$AGENTLAB_CI_ROOT/assessment/evidence" "$AGENTLAB_CI_ROOT/raw/$AGENTLAB_CAPTURE_RUN_ID"
@@ -120,18 +123,20 @@ jobs:
           cargo build --locked -p agentlab_code_analysis --bin agentlab-asset-model --bin agentlab-experience
           target/debug/agentlab-asset-model examples/knowledge-seed/seeds/harmony-code-workshop "$AGENTLAB_CI_ROOT/normalized-runtime" "https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/raw-evidence.tar.zst" "$AGENTLAB_CAPTURE_RUN_ID=$AGENTLAB_CI_ROOT/assessment/evidence"
           python3 - <<'PY'
-          import json,os,hashlib,shutil
+          import json,os,hashlib,shutil,subprocess
           from pathlib import Path
           root=Path(os.environ['AGENTLAB_CI_ROOT']);inputs=root/'evaluation-inputs';inputs.mkdir();cal=inputs/'calibration';cal.mkdir()
           shutil.copytree(root/'normalized-runtime/knowledge',inputs/'knowledge')
           evidence=root/'assessment/evidence'
-          variants={name:json.loads((evidence/(name+'-oracle.stdout.json')).read_text()) for name in ['baseline','reference','wrong-cancel','wrong-fallback']}
-          source=evidence/'initial/common/src/main/ets/view/DelayedLoadingView.ets'
+          scenario=os.environ['AGENTLAB_ASSESSMENT_SCENARIO'];lesson=json.loads(subprocess.check_output(['target/debug/agentlab-experience','contract',scenario]))
+          names={'loading':['baseline','reference','wrong-cancel','wrong-fallback'],'debounce':['baseline','reference','wrong-boundary','wrong-window'],'image-url':['baseline','reference','wrong-protocol','wrong-dispatch']}[scenario]
+          variants={name:json.loads((evidence/(name+'-oracle.stdout.json')).read_text()) for name in names}
+          task=json.loads((evidence/'frozen-task.json').read_text());source=evidence/'initial'/task['paths'][0]
           if (root/'capture-source.json').exists():shutil.copy2(root/'capture-source.json',inputs/'capture-source.json')
-          (cal/'calibration.json').write_text(json.dumps(dict(sourceRevision='7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6',sourceDigest=hashlib.sha256(source.read_bytes()).hexdigest(),oracleDigest=json.loads((evidence/'frozen-task.json').read_text())['oracleDigest'],scope='actual submitted lifecycle/shared breakpoint methods; timer/enum seam',variants=variants),indent=2)+'\n')
+          (cal/'calibration.json').write_text(json.dumps(dict(sourceRevision='7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6',sourceDigest=hashlib.sha256(source.read_bytes()).hexdigest(),oracleDigest=json.loads((evidence/'frozen-task.json').read_text())['oracleDigest'],scope=task['assessmentScope'],lesson=lesson,variants=variants),indent=2)+'\n')
           PY
       - name: Persist actual runtime, historical contexts and experience in released TableGit
-        if: always() && inputs.scenario == 'loading'
+        if: always() && contains(fromJSON('["loading","debounce","image-url"]'), inputs.scenario)
         run: |
           python3 scripts/channel-input.py --source "$AGENTLAB_COMPOSITION_DIR" --output "$RUNNER_TEMP/tablegit-inputs"
           mapfile -t runtime < <(python3 - <<'PY'
@@ -143,11 +148,11 @@ jobs:
           )
           /usr/bin/python3 examples/tablegit-session/run.py --image "${runtime[0]}" --runtime-volume "${runtime[1]}" --sdk-program "$AGENTLAB_COMPOSITION_DIR/session-sdk.json" --root "$AGENTLAB_CI_ROOT/store" --asset-model-export "$AGENTLAB_CI_ROOT/normalized-runtime/instances/$AGENTLAB_CAPTURE_RUN_ID" --asset-instance-id "$AGENTLAB_CAPTURE_RUN_ID" --experience-real-inputs "$AGENTLAB_CI_ROOT/evaluation-inputs"
       - name: Publish complete TableGit history and analysis evidence
-        if: always() && inputs.scenario == 'loading'
+        if: always() && contains(fromJSON('["loading","debounce","image-url"]'), inputs.scenario)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="evidence-loading-subject-$GITHUB_RUN_ID"
+          tag="evidence-$AGENTLAB_ASSESSMENT_SCENARIO-subject-$GITHUB_RUN_ID"
           mapfile -t evidence_dirs < <(python3 - <<'PY'
           import os
           from pathlib import Path
@@ -163,10 +168,10 @@ jobs:
           name: ${{ inputs.scenario || 'navigation' }}-subject-evidence
           path: ${{ env.AGENTLAB_CI_ROOT }}/assessment/evidence/
       - name: Preserve typed entities and TableGit failures
-        if: always() && inputs.scenario == 'loading'
+        if: always() && contains(fromJSON('["loading","debounce","image-url"]'), inputs.scenario)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: loading-tablegit-evidence
+          name: ${{ inputs.scenario }}-tablegit-evidence
           path: |
             ${{ env.AGENTLAB_CI_ROOT }}/normalized-runtime/
             ${{ env.AGENTLAB_CI_ROOT }}/evaluation-inputs/

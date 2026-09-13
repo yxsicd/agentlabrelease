@@ -7,8 +7,21 @@ use std::{fs, path::Path};
 fn load(path: &Path) -> Value {
     serde_json::from_slice(&fs::read(path).unwrap()).unwrap()
 }
+fn contract(scenario: &str) -> Value {
+    let (id, scope, phenomenon, cause, change, fact, skill, body, expected, qualification) = match scenario {
+        "loading" => ("loading-reappearance-cancels-old-timer", "isolated-loading-lifecycle", "Repeated appearance can leave an old timer and stale visibility", "Scheduling a new timer without cancelling the previous one retains pending work", "Cancel the previous timer and reset visibility before scheduling on appearance", "lesson-loading-lifecycle", "skill-loading-lifecycle-method", "Test repeated appearance, cancellation, visibility reset and breakpoint delay with an independently controlled scheduler. Require the reference to pass and an omitted-cancellation variant to fail. Cancel old pending work before replacing its handle. This evidence covers an isolated lifecycle seam; qualify HAP and UI separately.", json!({"baseline":false,"reference":true,"wrong-cancel":false}), "isolated timer/breakpoint scheduler; not HAP or UI"),
+        "debounce" => ("independent-click-accepted-window", "actual-click-clock-seam", "Independent click handlers interfere and suppressed clicks can postpone acceptance", "A shared timestamp mixes handlers and updating it on suppression extends the window", "Own the accepted-click timestamp per closure and update it only after acceptance", "lesson-independent-click-window", "skill-independent-click-window-method", "Execute actual utility and component click bodies with controlled time. Test first call at zero, independent handlers, exact/default wait, unchanged accepted-click windows and actual event payload forwarding. Require boundary and window-extension negatives to fail. Qualify full builds and UI separately.", json!({"baseline":false,"reference":true,"wrong-boundary":false,"wrong-window":false}), "actual utility/click methods with modeled Date/event sink; not UI"),
+        "image-url" => ("shared-image-url-resource-routing", "actual-image-url-resource-seam", "Malformed HTTP prefixes can be misclassified as network image resources", "Protocol-prefix classification ignores valid authorities and shared resource dispatch", "Validate HTTP/S URL authorities and preserve shared predicate resource routing", "lesson-shared-image-url-routing", "skill-shared-image-url-routing-method", "Execute actual URL predicate and ImageUtil resource method against independently labeled fixtures. Preserve query/fragment network strings and local/empty routing. Require protocol and stale-resource-dispatch negatives to fail. Node URL models the platform seam; qualify Harmony parser and UI separately.", json!({"baseline":false,"reference":true,"wrong-protocol":false,"wrong-dispatch":false}), "actual predicate/resource method with modeled platform parser/resources; not platform parser or UI"),
+        _ => panic!("No owned lesson contract for this scenario"),
+    };
+    json!({"id":id,"scope":scope,"phenomenon":phenomenon,"cause":cause,"change":change,"factId":fact,"skillId":skill,"body":body,"expected":expected,"qualification":qualification})
+}
 fn main() {
     let a: Vec<String> = std::env::args().collect();
+    if a.get(1).map(String::as_str) == Some("contract") {
+        println!("{}", contract(&a[2]));
+        return;
+    }
     assert!(a.len() >= 6, "observe INSTANCE ANALYSIS CALIBRATION OUTPUT | promote EXPERIENCE KNOWLEDGE OUTPUT LESSON_ID");
     let mut t = Tables::new();
     if a[1] == "calibrate" {
@@ -41,7 +54,7 @@ fn main() {
                 serde_json::from_slice(&reply.stdout).unwrap(),
             );
         }
-        let receipt = json!({"sourceRevision":provenance["sourceRevision"],"sourcePath":provenance["path"],"sourceDigest":provenance["sha256"],"oracleDigest":hash(&fs::read(oracle).unwrap()),"variants":variants,"scope":"isolated-loading-lifecycle","harmonyBuildQualified":false,"uiQualified":false});
+        let receipt = json!({"sourceRevision":provenance["sourceRevision"],"sourcePath":provenance["path"],"sourceDigest":provenance["sha256"],"oracleDigest":hash(&fs::read(oracle).unwrap()),"variants":variants,"scope":"isolated-loading-lifecycle","lesson":contract("loading"),"harmonyBuildQualified":false,"uiQualified":false});
         fs::write(
             output.join("calibration.json"),
             serde_json::to_vec_pretty(&receipt).unwrap(),
@@ -109,29 +122,40 @@ fn main() {
                 json!({"id":evidence,"assetClass":"evaluation-instance","lessonId":id,"kind":"adapter-tool-error","authority":call["authority"],"sourceTable":"tool_calls","sourceRowId":call["id"],"inputRevision":analysis["request"]["bindings"][0]["revision"],"record":call}),
             );
         }
-        let id = "loading-reappearance-cancels-old-timer";
-        let passed = calibration["variants"]["baseline"]["pass"] == false
-            && calibration["variants"]["reference"]["pass"] == true
-            && calibration["variants"]["wrong-cancel"]["pass"] == false;
+        let lesson = &calibration["lesson"];
+        let id = lesson["id"]
+            .as_str()
+            .expect("Owned calibration lesson contract");
+        let evidence_id = format!("{id}-calibration");
+        let analysis_id = format!("{id}-variant-comparison");
+        let validation_id = format!("{id}-variants");
+        let passed = lesson["expected"]
+            .as_object()
+            .unwrap()
+            .iter()
+            .all(|(name, expected)| {
+                calibration["variants"][name]["pass"] == *expected
+                    && calibration["variants"][name]["error"].is_null()
+            });
         put(
             &mut t,
             "analysis_records",
-            json!({"id":"loading-variant-comparison","assetClass":"evaluation-instance","kind":"calibration-comparison","code":"baseline.pass == false && reference.pass == true && wrong-cancel.pass == false","sourceRevision":calibration["sourceRevision"],"sourceDigest":calibration["sourceDigest"],"oracleDigest":calibration["oracleDigest"],"result":{"passed":passed},"evidenceIds":["loading-calibration"]}),
+            json!({"id":analysis_id,"assetClass":"evaluation-instance","kind":"calibration-comparison","code":"Every declared variant pass equals its frozen expected value; no oracle infrastructure error","expected":lesson["expected"],"sourceRevision":calibration["sourceRevision"],"sourceDigest":calibration["sourceDigest"],"oracleDigest":calibration["oracleDigest"],"result":{"passed":passed},"evidenceIds":[evidence_id]}),
         );
         put(
             &mut t,
             "experiment_lessons",
-            json!({"id":id,"assetClass":"evaluation-instance","kind":"calibrated-method-lesson","status":if passed {"verified"} else {"rejected"},"scope":"isolated-loading-lifecycle","phenomenon":"Repeated appearance can leave an old timer and stale visibility","attribution":"tested-code-lifecycle","cause":"Scheduling a new timer without cancelling the previous one retains pending work","change":"Cancel the previous timer and reset visibility before scheduling on appearance","analysisId":"loading-variant-comparison","sourceRevision":calibration["sourceRevision"],"evidenceIds":["loading-calibration"],"validationIds":["loading-variants"],"targetIds":["lesson-loading-lifecycle","skill-loading-lifecycle-method"]}),
+            json!({"id":id,"assetClass":"evaluation-instance","kind":"calibrated-method-lesson","status":if passed {"verified"} else {"rejected"},"scope":lesson["scope"],"phenomenon":lesson["phenomenon"],"attribution":"independent-variant-comparison","cause":lesson["cause"],"change":lesson["change"],"analysisId":analysis_id,"sourceRevision":calibration["sourceRevision"],"evidenceIds":[evidence_id],"validationIds":[validation_id],"targetIds":[lesson["factId"],lesson["skillId"]],"promotionContract":lesson}),
         );
         put(
             &mut t,
             "lesson_evidence",
-            json!({"id":"loading-calibration","assetClass":"evaluation-instance","lessonId":id,"kind":"executed-calibration","authority":"operator-owned-oracle","record":calibration}),
+            json!({"id":evidence_id,"assetClass":"evaluation-instance","lessonId":id,"kind":"executed-calibration","authority":"operator-owned-oracle","record":calibration}),
         );
         put(
             &mut t,
             "lesson_validations",
-            json!({"id":"loading-variants","assetClass":"evaluation-instance","lessonId":id,"kind":"positive-negative-calibration","passed":passed,"scope":"isolated-loading-lifecycle","evidenceId":"loading-calibration","expected":{"baseline":false,"reference":true,"wrong-cancel":false},"oracleDigest":calibration["oracleDigest"],"sourceDigest":calibration["sourceDigest"],"harmonyBuildQualified":false,"uiQualified":false}),
+            json!({"id":validation_id,"assetClass":"evaluation-instance","lessonId":id,"kind":"positive-negative-calibration","passed":passed,"scope":lesson["scope"],"evidenceId":evidence_id,"expected":lesson["expected"],"oracleDigest":calibration["oracleDigest"],"sourceDigest":calibration["sourceDigest"],"harmonyBuildQualified":false,"uiQualified":false}),
         );
         assert!(!Path::new(&a[5]).exists());
         println!("{}", export(Path::new(&a[5]), "evaluation-instance", &t));
@@ -145,10 +169,6 @@ fn main() {
         assert_eq!(
             lesson["status"], "verified",
             "Observation alone cannot become reusable guidance"
-        );
-        assert_eq!(
-            lesson["id"], "loading-reappearance-cancels-old-timer",
-            "This promotion recipe owns only the loading lifecycle lesson"
         );
         let validations = rows(&source.join("lesson_validations.jsonl"));
         assert!(lesson["validationIds"]
@@ -171,8 +191,9 @@ fn main() {
             "../../../skills/agentlab-experiment-learning/SKILL.md"
         ));
         let method_revision = std::env::var("GITHUB_SHA").ok();
-        let fact = json!({"id":"lesson-loading-lifecycle","assetClass":"reusable-knowledge","kind":"verified-lesson","scope":lesson["scope"],"phenomenon":lesson["phenomenon"],"cause":lesson["cause"],"change":lesson["change"],"sourceRevision":lesson["sourceRevision"],"sourceLessonId":lesson["id"],"sourceLessonExportDigest":provenance,"lessonSource":lineage,"methodSkillId":"agentlab-experiment-learning","methodDigest":method_digest,"methodRevision":method_revision,"validationIds":lesson["validationIds"],"qualification":"isolated timer/breakpoint scheduler; not HAP or UI"});
-        let skill = json!({"id":"skill-loading-lifecycle-method","assetClass":"reusable-knowledge","skillLayer":"method","role":"maintenance","stage":"calibration","objectId":"loading-lifecycle","title":"Calibrate repeated loading lifecycle","factIds":["lesson-loading-lifecycle"],"sourceLessonId":lesson["id"],"sourceLessonExportDigest":provenance,"lessonSource":lineage,"methodSkillId":"agentlab-experiment-learning","methodDigest":method_digest,"methodRevision":method_revision,"body":"Test repeated appearance, cancellation, visibility reset and breakpoint delay with an independently controlled scheduler. Require the reference to pass and an omitted-cancellation variant to fail. Cancel old pending work before replacing its handle. This evidence covers an isolated lifecycle seam; qualify HAP and UI separately."});
+        let promotion = &lesson["promotionContract"];
+        let fact = json!({"id":promotion["factId"],"assetClass":"reusable-knowledge","kind":"verified-lesson","scope":lesson["scope"],"phenomenon":lesson["phenomenon"],"cause":lesson["cause"],"change":lesson["change"],"sourceRevision":lesson["sourceRevision"],"sourceLessonId":lesson["id"],"sourceLessonExportDigest":provenance,"lessonSource":lineage,"methodSkillId":"agentlab-experiment-learning","methodDigest":method_digest,"methodRevision":method_revision,"validationIds":lesson["validationIds"],"qualification":promotion["qualification"]});
+        let skill = json!({"id":promotion["skillId"],"assetClass":"reusable-knowledge","skillLayer":"method","role":"maintenance","stage":"calibration","objectId":lesson["id"],"title":lesson["phenomenon"],"factIds":[promotion["factId"]],"sourceLessonId":lesson["id"],"sourceLessonExportDigest":provenance,"lessonSource":lineage,"methodSkillId":"agentlab-experiment-learning","methodDigest":method_digest,"methodRevision":method_revision,"body":promotion["body"]});
         t.get_mut("program_facts")
             .unwrap()
             .insert(fact["id"].as_str().unwrap().into(), fact);

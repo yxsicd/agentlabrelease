@@ -171,6 +171,10 @@ The `utility-calibration` job in the knowledge Action performs this entire recip
 on a fresh runner and preserves all 16 positive/negative stage receipts. Wrong
 resource dispatch passes stage one but fails stage two. Full subject evidence is
 preserved in the subject Action artifact and successful HAPs in its experiment
-Release. Automatic TableGit runtime replay/lesson promotion is currently wired
-for loading only; utility runtime collection must not be described as complete
-until its scenario-specific persistence and promotion path has been verified.
+Release. Automatic TableGit replay accepts all three scenarios. Rust emits an owned
+scenario lesson contract, freezes it with the actual calibration, and promotes
+only that committed lesson into a separate candidate. Utility evidence must never
+receive a loading lifecycle lesson. Replay can restore raw Release archives or
+the original complete subject artifact without redispatching the Agent or build.
+Qualification requires independently verified typed import, context history,
+frozen-knowledge preservation and candidate lineage.
