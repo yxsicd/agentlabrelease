@@ -99,8 +99,9 @@ this snapshot is the current instance authority export. Source is pinned to code
 `7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6`. The Rust analyzer parses all556 ArkTS/TypeScript files and imports AST facts
 for20 selected scenario files. Imports include multiline syntax. Two local common-package bindings are checked against package dependency
 files and entry metadata; external aliases and symbol/runtime calls remain
-unresolved. A SQL join archives four possible consumer/barrel/export paths,
-without claiming four resolved imported-symbol calls.
+unresolved. A SQL join archives possible consumer/barrel/export paths for the selected
+corpus, preserving established paths as scope grows without claiming resolved
+imported-symbol calls.
 
 Five candidates cover feedback, delayed loading, navigation, image URLs and
 independent click handlers. Click-handler behavior has an isolated-method

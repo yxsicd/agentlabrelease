@@ -38,3 +38,5 @@ the exact grammar digest; this does not qualify typing, resolved calls or HAP.
 When improving an analyzer, update existing facts and remove obsolete AST rows
 using their actual versions; archive old cuts and do not merely insert facts on
 the first run. Test fixtures need process-local uniqueness under parallel tests.
+
+When expanding the selected corpus, validate established dependency paths while allowing additional legitimate paths. A fixed result count confuses broader coverage with regression; archive the query/input cut and describe the observed path count without claiming symbol resolution.
