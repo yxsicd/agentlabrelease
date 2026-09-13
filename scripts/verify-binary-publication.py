@@ -10,8 +10,12 @@ a=p.parse_args();a.downloads.mkdir(parents=True,exist_ok=False)
 rows=json.loads(a.manifest.read_text());verified=[]
 for n,row in enumerate(rows):
     target=a.downloads/f'{n:04d}.hap'
-    subprocess.run(['curl','--fail','--location','--silent','--show-error','--retry','4','--retry-all-errors','--output',str(target),row['uri']],check=True)
-    digest=hashlib.file_digest(target.open('rb'),'sha256').hexdigest()
+    result=subprocess.run(['curl','--fail','--location','--silent','--show-error','--retry','4','--retry-all-errors','--output',str(target),row['uri']])
+    if result.returncode:
+        verified.append(dict(label=row['label'],uri=row['uri'],exact=False,downloadExitCode=result.returncode,observedBytes=target.stat().st_size if target.exists() else 0))
+        break
+    with target.open('rb') as binary:
+        digest=hashlib.file_digest(binary,'sha256').hexdigest()
     observed=dict(label=row['label'],uri=row['uri'],expectedSHA256=row['sha256'],observedSHA256=digest,expectedBytes=row['bytes'],observedBytes=target.stat().st_size)
     observed['exact']=observed['expectedSHA256']==digest and observed['expectedBytes']==observed['observedBytes'];verified.append(observed)
     if not observed['exact']:break

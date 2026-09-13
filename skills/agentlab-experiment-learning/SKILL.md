@@ -101,3 +101,7 @@ The Recover published experiment binaries Action restores captured publication
 metadata, downloads every URI and checks exact bytes/SHA256 without Agent or
 rebuild. Use scripts/verify-binary-publication.py locally with the same manifest.
 Its recovery receipt is external-deliverable qualification, not SessionFS restore.
+
+Recovery receipts also preserve failed download exit codes and partial byte
+counts. A transport failure leaves an explicit unsuccessful receipt; it never
+becomes a missing observation or a claim that original HAP bytes were corrupt.
