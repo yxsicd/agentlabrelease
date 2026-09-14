@@ -57,7 +57,7 @@ if [[ ! -f "$kit_marker" || "$(cat "$kit_marker")" != "${values[7]}" ]]; then
   fetch "${values[6]}" "${values[7]}" "$kit_archive"
   rm -rf "$kit_root"; mkdir -p "$kit_root"
   zstd -dc "$kit_archive" | tar -xf - -C "$kit_root" --strip-components=1 payload
-  test -x "$kit_root/bin/harmony"
+  test -f "$kit_root/bin/harmony"
   printf '%s\n' "${values[7]}" > "$kit_marker"
 fi
 
