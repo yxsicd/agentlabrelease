@@ -178,6 +178,23 @@ class Participant:
         finally:
             lifecycle.update(endedAt=datetime.now(timezone.utc).isoformat(),
                              durationMs=round((time.monotonic()-started)*1000))
+            events_path = self.evidence / f'{label}-events.jsonl'
+            completed_tools = tool_errors = parse_errors = 0
+            if events_path.is_file():
+                for line in events_path.read_bytes().splitlines():
+                    if not line.strip():
+                        continue
+                    try:
+                        event = json.loads(line)
+                    except (ValueError, UnicodeDecodeError):
+                        parse_errors += 1
+                        continue
+                    if event.get('type') == 'tool_execution_end':
+                        completed_tools += 1
+                        if event.get('result', {}).get('isError'):
+                            tool_errors += 1
+            lifecycle.update(completedToolCalls=completed_tools,
+                             toolErrors=tool_errors,nativeParseErrors=parse_errors)
             source = project / 'entry/src/main/ets/pages/Index.ets'
             lifecycle['sourcePresent'] = source.is_file()
             if source.is_file():
