@@ -46,6 +46,9 @@ jobs:
       AGENTLAB_PREPARE_ONLY: ${{ inputs.prepare_only || false }}
       AGENTLAB_BUILD_CACHE_PROBE_ONLY: ${{ inputs.build_cache_probe_only || false }}
       AGENTLAB_HARMONY_BUILD_CACHE_HOST: /tmp/agentlab-harmony-toolchain-cache
+      AGENTLAB_FAST_SUBJECT_ROOT: /tmp/agentlab-fast-subject
+      AGENTLAB_FAST_HARMONY_ROOT: /tmp/agentlab-fast-subject/harmony-cli
+      AGENTLAB_FAST_BUILD_KIT_ROOT: /tmp/agentlab-fast-subject/harmony-build-kit
       AGENTLAB_MODEL: glm-5.3-flash
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
     steps:
@@ -120,11 +123,17 @@ jobs:
           path: ${{ runner.temp }}/participant-image-cache
           key: agentlab-participant-image-v1-${{ hashFiles('examples/knowledge-seed/subject/participant.Dockerfile', 'examples/knowledge-seed/subject/participant-runtime.sh') }}
       - name: Restore immutable AgentLab composition CAS
-        if: inputs.capture_run_id == '' || (inputs.execution_mode || 'qualification') == 'qualification'
+        if: (inputs.execution_mode || 'qualification') == 'qualification'
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ runner.temp }}/agentlab-public-cas
           key: agentlab-composition-cas-v1-${{ hashFiles('release/candidates/harmony-buildkit-v6-linux-x64/environment-lock.json') }}
+      - name: Restore direct Fast subject toolchain
+        if: inputs.capture_run_id == '' && (inputs.execution_mode || 'qualification') == 'fast'
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: /tmp/agentlab-fast-subject
+          key: agentlab-fast-subject-v1-${{ hashFiles('release/candidates/harmony-buildkit-v6-linux-x64/environment-lock.json') }}
       - name: Restore Harmony toolchain build cache
         if: inputs.capture_run_id == ''
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
@@ -223,10 +232,11 @@ jobs:
           if [[ "$AGENTLAB_EXECUTION_MODE" == "qualification" ]]; then
             sudo apt-get update
             sudo apt-get install --yes zstd python3-websocket
+            scripts/ci-public-install-deploy-smoke.sh
           else
             command -v zstd >/dev/null
+            bash scripts/ci-fast-subject-install.sh
           fi
-          scripts/ci-public-install-deploy-smoke.sh
           printf 'install_agentlab_harmony\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
       - name: Seed Harmony toolchain cache with frozen-source build
         if: ${{ inputs.build_cache_probe_only && inputs.capture_run_id == '' }}
