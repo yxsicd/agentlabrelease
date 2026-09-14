@@ -86,6 +86,20 @@ jobs:
         with:
           path: ~/.npm
           key: agentlab-subject-npm-v1-${{ hashFiles('examples/real-code-agent/participant/package-lock.json', 'examples/knowledge-seed/subject/runtime/package-lock.json') }}
+      - name: Restore prepared participant and oracle runtimes
+        if: inputs.capture_run_id == ''
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ${{ runner.temp }}/pi-runtime
+            ${{ runner.temp }}/oracle-runtime
+          key: agentlab-subject-runtimes-v1-${{ hashFiles('examples/real-code-agent/participant/package-lock.json', 'examples/knowledge-seed/subject/runtime/package-lock.json') }}
+      - name: Restore stable source probe binary
+        if: inputs.capture_run_id == ''
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ runner.temp }}/agentlab-tools/agentlab-source-probe
+          key: agentlab-source-probe-v1-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/agentlab_code_analysis/**') }}
       - name: Restore participant image cache
         if: inputs.capture_run_id == ''
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
@@ -145,18 +159,30 @@ jobs:
           if [[ ! -d "$RUNNER_TEMP/reference/patched-source" ]]; then
             cargo run --locked -p agentlab_code_analysis --bin agentlab-harmony-materialize -- "$RUNNER_TEMP/source" "$RUNNER_TEMP/reference" examples/harmony-build/seed
           fi
-          cargo build --locked -p agentlab_code_analysis --bin agentlab-source-probe
-          echo "AGENTLAB_SOURCE_PROBE=$GITHUB_WORKSPACE/target/debug/agentlab-source-probe" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/agentlab-tools"
+          if [[ ! -x "$RUNNER_TEMP/agentlab-tools/agentlab-source-probe" ]]; then
+            cargo build --locked -p agentlab_code_analysis --bin agentlab-source-probe
+            cp target/debug/agentlab-source-probe "$RUNNER_TEMP/agentlab-tools/agentlab-source-probe"
+          fi
+          echo "AGENTLAB_SOURCE_PROBE=$RUNNER_TEMP/agentlab-tools/agentlab-source-probe" >> "$GITHUB_ENV"
           printf 'prepare_source_reference\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
       - name: Install contained participant and independent oracle runtimes
         if: inputs.capture_run_id == ''
         run: |
           started=$(date +%s%3N)
           mkdir -p "$RUNNER_TEMP/pi-runtime" "$RUNNER_TEMP/oracle-runtime"
-          cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
-          cp examples/knowledge-seed/subject/runtime/package*.json "$RUNNER_TEMP/oracle-runtime/"
-          npm ci --prefix "$RUNNER_TEMP/pi-runtime"
-          npm ci --prefix "$RUNNER_TEMP/oracle-runtime" --ignore-scripts
+          if [[ ! -f "$RUNNER_TEMP/pi-runtime/node_modules/@mariozechner/pi-coding-agent/dist/cli.js" ]]; then
+            rm -rf "$RUNNER_TEMP/pi-runtime"
+            mkdir -p "$RUNNER_TEMP/pi-runtime"
+            cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
+            npm ci --prefix "$RUNNER_TEMP/pi-runtime"
+          fi
+          if [[ ! -d "$RUNNER_TEMP/oracle-runtime/node_modules/typescript" ]]; then
+            rm -rf "$RUNNER_TEMP/oracle-runtime"
+            mkdir -p "$RUNNER_TEMP/oracle-runtime"
+            cp examples/knowledge-seed/subject/runtime/package*.json "$RUNNER_TEMP/oracle-runtime/"
+            npm ci --prefix "$RUNNER_TEMP/oracle-runtime" --ignore-scripts
+          fi
           mkdir -p "$RUNNER_TEMP/participant-image-cache"
           AGENTLAB_PARTICIPANT_CACHE_TAR="$RUNNER_TEMP/participant-image-cache/participant-image.tar" \
             bash examples/knowledge-seed/subject/participant-runtime.sh "$RUNNER_TEMP" agentlab-subject-participant:"$GITHUB_RUN_ID"
