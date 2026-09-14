@@ -1,5 +1,5 @@
 """Real staged navigation assessment, with explicit source-only fresh-Agent fork."""
-import argparse,hashlib,json,os,shutil,subprocess,sys,time
+import argparse,hashlib,json,os,shutil,subprocess,sys,time,threading
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'real-code-agent'))
 from participant import Participant
@@ -55,7 +55,7 @@ def main():
  guidance=load_guidance(a.guidance,a.scenario)
  if guidance:dump(e/'seed-guidance.json',guidance['manifest'])
  if seed.get('oracleDigest'):assert hashlib.sha256(Path(__file__).with_name(scenario['oracle']).read_bytes()).hexdigest()==seed['oracleDigest']
- summary=dict(schema='agentlab.'+a.scenario+'_subject.v1',taskId=scenario['caseId'],assessmentScope=scenario['scope'],sourceRevision=PIN,demands=demands,sourceForkQualified=False,formalSessionFSForkQualified=False,uiDeviceQualified=False,phases={},timing=dict(builds=[]),ok=False,subjectTaskSucceeded=False)
+ summary=dict(schema='agentlab.'+a.scenario+'_subject.v1',taskId=scenario['caseId'],assessmentScope=scenario['scope'],sourceRevision=PIN,demands=demands,sourceForkQualified=False,formalSessionFSForkQualified=False,uiDeviceQualified=False,phases={},timing=dict(builds=[],participantEdits=[]),ok=False,subjectTaskSucceeded=False)
  def oracle(label,directory,stage):
   command=['node',str(Path(__file__).with_name(scenario['oracle'])),str(directory),str(stage)]
   r=subprocess.run(command,capture_output=True);(e/(label+'-oracle.stdout.json')).write_bytes(r.stdout);(e/(label+'-oracle.stderr.log')).write_bytes(r.stderr)
@@ -97,6 +97,27 @@ def main():
   prompt=demand+'\n\nAssessed edit boundary (frozen task paths):\n'+allowed+'\nYou may read other files for context, but do not modify files outside this list. If you believe another file must change, leave it unchanged and report the reason instead. Out-of-scope writes are independently measured.'
   if guidance:prompt+='\n\nVerified prior-run engineering guidance (not task answer; frozen demands/oracle are unchanged):\n'+guidance['body']
   return prompt
+ def monitored_turn(label,directory,participant,prompt):
+  def snapshot():
+   result={}
+   for name in paths:
+    path=directory/name
+    result[name]=sha256_file(path) if path.is_file() else None
+   return result
+  baseline=snapshot();stop=threading.Event();started=time.monotonic_ns();record=dict(phase=label,firstSourceMutationMs=None,firstChangedPaths=[],samplingIntervalMs=250,detection='none')
+  def watch():
+   while not stop.wait(0.25):
+    current=snapshot();changed=[name for name in paths if current[name]!=baseline[name]]
+    if changed:
+     record.update(firstSourceMutationMs=(time.monotonic_ns()-started)//1_000_000,firstChangedPaths=changed,detection='sampled');return
+  thread=threading.Thread(target=watch,daemon=True);thread.start()
+  try:participant.turn(label,directory,prompt=prompt)
+  finally:
+   stop.set();thread.join(timeout=1)
+   if record['firstSourceMutationMs'] is None:
+    current=snapshot();changed=[name for name in paths if current[name]!=baseline[name]]
+    if changed:record.update(firstSourceMutationMs=(time.monotonic_ns()-started)//1_000_000,firstChangedPaths=changed,detection='post-turn')
+   summary['timing']['participantEdits'].append(record);dump(e/(label+'-edit-timing.json'),record)
  sdk=next(x for x in lock['components'] if x['slot']=='harmony-cli');kit=next(x for x in lock['components'] if x['slot']=='harmony-build-kit')
  build_cache=Path(os.environ['AGENTLAB_HARMONY_BUILD_CACHE_HOST']).resolve();build_cache.mkdir(parents=True,exist_ok=True)
  fast_cli=os.environ.get('AGENTLAB_FAST_HARMONY_ROOT');fast_kit=os.environ.get('AGENTLAB_FAST_BUILD_KIT_ROOT')
@@ -187,7 +208,7 @@ def main():
 
   if not build('prepare',project,True):raise RuntimeError('Harness dependency preparation failed')
   parent=subject('parent-agent');cut('initial',project)
-  try:parent.turn('turn-1',project,prompt=task_prompt(demands[0]))
+  try:monitored_turn('turn-1',project,parent,task_prompt(demands[0]))
   except RuntimeError as error:summary['phases']['turn-1-launch-error']=str(error)
   stage1=oracle('turn-1',project,1);built1=build('turn-1-build',project);scope1=scope('turn-1',project);cut_id=cut('turn-1-cut',project);summary['phases']['turn-1']=dict(behavior=stage1,build=built1,scope=scope1,sourceCut=cut_id)
   # Restore source from the operator cut onto original code; no reference fixes.
@@ -196,7 +217,7 @@ def main():
   for label,directory,participant in [('parent-turn-2',project,parent),('fresh-fork-turn-2',branch,None)]:
    if participant is None:fork=subject('fork-agent');participant=fork
    if directory==branch and not build('fork-prepare',directory,True):raise RuntimeError('Harness fork dependency preparation failed')
-   try:participant.turn(label,directory,prompt=task_prompt(demands[1]))
+   try:monitored_turn(label,directory,participant,task_prompt(demands[1]))
    except RuntimeError as error:summary['phases'][label+'-launch-error']=str(error)
    result=oracle(label,directory,2);compiled=build(label+'-build',directory);scope_result=scope(label,directory);summary['phases'][label]=dict(behavior=result,build=compiled,scope=scope_result,sourceCut=cut(label+'-cut',directory))
   summary['subjectTaskSucceeded']=all(summary['phases'][x]['behavior']['pass'] and summary['phases'][x]['build'] for x in ['turn-1','parent-turn-2','fresh-fork-turn-2']);summary['ok']=True
@@ -221,10 +242,11 @@ def main():
   manifest=e/'binary-manifest.json';binaries=json.loads(manifest.read_text()) if manifest.exists() else []
   evidence_cost=dict(successfulHapCount=len(binaries),successfulHapBytes=sum(x.get('bytes',0) for x in binaries),retainedHapCount=sum(bool(x.get('retainedBytes')) for x in binaries),retainedHapBytes=sum(x.get('bytes',0) for x in binaries if x.get('retainedBytes')),retentionPolicy=('qualification-full-bytes' if a.retain_hap_bytes else 'fast-manifest-only'))
   participant_process=[]
+  edit_timing={row['phase']:row for row in summary.get('timing',{}).get('participantEdits',[])}
   for name,directory in [('turn-1','parent-agent'),('parent-turn-2','parent-agent'),('fresh-fork-turn-2','fork-agent')]:
    lifecycle=e/directory/(name+'-lifecycle.json')
    if lifecycle.exists():
-    row=json.loads(lifecycle.read_text());participant_process.append(dict(phase=name,durationMs=row.get('durationMs'),timedOut=row.get('timedOut'),exitCode=row.get('exitCode'),completedToolCalls=row.get('completedToolCalls'),toolErrors=row.get('toolErrors'),nativeParseErrors=row.get('nativeParseErrors')))
+    row=json.loads(lifecycle.read_text());edit=edit_timing.get(name,{});participant_process.append(dict(phase=name,durationMs=row.get('durationMs'),timedOut=row.get('timedOut'),exitCode=row.get('exitCode'),completedToolCalls=row.get('completedToolCalls'),toolErrors=row.get('toolErrors'),nativeParseErrors=row.get('nativeParseErrors'),firstSourceMutationMs=edit.get('firstSourceMutationMs'),firstChangedPaths=edit.get('firstChangedPaths',[]),mutationDetection=edit.get('detection')))
   decision=dict(schema='agentlab.harness_decision_package.v1',scenario=a.scenario,taskId=scenario['caseId'],sourceRevision=PIN,subjectTaskSucceeded=summary.get('subjectTaskSucceeded'),sourceForkQualified=summary.get('sourceForkQualified'),seedGuidance=guidance_manifest,phaseVerdicts=verdicts,participantProcess=participant_process,launchErrors=launch_errors,buildTiming=dict(firstCompileStartMs=summary.get('timing',{}).get('firstCompileStartMs'),builds=build_rows),evidenceCost=evidence_cost,automaticAttributionCandidates=candidates,uncertainties=['Participant/model latency is not inferred from timeout alone.','Runner variance may affect wall-clock timing.','Calibration proves the declared seam only; device/UI and formal SessionFS remain separate unless independently qualified.'],agentDecisionRequired=True,allowedDecisions=['adopt-guidance','reject-guidance','rerun-control','rerun-guided','modify-guidance','design-next-experiment'],harnessPolicy='Collect, verify, compare and propose evidence-linked candidates; never choose promotion or seed adoption automatically.')
   dump(e/'decision-package.json',decision)
   dump(e/'summary.json',summary)
