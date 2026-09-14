@@ -96,8 +96,27 @@ jobs:
           (root/'environment-fingerprint.json').write_text(json.dumps(payload,indent=2)+'\n')
           (root/'timing.tsv').write_text('phase\tduration_ms\n')
           PY
+      - name: Gate assessed dispatch on model readiness before immutable preparation
+        id: gateway_readiness
+        if: ${{ !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' }}
+        env:
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+        run: |
+          started=$(date +%s%3N)
+          mkdir -p "$AGENTLAB_CI_ROOT/gateway-preflight"
+          python3 - <<'PY'
+          import os,sys
+          from pathlib import Path
+          sys.path.insert(0,'examples/knowledge-seed/subject')
+          import run
+          root=Path(os.environ['AGENTLAB_CI_ROOT'])/'gateway-preflight'
+          result=run.gateway_preflight(root,os.environ.get('AGENTLAB_MODEL','glm-5.3-flash'))
+          with Path(os.environ['GITHUB_OUTPUT']).open('a') as out: out.write('ready='+('true' if result['ready'] else 'false')+'\n')
+          with Path(os.environ['GITHUB_ENV']).open('a') as out: out.write('AGENTLAB_GATEWAY_PREFLIGHT_RECEIPT='+str(root/'gateway-preflight.json')+'\n')
+          PY
+          printf 'gateway_preflight\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
       - name: Restore immutable Harmony source/reference cache
-        if: inputs.capture_run_id == ''
+        if: ${{ inputs.capture_run_id == '' && steps.gateway_readiness.outputs.ready != 'false' }}
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
@@ -105,13 +124,13 @@ jobs:
             ${{ runner.temp }}/reference
           key: harmony-source-reference-v1-7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6-${{ hashFiles('crates/agentlab_code_analysis/**', 'examples/harmony-build/seed/**') }}
       - name: Restore npm download cache
-        if: inputs.capture_run_id == '' && !inputs.build_cache_probe_only
+        if: ${{ inputs.capture_run_id == '' && !inputs.build_cache_probe_only && steps.gateway_readiness.outputs.ready != 'false' }}
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.npm
           key: agentlab-subject-npm-v1-${{ hashFiles('examples/real-code-agent/participant/package-lock.json', 'examples/knowledge-seed/subject/runtime/package-lock.json') }}
       - name: Restore prepared participant and oracle runtimes
-        if: inputs.capture_run_id == '' && !inputs.build_cache_probe_only
+        if: ${{ inputs.capture_run_id == '' && !inputs.build_cache_probe_only && steps.gateway_readiness.outputs.ready != 'false' }}
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
@@ -119,31 +138,31 @@ jobs:
             ${{ runner.temp }}/oracle-runtime
           key: agentlab-subject-runtimes-v1-${{ hashFiles('examples/real-code-agent/participant/package-lock.json', 'examples/knowledge-seed/subject/runtime/package-lock.json') }}
       - name: Restore stable source probe binary
-        if: inputs.capture_run_id == '' && !inputs.build_cache_probe_only
+        if: ${{ inputs.capture_run_id == '' && !inputs.build_cache_probe_only && steps.gateway_readiness.outputs.ready != 'false' }}
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ runner.temp }}/agentlab-tools/agentlab-source-probe
           key: agentlab-source-probe-v1-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/agentlab_code_analysis/**') }}
       - name: Restore participant image cache
-        if: inputs.capture_run_id == '' && !inputs.build_cache_probe_only
+        if: ${{ inputs.capture_run_id == '' && !inputs.build_cache_probe_only && steps.gateway_readiness.outputs.ready != 'false' }}
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ runner.temp }}/participant-image-cache
           key: agentlab-participant-image-v1-${{ hashFiles('examples/knowledge-seed/subject/participant.Dockerfile', 'examples/knowledge-seed/subject/participant-runtime.sh') }}
       - name: Restore immutable AgentLab composition CAS
-        if: (inputs.execution_mode || 'qualification') == 'qualification'
+        if: ${{ (inputs.execution_mode || 'qualification') == 'qualification' && steps.gateway_readiness.outputs.ready != 'false' }}
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ runner.temp }}/agentlab-public-cas
           key: agentlab-composition-cas-v1-${{ hashFiles('release/candidates/harmony-buildkit-v6-linux-x64/environment-lock.json') }}
       - name: Restore Harmony toolchain build cache
-        if: inputs.capture_run_id == ''
+        if: ${{ inputs.capture_run_id == '' && steps.gateway_readiness.outputs.ready != 'false' }}
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /tmp/agentlab-harmony-toolchain-cache
           key: harmony-toolchain-cache-v1-${{ hashFiles('release/candidates/harmony-buildkit-v6-linux-x64/environment-lock.json') }}
       - name: Reserve immutable experiment source ref before long capture
-        if: ${{ !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only }}
+        if: ${{ !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && (inputs.capture_run_id != '' || steps.gateway_readiness.outputs.ready != 'false') }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -183,7 +202,7 @@ jobs:
           shutil.rmtree(r/'raw')
           PY
       - name: Pin source and calibrate reference outside assessed Workspace
-        if: inputs.capture_run_id == ''
+        if: ${{ inputs.capture_run_id == '' && steps.gateway_readiness.outputs.ready != 'false' }}
         run: |
           started=$(date +%s%3N)
           mkdir -p "$AGENTLAB_HARMONY_BUILD_CACHE_HOST"
@@ -204,7 +223,7 @@ jobs:
           echo "AGENTLAB_SOURCE_PROBE=$RUNNER_TEMP/agentlab-tools/agentlab-source-probe" >> "$GITHUB_ENV"
           printf 'prepare_source_reference\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
       - name: Install contained participant and independent oracle runtimes
-        if: inputs.capture_run_id == '' && !inputs.build_cache_probe_only
+        if: ${{ inputs.capture_run_id == '' && !inputs.build_cache_probe_only && steps.gateway_readiness.outputs.ready != 'false' }}
         run: |
           started=$(date +%s%3N)
           mkdir -p "$RUNNER_TEMP/pi-runtime" "$RUNNER_TEMP/oracle-runtime"
@@ -254,29 +273,21 @@ jobs:
           mkdir -p "$RUNNER_TEMP/baseline-decision"
           gh run download "${{ inputs.baseline_run_id }}" --name "$AGENTLAB_ASSESSMENT_SCENARIO-decision-package" --dir "$RUNNER_TEMP/baseline-decision"
           test -f "$RUNNER_TEMP/baseline-decision/decision-package.json"
-      - name: Gate assessed dispatch on model readiness before heavy install
-        id: gateway_readiness
-        if: ${{ !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' }}
-        env:
-          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+      - name: Record infrastructure-unavailable decision after lineage restore
+        if: ${{ !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' && steps.gateway_readiness.outputs.ready == 'false' }}
         run: |
-          started=$(date +%s%3N)
-          mkdir -p "$AGENTLAB_CI_ROOT/gateway-preflight"
           python3 - <<'PY'
           import json,os,sys
           from pathlib import Path
           sys.path.insert(0,'examples/knowledge-seed/subject')
           import run
-          root=Path(os.environ['AGENTLAB_CI_ROOT']); probe=root/'gateway-preflight'
-          result=run.gateway_preflight(probe,os.environ.get('AGENTLAB_MODEL','glm-5.3-flash'))
+          root=Path(os.environ['AGENTLAB_CI_ROOT'])
+          result=json.loads(Path(os.environ['AGENTLAB_GATEWAY_PREFLIGHT_RECEIPT']).read_text())
           guidance_path=Path(os.environ['RUNNER_TEMP'])/'seed-guidance'
           guidance=run.load_guidance(guidance_path,os.environ['AGENTLAB_ASSESSMENT_SCENARIO']) if (guidance_path/'seed-guidance.json').is_file() else None
-          if not result['ready']:
-              run.write_infrastructure_unavailable(root/'assessment/evidence',os.environ['AGENTLAB_ASSESSMENT_SCENARIO'],guidance,result)
-          with (Path(os.environ['GITHUB_OUTPUT'])).open('a') as out: out.write('ready='+('true' if result['ready'] else 'false')+'\n')
-          with (Path(os.environ['GITHUB_ENV'])).open('a') as out: out.write('AGENTLAB_GATEWAY_PREFLIGHT_RECEIPT='+str(probe/'gateway-preflight.json')+'\n')
+          assert result['ready'] is False
+          run.write_infrastructure_unavailable(root/'assessment/evidence',os.environ['AGENTLAB_ASSESSMENT_SCENARIO'],guidance,result)
           PY
-          printf 'gateway_preflight\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
       - name: Install published AgentLab SDK and build-kit
         if: ${{ (inputs.capture_run_id == '' || (inputs.execution_mode || 'qualification') == 'qualification') && steps.gateway_readiness.outputs.ready != 'false' }}
         env:
