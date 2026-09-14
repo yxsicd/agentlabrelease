@@ -151,6 +151,7 @@ jobs:
           echo "AGENTLAB_ORACLE_TYPESCRIPT=$RUNNER_TEMP/oracle-runtime/node_modules/typescript" >> "$GITHUB_ENV"
           printf 'prepare_participant_oracle\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
       - name: Install published AgentLab SDK and build-kit
+        if: inputs.capture_run_id == '' || (inputs.execution_mode || 'qualification') == 'qualification'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
