@@ -59,9 +59,14 @@ def main():
  if seed.get('oracleDigest'):assert hashlib.sha256(Path(__file__).with_name(scenario['oracle']).read_bytes()).hexdigest()==seed['oracleDigest']
  summary=dict(schema='agentlab.'+a.scenario+'_subject.v1',taskId=scenario['caseId'],assessmentScope=scenario['scope'],sourceRevision=PIN,demands=demands,sourceForkQualified=False,formalSessionFSForkQualified=False,uiDeviceQualified=False,phases={},timing=dict(builds=[],participantEdits=[]),ok=False,subjectTaskSucceeded=False)
  def oracle(label,directory,stage):
+  for variable in ('AGENTLAB_SOURCE_PROBE','AGENTLAB_ORACLE_TYPESCRIPT'):
+   value=os.environ.get(variable);assert value and Path(value).exists(), 'Harness oracle dependency missing: '+variable
   command=['node',str(Path(__file__).with_name(scenario['oracle'])),str(directory),str(stage)]
   r=subprocess.run(command,capture_output=True);(e/(label+'-oracle.stdout.json')).write_bytes(r.stdout);(e/(label+'-oracle.stderr.log')).write_bytes(r.stderr)
-  if r.returncode:raise RuntimeError('Harness oracle infrastructure error')
+  if r.returncode:
+   if a.scenario!='cache-durability':raise RuntimeError('Harness oracle infrastructure error')
+   result={'stage':stage,'schema':'agentlab.cache_durability_probe.v1','pass':False,'checks':{},'error':r.stderr.decode(errors='replace').strip() or 'cache oracle exited non-zero','oracleProcessExitCode':r.returncode,'errorClassification':'submitted-source-evaluation-error','referenceTransformsApplied':False,'actualModulesExecuted':0,'qualification':dict(candidateOnly=True,phoneBuild=False,pageUI=False,actualAgent=False)}
+   dump(e/(label+'-oracle.stdout.json'),result);return result
   return json.loads(r.stdout)
  def cut(label,directory):
   out=e/label;out.mkdir();rows=[]
