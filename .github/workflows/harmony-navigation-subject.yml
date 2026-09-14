@@ -30,6 +30,10 @@ on:
         options: [default, low, medium, high]
         default: default
         description: Operator-side provider reasoning_effort override; Pi thinking mode remains off
+      evidence_reasoning_escalation:
+        type: boolean
+        default: false
+        description: Escalate turn2 and fresh fork to high reasoning only after concrete turn1 verifier/compiler failure
       baseline_run_id:
         type: string
         default: ''
@@ -70,6 +74,7 @@ jobs:
       AGENTLAB_MODEL: glm-5.3-flash
       AGENTLAB_GUIDANCE_VARIANT: ${{ inputs.guidance_variant || 'none' }}
       AGENTLAB_REASONING_EFFORT: ${{ inputs.reasoning_effort || 'default' }}
+      AGENTLAB_EVIDENCE_REASONING_ESCALATION: ${{ inputs.evidence_reasoning_escalation || false }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1

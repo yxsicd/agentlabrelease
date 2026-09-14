@@ -42,6 +42,7 @@ class Participant:
         self.model = model
         self.route = route
         self.reasoning_effort = reasoning_effort if reasoning_effort not in (None, '', 'default') else None
+        self.active_reasoning_effort = self.reasoning_effort
         self.key = os.environ['AGENTLAB_LM_GATEWAY_KEY']
         self.requests = 0
         self.lock = threading.Lock()
@@ -85,8 +86,8 @@ class Participant:
                 stem.with_suffix('.request.json').write_bytes(raw)
                 wire = json.loads(raw)
                 wire['providerId'] = owner.route
-                if owner.reasoning_effort:
-                    wire['reasoning_effort'] = owner.reasoning_effort
+                if owner.active_reasoning_effort:
+                    wire['reasoning_effort'] = owner.active_reasoning_effort
                 upstream = json.dumps(wire).encode()
                 stem.with_suffix('.upstream-request.json').write_bytes(upstream)
                 request = urllib.request.Request(owner.gateway + self.path, data=upstream,
@@ -157,7 +158,8 @@ class Participant:
         return any(token in text for token in ('frp', '404 <!doctype', 'http 404', 'gateway exchange failed', '502 bad gateway'))
 
     def turn(self, label, project, marker=None, repair=False, prompt=None, container=None, requirement=None,
-             _transport_retry=0):
+             reasoning_effort=None, _transport_retry=0):
+        self.active_reasoning_effort = reasoning_effort if reasoning_effort is not None else self.reasoning_effort
         prompt = prompt or (f'Work in the current Harmony ArkTS project. Read the page source and '
                   f'{"repair its invalid trailing text, then " if repair else ""}'
                   f'change its displayed Text to exactly "{marker}". Keep the Stage application '
@@ -182,7 +184,8 @@ class Participant:
         env.update(HOME=str(self.state.parent), PI_CODING_AGENT_DIR=str(self.state))
         (self.evidence / f'{label}-command.json').write_text(json.dumps(command, indent=2) + '\n')
         lifecycle = {'label': label, 'startedAt': datetime.now(timezone.utc).isoformat(),
-                     'captureAuthority': 'operator', 'exitCode': None, 'timedOut': False}
+                     'captureAuthority': 'operator', 'exitCode': None, 'timedOut': False,
+                     'providerReasoningEffort': self.active_reasoning_effort}
         started = time.monotonic()
         turn_error = None
         try:
@@ -227,7 +230,7 @@ class Participant:
                     schema='agentlab.participant_transport_retry.v1', label=label, retryCount=1,
                     reason=combined, preserved=preserved), indent=2)+'\n')
                 return self.turn(label, project, marker=marker, repair=repair, prompt=prompt, container=container,
-                                 requirement=requirement, _transport_retry=1)
+                                 requirement=requirement, reasoning_effort=reasoning_effort, _transport_retry=1)
             raise turn_error
         source = project / 'entry/src/main/ets/pages/Index.ets'
         if marker is not None and marker not in source.read_text():

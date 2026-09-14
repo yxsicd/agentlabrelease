@@ -150,7 +150,21 @@ def main():
   prompt=demand+'\n\nAssessed edit boundary (frozen task paths):\n'+allowed+'\nYou may read other files for context, but do not modify files outside this list. If you believe another file must change, leave it unchanged and report the reason instead. Out-of-scope writes are independently measured.'
   if guidance:prompt+='\n\nVerified prior-run engineering guidance (not task answer; frozen demands/oracle are unchanged):\n'+guidance['body']
   return prompt
- def monitored_turn(label,directory,participant,prompt):
+ def feedback_prompt(stage,compiled):
+  notes=[]
+  if not stage.get('pass'):
+   failed=[name for name,value in stage.get('checks',{}).items() if value is False]
+   if failed:notes.append('Behavior checks still failing: '+', '.join(failed[:8]))
+   if stage.get('error'):notes.append('Behavior evaluation error: '+str(stage['error'])[:1200])
+  if not compiled:
+   path=e/'turn-1-build-stderr.log'
+   if path.is_file():
+    lines=[line.strip() for line in path.read_text(errors='replace').splitlines() if (' ERROR:' in line or 'Error Message:' in line)]
+    if lines:notes.append('Compiler evidence from the previous phase:\n'+'\n'.join(lines[-10:])[:2200])
+  if not notes:return None
+  return ('Harness feedback from the previous assessed phase. This is observed verifier/compiler evidence, not a reference answer. '
+          'Repair the current source against this evidence before broadening scope.\n'+'\n'.join(notes))
+ def monitored_turn(label,directory,participant,prompt,reasoning_effort=None):
   def snapshot():
    result={}
    for name in paths:
@@ -164,7 +178,7 @@ def main():
     if changed:
      record.update(firstSourceMutationMs=(time.monotonic_ns()-started)//1_000_000,firstChangedPaths=changed,detection='sampled');return
   thread=threading.Thread(target=watch,daemon=True);thread.start()
-  try:participant.turn(label,directory,prompt=prompt)
+  try:participant.turn(label,directory,prompt=prompt,reasoning_effort=reasoning_effort)
   finally:
    stop.set();thread.join(timeout=1)
    if record['firstSourceMutationMs'] is None:
@@ -265,13 +279,19 @@ def main():
   try:monitored_turn('turn-1',project,parent,task_prompt(demands[0]))
   except RuntimeError as error:summary['phases']['turn-1-launch-error']=str(error)
   stage1=oracle('turn-1',project,1);built1=build('turn-1-build',project);scope1=scope('turn-1',project);cut_id=cut('turn-1-cut',project);summary['phases']['turn-1']=dict(behavior=stage1,build=built1,scope=scope1,sourceCut=cut_id)
+  turn2_feedback=feedback_prompt(stage1,built1)
+  escalate=bool(turn2_feedback and os.environ.get('AGENTLAB_EVIDENCE_REASONING_ESCALATION','false')=='true')
+  summary['evidenceTriggeredEscalation']=dict(triggered=escalate,reason=('turn-1-verifier-or-build-failure' if escalate else None),reasoningEffort=('high' if escalate else None),feedbackPresent=bool(turn2_feedback))
   # Restore source from the operator cut onto original code; no reference fixes.
   branch=root/'fork-workspace';shutil.copytree(project,branch,ignore=shutil.ignore_patterns('oh_modules','node_modules','build','.hvigor','.native-build','.native-dependencies'))
   assert cut('fork-input',branch)==cut_id;summary['sourceForkQualified']=True
   for label,directory,participant in [('parent-turn-2',project,parent),('fresh-fork-turn-2',branch,None)]:
    if participant is None:fork=subject('fork-agent');participant=fork
    if directory==branch and not build('fork-prepare',directory,True):raise RuntimeError('Harness fork dependency preparation failed')
-   try:monitored_turn(label,directory,participant,task_prompt(demands[1]))
+   prompt=task_prompt(demands[1])
+   if turn2_feedback:prompt+='\n\n'+turn2_feedback
+   if escalate:prompt+='\n\nReasoning escalation: inspect the concrete evidence carefully, make the smallest compatible repair, and preserve already-passing behavior.'
+   try:monitored_turn(label,directory,participant,prompt,reasoning_effort=('high' if escalate else None))
    except RuntimeError as error:summary['phases'][label+'-launch-error']=str(error)
    result=oracle(label,directory,2);compiled=build(label+'-build',directory);scope_result=scope(label,directory);summary['phases'][label]=dict(behavior=result,build=compiled,scope=scope_result,sourceCut=cut(label+'-cut',directory))
   summary['subjectTaskSucceeded']=all(summary['phases'][x]['behavior']['pass'] and summary['phases'][x]['build'] for x in ['turn-1','parent-turn-2','fresh-fork-turn-2']);summary['ok']=True
@@ -305,7 +325,7 @@ def main():
      retry_count=json.loads(retry_receipt.read_text()).get('retryCount',0);retry_lifecycle=e/directory/(name+'-transport-attempt-1-lifecycle.json');retry_events=e/directory/(name+'-transport-attempt-1-events.jsonl')
      if retry_lifecycle.exists():retry_duration=json.loads(retry_lifecycle.read_text()).get('durationMs') or 0
      if retry_events.exists():retry_event_bytes=retry_events.stat().st_size;retry_event_lines=line_count(retry_events)
-    participant_process.append(dict(phase=name,durationMs=row.get('durationMs'),effectiveDurationMs=(row.get('durationMs') or 0)+retry_duration,timedOut=row.get('timedOut'),exitCode=row.get('exitCode'),completedToolCalls=row.get('completedToolCalls'),toolErrors=row.get('toolErrors'),nativeParseErrors=row.get('nativeParseErrors'),transportRetryCount=retry_count,transportRetryDurationMs=retry_duration,firstSourceMutationMs=edit.get('firstSourceMutationMs'),firstChangedPaths=edit.get('firstChangedPaths',[]),mutationDetection=edit.get('detection'),rawEventBytes=event_bytes,rawEventLines=event_lines,transportRetryRawEventBytes=retry_event_bytes,transportRetryRawEventLines=retry_event_lines,effectiveRawEventBytes=event_bytes+retry_event_bytes))
+    participant_process.append(dict(phase=name,durationMs=row.get('durationMs'),effectiveDurationMs=(row.get('durationMs') or 0)+retry_duration,timedOut=row.get('timedOut'),exitCode=row.get('exitCode'),providerReasoningEffort=row.get('providerReasoningEffort'),completedToolCalls=row.get('completedToolCalls'),toolErrors=row.get('toolErrors'),nativeParseErrors=row.get('nativeParseErrors'),transportRetryCount=retry_count,transportRetryDurationMs=retry_duration,firstSourceMutationMs=edit.get('firstSourceMutationMs'),firstChangedPaths=edit.get('firstChangedPaths',[]),mutationDetection=edit.get('detection'),rawEventBytes=event_bytes,rawEventLines=event_lines,transportRetryRawEventBytes=retry_event_bytes,transportRetryRawEventLines=retry_event_lines,effectiveRawEventBytes=event_bytes+retry_event_bytes))
   timeout_phases=[x['phase'] for x in participant_process if x.get('timedOut')]
   transport_errors=[x for x in launch_errors if any(token in x['error'].lower() for token in ('frp','http 404','404 <!doctype','502','gateway exchange failed'))]
   other_launch_errors=[x for x in launch_errors if x not in transport_errors and x['phase'] not in timeout_phases]
@@ -313,7 +333,7 @@ def main():
   if transport_errors:candidates.append(dict(kind='transport-launch-failure',strength='observed',evidence=[x['phase'] for x in transport_errors],claim='Participant launch/model exchange failed at the transport or gateway boundary before a normal assessed turn completed.'))
   if other_launch_errors:candidates.append(dict(kind='participant-launch-failure',strength='observed',evidence=[x['phase'] for x in other_launch_errors],claim='Participant did not complete normally for a non-timeout, non-transport launch reason; inspect retained events and stderr.'))
   reasoning_effort=os.environ.get('AGENTLAB_REASONING_EFFORT','default')
-  decision=dict(schema='agentlab.harness_decision_package.v1',scenario=a.scenario,taskId=scenario['caseId'],sourceRevision=PIN,assessmentStatus='assessed',infrastructureAvailable=True,subjectTaskSucceeded=summary.get('subjectTaskSucceeded'),sourceForkQualified=summary.get('sourceForkQualified'),seedGuidance=guidance_manifest,reasoningPolicy=dict(piThinkingMode='off',providerReasoningEffort=(None if reasoning_effort=='default' else reasoning_effort),source='operator-owned-gateway-proxy'),phaseVerdicts=verdicts,participantProcess=participant_process,launchErrors=launch_errors,buildTiming=dict(firstCompileStartMs=summary.get('timing',{}).get('firstCompileStartMs'),builds=build_rows),evidenceCost=evidence_cost,automaticAttributionCandidates=candidates,uncertainties=['Participant/model latency is not inferred from timeout alone.','Runner variance may affect wall-clock timing.','Calibration proves the declared seam only; device/UI and formal SessionFS remain separate unless independently qualified.'],agentDecisionRequired=True,allowedDecisions=['adopt-guidance','reject-guidance','rerun-control','rerun-guided','modify-guidance','design-next-experiment'],harnessPolicy='Collect, verify, compare and propose evidence-linked candidates; never choose promotion or seed adoption automatically.')
+  decision=dict(schema='agentlab.harness_decision_package.v1',scenario=a.scenario,taskId=scenario['caseId'],sourceRevision=PIN,assessmentStatus='assessed',infrastructureAvailable=True,subjectTaskSucceeded=summary.get('subjectTaskSucceeded'),sourceForkQualified=summary.get('sourceForkQualified'),seedGuidance=guidance_manifest,reasoningPolicy=dict(piThinkingMode='off',providerReasoningEffort=(None if reasoning_effort=='default' else reasoning_effort),source='operator-owned-gateway-proxy'),evidenceTriggeredEscalation=summary.get('evidenceTriggeredEscalation'),phaseVerdicts=verdicts,participantProcess=participant_process,launchErrors=launch_errors,buildTiming=dict(firstCompileStartMs=summary.get('timing',{}).get('firstCompileStartMs'),builds=build_rows),evidenceCost=evidence_cost,automaticAttributionCandidates=candidates,uncertainties=['Participant/model latency is not inferred from timeout alone.','Runner variance may affect wall-clock timing.','Calibration proves the declared seam only; device/UI and formal SessionFS remain separate unless independently qualified.'],agentDecisionRequired=True,allowedDecisions=['adopt-guidance','reject-guidance','rerun-control','rerun-guided','modify-guidance','design-next-experiment'],harnessPolicy='Collect, verify, compare and propose evidence-linked candidates; never choose promotion or seed adoption automatically.')
   dump(e/'decision-package.json',decision)
   dump(e/'summary.json',summary)
 if __name__=='__main__':main()
