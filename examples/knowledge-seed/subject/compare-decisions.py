@@ -77,5 +77,5 @@ result = dict(
     comparisonBlocker=(None if comparable else 'At least one run was not an assessed, infrastructure-available Participant experiment.'),
     interpretationPolicy='Deltas are evidence, not causal attribution. Do not interpret outcome/performance deltas when comparable=false. Runner/model variance and prompt guidance may confound results.',
     agentDecisionRequired=True,
-    allowedDecisions=['adopt-guidance','reject-guidance','rerun-control','rerun-guided','modify-guidance','design-next-experiment'])
+    allowedDecisions=(['adopt-guidance','reject-guidance','rerun-control','rerun-guided','modify-guidance','design-next-experiment'] if comparable else ['rerun-control','rerun-guided','design-next-experiment']))
 output_path.write_text(json.dumps(result, indent=2) + '\n')

@@ -254,8 +254,31 @@ jobs:
           mkdir -p "$RUNNER_TEMP/baseline-decision"
           gh run download "${{ inputs.baseline_run_id }}" --name "$AGENTLAB_ASSESSMENT_SCENARIO-decision-package" --dir "$RUNNER_TEMP/baseline-decision"
           test -f "$RUNNER_TEMP/baseline-decision/decision-package.json"
+      - name: Gate assessed dispatch on model readiness before heavy install
+        id: gateway_readiness
+        if: ${{ !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' }}
+        env:
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+        run: |
+          started=$(date +%s%3N)
+          mkdir -p "$AGENTLAB_CI_ROOT/gateway-preflight"
+          python3 - <<'PY'
+          import json,os,sys
+          from pathlib import Path
+          sys.path.insert(0,'examples/knowledge-seed/subject')
+          import run
+          root=Path(os.environ['AGENTLAB_CI_ROOT']); probe=root/'gateway-preflight'
+          result=run.gateway_preflight(probe,os.environ.get('AGENTLAB_MODEL','glm-5.3-flash'))
+          guidance_path=Path(os.environ['RUNNER_TEMP'])/'seed-guidance'
+          guidance=run.load_guidance(guidance_path,os.environ['AGENTLAB_ASSESSMENT_SCENARIO']) if (guidance_path/'seed-guidance.json').is_file() else None
+          if not result['ready']:
+              run.write_infrastructure_unavailable(root/'assessment/evidence',os.environ['AGENTLAB_ASSESSMENT_SCENARIO'],guidance,result)
+          with (Path(os.environ['GITHUB_OUTPUT'])).open('a') as out: out.write('ready='+('true' if result['ready'] else 'false')+'\n')
+          with (Path(os.environ['GITHUB_ENV'])).open('a') as out: out.write('AGENTLAB_GATEWAY_PREFLIGHT_RECEIPT='+str(probe/'gateway-preflight.json')+'\n')
+          PY
+          printf 'gateway_preflight\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
       - name: Install published AgentLab SDK and build-kit
-        if: inputs.capture_run_id == '' || (inputs.execution_mode || 'qualification') == 'qualification'
+        if: ${{ (inputs.capture_run_id == '' || (inputs.execution_mode || 'qualification') == 'qualification') && steps.gateway_readiness.outputs.ready != 'false' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
           AGENTLAB_CAS_DIR: ${{ runner.temp }}/agentlab-public-cas
@@ -284,7 +307,7 @@ jobs:
             --pi-runtime "$RUNNER_TEMP/pi-runtime" --image "$AGENTLAB_PARTICIPANT_IMAGE" --build-cache-probe-only
           printf 'build_cache_probe\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
       - name: Real parent two turns and fresh-Agent source fork; retain Agent failures
-        if: ${{ !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' }}
+        if: ${{ !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' && steps.gateway_readiness.outputs.ready != 'false' }}
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
         run: |
