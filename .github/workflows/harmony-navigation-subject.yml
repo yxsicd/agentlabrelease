@@ -202,6 +202,7 @@ jobs:
           AGENTLAB_CAS_DIR: ${{ runner.temp }}/agentlab-public-cas
           AGENTLAB_FETCH_ONLY: ${{ inputs.prewarm_only }}
           AGENTLAB_SUBJECT_ONLY: ${{ !inputs.prewarm_only && (inputs.execution_mode || 'qualification') == 'fast' }}
+          AGENTLAB_TIMING_FILE: ${{ env.AGENTLAB_CI_ROOT }}/timing.tsv
         run: |
           started=$(date +%s%3N)
           if [[ "$AGENTLAB_EXECUTION_MODE" == "qualification" ]]; then

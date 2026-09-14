@@ -44,6 +44,11 @@ need() {
 }
 for command in curl docker python3 sha256sum tar zstd; do need "${command}"; done
 
+record_phase_ms() {
+  local phase="$1" started_ms="$2"
+  [[ -z "${AGENTLAB_TIMING_FILE:-}" ]] || printf '%s\t%s\n' "${phase}" "$(( $(date +%s%3N) - started_ms ))" >> "${AGENTLAB_TIMING_FILE}"
+}
+
 download() {
   local url="$1" out="$2"
   curl -fL --retry 3 --retry-all-errors --retry-delay 2 \
@@ -147,19 +152,23 @@ download "${control[0]}" "${agentlabctl}"
 printf '%s  %s\n' "${control[1]}" "${agentlabctl}" | sha256sum -c -
 chmod +x "${agentlabctl}"
 
+phase_started_ms=$(date +%s%3N)
 "${agentlabctl}" fetch composition \
   --lock "${lock}" \
   --platform linux-x64 \
   --out-dir "${composition}" \
   --cache-dir "${cas}"
+record_phase_ms composition_fetch "${phase_started_ms}"
 if [[ "${AGENTLAB_FETCH_ONLY:-false}" == "true" ]]; then
   printf '{"schema":"agentlab.public_cache_prewarm.v1","ok":true,"sourceRevision":"%s"}\n' "${source_revision}" > "${root}/prewarm-summary.json"
   exit 0
 fi
+phase_started_ms=$(date +%s%3N)
 "${agentlabctl}" composition install-docker \
   --dir "${composition}" \
   --platform linux-x64 \
   --receipt "${root}/composition-install-receipt.json"
+record_phase_ms composition_install_docker "${phase_started_ms}"
 
 python3 - "${lock}" "${root}/docker-identities" <<'PY'
 import json, pathlib, sys
