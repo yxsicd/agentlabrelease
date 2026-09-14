@@ -20,6 +20,10 @@ on:
         type: string
         default: ''
         description: Optional prior qualification run whose verified seed candidate is injected as guidance; frozen task/oracle stay unchanged
+      baseline_run_id:
+        type: string
+        default: ''
+        description: Optional prior control run used only for Harness decision-package delta analysis; never changes subject prompts
       prewarm_only:
         type: boolean
         default: false
@@ -235,6 +239,15 @@ jobs:
           assert m['promotionAppliedToActiveKnowledge'] is False
           assert (root/'promotion-export/export.json').is_file()
           PY
+      - name: Restore optional baseline decision package
+        if: ${{ inputs.baseline_run_id != '' && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rm -rf "$RUNNER_TEMP/baseline-decision"
+          mkdir -p "$RUNNER_TEMP/baseline-decision"
+          gh run download "${{ inputs.baseline_run_id }}" --name "$AGENTLAB_ASSESSMENT_SCENARIO-subject-evidence" --dir "$RUNNER_TEMP/baseline-decision"
+          test -f "$RUNNER_TEMP/baseline-decision/decision-package.json"
       - name: Install published AgentLab SDK and build-kit
         if: inputs.capture_run_id == '' || (inputs.execution_mode || 'qualification') == 'qualification'
         env:
@@ -295,6 +308,13 @@ jobs:
           for row in rows:row['uri']='https://github.com/'+os.environ['GITHUB_REPOSITORY']+'/releases/download/evidence-'+os.environ['AGENTLAB_ASSESSMENT_SCENARIO']+'-subject-'+os.environ['GITHUB_RUN_ID']+'/'+row['filename']
           (e/'binary-publication.json').write_text(json.dumps(rows,indent=2)+'\n')
           PY
+      - name: Compare current decision package with optional baseline
+        if: ${{ always() && inputs.baseline_run_id != '' && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' }}
+        run: |
+          python3 examples/knowledge-seed/subject/compare-decisions.py \
+            "$RUNNER_TEMP/baseline-decision/decision-package.json" \
+            "$AGENTLAB_CI_ROOT/assessment/evidence/decision-package.json" \
+            "$AGENTLAB_CI_ROOT/assessment/evidence/decision-comparison.json"
       - name: Preserve raw evidence and build typed actual-run entities
         if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
         env:
