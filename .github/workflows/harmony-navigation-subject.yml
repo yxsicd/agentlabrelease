@@ -16,6 +16,10 @@ on:
         options: [fast, qualification]
         default: qualification
         description: Fast keeps complete subject evidence but skips heavy publication/TableGit qualification
+      seed_candidate_run_id:
+        type: string
+        default: ''
+        description: Optional prior qualification run whose verified seed candidate is injected as guidance; frozen task/oracle stay unchanged
       prewarm_only:
         type: boolean
         default: false
@@ -212,6 +216,25 @@ jobs:
           echo "AGENTLAB_PARTICIPANT_IMAGE=$(cat "$RUNNER_TEMP/image.txt")" >> "$GITHUB_ENV"
           echo "AGENTLAB_ORACLE_TYPESCRIPT=$RUNNER_TEMP/oracle-runtime/node_modules/typescript" >> "$GITHUB_ENV"
           printf 'prepare_participant_oracle\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
+      - name: Restore explicit verified seed guidance
+        if: ${{ inputs.seed_candidate_run_id != '' && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rm -rf "$RUNNER_TEMP/seed-guidance"
+          mkdir -p "$RUNNER_TEMP/seed-guidance"
+          gh run download "${{ inputs.seed_candidate_run_id }}" --name "$AGENTLAB_ASSESSMENT_SCENARIO-seed-candidate" --dir "$RUNNER_TEMP/seed-guidance"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])/'seed-guidance'
+          m=json.loads((root/'seed-guidance.json').read_text())
+          assert m['schema']=='agentlab.seed_guidance.v1'
+          assert m['scenario']==os.environ['AGENTLAB_ASSESSMENT_SCENARIO']
+          assert m['promotionOk'] is True and m['promotionExplicit'] is True
+          assert m['promotionAppliedToActiveKnowledge'] is False
+          assert (root/'promotion-export/export.json').is_file()
+          PY
       - name: Install published AgentLab SDK and build-kit
         if: inputs.capture_run_id == '' || (inputs.execution_mode || 'qualification') == 'qualification'
         env:
@@ -249,7 +272,9 @@ jobs:
           started=$(date +%s%3N)
           retain_hap=()
           if [[ "${{ inputs.execution_mode || 'qualification' }}" == qualification ]]; then retain_hap+=(--retain-hap-bytes); fi
-          python3 examples/knowledge-seed/subject/run.py --scenario "$AGENTLAB_ASSESSMENT_SCENARIO" --source "$RUNNER_TEMP/source" --reference "$RUNNER_TEMP/reference/patched-source" --root "$AGENTLAB_CI_ROOT/assessment" --install-root "$AGENTLAB_CI_ROOT" --pi-runtime "$RUNNER_TEMP/pi-runtime" --image "$AGENTLAB_PARTICIPANT_IMAGE" "${retain_hap[@]}"
+          guidance=()
+          if [[ -f "$RUNNER_TEMP/seed-guidance/seed-guidance.json" ]]; then guidance+=(--guidance "$RUNNER_TEMP/seed-guidance"); fi
+          python3 examples/knowledge-seed/subject/run.py --scenario "$AGENTLAB_ASSESSMENT_SCENARIO" --source "$RUNNER_TEMP/source" --reference "$RUNNER_TEMP/reference/patched-source" --root "$AGENTLAB_CI_ROOT/assessment" --install-root "$AGENTLAB_CI_ROOT" --pi-runtime "$RUNNER_TEMP/pi-runtime" --image "$AGENTLAB_PARTICIPANT_IMAGE" "${retain_hap[@]}" "${guidance[@]}"
           cp "$RUNNER_TEMP/participant-image.json" "$AGENTLAB_CI_ROOT/assessment/evidence/participant-image.json"
           cp "$RUNNER_TEMP/participant-runtime-preflight.txt" "$AGENTLAB_CI_ROOT/assessment/evidence/participant-runtime-preflight.txt"
           printf 'participant_and_verify\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
@@ -322,6 +347,34 @@ jobs:
           PY
           )
           /usr/bin/python3 examples/tablegit-session/run.py --image "${runtime[0]}" --runtime-volume "${runtime[1]}" --sdk-program "$AGENTLAB_COMPOSITION_DIR/session-sdk.json" --root "$AGENTLAB_CI_ROOT/store" --asset-model-export "$AGENTLAB_CI_ROOT/normalized-runtime/instances/$AGENTLAB_CAPTURE_RUN_ID" --asset-instance-id "$AGENTLAB_CAPTURE_RUN_ID" --experience-real-inputs "$AGENTLAB_CI_ROOT/evaluation-inputs"
+      - name: Export verified seed candidate for an explicit next run
+        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,shutil
+          from pathlib import Path
+          root=Path(os.environ['AGENTLAB_CI_ROOT']); out=root/'seed-candidate'; out.mkdir()
+          exports=sorted(root.glob('store/evidence-*/experience/promotion-export/export.json'))
+          summaries=sorted(root.glob('store/evidence-*/experience/summary.json'))
+          assert len(exports)==1 and len(summaries)==1,(exports,summaries)
+          export=exports[0].parent; summary=json.loads(summaries[0].read_text())
+          assert summary['ok'] is True and summary['promotionExplicit'] is True
+          assert summary['promotionAppliedToActiveKnowledge'] is False
+          shutil.copytree(export,out/'promotion-export')
+          h=hashlib.sha256()
+          for p in sorted((out/'promotion-export').rglob('*')):
+            if p.is_file(): h.update(str(p.relative_to(out/'promotion-export')).encode()+b'\0'+p.read_bytes())
+          subject=json.loads((root/'assessment/evidence/summary.json').read_text())
+          manifest=dict(schema='agentlab.seed_guidance.v1',scenario=os.environ['AGENTLAB_ASSESSMENT_SCENARIO'],sourceRunId=os.environ['GITHUB_RUN_ID'],captureRunId=os.environ['AGENTLAB_CAPTURE_RUN_ID'],promotionOk=summary['ok'],promotionExplicit=summary['promotionExplicit'],promotionAppliedToActiveKnowledge=summary['promotionAppliedToActiveKnowledge'],verifiedLessonId=summary['verifiedLessonId'],candidateDigest=h.hexdigest(),subjectTaskSucceeded=subject.get('subjectTaskSucceeded'),sourceForkQualified=subject.get('sourceForkQualified'))
+          (out/'seed-guidance.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          PY
+      - name: Preserve verified seed candidate
+        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ inputs.scenario }}-seed-candidate
+          if-no-files-found: error
+          path: ${{ env.AGENTLAB_CI_ROOT }}/seed-candidate/
       - name: Publish complete TableGit history and analysis evidence
         if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
         env:
