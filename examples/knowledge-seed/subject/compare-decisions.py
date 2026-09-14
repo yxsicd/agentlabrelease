@@ -9,6 +9,7 @@ current = json.loads(current_path.read_text())
 assert baseline['schema'] == current['schema'] == 'agentlab.harness_decision_package.v1'
 assert baseline['scenario'] == current['scenario']
 assert baseline['taskId'] == current['taskId']
+comparable = baseline.get('infrastructureAvailable', True) is True and current.get('infrastructureAvailable', True) is True and baseline.get('assessmentStatus','assessed') == current.get('assessmentStatus','assessed') == 'assessed'
 
 def phases(package):
     return {row['phase']: row for row in package['phaseVerdicts']}
@@ -72,8 +73,9 @@ summary = dict(
 result = dict(
     schema='agentlab.harness_decision_comparison.v1', scenario=current['scenario'], taskId=current['taskId'],
     baselineSeedGuidance=baseline.get('seedGuidance'), currentSeedGuidance=current.get('seedGuidance'),
-    summary=summary, phaseDelta=phase_delta,
-    interpretationPolicy='Deltas are evidence, not causal attribution. Runner/model variance and prompt guidance may confound results.',
+    summary=summary, phaseDelta=phase_delta, comparable=comparable,
+    comparisonBlocker=(None if comparable else 'At least one run was not an assessed, infrastructure-available Participant experiment.'),
+    interpretationPolicy='Deltas are evidence, not causal attribution. Do not interpret outcome/performance deltas when comparable=false. Runner/model variance and prompt guidance may confound results.',
     agentDecisionRequired=True,
     allowedDecisions=['adopt-guidance','reject-guidance','rerun-control','rerun-guided','modify-guidance','design-next-experiment'])
 output_path.write_text(json.dumps(result, indent=2) + '\n')

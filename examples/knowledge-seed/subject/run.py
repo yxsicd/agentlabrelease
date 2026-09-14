@@ -1,5 +1,5 @@
 """Real staged navigation assessment, with explicit source-only fresh-Agent fork."""
-import argparse,hashlib,json,os,shutil,subprocess,sys,time,threading
+import argparse,hashlib,json,os,shutil,subprocess,sys,time,threading,urllib.error,urllib.request
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'real-code-agent'))
 from participant import Participant
@@ -35,6 +35,27 @@ def sha256_file(path):
  with path.open('rb') as f:
   for chunk in iter(lambda:f.read(1024*1024),b''):h.update(chunk)
  return h.hexdigest()
+def gateway_preflight(e,model,route='glm'):
+ url=os.environ['AGENTLAB_LM_GATEWAY_URL'].rstrip('/')+'/v1/chat/completions'
+ payload=json.dumps(dict(model=model,providerId=route,stream=False,max_completion_tokens=4,messages=[dict(role='user',content='Return exactly OK.')])).encode()
+ attempts=[];ready=False
+ for number,delay in enumerate((0,5,15),1):
+  if delay:time.sleep(delay)
+  started=time.monotonic_ns();status=None;body=b'';error=None
+  request=urllib.request.Request(url,data=payload,headers={'Authorization':'Bearer '+os.environ['AGENTLAB_LM_GATEWAY_KEY'],'Content-Type':'application/json'},method='POST')
+  try:
+   with urllib.request.build_opener().open(request,timeout=30) as response:status=response.status;body=response.read(65536)
+  except urllib.error.HTTPError as exc:
+   status=exc.code;body=exc.read(65536)
+  except Exception as exc:error=type(exc).__name__+': '+str(exc)
+  attempts.append(dict(attempt=number,delayBeforeMs=delay*1000,status=status,durationMs=(time.monotonic_ns()-started)//1_000_000,responseBytes=len(body),responseSha256=hashlib.sha256(body).hexdigest(),responsePreview=body[:1024].decode(errors='replace'),error=error))
+  if status==200:
+   try:
+    parsed=json.loads(body);ready=isinstance(parsed,dict) and ('choices' in parsed or 'output' in parsed)
+   except Exception:ready=False
+  if ready:break
+ result=dict(schema='agentlab.gateway_preflight.v1',endpointPath='/v1/chat/completions',model=model,providerRoute=route,ready=ready,attempts=attempts,credentialRecorded=False,taskContentSent=False)
+ dump(e/'gateway-preflight.json',result);return result
 def line_count(path):
  with path.open('rb') as f:return sum(1 for _ in f)
 def load_guidance(path,scenario):
@@ -58,6 +79,12 @@ def main():
  if guidance:dump(e/'seed-guidance.json',guidance['manifest'])
  if seed.get('oracleDigest'):assert hashlib.sha256(Path(__file__).with_name(scenario['oracle']).read_bytes()).hexdigest()==seed['oracleDigest']
  summary=dict(schema='agentlab.'+a.scenario+'_subject.v1',taskId=scenario['caseId'],assessmentScope=scenario['scope'],sourceRevision=PIN,demands=demands,sourceForkQualified=False,formalSessionFSForkQualified=False,uiDeviceQualified=False,phases={},timing=dict(builds=[],participantEdits=[]),ok=False,subjectTaskSucceeded=False)
+ preflight=gateway_preflight(e,os.environ.get('AGENTLAB_MODEL','glm-5.3-flash'))
+ if not preflight['ready']:
+  summary.update(ok=True,subjectTaskSucceeded=None,assessmentStatus='infrastructure-unavailable',infrastructureAvailable=False)
+  decision=dict(schema='agentlab.harness_decision_package.v1',scenario=a.scenario,taskId=scenario['caseId'],sourceRevision=PIN,assessmentStatus='infrastructure-unavailable',infrastructureAvailable=False,subjectTaskSucceeded=None,sourceForkQualified=False,seedGuidance=(guidance['manifest'] if guidance else None),phaseVerdicts=[],participantProcess=[],launchErrors=[dict(phase='gateway-preflight',error='Model gateway readiness failed before assessed dispatch')],buildTiming=dict(firstCompileStartMs=None,builds=[]),evidenceCost=dict(successfulHapCount=0,successfulHapBytes=0,retainedHapCount=0,retainedHapBytes=0,retentionPolicy=('qualification-full-bytes' if a.retain_hap_bytes else 'fast-manifest-only')),automaticAttributionCandidates=[dict(kind='transport-gateway-unavailable',strength='verified-preflight',evidence=['gateway-preflight'],claim='The configured model route did not become ready after bounded preflight retries; no assessed Participant turn was dispatched.')],uncertainties=['No Participant/model-quality conclusion is permitted because assessed dispatch did not begin.'],agentDecisionRequired=True,allowedDecisions=['rerun-control','rerun-guided','design-next-experiment'],harnessPolicy='Collect, verify, compare and propose evidence-linked candidates; never choose promotion or seed adoption automatically.')
+  dump(e/'decision-package.json',decision);dump(e/'summary.json',summary);return
+ summary['assessmentStatus']='assessed';summary['infrastructureAvailable']=True
  def oracle(label,directory,stage):
   for variable in ('AGENTLAB_SOURCE_PROBE','AGENTLAB_ORACLE_TYPESCRIPT'):
    value=os.environ.get(variable);assert value and Path(value).exists(), 'Harness oracle dependency missing: '+variable
@@ -265,7 +292,7 @@ def main():
   if timeout_phases:candidates.append(dict(kind='participant-budget-timeout',strength='observed',evidence=timeout_phases,claim='Participant hit the fixed execution deadline; timing/tool evidence is required before attributing the cause.'))
   if transport_errors:candidates.append(dict(kind='transport-launch-failure',strength='observed',evidence=[x['phase'] for x in transport_errors],claim='Participant launch/model exchange failed at the transport or gateway boundary before a normal assessed turn completed.'))
   if other_launch_errors:candidates.append(dict(kind='participant-launch-failure',strength='observed',evidence=[x['phase'] for x in other_launch_errors],claim='Participant did not complete normally for a non-timeout, non-transport launch reason; inspect retained events and stderr.'))
-  decision=dict(schema='agentlab.harness_decision_package.v1',scenario=a.scenario,taskId=scenario['caseId'],sourceRevision=PIN,subjectTaskSucceeded=summary.get('subjectTaskSucceeded'),sourceForkQualified=summary.get('sourceForkQualified'),seedGuidance=guidance_manifest,phaseVerdicts=verdicts,participantProcess=participant_process,launchErrors=launch_errors,buildTiming=dict(firstCompileStartMs=summary.get('timing',{}).get('firstCompileStartMs'),builds=build_rows),evidenceCost=evidence_cost,automaticAttributionCandidates=candidates,uncertainties=['Participant/model latency is not inferred from timeout alone.','Runner variance may affect wall-clock timing.','Calibration proves the declared seam only; device/UI and formal SessionFS remain separate unless independently qualified.'],agentDecisionRequired=True,allowedDecisions=['adopt-guidance','reject-guidance','rerun-control','rerun-guided','modify-guidance','design-next-experiment'],harnessPolicy='Collect, verify, compare and propose evidence-linked candidates; never choose promotion or seed adoption automatically.')
+  decision=dict(schema='agentlab.harness_decision_package.v1',scenario=a.scenario,taskId=scenario['caseId'],sourceRevision=PIN,assessmentStatus='assessed',infrastructureAvailable=True,subjectTaskSucceeded=summary.get('subjectTaskSucceeded'),sourceForkQualified=summary.get('sourceForkQualified'),seedGuidance=guidance_manifest,phaseVerdicts=verdicts,participantProcess=participant_process,launchErrors=launch_errors,buildTiming=dict(firstCompileStartMs=summary.get('timing',{}).get('firstCompileStartMs'),builds=build_rows),evidenceCost=evidence_cost,automaticAttributionCandidates=candidates,uncertainties=['Participant/model latency is not inferred from timeout alone.','Runner variance may affect wall-clock timing.','Calibration proves the declared seam only; device/UI and formal SessionFS remain separate unless independently qualified.'],agentDecisionRequired=True,allowedDecisions=['adopt-guidance','reject-guidance','rerun-control','rerun-guided','modify-guidance','design-next-experiment'],harnessPolicy='Collect, verify, compare and propose evidence-linked candidates; never choose promotion or seed adoption automatically.')
   dump(e/'decision-package.json',decision)
   dump(e/'summary.json',summary)
 if __name__=='__main__':main()
