@@ -252,7 +252,13 @@ def main():
   for name,directory in [('turn-1','parent-agent'),('parent-turn-2','parent-agent'),('fresh-fork-turn-2','fork-agent')]:
    lifecycle=e/directory/(name+'-lifecycle.json')
    if lifecycle.exists():
-    row=json.loads(lifecycle.read_text());edit=edit_timing.get(name,{});events=e/directory/(name+'-events.jsonl');event_bytes=events.stat().st_size if events.exists() else 0;event_lines=line_count(events) if events.exists() else 0;participant_process.append(dict(phase=name,durationMs=row.get('durationMs'),timedOut=row.get('timedOut'),exitCode=row.get('exitCode'),completedToolCalls=row.get('completedToolCalls'),toolErrors=row.get('toolErrors'),nativeParseErrors=row.get('nativeParseErrors'),firstSourceMutationMs=edit.get('firstSourceMutationMs'),firstChangedPaths=edit.get('firstChangedPaths',[]),mutationDetection=edit.get('detection'),rawEventBytes=event_bytes,rawEventLines=event_lines))
+    row=json.loads(lifecycle.read_text());edit=edit_timing.get(name,{});events=e/directory/(name+'-events.jsonl');event_bytes=events.stat().st_size if events.exists() else 0;event_lines=line_count(events) if events.exists() else 0
+    retry_receipt=e/directory/(name+'-transport-retry.json');retry_count=retry_duration=retry_event_bytes=retry_event_lines=0
+    if retry_receipt.exists():
+     retry_count=json.loads(retry_receipt.read_text()).get('retryCount',0);retry_lifecycle=e/directory/(name+'-transport-attempt-1-lifecycle.json');retry_events=e/directory/(name+'-transport-attempt-1-events.jsonl')
+     if retry_lifecycle.exists():retry_duration=json.loads(retry_lifecycle.read_text()).get('durationMs') or 0
+     if retry_events.exists():retry_event_bytes=retry_events.stat().st_size;retry_event_lines=line_count(retry_events)
+    participant_process.append(dict(phase=name,durationMs=row.get('durationMs'),effectiveDurationMs=(row.get('durationMs') or 0)+retry_duration,timedOut=row.get('timedOut'),exitCode=row.get('exitCode'),completedToolCalls=row.get('completedToolCalls'),toolErrors=row.get('toolErrors'),nativeParseErrors=row.get('nativeParseErrors'),transportRetryCount=retry_count,transportRetryDurationMs=retry_duration,firstSourceMutationMs=edit.get('firstSourceMutationMs'),firstChangedPaths=edit.get('firstChangedPaths',[]),mutationDetection=edit.get('detection'),rawEventBytes=event_bytes,rawEventLines=event_lines,transportRetryRawEventBytes=retry_event_bytes,transportRetryRawEventLines=retry_event_lines,effectiveRawEventBytes=event_bytes+retry_event_bytes))
   timeout_phases=[x['phase'] for x in participant_process if x.get('timedOut')]
   transport_errors=[x for x in launch_errors if any(token in x['error'].lower() for token in ('frp','http 404','404 <!doctype','502','gateway exchange failed'))]
   other_launch_errors=[x for x in launch_errors if x not in transport_errors and x['phase'] not in timeout_phases]

@@ -4,6 +4,7 @@ import base64
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import threading
 import time
@@ -146,7 +147,13 @@ class Participant:
             'captureAuthority': 'operator-owned local forwarding proxy',
             'externalCredentialInParticipant': False}, indent=2) + '\n')
 
-    def turn(self, label, project, marker=None, repair=False, prompt=None, container=None, requirement=None):
+    @staticmethod
+    def _is_transient_transport_error(message):
+        text = message.lower()
+        return any(token in text for token in ('frp', '404 <!doctype', 'http 404', 'gateway exchange failed', '502 bad gateway'))
+
+    def turn(self, label, project, marker=None, repair=False, prompt=None, container=None, requirement=None,
+             _transport_retry=0):
         prompt = prompt or (f'Work in the current Harmony ArkTS project. Read the page source and '
                   f'{"repair its invalid trailing text, then " if repair else ""}'
                   f'change its displayed Text to exactly "{marker}". Keep the Stage application '
@@ -173,8 +180,11 @@ class Participant:
         lifecycle = {'label': label, 'startedAt': datetime.now(timezone.utc).isoformat(),
                      'captureAuthority': 'operator', 'exitCode': None, 'timedOut': False}
         started = time.monotonic()
+        turn_error = None
         try:
             self._run_turn(command, project, env, label, lifecycle)
+        except RuntimeError as error:
+            turn_error = error
         finally:
             lifecycle.update(endedAt=datetime.now(timezone.utc).isoformat(),
                              durationMs=round((time.monotonic()-started)*1000))
@@ -200,6 +210,21 @@ class Participant:
             if source.is_file():
                 (self.evidence / f'{label}-actual-source.ets').write_bytes(source.read_bytes())
             (self.evidence / f'{label}-lifecycle.json').write_text(json.dumps(lifecycle, indent=2)+'\n')
+        if turn_error is not None:
+            combined = str(turn_error)
+            if _transport_retry == 0 and lifecycle.get('completedToolCalls') == 0 and self._is_transient_transport_error(combined):
+                preserved = []
+                for suffix in ('events.jsonl','stderr.log','lifecycle.json','command.json','prompt.txt'):
+                    source = self.evidence / f'{label}-{suffix}'
+                    if source.is_file():
+                        target = self.evidence / f'{label}-transport-attempt-1-{suffix}'
+                        shutil.copy2(source, target); preserved.append(target.name)
+                (self.evidence / f'{label}-transport-retry.json').write_text(json.dumps(dict(
+                    schema='agentlab.participant_transport_retry.v1', label=label, retryCount=1,
+                    reason=combined, preserved=preserved), indent=2)+'\n')
+                return self.turn(label, project, marker=marker, repair=repair, prompt=prompt, container=container,
+                                 requirement=requirement, _transport_retry=1)
+            raise turn_error
         source = project / 'entry/src/main/ets/pages/Index.ets'
         if marker is not None and marker not in source.read_text():
             raise RuntimeError(f'{label}: Agent did not change actual source')
