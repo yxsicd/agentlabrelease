@@ -20,6 +20,10 @@ on:
         type: boolean
         default: false
         description: Populate immutable caches only; do not dispatch or evaluate a subject
+      prepare_only:
+        type: boolean
+        default: false
+        description: Prepare and preflight the full fast subject environment without dispatching Agent
 permissions:
   contents: write
 jobs:
@@ -35,6 +39,7 @@ jobs:
       AGENTLAB_CAPTURE_RUN_ID: ${{ inputs.capture_run_id || github.run_id }}
       AGENTLAB_EXECUTION_MODE: ${{ inputs.execution_mode || 'qualification' }}
       AGENTLAB_PREWARM_ONLY: ${{ inputs.prewarm_only || false }}
+      AGENTLAB_PREPARE_ONLY: ${{ inputs.prepare_only || false }}
       AGENTLAB_MODEL: glm-5.3-flash
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
     steps:
@@ -67,6 +72,7 @@ jobs:
             'git':out('git','--version'),
             'executionMode':os.environ.get('AGENTLAB_EXECUTION_MODE'),
             'prewarmOnly':os.environ.get('AGENTLAB_PREWARM_ONLY'),
+            'prepareOnly':os.environ.get('AGENTLAB_PREPARE_ONLY'),
             'startedUnixMs':time.time_ns()//1_000_000,
           }
           (root/'environment-fingerprint.json').write_text(json.dumps(payload,indent=2)+'\n')
@@ -113,14 +119,14 @@ jobs:
           path: ${{ runner.temp }}/agentlab-public-cas
           key: agentlab-composition-cas-v1-${{ hashFiles('release/candidates/harmony-buildkit-v6-linux-x64/environment-lock.json') }}
       - name: Reserve immutable experiment source ref before long capture
-        if: ${{ !inputs.prewarm_only }}
+        if: ${{ !inputs.prewarm_only && !inputs.prepare_only }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="evidence-$AGENTLAB_ASSESSMENT_SCENARIO-subject-$GITHUB_RUN_ID"
           gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$tag" -f sha="$GITHUB_SHA"
       - name: Restore immutable scenario capture for persistence replay
-        if: ${{ !inputs.prewarm_only && inputs.capture_run_id != '' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
+        if: ${{ !inputs.prewarm_only && !inputs.prepare_only && inputs.capture_run_id != '' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -203,7 +209,7 @@ jobs:
           scripts/ci-public-install-deploy-smoke.sh
           printf 'install_agentlab_harmony\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
       - name: Real parent two turns and fresh-Agent source fork; retain Agent failures
-        if: ${{ !inputs.prewarm_only && inputs.capture_run_id == '' }}
+        if: ${{ !inputs.prewarm_only && !inputs.prepare_only && inputs.capture_run_id == '' }}
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
         run: |
@@ -213,7 +219,7 @@ jobs:
           cp "$RUNNER_TEMP/participant-runtime-preflight.txt" "$AGENTLAB_CI_ROOT/assessment/evidence/participant-runtime-preflight.txt"
           printf 'participant_and_verify\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
       - name: Publish full successful build binaries as experiment evidence
-        if: ${{ always() && !inputs.prewarm_only && inputs.capture_run_id == '' && (inputs.execution_mode || 'qualification') == 'qualification' }}
+        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && inputs.capture_run_id == '' && (inputs.execution_mode || 'qualification') == 'qualification' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -229,7 +235,7 @@ jobs:
           (e/'binary-publication.json').write_text(json.dumps(rows,indent=2)+'\n')
           PY
       - name: Preserve raw evidence and build typed actual-run entities
-        if: ${{ always() && !inputs.prewarm_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
+        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -259,7 +265,7 @@ jobs:
           (cal/'calibration.json').write_text(json.dumps(dict(sourceRevision='7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6',sourceDigest=hashlib.sha256(source.read_bytes()).hexdigest(),oracleDigest=json.loads((evidence/'frozen-task.json').read_text())['oracleDigest'],scope=task['assessmentScope'],lesson=lesson,variants=variants),indent=2)+'\n')
           PY
       - name: Publish raw archive independently from typed normalization
-        if: ${{ always() && !inputs.prewarm_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
+        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -269,7 +275,7 @@ jobs:
           fi
           gh release upload "$tag" "$AGENTLAB_CI_ROOT/raw-evidence.tar.zst"
       - name: Persist actual runtime, historical contexts and experience in released TableGit
-        if: ${{ always() && !inputs.prewarm_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
+        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
         run: |
           python3 scripts/channel-input.py --source "$AGENTLAB_COMPOSITION_DIR" --output "$RUNNER_TEMP/tablegit-inputs"
           mapfile -t runtime < <(python3 - <<'PY'
@@ -281,7 +287,7 @@ jobs:
           )
           /usr/bin/python3 examples/tablegit-session/run.py --image "${runtime[0]}" --runtime-volume "${runtime[1]}" --sdk-program "$AGENTLAB_COMPOSITION_DIR/session-sdk.json" --root "$AGENTLAB_CI_ROOT/store" --asset-model-export "$AGENTLAB_CI_ROOT/normalized-runtime/instances/$AGENTLAB_CAPTURE_RUN_ID" --asset-instance-id "$AGENTLAB_CAPTURE_RUN_ID" --experience-real-inputs "$AGENTLAB_CI_ROOT/evaluation-inputs"
       - name: Publish complete TableGit history and analysis evidence
-        if: ${{ always() && !inputs.prewarm_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
+        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -295,7 +301,7 @@ jobs:
           tar -C "$AGENTLAB_CI_ROOT" -cf - normalized-runtime evaluation-inputs "${evidence_dirs[@]}" | zstd -q -o "$AGENTLAB_CI_ROOT/tablegit-runtime.tar.zst"
           gh release upload "$tag" "$AGENTLAB_CI_ROOT/tablegit-runtime.tar.zst"
       - name: Preserve complete supervisor capture, partial/failed Agent events and source cuts
-        if: ${{ always() && !inputs.prewarm_only }}
+        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ${{ inputs.scenario || 'navigation' }}-subject-evidence
@@ -309,14 +315,14 @@ jobs:
             ${{ env.AGENTLAB_CI_ROOT }}/environment-fingerprint.json
             ${{ env.AGENTLAB_CI_ROOT }}/timing.tsv
       - name: Preserve full HAP binaries even when Release publication fails
-        if: ${{ always() && !inputs.prewarm_only && inputs.capture_run_id == '' }}
+        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && inputs.capture_run_id == '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ${{ inputs.scenario || 'navigation' }}-full-hap-evidence
           compression-level: 0
           path: ${{ env.AGENTLAB_CI_ROOT }}/assessment/full-hap/*.hap
       - name: Preserve typed entities and TableGit failures
-        if: ${{ always() && !inputs.prewarm_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
+        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ${{ inputs.scenario }}-tablegit-evidence
