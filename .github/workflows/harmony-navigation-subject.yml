@@ -215,6 +215,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           AGENTLAB_CAS_DIR: ${{ runner.temp }}/agentlab-public-cas
           AGENTLAB_FETCH_ONLY: ${{ inputs.prewarm_only }}
+          AGENTLAB_INSTALL_ONLY: ${{ inputs.prepare_only || inputs.build_cache_probe_only }}
           AGENTLAB_SUBJECT_ONLY: ${{ !inputs.prewarm_only && (inputs.execution_mode || 'qualification') == 'fast' }}
           AGENTLAB_TIMING_FILE: ${{ env.AGENTLAB_CI_ROOT }}/timing.tsv
         run: |
