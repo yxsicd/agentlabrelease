@@ -94,13 +94,13 @@ jobs:
             ${{ runner.temp }}/reference
           key: harmony-source-reference-v1-7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6-${{ hashFiles('crates/agentlab_code_analysis/**', 'examples/harmony-build/seed/**') }}
       - name: Restore npm download cache
-        if: inputs.capture_run_id == ''
+        if: inputs.capture_run_id == '' && !inputs.build_cache_probe_only
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.npm
           key: agentlab-subject-npm-v1-${{ hashFiles('examples/real-code-agent/participant/package-lock.json', 'examples/knowledge-seed/subject/runtime/package-lock.json') }}
       - name: Restore prepared participant and oracle runtimes
-        if: inputs.capture_run_id == ''
+        if: inputs.capture_run_id == '' && !inputs.build_cache_probe_only
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
@@ -108,13 +108,13 @@ jobs:
             ${{ runner.temp }}/oracle-runtime
           key: agentlab-subject-runtimes-v1-${{ hashFiles('examples/real-code-agent/participant/package-lock.json', 'examples/knowledge-seed/subject/runtime/package-lock.json') }}
       - name: Restore stable source probe binary
-        if: inputs.capture_run_id == ''
+        if: inputs.capture_run_id == '' && !inputs.build_cache_probe_only
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ runner.temp }}/agentlab-tools/agentlab-source-probe
           key: agentlab-source-probe-v1-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'crates/agentlab_code_analysis/**') }}
       - name: Restore participant image cache
-        if: inputs.capture_run_id == ''
+        if: inputs.capture_run_id == '' && !inputs.build_cache_probe_only
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ runner.temp }}/participant-image-cache
@@ -187,7 +187,7 @@ jobs:
           echo "AGENTLAB_SOURCE_PROBE=$RUNNER_TEMP/agentlab-tools/agentlab-source-probe" >> "$GITHUB_ENV"
           printf 'prepare_source_reference\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
       - name: Install contained participant and independent oracle runtimes
-        if: inputs.capture_run_id == ''
+        if: inputs.capture_run_id == '' && !inputs.build_cache_probe_only
         run: |
           started=$(date +%s%3N)
           mkdir -p "$RUNNER_TEMP/pi-runtime" "$RUNNER_TEMP/oracle-runtime"
