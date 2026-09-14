@@ -20,6 +20,11 @@ on:
         type: string
         default: ''
         description: Optional prior qualification run whose verified seed candidate is injected as guidance; frozen task/oracle stay unchanged
+      guidance_variant:
+        type: choice
+        options: [none, budget-v1]
+        default: none
+        description: Optional repo-versioned experimental overlay on verified guidance; never mutates or promotes the base candidate
       baseline_run_id:
         type: string
         default: ''
@@ -58,6 +63,7 @@ jobs:
       AGENTLAB_FAST_HARMONY_ROOT: /tmp/agentlab-fast-subject/harmony-cli
       AGENTLAB_FAST_BUILD_KIT_ROOT: /tmp/agentlab-fast-subject/harmony-build-kit
       AGENTLAB_MODEL: glm-5.3-flash
+      AGENTLAB_GUIDANCE_VARIANT: ${{ inputs.guidance_variant || 'none' }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -284,7 +290,7 @@ jobs:
           root=Path(os.environ['AGENTLAB_CI_ROOT'])
           result=json.loads(Path(os.environ['AGENTLAB_GATEWAY_PREFLIGHT_RECEIPT']).read_text())
           guidance_path=Path(os.environ['RUNNER_TEMP'])/'seed-guidance'
-          guidance=run.load_guidance(guidance_path,os.environ['AGENTLAB_ASSESSMENT_SCENARIO']) if (guidance_path/'seed-guidance.json').is_file() else None
+          guidance=run.load_guidance(guidance_path,os.environ['AGENTLAB_ASSESSMENT_SCENARIO'],os.environ.get('AGENTLAB_GUIDANCE_VARIANT','none')) if (guidance_path/'seed-guidance.json').is_file() else None
           assert result['ready'] is False
           run.write_infrastructure_unavailable(root/'assessment/evidence',os.environ['AGENTLAB_ASSESSMENT_SCENARIO'],guidance,result)
           PY
@@ -327,7 +333,7 @@ jobs:
           if [[ "${{ inputs.execution_mode || 'qualification' }}" == qualification ]]; then retain_hap+=(--retain-hap-bytes); fi
           guidance=()
           if [[ -f "$RUNNER_TEMP/seed-guidance/seed-guidance.json" ]]; then guidance+=(--guidance "$RUNNER_TEMP/seed-guidance"); fi
-          python3 examples/knowledge-seed/subject/run.py --scenario "$AGENTLAB_ASSESSMENT_SCENARIO" --source "$RUNNER_TEMP/source" --reference "$RUNNER_TEMP/reference/patched-source" --root "$AGENTLAB_CI_ROOT/assessment" --install-root "$AGENTLAB_CI_ROOT" --pi-runtime "$RUNNER_TEMP/pi-runtime" --image "$AGENTLAB_PARTICIPANT_IMAGE" "${retain_hap[@]}" "${guidance[@]}"
+          python3 examples/knowledge-seed/subject/run.py --scenario "$AGENTLAB_ASSESSMENT_SCENARIO" --source "$RUNNER_TEMP/source" --reference "$RUNNER_TEMP/reference/patched-source" --root "$AGENTLAB_CI_ROOT/assessment" --install-root "$AGENTLAB_CI_ROOT" --pi-runtime "$RUNNER_TEMP/pi-runtime" --image "$AGENTLAB_PARTICIPANT_IMAGE" --guidance-variant "$AGENTLAB_GUIDANCE_VARIANT" "${retain_hap[@]}" "${guidance[@]}"
           cp "$RUNNER_TEMP/participant-image.json" "$AGENTLAB_CI_ROOT/assessment/evidence/participant-image.json"
           cp "$RUNNER_TEMP/participant-runtime-preflight.txt" "$AGENTLAB_CI_ROOT/assessment/evidence/participant-runtime-preflight.txt"
           printf 'participant_and_verify\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"

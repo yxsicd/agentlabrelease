@@ -1,0 +1,9 @@
+{
+  "schema": "agentlab.guidance_variant.v1",
+  "id": "budget-v1",
+  "scenario": "cache-durability",
+  "baseCandidateDigest": "d9b3af78bcebe8e1f63e0fc52d5b6296a1d637ffa8ea49fbda648d2c48fa7f33",
+  "decisionSourceRunId": "34865577068",
+  "body": "Treat the four frozen task files as the working set. Inspect only them and direct dependencies needed to identify the persistence chain; avoid broad repository exploration. Use the first third of the 420-second turn to choose a concrete hypothesis, then make the smallest supported edit rather than continuing discovery. On turn 2, focus on awaited flush/model settlement and failure propagation without expanding scope. The Harness performs the authoritative Harmony build after the turn, so do not spend the turn searching for or reconstructing that unavailable build path.",
+  "bodySha256": "1ca5d2e5157c3fcea57b20257f4b0ec9a6442f307358b6b539610363ee8e6688"
+}

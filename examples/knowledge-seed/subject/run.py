@@ -58,13 +58,21 @@ def gateway_preflight(e,model,route='glm'):
  dump(e/'gateway-preflight.json',result);return result
 def line_count(path):
  with path.open('rb') as f:return sum(1 for _ in f)
-def load_guidance(path,scenario):
+def load_guidance(path,scenario,variant='none'):
  if not path:return None
  manifest=json.loads((path/'seed-guidance.json').read_text());assert manifest['schema']=='agentlab.seed_guidance.v1' and manifest['scenario']==scenario
  export=path/'promotion-export';skills=[json.loads(line) for line in (export/'maintainer_skills.jsonl').read_text().splitlines() if line.strip()]
  promoted=[row for row in skills if row.get('sourceLessonId')==manifest['verifiedLessonId']]
  assert len(promoted)==1
- return dict(manifest=manifest,body=promoted[0]['body'],skillId=promoted[0]['id'])
+ body=promoted[0]['body']
+ if variant and variant!='none':
+  overlay_path=Path(__file__).with_name('guidance-variants')/scenario/(variant+'.json')
+  overlay=json.loads(overlay_path.read_text());assert overlay['schema']=='agentlab.guidance_variant.v1' and overlay['scenario']==scenario and overlay['id']==variant
+  assert overlay['baseCandidateDigest']==manifest['candidateDigest']
+  raw=overlay['body'].encode();digest=hashlib.sha256(raw).hexdigest();assert digest==overlay['bodySha256']
+  manifest=dict(manifest);manifest['guidanceVariant']=dict(id=variant,digest=digest,experimental=True,decisionSourceRunId=overlay['decisionSourceRunId'],baseCandidateDigest=overlay['baseCandidateDigest'])
+  body+='\n\nExperimental Agent-selected execution guidance (not verified reusable knowledge):\n'+overlay['body']
+ return dict(manifest=manifest,body=body,skillId=promoted[0]['id'])
 def write_infrastructure_unavailable(e,scenario_name,guidance=None,preflight=None):
  scenario=SCENARIOS[scenario_name]
  seed=json.loads(next(line for line in (Path(__file__).resolve().parents[1]/'seeds/harmony-code-workshop/evaluation_cases.jsonl').read_text().split('\n') if line.strip() and json.loads(line)['id']==scenario['caseId']))
@@ -76,7 +84,7 @@ def write_infrastructure_unavailable(e,scenario_name,guidance=None,preflight=Non
  decision=dict(schema='agentlab.harness_decision_package.v1',scenario=scenario_name,taskId=scenario['caseId'],sourceRevision=PIN,assessmentStatus='infrastructure-unavailable',infrastructureAvailable=False,subjectTaskSucceeded=None,sourceForkQualified=False,seedGuidance=manifest,phaseVerdicts=[],participantProcess=[],launchErrors=[dict(phase='gateway-preflight',error='Model gateway readiness failed before assessed dispatch')],buildTiming=dict(firstCompileStartMs=None,builds=[]),evidenceCost=dict(successfulHapCount=0,successfulHapBytes=0,retainedHapCount=0,retainedHapBytes=0,retentionPolicy='fast-manifest-only'),automaticAttributionCandidates=[dict(kind='transport-gateway-unavailable',strength='verified-preflight',evidence=['gateway-preflight'],claim='The configured model route did not become ready after bounded preflight retries; no assessed Participant turn was dispatched.')],uncertainties=['No Participant/model-quality conclusion is permitted because assessed dispatch did not begin.'],agentDecisionRequired=True,allowedDecisions=['rerun-control','rerun-guided','design-next-experiment'],harnessPolicy='Collect, verify, compare and propose evidence-linked candidates; never choose promotion or seed adoption automatically.')
  dump(e/'summary.json',summary);dump(e/'decision-package.json',decision);return decision
 def main():
- p=argparse.ArgumentParser();p.add_argument('--scenario',choices=SCENARIOS,default='navigation');p.add_argument('--source',type=Path,required=True);p.add_argument('--reference',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--install-root',type=Path,required=True);p.add_argument('--pi-runtime',type=Path,required=True);p.add_argument('--image',required=True);p.add_argument('--build-cache-probe-only',action='store_true');p.add_argument('--retain-hap-bytes',action='store_true');p.add_argument('--guidance',type=Path);a=p.parse_args()
+ p=argparse.ArgumentParser();p.add_argument('--scenario',choices=SCENARIOS,default='navigation');p.add_argument('--source',type=Path,required=True);p.add_argument('--reference',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--install-root',type=Path,required=True);p.add_argument('--pi-runtime',type=Path,required=True);p.add_argument('--image',required=True);p.add_argument('--build-cache-probe-only',action='store_true');p.add_argument('--retain-hap-bytes',action='store_true');p.add_argument('--guidance',type=Path);p.add_argument('--guidance-variant',default='none');a=p.parse_args()
  scenario=SCENARIOS[a.scenario];paths=scenario['paths'];demands=scenario['demands']
  experiment_started=time.monotonic_ns()
  root=a.root.resolve();root.mkdir();e=root/'evidence';e.mkdir();project=root/'workspace'
@@ -85,7 +93,7 @@ def main():
  lock=json.loads((a.install_root/'downloads/environment-lock.json').read_text());dump(e/'environment-lock.json',lock)
  seed=json.loads(next(line for line in (Path(__file__).resolve().parents[1]/'seeds/harmony-code-workshop/evaluation_cases.jsonl').read_text().split('\n') if line.strip() and json.loads(line)['id']==scenario['caseId']));assert seed['demands']==demands
  dump(e/'frozen-task.json',seed)
- guidance=load_guidance(a.guidance,a.scenario)
+ guidance=load_guidance(a.guidance,a.scenario,a.guidance_variant)
  if guidance:dump(e/'seed-guidance.json',guidance['manifest'])
  if seed.get('oracleDigest'):assert hashlib.sha256(Path(__file__).with_name(scenario['oracle']).read_bytes()).hexdigest()==seed['oracleDigest']
  summary=dict(schema='agentlab.'+a.scenario+'_subject.v1',taskId=scenario['caseId'],assessmentScope=scenario['scope'],sourceRevision=PIN,demands=demands,sourceForkQualified=False,formalSessionFSForkQualified=False,uiDeviceQualified=False,phases={},timing=dict(builds=[],participantEdits=[]),ok=False,subjectTaskSucceeded=False)

@@ -43,6 +43,7 @@ result=dict(
     baselineRunId=a.baseline_run_id,guidedRunId=a.guided_run_id,
     qualificationRunId=(guidance or {}).get('sourceRunId'),captureRunId=(guidance or {}).get('captureRunId'),
     candidateDigest=(guidance or {}).get('candidateDigest'),verifiedLessonId=(guidance or {}).get('verifiedLessonId'),
+    guidanceVariant=(guidance or {}).get('guidanceVariant'),
     baselineAssessmentStatus=baseline.get('assessmentStatus','assessed'),
     guidedAssessmentStatus=current.get('assessmentStatus','assessed'),
     comparable=bool(comparison.get('comparable')),comparisonBlocker=comparison.get('comparisonBlocker'),
