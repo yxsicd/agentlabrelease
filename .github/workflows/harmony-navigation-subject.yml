@@ -168,6 +168,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           AGENTLAB_CAS_DIR: ${{ runner.temp }}/agentlab-public-cas
+          AGENTLAB_FETCH_ONLY: ${{ inputs.prewarm_only }}
         run: |
           started=$(date +%s%3N)
           sudo apt-get update

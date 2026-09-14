@@ -152,6 +152,10 @@ chmod +x "${agentlabctl}"
   --platform linux-x64 \
   --out-dir "${composition}" \
   --cache-dir "${cas}"
+if [[ "${AGENTLAB_FETCH_ONLY:-false}" == "true" ]]; then
+  printf '{"schema":"agentlab.public_cache_prewarm.v1","ok":true,"sourceRevision":"%s"}\n' "${source_revision}" > "${root}/prewarm-summary.json"
+  exit 0
+fi
 "${agentlabctl}" composition install-docker \
   --dir "${composition}" \
   --platform linux-x64 \
