@@ -96,6 +96,7 @@ summary = dict(
 result = dict(
     schema='agentlab.harness_decision_comparison.v1', scenario=current['scenario'], taskId=current['taskId'],
     baselineSeedGuidance=baseline.get('seedGuidance'), currentSeedGuidance=current.get('seedGuidance'),
+    baselineReasoningPolicy=baseline.get('reasoningPolicy'), currentReasoningPolicy=current.get('reasoningPolicy'),
     summary=summary, phaseDelta=phase_delta, comparable=comparable,
     comparisonBlocker=(None if comparable else ('At least one run was not an assessed, infrastructure-available Participant experiment.' if not infrastructure_comparable else 'At least one phase is missing or has an infrastructure/transport launch error; whole-generation comparison is not valid.')),
     interpretationPolicy='Deltas are evidence, not causal attribution. Do not interpret outcome/performance deltas when comparable=false. Runner/model variance and prompt guidance may confound results.',

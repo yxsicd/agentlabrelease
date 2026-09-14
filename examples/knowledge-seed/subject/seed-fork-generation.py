@@ -44,6 +44,7 @@ result=dict(
     qualificationRunId=(guidance or {}).get('sourceRunId'),captureRunId=(guidance or {}).get('captureRunId'),
     candidateDigest=(guidance or {}).get('candidateDigest'),verifiedLessonId=(guidance or {}).get('verifiedLessonId'),
     guidanceVariant=(guidance or {}).get('guidanceVariant'),
+    reasoningPolicy=current.get('reasoningPolicy'),
     baselineAssessmentStatus=baseline.get('assessmentStatus','assessed'),
     guidedAssessmentStatus=current.get('assessmentStatus','assessed'),
     comparable=bool(comparison.get('comparable')),comparisonBlocker=comparison.get('comparisonBlocker'),

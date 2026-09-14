@@ -19,7 +19,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class Participant:
-    def __init__(self, evidence, state, binary, gateway, model, route='glm', implementation='pi'):
+    def __init__(self, evidence, state, binary, gateway, model, route='glm', implementation='pi', reasoning_effort=None):
         self.implementation = implementation
         self.evidence = evidence
         self.state = state
@@ -41,6 +41,7 @@ class Participant:
         self.gateway = gateway.rstrip('/')
         self.model = model
         self.route = route
+        self.reasoning_effort = reasoning_effort if reasoning_effort not in (None, '', 'default') else None
         self.key = os.environ['AGENTLAB_LM_GATEWAY_KEY']
         self.requests = 0
         self.lock = threading.Lock()
@@ -84,6 +85,8 @@ class Participant:
                 stem.with_suffix('.request.json').write_bytes(raw)
                 wire = json.loads(raw)
                 wire['providerId'] = owner.route
+                if owner.reasoning_effort:
+                    wire['reasoning_effort'] = owner.reasoning_effort
                 upstream = json.dumps(wire).encode()
                 stem.with_suffix('.upstream-request.json').write_bytes(upstream)
                 request = urllib.request.Request(owner.gateway + self.path, data=upstream,
@@ -144,6 +147,7 @@ class Participant:
         (evidence / 'participant.json').write_text(json.dumps({
             'implementation': implementation, 'packageVersion': '0.73.1' if implementation=='pi' else '2.4.6', 'model': model,
             'gateway': gateway, 'providerRoute': route,
+            'reasoningEffort': self.reasoning_effort, 'piThinkingMode': 'off',
             'captureAuthority': 'operator-owned local forwarding proxy',
             'externalCredentialInParticipant': False}, indent=2) + '\n')
 

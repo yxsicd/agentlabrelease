@@ -25,6 +25,11 @@ on:
         options: [none, budget-v1]
         default: none
         description: Optional repo-versioned experimental overlay on verified guidance; never mutates or promotes the base candidate
+      reasoning_effort:
+        type: choice
+        options: [default, low, medium, high]
+        default: default
+        description: Operator-side provider reasoning_effort override; Pi thinking mode remains off
       baseline_run_id:
         type: string
         default: ''
@@ -64,6 +69,7 @@ jobs:
       AGENTLAB_FAST_BUILD_KIT_ROOT: /tmp/agentlab-fast-subject/harmony-build-kit
       AGENTLAB_MODEL: glm-5.3-flash
       AGENTLAB_GUIDANCE_VARIANT: ${{ inputs.guidance_variant || 'none' }}
+      AGENTLAB_REASONING_EFFORT: ${{ inputs.reasoning_effort || 'default' }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
