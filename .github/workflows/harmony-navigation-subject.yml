@@ -343,6 +343,13 @@ jobs:
           path: |
             ${{ env.AGENTLAB_CI_ROOT }}/environment-fingerprint.json
             ${{ env.AGENTLAB_CI_ROOT }}/timing.tsv
+      - name: Preserve no-Agent build-cache probe evidence
+        if: ${{ always() && inputs.build_cache_probe_only }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ inputs.scenario || 'navigation' }}-build-cache-probe
+          if-no-files-found: error
+          path: ${{ env.AGENTLAB_CI_ROOT }}/build-cache-probe/evidence/
       - name: Preserve full HAP binaries even when Release publication fails
         if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
