@@ -35,6 +35,22 @@ def sha256_file(path):
  with path.open('rb') as f:
   for chunk in iter(lambda:f.read(1024*1024),b''):h.update(chunk)
  return h.hexdigest()
+def pi_session_identity(path):
+ if not path or not path.is_file():return None
+ try:
+  with path.open(errors='replace') as f:
+   for _ in range(32):
+    line=f.readline()
+    if not line:break
+    try:value=json.loads(line)
+    except ValueError:continue
+    if not isinstance(value,dict):continue
+    kind=str(value.get('type','')).lower()
+    if kind in ('session','session_start','session_header'):
+     identity=value.get('id') or value.get('sessionId')
+     if isinstance(identity,str) and identity:return identity
+ except OSError:return None
+ return None
 def gateway_preflight(e,model,route='glm'):
  url=os.environ['AGENTLAB_LM_GATEWAY_URL'].rstrip('/')+'/v1/chat/completions'
  payload=json.dumps(dict(model=model,providerId=route,stream=False,max_completion_tokens=4,messages=[dict(role='user',content='Return exactly OK.')])).encode()
@@ -214,7 +230,30 @@ def main():
   pe=e/name;pe.mkdir();runtime=root/(name+'-runtime');runtime.mkdir();session=runtime/'session';session.mkdir();wrapper=runtime/'container-pi.py';shutil.copy2(Path(__file__).with_name('container-pi.py'),wrapper)
   dump(runtime/'container-launch.json',dict(runtime=str(a.pi_runtime.resolve()),session=str(session),image=a.image))
   effort=os.environ.get('AGENTLAB_REASONING_EFFORT','default')
-  return Participant(pe,runtime/'state',wrapper,os.environ['AGENTLAB_LM_GATEWAY_URL'],os.environ.get('AGENTLAB_MODEL','glm-5.3-flash'),reasoning_effort=effort)
+  participant=Participant(pe,runtime/'state',wrapper,os.environ['AGENTLAB_LM_GATEWAY_URL'],os.environ.get('AGENTLAB_MODEL','glm-5.3-flash'),reasoning_effort=effort)
+  participant.native_session_file=session/'session.jsonl'
+  return participant
+ def capture_difficulty_checkpoint(phase,directory,participant,behavior,compiled,source_cut):
+  session=getattr(participant,'native_session_file',None)
+  if not session or not session.is_file():return None
+  root=e/'difficulty-checkpoints'/phase;root.mkdir(parents=True,exist_ok=True)
+  target=root/'pi-session.jsonl';shutil.copy2(session,target)
+  source=root/'source';source.mkdir()
+  files=[]
+  for name in paths:
+   origin=directory/name
+   if not origin.is_file():files.append(dict(path=name,absent=True));continue
+   raw=origin.read_bytes();out=source/name;out.parent.mkdir(parents=True,exist_ok=True);out.write_bytes(raw)
+   files.append(dict(path=name,bytes=len(raw),sha256=hashlib.sha256(raw).hexdigest()))
+  manifest=dict(schema='agentlab.difficulty_checkpoint_candidate.v1',phase=phase,sourceRevision=PIN,sourceCut=source_cut,
+   taskId=scenario['caseId'],behaviorPass=behavior.get('pass'),buildPass=compiled,
+   nativeSession=dict(agent='pi',packageVersion='0.73.1',file='pi-session.jsonl',bytes=target.stat().st_size,sha256=sha256_file(target),threadId=pi_session_identity(target)),
+   selectedSourceFiles=files,formalSessionFsSnapshot=False,readyForControlledFork=False,
+   promotionRequirement='Rehydrate source + native session into a qualified SessionFS capsule, then seal an immutable snapshot before any model/parameter sweep.',
+   persistedObservableState=['selected-source','pi-native-session'],
+   missingObservableState=['full-workspace','git-object-store','agent-home-outside-native-session','runtime-cache'],
+   neverPersist=['provider-hidden-state','process-memory','pid','tcp-connection'],agentDecisionRequired=True)
+  dump(root/'checkpoint.json',manifest);return str((root/'checkpoint.json').relative_to(e))
  parent=None;fork=None
  try:
   if a.build_cache_probe_only:
@@ -279,6 +318,7 @@ def main():
   try:monitored_turn('turn-1',project,parent,task_prompt(demands[0]))
   except RuntimeError as error:summary['phases']['turn-1-launch-error']=str(error)
   stage1=oracle('turn-1',project,1);built1=build('turn-1-build',project);scope1=scope('turn-1',project);cut_id=cut('turn-1-cut',project);summary['phases']['turn-1']=dict(behavior=stage1,build=built1,scope=scope1,sourceCut=cut_id)
+  summary['phases']['turn-1']['difficultyCheckpointCandidate']=capture_difficulty_checkpoint('turn-1',project,parent,stage1,built1,cut_id)
   turn2_feedback=feedback_prompt(stage1,built1)
   escalate=bool(turn2_feedback and os.environ.get('AGENTLAB_EVIDENCE_REASONING_ESCALATION','false')=='true')
   summary['evidenceTriggeredEscalation']=dict(triggered=escalate,reason=('turn-1-verifier-or-build-failure' if escalate else None),reasoningEffort=('high' if escalate else None),feedbackPresent=bool(turn2_feedback))
@@ -293,7 +333,8 @@ def main():
    if escalate:prompt+='\n\nReasoning escalation: inspect the concrete evidence carefully, make the smallest compatible repair, and preserve already-passing behavior.'
    try:monitored_turn(label,directory,participant,prompt,reasoning_effort=('high' if escalate else None))
    except RuntimeError as error:summary['phases'][label+'-launch-error']=str(error)
-   result=oracle(label,directory,2);compiled=build(label+'-build',directory);scope_result=scope(label,directory);summary['phases'][label]=dict(behavior=result,build=compiled,scope=scope_result,sourceCut=cut(label+'-cut',directory))
+   result=oracle(label,directory,2);compiled=build(label+'-build',directory);scope_result=scope(label,directory);phase_cut=cut(label+'-cut',directory);summary['phases'][label]=dict(behavior=result,build=compiled,scope=scope_result,sourceCut=phase_cut)
+   summary['phases'][label]['difficultyCheckpointCandidate']=capture_difficulty_checkpoint(label,directory,participant,result,compiled,phase_cut)
   summary['subjectTaskSucceeded']=all(summary['phases'][x]['behavior']['pass'] and summary['phases'][x]['build'] for x in ['turn-1','parent-turn-2','fresh-fork-turn-2']);summary['ok']=True
  finally:
   if parent:parent.close()

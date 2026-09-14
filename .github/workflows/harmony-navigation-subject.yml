@@ -395,6 +395,20 @@ jobs:
           name: ${{ inputs.scenario || 'navigation' }}-seed-fork-generation
           if-no-files-found: error
           path: ${{ env.AGENTLAB_CI_ROOT }}/assessment/evidence/seed-fork-generation.json
+      - name: Mine evidence-linked difficulty candidates
+        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' && steps.gateway_readiness.outputs.ready != 'false' }}
+        run: |
+          python3 examples/knowledge-seed/subject/difficulty-miner.py \
+            --decision "$GITHUB_RUN_ID=$AGENTLAB_CI_ROOT/assessment/evidence/decision-package.json" \
+            --evidence "$GITHUB_RUN_ID=$AGENTLAB_CI_ROOT/assessment/evidence" \
+            --output "$AGENTLAB_CI_ROOT/assessment/evidence/difficulty-candidates.json"
+      - name: Preserve difficulty candidates
+        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' && steps.gateway_readiness.outputs.ready != 'false' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ inputs.scenario || 'navigation' }}-difficulty-candidates
+          if-no-files-found: error
+          path: ${{ env.AGENTLAB_CI_ROOT }}/assessment/evidence/difficulty-candidates.json
       - name: Preserve raw evidence and build typed actual-run entities
         if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
         env:

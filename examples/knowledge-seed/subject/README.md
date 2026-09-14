@@ -188,3 +188,31 @@ checks model settlement and fresh-network versus offline-cache policy. The same
 local calibration runs8 variant/stage reports, with8 turn1 and10 turn2 checks.
 Reference full phone compilation is verified separately from participant patches.
 The selected-source fresh-Agent branch is not formal SessionFS Fork.
+
+### Difficulty mining and checkpoint-focused experiments
+
+`difficulty-miner.py` is a read-only post-processor over retained Harness decision
+packages and phase evidence.  It separates infrastructure failures from task
+difficulty, clusters stable compiler/error and behavioral invariants, and emits
+`agentlab.difficulty_candidates.v1`.  A single observation remains a candidate;
+only repeated independent run/phase observations are marked reproducible.  Parent
+versus fresh-fork occurrence is recorded as context sensitivity rather than used
+as an automatic causal claim.
+
+For a reproducible difficulty, the preferred next experiment is to freeze the
+exact observable Agent state at that point and fork from that checkpoint.  Keep
+source/task/oracle and checkpoint bytes fixed, change one variable (model,
+reasoning effort, guidance, tool policy, or context mode), and measure crossing
+rate, crossing latency, tool cost, downstream behavior/build, and regressions.
+Harness may observe, cluster and score; only the upper Agent confirms a difficulty
+and chooses/adopts an experiment.  Provider hidden state, process memory, PIDs and
+connections are recreated rather than represented as persisted context.
+
+Each assessed phase also preserves a `difficulty_checkpoint_candidate` when the
+Pi native session exists.  The candidate binds the selected source bytes, source
+cut, phase verdict and exact Pi JSONL digest.  It is intentionally marked
+`formalSessionFsSnapshot=false` and `readyForControlledFork=false`: the public
+source-only assessment does not become a formal context checkpoint merely because
+the native session file was retained.  A controlled model/parameter sweep begins
+only after this candidate is rehydrated into a separately qualified SessionFS
+capsule and sealed as an immutable snapshot.
