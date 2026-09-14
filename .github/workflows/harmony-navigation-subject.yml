@@ -173,6 +173,12 @@ jobs:
           from pathlib import Path
           r=Path(os.environ['AGENTLAB_CI_ROOT']);e=r/'raw'/os.environ['AGENTLAB_CAPTURE_RUN_ID']
           assert json.loads((e/'frozen-task.json').read_text())['id']=='case-'+os.environ['AGENTLAB_ASSESSMENT_SCENARIO']+'-subject-v1'
+          PY
+          python3 examples/knowledge-seed/subject/compact-events.py "$AGENTLAB_CI_ROOT/raw/$AGENTLAB_CAPTURE_RUN_ID" --restore
+          python3 - <<'PY'
+          import os,shutil
+          from pathlib import Path
+          r=Path(os.environ['AGENTLAB_CI_ROOT']);e=r/'raw'/os.environ['AGENTLAB_CAPTURE_RUN_ID']
           shutil.copytree(e,r/'assessment/evidence')
           shutil.rmtree(r/'raw')
           PY
