@@ -31,7 +31,7 @@ SCENARIOS={
  'feedback':dict(paths=['common/src/main/ets/component/FeedbackSheet.ets','common/src/main/ets/model/FeedbackData.ets','common/src/main/ets/util/SubmitInfoUtil.ets','common/src/main/ets/component/Toast.ets'],demands=FEEDBACK_DEMANDS,caseId='case-feedback-subject-v1',oracle='feedback.cjs',scope='Actual feedback submit/reset methods with controlled Promise backend and full phone compile; selected-source fresh-Agent branch')}
 def dump(path,value):path.write_text(json.dumps(value,indent=2)+'\n')
 def main():
- p=argparse.ArgumentParser();p.add_argument('--scenario',choices=SCENARIOS,default='navigation');p.add_argument('--source',type=Path,required=True);p.add_argument('--reference',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--install-root',type=Path,required=True);p.add_argument('--pi-runtime',type=Path,required=True);p.add_argument('--image',required=True);a=p.parse_args()
+ p=argparse.ArgumentParser();p.add_argument('--scenario',choices=SCENARIOS,default='navigation');p.add_argument('--source',type=Path,required=True);p.add_argument('--reference',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--install-root',type=Path,required=True);p.add_argument('--pi-runtime',type=Path,required=True);p.add_argument('--image',required=True);p.add_argument('--build-cache-probe-only',action='store_true');a=p.parse_args()
  scenario=SCENARIOS[a.scenario];paths=scenario['paths'];demands=scenario['demands']
  experiment_started=time.monotonic_ns()
  root=a.root.resolve();root.mkdir();e=root/'evidence';e.mkdir();project=root/'workspace'
@@ -92,6 +92,12 @@ def main():
   return Participant(pe,runtime/'state',wrapper,os.environ['AGENTLAB_LM_GATEWAY_URL'],os.environ.get('AGENTLAB_MODEL','glm-5.3-flash'))
  parent=None;fork=None
  try:
+  if a.build_cache_probe_only:
+   if not build('prepare',project,True):raise RuntimeError('Harness dependency preparation failed')
+   compiled=build('build-cache-probe',project)
+   summary['phases']['build-cache-probe']=dict(build=compiled,scope=scope('build-cache-probe',project),sourceCut=cut('build-cache-probe-cut',project))
+   summary['ok']=compiled
+   return
   if a.scenario=='cache-durability':
    calibration_root=root/'cache-calibration'
    result=subprocess.run(['node',str(Path(__file__).with_name('calibrate-cache.cjs')),str(project),str(a.reference),str(calibration_root)],capture_output=True)
