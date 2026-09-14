@@ -9,7 +9,7 @@ current = json.loads(current_path.read_text())
 assert baseline['schema'] == current['schema'] == 'agentlab.harness_decision_package.v1'
 assert baseline['scenario'] == current['scenario']
 assert baseline['taskId'] == current['taskId']
-comparable = baseline.get('infrastructureAvailable', True) is True and current.get('infrastructureAvailable', True) is True and baseline.get('assessmentStatus','assessed') == current.get('assessmentStatus','assessed') == 'assessed'
+infrastructure_comparable = baseline.get('infrastructureAvailable', True) is True and current.get('infrastructureAvailable', True) is True and baseline.get('assessmentStatus','assessed') == current.get('assessmentStatus','assessed') == 'assessed'
 
 def phases(package):
     return {row['phase']: row for row in package['phaseVerdicts']}
@@ -23,6 +23,9 @@ def first_compile(package):
 def process(package):
     return {row['phase']: row for row in package.get('participantProcess', [])}
 
+def launch_error_phases(package):
+    return {row.get('phase') for row in package.get('launchErrors', []) if row.get('phase')}
+
 def duration(row):
     return row.get('effectiveDurationMs', row.get('durationMs'))
 
@@ -31,12 +34,15 @@ def event_bytes(row):
 
 bph, cph = phases(baseline), phases(current)
 bproc, cproc = process(baseline), process(current)
+berr, cerr = launch_error_phases(baseline), launch_error_phases(current)
 phase_delta = []
 for name in sorted(set(bph) | set(cph)):
     before, after = bph.get(name, {}), cph.get(name, {})
     before_process, after_process = bproc.get(name, {}), cproc.get(name, {})
     phase_delta.append(dict(
         phase=name,
+        comparable=(infrastructure_comparable and name not in berr and name not in cerr and bool(before) and bool(after)),
+        comparisonBlocker=(None if infrastructure_comparable and name not in berr and name not in cerr and bool(before) and bool(after) else 'Phase missing or has a launch error in at least one run.'),
         behaviorPassBefore=before.get('behaviorPass'), behaviorPassAfter=after.get('behaviorPass'),
         buildPassBefore=before.get('buildPass'), buildPassAfter=after.get('buildPass'),
         scopeDriftBefore=before.get('scopeDrift'), scopeDriftAfter=after.get('scopeDrift'),
@@ -47,6 +53,9 @@ for name in sorted(set(bph) | set(cph)):
         transportRetryCountBefore=before_process.get('transportRetryCount', 0), transportRetryCountAfter=after_process.get('transportRetryCount', 0),
         firstSourceMutationMsBefore=before_process.get('firstSourceMutationMs'), firstSourceMutationMsAfter=after_process.get('firstSourceMutationMs'),
         rawEventBytesBefore=event_bytes(before_process), rawEventBytesAfter=event_bytes(after_process)))
+
+comparable_phase_count=sum(row['comparable'] for row in phase_delta)
+comparable = infrastructure_comparable and comparable_phase_count == len(phase_delta) and len(phase_delta) > 0
 
 bf, cf = first_compile(baseline), first_compile(current)
 duration_before = sum(duration(row) or 0 for row in bproc.values())
@@ -67,6 +76,7 @@ summary = dict(
     participantDurationMsBefore=duration_before, participantDurationMsAfter=duration_after, participantDurationMsDelta=duration_after-duration_before,
     completedToolCallsBefore=tools_before, completedToolCallsAfter=tools_after, completedToolCallsDelta=tools_after-tools_before,
     rawEventBytesBefore=events_before, rawEventBytesAfter=events_after, rawEventBytesDelta=events_after-events_before,
+    comparablePhaseCount=comparable_phase_count,totalPhaseCount=len(phase_delta),
     firstCompileStartMsBefore=bf, firstCompileStartMsAfter=cf,
     firstCompileStartMsDelta=(cf-bf if isinstance(bf, int) and isinstance(cf, int) else None))
 
@@ -74,7 +84,7 @@ result = dict(
     schema='agentlab.harness_decision_comparison.v1', scenario=current['scenario'], taskId=current['taskId'],
     baselineSeedGuidance=baseline.get('seedGuidance'), currentSeedGuidance=current.get('seedGuidance'),
     summary=summary, phaseDelta=phase_delta, comparable=comparable,
-    comparisonBlocker=(None if comparable else 'At least one run was not an assessed, infrastructure-available Participant experiment.'),
+    comparisonBlocker=(None if comparable else ('At least one run was not an assessed, infrastructure-available Participant experiment.' if not infrastructure_comparable else 'At least one phase is missing or has a Participant launch/transport error; whole-generation comparison is not valid.')),
     interpretationPolicy='Deltas are evidence, not causal attribution. Do not interpret outcome/performance deltas when comparable=false. Runner/model variance and prompt guidance may confound results.',
     agentDecisionRequired=True,
     allowedDecisions=(['adopt-guidance','reject-guidance','rerun-control','rerun-guided','modify-guidance','design-next-experiment'] if comparable else ['rerun-control','rerun-guided','design-next-experiment']))

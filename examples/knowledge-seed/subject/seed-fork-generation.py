@@ -30,6 +30,9 @@ elif current.get('infrastructureAvailable') is False:
 elif comparison.get('comparable') is True:
     state='decision-ready'
     actions=['adopt-guidance','reject-guidance','rerun-guided','modify-guidance','design-next-experiment']
+elif comparison.get('summary',{}).get('comparablePhaseCount',0) > 0:
+    state='partial-comparison'
+    actions=['rerun-control','rerun-guided','design-next-experiment']
 else:
     state='not-comparable'
     actions=['rerun-control','rerun-guided','design-next-experiment']
