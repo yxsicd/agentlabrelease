@@ -203,5 +203,22 @@ def main():
  finally:
   if parent:parent.close()
   if fork:fork.close()
+  phase_names=['turn-1','parent-turn-2','fresh-fork-turn-2']
+  verdicts=[];launch_errors=[];scope_drift=[]
+  for name in phase_names:
+   phase=summary['phases'].get(name,{})
+   verdicts.append(dict(phase=name,behaviorPass=phase.get('behavior',{}).get('pass'),buildPass=phase.get('build'),scopeDrift=phase.get('scope',{}).get('drift'),extraPaths=phase.get('scope',{}).get('extraPaths',[])))
+   if phase.get('scope',{}).get('drift'):scope_drift.append(name)
+   err=summary['phases'].get(name+'-launch-error')
+   if err:launch_errors.append(dict(phase=name,error=err))
+  build_rows=[x for x in summary.get('timing',{}).get('builds',[]) if not x.get('prepare')]
+  candidates=[]
+  if launch_errors:candidates.append(dict(kind='participant-budget-or-launch',strength='observed',evidence=[x['phase'] for x in launch_errors],claim='One or more participant phases did not complete normally; inspect retained events before attributing infrastructure or model cause.'))
+  if scope_drift:candidates.append(dict(kind='scope-expansion',strength='observed',evidence=scope_drift,claim='Participant changed files outside the frozen edit boundary.'))
+  if any(v['behaviorPass'] is True and v['buildPass'] is False for v in verdicts):candidates.append(dict(kind='compile-regression-after-behavior-pass',strength='observed',evidence=[v['phase'] for v in verdicts if v['behaviorPass'] is True and v['buildPass'] is False],claim='Behavior oracle passed while full Harmony compilation failed.'))
+  if any(v['behaviorPass'] is False and v['buildPass'] is True for v in verdicts):candidates.append(dict(kind='behavioral-incompleteness-with-compilable-patch',strength='observed',evidence=[v['phase'] for v in verdicts if v['behaviorPass'] is False and v['buildPass'] is True],claim='Submitted patch compiled but did not satisfy the frozen behavior oracle.'))
+  guidance_manifest=guidance['manifest'] if guidance else None
+  decision=dict(schema='agentlab.harness_decision_package.v1',scenario=a.scenario,taskId=scenario['caseId'],sourceRevision=PIN,subjectTaskSucceeded=summary.get('subjectTaskSucceeded'),sourceForkQualified=summary.get('sourceForkQualified'),seedGuidance=guidance_manifest,phaseVerdicts=verdicts,launchErrors=launch_errors,buildTiming=dict(firstCompileStartMs=summary.get('timing',{}).get('firstCompileStartMs'),builds=build_rows),automaticAttributionCandidates=candidates,uncertainties=['Participant/model latency is not inferred from timeout alone.','Runner variance may affect wall-clock timing.','Calibration proves the declared seam only; device/UI and formal SessionFS remain separate unless independently qualified.'],agentDecisionRequired=True,allowedDecisions=['adopt-guidance','reject-guidance','rerun-control','rerun-guided','modify-guidance','design-next-experiment'],harnessPolicy='Collect, verify, compare and propose evidence-linked candidates; never choose promotion or seed adoption automatically.')
+  dump(e/'decision-package.json',decision)
   dump(e/'summary.json',summary)
 if __name__=='__main__':main()
