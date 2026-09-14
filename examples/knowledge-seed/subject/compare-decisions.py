@@ -23,8 +23,21 @@ def first_compile(package):
 def process(package):
     return {row['phase']: row for row in package.get('participantProcess', [])}
 
-def launch_error_phases(package):
-    return {row.get('phase') for row in package.get('launchErrors', []) if row.get('phase')}
+def blocking_launch_error_phases(package):
+    """Return only infrastructure/transport launch failures.
+
+    A Participant budget timeout is an assessed outcome and is intentionally
+    comparable: reducing a timeout is one of the effects a seed candidate may
+    legitimately demonstrate.  Transport/gateway failures are not model/seed
+    outcomes and therefore block phase comparison.
+    """
+    tokens=('frp','http 404','404 <!doctype','502','gateway exchange failed','gateway readiness failed')
+    blocked=set()
+    for row in package.get('launchErrors', []):
+        phase=row.get('phase'); error=str(row.get('error','')).lower()
+        if phase and (phase=='gateway-preflight' or any(token in error for token in tokens)):
+            blocked.add(phase)
+    return blocked
 
 def duration(row):
     return row.get('effectiveDurationMs', row.get('durationMs'))
@@ -34,7 +47,7 @@ def event_bytes(row):
 
 bph, cph = phases(baseline), phases(current)
 bproc, cproc = process(baseline), process(current)
-berr, cerr = launch_error_phases(baseline), launch_error_phases(current)
+berr, cerr = blocking_launch_error_phases(baseline), blocking_launch_error_phases(current)
 phase_delta = []
 for name in sorted(set(bph) | set(cph)):
     before, after = bph.get(name, {}), cph.get(name, {})
@@ -42,7 +55,7 @@ for name in sorted(set(bph) | set(cph)):
     phase_delta.append(dict(
         phase=name,
         comparable=(infrastructure_comparable and name not in berr and name not in cerr and bool(before) and bool(after)),
-        comparisonBlocker=(None if infrastructure_comparable and name not in berr and name not in cerr and bool(before) and bool(after) else 'Phase missing or has a launch error in at least one run.'),
+        comparisonBlocker=(None if infrastructure_comparable and name not in berr and name not in cerr and bool(before) and bool(after) else 'Phase missing or has an infrastructure/transport launch error in at least one run.'),
         behaviorPassBefore=before.get('behaviorPass'), behaviorPassAfter=after.get('behaviorPass'),
         buildPassBefore=before.get('buildPass'), buildPassAfter=after.get('buildPass'),
         scopeDriftBefore=before.get('scopeDrift'), scopeDriftAfter=after.get('scopeDrift'),
@@ -84,7 +97,7 @@ result = dict(
     schema='agentlab.harness_decision_comparison.v1', scenario=current['scenario'], taskId=current['taskId'],
     baselineSeedGuidance=baseline.get('seedGuidance'), currentSeedGuidance=current.get('seedGuidance'),
     summary=summary, phaseDelta=phase_delta, comparable=comparable,
-    comparisonBlocker=(None if comparable else ('At least one run was not an assessed, infrastructure-available Participant experiment.' if not infrastructure_comparable else 'At least one phase is missing or has a Participant launch/transport error; whole-generation comparison is not valid.')),
+    comparisonBlocker=(None if comparable else ('At least one run was not an assessed, infrastructure-available Participant experiment.' if not infrastructure_comparable else 'At least one phase is missing or has an infrastructure/transport launch error; whole-generation comparison is not valid.')),
     interpretationPolicy='Deltas are evidence, not causal attribution. Do not interpret outcome/performance deltas when comparable=false. Runner/model variance and prompt guidance may confound results.',
     agentDecisionRequired=True,
     allowedDecisions=(['adopt-guidance','reject-guidance','rerun-control','rerun-guided','modify-guidance','design-next-experiment'] if comparable else ['rerun-control','rerun-guided','design-next-experiment']))
