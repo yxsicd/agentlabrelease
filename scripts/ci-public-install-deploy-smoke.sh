@@ -181,6 +181,11 @@ PY
 while IFS= read -r image; do [[ -z "${image}" ]] || docker image inspect "${image}" >/dev/null; done < "${root}/docker-identities/images"
 while IFS= read -r volume; do [[ -z "${volume}" ]] || docker volume inspect "${volume}" >/dev/null; done < "${root}/docker-identities/volumes"
 
+if [[ "${AGENTLAB_INSTALL_ONLY:-false}" == "true" ]]; then
+  printf '{"schema":"agentlab.public_install_prepare.v1","ok":true,"sourceRevision":"%s"}\n' "${source_revision}" > "${root}/install-prepare-summary.json"
+  exit 0
+fi
+
 # Source-only Harmony assessment needs only the digest-pinned composition
 # installed into Docker. Keep the broader standalone SessionFS/Harmony smoke
 # for qualification runs, but let fast assessment stop here.
