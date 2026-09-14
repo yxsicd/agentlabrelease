@@ -35,6 +35,8 @@ def sha256_file(path):
  with path.open('rb') as f:
   for chunk in iter(lambda:f.read(1024*1024),b''):h.update(chunk)
  return h.hexdigest()
+def line_count(path):
+ with path.open('rb') as f:return sum(1 for _ in f)
 def load_guidance(path,scenario):
  if not path:return None
  manifest=json.loads((path/'seed-guidance.json').read_text());assert manifest['schema']=='agentlab.seed_guidance.v1' and manifest['scenario']==scenario
@@ -246,7 +248,7 @@ def main():
   for name,directory in [('turn-1','parent-agent'),('parent-turn-2','parent-agent'),('fresh-fork-turn-2','fork-agent')]:
    lifecycle=e/directory/(name+'-lifecycle.json')
    if lifecycle.exists():
-    row=json.loads(lifecycle.read_text());edit=edit_timing.get(name,{});participant_process.append(dict(phase=name,durationMs=row.get('durationMs'),timedOut=row.get('timedOut'),exitCode=row.get('exitCode'),completedToolCalls=row.get('completedToolCalls'),toolErrors=row.get('toolErrors'),nativeParseErrors=row.get('nativeParseErrors'),firstSourceMutationMs=edit.get('firstSourceMutationMs'),firstChangedPaths=edit.get('firstChangedPaths',[]),mutationDetection=edit.get('detection')))
+    row=json.loads(lifecycle.read_text());edit=edit_timing.get(name,{});events=e/directory/(name+'-events.jsonl');event_bytes=events.stat().st_size if events.exists() else 0;event_lines=line_count(events) if events.exists() else 0;participant_process.append(dict(phase=name,durationMs=row.get('durationMs'),timedOut=row.get('timedOut'),exitCode=row.get('exitCode'),completedToolCalls=row.get('completedToolCalls'),toolErrors=row.get('toolErrors'),nativeParseErrors=row.get('nativeParseErrors'),firstSourceMutationMs=edit.get('firstSourceMutationMs'),firstChangedPaths=edit.get('firstChangedPaths',[]),mutationDetection=edit.get('detection'),rawEventBytes=event_bytes,rawEventLines=event_lines))
   decision=dict(schema='agentlab.harness_decision_package.v1',scenario=a.scenario,taskId=scenario['caseId'],sourceRevision=PIN,subjectTaskSucceeded=summary.get('subjectTaskSucceeded'),sourceForkQualified=summary.get('sourceForkQualified'),seedGuidance=guidance_manifest,phaseVerdicts=verdicts,participantProcess=participant_process,launchErrors=launch_errors,buildTiming=dict(firstCompileStartMs=summary.get('timing',{}).get('firstCompileStartMs'),builds=build_rows),evidenceCost=evidence_cost,automaticAttributionCandidates=candidates,uncertainties=['Participant/model latency is not inferred from timeout alone.','Runner variance may affect wall-clock timing.','Calibration proves the declared seam only; device/UI and formal SessionFS remain separate unless independently qualified.'],agentDecisionRequired=True,allowedDecisions=['adopt-guidance','reject-guidance','rerun-control','rerun-guided','modify-guidance','design-next-experiment'],harnessPolicy='Collect, verify, compare and propose evidence-linked candidates; never choose promotion or seed adoption automatically.')
   dump(e/'decision-package.json',decision)
   dump(e/'summary.json',summary)
