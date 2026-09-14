@@ -30,8 +30,13 @@ SCENARIOS={
  'navigation':dict(paths=PATHS,demands=DEMANDS,caseId='case-navigation-subject-v1',oracle='navigation.cjs',scope='Actual navigation controller/caller methods and full phone compile; selected-source fresh-Agent branch'),
  'feedback':dict(paths=['common/src/main/ets/component/FeedbackSheet.ets','common/src/main/ets/model/FeedbackData.ets','common/src/main/ets/util/SubmitInfoUtil.ets','common/src/main/ets/component/Toast.ets'],demands=FEEDBACK_DEMANDS,caseId='case-feedback-subject-v1',oracle='feedback.cjs',scope='Actual feedback submit/reset methods with controlled Promise backend and full phone compile; selected-source fresh-Agent branch')}
 def dump(path,value):path.write_text(json.dumps(value,indent=2)+'\n')
+def sha256_file(path):
+ h=hashlib.sha256()
+ with path.open('rb') as f:
+  for chunk in iter(lambda:f.read(1024*1024),b''):h.update(chunk)
+ return h.hexdigest()
 def main():
- p=argparse.ArgumentParser();p.add_argument('--scenario',choices=SCENARIOS,default='navigation');p.add_argument('--source',type=Path,required=True);p.add_argument('--reference',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--install-root',type=Path,required=True);p.add_argument('--pi-runtime',type=Path,required=True);p.add_argument('--image',required=True);p.add_argument('--build-cache-probe-only',action='store_true');a=p.parse_args()
+ p=argparse.ArgumentParser();p.add_argument('--scenario',choices=SCENARIOS,default='navigation');p.add_argument('--source',type=Path,required=True);p.add_argument('--reference',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--install-root',type=Path,required=True);p.add_argument('--pi-runtime',type=Path,required=True);p.add_argument('--image',required=True);p.add_argument('--build-cache-probe-only',action='store_true');p.add_argument('--retain-hap-bytes',action='store_true');a=p.parse_args()
  scenario=SCENARIOS[a.scenario];paths=scenario['paths'];demands=scenario['demands']
  experiment_started=time.monotonic_ns()
  root=a.root.resolve();root.mkdir();e=root/'evidence';e.mkdir();project=root/'workspace'
@@ -97,12 +102,14 @@ def main():
   reports=directory/('.native-dependencies' if prepare else '.native-build')
   if reports.exists():shutil.copytree(reports,e/label)
   if r.returncode==0 and not prepare:
-   report=json.loads((reports/'result.json').read_text());out=root/'full-hap';out.mkdir(exist_ok=True)
+   report=json.loads((reports/'result.json').read_text());out=root/'full-hap'
+   if a.retain_hap_bytes:out.mkdir(exist_ok=True)
    for item in report['artifacts']:
-    hap=directory/item['path'];assert hashlib.sha256(hap.read_bytes()).hexdigest()==item['sha256']
-    name=label+'-'+hap.name;shutil.copy2(hap,out/name)
+    hap=directory/item['path'];assert sha256_file(hap)==item['sha256']
+    name=label+'-'+hap.name
+    if a.retain_hap_bytes:shutil.copy2(hap,out/name)
     manifest=e/'binary-manifest.json';rows=json.loads(manifest.read_text()) if manifest.exists() else []
-    rows.append(dict(label=label,filename=name,sha256=item['sha256'],bytes=item['bytes'],module=item['module']));dump(manifest,rows)
+    rows.append(dict(label=label,filename=name,sha256=item['sha256'],bytes=item['bytes'],module=item['module'],retainedBytes=a.retain_hap_bytes));dump(manifest,rows)
   return r.returncode==0
  def subject(name):
   pe=e/name;pe.mkdir();runtime=root/(name+'-runtime');runtime.mkdir();session=runtime/'session';session.mkdir();wrapper=runtime/'container-pi.py';shutil.copy2(Path(__file__).with_name('container-pi.py'),wrapper)

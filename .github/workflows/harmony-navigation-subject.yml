@@ -247,11 +247,14 @@ jobs:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
         run: |
           started=$(date +%s%3N)
-          python3 examples/knowledge-seed/subject/run.py --scenario "$AGENTLAB_ASSESSMENT_SCENARIO" --source "$RUNNER_TEMP/source" --reference "$RUNNER_TEMP/reference/patched-source" --root "$AGENTLAB_CI_ROOT/assessment" --install-root "$AGENTLAB_CI_ROOT" --pi-runtime "$RUNNER_TEMP/pi-runtime" --image "$AGENTLAB_PARTICIPANT_IMAGE"
+          retain_hap=()
+          if [[ "${{ inputs.execution_mode || 'qualification' }}" == qualification ]]; then retain_hap+=(--retain-hap-bytes); fi
+          python3 examples/knowledge-seed/subject/run.py --scenario "$AGENTLAB_ASSESSMENT_SCENARIO" --source "$RUNNER_TEMP/source" --reference "$RUNNER_TEMP/reference/patched-source" --root "$AGENTLAB_CI_ROOT/assessment" --install-root "$AGENTLAB_CI_ROOT" --pi-runtime "$RUNNER_TEMP/pi-runtime" --image "$AGENTLAB_PARTICIPANT_IMAGE" "${retain_hap[@]}"
           cp "$RUNNER_TEMP/participant-image.json" "$AGENTLAB_CI_ROOT/assessment/evidence/participant-image.json"
           cp "$RUNNER_TEMP/participant-runtime-preflight.txt" "$AGENTLAB_CI_ROOT/assessment/evidence/participant-runtime-preflight.txt"
           printf 'participant_and_verify\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
       - name: Publish full successful build binaries as experiment evidence
+        id: publish_hap_release
         if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' && (inputs.execution_mode || 'qualification') == 'qualification' }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -355,7 +358,7 @@ jobs:
           if-no-files-found: error
           path: ${{ env.AGENTLAB_CI_ROOT }}/build-cache-probe/evidence/
       - name: Preserve full HAP binaries even when Release publication fails
-        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' }}
+        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' && (inputs.execution_mode || 'qualification') == 'qualification' && steps.publish_hap_release.outcome != 'success' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ${{ inputs.scenario || 'navigation' }}-full-hap-evidence
