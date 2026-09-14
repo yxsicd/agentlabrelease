@@ -44,7 +44,7 @@ if [[ ! -f "$cli_marker" || "$(cat "$cli_marker")" != "${values[5]}" ]]; then
   cli_archive="$assets/harmony-cli.tar.zst"
   fetch "${values[4]}" "${values[5]}" "$cli_archive"
   rm -rf "$cli_root"; mkdir -p "$cli_root"
-  zstd -dc "$cli_archive" | tar -xf - -C "$cli_root"
+  zstd --long=30 -dc "$cli_archive" | tar -xf - -C "$cli_root"
   test -x "$cli_root/tool/node/bin/node"
   test -f "$cli_root/sdk/default/openharmony/ets/oh-uni-package.json"
   test -f "$cli_root/hvigor/hvigor/bin/hvigor-simple.js"
