@@ -55,6 +55,12 @@ def main():
   delta=subprocess.run(['git','diff','--binary',PIN],cwd=directory,capture_output=True,check=True);(out/'workspace-tracked-delta.patch').write_bytes(delta.stdout)
   status=subprocess.run(['git','status','--porcelain'],cwd=directory,capture_output=True,check=True);(out/'workspace-status.txt').write_bytes(status.stdout)
   identity=hashlib.sha256(json.dumps(rows,sort_keys=True).encode()).hexdigest();dump(out/'source-cut.json',dict(kind='source-only-cut',id=identity,files=rows));return identity
+ def scope(label,directory):
+  tracked=subprocess.check_output(['git','diff','--name-only',PIN,'--'],cwd=directory,text=True).splitlines()
+  untracked=subprocess.check_output(['git','ls-files','--others','--exclude-standard'],cwd=directory,text=True).splitlines()
+  changed=sorted(set(tracked+untracked));expected=set(paths);extra=[name for name in changed if name not in expected]
+  result=dict(schema='agentlab.scope_drift.v1',label=label,expectedPaths=paths,changedPaths=changed,extraPaths=extra,changedCount=len(changed),extraCount=len(extra),drift=bool(extra))
+  dump(e/(label+'-scope.json'),result);return result
  sdk=next(x for x in lock['components'] if x['slot']=='harmony-cli');kit=next(x for x in lock['components'] if x['slot']=='harmony-build-kit')
  base=['docker','run','--rm','--network=none','--mount',f'type=volume,src={sdk["volume"]},dst=/toolchains/harmony,readonly','--mount',f'type=volume,src={kit["volume"]},dst=/toolchains/harmony-build-kit,readonly','--mount',f'type=bind,src={root},dst=/case','--env','HARMONY_TOOLCHAIN_ROOT=/toolchains/harmony','--env','HARMONY_BUILD_CACHE=/runtime/toolchain-cache/subject','--entrypoint','/usr/bin/python3',lock['images'][0]['reference'],'/toolchains/harmony-build-kit/bin/harmony']
  def build(label,directory,prepare=False):
@@ -135,7 +141,7 @@ def main():
   parent=subject('parent-agent');cut('initial',project)
   try:parent.turn('turn-1',project,prompt=demands[0])
   except RuntimeError as error:summary['phases']['turn-1-launch-error']=str(error)
-  stage1=oracle('turn-1',project,1);built1=build('turn-1-build',project);cut_id=cut('turn-1-cut',project);summary['phases']['turn-1']=dict(behavior=stage1,build=built1,sourceCut=cut_id)
+  stage1=oracle('turn-1',project,1);built1=build('turn-1-build',project);scope1=scope('turn-1',project);cut_id=cut('turn-1-cut',project);summary['phases']['turn-1']=dict(behavior=stage1,build=built1,scope=scope1,sourceCut=cut_id)
   # Restore source from the operator cut onto original code; no reference fixes.
   branch=root/'fork-workspace';shutil.copytree(project,branch,ignore=shutil.ignore_patterns('oh_modules','node_modules','build','.hvigor','.native-build','.native-dependencies'))
   assert cut('fork-input',branch)==cut_id;summary['sourceForkQualified']=True
@@ -144,7 +150,7 @@ def main():
    if directory==branch and not build('fork-prepare',directory,True):raise RuntimeError('Harness fork dependency preparation failed')
    try:participant.turn(label,directory,prompt=demands[1])
    except RuntimeError as error:summary['phases'][label+'-launch-error']=str(error)
-   result=oracle(label,directory,2);compiled=build(label+'-build',directory);summary['phases'][label]=dict(behavior=result,build=compiled,sourceCut=cut(label+'-cut',directory))
+   result=oracle(label,directory,2);compiled=build(label+'-build',directory);scope_result=scope(label,directory);summary['phases'][label]=dict(behavior=result,build=compiled,scope=scope_result,sourceCut=cut(label+'-cut',directory))
   summary['subjectTaskSucceeded']=all(summary['phases'][x]['behavior']['pass'] and summary['phases'][x]['build'] for x in ['turn-1','parent-turn-2','fresh-fork-turn-2']);summary['ok']=True
  finally:
   if parent:parent.close()
