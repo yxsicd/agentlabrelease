@@ -246,7 +246,7 @@ jobs:
         run: |
           rm -rf "$RUNNER_TEMP/baseline-decision"
           mkdir -p "$RUNNER_TEMP/baseline-decision"
-          gh run download "${{ inputs.baseline_run_id }}" --name "$AGENTLAB_ASSESSMENT_SCENARIO-subject-evidence" --dir "$RUNNER_TEMP/baseline-decision"
+          gh run download "${{ inputs.baseline_run_id }}" --name "$AGENTLAB_ASSESSMENT_SCENARIO-decision-package" --dir "$RUNNER_TEMP/baseline-decision"
           test -f "$RUNNER_TEMP/baseline-decision/decision-package.json"
       - name: Install published AgentLab SDK and build-kit
         if: inputs.capture_run_id == '' || (inputs.execution_mode || 'qualification') == 'qualification'
@@ -415,6 +415,15 @@ jobs:
         with:
           name: ${{ inputs.scenario || 'navigation' }}-subject-evidence
           path: ${{ env.AGENTLAB_CI_ROOT }}/assessment/evidence/
+      - name: Preserve lightweight Harness decision package
+        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ inputs.scenario || 'navigation' }}-decision-package
+          if-no-files-found: warn
+          path: |
+            ${{ env.AGENTLAB_CI_ROOT }}/assessment/evidence/decision-package.json
+            ${{ env.AGENTLAB_CI_ROOT }}/assessment/evidence/decision-comparison.json
       - name: Preserve environment fingerprint and timing
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
