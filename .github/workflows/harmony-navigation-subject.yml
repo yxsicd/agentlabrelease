@@ -195,6 +195,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           AGENTLAB_CAS_DIR: ${{ runner.temp }}/agentlab-public-cas
           AGENTLAB_FETCH_ONLY: ${{ inputs.prewarm_only }}
+          AGENTLAB_SUBJECT_ONLY: ${{ !inputs.prewarm_only && (inputs.execution_mode || 'qualification') == 'fast' }}
         run: |
           started=$(date +%s%3N)
           sudo apt-get update

@@ -172,6 +172,13 @@ PY
 while IFS= read -r image; do [[ -z "${image}" ]] || docker image inspect "${image}" >/dev/null; done < "${root}/docker-identities/images"
 while IFS= read -r volume; do [[ -z "${volume}" ]] || docker volume inspect "${volume}" >/dev/null; done < "${root}/docker-identities/volumes"
 
+# Source-only Harmony assessment needs only the digest-pinned composition
+# installed into Docker. Keep the broader standalone SessionFS/Harmony smoke
+# for qualification runs, but let fast assessment stop here.
+if [[ "${AGENTLAB_SUBJECT_ONLY:-false}" == "true" ]]; then
+  exit 0
+fi
+
 harmony_manifest="${downloads}/harmony-combined.json"
 harmony_archive="${downloads}/harmony-combined.tar.zst"
 # The standalone portable tier is pinned separately from the main runtime.
