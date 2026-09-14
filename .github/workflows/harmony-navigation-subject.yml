@@ -362,6 +362,22 @@ jobs:
           name: ${{ inputs.scenario || 'navigation' }}-decision-comparison
           if-no-files-found: error
           path: ${{ env.AGENTLAB_CI_ROOT }}/assessment/evidence/decision-comparison.json
+      - name: Summarize seed-fork generation state
+        if: ${{ always() && inputs.baseline_run_id != '' && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' }}
+        run: |
+          python3 examples/knowledge-seed/subject/seed-fork-generation.py \
+            --baseline "$RUNNER_TEMP/baseline-decision/decision-package.json" \
+            --current "$AGENTLAB_CI_ROOT/assessment/evidence/decision-package.json" \
+            --comparison "$AGENTLAB_CI_ROOT/assessment/evidence/decision-comparison.json" \
+            --baseline-run-id "${{ inputs.baseline_run_id }}" --guided-run-id "$GITHUB_RUN_ID" \
+            --output "$AGENTLAB_CI_ROOT/assessment/evidence/seed-fork-generation.json"
+      - name: Preserve seed-fork generation state
+        if: ${{ always() && inputs.baseline_run_id != '' && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ inputs.scenario || 'navigation' }}-seed-fork-generation
+          if-no-files-found: error
+          path: ${{ env.AGENTLAB_CI_ROOT }}/assessment/evidence/seed-fork-generation.json
       - name: Preserve raw evidence and build typed actual-run entities
         if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
         env:
