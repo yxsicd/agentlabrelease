@@ -11,6 +11,11 @@ on:
         type: string
         default: ''
         description: Replay only TableGit persistence from a completed source capture; no new Agent or HAP
+      execution_mode:
+        type: choice
+        options: [fast, qualification]
+        default: qualification
+        description: Fast keeps complete subject evidence but skips heavy publication/TableGit qualification
 permissions:
   contents: write
 jobs:
@@ -24,10 +29,63 @@ jobs:
       AGENTLAB_RELEASE_CHANNEL: candidate-20260913-harmony-buildkit-v6-linux-x64
       AGENTLAB_ASSESSMENT_SCENARIO: ${{ inputs.scenario || 'navigation' }}
       AGENTLAB_CAPTURE_RUN_ID: ${{ inputs.capture_run_id || github.run_id }}
+      AGENTLAB_EXECUTION_MODE: ${{ inputs.execution_mode || 'qualification' }}
       AGENTLAB_MODEL: glm-5.3-flash
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Fingerprint runner and start experiment timing
+        run: |
+          mkdir -p "$AGENTLAB_CI_ROOT"
+          python3 - <<'PY'
+          import json, os, platform, shutil, subprocess, time
+          from pathlib import Path
+          def out(*cmd):
+              try: return subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT).strip()
+              except Exception as exc: return f"unavailable: {exc}"
+          root=Path(os.environ['AGENTLAB_CI_ROOT'])
+          payload={
+            'schema':'agentlab.environment_fingerprint.v1',
+            'runId':os.environ.get('GITHUB_RUN_ID'),
+            'runnerName':os.environ.get('RUNNER_NAME'),
+            'runnerOs':os.environ.get('RUNNER_OS'),
+            'runnerArch':os.environ.get('RUNNER_ARCH'),
+            'platform':platform.platform(),
+            'machine':platform.machine(),
+            'cpu':out('bash','-lc',"lscpu | sed -n '1,30p'"),
+            'nproc':out('nproc'),
+            'memory':out('bash','-lc',"free -b"),
+            'disk':out('bash','-lc',"df -B1 / $RUNNER_TEMP"),
+            'docker':out('docker','version','--format','{{json .}}'),
+            'node':out('node','--version'),
+            'python':out('python3','--version'),
+            'git':out('git','--version'),
+            'executionMode':os.environ.get('AGENTLAB_EXECUTION_MODE'),
+            'startedUnixMs':time.time_ns()//1_000_000,
+          }
+          (root/'environment-fingerprint.json').write_text(json.dumps(payload,indent=2)+'\n')
+          (root/'timing.tsv').write_text('phase\tduration_ms\n')
+          PY
+      - name: Restore immutable Harmony source/reference cache
+        if: inputs.capture_run_id == ''
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ${{ runner.temp }}/source
+            ${{ runner.temp }}/reference
+          key: harmony-source-reference-v1-7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6-${{ hashFiles('crates/agentlab_code_analysis/**', 'examples/harmony-build/seed/**') }}
+      - name: Restore npm download cache
+        if: inputs.capture_run_id == ''
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.npm
+          key: agentlab-subject-npm-v1-${{ hashFiles('examples/real-code-agent/participant/package-lock.json', 'examples/knowledge-seed/subject/runtime/package-lock.json') }}
+      - name: Restore participant image cache
+        if: inputs.capture_run_id == ''
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ runner.temp }}/participant-image-cache
+          key: agentlab-participant-image-v1-${{ hashFiles('examples/knowledge-seed/subject/participant.Dockerfile', 'examples/knowledge-seed/subject/participant-runtime.sh') }}
       - name: Reserve immutable experiment source ref before long capture
         env:
           GH_TOKEN: ${{ github.token }}
@@ -64,40 +122,55 @@ jobs:
       - name: Pin source and calibrate reference outside assessed Workspace
         if: inputs.capture_run_id == ''
         run: |
-          git clone --depth 1 https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git "$RUNNER_TEMP/source"
-          git -C "$RUNNER_TEMP/source" fetch --depth 1 origin 7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6
-          git -C "$RUNNER_TEMP/source" checkout --detach FETCH_HEAD
-          cargo run --locked -p agentlab_code_analysis --bin agentlab-harmony-materialize -- "$RUNNER_TEMP/source" "$RUNNER_TEMP/reference" examples/harmony-build/seed
+          started=$(date +%s%3N)
+          if [[ ! -d "$RUNNER_TEMP/source/.git" ]]; then
+            git clone --depth 1 https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git "$RUNNER_TEMP/source"
+            git -C "$RUNNER_TEMP/source" fetch --depth 1 origin 7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6
+            git -C "$RUNNER_TEMP/source" checkout --detach FETCH_HEAD
+          fi
+          test "$(git -C "$RUNNER_TEMP/source" rev-parse HEAD)" = 7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6
+          if [[ ! -d "$RUNNER_TEMP/reference/patched-source" ]]; then
+            cargo run --locked -p agentlab_code_analysis --bin agentlab-harmony-materialize -- "$RUNNER_TEMP/source" "$RUNNER_TEMP/reference" examples/harmony-build/seed
+          fi
           cargo build --locked -p agentlab_code_analysis --bin agentlab-source-probe
           echo "AGENTLAB_SOURCE_PROBE=$GITHUB_WORKSPACE/target/debug/agentlab-source-probe" >> "$GITHUB_ENV"
+          printf 'prepare_source_reference\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
       - name: Install contained participant and independent oracle runtimes
         if: inputs.capture_run_id == ''
         run: |
+          started=$(date +%s%3N)
           mkdir -p "$RUNNER_TEMP/pi-runtime" "$RUNNER_TEMP/oracle-runtime"
           cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
           cp examples/knowledge-seed/subject/runtime/package*.json "$RUNNER_TEMP/oracle-runtime/"
           npm ci --prefix "$RUNNER_TEMP/pi-runtime"
           npm ci --prefix "$RUNNER_TEMP/oracle-runtime" --ignore-scripts
-          bash examples/knowledge-seed/subject/participant-runtime.sh "$RUNNER_TEMP" agentlab-subject-participant:"$GITHUB_RUN_ID"
+          mkdir -p "$RUNNER_TEMP/participant-image-cache"
+          AGENTLAB_PARTICIPANT_CACHE_TAR="$RUNNER_TEMP/participant-image-cache/participant-image.tar" \
+            bash examples/knowledge-seed/subject/participant-runtime.sh "$RUNNER_TEMP" agentlab-subject-participant:"$GITHUB_RUN_ID"
           echo "AGENTLAB_PARTICIPANT_IMAGE=$(cat "$RUNNER_TEMP/image.txt")" >> "$GITHUB_ENV"
           echo "AGENTLAB_ORACLE_TYPESCRIPT=$RUNNER_TEMP/oracle-runtime/node_modules/typescript" >> "$GITHUB_ENV"
+          printf 'prepare_participant_oracle\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
       - name: Install published AgentLab SDK and build-kit
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
+          started=$(date +%s%3N)
           sudo apt-get update
           sudo apt-get install --yes zstd python3-websocket
           scripts/ci-public-install-deploy-smoke.sh
+          printf 'install_agentlab_harmony\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
       - name: Real parent two turns and fresh-Agent source fork; retain Agent failures
         if: inputs.capture_run_id == ''
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
         run: |
+          started=$(date +%s%3N)
           python3 examples/knowledge-seed/subject/run.py --scenario "$AGENTLAB_ASSESSMENT_SCENARIO" --source "$RUNNER_TEMP/source" --reference "$RUNNER_TEMP/reference/patched-source" --root "$AGENTLAB_CI_ROOT/assessment" --install-root "$AGENTLAB_CI_ROOT" --pi-runtime "$RUNNER_TEMP/pi-runtime" --image "$AGENTLAB_PARTICIPANT_IMAGE"
           cp "$RUNNER_TEMP/participant-image.json" "$AGENTLAB_CI_ROOT/assessment/evidence/participant-image.json"
           cp "$RUNNER_TEMP/participant-runtime-preflight.txt" "$AGENTLAB_CI_ROOT/assessment/evidence/participant-runtime-preflight.txt"
+          printf 'participant_and_verify\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
       - name: Publish full successful build binaries as experiment evidence
-        if: always() && inputs.capture_run_id == ''
+        if: always() && inputs.capture_run_id == '' && (inputs.execution_mode || 'qualification') == 'qualification'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -113,7 +186,7 @@ jobs:
           (e/'binary-publication.json').write_text(json.dumps(rows,indent=2)+'\n')
           PY
       - name: Preserve raw evidence and build typed actual-run entities
-        if: always() && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario)
+        if: always() && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -143,7 +216,7 @@ jobs:
           (cal/'calibration.json').write_text(json.dumps(dict(sourceRevision='7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6',sourceDigest=hashlib.sha256(source.read_bytes()).hexdigest(),oracleDigest=json.loads((evidence/'frozen-task.json').read_text())['oracleDigest'],scope=task['assessmentScope'],lesson=lesson,variants=variants),indent=2)+'\n')
           PY
       - name: Publish raw archive independently from typed normalization
-        if: always() && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario)
+        if: always() && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -153,7 +226,7 @@ jobs:
           fi
           gh release upload "$tag" "$AGENTLAB_CI_ROOT/raw-evidence.tar.zst"
       - name: Persist actual runtime, historical contexts and experience in released TableGit
-        if: always() && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario)
+        if: always() && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario)
         run: |
           python3 scripts/channel-input.py --source "$AGENTLAB_COMPOSITION_DIR" --output "$RUNNER_TEMP/tablegit-inputs"
           mapfile -t runtime < <(python3 - <<'PY'
@@ -165,7 +238,7 @@ jobs:
           )
           /usr/bin/python3 examples/tablegit-session/run.py --image "${runtime[0]}" --runtime-volume "${runtime[1]}" --sdk-program "$AGENTLAB_COMPOSITION_DIR/session-sdk.json" --root "$AGENTLAB_CI_ROOT/store" --asset-model-export "$AGENTLAB_CI_ROOT/normalized-runtime/instances/$AGENTLAB_CAPTURE_RUN_ID" --asset-instance-id "$AGENTLAB_CAPTURE_RUN_ID" --experience-real-inputs "$AGENTLAB_CI_ROOT/evaluation-inputs"
       - name: Publish complete TableGit history and analysis evidence
-        if: always() && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario)
+        if: always() && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -184,6 +257,14 @@ jobs:
         with:
           name: ${{ inputs.scenario || 'navigation' }}-subject-evidence
           path: ${{ env.AGENTLAB_CI_ROOT }}/assessment/evidence/
+      - name: Preserve environment fingerprint and timing
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ inputs.scenario || 'navigation' }}-experiment-metrics
+          path: |
+            ${{ env.AGENTLAB_CI_ROOT }}/environment-fingerprint.json
+            ${{ env.AGENTLAB_CI_ROOT }}/timing.tsv
       - name: Preserve full HAP binaries even when Release publication fails
         if: always() && inputs.capture_run_id == ''
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -192,7 +273,7 @@ jobs:
           compression-level: 0
           path: ${{ env.AGENTLAB_CI_ROOT }}/assessment/full-hap/*.hap
       - name: Preserve typed entities and TableGit failures
-        if: always() && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario)
+        if: always() && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ${{ inputs.scenario }}-tablegit-evidence

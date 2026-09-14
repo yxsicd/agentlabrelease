@@ -1,5 +1,5 @@
 """Real staged navigation assessment, with explicit source-only fresh-Agent fork."""
-import argparse,hashlib,json,os,shutil,subprocess,sys
+import argparse,hashlib,json,os,shutil,subprocess,sys,time
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'real-code-agent'))
 from participant import Participant
@@ -33,6 +33,7 @@ def dump(path,value):path.write_text(json.dumps(value,indent=2)+'\n')
 def main():
  p=argparse.ArgumentParser();p.add_argument('--scenario',choices=SCENARIOS,default='navigation');p.add_argument('--source',type=Path,required=True);p.add_argument('--reference',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--install-root',type=Path,required=True);p.add_argument('--pi-runtime',type=Path,required=True);p.add_argument('--image',required=True);a=p.parse_args()
  scenario=SCENARIOS[a.scenario];paths=scenario['paths'];demands=scenario['demands']
+ experiment_started=time.monotonic_ns()
  root=a.root.resolve();root.mkdir();e=root/'evidence';e.mkdir();project=root/'workspace'
  subprocess.run(['git','clone','--no-hardlinks',str(a.source.resolve()),str(project)],check=True,capture_output=True)
  assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=project,text=True).strip()==PIN
@@ -40,7 +41,7 @@ def main():
  seed=json.loads(next(line for line in (Path(__file__).resolve().parents[1]/'seeds/harmony-code-workshop/evaluation_cases.jsonl').read_text().split('\n') if line.strip() and json.loads(line)['id']==scenario['caseId']));assert seed['demands']==demands
  dump(e/'frozen-task.json',seed)
  if seed.get('oracleDigest'):assert hashlib.sha256(Path(__file__).with_name(scenario['oracle']).read_bytes()).hexdigest()==seed['oracleDigest']
- summary=dict(schema='agentlab.'+a.scenario+'_subject.v1',taskId=scenario['caseId'],assessmentScope=scenario['scope'],sourceRevision=PIN,demands=demands,sourceForkQualified=False,formalSessionFSForkQualified=False,uiDeviceQualified=False,phases={},ok=False,subjectTaskSucceeded=False)
+ summary=dict(schema='agentlab.'+a.scenario+'_subject.v1',taskId=scenario['caseId'],assessmentScope=scenario['scope'],sourceRevision=PIN,demands=demands,sourceForkQualified=False,formalSessionFSForkQualified=False,uiDeviceQualified=False,phases={},timing=dict(builds=[]),ok=False,subjectTaskSucceeded=False)
  def oracle(label,directory,stage):
   command=['node',str(Path(__file__).with_name(scenario['oracle'])),str(directory),str(stage)]
   r=subprocess.run(command,capture_output=True);(e/(label+'-oracle.stdout.json')).write_bytes(r.stdout);(e/(label+'-oracle.stderr.log')).write_bytes(r.stderr)
@@ -59,7 +60,10 @@ def main():
  def build(label,directory,prepare=False):
   command=[x for x in base if not (prepare and x=='--network=none')]+['prepare-deps' if prepare else 'build','--project','/case/'+directory.name]
   if not prepare:command+=['--module','phone','--offline']
-  dump(e/(label+'-command.json'),command);r=subprocess.run(command,capture_output=True,timeout=660 if prepare else 240);(e/(label+'-stdout.log')).write_bytes(r.stdout);(e/(label+'-stderr.log')).write_bytes(r.stderr)
+  started=time.monotonic_ns();started_ms=(started-experiment_started)//1_000_000
+  dump(e/(label+'-command.json'),command);r=subprocess.run(command,capture_output=True,timeout=660 if prepare else 240);duration_ms=(time.monotonic_ns()-started)//1_000_000;(e/(label+'-stdout.log')).write_bytes(r.stdout);(e/(label+'-stderr.log')).write_bytes(r.stderr)
+  summary['timing']['builds'].append(dict(label=label,prepare=prepare,startedMs=started_ms,durationMs=duration_ms,success=r.returncode==0))
+  if not prepare and 'firstCompileStartMs' not in summary['timing']:summary['timing']['firstCompileStartMs']=started_ms
   reports=directory/('.native-dependencies' if prepare else '.native-build')
   if reports.exists():shutil.copytree(reports,e/label)
   if r.returncode==0 and not prepare:
