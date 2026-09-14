@@ -204,8 +204,12 @@ jobs:
           AGENTLAB_SUBJECT_ONLY: ${{ !inputs.prewarm_only && (inputs.execution_mode || 'qualification') == 'fast' }}
         run: |
           started=$(date +%s%3N)
-          sudo apt-get update
-          sudo apt-get install --yes zstd python3-websocket
+          if [[ "$AGENTLAB_EXECUTION_MODE" == "qualification" ]]; then
+            sudo apt-get update
+            sudo apt-get install --yes zstd python3-websocket
+          else
+            command -v zstd >/dev/null
+          fi
           scripts/ci-public-install-deploy-smoke.sh
           printf 'install_agentlab_harmony\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
       - name: Real parent two turns and fresh-Agent source fork; retain Agent failures
