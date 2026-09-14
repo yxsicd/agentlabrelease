@@ -409,6 +409,10 @@ jobs:
           )
           tar -C "$AGENTLAB_CI_ROOT" -cf - normalized-runtime evaluation-inputs "${evidence_dirs[@]}" | zstd -q -o "$AGENTLAB_CI_ROOT/tablegit-runtime.tar.zst"
           gh release upload "$tag" "$AGENTLAB_CI_ROOT/tablegit-runtime.tar.zst"
+      - name: Compact raw participant event streams after analysis
+        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' }}
+        run: |
+          python3 examples/knowledge-seed/subject/compact-events.py "$AGENTLAB_CI_ROOT/assessment/evidence"
       - name: Preserve complete supervisor capture, partial/failed Agent events and source cuts
         if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
