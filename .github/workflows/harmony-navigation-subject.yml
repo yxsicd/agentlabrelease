@@ -128,14 +128,6 @@ jobs:
         with:
           path: ${{ runner.temp }}/agentlab-public-cas
           key: agentlab-composition-cas-v1-${{ hashFiles('release/candidates/harmony-buildkit-v6-linux-x64/environment-lock.json') }}
-      - name: Restore direct Fast subject toolchain
-        if: inputs.capture_run_id == '' && (inputs.execution_mode || 'qualification') == 'fast'
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: |
-            /tmp/agentlab-fast-subject/harmony-cli
-            /tmp/agentlab-fast-subject/harmony-build-kit
-          key: agentlab-fast-toolchain-v2-${{ hashFiles('release/candidates/harmony-buildkit-v6-linux-x64/environment-lock.json') }}
       - name: Restore Harmony toolchain build cache
         if: inputs.capture_run_id == ''
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
