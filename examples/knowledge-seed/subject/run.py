@@ -121,7 +121,7 @@ def write_infrastructure_unavailable(e,scenario_name,guidance=None,preflight=Non
  decision=dict(schema='agentlab.harness_decision_package.v1',scenario=scenario_name,taskId=scenario['caseId'],sourceRevision=PIN,assessmentStatus='infrastructure-unavailable',infrastructureAvailable=False,subjectTaskSucceeded=None,sourceForkQualified=False,seedGuidance=manifest,phaseVerdicts=[],participantProcess=[],launchErrors=[dict(phase='gateway-preflight',error='Model gateway readiness failed before assessed dispatch')],buildTiming=dict(firstCompileStartMs=None,builds=[]),evidenceCost=dict(successfulHapCount=0,successfulHapBytes=0,retainedHapCount=0,retainedHapBytes=0,retentionPolicy='fast-manifest-only'),automaticAttributionCandidates=[dict(kind='transport-gateway-unavailable',strength='verified-preflight',evidence=['gateway-preflight'],claim='The configured model route did not become ready after bounded preflight retries; no assessed Participant turn was dispatched.')],uncertainties=['No Participant/model-quality conclusion is permitted because assessed dispatch did not begin.'],agentDecisionRequired=True,allowedDecisions=['rerun-control','rerun-guided','design-next-experiment'],harnessPolicy='Collect, verify, compare and propose evidence-linked candidates; never choose promotion or seed adoption automatically.')
  dump(e/'summary.json',summary);dump(e/'decision-package.json',decision);return decision
 def main():
- p=argparse.ArgumentParser();p.add_argument('--scenario',choices=SCENARIOS,default='navigation');p.add_argument('--source',type=Path,required=True);p.add_argument('--reference',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--install-root',type=Path,required=True);p.add_argument('--pi-runtime',type=Path,required=True);p.add_argument('--image',required=True);p.add_argument('--build-cache-probe-only',action='store_true');p.add_argument('--retain-hap-bytes',action='store_true');p.add_argument('--guidance',type=Path);p.add_argument('--guidance-variant',default='none');p.add_argument('--compiler-feedback-only',action='store_true');a=p.parse_args()
+ p=argparse.ArgumentParser();p.add_argument('--scenario',choices=SCENARIOS,default='navigation');p.add_argument('--source',type=Path,required=True);p.add_argument('--reference',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--install-root',type=Path,required=True);p.add_argument('--pi-runtime',type=Path,required=True);p.add_argument('--image',required=True);p.add_argument('--build-cache-probe-only',action='store_true');p.add_argument('--retain-hap-bytes',action='store_true');p.add_argument('--guidance',type=Path);p.add_argument('--guidance-variant',default='none');p.add_argument('--compiler-feedback-only',action='store_true');p.add_argument('--timeout-feedback-only',action='store_true');a=p.parse_args();assert not (a.compiler_feedback_only and a.timeout_feedback_only),'intervention modes are mutually exclusive'
  scenario=SCENARIOS[a.scenario];paths=scenario['paths'];demands=scenario['demands']
  experiment_started=time.monotonic_ns()
  root=a.root.resolve();root.mkdir();e=root/'evidence';e.mkdir();project=root/'workspace'
@@ -346,6 +346,28 @@ def main():
   stage1=oracle('turn-1',project,1);built1=build('turn-1-build',project);scope1=scope('turn-1',project);cut_id=cut('turn-1-cut',project);summary['phases']['turn-1']=dict(behavior=stage1,build=built1,scope=scope1,sourceCut=cut_id)
   summary['phases']['turn-1']['difficultyCheckpointCandidate']=capture_difficulty_checkpoint('turn-1',project,parent,stage1,built1,cut_id)
   turn2_feedback=feedback_prompt(stage1,built1)
+  if a.timeout_feedback_only:
+   lifecycle=json.loads((e/'parent-agent/turn-1-lifecycle.json').read_text())
+   edit=json.loads((e/'turn-1-edit-timing.json').read_text())
+   if not (stage1.get('pass') is False and built1 is True and lifecycle.get('timedOut') is True and edit.get('firstSourceMutationMs') is None):
+    raise RuntimeError('timeout-feedback-only requires behavior FAIL/build PASS and timeout-before-source-mutation')
+   before_requests=parent.requests;repair_started=time.monotonic_ns()
+   feedback=('Harness timing feedback from the previous assessed phase: the prior attempt reached the 420000 ms participant budget without any source mutation. '
+             'Continue the exact same task. Prioritize a minimal source change within the frozen edit boundary before further broad exploration. '
+             'This is observed timing evidence, not a reference implementation or code answer.')
+   repair_prompt=task_prompt(demands[0])+'\n\n'+feedback
+   try:monitored_turn('timeout-feedback-repair',project,parent,repair_prompt,reasoning_effort=None)
+   except RuntimeError as error:summary['phases']['timeout-feedback-repair-launch-error']=str(error)
+   repair_behavior=oracle('timeout-feedback-repair',project,1);repair_build=build('timeout-feedback-repair-build',project);repair_scope=scope('timeout-feedback-repair',project);repair_cut=cut('timeout-feedback-repair-cut',project)
+   repair_duration=(time.monotonic_ns()-repair_started)//1_000_000;repair_requests=parent.requests-before_requests
+   summary['phases']['timeout-feedback-repair']=dict(behavior=repair_behavior,build=repair_build,scope=repair_scope,sourceCut=repair_cut,repairLatencyMs=repair_duration,gatewayRequests=repair_requests,intervention='timeout-evidence-only',taskDemand='turn-1')
+   summary['phases']['timeout-feedback-repair']['difficultyCheckpointCandidate']=capture_difficulty_checkpoint('timeout-feedback-repair',project,parent,repair_behavior,repair_build,repair_cut)
+   turn1_checkpoint=json.loads((e/'difficulty-checkpoints/turn-1/checkpoint.json').read_text());repair_checkpoint=json.loads((e/'difficulty-checkpoints/timeout-feedback-repair/checkpoint.json').read_text())
+   input_session_sha=turn1_checkpoint['nativeSession']['sha256'];output_session_sha=repair_checkpoint['nativeSession']['sha256']
+   if output_session_sha==input_session_sha:raise RuntimeError('timeout-feedback-only native session did not advance')
+   summary['timeoutFeedbackOnly']=dict(enabled=True,inputPhase='turn-1',repairPhase='timeout-feedback-repair',sameNativeSession=True,sameTaskDemand=True,providerReasoningEffort='default',piThinkingMode='off',gatewayRequests=repair_requests,repairLatencyMs=repair_duration,inputSessionSha256=input_session_sha,outputSessionSha256=output_session_sha,sessionAdvanced=True)
+   summary['subjectTaskSucceeded']=bool(repair_behavior.get('pass') and repair_build);summary['ok']=True
+   return
   if a.compiler_feedback_only:
    if not (stage1.get('pass') is True and built1 is False and turn2_feedback):
     raise RuntimeError('compiler-feedback-only requires turn-1 behavior PASS and build FAIL with concrete compiler evidence')
@@ -385,7 +407,7 @@ def main():
  finally:
   if parent:parent.close()
   if fork:fork.close()
-  phase_names=(['turn-1','compiler-feedback-repair'] if a.compiler_feedback_only else ['turn-1','parent-turn-2','fresh-fork-turn-2'])
+  phase_names=(['turn-1','compiler-feedback-repair'] if a.compiler_feedback_only else ['turn-1','timeout-feedback-repair'] if a.timeout_feedback_only else ['turn-1','parent-turn-2','fresh-fork-turn-2'])
   verdicts=[];launch_errors=[];scope_drift=[]
   for name in phase_names:
    phase=summary['phases'].get(name,{})
@@ -403,7 +425,7 @@ def main():
   evidence_cost=dict(successfulHapCount=len(binaries),successfulHapBytes=sum(x.get('bytes',0) for x in binaries),retainedHapCount=sum(bool(x.get('retainedBytes')) for x in binaries),retainedHapBytes=sum(x.get('bytes',0) for x in binaries if x.get('retainedBytes')),retentionPolicy=('qualification-full-bytes' if a.retain_hap_bytes else 'fast-manifest-only'))
   participant_process=[]
   edit_timing={row['phase']:row for row in summary.get('timing',{}).get('participantEdits',[])}
-  participant_phase_sources=([('turn-1','parent-agent'),('compiler-feedback-repair','parent-agent')] if a.compiler_feedback_only else [('turn-1','parent-agent'),('parent-turn-2','parent-agent'),('fresh-fork-turn-2','fork-agent')])
+  participant_phase_sources=([('turn-1','parent-agent'),('compiler-feedback-repair','parent-agent')] if a.compiler_feedback_only else [('turn-1','parent-agent'),('timeout-feedback-repair','parent-agent')] if a.timeout_feedback_only else [('turn-1','parent-agent'),('parent-turn-2','parent-agent'),('fresh-fork-turn-2','fork-agent')])
   for name,directory in participant_phase_sources:
    lifecycle=e/directory/(name+'-lifecycle.json')
    if lifecycle.exists():
