@@ -127,21 +127,15 @@ def main():
  root=a.root.resolve();root.mkdir();e=root/'evidence';e.mkdir();project=root/'workspace'
  subprocess.run(['git','clone','--no-hardlinks',str(a.source.resolve()),str(project)],check=True,capture_output=True)
  assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=project,text=True).strip()==PIN
- resume_manifest=None;resume_session=None
+ resume_manifest=None;resume_session=None;resume_patch=None
  if a.resume_difficulty_checkpoint:
   resume_root=a.resume_difficulty_checkpoint.resolve();resume_manifest=json.loads((resume_root/'checkpoint.json').read_text())
   assert resume_manifest['schema']=='agentlab.difficulty_checkpoint_candidate.v1'
   assert resume_manifest['sourceRevision']==PIN and resume_manifest['taskId']==scenario['caseId']
   assert resume_manifest['behaviorPass'] is True and resume_manifest['buildPass'] is False
-  patch=resume_root/'workspace-tracked-delta.patch';assert patch.is_file()
+  resume_patch=resume_root/'workspace-tracked-delta.patch';assert resume_patch.is_file()
   tracked=resume_manifest.get('reconstruction',{}).get('trackedDelta',{})
-  if tracked.get('sha256'):assert sha256_file(patch)==tracked['sha256']
-  subprocess.run(['git','apply','--check',str(patch)],cwd=project,check=True,capture_output=True)
-  subprocess.run(['git','apply',str(patch)],cwd=project,check=True,capture_output=True)
-  for row in resume_manifest.get('selectedSourceFiles',[]):
-   path=project/row['path']
-   if row.get('absent'):assert not path.exists()
-   else:assert path.is_file() and sha256_file(path)==row['sha256']
+  if tracked.get('sha256'):assert sha256_file(resume_patch)==tracked['sha256']
   resume_session=resume_root/resume_manifest['nativeSession']['file'];assert resume_session.is_file()
   assert sha256_file(resume_session)==resume_manifest['nativeSession']['sha256']
  lock=json.loads((a.install_root/'downloads/environment-lock.json').read_text());dump(e/'environment-lock.json',lock)
@@ -356,6 +350,13 @@ def main():
     wrong_initial=root/'wrong-initial';shutil.copytree(a.reference/'common',wrong_initial/'common');file=wrong_initial/paths[0];file.write_text(file.read_text().replace('@State submitting: boolean = false','@State submitting: boolean = true'));summary['calibration']['wrongInitializerFails']=not oracle('wrong-initial',wrong_initial,2)['pass']
    assert all(summary['calibration'].values())
 
+  if resume_manifest:
+   subprocess.run(['git','apply','--check',str(resume_patch)],cwd=project,check=True,capture_output=True)
+   subprocess.run(['git','apply',str(resume_patch)],cwd=project,check=True,capture_output=True)
+   for row in resume_manifest.get('selectedSourceFiles',[]):
+    path=project/row['path']
+    if row.get('absent'):assert not path.exists()
+    else:assert path.is_file() and sha256_file(path)==row['sha256']
   if not build('prepare',project,True):raise RuntimeError('Harness dependency preparation failed')
   parent=subject('parent-agent')
   if resume_manifest:
