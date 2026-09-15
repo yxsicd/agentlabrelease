@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import importlib.util
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,6 +9,8 @@ from pathlib import Path
 HERE = Path(__file__).parent
 SPEC = importlib.util.spec_from_file_location("difficulty_miner", HERE / "difficulty-miner.py")
 M = importlib.util.module_from_spec(SPEC); SPEC.loader.exec_module(M)
+RUN_SPEC = importlib.util.spec_from_file_location("subject_run", HERE / "run.py")
+SUBJECT = importlib.util.module_from_spec(RUN_SPEC); RUN_SPEC.loader.exec_module(SUBJECT)
 
 
 def decision(verdicts, process=None, infra=True, errors=None):
@@ -66,6 +69,41 @@ class DifficultyMinerTest(unittest.TestCase):
             self.assertEqual(row['checkpointPolicy']['capturedCandidateCount'],1)
             self.assertEqual(row['checkpointPolicy']['formalSnapshotCount'],0)
             self.assertFalse(row['observations'][0]['checkpointCandidate']['readyForControlledFork'])
+
+    def test_workspace_reconstruction_captures_complete_semantic_delta(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td);repo=root/'repo';repo.mkdir()
+            subprocess.run(['git','init','-q'],cwd=repo,check=True)
+            subprocess.run(['git','config','user.email','agentlab@example.invalid'],cwd=repo,check=True)
+            subprocess.run(['git','config','user.name','AgentLab Test'],cwd=repo,check=True)
+            (repo/'a.txt').write_text('base\n');(repo/'b.txt').write_text('base\n')
+            subprocess.run(['git','add','.'],cwd=repo,check=True)
+            subprocess.run(['git','commit','-qm','base'],cwd=repo,check=True)
+            revision=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
+            (repo/'a.txt').write_text('changed\n')
+            evidence=root/'e';evidence.mkdir()
+            result=SUBJECT.workspace_reconstruction_evidence(repo,evidence,['a.txt'],revision)
+            self.assertTrue(result['semanticRehydrationEligible'])
+            self.assertEqual(result['semanticChangedPaths'],['a.txt'])
+            self.assertEqual(result['extraSemanticPaths'],[])
+            self.assertTrue((evidence/'workspace-tracked-delta.patch').read_bytes())
+            self.assertTrue((evidence/'workspace-status.txt').read_bytes())
+
+    def test_workspace_reconstruction_blocks_uncaptured_authored_path(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td);repo=root/'repo';repo.mkdir()
+            subprocess.run(['git','init','-q'],cwd=repo,check=True)
+            subprocess.run(['git','config','user.email','agentlab@example.invalid'],cwd=repo,check=True)
+            subprocess.run(['git','config','user.name','AgentLab Test'],cwd=repo,check=True)
+            (repo/'a.txt').write_text('base\n');(repo/'b.txt').write_text('base\n')
+            subprocess.run(['git','add','.'],cwd=repo,check=True)
+            subprocess.run(['git','commit','-qm','base'],cwd=repo,check=True)
+            revision=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
+            (repo/'b.txt').write_text('unexpected\n')
+            evidence=root/'e';evidence.mkdir()
+            result=SUBJECT.workspace_reconstruction_evidence(repo,evidence,['a.txt'],revision)
+            self.assertFalse(result['semanticRehydrationEligible'])
+            self.assertEqual(result['extraSemanticPaths'],['b.txt'])
 
 
 if __name__ == '__main__': unittest.main()

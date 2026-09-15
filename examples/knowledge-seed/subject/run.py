@@ -4,6 +4,8 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'real-code-agent'))
 from participant import Participant
 PIN='7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6'
+SOURCE_REPOSITORY='https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git'
+GENERATED_PREFIXES=('.native-build/','.native-dependencies/','.hvigor/','build/','oh_modules/','node_modules/','phone/build/')
 PATHS=['common/src/main/ets/routermanager/PageContext.ets','common/src/main/ets/model/PageEnum.ets','common/src/main/ets/util/Logger.ets','features/devpractices/src/main/ets/view/PracticeHomeView.ets']
 DEMANDS=[
  'Expose boolean success/failure outcomes for PageContext navigation operations, including its interface. Preserve stack ownership, push/replace/pop/clear semantics, parameters, animation defaults and error logging. Keep valid ArkTS.',
@@ -51,6 +53,25 @@ def pi_session_identity(path):
      if isinstance(identity,str) and identity:return identity
  except OSError:return None
  return None
+def workspace_reconstruction_evidence(directory,root,selected_paths,source_revision=PIN):
+ tracked=subprocess.run(['git','diff','--binary',source_revision,'--'],cwd=directory,capture_output=True,check=True).stdout
+ status=subprocess.run(['git','status','--porcelain=v1','--untracked-files=all'],cwd=directory,capture_output=True,check=True).stdout
+ tracked_paths=subprocess.check_output(['git','diff','--name-only',source_revision,'--'],cwd=directory,text=True).splitlines()
+ untracked=subprocess.check_output(['git','ls-files','--others','--exclude-standard'],cwd=directory,text=True).splitlines()
+ changed=sorted(set(tracked_paths+untracked))
+ generated=[name for name in changed if name.startswith(GENERATED_PREFIXES)]
+ semantic=[name for name in changed if name not in generated]
+ selected=set(selected_paths);extra=[name for name in semantic if name not in selected]
+ patch=root/'workspace-tracked-delta.patch';patch.write_bytes(tracked)
+ status_file=root/'workspace-status.txt';status_file.write_bytes(status)
+ return dict(schema='agentlab.difficulty_workspace_reconstruction.v1',
+  sourceAuthority=dict(repository=SOURCE_REPOSITORY,revision=source_revision),
+  trackedDelta=dict(file=patch.name,bytes=len(tracked),sha256=hashlib.sha256(tracked).hexdigest()),
+  workspaceStatus=dict(file=status_file.name,bytes=len(status),sha256=hashlib.sha256(status).hexdigest()),
+  changedPaths=changed,semanticChangedPaths=semantic,generatedPaths=generated,extraSemanticPaths=extra,
+  semanticRehydrationEligible=not extra,
+  generatedStatePolicy='Recreate deterministic Harness/build state once before SessionFS seal; all experiment arms then CoW-fork the same sealed snapshot.',
+  exactOriginalPhysicalStateCaptured=False)
 def gateway_preflight(e,model,route='glm'):
  url=os.environ['AGENTLAB_LM_GATEWAY_URL'].rstrip('/')+'/v1/chat/completions'
  payload=json.dumps(dict(model=model,providerId=route,stream=False,max_completion_tokens=4,messages=[dict(role='user',content='Return exactly OK.')])).encode()
@@ -141,8 +162,8 @@ def main():
  def scope(label,directory):
   tracked=subprocess.check_output(['git','diff','--name-only',PIN,'--'],cwd=directory,text=True).splitlines()
   untracked=subprocess.check_output(['git','ls-files','--others','--exclude-standard'],cwd=directory,text=True).splitlines()
-  raw=sorted(set(tracked+untracked));generated_prefixes=('.native-build/','.native-dependencies/','.hvigor/','build/','oh_modules/','node_modules/')
-  generated=[name for name in raw if name.startswith(generated_prefixes)];changed=[name for name in raw if name not in generated]
+  raw=sorted(set(tracked+untracked))
+  generated=[name for name in raw if name.startswith(GENERATED_PREFIXES)];changed=[name for name in raw if name not in generated]
   expected=set(paths);extra=[name for name in changed if name not in expected]
   result=dict(schema='agentlab.scope_drift.v2',label=label,expectedPaths=paths,rawChangedPaths=raw,generatedPaths=generated,changedPaths=changed,extraPaths=extra,changedCount=len(changed),extraCount=len(extra),drift=bool(extra))
   dump(e/(label+'-scope.json'),result);return result
@@ -238,6 +259,7 @@ def main():
   if not session or not session.is_file():return None
   root=e/'difficulty-checkpoints'/phase;root.mkdir(parents=True,exist_ok=True)
   target=root/'pi-session.jsonl';shutil.copy2(session,target)
+  reconstruction=workspace_reconstruction_evidence(directory,root,paths,PIN)
   source=root/'source';source.mkdir()
   files=[]
   for name in paths:
@@ -248,10 +270,12 @@ def main():
   manifest=dict(schema='agentlab.difficulty_checkpoint_candidate.v1',phase=phase,sourceRevision=PIN,sourceCut=source_cut,
    taskId=scenario['caseId'],behaviorPass=behavior.get('pass'),buildPass=compiled,
    nativeSession=dict(agent='pi',packageVersion='0.73.1',file='pi-session.jsonl',bytes=target.stat().st_size,sha256=sha256_file(target),threadId=pi_session_identity(target)),
-   selectedSourceFiles=files,formalSessionFsSnapshot=False,readyForControlledFork=False,
-   promotionRequirement='Rehydrate source + native session into a qualified SessionFS capsule, then seal an immutable snapshot before any model/parameter sweep.',
-   persistedObservableState=['selected-source','pi-native-session'],
-   missingObservableState=['full-workspace','git-object-store','agent-home-outside-native-session','runtime-cache'],
+   selectedSourceFiles=files,reconstruction=reconstruction,
+   semanticRehydrationEligible=reconstruction['semanticRehydrationEligible'],formalSessionFsSnapshot=False,readyForControlledFork=False,
+   promotionRequirement='Rehydrate exact Git revision + full tracked delta + native session, recreate declared immutable/generated runtime state once, then seal/verify one SessionFS snapshot before any model/parameter sweep.',
+   persistedObservableState=['source-revision-authority','workspace-tracked-delta','workspace-status','selected-source','pi-native-session'],
+   recreatedBeforeSeal=['readonly-participant-runtime','readonly-model-config','harmony-generated-state'],
+   missingObservableState=['exact-original-physical-workspace'],
    neverPersist=['provider-hidden-state','process-memory','pid','tcp-connection'],agentDecisionRequired=True)
   dump(root/'checkpoint.json',manifest);return str((root/'checkpoint.json').relative_to(e))
  parent=None;fork=None

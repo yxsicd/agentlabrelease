@@ -398,6 +398,7 @@ jobs:
       - name: Mine evidence-linked difficulty candidates
         if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' && steps.gateway_readiness.outputs.ready != 'false' }}
         run: |
+          python3 examples/knowledge-seed/subject/test-difficulty-miner.py
           python3 examples/knowledge-seed/subject/difficulty-miner.py \
             --decision "$GITHUB_RUN_ID=$AGENTLAB_CI_ROOT/assessment/evidence/decision-package.json" \
             --evidence "$GITHUB_RUN_ID=$AGENTLAB_CI_ROOT/assessment/evidence" \

@@ -210,9 +210,17 @@ connections are recreated rather than represented as persisted context.
 
 Each assessed phase also preserves a `difficulty_checkpoint_candidate` when the
 Pi native session exists.  The candidate binds the selected source bytes, source
-cut, phase verdict and exact Pi JSONL digest.  It is intentionally marked
+cut, phase verdict and exact Pi JSONL digest.  It also carries a semantic
+reconstruction proof: immutable source repository/revision, complete binary
+tracked delta, exact Git status and changed-path classification.  It is eligible
+for semantic rehydration only when every non-generated changed path remains in
+the frozen task boundary.  Generated Harness/build state and readonly participant
+runtime/config are recreated once before the exact experimental snapshot is
+sealed; they are not treated as mutable Agent memory.  The candidate is intentionally marked
 `formalSessionFsSnapshot=false` and `readyForControlledFork=false`: the public
 source-only assessment does not become a formal context checkpoint merely because
-the native session file was retained.  A controlled model/parameter sweep begins
-only after this candidate is rehydrated into a separately qualified SessionFS
-capsule and sealed as an immutable snapshot.
+the native session file was retained.  Rehydration is therefore a two-step
+contract: reproduce the semantic state, then seal/verify it once with SessionFS.
+Every controlled model/parameter arm must CoW-fork that same sealed snapshot.
+This does not claim byte-for-byte capture of the original GitHub runner's physical
+cache layout.
