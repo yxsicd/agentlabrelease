@@ -531,14 +531,17 @@ jobs:
           PY
           source "$RUNNER_TEMP/cbgroom-write-state.env"
           "${inspector[@]}" --method tools/call --tool-name skill_run_read --tool-args-json "$(cat "$RUNNER_TEMP/cbgroom-query-args.json")" > "$RUNNER_TEMP/cbgroom-readback.json"
-          python3 - "$RUNNER_TEMP/cbgroom-readback.json" "$CBGROOM_WRITTEN_REVISION" <<'PY'
+          python3 - "$RUNNER_TEMP/cbgroom-readback.json" "$asset_run_id" "$sentinel" "$CBGROOM_WRITTEN_REVISION" <<'PY'
           import json,sys
           outer=json.load(open(sys.argv[1])); structured=outer['result']['structuredContent']
           assert structured['outcome']=='executed',structured
           result=structured['result']
           assert result['returned_count']==1,result
-          assert result['revision']==sys.argv[2],(result['revision'],sys.argv[2])
-          print(json.dumps({'ok':True,'revision':result['revision'],'rowVersion':result['rows'][0]['row_version']},sort_keys=True))
+          row=result['rows'][0]
+          assert row['key']==sys.argv[3],row
+          assert row['row']['id']==sys.argv[3],row
+          assert row['row']['producerRun']==sys.argv[2],row
+          print(json.dumps({'ok':True,'writtenRevision':sys.argv[4],'readRevision':result['revision'],'rowVersion':row['row_version']},sort_keys=True))
           PY
       - name: Preserve raw evidence and build typed actual-run entities
         if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
