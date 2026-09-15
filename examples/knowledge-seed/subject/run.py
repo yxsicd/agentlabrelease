@@ -121,18 +121,23 @@ def write_infrastructure_unavailable(e,scenario_name,guidance=None,preflight=Non
  decision=dict(schema='agentlab.harness_decision_package.v1',scenario=scenario_name,taskId=scenario['caseId'],sourceRevision=PIN,assessmentStatus='infrastructure-unavailable',infrastructureAvailable=False,subjectTaskSucceeded=None,sourceForkQualified=False,seedGuidance=manifest,phaseVerdicts=[],participantProcess=[],launchErrors=[dict(phase='gateway-preflight',error='Model gateway readiness failed before assessed dispatch')],buildTiming=dict(firstCompileStartMs=None,builds=[]),evidenceCost=dict(successfulHapCount=0,successfulHapBytes=0,retainedHapCount=0,retainedHapBytes=0,retentionPolicy='fast-manifest-only'),automaticAttributionCandidates=[dict(kind='transport-gateway-unavailable',strength='verified-preflight',evidence=['gateway-preflight'],claim='The configured model route did not become ready after bounded preflight retries; no assessed Participant turn was dispatched.')],uncertainties=['No Participant/model-quality conclusion is permitted because assessed dispatch did not begin.'],agentDecisionRequired=True,allowedDecisions=['rerun-control','rerun-guided','design-next-experiment'],harnessPolicy='Collect, verify, compare and propose evidence-linked candidates; never choose promotion or seed adoption automatically.')
  dump(e/'summary.json',summary);dump(e/'decision-package.json',decision);return decision
 def main():
- p=argparse.ArgumentParser();p.add_argument('--scenario',choices=SCENARIOS,default='navigation');p.add_argument('--source',type=Path,required=True);p.add_argument('--reference',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--install-root',type=Path,required=True);p.add_argument('--pi-runtime',type=Path,required=True);p.add_argument('--image',required=True);p.add_argument('--build-cache-probe-only',action='store_true');p.add_argument('--retain-hap-bytes',action='store_true');p.add_argument('--guidance',type=Path);p.add_argument('--guidance-variant',default='none');p.add_argument('--compiler-feedback-only',action='store_true');p.add_argument('--timeout-feedback-only',action='store_true');p.add_argument('--resume-difficulty-checkpoint',type=Path);a=p.parse_args();assert not (a.compiler_feedback_only and a.timeout_feedback_only),'intervention modes are mutually exclusive';assert not a.resume_difficulty_checkpoint or a.compiler_feedback_only,'resume checkpoint currently admits compiler-feedback-only continuation only'
+ p=argparse.ArgumentParser();p.add_argument('--scenario',choices=SCENARIOS,default='navigation');p.add_argument('--source',type=Path,required=True);p.add_argument('--reference',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--install-root',type=Path,required=True);p.add_argument('--pi-runtime',type=Path,required=True);p.add_argument('--image',required=True);p.add_argument('--build-cache-probe-only',action='store_true');p.add_argument('--retain-hap-bytes',action='store_true');p.add_argument('--guidance',type=Path);p.add_argument('--guidance-variant',default='none');p.add_argument('--compiler-feedback-only',action='store_true');p.add_argument('--timeout-feedback-only',action='store_true');p.add_argument('--resume-difficulty-checkpoint',type=Path);a=p.parse_args();assert not (a.compiler_feedback_only and a.timeout_feedback_only),'intervention modes are mutually exclusive';assert not a.resume_difficulty_checkpoint or (a.compiler_feedback_only != a.timeout_feedback_only),'resume checkpoint requires exactly one focused intervention mode'
  scenario=SCENARIOS[a.scenario];paths=scenario['paths'];demands=scenario['demands']
  experiment_started=time.monotonic_ns()
  root=a.root.resolve();root.mkdir();e=root/'evidence';e.mkdir();project=root/'workspace'
  subprocess.run(['git','clone','--no-hardlinks',str(a.source.resolve()),str(project)],check=True,capture_output=True)
  assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=project,text=True).strip()==PIN
- resume_manifest=None;resume_session=None;resume_patch=None;resume_oracle_stage=1;resume_demand_index=0
+ resume_manifest=None;resume_session=None;resume_patch=None;resume_oracle_stage=1;resume_demand_index=0;resume_lifecycle=None;resume_edit=None
  if a.resume_difficulty_checkpoint:
   resume_root=a.resume_difficulty_checkpoint.resolve();resume_manifest=json.loads((resume_root/'checkpoint.json').read_text())
   assert resume_manifest['schema']=='agentlab.difficulty_checkpoint_candidate.v1'
   assert resume_manifest['sourceRevision']==PIN and resume_manifest['taskId']==scenario['caseId']
-  assert resume_manifest['behaviorPass'] is True and resume_manifest['buildPass'] is False
+  expected=(True,False) if a.compiler_feedback_only else (False,True)
+  assert (resume_manifest['behaviorPass'],resume_manifest['buildPass'])==expected
+  if a.timeout_feedback_only:
+   resume_lifecycle=json.loads((resume_root/'source-lifecycle.json').read_text())
+   resume_edit=json.loads((resume_root/'source-edit-timing.json').read_text())
+   assert resume_lifecycle.get('timedOut') is True and resume_edit.get('firstSourceMutationMs') is None
   if resume_manifest['phase'] in ('parent-turn-2','fresh-fork-turn-2'):
    resume_oracle_stage=2;resume_demand_index=1
   resume_patch=resume_root/'workspace-tracked-delta.patch';assert resume_patch.is_file()
@@ -353,8 +358,9 @@ def main():
    assert all(summary['calibration'].values())
 
   if resume_manifest:
-   subprocess.run(['git','apply','--check',str(resume_patch)],cwd=project,check=True,capture_output=True)
-   subprocess.run(['git','apply',str(resume_patch)],cwd=project,check=True,capture_output=True)
+   if resume_patch.stat().st_size:
+    subprocess.run(['git','apply','--check',str(resume_patch)],cwd=project,check=True,capture_output=True)
+    subprocess.run(['git','apply',str(resume_patch)],cwd=project,check=True,capture_output=True)
    for row in resume_manifest.get('selectedSourceFiles',[]):
     path=project/row['path']
     if row.get('absent'):assert not path.exists()
@@ -370,6 +376,8 @@ def main():
     inputSessionSha256=resume_manifest['nativeSession']['sha256'],
     nativeThreadId=resume_manifest['nativeSession'].get('threadId'),
     oracleStage=resume_oracle_stage,taskDemandIndex=resume_demand_index,
+    sourceTimedOut=(resume_lifecycle.get('timedOut') if resume_lifecycle else None),
+    sourceFirstMutationMs=(resume_edit.get('firstSourceMutationMs') if resume_edit else None),
     formalSessionFSForkQualified=False)
   cut('initial',project)
   if not resume_manifest:
@@ -383,25 +391,25 @@ def main():
   summary['phases']['turn-1']['difficultyCheckpointCandidate']=capture_difficulty_checkpoint('turn-1',project,parent,stage1,built1,cut_id)
   turn2_feedback=feedback_prompt(stage1,built1)
   if a.timeout_feedback_only:
-   lifecycle=json.loads((e/'parent-agent/turn-1-lifecycle.json').read_text())
-   edit=json.loads((e/'turn-1-edit-timing.json').read_text())
+   lifecycle=resume_lifecycle if resume_manifest else json.loads((e/'parent-agent/turn-1-lifecycle.json').read_text())
+   edit=resume_edit if resume_manifest else json.loads((e/'turn-1-edit-timing.json').read_text())
    if not (stage1.get('pass') is False and built1 is True and lifecycle.get('timedOut') is True and edit.get('firstSourceMutationMs') is None):
     raise RuntimeError('timeout-feedback-only requires behavior FAIL/build PASS and timeout-before-source-mutation')
    before_requests=parent.requests;repair_started=time.monotonic_ns()
    feedback=('Harness timing feedback from the previous assessed phase: the prior attempt reached the 420000 ms participant budget without any source mutation. '
              'Continue the exact same task. Prioritize a minimal source change within the frozen edit boundary before further broad exploration. '
              'This is observed timing evidence, not a reference implementation or code answer.')
-   repair_prompt=task_prompt(demands[0])+'\n\n'+feedback
+   repair_prompt=task_prompt(demands[resume_demand_index if resume_manifest else 0])+'\n\n'+feedback
    try:monitored_turn('timeout-feedback-repair',project,parent,repair_prompt,reasoning_effort=None)
    except RuntimeError as error:summary['phases']['timeout-feedback-repair-launch-error']=str(error)
-   repair_behavior=oracle('timeout-feedback-repair',project,1);repair_build=build('timeout-feedback-repair-build',project);repair_scope=scope('timeout-feedback-repair',project);repair_cut=cut('timeout-feedback-repair-cut',project)
+   repair_behavior=oracle('timeout-feedback-repair',project,resume_oracle_stage if resume_manifest else 1);repair_build=build('timeout-feedback-repair-build',project);repair_scope=scope('timeout-feedback-repair',project);repair_cut=cut('timeout-feedback-repair-cut',project)
    repair_duration=(time.monotonic_ns()-repair_started)//1_000_000;repair_requests=parent.requests-before_requests
-   summary['phases']['timeout-feedback-repair']=dict(behavior=repair_behavior,build=repair_build,scope=repair_scope,sourceCut=repair_cut,repairLatencyMs=repair_duration,gatewayRequests=repair_requests,intervention='timeout-evidence-only',taskDemand='turn-1')
+   summary['phases']['timeout-feedback-repair']=dict(behavior=repair_behavior,build=repair_build,scope=repair_scope,sourceCut=repair_cut,repairLatencyMs=repair_duration,gatewayRequests=repair_requests,intervention='timeout-evidence-only',taskDemand=('turn-'+str((resume_demand_index if resume_manifest else 0)+1)),oracleStage=(resume_oracle_stage if resume_manifest else 1))
    summary['phases']['timeout-feedback-repair']['difficultyCheckpointCandidate']=capture_difficulty_checkpoint('timeout-feedback-repair',project,parent,repair_behavior,repair_build,repair_cut)
    turn1_checkpoint=json.loads((e/'difficulty-checkpoints/turn-1/checkpoint.json').read_text());repair_checkpoint=json.loads((e/'difficulty-checkpoints/timeout-feedback-repair/checkpoint.json').read_text())
    input_session_sha=turn1_checkpoint['nativeSession']['sha256'];output_session_sha=repair_checkpoint['nativeSession']['sha256']
    if output_session_sha==input_session_sha:raise RuntimeError('timeout-feedback-only native session did not advance')
-   summary['timeoutFeedbackOnly']=dict(enabled=True,inputPhase='turn-1',repairPhase='timeout-feedback-repair',sameNativeSession=True,sameTaskDemand=True,providerReasoningEffort='default',piThinkingMode='off',gatewayRequests=repair_requests,repairLatencyMs=repair_duration,inputSessionSha256=input_session_sha,outputSessionSha256=output_session_sha,sessionAdvanced=True)
+   summary['timeoutFeedbackOnly']=dict(enabled=True,inputPhase='turn-1',repairPhase='timeout-feedback-repair',sameNativeSession=True,sameTaskDemand=True,taskDemandIndex=(resume_demand_index if resume_manifest else 0),oracleStage=(resume_oracle_stage if resume_manifest else 1),providerReasoningEffort='default',piThinkingMode='off',gatewayRequests=repair_requests,repairLatencyMs=repair_duration,inputSessionSha256=input_session_sha,outputSessionSha256=output_session_sha,sessionAdvanced=True)
    summary['subjectTaskSucceeded']=bool(repair_behavior.get('pass') and repair_build);summary['ok']=True
    return
   if a.compiler_feedback_only:

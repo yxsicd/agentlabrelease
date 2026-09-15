@@ -332,7 +332,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           test -n "$AGENTLAB_RESUME_CHECKPOINT_PHASE"
-          test "$AGENTLAB_COMPILER_FEEDBACK_ONLY" = true
+          if [[ "$AGENTLAB_COMPILER_FEEDBACK_ONLY" == "$AGENTLAB_TIMEOUT_FEEDBACK_ONLY" ]]; then
+            echo "focused checkpoint resume requires exactly one intervention mode" >&2
+            exit 1
+          fi
           rm -rf "$RUNNER_TEMP/resume-evidence" "$RUNNER_TEMP/resume-checkpoint"
           mkdir -p "$RUNNER_TEMP/resume-evidence" "$RUNNER_TEMP/resume-checkpoint"
           gh run download "$AGENTLAB_RESUME_CHECKPOINT_RUN_ID" \
@@ -340,6 +343,12 @@ jobs:
             --dir "$RUNNER_TEMP/resume-evidence"
           cp -R "$RUNNER_TEMP/resume-evidence/difficulty-checkpoints/$AGENTLAB_RESUME_CHECKPOINT_PHASE/." \
             "$RUNNER_TEMP/resume-checkpoint/"
+          if [[ "$AGENTLAB_TIMEOUT_FEEDBACK_ONLY" == true ]]; then
+            cp "$RUNNER_TEMP/resume-evidence/parent-agent/$AGENTLAB_RESUME_CHECKPOINT_PHASE-lifecycle.json" \
+              "$RUNNER_TEMP/resume-checkpoint/source-lifecycle.json"
+            cp "$RUNNER_TEMP/resume-evidence/$AGENTLAB_RESUME_CHECKPOINT_PHASE-edit-timing.json" \
+              "$RUNNER_TEMP/resume-checkpoint/source-edit-timing.json"
+          fi
           python3 - <<'PY'
           import hashlib,json,os
           from pathlib import Path
@@ -347,11 +356,20 @@ jobs:
           checkpoint=json.loads((root/'checkpoint.json').read_text())
           assert checkpoint['schema']=='agentlab.difficulty_checkpoint_candidate.v1'
           assert checkpoint['phase']==os.environ['AGENTLAB_RESUME_CHECKPOINT_PHASE']
-          assert checkpoint['behaviorPass'] is True and checkpoint['buildPass'] is False
+          compiler=os.environ['AGENTLAB_COMPILER_FEEDBACK_ONLY']=='true'
+          timeout=os.environ['AGENTLAB_TIMEOUT_FEEDBACK_ONLY']=='true'
+          assert compiler != timeout
+          expected=(True,False) if compiler else (False,True)
+          assert (checkpoint['behaviorPass'],checkpoint['buildPass'])==expected
           session=root/checkpoint['nativeSession']['file']
           assert session.is_file()
           assert hashlib.sha256(session.read_bytes()).hexdigest()==checkpoint['nativeSession']['sha256']
           assert (root/'workspace-tracked-delta.patch').is_file()
+          if timeout:
+            lifecycle=json.loads((root/'source-lifecycle.json').read_text())
+            edit=json.loads((root/'source-edit-timing.json').read_text())
+            assert lifecycle['timedOut'] is True
+            assert edit['firstSourceMutationMs'] is None
           PY
       - name: Record infrastructure-unavailable decision after lineage restore
         if: ${{ !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' && steps.gateway_readiness.outputs.ready == 'false' }}
