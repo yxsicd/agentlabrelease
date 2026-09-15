@@ -127,12 +127,14 @@ def main():
  root=a.root.resolve();root.mkdir();e=root/'evidence';e.mkdir();project=root/'workspace'
  subprocess.run(['git','clone','--no-hardlinks',str(a.source.resolve()),str(project)],check=True,capture_output=True)
  assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=project,text=True).strip()==PIN
- resume_manifest=None;resume_session=None;resume_patch=None
+ resume_manifest=None;resume_session=None;resume_patch=None;resume_oracle_stage=1;resume_demand_index=0
  if a.resume_difficulty_checkpoint:
   resume_root=a.resume_difficulty_checkpoint.resolve();resume_manifest=json.loads((resume_root/'checkpoint.json').read_text())
   assert resume_manifest['schema']=='agentlab.difficulty_checkpoint_candidate.v1'
   assert resume_manifest['sourceRevision']==PIN and resume_manifest['taskId']==scenario['caseId']
   assert resume_manifest['behaviorPass'] is True and resume_manifest['buildPass'] is False
+  if resume_manifest['phase'] in ('parent-turn-2','fresh-fork-turn-2'):
+   resume_oracle_stage=2;resume_demand_index=1
   resume_patch=resume_root/'workspace-tracked-delta.patch';assert resume_patch.is_file()
   tracked=resume_manifest.get('reconstruction',{}).get('trackedDelta',{})
   if tracked.get('sha256'):assert sha256_file(resume_patch)==tracked['sha256']
@@ -362,17 +364,18 @@ def main():
   if resume_manifest:
    shutil.copy2(resume_session,parent.native_session_file)
    summary['resumeDifficultyCheckpoint']=dict(
-    mode='semantic-rehydration-exact-native-session',
+   mode='semantic-rehydration-exact-native-session',
     sourceRunId=os.environ.get('AGENTLAB_RESUME_CHECKPOINT_RUN_ID'),
     sourcePhase=resume_manifest['phase'],sourceCut=resume_manifest['sourceCut'],
     inputSessionSha256=resume_manifest['nativeSession']['sha256'],
     nativeThreadId=resume_manifest['nativeSession'].get('threadId'),
+    oracleStage=resume_oracle_stage,taskDemandIndex=resume_demand_index,
     formalSessionFSForkQualified=False)
   cut('initial',project)
   if not resume_manifest:
    try:monitored_turn('turn-1',project,parent,task_prompt(demands[0]))
    except RuntimeError as error:summary['phases']['turn-1-launch-error']=str(error)
-  stage1=oracle('turn-1',project,1);built1=build('turn-1-build',project);scope1=scope('turn-1',project);cut_id=cut('turn-1-cut',project);summary['phases']['turn-1']=dict(behavior=stage1,build=built1,scope=scope1,sourceCut=cut_id)
+  stage1=oracle('turn-1',project,resume_oracle_stage if resume_manifest else 1);built1=build('turn-1-build',project);scope1=scope('turn-1',project);cut_id=cut('turn-1-cut',project);summary['phases']['turn-1']=dict(behavior=stage1,build=built1,scope=scope1,sourceCut=cut_id)
   if resume_manifest:
    if not (stage1.get('pass') is resume_manifest['behaviorPass'] and built1 is resume_manifest['buildPass'] and cut_id==resume_manifest['sourceCut']):
     raise RuntimeError('rehydrated difficulty checkpoint failed source/behavior/build equivalence gate')
@@ -406,19 +409,19 @@ def main():
     raise RuntimeError('compiler-feedback-only requires turn-1 behavior PASS and build FAIL with concrete compiler evidence')
    before_requests=parent.requests
    repair_started=time.monotonic_ns()
-   repair_prompt=task_prompt(demands[0])+'\n\n'+turn2_feedback
+   repair_prompt=task_prompt(demands[resume_demand_index if resume_manifest else 0])+'\n\n'+turn2_feedback
    try:monitored_turn('compiler-feedback-repair',project,parent,repair_prompt,reasoning_effort=None)
    except RuntimeError as error:summary['phases']['compiler-feedback-repair-launch-error']=str(error)
-   repair_behavior=oracle('compiler-feedback-repair',project,1);repair_build=build('compiler-feedback-repair-build',project);repair_scope=scope('compiler-feedback-repair',project);repair_cut=cut('compiler-feedback-repair-cut',project)
+   repair_behavior=oracle('compiler-feedback-repair',project,resume_oracle_stage if resume_manifest else 1);repair_build=build('compiler-feedback-repair-build',project);repair_scope=scope('compiler-feedback-repair',project);repair_cut=cut('compiler-feedback-repair-cut',project)
    repair_duration=(time.monotonic_ns()-repair_started)//1_000_000
    repair_requests=parent.requests-before_requests
-   summary['phases']['compiler-feedback-repair']=dict(behavior=repair_behavior,build=repair_build,scope=repair_scope,sourceCut=repair_cut,repairLatencyMs=repair_duration,gatewayRequests=repair_requests,intervention='compiler-evidence-only',taskDemand='turn-1')
+   summary['phases']['compiler-feedback-repair']=dict(behavior=repair_behavior,build=repair_build,scope=repair_scope,sourceCut=repair_cut,repairLatencyMs=repair_duration,gatewayRequests=repair_requests,intervention='compiler-evidence-only',taskDemand=('turn-'+str((resume_demand_index if resume_manifest else 0)+1)),oracleStage=(resume_oracle_stage if resume_manifest else 1))
    summary['phases']['compiler-feedback-repair']['difficultyCheckpointCandidate']=capture_difficulty_checkpoint('compiler-feedback-repair',project,parent,repair_behavior,repair_build,repair_cut)
    turn1_checkpoint=json.loads((e/'difficulty-checkpoints/turn-1/checkpoint.json').read_text())
    repair_checkpoint=json.loads((e/'difficulty-checkpoints/compiler-feedback-repair/checkpoint.json').read_text())
    input_session_sha=turn1_checkpoint['nativeSession']['sha256'];output_session_sha=repair_checkpoint['nativeSession']['sha256']
    if output_session_sha==input_session_sha:raise RuntimeError('compiler-feedback-only native session did not advance')
-   summary['compilerFeedbackOnly']=dict(enabled=True,inputPhase='turn-1',repairPhase='compiler-feedback-repair',sameNativeSession=True,sameTaskDemand=True,providerReasoningEffort='default',piThinkingMode='off',gatewayRequests=repair_requests,repairLatencyMs=repair_duration,inputSessionSha256=input_session_sha,outputSessionSha256=output_session_sha,sessionAdvanced=True)
+   summary['compilerFeedbackOnly']=dict(enabled=True,inputPhase='turn-1',repairPhase='compiler-feedback-repair',sameNativeSession=True,sameTaskDemand=True,taskDemandIndex=(resume_demand_index if resume_manifest else 0),oracleStage=(resume_oracle_stage if resume_manifest else 1),providerReasoningEffort='default',piThinkingMode='off',gatewayRequests=repair_requests,repairLatencyMs=repair_duration,inputSessionSha256=input_session_sha,outputSessionSha256=output_session_sha,sessionAdvanced=True)
    summary['subjectTaskSucceeded']=bool(repair_behavior.get('pass') and repair_build);summary['ok']=True
    return
   escalate=bool(turn2_feedback and os.environ.get('AGENTLAB_EVIDENCE_REASONING_ESCALATION','false')=='true')
