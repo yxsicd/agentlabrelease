@@ -121,12 +121,29 @@ def write_infrastructure_unavailable(e,scenario_name,guidance=None,preflight=Non
  decision=dict(schema='agentlab.harness_decision_package.v1',scenario=scenario_name,taskId=scenario['caseId'],sourceRevision=PIN,assessmentStatus='infrastructure-unavailable',infrastructureAvailable=False,subjectTaskSucceeded=None,sourceForkQualified=False,seedGuidance=manifest,phaseVerdicts=[],participantProcess=[],launchErrors=[dict(phase='gateway-preflight',error='Model gateway readiness failed before assessed dispatch')],buildTiming=dict(firstCompileStartMs=None,builds=[]),evidenceCost=dict(successfulHapCount=0,successfulHapBytes=0,retainedHapCount=0,retainedHapBytes=0,retentionPolicy='fast-manifest-only'),automaticAttributionCandidates=[dict(kind='transport-gateway-unavailable',strength='verified-preflight',evidence=['gateway-preflight'],claim='The configured model route did not become ready after bounded preflight retries; no assessed Participant turn was dispatched.')],uncertainties=['No Participant/model-quality conclusion is permitted because assessed dispatch did not begin.'],agentDecisionRequired=True,allowedDecisions=['rerun-control','rerun-guided','design-next-experiment'],harnessPolicy='Collect, verify, compare and propose evidence-linked candidates; never choose promotion or seed adoption automatically.')
  dump(e/'summary.json',summary);dump(e/'decision-package.json',decision);return decision
 def main():
- p=argparse.ArgumentParser();p.add_argument('--scenario',choices=SCENARIOS,default='navigation');p.add_argument('--source',type=Path,required=True);p.add_argument('--reference',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--install-root',type=Path,required=True);p.add_argument('--pi-runtime',type=Path,required=True);p.add_argument('--image',required=True);p.add_argument('--build-cache-probe-only',action='store_true');p.add_argument('--retain-hap-bytes',action='store_true');p.add_argument('--guidance',type=Path);p.add_argument('--guidance-variant',default='none');p.add_argument('--compiler-feedback-only',action='store_true');p.add_argument('--timeout-feedback-only',action='store_true');a=p.parse_args();assert not (a.compiler_feedback_only and a.timeout_feedback_only),'intervention modes are mutually exclusive'
+ p=argparse.ArgumentParser();p.add_argument('--scenario',choices=SCENARIOS,default='navigation');p.add_argument('--source',type=Path,required=True);p.add_argument('--reference',type=Path,required=True);p.add_argument('--root',type=Path,required=True);p.add_argument('--install-root',type=Path,required=True);p.add_argument('--pi-runtime',type=Path,required=True);p.add_argument('--image',required=True);p.add_argument('--build-cache-probe-only',action='store_true');p.add_argument('--retain-hap-bytes',action='store_true');p.add_argument('--guidance',type=Path);p.add_argument('--guidance-variant',default='none');p.add_argument('--compiler-feedback-only',action='store_true');p.add_argument('--timeout-feedback-only',action='store_true');p.add_argument('--resume-difficulty-checkpoint',type=Path);a=p.parse_args();assert not (a.compiler_feedback_only and a.timeout_feedback_only),'intervention modes are mutually exclusive';assert not a.resume_difficulty_checkpoint or a.compiler_feedback_only,'resume checkpoint currently admits compiler-feedback-only continuation only'
  scenario=SCENARIOS[a.scenario];paths=scenario['paths'];demands=scenario['demands']
  experiment_started=time.monotonic_ns()
  root=a.root.resolve();root.mkdir();e=root/'evidence';e.mkdir();project=root/'workspace'
  subprocess.run(['git','clone','--no-hardlinks',str(a.source.resolve()),str(project)],check=True,capture_output=True)
  assert subprocess.check_output(['git','rev-parse','HEAD'],cwd=project,text=True).strip()==PIN
+ resume_manifest=None;resume_session=None
+ if a.resume_difficulty_checkpoint:
+  resume_root=a.resume_difficulty_checkpoint.resolve();resume_manifest=json.loads((resume_root/'checkpoint.json').read_text())
+  assert resume_manifest['schema']=='agentlab.difficulty_checkpoint_candidate.v1'
+  assert resume_manifest['sourceRevision']==PIN and resume_manifest['taskId']==scenario['caseId']
+  assert resume_manifest['behaviorPass'] is True and resume_manifest['buildPass'] is False
+  patch=resume_root/'workspace-tracked-delta.patch';assert patch.is_file()
+  tracked=resume_manifest.get('reconstruction',{}).get('trackedDelta',{})
+  if tracked.get('sha256'):assert sha256_file(patch)==tracked['sha256']
+  subprocess.run(['git','apply','--check',str(patch)],cwd=project,check=True,capture_output=True)
+  subprocess.run(['git','apply',str(patch)],cwd=project,check=True,capture_output=True)
+  for row in resume_manifest.get('selectedSourceFiles',[]):
+   path=project/row['path']
+   if row.get('absent'):assert not path.exists()
+   else:assert path.is_file() and sha256_file(path)==row['sha256']
+  resume_session=resume_root/resume_manifest['nativeSession']['file'];assert resume_session.is_file()
+  assert sha256_file(resume_session)==resume_manifest['nativeSession']['sha256']
  lock=json.loads((a.install_root/'downloads/environment-lock.json').read_text());dump(e/'environment-lock.json',lock)
  seed=json.loads(next(line for line in (Path(__file__).resolve().parents[1]/'seeds/harmony-code-workshop/evaluation_cases.jsonl').read_text().split('\n') if line.strip() and json.loads(line)['id']==scenario['caseId']));assert seed['demands']==demands
  dump(e/'frozen-task.json',seed)
@@ -340,10 +357,25 @@ def main():
    assert all(summary['calibration'].values())
 
   if not build('prepare',project,True):raise RuntimeError('Harness dependency preparation failed')
-  parent=subject('parent-agent');cut('initial',project)
-  try:monitored_turn('turn-1',project,parent,task_prompt(demands[0]))
-  except RuntimeError as error:summary['phases']['turn-1-launch-error']=str(error)
+  parent=subject('parent-agent')
+  if resume_manifest:
+   shutil.copy2(resume_session,parent.native_session_file)
+   summary['resumeDifficultyCheckpoint']=dict(
+    mode='semantic-rehydration-exact-native-session',
+    sourceRunId=os.environ.get('AGENTLAB_RESUME_CHECKPOINT_RUN_ID'),
+    sourcePhase=resume_manifest['phase'],sourceCut=resume_manifest['sourceCut'],
+    inputSessionSha256=resume_manifest['nativeSession']['sha256'],
+    nativeThreadId=resume_manifest['nativeSession'].get('threadId'),
+    formalSessionFSForkQualified=False)
+  cut('initial',project)
+  if not resume_manifest:
+   try:monitored_turn('turn-1',project,parent,task_prompt(demands[0]))
+   except RuntimeError as error:summary['phases']['turn-1-launch-error']=str(error)
   stage1=oracle('turn-1',project,1);built1=build('turn-1-build',project);scope1=scope('turn-1',project);cut_id=cut('turn-1-cut',project);summary['phases']['turn-1']=dict(behavior=stage1,build=built1,scope=scope1,sourceCut=cut_id)
+  if resume_manifest:
+   if not (stage1.get('pass') is resume_manifest['behaviorPass'] and built1 is resume_manifest['buildPass'] and cut_id==resume_manifest['sourceCut']):
+    raise RuntimeError('rehydrated difficulty checkpoint failed source/behavior/build equivalence gate')
+   summary['resumeDifficultyCheckpoint']['requalified']=True
   summary['phases']['turn-1']['difficultyCheckpointCandidate']=capture_difficulty_checkpoint('turn-1',project,parent,stage1,built1,cut_id)
   turn2_feedback=feedback_prompt(stage1,built1)
   if a.timeout_feedback_only:
