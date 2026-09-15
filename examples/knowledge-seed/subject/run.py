@@ -224,9 +224,11 @@ def main():
    summary['timing']['participantEdits'].append(record);dump(e/(label+'-edit-timing.json'),record)
  sdk=next(x for x in lock['components'] if x['slot']=='harmony-cli');kit=next(x for x in lock['components'] if x['slot']=='harmony-build-kit')
  build_cache=Path(os.environ['AGENTLAB_HARMONY_BUILD_CACHE_HOST']).resolve();build_cache.mkdir(parents=True,exist_ok=True)
- fast_cli=os.environ.get('AGENTLAB_FAST_HARMONY_ROOT');fast_kit=os.environ.get('AGENTLAB_FAST_BUILD_KIT_ROOT')
+ fast_cli_raw=os.environ.get('AGENTLAB_FAST_HARMONY_ROOT');fast_kit_raw=os.environ.get('AGENTLAB_FAST_BUILD_KIT_ROOT')
+ fast_cli=Path(fast_cli_raw).resolve() if fast_cli_raw and Path(fast_cli_raw).is_dir() else None
+ fast_kit=Path(fast_kit_raw).resolve() if fast_kit_raw and Path(fast_kit_raw).is_dir() else None
  if bool(fast_cli)!=bool(fast_kit):raise RuntimeError('FAST_TOOLCHAIN_PAIR_REQUIRED')
- toolchain_mounts=(['--mount',f'type=bind,src={Path(fast_cli).resolve()},dst=/toolchains/harmony,readonly','--mount',f'type=bind,src={Path(fast_kit).resolve()},dst=/toolchains/harmony-build-kit,readonly'] if fast_cli else ['--mount',f'type=volume,src={sdk["volume"]},dst=/toolchains/harmony,readonly','--mount',f'type=volume,src={kit["volume"]},dst=/toolchains/harmony-build-kit,readonly'])
+ toolchain_mounts=(['--mount',f'type=bind,src={fast_cli},dst=/toolchains/harmony,readonly','--mount',f'type=bind,src={fast_kit},dst=/toolchains/harmony-build-kit,readonly'] if fast_cli else ['--mount',f'type=volume,src={sdk["volume"]},dst=/toolchains/harmony,readonly','--mount',f'type=volume,src={kit["volume"]},dst=/toolchains/harmony-build-kit,readonly'])
  base=['docker','run','--rm','--network=none']+toolchain_mounts+['--mount',f'type=bind,src={root},dst=/case','--mount',f'type=bind,src={build_cache},dst=/runtime/toolchain-cache/subject','--env','HARMONY_TOOLCHAIN_ROOT=/toolchains/harmony','--env','HARMONY_BUILD_CACHE=/runtime/toolchain-cache/subject','--entrypoint','/usr/bin/python3',lock['images'][0]['reference'],'/toolchains/harmony-build-kit/bin/harmony']
  def build(label,directory,prepare=False):
   command=[x for x in base if not (prepare and x=='--network=none')]+['prepare-deps' if prepare else 'build','--project','/case/'+directory.name]
