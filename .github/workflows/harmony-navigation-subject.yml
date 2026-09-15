@@ -425,7 +425,7 @@ jobs:
           if-no-files-found: error
           path: ${{ env.AGENTLAB_CI_ROOT }}/assessment/evidence/difficulty-candidates.json
       - name: Persist flywheel facts through cbgroom MCP
-        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' && steps.gateway_readiness.outputs.ready != 'false' }}
+        if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && steps.gateway_readiness.outputs.ready != 'false' }}
         env:
           AGENTLAB_TABLEGIT_MCP_URL: ${{ vars.AGENTLAB_TABLEGIT_MCP_URL }}
           AGENTLAB_TABLEGIT_PERSON_ID: ${{ vars.AGENTLAB_TABLEGIT_PERSON_ID }}
@@ -433,8 +433,9 @@ jobs:
           set -euo pipefail
           test -n "$AGENTLAB_TABLEGIT_MCP_URL"
           test -n "$AGENTLAB_TABLEGIT_PERSON_ID"
+          asset_run_id="$AGENTLAB_CAPTURE_RUN_ID"
           inspector=(npx --yes --package node@22.20.0 --package @modelcontextprotocol/inspector@2.6.0 mcp-inspector --cli "$AGENTLAB_TABLEGIT_MCP_URL" --transport http --format json)
-          sentinel="evidence-$GITHUB_RUN_ID-summary"
+          sentinel="evidence-$asset_run_id-summary"
           python3 - "$AGENTLAB_TABLEGIT_PERSON_ID" "$sentinel" > "$RUNNER_TEMP/cbgroom-query-args.json" <<'PY'
           import json,sys
           person,key=sys.argv[1:]
@@ -454,13 +455,13 @@ jobs:
           PY
           source "$RUNNER_TEMP/cbgroom-state.env"
           if [[ "$CBGROOM_ALREADY_PERSISTED" == true ]]; then
-            echo "run $GITHUB_RUN_ID already exists in cbgroom; idempotent no-op"
+            echo "source run $asset_run_id already exists in cbgroom; idempotent no-op"
             exit 0
           fi
           python3 scripts/build-cbgroom-flywheel-transaction.py \
             --evidence "$AGENTLAB_CI_ROOT/assessment/evidence" \
             --revision "$CBGROOM_REVISION" \
-            --run-id "$GITHUB_RUN_ID" \
+            --run-id "$asset_run_id" \
             --github-repository "$GITHUB_REPOSITORY" \
             --caller-person-id "$AGENTLAB_TABLEGIT_PERSON_ID" \
             --output "$RUNNER_TEMP/cbgroom-transaction.json"
