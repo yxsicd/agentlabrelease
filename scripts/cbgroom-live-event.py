@@ -71,6 +71,54 @@ def query_table(url: str, person: str, path: str, revision: str, limit: int = 10
     return result
 
 
+def write_works_json(url: str, person: str, path: str, content: str, message: str) -> str:
+    for attempt in range(5):
+        status_payload = {
+            "skill_id": "repo.read", "skill_version": "2.2.0",
+            "operation": "repo_status", "caller_person_id": person,
+            "arguments": {"repo": "works"},
+        }
+        status = inspector(url, "skill_run_read", status_payload)
+        if status.get("outcome") != "executed":
+            raise RuntimeError(status)
+        works_revision = status["result"]["head"]
+        write_payload = {
+            "skill_id": "repo.author", "skill_version": "2.2.0",
+            "operation": "write_file", "caller_person_id": person,
+            "arguments": {
+                "repo": "works", "path": path, "content": content,
+                "expected_revision": works_revision, "message": message,
+            },
+        }
+        written = inspector(url, "skill_run_write", write_payload)
+        if written.get("outcome") == "executed":
+            return written["result"]["revision"]
+        if attempt == 4:
+            raise RuntimeError(written)
+        time.sleep(0.5 * (attempt + 1))
+    raise AssertionError("unreachable")
+
+
+def refresh_run_projection(url: str, person: str, source_revision: str) -> str:
+    runs = query_table(url, person, "experiment_runs", source_revision, 30,
+                       [{"field": "latestHeartbeat", "direction": "desc"}])
+    events = query_table(url, person, "run_events", source_revision, 120,
+                         [{"field": "timestamp", "direction": "desc"}])
+    projection = {
+        "schema": "agentlab.live_run_projection.v1",
+        "generatedAt": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "source": {"repo": "agentlabtablegit", "revision": source_revision},
+        "counts": {"runs": runs.get("row_count", 0), "events": events.get("row_count", 0)},
+        "runs": runs.get("rows", []),
+        "recentEvents": events.get("rows", []),
+    }
+    content = json.dumps(projection, ensure_ascii=False, indent=2) + "\n"
+    return write_works_json(
+        url, person, "live/runs.json", content,
+        f"works: refresh AgentLab run projection at {source_revision[:12]}",
+    )
+
+
 def refresh_live_projection(url: str, person: str, source_revision: str) -> str:
     runs = query_table(url, person, "experiment_runs", source_revision, 30,
                        [{"field": "latestHeartbeat", "direction": "desc"}])
@@ -190,32 +238,10 @@ def refresh_live_projection(url: str, person: str, source_revision: str) -> str:
         "executionEnvironments": execution_environments.get("rows", []),
     }
     content = json.dumps(projection, ensure_ascii=False, indent=2) + "\n"
-    for attempt in range(5):
-        status_payload = {
-            "skill_id": "repo.read", "skill_version": "2.2.0",
-            "operation": "repo_status", "caller_person_id": person,
-            "arguments": {"repo": "works"},
-        }
-        status = inspector(url, "skill_run_read", status_payload)
-        if status.get("outcome") != "executed":
-            raise RuntimeError(status)
-        works_revision = status["result"]["head"]
-        write_payload = {
-            "skill_id": "repo.author", "skill_version": "2.2.0",
-            "operation": "write_file", "caller_person_id": person,
-            "arguments": {
-                "repo": "works", "path": "live/agentlab.json", "content": content,
-                "expected_revision": works_revision,
-                "message": f"works: refresh AgentLab live projection at {source_revision[:12]}",
-            },
-        }
-        written = inspector(url, "skill_run_write", write_payload)
-        if written.get("outcome") == "executed":
-            return written["result"]["revision"]
-        if attempt == 4:
-            raise RuntimeError(written)
-        time.sleep(0.5 * (attempt + 1))
-    raise AssertionError("unreachable")
+    return write_works_json(
+        url, person, "live/agentlab.json", content,
+        f"works: refresh AgentLab research projection at {source_revision[:12]}",
+    )
 
 
 def uid(seed: str) -> str:
@@ -337,13 +363,16 @@ def main() -> None:
         }
         structured = inspector(url, "skill_run_write", payload)
         if structured.get("outcome") == "executed":
-            works_revision = refresh_live_projection(
-                url, person, structured["result"]["revision"]
-            )
+            source_revision = structured["result"]["revision"]
+            run_projection_revision = refresh_run_projection(url, person, source_revision)
+            research_projection_revision = None
+            if args.kind in {"evidence_persisted", "run_finished"}:
+                research_projection_revision = refresh_live_projection(url, person, source_revision)
             print(json.dumps({
                 "runId": run_id, "sequence": sequence, "kind": args.kind,
-                "revision": structured["result"]["revision"],
-                "worksRevision": works_revision,
+                "revision": source_revision,
+                "runProjectionRevision": run_projection_revision,
+                "researchProjectionRevision": research_projection_revision,
             }, sort_keys=True))
             return
         if attempt == 4:
