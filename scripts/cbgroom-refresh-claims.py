@@ -6,6 +6,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import subprocess
 import sys
 import uuid
@@ -55,32 +56,99 @@ def query(url: str, person: str, path: str, revision: str, limit: int = 500) -> 
     return result
 
 
-def target_claims(decisions: List[Dict[str, Any]], revision: str) -> Dict[str, Dict[str, Any]]:
+def classify_evidence(claim_id: str, support_refs: List[str], contradiction_refs: List[str], checkpoints: List[Dict[str, Any]], revision: str) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+    checkpoint_rows = [r.get("row", r) for r in checkpoints]
+    by_id = {r.get("id"): r for r in checkpoint_rows}
+    refs = [(r, "support") for r in support_refs] + [(r, "contradiction") for r in contradiction_refs]
+    def run_id(ref: str) -> int:
+        match = re.search(r"decision-(\d+)", ref)
+        return int(match.group(1)) if match else 0
+    refs.sort(key=lambda item: run_id(item[0]))
+    seen_cuts, seen_sessions = set(), set()
+    unique_cuts, unique_sessions = set(), set()
+    classes, rows = [], []
+    basis_map = {
+        "anchor-checkpoint": "First structured evidence for this claim; establishes the reference lineage.",
+        "independent-source-cut": "Source cut differs from every earlier evidence item for this claim.",
+        "independent-checkpoint": "Source cut is shared, but native session/checkpoint lineage differs from earlier evidence.",
+        "same-checkpoint-new-rollout": "Source cut and native session lineage match an earlier evidence item; this is a new rollout, not a new checkpoint.",
+        "unknown-lineage": "Required checkpoint lineage fields are unavailable; independence is not inferred.",
+    }
+    for index, (ref, polarity) in enumerate(refs):
+        rid = str(run_id(ref))
+        checkpoint_id = "checkpoint-%s-turn-1" % rid
+        checkpoint = by_id.get(checkpoint_id, {})
+        source_cut = checkpoint.get("sourceCut")
+        session = checkpoint.get("nativeSessionSha256")
+        thread = checkpoint.get("nativeThreadId")
+        if not checkpoint or not source_cut or not session:
+            independence = "unknown-lineage"
+        elif index == 0:
+            independence = "anchor-checkpoint"
+        elif source_cut not in seen_cuts:
+            independence = "independent-source-cut"
+        elif session not in seen_sessions:
+            independence = "independent-checkpoint"
+        else:
+            independence = "same-checkpoint-new-rollout"
+        if source_cut:
+            seen_cuts.add(source_cut); unique_cuts.add(source_cut)
+        if session:
+            seen_sessions.add(session); unique_sessions.add(session)
+        classes.append(independence)
+        rows.append({
+            "id": "independence-%s-%s" % (claim_id, rid), "claimId": claim_id, "decisionRef": ref,
+            "polarity": polarity, "checkpointId": checkpoint_id, "sourceCut": source_cut,
+            "nativeThreadId": thread, "nativeSessionSha256": session, "independenceClass": independence,
+            "lineageGroup": (source_cut or "unknown") + "|" + (session or "unknown"),
+            "runnerIndependence": "unknown-not-encoded", "taskIndependence": "same-task-family-current-scope",
+            "basis": basis_map[independence], "sourceRevision": revision, "metadata": {"runId": rid},
+        })
+    class_counts = {}
+    for value in classes:
+        class_counts[value] = class_counts.get(value, 0) + 1
+    summary = {
+        "status": "classified-from-checkpoint-lineage", "evidenceCount": len(refs),
+        "uniqueSourceCuts": len(unique_cuts), "uniqueNativeSessions": len(unique_sessions),
+        "classCounts": class_counts, "runnerIndependence": "unknown-not-encoded",
+        "taskIndependence": "same-task-family-current-scope",
+        "note": "Evidence diversity is derived only from structured checkpoint lineage. Runner independence is unknown until explicitly encoded.",
+    }
+    return summary, rows
+
+
+def target_claims(decisions: List[Dict[str, Any]], checkpoints: List[Dict[str, Any]], revision: str) -> Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]:
     rows = [r.get("row", r) for r in decisions]
-    def split(token: str) -> Tuple[List[str], List[str]]:
+    def split(token: str, require_full: bool = False) -> Tuple[List[str], List[str]]:
         support, contradiction = [], []
         for r in rows:
             if token not in r.get("id", ""):
                 continue
-            if str(r.get("decision", "")).startswith("accept-"):
+            decision = str(r.get("decision", ""))
+            accepted = decision == "accept-full-crossing" if require_full else decision.startswith("accept-")
+            if accepted:
                 support.append(r["id"])
             else:
                 contradiction.append(r["id"])
         return sorted(support), sorted(contradiction)
 
-    compiler_support, compiler_contra = split("compiler-feedback")
+    compiler_support, compiler_contra = split("compiler-feedback", require_full=True)
     timeout_support, timeout_contra = split("timeout-feedback")
+    compiler_independence, compiler_rows = classify_evidence("claim-compiler-feedback-focused-repair", compiler_support, compiler_contra, checkpoints, revision)
+    timeout_independence, timeout_rows = classify_evidence("claim-timeout-feedback-action-start", timeout_support, timeout_contra, checkpoints, revision)
+    timeout_full_count = sum(1 for r in rows if "timeout-feedback" in r.get("id", "") and r.get("decision") == "accept-full-crossing")
     now = dt.datetime.now(dt.timezone.utc).isoformat()
-    compiler_status = "strongly-supported-current-scope" if len(compiler_support) >= 3 and not compiler_contra else "supported-with-counterevidence"
+    compiler_diverse = compiler_independence.get("uniqueSourceCuts", 0) >= 2 and compiler_independence.get("uniqueNativeSessions", 0) >= 3
+    compiler_status = "strongly-supported-current-scope" if len(compiler_support) >= 3 and not compiler_contra and compiler_diverse else "supported-with-counterevidence" if compiler_support else "insufficient-evidence"
     timeout_status = "supported-but-variable" if len(timeout_support) > len(timeout_contra) and timeout_contra else "supported-current-scope" if timeout_support else "insufficient-evidence"
-    return {
+    claims = {
         "claim-compiler-feedback-focused-repair": {
             "statement": "当业务行为已经正确、只剩明确编译错误时，提供具体编译器证据是一种稳定的局部修复方法。",
             "status": compiler_status,
             "scope": {"taskFamily": "cache-durability", "model": "glm-5.3-flash", "precondition": "behavior-pass-build-fail", "intervention": "compiler-feedback-only"},
             "supportCount": len(compiler_support), "contradictionCount": len(compiler_contra),
             "supportRefs": compiler_support, "contradictionRefs": compiler_contra,
-            "independenceSummary": {"status": "pending-explicit-classification", "note": "现有重复实验支持强，但 independenceClass 尚未结构化编码。"},
+            "independenceSummary": compiler_independence,
             "confidenceNote": "当前范围内 %d/%d 完整成功；结论仅适用于行为已经正确、问题明确定位到编译层的局部修复场景。" % (len(compiler_support), len(compiler_support) + len(compiler_contra)),
             "latestEvaluatedRevision": revision, "updatedAt": now,
             "metadata": {"family": "compiler-feedback"},
@@ -91,12 +159,13 @@ def target_claims(decisions: List[Dict[str, Any]], revision: str) -> Dict[str, D
             "scope": {"taskFamily": "cache-durability", "model": "glm-5.3-flash", "failureMode": "timeout-before-source-mutation", "interventionFamily": "timeout-feedback"},
             "supportCount": len(timeout_support), "contradictionCount": len(timeout_contra),
             "supportRefs": timeout_support, "contradictionRefs": timeout_contra,
-            "independenceSummary": {"status": "pending-explicit-classification", "note": "当前累计 7/11 行为跨越，且存在 4 条 no-crossing；不同实验批次的独立性尚未统一编码。"},
-            "confidenceNote": "证据支持“有明显帮助”，但不支持“已经稳定”；当前完整成功仅 2/11。",
+            "independenceSummary": timeout_independence,
+            "confidenceNote": "证据支持“有明显帮助”，但不支持“已经稳定”；当前完整成功仅 %d/%d。" % (timeout_full_count, len(timeout_support) + len(timeout_contra)),
             "latestEvaluatedRevision": revision, "updatedAt": now,
             "metadata": {"family": "timeout-feedback", "legacyCadenceMetadataIncomplete": True},
         },
     }
+    return claims, compiler_rows + timeout_rows
 
 
 def main() -> None:
@@ -111,12 +180,25 @@ def main() -> None:
     for attempt in range(5):
         revision = repo_head(args.mcp_url, args.person_id)
         decisions = query(args.mcp_url, args.person_id, "decisions", revision)["rows"]
+        checkpoints = query(args.mcp_url, args.person_id, "checkpoints", revision, 500)["rows"]
         claim_result = query(args.mcp_url, args.person_id, "research_claims", revision, 100)
         event_result = query(args.mcp_url, args.person_id, "claim_events", revision, 500)
+        independence_result = query(args.mcp_url, args.person_id, "claim_evidence_independence", revision, 1000)
         current = {r["key"]: r for r in claim_result["rows"]}
         events = [r.get("row", r) for r in event_result["rows"]]
-        targets = target_claims(decisions, revision)
-        claim_ops, event_ops = [], []
+        existing_independence = {r["key"]: r for r in independence_result["rows"]}
+        targets, desired_independence = target_claims(decisions, checkpoints, revision)
+        claim_ops, event_ops, independence_ops = [], [], []
+        for desired in desired_independence:
+            existing = existing_independence.get(desired["id"])
+            compare = {k: v for k, v in desired.items() if v is not None}
+            if existing is None:
+                independence_ops.append({"op": "insert", "operation_id": stable_uuid("claim-independence", revision, desired["id"]), "key": desired["id"], "row": compare})
+            else:
+                current_row = existing["row"]
+                changed_fields = {k: v for k, v in compare.items() if k != "sourceRevision" and current_row.get(k) != v}
+                if changed_fields:
+                    independence_ops.append({"op": "update", "operation_id": stable_uuid("claim-independence-update", revision, desired["id"]), "key": desired["id"], "expected_row_version": existing["row_version"], "set": changed_fields})
         summary = []
         for claim_id, target in targets.items():
             existing_wrap = current.get(claim_id)
@@ -150,7 +232,7 @@ def main() -> None:
                         "metadata": {"changedFields": changed}},
             })
             summary.append({"claimId": claim_id, "changed": changed, "supportAdded": support_added, "contradictionAdded": contradiction_added})
-        if not claim_ops:
+        if not claim_ops and not independence_ops:
             print(json.dumps({"ok": True, "outcome": "no-change", "revision": revision}, sort_keys=True))
             return
         if args.dry_run:
@@ -162,7 +244,7 @@ def main() -> None:
             "arguments": {"repo": "agentlabtablegit", "topic_id": "main", "expected_revision": revision,
                           "transaction_id": stable_uuid("claim-refresh", revision), "idempotency_key": "claim-refresh-" + revision,
                           "actor": "agentlab-research-claims", "message": "agentlab: refresh research claims from decisions",
-                          "tables": [{"path": "research_claims", "operations": claim_ops}, {"path": "claim_events", "operations": event_ops}]},
+                          "tables": ([{"path": "claim_evidence_independence", "operations": independence_ops}] if independence_ops else []) + ([{"path": "research_claims", "operations": claim_ops}, {"path": "claim_events", "operations": event_ops}] if claim_ops else [])},
         }
         try:
             result = inspector(args.mcp_url, "skill_run_write", payload)
