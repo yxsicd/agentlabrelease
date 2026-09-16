@@ -621,6 +621,11 @@ jobs:
           assert row['row']['producerRun']==sys.argv[2],row
           print(json.dumps({'ok':True,'writtenRevision':sys.argv[4],'readRevision':result['revision'],'rowVersion':row['row_version']},sort_keys=True))
           PY
+      - name: Refresh research claims from persisted evidence
+        continue-on-error: true
+        if: ${{ always() && inputs.capture_run_id == '' && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && steps.persist_cbgroom.outcome == 'success' }}
+        run: |
+          python3 scripts/cbgroom-refresh-claims.py
       - name: Stream evidence persistence to cbgroom
         continue-on-error: true
         if: ${{ always() && inputs.capture_run_id == '' && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && steps.persist_cbgroom.outcome == 'success' }}
