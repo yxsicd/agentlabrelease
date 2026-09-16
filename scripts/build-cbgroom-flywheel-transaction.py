@@ -120,7 +120,13 @@ def main():
 
     intervention = None
     if summary.get("timeoutFeedbackOnly", {}).get("enabled"):
-        intervention = ("timeout-feedback", "timeoutFeedbackOnly", "turn-1", "timeout-feedback-repair", summary["timeoutFeedbackOnly"])
+        timeout_info = summary["timeoutFeedbackOnly"]
+        timeout_variable = (
+            "timeoutFeedbackWithVerificationCadence"
+            if timeout_info.get("verificationCadenceGuidance")
+            else "timeoutFeedbackOnly"
+        )
+        intervention = ("timeout-feedback", timeout_variable, "turn-1", "timeout-feedback-repair", timeout_info)
     elif summary.get("compilerFeedbackOnly", {}).get("enabled"):
         intervention = ("compiler-feedback", "compilerEvidenceOnly", "turn-1", "compiler-feedback-repair", summary["compilerFeedbackOnly"])
 
@@ -135,8 +141,14 @@ def main():
             "difficultyId": difficulty_id,
             "checkpointId": checkpoint_id,
             "variable": variable,
-            "controlValue": {"evidence": "none"},
-            "variantValue": {"evidence": label},
+            "controlValue": {
+                "evidence": "none",
+                **({"verificationCadenceGuidance": False} if label == "timeout-feedback" else {}),
+            },
+            "variantValue": {
+                "evidence": label,
+                **({"verificationCadenceGuidance": bool(info.get("verificationCadenceGuidance"))} if label == "timeout-feedback" else {}),
+            },
             "model": "glm-5.3-flash",
             "agentKind": "pi",
             "frozen": ["native-session-lineage", "task-demand", "provider-reasoning", "behavior-oracle", "tool-policy"],

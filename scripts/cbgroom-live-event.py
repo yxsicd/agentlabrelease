@@ -100,7 +100,34 @@ def refresh_live_projection(url: str, person: str, source_revision: str) -> str:
             ),
         }
 
+    def intervention_stats(variable: str) -> dict:
+        intervention_ids = {
+            r.get("id") for r in intervention_rows if r.get("variable") == variable
+        }
+        rows = [
+            r for r in crossing_rows
+            if r.get("arm") == "timeout-feedback"
+            and r.get("interventionId") in intervention_ids
+        ]
+        return {
+            "trials": len(rows),
+            "behaviorPass": sum(r.get("behaviorPass") is True for r in rows),
+            "buildPass": sum(r.get("buildPass") is True for r in rows),
+            "scopeClean": sum(r.get("scopeDrift") is False for r in rows),
+            "fullPass": sum(
+                r.get("behaviorPass") is True
+                and r.get("buildPass") is True
+                and r.get("scopeDrift") is False
+                for r in rows
+            ),
+        }
+
     maturity_lag = []
+    legacy_timeout_without_cadence_metadata = [
+        r.get("id") for r in intervention_rows
+        if r.get("variable") == "timeoutFeedbackOnly"
+        and "verificationCadenceGuidance" not in (r.get("variantValue") or {})
+    ]
     timeout_trials = family_stats("timeout-feedback")["trials"]
     for row in difficulty_rows:
         if (
@@ -136,10 +163,18 @@ def refresh_live_projection(url: str, person: str, source_revision: str) -> str:
         "families": {
             "compilerFeedback": family_stats("compiler-feedback"),
             "timeoutFeedback": family_stats("timeout-feedback"),
+            "timeoutOnly": intervention_stats("timeoutFeedbackOnly"),
+            "timeoutWithVerificationCadence": intervention_stats("timeoutFeedbackWithVerificationCadence"),
         },
         "difficultyPoints": difficulty_rows,
         "interventions": intervention_rows[-30:],
-        "dataQuality": {"maturityLag": maturity_lag},
+        "dataQuality": {
+            "maturityLag": maturity_lag,
+            "legacyTimeoutCadenceMetadataMissing": {
+                "count": len(legacy_timeout_without_cadence_metadata),
+                "interventionIds": legacy_timeout_without_cadence_metadata,
+            },
+        },
         "recentDecisions": decisions.get("rows", [])[-20:],
     }
     content = json.dumps(projection, ensure_ascii=False, indent=2) + "\n"
