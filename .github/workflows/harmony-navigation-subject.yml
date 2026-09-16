@@ -101,8 +101,17 @@ jobs:
       AGENTLAB_RESUME_CHECKPOINT_RUN_ID: ${{ inputs.resume_checkpoint_run_id || '' }}
       AGENTLAB_RESUME_CHECKPOINT_PHASE: ${{ inputs.resume_checkpoint_phase || '' }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
+      AGENTLAB_TABLEGIT_MCP_URL: ${{ vars.AGENTLAB_TABLEGIT_MCP_URL }}
+      AGENTLAB_TABLEGIT_PERSON_ID: ${{ vars.AGENTLAB_TABLEGIT_PERSON_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Stream live run start to cbgroom
+        continue-on-error: true
+        if: ${{ inputs.capture_run_id == '' && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only }}
+        run: |
+          python3 scripts/cbgroom-live-event.py \
+            --kind run_started --stage preparing --status running \
+            --summary "GitHub Action accepted the experiment and began immutable preparation."
       - name: Fingerprint runner and start experiment timing
         run: |
           mkdir -p "$AGENTLAB_CI_ROOT"
@@ -376,6 +385,14 @@ jobs:
             assert lifecycle['timedOut'] is True
             assert edit['firstSourceMutationMs'] is None
           PY
+      - name: Stream checkpoint state to cbgroom
+        continue-on-error: true
+        if: ${{ inputs.capture_run_id == '' && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.resume_checkpoint_run_id != '' }}
+        run: |
+          python3 scripts/cbgroom-live-event.py \
+            --kind checkpoint_requalified --stage checkpoint-ready --status running \
+            --checkpoint-id "checkpoint-${AGENTLAB_RESUME_CHECKPOINT_RUN_ID}-${AGENTLAB_RESUME_CHECKPOINT_PHASE}" \
+            --summary "Exact difficulty checkpoint was restored and passed fail-closed lineage checks."
       - name: Record infrastructure-unavailable decision after lineage restore
         if: ${{ !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' && steps.gateway_readiness.outputs.ready == 'false' }}
         run: |
@@ -442,6 +459,41 @@ jobs:
           cp "$RUNNER_TEMP/participant-image.json" "$AGENTLAB_CI_ROOT/assessment/evidence/participant-image.json"
           cp "$RUNNER_TEMP/participant-runtime-preflight.txt" "$AGENTLAB_CI_ROOT/assessment/evidence/participant-runtime-preflight.txt"
           printf 'participant_and_verify\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
+      - name: Stream assessed Agent result to cbgroom
+        continue-on-error: true
+        if: ${{ always() && inputs.capture_run_id == '' && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && steps.gateway_readiness.outputs.ready != 'false' }}
+        run: |
+          python3 - <<'PY' > "$RUNNER_TEMP/live-agent-result.env"
+          import json, os, shlex
+          from pathlib import Path
+          e=Path(os.environ['AGENTLAB_CI_ROOT'])/'assessment/evidence'
+          s=json.loads((e/'summary.json').read_text()) if (e/'summary.json').is_file() else {}
+          phases=s.get('phases',{})
+          preferred=None
+          for name in ('compiler-feedback-repair','timeout-feedback-repair','parent-turn-2','turn-1'):
+              if name in phases:
+                  preferred=(name,phases[name]); break
+          phase,row=preferred if preferred else ('unknown',{})
+          behavior=(row.get('behavior') or {}).get('pass')
+          build=row.get('build')
+          scope=(row.get('scope') or {}).get('drift')
+          def word(v): return 'unknown' if v is None else ('pass' if v else 'fail')
+          print('LIVE_PHASE='+shlex.quote(phase))
+          print('LIVE_BEHAVIOR='+shlex.quote(word(behavior)))
+          print('LIVE_BUILD='+shlex.quote(word(build)))
+          print('LIVE_SOURCE_CUT='+shlex.quote(str(row.get('sourceCut') or '')))
+          print('LIVE_FIRST_MUTATION='+shlex.quote(str((s.get('participantProcess') or [{}])[-1].get('firstSourceMutationMs') or '')))
+          print('LIVE_PAYLOAD='+shlex.quote(json.dumps({'scopeDrift':scope,'subjectTaskSucceeded':s.get('subjectTaskSucceeded')})))
+          PY
+          source "$RUNNER_TEMP/live-agent-result.env"
+          mutation=()
+          if [[ -n "$LIVE_FIRST_MUTATION" ]]; then mutation+=(--first-mutation-ms "$LIVE_FIRST_MUTATION"); fi
+          python3 scripts/cbgroom-live-event.py \
+            --kind agent_phase_finished --stage evaluated --status running \
+            --phase "$LIVE_PHASE" --behavior-status "$LIVE_BEHAVIOR" \
+            --build-status "$LIVE_BUILD" --source-revision "$LIVE_SOURCE_CUT" \
+            --payload-json "$LIVE_PAYLOAD" "${mutation[@]}" \
+            --summary "Assessed Agent phase completed; behavior/build/scope evidence is available."
       - name: Publish full successful build binaries as experiment evidence
         id: publish_hap_release
         if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && inputs.capture_run_id == '' && (inputs.execution_mode || 'qualification') == 'qualification' }}
@@ -505,6 +557,7 @@ jobs:
           if-no-files-found: error
           path: ${{ env.AGENTLAB_CI_ROOT }}/assessment/evidence/difficulty-candidates.json
       - name: Persist flywheel facts through cbgroom MCP
+        id: persist_cbgroom
         if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && steps.gateway_readiness.outputs.ready != 'false' }}
         env:
           AGENTLAB_TABLEGIT_MCP_URL: ${{ vars.AGENTLAB_TABLEGIT_MCP_URL }}
@@ -568,6 +621,14 @@ jobs:
           assert row['row']['producerRun']==sys.argv[2],row
           print(json.dumps({'ok':True,'writtenRevision':sys.argv[4],'readRevision':result['revision'],'rowVersion':row['row_version']},sort_keys=True))
           PY
+      - name: Stream evidence persistence to cbgroom
+        continue-on-error: true
+        if: ${{ always() && inputs.capture_run_id == '' && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && steps.persist_cbgroom.outcome == 'success' }}
+        run: |
+          python3 scripts/cbgroom-live-event.py \
+            --kind evidence_persisted --stage evidence-persisted --status running \
+            --persistence-status persisted \
+            --summary "Immutable experiment facts were committed to agentlabtablegit and read back."
       - name: Preserve raw evidence and build typed actual-run entities
         if: ${{ always() && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only && (inputs.execution_mode || 'qualification') == 'qualification' && contains(fromJSON('["loading","debounce","image-url","cache-durability"]'), inputs.scenario) }}
         env:
@@ -712,3 +773,15 @@ jobs:
             ${{ env.AGENTLAB_CI_ROOT }}/normalized-runtime/
             ${{ env.AGENTLAB_CI_ROOT }}/evaluation-inputs/
             ${{ env.AGENTLAB_CI_ROOT }}/store/evidence-*/
+      - name: Stream run completion to cbgroom
+        continue-on-error: true
+        if: ${{ always() && inputs.capture_run_id == '' && !inputs.prewarm_only && !inputs.prepare_only && !inputs.build_cache_probe_only }}
+        env:
+          LIVE_PERSISTENCE_OUTCOME: ${{ steps.persist_cbgroom.outcome }}
+        run: |
+          persistence="${LIVE_PERSISTENCE_OUTCOME:-unknown}"
+          python3 scripts/cbgroom-live-event.py \
+            --kind run_finished --stage finished --status completed --completed \
+            --persistence-status "$persistence" \
+            --payload-json "{\"persistenceOutcome\":\"$persistence\"}" \
+            --summary "Workflow reached its final reporting milestone; inspect behavior/build events for scientific verdict."
