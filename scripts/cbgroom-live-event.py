@@ -78,6 +78,41 @@ def refresh_live_projection(url: str, person: str, source_revision: str) -> str:
                          [{"field": "timestamp", "direction": "desc"}])
     crossings = query_table(url, person, "crossings", source_revision, 500)
     decisions = query_table(url, person, "decisions", source_revision, 200)
+    interventions = query_table(url, person, "interventions", source_revision, 200)
+    difficulties = query_table(url, person, "difficulty_points", source_revision, 200)
+
+    crossing_rows = [r.get("row", r) for r in crossings.get("rows", [])]
+    intervention_rows = [r.get("row", r) for r in interventions.get("rows", [])]
+    difficulty_rows = [r.get("row", r) for r in difficulties.get("rows", [])]
+
+    def family_stats(arm: str) -> dict:
+        rows = [r for r in crossing_rows if r.get("arm") == arm]
+        return {
+            "trials": len(rows),
+            "behaviorPass": sum(r.get("behaviorPass") is True for r in rows),
+            "buildPass": sum(r.get("buildPass") is True for r in rows),
+            "scopeClean": sum(r.get("scopeDrift") is False for r in rows),
+            "fullPass": sum(
+                r.get("behaviorPass") is True
+                and r.get("buildPass") is True
+                and r.get("scopeDrift") is False
+                for r in rows
+            ),
+        }
+
+    maturity_lag = []
+    timeout_trials = family_stats("timeout-feedback")["trials"]
+    for row in difficulty_rows:
+        if (
+            row.get("mechanism") == "timeout-before-source-mutation"
+            and row.get("maturityState") in {"candidate", "reproduced"}
+            and timeout_trials >= 3
+        ):
+            maturity_lag.append({
+                "difficultyId": row.get("id"),
+                "rawMaturity": row.get("maturityState"),
+                "observedTimeoutTrials": timeout_trials,
+            })
 
     projection = {
         "schema": "agentlab.live_research_projection.v1",
@@ -88,14 +123,23 @@ def refresh_live_projection(url: str, person: str, source_revision: str) -> str:
             "events": events.get("row_count", 0),
             "crossings": crossings.get("row_count", 0),
             "decisions": decisions.get("row_count", 0),
+            "interventions": interventions.get("row_count", 0),
+            "difficulties": difficulties.get("row_count", 0),
         },
         "runs": runs.get("rows", []),
         "recentEvents": events.get("rows", []),
         "crossingSummary": {
-            "behaviorPass": sum((r.get("row", r).get("behaviorPass") is True) for r in crossings.get("rows", [])),
-            "buildPass": sum((r.get("row", r).get("buildPass") is True) for r in crossings.get("rows", [])),
-            "scopeClean": sum((r.get("row", r).get("scopeDrift") is False) for r in crossings.get("rows", [])),
+            "behaviorPass": sum(r.get("behaviorPass") is True for r in crossing_rows),
+            "buildPass": sum(r.get("buildPass") is True for r in crossing_rows),
+            "scopeClean": sum(r.get("scopeDrift") is False for r in crossing_rows),
         },
+        "families": {
+            "compilerFeedback": family_stats("compiler-feedback"),
+            "timeoutFeedback": family_stats("timeout-feedback"),
+        },
+        "difficultyPoints": difficulty_rows,
+        "interventions": intervention_rows[-30:],
+        "dataQuality": {"maturityLag": maturity_lag},
         "recentDecisions": decisions.get("rows", [])[-20:],
     }
     content = json.dumps(projection, ensure_ascii=False, indent=2) + "\n"
