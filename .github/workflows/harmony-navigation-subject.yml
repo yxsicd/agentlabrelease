@@ -50,6 +50,10 @@ on:
         type: boolean
         default: false
         description: After turn1 reproduces timeout-before-source-mutation, continue the same Pi session and same turn1 demand with only observed timeout/no-mutation feedback
+      timeout_verification_cadence:
+        type: boolean
+        default: false
+        description: With timeout-feedback-only, add process-only guidance to validate after the first minimal source edit before broadening changes; no task answer or failing-check names are provided
       baseline_run_id:
         type: string
         default: ''
@@ -93,6 +97,7 @@ jobs:
       AGENTLAB_EVIDENCE_REASONING_ESCALATION: ${{ inputs.evidence_reasoning_escalation || false }}
       AGENTLAB_COMPILER_FEEDBACK_ONLY: ${{ inputs.compiler_feedback_only || false }}
       AGENTLAB_TIMEOUT_FEEDBACK_ONLY: ${{ inputs.timeout_feedback_only || false }}
+      AGENTLAB_TIMEOUT_VERIFICATION_CADENCE: ${{ inputs.timeout_verification_cadence || false }}
       AGENTLAB_RESUME_CHECKPOINT_RUN_ID: ${{ inputs.resume_checkpoint_run_id || '' }}
       AGENTLAB_RESUME_CHECKPOINT_PHASE: ${{ inputs.resume_checkpoint_phase || '' }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
@@ -429,9 +434,11 @@ jobs:
           if [[ "$AGENTLAB_COMPILER_FEEDBACK_ONLY" == true ]]; then compiler_feedback+=(--compiler-feedback-only); fi
           timeout_feedback=()
           if [[ "$AGENTLAB_TIMEOUT_FEEDBACK_ONLY" == true ]]; then timeout_feedback+=(--timeout-feedback-only); fi
+          timeout_verification=()
+          if [[ "$AGENTLAB_TIMEOUT_VERIFICATION_CADENCE" == true ]]; then timeout_verification+=(--timeout-verification-cadence); fi
           resume_checkpoint=()
           if [[ -n "$AGENTLAB_RESUME_CHECKPOINT_RUN_ID" ]]; then resume_checkpoint+=(--resume-difficulty-checkpoint "$RUNNER_TEMP/resume-checkpoint"); fi
-          python3 examples/knowledge-seed/subject/run.py --scenario "$AGENTLAB_ASSESSMENT_SCENARIO" --source "$RUNNER_TEMP/source" --reference "$RUNNER_TEMP/reference/patched-source" --root "$AGENTLAB_CI_ROOT/assessment" --install-root "$AGENTLAB_CI_ROOT" --pi-runtime "$RUNNER_TEMP/pi-runtime" --image "$AGENTLAB_PARTICIPANT_IMAGE" --guidance-variant "$AGENTLAB_GUIDANCE_VARIANT" "${retain_hap[@]}" "${guidance[@]}" "${compiler_feedback[@]}" "${timeout_feedback[@]}" "${resume_checkpoint[@]}"
+          python3 examples/knowledge-seed/subject/run.py --scenario "$AGENTLAB_ASSESSMENT_SCENARIO" --source "$RUNNER_TEMP/source" --reference "$RUNNER_TEMP/reference/patched-source" --root "$AGENTLAB_CI_ROOT/assessment" --install-root "$AGENTLAB_CI_ROOT" --pi-runtime "$RUNNER_TEMP/pi-runtime" --image "$AGENTLAB_PARTICIPANT_IMAGE" --guidance-variant "$AGENTLAB_GUIDANCE_VARIANT" "${retain_hap[@]}" "${guidance[@]}" "${compiler_feedback[@]}" "${timeout_feedback[@]}" "${timeout_verification[@]}" "${resume_checkpoint[@]}"
           cp "$RUNNER_TEMP/participant-image.json" "$AGENTLAB_CI_ROOT/assessment/evidence/participant-image.json"
           cp "$RUNNER_TEMP/participant-runtime-preflight.txt" "$AGENTLAB_CI_ROOT/assessment/evidence/participant-runtime-preflight.txt"
           printf 'participant_and_verify\t%s\n' "$(( $(date +%s%3N) - started ))" >> "$AGENTLAB_CI_ROOT/timing.tsv"
