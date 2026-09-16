@@ -59,7 +59,7 @@ def main():
     difficulty = load(evidence / "difficulty-candidates.json") or {}
     groups = {name: [] for name in (
         "difficulty_points", "checkpoints", "interventions", "crossings",
-        "decisions", "capability_profiles", "evidence_refs",
+        "decisions", "capability_profiles", "evidence_refs", "execution_environments",
     )}
 
     def insert(path, row):
@@ -75,6 +75,7 @@ def main():
         ("summary.json", "subject-summary"),
         ("decision-package.json", "harness-decision-package"),
         ("difficulty-candidates.json", "difficulty-candidates"),
+        ("environment-fingerprint.json", "environment-fingerprint"),
     ):
         path = evidence / filename
         if path.is_file():
@@ -90,6 +91,34 @@ def main():
                 "public": True,
                 "metadata": {"scenario": decision.get("scenario"), "taskId": summary.get("taskId")},
             })
+
+    environment = load(evidence / "environment-fingerprint.json") or {}
+    if environment:
+        runner_name = environment.get("runnerName") or "unknown-runner"
+        runner_os = environment.get("runnerOs") or "unknown-os"
+        runner_arch = environment.get("runnerArch") or environment.get("machine") or "unknown-arch"
+        runner_identity = "|".join([str(runner_name), str(runner_os), str(runner_arch), str(environment.get("machine") or "unknown-machine")])
+        insert("execution_environments", {
+            "id": f"environment-{args.run_id}",
+            "runId": args.run_id,
+            "runnerIdentity": runner_identity,
+            "runnerName": runner_name,
+            "runnerOs": runner_os,
+            "runnerArch": runner_arch,
+            "platform": environment.get("platform"),
+            "machine": environment.get("machine"),
+            "executionMode": environment.get("executionMode"),
+            "fingerprintSha256": sha256(evidence / "environment-fingerprint.json"),
+            "sourceRevision": summary.get("sourceRevision") or "unknown",
+            "evidenceRef": f"evidence-{args.run_id}-environment-fingerprint",
+            "metadata": {
+                "schema": environment.get("schema"),
+                "docker": environment.get("docker"),
+                "node": environment.get("node"),
+                "python": environment.get("python"),
+                "git": environment.get("git"),
+            },
+        })
 
     checkpoint_ids = []
     for file in sorted((evidence / "difficulty-checkpoints").glob("*/checkpoint.json")):

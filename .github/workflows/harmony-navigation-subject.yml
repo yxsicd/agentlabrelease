@@ -591,6 +591,7 @@ jobs:
             echo "source run $asset_run_id already exists in cbgroom; idempotent no-op"
             exit 0
           fi
+          cp "$AGENTLAB_CI_ROOT/environment-fingerprint.json" "$AGENTLAB_CI_ROOT/assessment/evidence/environment-fingerprint.json"
           python3 scripts/build-cbgroom-flywheel-transaction.py \
             --evidence "$AGENTLAB_CI_ROOT/assessment/evidence" \
             --revision "$CBGROOM_REVISION" \

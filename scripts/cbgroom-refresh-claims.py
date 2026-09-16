@@ -56,17 +56,19 @@ def query(url: str, person: str, path: str, revision: str, limit: int = 500) -> 
     return result
 
 
-def classify_evidence(claim_id: str, support_refs: List[str], contradiction_refs: List[str], checkpoints: List[Dict[str, Any]], revision: str) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+def classify_evidence(claim_id: str, support_refs: List[str], contradiction_refs: List[str], checkpoints: List[Dict[str, Any]], environments: List[Dict[str, Any]], revision: str) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
     checkpoint_rows = [r.get("row", r) for r in checkpoints]
     by_id = {r.get("id"): r for r in checkpoint_rows}
+    environment_rows = [r.get("row", r) for r in environments]
+    environment_by_run = {str(r.get("runId")): r for r in environment_rows}
     refs = [(r, "support") for r in support_refs] + [(r, "contradiction") for r in contradiction_refs]
     def run_id(ref: str) -> int:
         match = re.search(r"decision-(\d+)", ref)
         return int(match.group(1)) if match else 0
     refs.sort(key=lambda item: run_id(item[0]))
-    seen_cuts, seen_sessions = set(), set()
-    unique_cuts, unique_sessions = set(), set()
-    classes, rows = [], []
+    seen_cuts, seen_sessions, seen_runners = set(), set(), set()
+    unique_cuts, unique_sessions, unique_runners = set(), set(), set()
+    classes, runner_classes, rows = [], [], []
     basis_map = {
         "anchor-checkpoint": "First structured evidence for this claim; establishes the reference lineage.",
         "independent-source-cut": "Source cut differs from every earlier evidence item for this claim.",
@@ -81,6 +83,8 @@ def classify_evidence(claim_id: str, support_refs: List[str], contradiction_refs
         source_cut = checkpoint.get("sourceCut")
         session = checkpoint.get("nativeSessionSha256")
         thread = checkpoint.get("nativeThreadId")
+        environment = environment_by_run.get(rid, {})
+        runner_identity = environment.get("runnerIdentity")
         if not checkpoint or not source_cut or not session:
             independence = "unknown-lineage"
         elif index == 0:
@@ -95,29 +99,57 @@ def classify_evidence(claim_id: str, support_refs: List[str], contradiction_refs
             seen_cuts.add(source_cut); unique_cuts.add(source_cut)
         if session:
             seen_sessions.add(session); unique_sessions.add(session)
-        classes.append(independence)
+        if not runner_identity:
+            runner_class = "unknown-not-encoded"
+        elif not seen_runners:
+            runner_class = "anchor-runner"
+        elif runner_identity not in seen_runners:
+            runner_class = "independent-runner"
+        else:
+            runner_class = "same-runner"
+        if runner_identity:
+            seen_runners.add(runner_identity); unique_runners.add(runner_identity)
+        classes.append(independence); runner_classes.append(runner_class)
+        metadata = {"runId": rid}
+        if runner_identity:
+            metadata.update({
+                "runnerIdentity": runner_identity,
+                "runnerName": environment.get("runnerName"),
+                "runnerOs": environment.get("runnerOs"),
+                "runnerArch": environment.get("runnerArch"),
+            })
         rows.append({
             "id": "independence-%s-%s" % (claim_id, rid), "claimId": claim_id, "decisionRef": ref,
             "polarity": polarity, "checkpointId": checkpoint_id, "sourceCut": source_cut,
             "nativeThreadId": thread, "nativeSessionSha256": session, "independenceClass": independence,
             "lineageGroup": (source_cut or "unknown") + "|" + (session or "unknown"),
-            "runnerIndependence": "unknown-not-encoded", "taskIndependence": "same-task-family-current-scope",
-            "basis": basis_map[independence], "sourceRevision": revision, "metadata": {"runId": rid},
+            "runnerIndependence": runner_class, "taskIndependence": "same-task-family-current-scope",
+            "basis": basis_map[independence], "sourceRevision": revision, "metadata": metadata,
         })
     class_counts = {}
     for value in classes:
         class_counts[value] = class_counts.get(value, 0) + 1
+    runner_class_counts = {}
+    for value in runner_classes:
+        runner_class_counts[value] = runner_class_counts.get(value, 0) + 1
+    if not unique_runners:
+        runner_status = "unknown-not-encoded"
+    elif len(unique_runners) == 1:
+        runner_status = "single-recorded-runner-environment"
+    else:
+        runner_status = "multiple-recorded-runner-environments"
     summary = {
         "status": "classified-from-checkpoint-lineage", "evidenceCount": len(refs),
         "uniqueSourceCuts": len(unique_cuts), "uniqueNativeSessions": len(unique_sessions),
-        "classCounts": class_counts, "runnerIndependence": "unknown-not-encoded",
+        "classCounts": class_counts, "uniqueExecutionEnvironments": len(unique_runners),
+        "runnerClassCounts": runner_class_counts, "runnerIndependence": runner_status,
         "taskIndependence": "same-task-family-current-scope",
-        "note": "Evidence diversity is derived only from structured checkpoint lineage. Runner independence is unknown until explicitly encoded.",
+        "note": "Code/session diversity is derived from checkpoint lineage. Runner diversity is counted only when execution_environments contains an explicit runnerIdentity for that run.",
     }
     return summary, rows
 
 
-def target_claims(decisions: List[Dict[str, Any]], checkpoints: List[Dict[str, Any]], revision: str) -> Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]:
+def target_claims(decisions: List[Dict[str, Any]], checkpoints: List[Dict[str, Any]], environments: List[Dict[str, Any]], revision: str) -> Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]:
     rows = [r.get("row", r) for r in decisions]
     def split(token: str, require_full: bool = False) -> Tuple[List[str], List[str]]:
         support, contradiction = [], []
@@ -134,8 +166,8 @@ def target_claims(decisions: List[Dict[str, Any]], checkpoints: List[Dict[str, A
 
     compiler_support, compiler_contra = split("compiler-feedback", require_full=True)
     timeout_support, timeout_contra = split("timeout-feedback")
-    compiler_independence, compiler_rows = classify_evidence("claim-compiler-feedback-focused-repair", compiler_support, compiler_contra, checkpoints, revision)
-    timeout_independence, timeout_rows = classify_evidence("claim-timeout-feedback-action-start", timeout_support, timeout_contra, checkpoints, revision)
+    compiler_independence, compiler_rows = classify_evidence("claim-compiler-feedback-focused-repair", compiler_support, compiler_contra, checkpoints, environments, revision)
+    timeout_independence, timeout_rows = classify_evidence("claim-timeout-feedback-action-start", timeout_support, timeout_contra, checkpoints, environments, revision)
     timeout_full_count = sum(1 for r in rows if "timeout-feedback" in r.get("id", "") and r.get("decision") == "accept-full-crossing")
     now = dt.datetime.now(dt.timezone.utc).isoformat()
     compiler_diverse = compiler_independence.get("uniqueSourceCuts", 0) >= 2 and compiler_independence.get("uniqueNativeSessions", 0) >= 3
@@ -181,13 +213,14 @@ def main() -> None:
         revision = repo_head(args.mcp_url, args.person_id)
         decisions = query(args.mcp_url, args.person_id, "decisions", revision)["rows"]
         checkpoints = query(args.mcp_url, args.person_id, "checkpoints", revision, 500)["rows"]
+        environments = query(args.mcp_url, args.person_id, "execution_environments", revision, 500)["rows"]
         claim_result = query(args.mcp_url, args.person_id, "research_claims", revision, 100)
         event_result = query(args.mcp_url, args.person_id, "claim_events", revision, 500)
         independence_result = query(args.mcp_url, args.person_id, "claim_evidence_independence", revision, 1000)
         current = {r["key"]: r for r in claim_result["rows"]}
         events = [r.get("row", r) for r in event_result["rows"]]
         existing_independence = {r["key"]: r for r in independence_result["rows"]}
-        targets, desired_independence = target_claims(decisions, checkpoints, revision)
+        targets, desired_independence = target_claims(decisions, checkpoints, environments, revision)
         claim_ops, event_ops, independence_ops = [], [], []
         for desired in desired_independence:
             existing = existing_independence.get(desired["id"])
@@ -219,14 +252,25 @@ def main() -> None:
             seq = max([int(e.get("sequence", 0)) for e in claim_events] or [0]) + 1
             support_added = sorted(set(target["supportRefs"]) - set(old.get("supportRefs", [])))
             contradiction_added = sorted(set(target["contradictionRefs"]) - set(old.get("contradictionRefs", [])))
-            kind = "status-changed" if old.get("status") != target.get("status") else "evidence-updated"
+            if old.get("status") != target.get("status"):
+                kind = "status-changed"
+                event_summary = "新实验导致该结论的状态发生变化。"
+            elif support_added or contradiction_added:
+                kind = "evidence-updated"
+                event_summary = "新实验改变了该结论的结构化支持/反例集合。"
+            elif changed == ["independenceSummary"]:
+                kind = "independence-updated"
+                event_summary = "已有实验的独立性信息得到更完整的结构化刻画；支持/反例集合未变化。"
+            else:
+                kind = "claim-metadata-updated"
+                event_summary = "结论元数据发生变化；支持/反例集合未变化。"
             event_id = "%s-%06d" % (claim_id, seq)
             event_ops.append({
                 "op": "insert", "operation_id": stable_uuid("claim-event", revision, event_id), "key": event_id,
                 "row": {"id": event_id, "claimId": claim_id, "sequence": seq, "timestamp": target["updatedAt"],
                         "kind": kind, "fromStatus": old.get("status", "unknown"), "toStatus": target["status"],
                         "sourceRevision": revision, "supportAdded": support_added, "contradictionAdded": contradiction_added,
-                        "summary": "新实验改变了该结论的结构化证据集合。" if kind == "evidence-updated" else "新实验导致该结论的状态发生变化。",
+                        "summary": event_summary,
                         "metricsBefore": {"supportCount": old.get("supportCount", 0), "contradictionCount": old.get("contradictionCount", 0)},
                         "metricsAfter": {"supportCount": target["supportCount"], "contradictionCount": target["contradictionCount"]},
                         "metadata": {"changedFields": changed}},
