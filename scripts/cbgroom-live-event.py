@@ -80,6 +80,8 @@ def refresh_live_projection(url: str, person: str, source_revision: str) -> str:
     decisions = query_table(url, person, "decisions", source_revision, 200)
     interventions = query_table(url, person, "interventions", source_revision, 200)
     difficulties = query_table(url, person, "difficulty_points", source_revision, 200)
+    claims = query_table(url, person, "research_claims", source_revision, 100)
+    claim_events = query_table(url, person, "claim_events", source_revision, 200)
 
     crossing_rows = [r.get("row", r) for r in crossings.get("rows", [])]
     intervention_rows = [r.get("row", r) for r in interventions.get("rows", [])]
@@ -152,6 +154,8 @@ def refresh_live_projection(url: str, person: str, source_revision: str) -> str:
             "decisions": decisions.get("row_count", 0),
             "interventions": interventions.get("row_count", 0),
             "difficulties": difficulties.get("row_count", 0),
+            "claims": claims.get("row_count", 0),
+            "claimEvents": claim_events.get("row_count", 0),
         },
         "runs": runs.get("rows", []),
         "recentEvents": events.get("rows", []),
@@ -176,6 +180,8 @@ def refresh_live_projection(url: str, person: str, source_revision: str) -> str:
             },
         },
         "recentDecisions": decisions.get("rows", [])[-20:],
+        "claims": claims.get("rows", []),
+        "claimEvents": claim_events.get("rows", [])[-50:],
     }
     content = json.dumps(projection, ensure_ascii=False, indent=2) + "\n"
     for attempt in range(5):
