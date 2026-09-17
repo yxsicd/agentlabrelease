@@ -60,7 +60,14 @@ def classify_evidence(claim_id: str, support_refs: List[str], contradiction_refs
     checkpoint_rows = [r.get("row", r) for r in checkpoints]
     by_id = {r.get("id"): r for r in checkpoint_rows}
     environment_rows = [r.get("row", r) for r in environments]
-    environment_by_run = {str(r.get("runId")): r for r in environment_rows}
+    environment_by_run: Dict[str, List[Dict[str, Any]]] = {}
+    for environment in environment_rows:
+        metadata = environment.get("metadata") if isinstance(environment.get("metadata"), dict) else {}
+        if metadata.get("claimIndependenceEligible") is False:
+            continue
+        environment_by_run.setdefault(str(environment.get("runId")), []).append(environment)
+    for run_environments in environment_by_run.values():
+        run_environments.sort(key=lambda environment: str(environment.get("id", "")))
     refs = [(r, "support") for r in support_refs] + [(r, "contradiction") for r in contradiction_refs]
     def run_id(ref: str) -> int:
         match = re.search(r"decision-(\d+)", ref)
@@ -83,8 +90,12 @@ def classify_evidence(claim_id: str, support_refs: List[str], contradiction_refs
         source_cut = checkpoint.get("sourceCut")
         session = checkpoint.get("nativeSessionSha256")
         thread = checkpoint.get("nativeThreadId")
-        environment = environment_by_run.get(rid, {})
-        runner_identity = environment.get("runnerIdentity")
+        run_environments = environment_by_run.get(rid, [])
+        runner_identities: List[str] = []
+        for environment in run_environments:
+            runner_identity = str(environment.get("runnerIdentity") or "")
+            if runner_identity and runner_identity not in runner_identities:
+                runner_identities.append(runner_identity)
         if not checkpoint or not source_cut or not session:
             independence = "unknown-lineage"
         elif index == 0:
@@ -99,21 +110,28 @@ def classify_evidence(claim_id: str, support_refs: List[str], contradiction_refs
             seen_cuts.add(source_cut); unique_cuts.add(source_cut)
         if session:
             seen_sessions.add(session); unique_sessions.add(session)
-        if not runner_identity:
+        new_runner_identities = [identity for identity in runner_identities if identity not in seen_runners]
+        if not runner_identities:
             runner_class = "unknown-not-encoded"
+        elif not seen_runners and len(runner_identities) > 1:
+            runner_class = "multiple-environments-on-evidence"
         elif not seen_runners:
             runner_class = "anchor-runner"
-        elif runner_identity not in seen_runners:
+        elif new_runner_identities:
             runner_class = "independent-runner"
         else:
             runner_class = "same-runner"
-        if runner_identity:
+        for runner_identity in runner_identities:
             seen_runners.add(runner_identity); unique_runners.add(runner_identity)
         classes.append(independence); runner_classes.append(runner_class)
         metadata = {"runId": rid}
-        if runner_identity:
+        if runner_identities:
+            metadata["runnerIdentities"] = runner_identities
+            metadata["executionEnvironmentIds"] = [str(environment.get("id")) for environment in run_environments]
+        if len(run_environments) == 1 and runner_identities:
+            environment = run_environments[0]
             metadata.update({
-                "runnerIdentity": runner_identity,
+                "runnerIdentity": runner_identities[0],
                 "runnerName": environment.get("runnerName"),
                 "runnerOs": environment.get("runnerOs"),
                 "runnerArch": environment.get("runnerArch"),
@@ -144,7 +162,7 @@ def classify_evidence(claim_id: str, support_refs: List[str], contradiction_refs
         "classCounts": class_counts, "uniqueExecutionEnvironments": len(unique_runners),
         "runnerClassCounts": runner_class_counts, "runnerIndependence": runner_status,
         "taskIndependence": "same-task-family-current-scope",
-        "note": "Code/session diversity is derived from checkpoint lineage. Runner diversity is counted only when execution_environments contains an explicit runnerIdentity for that run.",
+        "note": "Code/session diversity is derived from checkpoint lineage. Runner diversity is counted from every explicit, claim-eligible execution_environments row linked to an evidence run; one evidence run may be independently reproduced in multiple environments.",
     }
     return summary, rows
 
