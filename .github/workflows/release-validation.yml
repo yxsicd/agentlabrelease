@@ -1,7 +1,7 @@
 name: Public release validation
 on:
   push:
-    branches: [main, work/agentlab-first-class-action-20260921]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -55,10 +55,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - target: alprod
+            channel: alprod
+            composition: ''
+            backend: copy-tree
           - target: candidate-copy
             channel: candidate-20260921-40ecdf4b-sdk-1272b13b-linux-x64
             composition: release/candidates/40ecdf4b-sdk-1272b13b-linux-x64
             backend: copy-tree
+          - target: candidate-btrfs
+            channel: candidate-20260921-40ecdf4b-sdk-1272b13b-linux-x64
+            composition: release/candidates/40ecdf4b-sdk-1272b13b-linux-x64
+            backend: btrfs-subvolume
     env:
       AGENTLAB_CI_ROOT: /tmp/agentlab-${{ matrix.target }}
     steps:
