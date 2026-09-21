@@ -1,7 +1,7 @@
 name: Public release validation
 on:
   push:
-    branches: [main]
+    branches: [main, work/agentlab-first-class-action-20260921]
   pull_request:
   workflow_dispatch:
 permissions:
