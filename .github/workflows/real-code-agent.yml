@@ -82,7 +82,7 @@ jobs:
             gh run download "$PLAN_RUN_ID" --repo "$GITHUB_REPOSITORY" \
               --name channel-validation-plan --dir "$RUNNER_TEMP/real-composition"
           else
-            cp release/candidates/40ecdf4b-linux-x64/{publication,environment-lock}.json "$RUNNER_TEMP/real-composition/"
+            cp release/candidates/40ecdf4b-sdk-1272b13b-linux-x64/{publication,environment-lock}.json "$RUNNER_TEMP/real-composition/"
           fi
           for file in standalone-harmony.json standalone-sessionfs.json mcpgit-program.json; do
             cp "release/ci/$file" "$RUNNER_TEMP/real-composition/$file"

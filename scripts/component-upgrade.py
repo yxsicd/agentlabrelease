@@ -71,6 +71,12 @@ def compose(base, donor, component, tag):
             before, after = original['sessionSdk'], replacement['sessionSdk']
             pub['sessionSdk'] = copy.deepcopy(after)
             before_urls.add(before['artifact']); after_urls.add(after['artifact'])
+            before_action = before.get('actionQualification')
+            after_action = after.get('actionQualification')
+            if before_action:
+                before_urls.add(before_action['artifact'])
+            if after_action:
+                after_urls.add(after_action['artifact'])
         else:
             before, after = original['smoke']['control'], replacement['smoke']['control']
             pub['smoke']['control'] = after

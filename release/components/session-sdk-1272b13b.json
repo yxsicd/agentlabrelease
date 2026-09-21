@@ -1,0 +1,36 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "session-sdk",
+  "value": {
+    "schema": "agentlab.demo_dependency.v1",
+    "sourceRevision": "1272b13b7541821921a239f5cc0f95029b2e5625",
+    "platform": "linux-x64",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/session-sdk-1272b13b-linux-x64/agentlab-session-sdk-1272b13b-linux-x64",
+    "bytes": 5219632,
+    "sha256": "1140531f29fcad388a990941815a8758cde1a436876c03a43ce6c19ebade7f1c",
+    "sessionTables": 55,
+    "ownerTables": 12,
+    "templateInventoryDigest": "1315cce02baf3fbdd84fe7a5b0283d47f3abe5a444c085190bfbd54e32f8b50e",
+    "templateInventory": "./session-template-inventory.json",
+    "actionQualification": {
+      "schema": "agentlab.first_class_action_program.v1",
+      "sourceRevision": "1272b13b7541821921a239f5cc0f95029b2e5625",
+      "platform": "linux-x64",
+      "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/session-sdk-1272b13b-linux-x64/agentlab-first-class-action-probe-1272b13b-linux-x64",
+      "bytes": 4703120,
+      "sha256": "3ab98e532feb901b73e0a024426fbea88bd930ffc37be5de1f792642ec5056d3"
+    }
+  },
+  "assets": [
+    {
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/session-sdk-1272b13b-linux-x64/agentlab-session-sdk-1272b13b-linux-x64",
+      "bytes": 5219632,
+      "sha256": "1140531f29fcad388a990941815a8758cde1a436876c03a43ce6c19ebade7f1c"
+    },
+    {
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/session-sdk-1272b13b-linux-x64/agentlab-first-class-action-probe-1272b13b-linux-x64",
+      "bytes": 4703120,
+      "sha256": "3ab98e532feb901b73e0a024426fbea88bd930ffc37be5de1f792642ec5056d3"
+    }
+  ]
+}

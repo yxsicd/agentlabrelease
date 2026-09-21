@@ -121,11 +121,44 @@ def main():
                         args.image, label=label)
         return save(evidence / (label + ".json"), json.loads(result))
 
+    def first_class_action(repository_id, base_revision, label):
+        values = {
+            "AGENTLAB_FIRST_CLASS_PROBE_REPOSITORY": repository_id,
+            "AGENTLAB_FIRST_CLASS_PROBE_BASE_REVISION": base_revision,
+            "MCPGIT_PROBE_URL": "ws://127.0.0.1:8002/__mcpgit/service-ws",
+            "MCPGIT_PROBE_HOST": "gateway",
+            "MCPGIT_PROBE_CALLER_PROFILE": "demo",
+            "MCPGIT_PROBE_CREDENTIAL_GENERATION": "1",
+            "MCPGIT_PROBE_AUTHORIZATION_FILE": "/demo/caller.authorization",
+            "MCPGIT_PROBE_TEMPLATE_LOCK_FILE": "/demo/template-lock.json",
+            "MCPGIT_PROBE_TEMPLATE_QUALIFICATION_FILE": "/demo/qualification.json",
+        }
+        env = [part for key,value in values.items() for part in ("--env", key+"="+value)]
+        result = docker("run", "--rm", "--network", "container:"+gateway,
+                        "--mount", f"type=bind,src={state},dst=/demo,readonly",
+                        "--mount", f"type=bind,src={action_binary},dst=/session-sdk/first-class-action,readonly",
+                        *env, "--entrypoint", "/session-sdk/first-class-action",
+                        args.image, label=label)
+        return save(evidence / (label + ".json"), json.loads(result))
+
     try:
         sdk_binary = root / "downloads/session-sdk"
         sdk = demo.acquire(args.sdk_program, sdk_binary)
         sdk_binary.chmod(0o755)
         save(evidence / "session-sdk.json", sdk)
+        action_binary = None
+        action_program = sdk.get("actionQualification")
+        if action_program is not None:
+            if (not isinstance(action_program, dict)
+                    or action_program.get("schema") != "agentlab.first_class_action_program.v1"
+                    or action_program.get("sourceRevision") != sdk.get("sourceRevision")):
+                raise RuntimeError("Session SDK first-class Action program contract is invalid")
+            action_lock = state / "first-class-action-program.json"
+            save(action_lock, action_program)
+            action_binary = root / "downloads/first-class-action"
+            demo.acquire(action_lock, action_binary)
+            action_binary.chmod(0o755)
+            save(evidence / "first-class-action-program.json", action_program)
         lock = demo.acquire(Path(os.environ.get("AGENTLAB_MCPGIT_PROGRAM_LOCK", str(REPO / "release/ci/mcpgit-program.json"))), root / "downloads/mcpgit.tar.gz")
         summary["mcpgit"] = lock
         program = root / "program"
@@ -181,6 +214,20 @@ def main():
                     "MCPGIT_PROBE_TEMPLATE_QUALIFICATION_FILE":"/demo/qualification.json",
                     "MCPGIT_PROBE_PROJECTION_ROOT":"/tmp/agentlab-mcpgit-e2e-public-demo"}
         first = probe("provision", settings, "session-created")
+        first_class_receipt = None
+        if action_binary is not None:
+            action_service = Service(initial_service_url,
+                                     (state/"caller.authorization").read_text().strip(), evidence)
+            action_worktree = {"topic_id":first["binding"]["topicId"]}
+            action_base_revision = action_service.call(
+                "table.worktree.open",
+                {"repo":first["binding"]["repositoryId"], "worktree":action_worktree}
+            )["revision"]
+            first_class_receipt = first_class_action(
+                first["binding"]["repositoryId"], action_base_revision,
+                "first-class-action"
+            )
+            summary["firstClassAction"] = first_class_receipt
         capture_state = None
         if args.asset_model_export and not args.capture_evidence:
             service=Service(initial_service_url,(state/"caller.authorization").read_text().strip(),evidence)
@@ -364,6 +411,19 @@ def main():
         checks["sdk_template_inventory"] = (len(template["session"]["tables"]) == sdk["sessionTables"]
             and len(template["ownerGlobal"]["tables"]) == sdk["ownerTables"]
             and inventory_digest(template) == sdk["templateInventoryDigest"])
+        if action_binary is not None:
+            expected_kinds = {"task", "evaluation_case", "run", "trajectory", "evaluation_result"}
+            readback_kinds = {
+                item["kind"] for item in first_class_receipt.get("freshReadback", [])
+            }
+            checks["first_class_action_authority"] = (
+                first_class_receipt.get("schema") == "agentlab.first-class-harness-live.v1"
+                and first_class_receipt.get("status") == "pass"
+                and first_class_receipt.get("legacySixTableAuthorityAbsent") is True
+                and readback_kinds == expected_kinds
+                and first_class_receipt.get("phases")
+                    == ["Admitted", "WorkspaceReady", "Running", "Completed"]
+            )
         summary["templateInventoryDigest"] = inventory_digest(template)
         summary["sessionSdk"] = sdk
         summary["sessionTables"] = len(template["session"]["tables"])

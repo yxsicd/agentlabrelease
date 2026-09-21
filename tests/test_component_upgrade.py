@@ -70,6 +70,35 @@ class ComponentUpgradeTests(unittest.TestCase):
         self.assertEqual(lock,base[1])
         self.assertEqual(result['sessionSdk'],pub['sessionSdk'])
 
+    def test_sdk_upgrade_keeps_first_class_action_companion_asset(self):
+        base = upgrade.load(ROOT/'release/channels/aldev')
+        pub = copy.deepcopy(base[0])
+        sdk = pub['sessionSdk']
+        sdk['sourceRevision'] = 'b'*40
+        sdk['artifact'] = 'https://github.com/yxsicd/agentlabrelease/releases/download/session-sdk-bbbbbbbb-linux-x64/agentlab-session-sdk-bbbbbbbb-linux-x64'
+        sdk['actionQualification'] = {
+            'schema':'agentlab.first_class_action_program.v1',
+            'sourceRevision':'b'*40,
+            'platform':'linux-x64',
+            'artifact':'https://github.com/yxsicd/agentlabrelease/releases/download/session-sdk-bbbbbbbb-linux-x64/agentlab-first-class-action-probe-bbbbbbbb-linux-x64',
+            'bytes':1234,
+            'sha256':'1'*64,
+        }
+        manifest = dict(
+            schema='agentlab.component_update.v1',
+            component='session-sdk',
+            value=sdk,
+            assets=[
+                dict(url=sdk['artifact'], bytes=sdk['bytes'], sha256=sdk['sha256']),
+                dict(url=sdk['actionQualification']['artifact'], bytes=1234, sha256='1'*64),
+            ],
+        )
+        donor = upgrade.replacement_donor(base,manifest,'session-sdk')
+        result,_,_,_ = upgrade.compose(base,donor,'session-sdk','candidate-action-sdk')
+        assets = {row['url'] for row in result['assets']}
+        self.assertIn(sdk['artifact'], assets)
+        self.assertIn(sdk['actionQualification']['artifact'], assets)
+
     def test_direct_component_contract_must_bind_selected_slot(self):
         manifest = dict(schema='agentlab.component_update.v1',component='pack:tools',
                         value=self.base[1]['components'][1],assets=[],graphNode=self.base[1]['componentGraph']['nodes'][1])

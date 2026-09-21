@@ -60,12 +60,12 @@ jobs:
             composition: ''
             backend: copy-tree
           - target: candidate-copy
-            channel: candidate-20260913-40ecdf4b-sdk-c075105a-linux-x64
-            composition: release/candidates/40ecdf4b-linux-x64
+            channel: candidate-20260921-40ecdf4b-sdk-1272b13b-linux-x64
+            composition: release/candidates/40ecdf4b-sdk-1272b13b-linux-x64
             backend: copy-tree
           - target: candidate-btrfs
-            channel: candidate-20260913-40ecdf4b-sdk-c075105a-linux-x64
-            composition: release/candidates/40ecdf4b-linux-x64
+            channel: candidate-20260921-40ecdf4b-sdk-1272b13b-linux-x64
+            composition: release/candidates/40ecdf4b-sdk-1272b13b-linux-x64
             backend: btrfs-subvolume
     env:
       AGENTLAB_CI_ROOT: /tmp/agentlab-${{ matrix.target }}
@@ -121,14 +121,17 @@ jobs:
         if: matrix.target == 'candidate-copy'
         run: |
           mapfile -t runtime < <(python3 - <<'PY'
-          import json
-          lock = json.load(open("release/candidates/40ecdf4b-linux-x64/environment-lock.json"))
+          import json, os
+          lock = json.load(open(os.environ["AGENTLAB_COMPOSITION_DIR"] + "/environment-lock.json"))
           print(lock["images"][0]["reference"])
           print(next(c["volume"] for c in lock["components"] if c["slot"] == "release"))
           PY
           )
+          python3 -c 'import json,sys; publication=json.load(open(sys.argv[1])); open(sys.argv[2],"w").write(json.dumps(publication["sessionSdk"],indent=2)+"\\n")' \
+            '${{ matrix.composition }}/publication.json' "$RUNNER_TEMP/session-sdk.json"
           /usr/bin/python3 examples/tablegit-session/run.py \
             --image "${runtime[0]}" --runtime-volume "${runtime[1]}" \
+            --sdk-program "$RUNNER_TEMP/session-sdk.json" \
             --root "$AGENTLAB_CI_ROOT/tablegit-demo" \
             --capture-evidence "$AGENTLAB_CI_ROOT/mock-evidence" --capture-agent-kind mock
       - name: Explain verified stateful demo scope
