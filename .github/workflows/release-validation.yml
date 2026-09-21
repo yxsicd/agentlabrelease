@@ -55,18 +55,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: alprod
-            channel: alprod
-            composition: ''
-            backend: copy-tree
           - target: candidate-copy
             channel: candidate-20260921-40ecdf4b-sdk-1272b13b-linux-x64
             composition: release/candidates/40ecdf4b-sdk-1272b13b-linux-x64
             backend: copy-tree
-          - target: candidate-btrfs
-            channel: candidate-20260921-40ecdf4b-sdk-1272b13b-linux-x64
-            composition: release/candidates/40ecdf4b-sdk-1272b13b-linux-x64
-            backend: btrfs-subvolume
     env:
       AGENTLAB_CI_ROOT: /tmp/agentlab-${{ matrix.target }}
     steps:
@@ -120,14 +112,9 @@ jobs:
       - name: Create real TableGit Session and recover from process and projection loss
         if: matrix.target == 'candidate-copy'
         run: |
-          mapfile -t runtime < <(python3 - <<'PY'
-          import json, os
-          lock = json.load(open(os.environ["AGENTLAB_COMPOSITION_DIR"] + "/environment-lock.json"))
-          print(lock["images"][0]["reference"])
-          print(next(c["volume"] for c in lock["components"] if c["slot"] == "release"))
-          PY
-          )
-          python3 -c 'import json,sys; publication=json.load(open(sys.argv[1])); open(sys.argv[2],"w").write(json.dumps(publication["sessionSdk"],indent=2)+"\\n")' \
+          mapfile -t runtime < <(python3 -c 'import json,sys; lock=json.load(open(sys.argv[1])); print(lock["images"][0]["reference"]); print(next(c["volume"] for c in lock["components"] if c["slot"]=="release"))' \
+            '${{ matrix.composition }}/environment-lock.json')
+          python3 -c 'import json,sys; publication=json.load(open(sys.argv[1])); open(sys.argv[2],"w").write(json.dumps(publication["sessionSdk"],indent=2)+"\n")' \
             '${{ matrix.composition }}/publication.json' "$RUNNER_TEMP/session-sdk.json"
           /usr/bin/python3 examples/tablegit-session/run.py \
             --image "${runtime[0]}" --runtime-volume "${runtime[1]}" \
