@@ -22,6 +22,14 @@
       "immutableRef": "control-24fb4ec0-linux-x64"
     },
     {
+      "id": "composition-installer-linux-x64",
+      "kind": "installer",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/installer-24fb4ec0-linux-x64/agentlab-composition-install.sh",
+      "sha256": "f0cfce3d0842bfd36b41ec3a4c593b41779d461ca3359c6cf2256728ce42ad04",
+      "bytes": 4653,
+      "immutableRef": "installer-24fb4ec0-linux-x64"
+    },
+    {
       "id": "environment-lock-linux-x64",
       "kind": "composition",
       "url": "https://github.com/yxsicd/agentlabrelease/releases/download/candidate-agentlab-alpha10-24fb4ec0-linux-x64/environment-lock.json",
