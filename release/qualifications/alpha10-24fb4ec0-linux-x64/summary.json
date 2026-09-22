@@ -11,6 +11,11 @@
     "visibleCommands": ["docker"],
     "intentionallyHiddenCommands": ["python3", "zstd", "tar", "bun", "node", "rustc", "cargo", "git", "gh"]
   },
+  "portableEntrypointPathContract": {
+    "shellBaselineCommands": ["bash", "mkdir"],
+    "applicationCommands": ["docker"],
+    "sharedImmutableCache": true
+  },
   "checks": {
     "immutableAcquisition": "passed",
     "firstCompositionInstall": "passed",
@@ -18,6 +23,7 @@
     "runtimeVolumeSourceRevision": "passed",
     "runtimeRequiredBinaries": "passed",
     "existingMcpgitContainersUnaffected": "passed",
+    "portableOfflineEntrypointReplay": "passed",
     "fullRuntimeDeployment": "not_run",
     "nativeSessionFsDeployment": "not_run"
   },
