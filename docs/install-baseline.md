@@ -11,8 +11,8 @@ The only always-required host command is Docker with permission to use its
 engine. A pre-provisioned `agentlabctl` is a static executable and performs
 release verification and zstd extraction itself. Python, zstd, tar, Bun/Node,
 Rust/Cargo, Git, and GitHub CLI are not installation prerequisites. An online
-bootstrap needs either curl or wget only when the control binary is not
-supplied by other media.
+bootstrap needs either curl or wget plus one of sha256sum, shasum, or openssl
+only when the control binary is not supplied and verified by other media.
 
 The host must provide at least 8 GiB memory, sufficient disk space for the
 immutable artifacts and Docker volumes, and the release descriptor's free

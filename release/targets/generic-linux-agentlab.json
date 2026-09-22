@@ -11,7 +11,8 @@
     "notRequiredCommands": ["python3", "zstd", "tar", "bun", "node", "rustc", "cargo", "git", "gh"],
     "onlineBootstrapAcquisition": {
       "requiredOnlyWhenControlBinaryIsNotPreprovisioned": true,
-      "oneOfCommands": ["curl", "wget"]
+      "oneOfCommands": ["curl", "wget"],
+      "oneOfIntegrityCommands": ["sha256sum", "shasum", "openssl"]
     },
     "dockerRequired": true,
     "architecture": "x86_64",

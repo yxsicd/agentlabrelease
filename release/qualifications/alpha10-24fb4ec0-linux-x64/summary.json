@@ -1,0 +1,34 @@
+{
+  "schema": "agentlab.install_qualification.v1",
+  "candidate": "candidate-agentlab-alpha10-24fb4ec0-linux-x64",
+  "sourceRevision": "24fb4ec0beaff395b790bf4d1678f7f2a9c76a3c",
+  "candidateRepositoryRevision": "a273536845b530cbc7768fc5dbced9e0a5ed5753",
+  "target": "wsl2",
+  "platform": "linux-x64",
+  "controlSha256": "51cec430e1c0a3741bab77f387ee90ed7349746a2d87ff39a275b4f975eab886",
+  "lockSha256": "dcb27623ef9f3f5a92c0eb759120989cafcf25ace8873945a043242cb41fd1eb",
+  "hostPathContract": {
+    "visibleCommands": ["docker"],
+    "intentionallyHiddenCommands": ["python3", "zstd", "tar", "bun", "node", "rustc", "cargo", "git", "gh"]
+  },
+  "checks": {
+    "immutableAcquisition": "passed",
+    "firstCompositionInstall": "passed",
+    "secondCompositionInstallIdempotent": "passed",
+    "runtimeVolumeSourceRevision": "passed",
+    "runtimeRequiredBinaries": "passed",
+    "existingMcpgitContainersUnaffected": "passed",
+    "fullRuntimeDeployment": "not_run",
+    "nativeSessionFsDeployment": "not_run"
+  },
+  "receipts": {
+    "first": {
+      "path": "wsl2-install-first.json",
+      "sha256": "c9b976cee69339714a396e8fcbcefc651300827224c2da1c282c87f92f6f2e7f"
+    },
+    "second": {
+      "path": "wsl2-install-second.json",
+      "sha256": "cc6ce46947fa1e55494007ff706e1ababb81c95828b6fd45e95367b64eb4e023"
+    }
+  }
+}
