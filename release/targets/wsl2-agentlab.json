@@ -1,0 +1,56 @@
+{
+  "schema": "agentlab.target_descriptor.v1",
+  "id": "wsl2",
+  "aliases": ["bluebwsl"],
+  "platform": "linux-x64",
+  "qualificationStatus": "experimental",
+  "supportedDeploymentModes": ["self-hosted-mcpgit", "external-mcpgit"],
+  "defaultDeploymentMode": "self-hosted-mcpgit",
+  "hostPrerequisites": {
+    "requiredCommands": ["docker", "zstd"],
+    "optionalCommands": ["bun"],
+    "dockerRequired": true,
+    "wslDetection": ["/proc/version", "/proc/sys/kernel/osrelease"],
+    "btrfsStrategy": "linux-loopback-btrfs-v1"
+  },
+  "resourceSizing": {
+    "memoryMinimumMiB": 8192,
+    "memoryRecommendedMiB": 12288,
+    "memoryHeavyBuildMiB": 16384,
+    "wslConfigRecommendation": true
+  },
+  "network": {
+    "defaultBindHost": "127.0.0.1",
+    "dockerNetwork": "armnet",
+    "requiredFreePorts": [18083, 18094],
+    "publishAfterQualification": true
+  },
+  "mcpgit": {
+    "defaultMode": "self-hosted",
+    "externalAllowed": true,
+    "isolatedDataVolumeByDefault": true,
+    "isolatedSafeGitCredentialsByDefault": true
+  },
+  "sessionFs": {
+    "serviceOwnership": "independent",
+    "independentVolume": true,
+    "independentRestartContract": true
+  },
+  "deploymentOrder": [
+    "mcpgit-prepare",
+    "mcpgit-gateway",
+    "safegit-bootstrap",
+    "sessionfs-projection",
+    "main-runtime"
+  ],
+  "healthLayers": ["process", "dependency", "mcpgit", "safegit", "sessionfs", "sandbox", "harmony"],
+  "restartQualification": ["cold-restart", "docker-restart", "wsl-restart"],
+  "qualificationCases": [
+    "blueb-clean-install",
+    "blueb-restart",
+    "mutable-channel-rejected",
+    "schema-drift-fail-closed",
+    "historical-asset-retained",
+    "oci-image-identity-distinguished"
+  ]
+}

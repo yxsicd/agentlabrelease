@@ -8,6 +8,11 @@ Current runtime candidate: `candidate-20260912-c22b7bfd-linux-x64`.
 The historical environment-kit preview remains `v0.1.0-alpha.9`.
 
 Component-based publication now uses [reference-only environment releases](docs/component-publication.md).
+Tagged releases additionally use an [immutable Release Graph](docs/release-graph.md)
+to bind exact component bytes, schema compatibility and target qualification
+before installation. `generic-linux` and `wsl2` target descriptors live under
+`release/targets/`; `bluebwsl` is an explicit WSL2 alias rather than an AIWSL
+substitute.
 The [c22b7bfd Linux x64 candidate](release/candidates/c22b7bfd-linux-x64/publication.json)
 references independently published packages and records its remaining acceptance
 gates. It does not supersede the current developer preview or stable channels.
