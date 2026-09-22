@@ -7,9 +7,20 @@
   "supportedDeploymentModes": ["self-hosted-mcpgit", "external-mcpgit"],
   "defaultDeploymentMode": "self-hosted-mcpgit",
   "hostPrerequisites": {
-    "requiredCommands": ["docker", "zstd"],
-    "optionalCommands": ["bun"],
+    "requiredCommands": ["docker"],
+    "notRequiredCommands": ["python3", "zstd", "tar", "bun", "node", "rustc", "cargo", "git", "gh"],
+    "onlineBootstrapAcquisition": {
+      "requiredOnlyWhenControlBinaryIsNotPreprovisioned": true,
+      "oneOfCommands": ["curl", "wget"]
+    },
     "dockerRequired": true,
+    "architecture": "x86_64",
+    "nativeSessionFs": {
+      "privilege": "root-or-passwordless-sudo",
+      "requiredCommands": ["find", "findmnt", "losetup", "mount", "mountpoint", "stat", "systemctl", "systemd-escape", "truncate", "mkfs.btrfs", "btrfs"],
+      "requiredKernelFeatures": ["loop", "btrfs"],
+      "systemdRequired": true
+    },
     "wslDetection": ["/proc/version", "/proc/sys/kernel/osrelease"],
     "btrfsStrategy": "linux-loopback-btrfs-v1"
   },

@@ -1,0 +1,10 @@
+{
+  "schema": "agentlab.component_upgrade.v1",
+  "component": "control",
+  "basePublicationSha256": "419a7a9478db78459d3a217aa8a86ac22fac8f7c674b784dd72b435f9a85d1ba",
+  "before": "https://github.com/yxsicd/agentlabrelease/releases/download/control-ea25616d-linux-x64/agentlabctl-ea25616d-linux-x64",
+  "after": "https://github.com/yxsicd/agentlabrelease/releases/download/control-24fb4ec0-linux-x64/agentlabctl-linux-x64",
+  "rebuildComponents": false,
+  "replacementDescriptorSha256": "e7464d90c5a7f545e6a121cdbbec72e97e8fbda4c73437fe44f034ccf407f188",
+  "replacementDescriptorUrl": null
+}

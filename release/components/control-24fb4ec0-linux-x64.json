@@ -1,0 +1,18 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "control",
+  "value": {
+    "sourceRevision": "24fb4ec0beaff395b790bf4d1678f7f2a9c76a3c",
+    "platform": "linux-x64",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/control-24fb4ec0-linux-x64/agentlabctl-linux-x64",
+    "bytes": 4532144,
+    "sha256": "51cec430e1c0a3741bab77f387ee90ed7349746a2d87ff39a275b4f975eab886"
+  },
+  "assets": [
+    {
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-24fb4ec0-linux-x64/agentlabctl-linux-x64",
+      "bytes": 4532144,
+      "sha256": "51cec430e1c0a3741bab77f387ee90ed7349746a2d87ff39a275b4f975eab886"
+    }
+  ]
+}
