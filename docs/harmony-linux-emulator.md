@@ -1,0 +1,97 @@
+# HarmonyOS Linux emulator integration
+
+AgentLab can use the Huawei HarmonyOS emulator on a Linux x86-64 host with KVM,
+but the emulator and system-image bytes remain vendor-owned external
+dependencies. The public AgentLab release distributes only metadata, verification
+and installation tooling.
+
+The verified local bundle consists of:
+
+- command-line tools 26.0.0.821 repacked as
+  `commandline-tools-linux-x64-26.0.0.821.tar.zst`;
+- HarmonyOS 7.0.0 phone x86 image repacked as
+  `HarmonyOS-7.0.0-phone_all_x86.tar.zst`.
+
+Exact byte counts, SHA-256 values and validation results are in
+`release/alharmony/harmony-emulator-linux-x64-26.0.0.821.json`.
+
+## Distribution boundary
+
+The agreements embedded in the vendor package prohibit redistribution of the
+SDK and system software without prior written permission. Do not upload either
+vendor archive or a derived archive to a public AgentLab GitHub Release. Written
+vendor permission must be recorded and independently reviewed before changing
+the manifest's fail-closed distribution gate.
+
+Operators acquire the vendor assets through an authorized Huawei channel and
+retain them in their own cache. AgentLab does not automate agreement acceptance
+and does not treat possession of an archive as redistribution permission.
+
+## Installation
+
+The installer accepts only the two byte-identical, already verified `.tar.zst`
+files described by the manifest:
+
+```sh
+scripts/agentlab-harmony-emulator.sh preflight
+scripts/agentlab-harmony-emulator.sh verify-assets \
+  /path/to/commandline-tools-linux-x64-26.0.0.821.tar.zst \
+  /path/to/HarmonyOS-7.0.0-phone_all_x86.tar.zst
+scripts/agentlab-harmony-emulator.sh install \
+  --tools /path/to/commandline-tools-linux-x64-26.0.0.821.tar.zst \
+  --image /path/to/HarmonyOS-7.0.0-phone_all_x86.tar.zst \
+  --root "$HOME/.local/share/agentlab/harmony-emulator-26.0.0.821" \
+  --acknowledge-vendor-agreements
+```
+
+Installation is fail-closed: architecture, KVM, byte count, SHA-256, zstd long
+window integrity and expected payload paths are checked before the staging
+directory is atomically promoted. An existing install root is never overwritten.
+After adding an operator to the `kvm` or `render` group, start a fresh login
+session before running the preflight; an already-open service session does not
+inherit newly granted supplementary groups.
+
+## One-command functional case
+
+Prepare an emulator instance with the vendor CLI, then run a bounded case. The
+runner starts the named instance, waits for its exact HDC target, installs the
+HAP, queries the bundle, launches the Ability, requires a live process, captures
+a screenshot and SmartPerf proxy samples, writes
+`agentlab.harmony_emulator_case_result.v1`, and stops the instance unless
+`--keep-running` is explicit.
+
+Example:
+
+    scripts/agentlab-harmony-emulator.sh run-case \
+      --root "$HOME/.local/share/agentlab/harmony-emulator-26.0.0.821" \
+      --image-root "$HOME/.local/share/agentlab/harmony-emulator-26.0.0.821/images" \
+      --instance-path "$HOME/.local/share/agentlab/harmony-emulator-instances" \
+      --instance agentlab-case-01 \
+      --hdc-port 10100 \
+      --hap /workspace/app/entry-default-unsigned.hap \
+      --bundle com.example.app \
+      --ability EntryAbility \
+      --output /workspace/evidence/case-01
+
+The output directory is immutable-by-convention: the runner refuses to
+overwrite it. `result.json` references the raw install, bundle, launch, process,
+screenshot and SmartPerf artifacts and binds the HAP and screenshot SHA-256.
+SmartPerf data is a relative emulator regression signal only; the result
+explicitly records that absolute power and thermal authority are unavailable.
+
+## Qualified scope
+
+On `hwlinux`, the Linux x86-64 emulator 26.0.0.400 booted the HarmonyOS
+7.0.0(26.0.0) x86 phone image to the lock screen, accepted emulator control and
+produced a screenshot. Two concurrent instances are the recommended configuration
+on the tested i7-8700/32 GiB host; three are a throughput mode; four exhausted
+swap and are not a steady-state recommendation.
+
+This establishes Linux emulator availability for the toolchain. It does not
+establish ARM-native application compatibility. The current image declares
+`abi: x86`; an application containing only ARM native libraries remains outside
+the supported scope unless an independently qualified translation layer exists.
+The bounded `run-case` install/deploy/launch/process/screenshot/profile path has
+been qualified on 'hwlinux'. Arbitrary UI action scripts, application-specific
+hidden Oracles, AgentLab Result ingestion, host graphics coverage and real-device
+power/thermal calibration remain separate gates.

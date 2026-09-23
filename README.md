@@ -28,6 +28,7 @@ these separate checks do not qualify the complete whitebox evaluation chain.
 - On AIWSL, start the current preview with
   `scripts/agentlab-harness-quickstart.sh online-install`.
 - Read [`RELEASES.md`](RELEASES.md) for version scope and limitations.
+- Use the [Linux emulator integration](docs/harmony-linux-emulator.md) for the operator-supplied HarmonyOS x86 emulator path.
 - Verify downloaded files with `manifest.json`, `provenance.json`, and
   `SHA256SUMS`.
 

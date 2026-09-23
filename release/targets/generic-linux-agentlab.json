@@ -4,22 +4,59 @@
   "aliases": [],
   "platform": "linux-x64",
   "qualificationStatus": "experimental",
-  "supportedDeploymentModes": ["self-hosted-mcpgit", "external-mcpgit"],
+  "supportedDeploymentModes": [
+    "self-hosted-mcpgit",
+    "external-mcpgit"
+  ],
   "defaultDeploymentMode": "self-hosted-mcpgit",
   "hostPrerequisites": {
-    "requiredCommands": ["docker"],
-    "notRequiredCommands": ["python3", "zstd", "tar", "bun", "node", "rustc", "cargo", "git", "gh"],
+    "requiredCommands": [
+      "docker"
+    ],
+    "notRequiredCommands": [
+      "python3",
+      "zstd",
+      "tar",
+      "bun",
+      "node",
+      "rustc",
+      "cargo",
+      "git",
+      "gh"
+    ],
     "onlineBootstrapAcquisition": {
       "requiredOnlyWhenControlBinaryIsNotPreprovisioned": true,
-      "oneOfCommands": ["curl", "wget"],
-      "oneOfIntegrityCommands": ["sha256sum", "shasum", "openssl"]
+      "oneOfCommands": [
+        "curl",
+        "wget"
+      ],
+      "oneOfIntegrityCommands": [
+        "sha256sum",
+        "shasum",
+        "openssl"
+      ]
     },
     "dockerRequired": true,
     "architecture": "x86_64",
     "nativeSessionFs": {
       "privilege": "root-or-passwordless-sudo",
-      "requiredCommands": ["find", "findmnt", "losetup", "mount", "mountpoint", "stat", "systemctl", "systemd-escape", "truncate", "mkfs.btrfs", "btrfs"],
-      "requiredKernelFeatures": ["loop", "btrfs"],
+      "requiredCommands": [
+        "find",
+        "findmnt",
+        "losetup",
+        "mount",
+        "mountpoint",
+        "stat",
+        "systemctl",
+        "systemd-escape",
+        "truncate",
+        "mkfs.btrfs",
+        "btrfs"
+      ],
+      "requiredKernelFeatures": [
+        "loop",
+        "btrfs"
+      ],
       "systemdRequired": true
     },
     "btrfsStrategy": "linux-loopback-btrfs-v1"
@@ -32,7 +69,10 @@
   "network": {
     "defaultBindHost": "127.0.0.1",
     "dockerNetwork": "armnet",
-    "requiredFreePorts": [18083, 18094],
+    "requiredFreePorts": [
+      18083,
+      18094
+    ],
     "publishAfterQualification": true
   },
   "mcpgit": {
@@ -53,6 +93,43 @@
     "sessionfs-projection",
     "main-runtime"
   ],
-  "healthLayers": ["process", "dependency", "mcpgit", "safegit", "sessionfs", "sandbox", "harmony"],
-  "restartQualification": ["cold-restart", "docker-restart"]
+  "healthLayers": [
+    "process",
+    "dependency",
+    "mcpgit",
+    "safegit",
+    "sessionfs",
+    "sandbox",
+    "harmony"
+  ],
+  "restartQualification": [
+    "cold-restart",
+    "docker-restart"
+  ],
+  "emulatorSupport": {
+    "status": "experimental",
+    "manifest": "release/alharmony/harmony-emulator-linux-x64-26.0.0.821.json",
+    "platform": "linux-x64",
+    "acceleration": "kvm",
+    "imageAbi": "x86",
+    "acquisition": "operator-supplied-vendor-assets",
+    "publicBinaryRedistribution": false,
+    "requiredHostFeatures": [
+      "/dev/kvm"
+    ],
+    "qualifiedOperations": [
+      "boot-to-lockscreen",
+      "emulator-control",
+      "screenshot",
+      "multi-instance",
+      "hdc-install-launch-probe",
+      "smartperf-proxy-profile"
+    ],
+    "remainingGates": [
+      "arbitrary-ui-action-and-hidden-oracle",
+      "agentlab-result-ingestion",
+      "host-graphics-matrix",
+      "vendor-redistribution-permission-before-public-binary-upload"
+    ]
+  }
 }

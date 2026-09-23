@@ -1,0 +1,91 @@
+{
+  "schema": "agentlab.harmony_emulator_external_bundle.v1",
+  "id": "harmony-emulator-linux-x64-26.0.0.821",
+  "platform": "linux-x64",
+  "vendor": "Huawei",
+  "publicationMode": "bring-your-own-vendor-assets",
+  "distribution": {
+    "publicBinaryRedistribution": false,
+    "status": "blocked-without-vendor-written-permission",
+    "reason": "Bundled Huawei agreements prohibit redistribution or network availability without prior written permission.",
+    "releasePolicy": "Publish only this manifest, installer, documentation, and tests. Never upload the vendor archives or derived tar.zst files to a public AgentLab GitHub Release without recorded written permission."
+  },
+  "assets": [
+    {
+      "id": "command-line-tools",
+      "filename": "commandline-tools-linux-x64-26.0.0.821.tar.zst",
+      "bytes": 932070897,
+      "sha256": "ad1eb9a255b6fc6f022a646bd536ef230d66e47aea1f9177a793924b83ebb649",
+      "compression": "zstd --ultra -22 --long=31 -T0",
+      "source": {
+        "filename": "commandline-tools-linux-x64-26.0.0.821.zip",
+        "bytes": 2347882285,
+        "sha256": "58da7359019e9360a8bb82da0cd1d3b3b26fedc338379f257849f2162e3ac1fc"
+      },
+      "verification": {
+        "zstdIntegrity": "passed",
+        "memberCount": 114657,
+        "symlinkCount": 128,
+        "pathTypeSizeAndContentSha256": "exact"
+      }
+    },
+    {
+      "id": "phone-system-image",
+      "filename": "HarmonyOS-7.0.0-phone_all_x86.tar.zst",
+      "bytes": 1568108769,
+      "sha256": "75c537cb6dc62291f96f0f247c148de653c9c6633c4dc5b0c34cc254909ae671",
+      "compression": "zstd --ultra -22 --long=31 -T0",
+      "source": {
+        "logicalPath": "system-image/HarmonyOS-7.0.0/phone_all_x86",
+        "logicalBytes": 4836496841,
+        "fileCount": 15
+      },
+      "verification": {
+        "zstdIntegrity": "passed",
+        "memberCount": 17,
+        "pathTypeSizeAndContentSha256": "exact"
+      }
+    }
+  ],
+  "installLayout": {
+    "toolsRoot": "command-line-tools",
+    "imageRoot": "images/system-image/HarmonyOS-7.0.0/phone_all_x86",
+    "emulatorEntrypoint": "command-line-tools/bin/Emulator",
+    "hdcEntrypoint": "command-line-tools/sdk/default/openharmony/toolchains/hdc"
+  },
+  "capabilities": {
+    "emulatorVersion": "26.0.0.400",
+    "systemVersion": "HarmonyOS 7.0.0(26.0.0)",
+    "imageVersion": "7.0.0.107",
+    "imageAbi": "x86",
+    "acceleration": "KVM",
+    "validatedOperations": [
+      "boot-to-lockscreen",
+      "emulator-control",
+      "screenshot",
+      "multi-instance",
+      "hdc-connect",
+      "hap-install",
+      "bundle-query",
+      "ability-launch",
+      "process-check",
+      "smartperf-proxy-profile"
+    ]
+  },
+  "limitations": [
+    "Linux x86_64 and accessible KVM are required.",
+    "The image is x86; applications containing only ARM native libraries are not supported unless a separately qualified translation layer is present.",
+    "The run-case path qualifies HDC install, launch, process, screenshot, and SmartPerf proxy evidence; it does not yet execute an arbitrary UI action script or hidden application-specific Oracle.",
+    "Absolute power and thermal measurements are unavailable on the emulator and require a separately qualified physical-device lane.",
+    "GUI and host graphics dependencies remain host-specific.",
+    "Vendor agreement acceptance is operator-owned and is never inferred or recorded by AgentLab."
+  ],
+  "validatedHost": {
+    "name": "hwlinux",
+    "cpu": "Intel Core i7-8700",
+    "memoryGiB": 32,
+    "recommendedInstances": 2,
+    "throughputInstances": 3,
+    "notRecommendedSteadyStateInstances": 4
+  }
+}
