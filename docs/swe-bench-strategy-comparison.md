@@ -232,6 +232,11 @@ rejects extra files, symlinks, digest drift and byte-identical cross-bundle
 content. This closes the structural hidden-Oracle packaging gap. It does not
 perform semantic-leak or contamination review and therefore marks every v1 cut
 ineligible for unseen-Agent discrimination until later independent gates close.
+The reviewed multi-repository workflow now produces that cut, stages only its
+participant projection, and binds the exact participant manifest into every
+stage request and attempt decision. Current host-process execution still reports
+`filesystemIsolationQualified=false`; interface non-disclosure is not treated
+as proof that the participant cannot traverse unrelated host paths.
 
 No aggregate difficulty score may compensate for a failed qualification
 dimension. In particular, high participant separation cannot promote an

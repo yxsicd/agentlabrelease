@@ -274,6 +274,31 @@ The JSON shape is published at
 guardrails and freshness/contamination review remain explicit pending gates;
 static calibration cannot silently qualify them.
 
+Before operational assessment, project the frozen case into separate blind
+participant/evaluator roots, then stage only the participant root:
+
+```sh
+python3 scripts/prepare-multi-repo-blind-cut.py \
+  --case /tmp/multi-repo-evaluation-case.json \
+  --oracle examples/multi-repo-case/oracle.mjs \
+  --reference-root examples/multi-repo-case/reference \
+  --calibration /tmp/multi-repo-calibration/summary.json \
+  --review /tmp/case-plan-review.json \
+  --method-revision <release-commit> \
+  --constructed-at <utc-rfc3339> \
+  --output /tmp/multi-repo-blind-cut
+
+python3 scripts/build-blind-case-cut.py stage-participant \
+  --cut /tmp/multi-repo-blind-cut \
+  --output /tmp/multi-repo-participant-input \
+  --receipt /tmp/multi-repo-dispatch-receipt.json
+```
+
+The participant projection contains stage IDs and demands but no check IDs,
+Oracle path, reference source, calibration or review bytes.
+The Pi adapter revalidates the participant task digest and rejects any stage
+demand or allowed-edit surface that differs from that staged projection.
+
 For v2 plans the freezer independently rereads both evidence files, verifies
 their digests and confirms every calibrated plan field is identical to the
 reviewed proposal. Legacy v1 plans remain accepted without claiming this
@@ -293,6 +318,8 @@ python3 scripts/run-multi-repo-assessment.py \
   --manifest /tmp/multi-repo-manifest.json \
   --oracle examples/multi-repo-case/oracle.mjs \
   --participant examples/multi-repo-case/pi-assessed-agent.py \
+  --blind-participant-root /tmp/multi-repo-participant-input \
+  --blind-dispatch-receipt /tmp/multi-repo-dispatch-receipt.json \
   --participant-id pi-glm-5.3-flash \
   --output /tmp/multi-repo-attempt
 ```
@@ -311,7 +338,9 @@ fixtures for deterministic Harness regression only. Their separation score is
 not evidence about a real model. The current local-process adapter also relies
 on participant cooperation not to traverse outside the supplied workspace;
 formal production isolation requires the released sandbox/SessionFS execution
-boundary.
+boundary. The runner therefore records the manifest-bound interface input but
+keeps `filesystemIsolationQualified=false` and `blindAssessmentQualified=false`
+for its current host-process mode.
 
 Copy the frozen case into campaign evidence as
 `multi-repo-evaluation-case.json` and its exact calibration summary as

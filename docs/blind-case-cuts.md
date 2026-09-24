@@ -47,6 +47,15 @@ python3 scripts/build-blind-case-cut.py build \
 
 python3 scripts/build-blind-case-cut.py validate \
   --cut /private/cuts/case-001
+
+python3 scripts/build-blind-case-cut.py stage-participant \
+  --cut /private/cuts/case-001 \
+  --output /isolated-dispatch/case-001 \
+  --receipt /operator-evidence/case-001-dispatch.json
+
+python3 scripts/build-blind-case-cut.py validate-dispatch \
+  --participant-root /isolated-dispatch/case-001 \
+  --receipt /operator-evidence/case-001-dispatch.json
 ```
 
 The result has three siblings:
@@ -63,6 +72,14 @@ must mount only `participant/`; it retains `evaluator/` and `cut-receipt.json`
 outside the participant filesystem. The evaluator manifest binds the exact
 participant manifest digest, and the outer receipt binds both sides without
 placing evaluator inventory or paths in the participant manifest.
+
+`stage-participant` makes a second immutable projection containing only the
+participant manifest and its bound files. Its dispatch receipt must remain
+outside that root. The receipt fixes the intended read-only mount target at
+`/agentlab/case`, but deliberately reports `filesystemIsolationQualified=false`:
+copying and interface binding do not prove that a host process cannot traverse
+other host paths. A later container, bwrap or SessionFS executor must supply
+that independent runtime postcondition.
 
 ## Evidence boundary
 

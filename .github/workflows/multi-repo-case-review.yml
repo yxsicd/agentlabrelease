@@ -99,6 +99,21 @@ jobs:
             --calibration "$AGENTLAB_ROOT/calibration/summary.json" \
             | tee "$AGENTLAB_ROOT/case-qualification-validation.json"
           sha256sum "$AGENTLAB_ROOT/evaluation-case.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Split participant input from evaluator authority
+        run: |
+          python3 scripts/prepare-multi-repo-blind-cut.py \
+            --case "$AGENTLAB_ROOT/evaluation-case.json" \
+            --oracle "$AGENTLAB_ROOT/source/operator-fixture/oracle.mjs" \
+            --reference-root "$AGENTLAB_ROOT/source/operator-fixture/reference" \
+            --calibration "$AGENTLAB_ROOT/calibration/summary.json" \
+            --review "$AGENTLAB_ROOT/case-plan-review.json" \
+            --method-revision "$GITHUB_SHA" \
+            --constructed-at "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            --source-visibility held-out-public-revision \
+            --output "$AGENTLAB_ROOT/blind-cut"
+          python3 scripts/build-blind-case-cut.py validate \
+            --cut "$AGENTLAB_ROOT/blind-cut"
+          sha256sum "$AGENTLAB_ROOT/blind-cut/cut-receipt.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve exact review, calibration and frozen case lineage
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

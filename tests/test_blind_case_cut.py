@@ -137,6 +137,31 @@ class BlindCaseCutTests(unittest.TestCase):
             with self.assertRaisesRegex(MODULE.BlindCutError, "evaluator or unsupported"):
                 MODULE.validate_cut(output)
 
+    def test_stages_participant_without_evaluator_or_operator_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cut = root / "cut"
+            dispatch = root / "dispatch-input"
+            receipt_path = root / "operator/dispatch-receipt.json"
+            MODULE.build_cut(source_fixture(root), cut)
+            receipt = MODULE.stage_participant(cut, dispatch, receipt_path)
+            self.assertEqual(MODULE.validate_dispatch(dispatch, receipt_path), receipt)
+            self.assertFalse(receipt["boundary"]["filesystemIsolationQualified"])
+            self.assertNotIn("oracle.ui", "\n".join(path.name for path in dispatch.rglob("*")))
+            self.assertFalse((dispatch / "dispatch-receipt.json").exists())
+
+    def test_dispatch_rejects_extra_participant_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cut = root / "cut"
+            dispatch = root / "dispatch-input"
+            receipt_path = root / "dispatch-receipt.json"
+            MODULE.build_cut(source_fixture(root), cut)
+            MODULE.stage_participant(cut, dispatch, receipt_path)
+            (dispatch / "extra.txt").write_text("unbound")
+            with self.assertRaisesRegex(MODULE.BlindCutError, "unbound files"):
+                MODULE.validate_dispatch(dispatch, receipt_path)
+
 
 if __name__ == "__main__":
     unittest.main()

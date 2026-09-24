@@ -17,6 +17,7 @@ SOURCE_SCHEMA = "agentlab.blind_case_source.v1"
 PARTICIPANT_SCHEMA = "agentlab.blind_case_participant_bundle.v1"
 EVALUATOR_SCHEMA = "agentlab.blind_case_evaluator_bundle.v1"
 RECEIPT_SCHEMA = "agentlab.blind_case_cut_receipt.v1"
+DISPATCH_SCHEMA = "agentlab.blind_participant_dispatch.v1"
 SHA256 = re.compile(r"[0-9a-f]{64}")
 REVISION = re.compile(r"[0-9a-f]{40}")
 TOKEN = re.compile(r"[A-Za-z0-9_.:-]+")
@@ -270,6 +271,76 @@ def validate_cut(output_root: Path) -> dict[str, Any]:
     return receipt
 
 
+def stage_participant(cut_root: Path, output_root: Path, receipt_path: Path) -> dict[str, Any]:
+    require(not output_root.exists(), f"refusing to overwrite existing dispatch: {output_root}")
+    require(not receipt_path.exists(), f"refusing to overwrite existing dispatch receipt: {receipt_path}")
+    require(output_root != receipt_path and output_root not in receipt_path.parents, "dispatch receipt must remain outside participant root")
+    cut = validate_cut(cut_root)
+    temporary = output_root.parent / f".{output_root.name}.tmp-{os.getpid()}"
+    require(not temporary.exists(), f"temporary dispatch already exists: {temporary}")
+    try:
+        shutil.copytree(cut_root / "participant", temporary, symlinks=False)
+        temporary.replace(output_root)
+        dispatch = {
+            "schema": DISPATCH_SCHEMA,
+            "cutId": cut["cutId"],
+            "caseId": cut["caseId"],
+            "methodRevision": cut["methodRevision"],
+            "sourceSetSha256": cut["sourceSetSha256"],
+            "sourceCutReceiptSha256": digest_file(cut_root / "cut-receipt.json"),
+            "participantManifestSha256": digest_file(output_root / "manifest.json"),
+            "participantInventorySha256": cut["participantBundle"]["inventorySha256"],
+            "participantFileCount": cut["participantBundle"]["fileCount"],
+            "mount": {"source": str(output_root.resolve()), "target": "/agentlab/case", "readOnly": True},
+            "boundary": {
+                "evaluatorPathDisclosedToParticipant": False,
+                "operatorReceiptOutsideParticipantRoot": True,
+                "filesystemIsolationRequired": True,
+                "filesystemIsolationQualified": False,
+            },
+            "automaticPromotion": False,
+        }
+        receipt_path.parent.mkdir(parents=True, exist_ok=True)
+        write_json(receipt_path, dispatch)
+    except Exception:
+        if temporary.exists():
+            shutil.rmtree(temporary)
+        if output_root.exists():
+            shutil.rmtree(output_root)
+        if receipt_path.exists():
+            receipt_path.unlink()
+        raise
+    validate_dispatch(output_root, receipt_path)
+    return dispatch
+
+
+def validate_dispatch(participant_root: Path, receipt_path: Path) -> dict[str, Any]:
+    require(participant_root.is_dir() and not participant_root.is_symlink(), "participant dispatch root is unsafe")
+    require(receipt_path.is_file() and not receipt_path.is_symlink(), "dispatch receipt is unsafe")
+    require(participant_root not in receipt_path.resolve().parents, "dispatch receipt must not be participant-visible")
+    receipt = load(receipt_path, "dispatch receipt")
+    manifest = load(participant_root / "manifest.json", "participant dispatch manifest")
+    require(receipt.get("schema") == DISPATCH_SCHEMA, "unsupported dispatch schema")
+    require(manifest.get("schema") == PARTICIPANT_SCHEMA, "unsupported dispatch participant schema")
+    require(set(manifest) == {"schema", "cutId", "caseId", "methodRevision", "sourceSetSha256", "files", "constraints"}, "dispatch participant manifest contains unsupported fields")
+    require(all(receipt.get(key) == manifest.get(key) for key in ("cutId", "caseId", "methodRevision", "sourceSetSha256")), "dispatch identity differs")
+    rows = validate_built_inventory(participant_root, manifest, PARTICIPANT_ROLES, "dispatch participant")
+    require(receipt.get("participantManifestSha256") == digest_file(participant_root / "manifest.json"), "dispatch participant manifest digest differs")
+    require(receipt.get("participantInventorySha256") == inventory_digest(rows), "dispatch participant inventory differs")
+    require(receipt.get("participantFileCount") == len(rows), "dispatch participant file count differs")
+    mount = receipt.get("mount") or {}
+    require(mount == {"source": str(participant_root.resolve()), "target": "/agentlab/case", "readOnly": True}, "dispatch mount contract differs")
+    boundary = receipt.get("boundary") or {}
+    require(boundary == {
+        "evaluatorPathDisclosedToParticipant": False,
+        "operatorReceiptOutsideParticipantRoot": True,
+        "filesystemIsolationRequired": True,
+        "filesystemIsolationQualified": False,
+    }, "dispatch boundary differs")
+    require(receipt.get("automaticPromotion") is False, "dispatch cannot auto-promote")
+    return receipt
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
@@ -278,9 +349,23 @@ def main() -> int:
     build.add_argument("--output", type=Path, required=True)
     validate = sub.add_parser("validate")
     validate.add_argument("--cut", type=Path, required=True)
+    stage = sub.add_parser("stage-participant")
+    stage.add_argument("--cut", type=Path, required=True)
+    stage.add_argument("--output", type=Path, required=True)
+    stage.add_argument("--receipt", type=Path, required=True)
+    validate_dispatch_parser = sub.add_parser("validate-dispatch")
+    validate_dispatch_parser.add_argument("--participant-root", type=Path, required=True)
+    validate_dispatch_parser.add_argument("--receipt", type=Path, required=True)
     args = parser.parse_args()
     try:
-        value = build_cut(args.source.resolve(), args.output.resolve()) if args.command == "build" else validate_cut(args.cut.resolve())
+        if args.command == "build":
+            value = build_cut(args.source.absolute(), args.output.absolute())
+        elif args.command == "validate":
+            value = validate_cut(args.cut.absolute())
+        elif args.command == "stage-participant":
+            value = stage_participant(args.cut.absolute(), args.output.absolute(), args.receipt.absolute())
+        else:
+            value = validate_dispatch(args.participant_root.absolute(), args.receipt.absolute())
     except (BlindCutError, OSError) as error:
         print(f"blind case cut invalid: {error}", file=sys.stderr)
         return 1

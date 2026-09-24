@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -43,6 +44,15 @@ def digest(path: Path):
 def write_json(path: Path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+
+
+def validate_blind_dispatch(participant_root: Path, receipt_path: Path):
+    module_path = Path(__file__).with_name("build-blind-case-cut.py")
+    spec = importlib.util.spec_from_file_location("agentlab_blind_case_cut", module_path)
+    require(spec is not None and spec.loader is not None, "blind dispatch validator is unavailable")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.validate_dispatch(participant_root.absolute(), receipt_path.absolute())
 
 
 def git(root: Path, *arguments: str, text=False):
@@ -102,7 +112,7 @@ def tree_digest(state):
 
 
 class ParticipantProtocol:
-    def __init__(self, participant: Path, workspace: Path, evidence: Path):
+    def __init__(self, participant: Path, workspace: Path, evidence: Path, case_input: Path | None = None):
         environment = {
             key: os.environ[key]
             for key in (
@@ -120,6 +130,8 @@ class ParticipantProtocol:
             if key in os.environ
         }
         environment["AGENTLAB_ASSESSMENT_EVIDENCE"] = str(evidence)
+        if case_input is not None:
+            environment["AGENTLAB_CASE_INPUT_ROOT"] = str(case_input)
         self.stderr = (evidence / "participant-stderr.log").open("wb")
         self.process = subprocess.Popen(
             [sys.executable, str(participant.resolve()), "--protocol"],
@@ -174,6 +186,8 @@ def main():
     parser.add_argument("--oracle", type=Path, required=True)
     parser.add_argument("--participant", type=Path, required=True)
     parser.add_argument("--participant-id", required=True)
+    parser.add_argument("--blind-participant-root", type=Path)
+    parser.add_argument("--blind-dispatch-receipt", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -190,6 +204,19 @@ def main():
     require(oracle.is_file() and digest(oracle) == (case.get("oracle") or {}).get("sha256"), "Oracle digest mismatch")
     participant = args.participant.resolve()
     require(participant.is_file(), "participant adapter is absent")
+    require(
+        (args.blind_participant_root is None) == (args.blind_dispatch_receipt is None),
+        "blind participant root and dispatch receipt must be supplied together",
+    )
+    blind_dispatch = None
+    blind_participant_root = None
+    if args.blind_participant_root is not None:
+        blind_participant_root = args.blind_participant_root.absolute()
+        blind_dispatch = validate_blind_dispatch(
+            blind_participant_root, args.blind_dispatch_receipt.absolute()
+        )
+        require(blind_dispatch.get("caseId") == case.get("id"), "blind dispatch case identity differs")
+        require(blind_dispatch.get("sourceSetSha256") == source_set, "blind dispatch source set differs")
 
     case_sources = {row["id"]: row for row in case.get("sources", [])}
     manifest_sources = {row["id"]: row for row in manifest.get("repositories", [])}
@@ -225,7 +252,7 @@ def main():
 
     initial_state = tree_state(workspace)
     write_json(args.output / "initial-source-state.json", initial_state)
-    protocol = ParticipantProtocol(participant, workspace, evidence)
+    protocol = ParticipantProtocol(participant, workspace, evidence, blind_participant_root)
     stage_results = []
     infrastructure_errors = []
     cumulative_checks = []
@@ -254,6 +281,11 @@ def main():
                     "allowedEdits": sorted(allowed),
                     "priorStageCount": len(stage_results),
                     "oracleVisibleToParticipant": False,
+                    "blindParticipantManifestSha256": (
+                        blind_dispatch.get("participantManifestSha256")
+                        if blind_dispatch is not None
+                        else None
+                    ),
                 },
             )
             before = tree_state(workspace)
@@ -363,6 +395,18 @@ def main():
         "startedAt": started_at,
         "endedAt": ended_at,
         "durationMs": duration_ms,
+        "blindDispatch": {
+            "provided": blind_dispatch is not None,
+            "interfaceInputQualified": blind_dispatch is not None,
+            "participantManifestSha256": (
+                blind_dispatch.get("participantManifestSha256")
+                if blind_dispatch is not None
+                else None
+            ),
+            "filesystemIsolationRequired": blind_dispatch is not None,
+            "filesystemIsolationQualified": False,
+            "blindAssessmentQualified": False,
+        },
         "assessmentBoundary": "Exact committed source materialized without Git metadata and evaluated by the frozen VM-module Oracle; no Harmony build, UI, emulator or performance claim.",
     }
     decision = {
@@ -375,6 +419,7 @@ def main():
         "subjectTaskSucceeded": succeeded,
         "phaseVerdicts": stage_results,
         "launchErrors": infrastructure_errors,
+        "blindDispatch": summary["blindDispatch"],
         "automaticPromotion": False,
         "harnessPolicy": "Participant edits are evidence; only the operator-owned frozen Oracle and scope gate decide the attempt verdict.",
     }

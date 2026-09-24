@@ -67,6 +67,11 @@ class MultiRepoModelConstructionTest(unittest.TestCase):
         self.assertIn("scripts/prepare-harmony-assessed-handoff.py", campaign)
         self.assertIn("harmony-device-handoff.json", campaign)
         self.assertIn("validate-case-qualification.py", review)
+        self.assertIn("scripts/prepare-multi-repo-blind-cut.py", review)
+        self.assertIn('scripts/build-blind-case-cut.py validate', review)
+        self.assertIn('scripts/build-blind-case-cut.py stage-participant', campaign)
+        self.assertIn('--blind-participant-root "$RUNNER_TEMP/agentlab-blind-participant"', campaign)
+        self.assertIn('--blind-dispatch-receipt "$AGENTLAB_ROOT/blind-dispatch-receipt.json"', campaign)
 
     def test_fixture_script_is_release_manifested(self):
         expected = hashlib.sha256(

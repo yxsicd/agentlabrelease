@@ -67,6 +67,17 @@ jobs:
           python3 scripts/prepare-multi-repo-construction-fixture.py \
             --source "$AGENTLAB_ROOT/case/source/input/repositories" \
             --output "$AGENTLAB_ROOT/input"
+      - name: Stage only the participant-visible blind input
+        run: |
+          python3 scripts/build-blind-case-cut.py validate \
+            --cut "$AGENTLAB_ROOT/case/blind-cut"
+          python3 scripts/build-blind-case-cut.py stage-participant \
+            --cut "$AGENTLAB_ROOT/case/blind-cut" \
+            --output "$RUNNER_TEMP/agentlab-blind-participant" \
+            --receipt "$AGENTLAB_ROOT/blind-dispatch-receipt.json"
+          python3 scripts/build-blind-case-cut.py validate-dispatch \
+            --participant-root "$RUNNER_TEMP/agentlab-blind-participant" \
+            --receipt "$AGENTLAB_ROOT/blind-dispatch-receipt.json"
       - name: Install a separately contained Pi runtime
         run: |
           mkdir -p "$RUNNER_TEMP/pi-runtime"
@@ -94,6 +105,8 @@ jobs:
                 --manifest "$AGENTLAB_ROOT/input/manifest.json" \
                 --oracle "$AGENTLAB_ROOT/case/source/operator-fixture/oracle.mjs" \
                 --participant examples/multi-repo-case/pi-assessed-agent.py \
+                --blind-participant-root "$RUNNER_TEMP/agentlab-blind-participant" \
+                --blind-dispatch-receipt "$AGENTLAB_ROOT/blind-dispatch-receipt.json" \
                 --participant-id "pi-${model}" --output "$output"
               status=$?
               set -e
