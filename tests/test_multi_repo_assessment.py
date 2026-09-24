@@ -107,6 +107,7 @@ class MultiRepoAssessmentTests(unittest.TestCase):
             env=environment,
             text=True,
             capture_output=True,
+            preexec_fn=(lambda: os.umask(0o002)) if os.name == "posix" else None,
         )
         self.assertEqual(completed.returncode, 0, completed.stderr)
         return output, json.loads((output / "summary.json").read_text())
@@ -126,6 +127,16 @@ class MultiRepoAssessmentTests(unittest.TestCase):
             self.assertEqual(len(reference_summary["stages"]), 2)
             self.assertTrue(
                 all(row["scopeValid"] for row in reference_summary["stages"])
+            )
+            final_state = json.loads(
+                (reference / "final-source-state.json").read_text()
+            )
+            self.assertTrue(final_state)
+            self.assertTrue(
+                all(
+                    row["unixMode"] in {0o644, 0o755}
+                    for row in final_state.values()
+                )
             )
 
             calibration = root / "calibration"

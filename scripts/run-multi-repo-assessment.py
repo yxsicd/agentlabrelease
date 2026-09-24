@@ -61,15 +61,28 @@ def safe_source_path(value: str):
 
 
 def materialize_repository(root: Path, revision: str, target: Path):
-    raw = git(root, "ls-tree", "-rz", "--name-only", revision)
-    paths = [item.decode("utf-8") for item in raw.split(b"\0") if item]
-    require(paths, "pinned repository has no files")
-    for value in paths:
+    raw = git(root, "ls-tree", "-rz", revision)
+    entries = [item for item in raw.split(b"\0") if item]
+    require(entries, "pinned repository has no files")
+    for entry in entries:
+        metadata, separator, encoded_path = entry.partition(b"\t")
+        fields = metadata.split()
+        require(separator and len(fields) == 3, "malformed Git tree entry")
+        mode, object_type, _object_id = fields
+        require(
+            object_type == b"blob", "pinned repository contains a non-blob entry"
+        )
+        require(
+            mode in {b"100644", b"100755"},
+            "pinned repository contains an unsupported file mode",
+        )
+        value = encoded_path.decode("utf-8")
         relative = safe_source_path(value)
         body = git(root, "show", f"{revision}:{value}")
         destination = target.joinpath(*relative.parts)
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(body)
+        destination.chmod(0o755 if mode == b"100755" else 0o644)
 
 
 def tree_state(root: Path):
