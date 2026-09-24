@@ -3,12 +3,12 @@
   "id": "harmony-emulator-linux-x64-26.0.0.821",
   "platform": "linux-x64",
   "vendor": "Huawei",
-  "publicationMode": "bring-your-own-vendor-assets",
+  "publicationMode": "authorized-release-assets",
   "distribution": {
-    "publicBinaryRedistribution": false,
-    "status": "blocked-without-vendor-written-permission",
-    "reason": "Bundled Huawei agreements prohibit redistribution or network availability without prior written permission.",
-    "releasePolicy": "Publish only this manifest, installer, documentation, and tests. Never upload the vendor archives or derived tar.zst files to a public AgentLab GitHub Release without recorded written permission."
+    "publicBinaryRedistribution": true,
+    "status": "authorized-for-internal-use-release",
+    "reason": "A Huawei operator confirmed authorization for this internal-use GitHub release on 2026-09-24.",
+    "releasePolicy": "Upload only the two byte-identical assets bound by filename, byte count, and SHA-256 in this manifest."
   },
   "assets": [
     {

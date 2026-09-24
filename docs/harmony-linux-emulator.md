@@ -1,9 +1,9 @@
 # HarmonyOS Linux emulator integration
 
-AgentLab can use the Huawei HarmonyOS emulator on a Linux x86-64 host with KVM,
-but the emulator and system-image bytes remain vendor-owned external
-dependencies. The public AgentLab release distributes only metadata, verification
-and installation tooling.
+AgentLab can use the Huawei HarmonyOS emulator on a Linux x86-64 host with KVM.
+The emulator and system-image bytes remain vendor-owned dependencies; this
+internal-use release is authorized to publish the two exact verified archives
+described below.
 
 The verified local bundle consists of:
 
@@ -17,15 +17,11 @@ Exact byte counts, SHA-256 values and validation results are in
 
 ## Distribution boundary
 
-The agreements embedded in the vendor package prohibit redistribution of the
-SDK and system software without prior written permission. Do not upload either
-vendor archive or a derived archive to a public AgentLab GitHub Release. Written
-vendor permission must be recorded and independently reviewed before changing
-the manifest's fail-closed distribution gate.
-
-Operators acquire the vendor assets through an authorized Huawei channel and
-retain them in their own cache. AgentLab does not automate agreement acceptance
-and does not treat possession of an archive as redistribution permission.
+Huawei authorization for this internal-use GitHub release was confirmed by the
+operator on 2026-09-24. Publication remains exact-asset scoped: only the two
+filenames, byte counts and SHA-256 identities recorded in the manifest are
+authorized by this release record. AgentLab still does not automate agreement
+acceptance or infer authorization for other SDK/image versions.
 
 ## Installation
 

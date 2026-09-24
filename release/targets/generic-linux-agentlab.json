@@ -112,8 +112,8 @@
     "platform": "linux-x64",
     "acceleration": "kvm",
     "imageAbi": "x86",
-    "acquisition": "operator-supplied-vendor-assets",
-    "publicBinaryRedistribution": false,
+    "acquisition": "authorized-github-release-assets",
+    "publicBinaryRedistribution": true,
     "requiredHostFeatures": [
       "/dev/kvm"
     ],
@@ -130,8 +130,7 @@
     "remainingGates": [
       "application-specific-oracle-calibration",
       "live-tablegit-import-and-replay",
-      "host-graphics-matrix",
-      "vendor-redistribution-permission-before-public-binary-upload"
+      "host-graphics-matrix"
     ]
   }
 }

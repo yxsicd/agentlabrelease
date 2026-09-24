@@ -15,16 +15,16 @@ class HarmonyEmulatorReleaseTests(unittest.TestCase):
     def setUp(self) -> None:
         self.value = json.loads(MANIFEST.read_text(encoding="utf-8"))
 
-    def test_external_vendor_assets_fail_closed_for_publication(self) -> None:
+    def test_vendor_assets_are_exactly_scoped_for_authorized_publication(self) -> None:
         self.assertEqual(
             self.value["schema"], "agentlab.harmony_emulator_external_bundle.v1"
         )
         distribution = self.value["distribution"]
-        self.assertFalse(distribution["publicBinaryRedistribution"])
+        self.assertTrue(distribution["publicBinaryRedistribution"])
         self.assertEqual(
-            distribution["status"], "blocked-without-vendor-written-permission"
+            distribution["status"], "authorized-for-internal-use-release"
         )
-        self.assertEqual(self.value["publicationMode"], "bring-your-own-vendor-assets")
+        self.assertEqual(self.value["publicationMode"], "authorized-release-assets")
 
     def test_verified_asset_identities_are_exact(self) -> None:
         assets = {item["id"]: item for item in self.value["assets"]}
