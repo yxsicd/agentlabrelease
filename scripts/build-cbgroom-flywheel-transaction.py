@@ -128,6 +128,8 @@ def main():
         ("assessment-feedback-candidates.json", "assessment-feedback-candidates"),
         ("smartperf-baseline-summary.json", "smartperf-baseline-summary"),
         ("smartperf-candidate-summary.json", "smartperf-candidate-summary"),
+        ("harmony-baseline-result.json", "harmony-functional-result"),
+        ("harmony-candidate-result.json", "harmony-functional-result"),
         ("smartperf-comparison.json", "smartperf-comparison"),
         ("environment-fingerprint.json", "environment-fingerprint"),
     ):
@@ -555,7 +557,11 @@ def main():
 
     performance = load(evidence / "smartperf-comparison.json") or {}
     if performance:
-        if performance.get("schema") != "agentlab.smartperf_comparison.v1":
+        performance_schema = performance.get("schema")
+        if performance_schema not in {
+            "agentlab.smartperf_comparison.v1",
+            "agentlab.smartperf_comparison.v2",
+        }:
             raise SystemExit("unsupported SmartPerf comparison schema")
         policy = performance.get("policy") or {}
         if policy.get("automaticPromotion") is not False:
@@ -599,6 +605,81 @@ def main():
                 raise SystemExit(f"{label} SmartPerf summary source differs from comparison")
             if canonical_json_sha256(profile) != performance.get(f"{label}SummarySha256"):
                 raise SystemExit(f"{label} SmartPerf summary digest differs from comparison")
+        functional_evidence_ids = []
+        if performance_schema == "agentlab.smartperf_comparison.v2":
+            functional_gate = performance.get("functionalGate")
+            if not isinstance(functional_gate, dict):
+                raise SystemExit("SmartPerf v2 comparison requires functionalGate")
+            gate_passes = []
+            gate_failure_reasons = []
+            scenario_identities = []
+            for label, profile in (
+                ("baseline", baseline_summary),
+                ("candidate", candidate_summary),
+            ):
+                result_path = evidence / f"harmony-{label}-result.json"
+                result = load(result_path)
+                gate = functional_gate.get(label)
+                if not isinstance(result, dict) or result.get("schema") != "agentlab.harmony_emulator_case_result.v2":
+                    raise SystemExit(f"SmartPerf v2 comparison requires retained {label} functional result")
+                if not isinstance(gate, dict) or gate.get("resultSha256") != canonical_json_sha256(result):
+                    raise SystemExit(f"{label} functional result digest differs from comparison")
+                if result.get("taskId") != task_id or gate.get("sourceIdentity") != profile.get("sourceIdentity"):
+                    raise SystemExit(f"{label} functional result identity differs from SmartPerf summary")
+                hap_digest = str(profile.get("sourceIdentity", "")).removeprefix("artifact-sha256:")
+                if result.get("sourceIdentity") != profile.get("sourceIdentity") or result.get("hapSha256") != hap_digest:
+                    raise SystemExit(f"{label} functional result HAP differs from SmartPerf summary")
+                if result.get("powerThermalAuthority") != "unavailable_on_emulator":
+                    raise SystemExit(f"{label} functional result overclaims power or thermal authority")
+                scenario_id = result.get("scenarioId")
+                scenario_sha256 = result.get("scenarioSha256")
+                if not isinstance(scenario_id, str) or not scenario_id or not isinstance(scenario_sha256, str) or not SHA256.fullmatch(scenario_sha256):
+                    raise SystemExit(f"{label} functional result requires exact scenario identity")
+                if result.get("profileRunId") != profile.get("runId") or result.get("environmentIdentity") != profile.get("environmentIdentity"):
+                    raise SystemExit(f"{label} functional result profile identity differs from SmartPerf summary")
+                if result.get("profileStatus") != "collected" or result.get("profileSummaryStatus") != "normalized":
+                    raise SystemExit(f"{label} functional result does not bind a normalized SmartPerf profile")
+                assessed = (
+                    result.get("assessmentStatus") == "assessed"
+                    and result.get("infrastructureAvailable") is True
+                    and isinstance(result.get("subjectTaskSucceeded"), bool)
+                )
+                passed = (
+                    assessed
+                    and result.get("subjectTaskSucceeded") is True
+                    and result.get("status") == "passed"
+                    and result.get("oracleStatus") == "passed"
+                    and result.get("failureClass") == "none"
+                )
+                if (
+                    gate.get("assessmentStatus") != result.get("assessmentStatus")
+                    or gate.get("infrastructureAvailable") is not result.get("infrastructureAvailable")
+                    or gate.get("subjectTaskSucceeded") is not result.get("subjectTaskSucceeded")
+                    or gate.get("oracleStatus") != result.get("oracleStatus")
+                    or gate.get("scenarioId") != scenario_id
+                    or gate.get("scenarioSha256") != scenario_sha256
+                    or gate.get("profileRunId") != result.get("profileRunId")
+                    or gate.get("environmentIdentity") != result.get("environmentIdentity")
+                    or gate.get("passed") is not passed
+                ):
+                    raise SystemExit(f"{label} functional gate contradicts retained result")
+                gate_passes.append(passed)
+                scenario_identities.append((scenario_id, scenario_sha256))
+                if not assessed:
+                    gate_failure_reasons.append(f"{label}-functional-evidence-unassessed")
+                elif not passed:
+                    gate_failure_reasons.append(f"{label}-functional-gate-failed")
+                functional_evidence_ids.append(f"evidence-{args.run_id}-harmony-{label}-result")
+            if functional_gate.get("passed") is not all(gate_passes):
+                raise SystemExit("SmartPerf aggregate functional gate is inconsistent")
+            if scenario_identities[0] != scenario_identities[1]:
+                if comparable is not False or "functional-scenario-mismatch" not in (performance.get("incomparabilityReasons") or []):
+                    raise SystemExit("SmartPerf comparison does not reject functional scenario mismatch")
+            if not all(gate_passes):
+                if comparable is not False:
+                    raise SystemExit("SmartPerf comparison cannot be comparable when a functional gate failed")
+                if not set(gate_failure_reasons).issubset(set(performance.get("incomparabilityReasons") or [])):
+                    raise SystemExit("SmartPerf comparison omits functional gate failure reason")
         source_revision = summary.get("sourceRevision")
         if not isinstance(source_revision, str) or not REVISION.fullmatch(source_revision):
             raise SystemExit("SmartPerf feedback requires exact run sourceRevision")
@@ -648,12 +729,49 @@ def main():
             "evidenceIds": [
                 f"evidence-{args.run_id}-smartperf-baseline-summary",
                 f"evidence-{args.run_id}-smartperf-candidate-summary",
+                *functional_evidence_ids,
                 f"evidence-{args.run_id}-smartperf-comparison",
             ],
             "automaticPromotion": False,
             "absolutePowerThermalUsed": False,
             "nextAction": "maintainer-review-performance-feedback",
         })
+        if (
+            performance_schema == "agentlab.smartperf_comparison.v2"
+            and decision == "performance-regression-candidate"
+            and (performance.get("functionalGate") or {}).get("passed") is True
+        ):
+            insert("difficulty_points", {
+                "id": f"difficulty-{args.run_id}-performance-{suffix}",
+                "schema": "agentlab.difficulty_point.v1",
+                "taskId": task_id,
+                "dimensionId": "functionally-correct-performance-regression",
+                "primaryDimension": "performance-feedback",
+                "mechanism": "functionally passing Harmony HAP regressed one or more relative emulator guardrails",
+                "status": "candidate",
+                "maturityState": "candidate",
+                "sourceRevision": source_revision,
+                "baselineSourceIdentity": performance.get("baselineSourceIdentity"),
+                "candidateSourceIdentity": performance.get("candidateSourceIdentity"),
+                "environmentIdentity": performance.get("environmentIdentity"),
+                "metrics": metrics,
+                "verificationContract": {
+                    "caseReady": False,
+                    "required": [
+                        "maintainer-adjudication",
+                        "repeatable-emulator-regression",
+                        "independent-functional-and-performance-calibration",
+                    ],
+                },
+                "evidenceIds": [
+                    f"evidence-{args.run_id}-smartperf-baseline-summary",
+                    f"evidence-{args.run_id}-smartperf-candidate-summary",
+                    *functional_evidence_ids,
+                    f"evidence-{args.run_id}-smartperf-comparison",
+                ],
+                "automaticPromotion": False,
+                "absolutePowerThermalUsed": False,
+            })
 
     tables = [{"path": path, "operations": operations} for path, operations in groups.items() if operations]
     if not tables:

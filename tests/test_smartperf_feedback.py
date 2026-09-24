@@ -64,6 +64,28 @@ def summary(
     )
 
 
+def functional_result(source: str, run_id: str, passed: bool = True):
+    return {
+        "schema": "agentlab.harmony_emulator_case_result.v2",
+        "status": "passed" if passed else "failed",
+        "taskId": "case-ui-performance",
+        "sourceIdentity": source,
+        "hapSha256": source.removeprefix("artifact-sha256:"),
+        "scenarioId": "bounded-ui-case",
+        "scenarioSha256": "c" * 64,
+        "oracleStatus": "passed" if passed else "failed",
+        "assessmentStatus": "assessed",
+        "infrastructureAvailable": True,
+        "subjectTaskSucceeded": passed,
+        "failureClass": "none" if passed else "oracle",
+        "profileRunId": run_id,
+        "environmentIdentity": "hwlinux:emulator-26.0.0.400:instance-class-a",
+        "profileStatus": "collected",
+        "profileSummaryStatus": "normalized",
+        "powerThermalAuthority": "unavailable_on_emulator",
+    }
+
+
 class SmartPerfFeedbackTests(unittest.TestCase):
     def test_official_order_format_is_normalized_without_power_claim(self) -> None:
         value = summary(raw_profile(60, 10, 100000, 16.0), "artifact:base", "base")
@@ -102,6 +124,85 @@ class SmartPerfFeedbackTests(unittest.TestCase):
         self.assertEqual(report["decision"], "performance-regression-candidate")
         self.assertTrue(any(row["status"] == "regressed" for row in report["metrics"]))
         self.assertFalse(report["policy"]["automaticPromotion"])
+
+    def test_v2_regression_requires_both_functional_gates(self) -> None:
+        baseline_source = f"artifact-sha256:{'a' * 64}"
+        candidate_source = f"artifact-sha256:{'b' * 64}"
+        baseline = summary(raw_profile(60, 10, 100000, 16.0), baseline_source, "base")
+        candidate = summary(raw_profile(40, 30, 200000, 40.0), candidate_source, "candidate")
+        report = COMPARE.build_comparison(
+            baseline,
+            candidate,
+            0.90,
+            0.20,
+            0.15,
+            0.20,
+            functional_result(baseline_source, "base"),
+            functional_result(candidate_source, "candidate"),
+        )
+        self.assertEqual(report["schema"], "agentlab.smartperf_comparison.v2")
+        self.assertTrue(report["functionalGate"]["passed"])
+        self.assertEqual(report["decision"], "performance-regression-candidate")
+
+    def test_failed_functional_candidate_cannot_be_a_performance_regression(self) -> None:
+        baseline_source = f"artifact-sha256:{'a' * 64}"
+        candidate_source = f"artifact-sha256:{'b' * 64}"
+        baseline = summary(raw_profile(60, 10, 100000, 16.0), baseline_source, "base")
+        candidate = summary(raw_profile(40, 30, 200000, 40.0), candidate_source, "candidate")
+        report = COMPARE.build_comparison(
+            baseline,
+            candidate,
+            0.90,
+            0.20,
+            0.15,
+            0.20,
+            functional_result(baseline_source, "base"),
+            functional_result(candidate_source, "candidate", passed=False),
+        )
+        self.assertFalse(report["functionalGate"]["passed"])
+        self.assertFalse(report["comparable"])
+        self.assertEqual(report["decision"], "insufficient-comparable-evidence")
+        self.assertIn("candidate-functional-gate-failed", report["incomparabilityReasons"])
+
+    def test_functional_hap_mismatch_is_rejected(self) -> None:
+        baseline_source = f"artifact-sha256:{'a' * 64}"
+        candidate_source = f"artifact-sha256:{'b' * 64}"
+        baseline = summary(raw_profile(60, 10, 100000, 16.0), baseline_source, "base")
+        candidate = summary(raw_profile(40, 30, 200000, 40.0), candidate_source, "candidate")
+        wrong = functional_result(candidate_source, "candidate")
+        wrong["hapSha256"] = "c" * 64
+        with self.assertRaisesRegex(ValueError, "HAP digest"):
+            COMPARE.build_comparison(
+                baseline,
+                candidate,
+                0.90,
+                0.20,
+                0.15,
+                0.20,
+                functional_result(baseline_source, "base"),
+                wrong,
+            )
+
+    def test_different_functional_scenarios_are_not_comparable(self) -> None:
+        baseline_source = f"artifact-sha256:{'a' * 64}"
+        candidate_source = f"artifact-sha256:{'b' * 64}"
+        baseline = summary(raw_profile(60, 10, 100000, 16.0), baseline_source, "base")
+        candidate = summary(raw_profile(40, 30, 200000, 40.0), candidate_source, "candidate")
+        candidate_result = functional_result(candidate_source, "candidate")
+        candidate_result["scenarioSha256"] = "d" * 64
+        report = COMPARE.build_comparison(
+            baseline,
+            candidate,
+            0.90,
+            0.20,
+            0.15,
+            0.20,
+            functional_result(baseline_source, "base"),
+            candidate_result,
+        )
+        self.assertFalse(report["comparable"])
+        self.assertEqual(report["decision"], "insufficient-comparable-evidence")
+        self.assertIn("functional-scenario-mismatch", report["incomparabilityReasons"])
 
     def test_environment_mismatch_is_not_compared(self) -> None:
         baseline = summary(raw_profile(60, 10, 100000, 16.0), "artifact:base", "base")

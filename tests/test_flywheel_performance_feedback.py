@@ -84,7 +84,28 @@ class FlywheelPerformanceFeedbackTests(unittest.TestCase):
             },
         }
 
-    def prepare(self, root: pathlib.Path, mutate=None) -> pathlib.Path:
+    def functional_result(self, source: str, run_id: str, passed: bool = True) -> dict:
+        return {
+            "schema": "agentlab.harmony_emulator_case_result.v2",
+            "status": "passed" if passed else "failed",
+            "taskId": "case-ui-performance",
+            "sourceIdentity": source,
+            "hapSha256": source.removeprefix("artifact-sha256:"),
+            "scenarioId": "bounded-ui-case",
+            "scenarioSha256": "c" * 64,
+            "oracleStatus": "passed" if passed else "failed",
+            "assessmentStatus": "assessed",
+            "infrastructureAvailable": True,
+            "subjectTaskSucceeded": passed,
+            "failureClass": "none" if passed else "oracle",
+            "profileRunId": run_id,
+            "environmentIdentity": "hwlinux:emulator-26.0.0.400:class-a",
+            "profileStatus": "collected",
+            "profileSummaryStatus": "normalized",
+            "powerThermalAuthority": "unavailable_on_emulator",
+        }
+
+    def prepare(self, root: pathlib.Path, mutate=None, v2: bool = False) -> pathlib.Path:
         evidence = root / "evidence"
         evidence.mkdir()
         (evidence / "summary.json").write_text(
@@ -99,6 +120,41 @@ class FlywheelPerformanceFeedbackTests(unittest.TestCase):
         baseline = self.summary("baseline", "a" * 64, 60.0)
         candidate = self.summary("candidate", "b" * 64, 40.0)
         report = self.report(baseline, candidate)
+        if v2:
+            baseline_result = self.functional_result(baseline["sourceIdentity"], "baseline")
+            candidate_result = self.functional_result(candidate["sourceIdentity"], "candidate")
+            report["schema"] = "agentlab.smartperf_comparison.v2"
+            report["functionalGate"] = {
+                "baseline": {
+                    "resultSha256": self.digest(baseline_result),
+                    "sourceIdentity": baseline["sourceIdentity"],
+                    "assessmentStatus": "assessed",
+                    "infrastructureAvailable": True,
+                    "subjectTaskSucceeded": True,
+                    "oracleStatus": "passed",
+                    "scenarioId": "bounded-ui-case",
+                    "scenarioSha256": "c" * 64,
+                    "profileRunId": "baseline",
+                    "environmentIdentity": "hwlinux:emulator-26.0.0.400:class-a",
+                    "passed": True,
+                },
+                "candidate": {
+                    "resultSha256": self.digest(candidate_result),
+                    "sourceIdentity": candidate["sourceIdentity"],
+                    "assessmentStatus": "assessed",
+                    "infrastructureAvailable": True,
+                    "subjectTaskSucceeded": True,
+                    "oracleStatus": "passed",
+                    "scenarioId": "bounded-ui-case",
+                    "scenarioSha256": "c" * 64,
+                    "profileRunId": "candidate",
+                    "environmentIdentity": "hwlinux:emulator-26.0.0.400:class-a",
+                    "passed": True,
+                },
+                "passed": True,
+            }
+            (evidence / "harmony-baseline-result.json").write_text(json.dumps(baseline_result))
+            (evidence / "harmony-candidate-result.json").write_text(json.dumps(candidate_result))
         if mutate:
             mutate(report, baseline, candidate)
         (evidence / "smartperf-baseline-summary.json").write_text(json.dumps(baseline))
@@ -134,6 +190,40 @@ class FlywheelPerformanceFeedbackTests(unittest.TestCase):
                     for row in tables["evidence_refs"]
                 )
             )
+
+    def test_functionally_passing_regression_becomes_difficulty_candidate(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            output = root / "transaction.json"
+            completed = self.run_builder(self.prepare(root, v2=True), output)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            payload = json.loads(output.read_text())
+            difficulties = [
+                operation["row"]
+                for table in payload["arguments"]["tables"]
+                if table["path"] == "difficulty_points"
+                for operation in table["operations"]
+            ]
+            self.assertEqual(len(difficulties), 1)
+            self.assertEqual(
+                difficulties[0]["dimensionId"],
+                "functionally-correct-performance-regression",
+            )
+            self.assertFalse(difficulties[0]["verificationContract"]["caseReady"])
+            self.assertFalse(difficulties[0]["automaticPromotion"])
+            self.assertEqual(len(difficulties[0]["evidenceIds"]), 5)
+
+    def test_tampered_functional_result_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            evidence = self.prepare(root, v2=True)
+            result_path = evidence / "harmony-candidate-result.json"
+            result = json.loads(result_path.read_text())
+            result["subjectTaskSucceeded"] = False
+            result_path.write_text(json.dumps(result))
+            completed = self.run_builder(evidence, root / "transaction.json")
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("functional result digest differs", completed.stderr)
 
     def test_tampered_decision_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

@@ -262,6 +262,8 @@ run_case() {
   infrastructure_available=false
   subject_task_succeeded=null
   failure_class=infrastructure
+  profile_status=not-run
+  profile_summary_status=not-run
   layout_ordinal=0
   action_ordinal=0
   last_layout=
@@ -416,10 +418,12 @@ run_case() {
     fi
     if [ "$terminal_status" != passed ]; then
       if [ -n "$ui_scenario" ]; then
-        printf '{"schema":"agentlab.harmony_emulator_case_result.v2","status":"failed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","powerThermalAuthority":"unavailable_on_emulator"}\n' \
+        printf '{"schema":"agentlab.harmony_emulator_case_result.v2","status":"failed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","profileRunId":"%s","environmentIdentity":"%s","profileStatus":"%s","profileSummaryStatus":"%s","powerThermalAuthority":"unavailable_on_emulator"}\n' \
           "$task_id" "$source_id" "$instance" "$target" "$bundle" "$ability" "$hap_sha" \
           "$scenario_id" "$scenario_sha" "$oracle_status" "$assessment_status" \
-          "$infrastructure_available" "$subject_task_succeeded" "$failure_class" >"$output/result.json"
+          "$infrastructure_available" "$subject_task_succeeded" "$failure_class" \
+          "$profile_run_id" "$environment_id" "$profile_status" "$profile_summary_status" \
+          >"$output/result.json"
       else
         printf '{"schema":"agentlab.harmony_emulator_case_result.v1","status":"failed","instance":"%s","target":"%s","bundle":"%s","ability":"%s"}\n' \
           "$instance" "$target" "$bundle" "$ability" >"$output/result.json"
@@ -530,11 +534,12 @@ run_case() {
   fi
   terminal_status=passed
   if [ -n "$ui_scenario" ]; then
-    printf '{"schema":"agentlab.harmony_emulator_case_result.v2","status":"passed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","profileStatus":"%s","profileSummaryStatus":"%s","resetAppData":%s,"powerThermalAuthority":"unavailable_on_emulator","artifacts":{"uninstall":"uninstall.log","install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","uiActions":"ui-actions.tsv","uiChecks":"ui-checks.tsv","screenshot":"%s","smartperf":"smartperf.txt","smartperfSummary":"%s"}}\n' \
+    printf '{"schema":"agentlab.harmony_emulator_case_result.v2","status":"passed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","profileRunId":"%s","environmentIdentity":"%s","profileStatus":"%s","profileSummaryStatus":"%s","resetAppData":%s,"powerThermalAuthority":"unavailable_on_emulator","artifacts":{"uninstall":"uninstall.log","install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","uiActions":"ui-actions.tsv","uiChecks":"ui-checks.tsv","screenshot":"%s","smartperf":"smartperf.txt","smartperfSummary":"%s"}}\n' \
       "$task_id" "$source_id" "$instance" "$target" "$bundle" "$ability" "$hap_sha" \
       "$(cat "$output/screenshot.sha256")" "$scenario_id" "$scenario_sha" "$oracle_status" \
       "$assessment_status" "$infrastructure_available" "$subject_task_succeeded" "$failure_class" \
-      "$profile_status" "$profile_summary_status" "$reset_app_data" "$(basename "$screenshot")" \
+      "$profile_run_id" "$environment_id" "$profile_status" "$profile_summary_status" \
+      "$reset_app_data" "$(basename "$screenshot")" \
       "$profile_summary_artifact" >"$output/result.json"
   else
     printf '{"schema":"agentlab.harmony_emulator_case_result.v1","status":"passed","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","profileStatus":"%s","powerThermalAuthority":"unavailable_on_emulator","artifacts":{"install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","screenshot":"%s","smartperf":"smartperf.txt"}}\n' \

@@ -215,6 +215,8 @@ fn harmony_instance(root: &Path, run: &str, archive: &str, result: Value) -> Tab
             "subjectTaskSucceeded":result["subjectTaskSucceeded"],
             "failureClass":result["failureClass"],
             "profileCollected":result["profileStatus"] == "collected",
+            "profileRunId":result["profileRunId"],
+            "environmentIdentity":result["environmentIdentity"],
             "powerThermalAuthority":result["powerThermalAuthority"],
             "authority":"operator-owned-device-runner"
         }),
@@ -252,6 +254,15 @@ fn harmony_instance(root: &Path, run: &str, archive: &str, result: Value) -> Tab
         assert_eq!(summary["schema"], "agentlab.smartperf_summary.v1");
         assert_eq!(summary["taskId"], result["taskId"]);
         assert_eq!(summary["sourceIdentity"], result["sourceIdentity"]);
+        if !result["profileRunId"].is_null() {
+            assert_eq!(summary["runId"], result["profileRunId"]);
+        }
+        if !result["environmentIdentity"].is_null() {
+            assert_eq!(
+                summary["environmentIdentity"],
+                result["environmentIdentity"]
+            );
+        }
         assert_eq!(
             summary["authority"]["absolutePowerThermal"],
             "unavailable-on-emulator"

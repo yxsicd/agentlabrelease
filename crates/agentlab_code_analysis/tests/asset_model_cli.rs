@@ -294,7 +294,7 @@ fn exports_harmony_device_checks_and_raw_evidence() {
             "sourceIdentity":format!("artifact-sha256:{hap_sha256}"),
             "hapSha256":hap_sha256,
             "scenarioId":"dismiss",
-            "scenarioSha256":"scenario",
+            "scenarioSha256":"c".repeat(64),
             "oracleStatus":"passed",
             "assessmentStatus":"assessed",
             "infrastructureAvailable":true,
@@ -302,6 +302,8 @@ fn exports_harmony_device_checks_and_raw_evidence() {
             "failureClass":"none",
             "profileStatus":"collected",
             "profileSummaryStatus":"normalized",
+            "profileRunId":"harmony",
+            "environmentIdentity":"hwlinux:emulator-26.0.0.400:class-a",
             "powerThermalAuthority":"unavailable_on_emulator"
         }),
     );
@@ -357,6 +359,11 @@ fn exports_harmony_device_checks_and_raw_evidence() {
     assert_eq!(assessments[0]["subjectTaskSucceeded"], true);
     assert_eq!(assessments[0]["failureClass"], "none");
     assert_eq!(assessments[0]["profileCollected"], true);
+    assert_eq!(assessments[0]["profileRunId"], "harmony");
+    assert_eq!(
+        assessments[0]["environmentIdentity"],
+        "hwlinux:emulator-26.0.0.400:class-a"
+    );
     assert_eq!(
         assessments[0]["powerThermalAuthority"],
         "unavailable_on_emulator"

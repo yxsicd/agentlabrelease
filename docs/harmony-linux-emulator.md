@@ -136,6 +136,8 @@ environment identity:
 python3 scripts/compare-smartperf.py \
   --baseline baseline/smartperf-summary.json \
   --candidate candidate/smartperf-summary.json \
+  --baseline-result baseline/result.json \
+  --candidate-result candidate/result.json \
   --output candidate/smartperf-comparison.json
 ```
 
@@ -143,11 +145,21 @@ Default guardrails require at least 90% of baseline median FPS and limit mean
 CPU growth to 20%, mean PSS growth to 15%, and frame-interval p95 growth to 20%.
 Missing required metrics or an environment mismatch is insufficient evidence,
 not a pass or failure. A detected regression is a review candidate and never an
-automatic case rejection or release decision. Before flywheel persistence,
+automatic case rejection or release decision. The function-bound v2 comparison
+requires both exact Harmony results to describe assessed, infrastructure-valid,
+UI-Oracle-passing runs for the same task and HAP identities as the performance
+summaries. If either functional gate fails, the profiles are not comparable and
+cannot become a performance-regression difficulty.
+
+Before flywheel persistence,
 retain the exact inputs as `smartperf-baseline-summary.json` and
-`smartperf-candidate-summary.json` beside `smartperf-comparison.json`; the
-transaction builder recomputes both canonical summary digests and rejects any
-task, run, environment, HAP identity or authority drift.
+`smartperf-candidate-summary.json`, plus the two results as
+`harmony-baseline-result.json` and `harmony-candidate-result.json`, beside
+`smartperf-comparison.json`. The transaction builder recomputes all canonical
+digests and rejects any task, run, environment, HAP identity, functional verdict
+or authority drift. A functionally passing v2 regression becomes a non-ready,
+non-promoted `difficulty_point` for maintainer adjudication and repeated
+calibration; a legacy v1 profile-only comparison remains a decision record only.
 
 ## Evaluation-instance export
 
