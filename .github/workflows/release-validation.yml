@@ -47,6 +47,9 @@ jobs:
             --registry release/components/registry.json \
             --target release/targets/generic-linux-agentlab.json \
             --target release/targets/wsl2-agentlab.json
+          python3 scripts/score-case-discrimination.py \
+            --input examples/case-discrimination/fixture.json \
+            > "$RUNNER_TEMP/case-discrimination-report.json"
           python3 -m unittest discover -s tests
           python3 scripts/validate-composition-release.py
       - name: Test and build public tools
