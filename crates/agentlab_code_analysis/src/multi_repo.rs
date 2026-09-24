@@ -2,9 +2,9 @@ use agentlab_code_analysis::{analyze, digest, GRAMMAR, GRAMMAR_DIGEST};
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fs::{self, File};
-use std::io::{BufWriter, Write};
+use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 use std::path::{Component, Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 #[derive(Clone)]
 struct Repository {
@@ -40,6 +40,80 @@ fn git(root: &Path, args: &[&str]) -> Result<Vec<u8>, Box<dyn std::error::Error>
         )));
     }
     Ok(result.stdout)
+}
+
+fn git_blobs(
+    repository: &Repository,
+    paths: &[String],
+) -> Result<BTreeMap<String, Vec<u8>>, Box<dyn std::error::Error>> {
+    let mut child = Command::new("git")
+        .arg("-C")
+        .arg(&repository.root)
+        .args(["cat-file", "--batch", "-Z"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+    let mut stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| fail("missing git stdin"))?;
+    let revision = repository.revision.clone();
+    let query_paths = paths.to_vec();
+    let writer = std::thread::spawn(move || -> std::io::Result<()> {
+        for path in &query_paths {
+            stdin.write_all(format!("{revision}:{path}\0").as_bytes())?;
+        }
+        Ok(())
+    });
+    let mut stdout = BufReader::new(
+        child
+            .stdout
+            .take()
+            .ok_or_else(|| fail("missing git stdout"))?,
+    );
+    let mut blobs = BTreeMap::new();
+    for path in paths {
+        let mut header = Vec::new();
+        stdout.read_until(0, &mut header)?;
+        if header.pop() != Some(0) {
+            return Err(fail(format!("unterminated git cat-file header for {path}")));
+        }
+        let header = std::str::from_utf8(&header)?;
+        let parts = header.split_whitespace().collect::<Vec<_>>();
+        if parts.len() != 3 || parts[1] != "blob" {
+            return Err(fail(format!(
+                "unexpected git cat-file header for {path}: {header}"
+            )));
+        }
+        let size = parts[2].parse::<usize>()?;
+        let mut bytes = vec![0; size];
+        stdout.read_exact(&mut bytes)?;
+        let mut delimiter = [0];
+        stdout.read_exact(&mut delimiter)?;
+        if delimiter != [0] {
+            return Err(fail(format!("unterminated git blob for {path}")));
+        }
+        blobs.insert(path.clone(), bytes);
+    }
+    writer
+        .join()
+        .map_err(|_| fail("git cat-file input writer panicked"))??;
+    let status = child.wait()?;
+    if !status.success() {
+        let mut stderr = Vec::new();
+        child
+            .stderr
+            .take()
+            .ok_or_else(|| fail("missing git stderr"))?
+            .read_to_end(&mut stderr)?;
+        return Err(fail(format!(
+            "git cat-file --batch failed for {}: {}",
+            repository.root.display(),
+            String::from_utf8_lossy(&stderr).trim()
+        )));
+    }
+    Ok(blobs)
 }
 
 fn exact_revision(value: &Value, label: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -197,18 +271,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut facts = Vec::new();
     let mut module_facts = Vec::new();
     let mut repository_receipts = Vec::new();
+    let mut unsupported_sources = Vec::new();
     for repository in repositories.values() {
+        let source_paths = repository
+            .files
+            .iter()
+            .filter(|path| path.ends_with(".ets") || path.ends_with(".ts"))
+            .cloned()
+            .collect::<Vec<_>>();
+        let source_blobs = git_blobs(repository, &source_paths)?;
+        let mut source_file_candidate_count = 0usize;
         let mut file_count = 0usize;
         let mut syntax_error_count = 0usize;
         let mut fact_count = 0usize;
-        for path in &repository.files {
-            if !(path.ends_with(".ets") || path.ends_with(".ts")) {
+        for path in &source_paths {
+            source_file_candidate_count += 1;
+            let bytes = &source_blobs[path];
+            if let Err(error) = std::str::from_utf8(&bytes) {
+                unsupported_sources.push(json!({
+                    "schema":"agentlab.unsupported_source.v1",
+                    "repositoryId":repository.id,
+                    "path":path,
+                    "sourceIdentity":format!("git:{}@{}",repository.source,repository.revision),
+                    "sha256":digest(&bytes),
+                    "byteLength":bytes.len(),
+                    "reason":"non-utf8-source",
+                    "invalidUtf8AtByte":error.valid_up_to()
+                }));
                 continue;
             }
-            let bytes = git(
-                &repository.root,
-                &["show", &format!("{}:{path}", repository.revision)],
-            )?;
             let analysis = analyze(path, &bytes, &repository.revision)?;
             file_count += 1;
             syntax_error_count += usize::from(analysis.has_errors);
@@ -235,7 +326,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "repository":repository.source,
             "revision":repository.revision,
             "sourceIdentity":format!("git:{}@{}",repository.source,repository.revision),
+            "sourceFileCandidates":source_file_candidate_count,
             "files":file_count,
+            "unsupportedSources":source_file_candidate_count-file_count,
             "filesWithSyntaxErrors":syntax_error_count,
             "facts":fact_count
         }));
@@ -259,17 +352,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let repository_id = facts[index]["repositoryId"].as_str().unwrap().to_owned();
         let importer = facts[index]["path"].as_str().unwrap().to_owned();
         let specifier = facts[index]["specifier"].as_str().unwrap().to_owned();
-        let resolved = if specifier.starts_with('.') {
-            resolve_relative(&repositories[&repository_id], &importer, &specifier)
-                .map(|path| (repository_id.clone(), path, "relative-file"))
+        let (resolved, unresolved_reason) = if specifier.starts_with('.') {
+            match resolve_relative(&repositories[&repository_id], &importer, &specifier) {
+                Some(path) if file_index.contains_key(&(repository_id.clone(), path.clone())) => (
+                    Some((repository_id.clone(), path, "relative-file")),
+                    "relative-target-absent-at-pinned-revision",
+                ),
+                Some(_) => (None, "relative-target-unsupported-source"),
+                None => (None, "relative-target-absent-at-pinned-revision"),
+            }
         } else {
-            bindings.get(&specifier).map(|binding| {
-                (
-                    binding.repository_id.clone(),
-                    binding.path.clone(),
-                    "explicit-manifest-binding",
-                )
-            })
+            match bindings.get(&specifier) {
+                Some(binding)
+                    if file_index
+                        .contains_key(&(binding.repository_id.clone(), binding.path.clone())) =>
+                {
+                    (
+                        Some((
+                            binding.repository_id.clone(),
+                            binding.path.clone(),
+                            "explicit-manifest-binding",
+                        )),
+                        "external-or-unbound-module",
+                    )
+                }
+                Some(_) => (None, "bound-target-unsupported-source"),
+                None => (None, "external-or-unbound-module"),
+            }
         };
         let object = facts[index].as_object_mut().unwrap();
         if let Some((target_repository, target_path, method)) = resolved {
@@ -309,14 +418,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }));
         } else {
             object.insert("resolution".into(), json!("unresolved"));
-            object.insert(
-                "resolutionReason".into(),
-                json!(if specifier.starts_with('.') {
-                    "relative-target-absent-at-pinned-revision"
-                } else {
-                    "external-or-unbound-module"
-                }),
-            );
+            object.insert("resolutionReason".into(), json!(unresolved_reason));
         }
     }
     edges.sort_by_key(|row| row["id"].as_str().unwrap().to_owned());
@@ -484,6 +586,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     facts.sort_by_key(|row| row["id"].as_str().unwrap().to_owned());
     fs::create_dir_all(&output)?;
     let fact_bytes = write_jsonl(&output.join("workspace_facts.jsonl"), &facts)?;
+    let unsupported_source_bytes = write_jsonl(
+        &output.join("unsupported_sources.jsonl"),
+        &unsupported_sources,
+    )?;
     let canonical_bindings: BTreeMap<_, _> = bindings
         .iter()
         .map(|(specifier, binding)| {
@@ -528,6 +634,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "grammarDigest":GRAMMAR_DIGEST,
         "repositories":repository_receipts,
         "facts":facts.len(),
+        "unsupportedSources":unsupported_sources.len(),
+        "unsupportedSourcesSha256":digest(&unsupported_source_bytes),
         "moduleDependencyEdges":edges.len(),
         "crossRepositoryEdges":edges.iter().filter(|edge|edge["sourceRepositoryId"]!=edge["targetRepositoryId"]).count(),
         "sharedExternalModuleContracts":shared_external_module_count,
@@ -535,7 +643,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "difficultyCandidates":difficulty["candidates"].as_array().unwrap().len(),
         "workspaceFactsSha256":digest(&fact_bytes),
         "difficultyCandidatesSha256":digest(&difficulty_bytes),
-        "coverage":"committed ArkTS/TypeScript syntax facts plus relative-file and explicit-manifest module bindings; no compiler type resolution, dynamic import resolution, call-target resolution or dataflow",
+        "coverage":"committed UTF-8 ArkTS/TypeScript syntax facts plus relative-file and explicit-manifest module bindings; exact non-UTF-8 exclusions are recorded in unsupported_sources.jsonl; no compiler type resolution, dynamic import resolution, call-target resolution or dataflow",
         "automaticPromotion":false
     });
     fs::write(

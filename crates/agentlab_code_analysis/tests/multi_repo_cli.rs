@@ -355,3 +355,63 @@ fn shared_external_module_contract_becomes_non_ready_multi_repo_candidate() {
     assert_eq!(candidate["verificationContract"]["caseReady"], false);
     assert_eq!(candidate["automaticPromotion"], false);
 }
+
+#[test]
+fn non_utf8_source_is_audited_without_aborting_the_source_set() {
+    let mut fixture = Fixture::new();
+    let (one, _) = fixture.repository(
+        "one",
+        &[(
+            "src/one.ts",
+            "import broken from './non_utf8'; export const one = broken;",
+        )],
+    );
+    fs::write(one.join("src/non_utf8.ets"), [0xff, 0xfe, b'A']).unwrap();
+    git(&one, &["add", "."]);
+    git(
+        &one,
+        &[
+            "-c",
+            "user.name=Multi repo test",
+            "-c",
+            "user.email=multi@example.invalid",
+            "commit",
+            "-qm",
+            "add non utf8 source",
+        ],
+    );
+    let revision_one = git_output(&one, &["rev-parse", "HEAD"]);
+    let (two, revision_two) = fixture.repository("two", &[("src/two.ts", "export const two = 2;")]);
+    let manifest = json!({
+        "schema":"agentlab.multi_repo_manifest.v1",
+        "repositories":[
+            {"id":"one","repository":"fixture://one","root":one,"revision":revision_one},
+            {"id":"two","repository":"fixture://two","root":two,"revision":revision_two}
+        ]
+    });
+    let result = fixture.run(&manifest, "non-utf8");
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let receipt: Value = serde_json::from_slice(&result.stdout).unwrap();
+    assert_eq!(receipt["unsupportedSources"], 1);
+    let unsupported = rows(
+        &fixture
+            .root
+            .join("non-utf8-output/unsupported_sources.jsonl"),
+    );
+    assert_eq!(unsupported.len(), 1);
+    assert_eq!(unsupported[0]["repositoryId"], "one");
+    assert_eq!(unsupported[0]["path"], "src/non_utf8.ets");
+    assert_eq!(unsupported[0]["reason"], "non-utf8-source");
+    assert_eq!(unsupported[0]["invalidUtf8AtByte"], 0);
+    let facts = rows(&fixture.root.join("non-utf8-output/workspace_facts.jsonl"));
+    assert!(facts.iter().any(|row| {
+        row["kind"] == "module-reference"
+            && row["specifier"] == "./non_utf8"
+            && row["resolution"] == "unresolved"
+            && row["resolutionReason"] == "relative-target-unsupported-source"
+    }));
+}

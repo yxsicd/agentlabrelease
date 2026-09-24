@@ -60,6 +60,10 @@ The output directory contains:
 - `workspace_facts.jsonl`: repository-namespaced syntax facts plus resolved
   module-dependency edges. Every edge binds both source and target source
   identities.
+- `unsupported_sources.jsonl`: exact path, source identity, byte digest and
+  rejection location for committed `.ets`/`.ts` files that are not UTF-8.
+  These exclusions do not abort the remaining source set and are never parsed
+  through a lossy conversion.
 - `difficulty_candidates.json`: unresolved module boundaries and recursively
   derived reverse-dependency impact surfaces. It also clusters a non-relative
   unresolved module imported from two or more repositories into a
