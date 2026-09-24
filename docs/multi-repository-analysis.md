@@ -61,8 +61,12 @@ The output directory contains:
   module-dependency edges. Every edge binds both source and target source
   identities.
 - `difficulty_candidates.json`: unresolved module boundaries and recursively
-  derived reverse-dependency impact surfaces. It binds the portable source-set
-  digest, not local checkout paths. `automaticPromotion` is false.
+  derived reverse-dependency impact surfaces. It also clusters a non-relative
+  unresolved module imported from two or more repositories into a
+  `shared-external-module-contract` candidate. This represents a possible
+  shared platform/package contract change surface, not a claim that the
+  repositories depend on one another. It binds the portable source-set digest,
+  not local checkout paths. `automaticPromotion` is false.
 - `multi_repo_analysis.json`: analyzer/grammar identity, exact repository cuts,
   counts and SHA-256 digests for both evidence files.
 
@@ -71,6 +75,12 @@ committed file paths. Non-relative imports resolve only through
 `moduleBindings`. Compiler aliases, package-manager state, dynamic imports,
 types, call targets and dataflow remain unresolved unless a later analyzer
 provides independently verified evidence.
+
+Shared external-module candidates are grounded in exact import facts but remain
+non-ready. Qualification must independently establish the external contract's
+version and semantics, repository-specific builds, and a cross-repository
+behavior Oracle. This supports real repositories that consume the same Harmony
+platform API without inventing a source-to-source import edge.
 
 ## From difficulty to a valid evaluation case
 

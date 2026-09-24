@@ -300,3 +300,58 @@ fn manifest_refuses_symbolic_revisions_and_missing_bound_targets() {
     assert!(!result.status.success());
     assert!(String::from_utf8_lossy(&result.stderr).contains("absent at pinned revision"));
 }
+
+#[test]
+fn shared_external_module_contract_becomes_non_ready_multi_repo_candidate() {
+    let mut fixture = Fixture::new();
+    let (one, revision_one) = fixture.repository(
+        "one",
+        &[(
+            "src/first.ets",
+            "import { router } from '@kit.ArkUI'; export function first() { return router; }",
+        )],
+    );
+    let (two, revision_two) = fixture.repository(
+        "two",
+        &[(
+            "src/second.ets",
+            "import { router } from '@kit.ArkUI'; export function second() { return router; }",
+        )],
+    );
+    let manifest = json!({
+        "schema":"agentlab.multi_repo_manifest.v1",
+        "repositories":[
+            {"id":"one","repository":"fixture://one","root":one,"revision":revision_one},
+            {"id":"two","repository":"fixture://two","root":two,"revision":revision_two}
+        ]
+    });
+    let result = fixture.run(&manifest, "shared-external");
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let receipt: Value = serde_json::from_slice(&result.stdout).unwrap();
+    assert_eq!(receipt["sharedExternalModuleContracts"], 1);
+    let difficulty: Value = serde_json::from_slice(
+        &fs::read(
+            fixture
+                .root
+                .join("shared-external-output/difficulty_candidates.json"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    let candidate = difficulty["candidates"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["relationType"] == "shared-external-module-contract")
+        .unwrap();
+    assert_eq!(candidate["seed"]["specifier"], "@kit.ArkUI");
+    assert_eq!(candidate["affectedRepositoryCount"], 2);
+    assert_eq!(candidate["affectedFiles"].as_array().unwrap().len(), 2);
+    assert_eq!(candidate["evidenceIds"].as_array().unwrap().len(), 2);
+    assert_eq!(candidate["verificationContract"]["caseReady"], false);
+    assert_eq!(candidate["automaticPromotion"], false);
+}

@@ -395,6 +395,72 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "automaticPromotion":false
         }));
     }
+    let mut shared_external_modules: BTreeMap<String, Vec<(String, String, String)>> =
+        BTreeMap::new();
+    for row in facts.iter().filter(|row| {
+        row.get("kind").and_then(Value::as_str) == Some("module-reference")
+            && row.get("resolution").and_then(Value::as_str) == Some("unresolved")
+            && row
+                .get("specifier")
+                .and_then(Value::as_str)
+                .is_some_and(|specifier| !specifier.starts_with('.'))
+    }) {
+        shared_external_modules
+            .entry(row["specifier"].as_str().unwrap().to_owned())
+            .or_default()
+            .push((
+                row["repositoryId"].as_str().unwrap().to_owned(),
+                row["path"].as_str().unwrap().to_owned(),
+                row["id"].as_str().unwrap().to_owned(),
+            ));
+    }
+    let mut shared_external_module_count = 0usize;
+    for (specifier, mut observations) in shared_external_modules {
+        observations.sort();
+        observations.dedup();
+        let affected_repositories = observations
+            .iter()
+            .map(|(repository_id, _, _)| repository_id)
+            .collect::<BTreeSet<_>>();
+        if affected_repositories.len() < 2 {
+            continue;
+        }
+        shared_external_module_count += 1;
+        let affected = observations
+            .iter()
+            .map(|(repository_id, path, _)| {
+                json!({"repositoryId":repository_id,"path":path,"dependencyDepth":1})
+            })
+            .collect::<Vec<_>>();
+        let evidence = observations
+            .iter()
+            .map(|(_, _, fact_id)| fact_id)
+            .collect::<Vec<_>>();
+        candidates.push(json!({
+            "id":stable_id("difficulty", &["shared-external-module-contract",&specifier]),
+            "schema":"agentlab.difficulty_point.v1",
+            "dimensionId":"multi-repository-change-impact",
+            "primaryDimension":"program-analysis",
+            "relationType":"shared-external-module-contract",
+            "mechanism":"shared unresolved external module contract spans repository boundaries",
+            "status":"candidate",
+            "maturityState":"candidate",
+            "seed":{"specifier":specifier},
+            "affectedFiles":affected,
+            "affectedRepositoryCount":affected_repositories.len(),
+            "maxDependencyDepth":1,
+            "evidenceIds":evidence,
+            "verificationContract":{
+                "caseReady":false,
+                "required":[
+                    "external module contract version and semantics",
+                    "repository-specific build checks",
+                    "cross-repository behavior oracle"
+                ]
+            },
+            "automaticPromotion":false
+        }));
+    }
     for row in facts.iter().filter(|row| {
         row.get("kind").and_then(Value::as_str) == Some("module-reference")
             && row.get("resolution").and_then(Value::as_str) == Some("unresolved")
@@ -437,7 +503,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let source_set_sha256 = digest(&serde_json::to_vec(&source_set)?);
     let difficulty = json!({
         "schema":"agentlab.difficulty_candidates.v2",
-        "method":"revision-fenced multi-repository dependency graph and recursive reverse impact closure",
+        "method":"revision-fenced multi-repository dependency graph, recursive reverse impact closure and shared external module contract clustering",
         "sourceSetSha256":source_set_sha256,
         "sources":source_set["repositories"],
         "moduleBindings":source_set["moduleBindings"],
@@ -464,6 +530,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "facts":facts.len(),
         "moduleDependencyEdges":edges.len(),
         "crossRepositoryEdges":edges.iter().filter(|edge|edge["sourceRepositoryId"]!=edge["targetRepositoryId"]).count(),
+        "sharedExternalModuleContracts":shared_external_module_count,
         "unresolvedModuleReferences":unresolved,
         "difficultyCandidates":difficulty["candidates"].as_array().unwrap().len(),
         "workspaceFactsSha256":digest(&fact_bytes),
