@@ -1,5 +1,11 @@
 # Multi-repository program analysis and difficulty discovery
 
+The design is informed by SWE-bench's hidden repair/preservation tests and
+fresh evaluation environments, while explicitly addressing case validity,
+contamination, multi-repository scope and device/performance feedback. See the
+[SWE-bench strategy comparison](swe-bench-strategy-comparison.md) for the
+adopted qualification model and current evidence boundary.
+
 AgentLab can build one revision-fenced program graph from multiple Git
 repositories without assuming that a task belongs to a fixed monorepo. The
 input is explicit and local checkouts are transport only: committed objects at
