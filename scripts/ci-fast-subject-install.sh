@@ -38,6 +38,12 @@ fetch() {
 
 runtime_archive="$assets/runtime.docker.tar.zst"
 fetch "${values[0]}" "${values[1]}" "$runtime_archive"
+python3 scripts/verify-docker-image-archive.py \
+  --archive "$runtime_archive" \
+  --expected-archive-sha256 "${values[1]}" \
+  --expected-image-id "${values[2]}" \
+  --expected-reference "${values[3]}" \
+  --receipt "$root/runtime-image-verification.json" >/dev/null
 
 cli_marker="$cli_root/.agentlab-fast-sha256"
 if [[ ! -f "$cli_marker" || "$(cat "$cli_marker")" != "${values[5]}" ]]; then

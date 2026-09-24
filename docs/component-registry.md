@@ -41,3 +41,24 @@ Aggregate closures remain immutable, small JSON documents. They reference
 component assets by URL, byte count, SHA-256 and immutable tag. Promotion and
 new aggregate versions may reuse those references indefinitely. A no-op
 component change must not create a new component Release.
+
+Container-image metadata has one additional content check. The compressed
+Docker archive SHA-256 identifies the transport bytes, while the image ID is
+the SHA-256 of the exact config object named by `manifest.json`; neither value
+may stand in for the other. Before publishing or reusing an image descriptor,
+run:
+
+```sh
+python3 scripts/verify-docker-image-archive.py \
+  --archive <image.docker.tar.zst> \
+  --descriptor <image.docker.tar.zst.json> \
+  --expected-archive-sha256 <archive-sha256> \
+  --expected-image-id sha256:<config-sha256> \
+  --expected-reference <repository:tag> \
+  --receipt <verification.json>
+```
+
+The verifier streams the archive, binds the selected tag to its manifest
+entry and config member, and fails closed on archive, descriptor, reference or
+image-ID drift. A metadata-only correction must use a new immutable descriptor
+Release; keep the unchanged large archive at its existing immutable URL.
