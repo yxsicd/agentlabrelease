@@ -41,7 +41,8 @@
     "guide-snippets API 20 baseline builds successfully with two member-equivalent clean HAPs",
     "one exact baseline HAP installs, launches and retains a live process on the Linux x86 emulator",
     "UI coordinate calibration rejects a DomStorage decoy tap and the corrected UserAgent_four baseline produces an assessed Oracle failure",
-    "one controlled one-line page-registration variant changes an identical target-page semantic Oracle from FAIL to PASS on the Linux emulator"
+    "one controlled one-line page-registration variant changes an identical target-page semantic Oracle from FAIL to PASS on the Linux emulator",
+    "the independent DomStorage preservation scenario passes on both baseline and known-fix HAPs under the same Linux emulator environment"
   ],
   "notQualified": [
     "ArkWeb API-version semantics",
@@ -51,7 +52,7 @@
     "independent localization review",
     "code-workshop API 23/24 source build",
     "independently reviewed guide-snippets business UI Oracle",
-    "PASS_TO_PASS preservation checks for the proposed business UI behavior",
+    "broader PASS_TO_PASS preservation coverage beyond the single DomStorage route",
     "startup-performance improvement",
     "participant discrimination"
   ],
@@ -80,7 +81,7 @@
     "status": "controlled-fail-to-pass-observed",
     "scenarioPath": "guide-user-agent-four-target.ui",
     "knownFixIsGold": false,
-    "preservationPassToPassQualified": false,
+    "preservationPassToPassQualified": true,
     "businessUiOracleQualified": false,
     "automaticPromotion": false
   },

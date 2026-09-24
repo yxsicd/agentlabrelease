@@ -1,0 +1,6 @@
+schema	agentlab.harmony_ui_scenario.v1
+case	guide-dom-storage-preservation
+wait-text	dom-storage-visible	30	DomStorage
+tap	628	1256
+sleep	2000
+assert-no-text	index-cache-two-absent	Cache_two

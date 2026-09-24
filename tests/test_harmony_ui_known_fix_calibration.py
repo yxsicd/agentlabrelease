@@ -30,9 +30,19 @@ def fixture(root: pathlib.Path) -> dict:
         encoding="utf-8",
     )
     scenario_sha = hashlib.sha256(scenario.read_bytes()).hexdigest()
+    preservation = root / "preservation.ui"
+    preservation.write_text(
+        "schema\tagentlab.harmony_ui_scenario.v1\n"
+        "case\tpreservation\n"
+        "wait-text\tdom-visible\t30\tDomStorage\n"
+        "tap\t628\t1256\n"
+        "assert-no-text\tindex-absent\tCache_two\n",
+        encoding="utf-8",
+    )
+    preservation_sha = hashlib.sha256(preservation.read_bytes()).hexdigest()
     baseline_hap, fixed_hap = "a" * 64, "b" * 64
     authority = {"routeDecision": "peer_direct", "targetPeerId": "lgw_" + "1" * 32, "operationId": "exec-1", "traceIds": ["trace"]}
-    def attempt(hap: str, passed: bool) -> dict:
+    def attempt(hap: str, scenario_digest: str, passed: bool, check_field: str = "repairCheckPassed") -> dict:
         status = "passed" if passed else "failed"
         return {
             "executionAuthority": copy.deepcopy(authority),
@@ -40,17 +50,21 @@ def fixture(root: pathlib.Path) -> dict:
                 "schema": "agentlab.harmony_emulator_case_result.v2", "status": status,
                 "oracleStatus": status, "assessmentStatus": "assessed", "infrastructureAvailable": True,
                 "subjectTaskSucceeded": passed, "failureClass": "none" if passed else "oracle",
-                "hapSha256": hap, "scenarioSha256": scenario_sha,
+                "hapSha256": hap, "scenarioSha256": scenario_digest,
             },
-            "repairCheckPassed": passed,
             "resultSha256": "c" * 64, "actionsSha256": "d" * 64, "checksSha256": "e" * 64,
             "layoutBeforeSha256": "f" * 64, "layoutAfterSha256": "0" * 64,
+            check_field: passed,
         }
-    baseline = attempt(baseline_hap, False)
+    baseline = attempt(baseline_hap, scenario_sha, False)
     baseline["observedPagePathAfter"] = "pages/Index"
-    fixed = attempt(fixed_hap, True)
+    fixed = attempt(fixed_hap, scenario_sha, True)
     fixed["observedPagePathAfter"] = "pages/UserAgent_four"
     fixed["observedVisibleTextAfter"] = "Example Domain"
+    baseline_preservation = attempt(baseline_hap, preservation_sha, True, "preservationCheckPassed")
+    baseline_preservation["observedPagePathAfter"] = "pages/DomStorage"
+    fixed_preservation = attempt(fixed_hap, preservation_sha, True, "preservationCheckPassed")
+    fixed_preservation["observedPagePathAfter"] = "pages/DomStorage"
     return {
         "schema": "agentlab.harmony_ui_known_fix_calibration.v1",
         "status": "controlled-fail-to-pass-observed",
@@ -69,21 +83,32 @@ def fixture(root: pathlib.Path) -> dict:
             "path": "target.ui", "id": "target", "sha256": scenario_sha, "tap": [628, 1606],
             "repairAssertion": "Example Domain is visible after selecting UserAgent_four.",
         },
+        "preservationScenario": {
+            "path": "preservation.ui", "id": "preservation", "sha256": preservation_sha,
+            "tap": [628, 1256], "preservationAssertion": "Index control is absent after DomStorage route.",
+        },
         "supersededOracleFinding": {
             "falseFailure": True, "observedPagePath": "pages/UserAgent_four", "observedVisibleText": "Example Domain",
             "cause": "matched pagePath= metadata", "scenarioSha256": "6" * 64, "knownFixResultSha256": "7" * 64,
         },
+        "rejectedPreservationAttempt": {
+            "status": "failed", "infrastructureAvailable": True, "observedPagePath": "pages/DomStorage",
+            "rejectionReason": "network assertion was environment-sensitive", "scenarioSha256": "8" * 64,
+            "resultSha256": "9" * 64,
+        },
         "baselineAttempt": baseline,
         "knownFixAttempt": fixed,
+        "baselinePreservationAttempt": baseline_preservation,
+        "knownFixPreservationAttempt": fixed_preservation,
         "qualificationMatrix": {
             "repairChecks": {"failToPassObserved": True, "sameScenario": True, "sameEnvironment": True},
-            "preservationChecks": {"defined": False, "passToPassObserved": False},
+            "preservationChecks": {"defined": True, "passToPassObserved": True, "sameScenario": True, "sameEnvironment": True},
             "review": {"independent": False, "knownFixAcceptedAsReference": False},
         },
         "qualificationScope": {
             "controlledKnownFix": True, "businessSemanticAssertionObserved": True, "candidateFailToPass": True,
             "businessUiOracleQualified": False, "independentReview": False, "referenceRepair": False,
-            "preservationPassToPass": False, "performanceComparison": False,
+            "preservationPassToPass": True, "performanceComparison": False,
         },
     }
 
@@ -118,12 +143,12 @@ class HarmonyUiKnownFixCalibrationTests(unittest.TestCase):
             with self.assertRaisesRegex(MODULE.CalibrationError, "non-reference"):
                 MODULE.validate(value, root)
 
-    def test_preservation_cannot_be_claimed_without_checks(self) -> None:
+    def test_preservation_cannot_be_dropped_after_pass_to_pass(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
             value = fixture(root)
-            value["qualificationScope"]["preservationPassToPass"] = True
-            with self.assertRaisesRegex(MODULE.CalibrationError, "must remain unqualified"):
+            value["qualificationScope"]["preservationPassToPass"] = False
+            with self.assertRaisesRegex(MODULE.CalibrationError, "must be observed"):
                 MODULE.validate(value, root)
 
 

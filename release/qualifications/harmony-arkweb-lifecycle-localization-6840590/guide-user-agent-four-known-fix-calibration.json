@@ -52,6 +52,13 @@
     "tap": [628, 1606],
     "repairAssertion": "Example Domain is visible after selecting UserAgent_four."
   },
+  "preservationScenario": {
+    "path": "guide-dom-storage-preservation.ui",
+    "id": "guide-dom-storage-preservation",
+    "sha256": "afc7348b3bde63d5613a0274caf1a016aa97af6b231b0a41bd833249fdbfabc8",
+    "tap": [628, 1256],
+    "preservationAssertion": "After selecting DomStorage, the Index-only Cache_two control is absent and the retained layout pagePath is pages/DomStorage."
+  },
   "supersededOracleFinding": {
     "scenarioSha256": "f66ac9e6ac8f16ed9ee31f33b37766faf3e88b90936fc1548a8bf95f163e06a8",
     "knownFixResultSha256": "12d7515a6cfc091af10a74303e3af53e6432e447c75631dcd7c7523514747701",
@@ -61,6 +68,15 @@
     "falseFailure": true,
     "cause": "assert-no-text searched serialized layout metadata and matched pagePath=pages/UserAgent_four rather than visible text",
     "retainedEvidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-useragent-four-known-fix-83660b76-f66ac9e6-v1"
+  },
+  "rejectedPreservationAttempt": {
+    "scenarioSha256": "0a2a4cb85e43edd33e77d3517eefc6c32bff431bd6ccb2974c569b7801c76abb",
+    "resultSha256": "9ea90e1f96c2b6ad2a1eb1fb2f7d920de95a9feb7b74050e31fcafcfd855a56d",
+    "status": "failed",
+    "infrastructureAvailable": true,
+    "observedPagePath": "pages/DomStorage",
+    "rejectionReason": "The first preservation Oracle required network Web content to appear within a fixed two-second window; the route succeeded but Example Domain was not yet present, so this assertion was rejected as environment-sensitive.",
+    "retainedEvidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-dom-storage-baseline-preservation-0a2a4cb8-v1"
   },
   "baselineAttempt": {
     "executionAuthority": {
@@ -127,6 +143,70 @@
     "repairCheckPassed": true,
     "evidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-useragent-four-known-fix-target-83660b76-8306a8ff-v1"
   },
+  "baselinePreservationAttempt": {
+    "executionAuthority": {
+      "routeDecision": "peer_direct",
+      "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+      "host": "huawei-ThinkCentre-M920t",
+      "operationId": "exec-00000000000001f7",
+      "traceIds": [
+        "fa09016e-db9d-493b-b92f-4aa5637c72ed",
+        "e42819b1-a8de-496d-b9c2-86785d1ebfe9",
+        "cbc4af52-00e4-4be6-8aab-7875c8f7dd96"
+      ]
+    },
+    "result": {
+      "schema": "agentlab.harmony_emulator_case_result.v2",
+      "status": "passed",
+      "oracleStatus": "passed",
+      "assessmentStatus": "assessed",
+      "infrastructureAvailable": true,
+      "subjectTaskSucceeded": true,
+      "failureClass": "none",
+      "hapSha256": "af20e2c0aa516b7853a0f99c03f0b6b0aa5fe9b73b89144a3f082f490a67a97a",
+      "scenarioSha256": "afc7348b3bde63d5613a0274caf1a016aa97af6b231b0a41bd833249fdbfabc8"
+    },
+    "resultSha256": "f79d3d9ea0a5a074724f4bdf8877b12ddbba61c3af855b69d2f64f1b2b9d0d17",
+    "actionsSha256": "0dfc07c7216cfd45bc790cf9dacc4657c5c5cade6e50a418977a611c3cbfccc7",
+    "checksSha256": "fad917f91ab31e5de222d779ca0f4b0c4a86b4b84ce6da9f8f0f5fe6ab80cf76",
+    "layoutBeforeSha256": "5a6d311426f4a644af419e4b4e72556e748821b59ac4a45a91ef91cc5ce4d979",
+    "layoutAfterSha256": "684e1164b82fb1f443e607deb7734c30e5f2cc92dfb48570c1cea3b556e78600",
+    "observedPagePathAfter": "pages/DomStorage",
+    "preservationCheckPassed": true,
+    "evidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-dom-storage-baseline-preservation-afc7348b-v2"
+  },
+  "knownFixPreservationAttempt": {
+    "executionAuthority": {
+      "routeDecision": "peer_direct",
+      "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+      "host": "huawei-ThinkCentre-M920t",
+      "operationId": "exec-00000000000001f8",
+      "traceIds": [
+        "34158c31-ecd3-415f-8668-68ac31fda2ad",
+        "dde40375-796c-4ec5-8700-16cf4e7c6688",
+        "cbc4af52-00e4-4be6-8aab-7875c8f7dd96"
+      ]
+    },
+    "result": {
+      "schema": "agentlab.harmony_emulator_case_result.v2",
+      "status": "passed",
+      "oracleStatus": "passed",
+      "assessmentStatus": "assessed",
+      "infrastructureAvailable": true,
+      "subjectTaskSucceeded": true,
+      "failureClass": "none",
+      "hapSha256": "c4b77a4f1aeebbf74786af79299dd315b2074ee7f0735a6682bdf6abb1128f90",
+      "scenarioSha256": "afc7348b3bde63d5613a0274caf1a016aa97af6b231b0a41bd833249fdbfabc8"
+    },
+    "resultSha256": "964accfe2b7ed58d751bea2700dce7027fddec3bf0365aa54c35647d048551f3",
+    "actionsSha256": "0dfc07c7216cfd45bc790cf9dacc4657c5c5cade6e50a418977a611c3cbfccc7",
+    "checksSha256": "fad917f91ab31e5de222d779ca0f4b0c4a86b4b84ce6da9f8f0f5fe6ab80cf76",
+    "layoutBeforeSha256": "8662fb431df245a7e092f53b37b9468c1596176424f69c3b9252cdbd1e332175",
+    "layoutAfterSha256": "105526cc47f3e2640739bb74245b428a8775e62a9abea49c391a1c0a88211145",
+    "observedPagePathAfter": "pages/DomStorage",
+    "preservationCheckPassed": true,
+    "evidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-dom-storage-known-fix-preservation-afc7348b-v1"
+  },
   "qualificationMatrix": {
     "repairChecks": {
       "failToPassObserved": true,
@@ -134,8 +214,10 @@
       "sameEnvironment": true
     },
     "preservationChecks": {
-      "defined": false,
-      "passToPassObserved": false
+      "defined": true,
+      "passToPassObserved": true,
+      "sameScenario": true,
+      "sameEnvironment": true
     },
     "review": {
       "independent": false,
@@ -149,11 +231,11 @@
     "businessUiOracleQualified": false,
     "independentReview": false,
     "referenceRepair": false,
-    "preservationPassToPass": false,
+    "preservationPassToPass": true,
     "performanceComparison": false
   },
   "remainingGates": [
-    "Add preservation checks that pass on both baseline and known-fix HAPs.",
+    "Add broader preservation coverage beyond the single DomStorage route.",
     "Obtain independent fairness and Oracle-breadth review before accepting a gold/reference repair.",
     "Only after functional qualification, run repeated identical performance workloads."
   ]

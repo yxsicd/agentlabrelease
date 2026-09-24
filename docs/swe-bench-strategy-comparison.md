@@ -120,9 +120,10 @@ smaller than SWE-bench's:
    has a controlled `FAIL_TO_PASS` replay: the frozen baseline stays on
    `pages/Index`, while a one-line page-registration variant reaches
    `pages/UserAgent_four` and renders `Example Domain` under the exact same
-   scenario. This is not yet a uniform repair-versus-preservation contract:
-   `PASS_TO_PASS` preservation checks, independent review and reference/gold
-   acceptance remain absent.
+   scenario. A separate DomStorage route now supplies one real `PASS_TO_PASS`
+   preservation check on both HAPs. This is still not a uniform contract:
+   preservation breadth, independent review and reference/gold acceptance
+   remain absent.
 5. Freshness and contamination are not yet explicit case fields. Private
    repositories reduce public leakage but do not prove that a model has not
    seen related code, issues or fixes.
@@ -156,8 +157,13 @@ smaller than SWE-bench's:
     because `pagePath=pages/UserAgent_four` contained the same substring. The
     replacement Oracle asserts visible `Example Domain`; it fails on the exact
     baseline HAP and passes on a controlled one-line page-registration variant.
-    This qualifies a candidate repair check and Oracle-design lesson, not a
-    reviewed reference repair or business UI case. The API 23/24 code-workshop
+    A separate DomStorage scenario passes before and after the variant, closing
+    the first real `PASS_TO_PASS` device check. Its first form—requiring remote
+    Web content within two seconds—was rejected after a route-success/content-
+    delay failure; the retained form checks that an Index-only control is absent
+    and separately binds the observed `pages/DomStorage` path. This qualifies a
+    candidate repair/preservation pair and Oracle-design lesson, not a reviewed
+    reference repair or business UI case. The API 23/24 code-workshop
     build remains unqualified because matching DevEco 6.1 tooling is absent, and
     the exact `hwlinux` host still has only the emulator/runtime substrate rather
     than a source-build SDK.
@@ -218,10 +224,11 @@ underspecified or contaminated case.
 1. Extend the implemented qualification matrix with evidence-backed
    freshness/contamination declarations and a stronger independent review
    receipt; unknown evidence already remains review-required, never qualified.
-2. Add `PASS_TO_PASS` preservation assertions to the real UserAgent_four device
-   candidate, independently review Oracle breadth/fairness, and only then accept
-   a reference repair. The device campaign must extend, rather than overwrite,
-   the static repair/preservation matrix with exact UI and performance receipts.
+2. Broaden `PASS_TO_PASS` coverage beyond the real candidate's single
+   DomStorage route, independently review Oracle breadth/fairness, and only then
+   accept a reference repair. The device campaign must extend, rather than
+   overwrite, the static repair/preservation matrix with exact UI and
+   performance receipts.
 3. Exercise the reviewed feedback-to-analysis bridge on a real source update
    and prove that the successor case retains prior failure lineage without
    mutating the old case.

@@ -50,6 +50,7 @@ def validate_result(
     hap_sha: str,
     scenario_sha: str,
     passed: bool,
+    check_field: str = "repairCheckPassed",
 ) -> None:
     require(isinstance(attempt, dict), f"{label} is required")
     validate_authority(attempt.get("executionAuthority"), label)
@@ -65,15 +66,15 @@ def validate_result(
     require(result.get("failureClass") == ("none" if passed else "oracle"), f"{label} failure class differs")
     require(result.get("hapSha256") == hap_sha, f"{label} HAP differs")
     require(result.get("scenarioSha256") == scenario_sha, f"{label} scenario differs")
-    require(attempt.get("repairCheckPassed") is passed, f"{label} repair check differs")
+    require(attempt.get(check_field) is passed, f"{label} {check_field} differs")
     for field in ("resultSha256", "actionsSha256", "checksSha256", "layoutBeforeSha256", "layoutAfterSha256"):
         digest(attempt.get(field), f"{label} {field}")
 
 
-def scenario_contract(path: Path) -> tuple[str, tuple[int, int], str]:
+def scenario_contract(path: Path) -> tuple[str, tuple[int, int], str, str]:
     case_ids: list[str] = []
     taps: list[tuple[int, int]] = []
-    assertions: list[str] = []
+    assertions: list[tuple[str, str]] = []
     for raw in path.read_text(encoding="utf-8").splitlines():
         fields = raw.split("\t")
         if fields[0] == "case" and len(fields) == 2:
@@ -83,10 +84,10 @@ def scenario_contract(path: Path) -> tuple[str, tuple[int, int], str]:
                 taps.append((int(fields[1]), int(fields[2])))
             except ValueError as error:
                 raise CalibrationError("scenario tap coordinates must be integers") from error
-        elif fields[0] == "assert-text" and len(fields) == 3:
-            assertions.append(fields[2])
-    require(len(case_ids) == 1 and len(taps) == 1 and len(assertions) == 1, "scenario must have one case, tap and assert-text")
-    return case_ids[0], taps[0], assertions[0]
+        elif fields[0] in ("assert-text", "assert-no-text") and len(fields) == 3:
+            assertions.append((fields[0], fields[2]))
+    require(len(case_ids) == 1 and len(taps) == 1 and len(assertions) == 1, "scenario must have one case, tap and assertion")
+    return case_ids[0], taps[0], assertions[0][0], assertions[0][1]
 
 
 def validate(value: object, base_dir: Path | None = None) -> dict:
@@ -134,10 +135,22 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
         path = base_dir / str(scenario.get("path", ""))
         require(path.is_file(), "scenario file is missing")
         require(hashlib.sha256(path.read_bytes()).hexdigest() == scenario_sha, "scenario file digest differs")
-        case_id, tap, assertion = scenario_contract(path)
+        case_id, tap, assertion_kind, assertion = scenario_contract(path)
         require(case_id == scenario.get("id"), "scenario case id differs")
         require(list(tap) == scenario.get("tap"), "scenario tap differs")
-        require(assertion == "Example Domain", "scenario must assert target-page visible semantics")
+        require(assertion_kind == "assert-text" and assertion == "Example Domain", "scenario must assert target-page visible semantics")
+
+    preservation_scenario = data.get("preservationScenario")
+    require(isinstance(preservation_scenario, dict), "preservationScenario is required")
+    preservation_sha = digest(preservation_scenario.get("sha256"), "preservation scenario")
+    if base_dir is not None:
+        path = base_dir / str(preservation_scenario.get("path", ""))
+        require(path.is_file(), "preservation scenario file is missing")
+        require(hashlib.sha256(path.read_bytes()).hexdigest() == preservation_sha, "preservation scenario file digest differs")
+        case_id, tap, assertion_kind, assertion = scenario_contract(path)
+        require(case_id == preservation_scenario.get("id"), "preservation scenario case id differs")
+        require(list(tap) == preservation_scenario.get("tap"), "preservation scenario tap differs")
+        require(assertion_kind == "assert-no-text" and assertion == "Cache_two", "preservation scenario must assert the Index control is absent")
 
     superseded = data.get("supersededOracleFinding")
     require(isinstance(superseded, dict), "supersededOracleFinding is required")
@@ -148,26 +161,38 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
     digest(superseded.get("scenarioSha256"), "superseded scenario")
     digest(superseded.get("knownFixResultSha256"), "superseded result")
 
+    rejected_preservation = data.get("rejectedPreservationAttempt")
+    require(isinstance(rejected_preservation, dict), "rejectedPreservationAttempt is required")
+    require(rejected_preservation.get("status") == "failed" and rejected_preservation.get("infrastructureAvailable") is True, "rejected preservation attempt must retain an assessed failure")
+    require(rejected_preservation.get("observedPagePath") == "pages/DomStorage", "rejected preservation attempt must retain the successful route")
+    require("environment-sensitive" in str(rejected_preservation.get("rejectionReason", "")), "rejected preservation reason must identify environment sensitivity")
+    digest(rejected_preservation.get("scenarioSha256"), "rejected preservation scenario")
+    digest(rejected_preservation.get("resultSha256"), "rejected preservation result")
+
     validate_result(data.get("baselineAttempt"), "baseline attempt", hap_sha=baseline_hap, scenario_sha=scenario_sha, passed=False)
     validate_result(data.get("knownFixAttempt"), "known-fix attempt", hap_sha=known_hap, scenario_sha=scenario_sha, passed=True)
     require(data["baselineAttempt"].get("observedPagePathAfter") == "pages/Index", "baseline must remain on Index")
     require(data["knownFixAttempt"].get("observedPagePathAfter") == "pages/UserAgent_four", "known fix must reach target page")
     require(data["knownFixAttempt"].get("observedVisibleTextAfter") == "Example Domain", "known fix target semantics differ")
+    validate_result(data.get("baselinePreservationAttempt"), "baseline preservation attempt", hap_sha=baseline_hap, scenario_sha=preservation_sha, passed=True, check_field="preservationCheckPassed")
+    validate_result(data.get("knownFixPreservationAttempt"), "known-fix preservation attempt", hap_sha=known_hap, scenario_sha=preservation_sha, passed=True, check_field="preservationCheckPassed")
+    require(data["baselinePreservationAttempt"].get("observedPagePathAfter") == "pages/DomStorage", "baseline preservation must reach DomStorage")
+    require(data["knownFixPreservationAttempt"].get("observedPagePathAfter") == "pages/DomStorage", "known-fix preservation must reach DomStorage")
 
     matrix = data.get("qualificationMatrix")
     require(isinstance(matrix, dict), "qualificationMatrix is required")
     repairs = matrix.get("repairChecks")
     require(isinstance(repairs, dict) and all(repairs.get(key) is True for key in ("failToPassObserved", "sameScenario", "sameEnvironment")), "repair checks must bind the controlled comparison")
     preservation = matrix.get("preservationChecks")
-    require(isinstance(preservation, dict) and preservation.get("defined") is False and preservation.get("passToPassObserved") is False, "preservation must remain unqualified")
+    require(isinstance(preservation, dict) and all(preservation.get(key) is True for key in ("defined", "passToPassObserved", "sameScenario", "sameEnvironment")), "preservation checks must bind the controlled comparison")
     review = matrix.get("review")
     require(isinstance(review, dict) and review.get("independent") is False and review.get("knownFixAcceptedAsReference") is False, "known fix must remain unreviewed and non-reference")
 
     scope = data.get("qualificationScope")
     require(isinstance(scope, dict), "qualificationScope is required")
-    for field in ("controlledKnownFix", "businessSemanticAssertionObserved", "candidateFailToPass"):
+    for field in ("controlledKnownFix", "businessSemanticAssertionObserved", "candidateFailToPass", "preservationPassToPass"):
         require(scope.get(field) is True, f"{field} must be observed")
-    for field in ("businessUiOracleQualified", "independentReview", "referenceRepair", "preservationPassToPass", "performanceComparison"):
+    for field in ("businessUiOracleQualified", "independentReview", "referenceRepair", "performanceComparison"):
         require(scope.get(field) is False, f"{field} must remain unqualified")
     return data
 
