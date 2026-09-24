@@ -111,6 +111,53 @@ class DockerImageArchiveVerificationTests(unittest.TestCase):
         self.assertNotEqual(completed.returncode, 0)
         self.assertIn("path traversal", completed.stderr)
 
+    def test_oci_manifest_indirection_uses_nested_config_digest_as_image_id(self) -> None:
+        config_digest = hashlib.sha256(self.config).hexdigest()
+        image_manifest = json.dumps(
+            {
+                "schemaVersion": 2,
+                "config": {
+                    "mediaType": "application/vnd.oci.image.config.v1+json",
+                    "digest": "sha256:" + config_digest,
+                    "size": len(self.config),
+                },
+                "layers": [],
+            },
+            separators=(",", ":"),
+        ).encode()
+        manifest_digest = hashlib.sha256(image_manifest).hexdigest()
+        docker_manifest = json.dumps(
+            [
+                {
+                    "Config": "blobs/sha256/" + manifest_digest,
+                    "RepoTags": [self.reference],
+                    "Layers": [],
+                }
+            ]
+        ).encode()
+        with tarfile.open(self.archive, "w") as output:
+            for name, content in (
+                ("blobs/sha256/" + config_digest, self.config),
+                ("blobs/sha256/" + manifest_digest, image_manifest),
+                ("manifest.json", docker_manifest),
+            ):
+                info = tarfile.TarInfo(name)
+                info.size = len(content)
+                output.addfile(info, io.BytesIO(content))
+        self.archive_sha = hashlib.sha256(self.archive.read_bytes()).hexdigest()
+        value = json.loads(self.descriptor.read_text())
+        value["archive"]["bytes"] = self.archive.stat().st_size
+        value["archive"]["sha256"] = self.archive_sha
+        self.descriptor.write_text(json.dumps(value), encoding="utf-8")
+        completed = self.run_verifier()
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        receipt = json.loads(completed.stdout)
+        self.assertEqual(receipt["image"]["imageId"], self.image_id)
+        self.assertEqual(receipt["image"]["manifestDigest"], "sha256:" + manifest_digest)
+        self.assertEqual(
+            receipt["image"]["configMember"], "blobs/sha256/" + config_digest
+        )
+
     def test_fast_install_verifies_archive_before_docker_load(self) -> None:
         source = FAST_INSTALL.read_text(encoding="utf-8")
         verification = source.index("verify-docker-image-archive.py")

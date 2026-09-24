@@ -38,9 +38,13 @@ def hash_member(handle: BinaryIO, capture: bool = False) -> tuple[str, bytes | N
     return digest.hexdigest(), bytes(content) if content is not None else None
 
 
-def inspect_tar(stream: BinaryIO) -> tuple[list[dict[str, object]], dict[str, str]]:
+def inspect_tar(
+    stream: BinaryIO,
+) -> tuple[list[dict[str, object]], dict[str, str], dict[str, bytes]]:
     manifests: list[dict[str, object]] | None = None
     member_digests: dict[str, str] = {}
+    metadata_members: dict[str, bytes] = {}
+    captured_bytes = 0
     with tarfile.open(fileobj=stream, mode="r|") as archive:
         for member in archive:
             require(not member.name.startswith("/"), "archive contains an absolute path")
@@ -50,17 +54,30 @@ def inspect_tar(stream: BinaryIO) -> tuple[list[dict[str, object]], dict[str, st
                 continue
             handle = archive.extractfile(member)
             require(handle is not None, f"cannot read archive member: {member.name}")
-            digest, content = hash_member(handle, member.name == "manifest.json")
+            capture = (
+                member.name == "manifest.json"
+                or member.name.endswith(".json")
+                or member.name.startswith("blobs/sha256/")
+            ) and member.size <= 4 * 1024 * 1024
+            if capture:
+                require(captured_bytes + member.size <= 64 * 1024 * 1024,
+                        "archive metadata capture exceeds safety limit")
+            digest, content = hash_member(handle, capture)
             member_digests[member.name] = digest
             if content is not None:
+                metadata_members[member.name] = content
+                captured_bytes += len(content)
+            if member.name == "manifest.json" and content is not None:
                 parsed = json.loads(content)
                 require(isinstance(parsed, list), "manifest.json must be an array")
                 manifests = parsed
     require(manifests is not None, "archive does not contain manifest.json")
-    return manifests, member_digests
+    return manifests, member_digests, metadata_members
 
 
-def inspect_archive(path: pathlib.Path) -> tuple[list[dict[str, object]], dict[str, str]]:
+def inspect_archive(
+    path: pathlib.Path,
+) -> tuple[list[dict[str, object]], dict[str, str], dict[str, bytes]]:
     if path.name.endswith(".zst"):
         process = subprocess.Popen(
             ["zstd", "-dc", "--long=31", str(path)],
@@ -93,7 +110,7 @@ def verify(
     require(archive_sha256 == expected_archive_sha256,
             "archive SHA-256 does not match the expected identity")
 
-    manifests, member_digests = inspect_archive(archive)
+    manifests, member_digests, metadata_members = inspect_archive(archive)
     matches = [
         row for row in manifests
         if isinstance(row, dict)
@@ -106,7 +123,22 @@ def verify(
             "matching manifest entry does not declare Config")
     require(config_path in member_digests,
             "manifest Config member is missing from the archive")
-    actual_image_id = "sha256:" + member_digests[config_path]
+    archive_manifest_digest = "sha256:" + member_digests[config_path]
+    actual_image_id = archive_manifest_digest
+    actual_config_path = config_path
+    config_content = metadata_members.get(config_path)
+    if config_content is not None:
+        candidate = json.loads(config_content)
+        nested = candidate.get("config") if isinstance(candidate, dict) else None
+        nested_digest = nested.get("digest") if isinstance(nested, dict) else None
+        if isinstance(nested_digest, str) and nested_digest.startswith("sha256:"):
+            nested_hex = nested_digest.removeprefix("sha256:")
+            require(len(nested_hex) == 64 and all(c in "0123456789abcdef" for c in nested_hex),
+                    "OCI manifest config digest is invalid")
+            actual_config_path = "blobs/sha256/" + nested_hex
+            require(member_digests.get(actual_config_path) == nested_hex,
+                    "OCI config blob is missing or does not match its digest")
+            actual_image_id = nested_digest
     require(actual_image_id == expected_image_id,
             f"image ID mismatch: expected {expected_image_id}, got {actual_image_id}")
 
@@ -142,7 +174,9 @@ def verify(
         "image": {
             "reference": expected_reference,
             "imageId": actual_image_id,
-            "configMember": config_path,
+            "manifestDigest": archive_manifest_digest,
+            "manifestMember": config_path,
+            "configMember": actual_config_path,
         },
         "descriptorSha256": descriptor_sha256,
     }
