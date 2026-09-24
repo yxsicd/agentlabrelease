@@ -159,6 +159,40 @@ their digests and confirms every calibrated plan field is identical to the
 reviewed proposal. Legacy v1 plans remain accepted without claiming this
 stronger review lineage.
 
+## Assessed-Agent execution
+
+Run the frozen case with a persistent, replaceable assessed-participant adapter.
+The Harness materializes the complete committed source set without Git metadata,
+sends only the staged demand and allowed edit surface, retains one workspace
+across stages, rejects changes outside that surface, and invokes the frozen
+Oracle independently after every participant turn:
+
+```sh
+python3 scripts/run-multi-repo-assessment.py \
+  --case /tmp/multi-repo-evaluation-case.json \
+  --manifest /tmp/multi-repo-manifest.json \
+  --oracle examples/multi-repo-case/oracle.mjs \
+  --participant examples/multi-repo-case/pi-assessed-agent.py \
+  --participant-id pi-glm-5.3-flash \
+  --output /tmp/multi-repo-attempt
+```
+
+The Pi adapter keeps one participant process and native session across both
+stages, while the operator-owned Gateway proxy retains the complete model
+exchange. The external Gateway credential is available only to the adapter,
+not to Pi. `summary.json` and `decision-package.json` carry the exact
+`sourceSetSha256` and are directly consumable by an
+`agentlab.case_attempt_collection.v2` campaign. Participant/runtime or Oracle
+transport failures produce `infrastructure-unavailable` with a null verdict;
+valid runs that fail behavior or edit scope remain assessed failures.
+
+`mock-assessed-agent.py` provides baseline, reference and scope-drift protocol
+fixtures for deterministic Harness regression only. Their separation score is
+not evidence about a real model. The current local-process adapter also relies
+on participant cooperation not to traverse outside the supplied workspace;
+formal production isolation requires the released sandbox/SessionFS execution
+boundary.
+
 Copy the frozen case into campaign evidence as
 `multi-repo-evaluation-case.json` and its exact calibration summary as
 `multi-repo-calibration.json`. For a constructed case, also copy the exact
