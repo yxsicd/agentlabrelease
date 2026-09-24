@@ -159,6 +159,29 @@ phase_started_ms=$(date +%s%3N)
   --out-dir "${composition}" \
   --cache-dir "${cas}"
 record_phase_ms composition_fetch "${phase_started_ms}"
+python3 - "${lock}" "${root}/image-locks.tsv" <<'PY'
+import json, pathlib, re, sys, urllib.parse
+lock = json.load(open(sys.argv[1]))
+rows = []
+for image in lock['images']:
+    if not image.get('enabled', True): continue
+    slot = image['slot']
+    assert re.fullmatch(r'[A-Za-z0-9_.-]+', slot)
+    artifact = pathlib.PurePosixPath(urllib.parse.urlsplit(image['artifact']).path).name
+    descriptor = pathlib.PurePosixPath(urllib.parse.urlsplit(image['descriptor']).path).name
+    rows.append('\t'.join((slot, artifact, descriptor, image['archiveSha256'], image['imageId'], image['reference'])))
+assert rows
+pathlib.Path(sys.argv[2]).write_text('\n'.join(rows) + '\n')
+PY
+while IFS=$'\t' read -r slot archive descriptor archive_sha image_id reference; do
+  python3 scripts/verify-docker-image-archive.py \
+    --archive "${composition}/${archive}" \
+    --descriptor "${composition}/${descriptor}" \
+    --expected-archive-sha256 "${archive_sha}" \
+    --expected-image-id "${image_id}" \
+    --expected-reference "${reference}" \
+    --receipt "${root}/runtime-image-${slot}-verification.json" >/dev/null
+done < "${root}/image-locks.tsv"
 if [[ "${AGENTLAB_FETCH_ONLY:-false}" == "true" ]]; then
   printf '{"schema":"agentlab.public_cache_prewarm.v1","ok":true,"sourceRevision":"%s"}\n' "${source_revision}" > "${root}/prewarm-summary.json"
   exit 0
@@ -178,7 +201,18 @@ out.mkdir(exist_ok=True)
 (out / "images").write_text("\n".join(row["reference"] for row in lock["images"] if row.get("enabled", True)) + "\n")
 (out / "volumes").write_text("\n".join(row["volume"] for row in lock["components"] if row.get("enabled", True)) + "\n")
 PY
-while IFS= read -r image; do [[ -z "${image}" ]] || docker image inspect "${image}" >/dev/null; done < "${root}/docker-identities/images"
+while IFS=$'\t' read -r slot _archive _descriptor _archive_sha _image_id reference; do
+  actual="$(docker image inspect "${reference}" --format '{{.Id}}')"
+  python3 - "${root}/runtime-image-${slot}-verification.json" "${actual}" <<'PY'
+import json, sys
+receipt = json.load(open(sys.argv[1]))
+actual = sys.argv[2]
+admitted = {receipt['image']['imageId']}
+if receipt['image'].get('ociManifestDigest'):
+    admitted.add(receipt['image']['ociManifestDigest'])
+assert actual in admitted, f"loaded image identity {actual} is not archive config/manifest identity"
+PY
+done < "${root}/image-locks.tsv"
 while IFS= read -r volume; do [[ -z "${volume}" ]] || docker volume inspect "${volume}" >/dev/null; done < "${root}/docker-identities/volumes"
 
 if [[ "${AGENTLAB_INSTALL_ONLY:-false}" == "true" ]]; then

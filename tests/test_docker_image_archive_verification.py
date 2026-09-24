@@ -14,6 +14,7 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/verify-docker-image-archive.py"
 FAST_INSTALL = ROOT / "scripts/ci-fast-subject-install.sh"
+PUBLIC_INSTALL = ROOT / "scripts/ci-public-install-deploy-smoke.sh"
 QUALIFICATION = ROOT / "release/qualifications/runtime-image-identity-e4c326e"
 
 
@@ -205,6 +206,14 @@ class DockerImageArchiveVerificationTests(unittest.TestCase):
                     hashlib.sha256((QUALIFICATION / evidence["path"]).read_bytes()).hexdigest(),
                     evidence["sha256"],
                 )
+
+    def test_public_install_verifies_acquired_and_loaded_image_identity(self) -> None:
+        source = PUBLIC_INSTALL.read_text(encoding="utf-8")
+        self.assertIn("image-locks.tsv", source)
+        self.assertIn("verify-docker-image-archive.py", source)
+        self.assertIn("runtime-image-${slot}-verification.json", source)
+        self.assertIn("ociManifestDigest", source)
+        self.assertIn("actual in admitted", source)
 
 
 if __name__ == "__main__":
