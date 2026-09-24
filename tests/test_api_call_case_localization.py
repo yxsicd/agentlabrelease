@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PROPOSE = ROOT / "scripts/propose-api-call-case-localization.py"
 REVIEW = ROOT / "scripts/review-api-call-case-localization.py"
+CREATE_REVIEW = ROOT / "scripts/create-api-call-localization-review.py"
 CONSTRUCT = ROOT / "scripts/run-multi-repo-intent-construction.py"
 SCORE = ROOT / "scripts/score-multi-repo-intent.py"
 PLAN = ROOT / "scripts/propose-multi-repo-case-plan.py"
@@ -201,19 +202,28 @@ class ApiCallCaseLocalizationTest(unittest.TestCase):
             self.assertTrue(all(row["gitBlobOid"] for row in proposal["editablePaths"]))
             self.assertFalse(proposal["automaticPromotion"])
 
-            review = self.write(
-                root,
-                "review.json",
-                {
-                    "schema": "agentlab.api_call_case_localization_review.v1",
-                    "proposalSha256": file_digest(proposal_path),
-                    "reviewer": "independent-maintainer",
-                    "rationale": "The selected calls and expanded lifecycle paths are a coherent calibration input.",
-                    "acknowledgedRiskIds": [row["id"] for row in proposal["risks"]],
-                    "verdict": "approve-for-intent-construction",
-                    "automaticPromotion": False,
-                },
+            review = root / "review.json"
+            decision = subprocess.run(
+                [
+                    sys.executable,
+                    str(CREATE_REVIEW),
+                    "--proposal",
+                    str(proposal_path),
+                    "--expected-sha256",
+                    file_digest(proposal_path),
+                    "--reviewer",
+                    "independent-maintainer",
+                    "--rationale",
+                    "The selected calls and expanded lifecycle paths are a coherent calibration input.",
+                    "--acknowledged-risk-ids",
+                    ",".join(row["id"] for row in proposal["risks"]),
+                    "--output",
+                    str(review),
+                ],
+                text=True,
+                capture_output=True,
             )
+            self.assertEqual(decision.returncode, 0, decision.stderr)
             reviewed_path = root / "reviewed.json"
             reviewed = subprocess.run(
                 [sys.executable, str(REVIEW), "--proposal", str(proposal_path), "--review", str(review), "--output", str(reviewed_path)],
@@ -442,6 +452,17 @@ class ApiCallCaseLocalizationTest(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("requires reviewed localization evidence", result.stderr)
             self.assertFalse((root / "construction").exists())
+
+    def test_review_workflow_is_manual_trusted_main_and_secret_free(self):
+        workflow = (ROOT / ".github/workflows/api-call-localization-review.yml").read_text()
+        self.assertIn("github.event_name == 'workflow_dispatch'", workflow)
+        self.assertIn("github.ref == 'refs/heads/main'", workflow)
+        self.assertIn("github.actor", workflow)
+        self.assertIn("create-api-call-localization-review.py", workflow)
+        self.assertIn("review-api-call-case-localization.py", workflow)
+        self.assertIn("expected_proposal_sha256", workflow)
+        self.assertIn("acknowledged_risk_ids", workflow)
+        self.assertNotIn("secrets.", workflow)
 
 
 if __name__ == "__main__":

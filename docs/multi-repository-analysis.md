@@ -135,6 +135,13 @@ localization lineage into the construction receipt and intent. The plan builder
 then derives `allowedEdits` from the reviewed editable paths, not from the broad
 candidate cluster. The case freezer rejects any later edit-surface drift.
 
+After this workflow reaches trusted `main`, a maintainer can dispatch
+`API-call localization independent review`. The job takes the retained
+qualification directory, exact proposal SHA-256, every risk ID and a rationale;
+it binds the authenticated GitHub actor as reviewer and uploads the proposal,
+decision and compiled reviewed localization together. It is intentionally
+secret-free and cannot run from a pull-request ref.
+
 ## From difficulty to a valid evaluation case
 
 A recursive impact candidate describes where a change may be discriminating;

@@ -72,6 +72,12 @@ reference implementation. The ArkWeb real-source example at
 `release/qualifications/harmony-arkweb-lifecycle-localization-6840590/` stops at
 this review boundary on purpose.
 
+On trusted `main`, the manual `API-call localization independent review`
+workflow performs the same exact-digest operation using the authenticated
+GitHub actor as reviewer and retains all three artifacts together. It requires
+the reviewer to enter the proposal digest, every risk ID and a rationale; it
+has no model or repository-write secret.
+
 For a `shared-external-api-call-contract`, intent construction fails closed
 unless all three exact localization artifacts are supplied:
 

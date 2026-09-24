@@ -1,0 +1,81 @@
+name: API-call localization independent review
+on:
+  workflow_dispatch:
+    inputs:
+      qualification_path:
+        description: Qualification directory below release/qualifications
+        required: true
+        default: release/qualifications/harmony-arkweb-lifecycle-localization-6840590
+        type: string
+      expected_proposal_sha256:
+        description: Exact localization proposal digest inspected by the reviewer
+        required: true
+        type: string
+      acknowledged_risk_ids:
+        description: Comma-separated localization risk IDs, exactly as reviewed
+        required: true
+        type: string
+      rationale:
+        description: Why this exact localization is approved for intent construction
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/api-call-localization-review
+      QUALIFICATION_PATH: ${{ inputs.qualification_path }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Resolve the retained proposal without path escape
+        id: proposal
+        run: |
+          mkdir -p "$AGENTLAB_ROOT"
+          python3 - <<'PY'
+          import os, pathlib, re
+          root = pathlib.Path.cwd().resolve()
+          relative = os.environ["QUALIFICATION_PATH"]
+          assert re.fullmatch(r"release/qualifications/[A-Za-z0-9._/-]+", relative), relative
+          proposal = (root / relative / "proposal.json").resolve()
+          proposal.relative_to(root / "release" / "qualifications")
+          assert proposal.is_file(), proposal
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("proposal_path=" + str(proposal) + "\n")
+          PY
+      - name: Bind reviewer identity, exact digest, risks and rationale
+        env:
+          PROPOSAL_PATH: ${{ steps.proposal.outputs.proposal_path }}
+          EXPECTED_PROPOSAL_SHA256: ${{ inputs.expected_proposal_sha256 }}
+          REVIEWER: ${{ github.actor }}
+          ACKNOWLEDGED_RISK_IDS: ${{ inputs.acknowledged_risk_ids }}
+          REVIEW_RATIONALE: ${{ inputs.rationale }}
+        run: |
+          python3 scripts/create-api-call-localization-review.py \
+            --proposal "$PROPOSAL_PATH" \
+            --expected-sha256 "$EXPECTED_PROPOSAL_SHA256" \
+            --reviewer "$REVIEWER" \
+            --acknowledged-risk-ids "$ACKNOWLEDGED_RISK_IDS" \
+            --rationale "$REVIEW_RATIONALE" \
+            --output "$AGENTLAB_ROOT/review.json"
+          python3 scripts/review-api-call-case-localization.py \
+            --proposal "$PROPOSAL_PATH" \
+            --review "$AGENTLAB_ROOT/review.json" \
+            --output "$AGENTLAB_ROOT/localization.json"
+          cp "$PROPOSAL_PATH" "$AGENTLAB_ROOT/proposal.json"
+          sha256sum "$AGENTLAB_ROOT/proposal.json" \
+            "$AGENTLAB_ROOT/review.json" \
+            "$AGENTLAB_ROOT/localization.json" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve exact independent review lineage
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: api-call-localization-review
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/
