@@ -61,6 +61,34 @@ def main():
     summary = load(evidence / "summary.json") or {}
     decision = load(evidence / "decision-package.json") or {}
     difficulty = load(evidence / "difficulty-candidates.json") or {}
+    multi_repo_difficulty = difficulty.get("schema") == "agentlab.difficulty_candidates.v2"
+    if multi_repo_difficulty:
+        source_set_sha256 = difficulty.get("sourceSetSha256")
+        sources = difficulty.get("sources")
+        if not isinstance(source_set_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", source_set_sha256):
+            raise SystemExit("multi-repository difficulty evidence requires sourceSetSha256")
+        if difficulty.get("automaticPromotion") is not False:
+            raise SystemExit("multi-repository difficulty evidence must not auto-promote")
+        if not isinstance(sources, list) or len(sources) < 2:
+            raise SystemExit("multi-repository difficulty evidence requires at least two sources")
+        if not all(
+            isinstance(source, dict)
+            and isinstance(source.get("id"), str) and source["id"]
+            and isinstance(source.get("repository"), str) and source["repository"]
+            and isinstance(source.get("revision"), str) and REVISION.fullmatch(source["revision"])
+            for source in sources
+        ):
+            raise SystemExit("invalid multi-repository difficulty source identity")
+        source_set = {
+            "schema": "agentlab.multi_repo_source_set.v1",
+            "repositories": sources,
+            "moduleBindings": difficulty.get("moduleBindings") or {},
+        }
+        calculated_source_set = hashlib.sha256(
+            json.dumps(source_set, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        if calculated_source_set != source_set_sha256:
+            raise SystemExit("multi-repository difficulty sourceSetSha256 mismatch")
     groups = {name: [] for name in (
         "difficulty_points", "checkpoints", "interventions", "crossings",
         "decisions", "capability_profiles", "evidence_refs", "execution_environments",
@@ -85,7 +113,7 @@ def main():
     ):
         path = evidence / filename
         if path.is_file():
-            insert("evidence_refs", {
+            evidence_row = {
                 "id": f"evidence-{args.run_id}-{filename[:-5]}",
                 "schema": "agentlab.evidence_ref.v1",
                 "kind": kind,
@@ -96,7 +124,12 @@ def main():
                 "producerRun": args.run_id,
                 "public": True,
                 "metadata": {"scenario": decision.get("scenario"), "taskId": summary.get("taskId")},
-            })
+            }
+            if filename == "difficulty-candidates.json" and multi_repo_difficulty:
+                evidence_row["sourceSetSha256"] = difficulty["sourceSetSha256"]
+                evidence_row["sources"] = difficulty["sources"]
+                evidence_row.pop("sourceRevision", None)
+            insert("evidence_refs", evidence_row)
 
     environment = load(evidence / "environment-fingerprint.json") or {}
     if environment:
@@ -224,8 +257,16 @@ def main():
         mechanism = candidate.get("mechanism") or candidate.get("signature")
         if not all(isinstance(value, str) and value for value in (dimension, primary, mechanism)):
             continue
+        if multi_repo_difficulty:
+            verification = candidate.get("verificationContract") or {}
+            if not isinstance(candidate.get("id"), str) or not candidate["id"]:
+                raise SystemExit("multi-repository difficulty candidate requires a stable id")
+            if candidate.get("automaticPromotion") is not False:
+                raise SystemExit("multi-repository difficulty candidate must not auto-promote")
+            if candidate.get("maturityState") != "candidate" or verification.get("caseReady") is not False:
+                raise SystemExit("multi-repository difficulty must remain a non-ready candidate")
         candidate_id = f"difficulty-{args.run_id}-{hashlib.sha256(json.dumps(candidate, sort_keys=True).encode()).hexdigest()[:16]}"
-        insert("difficulty_points", {
+        difficulty_row = {
             "id": candidate_id,
             "schema": "agentlab.difficulty_point.v1",
             "taskId": summary.get("taskId"),
@@ -239,7 +280,19 @@ def main():
             "checkpointIds": checkpoint_ids,
             "evidenceIds": [f"evidence-{args.run_id}-difficulty-candidates"],
             "observation": {"producerRun": args.run_id, "reproducible": candidate.get("reproducible")},
-        })
+        }
+        if multi_repo_difficulty:
+            difficulty_row.pop("sourceRevision", None)
+            difficulty_row.update({
+                "analysisCandidateId": candidate.get("id"),
+                "sourceSetSha256": difficulty["sourceSetSha256"],
+                "sources": difficulty["sources"],
+                "seed": candidate.get("seed"),
+                "affectedFiles": candidate.get("affectedFiles", []),
+                "verificationContract": candidate.get("verificationContract"),
+                "automaticPromotion": False,
+            })
+        insert("difficulty_points", difficulty_row)
 
     discrimination = load(evidence / "case-discrimination-report.json") or {}
     if discrimination:

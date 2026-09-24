@@ -31,6 +31,29 @@ Full source syntax facts remain in the captured AST evidence. Type resolution,
 resolved calls, control/dataflow and whole-corpus TableGit ingestion are further
 capabilities, not claims of this version.
 
+## Revision-fenced multi-repository graph
+
+`agentlab-multi-repo-analysis` accepts two or more repositories in an explicit
+manifest. Every repository has a stable source identifier, a local checkout
+used only as an object database, and an exact 40-character commit. The analyzer
+reads each file with `git show <revision>:<path>`, so dirty and untracked
+workspace bytes do not enter the result.
+
+```sh
+cargo run --locked -p agentlab_code_analysis \
+  --bin agentlab-multi-repo-analysis -- \
+  multi-repo-manifest.json /tmp/multi-repo-evidence
+```
+
+See [`docs/multi-repository-analysis.md`](../../docs/multi-repository-analysis.md)
+for the manifest and evidence contract. Relative ArkTS/TypeScript imports are
+resolved within a repository. Non-relative cross-repository imports resolve
+only through explicit manifest bindings; the tool does not guess package
+manager or compiler configuration. It emits a dependency graph, unresolved
+boundary evidence, and recursive reverse-impact difficulty candidates. Those
+candidates are not benchmark cases: each remains in candidate state until it
+has repository-specific build checks and an independent behavior oracle.
+
 ## Local iteration and public Action
 
 Run the same checks used by `rust-code-analysis.yml`:
@@ -41,10 +64,14 @@ cargo test --locked -p agentlab_code_analysis
 cargo run --locked -p agentlab_code_analysis -- /path/to/source-repo /tmp/ast-evidence
 ```
 
-Five tests cover syntax extraction plus real Git/CLI execution: multiline
+Tests cover syntax extraction plus real Git/CLI execution: multiline
 imports/ArkUI, comment exclusion and method ownership, whitespace-stable IDs,
 fixed committed source independent from dirty/untracked Workspace files,
-byte-identical repeated exports and retained invalid-syntax evidence.
+byte-identical repeated exports and retained invalid-syntax evidence. The
+multi-repository integration tests additionally construct three real Git
+repositories, prove direct and transitive cross-repository impact, retain an
+unresolved import as a difficulty candidate, and reject symbolic revisions and
+missing bound targets.
 
 The independent Rust Action runs on main pushes, relevant pull requests and
 manual dispatch. After Rust tests it fetches the fixed public Harmony source,

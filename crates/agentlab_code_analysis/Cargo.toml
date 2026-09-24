@@ -17,6 +17,10 @@ path = "src/harmony_materialize.rs"
 name = "agentlab-source-probe"
 path = "src/source_probe.rs"
 
+[[bin]]
+name = "agentlab-multi-repo-analysis"
+path = "src/multi_repo.rs"
+
 [dependencies]
 tree-sitter = "=0.27.0"
 tree-sitter-language = "=0.1.8"
