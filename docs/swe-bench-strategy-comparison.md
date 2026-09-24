@@ -152,9 +152,13 @@ smaller than SWE-bench's:
    cut and survive into successor-case lineage. It has deterministic regression
    coverage, but has not yet been exercised on a representative real source
    update with several candidate cases.
-9. Process-level scoring—per-turn dependency discovery, deviations, recovery,
-   decision impact, elapsed time and subjective/objective consistency—is not
-   yet one uniform scorecard for every case.
+9. Multi-repository assessment now emits operator-owned per-stage timing,
+   changed/unauthorized paths, scope verdicts and Oracle recovery/regression.
+   Collection independently reconstructs that process aggregate, discrimination
+   reports retain process coverage and participant Wilson intervals, and a
+   trusted-main suite composer joins those results to the authenticated review
+   population. Dependency-discovery quality, subjective/objective consistency
+   and equivalent process coverage for every Harmony/device adapter remain open.
 10. Real-source candidate precision remains uneven. The largest module-level
     clusters span 1,567 to 3,018 files, far wider than SWE-bench's issue-level
     repair contracts. The new API-call pass proves that one `@kit.ArkWeb`
@@ -294,8 +298,10 @@ underspecified or contaminated case.
    change hypotheses, then add repair/preservation checks and independent
    review before running repeated strong/weak/middle participant trials.
    Report confidence intervals, exclusions and infrastructure failures.
-6. Unify outcome and process measurements into a per-turn scorecard while
-   retaining raw trajectories and independently executable verdict evidence.
+6. Exercise the implemented suite scorecard on real reviewed campaigns, then
+   extend the same process contract to Harmony/device adapters and add
+   dependency-discovery plus subjective/objective consistency without replacing
+   raw trajectories or independently executable verdict evidence.
 
 This ordering copies SWE-bench's most valuable discipline—hidden executable
 repair and preservation evidence—while addressing the two failure modes that

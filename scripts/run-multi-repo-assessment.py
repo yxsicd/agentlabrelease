@@ -161,6 +161,47 @@ def blind_dispatch_qualification(blind_dispatch, runtime_validation, authenticat
     }
 
 
+def process_measurement(stage_results, duration_ms):
+    oracle_outcomes = [
+        row["oraclePass"]
+        for row in stage_results
+        if isinstance(row.get("oraclePass"), bool)
+    ]
+    recovery_count = sum(
+        previous is False and current is True
+        for previous, current in zip(oracle_outcomes, oracle_outcomes[1:])
+    )
+    regression_count = sum(
+        previous is True and current is False
+        for previous, current in zip(oracle_outcomes, oracle_outcomes[1:])
+    )
+    return {
+        "schema": "agentlab.assessment_process_measurement.v1",
+        "stageCount": len(stage_results),
+        "participantCompletedStageCount": sum(
+            row.get("participantCompleted") is True for row in stage_results
+        ),
+        "oracleExecutedStageCount": len(oracle_outcomes),
+        "oraclePassedStageCount": sum(value is True for value in oracle_outcomes),
+        "scopeViolationStageCount": sum(
+            row.get("scopeValid") is False for row in stage_results
+        ),
+        "changedPathCount": sum(row.get("changedPathCount", 0) for row in stage_results),
+        "unauthorizedPathCount": sum(
+            row.get("unauthorizedPathCount", 0) for row in stage_results
+        ),
+        "oracleRecoveryCount": recovery_count,
+        "oracleRegressionCount": regression_count,
+        "participantDurationMs": sum(
+            row.get("participantDurationMs", 0) for row in stage_results
+        ),
+        "oracleDurationMs": sum(row.get("oracleDurationMs", 0) for row in stage_results),
+        "stageDurationMs": sum(row.get("stageDurationMs", 0) for row in stage_results),
+        "attemptDurationMs": duration_ms,
+        "processMeasurementQualified": bool(stage_results),
+    }
+
+
 def git(root: Path, *arguments: str, text=False):
     result = subprocess.run(
         ["git", "-C", str(root), *arguments], capture_output=True, text=text
@@ -431,6 +472,7 @@ def main():
     started = time.monotonic()
     try:
         for stage in stages:
+            stage_started = time.monotonic()
             stage_id = stage.get("id")
             demand = stage.get("demand")
             check_ids = stage.get("checkIds")
@@ -462,6 +504,7 @@ def main():
             before = tree_state(workspace)
             participant_ok = False
             participant_error = None
+            participant_started = time.monotonic()
             try:
                 response = protocol.request(
                     {
@@ -476,6 +519,9 @@ def main():
                     participant_error = response.get("error") or "participant rejected stage"
             except Exception as error:
                 participant_error = f"{type(error).__name__}: {error}"
+            participant_duration_ms = round(
+                (time.monotonic() - participant_started) * 1000
+            )
             after = tree_state(workspace)
             changed = sorted(set(before) | set(after))
             changed = [path for path in changed if before.get(path) != after.get(path)]
@@ -485,10 +531,15 @@ def main():
             stderr_path = oracle_evidence / f"{stage_id}.stderr.log"
             oracle_receipt = None
             oracle_error = None
+            oracle_duration_ms = 0
             if participant_ok:
+                oracle_started = time.monotonic()
                 completed = subprocess.run(
                     ["node", "--experimental-vm-modules", str(oracle), str(workspace), stage_id],
                     capture_output=True,
+                )
+                oracle_duration_ms = round(
+                    (time.monotonic() - oracle_started) * 1000
                 )
                 stdout_path.write_bytes(completed.stdout)
                 stderr_path.write_bytes(completed.stderr)
@@ -521,16 +572,23 @@ def main():
                 infrastructure_errors.append(
                     {"stageId": stage_id, "source": "oracle", "error": oracle_error}
                 )
+            stage_duration_ms = round((time.monotonic() - stage_started) * 1000)
             stage_results.append(
                 {
                     "stageId": stage_id,
                     "participantCompleted": participant_ok,
                     "changedPaths": changed,
+                    "changedPathCount": len(changed),
                     "unauthorizedPaths": unauthorized,
+                    "unauthorizedPathCount": len(unauthorized),
                     "scopeValid": not unauthorized,
                     "oraclePass": oracle_receipt.get("pass") if oracle_receipt and not oracle_error else None,
                     "oracleReceiptSha256": digest(stdout_path) if stdout_path.stat().st_size else None,
                     "workspaceSha256": tree_digest(after),
+                    "participantDurationMs": participant_duration_ms,
+                    "oracleDurationMs": oracle_duration_ms,
+                    "stageDurationMs": stage_duration_ms,
+                    "cumulativeCheckCount": len(cumulative_checks),
                 }
             )
             if participant_error or oracle_error:
@@ -568,6 +626,7 @@ def main():
     final_state = tree_state(workspace)
     ended_at = datetime.now(timezone.utc).isoformat()
     duration_ms = round((time.monotonic() - started) * 1000)
+    process = process_measurement(stage_results, duration_ms)
     summary = {
         "schema": "agentlab.multi_repo_assessment_summary.v1",
         "taskId": case["id"],
@@ -582,6 +641,7 @@ def main():
         "startedAt": started_at,
         "endedAt": ended_at,
         "durationMs": duration_ms,
+        "processMeasurement": process,
         "blindDispatch": blind_dispatch_qualification(
             blind_dispatch,
             runtime_validation,
@@ -598,6 +658,7 @@ def main():
         "infrastructureAvailable": assessed,
         "subjectTaskSucceeded": succeeded,
         "phaseVerdicts": stage_results,
+        "processMeasurement": process,
         "launchErrors": infrastructure_errors,
         "blindDispatch": summary["blindDispatch"],
         "automaticPromotion": False,

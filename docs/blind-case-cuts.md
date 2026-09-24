@@ -224,6 +224,17 @@ requires a later independent sampling-frame review; neither case count nor low
 reviewer disagreement can establish it automatically. The public repository
 currently contains protocol tests, not a completed real reviewed cohort.
 
+The trusted-main `agent-suite-scorecard.yml` workflow can join that exact
+population to one successful `multi-repo-assessed-campaign` run per case. It
+verifies each source run's repository, workflow path, manual event, main branch,
+revision, attempt and successful conclusion before accepting the artifact. The
+scorecard requires exact case/source-set membership, a participant capability
+order declared before composition, complete operator-owned process measurement,
+the existing discrimination gate and non-overlapping strongest/weakest 95%
+Wilson intervals. It signs the exact output and retains the source-run metadata.
+Even a fully measured suite keeps benchmark-population qualification false until
+the sampling frame and model-exposure boundary receive independent evidence.
+
 ## Evidence boundary
 
 A structurally valid cut is eligible for a blind pilot only. It is not yet

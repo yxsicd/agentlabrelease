@@ -108,7 +108,11 @@ class AuthenticatedBlindCaseReviewTests(unittest.TestCase):
             ROOT / ".github/workflows/multi-repo-assessed-campaign.yml"
         ).read_text()
         self.assertIn("authenticated_review_run_id:", campaign)
-        self.assertIn("attestations: read", campaign)
+        self.assertIn("attestations: write", campaign)
+        self.assertIn("artifact-metadata: write", campaign)
+        self.assertIn("id-token: write", campaign)
+        self.assertIn(action, campaign)
+        self.assertIn("case-discrimination-report.json", campaign)
         self.assertIn("authenticate-blind-case-review.py verify-online", campaign)
         self.assertIn("--verification-output", campaign)
         self.assertIn("--authenticated-review-bundle", campaign)

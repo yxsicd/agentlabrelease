@@ -63,6 +63,58 @@ def entropy(probability: float) -> float:
     return -(probability * math.log2(probability) + (1.0 - probability) * math.log2(1.0 - probability))
 
 
+def wilson_interval(successes: int, total: int, z: float = 1.959963984540054) -> dict[str, float]:
+    if not 0 <= successes <= total or total < 1:
+        fail("Wilson interval denominator is invalid")
+    probability = successes / total
+    denominator = 1.0 + z * z / total
+    center = (probability + z * z / (2.0 * total)) / denominator
+    margin = (
+        z
+        * math.sqrt(
+            probability * (1.0 - probability) / total
+            + z * z / (4.0 * total * total)
+        )
+        / denominator
+    )
+    return {
+        "confidenceLevel": 0.95,
+        "lower": max(0.0, center - margin),
+        "upper": min(1.0, center + margin),
+    }
+
+
+def validate_process_measurement(value: Any, case_id: str, attempt_id: str) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if not isinstance(value, dict) or value.get("schema") != "agentlab.assessment_process_measurement.v1":
+        fail(f"{case_id} {attempt_id} process measurement schema differs")
+    integer_fields = (
+        "stageCount",
+        "participantCompletedStageCount",
+        "oracleExecutedStageCount",
+        "oraclePassedStageCount",
+        "scopeViolationStageCount",
+        "changedPathCount",
+        "unauthorizedPathCount",
+        "oracleRecoveryCount",
+        "oracleRegressionCount",
+        "participantDurationMs",
+        "oracleDurationMs",
+        "stageDurationMs",
+        "attemptDurationMs",
+    )
+    if not all(isinstance(value.get(field), int) and value[field] >= 0 for field in integer_fields):
+        fail(f"{case_id} {attempt_id} process measurement is invalid")
+    if value.get("processMeasurementQualified") is not True or value["stageCount"] < 1:
+        fail(f"{case_id} {attempt_id} process measurement is not qualified")
+    if value["participantCompletedStageCount"] > value["stageCount"]:
+        fail(f"{case_id} {attempt_id} completed stage count is invalid")
+    if value["oraclePassedStageCount"] > value["oracleExecutedStageCount"]:
+        fail(f"{case_id} {attempt_id} Oracle stage count is invalid")
+    return value
+
+
 def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> dict[str, Any]:
     case_id = case.get("id")
     if not isinstance(case_id, str) or not case_id:
@@ -71,7 +123,7 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
     if not isinstance(attempts, list):
         fail(f"{case_id} attempts must be a list")
 
-    profiles: dict[str, list[bool]] = {}
+    profiles: dict[str, list[dict[str, Any]]] = {}
     excluded: list[dict[str, str]] = []
     seen_attempts: set[str] = set()
     for attempt in attempts:
@@ -91,20 +143,53 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
         if not isinstance(verdict, bool):
             excluded.append({"attemptId": attempt_id, "reason": "missing-independent-verdict"})
             continue
-        profiles.setdefault(participant_id, []).append(verdict)
+        process = validate_process_measurement(
+            attempt.get("processMeasurement"), case_id, attempt_id
+        )
+        profiles.setdefault(participant_id, []).append(
+            {"verdict": verdict, "process": process}
+        )
 
     profile_rows = []
-    for participant_id, verdicts in sorted(profiles.items()):
+    for participant_id, attempt_rows in sorted(profiles.items()):
+        verdicts = [row["verdict"] for row in attempt_rows]
+        process_rows = [row["process"] for row in attempt_rows if row["process"] is not None]
         passed = sum(verdicts)
-        count = len(verdicts)
+        count = len(attempt_rows)
         rate = passed / count
+        measured = len(process_rows)
         profile_rows.append(
             {
                 "participantId": participant_id,
                 "validTrials": count,
                 "passedTrials": passed,
                 "passRate": rate,
+                "passRateWilson95": wilson_interval(passed, count),
                 "withinProfileDeterminism": abs(2.0 * rate - 1.0),
+                "processMeasurement": {
+                    "measuredTrials": measured,
+                    "coverageRate": measured / count,
+                    "coverageQualified": measured == count,
+                    "meanAttemptDurationMs": (
+                        sum(row["attemptDurationMs"] for row in process_rows) / measured
+                        if measured
+                        else None
+                    ),
+                    "meanChangedPathCount": (
+                        sum(row["changedPathCount"] for row in process_rows) / measured
+                        if measured
+                        else None
+                    ),
+                    "totalOracleRecoveryCount": sum(
+                        row["oracleRecoveryCount"] for row in process_rows
+                    ),
+                    "totalOracleRegressionCount": sum(
+                        row["oracleRegressionCount"] for row in process_rows
+                    ),
+                    "totalScopeViolationStageCount": sum(
+                        row["scopeViolationStageCount"] for row in process_rows
+                    ),
+                },
             }
         )
 
@@ -127,6 +212,19 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
     calibrated = calibration_passed(case.get("calibration"))
     evidence_complete = len(profile_rows) >= 2 and minimum_trials >= required_trials
     eligible = calibrated and evidence_complete and score >= threshold
+    process_measured = sum(
+        row["processMeasurement"]["measuredTrials"] for row in profile_rows
+    )
+    process_coverage_qualified = total > 0 and process_measured == total
+    if len(profile_rows) >= 2:
+        highest = max(profile_rows, key=lambda row: (row["passRate"], row["participantId"]))
+        lowest = min(profile_rows, key=lambda row: (row["passRate"], row["participantId"]))
+        extreme_intervals_separated = (
+            highest["passRateWilson95"]["lower"]
+            > lowest["passRateWilson95"]["upper"]
+        )
+    else:
+        extreme_intervals_separated = False
     if not calibrated:
         decision = "reject-oracle-calibration"
     elif not evidence_complete:
@@ -149,9 +247,18 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
             "trialConfidence": confidence,
             "outcomeEntropy": entropy(overall_rate),
             "discriminationScore": score,
+            "observedExtremePassRateWilson95Separated": extreme_intervals_separated,
+        },
+        "processMeasurement": {
+            "validAttemptCount": total,
+            "measuredAttemptCount": process_measured,
+            "coverageRate": process_measured / total if total else 0.0,
+            "coverageQualified": process_coverage_qualified,
+            "note": "Operator-owned stage timing, change, scope and Oracle transition evidence; participant intent quality is not inferred.",
         },
         "evidenceComplete": evidence_complete,
         "eligible": eligible,
+        "processAwareEligible": eligible and process_coverage_qualified,
         "decision": decision,
     }
 
@@ -194,6 +301,7 @@ def build_report(value: dict[str, Any], required_trials: int, threshold: float) 
             "minimumParticipantProfiles": 2,
             "eligibilityThreshold": threshold,
             "successEvent": "independent taskPassed verdict from infrastructure-valid attempt",
+            "processMeasurementEvent": "operator-owned per-stage timing, changed paths, scope verdict and Oracle transition evidence",
         },
         "ranking": rows,
         "eligibleCaseIds": [row["caseId"] for row in rows if row["eligible"]],

@@ -132,6 +132,93 @@ def normalize_calibration(
     }
 
 
+def normalize_process_measurement(
+    summary: dict[str, Any],
+    decision: dict[str, Any],
+    attempt_id: str,
+) -> dict[str, Any] | None:
+    process = summary.get("processMeasurement")
+    if process is None:
+        if decision.get("processMeasurement") is not None:
+            fail(f"{attempt_id} decision has unbound process measurement")
+        return None
+    if not isinstance(process, dict) or process.get("schema") != "agentlab.assessment_process_measurement.v1":
+        fail(f"{attempt_id} process measurement schema differs")
+    if decision.get("processMeasurement") != process:
+        fail(f"{attempt_id} process measurement differs between summary and decision")
+    stages = summary.get("stages")
+    if not isinstance(stages, list) or not stages:
+        fail(f"{attempt_id} measured process requires stage evidence")
+    duration_ms = summary.get("durationMs")
+    if not isinstance(duration_ms, int) or duration_ms < 0:
+        fail(f"{attempt_id} measured process duration is invalid")
+    stage_ids: set[str] = set()
+    for stage in stages:
+        if not isinstance(stage, dict):
+            fail(f"{attempt_id} process stage is invalid")
+        stage_id = stage.get("stageId")
+        if not isinstance(stage_id, str) or not stage_id or stage_id in stage_ids:
+            fail(f"{attempt_id} process stage identity is invalid")
+        stage_ids.add(stage_id)
+        for field in (
+            "participantDurationMs",
+            "oracleDurationMs",
+            "stageDurationMs",
+            "changedPathCount",
+            "unauthorizedPathCount",
+            "cumulativeCheckCount",
+        ):
+            if not isinstance(stage.get(field), int) or stage[field] < 0:
+                fail(f"{attempt_id} process stage {field} is invalid")
+        changed = stage.get("changedPaths")
+        unauthorized = stage.get("unauthorizedPaths")
+        if not isinstance(changed, list) or stage["changedPathCount"] != len(changed):
+            fail(f"{attempt_id} process changed-path count differs")
+        if not isinstance(unauthorized, list) or stage["unauthorizedPathCount"] != len(unauthorized):
+            fail(f"{attempt_id} process unauthorized-path count differs")
+        if not isinstance(stage.get("participantCompleted"), bool):
+            fail(f"{attempt_id} process participant completion is invalid")
+        if not isinstance(stage.get("scopeValid"), bool):
+            fail(f"{attempt_id} process scope verdict is invalid")
+        if stage.get("oraclePass") is not None and not isinstance(stage.get("oraclePass"), bool):
+            fail(f"{attempt_id} process Oracle verdict is invalid")
+    oracle_outcomes = [
+        stage["oraclePass"]
+        for stage in stages
+        if isinstance(stage.get("oraclePass"), bool)
+    ]
+    expected = {
+        "schema": "agentlab.assessment_process_measurement.v1",
+        "stageCount": len(stages),
+        "participantCompletedStageCount": sum(
+            stage["participantCompleted"] for stage in stages
+        ),
+        "oracleExecutedStageCount": len(oracle_outcomes),
+        "oraclePassedStageCount": sum(value is True for value in oracle_outcomes),
+        "scopeViolationStageCount": sum(not stage["scopeValid"] for stage in stages),
+        "changedPathCount": sum(stage["changedPathCount"] for stage in stages),
+        "unauthorizedPathCount": sum(
+            stage["unauthorizedPathCount"] for stage in stages
+        ),
+        "oracleRecoveryCount": sum(
+            previous is False and current is True
+            for previous, current in zip(oracle_outcomes, oracle_outcomes[1:])
+        ),
+        "oracleRegressionCount": sum(
+            previous is True and current is False
+            for previous, current in zip(oracle_outcomes, oracle_outcomes[1:])
+        ),
+        "participantDurationMs": sum(stage["participantDurationMs"] for stage in stages),
+        "oracleDurationMs": sum(stage["oracleDurationMs"] for stage in stages),
+        "stageDurationMs": sum(stage["stageDurationMs"] for stage in stages),
+        "attemptDurationMs": duration_ms,
+        "processMeasurementQualified": True,
+    }
+    if process != expected:
+        fail(f"{attempt_id} process measurement differs from retained stages")
+    return process
+
+
 def collect_harness_attempt(
     attempt: dict[str, Any],
     attempt_id: str,
@@ -140,7 +227,7 @@ def collect_harness_attempt(
     source_identity: str,
     evidence_dir: pathlib.Path,
     manifest_dir: pathlib.Path,
-) -> tuple[bool, bool | None, str, dict[str, Any]]:
+) -> tuple[bool, bool | None, str, dict[str, Any], dict[str, Any] | None]:
     summary_path = evidence_dir / "summary.json"
     decision_path = evidence_dir / "decision-package.json"
     summary = load_object(summary_path, f"{attempt_id} summary")
@@ -160,6 +247,7 @@ def collect_harness_attempt(
     verdict = decision.get("subjectTaskSucceeded")
     if infrastructure_valid and not isinstance(verdict, bool):
         fail(f"{attempt_id} assessed run requires boolean subjectTaskSucceeded")
+    process = normalize_process_measurement(summary, decision, attempt_id)
     return (
         infrastructure_valid,
         verdict if infrastructure_valid else None,
@@ -168,6 +256,7 @@ def collect_harness_attempt(
             "summary": evidence_ref(summary_path, manifest_dir),
             "decisionPackage": evidence_ref(decision_path, manifest_dir),
         },
+        process,
     )
 
 
@@ -361,7 +450,7 @@ def build_input(manifest: dict[str, Any], manifest_dir: pathlib.Path) -> dict[st
             )
             evidence_kind = attempt.get("evidenceKind", "harness-decision-package")
             if evidence_kind == "harness-decision-package":
-                infrastructure_valid, verdict, verdict_source, evidence = (
+                infrastructure_valid, verdict, verdict_source, evidence, process = (
                     collect_harness_attempt(
                         attempt,
                         attempt_id,
@@ -385,6 +474,7 @@ def build_input(manifest: dict[str, Any], manifest_dir: pathlib.Path) -> dict[st
                         source_identity,
                     )
                 )
+                process = None
             else:
                 fail(f"{attempt_id} unsupported evidenceKind: {evidence_kind}")
             output_attempts.append(
@@ -396,6 +486,7 @@ def build_input(manifest: dict[str, Any], manifest_dir: pathlib.Path) -> dict[st
                     "taskPassed": verdict,
                     "verdictSource": verdict_source,
                     "evidence": evidence,
+                    "processMeasurement": process,
                 }
             )
         output_cases.append(

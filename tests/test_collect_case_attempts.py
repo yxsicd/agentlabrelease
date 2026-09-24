@@ -294,6 +294,82 @@ class CollectCaseAttemptsTests(unittest.TestCase):
             self.assertEqual(report["sourceSetSha256"], self.source_set_sha256)
             self.assertTrue(report["ranking"][0]["eligible"])
 
+    def test_operator_process_measurement_is_bound_and_collected(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            self.write_multi_repo_calibration(root)
+            evidence = root / "runs/measured-1"
+            stages = [
+                {
+                    "stageId": "turn-1",
+                    "participantCompleted": True,
+                    "changedPaths": ["app/src/example.ts"],
+                    "changedPathCount": 1,
+                    "unauthorizedPaths": [],
+                    "unauthorizedPathCount": 0,
+                    "scopeValid": True,
+                    "oraclePass": True,
+                    "participantDurationMs": 12,
+                    "oracleDurationMs": 3,
+                    "stageDurationMs": 17,
+                    "cumulativeCheckCount": 2,
+                }
+            ]
+            process = {
+                "schema": "agentlab.assessment_process_measurement.v1",
+                "stageCount": 1,
+                "participantCompletedStageCount": 1,
+                "oracleExecutedStageCount": 1,
+                "oraclePassedStageCount": 1,
+                "scopeViolationStageCount": 0,
+                "changedPathCount": 1,
+                "unauthorizedPathCount": 0,
+                "oracleRecoveryCount": 0,
+                "oracleRegressionCount": 0,
+                "participantDurationMs": 12,
+                "oracleDurationMs": 3,
+                "stageDurationMs": 17,
+                "attemptDurationMs": 20,
+                "processMeasurementQualified": True,
+            }
+            common = {
+                "taskId": self.case_id,
+                "sourceSetSha256": self.source_set_sha256,
+                "participantId": "candidate",
+                "assessmentStatus": "assessed",
+                "infrastructureAvailable": True,
+                "subjectTaskSucceeded": True,
+                "processMeasurement": process,
+            }
+            self.write_json(
+                evidence / "summary.json",
+                {**common, "stages": stages, "durationMs": 20},
+            )
+            self.write_json(
+                evidence / "decision-package.json",
+                {**common, "schema": "agentlab.harness_decision_package.v1"},
+            )
+            attempt = {
+                "attemptId": "measured-1",
+                "participantId": "candidate",
+                "evidence": "runs/measured-1",
+            }
+            collected = COLLECTOR.build_input(
+                self.multi_repo_manifest([attempt]), root.resolve()
+            )
+            self.assertEqual(
+                collected["cases"][0]["attempts"][0]["processMeasurement"],
+                process,
+            )
+
+            decision = json.loads((evidence / "decision-package.json").read_text())
+            decision["processMeasurement"]["attemptDurationMs"] = 21
+            self.write_json(evidence / "decision-package.json", decision)
+            with self.assertRaisesRegex(ValueError, "differs between summary and decision"):
+                COLLECTOR.build_input(
+                    self.multi_repo_manifest([attempt]), root.resolve()
+                )
+
     def test_multi_repo_attempt_from_another_source_set_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = pathlib.Path(raw)

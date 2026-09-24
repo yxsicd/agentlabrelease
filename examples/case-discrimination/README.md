@@ -22,6 +22,25 @@ participant profiles have enough valid trials, and the score crosses the
 declared threshold. Infrastructure-invalid attempts are retained but excluded
 from ability scoring. The report never promotes a case automatically.
 
+For multi-stage Harness attempts, the operator now records one
+`agentlab.assessment_process_measurement.v1` object in both the summary and
+decision package. It is reconstructed from retained stages and covers
+participant/Oracle/stage duration, changed and unauthorized path counts, scope
+violations, and Oracle false-to-true recovery or true-to-false regression. The
+collector rejects summary/decision or aggregate/stage disagreement. The scorer
+reports process coverage per participant and case, plus a 95% Wilson interval
+for every participant pass rate. Legacy or emulator evidence without this
+contract remains outcome-scoreable but has `processAwareEligible=false`.
+
+`scripts/compose-agent-suite-scorecard.py` then joins an authenticated blind
+review population to exactly one discrimination report per reviewed case. The
+manifest freezes the expected participant capability order before inspecting
+the outcomes. A case-level scorecard qualifies only when review, outcome,
+process coverage, declared ordering and strongest-versus-weakest Wilson
+separation all pass. Aggregate micro pass rates retain their trial denominators.
+The resulting suite measurement still cannot establish representative sampling,
+model-training exclusion or unseen-Agent eligibility and never auto-promotes.
+
 Real run evidence enters the same scorer through a revision-fenced collection
 manifest:
 

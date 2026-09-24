@@ -380,6 +380,15 @@ retention and signing of the resulting report. This report measures the chosen
 cohort only: v1 deliberately refuses a representative-population declaration,
 model-training exclusion or unseen-Agent eligibility.
 
+Once every reviewed case has an assessed campaign, the trusted-main
+`Agent suite scorecard` workflow accepts the population run, one campaign run
+per case, and a participant ID order declared weakest-to-strongest. It validates
+the exact producing workflows and revisions, joins case/source identities,
+requires complete operator-owned stage-process evidence, and reports both
+per-case and aggregate participant pass-rate Wilson intervals. A scorecard can
+qualify the measurement procedure; it cannot promote the selected cohort into
+a representative or unseen-Agent benchmark.
+
 Copy the frozen case into campaign evidence as
 `multi-repo-evaluation-case.json` and its exact calibration summary as
 `multi-repo-calibration.json`. For a constructed case, also copy the exact

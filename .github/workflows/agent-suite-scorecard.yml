@@ -1,0 +1,186 @@
+name: Agent suite scorecard
+on:
+  workflow_dispatch:
+    inputs:
+      suite_id:
+        description: Stable identifier for this exact reviewed and assessed suite
+        required: true
+        type: string
+      review_population_run_id:
+        description: Successful trusted-main blind review population workflow run
+        required: true
+        type: string
+      assessed_campaign_run_ids:
+        description: JSON array of one assessed campaign run per reviewed case
+        required: true
+        type: string
+      participant_order:
+        description: JSON array of participant IDs ordered weakest to strongest
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  artifact-metadata: write
+  attestations: write
+  contents: read
+  id-token: write
+
+jobs:
+  compose:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/agent-suite-scorecard
+      SUITE_ID: ${{ inputs.suite_id }}
+      POPULATION_RUN_ID: ${{ inputs.review_population_run_id }}
+      CAMPAIGN_RUN_IDS_JSON: ${{ inputs.assessed_campaign_run_ids }}
+      PARTICIPANT_ORDER_JSON: ${{ inputs.participant_order }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Recover the exact reviewed population and assessed campaigns
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$POPULATION_RUN_ID" =~ ^[0-9]+$ ]]
+          mkdir -p "$AGENTLAB_ROOT/population" "$AGENTLAB_ROOT/campaigns"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$POPULATION_RUN_ID" \
+            > "$AGENTLAB_ROOT/population-run.json"
+          gh run download "$POPULATION_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name blind-review-population-report \
+            --dir "$AGENTLAB_ROOT/population"
+          python3 - <<'PY'
+          import json, os, pathlib
+          root = pathlib.Path(os.environ["AGENTLAB_ROOT"])
+          raw = json.loads(os.environ["CAMPAIGN_RUN_IDS_JSON"])
+          assert isinstance(raw, list) and 2 <= len(raw) <= 100
+          ids = []
+          for value in raw:
+              text = str(value)
+              assert text.isdigit() and int(text) > 0
+              ids.append(int(text))
+          assert len(ids) == len(set(ids))
+          order = json.loads(os.environ["PARTICIPANT_ORDER_JSON"])
+          assert isinstance(order, list) and len(order) >= 2
+          assert len(order) == len(set(order)) and all(isinstance(value, str) and value for value in order)
+          root.joinpath("campaign-run-ids.txt").write_text(
+              "".join(f"{value}\n" for value in ids), encoding="utf-8"
+          )
+          root.joinpath("participant-order.json").write_text(
+              json.dumps(order, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+          while IFS= read -r run_id; do
+            mkdir -p "$AGENTLAB_ROOT/campaigns/$run_id"
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" \
+              > "$AGENTLAB_ROOT/campaigns/$run_id/run.json"
+            gh run download "$run_id" --repo "$GITHUB_REPOSITORY" \
+              --name multi-repo-assessed-campaign \
+              --dir "$AGENTLAB_ROOT/campaigns/$run_id"
+          done < "$AGENTLAB_ROOT/campaign-run-ids.txt"
+      - name: Freeze exact suite membership and participant capability order
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          population_head_sha=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["head_sha"])' "$AGENTLAB_ROOT/population-run.json")
+          gh attestation verify "$AGENTLAB_ROOT/population/report.json" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/blind-review-population.yml" \
+            --source-ref refs/heads/main \
+            --source-digest "$population_head_sha" \
+            --deny-self-hosted-runners \
+            --format json > "$AGENTLAB_ROOT/population-attestation-verification.json"
+          while IFS= read -r run_id; do
+            campaign_head_sha=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["head_sha"])' "$AGENTLAB_ROOT/campaigns/$run_id/run.json")
+            gh attestation verify "$AGENTLAB_ROOT/campaigns/$run_id/case-discrimination-report.json" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/multi-repo-assessed-campaign.yml" \
+              --source-ref refs/heads/main \
+              --source-digest "$campaign_head_sha" \
+              --deny-self-hosted-runners \
+              --format json > "$AGENTLAB_ROOT/campaigns/$run_id/attestation-verification.json"
+          done < "$AGENTLAB_ROOT/campaign-run-ids.txt"
+          python3 - <<'PY'
+          import json, os, pathlib
+          root = pathlib.Path(os.environ["AGENTLAB_ROOT"])
+          population_run = json.loads(root.joinpath("population-run.json").read_text())
+          assert population_run["repository"]["full_name"] == os.environ["GITHUB_REPOSITORY"]
+          assert population_run["path"] == ".github/workflows/blind-review-population.yml"
+          assert population_run["event"] == "workflow_dispatch"
+          assert population_run["head_branch"] == "main"
+          assert population_run["status"] == "completed" and population_run["conclusion"] == "success"
+          cases = []
+          case_ids = set()
+          for text in root.joinpath("campaign-run-ids.txt").read_text().splitlines():
+              run_id = int(text)
+              run = json.loads((root / "campaigns" / text / "run.json").read_text())
+              assert run["repository"]["full_name"] == os.environ["GITHUB_REPOSITORY"]
+              assert run["path"] == ".github/workflows/multi-repo-assessed-campaign.yml"
+              assert run["event"] == "workflow_dispatch"
+              assert run["head_branch"] == "main"
+              assert run["status"] == "completed" and run["conclusion"] == "success"
+              report = root / "campaigns" / text / "case-discrimination-report.json"
+              value = json.loads(report.read_text())
+              assert value["schema"] == "agentlab.case_discrimination_report.v2"
+              ranking = value["ranking"]
+              assert isinstance(ranking, list) and len(ranking) == 1
+              case_id = ranking[0]["caseId"]
+              assert isinstance(case_id, str) and case_id and case_id not in case_ids
+              case_ids.add(case_id)
+              cases.append({
+                  "caseId": case_id,
+                  "assessedCampaignRunId": run_id,
+                  "assessedCampaignRunAttempt": run["run_attempt"],
+                  "assessedCampaignWorkflowHeadSha": run["head_sha"],
+                  "discriminationReport": f"campaigns/{run_id}/case-discrimination-report.json",
+                  "discriminationAttestationVerification": f"campaigns/{run_id}/attestation-verification.json",
+              })
+          manifest = {
+              "schema": "agentlab.agent_suite_scorecard_manifest.v1",
+              "suiteId": os.environ["SUITE_ID"],
+              "methodRevision": os.environ["GITHUB_SHA"],
+              "reviewPopulation": {
+                  "workflowRunId": int(os.environ["POPULATION_RUN_ID"]),
+                  "workflowRunAttempt": population_run["run_attempt"],
+                  "workflowHeadSha": population_run["head_sha"],
+                  "report": "population/report.json",
+                  "attestationVerification": "population-attestation-verification.json",
+              },
+              "participantOrder": json.loads(root.joinpath("participant-order.json").read_text()),
+              "cases": sorted(cases, key=lambda row: row["caseId"]),
+          }
+          root.joinpath("scorecard-manifest.json").write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+          )
+          PY
+      - name: Compose the review outcome and process scorecard
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/output/source-runs/campaigns"
+          cp "$AGENTLAB_ROOT/scorecard-manifest.json" "$AGENTLAB_ROOT/output/input-manifest.json"
+          cp "$AGENTLAB_ROOT/population-run.json" "$AGENTLAB_ROOT/output/source-runs/population.json"
+          cp "$AGENTLAB_ROOT/population-attestation-verification.json" \
+            "$AGENTLAB_ROOT/output/population-attestation-verification.json"
+          while IFS= read -r run_id; do
+            cp "$AGENTLAB_ROOT/campaigns/$run_id/run.json" \
+              "$AGENTLAB_ROOT/output/source-runs/campaigns/$run_id.json"
+            cp "$AGENTLAB_ROOT/campaigns/$run_id/attestation-verification.json" \
+              "$AGENTLAB_ROOT/output/source-runs/campaigns/$run_id-attestation-verification.json"
+          done < "$AGENTLAB_ROOT/campaign-run-ids.txt"
+          python3 scripts/compose-agent-suite-scorecard.py \
+            --manifest "$AGENTLAB_ROOT/scorecard-manifest.json" \
+            --output "$AGENTLAB_ROOT/output/scorecard.json"
+          sha256sum "$AGENTLAB_ROOT/output/scorecard.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Sign the exact suite scorecard with GitHub OIDC provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: ${{ env.AGENTLAB_ROOT }}/output/scorecard.json
+      - name: Preserve the suite manifest and scorecard
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: agent-suite-scorecard
+          if-no-files-found: error
+          path: ${{ env.AGENTLAB_ROOT }}/output/

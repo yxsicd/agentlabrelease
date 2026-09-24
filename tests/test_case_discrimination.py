@@ -28,6 +28,9 @@ class CaseDiscriminationTests(unittest.TestCase):
         self.assertEqual(first["metrics"]["withinProfileDeterminism"], 1.0)
         self.assertEqual(first["metrics"]["trialConfidence"], 1.0)
         self.assertEqual(first["metrics"]["discriminationScore"], 1.0)
+        self.assertFalse(first["metrics"]["observedExtremePassRateWilson95Separated"])
+        self.assertFalse(first["processMeasurement"]["coverageQualified"])
+        self.assertFalse(first["processAwareEligible"])
         self.assertTrue(first["eligible"])
         self.assertFalse(report["policy"]["automaticPromotion"])
 
@@ -63,6 +66,57 @@ class CaseDiscriminationTests(unittest.TestCase):
         self.value["sourceRevision"] = "main"
         with self.assertRaisesRegex(ValueError, "sourceRevision must be"):
             MODULE.build_report(self.value, 3, 0.6)
+
+    def test_operator_process_coverage_and_statistical_separation_are_explicit(self) -> None:
+        process = {
+            "schema": "agentlab.assessment_process_measurement.v1",
+            "stageCount": 2,
+            "participantCompletedStageCount": 2,
+            "oracleExecutedStageCount": 2,
+            "oraclePassedStageCount": 2,
+            "scopeViolationStageCount": 0,
+            "changedPathCount": 2,
+            "unauthorizedPathCount": 0,
+            "oracleRecoveryCount": 0,
+            "oracleRegressionCount": 0,
+            "participantDurationMs": 10,
+            "oracleDurationMs": 4,
+            "stageDurationMs": 16,
+            "attemptDurationMs": 20,
+            "processMeasurementQualified": True,
+        }
+        case = self.value["cases"][0]
+        case["attempts"] = []
+        for participant, passed in (("strong", True), ("weak", False)):
+            for trial in range(5):
+                case["attempts"].append(
+                    {
+                        "attemptId": f"{participant}-{trial}",
+                        "participantId": participant,
+                        "infrastructureValid": True,
+                        "taskPassed": passed,
+                        "processMeasurement": process,
+                    }
+                )
+        row = MODULE.score_case(case, 5, 0.6)
+        self.assertTrue(row["eligible"])
+        self.assertTrue(row["processAwareEligible"])
+        self.assertTrue(row["processMeasurement"]["coverageQualified"])
+        self.assertTrue(row["metrics"]["observedExtremePassRateWilson95Separated"])
+        strong = next(
+            profile
+            for profile in row["participantProfiles"]
+            if profile["participantId"] == "strong"
+        )
+        weak = next(
+            profile
+            for profile in row["participantProfiles"]
+            if profile["participantId"] == "weak"
+        )
+        self.assertGreater(
+            strong["passRateWilson95"]["lower"],
+            weak["passRateWilson95"]["upper"],
+        )
 
 
 if __name__ == "__main__":

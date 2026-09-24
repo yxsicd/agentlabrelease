@@ -33,7 +33,9 @@ on:
 permissions:
   contents: read
   actions: read
-  attestations: read
+  artifact-metadata: write
+  attestations: write
+  id-token: write
 
 concurrency:
   group: multi-repo-assessed-campaign
@@ -192,6 +194,10 @@ jobs:
             --required-trials "$REQUIRED_TRIALS" \
             --output "$AGENTLAB_ROOT/case-discrimination-report.json"
           cat "$AGENTLAB_ROOT/case-discrimination-report.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Sign the exact discrimination report with GitHub OIDC provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: ${{ env.AGENTLAB_ROOT }}/case-discrimination-report.json
       - name: Derive review-required difficulty feedback for the next maintenance cut
         run: |
           cp "$AGENTLAB_ROOT/discrimination-input.json" \

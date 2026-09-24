@@ -1,0 +1,327 @@
+from __future__ import annotations
+
+import importlib.util
+import hashlib
+import json
+from pathlib import Path
+import tempfile
+import unittest
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(module)
+    return module
+
+
+SCORER = load_module("suite_fixture_discrimination", ROOT / "scripts/score-case-discrimination.py")
+SUITE = load_module("agent_suite_scorecard", ROOT / "scripts/compose-agent-suite-scorecard.py")
+
+
+def process() -> dict:
+    return {
+        "schema": "agentlab.assessment_process_measurement.v1",
+        "stageCount": 2,
+        "participantCompletedStageCount": 2,
+        "oracleExecutedStageCount": 2,
+        "oraclePassedStageCount": 2,
+        "scopeViolationStageCount": 0,
+        "changedPathCount": 2,
+        "unauthorizedPathCount": 0,
+        "oracleRecoveryCount": 0,
+        "oracleRegressionCount": 0,
+        "participantDurationMs": 20,
+        "oracleDurationMs": 4,
+        "stageDurationMs": 26,
+        "attemptDurationMs": 30,
+        "processMeasurementQualified": True,
+    }
+
+
+class AgentSuiteScorecardTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        self.root = Path(self.temporary.name)
+        self.source_sets = {"case-a": "a" * 64, "case-b": "b" * 64}
+        self.population = self.root / "population.json"
+        self.write_population()
+        self.population_attestation = self.root / "population-attestation.json"
+        self.write_attestation(self.population_attestation, self.population, 9001)
+        self.reports = {}
+        self.report_attestations = {}
+        for index, case_id in enumerate(self.source_sets, 1):
+            self.reports[case_id] = self.write_discrimination(case_id, index)
+            verification = self.root / f"report-{index}-attestation.json"
+            self.write_attestation(verification, self.reports[case_id], 2000 + index)
+            self.report_attestations[case_id] = verification
+        self.manifest = self.root / "manifest.json"
+        self.write_manifest()
+
+    def tearDown(self) -> None:
+        self.temporary.cleanup()
+
+    def write_population(self, *, unqualified: str | None = None) -> None:
+        cases = []
+        for index, (case_id, source_set) in enumerate(self.source_sets.items(), 1):
+            qualified = case_id != unqualified
+            cases.append(
+                {
+                    "caseId": case_id,
+                    "sourceSetSha256": source_set,
+                    "adjudicationRunId": 1000 + index,
+                    "blindPilotReviewQualified": qualified,
+                    "modelTrainingExclusionQualified": False,
+                    "eligibleForUnseenAgentDiscrimination": False,
+                    "bundleEvidence": {
+                        "adjudication": {
+                            "path": "authenticated-adjudication.json",
+                            "sha256": f"{index:064x}",
+                            "byteLength": 100,
+                        }
+                    },
+                }
+            )
+        value = {
+            "schema": "agentlab.blind_review_population_report.v1",
+            "cohortId": "reviewed-cohort",
+            "methodRevision": "f" * 40,
+            "caseMembershipSha256": "c" * 64,
+            "denominators": {"caseCount": len(cases)},
+            "cases": cases,
+            "qualification": {
+                "allCasesAuthenticatedAndAttested": True,
+                "populationRepresentativenessQualified": False,
+                "modelTrainingExclusionQualified": False,
+                "eligibleForUnseenAgentDiscrimination": False,
+            },
+            "policy": {"automaticPromotion": False},
+        }
+        self.population.write_text(json.dumps(value, indent=2))
+
+    def write_attestation(self, output: Path, subject: Path, run_id: int) -> None:
+        output.write_text(
+            json.dumps(
+                [
+                    {
+                        "verificationResult": {
+                            "statement": {
+                                "predicateType": "https://slsa.dev/provenance/v1",
+                                "subject": [
+                                    {
+                                        "name": subject.name,
+                                        "digest": {
+                                            "sha256": hashlib.sha256(
+                                                subject.read_bytes()
+                                            ).hexdigest()
+                                        },
+                                    }
+                                ],
+                                "predicate": {
+                                    "runDetails": {
+                                        "metadata": {
+                                            "invocationId": f"https://github.com/example/agentlab/actions/runs/{run_id}/attempts/1"
+                                        }
+                                    }
+                                },
+                            }
+                        }
+                    }
+                ]
+            )
+        )
+
+    def write_discrimination(
+        self,
+        case_id: str,
+        ordinal: int,
+        *,
+        reverse: bool = False,
+        process_evidence: bool = True,
+    ) -> Path:
+        calibration = {
+            "infrastructureValid": True,
+            "baselineExpectedPass": False,
+            "baselineObservedPass": False,
+            "referenceExpectedPass": True,
+            "referenceObservedPass": True,
+            "negativeVariants": [
+                {
+                    "id": "wrong-repair",
+                    "expectedPass": False,
+                    "observedPass": False,
+                    "infrastructureValid": True,
+                }
+            ],
+        }
+        attempts = []
+        for participant, passed in (
+            ("weak", True if reverse else False),
+            ("strong", False if reverse else True),
+        ):
+            for trial in range(5):
+                attempt = {
+                    "attemptId": f"{case_id}-{participant}-{trial}",
+                    "participantId": participant,
+                    "infrastructureValid": True,
+                    "taskPassed": passed,
+                }
+                if process_evidence:
+                    attempt["processMeasurement"] = process()
+                attempts.append(attempt)
+        report = SCORER.build_report(
+            {
+                "schema": "agentlab.case_discrimination_input.v2",
+                "sourceSetSha256": self.source_sets[case_id],
+                "methodRevision": "d" * 40,
+                "cases": [{"id": case_id, "calibration": calibration, "attempts": attempts}],
+            },
+            5,
+            0.6,
+        )
+        path = self.root / f"report-{ordinal}.json"
+        path.write_text(json.dumps(report, indent=2))
+        return path
+
+    def write_manifest(self, *, case_ids: list[str] | None = None) -> None:
+        selected = case_ids or list(self.source_sets)
+        value = {
+            "schema": "agentlab.agent_suite_scorecard_manifest.v1",
+            "suiteId": "suite-one",
+            "methodRevision": "e" * 40,
+            "reviewPopulation": {
+                "workflowRunId": 9001,
+                "workflowRunAttempt": 1,
+                "workflowHeadSha": "f" * 40,
+                "report": self.population.name,
+                "attestationVerification": self.population_attestation.name,
+            },
+            "participantOrder": ["weak", "strong"],
+            "cases": [
+                {
+                    "caseId": case_id,
+                    "assessedCampaignRunId": 2000 + index,
+                    "assessedCampaignRunAttempt": 1,
+                    "assessedCampaignWorkflowHeadSha": "d" * 40,
+                    "discriminationReport": self.reports[case_id].name,
+                    "discriminationAttestationVerification": self.report_attestations[
+                        case_id
+                    ].name,
+                }
+                for index, case_id in enumerate(selected, 1)
+            ],
+        }
+        self.manifest.write_text(json.dumps(value, indent=2))
+
+    def test_review_outcome_and_process_form_one_scorecard(self) -> None:
+        value = SUITE.build_scorecard(self.manifest)
+        self.assertEqual(value["denominators"]["caseCount"], 2)
+        self.assertEqual(value["denominators"]["qualifiedCaseCount"], 2)
+        self.assertEqual(value["denominators"]["validAttemptCount"], 20)
+        self.assertTrue(value["qualification"]["suiteMeasurementQualified"])
+        self.assertEqual(value["qualification"]["qualifiedCaseRate"], 1.0)
+        self.assertFalse(value["qualification"]["benchmarkPopulationQualified"])
+        self.assertFalse(value["qualification"]["eligibleForUnseenAgentDiscrimination"])
+        self.assertTrue(all(row["reviewQualified"] for row in value["cases"]))
+        self.assertTrue(
+            all(row["strongestWeakestWilson95Separated"] for row in value["cases"])
+        )
+        weak, strong = value["aggregateParticipantProfiles"]
+        self.assertEqual(weak["microPassRate"], 0.0)
+        self.assertEqual(strong["microPassRate"], 1.0)
+
+    def test_review_failure_keeps_suite_measurement_unqualified(self) -> None:
+        self.write_population(unqualified="case-b")
+        self.write_attestation(self.population_attestation, self.population, 9001)
+        value = SUITE.build_scorecard(self.manifest)
+        self.assertEqual(value["denominators"]["qualifiedCaseCount"], 1)
+        self.assertFalse(value["qualification"]["suiteMeasurementQualified"])
+        failed = next(row for row in value["cases"] if row["caseId"] == "case-b")
+        self.assertFalse(failed["reviewQualified"])
+
+    def test_declared_capability_order_is_not_recovered_from_outcomes(self) -> None:
+        self.reports["case-b"] = self.write_discrimination("case-b", 2, reverse=True)
+        self.write_attestation(
+            self.report_attestations["case-b"], self.reports["case-b"], 2002
+        )
+        self.write_manifest()
+        value = SUITE.build_scorecard(self.manifest)
+        failed = next(row for row in value["cases"] if row["caseId"] == "case-b")
+        self.assertFalse(failed["expectedCapabilityOrderQualified"])
+        self.assertFalse(failed["scorecardQualified"])
+
+    def test_missing_process_evidence_is_explicitly_unqualified(self) -> None:
+        self.reports["case-b"] = self.write_discrimination(
+            "case-b", 2, process_evidence=False
+        )
+        self.write_attestation(
+            self.report_attestations["case-b"], self.reports["case-b"], 2002
+        )
+        self.write_manifest()
+        value = SUITE.build_scorecard(self.manifest)
+        failed = next(row for row in value["cases"] if row["caseId"] == "case-b")
+        self.assertFalse(failed["processMeasurementCoverageQualified"])
+        self.assertFalse(failed["scorecardQualified"])
+
+    def test_scorecard_membership_must_equal_reviewed_population(self) -> None:
+        self.write_manifest(case_ids=["case-a"])
+        with self.assertRaisesRegex(SUITE.ScorecardError, "exactly match"):
+            SUITE.build_scorecard(self.manifest)
+
+    def test_source_set_drift_is_rejected(self) -> None:
+        report = json.loads(self.reports["case-b"].read_text())
+        report["sourceSetSha256"] = "f" * 64
+        self.reports["case-b"].write_text(json.dumps(report))
+        with self.assertRaisesRegex(SUITE.ScorecardError, "source set differs"):
+            SUITE.build_scorecard(self.manifest)
+
+    def test_campaign_revision_must_match_report_method_revision(self) -> None:
+        value = json.loads(self.manifest.read_text())
+        value["cases"][1]["assessedCampaignWorkflowHeadSha"] = "c" * 40
+        self.manifest.write_text(json.dumps(value))
+        with self.assertRaisesRegex(SUITE.ScorecardError, "method revision differs"):
+            SUITE.build_scorecard(self.manifest)
+
+    def test_attestation_must_bind_exact_subject_and_run(self) -> None:
+        value = json.loads(self.population_attestation.read_text())
+        value[0]["verificationResult"]["statement"]["predicate"]["runDetails"][
+            "metadata"
+        ]["invocationId"] = (
+            "https://github.com/example/agentlab/actions/runs/9999/attempts/1"
+        )
+        self.population_attestation.write_text(json.dumps(value))
+        with self.assertRaisesRegex(SUITE.ScorecardError, "expected workflow run"):
+            SUITE.build_scorecard(self.manifest)
+
+    def test_population_metadata_is_fail_closed(self) -> None:
+        value = json.loads(self.population.read_text())
+        value["caseMembershipSha256"] = "not-a-digest"
+        self.population.write_text(json.dumps(value))
+        with self.assertRaisesRegex(SUITE.ScorecardError, "membership digest"):
+            SUITE.build_scorecard(self.manifest)
+
+    def test_workflow_freezes_run_ids_order_and_attests_output(self) -> None:
+        workflow = (ROOT / ".github/workflows/agent-suite-scorecard.yml").read_text()
+        self.assertIn("github.ref == 'refs/heads/main'", workflow)
+        self.assertIn("blind-review-population-report", workflow)
+        self.assertIn("multi-repo-assessed-campaign", workflow)
+        self.assertIn(".github/workflows/blind-review-population.yml", workflow)
+        self.assertIn(".github/workflows/multi-repo-assessed-campaign.yml", workflow)
+        self.assertIn('run["head_branch"] == "main"', workflow)
+        self.assertIn('run["conclusion"] == "success"', workflow)
+        self.assertIn("participantOrder", workflow)
+        self.assertIn("compose-agent-suite-scorecard.py", workflow)
+        self.assertIn("id-token: write", workflow)
+        self.assertIn("attestations: write", workflow)
+        self.assertIn(
+            "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6",
+            workflow,
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

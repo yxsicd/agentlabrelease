@@ -191,8 +191,26 @@ class MultiRepoAssessmentTests(unittest.TestCase):
             self.assertFalse(baseline_summary["subjectTaskSucceeded"])
             self.assertTrue(reference_summary["subjectTaskSucceeded"])
             self.assertEqual(len(reference_summary["stages"]), 2)
+            self.assertEqual(
+                reference_summary["processMeasurement"]["schema"],
+                "agentlab.assessment_process_measurement.v1",
+            )
+            self.assertTrue(
+                reference_summary["processMeasurement"]["processMeasurementQualified"]
+            )
+            self.assertEqual(
+                reference_summary["processMeasurement"]["stageCount"], 2
+            )
             self.assertTrue(
                 all(row["scopeValid"] for row in reference_summary["stages"])
+            )
+            self.assertTrue(
+                all(
+                    row["stageDurationMs"] >= row["participantDurationMs"]
+                    and row["stageDurationMs"] >= row["oracleDurationMs"]
+                    and row["changedPathCount"] == len(row["changedPaths"])
+                    for row in reference_summary["stages"]
+                )
             )
             final_state = json.loads(
                 (reference / "final-source-state.json").read_text()
@@ -283,6 +301,10 @@ class MultiRepoAssessmentTests(unittest.TestCase):
             self.assertEqual(
                 report["ranking"][0]["metrics"]["discriminationScore"], 1.0
             )
+            self.assertTrue(
+                report["ranking"][0]["processMeasurement"]["coverageQualified"]
+            )
+            self.assertTrue(report["ranking"][0]["processAwareEligible"])
 
     def test_scope_drift_is_an_assessed_failure(self):
         with tempfile.TemporaryDirectory() as raw:
