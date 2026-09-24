@@ -220,6 +220,38 @@ verdict into scoring.
 
 ### Controlled-regression calibration
 
+Use `scripts/run-harmony-performance-calibration.py` to reproduce a controlled
+calibration as one fail-closed operation instead of manually joining five
+commands. Its `agentlab.harmony_performance_calibration_plan.v1` input binds the
+exact harness and application revisions, baseline and candidate HAPs, controlled
+source mutation, UI Oracle, emulator environment, performance policy and
+workload. The current protocol deliberately requires one baseline and two
+candidate cold runs:
+
+```sh
+python3 scripts/run-harmony-performance-calibration.py \
+  --plan /absolute/path/calibration-plan.json \
+  --output /absolute/path/new-calibration-evidence
+```
+
+On `hwlinux`, invoke this command from a session that already has both KVM and
+render-device access, for example under the same outer `sg kvm` / inner
+`sg render` context used by the emulator runner. The output path must not exist.
+The orchestrator derives both `artifact-sha256:` identities from the HAP bytes,
+runs the functional Oracle and bound SmartPerf workload three times, validates
+every task/source/run/environment/Oracle/policy/workload identity, compares both
+candidates to the same baseline, and accepts the calibration only when both
+comparisons expose at least one common regressed metric. A success is atomically
+published at the requested output path with the raw runs, comparisons,
+`performance-calibration.json` and `calibration-run.json`.
+
+If any phase or identity check fails, the final output is not created. The
+adjacent hidden `.stage-*` directory is retained with phase logs, partial raw
+evidence and `failure.json` for diagnosis. Neither success nor failure permits
+automatic case promotion: the generated records always state
+`automaticPromotion=false`, and maintainer adjudication plus independent
+calibration remain mandatory.
+
 The first positive calibration of the regression detector is checked in at
 `release/qualifications/harmony-performance-controlled-regression-v1`. Baseline
 and candidate were built from the same generated Tutu project rooted at exact
