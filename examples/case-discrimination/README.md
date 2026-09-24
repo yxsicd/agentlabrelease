@@ -43,6 +43,17 @@ hashes both evidence files, accepts task success only from an independently
 produced assessed decision package, and records infrastructure-unavailable
 runs with a null verdict so they cannot become false Agent failures.
 
+Multi-repository cases use `agentlab.case_attempt_collection.v2`: replace the
+single-repository `sourceRevision` with the frozen case's exact
+`sourceSetSha256`. The collector emits `agentlab.case_discrimination_input.v2`,
+the scorer emits `agentlab.case_discrimination_report.v2`, and the TableGit
+decision row retains that source-set identity rather than inventing a synthetic
+Git revision. Attempt summaries and decision packages must carry the same
+source-set digest; mixed or drifted source sets fail closed. The collector also
+normalizes an exact `agentlab.multi_repo_calibration.v1` summary into the common
+baseline/reference/negative-variant scoring contract while retaining per-stage
+verdicts and the calibration file's digest as evidence.
+
 Harmony emulator attempts use the same manifest with
 `evidenceKind: harmony-emulator-v2`, an exact `sourceIdentity`, and an evidence
 directory containing the runner's `result.json`. Only the explicit assessed

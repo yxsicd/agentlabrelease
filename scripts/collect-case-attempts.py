@@ -10,8 +10,18 @@ import re
 from typing import Any
 
 
-MANIFEST_SCHEMA = "agentlab.case_attempt_collection.v1"
-OUTPUT_SCHEMA = "agentlab.case_discrimination_input.v1"
+MANIFEST_SCHEMAS = {
+    "agentlab.case_attempt_collection.v1": (
+        "agentlab.case_discrimination_input.v1",
+        "sourceRevision",
+        re.compile(r"[0-9a-f]{40}"),
+    ),
+    "agentlab.case_attempt_collection.v2": (
+        "agentlab.case_discrimination_input.v2",
+        "sourceSetSha256",
+        re.compile(r"[0-9a-f]{64}"),
+    ),
+}
 DECISION_SCHEMA = "agentlab.harness_decision_package.v1"
 EMULATOR_SCHEMA = "agentlab.harmony_emulator_case_result.v2"
 REVISION = re.compile(r"[0-9a-f]{40}")
@@ -60,11 +70,71 @@ def evidence_ref(path: pathlib.Path, root: pathlib.Path) -> dict[str, Any]:
     }
 
 
+def normalize_calibration(
+    calibration: dict[str, Any], source_identity_field: str, source_identity: str
+) -> dict[str, Any]:
+    if calibration.get("schema") != "agentlab.multi_repo_calibration.v1":
+        return calibration
+    if source_identity_field != "sourceSetSha256":
+        fail("multi-repository calibration requires sourceSetSha256 collection")
+    if calibration.get("sourceSetSha256") != source_identity:
+        fail("multi-repository calibration sourceSetSha256 mismatch")
+    if calibration.get("infrastructureAvailable") is not True:
+        fail("multi-repository calibration infrastructure is unavailable")
+    variants = calibration.get("variants")
+    if not isinstance(variants, dict) or not {"baseline", "reference"}.issubset(variants):
+        fail("multi-repository calibration requires baseline and reference variants")
+
+    def variant_pass(name: str) -> tuple[bool, dict[str, bool]]:
+        row = variants.get(name)
+        stages = row.get("stages") if isinstance(row, dict) else None
+        if not isinstance(stages, dict) or not stages:
+            fail(f"multi-repository calibration variant {name} has no stages")
+        stage_pass = {}
+        for stage_id, stage in stages.items():
+            verdict = stage.get("pass") if isinstance(stage, dict) else None
+            if not isinstance(stage_id, str) or not stage_id or not isinstance(verdict, bool):
+                fail(f"multi-repository calibration variant {name} has invalid stage")
+            stage_pass[stage_id] = verdict
+        return all(stage_pass.values()), stage_pass
+
+    baseline_pass, baseline_stages = variant_pass("baseline")
+    reference_pass, reference_stages = variant_pass("reference")
+    negative_variants = []
+    for name in sorted(set(variants) - {"baseline", "reference"}):
+        observed, stages = variant_pass(name)
+        negative_variants.append(
+            {
+                "id": name,
+                "expectedPass": False,
+                "observedPass": observed,
+                "infrastructureValid": True,
+                "stagePass": stages,
+            }
+        )
+    if not negative_variants:
+        fail("multi-repository calibration requires negative variants")
+    return {
+        "schema": "agentlab.case_calibration_summary.v1",
+        "sourceSchema": "agentlab.multi_repo_calibration.v1",
+        "sourceSetSha256": source_identity,
+        "infrastructureValid": True,
+        "baselineExpectedPass": False,
+        "baselineObservedPass": baseline_pass,
+        "baselineStagePass": baseline_stages,
+        "referenceExpectedPass": True,
+        "referenceObservedPass": reference_pass,
+        "referenceStagePass": reference_stages,
+        "negativeVariants": negative_variants,
+    }
+
+
 def collect_harness_attempt(
     attempt: dict[str, Any],
     attempt_id: str,
     case_id: str,
-    source_revision: str,
+    source_identity_field: str,
+    source_identity: str,
     evidence_dir: pathlib.Path,
     manifest_dir: pathlib.Path,
 ) -> tuple[bool, bool | None, str, dict[str, Any]]:
@@ -77,8 +147,8 @@ def collect_harness_attempt(
     for label, document in (("summary", summary), ("decision package", decision)):
         if document.get("taskId") != case_id:
             fail(f"{attempt_id} {label} taskId does not match {case_id}")
-        if document.get("sourceRevision") != source_revision:
-            fail(f"{attempt_id} {label} sourceRevision mismatch")
+        if document.get(source_identity_field) != source_identity:
+            fail(f"{attempt_id} {label} {source_identity_field} mismatch")
 
     infrastructure_valid = (
         decision.get("assessmentStatus") == "assessed"
@@ -151,12 +221,14 @@ def collect_emulator_attempt(
 
 
 def build_input(manifest: dict[str, Any], manifest_dir: pathlib.Path) -> dict[str, Any]:
-    if manifest.get("schema") != MANIFEST_SCHEMA:
+    manifest_contract = MANIFEST_SCHEMAS.get(manifest.get("schema"))
+    if manifest_contract is None:
         fail("unsupported case attempt collection schema")
-    source_revision = manifest.get("sourceRevision")
+    output_schema, source_identity_field, source_identity_pattern = manifest_contract
+    source_identity = manifest.get(source_identity_field)
     method_revision = manifest.get("methodRevision")
-    if not isinstance(source_revision, str) or not REVISION.fullmatch(source_revision):
-        fail("sourceRevision must be a lowercase 40-character Git revision")
+    if not isinstance(source_identity, str) or not source_identity_pattern.fullmatch(source_identity):
+        fail(f"{source_identity_field} has invalid exact identity")
     if not isinstance(method_revision, str) or not REVISION.fullmatch(method_revision):
         fail("methodRevision must be a lowercase 40-character Git revision")
     cases = manifest.get("cases")
@@ -177,6 +249,9 @@ def build_input(manifest: dict[str, Any], manifest_dir: pathlib.Path) -> dict[st
             manifest_dir, case.get("calibration"), f"{case_id} calibration"
         )
         calibration = load_object(calibration_path, f"{case_id} calibration")
+        calibration = normalize_calibration(
+            calibration, source_identity_field, source_identity
+        )
         attempts = case.get("attempts")
         if not isinstance(attempts, list) or not attempts:
             fail(f"{case_id} attempts required")
@@ -207,7 +282,8 @@ def build_input(manifest: dict[str, Any], manifest_dir: pathlib.Path) -> dict[st
                         attempt,
                         attempt_id,
                         case_id,
-                        source_revision,
+                        source_identity_field,
+                        source_identity,
                         evidence_dir,
                         manifest_dir,
                     )
@@ -241,8 +317,8 @@ def build_input(manifest: dict[str, Any], manifest_dir: pathlib.Path) -> dict[st
         )
 
     return {
-        "schema": OUTPUT_SCHEMA,
-        "sourceRevision": source_revision,
+        "schema": output_schema,
+        source_identity_field: source_identity,
         "methodRevision": method_revision,
         "cases": output_cases,
         "collectionPolicy": {

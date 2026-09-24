@@ -9,8 +9,18 @@ import pathlib
 import re
 from typing import Any
 
-INPUT_SCHEMA = "agentlab.case_discrimination_input.v1"
-OUTPUT_SCHEMA = "agentlab.case_discrimination_report.v1"
+INPUT_SCHEMAS = {
+    "agentlab.case_discrimination_input.v1": (
+        "agentlab.case_discrimination_report.v1",
+        "sourceRevision",
+        re.compile(r"[0-9a-f]{40}"),
+    ),
+    "agentlab.case_discrimination_input.v2": (
+        "agentlab.case_discrimination_report.v2",
+        "sourceSetSha256",
+        re.compile(r"[0-9a-f]{64}"),
+    ),
+}
 REVISION = re.compile(r"[0-9a-f]{40}")
 
 
@@ -141,12 +151,18 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
 
 
 def build_report(value: dict[str, Any], required_trials: int, threshold: float) -> dict[str, Any]:
-    if value.get("schema") != INPUT_SCHEMA:
+    input_contract = INPUT_SCHEMAS.get(value.get("schema"))
+    if input_contract is None:
         fail("unsupported case discrimination input schema")
-    for field in ("sourceRevision", "methodRevision"):
-        revision = value.get(field)
-        if not isinstance(revision, str) or not REVISION.fullmatch(revision):
-            fail(f"{field} must be a lowercase 40-character Git revision")
+    output_schema, source_identity_field, source_identity_pattern = input_contract
+    source_identity = value.get(source_identity_field)
+    if not isinstance(source_identity, str) or not source_identity_pattern.fullmatch(source_identity):
+        if source_identity_field == "sourceRevision":
+            fail("sourceRevision must be a lowercase 40-character Git revision")
+        fail("sourceSetSha256 must be a lowercase 64-character SHA-256 digest")
+    method_revision = value.get("methodRevision")
+    if not isinstance(method_revision, str) or not REVISION.fullmatch(method_revision):
+        fail("methodRevision must be a lowercase 40-character Git revision")
     if required_trials < 1:
         fail("required trials must be positive")
     if not 0.0 <= threshold <= 1.0:
@@ -163,9 +179,9 @@ def build_report(value: dict[str, Any], required_trials: int, threshold: float) 
         )
     )
     return {
-        "schema": OUTPUT_SCHEMA,
-        "sourceRevision": value.get("sourceRevision"),
-        "methodRevision": value.get("methodRevision"),
+        "schema": output_schema,
+        source_identity_field: source_identity,
+        "methodRevision": method_revision,
         "denominators": {
             "requiredTrialsPerParticipant": required_trials,
             "minimumParticipantProfiles": 2,

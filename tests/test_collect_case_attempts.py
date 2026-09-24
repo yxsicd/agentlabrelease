@@ -24,6 +24,7 @@ SCORER = load_module("score_collected_cases", ROOT / "scripts/score-case-discrim
 
 class CollectCaseAttemptsTests(unittest.TestCase):
     source_revision = "1" * 40
+    source_set_sha256 = "a" * 64
     method_revision = "2" * 40
     case_id = "case-separates-participants"
 
@@ -73,6 +74,33 @@ class CollectCaseAttemptsTests(unittest.TestCase):
             ],
         }
 
+    def multi_repo_manifest(self, attempts: list[dict]) -> dict:
+        value = self.manifest(attempts)
+        value["schema"] = "agentlab.case_attempt_collection.v2"
+        value.pop("sourceRevision")
+        value["sourceSetSha256"] = self.source_set_sha256
+        return value
+
+    def write_multi_repo_attempt(
+        self, root: pathlib.Path, attempt_id: str, passed: bool
+    ) -> None:
+        evidence = root / "runs" / attempt_id
+        common = {
+            "taskId": self.case_id,
+            "sourceSetSha256": self.source_set_sha256,
+        }
+        self.write_json(evidence / "summary.json", common)
+        self.write_json(
+            evidence / "decision-package.json",
+            {
+                **common,
+                "schema": "agentlab.harness_decision_package.v1",
+                "assessmentStatus": "assessed",
+                "infrastructureAvailable": True,
+                "subjectTaskSucceeded": passed,
+            },
+        )
+
     def write_calibration(self, root: pathlib.Path) -> None:
         self.write_json(
             root / "calibration.json",
@@ -90,6 +118,31 @@ class CollectCaseAttemptsTests(unittest.TestCase):
                         "infrastructureValid": True,
                     }
                 ],
+            },
+        )
+
+    def write_multi_repo_calibration(self, root: pathlib.Path) -> None:
+        def variant(*verdicts: bool) -> dict:
+            return {
+                "sourceSha256": "f" * 64,
+                "stages": {
+                    f"turn-{index}": {"pass": verdict}
+                    for index, verdict in enumerate(verdicts, 1)
+                },
+            }
+
+        self.write_json(
+            root / "calibration.json",
+            {
+                "schema": "agentlab.multi_repo_calibration.v1",
+                "sourceSetSha256": self.source_set_sha256,
+                "infrastructureAvailable": True,
+                "variants": {
+                    "baseline": variant(False, False),
+                    "reference": variant(True, True),
+                    "wrong-boundary": variant(False, False),
+                    "stale-consumer": variant(True, False),
+                },
             },
         )
 
@@ -151,6 +204,63 @@ class CollectCaseAttemptsTests(unittest.TestCase):
             evidence = collected["cases"][0]["attempts"][0]["evidence"]
             self.assertEqual(len(evidence["summary"]["sha256"]), 64)
             self.assertEqual(len(evidence["decisionPackage"]["sha256"]), 64)
+
+    def test_multi_repo_source_set_flows_into_v2_score(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            self.write_multi_repo_calibration(root)
+            attempts = []
+            for participant, passed in (("strong", True), ("baseline", False)):
+                for trial in range(1, 4):
+                    attempt_id = f"{participant}-{trial}"
+                    self.write_multi_repo_attempt(root, attempt_id, passed)
+                    attempts.append(
+                        {
+                            "attemptId": attempt_id,
+                            "participantId": participant,
+                            "evidence": f"runs/{attempt_id}",
+                        }
+                    )
+            collected = COLLECTOR.build_input(
+                self.multi_repo_manifest(attempts), root.resolve()
+            )
+            self.assertEqual(collected["schema"], "agentlab.case_discrimination_input.v2")
+            self.assertEqual(collected["sourceSetSha256"], self.source_set_sha256)
+            self.assertNotIn("sourceRevision", collected)
+            calibration = collected["cases"][0]["calibration"]
+            self.assertEqual(
+                calibration["sourceSchema"], "agentlab.multi_repo_calibration.v1"
+            )
+            self.assertFalse(calibration["baselineObservedPass"])
+            self.assertTrue(calibration["referenceObservedPass"])
+            self.assertEqual(len(calibration["negativeVariants"]), 2)
+            report = SCORER.build_report(collected, 3, 0.6)
+            self.assertEqual(report["schema"], "agentlab.case_discrimination_report.v2")
+            self.assertEqual(report["sourceSetSha256"], self.source_set_sha256)
+            self.assertTrue(report["ranking"][0]["eligible"])
+
+    def test_multi_repo_attempt_from_another_source_set_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            self.write_multi_repo_calibration(root)
+            self.write_multi_repo_attempt(root, "drifted-set", True)
+            summary = root / "runs/drifted-set/summary.json"
+            value = json.loads(summary.read_text())
+            value["sourceSetSha256"] = "b" * 64
+            self.write_json(summary, value)
+            with self.assertRaisesRegex(ValueError, "sourceSetSha256 mismatch"):
+                COLLECTOR.build_input(
+                    self.multi_repo_manifest(
+                        [
+                            {
+                                "attemptId": "drifted-set",
+                                "participantId": "candidate",
+                                "evidence": "runs/drifted-set",
+                            }
+                        ]
+                    ),
+                    root.resolve(),
+                )
 
     def test_infrastructure_unavailable_attempt_has_no_failure_verdict(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

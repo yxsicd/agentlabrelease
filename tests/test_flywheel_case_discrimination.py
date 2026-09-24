@@ -108,6 +108,56 @@ class FlywheelCaseDiscriminationTests(unittest.TestCase):
             self.assertNotEqual(completed.returncode, 0)
             self.assertIn("does not match run summary", completed.stderr)
 
+    def test_multi_repo_report_retains_source_set_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            evidence = root / "evidence"
+            evidence.mkdir()
+            source_set = "a" * 64
+            (evidence / "summary.json").write_text(
+                json.dumps(
+                    {
+                        "schema": "agentlab.multi_repo_assessment_summary.v1",
+                        "sourceSetSha256": source_set,
+                        "taskId": "campaign",
+                    }
+                )
+            )
+            value = json.loads(
+                (ROOT / "examples/case-discrimination/fixture.json").read_text()
+            )
+            value["schema"] = "agentlab.case_discrimination_input.v2"
+            value.pop("sourceRevision")
+            value["sourceSetSha256"] = source_set
+            input_path = root / "input.json"
+            input_path.write_text(json.dumps(value))
+            report = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts/score-case-discrimination.py"),
+                    "--input",
+                    str(input_path),
+                ],
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout
+            (evidence / "case-discrimination-report.json").write_text(report)
+            output = root / "transaction.json"
+            completed = self.run_builder(evidence, output)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            payload = json.loads(output.read_text())
+            decisions = [
+                operation["row"]
+                for table in payload["arguments"]["tables"]
+                if table["path"] == "decisions"
+                for operation in table["operations"]
+                if operation["row"]["schema"] == "agentlab.case_selection_decision.v1"
+            ]
+            self.assertEqual(len(decisions), 3)
+            self.assertTrue(all(row["sourceSetSha256"] == source_set for row in decisions))
+            self.assertTrue(all("sourceRevision" not in row for row in decisions))
+
 
 if __name__ == "__main__":
     unittest.main()

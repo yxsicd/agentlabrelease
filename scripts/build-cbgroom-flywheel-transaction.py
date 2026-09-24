@@ -11,6 +11,7 @@ from pathlib import Path
 
 
 REVISION = re.compile(r"[0-9a-f]{40}")
+SHA256 = re.compile(r"[0-9a-f]{64}")
 
 
 def load(path: Path):
@@ -399,17 +400,30 @@ def main():
 
     discrimination = load(evidence / "case-discrimination-report.json") or {}
     if discrimination:
-        if discrimination.get("schema") != "agentlab.case_discrimination_report.v1":
+        discrimination_schema = discrimination.get("schema")
+        if discrimination_schema not in {
+            "agentlab.case_discrimination_report.v1",
+            "agentlab.case_discrimination_report.v2",
+        }:
             raise SystemExit("unsupported case discrimination report schema")
-        discrimination_source = discrimination.get("sourceRevision")
+        multi_repo_discrimination = (
+            discrimination_schema == "agentlab.case_discrimination_report.v2"
+        )
+        source_identity_field = (
+            "sourceSetSha256" if multi_repo_discrimination else "sourceRevision"
+        )
+        discrimination_source = discrimination.get(source_identity_field)
         method_revision = discrimination.get("methodRevision")
-        if not isinstance(discrimination_source, str) or not REVISION.fullmatch(discrimination_source):
-            raise SystemExit("case discrimination sourceRevision must be an exact Git revision")
+        source_pattern = SHA256 if multi_repo_discrimination else REVISION
+        if not isinstance(discrimination_source, str) or not source_pattern.fullmatch(discrimination_source):
+            raise SystemExit(f"case discrimination {source_identity_field} has invalid exact identity")
         if not isinstance(method_revision, str) or not REVISION.fullmatch(method_revision):
             raise SystemExit("case discrimination methodRevision must be an exact Git revision")
-        summary_source = summary.get("sourceRevision")
+        summary_source = summary.get(source_identity_field)
         if summary_source and discrimination_source != summary_source:
-            raise SystemExit("case discrimination sourceRevision does not match run summary")
+            raise SystemExit(
+                f"case discrimination {source_identity_field} does not match run summary"
+            )
         policy = discrimination.get("policy") or {}
         if policy.get("automaticPromotion") is not False:
             raise SystemExit("case discrimination report must not auto-promote")
@@ -419,12 +433,11 @@ def main():
             if not isinstance(case_id, str) or not case_id or not isinstance(decision, str):
                 raise SystemExit("invalid case discrimination ranking row")
             suffix = hashlib.sha256(case_id.encode()).hexdigest()[:16]
-            insert("decisions", {
+            decision_row = {
                 "id": f"decision-{args.run_id}-case-{suffix}",
                 "schema": "agentlab.case_selection_decision.v1",
                 "caseId": case_id,
                 "taskId": case_id,
-                "sourceRevision": discrimination_source,
                 "methodRevision": method_revision,
                 "decision": decision,
                 "eligible": bool(row.get("eligible")),
@@ -435,7 +448,9 @@ def main():
                 "evidenceIds": [f"evidence-{args.run_id}-case-discrimination-report"],
                 "automaticPromotion": False,
                 "nextAction": policy.get("nextAction"),
-            })
+            }
+            decision_row[source_identity_field] = discrimination_source
+            insert("decisions", decision_row)
 
     performance = load(evidence / "smartperf-comparison.json") or {}
     if performance:
