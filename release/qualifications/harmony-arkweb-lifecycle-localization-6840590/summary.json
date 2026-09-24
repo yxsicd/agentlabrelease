@@ -50,5 +50,11 @@
     "startup-performance improvement",
     "participant discrimination"
   ],
+  "sourceBuildPreflight": {
+    "path": "source-build-preflight.json",
+    "status": "blocked-missing-toolchain",
+    "qualified": false,
+    "boundary": "The retained emulator install receipt used an existing HAP; it is not a source-build receipt for either pinned repository."
+  },
   "automaticPromotion": false
 }

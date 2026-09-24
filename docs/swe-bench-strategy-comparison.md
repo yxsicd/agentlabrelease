@@ -144,7 +144,11 @@ smaller than SWE-bench's:
     proposed cross-repository targets. That is useful localization evidence,
     not yet semantic proof: the lifecycle hypothesis, five-file edit surface,
     repair/preservation checks and Oracle still require independent review and
-    calibration.
+    calibration. The two source projects now have revision-bound project roots
+    and build modules, but the exact `hwlinux` host has only the emulator/runtime
+    substrate: its source-build preflight fails closed because the Harmony SDK,
+    `ohpm`, and Hvigor CLI are absent. A prior install of an existing HAP is not
+    counted as a baseline build of either repository.
 11. The richer API-localizing full run takes 257.65 seconds and emits roughly
     297 MiB of fact rows plus 25 MiB of difficulty candidates. Git blob reads
     are batched, but AST analysis is still single-process and there is no
