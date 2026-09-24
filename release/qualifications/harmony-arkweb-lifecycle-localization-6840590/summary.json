@@ -39,7 +39,8 @@
     "editable and context source bytes bind Git blob OIDs and SHA-256 digests",
     "repair, preservation, device and performance checks are proposed separately",
     "guide-snippets API 20 baseline builds successfully with two member-equivalent clean HAPs",
-    "one exact baseline HAP installs, launches and retains a live process on the Linux x86 emulator"
+    "one exact baseline HAP installs, launches and retains a live process on the Linux x86 emulator",
+    "UI coordinate calibration rejects a DomStorage decoy tap and the corrected UserAgent_four baseline produces an assessed Oracle failure"
   ],
   "notQualified": [
     "ArkWeb API-version semantics",
@@ -62,6 +63,14 @@
   "guideBaselineBuildRuntime": {
     "path": "guide-api20-build-runtime.json",
     "status": "baseline-build-runtime-qualified",
+    "businessUiOracleQualified": false,
+    "automaticPromotion": false
+  },
+  "guideCandidateOracleCalibration": {
+    "path": "guide-user-agent-four-oracle-calibration.json",
+    "status": "candidate-baseline-failure-observed",
+    "coordinateCalibrationQualified": true,
+    "candidateFailToPassObserved": true,
     "businessUiOracleQualified": false,
     "automaticPromotion": false
   },

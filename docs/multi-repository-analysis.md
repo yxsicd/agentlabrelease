@@ -118,6 +118,15 @@ paths. `proposal.json` binds every selected path to its Git blob OID and byte
 digest, but remains `review-required`: the syntactic evidence does not prove
 the lifecycle hypothesis or authorize intent construction.
 
+The same directory now retains a Linux-emulator Oracle calibration candidate.
+It rejects an initially misleading PASS whose screenshot-space coordinate
+actually hit `DomStorage`, then binds the corrected `UserAgent_four` device
+coordinate to exact `uitest` bounds. The corrected frozen baseline is an
+assessed Oracle failure with infrastructure available and an unchanged Index
+layout. This qualifies a candidate `FAIL_TO_PASS` observation, not the
+business Oracle itself: independent review, reference repair, preservation and
+performance calibration remain explicit later gates.
+
 Use `propose-api-call-case-localization.py` to compile an exact proposal, then
 have an independent maintainer create a decision that binds the proposal
 SHA-256 and acknowledges every risk. Only

@@ -116,6 +116,14 @@ class HarmonyEmulatorReleaseTests(unittest.TestCase):
         self.assertIn('"profileSummaryStatus":"%s"', source)
         self.assertIn('infrastructure_failure "UI layout dump failed"', source)
         self.assertIn('oracle_failure "UI oracle check failed: $a"', source)
+        self.assertIn("GNU timeout is required for bounded HDC operations", source)
+        self.assertIn("timeout --signal=TERM --kill-after=2s 15s", source)
+        self.assertNotIn('"$hdc" -t "$target" shell uitest dumpLayout', source)
+        self.assertIn("target_connected", source)
+        self.assertIn("connect_deadline=$((SECONDS + 180))", source)
+        self.assertIn("ui_ready_deadline=$((SECONDS + 120))", source)
+        self.assertIn('grep -F "install bundle successfully"', source)
+        self.assertIn('infrastructure_failure "HAP install did not report success"', source)
 
     def test_run_case_binds_policy_and_dynamic_workload_to_profile_window(self) -> None:
         source = INSTALLER.read_text(encoding="utf-8")

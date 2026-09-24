@@ -94,6 +94,12 @@ bounded operations are `wait-text`, `tap`, `swipe`, `key`, `sleep`,
 bundle before installation so state from a prior case cannot silently satisfy
 the Oracle.
 
+Every HDC subprocess is itself bounded with GNU `timeout`. Connection and UI
+readiness use wall-clock deadlines, and successful installation is accepted
+only when HDC emits `install bundle successfully`. This prevents an HDC call
+that returns zero with a textual `[Fail]` result, or a hung `dumpLayout`,
+from being promoted as device or Oracle evidence.
+
 Version 2 results also expose `assessmentStatus`, `infrastructureAvailable`,
 `subjectTaskSucceeded` and `failureClass`. A failed bounded UI assertion is an
 assessed task failure. Boot, HDC, layout-transfer and input-control failures are

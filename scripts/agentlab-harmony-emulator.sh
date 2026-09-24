@@ -224,6 +224,14 @@ run_case() {
   hdc="$tools_root/sdk/default/openharmony/toolchains/hdc"
   [ -x "$emulator" ] || die "emulator entrypoint missing or not executable: $emulator"
   [ -x "$hdc" ] || die "hdc entrypoint missing or not executable: $hdc"
+  command -v timeout >/dev/null 2>&1 || die "GNU timeout is required for bounded HDC operations"
+  hdc_bounded() {
+    timeout --signal=TERM --kill-after=2s 15s "$hdc" "$@"
+  }
+  target_connected() {
+    hdc_bounded list targets 2>/dev/null | awk -v target="$target" \
+      '$1 == target { found = 1 } END { exit(found ? 0 : 1) }'
+  }
   [ -f "$hap" ] || die "HAP not found: $hap"
   [ -f "$instance_path/$instance.ini" ] || die "emulator instance is not prepared: $instance"
   scenario_id=
@@ -322,10 +330,10 @@ run_case() {
     layout_ordinal=$((layout_ordinal + 1))
     layout_name=$(printf 'ui-layout-%03d.json' "$layout_ordinal")
     remote_layout="/data/local/tmp/agentlab-$scenario_id-$layout_ordinal.json"
-    "$hdc" -t "$target" shell uitest dumpLayout -p "$remote_layout" \
+    hdc_bounded -t "$target" shell uitest dumpLayout -p "$remote_layout" \
       >"$output/$layout_name.dump.log" 2>&1 ||
       infrastructure_failure "UI layout dump failed"
-    "$hdc" -t "$target" file recv "$remote_layout" "$output/$layout_name" \
+    hdc_bounded -t "$target" file recv "$remote_layout" "$output/$layout_name" \
       >"$output/$layout_name.recv.log" 2>&1 ||
       infrastructure_failure "UI layout receive failed"
     last_layout="$output/$layout_name"
@@ -403,7 +411,7 @@ run_case() {
           ui_validate_integer "tap x" "$a" 0 10000
           ui_validate_integer "tap y" "$b" 0 10000
           [ -z "$c$d$e" ] || infrastructure_failure "tap requires X Y"
-          "$hdc" -t "$target" shell uitest uiInput click "$a" "$b" \
+          hdc_bounded -t "$target" shell uitest uiInput click "$a" "$b" \
             >>"$output/ui-input.log" 2>&1 || infrastructure_failure "UI tap failed"
           record_ui_action tap "$a,$b" || infrastructure_failure "UI action evidence write failed"
           ;;
@@ -413,7 +421,7 @@ run_case() {
           ui_validate_integer "swipe x2" "$c" 0 10000
           ui_validate_integer "swipe y2" "$d" 0 10000
           ui_validate_integer "swipe duration" "$e" 1 60000
-          "$hdc" -t "$target" shell uitest uiInput swipe "$a" "$b" "$c" "$d" "$e" \
+          hdc_bounded -t "$target" shell uitest uiInput swipe "$a" "$b" "$c" "$d" "$e" \
             >>"$output/ui-input.log" 2>&1 || infrastructure_failure "UI swipe failed"
           record_ui_action swipe "$a,$b,$c,$d,$e" ||
             infrastructure_failure "UI action evidence write failed"
@@ -421,7 +429,7 @@ run_case() {
         key)
           ui_validate_integer "key code" "$a" 0 1000
           [ -z "$b$c$d$e" ] || infrastructure_failure "key requires KEYCODE"
-          "$hdc" -t "$target" shell uitest uiInput keyEvent "$a" \
+          hdc_bounded -t "$target" shell uitest uiInput keyEvent "$a" \
             >>"$output/ui-input.log" 2>&1 || infrastructure_failure "UI key event failed"
           record_ui_action key "$a" || infrastructure_failure "UI action evidence write failed"
           ;;
@@ -480,7 +488,7 @@ run_case() {
           ui_validate_integer "profile workload swipe x2" "$c" 0 10000
           ui_validate_integer "profile workload swipe y2" "$d" 0 10000
           ui_validate_integer "profile workload swipe duration" "$e" 1 60000
-          "$hdc" -t "$target" shell uitest uiInput swipe "$a" "$b" "$c" "$d" "$e" \
+          hdc_bounded -t "$target" shell uitest uiInput swipe "$a" "$b" "$c" "$d" "$e" \
             >>"$output/profile-workload-input.log" 2>&1 || infrastructure_failure "profile workload swipe failed"
           workload_action=$((workload_action + 1))
           printf '%s\tswipe\t%s,%s,%s,%s,%s\n' "$workload_action" "$a" "$b" "$c" "$d" "$e" >>"$output/profile-workload-actions.tsv"
@@ -529,46 +537,49 @@ run_case() {
     >"$output/emulator-start.log" 2>&1 &
   started=true
   connected=false
-  attempt=1
-  while [ "$attempt" -le 180 ]; do
-    "$hdc" tconn "$target" >>"$output/hdc-connect.log" 2>&1 || true
-    if "$hdc" list targets 2>/dev/null | awk -v target="$target" \
-        '$1 == target { found = 1 } END { exit(found ? 0 : 1) }' \
-        >"$output/hdc-target.txt"; then
-      "$hdc" list targets >"$output/hdc-target.txt"
+  connect_deadline=$((SECONDS + 180))
+  while [ "$SECONDS" -lt "$connect_deadline" ]; do
+    hdc_bounded tconn "$target" >>"$output/hdc-connect.log" 2>&1 || true
+    if target_connected >"$output/hdc-target.txt"; then
+      hdc_bounded list targets >"$output/hdc-target.txt"
       connected=true
       break
     fi
     sleep 1
-    attempt=$((attempt + 1))
   done
   [ "$connected" = true ] || die "emulator did not expose a connected HDC target within 180 seconds"
-  "$hdc" -t "$target" shell param get const.product.name >"$output/device-product.txt"
-  "$hdc" -t "$target" shell param get const.ohos.fullname >"$output/device-version.txt"
+  hdc_bounded -t "$target" shell param get const.product.name >"$output/device-product.txt"
+  hdc_bounded -t "$target" shell param get const.ohos.fullname >"$output/device-version.txt"
   ui_ready=false
-  attempt=1
-  while [ "$attempt" -le 60 ]; do
-    if "$hdc" -t "$target" shell uitest dumpLayout \
+  ui_ready_deadline=$((SECONDS + 120))
+  while [ "$SECONDS" -lt "$ui_ready_deadline" ]; do
+    if hdc_bounded -t "$target" shell uitest dumpLayout \
         -p /data/local/tmp/agentlab-ready.json >"$output/ui-ready.log" 2>&1 &&
-        ! grep -iF "failed" "$output/ui-ready.log" >/dev/null; then
+        ! grep -iF "failed" "$output/ui-ready.log" >/dev/null &&
+        target_connected; then
       ui_ready=true
       break
     fi
     sleep 1
-    attempt=$((attempt + 1))
   done
-  [ "$ui_ready" = true ] || die "emulator UI did not become ready within 60 seconds"
+  [ "$ui_ready" = true ] || die "emulator UI did not become ready within 120 seconds"
   if [ "$reset_app_data" = true ]; then
-    "$hdc" -t "$target" uninstall "$bundle" >"$output/uninstall.log" 2>&1 || true
+    hdc_bounded -t "$target" uninstall "$bundle" >"$output/uninstall.log" 2>&1 || true
   else
     printf 'reset-app-data not requested\n' >"$output/uninstall.log"
   fi
-  "$hdc" -t "$target" install -r "$hap" >"$output/install.log" 2>&1
-  "$hdc" -t "$target" shell bm dump -n "$bundle" >"$output/bundle-dump.txt" 2>&1
-  "$hdc" -t "$target" shell uitest uiInput swipe 630 2400 630 600 1000 \
+  hdc_bounded -t "$target" install -r "$hap" >"$output/install.log" 2>&1
+  grep -F "install bundle successfully" "$output/install.log" >/dev/null ||
+    infrastructure_failure "HAP install did not report success"
+  hdc_bounded -t "$target" shell bm dump -n "$bundle" >"$output/bundle-dump.txt" 2>&1
+  ! grep -F "[Fail]" "$output/bundle-dump.txt" >/dev/null ||
+    infrastructure_failure "bundle query reported failure"
+  hdc_bounded -t "$target" shell uitest uiInput swipe 630 2400 630 600 1000 \
     >"$output/unlock.log" 2>&1
+  ! grep -F "[Fail]" "$output/unlock.log" >/dev/null ||
+    infrastructure_failure "unlock input reported failure"
   sleep 3
-  "$hdc" -t "$target" shell aa start -a "$ability" -b "$bundle" >"$output/launch.log" 2>&1
+  hdc_bounded -t "$target" shell aa start -a "$ability" -b "$bundle" >"$output/launch.log" 2>&1
   grep -F "start ability successfully" "$output/launch.log" >/dev/null ||
     die "ability launch did not report success; inspect launch.log"
   process_hint=$bundle
@@ -580,7 +591,7 @@ run_case() {
     # the left (for example com.agentlab.multirepo becomes ntlab.multirepo).
     # Request NAME explicitly and require an exact field match so a live app is
     # neither missed nor confused with a similarly named process.
-    "$hdc" -t "$target" shell ps -A -o PID,NAME >"$output/process-all.txt" 2>&1
+    hdc_bounded -t "$target" shell ps -A -o PID,NAME >"$output/process-all.txt" 2>&1
     if LC_ALL=C awk -v bundle="$process_hint" '$2 == bundle { found = 1; print } END { exit(found ? 0 : 1) }' \
         "$output/process-all.txt" >"$output/process.txt"; then
       process_found=true
@@ -606,7 +617,7 @@ run_case() {
   [ -n "$screenshot" ] || die "emulator screenshot was not produced"
   file_sha256 "$screenshot" >"$output/screenshot.sha256"
   if [ -n "$profile_workload" ]; then
-    "$hdc" -t "$target" shell SP_daemon -N "$profile_samples" -PKG "$bundle" \
+    hdc_bounded -t "$target" shell SP_daemon -N "$profile_samples" -PKG "$bundle" \
       -c -g -t -p -f -r -net -snapshot -d >"$output/smartperf.txt" 2>&1 &
     smartperf_pid=$!
     run_profile_workload
@@ -615,7 +626,7 @@ run_case() {
     else
       profile_status=unavailable
     fi
-  elif "$hdc" -t "$target" shell SP_daemon -N "$profile_samples" -PKG "$bundle" \
+  elif hdc_bounded -t "$target" shell SP_daemon -N "$profile_samples" -PKG "$bundle" \
       -c -g -t -p -f -r -net -snapshot -d >"$output/smartperf.txt" 2>&1; then
     profile_status=collected
   else
