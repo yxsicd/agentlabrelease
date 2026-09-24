@@ -320,14 +320,17 @@ python3 scripts/run-multi-repo-assessment.py \
   --participant examples/multi-repo-case/pi-assessed-agent.py \
   --blind-participant-root /tmp/multi-repo-participant-input \
   --blind-dispatch-receipt /tmp/multi-repo-dispatch-receipt.json \
+  --participant-runtime-config /tmp/participant-runtime.json \
   --participant-id pi-glm-5.3-flash \
   --output /tmp/multi-repo-attempt
 ```
 
-The Pi adapter keeps one participant process and native session across both
+The Pi adapter keeps one trusted protocol process and native session across both
 stages, while the operator-owned Gateway proxy retains the complete model
-exchange. The external Gateway credential is available only to the adapter,
-not to Pi. `summary.json` and `decision-package.json` carry the exact
+exchange. Each Pi turn is a fresh least-mounted container over the same
+Workspace and participant-state mounts. The external Gateway credential is
+available only to the host adapter, not to Pi or its PID namespace.
+`summary.json` and `decision-package.json` carry the exact
 `sourceSetSha256` and are directly consumable by an
 `agentlab.case_attempt_collection.v2` campaign. Participant/runtime or Oracle
 transport failures produce `infrastructure-unavailable` with a null verdict;
@@ -335,12 +338,15 @@ valid runs that fail behavior or edit scope remain assessed failures.
 
 `mock-assessed-agent.py` provides baseline, reference and scope-drift protocol
 fixtures for deterministic Harness regression only. Their separation score is
-not evidence about a real model. The current local-process adapter also relies
-on participant cooperation not to traverse outside the supplied workspace;
-formal production isolation requires the released sandbox/SessionFS execution
-boundary. The runner therefore records the manifest-bound interface input but
-keeps `filesystemIsolationQualified=false` and `blindAssessmentQualified=false`
-for its current host-process mode.
+not evidence about a real model. A run without `--participant-runtime-config`
+is host-process compatibility mode and keeps
+`filesystemIsolationQualified=false`. The assessed workflow freezes an exact
+container image/runtime/case configuration, probes evaluator and operator paths
+as unreachable, retains Docker lifecycle evidence outside participant mounts,
+and independently validates the exact four-mount policy before setting
+filesystem and external-credential isolation true. Host networking is not an
+egress allowlist and freshness/contamination remain review-required, so
+`networkEgressIsolationQualified` and `blindAssessmentQualified` remain false.
 
 Copy the frozen case into campaign evidence as
 `multi-repo-evaluation-case.json` and its exact calibration summary as

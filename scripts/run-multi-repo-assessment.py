@@ -55,6 +55,17 @@ def validate_blind_dispatch(participant_root: Path, receipt_path: Path):
     return module.validate_dispatch(participant_root.absolute(), receipt_path.absolute())
 
 
+def validate_participant_runtime(config: Path, receipt_root: Path, workspace: Path, state: Path, labels):
+    module_path = Path(__file__).with_name("validate-participant-runtime.py")
+    spec = importlib.util.spec_from_file_location("agentlab_participant_runtime", module_path)
+    require(spec is not None and spec.loader is not None, "participant runtime validator is unavailable")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.validate_runtime_receipts(
+        config.absolute(), receipt_root.absolute(), workspace.absolute(), state.absolute(), labels
+    )
+
+
 def git(root: Path, *arguments: str, text=False):
     result = subprocess.run(
         ["git", "-C", str(root), *arguments], capture_output=True, text=text
@@ -112,7 +123,15 @@ def tree_digest(state):
 
 
 class ParticipantProtocol:
-    def __init__(self, participant: Path, workspace: Path, evidence: Path, case_input: Path | None = None):
+    def __init__(
+        self,
+        participant: Path,
+        workspace: Path,
+        evidence: Path,
+        case_input: Path | None = None,
+        runtime_config: Path | None = None,
+        runtime_receipts: Path | None = None,
+    ):
         environment = {
             key: os.environ[key]
             for key in (
@@ -132,6 +151,16 @@ class ParticipantProtocol:
         environment["AGENTLAB_ASSESSMENT_EVIDENCE"] = str(evidence)
         if case_input is not None:
             environment["AGENTLAB_CASE_INPUT_ROOT"] = str(case_input)
+        if runtime_config is not None:
+            require(runtime_receipts is not None, "runtime receipt root is required")
+            environment["AGENTLAB_PARTICIPANT_RUNTIME_CONFIG"] = str(runtime_config)
+            environment["AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT"] = str(runtime_receipts)
+            environment["DOCKER_CONFIG"] = os.environ.get(
+                "DOCKER_CONFIG", str(Path.home() / ".docker")
+            )
+            for key in ("DOCKER_HOST", "DOCKER_CONTEXT"):
+                if key in os.environ:
+                    environment[key] = os.environ[key]
         self.stderr = (evidence / "participant-stderr.log").open("wb")
         self.process = subprocess.Popen(
             [sys.executable, str(participant.resolve()), "--protocol"],
@@ -188,6 +217,7 @@ def main():
     parser.add_argument("--participant-id", required=True)
     parser.add_argument("--blind-participant-root", type=Path)
     parser.add_argument("--blind-dispatch-receipt", type=Path)
+    parser.add_argument("--participant-runtime-config", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -217,6 +247,9 @@ def main():
         )
         require(blind_dispatch.get("caseId") == case.get("id"), "blind dispatch case identity differs")
         require(blind_dispatch.get("sourceSetSha256") == source_set, "blind dispatch source set differs")
+    if args.participant_runtime_config is not None:
+        require(blind_dispatch is not None, "isolated participant runtime requires a blind dispatch")
+        require(args.participant_runtime_config.resolve().is_file(), "participant runtime config is absent")
 
     case_sources = {row["id"]: row for row in case.get("sources", [])}
     manifest_sources = {row["id"]: row for row in manifest.get("repositories", [])}
@@ -245,6 +278,9 @@ def main():
     workspace.mkdir()
     evidence.mkdir()
     oracle_evidence.mkdir()
+    runtime_receipts = evidence / "runtime-isolation"
+    if args.participant_runtime_config is not None:
+        runtime_receipts.mkdir()
     for repository_id, source in sorted(manifest_sources.items()):
         materialize_repository(
             Path(source["root"]), source["revision"], workspace / repository_id
@@ -252,7 +288,14 @@ def main():
 
     initial_state = tree_state(workspace)
     write_json(args.output / "initial-source-state.json", initial_state)
-    protocol = ParticipantProtocol(participant, workspace, evidence, blind_participant_root)
+    protocol = ParticipantProtocol(
+        participant,
+        workspace,
+        evidence,
+        blind_participant_root,
+        args.participant_runtime_config.resolve() if args.participant_runtime_config else None,
+        runtime_receipts if args.participant_runtime_config else None,
+    )
     stage_results = []
     infrastructure_errors = []
     cumulative_checks = []
@@ -368,6 +411,22 @@ def main():
         participant_exit = protocol.close()
         write_json(args.output / "participant-protocol.json", protocol.transcript)
 
+    runtime_validation = None
+    if args.participant_runtime_config is not None:
+        try:
+            runtime_validation = validate_participant_runtime(
+                args.participant_runtime_config,
+                runtime_receipts,
+                workspace,
+                args.output / "participant-state",
+                [row["stageId"] for row in stage_results],
+            )
+            write_json(args.output / "participant-runtime-validation.json", runtime_validation)
+        except Exception as error:
+            infrastructure_errors.append(
+                {"stageId": None, "source": "participant-runtime-isolation", "error": f"{type(error).__name__}: {error}"}
+            )
+
     if participant_exit not in (0, None) and not infrastructure_errors:
         infrastructure_errors.append(
             {"stageId": None, "source": "participant", "error": f"protocol exited {participant_exit}"}
@@ -404,7 +463,20 @@ def main():
                 else None
             ),
             "filesystemIsolationRequired": blind_dispatch is not None,
-            "filesystemIsolationQualified": False,
+            "filesystemIsolationQualified": bool(
+                runtime_validation
+                and runtime_validation.get("filesystemIsolationQualified") is True
+            ),
+            "externalCredentialIsolationQualified": bool(
+                runtime_validation
+                and runtime_validation.get("externalCredentialIsolationQualified") is True
+            ),
+            "networkEgressIsolationQualified": bool(
+                runtime_validation
+                and runtime_validation.get("networkEgressIsolationQualified") is True
+            ),
+            "runtimeExecutor": runtime_validation.get("executor") if runtime_validation else None,
+            "runtimeImageId": runtime_validation.get("imageId") if runtime_validation else None,
             "blindAssessmentQualified": False,
         },
         "assessmentBoundary": "Exact committed source materialized without Git metadata and evaluated by the frozen VM-module Oracle; no Harmony build, UI, emulator or performance claim.",

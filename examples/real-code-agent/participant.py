@@ -169,10 +169,12 @@ class Participant:
                   'Briefly describe your change when done.')
         if requirement: prompt += '\nAdditional requirement: '+requirement
         (self.evidence / f'{label}-prompt.txt').write_text(prompt)
+        runtime_config = os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG')
+        session_path = self.state / 'pi-session.jsonl' if runtime_config else self.evidence / 'pi-session.jsonl'
         command = [self.binary, '--print', '--mode', 'json', '--provider', 'agentlab-ci',
                    '--model', self.model, '--thinking', 'off', '--no-extensions',
                    '--no-skills', '--no-context-files',
-                   '--session', str(self.evidence / 'pi-session.jsonl'), prompt]
+                   '--session', str(session_path), prompt]
         if self.implementation == 'mini-swe-agent':
             command = [self.binary, str(Path(__file__).with_name('mini_runner.py')),
                        '--base-url', f'http://127.0.0.1:{self.server.server_port}/v1',
@@ -182,6 +184,18 @@ class Participant:
         # Only the operator-side proxy has the external credential.
         env = {k: os.environ[k] for k in ('PATH', 'LANG', 'LC_ALL', 'TMPDIR') if k in os.environ}
         env.update(HOME=str(self.state.parent), PI_CODING_AGENT_DIR=str(self.state))
+        if runtime_config:
+            env.update(
+                AGENTLAB_PARTICIPANT_RUNTIME_CONFIG=runtime_config,
+                AGENTLAB_PARTICIPANT_RUNTIME_LABEL=label,
+                AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT=os.environ[
+                    'AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'
+                ],
+                DOCKER_CONFIG=os.environ['DOCKER_CONFIG'],
+            )
+            for key in ('DOCKER_HOST', 'DOCKER_CONTEXT'):
+                if key in os.environ:
+                    env[key] = os.environ[key]
         (self.evidence / f'{label}-command.json').write_text(json.dumps(command, indent=2) + '\n')
         lifecycle = {'label': label, 'startedAt': datetime.now(timezone.utc).isoformat(),
                      'captureAuthority': 'operator', 'exitCode': None, 'timedOut': False,

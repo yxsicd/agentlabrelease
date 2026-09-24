@@ -234,9 +234,14 @@ perform semantic-leak or contamination review and therefore marks every v1 cut
 ineligible for unseen-Agent discrimination until later independent gates close.
 The reviewed multi-repository workflow now produces that cut, stages only its
 participant projection, and binds the exact participant manifest into every
-stage request and attempt decision. Current host-process execution still reports
-`filesystemIsolationQualified=false`; interface non-disclosure is not treated
-as proof that the participant cannot traverse unrelated host paths.
+stage request and attempt decision. Assessed Pi turns now execute in a
+least-mounted Docker runtime whose raw inspect and negative-path probes are
+validated independently. Only this path may report
+`filesystemIsolationQualified=true` and
+`externalCredentialIsolationQualified=true`; host-process compatibility runs
+remain false. Host networking is presently needed for the external operator
+Gateway proxy, so egress isolation remains false, and neither runtime isolation
+nor interface non-disclosure substitutes for contamination/semantic-leak review.
 
 No aggregate difficulty score may compensate for a failed qualification
 dimension. In particular, high participant separation cannot promote an
@@ -244,10 +249,10 @@ underspecified or contaminated case.
 
 ## Ordered implementation consequences
 
-1. Use the implemented blind-cut builder on a new private or held-out case set,
-   mount only its participant root during assessment, then add contamination,
-   semantic-leak and stronger independent review receipts; unknown evidence
-   remains review-required, never qualified.
+1. Use the implemented blind-cut and validated least-mounted participant runtime
+   on a new private or held-out case set, then add network egress attenuation,
+   contamination, semantic-leak and stronger independent review receipts;
+   unknown evidence remains review-required, never qualified.
 2. Broaden `PASS_TO_PASS` coverage beyond the candidate's three qualified
    routes, independently review Oracle breadth/fairness, and only then accept a
    reference repair. The device campaign must extend, rather than

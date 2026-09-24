@@ -72,6 +72,10 @@ class MultiRepoModelConstructionTest(unittest.TestCase):
         self.assertIn('scripts/build-blind-case-cut.py stage-participant', campaign)
         self.assertIn('--blind-participant-root "$RUNNER_TEMP/agentlab-blind-participant"', campaign)
         self.assertIn('--blind-dispatch-receipt "$AGENTLAB_ROOT/blind-dispatch-receipt.json"', campaign)
+        self.assertIn("scripts/prepare-participant-runtime.py", campaign)
+        self.assertIn("scripts/run-pi-in-docker.py", campaign)
+        self.assertIn('--participant-runtime-config "$AGENTLAB_ROOT/participant-runtime.json"', campaign)
+        self.assertIn('--forbid "$AGENTLAB_ROOT/case"', campaign)
 
     def test_fixture_script_is_release_manifested(self):
         expected = hashlib.sha256(

@@ -127,7 +127,9 @@ class MultiRepoAssessmentTests(unittest.TestCase):
         participant.mkdir(parents=True)
         evaluator.mkdir()
         (participant / "task.json").write_text(json.dumps({
+            "schema": "agentlab.multi_repo_participant_task.v1",
             "caseId": case["id"], "title": case["title"],
+            "sourceSetSha256": case["sourceSetSha256"],
             "stages": [{"id": row["id"], "demand": row["demand"]} for row in case["stages"]],
         }))
         (participant / "sources.json").write_text(json.dumps(case["sources"]))

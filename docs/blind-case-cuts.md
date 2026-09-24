@@ -76,10 +76,23 @@ placing evaluator inventory or paths in the participant manifest.
 `stage-participant` makes a second immutable projection containing only the
 participant manifest and its bound files. Its dispatch receipt must remain
 outside that root. The receipt fixes the intended read-only mount target at
-`/agentlab/case`, but deliberately reports `filesystemIsolationQualified=false`:
-copying and interface binding do not prove that a host process cannot traverse
-other host paths. A later container, bwrap or SessionFS executor must supply
-that independent runtime postcondition.
+`/agentlab/case`. Copying and interface binding alone still report
+`filesystemIsolationQualified=false`. The assessed campaign can now add an
+independent runtime postcondition: each Pi turn runs in a Docker container with
+an immutable image, read-only root, private PID namespace, all capabilities
+dropped and exactly four bind mounts—Workspace RW, participant state RW, Pi
+runtime RO and `/agentlab/case` RO. The operator Gateway proxy and external key
+remain in the host adapter. Raw `docker inspect` evidence and positive/negative
+runtime probes stay outside every participant mount; an independent validator
+rejects extra mounts, changed identities, host PID access, writable rootfs,
+Docker socket exposure or credential environment names before qualifying
+filesystem and external-credential isolation.
+
+This runtime deliberately keeps `networkEgressIsolationQualified=false` because
+host networking is currently used to reach the loopback operator proxy. The cut
+also lacks contamination and semantic-leak qualification, so
+`blindAssessmentQualified` remains false. Host-process and mock runs without
+validated runtime receipts continue to report filesystem isolation false.
 
 ## Evidence boundary
 

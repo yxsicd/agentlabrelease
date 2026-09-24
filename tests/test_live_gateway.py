@@ -22,6 +22,40 @@ SPEC.loader.exec_module(MODULE)
 
 
 class GatewayCaptureTests(unittest.TestCase):
+    def test_container_launcher_gets_docker_control_but_not_gateway_key(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ,
+            {
+                'AGENTLAB_LM_GATEWAY_KEY': 'synthetic-external-key',
+                'AGENTLAB_PARTICIPANT_RUNTIME_CONFIG': str(Path(tmp) / 'runtime.json'),
+                'AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT': str(Path(tmp) / 'receipts'),
+                'DOCKER_CONFIG': str(Path(tmp) / 'docker-config'),
+                'DOCKER_CONTEXT': 'fixture-context',
+            },
+            clear=False,
+        ):
+            root = Path(tmp)
+            evidence = root / 'evidence'
+            evidence.mkdir()
+            captured = {}
+            participant = MODULE.Participant(
+                evidence, root / 'state', '/bin/true', 'http://127.0.0.1:1', 'test-model'
+            )
+            try:
+                def capture(command, project, environment, label, lifecycle):
+                    captured.update(command=command, environment=environment)
+
+                with patch.object(participant, '_run_turn', side_effect=capture):
+                    participant.turn('sandbox-stage', root, prompt='fixture prompt')
+            finally:
+                participant.close()
+            environment = captured['environment']
+            self.assertEqual(environment['DOCKER_CONTEXT'], 'fixture-context')
+            self.assertEqual(environment['DOCKER_CONFIG'], str(root / 'docker-config'))
+            self.assertNotIn('AGENTLAB_LM_GATEWAY_KEY', environment)
+            session = captured['command'][captured['command'].index('--session') + 1]
+            self.assertEqual(Path(session), root / 'state/pi-session.jsonl')
+
     def test_failed_participant_retains_actual_source_and_lifecycle(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ,
                 {'AGENTLAB_LM_GATEWAY_KEY': 'synthetic-external-key'}):
