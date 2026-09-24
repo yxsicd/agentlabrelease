@@ -73,6 +73,7 @@ def main():
     multi_repo_construction_quality = load(evidence / "multi-repo-construction-quality.json") or {}
     assessment_feedback = load(evidence / "assessment-feedback-candidates.json") or {}
     performance_calibration = load(evidence / "performance-calibration.json") or {}
+    performance_calibration_run = load(evidence / "calibration-run.json") or {}
     multi_repo_difficulty = difficulty.get("schema") == "agentlab.difficulty_candidates.v2"
     if multi_repo_difficulty:
         source_set_sha256 = difficulty.get("sourceSetSha256")
@@ -138,6 +139,7 @@ def main():
         ("performance-policy.json", "harmony-performance-policy"),
         ("profile-workload.tsv", "harmony-profile-workload"),
         ("performance-calibration.json", "harmony-performance-calibration"),
+        ("calibration-run.json", "harmony-performance-calibration-run"),
         ("environment-fingerprint.json", "environment-fingerprint"),
     ):
         path = evidence / filename
@@ -1009,6 +1011,73 @@ def main():
                     "consistentRegressedMetrics": consistent_regressions,
                 }
                 repeatability_verified = True
+            automation_binding = None
+            if performance_calibration_run:
+                if performance_calibration_run.get("schema") != "agentlab.harmony_performance_calibration_run.v1":
+                    raise SystemExit("unsupported performance calibration run schema")
+                if performance_calibration_run.get("status") != "passed":
+                    raise SystemExit("performance calibration run did not pass")
+                if performance_calibration_run.get("automaticPromotion") is not False:
+                    raise SystemExit("performance calibration run must not auto-promote")
+                for field in ("planSha256", "runnerSha256", "comparatorSha256"):
+                    if not isinstance(performance_calibration_run.get(field), str) or not SHA256.fullmatch(performance_calibration_run[field]):
+                        raise SystemExit(f"performance calibration run requires exact {field}")
+                if (
+                    performance_calibration_run.get("baselineSourceIdentity")
+                    != performance.get("baselineSourceIdentity")
+                    or performance_calibration_run.get("candidateSourceIdentity")
+                    != performance.get("candidateSourceIdentity")
+                ):
+                    raise SystemExit("performance calibration run source identities differ")
+                if not repeatability_verified:
+                    raise SystemExit("performance calibration run requires verified repeatability")
+                if (
+                    performance_calibration_run.get("candidateRunIds")
+                    != repeatability_binding["candidateRunIds"]
+                    or performance_calibration_run.get("consistentRegressedMetrics")
+                    != repeatability_binding["consistentRegressedMetrics"]
+                ):
+                    raise SystemExit("performance calibration run repeatability differs")
+                phases = performance_calibration_run.get("phases")
+                expected_phases = [
+                    "baseline",
+                    "port-release-after-baseline",
+                    "candidate-1",
+                    "port-release-after-candidate-1",
+                    "candidate-2",
+                    "compare-1",
+                    "compare-2",
+                ]
+                if (
+                    not isinstance(phases, list)
+                    or [phase.get("phase") for phase in phases if isinstance(phase, dict)]
+                    != expected_phases
+                    or not all(isinstance(phase, dict) and phase.get("exitCode") == 0 for phase in phases)
+                ):
+                    raise SystemExit("performance calibration run phases are incomplete or failed")
+                release_phases = [phase for phase in phases if "port-release" in phase["phase"]]
+                if not all(
+                    isinstance(phase.get("attempts"), int)
+                    and phase["attempts"] >= 1
+                    and isinstance(phase.get("elapsedSeconds"), (int, float))
+                    and phase["elapsedSeconds"] >= 0
+                    for phase in release_phases
+                ):
+                    raise SystemExit("performance calibration run port release evidence is invalid")
+                automation_binding = {
+                    "sha256": sha256(evidence / "calibration-run.json"),
+                    "planSha256": performance_calibration_run["planSha256"],
+                    "runnerSha256": performance_calibration_run["runnerSha256"],
+                    "comparatorSha256": performance_calibration_run["comparatorSha256"],
+                    "phases": [
+                        {
+                            "phase": phase["phase"],
+                            "exitCode": phase["exitCode"],
+                            **({"attempts": phase["attempts"], "elapsedSeconds": phase["elapsedSeconds"]} if "attempts" in phase else {}),
+                        }
+                        for phase in phases
+                    ],
+                }
             calibration_sha256 = sha256(evidence / "performance-calibration.json")
             calibration_binding = {
                 "id": performance_calibration.get("id"),
@@ -1016,6 +1085,7 @@ def main():
                 "applicationSource": application_source,
                 "controlledMutation": mutation,
                 **({"repeatability": repeatability_binding} if repeatability_binding else {}),
+                **({"automationRun": automation_binding} if automation_binding else {}),
             }
             if not isinstance(calibration_binding["id"], str) or not calibration_binding["id"]:
                 raise SystemExit("performance calibration requires id")
@@ -1026,6 +1096,10 @@ def main():
                     f"evidence-{args.run_id}-harmony-candidate-repeat-result",
                     f"evidence-{args.run_id}-smartperf-repeat-comparison",
                 ])
+            if automation_binding:
+                calibration_evidence_ids.append(
+                    f"evidence-{args.run_id}-calibration-run"
+                )
         suffix = hashlib.sha256(
             f"{task_id}|{performance.get('candidateRunId')}|{performance.get('environmentIdentity')}".encode()
         ).hexdigest()[:16]

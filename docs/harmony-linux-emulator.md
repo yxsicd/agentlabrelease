@@ -256,7 +256,9 @@ phases in 270.566 seconds. Both one-second port-release phases required two
 probes, all three UI Oracles passed, and both independent comparisons reported
 `appPssKiB` regression. Baseline/candidate/repeat mean PSS were
 173344/239498/239810 KiB; mean CPU was 5.8048%/6.1168%/5.3576%. The run receipt
-is retained as `automated-calibration-run.json`, SHA256
+is retained under
+`release/qualifications/harmony-performance-automated-calibration-v1` as
+`calibration-run.json`, SHA256
 `9cd7c9e0673a15b0f4d016e5621fb03710d57cde4cd1b59c93f5915eb55cc3bb`.
 The full raw result remains on the execution host at
 `performance-regression-calibration/automated-calibration-c40d90f-v3`.

@@ -19,6 +19,9 @@ ASSET_MODEL = ROOT / "crates/agentlab_code_analysis/src/asset_model.rs"
 CONTROLLED_REGRESSION = (
     ROOT / "release/qualifications/harmony-performance-controlled-regression-v1"
 )
+AUTOMATED_CALIBRATION = (
+    ROOT / "release/qualifications/harmony-performance-automated-calibration-v1"
+)
 
 
 class HarmonyEmulatorReleaseTests(unittest.TestCase):
@@ -259,7 +262,7 @@ class HarmonyEmulatorReleaseTests(unittest.TestCase):
             self.assertEqual(len(difficulty["evidenceIds"]), 11)
 
     def test_real_automated_calibration_receipt_is_fail_closed(self) -> None:
-        receipt_path = CONTROLLED_REGRESSION / "automated-calibration-run.json"
+        receipt_path = AUTOMATED_CALIBRATION / "calibration-run.json"
         receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
         self.assertEqual(
             hashlib.sha256(receipt_path.read_bytes()).hexdigest(),
@@ -274,6 +277,92 @@ class HarmonyEmulatorReleaseTests(unittest.TestCase):
             [phase["attempts"] for phase in receipt["phases"] if "attempts" in phase],
             [2, 2],
         )
+
+    def test_real_automated_calibration_enters_review_only_transaction(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            output = pathlib.Path(raw) / "transaction.json"
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts/build-cbgroom-flywheel-transaction.py"),
+                    "--evidence",
+                    str(AUTOMATED_CALIBRATION),
+                    "--revision",
+                    "2" * 40,
+                    "--run-id",
+                    "automated-calibration-replay",
+                    "--github-repository",
+                    "example/agentlab",
+                    "--caller-person-id",
+                    "person-test",
+                    "--output",
+                    str(output),
+                ],
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            payload = json.loads(output.read_text())
+            rows = [
+                operation["row"]
+                for table in payload["arguments"]["tables"]
+                for operation in table["operations"]
+            ]
+            decision = next(
+                row
+                for row in rows
+                if row.get("schema") == "agentlab.performance_feedback_decision.v1"
+            )
+            difficulty = next(
+                row
+                for row in rows
+                if row.get("dimensionId") == "functionally-correct-performance-regression"
+            )
+            for row in (decision, difficulty):
+                automation = row["performanceCalibration"]["automationRun"]
+                self.assertEqual(
+                    automation["sha256"],
+                    "9cd7c9e0673a15b0f4d016e5621fb03710d57cde4cd1b59c93f5915eb55cc3bb",
+                )
+                self.assertEqual(len(automation["phases"]), 7)
+                self.assertFalse(row["automaticPromotion"])
+            self.assertFalse(difficulty["verificationContract"]["caseReady"])
+            self.assertIn(
+                "maintainer-adjudication",
+                difficulty["verificationContract"]["required"],
+            )
+            self.assertEqual(len(difficulty["evidenceIds"]), 12)
+
+    def test_tampered_automated_calibration_receipt_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            evidence = pathlib.Path(raw) / "evidence"
+            shutil.copytree(AUTOMATED_CALIBRATION, evidence)
+            receipt_path = evidence / "calibration-run.json"
+            receipt = json.loads(receipt_path.read_text())
+            receipt["phases"][3]["exitCode"] = 1
+            receipt_path.write_text(json.dumps(receipt))
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts/build-cbgroom-flywheel-transaction.py"),
+                    "--evidence",
+                    str(evidence),
+                    "--revision",
+                    "2" * 40,
+                    "--run-id",
+                    "tampered-automated-calibration",
+                    "--github-repository",
+                    "example/agentlab",
+                    "--caller-person-id",
+                    "person-test",
+                    "--output",
+                    str(pathlib.Path(raw) / "transaction.json"),
+                ],
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("phases are incomplete or failed", completed.stderr)
 
     def test_real_repeatability_evidence_fails_closed_when_tampered(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
