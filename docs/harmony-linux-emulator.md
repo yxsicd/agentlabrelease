@@ -306,6 +306,47 @@ common regressed metric. It still sets `automaticPromotion=false` and
 independent functional/performance calibration and does not authorize TableGit
 publication.
 
+### Review-transaction preparation
+
+After a calibration succeeds, use
+`scripts/prepare-harmony-performance-review.py` to prepare the revision-fenced
+TableGit transaction without publishing it. Its plan binds the immutable
+calibration directory, the exact transaction-builder SHA, the current expected
+TableGit revision, the selected caller Person, repository and run identity:
+
+```json
+{
+  "schema": "agentlab.harmony_performance_review_plan.v1",
+  "evidence": "/absolute/path/calibration-evidence",
+  "transactionBuilder": "/absolute/path/build-cbgroom-flywheel-transaction.py",
+  "transactionBuilderSha256": "<64 lowercase hex>",
+  "expectedRevision": "<40 lowercase hex>",
+  "runId": "controlled-performance-review-v1",
+  "githubRepository": "owner/repository",
+  "callerPersonId": "<selected-person-id>",
+  "repo": "agentlabtablegit",
+  "automaticPublication": false,
+  "automaticPromotion": false
+}
+```
+
+Run it with a new output path:
+
+```sh
+python3 scripts/prepare-harmony-performance-review.py \
+  --plan /absolute/path/review-plan.json \
+  --output /absolute/path/prepared-review
+```
+
+The operation hashes every evidence file, invokes the exact bound builder,
+revalidates transaction authority, requires exactly one performance decision and
+one non-ready performance difficulty, and rejects any automatic-promotion bit.
+Success atomically emits `transaction.json`, builder logs and
+`preparation.json` with status `prepared-not-published`. It never contacts or
+mutates TableGit. Publication remains a separate operator-owned action against
+the still-current expected revision; a prepared transaction is not publication
+evidence.
+
 ## Evaluation-instance export
 
 Build the normalizer and convert an immutable case directory:
