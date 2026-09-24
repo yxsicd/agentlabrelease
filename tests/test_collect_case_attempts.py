@@ -179,6 +179,7 @@ class CollectCaseAttemptsTests(unittest.TestCase):
                 ),
                 "status": "passed" if passed is True else "failed",
                 "taskId": self.case_id,
+                "sourceSetSha256": self.source_set_sha256,
                 "sourceIdentity": source_identity,
                 "hapSha256": "a" * 64,
                 "scenarioId": "bounded-ui-case",
@@ -456,6 +457,48 @@ class CollectCaseAttemptsTests(unittest.TestCase):
             )
             self.assertTrue(all(len(row["sha256"]) == 64 for row in evidence.values()))
 
+    def test_multi_repo_emulator_attempt_binds_source_set_and_hap(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            self.write_multi_repo_calibration(root)
+            identity = self.write_emulator_result(
+                root, "multi-repo-emulator", passed=True, infrastructure=True, v3=True
+            )
+            collected = COLLECTOR.build_input(
+                self.multi_repo_manifest(
+                    [
+                        {
+                            "attemptId": "multi-repo-emulator",
+                            "participantId": "candidate",
+                            "evidenceKind": "harmony-emulator-v3",
+                            "sourceIdentity": identity,
+                            "evidence": "runs/multi-repo-emulator",
+                        }
+                    ]
+                ),
+                root.resolve(),
+            )
+            attempt = collected["cases"][0]["attempts"][0]
+            self.assertTrue(attempt["taskPassed"])
+            result = root / attempt["evidence"]["emulatorResult"]["path"]
+            value = json.loads(result.read_text())
+            value["sourceSetSha256"] = "b" * 64
+            result.write_text(json.dumps(value))
+            with self.assertRaisesRegex(ValueError, "sourceSetSha256 mismatch"):
+                COLLECTOR.build_input(
+                    self.multi_repo_manifest(
+                        [
+                            {
+                                "attemptId": "multi-repo-emulator",
+                                "participantId": "candidate",
+                                "evidenceKind": "harmony-emulator-v3",
+                                "sourceIdentity": identity,
+                                "evidence": "runs/multi-repo-emulator",
+                            }
+                        ]
+                    ),
+                    root.resolve(),
+                )
     def test_emulator_source_identity_mismatch_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = pathlib.Path(raw)

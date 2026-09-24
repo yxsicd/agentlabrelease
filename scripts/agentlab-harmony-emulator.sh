@@ -147,6 +147,13 @@ validate_integer() {
     die "$label must be in $minimum..$maximum"
 }
 
+validate_sha256() {
+  label=$1
+  value=$2
+  [ "${#value}" -eq 64 ] || die "$label must be a lowercase SHA-256 digest"
+  case "$value" in *[!0-9a-f]*) die "$label must be a lowercase SHA-256 digest" ;; esac
+}
+
 run_case() {
   root=
   tools_root=
@@ -161,6 +168,7 @@ run_case() {
   ui_scenario=
   task_id=
   source_id=
+  source_set_sha256=
   profile_run_id=
   environment_id=
   performance_policy=
@@ -184,6 +192,7 @@ run_case() {
       --ui-scenario) [ "$#" -ge 2 ] || die "--ui-scenario requires a path"; ui_scenario=$2; shift 2 ;;
       --task-id) [ "$#" -ge 2 ] || die "--task-id requires an id"; task_id=$2; shift 2 ;;
       --source-id) [ "$#" -ge 2 ] || die "--source-id requires an id"; source_id=$2; shift 2 ;;
+      --source-set-sha256) [ "$#" -ge 2 ] || die "--source-set-sha256 requires a digest"; source_set_sha256=$2; shift 2 ;;
       --profile-run-id) [ "$#" -ge 2 ] || die "--profile-run-id requires an id"; profile_run_id=$2; shift 2 ;;
       --environment-id) [ "$#" -ge 2 ] || die "--environment-id requires an id"; environment_id=$2; shift 2 ;;
       --performance-policy) [ "$#" -ge 2 ] || die "--performance-policy requires a path"; performance_policy=$2; shift 2 ;;
@@ -231,10 +240,13 @@ run_case() {
       die "--ui-scenario requires --task-id and --source-id"
     validate_token "task id" "$task_id"
     validate_token "source id" "$source_id"
+    if [ -n "$source_set_sha256" ]; then
+      validate_sha256 "source set SHA-256" "$source_set_sha256"
+    fi
     scenario_sha=$(file_sha256 "$ui_scenario")
   else
-    [ -z "$task_id" ] && [ -z "$source_id" ] ||
-      die "--task-id and --source-id require --ui-scenario"
+    [ -z "$task_id" ] && [ -z "$source_id" ] && [ -z "$source_set_sha256" ] ||
+      die "--task-id, --source-id and --source-set-sha256 require --ui-scenario"
   fi
   if [ -n "$profile_run_id$environment_id" ]; then
     [ -n "$ui_scenario" ] || die "profile identity requires --ui-scenario"
@@ -488,17 +500,21 @@ run_case() {
       if [ -n "$ui_scenario" ]; then
         case_result_schema=agentlab.harmony_emulator_case_result.v2
         policy_fields=
+        lineage_fields=
+        if [ -n "$source_set_sha256" ]; then
+          lineage_fields=$(printf ',"sourceSetSha256":"%s"' "$source_set_sha256")
+        fi
         if [ -n "$performance_policy" ]; then
           case_result_schema=agentlab.harmony_emulator_case_result.v3
           policy_fields=$(printf ',"performancePolicyId":"%s","performancePolicySha256":"%s","profileWorkloadId":"%s","profileWorkloadSha256":"%s"' \
             "$performance_policy_id" "$performance_policy_sha" "$profile_workload_id" "$profile_workload_sha")
         fi
-        printf '{"schema":"%s","status":"failed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","profileRunId":"%s","environmentIdentity":"%s","profileStatus":"%s","profileSummaryStatus":"%s","powerThermalAuthority":"unavailable_on_emulator"%s}\n' \
+        printf '{"schema":"%s","status":"failed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","profileRunId":"%s","environmentIdentity":"%s","profileStatus":"%s","profileSummaryStatus":"%s","powerThermalAuthority":"unavailable_on_emulator"%s%s}\n' \
           "$case_result_schema" \
           "$task_id" "$source_id" "$instance" "$target" "$bundle" "$ability" "$hap_sha" \
           "$scenario_id" "$scenario_sha" "$oracle_status" "$assessment_status" \
           "$infrastructure_available" "$subject_task_succeeded" "$failure_class" \
-          "$profile_run_id" "$environment_id" "$profile_status" "$profile_summary_status" "$policy_fields" \
+          "$profile_run_id" "$environment_id" "$profile_status" "$profile_summary_status" "$policy_fields" "$lineage_fields" \
           >"$output/result.json"
       else
         printf '{"schema":"agentlab.harmony_emulator_case_result.v1","status":"failed","instance":"%s","target":"%s","bundle":"%s","ability":"%s"}\n' \
@@ -646,6 +662,10 @@ run_case() {
   if [ -n "$ui_scenario" ]; then
     case_result_schema=agentlab.harmony_emulator_case_result.v2
     policy_fields=
+    lineage_fields=
+    if [ -n "$source_set_sha256" ]; then
+      lineage_fields=$(printf ',"sourceSetSha256":"%s"' "$source_set_sha256")
+    fi
     profile_workload_artifact=
     if [ -n "$performance_policy" ]; then
       case_result_schema=agentlab.harmony_emulator_case_result.v3
@@ -653,13 +673,13 @@ run_case() {
         "$performance_policy_id" "$performance_policy_sha" "$profile_workload_id" "$profile_workload_sha")
       profile_workload_artifact=',"performancePolicy":"performance-policy.json","profileWorkload":"profile-workload.tsv","profileWorkloadActions":"profile-workload-actions.tsv"'
     fi
-    printf '{"schema":"%s","status":"passed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","profileRunId":"%s","environmentIdentity":"%s","profileStatus":"%s","profileSummaryStatus":"%s","resetAppData":%s,"powerThermalAuthority":"unavailable_on_emulator"%s,"artifacts":{"uninstall":"uninstall.log","install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","uiActions":"ui-actions.tsv","uiChecks":"ui-checks.tsv","screenshot":"%s","smartperf":"smartperf.txt","smartperfSummary":"%s"%s}}\n' \
+    printf '{"schema":"%s","status":"passed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","profileRunId":"%s","environmentIdentity":"%s","profileStatus":"%s","profileSummaryStatus":"%s","resetAppData":%s,"powerThermalAuthority":"unavailable_on_emulator"%s%s,"artifacts":{"uninstall":"uninstall.log","install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","uiActions":"ui-actions.tsv","uiChecks":"ui-checks.tsv","screenshot":"%s","smartperf":"smartperf.txt","smartperfSummary":"%s"%s}}\n' \
       "$case_result_schema" \
       "$task_id" "$source_id" "$instance" "$target" "$bundle" "$ability" "$hap_sha" \
       "$(cat "$output/screenshot.sha256")" "$scenario_id" "$scenario_sha" "$oracle_status" \
       "$assessment_status" "$infrastructure_available" "$subject_task_succeeded" "$failure_class" \
       "$profile_run_id" "$environment_id" "$profile_status" "$profile_summary_status" \
-      "$reset_app_data" "$policy_fields" "$(basename "$screenshot")" \
+      "$reset_app_data" "$policy_fields" "$lineage_fields" "$(basename "$screenshot")" \
       "$profile_summary_artifact" "$profile_workload_artifact" >"$output/result.json"
   else
     printf '{"schema":"agentlab.harmony_emulator_case_result.v1","status":"passed","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","profileStatus":"%s","powerThermalAuthority":"unavailable_on_emulator","artifacts":{"install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","screenshot":"%s","smartperf":"smartperf.txt"}}\n' \
@@ -682,7 +702,7 @@ usage() {
     '  agentlab-harmony-emulator.sh verify-assets TOOLS_ARCHIVE IMAGE_ARCHIVE' \
     '  agentlab-harmony-emulator.sh verify-install INSTALL_ROOT' \
     '  agentlab-harmony-emulator.sh install --tools PATH --image PATH --root PATH --acknowledge-vendor-agreements' \
-    '  agentlab-harmony-emulator.sh run-case --root INSTALL_ROOT --image-root PATH --instance-path PATH --instance NAME --hdc-port PORT --hap PATH --bundle ID --ability NAME --output PATH [--ui-scenario PATH --task-id ID --source-id ID] [--profile-run-id ID --environment-id ID [--performance-policy PATH --profile-workload PATH]] [--reset-app-data] [--boot-mode coldboot|reset|snapshot] [--profile-samples N] [--keep-running]' \
+    '  agentlab-harmony-emulator.sh run-case --root INSTALL_ROOT --image-root PATH --instance-path PATH --instance NAME --hdc-port PORT --hap PATH --bundle ID --ability NAME --output PATH [--ui-scenario PATH --task-id ID --source-id ID --source-set-sha256 SHA256] [--profile-run-id ID --environment-id ID [--performance-policy PATH --profile-workload PATH]] [--reset-app-data] [--boot-mode coldboot|reset|snapshot] [--profile-samples N] [--keep-running]' \
     '  For an existing vendor layout, replace --root with --tools-root PATH.'
 }
 

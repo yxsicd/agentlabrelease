@@ -111,6 +111,9 @@ def validate_plan(plan: dict[str, Any]) -> dict[str, Any]:
         raise EvaluationRunError("unsupported Harmony evaluation run plan schema")
     if plan.get("automaticPromotion") is not False:
         raise EvaluationRunError("Harmony evaluation run plan must set automaticPromotion=false")
+    subject_outcome_policy = plan.get("subjectOutcomePolicy", "require-pass")
+    if subject_outcome_policy not in {"require-pass", "retain-assessed-failure"}:
+        raise EvaluationRunError("unsupported subjectOutcomePolicy")
 
     case_binding = plan.get("evaluationCase") or {}
     case_path = require_file(case_binding.get("path"), "evaluation case")
@@ -250,6 +253,7 @@ def validate_plan(plan: dict[str, Any]) -> dict[str, Any]:
         "workload": workload,
         "workloadSha256": workload_sha256,
         "runId": require_token(plan.get("runId"), "runId"),
+        "subjectOutcomePolicy": subject_outcome_policy,
     }
 
 
@@ -269,7 +273,8 @@ def runner_command(validated: dict[str, Any], execution: pathlib.Path) -> list[s
         "--output", str(execution),
         "--ui-scenario", str(validated["scenario"]),
         "--task-id", validated["caseId"],
-        "--source-id", f"source-set-sha256:{validated['sourceSetSha256']}",
+        "--source-id", f"artifact-sha256:{validated['hapSha256']}",
+        "--source-set-sha256", validated["sourceSetSha256"],
         "--profile-run-id", validated["runId"],
         "--environment-id", runtime["environmentIdentity"],
         "--performance-policy", str(validated["policy"]),
@@ -280,25 +285,22 @@ def runner_command(validated: dict[str, Any], execution: pathlib.Path) -> list[s
     ]
 
 
-def validate_result(result: dict[str, Any], validated: dict[str, Any]) -> None:
+def validate_result(
+    result: dict[str, Any], validated: dict[str, Any], execution: pathlib.Path
+) -> bool:
     runtime = validated["runtime"]
     expected = {
         "schema": RESULT_SCHEMA,
-        "status": "passed",
         "taskId": validated["caseId"],
-        "sourceIdentity": f"source-set-sha256:{validated['sourceSetSha256']}",
+        "sourceIdentity": f"artifact-sha256:{validated['hapSha256']}",
+        "sourceSetSha256": validated["sourceSetSha256"],
         "hapSha256": validated["hapSha256"],
         "scenarioId": validated["scenarioId"],
         "scenarioSha256": validated["scenarioSha256"],
-        "oracleStatus": "passed",
         "assessmentStatus": "assessed",
         "infrastructureAvailable": True,
-        "subjectTaskSucceeded": True,
-        "failureClass": "none",
         "profileRunId": validated["runId"],
         "environmentIdentity": runtime["environmentIdentity"],
-        "profileStatus": "collected",
-        "profileSummaryStatus": "normalized",
         "powerThermalAuthority": "unavailable_on_emulator",
         "performancePolicySha256": validated["policySha256"],
         "profileWorkloadSha256": validated["workloadSha256"],
@@ -306,6 +308,45 @@ def validate_result(result: dict[str, Any], validated: dict[str, Any]) -> None:
     for field, value in expected.items():
         if result.get(field) != value:
             raise EvaluationRunError(f"Harmony result {field} differs from bound run plan")
+    subject_succeeded = result.get("subjectTaskSucceeded")
+    if subject_succeeded is True:
+        passing = {
+            "status": "passed",
+            "oracleStatus": "passed",
+            "failureClass": "none",
+            "profileStatus": "collected",
+            "profileSummaryStatus": "normalized",
+        }
+        for field, value in passing.items():
+            if result.get(field) != value:
+                raise EvaluationRunError(f"passing Harmony result {field} is invalid")
+        return True
+    if subject_succeeded is not False:
+        raise EvaluationRunError("Harmony result has no boolean subject verdict")
+    if validated["subjectOutcomePolicy"] != "retain-assessed-failure":
+        raise EvaluationRunError("Harmony subject failed but run plan requires pass")
+    failing = {
+        "status": "failed",
+        "oracleStatus": "failed",
+        "failureClass": "oracle",
+        "profileStatus": "not-run",
+        "profileSummaryStatus": "not-run",
+    }
+    for field, value in failing.items():
+        if result.get(field) != value:
+            raise EvaluationRunError(f"assessed failing Harmony result {field} is invalid")
+    checks_path = execution / "ui-checks.tsv"
+    if not checks_path.is_file():
+        raise EvaluationRunError("assessed failing Harmony result has no UI check evidence")
+    verdicts = []
+    for line in checks_path.read_text(encoding="utf-8").splitlines():
+        fields = line.split("\t", 3)
+        if len(fields) != 4 or fields[1] not in {"true", "false"}:
+            raise EvaluationRunError("assessed failing Harmony result has malformed UI checks")
+        verdicts.append(fields[1] == "true")
+    if not verdicts or all(verdicts):
+        raise EvaluationRunError("assessed failing Harmony result is not supported by a failed UI check")
+    return False
 
 
 def validate_summary(summary: dict[str, Any], validated: dict[str, Any]) -> None:
@@ -313,7 +354,7 @@ def validate_summary(summary: dict[str, Any], validated: dict[str, Any]) -> None
     expected = {
         "schema": "agentlab.smartperf_summary.v2",
         "taskId": validated["caseId"],
-        "sourceIdentity": f"source-set-sha256:{validated['sourceSetSha256']}",
+        "sourceIdentity": f"artifact-sha256:{validated['hapSha256']}",
         "runId": validated["runId"],
         "environmentIdentity": runtime["environmentIdentity"],
         "sampleCount": runtime["profileSamples"],
@@ -357,8 +398,6 @@ def main() -> int:
         stderr_path = stage / "runner.stderr.log"
         stdout_path.write_text(completed.stdout, encoding="utf-8")
         stderr_path.write_text(completed.stderr, encoding="utf-8")
-        if completed.returncode != 0:
-            raise EvaluationRunError(f"Harmony emulator runner failed with exit {completed.returncode}")
         if sha256(plan_path) != plan_sha256:
             raise EvaluationRunError("Harmony evaluation run plan changed during execution")
         if sha256(validated["casePath"]) != validated["caseSha256"]:
@@ -378,15 +417,27 @@ def main() -> int:
 
         result_path = execution / "result.json"
         result = load_object(result_path)
-        validate_result(result, validated)
+        subject_succeeded = validate_result(result, validated, execution)
+        if completed.returncode != 0 and subject_succeeded:
+            raise EvaluationRunError(f"Harmony emulator runner failed with exit {completed.returncode}")
         summary_path = execution / "smartperf-summary.json"
-        if not summary_path.is_file():
-            raise EvaluationRunError("Harmony execution did not retain SmartPerf summary")
-        summary = load_object(summary_path)
-        validate_summary(summary, validated)
+        if subject_succeeded:
+            if not summary_path.is_file():
+                raise EvaluationRunError("Harmony execution did not retain SmartPerf summary")
+            summary = load_object(summary_path)
+            validate_summary(summary, validated)
+            summary_sha256 = sha256(summary_path)
+        else:
+            if summary_path.exists():
+                raise EvaluationRunError("functionally failing Harmony run must not claim a profile summary")
+            summary_sha256 = None
         binding = {
             "schema": BINDING_SCHEMA,
-            "status": "passed-review-required",
+            "status": (
+                "passed-review-required"
+                if subject_succeeded
+                else "assessed-failure-review-required"
+            ),
             "planSha256": plan_sha256,
             "caseId": validated["caseId"],
             "evaluationCaseSha256": validated["caseSha256"],
@@ -400,7 +451,9 @@ def main() -> int:
             "performancePolicySha256": validated["policySha256"],
             "profileWorkloadSha256": validated["workloadSha256"],
             "resultSha256": sha256(result_path),
-            "smartperfSummarySha256": sha256(summary_path),
+            "smartperfSummarySha256": summary_sha256,
+            "subjectTaskSucceeded": subject_succeeded,
+            "failureClass": result.get("failureClass"),
             "runnerStdoutSha256": sha256(stdout_path),
             "runnerStderrSha256": sha256(stderr_path),
             "environmentIdentity": validated["runtime"]["environmentIdentity"],

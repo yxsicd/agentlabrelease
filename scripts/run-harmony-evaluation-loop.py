@@ -336,7 +336,10 @@ def main() -> int:
             write_json(run_plan_path, expected_run_plan)
 
         assessment = output / "assessment"
-        if state["stages"]["emulatorAssessment"].get("status") == "passed":
+        if state["stages"]["emulatorAssessment"].get("status") in {
+            "passed",
+            "assessed-failure",
+        }:
             binding_path = assessment / "evaluation-binding.json"
             if not binding_path.is_file() or state["stages"]["emulatorAssessment"].get("bindingSha256") != sha256(binding_path):
                 raise LoopError("completed emulator assessment evidence drifted after recording")
@@ -365,7 +368,10 @@ def main() -> int:
                 binding = load(binding_path, "evaluation binding")
                 if (
                     binding.get("schema") != "agentlab.harmony_evaluation_binding.v1"
-                    or binding.get("status") != "passed-review-required"
+                    or binding.get("status") not in {
+                        "passed-review-required",
+                        "assessed-failure-review-required",
+                    }
                     or binding.get("automaticPromotion") is not False
                     or binding.get("evaluationCaseSha256") != validated["caseSha256"]
                     or binding.get("buildReceiptSha256") != sha256(receipt_path)
@@ -391,16 +397,30 @@ def main() -> int:
             except (LoopError, OSError) as error:
                 fail_stage(output, state, "emulatorAssessment", str(error), resumable=False)
                 raise
+            device_succeeded = binding.get("subjectTaskSucceeded")
+            expected_binding_status = (
+                "passed-review-required"
+                if device_succeeded is True
+                else "assessed-failure-review-required"
+                if device_succeeded is False
+                else None
+            )
+            if binding.get("status") != expected_binding_status:
+                message = "emulator binding status contradicts subject verdict"
+                fail_stage(output, state, "emulatorAssessment", message, resumable=False)
+                raise LoopError(message)
             state["stages"]["emulatorAssessment"].update({
-                "status": "passed",
+                "status": "passed" if device_succeeded else "assessed-failure",
                 "endedAt": datetime.now(timezone.utc).isoformat(),
                 "bindingSha256": sha256(binding_path),
             })
 
         build_receipt = load(receipt_path, "build receipt")
+        binding = load(binding_path, "evaluation binding")
+        device_succeeded = binding.get("subjectTaskSucceeded")
         receipt = {
             "schema": RECEIPT_SCHEMA,
-            "status": "passed-review-required",
+            "status": binding.get("status"),
             "loopId": validated["loopId"],
             "planSha256": validated["planSha256"],
             "caseId": validated["caseId"],
@@ -414,6 +434,8 @@ def main() -> int:
             "hapSha256": sha256(artifact_path),
             "runPlanSha256": sha256(run_plan_path),
             "evaluationBindingSha256": sha256(binding_path),
+            "subjectTaskSucceeded": device_succeeded,
+            "failureClass": binding.get("failureClass"),
             "buildAuthority": build_receipt.get("buildAuthority"),
             "automaticPromotion": False,
             "nextGate": "maintainer-adjudication-and-next-analysis-cut",
@@ -433,7 +455,7 @@ def main() -> int:
         if receipt_path_final.exists() and load(receipt_path_final, "loop receipt") != receipt:
             raise LoopError("existing loop receipt differs from recomputed evidence")
         write_json(receipt_path_final, receipt)
-        state["status"] = "passed-review-required"
+        state["status"] = receipt["status"]
         state["nextGate"] = receipt["nextGate"]
         write_json(output / "loop-state.json", state)
         print(json.dumps({"ok": True, "output": str(output), "status": receipt["status"], "resumable": True}, sort_keys=True))

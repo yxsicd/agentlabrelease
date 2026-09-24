@@ -83,6 +83,7 @@ For deterministic UI cases, add `--ui-scenario`, `--task-id`,
       --ui-scenario examples/harmony-emulator/tutu-cookie-dismiss.ui \
       --task-id harmony-tutu-cookie-dismiss \
       --source-id artifact-sha256:<hap-sha256> \
+      --source-set-sha256 <multi-repository-source-set-sha256> \
       --reset-app-data
 
 The tab-separated scenario schema is `agentlab.harmony_ui_scenario.v1`. Its
@@ -103,6 +104,8 @@ be exactly `artifact-sha256:<actual HAP SHA-256>`; the runner, attempt collector
 and evaluation-instance exporter all reject a source/HAP mismatch. Assessed
 results must also retain at least one valid `ui-checks.tsv` row, and its aggregate
 must equal both `oracleStatus` and `subjectTaskSucceeded`.
+Multi-repository runs additionally carry `sourceSetSha256` as a separate field;
+the artifact identity is never overloaded to mean the source-set identity.
 
 The output directory is immutable-by-convention: the runner refuses to
 overwrite it. `result.json` references the raw install, bundle, launch, process,
@@ -400,14 +403,23 @@ final source-state and subject-workspace digest. Those identities are copied to
 `evaluation-binding.json`, so a device result cannot be silently attributed to
 the frozen baseline or to another Agent attempt.
 
+For an assessed Agent workspace, set
+`subjectOutcomePolicy=retain-assessed-failure`. A runner exit caused by a
+well-formed UI Oracle failure is then retained as
+`assessed-failure-review-required`, with a boolean false subject verdict and the
+failed UI-check evidence. Infrastructure-unavailable output, malformed failure
+evidence or identity drift still fails the bridge. The default policy remains
+`require-pass` for qualification and reference runs.
+
 ```sh
 python3 scripts/run-harmony-evaluation-case.py \
   --plan /absolute/path/harmony-evaluation-run-plan.json \
   --output /absolute/path/new-evaluation-evidence
 ```
 
-Success atomically retains the raw emulator execution, runner logs and
-`evaluation-binding.json` with status `passed-review-required`. The bridge
+Completed assessment atomically retains the raw emulator execution, runner logs
+and `evaluation-binding.json` with either `passed-review-required` or
+`assessed-failure-review-required`. The bridge
 rechecks every input after execution, then verifies functional result,
 source-set identity, HAP, Oracle, run/environment identity, normalized
 SmartPerf sample contract, policy/workload identity and the emulator-only

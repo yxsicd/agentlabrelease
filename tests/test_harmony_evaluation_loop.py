@@ -45,7 +45,10 @@ plan = json.loads(pathlib.Path(a.plan).read_text()); build = json.loads(pathlib.
 digest = lambda path: hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
 binding = {"schema":"agentlab.harmony_evaluation_binding.v1","status":"passed-review-required",
  "evaluationCaseSha256":plan["evaluationCase"]["sha256"],"buildReceiptSha256":digest(plan["buildReceipt"]["path"]),
- "hapSha256":digest(plan["artifact"]["path"]),"buildAuthority":build["buildAuthority"],"automaticPromotion":False}
+ "hapSha256":digest(plan["artifact"]["path"]),"buildAuthority":build["buildAuthority"],
+ "subjectTaskSucceeded":True,"failureClass":"none","automaticPromotion":False}
+if os.environ.get("LOOP_SUBJECT_FAIL"):
+    binding.update({"status":"assessed-failure-review-required","subjectTaskSucceeded":False,"failureClass":"oracle"})
 if build["buildAuthority"] == "independent-harmony-assessed-workspace-build":
     binding["assessedWorkspace"] = {key: build[key] for key in ("participantId","subjectWorkspaceSha256",
       "assessmentSummarySha256","assessmentDecisionSha256","finalSourceStateSha256")}
@@ -188,6 +191,20 @@ class HarmonyEvaluationLoopTests(unittest.TestCase):
         resumed = json.loads((output / "loop-state.json").read_text())
         self.assertEqual(resumed["stages"]["build"]["attempts"], 1)
         self.assertEqual(resumed["stages"]["emulatorAssessment"]["attempts"], 2)
+
+    def test_assessed_device_failure_is_terminal_evidence_not_retryable_infrastructure(self) -> None:
+        output = self.root / "loop-output"
+        completed = self.run_loop(output, {"LOOP_SUBJECT_FAIL": "1"})
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        receipt = json.loads((output / "loop-receipt.json").read_text())
+        state = json.loads((output / "loop-state.json").read_text())
+        self.assertEqual(receipt["status"], "assessed-failure-review-required")
+        self.assertFalse(receipt["subjectTaskSucceeded"])
+        self.assertEqual(state["stages"]["emulatorAssessment"]["status"], "assessed-failure")
+        repeated = self.run_loop(output, {"LOOP_SUBJECT_FAIL": "1"})
+        self.assertEqual(repeated.returncode, 0, repeated.stderr)
+        state = json.loads((output / "loop-state.json").read_text())
+        self.assertEqual(state["stages"]["emulatorAssessment"]["attempts"], 1)
 
 
 if __name__ == "__main__":

@@ -178,6 +178,8 @@ def collect_emulator_attempt(
     evidence_dir: pathlib.Path,
     manifest_dir: pathlib.Path,
     evidence_kind: str,
+    source_identity_field: str,
+    source_identity: str,
 ) -> tuple[bool, bool | None, str, dict[str, Any]]:
     result_path = evidence_dir / "result.json"
     result = load_object(result_path, f"{attempt_id} emulator result")
@@ -192,6 +194,11 @@ def collect_emulator_attempt(
         fail(f"{attempt_id} emulator result schema contradicts evidenceKind")
     if result.get("taskId") != case_id:
         fail(f"{attempt_id} emulator taskId does not match {case_id}")
+    if (
+        source_identity_field == "sourceSetSha256"
+        and result.get("sourceSetSha256") != source_identity
+    ):
+        fail(f"{attempt_id} emulator sourceSetSha256 mismatch")
     expected_identity = attempt.get("sourceIdentity")
     if not isinstance(expected_identity, str) or not expected_identity:
         fail(f"{attempt_id} sourceIdentity required for emulator evidence")
@@ -374,6 +381,8 @@ def build_input(manifest: dict[str, Any], manifest_dir: pathlib.Path) -> dict[st
                         evidence_dir,
                         manifest_dir,
                         evidence_kind,
+                        source_identity_field,
+                        source_identity,
                     )
                 )
             else:

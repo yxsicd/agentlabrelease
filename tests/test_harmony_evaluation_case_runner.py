@@ -25,7 +25,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("command")
 for name in ("tools-root", "image-root", "instance-path", "instance", "hdc-port",
              "hap", "bundle", "ability", "output", "ui-scenario", "task-id",
-             "source-id", "profile-run-id", "environment-id", "performance-policy",
+             "source-id", "source-set-sha256", "profile-run-id", "environment-id", "performance-policy",
              "profile-workload", "boot-mode", "profile-samples"):
     parser.add_argument("--" + name, required=True)
 parser.add_argument("--reset-app-data", action="store_true")
@@ -37,26 +37,28 @@ if marker:
 def digest(path):
     return hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
 
-source_id = "source-set-sha256:" + "f" * 64 if os.environ.get("SYNTHETIC_BAD_SOURCE") else args.source_id
+source_id = "artifact-sha256:" + "f" * 64 if os.environ.get("SYNTHETIC_BAD_SOURCE") else args.source_id
+subject_failed = bool(os.environ.get("SYNTHETIC_SUBJECT_FAIL"))
 output = pathlib.Path(args.output)
 output.mkdir(parents=True)
 result = {
     "schema": "agentlab.harmony_emulator_case_result.v3",
-    "status": "passed",
+    "status": "failed" if subject_failed else "passed",
     "taskId": args.task_id,
     "sourceIdentity": source_id,
+    "sourceSetSha256": args.source_set_sha256,
     "hapSha256": digest(args.hap),
     "scenarioId": "synthetic-harmony-oracle-v1",
     "scenarioSha256": digest(args.ui_scenario),
-    "oracleStatus": "passed",
+    "oracleStatus": "failed" if subject_failed else "passed",
     "assessmentStatus": "assessed",
     "infrastructureAvailable": True,
-    "subjectTaskSucceeded": True,
-    "failureClass": "none",
+    "subjectTaskSucceeded": not subject_failed,
+    "failureClass": "oracle" if subject_failed else "none",
     "profileRunId": args.profile_run_id,
     "environmentIdentity": args.environment_id,
-    "profileStatus": "collected",
-    "profileSummaryStatus": "normalized",
+    "profileStatus": "not-run" if subject_failed else "collected",
+    "profileSummaryStatus": "not-run" if subject_failed else "normalized",
     "powerThermalAuthority": "unavailable_on_emulator",
     "performancePolicySha256": digest(args.performance_policy),
     "profileWorkloadSha256": digest(args.profile_workload),
@@ -75,6 +77,9 @@ summary = {
     "authority": {"absolutePowerThermal": "unavailable-on-emulator"},
 }
 (output / "result.json").write_text(json.dumps(result))
+if subject_failed:
+    (output / "ui-checks.tsv").write_text("ready\tfalse\tassert-text\tReady\n")
+    raise SystemExit(9)
 (output / "smartperf-summary.json").write_text(json.dumps(summary))
 '''
 
@@ -211,8 +216,9 @@ class HarmonyEvaluationCaseRunnerTests(unittest.TestCase):
         self.assertFalse(binding["automaticPromotion"])
         self.assertEqual(
             result["sourceIdentity"],
-            f"source-set-sha256:{self.source_set}",
+            f"artifact-sha256:{digest(self.hap)}",
         )
+        self.assertEqual(result["sourceSetSha256"], self.source_set)
 
     def test_hap_drift_is_rejected_before_runner(self) -> None:
         plan = json.loads(self.plan.read_text())
@@ -262,6 +268,36 @@ class HarmonyEvaluationCaseRunnerTests(unittest.TestCase):
         )
         self.assertEqual(binding["assessedWorkspace"]["participantId"], "agent-profile-a")
         self.assertEqual(binding["assessedWorkspace"]["subjectWorkspaceSha256"], "1" * 64)
+
+    def test_assessed_ui_failure_is_retained_as_subject_verdict(self) -> None:
+        build = json.loads(self.build.read_text())
+        build.update(
+            {
+                "buildAuthority": "independent-harmony-assessed-workspace-build",
+                "participantId": "agent-profile-a",
+                "subjectWorkspaceSha256": "1" * 64,
+                "assessmentSummarySha256": "2" * 64,
+                "assessmentDecisionSha256": "3" * 64,
+                "finalSourceStateSha256": "4" * 64,
+            }
+        )
+        self.build.write_text(json.dumps(build))
+        self.write_plan(subjectOutcomePolicy="retain-assessed-failure")
+        output = self.root / "evidence"
+        completed = self.run_case(output, {"SYNTHETIC_SUBJECT_FAIL": "1"})
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        binding = json.loads((output / "evaluation-binding.json").read_text())
+        self.assertEqual(binding["status"], "assessed-failure-review-required")
+        self.assertFalse(binding["subjectTaskSucceeded"])
+        self.assertEqual(binding["failureClass"], "oracle")
+        self.assertIsNone(binding["smartperfSummarySha256"])
+
+    def test_ui_failure_is_rejected_when_plan_requires_pass(self) -> None:
+        output = self.root / "evidence"
+        completed = self.run_case(output, {"SYNTHETIC_SUBJECT_FAIL": "1"})
+        self.assertEqual(completed.returncode, 1)
+        failure = json.loads(next(self.root.glob(".evidence.stage-*/failure.json")).read_text())
+        self.assertIn("requires pass", failure["error"])
 
     def test_existing_output_is_never_overwritten(self) -> None:
         output = self.root / "evidence"

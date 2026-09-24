@@ -160,9 +160,10 @@ stage while validating and reusing any earlier passed stage. Plan drift,
 completed-evidence drift, program drift, or a generated run-plan mismatch fails
 closed. A command that leaves an invalid final stage directory is marked
 `failed-integrity` instead of pretending it can be safely retried; that evidence
-requires operator review and a new loop identity. The successful
-`loop-receipt.json` is still
-`passed-review-required`, sets `automaticPromotion=false`, and stops at
+requires operator review and a new loop identity. A functionally passing loop
+emits `passed-review-required`; a valid device Oracle failure emits
+`assessed-failure-review-required` and is terminal evidence rather than a
+retryable infrastructure error. Both set `automaticPromotion=false` and stop at
 `maintainer-adjudication-and-next-analysis-cut`. It therefore automates the
 repeatable operational path without turning runtime feedback into benchmark
 truth or silently bypassing the review and recalibration boundary.
@@ -180,9 +181,9 @@ build tool. It accepts only an infrastructure-valid, independently assessed,
 statically passing attempt.
 
 Before building, the producer rejects symlinks and verifies the entire current
-workspace bytes and executable modes against the final source-state manifest. It then copies only
-manifest-bound bytes into a fresh disposable project, rather than building the
-participant-owned directory in place. The resulting ordinary Harmony build
+workspace bytes and executable modes against the final source-state manifest.
+It then copies only manifest-bound bytes into a fresh disposable project,
+rather than building the participant-owned directory in place. The resulting ordinary Harmony build
 receipt uses
 `buildAuthority=independent-harmony-assessed-workspace-build` and additionally
 binds participant ID, subject-workspace digest, assessment summary, decision
@@ -194,6 +195,24 @@ their independent failure evidence remains valid without spending device
 capacity. Passing this build still does not mean the Agent passed the device
 gate; it only proves that the HAP submitted to that gate came from the exact
 assessed Agent workspace.
+
+### Compose static and device verdicts for discrimination
+
+`compose-harmony-assessed-decision.py` accepts one statically passing assessment
+and its exact assessed-workspace Harmony loop. It verifies the participant,
+workspace, static decision, HAP, source set, loop receipt, emulator binding and
+raw result digests. It then emits a normal
+`agentlab.harness_decision_package.v1` whose existing static phases are followed
+by `harmony-device`.
+
+A failed UI Oracle becomes `oraclePass=false` for that phase and a false Agent
+verdict; it is not rewritten as infrastructure failure. Conversely, unavailable
+infrastructure cannot enter the compound decision. The ordinary attempt
+collector and discrimination scorer can therefore compare participants across
+the complete static-plus-device path, and `derive-assessment-feedback.py` can
+turn a repeatable `harmony-device` failure into a non-ready difficulty candidate
+for the next maintainer-reviewed analysis cut. The composition receipt remains
+review-required and never mutates the frozen case or reusable knowledge.
 
 ## Close assessed failures into the next analysis cut
 
