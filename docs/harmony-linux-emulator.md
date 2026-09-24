@@ -221,6 +221,39 @@ Case-discrimination collection accepts this evidence only as
 normalized summary and executed-action hashes before carrying the functional
 verdict into scoring.
 
+### hwlinux assessed-campaign canary
+
+The first real assessed-Agent campaign for this lane is retained on `hwlinux`
+at `/home/huawei/.agentlab/evidence/harmony-assessed-campaign-c34095d`. It ran
+from method revision `b6de366b61674c1b58a686e4ffa5187c4d011414` against two
+exact local Git source revisions and the source-set SHA256
+`a18237a4e8f541b423cd9283743ca1da5f18efbf54250403a782bfd114976b14`.
+Both participants passed the independent static Oracle. The weak participant
+then changed only the device-visible text from `Multi Repo Ready` to
+`Multi Repo Missing`, a behavior intentionally outside that static Oracle.
+
+The campaign completed two sequential cold-boot builds and device assessments
+in 188.817 seconds. The strong attempt passed the device Oracle and retained a
+normalized three-sample SmartPerf profile: mean application CPU was 2.3655%
+and mean application PSS was 33,296 KiB. The weak attempt reached the same
+emulator infrastructure but failed the bounded UI Oracle, so its result is an
+assessed Agent failure (`failureClass=oracle`) rather than an infrastructure
+failure; performance sampling correctly remained `not-run` behind the failed
+functional gate. The resulting discrimination score is 1.0 with no excluded
+attempts. One review-only `harmony-device` feedback candidate was derived and
+automatic promotion remained false.
+
+The campaign summary SHA256 is
+`13e3fe304d29a7434a8d0af87e316ac45579e46f40975561f8643f2745cdcb8b`;
+the discrimination-report SHA256 is
+`40efda306ac46448742449b353662961d8b7b8fc8ef03ccc3a7fc9aca4d81fc1`.
+The run also exposed and fixed a Linux portability defect: assessed Git blobs
+previously inherited the host `umask` and could become mode `0664`, while the
+downstream builder accepts only Git-representable `0644` and `0755`. Revision
+`b6de366` now materializes and verifies the exact mode from each Git tree entry.
+The preserved pre-fix and instance-path configuration failures remain beside
+the successful campaign and are not counted as participant attempts.
+
 ### Controlled-regression calibration
 
 Use `scripts/run-harmony-performance-calibration.py` to reproduce a controlled
