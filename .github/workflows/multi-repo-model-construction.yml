@@ -1,0 +1,98 @@
+name: Multi-repository model construction
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Model exposed by the LM Gateway
+        required: true
+        default: glm-5.3-flash
+        type: string
+      provider_route:
+        description: Explicit LM Gateway provider route
+        required: true
+        default: glm
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: multi-repo-model-construction
+  cancel-in-progress: false
+
+jobs:
+  construct:
+    # The workflow is intentionally manual and credential-bearing code only runs
+    # from the trusted default branch. Pull requests exercise the mock path.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AGENTLAB_ROOT: ${{ runner.temp }}/multi-repo-model-construction
+      AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
+      AGENTLAB_MODEL: ${{ inputs.model }}
+      AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Build the revision-fenced analysis binary
+        run: cargo build --locked -p agentlab_code_analysis --bin agentlab-multi-repo-analysis
+      - name: Materialize three deterministic Git repositories and analyze them
+        id: analysis
+        run: |
+          python3 scripts/prepare-multi-repo-construction-fixture.py \
+            --source examples/multi-repo-case/baseline \
+            --output "$AGENTLAB_ROOT/input"
+          target/debug/agentlab-multi-repo-analysis \
+            "$AGENTLAB_ROOT/input/manifest.json" "$AGENTLAB_ROOT/analysis"
+          python3 - <<'PY'
+          import json, os, pathlib
+          root = pathlib.Path(os.environ["AGENTLAB_ROOT"])
+          difficulty = json.loads((root / "analysis/difficulty_candidates.json").read_text())
+          matches = [row for row in difficulty["candidates"]
+                     if row["dimensionId"] == "multi-repository-change-impact"
+                     and row["seed"]["repositoryId"] == "contracts"
+                     and row["affectedRepositoryCount"] == 3]
+          assert len(matches) == 1, matches
+          selection = {"schema": "agentlab.multi_repo_candidate_selection.v1",
+                       "candidateId": matches[0]["id"],
+                       "sourceSetSha256": difficulty["sourceSetSha256"],
+                       "automaticPromotion": False}
+          (root / "candidate-selection.json").write_text(json.dumps(selection, indent=2) + "\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("candidate_id=" + selection["candidateId"] + "\n")
+          PY
+      - name: Install a separately contained Pi runtime
+        run: |
+          mkdir -p "$RUNNER_TEMP/pi-runtime"
+          cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
+          npm ci --prefix "$RUNNER_TEMP/pi-runtime"
+          "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" --version
+      - name: Ask Pi to construct an intent from exact source and fact evidence
+        env:
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+          AGENTLAB_PI_BINARY: ${{ runner.temp }}/pi-runtime/node_modules/.bin/pi
+        run: |
+          python3 scripts/run-multi-repo-intent-construction.py \
+            --manifest "$AGENTLAB_ROOT/input/manifest.json" \
+            --difficulty "$AGENTLAB_ROOT/analysis/difficulty_candidates.json" \
+            --facts "$AGENTLAB_ROOT/analysis/workspace_facts.jsonl" \
+            --candidate-id '${{ steps.analysis.outputs.candidate_id }}' \
+            --oracle-contract examples/multi-repo-case/oracle-contract.json \
+            --participant examples/multi-repo-case/pi-construction-agent.py \
+            --participant-id "pi-${AGENTLAB_MODEL}" \
+            --output "$AGENTLAB_ROOT/construction"
+      - name: Apply the deterministic pre-review quality gate
+        run: |
+          python3 scripts/score-multi-repo-intent.py \
+            --intent "$AGENTLAB_ROOT/construction/intent.json" \
+            --construction-receipt "$AGENTLAB_ROOT/construction/construction-receipt.json" \
+            --oracle-contract examples/multi-repo-case/oracle-contract.json \
+            --output "$AGENTLAB_ROOT/construction/intent-quality.json"
+          cat "$AGENTLAB_ROOT/construction/intent-quality.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve source identities, native model capture and gate result
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-model-construction
+          if-no-files-found: error
+          path: ${{ env.AGENTLAB_ROOT }}/

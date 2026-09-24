@@ -94,6 +94,14 @@ python3 scripts/score-multi-repo-intent.py \
 
 This lexical gate is intentionally narrow: it can reject generic, duplicated or
 leaking demands, but cannot prove semantic correctness or Agent discrimination.
+After this workflow reaches the trusted default branch, an operator can dispatch
+`Multi-repository model construction`. It creates reproducible Git fixture
+revisions, runs the real Pi adapter with the repository Gateway secret, applies
+this quality gate without the secret, and uploads the complete source, native
+model/Gateway, receipt and quality evidence. The credential-bearing job is
+manual and is rejected unless its ref is exactly `refs/heads/main`; pull requests
+continue to exercise only the deterministic mock path.
+
 Construct a proposal; the proposer independently verifies both construction
 receipt and qualified quality report, derives the allowed edit surface and
 records analysis evidence plus known qualification risks:
