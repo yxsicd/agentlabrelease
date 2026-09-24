@@ -107,16 +107,37 @@ clusters, two audited non-UTF-8 exclusions and the exact evidence digests. Its
 status is `analysis-qualified-case-review-required`: the clusters are discovery
 evidence, not evaluation cases.
 
+The first call-localization qualification is retained at
+`release/qualifications/harmony-arkweb-lifecycle-localization-6840590/`. On the
+same frozen source set, it reduces the broad `@kit.ArkWeb` module cluster from
+176 files to six exact
+`webview.WebviewController.initializeWebEngine` call sites. The retained
+selection identifies two cross-repository target calls, four read-only
+reference calls, five proposed editable paths and three explicitly expanded
+paths. `proposal.json` binds every selected path to its Git blob OID and byte
+digest, but remains `review-required`: the syntactic evidence does not prove
+the lifecycle hypothesis or authorize intent construction.
+
+Use `propose-api-call-case-localization.py` to compile an exact proposal, then
+have an independent maintainer create a decision that binds the proposal
+SHA-256 and acknowledges every risk. Only
+`review-api-call-case-localization.py` can produce a
+`reviewed-for-intent-construction` localization. Even that reviewed artifact
+retains `automaticPromotion: false`; build, functional, device, performance and
+discrimination qualification are later gates.
+
 ## From difficulty to a valid evaluation case
 
 A recursive impact candidate describes where a change may be discriminating;
 it is not yet a task. Promotion requires all of the following:
 
 1. freeze every participating repository revision and the source-set digest;
-2. define the intended cross-repository behavior and permitted edit scope;
-3. provide repository-specific build or static checks;
-4. provide an independent behavior oracle covering the affected boundary;
-5. calibrate reference and known-failing variants before ranking Agent attempts.
+2. localize exact calls and review any edit or context path that expands beyond
+   them;
+3. define the intended cross-repository behavior and permitted edit scope;
+4. provide repository-specific build or static checks;
+5. provide an independent behavior oracle covering the affected boundary;
+6. calibrate reference and known-failing variants before ranking Agent attempts.
 
 This separation prevents a large dependency cone or an unresolved import from
 being mistaken for a useful benchmark merely because it looks difficult.

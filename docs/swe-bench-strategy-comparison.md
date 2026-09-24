@@ -137,15 +137,18 @@ smaller than SWE-bench's:
 9. Process-level scoring—per-turn dependency discovery, deviations, recovery,
    decision impact, elapsed time and subjective/objective consistency—is not
    yet one uniform scorecard for every case.
-10. Real-source candidate precision is still weak. The largest shared-contract
-    clusters span 1,567 to 3,018 files; they identify a platform-wide change
-    surface, not the narrow issue-level repair contract that makes a SWE-bench
-    task executable and fair. Semantic/version evidence, change localization
-    and repair/preservation checks must shrink each cluster before review.
-11. The current full run takes 181.14 seconds and emits roughly 294 MiB of fact
-    rows plus 19 MiB of difficulty candidates. Git blob reads are batched, but
-    AST analysis is still single-process and there is no revision-aware
-    incremental cache or early candidate prefilter.
+10. Real-source candidate precision remains uneven. The largest module-level
+    clusters span 1,567 to 3,018 files, far wider than SWE-bench's issue-level
+    repair contracts. The new API-call pass proves that one `@kit.ArkWeb`
+    surface can shrink from 176 files to six exact call sites, then to two
+    proposed cross-repository targets. That is useful localization evidence,
+    not yet semantic proof: the lifecycle hypothesis, five-file edit surface,
+    repair/preservation checks and Oracle still require independent review and
+    calibration.
+11. The richer API-localizing full run takes 257.65 seconds and emits roughly
+    297 MiB of fact rows plus 25 MiB of difficulty candidates. Git blob reads
+    are batched, but AST analysis is still single-process and there is no
+    revision-aware incremental cache or early candidate prefilter.
 
 Until these gaps close, AgentLab can claim a richer executable architecture and
 one real closed-path proof, not a large, statistically qualified benchmark.

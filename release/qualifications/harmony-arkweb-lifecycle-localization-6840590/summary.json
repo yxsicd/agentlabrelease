@@ -1,0 +1,54 @@
+{
+  "schema": "agentlab.api_call_localization_qualification.v1",
+  "status": "localization-review-required",
+  "methodRevision": "68405907e5a1b41cbf618245add6bfe98be45306",
+  "sourceSetSha256": "c4923e499fbb0ca2ed4fd205c66d6353bbe2aa58935413e3c897183a25493ca9",
+  "analysis": {
+    "wallSeconds": 257.65,
+    "userCpuSeconds": 79.99,
+    "systemCpuSeconds": 4.26,
+    "facts": 404308,
+    "sharedExternalModuleContracts": 22,
+    "sharedExternalApiCallContracts": 75,
+    "difficultyCandidates": 19374,
+    "workspaceFactsBytes": 311119067,
+    "difficultyCandidatesBytes": 26006111,
+    "workspaceFactsSha256": "a164c323ca7847117aa08b0f30b5b3895bce0787fb0539684ef7286cfbf35d79",
+    "difficultyCandidatesSha256": "4d7d562a231c70f691edc24191223e88775c8e9197a86160a88dcfecdb118918",
+    "analysisReceiptSha256": "fa91cb73dee495270ab3be160cdbb6cbd9eb7d2c68d51f6757ce55444c85e39f"
+  },
+  "localization": {
+    "candidateId": "difficulty-9884f55b9479b7df35e91fe6",
+    "specifier": "@kit.ArkWeb",
+    "exportedSymbol": "webview",
+    "callTarget": "webview.WebviewController.initializeWebEngine",
+    "moduleClusterFiles": 176,
+    "localizedCallFiles": 6,
+    "targetCallSites": 2,
+    "referenceCallSites": 4,
+    "editablePaths": 5,
+    "expandedPaths": 3,
+    "selectionSha256": "c972453de4a1bc21552cd8b9364e7d6d8d9f3483bd1c2bc5cf93146d8b592a49",
+    "proposalSha256": "8e14f0616942d1b9841c784915a231aedd2d5ae6fc0fd9599bf37721a26fa451"
+  },
+  "qualified": [
+    "named and aliased import bindings are retained",
+    "external API calls are normalized to exported symbols",
+    "the same exact API call is observed in both repositories",
+    "target and reference call facts bind exact owners, spans and revisions",
+    "editable and context source bytes bind Git blob OIDs and SHA-256 digests",
+    "repair, preservation, device and performance checks are proposed separately"
+  ],
+  "notQualified": [
+    "ArkWeb API-version semantics",
+    "the lifecycle hypothesis",
+    "expanded edit-path relevance",
+    "reference implementation",
+    "independent localization review",
+    "repository builds",
+    "Linux emulator behavior",
+    "startup-performance improvement",
+    "participant discrimination"
+  ],
+  "automaticPromotion": false
+}

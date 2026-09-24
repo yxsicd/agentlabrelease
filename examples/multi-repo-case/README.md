@@ -7,6 +7,8 @@ evaluation case:
 exact Git source set
   -> cross-repository module graph
   -> recursive change-impact difficulty
+  -> exact API-call localization proposal
+  -> independent localization review
   -> exact affected source + relevant facts
   -> replaceable construction participant
   -> captured semantic-intent candidate
@@ -37,6 +39,29 @@ Calibration includes four variants:
 
 That last variant proves the second demand measures retained cross-repository
 state rather than merely repeating the first check.
+
+For real shared-external API candidates, do not pass a broad module cluster
+directly into intent construction. First select exact target and reference call
+facts plus the proposed editable/context paths, then run:
+
+```sh
+python3 scripts/propose-api-call-case-localization.py \
+  --manifest /tmp/multi-repo-manifest.json \
+  --difficulty /tmp/analysis/difficulty_candidates.json \
+  --facts /tmp/analysis/workspace_facts.jsonl \
+  --candidate-id <shared-external-api-call-candidate-id> \
+  --selection /tmp/api-call-selection.json \
+  --method-revision <exact-agentlab-commit> \
+  --output /tmp/api-call-localization-proposal.json
+```
+
+An independent maintainer must review the exact proposal digest, the semantic
+hypothesis and every path that expands beyond the localized calls. Compile the
+decision with `review-api-call-case-localization.py`. The resulting artifact
+only authorizes intent construction; it does not qualify a case or expose a
+reference implementation. The ArkWeb real-source example at
+`release/qualifications/harmony-arkweb-lifecycle-localization-6840590/` stops at
+this review boundary on purpose.
 
 ## Commands
 
