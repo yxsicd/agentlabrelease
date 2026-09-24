@@ -153,6 +153,7 @@ fn phase_for(path: &str) -> String {
 }
 
 fn harmony_instance(root: &Path, run: &str, archive: &str, result: Value) -> Tables {
+    let policy_bound = result["schema"] == "agentlab.harmony_emulator_case_result.v3";
     let hap_sha256 = result["hapSha256"]
         .as_str()
         .expect("Harmony emulator result requires hapSha256");
@@ -217,6 +218,10 @@ fn harmony_instance(root: &Path, run: &str, archive: &str, result: Value) -> Tab
             "profileCollected":result["profileStatus"] == "collected",
             "profileRunId":result["profileRunId"],
             "environmentIdentity":result["environmentIdentity"],
+            "performancePolicyId":result["performancePolicyId"],
+            "performancePolicySha256":result["performancePolicySha256"],
+            "profileWorkloadId":result["profileWorkloadId"],
+            "profileWorkloadSha256":result["profileWorkloadSha256"],
             "powerThermalAuthority":result["powerThermalAuthority"],
             "authority":"operator-owned-device-runner"
         }),
@@ -251,7 +256,11 @@ fn harmony_instance(root: &Path, run: &str, archive: &str, result: Value) -> Tab
     if performance.exists() {
         assert_eq!(result["profileSummaryStatus"], "normalized");
         let summary = json(&performance);
-        assert_eq!(summary["schema"], "agentlab.smartperf_summary.v1");
+        assert!(
+            summary["schema"] == "agentlab.smartperf_summary.v1"
+                || summary["schema"] == "agentlab.smartperf_summary.v2",
+            "unsupported SmartPerf summary schema"
+        );
         assert_eq!(summary["taskId"], result["taskId"]);
         assert_eq!(summary["sourceIdentity"], result["sourceIdentity"]);
         if !result["profileRunId"].is_null() {
@@ -267,6 +276,46 @@ fn harmony_instance(root: &Path, run: &str, archive: &str, result: Value) -> Tab
             summary["authority"]["absolutePowerThermal"],
             "unavailable-on-emulator"
         );
+        if policy_bound {
+            assert_eq!(summary["schema"], "agentlab.smartperf_summary.v2");
+            let policy_path = root.join("performance-policy.json");
+            let workload_path = root.join("profile-workload.tsv");
+            assert!(
+                policy_path.exists(),
+                "policy-bound result is missing performance-policy.json"
+            );
+            assert!(
+                workload_path.exists(),
+                "policy-bound result is missing profile-workload.tsv"
+            );
+            let policy = json(&policy_path);
+            assert_eq!(policy["schema"], "agentlab.harmony_performance_policy.v1");
+            assert_eq!(policy["id"], result["performancePolicyId"]);
+            assert_eq!(
+                hash(&fs::read(&policy_path).unwrap()),
+                result["performancePolicySha256"]
+            );
+            assert_eq!(
+                hash(&fs::read(&workload_path).unwrap()),
+                result["profileWorkloadSha256"]
+            );
+            assert_eq!(
+                summary["performancePolicy"]["id"],
+                result["performancePolicyId"]
+            );
+            assert_eq!(
+                summary["performancePolicy"]["sha256"],
+                result["performancePolicySha256"]
+            );
+            assert_eq!(
+                summary["profileWorkload"]["id"],
+                result["profileWorkloadId"]
+            );
+            assert_eq!(
+                summary["profileWorkload"]["sha256"],
+                result["profileWorkloadSha256"]
+            );
+        }
         put(
             &mut tables,
             "performance_assessments",
@@ -280,6 +329,9 @@ fn harmony_instance(root: &Path, run: &str, archive: &str, result: Value) -> Tab
                 "sampleCount":summary["sampleCount"],
                 "profileValid":summary["profileValid"],
                 "canonicalMetrics":summary["canonicalMetrics"],
+                "performancePolicy":summary["performancePolicy"],
+                "profileWorkload":summary["profileWorkload"],
+                "metricAvailability":summary["metricAvailability"],
                 "authority":summary["authority"],
                 "evidencePath":"smartperf-summary.json"
             }),
@@ -384,7 +436,9 @@ fn instance(root: &Path, run: &str, archive: &str) -> Tables {
     let result_path = root.join("result.json");
     if result_path.exists() {
         let result = json(&result_path);
-        if result["schema"] == "agentlab.harmony_emulator_case_result.v2" {
+        if result["schema"] == "agentlab.harmony_emulator_case_result.v2"
+            || result["schema"] == "agentlab.harmony_emulator_case_result.v3"
+        {
             return harmony_instance(root, run, archive, result);
         }
     }

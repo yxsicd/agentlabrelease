@@ -10,10 +10,14 @@ import re
 from typing import Any
 
 
-INPUT_SCHEMA = "agentlab.smartperf_summary.v1"
+INPUT_SCHEMAS = {"agentlab.smartperf_summary.v1", "agentlab.smartperf_summary.v2"}
 OUTPUT_SCHEMA_V1 = "agentlab.smartperf_comparison.v1"
 OUTPUT_SCHEMA_V2 = "agentlab.smartperf_comparison.v2"
-RESULT_SCHEMA = "agentlab.harmony_emulator_case_result.v2"
+OUTPUT_SCHEMA_V3 = "agentlab.smartperf_comparison.v3"
+RESULT_SCHEMAS = {
+    "agentlab.harmony_emulator_case_result.v2",
+    "agentlab.harmony_emulator_case_result.v3",
+}
 HAP_IDENTITY = re.compile(r"artifact-sha256:([0-9a-f]{64})")
 
 
@@ -23,14 +27,14 @@ def fail(message: str) -> None:
 
 def load(path: pathlib.Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(value, dict) or value.get("schema") != INPUT_SCHEMA:
+    if not isinstance(value, dict) or value.get("schema") not in INPUT_SCHEMAS:
         fail(f"unsupported SmartPerf summary: {path}")
     return value
 
 
 def load_result(path: pathlib.Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(value, dict) or value.get("schema") != RESULT_SCHEMA:
+    if not isinstance(value, dict) or value.get("schema") not in RESULT_SCHEMAS:
         fail(f"unsupported Harmony emulator result: {path}")
     return value
 
@@ -76,6 +80,21 @@ def functional_gate(
         fail(f"{label} functional result environment differs from SmartPerf summary")
     if result.get("profileStatus") != "collected" or result.get("profileSummaryStatus") != "normalized":
         fail(f"{label} functional result does not bind a normalized SmartPerf profile")
+    if summary.get("schema") == "agentlab.smartperf_summary.v2":
+        if result.get("schema") != "agentlab.harmony_emulator_case_result.v3":
+            fail(f"{label} policy-bound summary requires a v3 functional result")
+        policy = summary.get("performancePolicy") or {}
+        workload = summary.get("profileWorkload") or {}
+        if (
+            result.get("performancePolicyId") != policy.get("id")
+            or result.get("performancePolicySha256") != policy.get("sha256")
+        ):
+            fail(f"{label} functional result performance policy differs from summary")
+        if (
+            result.get("profileWorkloadId") != workload.get("id")
+            or result.get("profileWorkloadSha256") != workload.get("sha256")
+        ):
+            fail(f"{label} functional result profile workload differs from summary")
     assessed = (
         result.get("assessmentStatus") == "assessed"
         and result.get("infrastructureAvailable") is True
@@ -122,8 +141,10 @@ def build_comparison(
     candidate_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     for label, value in (("baseline", baseline), ("candidate", candidate)):
-        if value.get("schema") != INPUT_SCHEMA:
+        if value.get("schema") not in INPUT_SCHEMAS:
             fail(f"unsupported {label} SmartPerf summary schema")
+    if baseline.get("schema") != candidate.get("schema"):
+        fail("baseline and candidate SmartPerf summary schemas differ")
     if not 0 < min_fps_ratio <= 1:
         fail("minimum FPS ratio must be in (0, 1]")
     for label, value in (
@@ -170,12 +191,53 @@ def build_comparison(
         if authority != "unavailable-on-emulator":
             reasons.append(f"{label}-authority-unsupported")
 
-    specifications = [
-        ("fps", "p50", "higher", min_fps_ratio),
-        ("appCpuUsagePercent", "mean", "lower", max_cpu_regression),
-        ("appPssKiB", "mean", "lower", max_pss_regression),
-        ("frameIntervalMs", "p95", "lower", max_jitter_regression),
-    ]
+    policy_identity = None
+    workload_identity = None
+    if baseline.get("schema") == "agentlab.smartperf_summary.v2":
+        baseline_policy = baseline.get("performancePolicy") or {}
+        candidate_policy = candidate.get("performancePolicy") or {}
+        baseline_workload = baseline.get("profileWorkload") or {}
+        candidate_workload = candidate.get("profileWorkload") or {}
+        if baseline_policy != candidate_policy:
+            reasons.append("performance-policy-mismatch")
+        if baseline_workload != candidate_workload:
+            reasons.append("profile-workload-mismatch")
+        required = candidate_policy.get("requiredMetrics")
+        if not isinstance(required, list) or not required:
+            fail("policy-bound summary requires requiredMetrics")
+        specifications = []
+        for row in required:
+            if not isinstance(row, dict):
+                fail("invalid required performance metric")
+            direction = row.get("direction")
+            threshold = (
+                row.get("minimumCandidateToBaselineRatio")
+                if direction == "higher"
+                else row.get("maximumRelativeIncrease")
+            )
+            if (
+                not isinstance(row.get("metric"), str)
+                or row.get("statistic") not in {"mean", "p50", "p95"}
+                or direction not in {"higher", "lower"}
+                or not isinstance(threshold, (int, float))
+            ):
+                fail("invalid required performance metric specification")
+            specifications.append((row["metric"], row["statistic"], direction, float(threshold)))
+        policy_identity = {
+            "id": candidate_policy.get("id"),
+            "sha256": candidate_policy.get("sha256"),
+        }
+        workload_identity = {
+            "id": candidate_workload.get("id"),
+            "sha256": candidate_workload.get("sha256"),
+        }
+    else:
+        specifications = [
+            ("fps", "p50", "higher", min_fps_ratio),
+            ("appCpuUsagePercent", "mean", "lower", max_cpu_regression),
+            ("appPssKiB", "mean", "lower", max_pss_regression),
+            ("frameIntervalMs", "p95", "lower", max_jitter_regression),
+        ]
     rows: list[dict[str, Any]] = []
     for name, statistic, direction, threshold in specifications:
         before = metric(baseline, name, statistic)
@@ -238,7 +300,13 @@ def build_comparison(
     else:
         decision = "within-relative-guardrails"
     report = {
-        "schema": OUTPUT_SCHEMA_V2 if functional is not None else OUTPUT_SCHEMA_V1,
+        "schema": (
+            OUTPUT_SCHEMA_V3
+            if functional is not None and policy_identity is not None
+            else OUTPUT_SCHEMA_V2
+            if functional is not None
+            else OUTPUT_SCHEMA_V1
+        ),
         "taskId": candidate.get("taskId"),
         "baselineRunId": baseline.get("runId"),
         "baselineSourceIdentity": baseline.get("sourceIdentity"),
@@ -261,6 +329,9 @@ def build_comparison(
     }
     if functional is not None:
         report["functionalGate"] = functional
+    if policy_identity is not None:
+        report["performancePolicy"] = policy_identity
+        report["profileWorkload"] = workload_identity
     return report
 
 

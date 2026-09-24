@@ -10,6 +10,8 @@ import unittest
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+POLICY_PATH = ROOT / "examples/harmony-emulator/emulator-cpu-memory-relative.performance.json"
+WORKLOAD_PATH = ROOT / "examples/harmony-emulator/tutu-scroll.profile"
 
 
 class FlywheelPerformanceFeedbackTests(unittest.TestCase):
@@ -105,7 +107,7 @@ class FlywheelPerformanceFeedbackTests(unittest.TestCase):
             "powerThermalAuthority": "unavailable_on_emulator",
         }
 
-    def prepare(self, root: pathlib.Path, mutate=None, v2: bool = False) -> pathlib.Path:
+    def prepare(self, root: pathlib.Path, mutate=None, v2: bool = False, v3: bool = False) -> pathlib.Path:
         evidence = root / "evidence"
         evidence.mkdir()
         (evidence / "summary.json").write_text(
@@ -120,10 +122,104 @@ class FlywheelPerformanceFeedbackTests(unittest.TestCase):
         baseline = self.summary("baseline", "a" * 64, 60.0)
         candidate = self.summary("candidate", "b" * 64, 40.0)
         report = self.report(baseline, candidate)
-        if v2:
+        if v3:
+            policy = json.loads(POLICY_PATH.read_text())
+            policy_sha = hashlib.sha256(POLICY_PATH.read_bytes()).hexdigest()
+            workload_sha = hashlib.sha256(WORKLOAD_PATH.read_bytes()).hexdigest()
+            policy_binding = {
+                "id": policy["id"],
+                "sha256": policy_sha,
+                "requiredMetrics": policy["requiredMetrics"],
+                "observedOnlyMetrics": policy["observedOnlyMetrics"],
+            }
+            workload_binding = {"id": "tutu-scroll-v1", "sha256": workload_sha}
+            for profile, cpu in ((baseline, 10.0), (candidate, 30.0)):
+                profile["schema"] = "agentlab.smartperf_summary.v2"
+                profile["canonicalMetrics"] = {
+                    "appCpuUsagePercent": {"count": 3, "mean": cpu},
+                    "appPssKiB": {"count": 3, "mean": 100000.0},
+                }
+                profile["performancePolicy"] = policy_binding
+                profile["profileWorkload"] = workload_binding
+                profile["metricAvailability"] = {
+                    "appCpuUsagePercent": True,
+                    "appPssKiB": True,
+                    "fps": False,
+                    "frameIntervalMs": False,
+                    "gpuLoadPercent": False,
+                }
+            report = self.report(baseline, candidate)
+            report["schema"] = "agentlab.smartperf_comparison.v3"
+            report["baselineSummarySha256"] = self.digest(baseline)
+            report["candidateSummarySha256"] = self.digest(candidate)
+            report["metrics"] = [
+                {
+                    "metric": "appCpuUsagePercent",
+                    "statistic": "mean",
+                    "status": "regressed",
+                    "baseline": 10.0,
+                    "candidate": 30.0,
+                    "candidateToBaselineRatio": 3.0,
+                    "guardrail": {"maximumRelativeIncrease": 0.2},
+                },
+                {
+                    "metric": "appPssKiB",
+                    "statistic": "mean",
+                    "status": "passed",
+                    "baseline": 100000.0,
+                    "candidate": 100000.0,
+                    "candidateToBaselineRatio": 1.0,
+                    "guardrail": {"maximumRelativeIncrease": 0.15},
+                },
+            ]
+            report["performancePolicy"] = {"id": policy["id"], "sha256": policy_sha}
+            report["profileWorkload"] = workload_binding
+            baseline_result = self.functional_result(baseline["sourceIdentity"], "baseline")
+            candidate_result = self.functional_result(candidate["sourceIdentity"], "candidate")
+            for result in (baseline_result, candidate_result):
+                result.update({
+                    "schema": "agentlab.harmony_emulator_case_result.v3",
+                    "performancePolicyId": policy["id"],
+                    "performancePolicySha256": policy_sha,
+                    "profileWorkloadId": "tutu-scroll-v1",
+                    "profileWorkloadSha256": workload_sha,
+                })
+            (evidence / "performance-policy.json").write_bytes(POLICY_PATH.read_bytes())
+            (evidence / "profile-workload.tsv").write_bytes(WORKLOAD_PATH.read_bytes())
+        elif v2:
             baseline_result = self.functional_result(baseline["sourceIdentity"], "baseline")
             candidate_result = self.functional_result(candidate["sourceIdentity"], "candidate")
             report["schema"] = "agentlab.smartperf_comparison.v2"
+            report["functionalGate"] = {
+                "baseline": {
+                    "resultSha256": self.digest(baseline_result),
+                    "sourceIdentity": baseline["sourceIdentity"],
+                    "assessmentStatus": "assessed",
+                    "infrastructureAvailable": True,
+                    "subjectTaskSucceeded": True,
+                    "oracleStatus": "passed",
+                    "scenarioId": "bounded-ui-case",
+                    "scenarioSha256": "c" * 64,
+                    "profileRunId": "baseline",
+                    "environmentIdentity": "hwlinux:emulator-26.0.0.400:class-a",
+                    "passed": True,
+                },
+                "candidate": {
+                    "resultSha256": self.digest(candidate_result),
+                    "sourceIdentity": candidate["sourceIdentity"],
+                    "assessmentStatus": "assessed",
+                    "infrastructureAvailable": True,
+                    "subjectTaskSucceeded": True,
+                    "oracleStatus": "passed",
+                    "scenarioId": "bounded-ui-case",
+                    "scenarioSha256": "c" * 64,
+                    "profileRunId": "candidate",
+                    "environmentIdentity": "hwlinux:emulator-26.0.0.400:class-a",
+                    "passed": True,
+                },
+                "passed": True,
+            }
+        if v2 or v3:
             report["functionalGate"] = {
                 "baseline": {
                     "resultSha256": self.digest(baseline_result),
@@ -224,6 +320,36 @@ class FlywheelPerformanceFeedbackTests(unittest.TestCase):
             completed = self.run_builder(evidence, root / "transaction.json")
             self.assertNotEqual(completed.returncode, 0)
             self.assertIn("functional result digest differs", completed.stderr)
+
+    def test_policy_bound_regression_retains_workload_and_policy_identities(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            output = root / "transaction.json"
+            completed = self.run_builder(self.prepare(root, v3=True), output)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            payload = json.loads(output.read_text())
+            rows = [
+                operation["row"]
+                for table in payload["arguments"]["tables"]
+                for operation in table["operations"]
+            ]
+            decision = next(row for row in rows if row.get("schema") == "agentlab.performance_feedback_decision.v1")
+            difficulty = next(row for row in rows if row.get("dimensionId") == "functionally-correct-performance-regression")
+            self.assertEqual(decision["performancePolicy"]["id"], "emulator-cpu-memory-relative-v1")
+            self.assertEqual(decision["profileWorkload"]["id"], "tutu-scroll-v1")
+            self.assertEqual(len(decision["evidenceIds"]), 7)
+            self.assertEqual(difficulty["profileWorkload"]["sha256"], hashlib.sha256(WORKLOAD_PATH.read_bytes()).hexdigest())
+
+    def test_tampered_retained_policy_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            evidence = self.prepare(root, v3=True)
+            policy = json.loads((evidence / "performance-policy.json").read_text())
+            policy["id"] = "tampered"
+            (evidence / "performance-policy.json").write_text(json.dumps(policy))
+            completed = self.run_builder(evidence, root / "transaction.json")
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("retained performance policy differs", completed.stderr)
 
     def test_tampered_decision_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

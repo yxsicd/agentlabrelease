@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import pathlib
 import tempfile
@@ -153,13 +154,29 @@ class CollectCaseAttemptsTests(unittest.TestCase):
         *,
         passed: bool | None,
         infrastructure: bool,
+        v3: bool = False,
     ) -> str:
         source_identity = f"artifact-sha256:{'a' * 64}"
         assessed = infrastructure and isinstance(passed, bool)
-        self.write_json(
-            root / "runs" / attempt_id / "result.json",
+        evidence = root / "runs" / attempt_id
+        policy_raw = json.dumps(
             {
-                "schema": "agentlab.harmony_emulator_case_result.v2",
+                "schema": "agentlab.harmony_performance_policy.v1",
+                "id": "cpu-memory-v1",
+            },
+            sort_keys=True,
+        ).encode()
+        workload_raw = b"schema\tagentlab.harmony_profile_workload.v1\nworkload\tscroll-v1\nswipe\t1\t2\t3\t4\t5\n"
+        policy_sha = hashlib.sha256(policy_raw).hexdigest()
+        workload_sha = hashlib.sha256(workload_raw).hexdigest()
+        self.write_json(
+            evidence / "result.json",
+            {
+                "schema": (
+                    "agentlab.harmony_emulator_case_result.v3"
+                    if v3
+                    else "agentlab.harmony_emulator_case_result.v2"
+                ),
                 "status": "passed" if passed is True else "failed",
                 "taskId": self.case_id,
                 "sourceIdentity": source_identity,
@@ -174,8 +191,41 @@ class CollectCaseAttemptsTests(unittest.TestCase):
                 "subjectTaskSucceeded": passed if assessed else None,
                 "failureClass": "none" if passed is True else "oracle" if assessed else "infrastructure",
                 "powerThermalAuthority": "unavailable_on_emulator",
+                **(
+                    {
+                        "profileStatus": "collected",
+                        "profileSummaryStatus": "normalized",
+                        "profileRunId": attempt_id,
+                        "environmentIdentity": "hwlinux:emulator:class-a",
+                        "performancePolicyId": "cpu-memory-v1",
+                        "performancePolicySha256": policy_sha,
+                        "profileWorkloadId": "scroll-v1",
+                        "profileWorkloadSha256": workload_sha,
+                    }
+                    if v3
+                    else {}
+                ),
             },
         )
+        if v3:
+            evidence.mkdir(parents=True, exist_ok=True)
+            (evidence / "performance-policy.json").write_bytes(policy_raw)
+            (evidence / "profile-workload.tsv").write_bytes(workload_raw)
+            (evidence / "profile-workload-actions.tsv").write_text(
+                "1\tswipe\t1,2,3,4,5\n"
+            )
+            self.write_json(
+                evidence / "smartperf-summary.json",
+                {
+                    "schema": "agentlab.smartperf_summary.v2",
+                    "taskId": self.case_id,
+                    "sourceIdentity": source_identity,
+                    "runId": attempt_id,
+                    "environmentIdentity": "hwlinux:emulator:class-a",
+                    "performancePolicy": {"id": "cpu-memory-v1", "sha256": policy_sha},
+                    "profileWorkload": {"id": "scroll-v1", "sha256": workload_sha},
+                },
+            )
         if assessed:
             (root / "runs" / attempt_id / "ui-checks.tsv").write_text(
                 f"visible\t{'true' if passed else 'false'}\tassert-text\tExpected\n"
@@ -370,6 +420,41 @@ class CollectCaseAttemptsTests(unittest.TestCase):
             attempt = collected["cases"][0]["attempts"][0]
             self.assertFalse(attempt["infrastructureValid"])
             self.assertIsNone(attempt["taskPassed"])
+
+    def test_v3_emulator_attempt_retains_policy_workload_and_profile_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            self.write_calibration(root)
+            identity = self.write_emulator_result(
+                root, "emulator-v3", passed=True, infrastructure=True, v3=True
+            )
+            collected = COLLECTOR.build_input(
+                self.manifest(
+                    [
+                        {
+                            "attemptId": "emulator-v3",
+                            "participantId": "candidate",
+                            "evidenceKind": "harmony-emulator-v3",
+                            "sourceIdentity": identity,
+                            "evidence": "runs/emulator-v3",
+                        }
+                    ]
+                ),
+                root.resolve(),
+            )
+            evidence = collected["cases"][0]["attempts"][0]["evidence"]
+            self.assertEqual(
+                set(evidence),
+                {
+                    "emulatorResult",
+                    "uiChecks",
+                    "performancePolicy",
+                    "profileWorkload",
+                    "smartperfSummary",
+                    "profileWorkloadActions",
+                },
+            )
+            self.assertTrue(all(len(row["sha256"]) == 64 for row in evidence.values()))
 
     def test_emulator_source_identity_mismatch_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

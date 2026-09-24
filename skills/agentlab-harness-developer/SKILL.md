@@ -1466,3 +1466,26 @@ and no frame-interval samples. Keep zero ratio baselines explicitly unusable,
 never label them as regressions. Before claiming emulator performance
 qualification, add a bounded repeatable dynamic workload inside the SmartPerf
 window and prove the same workload identity across baseline and candidate.
+
+## Harmony dynamic-profile capability checkpoint
+
+The next `hwlinux` probe ran twelve real `SP_daemon` samples while ten
+deterministic alternating swipes executed against the same Tutu HAP. The app CPU
+signal reacted (mean about 5.83%), but all FPS values were still zero and all
+`fpsJitters` fields were empty. Do not infer that interaction alone makes frame
+telemetry available, and do not globally drop missing metrics. Bind an exact
+`agentlab.harmony_performance_policy.v1` plus an exact
+`agentlab.harmony_profile_workload.v1` to baseline, candidate, functional result
+and comparison. Gate only the policy-declared required metrics; preserve
+unsupported FPS/frame/GPU metrics as observed-only, keep absolute power/thermal
+unavailable on emulator, and reject policy or workload identity drift. A
+functionally passing policy-bound regression is still only a non-ready,
+non-promoted difficulty candidate.
+
+The first complete paired v3 canary then passed twice with the exact same
+policy/workload identities, 12 samples and 21 retained action rows per run.
+CPU mean was 6.4297% then 6.2624%; PSS mean was 172674 then 172003 KiB, so the
+v3 decision was `within-relative-guardrails` and comparable. Retain comparison
+SHA256 `bb3ad5cd3e6a84405dee9119c97af8d74a6968181c941b600cc58ea3ed21c7e5`
+as the real checkpoint. FPS remained zero and frame intervals absent, so this
+qualifies only the declared CPU/PSS policy lane.

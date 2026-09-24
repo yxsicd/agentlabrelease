@@ -131,12 +131,14 @@ def main():
         ("harmony-baseline-result.json", "harmony-functional-result"),
         ("harmony-candidate-result.json", "harmony-functional-result"),
         ("smartperf-comparison.json", "smartperf-comparison"),
+        ("performance-policy.json", "harmony-performance-policy"),
+        ("profile-workload.tsv", "harmony-profile-workload"),
         ("environment-fingerprint.json", "environment-fingerprint"),
     ):
         path = evidence / filename
         if path.is_file():
             evidence_row = {
-                "id": f"evidence-{args.run_id}-{filename[:-5]}",
+                "id": f"evidence-{args.run_id}-{Path(filename).stem}",
                 "schema": "agentlab.evidence_ref.v1",
                 "kind": kind,
                 "uri": action_uri + "#" + filename,
@@ -561,6 +563,7 @@ def main():
         if performance_schema not in {
             "agentlab.smartperf_comparison.v1",
             "agentlab.smartperf_comparison.v2",
+            "agentlab.smartperf_comparison.v3",
         }:
             raise SystemExit("unsupported SmartPerf comparison schema")
         policy = performance.get("policy") or {}
@@ -582,7 +585,10 @@ def main():
             ("baseline", baseline_summary),
             ("candidate", candidate_summary),
         ):
-            if profile.get("schema") != "agentlab.smartperf_summary.v1":
+            if profile.get("schema") not in {
+                "agentlab.smartperf_summary.v1",
+                "agentlab.smartperf_summary.v2",
+            }:
                 raise SystemExit(f"unsupported {label} SmartPerf summary schema")
             source_identity = profile.get("sourceIdentity")
             if not isinstance(source_identity, str) or not re.fullmatch(
@@ -606,7 +612,95 @@ def main():
             if canonical_json_sha256(profile) != performance.get(f"{label}SummarySha256"):
                 raise SystemExit(f"{label} SmartPerf summary digest differs from comparison")
         functional_evidence_ids = []
-        if performance_schema == "agentlab.smartperf_comparison.v2":
+        policy_evidence_ids = []
+        if performance_schema == "agentlab.smartperf_comparison.v3":
+            policy_path = evidence / "performance-policy.json"
+            workload_path = evidence / "profile-workload.tsv"
+            if not policy_path.is_file() or not workload_path.is_file():
+                raise SystemExit("SmartPerf v3 comparison requires retained policy and workload")
+            retained_policy = load(policy_path)
+            retained_workload_sha = sha256(workload_path)
+            comparison_policy = performance.get("performancePolicy") or {}
+            comparison_workload = performance.get("profileWorkload") or {}
+            if (
+                not isinstance(retained_policy, dict)
+                or retained_policy.get("schema") != "agentlab.harmony_performance_policy.v1"
+                or retained_policy.get("id") != comparison_policy.get("id")
+                or sha256(policy_path) != comparison_policy.get("sha256")
+            ):
+                raise SystemExit("retained performance policy differs from comparison")
+            expected_policy_binding = {
+                "id": retained_policy.get("id"),
+                "sha256": sha256(policy_path),
+                "requiredMetrics": retained_policy.get("requiredMetrics"),
+                "observedOnlyMetrics": retained_policy.get("observedOnlyMetrics"),
+            }
+            workload_lines = workload_path.read_text().splitlines()
+            workload_ids = [line.split("\t", 1)[1] for line in workload_lines if line.startswith("workload\t")]
+            if (
+                len(workload_ids) != 1
+                or workload_ids[0] != comparison_workload.get("id")
+                or retained_workload_sha != comparison_workload.get("sha256")
+            ):
+                raise SystemExit("retained profile workload differs from comparison")
+            for label, profile in (("baseline", baseline_summary), ("candidate", candidate_summary)):
+                if profile.get("schema") != "agentlab.smartperf_summary.v2":
+                    raise SystemExit(f"SmartPerf v3 requires policy-bound {label} summary")
+                if profile.get("performancePolicy") != expected_policy_binding:
+                    raise SystemExit(f"{label} SmartPerf summary policy differs from retained policy")
+                if (profile.get("profileWorkload") or {}).get("id") != workload_ids[0] or (profile.get("profileWorkload") or {}).get("sha256") != retained_workload_sha:
+                    raise SystemExit(f"{label} SmartPerf summary workload differs from retained workload")
+            policy_evidence_ids = [
+                f"evidence-{args.run_id}-performance-policy",
+                f"evidence-{args.run_id}-profile-workload",
+            ]
+            expected_rows = []
+            for specification in retained_policy.get("requiredMetrics") or []:
+                if not isinstance(specification, dict):
+                    raise SystemExit("invalid retained performance policy metric")
+                name = specification.get("metric")
+                statistic = specification.get("statistic")
+                direction = specification.get("direction")
+                baseline_metric = (baseline_summary.get("canonicalMetrics") or {}).get(name) or {}
+                candidate_metric = (candidate_summary.get("canonicalMetrics") or {}).get(name) or {}
+                before = baseline_metric.get(statistic)
+                after = candidate_metric.get(statistic)
+                if not isinstance(before, (int, float)) or not isinstance(after, (int, float)):
+                    expected_rows.append((name, statistic, "missing", before, after, None, None))
+                    continue
+                if before <= 0:
+                    expected_rows.append((name, statistic, "unusable-baseline", before, after, None, None))
+                    continue
+                ratio = after / before
+                if direction == "lower":
+                    threshold = specification.get("maximumRelativeIncrease")
+                    status = "passed" if isinstance(threshold, (int, float)) and ratio <= 1.0 + threshold else "regressed"
+                    guardrail = {"maximumRelativeIncrease": threshold}
+                elif direction == "higher":
+                    threshold = specification.get("minimumCandidateToBaselineRatio")
+                    status = "passed" if isinstance(threshold, (int, float)) and ratio >= threshold else "regressed"
+                    guardrail = {"minimumCandidateToBaselineRatio": threshold}
+                else:
+                    raise SystemExit("invalid retained performance policy direction")
+                expected_rows.append((name, statistic, status, before, after, ratio, guardrail))
+            if len(metrics) != len(expected_rows):
+                raise SystemExit("SmartPerf v3 metrics differ from retained performance policy")
+            for actual, expected in zip(metrics, expected_rows):
+                name, statistic, status, before, after, ratio, guardrail = expected
+                if (
+                    actual.get("metric") != name
+                    or actual.get("statistic") != statistic
+                    or actual.get("status") != status
+                    or actual.get("baseline") != before
+                    or actual.get("candidate") != after
+                    or actual.get("candidateToBaselineRatio") != ratio
+                    or (guardrail is not None and actual.get("guardrail") != guardrail)
+                ):
+                    raise SystemExit("SmartPerf v3 metric contradicts retained summaries or policy")
+        if performance_schema in {
+            "agentlab.smartperf_comparison.v2",
+            "agentlab.smartperf_comparison.v3",
+        }:
             functional_gate = performance.get("functionalGate")
             if not isinstance(functional_gate, dict):
                 raise SystemExit("SmartPerf v2 comparison requires functionalGate")
@@ -620,8 +714,13 @@ def main():
                 result_path = evidence / f"harmony-{label}-result.json"
                 result = load(result_path)
                 gate = functional_gate.get(label)
-                if not isinstance(result, dict) or result.get("schema") != "agentlab.harmony_emulator_case_result.v2":
-                    raise SystemExit(f"SmartPerf v2 comparison requires retained {label} functional result")
+                expected_result_schema = (
+                    "agentlab.harmony_emulator_case_result.v3"
+                    if performance_schema == "agentlab.smartperf_comparison.v3"
+                    else "agentlab.harmony_emulator_case_result.v2"
+                )
+                if not isinstance(result, dict) or result.get("schema") != expected_result_schema:
+                    raise SystemExit(f"SmartPerf comparison requires retained {label} functional result")
                 if not isinstance(gate, dict) or gate.get("resultSha256") != canonical_json_sha256(result):
                     raise SystemExit(f"{label} functional result digest differs from comparison")
                 if result.get("taskId") != task_id or gate.get("sourceIdentity") != profile.get("sourceIdentity"):
@@ -639,6 +738,13 @@ def main():
                     raise SystemExit(f"{label} functional result profile identity differs from SmartPerf summary")
                 if result.get("profileStatus") != "collected" or result.get("profileSummaryStatus") != "normalized":
                     raise SystemExit(f"{label} functional result does not bind a normalized SmartPerf profile")
+                if performance_schema == "agentlab.smartperf_comparison.v3":
+                    profile_policy = profile.get("performancePolicy") or {}
+                    profile_workload = profile.get("profileWorkload") or {}
+                    if result.get("performancePolicyId") != profile_policy.get("id") or result.get("performancePolicySha256") != profile_policy.get("sha256"):
+                        raise SystemExit(f"{label} functional result policy differs from SmartPerf summary")
+                    if result.get("profileWorkloadId") != profile_workload.get("id") or result.get("profileWorkloadSha256") != profile_workload.get("sha256"):
+                        raise SystemExit(f"{label} functional result workload differs from SmartPerf summary")
                 assessed = (
                     result.get("assessmentStatus") == "assessed"
                     and result.get("infrastructureAvailable") is True
@@ -690,7 +796,7 @@ def main():
         if not metrics or not all(
             isinstance(row, dict)
             and isinstance(row.get("metric"), str)
-            and row.get("status") in {"passed", "regressed", "missing"}
+            and row.get("status") in {"passed", "regressed", "missing", "unusable-baseline"}
             for row in metrics
         ):
             raise SystemExit("invalid SmartPerf comparison metric row")
@@ -730,14 +836,22 @@ def main():
                 f"evidence-{args.run_id}-smartperf-baseline-summary",
                 f"evidence-{args.run_id}-smartperf-candidate-summary",
                 *functional_evidence_ids,
+                *policy_evidence_ids,
                 f"evidence-{args.run_id}-smartperf-comparison",
             ],
             "automaticPromotion": False,
             "absolutePowerThermalUsed": False,
             "nextAction": "maintainer-review-performance-feedback",
+            **({
+                "performancePolicy": performance.get("performancePolicy"),
+                "profileWorkload": performance.get("profileWorkload"),
+            } if performance_schema == "agentlab.smartperf_comparison.v3" else {}),
         })
         if (
-            performance_schema == "agentlab.smartperf_comparison.v2"
+            performance_schema in {
+                "agentlab.smartperf_comparison.v2",
+                "agentlab.smartperf_comparison.v3",
+            }
             and decision == "performance-regression-candidate"
             and (performance.get("functionalGate") or {}).get("passed") is True
         ):
@@ -767,10 +881,15 @@ def main():
                     f"evidence-{args.run_id}-smartperf-baseline-summary",
                     f"evidence-{args.run_id}-smartperf-candidate-summary",
                     *functional_evidence_ids,
+                    *policy_evidence_ids,
                     f"evidence-{args.run_id}-smartperf-comparison",
                 ],
                 "automaticPromotion": False,
                 "absolutePowerThermalUsed": False,
+                **({
+                    "performancePolicy": performance.get("performancePolicy"),
+                    "profileWorkload": performance.get("profileWorkload"),
+                } if performance_schema == "agentlab.smartperf_comparison.v3" else {}),
             })
 
     tables = [{"path": path, "operations": operations} for path, operations in groups.items() if operations]

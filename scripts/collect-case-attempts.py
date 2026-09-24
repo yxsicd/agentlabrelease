@@ -23,7 +23,10 @@ MANIFEST_SCHEMAS = {
     ),
 }
 DECISION_SCHEMA = "agentlab.harness_decision_package.v1"
-EMULATOR_SCHEMA = "agentlab.harmony_emulator_case_result.v2"
+EMULATOR_SCHEMAS = {
+    "agentlab.harmony_emulator_case_result.v2",
+    "agentlab.harmony_emulator_case_result.v3",
+}
 REVISION = re.compile(r"[0-9a-f]{40}")
 
 
@@ -174,11 +177,19 @@ def collect_emulator_attempt(
     case_id: str,
     evidence_dir: pathlib.Path,
     manifest_dir: pathlib.Path,
+    evidence_kind: str,
 ) -> tuple[bool, bool | None, str, dict[str, Any]]:
     result_path = evidence_dir / "result.json"
     result = load_object(result_path, f"{attempt_id} emulator result")
-    if result.get("schema") != EMULATOR_SCHEMA:
+    if result.get("schema") not in EMULATOR_SCHEMAS:
         fail(f"{attempt_id} unsupported emulator result schema")
+    expected_schema = (
+        "agentlab.harmony_emulator_case_result.v3"
+        if evidence_kind == "harmony-emulator-v3"
+        else "agentlab.harmony_emulator_case_result.v2"
+    )
+    if result.get("schema") != expected_schema:
+        fail(f"{attempt_id} emulator result schema contradicts evidenceKind")
     if result.get("taskId") != case_id:
         fail(f"{attempt_id} emulator taskId does not match {case_id}")
     expected_identity = attempt.get("sourceIdentity")
@@ -234,6 +245,50 @@ def collect_emulator_attempt(
     checks_path = evidence_dir / "ui-checks.tsv"
     if checks_path.is_file():
         evidence["uiChecks"] = evidence_ref(checks_path, manifest_dir)
+    if result.get("schema") == "agentlab.harmony_emulator_case_result.v3":
+        policy_path = evidence_dir / "performance-policy.json"
+        workload_path = evidence_dir / "profile-workload.tsv"
+        policy = load_object(policy_path, f"{attempt_id} performance policy")
+        if (
+            policy.get("schema") != "agentlab.harmony_performance_policy.v1"
+            or policy.get("id") != result.get("performancePolicyId")
+            or sha256(policy_path) != result.get("performancePolicySha256")
+        ):
+            fail(f"{attempt_id} performance policy identity mismatch")
+        if not workload_path.is_file():
+            fail(f"{attempt_id} profile workload not found: {workload_path}")
+        workload_ids = [
+            line.split("\t", 1)[1]
+            for line in workload_path.read_text(encoding="utf-8").splitlines()
+            if line.startswith("workload\t")
+        ]
+        if (
+            len(workload_ids) != 1
+            or workload_ids[0] != result.get("profileWorkloadId")
+            or sha256(workload_path) != result.get("profileWorkloadSha256")
+        ):
+            fail(f"{attempt_id} profile workload identity mismatch")
+        evidence["performancePolicy"] = evidence_ref(policy_path, manifest_dir)
+        evidence["profileWorkload"] = evidence_ref(workload_path, manifest_dir)
+        if result.get("profileStatus") == "collected":
+            summary_path = evidence_dir / "smartperf-summary.json"
+            actions_path = evidence_dir / "profile-workload-actions.tsv"
+            summary = load_object(summary_path, f"{attempt_id} SmartPerf summary")
+            if (
+                result.get("profileSummaryStatus") != "normalized"
+                or summary.get("schema") != "agentlab.smartperf_summary.v2"
+                or summary.get("taskId") != result.get("taskId")
+                or summary.get("sourceIdentity") != result.get("sourceIdentity")
+                or summary.get("runId") != result.get("profileRunId")
+                or summary.get("environmentIdentity") != result.get("environmentIdentity")
+                or (summary.get("performancePolicy") or {}).get("sha256") != result.get("performancePolicySha256")
+                or (summary.get("profileWorkload") or {}).get("sha256") != result.get("profileWorkloadSha256")
+            ):
+                fail(f"{attempt_id} SmartPerf summary identity mismatch")
+            if not actions_path.is_file() or not actions_path.read_text(encoding="utf-8").strip():
+                fail(f"{attempt_id} collected profile is missing workload action evidence")
+            evidence["smartperfSummary"] = evidence_ref(summary_path, manifest_dir)
+            evidence["profileWorkloadActions"] = evidence_ref(actions_path, manifest_dir)
     return (
         infrastructure_valid,
         verdict if infrastructure_valid else None,
@@ -310,10 +365,15 @@ def build_input(manifest: dict[str, Any], manifest_dir: pathlib.Path) -> dict[st
                         manifest_dir,
                     )
                 )
-            elif evidence_kind == "harmony-emulator-v2":
+            elif evidence_kind in {"harmony-emulator-v2", "harmony-emulator-v3"}:
                 infrastructure_valid, verdict, verdict_source, evidence = (
                     collect_emulator_attempt(
-                        attempt, attempt_id, case_id, evidence_dir, manifest_dir
+                        attempt,
+                        attempt_id,
+                        case_id,
+                        evidence_dir,
+                        manifest_dir,
+                        evidence_kind,
                     )
                 )
             else:

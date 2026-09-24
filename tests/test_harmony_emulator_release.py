@@ -8,6 +8,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "release/alharmony/harmony-emulator-linux-x64-26.0.0.821.json"
 INSTALLER = ROOT / "scripts/agentlab-harmony-emulator.sh"
 SCENARIO = ROOT / "examples/harmony-emulator/tutu-cookie-dismiss.ui"
+PROFILE_WORKLOAD = ROOT / "examples/harmony-emulator/tutu-scroll.profile"
+PERFORMANCE_POLICY = ROOT / "examples/harmony-emulator/emulator-cpu-memory-relative.performance.json"
 ASSET_MODEL = ROOT / "crates/agentlab_code_analysis/src/asset_model.rs"
 
 
@@ -101,6 +103,28 @@ class HarmonyEmulatorReleaseTests(unittest.TestCase):
         self.assertIn('"profileSummaryStatus":"%s"', source)
         self.assertIn('infrastructure_failure "UI layout dump failed"', source)
         self.assertIn('oracle_failure "UI oracle check failed: $a"', source)
+
+    def test_run_case_binds_policy_and_dynamic_workload_to_profile_window(self) -> None:
+        source = INSTALLER.read_text(encoding="utf-8")
+        workload = PROFILE_WORKLOAD.read_text(encoding="utf-8")
+        policy = json.loads(PERFORMANCE_POLICY.read_text(encoding="utf-8"))
+        self.assertIn("--performance-policy", source)
+        self.assertIn("--profile-workload", source)
+        self.assertIn("run_profile_workload", source)
+        self.assertIn("profile-workload-actions.tsv", source)
+        self.assertIn("agentlab.harmony_emulator_case_result.v3", source)
+        self.assertTrue(workload.startswith("schema\tagentlab.harmony_profile_workload.v1\n"))
+        self.assertIn("swipe\t", workload)
+        self.assertEqual(policy["schema"], "agentlab.harmony_performance_policy.v1")
+        self.assertEqual(
+            [row["metric"] for row in policy["requiredMetrics"]],
+            ["appCpuUsagePercent", "appPssKiB"],
+        )
+        self.assertIn("fps", policy["observedOnlyMetrics"])
+        self.assertEqual(
+            policy["authority"]["absolutePowerThermal"],
+            "unavailable-on-emulator",
+        )
 
     def test_asset_model_exports_harmony_evaluation_instances(self) -> None:
         source = ASSET_MODEL.read_text(encoding="utf-8")

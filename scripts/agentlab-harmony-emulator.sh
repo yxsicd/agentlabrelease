@@ -163,6 +163,8 @@ run_case() {
   source_id=
   profile_run_id=
   environment_id=
+  performance_policy=
+  profile_workload=
   boot_mode=coldboot
   profile_samples=3
   keep_running=false
@@ -184,6 +186,8 @@ run_case() {
       --source-id) [ "$#" -ge 2 ] || die "--source-id requires an id"; source_id=$2; shift 2 ;;
       --profile-run-id) [ "$#" -ge 2 ] || die "--profile-run-id requires an id"; profile_run_id=$2; shift 2 ;;
       --environment-id) [ "$#" -ge 2 ] || die "--environment-id requires an id"; environment_id=$2; shift 2 ;;
+      --performance-policy) [ "$#" -ge 2 ] || die "--performance-policy requires a path"; performance_policy=$2; shift 2 ;;
+      --profile-workload) [ "$#" -ge 2 ] || die "--profile-workload requires a path"; profile_workload=$2; shift 2 ;;
       --boot-mode) [ "$#" -ge 2 ] || die "--boot-mode requires a value"; boot_mode=$2; shift 2 ;;
       --profile-samples) [ "$#" -ge 2 ] || die "--profile-samples requires a count"; profile_samples=$2; shift 2 ;;
       --keep-running) keep_running=true; shift ;;
@@ -242,6 +246,13 @@ run_case() {
     [ -f "$SCRIPT_DIR/summarize-smartperf.py" ] ||
       die "SmartPerf normalizer not found beside runner"
   fi
+  if [ -n "$performance_policy$profile_workload" ]; then
+    [ -n "$profile_run_id" ] || die "performance policy and workload require profile identity"
+    [ -n "$performance_policy" ] && [ -n "$profile_workload" ] ||
+      die "--performance-policy and --profile-workload must be supplied together"
+    [ -f "$performance_policy" ] || die "performance policy not found: $performance_policy"
+    [ -f "$profile_workload" ] || die "profile workload not found: $profile_workload"
+  fi
   [ ! -e "$output" ] || die "refusing to overwrite existing output: $output"
   preflight
   mkdir -p "$output"
@@ -253,6 +264,27 @@ run_case() {
   printf '%s\n' "$hap_sha" >"$output/hap.sha256"
   if [ -n "$ui_scenario" ]; then
     printf '%s\n' "$scenario_sha" >"$output/ui-scenario.sha256"
+  fi
+  performance_policy_id=
+  performance_policy_sha=
+  profile_workload_id=
+  profile_workload_sha=
+  if [ -n "$performance_policy" ]; then
+    performance_policy_id=$(python3 -c 'import json,sys; v=json.load(open(sys.argv[1])); assert v.get("schema")=="agentlab.harmony_performance_policy.v1" and isinstance(v.get("id"),str) and v["id"] and v.get("requiresWorkload") is True; print(v["id"])' "$performance_policy") ||
+      die "performance policy validation failed"
+    profile_workload_id=$(awk -F '\t' '$1 == "workload" && NF == 2 { print $2 }' "$profile_workload")
+    [ "$(grep -c $'^schema\tagentlab.harmony_profile_workload.v1$' "$profile_workload")" -eq 1 ] ||
+      die "profile workload schema is missing or unsupported"
+    [ "$(grep -c $'^workload\t' "$profile_workload")" -eq 1 ] ||
+      die "profile workload must declare exactly one workload"
+    validate_token "performance policy id" "$performance_policy_id"
+    validate_token "profile workload id" "$profile_workload_id"
+    performance_policy_sha=$(file_sha256 "$performance_policy")
+    profile_workload_sha=$(file_sha256 "$profile_workload")
+    cp -- "$performance_policy" "$output/performance-policy.json"
+    cp -- "$profile_workload" "$output/profile-workload.tsv"
+    printf '%s\n' "$performance_policy_sha" >"$output/performance-policy.sha256"
+    printf '%s\n' "$profile_workload_sha" >"$output/profile-workload.sha256"
   fi
   target="127.0.0.1:$hdc_port"
   started=false
@@ -410,6 +442,42 @@ run_case() {
     subject_task_succeeded=true
     failure_class=none
   }
+  run_profile_workload() {
+    workload_action=0
+    while IFS=$'\t' read -r operation a b c d e || [ -n "$operation$a$b$c$d$e" ]; do
+      case "$operation" in
+        ''|'#'*) continue ;;
+        schema)
+          [ "$a" = "agentlab.harmony_profile_workload.v1" ] && [ -z "$b$c$d$e" ] ||
+            infrastructure_failure "invalid profile workload schema line"
+          ;;
+        workload)
+          [ "$a" = "$profile_workload_id" ] && [ -z "$b$c$d$e" ] ||
+            infrastructure_failure "invalid profile workload identity line"
+          ;;
+        sleep)
+          ui_validate_integer "profile workload sleep milliseconds" "$a" 0 60000
+          [ -z "$b$c$d$e" ] || infrastructure_failure "profile workload sleep requires MILLISECONDS"
+          sleep "$(awk -v ms="$a" 'BEGIN { printf "%.3f", ms / 1000 }')"
+          workload_action=$((workload_action + 1))
+          printf '%s\tsleep\t%s\n' "$workload_action" "$a" >>"$output/profile-workload-actions.tsv"
+          ;;
+        swipe)
+          ui_validate_integer "profile workload swipe x1" "$a" 0 10000
+          ui_validate_integer "profile workload swipe y1" "$b" 0 10000
+          ui_validate_integer "profile workload swipe x2" "$c" 0 10000
+          ui_validate_integer "profile workload swipe y2" "$d" 0 10000
+          ui_validate_integer "profile workload swipe duration" "$e" 1 60000
+          "$hdc" -t "$target" shell uitest uiInput swipe "$a" "$b" "$c" "$d" "$e" \
+            >>"$output/profile-workload-input.log" 2>&1 || infrastructure_failure "profile workload swipe failed"
+          workload_action=$((workload_action + 1))
+          printf '%s\tswipe\t%s,%s,%s,%s,%s\n' "$workload_action" "$a" "$b" "$c" "$d" "$e" >>"$output/profile-workload-actions.tsv"
+          ;;
+        *) infrastructure_failure "unsupported profile workload operation: $operation" ;;
+      esac
+    done <"$profile_workload"
+    [ "$workload_action" -gt 0 ] || infrastructure_failure "profile workload has no actions"
+  }
   cleanup_case() {
     rc=$?
     if [ "$started" = true ] && [ "$keep_running" != true ]; then
@@ -418,11 +486,19 @@ run_case() {
     fi
     if [ "$terminal_status" != passed ]; then
       if [ -n "$ui_scenario" ]; then
-        printf '{"schema":"agentlab.harmony_emulator_case_result.v2","status":"failed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","profileRunId":"%s","environmentIdentity":"%s","profileStatus":"%s","profileSummaryStatus":"%s","powerThermalAuthority":"unavailable_on_emulator"}\n' \
+        case_result_schema=agentlab.harmony_emulator_case_result.v2
+        policy_fields=
+        if [ -n "$performance_policy" ]; then
+          case_result_schema=agentlab.harmony_emulator_case_result.v3
+          policy_fields=$(printf ',"performancePolicyId":"%s","performancePolicySha256":"%s","profileWorkloadId":"%s","profileWorkloadSha256":"%s"' \
+            "$performance_policy_id" "$performance_policy_sha" "$profile_workload_id" "$profile_workload_sha")
+        fi
+        printf '{"schema":"%s","status":"failed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","profileRunId":"%s","environmentIdentity":"%s","profileStatus":"%s","profileSummaryStatus":"%s","powerThermalAuthority":"unavailable_on_emulator"%s}\n' \
+          "$case_result_schema" \
           "$task_id" "$source_id" "$instance" "$target" "$bundle" "$ability" "$hap_sha" \
           "$scenario_id" "$scenario_sha" "$oracle_status" "$assessment_status" \
           "$infrastructure_available" "$subject_task_succeeded" "$failure_class" \
-          "$profile_run_id" "$environment_id" "$profile_status" "$profile_summary_status" \
+          "$profile_run_id" "$environment_id" "$profile_status" "$profile_summary_status" "$policy_fields" \
           >"$output/result.json"
       else
         printf '{"schema":"agentlab.harmony_emulator_case_result.v1","status":"failed","instance":"%s","target":"%s","bundle":"%s","ability":"%s"}\n' \
@@ -508,7 +584,17 @@ run_case() {
   done
   [ -n "$screenshot" ] || die "emulator screenshot was not produced"
   file_sha256 "$screenshot" >"$output/screenshot.sha256"
-  if "$hdc" -t "$target" shell SP_daemon -N "$profile_samples" -PKG "$bundle" \
+  if [ -n "$profile_workload" ]; then
+    "$hdc" -t "$target" shell SP_daemon -N "$profile_samples" -PKG "$bundle" \
+      -c -g -t -p -f -r -net -snapshot -d >"$output/smartperf.txt" 2>&1 &
+    smartperf_pid=$!
+    run_profile_workload
+    if wait "$smartperf_pid"; then
+      profile_status=collected
+    else
+      profile_status=unavailable
+    fi
+  elif "$hdc" -t "$target" shell SP_daemon -N "$profile_samples" -PKG "$bundle" \
       -c -g -t -p -f -r -net -snapshot -d >"$output/smartperf.txt" 2>&1; then
     profile_status=collected
   else
@@ -517,7 +603,25 @@ run_case() {
   profile_summary_status=not-requested
   profile_summary_artifact=
   if [ -n "$profile_run_id" ] && [ "$profile_status" = collected ]; then
-    if python3 "$SCRIPT_DIR/summarize-smartperf.py" \
+    if [ -n "$performance_policy" ]; then
+      if python3 "$SCRIPT_DIR/summarize-smartperf.py" \
+        --input "$output/smartperf.txt" \
+        --task-id "$task_id" \
+        --source-identity "$source_id" \
+        --run-id "$profile_run_id" \
+        --environment-identity "$environment_id" \
+        --minimum-samples "$profile_samples" \
+        --performance-policy "$performance_policy" \
+        --profile-workload "$profile_workload" \
+        --output "$output/smartperf-summary.json" \
+        >"$output/smartperf-summary.log" 2>&1; then
+        profile_summary_status=normalized
+        profile_summary_artifact=smartperf-summary.json
+      else
+        profile_summary_status=normalization-failed
+      fi
+    else
+      if python3 "$SCRIPT_DIR/summarize-smartperf.py" \
         --input "$output/smartperf.txt" \
         --task-id "$task_id" \
         --source-identity "$source_id" \
@@ -526,21 +630,32 @@ run_case() {
         --minimum-samples "$profile_samples" \
         --output "$output/smartperf-summary.json" \
         >"$output/smartperf-summary.log" 2>&1; then
-      profile_summary_status=normalized
-      profile_summary_artifact=smartperf-summary.json
-    else
-      profile_summary_status=normalization-failed
+        profile_summary_status=normalized
+        profile_summary_artifact=smartperf-summary.json
+      else
+        profile_summary_status=normalization-failed
+      fi
     fi
   fi
   terminal_status=passed
   if [ -n "$ui_scenario" ]; then
-    printf '{"schema":"agentlab.harmony_emulator_case_result.v2","status":"passed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","profileRunId":"%s","environmentIdentity":"%s","profileStatus":"%s","profileSummaryStatus":"%s","resetAppData":%s,"powerThermalAuthority":"unavailable_on_emulator","artifacts":{"uninstall":"uninstall.log","install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","uiActions":"ui-actions.tsv","uiChecks":"ui-checks.tsv","screenshot":"%s","smartperf":"smartperf.txt","smartperfSummary":"%s"}}\n' \
+    case_result_schema=agentlab.harmony_emulator_case_result.v2
+    policy_fields=
+    profile_workload_artifact=
+    if [ -n "$performance_policy" ]; then
+      case_result_schema=agentlab.harmony_emulator_case_result.v3
+      policy_fields=$(printf ',"performancePolicyId":"%s","performancePolicySha256":"%s","profileWorkloadId":"%s","profileWorkloadSha256":"%s"' \
+        "$performance_policy_id" "$performance_policy_sha" "$profile_workload_id" "$profile_workload_sha")
+      profile_workload_artifact=',"performancePolicy":"performance-policy.json","profileWorkload":"profile-workload.tsv","profileWorkloadActions":"profile-workload-actions.tsv"'
+    fi
+    printf '{"schema":"%s","status":"passed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","profileRunId":"%s","environmentIdentity":"%s","profileStatus":"%s","profileSummaryStatus":"%s","resetAppData":%s,"powerThermalAuthority":"unavailable_on_emulator"%s,"artifacts":{"uninstall":"uninstall.log","install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","uiActions":"ui-actions.tsv","uiChecks":"ui-checks.tsv","screenshot":"%s","smartperf":"smartperf.txt","smartperfSummary":"%s"%s}}\n' \
+      "$case_result_schema" \
       "$task_id" "$source_id" "$instance" "$target" "$bundle" "$ability" "$hap_sha" \
       "$(cat "$output/screenshot.sha256")" "$scenario_id" "$scenario_sha" "$oracle_status" \
       "$assessment_status" "$infrastructure_available" "$subject_task_succeeded" "$failure_class" \
       "$profile_run_id" "$environment_id" "$profile_status" "$profile_summary_status" \
-      "$reset_app_data" "$(basename "$screenshot")" \
-      "$profile_summary_artifact" >"$output/result.json"
+      "$reset_app_data" "$policy_fields" "$(basename "$screenshot")" \
+      "$profile_summary_artifact" "$profile_workload_artifact" >"$output/result.json"
   else
     printf '{"schema":"agentlab.harmony_emulator_case_result.v1","status":"passed","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","profileStatus":"%s","powerThermalAuthority":"unavailable_on_emulator","artifacts":{"install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","screenshot":"%s","smartperf":"smartperf.txt"}}\n' \
       "$instance" "$target" "$bundle" "$ability" "$hap_sha" \
@@ -562,7 +677,7 @@ usage() {
     '  agentlab-harmony-emulator.sh verify-assets TOOLS_ARCHIVE IMAGE_ARCHIVE' \
     '  agentlab-harmony-emulator.sh verify-install INSTALL_ROOT' \
     '  agentlab-harmony-emulator.sh install --tools PATH --image PATH --root PATH --acknowledge-vendor-agreements' \
-    '  agentlab-harmony-emulator.sh run-case --root INSTALL_ROOT --image-root PATH --instance-path PATH --instance NAME --hdc-port PORT --hap PATH --bundle ID --ability NAME --output PATH [--ui-scenario PATH --task-id ID --source-id ID] [--profile-run-id ID --environment-id ID] [--reset-app-data] [--boot-mode coldboot|reset|snapshot] [--profile-samples N] [--keep-running]' \
+    '  agentlab-harmony-emulator.sh run-case --root INSTALL_ROOT --image-root PATH --instance-path PATH --instance NAME --hdc-port PORT --hap PATH --bundle ID --ability NAME --output PATH [--ui-scenario PATH --task-id ID --source-id ID] [--profile-run-id ID --environment-id ID [--performance-policy PATH --profile-workload PATH]] [--reset-app-data] [--boot-mode coldboot|reset|snapshot] [--profile-samples N] [--keep-running]' \
     '  For an existing vendor layout, replace --root with --tools-root PATH.'
 }
 

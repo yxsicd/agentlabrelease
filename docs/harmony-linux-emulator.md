@@ -57,6 +57,9 @@ a screenshot and SmartPerf proxy samples, writes
 `--keep-running` is explicit. Supplying a bounded UI scenario upgrades the
 result to `agentlab.harmony_emulator_case_result.v2` and records task/source
 identity, scenario identity, actions and Oracle checks.
+Supplying an exact performance policy and profile workload upgrades it again to
+`agentlab.harmony_emulator_case_result.v3`; the runner hashes and retains both
+inputs and executes the workload concurrently with the SmartPerf window.
 
 Example:
 
@@ -118,7 +121,10 @@ scripts/agentlab-harmony-emulator.sh run-case \
   --task-id harmony-tutu-cookie-dismiss \
   --source-id artifact-sha256:<hap-sha256> \
   --profile-run-id candidate-001 \
-  --environment-id hwlinux:emulator-26.0.0.400:phone-x86-class-a
+  --environment-id hwlinux:emulator-26.0.0.821:phone-x86-class-a \
+  --performance-policy examples/harmony-emulator/emulator-cpu-memory-relative.performance.json \
+  --profile-workload examples/harmony-emulator/tutu-scroll.profile \
+  --profile-samples 12
 ```
 
 The runner retains `smartperf.txt` and creates `smartperf-summary.json`. The
@@ -144,11 +150,16 @@ python3 scripts/compare-smartperf.py \
   --output candidate/smartperf-comparison.json
 ```
 
-Default guardrails require at least 90% of baseline median FPS and limit mean
-CPU growth to 20%, mean PSS growth to 15%, and frame-interval p95 growth to 20%.
-Missing required metrics or an environment mismatch is insufficient evidence,
-not a pass or failure. A detected regression is a review candidate and never an
-automatic case rejection or release decision. The function-bound v2 comparison
+Legacy v1/v2 summaries use the original fixed FPS, CPU, PSS and frame-interval
+guardrails. Policy-bound v2 summaries and v3 comparisons instead use only the
+exact policy's `requiredMetrics`. The checked-in emulator policy requires mean
+CPU (maximum 20% increase) and mean PSS (maximum 15% increase); FPS,
+frame interval and GPU load remain observed-only because the current Linux
+emulator/SP_daemon combination has not produced usable frame telemetry. This is
+capability scoping, not a claim that missing frame, power or thermal data passed.
+Missing policy-required metrics or an environment, policy or workload mismatch
+is insufficient evidence, not a pass or failure. A detected regression is a
+review candidate and never an automatic case rejection or release decision. The function-bound comparison
 requires both exact Harmony results to describe assessed, infrastructure-valid,
 UI-Oracle-passing runs for the same task and HAP identities as the performance
 summaries. If either functional gate fails, the profiles are not comparable and
@@ -160,7 +171,9 @@ retain the exact inputs as `smartperf-baseline-summary.json` and
 `harmony-baseline-result.json` and `harmony-candidate-result.json`, beside
 `smartperf-comparison.json`. The transaction builder recomputes all canonical
 digests and rejects any task, run, environment, HAP identity, functional verdict
-or authority drift. A functionally passing v2 regression becomes a non-ready,
+or authority drift. For v3, also retain `performance-policy.json` and
+`profile-workload.tsv`; the builder verifies their raw SHA-256 identities against
+both summaries, results and the comparison. A functionally passing v2/v3 regression becomes a non-ready,
 non-promoted `difficulty_point` for maintainer adjudication and repeated
 calibration; a legacy v1 profile-only comparison remains a decision record only.
 
@@ -182,6 +195,28 @@ but the comparison returned `insufficient-comparable-evidence` with
 performance qualification must execute a bounded repeatable dynamic workload
 during the profiling window; it must not reinterpret a static zero-FPS sample
 as either a pass or a regression.
+
+A follow-up 12-sample probe executed ten alternating deterministic swipes during
+the profiling window. Application CPU reacted (mean about 5.83%), proving that
+the workload was active, but all twelve FPS values remained zero and every
+`fpsJitters` field remained empty. Therefore the public v3 contract binds this
+exact workload while gating only CPU/PSS. Frame metrics stay observed-only until
+a separately evidenced environment or instrumentation path makes them usable.
+
+The first full v3 paired canary is retained beside the earlier evidence as
+`baseline-v3-r2`, `candidate-v3` and `smartperf-comparison-v3.json`. Both cold
+boots passed the functional Oracle, retained 21 workload action rows and
+normalized 12 samples under policy SHA256 `667c5704…77ef9` and workload SHA256
+`86a52cb8…2e4c5`. Baseline/candidate mean CPU were 6.4297%/6.2624%; mean PSS
+were 172674/172003 KiB. The comparison is genuinely comparable and reports
+`within-relative-guardrails`; its 3,245-byte SHA256 is
+`bb3ad5cd3e6a84405dee9119c97af8d74a6968181c941b600cc58ea3ed21c7e5`.
+This qualifies the policy-bound CPU/PSS emulator lane only; it does not qualify
+FPS, frame interval, GPU fidelity, absolute power or thermal measurement.
+Case-discrimination collection accepts this evidence only as
+`harmony-emulator-v3` and independently rechecks the retained policy, workload,
+normalized summary and executed-action hashes before carrying the functional
+verdict into scoring.
 
 ## Evaluation-instance export
 
