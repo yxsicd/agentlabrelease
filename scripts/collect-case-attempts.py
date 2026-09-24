@@ -186,6 +186,11 @@ def collect_emulator_attempt(
         fail(f"{attempt_id} sourceIdentity required for emulator evidence")
     if result.get("sourceIdentity") != expected_identity:
         fail(f"{attempt_id} emulator sourceIdentity mismatch")
+    hap_sha256 = result.get("hapSha256")
+    if not isinstance(hap_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", hap_sha256):
+        fail(f"{attempt_id} emulator hapSha256 is invalid")
+    if expected_identity != f"artifact-sha256:{hap_sha256}":
+        fail(f"{attempt_id} emulator sourceIdentity is not bound to hapSha256")
     if result.get("powerThermalAuthority") != "unavailable_on_emulator":
         fail(f"{attempt_id} emulator power/thermal authority is invalid")
 
@@ -193,6 +198,17 @@ def collect_emulator_attempt(
     infrastructure_available = result.get("infrastructureAvailable")
     verdict = result.get("subjectTaskSucceeded")
     if assessment_status == "assessed" and infrastructure_available is True:
+        checks_path = evidence_dir / "ui-checks.tsv"
+        if not checks_path.is_file():
+            fail(f"{attempt_id} assessed emulator run is missing ui-checks.tsv")
+        check_verdicts: list[bool] = []
+        for ordinal, line in enumerate(checks_path.read_text(encoding="utf-8").splitlines(), 1):
+            fields = line.split("\t", 3)
+            if len(fields) != 4 or fields[1] not in {"true", "false"}:
+                fail(f"{attempt_id} malformed UI check line {ordinal}")
+            check_verdicts.append(fields[1] == "true")
+        if not check_verdicts:
+            fail(f"{attempt_id} assessed emulator run has no UI checks")
         if not isinstance(verdict, bool):
             fail(f"{attempt_id} assessed emulator run requires boolean verdict")
         if verdict and not (
@@ -203,6 +219,8 @@ def collect_emulator_attempt(
             result.get("status") == "failed" and result.get("oracleStatus") == "failed"
         ):
             fail(f"{attempt_id} failing emulator verdict contradicts result status")
+        if verdict != all(check_verdicts):
+            fail(f"{attempt_id} emulator verdict contradicts retained UI checks")
         infrastructure_valid = True
     elif (
         assessment_status == "infrastructure-unavailable"
@@ -212,11 +230,15 @@ def collect_emulator_attempt(
         infrastructure_valid = False
     else:
         fail(f"{attempt_id} emulator assessment fields are inconsistent")
+    evidence = {"emulatorResult": evidence_ref(result_path, manifest_dir)}
+    checks_path = evidence_dir / "ui-checks.tsv"
+    if checks_path.is_file():
+        evidence["uiChecks"] = evidence_ref(checks_path, manifest_dir)
     return (
         infrastructure_valid,
         verdict if infrastructure_valid else None,
         "operator-owned-harmony-ui-oracle",
-        {"emulatorResult": evidence_ref(result_path, manifest_dir)},
+        evidence,
     )
 
 

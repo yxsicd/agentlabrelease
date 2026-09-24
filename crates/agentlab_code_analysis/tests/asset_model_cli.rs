@@ -284,14 +284,15 @@ fn exports_harmony_device_checks_and_raw_evidence() {
         fs::write(seed.join(format!("{table}.jsonl")), "").unwrap();
     }
     let evidence = root.join("evidence");
+    let hap_sha256 = "a".repeat(64);
     write(
         &evidence.join("result.json"),
         json!({
             "schema":"agentlab.harmony_emulator_case_result.v2",
             "status":"passed",
             "taskId":"harmony-case",
-            "sourceIdentity":"artifact-sha256:hap",
-            "hapSha256":"hap",
+            "sourceIdentity":format!("artifact-sha256:{hap_sha256}"),
+            "hapSha256":hap_sha256,
             "scenarioId":"dismiss",
             "scenarioSha256":"scenario",
             "oracleStatus":"passed",
@@ -315,7 +316,7 @@ fn exports_harmony_device_checks_and_raw_evidence() {
         json!({
             "schema":"agentlab.smartperf_summary.v1",
             "taskId":"harmony-case",
-            "sourceIdentity":"artifact-sha256:hap",
+            "sourceIdentity":format!("artifact-sha256:{}", "a".repeat(64)),
             "runId":"harmony",
             "environmentIdentity":"hwlinux:emulator-26.0.0.400:class-a",
             "sampleCount":3,
@@ -376,5 +377,21 @@ fn exports_harmony_device_checks_and_raw_evidence() {
     assert!(files
         .iter()
         .all(|row| row["archiveUri"] == "file:///evidence"));
+    let mut tampered: Value =
+        serde_json::from_slice(&fs::read(evidence.join("result.json")).unwrap()).unwrap();
+    tampered["sourceIdentity"] = json!(format!("artifact-sha256:{}", "b".repeat(64)));
+    write(&evidence.join("result.json"), tampered);
+    let rejected = Command::new(env!("CARGO_BIN_EXE_agentlab-asset-model"))
+        .args([
+            seed.as_os_str(),
+            root.join("tampered").as_os_str(),
+            std::ffi::OsStr::new("file:///evidence"),
+            std::ffi::OsStr::new(&format!("harmony={}", evidence.display())),
+        ])
+        .output()
+        .unwrap();
+    assert!(!rejected.status.success());
+    assert!(String::from_utf8_lossy(&rejected.stderr)
+        .contains("Harmony emulator sourceIdentity must bind the exact HAP"));
     fs::remove_dir_all(root).unwrap();
 }

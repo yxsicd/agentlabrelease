@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import pathlib
 import subprocess
 import sys
@@ -34,16 +35,33 @@ class FlywheelPerformanceFeedbackTests(unittest.TestCase):
             capture_output=True,
         )
 
-    def report(self) -> dict:
+    def summary(self, run_id: str, digest: str, fps: float) -> dict:
+        return {
+            "schema": "agentlab.smartperf_summary.v1",
+            "taskId": "case-ui-performance",
+            "sourceIdentity": f"artifact-sha256:{digest}",
+            "runId": run_id,
+            "environmentIdentity": "hwlinux:emulator-26.0.0.400:class-a",
+            "sampleCount": 3,
+            "profileValid": True,
+            "canonicalMetrics": {"fps": {"count": 3, "p50": fps}},
+            "authority": {"absolutePowerThermal": "unavailable-on-emulator"},
+        }
+
+    def digest(self, value: dict) -> str:
+        raw = json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
+        return hashlib.sha256(raw).hexdigest()
+
+    def report(self, baseline: dict, candidate: dict) -> dict:
         return {
             "schema": "agentlab.smartperf_comparison.v1",
             "taskId": "case-ui-performance",
             "baselineRunId": "baseline",
-            "baselineSourceIdentity": "artifact:baseline",
-            "baselineSummarySha256": "a" * 64,
+            "baselineSourceIdentity": baseline["sourceIdentity"],
+            "baselineSummarySha256": self.digest(baseline),
             "candidateRunId": "candidate",
-            "candidateSourceIdentity": "artifact:candidate",
-            "candidateSummarySha256": "b" * 64,
+            "candidateSourceIdentity": candidate["sourceIdentity"],
+            "candidateSummarySha256": self.digest(candidate),
             "environmentIdentity": "hwlinux:emulator-26.0.0.400:class-a",
             "comparable": True,
             "incomparabilityReasons": [],
@@ -66,7 +84,7 @@ class FlywheelPerformanceFeedbackTests(unittest.TestCase):
             },
         }
 
-    def prepare(self, root: pathlib.Path, report: dict) -> pathlib.Path:
+    def prepare(self, root: pathlib.Path, mutate=None) -> pathlib.Path:
         evidence = root / "evidence"
         evidence.mkdir()
         (evidence / "summary.json").write_text(
@@ -78,6 +96,13 @@ class FlywheelPerformanceFeedbackTests(unittest.TestCase):
                 }
             )
         )
+        baseline = self.summary("baseline", "a" * 64, 60.0)
+        candidate = self.summary("candidate", "b" * 64, 40.0)
+        report = self.report(baseline, candidate)
+        if mutate:
+            mutate(report, baseline, candidate)
+        (evidence / "smartperf-baseline-summary.json").write_text(json.dumps(baseline))
+        (evidence / "smartperf-candidate-summary.json").write_text(json.dumps(candidate))
         (evidence / "smartperf-comparison.json").write_text(json.dumps(report))
         return evidence
 
@@ -85,7 +110,7 @@ class FlywheelPerformanceFeedbackTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             root = pathlib.Path(raw)
             output = root / "transaction.json"
-            completed = self.run_builder(self.prepare(root, self.report()), output)
+            completed = self.run_builder(self.prepare(root), output)
             self.assertEqual(completed.returncode, 0, completed.stderr)
             payload = json.loads(output.read_text())
             tables = {
@@ -101,8 +126,8 @@ class FlywheelPerformanceFeedbackTests(unittest.TestCase):
             self.assertEqual(decisions[0]["decision"], "performance-regression-candidate")
             self.assertFalse(decisions[0]["automaticPromotion"])
             self.assertFalse(decisions[0]["absolutePowerThermalUsed"])
-            self.assertEqual(decisions[0]["baselineSummarySha256"], "a" * 64)
-            self.assertTrue(decisions[0]["evidenceIds"])
+            self.assertEqual(len(decisions[0]["baselineSummarySha256"]), 64)
+            self.assertEqual(len(decisions[0]["evidenceIds"]), 3)
             self.assertTrue(
                 any(
                     row["kind"] == "smartperf-comparison"
@@ -113,13 +138,27 @@ class FlywheelPerformanceFeedbackTests(unittest.TestCase):
     def test_tampered_decision_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = pathlib.Path(raw)
-            report = self.report()
-            report["decision"] = "within-relative-guardrails"
+            def mutate(report, _baseline, _candidate):
+                report["decision"] = "within-relative-guardrails"
+
             completed = self.run_builder(
-                self.prepare(root, report), root / "transaction.json"
+                self.prepare(root, mutate), root / "transaction.json"
             )
             self.assertNotEqual(completed.returncode, 0)
             self.assertIn("contradicts comparison metrics", completed.stderr)
+
+    def test_tampered_candidate_summary_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+
+            def mutate(_report, _baseline, candidate):
+                candidate["canonicalMetrics"]["fps"]["p50"] = 55.0
+
+            completed = self.run_builder(
+                self.prepare(root, mutate), root / "transaction.json"
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("candidate SmartPerf summary digest differs", completed.stderr)
 
 
 if __name__ == "__main__":

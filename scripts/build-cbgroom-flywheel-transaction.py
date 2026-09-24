@@ -26,6 +26,11 @@ def sha256(path: Path):
     return h.hexdigest()
 
 
+def canonical_json_sha256(value):
+    raw = json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
+    return hashlib.sha256(raw).hexdigest()
+
+
 def stable_uuid(*parts: str):
     return str(uuid.uuid5(uuid.NAMESPACE_URL, "agentlab://" + "/".join(parts)))
 
@@ -118,6 +123,8 @@ def main():
         ("multi-repo-construction-receipt.json", "multi-repo-construction-receipt"),
         ("multi-repo-construction-quality.json", "multi-repo-construction-quality"),
         ("case-discrimination-report.json", "case-discrimination-report"),
+        ("smartperf-baseline-summary.json", "smartperf-baseline-summary"),
+        ("smartperf-candidate-summary.json", "smartperf-candidate-summary"),
         ("smartperf-comparison.json", "smartperf-comparison"),
         ("environment-fingerprint.json", "environment-fingerprint"),
     ):
@@ -467,6 +474,37 @@ def main():
         comparable = performance.get("comparable")
         if not isinstance(task_id, str) or not task_id or not isinstance(metrics, list):
             raise SystemExit("invalid SmartPerf comparison identity or metrics")
+        baseline_summary = load(evidence / "smartperf-baseline-summary.json")
+        candidate_summary = load(evidence / "smartperf-candidate-summary.json")
+        if not isinstance(baseline_summary, dict) or not isinstance(candidate_summary, dict):
+            raise SystemExit("SmartPerf comparison requires retained baseline and candidate summaries")
+        for label, profile in (
+            ("baseline", baseline_summary),
+            ("candidate", candidate_summary),
+        ):
+            if profile.get("schema") != "agentlab.smartperf_summary.v1":
+                raise SystemExit(f"unsupported {label} SmartPerf summary schema")
+            source_identity = profile.get("sourceIdentity")
+            if not isinstance(source_identity, str) or not re.fullmatch(
+                r"artifact-sha256:[0-9a-f]{64}", source_identity
+            ):
+                raise SystemExit(f"{label} SmartPerf summary requires exact HAP identity")
+            if profile.get("taskId") != task_id:
+                raise SystemExit(f"{label} SmartPerf summary task differs from comparison")
+            if profile.get("environmentIdentity") != performance.get("environmentIdentity"):
+                raise SystemExit(f"{label} SmartPerf summary environment differs from comparison")
+            if (profile.get("authority") or {}).get("absolutePowerThermal") != "unavailable-on-emulator":
+                raise SystemExit(f"{label} SmartPerf summary overclaims power or thermal authority")
+        for label, profile in (
+            ("baseline", baseline_summary),
+            ("candidate", candidate_summary),
+        ):
+            if profile.get("runId") != performance.get(f"{label}RunId"):
+                raise SystemExit(f"{label} SmartPerf summary run differs from comparison")
+            if profile.get("sourceIdentity") != performance.get(f"{label}SourceIdentity"):
+                raise SystemExit(f"{label} SmartPerf summary source differs from comparison")
+            if canonical_json_sha256(profile) != performance.get(f"{label}SummarySha256"):
+                raise SystemExit(f"{label} SmartPerf summary digest differs from comparison")
         source_revision = summary.get("sourceRevision")
         if not isinstance(source_revision, str) or not REVISION.fullmatch(source_revision):
             raise SystemExit("SmartPerf feedback requires exact run sourceRevision")
@@ -513,7 +551,11 @@ def main():
             "comparable": comparable,
             "decision": decision,
             "metrics": metrics,
-            "evidenceIds": [f"evidence-{args.run_id}-smartperf-comparison"],
+            "evidenceIds": [
+                f"evidence-{args.run_id}-smartperf-baseline-summary",
+                f"evidence-{args.run_id}-smartperf-candidate-summary",
+                f"evidence-{args.run_id}-smartperf-comparison",
+            ],
             "automaticPromotion": False,
             "absolutePowerThermalUsed": False,
             "nextAction": "maintainer-review-performance-feedback",

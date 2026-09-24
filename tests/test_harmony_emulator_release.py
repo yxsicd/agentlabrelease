@@ -95,6 +95,7 @@ class HarmonyEmulatorReleaseTests(unittest.TestCase):
         self.assertIn("--profile-run-id", source)
         self.assertIn("--environment-id", source)
         self.assertIn("summarize-smartperf.py", source)
+        self.assertIn('[ "$source_id" = "artifact-sha256:$hap_sha" ]', source)
         self.assertIn('"profileSummaryStatus":"%s"', source)
         self.assertIn('infrastructure_failure "UI layout dump failed"', source)
         self.assertIn('oracle_failure "UI oracle check failed: $a"', source)
@@ -106,6 +107,7 @@ class HarmonyEmulatorReleaseTests(unittest.TestCase):
         self.assertIn('"subjectTaskSucceeded":result["subjectTaskSucceeded"]', source)
         self.assertIn("operator-owned-device-runner", source)
         self.assertIn("operator-owned-ui-oracle", source)
+        self.assertIn("sourceIdentity must bind the exact HAP", source)
         self.assertIn('"evidence_files"', source)
 
     def test_manifest_claims_only_the_newly_qualified_case_scope(self) -> None:

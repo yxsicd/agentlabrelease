@@ -153,6 +153,25 @@ fn phase_for(path: &str) -> String {
 }
 
 fn harmony_instance(root: &Path, run: &str, archive: &str, result: Value) -> Tables {
+    let hap_sha256 = result["hapSha256"]
+        .as_str()
+        .expect("Harmony emulator result requires hapSha256");
+    assert!(
+        hap_sha256.len() == 64
+            && hap_sha256
+                .bytes()
+                .all(|value| value.is_ascii_hexdigit() && !value.is_ascii_uppercase()),
+        "Harmony emulator hapSha256 must be lowercase SHA-256"
+    );
+    assert_eq!(
+        result["sourceIdentity"],
+        format!("artifact-sha256:{hap_sha256}"),
+        "Harmony emulator sourceIdentity must bind the exact HAP"
+    );
+    assert_eq!(
+        result["powerThermalAuthority"], "unavailable_on_emulator",
+        "Harmony emulator result must not claim power or thermal authority"
+    );
     let mut tables = Tables::new();
     for name in [
         "runs",
@@ -269,6 +288,7 @@ fn harmony_instance(root: &Path, run: &str, archive: &str, result: Value) -> Tab
         );
     }
     let checks = root.join("ui-checks.tsv");
+    let mut ui_check_verdicts = Vec::new();
     if checks.exists() {
         for (line_number, line) in fs::read_to_string(&checks).unwrap().lines().enumerate() {
             let fields: Vec<&str> = line.splitn(4, '\t').collect();
@@ -283,6 +303,7 @@ fn harmony_instance(root: &Path, run: &str, archive: &str, result: Value) -> Tab
                 "Malformed UI check outcome on line {}",
                 line_number + 1
             );
+            ui_check_verdicts.push(fields[1] == "true");
             put(
                 &mut tables,
                 "checks",
@@ -299,6 +320,31 @@ fn harmony_instance(root: &Path, run: &str, archive: &str, result: Value) -> Tab
                 }),
             );
         }
+    }
+    if result["assessmentStatus"] == "assessed" {
+        assert_eq!(result["infrastructureAvailable"], true);
+        assert!(result["subjectTaskSucceeded"].is_boolean());
+        assert!(
+            !ui_check_verdicts.is_empty(),
+            "assessed Harmony emulator result requires retained UI checks"
+        );
+        let aggregate = ui_check_verdicts.iter().all(|value| *value);
+        assert_eq!(
+            result["subjectTaskSucceeded"], aggregate,
+            "Harmony emulator verdict must match retained UI checks"
+        );
+        assert_eq!(
+            oracle_passed, aggregate,
+            "Harmony emulator Oracle status must match retained UI checks"
+        );
+        assert_eq!(
+            functional_passed, aggregate,
+            "Harmony emulator status must match retained UI checks"
+        );
+    } else {
+        assert_eq!(result["assessmentStatus"], "infrastructure-unavailable");
+        assert_eq!(result["infrastructureAvailable"], false);
+        assert!(result["subjectTaskSucceeded"].is_null());
     }
     for path in files(root) {
         let rel = relative(&path, root);

@@ -176,6 +176,10 @@ class CollectCaseAttemptsTests(unittest.TestCase):
                 "powerThermalAuthority": "unavailable_on_emulator",
             },
         )
+        if assessed:
+            (root / "runs" / attempt_id / "ui-checks.tsv").write_text(
+                f"visible\t{'true' if passed else 'false'}\tassert-text\tExpected\n"
+            )
         return source_identity
 
     def test_collected_evidence_flows_into_eligible_score(self) -> None:
@@ -384,6 +388,59 @@ class CollectCaseAttemptsTests(unittest.TestCase):
                                 "evidenceKind": "harmony-emulator-v2",
                                 "sourceIdentity": "artifact-sha256:" + "c" * 64,
                                 "evidence": "runs/emulator-drift",
+                            }
+                        ]
+                    ),
+                    root.resolve(),
+                )
+
+    def test_emulator_source_identity_must_bind_hap_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            self.write_calibration(root)
+            identity = self.write_emulator_result(
+                root, "emulator-hap-drift", passed=True, infrastructure=True
+            )
+            result_path = root / "runs/emulator-hap-drift/result.json"
+            result = json.loads(result_path.read_text())
+            result["hapSha256"] = "d" * 64
+            self.write_json(result_path, result)
+            with self.assertRaisesRegex(ValueError, "not bound to hapSha256"):
+                COLLECTOR.build_input(
+                    self.manifest(
+                        [
+                            {
+                                "attemptId": "emulator-hap-drift",
+                                "participantId": "candidate",
+                                "evidenceKind": "harmony-emulator-v2",
+                                "sourceIdentity": identity,
+                                "evidence": "runs/emulator-hap-drift",
+                            }
+                        ]
+                    ),
+                    root.resolve(),
+                )
+
+    def test_emulator_verdict_must_match_retained_ui_checks(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            self.write_calibration(root)
+            identity = self.write_emulator_result(
+                root, "emulator-oracle-drift", passed=True, infrastructure=True
+            )
+            (root / "runs/emulator-oracle-drift/ui-checks.tsv").write_text(
+                "visible\tfalse\tassert-text\tExpected\n"
+            )
+            with self.assertRaisesRegex(ValueError, "contradicts retained UI checks"):
+                COLLECTOR.build_input(
+                    self.manifest(
+                        [
+                            {
+                                "attemptId": "emulator-oracle-drift",
+                                "participantId": "candidate",
+                                "evidenceKind": "harmony-emulator-v2",
+                                "sourceIdentity": identity,
+                                "evidence": "runs/emulator-oracle-drift",
                             }
                         ]
                     ),

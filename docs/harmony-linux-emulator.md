@@ -95,7 +95,11 @@ Version 2 results also expose `assessmentStatus`, `infrastructureAvailable`,
 assessed task failure. Boot, HDC, layout-transfer and input-control failures are
 infrastructure failures and carry a null task verdict. This distinction is
 preserved when `collect-case-attempts.py` ingests emulator attempts for
-cross-participant discrimination scoring.
+cross-participant discrimination scoring. For every v2 run, `--source-id` must
+be exactly `artifact-sha256:<actual HAP SHA-256>`; the runner, attempt collector
+and evaluation-instance exporter all reject a source/HAP mismatch. Assessed
+results must also retain at least one valid `ui-checks.tsv` row, and its aggregate
+must equal both `oracleStatus` and `subjectTaskSucceeded`.
 
 The output directory is immutable-by-convention: the runner refuses to
 overwrite it. `result.json` references the raw install, bundle, launch, process,
@@ -139,7 +143,11 @@ Default guardrails require at least 90% of baseline median FPS and limit mean
 CPU growth to 20%, mean PSS growth to 15%, and frame-interval p95 growth to 20%.
 Missing required metrics or an environment mismatch is insufficient evidence,
 not a pass or failure. A detected regression is a review candidate and never an
-automatic case rejection or release decision.
+automatic case rejection or release decision. Before flywheel persistence,
+retain the exact inputs as `smartperf-baseline-summary.json` and
+`smartperf-candidate-summary.json` beside `smartperf-comparison.json`; the
+transaction builder recomputes both canonical summary digests and rejects any
+task, run, environment, HAP identity or authority drift.
 
 ## Evaluation-instance export
 

@@ -246,6 +246,10 @@ run_case() {
   preflight
   mkdir -p "$output"
   hap_sha=$(file_sha256 "$hap")
+  if [ -n "$ui_scenario" ]; then
+    [ "$source_id" = "artifact-sha256:$hap_sha" ] ||
+      die "--source-id must equal artifact-sha256:<exact HAP SHA-256>"
+  fi
   printf '%s\n' "$hap_sha" >"$output/hap.sha256"
   if [ -n "$ui_scenario" ]; then
     printf '%s\n' "$scenario_sha" >"$output/ui-scenario.sha256"
