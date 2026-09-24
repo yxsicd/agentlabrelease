@@ -1,0 +1,105 @@
+name: Multi-repository case review and freeze
+on:
+  workflow_dispatch:
+    inputs:
+      construction_run_id:
+        description: Successful trusted-main model-construction run to review
+        required: true
+        type: string
+      expected_proposal_sha256:
+        description: Exact proposal digest inspected by the reviewer
+        required: true
+        type: string
+      acknowledged_risk_ids:
+        description: Comma-separated proposal risk IDs, exactly as reviewed
+        required: true
+        type: string
+      rationale:
+        description: Why this exact proposal is approved for calibration
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  freeze:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AGENTLAB_ROOT: ${{ runner.temp }}/multi-repo-case-review
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Verify and recover the trusted construction evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.construction_run_id }}
+        run: |
+          mkdir -p "$AGENTLAB_ROOT"
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$AGENTLAB_ROOT/source-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/source-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-model-construction.yml"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-model-construction --dir "$AGENTLAB_ROOT/source"
+      - name: Bind explicit operator review to the exact proposal
+        env:
+          EXPECTED_PROPOSAL_SHA256: ${{ inputs.expected_proposal_sha256 }}
+          REVIEWER: ${{ github.actor }}
+          ACKNOWLEDGED_RISK_IDS: ${{ inputs.acknowledged_risk_ids }}
+          REVIEW_RATIONALE: ${{ inputs.rationale }}
+        run: |
+          python3 scripts/create-multi-repo-review-decision.py \
+            --proposal "$AGENTLAB_ROOT/source/case-plan-proposal.json" \
+            --expected-sha256 "$EXPECTED_PROPOSAL_SHA256" \
+            --reviewer "$REVIEWER" \
+            --acknowledged-risk-ids "$ACKNOWLEDGED_RISK_IDS" \
+            --rationale "$REVIEW_RATIONALE" \
+            --output "$AGENTLAB_ROOT/case-plan-review.json"
+          python3 scripts/review-multi-repo-case-plan.py \
+            --proposal "$AGENTLAB_ROOT/source/case-plan-proposal.json" \
+            --review "$AGENTLAB_ROOT/case-plan-review.json" \
+            --output "$AGENTLAB_ROOT/case-plan.json"
+      - name: Re-run the independent executable calibration
+        run: |
+          mapfile -t identity < <(python3 - <<'PY'
+          import json, os
+          root = os.environ["AGENTLAB_ROOT"] + "/source"
+          difficulty = json.load(open(root + "/analysis/difficulty_candidates.json"))
+          proposal = json.load(open(root + "/case-plan-proposal.json"))
+          print(difficulty["sourceSetSha256"])
+          print(proposal["candidateId"])
+          PY
+          )
+          python3 "$AGENTLAB_ROOT/source/operator-fixture/calibrate.py" \
+            --baseline "$AGENTLAB_ROOT/source/input/repositories" \
+            --reference "$AGENTLAB_ROOT/source/operator-fixture/reference" \
+            --source-set-sha256 "${identity[0]}" \
+            --candidate-id "${identity[1]}" \
+            --output "$AGENTLAB_ROOT/calibration"
+      - name: Freeze only the reviewed and calibrated case
+        run: |
+          python3 scripts/generate-multi-repo-case.py \
+            --difficulty "$AGENTLAB_ROOT/source/analysis/difficulty_candidates.json" \
+            --plan "$AGENTLAB_ROOT/case-plan.json" \
+            --proposal "$AGENTLAB_ROOT/source/case-plan-proposal.json" \
+            --review "$AGENTLAB_ROOT/case-plan-review.json" \
+            --construction-quality "$AGENTLAB_ROOT/source/construction/intent-quality.json" \
+            --calibration "$AGENTLAB_ROOT/calibration/summary.json" \
+            --output "$AGENTLAB_ROOT/evaluation-case.json"
+          sha256sum "$AGENTLAB_ROOT/evaluation-case.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve exact review, calibration and frozen case lineage
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-frozen-case
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/

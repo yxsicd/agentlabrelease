@@ -41,6 +41,26 @@ class MultiRepoModelConstructionTest(unittest.TestCase):
         self.assertEqual(workflow.count("secrets.AGENTLAB_LM_GATEWAY_KEY"), 1)
         self.assertIn("if: always()", workflow)
         self.assertIn("multi-repo-model-construction", workflow)
+        self.assertIn("operator-fixture/oracle.mjs", workflow)
+
+    def test_review_and_campaign_workflows_preserve_trusted_boundaries(self):
+        review = (ROOT / ".github/workflows/multi-repo-case-review.yml").read_text()
+        campaign = (ROOT / ".github/workflows/multi-repo-assessed-campaign.yml").read_text()
+        for workflow in (review, campaign):
+            self.assertIn("github.ref == 'refs/heads/main'", workflow)
+            self.assertIn("github.event_name == 'workflow_dispatch'", workflow)
+            self.assertIn('[[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]', workflow)
+        self.assertNotIn("secrets.AGENTLAB_LM_GATEWAY_KEY", review)
+        self.assertEqual(campaign.count("secrets.AGENTLAB_LM_GATEWAY_KEY"), 1)
+        self.assertIn(".github/workflows/multi-repo-model-construction.yml", review)
+        self.assertIn(".github/workflows/multi-repo-case-review.yml", campaign)
+        self.assertIn('--expected-sha256 "$EXPECTED_PROPOSAL_SHA256"', review)
+        self.assertIn('--rationale "$REVIEW_RATIONALE"', review)
+        self.assertNotIn("--rationale '${{ inputs.rationale }}'", review)
+        self.assertIn("source/operator-fixture/calibrate.py", review)
+        self.assertIn("case/source/operator-fixture/oracle.mjs", campaign)
+        self.assertIn('[[ "$MODEL_A" != "$MODEL_B" ]]', campaign)
+        self.assertIn('--required-trials "$REQUIRED_TRIALS"', campaign)
 
     def test_fixture_script_is_release_manifested(self):
         expected = hashlib.sha256(

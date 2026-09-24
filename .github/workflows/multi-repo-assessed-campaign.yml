@@ -1,0 +1,144 @@
+name: Multi-repository assessed-Agent campaign
+on:
+  workflow_dispatch:
+    inputs:
+      case_run_id:
+        description: Successful trusted-main case-review run to assess
+        required: true
+        type: string
+      model_a:
+        description: First exact LM Gateway model profile
+        required: true
+        default: glm-5.3-flash
+        type: string
+      model_b:
+        description: Second exact LM Gateway model profile
+        required: true
+        type: string
+      provider_route:
+        description: Explicit LM Gateway provider route
+        required: true
+        default: glm
+        type: string
+      trials:
+        description: Independent fresh trials per model
+        type: choice
+        options: ['1', '3']
+        default: '3'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: multi-repo-assessed-campaign
+  cancel-in-progress: false
+
+jobs:
+  assess:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      AGENTLAB_ROOT: ${{ runner.temp }}/multi-repo-assessed-campaign
+      AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
+      AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Verify and recover the trusted frozen case
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.case_run_id }}
+        run: |
+          mkdir -p "$AGENTLAB_ROOT"
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$AGENTLAB_ROOT/source-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/source-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-case-review.yml"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-frozen-case --dir "$AGENTLAB_ROOT/case"
+      - name: Reconstruct the exact reviewed source repositories
+        run: |
+          python3 scripts/prepare-multi-repo-construction-fixture.py \
+            --source "$AGENTLAB_ROOT/case/source/input/repositories" \
+            --output "$AGENTLAB_ROOT/input"
+      - name: Install a separately contained Pi runtime
+        run: |
+          mkdir -p "$RUNNER_TEMP/pi-runtime"
+          cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
+          npm ci --prefix "$RUNNER_TEMP/pi-runtime"
+          "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" --version
+      - name: Run fresh staged attempts for both model profiles
+        env:
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+          AGENTLAB_PI_BINARY: ${{ runner.temp }}/pi-runtime/node_modules/.bin/pi
+          MODEL_A: ${{ inputs.model_a }}
+          MODEL_B: ${{ inputs.model_b }}
+          TRIALS: ${{ inputs.trials }}
+        run: |
+          [[ "$MODEL_A" != "$MODEL_B" ]]
+          mkdir -p "$AGENTLAB_ROOT/runs"
+          for arm in a b; do
+            if [[ "$arm" == a ]]; then model="$MODEL_A"; else model="$MODEL_B"; fi
+            for trial in $(seq 1 "$TRIALS"); do
+              export AGENTLAB_MODEL="$model"
+              output="$AGENTLAB_ROOT/runs/${arm}-${trial}"
+              set +e
+              python3 scripts/run-multi-repo-assessment.py \
+                --case "$AGENTLAB_ROOT/case/evaluation-case.json" \
+                --manifest "$AGENTLAB_ROOT/input/manifest.json" \
+                --oracle "$AGENTLAB_ROOT/case/source/operator-fixture/oracle.mjs" \
+                --participant examples/multi-repo-case/pi-assessed-agent.py \
+                --participant-id "pi-${model}" --output "$output"
+              status=$?
+              set -e
+              [[ -f "$output/summary.json" && -f "$output/decision-package.json" ]]
+              printf '%s\n' "$status" > "$output/runner-exit-code.txt"
+            done
+          done
+      - name: Collect attempts and score repeatable model separation
+        env:
+          MODEL_A: ${{ inputs.model_a }}
+          MODEL_B: ${{ inputs.model_b }}
+          TRIALS: ${{ inputs.trials }}
+          REQUIRED_TRIALS: ${{ inputs.trials }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib
+          root = pathlib.Path(os.environ["AGENTLAB_ROOT"])
+          case = json.loads((root / "case/evaluation-case.json").read_text())
+          attempts = []
+          for arm, model in (("a", os.environ["MODEL_A"]), ("b", os.environ["MODEL_B"])):
+              for trial in range(1, int(os.environ["TRIALS"]) + 1):
+                  attempts.append({"attemptId": f"{arm}-{trial}", "participantId": f"pi-{model}",
+                                   "producerRun": os.environ["GITHUB_RUN_ID"],
+                                   "evidence": f"runs/{arm}-{trial}"})
+          manifest = {"schema": "agentlab.case_attempt_collection.v2",
+                      "sourceSetSha256": case["sourceSetSha256"],
+                      "methodRevision": os.environ["GITHUB_SHA"],
+                      "cases": [{"id": case["id"],
+                                 "calibration": "case/calibration/summary.json",
+                                 "attempts": attempts}]}
+          (root / "attempts.json").write_text(json.dumps(manifest, indent=2) + "\n")
+          PY
+          python3 scripts/collect-case-attempts.py \
+            --manifest "$AGENTLAB_ROOT/attempts.json" \
+            --output "$AGENTLAB_ROOT/discrimination-input.json"
+          python3 scripts/score-case-discrimination.py \
+            --input "$AGENTLAB_ROOT/discrimination-input.json" \
+            --required-trials "$REQUIRED_TRIALS" \
+            --output "$AGENTLAB_ROOT/case-discrimination-report.json"
+          cat "$AGENTLAB_ROOT/case-discrimination-report.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve complete model, source, Oracle and scoring evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-assessed-campaign
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/

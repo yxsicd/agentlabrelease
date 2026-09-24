@@ -89,6 +89,25 @@ jobs:
             --oracle-contract examples/multi-repo-case/oracle-contract.json \
             --output "$AGENTLAB_ROOT/construction/intent-quality.json"
           cat "$AGENTLAB_ROOT/construction/intent-quality.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Build the exact review-required proposal
+        run: |
+          python3 scripts/propose-multi-repo-case-plan.py \
+            --difficulty "$AGENTLAB_ROOT/analysis/difficulty_candidates.json" \
+            --intent "$AGENTLAB_ROOT/construction/intent.json" \
+            --construction-receipt "$AGENTLAB_ROOT/construction/construction-receipt.json" \
+            --quality-report "$AGENTLAB_ROOT/construction/intent-quality.json" \
+            --output "$AGENTLAB_ROOT/case-plan-proposal.json"
+          sha256sum "$AGENTLAB_ROOT/case-plan-proposal.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve the operator-owned calibration fixture
+        run: |
+          mkdir -p "$AGENTLAB_ROOT/operator-fixture"
+          cp -R examples/multi-repo-case/reference "$AGENTLAB_ROOT/operator-fixture/reference"
+          cp examples/multi-repo-case/calibrate.py \
+            examples/multi-repo-case/oracle.mjs \
+            "$AGENTLAB_ROOT/operator-fixture/"
+          sha256sum "$AGENTLAB_ROOT/operator-fixture/calibrate.py" \
+            "$AGENTLAB_ROOT/operator-fixture/oracle.mjs" \
+            >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve source identities, native model capture and gate result
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
