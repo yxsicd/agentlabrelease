@@ -90,6 +90,25 @@ def scenario_contract(path: Path) -> tuple[str, tuple[int, int], str, str]:
     return case_ids[0], taps[0], assertions[0][0], assertions[0][1]
 
 
+def validate_scenario_descriptor(value: object, label: str, base_dir: Path | None) -> tuple[dict, str]:
+    require(isinstance(value, dict), f"{label} is required")
+    descriptor = value
+    scenario_sha = digest(descriptor.get("sha256"), label)
+    require(descriptor.get("assertionKind") in ("assert-text", "assert-no-text"), f"{label} assertionKind differs")
+    require(isinstance(descriptor.get("assertionText"), str) and descriptor["assertionText"], f"{label} assertionText is required")
+    require(str(descriptor.get("expectedPagePath", "")).startswith("pages/"), f"{label} expectedPagePath is required")
+    if base_dir is not None:
+        path = base_dir / str(descriptor.get("path", ""))
+        require(path.is_file(), f"{label} file is missing")
+        require(hashlib.sha256(path.read_bytes()).hexdigest() == scenario_sha, f"{label} file digest differs")
+        case_id, tap, assertion_kind, assertion = scenario_contract(path)
+        require(case_id == descriptor.get("id"), f"{label} case id differs")
+        require(list(tap) == descriptor.get("tap"), f"{label} tap differs")
+        require(assertion_kind == descriptor.get("assertionKind"), f"{label} assertion kind differs")
+        require(assertion == descriptor.get("assertionText"), f"{label} assertion text differs")
+    return descriptor, scenario_sha
+
+
 def validate(value: object, base_dir: Path | None = None) -> dict:
     require(isinstance(value, dict), "calibration must be a JSON object")
     data = value
@@ -140,17 +159,15 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
         require(list(tap) == scenario.get("tap"), "scenario tap differs")
         require(assertion_kind == "assert-text" and assertion == "Example Domain", "scenario must assert target-page visible semantics")
 
-    preservation_scenario = data.get("preservationScenario")
-    require(isinstance(preservation_scenario, dict), "preservationScenario is required")
-    preservation_sha = digest(preservation_scenario.get("sha256"), "preservation scenario")
-    if base_dir is not None:
-        path = base_dir / str(preservation_scenario.get("path", ""))
-        require(path.is_file(), "preservation scenario file is missing")
-        require(hashlib.sha256(path.read_bytes()).hexdigest() == preservation_sha, "preservation scenario file digest differs")
-        case_id, tap, assertion_kind, assertion = scenario_contract(path)
-        require(case_id == preservation_scenario.get("id"), "preservation scenario case id differs")
-        require(list(tap) == preservation_scenario.get("tap"), "preservation scenario tap differs")
-        require(assertion_kind == "assert-no-text" and assertion == "Cache_two", "preservation scenario must assert the Index control is absent")
+    preservation_scenario, preservation_sha = validate_scenario_descriptor(
+        data.get("preservationScenario"), "preservation scenario", base_dir
+    )
+    require(
+        preservation_scenario.get("assertionKind") == "assert-no-text"
+        and preservation_scenario.get("assertionText") == "Cache_two"
+        and preservation_scenario.get("expectedPagePath") == "pages/DomStorage",
+        "preservation scenario must bind the DomStorage route and absent Index control",
+    )
 
     superseded = data.get("supersededOracleFinding")
     require(isinstance(superseded, dict), "supersededOracleFinding is required")
@@ -179,20 +196,61 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
     require(data["baselinePreservationAttempt"].get("observedPagePathAfter") == "pages/DomStorage", "baseline preservation must reach DomStorage")
     require(data["knownFixPreservationAttempt"].get("observedPagePathAfter") == "pages/DomStorage", "known-fix preservation must reach DomStorage")
 
+    additional = data.get("additionalPreservationCases")
+    require(isinstance(additional, list) and len(additional) == 2, "exactly two additional preservation cases are required")
+    preservation_ids = [preservation_scenario.get("id")]
+    positive_visible_semantic_cases = 0
+    for index, item in enumerate(additional):
+        label = f"additional preservation case {index + 1}"
+        require(isinstance(item, dict), f"{label} is required")
+        descriptor, descriptor_sha = validate_scenario_descriptor(item.get("scenario"), f"{label} scenario", base_dir)
+        require(item.get("id") == descriptor.get("id"), f"{label} id differs")
+        preservation_ids.append(str(item.get("id")))
+        baseline_attempt = item.get("baselineAttempt")
+        fixed_attempt = item.get("knownFixAttempt")
+        validate_result(baseline_attempt, f"{label} baseline", hap_sha=baseline_hap, scenario_sha=descriptor_sha, passed=True, check_field="preservationCheckPassed")
+        validate_result(fixed_attempt, f"{label} known fix", hap_sha=known_hap, scenario_sha=descriptor_sha, passed=True, check_field="preservationCheckPassed")
+        expected_page = descriptor.get("expectedPagePath")
+        require(baseline_attempt.get("observedPagePathAfter") == expected_page, f"{label} baseline page differs")
+        require(fixed_attempt.get("observedPagePathAfter") == expected_page, f"{label} known-fix page differs")
+        if descriptor.get("assertionKind") == "assert-text":
+            positive_visible_semantic_cases += 1
+            expected_text = descriptor.get("assertionText")
+            require(baseline_attempt.get("observedVisibleTextAfter") == expected_text, f"{label} baseline visible text differs")
+            require(fixed_attempt.get("observedVisibleTextAfter") == expected_text, f"{label} known-fix visible text differs")
+    require(len(set(preservation_ids)) == len(preservation_ids), "preservation case ids must be unique")
+
+    freshness = data.get("freshness")
+    require(isinstance(freshness, dict), "freshness declaration is required")
+    require(freshness.get("schema") == "agentlab.case_freshness.v1", "unsupported freshness schema")
+    require(freshness.get("constructionMode") == "synthetic-controlled-calibration", "freshness construction mode differs")
+    require(freshness.get("sourceRepositoryVisibility") == "public", "source visibility must remain public")
+    require(freshness.get("historicalIssueMined") is False and freshness.get("historicalFixMined") is False, "controlled calibration must not claim historical mining")
+    require(freshness.get("controlledFixCreatedForCalibration") is True, "controlled fix provenance is required")
+    require(freshness.get("controlledFixPublishedInReleasePr") is True, "publication boundary is required")
+    require(freshness.get("assessedParticipantRun") is False, "calibration must not claim a participant run")
+    require(freshness.get("hiddenOracleDuringCalibration") is True, "calibration Oracle must be hidden during execution")
+    require(freshness.get("modelTrainingExclusionKnown") is False, "training exclusion must not be claimed")
+    require(freshness.get("contaminationRisk") == "unknown-after-publication", "contamination risk must remain conservative")
+    require(freshness.get("eligibleForUnseenAgentDiscrimination") is False, "public calibration cannot claim unseen-Agent discrimination")
+
     matrix = data.get("qualificationMatrix")
     require(isinstance(matrix, dict), "qualificationMatrix is required")
     repairs = matrix.get("repairChecks")
     require(isinstance(repairs, dict) and all(repairs.get(key) is True for key in ("failToPassObserved", "sameScenario", "sameEnvironment")), "repair checks must bind the controlled comparison")
     preservation = matrix.get("preservationChecks")
     require(isinstance(preservation, dict) and all(preservation.get(key) is True for key in ("defined", "passToPassObserved", "sameScenario", "sameEnvironment")), "preservation checks must bind the controlled comparison")
+    require(preservation.get("caseCount") == 3, "preservation matrix case count differs")
+    require(preservation.get("positiveVisibleSemanticCaseCount") == positive_visible_semantic_cases == 2, "preservation semantic case count differs")
+    require(preservation.get("caseIds") == preservation_ids, "preservation matrix case ids differ")
     review = matrix.get("review")
     require(isinstance(review, dict) and review.get("independent") is False and review.get("knownFixAcceptedAsReference") is False, "known fix must remain unreviewed and non-reference")
 
     scope = data.get("qualificationScope")
     require(isinstance(scope, dict), "qualificationScope is required")
-    for field in ("controlledKnownFix", "businessSemanticAssertionObserved", "candidateFailToPass", "preservationPassToPass"):
+    for field in ("controlledKnownFix", "businessSemanticAssertionObserved", "candidateFailToPass", "preservationPassToPass", "freshnessDeclared"):
         require(scope.get(field) is True, f"{field} must be observed")
-    for field in ("businessUiOracleQualified", "independentReview", "referenceRepair", "performanceComparison"):
+    for field in ("businessUiOracleQualified", "independentReview", "referenceRepair", "unseenAgentDiscrimination", "performanceComparison"):
         require(scope.get(field) is False, f"{field} must remain unqualified")
     return data
 

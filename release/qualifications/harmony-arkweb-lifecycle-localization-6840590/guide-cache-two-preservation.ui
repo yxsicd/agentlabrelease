@@ -1,0 +1,6 @@
+schema	agentlab.harmony_ui_scenario.v1
+case	guide-cache-two-preservation
+wait-text	cache-two-visible	30	Cache_two
+tap	628	1081
+sleep	1000
+assert-text	remove-cache-visible	removeCache

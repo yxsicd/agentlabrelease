@@ -120,13 +120,18 @@ smaller than SWE-bench's:
    has a controlled `FAIL_TO_PASS` replay: the frozen baseline stays on
    `pages/Index`, while a one-line page-registration variant reaches
    `pages/UserAgent_four` and renders `Example Domain` under the exact same
-   scenario. A separate DomStorage route now supplies one real `PASS_TO_PASS`
-   preservation check on both HAPs. This is still not a uniform contract:
-   preservation breadth, independent review and reference/gold acceptance
-   remain absent.
-5. Freshness and contamination are not yet explicit case fields. Private
-   repositories reduce public leakage but do not prove that a model has not
-   seen related code, issues or fixes.
+   scenario. Three independent routes now supply real `PASS_TO_PASS`
+   preservation checks on both HAPs: DomStorage binds route identity plus an
+   absent Index control, while UserAgent_one and Cache_two each bind route
+   identity plus positive visible semantics. This is still not a uniform
+   contract: full pre-existing-route coverage, independent review and
+   reference/gold acceptance remain absent.
+5. Freshness and contamination are now explicit case fields. The controlled
+   calibration truthfully records that it was synthesized from public source,
+   published in the release PR and is therefore ineligible for future claims
+   of unseen-Agent discrimination. A new private or held-out case cut is still
+   required for comparative evaluation; private source alone would not prove
+   training exclusion.
 6. SmartPerf currently supplies useful relative CPU and PSS observations on
    the emulator. Absolute power and thermal authority remain unavailable, and
    emulator results are not substitutes for calibrated real-device energy
@@ -161,9 +166,13 @@ smaller than SWE-bench's:
     the first real `PASS_TO_PASS` device check. Its first form—requiring remote
     Web content within two seconds—was rejected after a route-success/content-
     delay failure; the retained form checks that an Index-only control is absent
-    and separately binds the observed `pages/DomStorage` path. This qualifies a
+    and separately binds the observed `pages/DomStorage` path. Two more
+    preservation routes now bind `pages/UserAgent_one` plus visible
+    `getUserAgent`, and `pages/Cache_two` plus visible `removeCache`, on both
+    baseline and known-fix HAPs. The three-route matrix qualifies a stronger
     candidate repair/preservation pair and Oracle-design lesson, not a reviewed
-    reference repair or business UI case. The API 23/24 code-workshop
+    reference repair, exhaustive regression suite, business UI case or unseen
+    Agent benchmark. The API 23/24 code-workshop
     build remains unqualified because matching DevEco 6.1 tooling is absent, and
     the exact `hwlinux` host still has only the emulator/runtime substrate rather
     than a source-build SDK.
@@ -221,12 +230,13 @@ underspecified or contaminated case.
 
 ## Ordered implementation consequences
 
-1. Extend the implemented qualification matrix with evidence-backed
-   freshness/contamination declarations and a stronger independent review
-   receipt; unknown evidence already remains review-required, never qualified.
-2. Broaden `PASS_TO_PASS` coverage beyond the real candidate's single
-   DomStorage route, independently review Oracle breadth/fairness, and only then
-   accept a reference repair. The device campaign must extend, rather than
+1. Cut a new private or held-out case set with the implemented
+   freshness/contamination declaration, keep participant runs blind, and add a
+   stronger independent review receipt; unknown evidence remains
+   review-required, never qualified.
+2. Broaden `PASS_TO_PASS` coverage beyond the candidate's three qualified
+   routes, independently review Oracle breadth/fairness, and only then accept a
+   reference repair. The device campaign must extend, rather than
    overwrite, the static repair/preservation matrix with exact UI and
    performance receipts.
 3. Exercise the reviewed feedback-to-analysis bridge on a real source update
