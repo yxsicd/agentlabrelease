@@ -61,6 +61,9 @@ class MultiRepoModelConstructionTest(unittest.TestCase):
         self.assertIn("case/source/operator-fixture/oracle.mjs", campaign)
         self.assertIn('[[ "$MODEL_A" != "$MODEL_B" ]]', campaign)
         self.assertIn('--required-trials "$REQUIRED_TRIALS"', campaign)
+        self.assertIn("scripts/derive-assessment-feedback.py", campaign)
+        self.assertIn("assessment-feedback-candidates.json", campaign)
+        self.assertIn("multi-repo-evaluation-case.json", campaign)
 
     def test_fixture_script_is_release_manifested(self):
         expected = hashlib.sha256(

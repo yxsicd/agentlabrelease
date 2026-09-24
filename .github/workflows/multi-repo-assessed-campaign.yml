@@ -134,6 +134,41 @@ jobs:
             --required-trials "$REQUIRED_TRIALS" \
             --output "$AGENTLAB_ROOT/case-discrimination-report.json"
           cat "$AGENTLAB_ROOT/case-discrimination-report.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Derive review-required difficulty feedback for the next maintenance cut
+        run: |
+          cp "$AGENTLAB_ROOT/discrimination-input.json" \
+            "$AGENTLAB_ROOT/case-discrimination-input.json"
+          cp "$AGENTLAB_ROOT/case/evaluation-case.json" \
+            "$AGENTLAB_ROOT/multi-repo-evaluation-case.json"
+          cp "$AGENTLAB_ROOT/case/calibration/summary.json" \
+            "$AGENTLAB_ROOT/multi-repo-calibration.json"
+          if [[ -f "$AGENTLAB_ROOT/case/source/construction/construction-receipt.json" ]]; then
+            cp "$AGENTLAB_ROOT/case/source/construction/construction-receipt.json" \
+              "$AGENTLAB_ROOT/multi-repo-construction-receipt.json"
+          fi
+          if [[ -f "$AGENTLAB_ROOT/case/source/construction/intent-quality.json" ]]; then
+            cp "$AGENTLAB_ROOT/case/source/construction/intent-quality.json" \
+              "$AGENTLAB_ROOT/multi-repo-construction-quality.json"
+          fi
+          python3 scripts/derive-assessment-feedback.py \
+            --case "$AGENTLAB_ROOT/multi-repo-evaluation-case.json" \
+            --input "$AGENTLAB_ROOT/case-discrimination-input.json" \
+            --report "$AGENTLAB_ROOT/case-discrimination-report.json" \
+            --output "$AGENTLAB_ROOT/assessment-feedback-candidates.json"
+          python3 - <<'PY'
+          import json, os, pathlib
+          root = pathlib.Path(os.environ["AGENTLAB_ROOT"])
+          case = json.loads((root / "multi-repo-evaluation-case.json").read_text())
+          summary = {
+              "schema": "agentlab.multi_repo_assessed_campaign_summary.v1",
+              "taskId": case["id"],
+              "sourceSetSha256": case["sourceSetSha256"],
+              "methodRevision": os.environ["GITHUB_SHA"],
+              "automaticPromotion": False,
+          }
+          (root / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+          PY
+          cat "$AGENTLAB_ROOT/assessment-feedback-candidates.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve complete model, source, Oracle and scoring evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

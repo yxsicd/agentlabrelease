@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import pathlib
@@ -26,6 +27,11 @@ REVISION = re.compile(r"[0-9a-f]{40}")
 
 def fail(message: str) -> None:
     raise ValueError(message)
+
+
+def canonical_sha256(value: Any) -> str:
+    raw = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(raw).hexdigest()
 
 
 def calibration_passed(calibration: Any) -> bool:
@@ -182,6 +188,7 @@ def build_report(value: dict[str, Any], required_trials: int, threshold: float) 
         "schema": output_schema,
         source_identity_field: source_identity,
         "methodRevision": method_revision,
+        "inputSha256": canonical_sha256(value),
         "denominators": {
             "requiredTrialsPerParticipant": required_trials,
             "minimumParticipantProfiles": 2,

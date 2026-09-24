@@ -71,6 +71,7 @@ def main():
     multi_repo_calibration = load(evidence / "multi-repo-calibration.json") or {}
     multi_repo_construction = load(evidence / "multi-repo-construction-receipt.json") or {}
     multi_repo_construction_quality = load(evidence / "multi-repo-construction-quality.json") or {}
+    assessment_feedback = load(evidence / "assessment-feedback-candidates.json") or {}
     multi_repo_difficulty = difficulty.get("schema") == "agentlab.difficulty_candidates.v2"
     if multi_repo_difficulty:
         source_set_sha256 = difficulty.get("sourceSetSha256")
@@ -123,6 +124,8 @@ def main():
         ("multi-repo-construction-receipt.json", "multi-repo-construction-receipt"),
         ("multi-repo-construction-quality.json", "multi-repo-construction-quality"),
         ("case-discrimination-report.json", "case-discrimination-report"),
+        ("case-discrimination-input.json", "case-discrimination-input"),
+        ("assessment-feedback-candidates.json", "assessment-feedback-candidates"),
         ("smartperf-baseline-summary.json", "smartperf-baseline-summary"),
         ("smartperf-candidate-summary.json", "smartperf-candidate-summary"),
         ("smartperf-comparison.json", "smartperf-comparison"),
@@ -458,6 +461,97 @@ def main():
             }
             decision_row[source_identity_field] = discrimination_source
             insert("decisions", decision_row)
+
+    if assessment_feedback:
+        if assessment_feedback.get("schema") != "agentlab.assessment_feedback_candidates.v1":
+            raise SystemExit("unsupported assessment feedback schema")
+        if (assessment_feedback.get("policy") or {}).get("automaticPromotion") is not False:
+            raise SystemExit("assessment feedback must not auto-promote")
+        feedback_source_set = assessment_feedback.get("sourceSetSha256")
+        feedback_method_revision = assessment_feedback.get("methodRevision")
+        if not isinstance(feedback_source_set, str) or not SHA256.fullmatch(feedback_source_set):
+            raise SystemExit("assessment feedback requires exact sourceSetSha256")
+        if not isinstance(feedback_method_revision, str) or not REVISION.fullmatch(feedback_method_revision):
+            raise SystemExit("assessment feedback requires exact methodRevision")
+        if discrimination:
+            if discrimination.get("sourceSetSha256") != feedback_source_set:
+                raise SystemExit("assessment feedback source set differs from discrimination report")
+            if discrimination.get("methodRevision") != feedback_method_revision:
+                raise SystemExit("assessment feedback method revision differs from discrimination report")
+        if not multi_repo_case:
+            raise SystemExit("assessment feedback requires retained frozen case")
+        if multi_repo_case.get("sourceSetSha256") != feedback_source_set:
+            raise SystemExit("assessment feedback source set differs from frozen case")
+        if canonical_json_sha256(multi_repo_case) != assessment_feedback.get("caseSha256"):
+            raise SystemExit("assessment feedback frozen case digest mismatch")
+        input_path = evidence / "case-discrimination-input.json"
+        if not input_path.is_file():
+            raise SystemExit("assessment feedback requires retained discrimination input")
+        discrimination_input = load(input_path)
+        discrimination_input_sha256 = canonical_json_sha256(discrimination_input)
+        if discrimination_input_sha256 != assessment_feedback.get("discriminationInputSha256"):
+            raise SystemExit("assessment feedback discrimination input digest mismatch")
+        if discrimination.get("inputSha256") != discrimination_input_sha256:
+            raise SystemExit("case discrimination report does not bind retained input")
+        if canonical_json_sha256(discrimination) != assessment_feedback.get("discriminationReportSha256"):
+            raise SystemExit("assessment feedback discrimination report digest mismatch")
+        candidates = assessment_feedback.get("candidates")
+        if not isinstance(candidates, list) or assessment_feedback.get("candidateCount") != len(candidates):
+            raise SystemExit("assessment feedback candidate count mismatch")
+        case_id = assessment_feedback.get("caseId")
+        if not isinstance(case_id, str) or not case_id:
+            raise SystemExit("assessment feedback requires caseId")
+        sources = multi_repo_case.get("sources") if multi_repo_case else None
+        for candidate in candidates:
+            verification = candidate.get("verificationContract") if isinstance(candidate, dict) else None
+            if not isinstance(candidate, dict) or not all(
+                isinstance(candidate.get(field), str) and candidate.get(field)
+                for field in ("id", "dimensionId", "primaryDimension", "mechanism", "stageId", "failureMode")
+            ):
+                raise SystemExit("invalid assessment feedback candidate")
+            if (
+                candidate.get("caseId") != case_id
+                or candidate.get("status") != "candidate"
+                or candidate.get("maturityState") != "candidate"
+                or candidate.get("automaticPromotion") is not False
+                or not isinstance(verification, dict)
+                or verification.get("caseReady") is not False
+            ):
+                raise SystemExit("assessment feedback candidate overclaims readiness")
+            observations = candidate.get("observations")
+            if not isinstance(observations, list) or not observations:
+                raise SystemExit("assessment feedback candidate has no observations")
+            suffix = hashlib.sha256(
+                f"{case_id}|{candidate['id']}|{feedback_source_set}".encode()
+            ).hexdigest()[:16]
+            row = {
+                "id": f"difficulty-{args.run_id}-feedback-{suffix}",
+                "schema": "agentlab.difficulty_point.v1",
+                "taskId": case_id,
+                "dimensionId": candidate["dimensionId"],
+                "primaryDimension": candidate["primaryDimension"],
+                "mechanism": candidate["mechanism"],
+                "status": "candidate",
+                "maturityState": "candidate",
+                "sourceSetSha256": feedback_source_set,
+                "analysisCandidateId": candidate["id"],
+                "stageId": candidate["stageId"],
+                "failureMode": candidate["failureMode"],
+                "participantProfiles": candidate.get("participantProfiles") or [],
+                "observations": observations,
+                "caseSelection": candidate.get("caseSelection") or {},
+                "verificationContract": verification,
+                "methodRevision": feedback_method_revision,
+                "evidenceIds": [
+                    f"evidence-{args.run_id}-case-discrimination-input",
+                    f"evidence-{args.run_id}-case-discrimination-report",
+                    f"evidence-{args.run_id}-assessment-feedback-candidates",
+                ],
+                "automaticPromotion": False,
+            }
+            if sources:
+                row["sources"] = sources
+            insert("difficulty_points", row)
 
     performance = load(evidence / "smartperf-comparison.json") or {}
     if performance:

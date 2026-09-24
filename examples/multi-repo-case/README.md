@@ -15,6 +15,8 @@ exact Git source set
   -> independent executable Oracle
   -> baseline/reference/wrong-variant calibration
   -> frozen evaluation case
+  -> repeated assessed-Agent attempts and discrimination score
+  -> stage/failure-mode feedback candidates for the next maintenance cut
   -> TableGit evaluation_cases row
 ```
 
@@ -222,6 +224,26 @@ Copy the pre-review report as `multi-repo-construction-quality.json`.
 `build-cbgroom-flywheel-transaction.py` validates all
 digest/source-set/candidate/participant/Oracle links and writes an
 `evaluation_cases` row linked to all retained evidence objects.
+
+After collecting repeated attempts and scoring discrimination, derive the next
+maintenance input without mutating the frozen case:
+
+```sh
+python3 scripts/derive-assessment-feedback.py \
+  --case /tmp/multi-repo-evaluation-case.json \
+  --input /tmp/case-discrimination-input.json \
+  --report /tmp/case-discrimination-report.json \
+  --output /tmp/assessment-feedback-candidates.json
+```
+
+The derivation rereads every infrastructure-valid Harness decision package by
+its collected byte count and SHA-256, groups independent Oracle failures and
+scope drift by frozen stage, and excludes infrastructure failures from Agent
+capability evidence. Its candidates remain `caseReady=false` and
+`automaticPromotion=false`; a maintainer must adjudicate them into a new source,
+analysis and calibration cut. When all four canonical files are retained, the
+flywheel transaction persists these observations as evidence-linked
+`difficulty_points` rather than rewriting reusable guidance or the active case.
 
 ## Evidence boundary
 

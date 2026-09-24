@@ -87,3 +87,21 @@ deterministic pre-review quality report, explicit review, independent runtime
 Oracle, four calibration variants, frozen task output and TableGit persistence.
 Dependency evidence can derive edit scope and construction risks; neither it,
 a lexical quality gate nor an Agent draft establishes semantic truth.
+
+## Close assessed failures into the next analysis cut
+
+The trusted assessed campaign keeps the frozen case unchanged, runs fresh trials
+for two exact participant/model identities, and scores only infrastructure-valid
+independent verdicts. `derive-assessment-feedback.py` then verifies the frozen
+case, collected evidence references, discrimination report and original decision
+packages before grouping failure observations by stage and mechanism. Oracle
+failure, edit-scope drift, and their intersection stay distinct.
+
+The output is `agentlab.assessment_feedback_candidates.v1`. It binds the exact
+source-set digest, method revision and canonical digests of the case, collected
+input and score report. These rows are evidence for recursive difficulty
+discovery, not automatically generated benchmark truth: infrastructure failures
+are excluded, every candidate remains non-ready, and promotion requires a new
+maintainer-adjudicated source/analysis cut plus independent calibration. The
+flywheel transaction can persist the candidates into `difficulty_points` while
+leaving the active `evaluation_cases` and reusable Skills untouched.
