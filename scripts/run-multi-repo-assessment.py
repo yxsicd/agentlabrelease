@@ -55,14 +55,24 @@ def validate_blind_dispatch(participant_root: Path, receipt_path: Path):
     return module.validate_dispatch(participant_root.absolute(), receipt_path.absolute())
 
 
-def validate_participant_runtime(config: Path, receipt_root: Path, workspace: Path, state: Path, labels):
+def validate_participant_runtime(
+    config: Path,
+    receipt_root: Path,
+    workspace: Path,
+    state: Path,
+    labels,
+):
     module_path = Path(__file__).with_name("validate-participant-runtime.py")
     spec = importlib.util.spec_from_file_location("agentlab_participant_runtime", module_path)
     require(spec is not None and spec.loader is not None, "participant runtime validator is unavailable")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module.validate_runtime_receipts(
-        config.absolute(), receipt_root.absolute(), workspace.absolute(), state.absolute(), labels
+        config.absolute(),
+        receipt_root.absolute(),
+        workspace.absolute(),
+        state.absolute(),
+        labels,
     )
 
 

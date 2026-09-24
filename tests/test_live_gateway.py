@@ -23,7 +23,9 @@ SPEC.loader.exec_module(MODULE)
 
 class GatewayCaptureTests(unittest.TestCase):
     def test_container_launcher_gets_docker_control_but_not_gateway_key(self):
-        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with patch.dict(
             os.environ,
             {
                 'AGENTLAB_LM_GATEWAY_KEY': 'synthetic-external-key',
@@ -33,28 +35,59 @@ class GatewayCaptureTests(unittest.TestCase):
                 'DOCKER_CONTEXT': 'fixture-context',
             },
             clear=False,
-        ):
-            root = Path(tmp)
-            evidence = root / 'evidence'
-            evidence.mkdir()
-            captured = {}
-            participant = MODULE.Participant(
-                evidence, root / 'state', '/bin/true', 'http://127.0.0.1:1', 'test-model'
-            )
-            try:
-                def capture(command, project, environment, label, lifecycle):
-                    captured.update(command=command, environment=environment)
+            ):
+                evidence = root / 'evidence'
+                evidence.mkdir()
+                captured = {}
+                participant = MODULE.Participant(
+                    evidence, root / 'state', '/bin/true', 'http://127.0.0.1:1', 'test-model'
+                )
+                try:
+                    models = json.loads((root / 'state/models.json').read_text())
+                    provider = models['providers']['agentlab-ci']
+                    self.assertEqual(provider['baseUrl'], 'http://agentlab-gateway:18765/v1')
+                    self.assertNotEqual(provider['apiKey'], 'synthetic-external-key')
+                    probe_url = (
+                        f'http://127.0.0.1:{participant.server.server_port}'
+                        '/__agentlab_runtime_probe'
+                    )
+                    with self.assertRaises(urllib.error.HTTPError) as denied:
+                        urllib.request.urlopen(probe_url, timeout=5)
+                    self.assertEqual(denied.exception.code, 401)
+                    denied.exception.close()
+                    request = urllib.request.Request(
+                        probe_url,
+                        headers={'Authorization': 'Bearer ' + provider['apiKey']},
+                    )
+                    with urllib.request.urlopen(request, timeout=5) as response:
+                        self.assertEqual(response.status, 204)
+                    denied_path = urllib.request.Request(
+                        f'http://127.0.0.1:{participant.server.server_port}/v1/other',
+                        data=b'{}',
+                        headers={'Authorization': 'Bearer ' + provider['apiKey']},
+                    )
+                    with self.assertRaises(urllib.error.HTTPError) as rejected:
+                        urllib.request.urlopen(denied_path, timeout=5)
+                    self.assertEqual(rejected.exception.code, 404)
+                    rejected.exception.close()
 
-                with patch.object(participant, '_run_turn', side_effect=capture):
-                    participant.turn('sandbox-stage', root, prompt='fixture prompt')
-            finally:
-                participant.close()
-            environment = captured['environment']
-            self.assertEqual(environment['DOCKER_CONTEXT'], 'fixture-context')
-            self.assertEqual(environment['DOCKER_CONFIG'], str(root / 'docker-config'))
-            self.assertNotIn('AGENTLAB_LM_GATEWAY_KEY', environment)
-            session = captured['command'][captured['command'].index('--session') + 1]
-            self.assertEqual(Path(session), root / 'state/pi-session.jsonl')
+                    def capture(command, project, environment, label, lifecycle):
+                        captured.update(command=command, environment=environment)
+
+                    with patch.object(participant, '_run_turn', side_effect=capture):
+                        participant.turn('sandbox-stage', root, prompt='fixture prompt')
+                finally:
+                    participant.close()
+                environment = captured['environment']
+                self.assertEqual(environment['DOCKER_CONTEXT'], 'fixture-context')
+                self.assertEqual(environment['DOCKER_CONFIG'], str(root / 'docker-config'))
+                self.assertEqual(
+                    int(environment['AGENTLAB_OPERATOR_GATEWAY_PORT']),
+                    participant.server.server_port,
+                )
+                self.assertNotIn('AGENTLAB_LM_GATEWAY_KEY', environment)
+                session = captured['command'][captured['command'].index('--session') + 1]
+                self.assertEqual(Path(session), root / 'state/pi-session.jsonl')
 
     def test_failed_participant_retains_actual_source_and_lifecycle(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ,
@@ -188,7 +221,9 @@ class GatewayCaptureTests(unittest.TestCase):
                 finally:
                     participant.close()
                 self.assertEqual(received['authorization'], 'Bearer synthetic-external-key')
-                self.assertEqual(json.loads(received['body']), {**json.loads(body), 'providerId': 'glm'})
+                self.assertEqual(json.loads(received['body']), {
+                    **json.loads(body), 'providerId': 'glm', 'model': 'test-model'
+                })
                 self.assertEqual((evidence / 'gateway/0001.request.json').read_bytes(), body)
                 self.assertEqual((evidence / 'gateway/0001.response').read_bytes(), response)
                 receipt=json.loads((evidence/'gateway/0001.status.json').read_text())

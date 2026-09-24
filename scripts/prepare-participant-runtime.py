@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -29,6 +31,15 @@ def digest(path: Path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def gateway_relay_digest():
+    module_path = Path(__file__).with_name("run-pi-in-docker.py")
+    spec = importlib.util.spec_from_file_location("agentlab_pi_docker_runtime", module_path)
+    require(spec is not None and spec.loader is not None, "participant runtime launcher is unavailable")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return hashlib.sha256(module.GATEWAY_RELAY.encode()).hexdigest()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--image", required=True)
@@ -39,6 +50,7 @@ def main():
     args = parser.parse_args()
 
     require(not args.output.exists(), "refusing to overwrite participant runtime config")
+    require(os.getuid() != 0, "participant runtime must be prepared by a non-root operator")
     runtime = args.pi_runtime.resolve(strict=True)
     case_input = args.case_input.resolve(strict=True)
     require(runtime.is_dir(), "Pi runtime must be a directory")
@@ -91,17 +103,20 @@ def main():
         "executor": "docker",
         "imageReference": args.image,
         "imageId": image_id,
+        "runtimeUser": f"{os.getuid()}:{os.getgid()}",
         "imageEnvironmentNames": image_environment_names,
         "piRuntimeRoot": str(runtime),
         "piPackageLockSha256": digest(lock),
         "caseInputRoot": str(case_input),
         "participantManifestSha256": digest(manifest),
+        "gatewayRelayProgramSha256": gateway_relay_digest(),
         "forbiddenHostPaths": forbidden,
         "mountPolicy": {
             "workspace": "read-write",
             "participantCase": "read-only",
             "piRuntime": "read-only",
             "participantState": "read-write",
+            "operatorGatewayRelay": "separate-no-credential-container",
             "rootFilesystem": "read-only",
         },
         "processPolicy": {
@@ -110,7 +125,7 @@ def main():
             "noNewPrivileges": True,
             "pidsLimit": 256,
         },
-        "networkPolicy": "host-network-proxy-reachable-not-egress-isolated",
+        "networkPolicy": "internal-bridge-with-operator-relay",
         "credentialPolicy": "external-operator-proxy-no-external-key-in-container",
         "automaticQualification": False,
     }

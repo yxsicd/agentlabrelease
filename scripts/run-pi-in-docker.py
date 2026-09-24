@@ -25,6 +25,22 @@ SECRET_NAMES = {
     "AWS_ACCESS_KEY_ID",
     "AWS_SECRET_ACCESS_KEY",
 }
+CONTAINER_GATEWAY_PORT = 18765
+GATEWAY_RELAY = r"""
+const net = require('node:net');
+const targetHost = process.env.AGENTLAB_RELAY_TARGET_HOST;
+const targetPort = Number(process.env.AGENTLAB_RELAY_TARGET_PORT);
+const server = net.createServer(client => {
+  const upstream = net.createConnection({host: targetHost, port: targetPort});
+  client.pipe(upstream);
+  upstream.pipe(client);
+  const close = () => { client.destroy(); upstream.destroy(); };
+  client.on('error', close);
+  upstream.on('error', close);
+});
+server.listen(%d, '0.0.0.0');
+server.on('error', error => { console.error(error); process.exit(125); });
+""" % CONTAINER_GATEWAY_PORT
 
 
 def require(condition, message):
@@ -46,8 +62,16 @@ def load_config(path: Path):
     require(value.get("schema") == "agentlab.participant_docker_runtime.v1", "unsupported runtime config")
     require(value.get("executor") == "docker", "runtime executor must be Docker")
     require(IMAGE_ID.fullmatch(value.get("imageId", "")), "runtime image ID is invalid")
-    require(value.get("networkPolicy") == "host-network-proxy-reachable-not-egress-isolated", "runtime network policy differs")
+    require(value.get("networkPolicy") == "internal-bridge-with-operator-relay", "runtime network policy differs")
     require(value.get("credentialPolicy") == "external-operator-proxy-no-external-key-in-container", "runtime credential policy differs")
+    require(
+        value.get("runtimeUser") == f"{os.getuid()}:{os.getgid()}" and os.getuid() != 0,
+        "runtime user differs from the non-root operator",
+    )
+    require(
+        value.get("gatewayRelayProgramSha256") == digest_bytes(GATEWAY_RELAY.encode()),
+        "runtime Gateway relay program differs",
+    )
     return value
 
 
@@ -58,7 +82,7 @@ def mount(source: Path, destination: str, readonly=False):
     return ["--mount", option]
 
 
-def docker_base(config, workspace: Path, state: Path):
+def docker_base(config, workspace: Path, state: Path, network_name: str):
     runtime = Path(config["piRuntimeRoot"]).resolve(strict=True)
     case_input = Path(config["caseInputRoot"]).resolve(strict=True)
     require(digest(runtime / "package-lock.json") == config["piPackageLockSha256"], "Pi runtime lock digest drifted")
@@ -69,8 +93,8 @@ def docker_base(config, workspace: Path, state: Path):
         "--cap-drop=ALL",
         "--security-opt=no-new-privileges",
         "--pids-limit=256",
-        "--network=host",
-        "--user", f"{os.getuid()}:{os.getgid()}",
+        f"--network={network_name}",
+        "--user", config["runtimeUser"],
         "--workdir", "/workspace",
         "--tmpfs", "/tmp:rw,nosuid,nodev,noexec,size=268435456,mode=1777",
         *mount(workspace, "/workspace"),
@@ -88,9 +112,12 @@ def run_probe(base, config, workspace: Path):
     sentinel = f".agentlab-write-probe-{uuid.uuid4().hex}"
     forbidden = config["forbiddenHostPaths"]
     script = r'''
-set -eu
+set -eux
 test -r /agentlab/case/manifest.json
 test -x /runtime/node_modules/.bin/pi
+node -e "const n=require('node:net').createConnection({host:'agentlab-gateway',port:18765});n.setTimeout(5000);n.on('connect',()=>{n.end();process.exit(0)});n.on('timeout',()=>process.exit(72));n.on('error',()=>process.exit(73))"
+node -e "const fs=require('node:fs'),http=require('node:http');const m=JSON.parse(fs.readFileSync('/agent/models.json'));const k=m.providers['agentlab-ci'].apiKey;const q=http.get({host:'agentlab-gateway',port:18765,path:'/__agentlab_runtime_probe',headers:{Authorization:'Bearer '+k}},r=>process.exit(r.statusCode===204?0:75));q.setTimeout(5000,()=>process.exit(76));q.on('error',()=>process.exit(77))"
+node -e "const n=require('node:net').createConnection({host:'1.1.1.1',port:443});n.setTimeout(2000);n.on('connect',()=>process.exit(74));n.on('timeout',()=>process.exit(0));n.on('error',()=>process.exit(0))"
 test -w /workspace
 touch "/workspace/$1"
 rm "/workspace/$1"
@@ -108,13 +135,20 @@ done
         capture_output=True,
         text=True,
     )
-    require(completed.returncode == 0, f"container isolation probe failed ({completed.returncode}): {completed.stderr.strip()}")
+    require(
+        completed.returncode == 0,
+        f"container isolation probe failed ({completed.returncode}): "
+        f"stdout={completed.stdout.strip()} stderr={completed.stderr.strip()}",
+    )
     require(not (workspace / sentinel).exists(), "workspace probe sentinel was not cleaned")
     return {
         "caseInputReadable": True,
         "piRuntimeReadable": True,
         "workspaceWritable": True,
         "dockerSocketVisible": False,
+        "operatorGatewayRelayReachable": True,
+        "operatorGatewayLocalAuthQualified": True,
+        "externalNetworkConnectBlocked": True,
         "externalCredentialNamesVisibleInPidOne": False,
         "forbiddenPaths": [
             {"pathSha256": digest_bytes(value.encode()), "visibleAtHostAbsolutePath": False}
@@ -171,6 +205,8 @@ def main():
     config = load_config(config_path)
     workspace = Path.cwd().resolve(strict=True)
     state = Path(os.environ["PI_CODING_AGENT_DIR"]).resolve(strict=True)
+    gateway_port = int(os.environ["AGENTLAB_OPERATOR_GATEWAY_PORT"])
+    require(1 <= gateway_port <= 65535, "operator Gateway port is invalid")
     receipt_path = receipt_root / f"{label}.json"
     inspect_path = receipt_root / f"{label}.container-inspect.json"
     require(receipt_root.is_dir() and not receipt_path.exists() and not inspect_path.exists(), "runtime receipt already exists")
@@ -182,7 +218,10 @@ def main():
     original_session = Path(arguments[session_index]).resolve()
     require(original_session.is_relative_to(state), "Pi session must stay in participant state")
     arguments[session_index] = "/agent/" + original_session.relative_to(state).as_posix()
-    base = docker_base(config, workspace, state)
+    runtime_id = uuid.uuid4().hex[:12]
+    network_name = f"agentlab-net-{runtime_id}"
+    relay_name = f"agentlab-relay-{runtime_id}"
+    base = docker_base(config, workspace, state, network_name)
     started = time.monotonic()
     receipt = {
         "schema": "agentlab.participant_runtime_isolation_receipt.v1",
@@ -194,24 +233,65 @@ def main():
         "imageId": config["imageId"],
         "startedAt": datetime.now(timezone.utc).isoformat(),
         "externalCredentialInjected": False,
+        "operatorGatewayPort": gateway_port,
         "filesystemIsolationQualified": False,
         "networkEgressIsolationQualified": False,
     }
     container_id = None
+    relay_id = None
+    network_id = None
     start_process = None
 
     def cleanup(*_unused):
         if container_id:
             subprocess.run(["docker", "kill", container_id], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             subprocess.run(["docker", "rm", "-f", container_id], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if relay_id:
+            subprocess.run(["docker", "kill", relay_id], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["docker", "rm", "-f", relay_id], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if network_id:
+            subprocess.run(["docker", "network", "rm", network_id], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     previous_term = signal.signal(signal.SIGTERM, cleanup)
     previous_int = signal.signal(signal.SIGINT, cleanup)
     try:
+        network = subprocess.run(
+            ["docker", "network", "create", "--internal", "--driver", "bridge", network_name],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        network_id = network.stdout.strip()
+        require(re.fullmatch(r"[0-9a-f]{64}", network_id) is not None, "invalid Docker network ID")
+        relay = subprocess.run(
+            [
+                "docker", "create", "--name", relay_name,
+                "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges",
+                "--pids-limit=64", f"--network={network_name}",
+                "--user", config["runtimeUser"],
+                "--network-alias=agentlab-gateway",
+                "--add-host=host.docker.internal:host-gateway",
+                "--env", "AGENTLAB_RELAY_TARGET_HOST=host.docker.internal",
+                "--env", f"AGENTLAB_RELAY_TARGET_PORT={gateway_port}",
+                "--entrypoint", "/usr/local/bin/node", config["imageId"],
+                "-e", GATEWAY_RELAY,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        relay_id = relay.stdout.strip()
+        require(re.fullmatch(r"[0-9a-f]{64}", relay_id) is not None, "invalid Gateway relay container ID")
+        subprocess.run(["docker", "network", "connect", "bridge", relay_id], check=True, capture_output=True)
+        subprocess.run(["docker", "start", relay_id], check=True, capture_output=True)
         receipt["probes"] = run_probe(base, config, workspace)
         name = f"agentlab-{re.sub(r'[^a-z0-9_.-]', '-', label.lower())}-{uuid.uuid4().hex[:12]}"
         created = subprocess.run(
-            ["docker", "create", "--name", name, *base[:-1], "--entrypoint", "/runtime/node_modules/.bin/pi", base[-1], *arguments],
+            [
+                "docker", "create", "--name", name, *base[:-1],
+                "--entrypoint", "/runtime/node_modules/.bin/pi", base[-1],
+                *arguments,
+            ],
             check=True,
             capture_output=True,
             text=True,
@@ -220,10 +300,28 @@ def main():
         require(re.fullmatch(r"[0-9a-f]{64}", container_id) is not None, "invalid Docker container ID")
         inspected = subprocess.run(["docker", "inspect", container_id], check=True, capture_output=True)
         inspect_path.write_bytes(inspected.stdout)
+        relay_inspect_path = receipt_root / f"{label}.relay-inspect.json"
+        network_inspect_path = receipt_root / f"{label}.network-inspect.json"
+        require(
+            not relay_inspect_path.exists() and not network_inspect_path.exists(),
+            "runtime topology evidence already exists",
+        )
+        relay_inspect = subprocess.run(
+            ["docker", "inspect", relay_id], check=True, capture_output=True
+        )
+        network_inspect = subprocess.run(
+            ["docker", "network", "inspect", network_id], check=True, capture_output=True
+        )
+        relay_inspect_path.write_bytes(relay_inspect.stdout)
+        network_inspect_path.write_bytes(network_inspect.stdout)
         raw_inspect = json.loads(inspected.stdout)
         receipt["containerInspectSha256"] = digest(inspect_path)
         receipt["container"] = inspect_projection(raw_inspect)
         receipt["containerId"] = container_id
+        receipt["relayContainerId"] = relay_id
+        receipt["internalNetworkId"] = network_id
+        receipt["relayInspectSha256"] = digest(relay_inspect_path)
+        receipt["networkInspectSha256"] = digest(network_inspect_path)
         write_json(receipt_path, receipt)
         start_process = subprocess.Popen(["docker", "start", "-a", container_id])
         return_code = start_process.wait()

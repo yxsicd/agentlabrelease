@@ -344,9 +344,13 @@ is host-process compatibility mode and keeps
 container image/runtime/case configuration, probes evaluator and operator paths
 as unreachable, retains Docker lifecycle evidence outside participant mounts,
 and independently validates the exact four-mount policy before setting
-filesystem and external-credential isolation true. Host networking is not an
-egress allowlist and freshness/contamination remain review-required, so
-`networkEgressIsolationQualified` and `blindAssessmentQualified` remain false.
+filesystem and external-credential isolation true. Pi joins only a fresh
+Docker-internal network; a separate immutable relay with no external credential
+connects that network to the token-protected operator proxy. Raw network and
+relay inspection, exact membership, a successful authenticated health probe and
+a blocked direct external connection are required before
+`networkEgressIsolationQualified=true`. Freshness, semantic leakage and
+contamination remain review-required, so `blindAssessmentQualified` stays false.
 
 Copy the frozen case into campaign evidence as
 `multi-repo-evaluation-case.json` and its exact calibration summary as

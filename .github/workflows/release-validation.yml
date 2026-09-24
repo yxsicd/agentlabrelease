@@ -57,6 +57,29 @@ jobs:
           cargo test --locked --workspace
           cargo build --locked --release --workspace
           python3 -m unittest discover -s tests -p test_mock_agent.py
+  participant-runtime-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Pull the participant smoke image
+        run: docker pull node:22-bookworm-slim
+      - name: Prove least-mounted filesystem, credential and network isolation
+        run: |
+          python3 scripts/participant-runtime-isolation-smoke.py \
+            --output "$RUNNER_TEMP/participant-runtime-isolation-evidence" \
+            | tee "$RUNNER_TEMP/participant-runtime-isolation-smoke.json"
+          cat "$RUNNER_TEMP/participant-runtime-isolation-smoke.json" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain the isolation summary
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: participant-runtime-isolation-smoke
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/participant-runtime-isolation-smoke.json
+            ${{ runner.temp }}/participant-runtime-isolation-evidence/
   public-install-deploy-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 45

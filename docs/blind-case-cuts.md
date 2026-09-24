@@ -81,16 +81,23 @@ outside that root. The receipt fixes the intended read-only mount target at
 independent runtime postcondition: each Pi turn runs in a Docker container with
 an immutable image, read-only root, private PID namespace, all capabilities
 dropped and exactly four bind mounts—Workspace RW, participant state RW, Pi
-runtime RO and `/agentlab/case` RO. The operator Gateway proxy and external key
-remain in the host adapter. Raw `docker inspect` evidence and positive/negative
+runtime RO and `/agentlab/case` RO. Both participant and relay run as the frozen
+non-root operator UID/GID; root-owned assessment launch fails closed. The
+operator Gateway proxy and external key
+remain in the host adapter. A separate no-credential TCP relay joins both a
+Docker-internal participant network and the ordinary bridge; the participant
+joins only the internal network and can address only that fixed relay. The host
+proxy requires a per-attempt local token that is distinct from the external
+Gateway key. Raw container/network `docker inspect` evidence and positive/negative
 runtime probes stay outside every participant mount; an independent validator
 rejects extra mounts, changed identities, host PID access, writable rootfs,
-Docker socket exposure or credential environment names before qualifying
-filesystem and external-credential isolation.
+Docker socket exposure, extra participant networks, non-internal topology or
+credential environment names before qualifying filesystem, external-credential
+and network-egress isolation.
 
-This runtime deliberately keeps `networkEgressIsolationQualified=false` because
-host networking is currently used to reach the loopback operator proxy. The cut
-also lacks contamination and semantic-leak qualification, so
+The runtime probe must reach the token-protected operator health route through
+the relay while a direct external TCP connection is blocked. The cut still
+lacks contamination and semantic-leak qualification, so
 `blindAssessmentQualified` remains false. Host-process and mock runs without
 validated runtime receipts continue to report filesystem isolation false.
 

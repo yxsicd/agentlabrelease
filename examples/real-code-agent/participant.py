@@ -5,12 +5,16 @@ import json
 import os
 from pathlib import Path
 import shutil
+import secrets
 import subprocess
 import threading
 import time
 from datetime import datetime, timezone
 import urllib.request
 import urllib.error
+
+
+CONTAINER_GATEWAY_PORT = 18765
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -44,6 +48,12 @@ class Participant:
         self.reasoning_effort = reasoning_effort if reasoning_effort not in (None, '', 'default') else None
         self.active_reasoning_effort = self.reasoning_effort
         self.key = os.environ['AGENTLAB_LM_GATEWAY_KEY']
+        self.runtime_isolated = bool(os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'))
+        self.local_proxy_token = (
+            secrets.token_urlsafe(32)
+            if self.runtime_isolated
+            else 'agentlab-local-test-credential'
+        )
         self.requests = 0
         self.lock = threading.Lock()
         state.mkdir()
@@ -55,7 +65,30 @@ class Participant:
             def log_message(self, *args):
                 pass
 
+            def locally_authorized(self):
+                return (
+                    not owner.runtime_isolated
+                    or self.headers.get('Authorization')
+                    == 'Bearer ' + owner.local_proxy_token
+                )
+
+            def do_GET(self):
+                if self.path != '/__agentlab_runtime_probe':
+                    self.send_error(404)
+                    return
+                if not self.locally_authorized():
+                    self.send_error(401, 'Invalid participant proxy credential')
+                    return
+                self.send_response(204)
+                self.end_headers()
+
             def do_POST(self):
+                if not self.locally_authorized():
+                    self.send_error(401, 'Invalid participant proxy credential')
+                    return
+                if owner.runtime_isolated and self.path != '/v1/chat/completions':
+                    self.send_error(404, 'Participant proxy path is not allowed')
+                    return
                 with owner.lock:
                     owner.requests += 1
                     number = owner.requests
@@ -86,6 +119,7 @@ class Participant:
                 stem.with_suffix('.request.json').write_bytes(raw)
                 wire = json.loads(raw)
                 wire['providerId'] = owner.route
+                wire['model'] = owner.model
                 if owner.active_reasoning_effort:
                     wire['reasoning_effort'] = owner.active_reasoning_effort
                 upstream = json.dumps(wire).encode()
@@ -135,12 +169,18 @@ class Participant:
                                     # Keep observing upstream after participant cancellation.
                                     receipt['clientDisconnected'] = True
 
-        self.server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        bind_host = '0.0.0.0' if self.runtime_isolated else '127.0.0.1'
+        self.server = http.server.ThreadingHTTPServer((bind_host, 0), Handler)
+        self.server.daemon_threads = False
+        self.server.block_on_close = True
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
+        model_base_url = f'http://127.0.0.1:{self.server.server_port}/v1'
+        if self.runtime_isolated:
+            model_base_url = f'http://agentlab-gateway:{CONTAINER_GATEWAY_PORT}/v1'
         models = {'providers': {'agentlab-ci': {
-            'baseUrl': f'http://127.0.0.1:{self.server.server_port}/v1',
-            'api': 'openai-completions', 'apiKey': 'agentlab-local-test-credential',
+            'baseUrl': model_base_url,
+            'api': 'openai-completions', 'apiKey': self.local_proxy_token,
             'compat': {'supportsDeveloperRole': False, 'supportsReasoningEffort': False},
             'models': [{'id': model, 'reasoning': False, 'input': ['text'],
                         'contextWindow': 128000, 'maxTokens': 8192}]}}}
@@ -191,6 +231,7 @@ class Participant:
                 AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT=os.environ[
                     'AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'
                 ],
+                AGENTLAB_OPERATOR_GATEWAY_PORT=str(self.server.server_port),
                 DOCKER_CONFIG=os.environ['DOCKER_CONFIG'],
             )
             for key in ('DOCKER_HOST', 'DOCKER_CONTEXT'):
