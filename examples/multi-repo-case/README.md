@@ -17,6 +17,8 @@ exact Git source set
   -> frozen evaluation case
   -> repeated assessed-Agent attempts and discrimination score
   -> stage/failure-mode feedback candidates for the next maintenance cut
+  -> reviewed feedback-to-new-analysis cut
+  -> next case construction and independent calibration
   -> TableGit evaluation_cases row
 ```
 
@@ -124,6 +126,15 @@ auditable manual runs:
 Freezing and scoring never auto-promote a case. A score is campaign evidence,
 not a publication decision. The campaign uses the Oracle retained by the
 construction run, so a later change on `main` cannot silently alter the case.
+
+For a feedback-derived successor, first run a new exact multi-repository
+analysis cut, then use `propose-feedback-analysis-cut.py` and
+`review-feedback-analysis-cut.py` as documented in
+[`docs/multi-repository-analysis.md`](../../docs/multi-repository-analysis.md).
+Pass the reviewed cut to the proposer with `--feedback-analysis-cut`. The
+resulting frozen case retains the prior case ID, feedback candidate ID, reviewed
+cut digest and next method revision in its lineage; it never edits or supersedes
+the prior frozen case in place.
 
 Construct a proposal; the proposer independently verifies both construction
 receipt and qualified quality report, derives the allowed edit surface and

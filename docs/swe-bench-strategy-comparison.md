@@ -125,10 +125,14 @@ smaller than SWE-bench's:
    the emulator. Absolute power and thermal authority remain unavailable, and
    emulator results are not substitutes for calibrated real-device energy
    measurements.
-7. The GitHub static campaign to Linux emulator handoff still needs a portable,
-   generated plan; the successful real campaign used an operator-resolved host
-   plan.
-8. Process-level scoring—per-turn dependency discovery, deviations, recovery,
+7. The portable static-to-Linux handoff is now implemented and qualified on
+   `hwlinux`, but it has one real campaign rather than cross-host repeatability
+   evidence.
+8. Assessed feedback can now enter a separately reviewed new source/analysis
+   cut and survive into successor-case lineage. It has deterministic regression
+   coverage, but has not yet been exercised on a representative real source
+   update with several candidate cases.
+9. Process-level scoring—per-turn dependency discovery, deviations, recovery,
    decision impact, elapsed time and subjective/objective consistency—is not
    yet one uniform scorecard for every case.
 
@@ -184,10 +188,11 @@ underspecified or contaminated case.
 1. Extend the implemented qualification matrix with evidence-backed
    freshness/contamination declarations and a stronger independent review
    receipt; unknown evidence already remains review-required, never qualified.
-2. Generate a portable device-handoff bundle from the static campaign, then
-   resolve only host-specific emulator/build paths on the qualified Linux host.
-3. Require the device campaign to extend, rather than overwrite, the static
+2. Require the device campaign to extend, rather than overwrite, the static
    repair/preservation matrix with exact UI and performance gate receipts.
+3. Exercise the reviewed feedback-to-analysis bridge on a real source update
+   and prove that the successor case retains prior failure lineage without
+   mutating the old case.
 4. Add independent multi-reviewer adjudication and disagreement measurement;
    default unknown evidence to review-required, never qualified.
 5. Run repeated strong/weak/middle participant trials on at least five cases

@@ -31,6 +31,9 @@ def main():
     parser.add_argument("--intent", type=Path, required=True)
     parser.add_argument("--construction-receipt", type=Path)
     parser.add_argument("--quality-report", type=Path)
+    parser.add_argument("--feedback-analysis-cut", type=Path)
+    parser.add_argument("--feedback-cut-proposal", type=Path)
+    parser.add_argument("--feedback-cut-review", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -85,6 +88,50 @@ def main():
     )
     require(all(row["repositoryId"] and row["path"] for row in allowed), "affected file identity is incomplete")
 
+    feedback_analysis_cut = None
+    if args.feedback_analysis_cut is not None:
+        require(args.feedback_cut_proposal is not None and args.feedback_cut_review is not None, "reviewed feedback cut requires proposal and review evidence")
+        reviewed_cut = load(args.feedback_analysis_cut)
+        cut_proposal = load(args.feedback_cut_proposal)
+        cut_decision = load(args.feedback_cut_review)
+        require(reviewed_cut.get("schema") == "agentlab.feedback_analysis_cut.v1", "unsupported feedback analysis cut schema")
+        require(reviewed_cut.get("status") == "reviewed-for-case-construction", "feedback analysis cut is not reviewed for construction")
+        require(reviewed_cut.get("automaticPromotion") is False, "feedback analysis cut must not auto-promote")
+        require(cut_proposal.get("schema") == "agentlab.feedback_analysis_cut_proposal.v1", "unsupported feedback cut proposal evidence")
+        require(cut_decision.get("schema") == "agentlab.feedback_analysis_cut_review.v1", "unsupported feedback cut review evidence")
+        require(cut_proposal.get("status") == "review-required" and cut_proposal.get("automaticPromotion") is False, "feedback cut proposal is not review-required")
+        require(cut_decision.get("automaticPromotion") is False, "feedback cut review must not auto-promote")
+        require((reviewed_cut.get("priorCase") or {}).get("immutability") == "retained-unchanged", "feedback analysis cut does not preserve its prior case")
+        require(all(reviewed_cut.get(key) == cut_proposal.get(key) for key in ("cutId", "priorCase", "feedback", "nextAnalysis", "change")), "reviewed feedback cut differs from its proposal")
+        next_analysis = reviewed_cut.get("nextAnalysis") or {}
+        require(next_analysis.get("sourceSetSha256") == source_set, "feedback analysis cut source set mismatch")
+        require(next_analysis.get("candidateId") == candidate_id, "feedback analysis cut candidate mismatch")
+        require(next_analysis.get("difficultyEvidenceSha256") == digest(args.difficulty), "feedback analysis cut difficulty digest mismatch")
+        review = reviewed_cut.get("review") or {}
+        require(review.get("authority") == "independent-maintainer-review", "feedback analysis cut review authority is invalid")
+        require(review.get("verdict") == "approve-for-case-construction", "feedback analysis cut was not approved for construction")
+        require(review.get("proposalSha256") == digest(args.feedback_cut_proposal) == cut_decision.get("proposalSha256"), "feedback cut proposal digest mismatch")
+        require(review.get("decisionSha256") == digest(args.feedback_cut_review), "feedback cut review digest mismatch")
+        require(review.get("reviewer") == cut_decision.get("reviewer"), "feedback cut reviewer mismatch")
+        require(review.get("verdict") == cut_decision.get("verdict"), "feedback cut verdict mismatch")
+        risk_ids = {row.get("id") for row in cut_proposal.get("risks", []) if isinstance(row, dict)}
+        require(set(review.get("acknowledgedRiskIds", [])) == risk_ids == set(cut_decision.get("acknowledgedRiskIds", [])), "feedback cut risk acknowledgements mismatch")
+        feedback_analysis_cut = {
+            "cutId": reviewed_cut.get("cutId"),
+            "sha256": digest(args.feedback_analysis_cut),
+            "priorCaseId": (reviewed_cut.get("priorCase") or {}).get("caseId"),
+            "priorCaseSha256": (reviewed_cut.get("priorCase") or {}).get("caseSha256"),
+            "priorSourceSetSha256": (reviewed_cut.get("priorCase") or {}).get("sourceSetSha256"),
+            "feedbackCandidateId": (reviewed_cut.get("feedback") or {}).get("candidateId"),
+            "feedbackEvidenceSha256": (reviewed_cut.get("feedback") or {}).get("evidenceSha256"),
+            "nextSourceSetSha256": next_analysis.get("sourceSetSha256"),
+            "nextMethodRevision": next_analysis.get("methodRevision"),
+            "nextAnalysisReceiptSha256": next_analysis.get("analysisReceiptSha256"),
+            "review": review,
+        }
+    else:
+        require(args.feedback_cut_proposal is None and args.feedback_cut_review is None, "feedback cut evidence requires a reviewed feedback analysis cut")
+
     stages = intent.get("stages")
     require(isinstance(stages, list) and len(stages) >= 2, "intent requires at least two stages")
     stage_ids = []
@@ -125,6 +172,7 @@ def main():
         "calibrationExpectations": expectations,
         "construction": construction,
         "constructionQuality": construction_quality,
+        "feedbackAnalysisCut": feedback_analysis_cut,
         "constructionEvidence": {
             "mechanism": candidate.get("mechanism"),
             "seed": candidate.get("seed"),

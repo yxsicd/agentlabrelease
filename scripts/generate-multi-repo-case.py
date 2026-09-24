@@ -73,7 +73,7 @@ def main():
         require(decision.get("verdict") == review.get("verdict"), "review verdict mismatch")
         require(decision.get("reviewer") == review.get("reviewer"), "reviewer mismatch")
         require(sorted(decision.get("acknowledgedRiskIds", [])) == review.get("acknowledgedRiskIds"), "review risk acknowledgements mismatch")
-        reviewed_fields = ("caseId", "candidateId", "sourceSetSha256", "title", "allowedEdits", "stages", "oracle", "calibrationExpectations", "construction", "constructionQuality")
+        reviewed_fields = ("caseId", "candidateId", "sourceSetSha256", "title", "allowedEdits", "stages", "oracle", "calibrationExpectations", "construction", "constructionQuality", "feedbackAnalysisCut")
         require(all(plan.get(key) == proposal.get(key) for key in reviewed_fields), "v2 plan differs from reviewed proposal")
         if plan.get("construction") is not None:
             require(args.construction_quality is not None, "constructed v2 plan requires construction quality evidence")
@@ -221,6 +221,7 @@ def main():
             "planSha256": plan_sha256,
             "calibrationSha256": calibration_sha256,
             "review": plan.get("review"),
+            "feedbackAnalysisCut": plan.get("feedbackAnalysisCut"),
         },
         "automaticPromotion": False,
         "assessmentBoundary": "Exact pinned source set and executable fixture oracle; Harmony build, emulator rendering and device performance remain separate gates.",

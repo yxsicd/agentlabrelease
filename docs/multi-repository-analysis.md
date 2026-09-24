@@ -321,3 +321,44 @@ are excluded, every candidate remains non-ready, and promotion requires a new
 maintainer-adjudicated source/analysis cut plus independent calibration. The
 flywheel transaction can persist the candidates into `difficulty_points` while
 leaving the active `evaluation_cases` and reusable Skills untouched.
+
+The next-cut bridge is executable and fail-closed. Rerun multi-repository
+analysis over a new exact source set, a new method revision, or both, then bind
+one assessed feedback candidate to one new recursive impact candidate:
+
+```sh
+python3 scripts/propose-feedback-analysis-cut.py \
+  --prior-case /evidence/multi-repo-evaluation-case.json \
+  --feedback /evidence/assessment-feedback-candidates.json \
+  --analysis-receipt /next-analysis/multi_repo_analysis.json \
+  --difficulty /next-analysis/difficulty_candidates.json \
+  --feedback-candidate-id <assessment-feedback-id> \
+  --difficulty-candidate-id <next-difficulty-id> \
+  --next-method-revision <exact-40-character-release-revision> \
+  --output /next-analysis/feedback-analysis-cut-proposal.json
+```
+
+The proposer re-derives the prior case identity, verifies the exact feedback,
+analysis receipt and difficulty bytes, reproduces the next source-set digest,
+and rejects a transition where neither source set nor method revision changed.
+It deliberately does not claim that the two mechanisms are semantically
+aligned. An independent maintainer must review that judgment, acknowledge all
+remaining semantic, Oracle, calibration and freshness risks, and bind the exact
+proposal digest:
+
+```sh
+python3 scripts/review-feedback-analysis-cut.py \
+  --proposal /next-analysis/feedback-analysis-cut-proposal.json \
+  --review /next-analysis/feedback-analysis-cut-review.json \
+  --output /next-analysis/feedback-analysis-cut.json
+```
+
+The reviewed output conforms to
+`schemas/feedback-analysis-cut.schema.json`. Supplying it through
+`propose-multi-repo-case-plan.py --feedback-analysis-cut ...` together with
+`--feedback-cut-proposal ... --feedback-cut-review ...` makes the proposer
+independently recheck all three exact artifacts and makes the transition survive
+proposal review, calibration and final frozen-case lineage.
+It authorizes only construction of a new candidate. The old case stays frozen,
+the new difficulty stays non-ready, and every artifact keeps
+`automaticPromotion: false`.
