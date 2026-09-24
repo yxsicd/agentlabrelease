@@ -555,13 +555,18 @@ run_case() {
   "$hdc" -t "$target" shell aa start -a "$ability" -b "$bundle" >"$output/launch.log" 2>&1
   grep -F "start ability successfully" "$output/launch.log" >/dev/null ||
     die "ability launch did not report success; inspect launch.log"
-  process_hint=${bundle#com.}
+  process_hint=$bundle
   printf '%s\n' "$process_hint" >"$output/process-hint.txt"
   process_attempt=1
   process_found=false
   while [ "$process_attempt" -le 15 ]; do
-    "$hdc" -t "$target" shell ps -A >"$output/process-all.txt" 2>&1
-    if LC_ALL=C grep -F -- "$process_hint" "$output/process-all.txt" >"$output/process.txt"; then
+    # The default HarmonyOS `ps -A` display truncates long process names from
+    # the left (for example com.agentlab.multirepo becomes ntlab.multirepo).
+    # Request NAME explicitly and require an exact field match so a live app is
+    # neither missed nor confused with a similarly named process.
+    "$hdc" -t "$target" shell ps -A -o PID,NAME >"$output/process-all.txt" 2>&1
+    if LC_ALL=C awk -v bundle="$process_hint" '$2 == bundle { found = 1; print } END { exit(found ? 0 : 1) }' \
+        "$output/process-all.txt" >"$output/process.txt"; then
       process_found=true
       break
     fi
