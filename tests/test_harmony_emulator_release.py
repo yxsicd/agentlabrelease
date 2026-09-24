@@ -7,6 +7,8 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "release/alharmony/harmony-emulator-linux-x64-26.0.0.821.json"
 INSTALLER = ROOT / "scripts/agentlab-harmony-emulator.sh"
+SCENARIO = ROOT / "examples/harmony-emulator/tutu-cookie-dismiss.ui"
+ASSET_MODEL = ROOT / "crates/agentlab_code_analysis/src/asset_model.rs"
 
 
 class HarmonyEmulatorReleaseTests(unittest.TestCase):
@@ -46,7 +48,7 @@ class HarmonyEmulatorReleaseTests(unittest.TestCase):
         self.assertEqual(self.value["capabilities"]["acceleration"], "KVM")
         limitations = " ".join(self.value["limitations"])
         self.assertIn("ARM native", limitations)
-        self.assertIn("hidden application-specific Oracle", limitations)
+        self.assertIn("application-specific semantic Oracle calibration", limitations)
         self.assertIn("Absolute power and thermal", limitations)
 
     def test_installer_is_fail_closed(self) -> None:
@@ -75,6 +77,27 @@ class HarmonyEmulatorReleaseTests(unittest.TestCase):
         self.assertIn('"powerThermalAuthority":"unavailable_on_emulator"', source)
         self.assertIn("refusing to overwrite existing output", source)
 
+    def test_run_case_supports_bounded_ui_oracles(self) -> None:
+        source = INSTALLER.read_text(encoding="utf-8")
+        scenario = SCENARIO.read_text(encoding="utf-8")
+        self.assertTrue(scenario.startswith("schema\tagentlab.harmony_ui_scenario.v1\n"))
+        for operation in ["wait-text", "tap", "sleep", "assert-text", "assert-no-text"]:
+            self.assertIn(operation, scenario)
+        self.assertIn("agentlab.harmony_emulator_case_result.v2", source)
+        self.assertIn("--ui-scenario", source)
+        self.assertIn("--reset-app-data", source)
+        self.assertIn("ui-actions.tsv", source)
+        self.assertIn("ui-checks.tsv", source)
+        self.assertIn('"oracleStatus":"%s"', source)
+
+    def test_asset_model_exports_harmony_evaluation_instances(self) -> None:
+        source = ASSET_MODEL.read_text(encoding="utf-8")
+        self.assertIn("agentlab.harmony_emulator_case_result.v2", source)
+        self.assertIn('"device_assessments"', source)
+        self.assertIn("operator-owned-device-runner", source)
+        self.assertIn("operator-owned-ui-oracle", source)
+        self.assertIn('"evidence_files"', source)
+
     def test_manifest_claims_only_the_newly_qualified_case_scope(self) -> None:
         operations = self.value["capabilities"]["validatedOperations"]
         for operation in [
@@ -85,6 +108,9 @@ class HarmonyEmulatorReleaseTests(unittest.TestCase):
             "process-check",
             "screenshot",
             "smartperf-proxy-profile",
+            "declarative-ui-actions",
+            "layout-text-oracle",
+            "agentlab-evaluation-instance-export",
         ]:
             self.assertIn(operation, operations)
         self.assertNotIn("absolute-power", operations)

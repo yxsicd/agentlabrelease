@@ -268,3 +268,79 @@ fn preserves_multiple_observed_sources_and_empty_agent_capture() {
     );
     fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn exports_harmony_device_checks_and_raw_evidence() {
+    let root = std::env::temp_dir().join(format!(
+        "al-harmony-instance-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    let seed = root.join("seed");
+    fs::create_dir_all(&seed).unwrap();
+    for table in ["maintainer_skills", "program_facts", "evaluation_cases"] {
+        fs::write(seed.join(format!("{table}.jsonl")), "").unwrap();
+    }
+    let evidence = root.join("evidence");
+    write(
+        &evidence.join("result.json"),
+        json!({
+            "schema":"agentlab.harmony_emulator_case_result.v2",
+            "status":"passed",
+            "taskId":"harmony-case",
+            "sourceIdentity":"artifact-sha256:hap",
+            "hapSha256":"hap",
+            "scenarioId":"dismiss",
+            "scenarioSha256":"scenario",
+            "oracleStatus":"passed",
+            "profileStatus":"collected",
+            "powerThermalAuthority":"unavailable_on_emulator"
+        }),
+    );
+    fs::write(
+        evidence.join("ui-checks.tsv"),
+        "visible\ttrue\twait-text\tAccept\nhidden\ttrue\tassert-no-text\tAccept\n",
+    )
+    .unwrap();
+    fs::write(evidence.join("smartperf.txt"), "fps=60\n").unwrap();
+    let out = root.join("out");
+    assert!(Command::new(env!("CARGO_BIN_EXE_agentlab-asset-model"))
+        .args([
+            seed.as_os_str(),
+            out.as_os_str(),
+            std::ffi::OsStr::new("file:///evidence"),
+            std::ffi::OsStr::new(&format!("harmony={}", evidence.display()))
+        ])
+        .output()
+        .unwrap()
+        .status
+        .success());
+    let instance = out.join("instances/harmony");
+    let checks = rows(&instance.join("checks.jsonl"));
+    assert_eq!(checks.len(), 5);
+    assert!(checks.iter().all(|row| row["passed"] == true));
+    assert_eq!(
+        checks
+            .iter()
+            .filter(|row| row["authority"] == "operator-owned-ui-oracle")
+            .count(),
+        2
+    );
+    let assessments = rows(&instance.join("device_assessments.jsonl"));
+    assert_eq!(assessments.len(), 1);
+    assert_eq!(assessments[0]["functionalPassed"], true);
+    assert_eq!(assessments[0]["oraclePassed"], true);
+    assert_eq!(assessments[0]["profileCollected"], true);
+    assert_eq!(
+        assessments[0]["powerThermalAuthority"],
+        "unavailable_on_emulator"
+    );
+    let files = rows(&instance.join("evidence_files.jsonl"));
+    assert_eq!(files.len(), 3);
+    assert!(files
+        .iter()
+        .all(|row| row["archiveUri"] == "file:///evidence"));
+    fs::remove_dir_all(root).unwrap();
+}

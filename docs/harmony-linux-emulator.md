@@ -58,7 +58,9 @@ runner starts the named instance, waits for its exact HDC target, installs the
 HAP, queries the bundle, launches the Ability, requires a live process, captures
 a screenshot and SmartPerf proxy samples, writes
 `agentlab.harmony_emulator_case_result.v1`, and stops the instance unless
-`--keep-running` is explicit.
+`--keep-running` is explicit. Supplying a bounded UI scenario upgrades the
+result to `agentlab.harmony_emulator_case_result.v2` and records task/source
+identity, scenario identity, actions and Oracle checks.
 
 Example:
 
@@ -73,11 +75,48 @@ Example:
       --ability EntryAbility \
       --output /workspace/evidence/case-01
 
+For deterministic UI cases, add `--ui-scenario`, `--task-id`,
+`--source-id` and `--reset-app-data`:
+
+    scripts/agentlab-harmony-emulator.sh run-case \
+      ... \
+      --output /workspace/evidence/case-01 \
+      --ui-scenario examples/harmony-emulator/tutu-cookie-dismiss.ui \
+      --task-id harmony-tutu-cookie-dismiss \
+      --source-id artifact-sha256:<hap-sha256> \
+      --reset-app-data
+
+The tab-separated scenario schema is `agentlab.harmony_ui_scenario.v1`. Its
+bounded operations are `wait-text`, `tap`, `swipe`, `key`, `sleep`,
+`assert-text` and `assert-no-text`. Text checks are evaluated from pulled
+`uitest dumpLayout` artifacts; every action and check is persisted in
+`ui-actions.tsv` and `ui-checks.tsv`. `--reset-app-data` uninstalls the
+bundle before installation so state from a prior case cannot silently satisfy
+the Oracle.
+
 The output directory is immutable-by-convention: the runner refuses to
 overwrite it. `result.json` references the raw install, bundle, launch, process,
 screenshot and SmartPerf artifacts and binds the HAP and screenshot SHA-256.
 SmartPerf data is a relative emulator regression signal only; the result
 explicitly records that absolute power and thermal authority are unavailable.
+
+## Evaluation-instance export
+
+Build the normalizer and convert an immutable case directory:
+
+    cargo build --locked -p agentlab_code_analysis --bin agentlab-asset-model
+    target/debug/agentlab-asset-model \
+      examples/knowledge-seed/seeds/harmony-code-workshop \
+      /workspace/evidence/export \
+      file:///workspace/evidence/case-01 \
+      case-01=/workspace/evidence/case-01
+
+The export is an `agentlab.asset_exchange.v1` evaluation instance with `runs`,
+`device_assessments`, `checks` and `evidence_files` tables. Device-runner
+checks and UI Oracle checks retain distinct authority labels. The exporter
+hashes every raw evidence file; it does not replace or mutate the device
+evidence directory. Import into a live TableGit deployment remains a separate
+operator-owned step.
 
 ## Qualified scope
 
@@ -91,7 +130,8 @@ This establishes Linux emulator availability for the toolchain. It does not
 establish ARM-native application compatibility. The current image declares
 `abi: x86`; an application containing only ARM native libraries remains outside
 the supported scope unless an independently qualified translation layer exists.
-The bounded `run-case` install/deploy/launch/process/screenshot/profile path has
-been qualified on 'hwlinux'. Arbitrary UI action scripts, application-specific
-hidden Oracles, AgentLab Result ingestion, host graphics coverage and real-device
+The bounded `run-case` install/deploy/launch/process/screenshot/profile path,
+the declarative UI action/layout-text Oracle path, and evaluation-instance
+export have been qualified on `hwlinux`. Application-specific semantic Oracle
+calibration, live TableGit import/replay, host graphics coverage and real-device
 power/thermal calibration remain separate gates.

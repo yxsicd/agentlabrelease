@@ -1,0 +1,7 @@
+schema	agentlab.harmony_ui_scenario.v1
+case	tutu-cookie-dismiss
+wait-text	cookie-banner-visible	30	Соглашаюсь
+tap	628	2481
+sleep	1500
+assert-text	app-title-visible	Tutu
+assert-no-text	cookie-banner-dismissed	Соглашаюсь

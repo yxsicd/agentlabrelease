@@ -135,6 +135,16 @@ validate_token() {
   esac
 }
 
+validate_integer() {
+  label=$1
+  value=$2
+  minimum=$3
+  maximum=$4
+  case "$value" in ''|*[!0-9]*) die "$label must be numeric" ;; esac
+  [ "$value" -ge "$minimum" ] && [ "$value" -le "$maximum" ] ||
+    die "$label must be in $minimum..$maximum"
+}
+
 run_case() {
   root=
   tools_root=
@@ -146,9 +156,13 @@ run_case() {
   bundle=
   ability=
   output=
+  ui_scenario=
+  task_id=
+  source_id=
   boot_mode=coldboot
   profile_samples=3
   keep_running=false
+  reset_app_data=false
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --root) [ "$#" -ge 2 ] || die "--root requires a path"; root=$2; shift 2 ;;
@@ -161,9 +175,13 @@ run_case() {
       --bundle) [ "$#" -ge 2 ] || die "--bundle requires an id"; bundle=$2; shift 2 ;;
       --ability) [ "$#" -ge 2 ] || die "--ability requires a name"; ability=$2; shift 2 ;;
       --output) [ "$#" -ge 2 ] || die "--output requires a path"; output=$2; shift 2 ;;
+      --ui-scenario) [ "$#" -ge 2 ] || die "--ui-scenario requires a path"; ui_scenario=$2; shift 2 ;;
+      --task-id) [ "$#" -ge 2 ] || die "--task-id requires an id"; task_id=$2; shift 2 ;;
+      --source-id) [ "$#" -ge 2 ] || die "--source-id requires an id"; source_id=$2; shift 2 ;;
       --boot-mode) [ "$#" -ge 2 ] || die "--boot-mode requires a value"; boot_mode=$2; shift 2 ;;
       --profile-samples) [ "$#" -ge 2 ] || die "--profile-samples requires a count"; profile_samples=$2; shift 2 ;;
       --keep-running) keep_running=true; shift ;;
+      --reset-app-data) reset_app_data=true; shift ;;
       *) die "unknown run-case argument: $1" ;;
     esac
   done
@@ -180,12 +198,8 @@ run_case() {
   validate_token instance "$instance"
   validate_token bundle "$bundle"
   validate_token ability "$ability"
-  case "$hdc_port" in ''|*[!0-9]*) die "hdc port must be numeric" ;; esac
-  [ "$hdc_port" -ge 10000 ] && [ "$hdc_port" -le 16555 ] ||
-    die "hdc port must be in 10000..16555"
-  case "$profile_samples" in ''|*[!0-9]*) die "profile samples must be numeric" ;; esac
-  [ "$profile_samples" -ge 1 ] && [ "$profile_samples" -le 60 ] ||
-    die "profile samples must be in 1..60"
+  validate_integer "hdc port" "$hdc_port" 10000 16555
+  validate_integer "profile samples" "$profile_samples" 1 60
   case "$boot_mode" in coldboot|reset|snapshot) ;; *) die "unsupported boot mode: $boot_mode" ;; esac
   emulator="$tools_root/bin/Emulator"
   hdc="$tools_root/sdk/default/openharmony/toolchains/hdc"
@@ -193,12 +207,137 @@ run_case() {
   [ -x "$hdc" ] || die "hdc entrypoint missing or not executable: $hdc"
   [ -f "$hap" ] || die "HAP not found: $hap"
   [ -f "$instance_path/$instance.ini" ] || die "emulator instance is not prepared: $instance"
+  scenario_id=
+  scenario_sha=
+  if [ -n "$ui_scenario" ]; then
+    [ -f "$ui_scenario" ] || die "UI scenario not found: $ui_scenario"
+    grep -q $'^schema\tagentlab.harmony_ui_scenario.v1$' "$ui_scenario" ||
+      die "UI scenario schema is missing or unsupported"
+    [ "$(grep -c $'^case\t' "$ui_scenario")" -eq 1 ] ||
+      die "UI scenario must declare exactly one case"
+    scenario_id=$(awk -F '\t' '$1 == "case" { print $2 }' "$ui_scenario")
+    validate_token "scenario case" "$scenario_id"
+    [ -n "$task_id" ] && [ -n "$source_id" ] ||
+      die "--ui-scenario requires --task-id and --source-id"
+    validate_token "task id" "$task_id"
+    validate_token "source id" "$source_id"
+    scenario_sha=$(file_sha256 "$ui_scenario")
+  else
+    [ -z "$task_id" ] && [ -z "$source_id" ] ||
+      die "--task-id and --source-id require --ui-scenario"
+  fi
   [ ! -e "$output" ] || die "refusing to overwrite existing output: $output"
   preflight
   mkdir -p "$output"
+  hap_sha=$(file_sha256 "$hap")
+  printf '%s\n' "$hap_sha" >"$output/hap.sha256"
+  if [ -n "$ui_scenario" ]; then
+    printf '%s\n' "$scenario_sha" >"$output/ui-scenario.sha256"
+  fi
   target="127.0.0.1:$hdc_port"
   started=false
   terminal_status=failed
+  oracle_status=not-run
+  layout_ordinal=0
+  action_ordinal=0
+  last_layout=
+  record_ui_action() {
+    action_ordinal=$((action_ordinal + 1))
+    printf '%s\t%s\t%s\n' "$action_ordinal" "$1" "$2" >>"$output/ui-actions.tsv"
+  }
+  record_ui_check() {
+    printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" >>"$output/ui-checks.tsv"
+  }
+  dump_ui_layout() {
+    layout_ordinal=$((layout_ordinal + 1))
+    layout_name=$(printf 'ui-layout-%03d.json' "$layout_ordinal")
+    remote_layout="/data/local/tmp/agentlab-$scenario_id-$layout_ordinal.json"
+    "$hdc" -t "$target" shell uitest dumpLayout -p "$remote_layout" \
+      >"$output/$layout_name.dump.log" 2>&1
+    "$hdc" -t "$target" file recv "$remote_layout" "$output/$layout_name" \
+      >"$output/$layout_name.recv.log" 2>&1
+    last_layout="$output/$layout_name"
+  }
+  run_ui_scenario() {
+    oracle_status=failed
+    while IFS=$'\t' read -r operation a b c d e || [ -n "$operation$a$b$c$d$e" ]; do
+      case "$operation" in
+        ''|'#'*) continue ;;
+        schema)
+          [ "$a" = "agentlab.harmony_ui_scenario.v1" ] && [ -z "$b$c$d$e" ] ||
+            die "invalid UI scenario schema line"
+          ;;
+        case)
+          [ "$a" = "$scenario_id" ] && [ -z "$b$c$d$e" ] ||
+            die "invalid UI scenario case line"
+          ;;
+        wait-text)
+          validate_token "UI check label" "$a"
+          validate_integer "wait-text timeout" "$b" 1 120
+          [ -n "$c" ] && [ -z "$d$e" ] || die "wait-text requires LABEL TIMEOUT TEXT"
+          wait_attempt=1
+          wait_passed=false
+          while [ "$wait_attempt" -le "$b" ]; do
+            dump_ui_layout
+            if LC_ALL=C grep -F -- "$c" "$last_layout" >/dev/null; then
+              wait_passed=true
+              break
+            fi
+            sleep 1
+            wait_attempt=$((wait_attempt + 1))
+          done
+          record_ui_check "$a" "$wait_passed" wait-text "$c"
+          [ "$wait_passed" = true ] || die "UI wait-text check failed: $a"
+          ;;
+        tap)
+          validate_integer "tap x" "$a" 0 10000
+          validate_integer "tap y" "$b" 0 10000
+          [ -z "$c$d$e" ] || die "tap requires X Y"
+          "$hdc" -t "$target" shell uitest uiInput click "$a" "$b" \
+            >>"$output/ui-input.log" 2>&1
+          record_ui_action tap "$a,$b"
+          ;;
+        swipe)
+          validate_integer "swipe x1" "$a" 0 10000
+          validate_integer "swipe y1" "$b" 0 10000
+          validate_integer "swipe x2" "$c" 0 10000
+          validate_integer "swipe y2" "$d" 0 10000
+          validate_integer "swipe duration" "$e" 1 60000
+          "$hdc" -t "$target" shell uitest uiInput swipe "$a" "$b" "$c" "$d" "$e" \
+            >>"$output/ui-input.log" 2>&1
+          record_ui_action swipe "$a,$b,$c,$d,$e"
+          ;;
+        key)
+          validate_integer "key code" "$a" 0 1000
+          [ -z "$b$c$d$e" ] || die "key requires KEYCODE"
+          "$hdc" -t "$target" shell uitest uiInput keyEvent "$a" \
+            >>"$output/ui-input.log" 2>&1
+          record_ui_action key "$a"
+          ;;
+        sleep)
+          validate_integer "sleep milliseconds" "$a" 0 60000
+          [ -z "$b$c$d$e" ] || die "sleep requires MILLISECONDS"
+          sleep "$(awk -v ms="$a" 'BEGIN { printf "%.3f", ms / 1000 }')"
+          record_ui_action sleep "$a"
+          ;;
+        assert-text|assert-no-text)
+          validate_token "UI check label" "$a"
+          [ -n "$b" ] && [ -z "$c$d$e" ] || die "$operation requires LABEL TEXT"
+          dump_ui_layout
+          check_passed=false
+          if LC_ALL=C grep -F -- "$b" "$last_layout" >/dev/null; then
+            [ "$operation" = assert-text ] && check_passed=true
+          else
+            [ "$operation" = assert-no-text ] && check_passed=true
+          fi
+          record_ui_check "$a" "$check_passed" "$operation" "$b"
+          [ "$check_passed" = true ] || die "UI oracle check failed: $a"
+          ;;
+        *) die "unsupported UI scenario operation: $operation" ;;
+      esac
+    done <"$ui_scenario"
+    oracle_status=passed
+  }
   cleanup_case() {
     rc=$?
     if [ "$started" = true ] && [ "$keep_running" != true ]; then
@@ -206,8 +345,14 @@ run_case() {
         >>"$output/emulator-stop.log" 2>&1 || true
     fi
     if [ "$terminal_status" != passed ]; then
-      printf '{"schema":"agentlab.harmony_emulator_case_result.v1","status":"failed","instance":"%s","target":"%s","bundle":"%s","ability":"%s"}\n' \
-        "$instance" "$target" "$bundle" "$ability" >"$output/result.json"
+      if [ -n "$ui_scenario" ]; then
+        printf '{"schema":"agentlab.harmony_emulator_case_result.v2","status":"failed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","powerThermalAuthority":"unavailable_on_emulator"}\n' \
+          "$task_id" "$source_id" "$instance" "$target" "$bundle" "$ability" "$hap_sha" \
+          "$scenario_id" "$scenario_sha" "$oracle_status" >"$output/result.json"
+      else
+        printf '{"schema":"agentlab.harmony_emulator_case_result.v1","status":"failed","instance":"%s","target":"%s","bundle":"%s","ability":"%s"}\n' \
+          "$instance" "$target" "$bundle" "$ability" >"$output/result.json"
+      fi
     fi
     exit "$rc"
   }
@@ -246,6 +391,11 @@ run_case() {
     attempt=$((attempt + 1))
   done
   [ "$ui_ready" = true ] || die "emulator UI did not become ready within 60 seconds"
+  if [ "$reset_app_data" = true ]; then
+    "$hdc" -t "$target" uninstall "$bundle" >"$output/uninstall.log" 2>&1 || true
+  else
+    printf 'reset-app-data not requested\n' >"$output/uninstall.log"
+  fi
   "$hdc" -t "$target" install -r "$hap" >"$output/install.log" 2>&1
   "$hdc" -t "$target" shell bm dump -n "$bundle" >"$output/bundle-dump.txt" 2>&1
   "$hdc" -t "$target" shell uitest uiInput swipe 630 2400 630 600 1000 \
@@ -268,6 +418,9 @@ run_case() {
     process_attempt=$((process_attempt + 1))
   done
   [ "$process_found" = true ] || die "launched bundle has no process: $bundle"
+  if [ -n "$ui_scenario" ]; then
+    run_ui_scenario
+  fi
   "$emulator" -instance "$instance" -instancePath "$instance_path" \
     -screenshot -screenshotPath "$output" >"$output/screenshot.log" 2>&1
   screenshot=
@@ -279,7 +432,6 @@ run_case() {
     screenshot_attempt=$((screenshot_attempt + 1))
   done
   [ -n "$screenshot" ] || die "emulator screenshot was not produced"
-  file_sha256 "$hap" >"$output/hap.sha256"
   file_sha256 "$screenshot" >"$output/screenshot.sha256"
   if "$hdc" -t "$target" shell SP_daemon -N "$profile_samples" -PKG "$bundle" \
       -c -g -t -p -f -r -net -snapshot -d >"$output/smartperf.txt" 2>&1; then
@@ -288,10 +440,17 @@ run_case() {
     profile_status=unavailable
   fi
   terminal_status=passed
-  printf '{"schema":"agentlab.harmony_emulator_case_result.v1","status":"passed","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","profileStatus":"%s","powerThermalAuthority":"unavailable_on_emulator","artifacts":{"install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","screenshot":"%s","smartperf":"smartperf.txt"}}\n' \
-    "$instance" "$target" "$bundle" "$ability" \
-    "$(cat "$output/hap.sha256")" "$(cat "$output/screenshot.sha256")" \
-    "$profile_status" "$(basename "$screenshot")" >"$output/result.json"
+  if [ -n "$ui_scenario" ]; then
+    printf '{"schema":"agentlab.harmony_emulator_case_result.v2","status":"passed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","profileStatus":"%s","resetAppData":%s,"powerThermalAuthority":"unavailable_on_emulator","artifacts":{"uninstall":"uninstall.log","install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","uiActions":"ui-actions.tsv","uiChecks":"ui-checks.tsv","screenshot":"%s","smartperf":"smartperf.txt"}}\n' \
+      "$task_id" "$source_id" "$instance" "$target" "$bundle" "$ability" "$hap_sha" \
+      "$(cat "$output/screenshot.sha256")" "$scenario_id" "$scenario_sha" "$oracle_status" \
+      "$profile_status" "$reset_app_data" "$(basename "$screenshot")" >"$output/result.json"
+  else
+    printf '{"schema":"agentlab.harmony_emulator_case_result.v1","status":"passed","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","profileStatus":"%s","powerThermalAuthority":"unavailable_on_emulator","artifacts":{"install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","screenshot":"%s","smartperf":"smartperf.txt"}}\n' \
+      "$instance" "$target" "$bundle" "$ability" "$hap_sha" \
+      "$(cat "$output/screenshot.sha256")" "$profile_status" \
+      "$(basename "$screenshot")" >"$output/result.json"
+  fi
   printf 'case passed: result=%s/result.json\n' "$output"
   trap - EXIT INT TERM
   if [ "$keep_running" != true ]; then
@@ -307,7 +466,7 @@ usage() {
     '  agentlab-harmony-emulator.sh verify-assets TOOLS_ARCHIVE IMAGE_ARCHIVE' \
     '  agentlab-harmony-emulator.sh verify-install INSTALL_ROOT' \
     '  agentlab-harmony-emulator.sh install --tools PATH --image PATH --root PATH --acknowledge-vendor-agreements' \
-    '  agentlab-harmony-emulator.sh run-case --root INSTALL_ROOT --image-root PATH --instance-path PATH --instance NAME --hdc-port PORT --hap PATH --bundle ID --ability NAME --output PATH [--boot-mode coldboot|reset|snapshot] [--profile-samples N] [--keep-running]' \
+    '  agentlab-harmony-emulator.sh run-case --root INSTALL_ROOT --image-root PATH --instance-path PATH --instance NAME --hdc-port PORT --hap PATH --bundle ID --ability NAME --output PATH [--ui-scenario PATH --task-id ID --source-id ID] [--reset-app-data] [--boot-mode coldboot|reset|snapshot] [--profile-samples N] [--keep-running]' \
     '  For an existing vendor layout, replace --root with --tools-root PATH.'
 }
 

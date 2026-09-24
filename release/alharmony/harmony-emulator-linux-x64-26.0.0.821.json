@@ -69,13 +69,16 @@
       "bundle-query",
       "ability-launch",
       "process-check",
-      "smartperf-proxy-profile"
+      "smartperf-proxy-profile",
+      "declarative-ui-actions",
+      "layout-text-oracle",
+      "agentlab-evaluation-instance-export"
     ]
   },
   "limitations": [
     "Linux x86_64 and accessible KVM are required.",
     "The image is x86; applications containing only ARM native libraries are not supported unless a separately qualified translation layer is present.",
-    "The run-case path qualifies HDC install, launch, process, screenshot, and SmartPerf proxy evidence; it does not yet execute an arbitrary UI action script or hidden application-specific Oracle.",
+    "The run-case path qualifies HDC install, launch, process, screenshot, SmartPerf proxy evidence, and the bounded declarative UI scenario DSL; application-specific semantic Oracle calibration remains operator-owned.",
     "Absolute power and thermal measurements are unavailable on the emulator and require a separately qualified physical-device lane.",
     "GUI and host graphics dependencies remain host-specific.",
     "Vendor agreement acceptance is operator-owned and is never inferred or recorded by AgentLab."

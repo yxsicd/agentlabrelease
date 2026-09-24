@@ -151,7 +151,130 @@ fn phase_for(path: &str) -> String {
         .trim_end_matches("-events.jsonl")
         .into()
 }
+
+fn harmony_instance(root: &Path, run: &str, archive: &str, result: Value) -> Tables {
+    let mut tables = Tables::new();
+    for name in ["runs", "device_assessments", "checks", "evidence_files"] {
+        tables.entry(name.into()).or_default();
+    }
+    let functional_passed = result["status"] == "passed";
+    let oracle_passed = result["oracleStatus"] == "passed";
+    put(
+        &mut tables,
+        "runs",
+        json!({
+            "id":run,
+            "assetClass":"evaluation-instance",
+            "runId":run,
+            "taskId":result["taskId"],
+            "sourceIdentity":result["sourceIdentity"],
+            "summary":result.clone()
+        }),
+    );
+    put(
+        &mut tables,
+        "device_assessments",
+        json!({
+            "id":format!("{run}-harmony-emulator"),
+            "assetClass":"evaluation-instance",
+            "runId":run,
+            "taskId":result["taskId"],
+            "sourceIdentity":result["sourceIdentity"],
+            "scenarioId":result["scenarioId"],
+            "scenarioSha256":result["scenarioSha256"],
+            "hapSha256":result["hapSha256"],
+            "functionalPassed":functional_passed,
+            "oraclePassed":oracle_passed,
+            "profileCollected":result["profileStatus"] == "collected",
+            "powerThermalAuthority":result["powerThermalAuthority"],
+            "authority":"operator-owned-device-runner"
+        }),
+    );
+    for (check, passed) in [
+        ("functional-case-completed", functional_passed),
+        ("ui-oracle-completed", oracle_passed),
+        (
+            "smartperf-proxy-collected",
+            result["profileStatus"] == "collected",
+        ),
+    ] {
+        put(
+            &mut tables,
+            "checks",
+            json!({
+                "id":format!("{run}-{check}"),
+                "assetClass":"evaluation-instance",
+                "runId":run,
+                "phaseLabel":"harmony-emulator",
+                "check":check,
+                "passed":passed,
+                "authority":"operator-owned-device-runner"
+            }),
+        );
+    }
+    let checks = root.join("ui-checks.tsv");
+    if checks.exists() {
+        for (line_number, line) in fs::read_to_string(&checks).unwrap().lines().enumerate() {
+            let fields: Vec<&str> = line.splitn(4, '\t').collect();
+            assert_eq!(
+                fields.len(),
+                4,
+                "Malformed ui-checks.tsv line {}",
+                line_number + 1
+            );
+            assert!(
+                matches!(fields[1], "true" | "false"),
+                "Malformed UI check outcome on line {}",
+                line_number + 1
+            );
+            put(
+                &mut tables,
+                "checks",
+                json!({
+                    "id":format!("{run}-{}",fields[0]),
+                    "assetClass":"evaluation-instance",
+                    "runId":run,
+                    "phaseLabel":"harmony-emulator-ui",
+                    "check":fields[0],
+                    "passed":fields[1] == "true",
+                    "kind":fields[2],
+                    "expected":fields[3],
+                    "authority":"operator-owned-ui-oracle"
+                }),
+            );
+        }
+    }
+    for path in files(root) {
+        let rel = relative(&path, root);
+        let raw = fs::read(&path).unwrap();
+        let file_id = hash(format!("{run}:{rel}").as_bytes());
+        put(
+            &mut tables,
+            "evidence_files",
+            json!({
+                "id":file_id,
+                "assetClass":"evaluation-instance",
+                "runId":run,
+                "path":rel,
+                "sha256":hash(&raw),
+                "byteCount":raw.len(),
+                "archiveUri":archive,
+                "archivePath":format!("raw/{run}/{rel}"),
+                "storage":"external-instance-evidence"
+            }),
+        );
+    }
+    tables
+}
+
 fn instance(root: &Path, run: &str, archive: &str) -> Tables {
+    let result_path = root.join("result.json");
+    if result_path.exists() {
+        let result = json(&result_path);
+        if result["schema"] == "agentlab.harmony_emulator_case_result.v2" {
+            return harmony_instance(root, run, archive, result);
+        }
+    }
     let mut t = Tables::new();
     for name in [
         "tool_calls",

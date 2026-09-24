@@ -123,11 +123,13 @@
       "screenshot",
       "multi-instance",
       "hdc-install-launch-probe",
-      "smartperf-proxy-profile"
+      "smartperf-proxy-profile",
+      "declarative-ui-layout-oracle",
+      "evaluation-instance-export"
     ],
     "remainingGates": [
-      "arbitrary-ui-action-and-hidden-oracle",
-      "agentlab-result-ingestion",
+      "application-specific-oracle-calibration",
+      "live-tablegit-import-and-replay",
       "host-graphics-matrix",
       "vendor-redistribution-permission-before-public-binary-upload"
     ]
