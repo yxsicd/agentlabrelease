@@ -154,7 +154,13 @@ fn phase_for(path: &str) -> String {
 
 fn harmony_instance(root: &Path, run: &str, archive: &str, result: Value) -> Tables {
     let mut tables = Tables::new();
-    for name in ["runs", "device_assessments", "checks", "evidence_files"] {
+    for name in [
+        "runs",
+        "device_assessments",
+        "performance_assessments",
+        "checks",
+        "evidence_files",
+    ] {
         tables.entry(name.into()).or_default();
     }
     let functional_passed = result["status"] == "passed";
@@ -213,6 +219,52 @@ fn harmony_instance(root: &Path, run: &str, archive: &str, result: Value) -> Tab
                 "check":check,
                 "passed":passed,
                 "authority":"operator-owned-device-runner"
+            }),
+        );
+    }
+    let performance = root.join("smartperf-summary.json");
+    assert!(
+        result["profileSummaryStatus"] != "normalized" || performance.exists(),
+        "normalized SmartPerf result is missing smartperf-summary.json"
+    );
+    if performance.exists() {
+        assert_eq!(result["profileSummaryStatus"], "normalized");
+        let summary = json(&performance);
+        assert_eq!(summary["schema"], "agentlab.smartperf_summary.v1");
+        assert_eq!(summary["taskId"], result["taskId"]);
+        assert_eq!(summary["sourceIdentity"], result["sourceIdentity"]);
+        assert_eq!(
+            summary["authority"]["absolutePowerThermal"],
+            "unavailable-on-emulator"
+        );
+        put(
+            &mut tables,
+            "performance_assessments",
+            json!({
+                "id":format!("{run}-smartperf"),
+                "assetClass":"evaluation-instance",
+                "runId":run,
+                "taskId":result["taskId"],
+                "sourceIdentity":result["sourceIdentity"],
+                "environmentIdentity":summary["environmentIdentity"],
+                "sampleCount":summary["sampleCount"],
+                "profileValid":summary["profileValid"],
+                "canonicalMetrics":summary["canonicalMetrics"],
+                "authority":summary["authority"],
+                "evidencePath":"smartperf-summary.json"
+            }),
+        );
+        put(
+            &mut tables,
+            "checks",
+            json!({
+                "id":format!("{run}-smartperf-summary-normalized"),
+                "assetClass":"evaluation-instance",
+                "runId":run,
+                "phaseLabel":"harmony-emulator",
+                "check":"smartperf-summary-normalized",
+                "passed":summary["profileValid"] == true,
+                "authority":"operator-owned-performance-normalizer"
             }),
         );
     }

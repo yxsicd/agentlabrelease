@@ -80,6 +80,7 @@ def main():
         ("decision-package.json", "harness-decision-package"),
         ("difficulty-candidates.json", "difficulty-candidates"),
         ("case-discrimination-report.json", "case-discrimination-report"),
+        ("smartperf-comparison.json", "smartperf-comparison"),
         ("environment-fingerprint.json", "environment-fingerprint"),
     ):
         path = evidence / filename
@@ -279,6 +280,73 @@ def main():
                 "automaticPromotion": False,
                 "nextAction": policy.get("nextAction"),
             })
+
+    performance = load(evidence / "smartperf-comparison.json") or {}
+    if performance:
+        if performance.get("schema") != "agentlab.smartperf_comparison.v1":
+            raise SystemExit("unsupported SmartPerf comparison schema")
+        policy = performance.get("policy") or {}
+        if policy.get("automaticPromotion") is not False:
+            raise SystemExit("SmartPerf comparison must not auto-promote")
+        if policy.get("absolutePowerThermalUsed") is not False:
+            raise SystemExit("emulator SmartPerf comparison must not claim absolute power or thermal")
+        task_id = performance.get("taskId")
+        decision = performance.get("decision")
+        metrics = performance.get("metrics")
+        comparable = performance.get("comparable")
+        if not isinstance(task_id, str) or not task_id or not isinstance(metrics, list):
+            raise SystemExit("invalid SmartPerf comparison identity or metrics")
+        source_revision = summary.get("sourceRevision")
+        if not isinstance(source_revision, str) or not REVISION.fullmatch(source_revision):
+            raise SystemExit("SmartPerf feedback requires exact run sourceRevision")
+        for field in ("baselineSummarySha256", "candidateSummarySha256"):
+            digest = performance.get(field)
+            if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+                raise SystemExit(f"SmartPerf comparison requires exact {field}")
+        if not metrics or not all(
+            isinstance(row, dict)
+            and isinstance(row.get("metric"), str)
+            and row.get("status") in {"passed", "regressed", "missing"}
+            for row in metrics
+        ):
+            raise SystemExit("invalid SmartPerf comparison metric row")
+        if comparable is True:
+            if any(row["status"] == "missing" for row in metrics):
+                raise SystemExit("comparable SmartPerf report contains missing metric")
+            expected = (
+                "performance-regression-candidate"
+                if any(row["status"] == "regressed" for row in metrics)
+                else "within-relative-guardrails"
+            )
+        elif comparable is False:
+            expected = "insufficient-comparable-evidence"
+        else:
+            raise SystemExit("SmartPerf comparable must be boolean")
+        if decision != expected:
+            raise SystemExit("SmartPerf decision contradicts comparison metrics")
+        suffix = hashlib.sha256(
+            f"{task_id}|{performance.get('candidateRunId')}|{performance.get('environmentIdentity')}".encode()
+        ).hexdigest()[:16]
+        insert("decisions", {
+            "id": f"decision-{args.run_id}-performance-{suffix}",
+            "schema": "agentlab.performance_feedback_decision.v1",
+            "taskId": task_id,
+            "sourceRevision": source_revision,
+            "baselineRunId": performance.get("baselineRunId"),
+            "baselineSourceIdentity": performance.get("baselineSourceIdentity"),
+            "candidateRunId": performance.get("candidateRunId"),
+            "candidateSourceIdentity": performance.get("candidateSourceIdentity"),
+            "baselineSummarySha256": performance.get("baselineSummarySha256"),
+            "candidateSummarySha256": performance.get("candidateSummarySha256"),
+            "environmentIdentity": performance.get("environmentIdentity"),
+            "comparable": comparable,
+            "decision": decision,
+            "metrics": metrics,
+            "evidenceIds": [f"evidence-{args.run_id}-smartperf-comparison"],
+            "automaticPromotion": False,
+            "absolutePowerThermalUsed": False,
+            "nextAction": "maintainer-review-performance-feedback",
+        })
 
     tables = [{"path": path, "operations": operations} for path, operations in groups.items() if operations]
     if not tables:

@@ -92,6 +92,10 @@ class HarmonyEmulatorReleaseTests(unittest.TestCase):
         self.assertIn('"assessmentStatus":"%s"', source)
         self.assertIn('"infrastructureAvailable":%s', source)
         self.assertIn('"subjectTaskSucceeded":%s', source)
+        self.assertIn("--profile-run-id", source)
+        self.assertIn("--environment-id", source)
+        self.assertIn("summarize-smartperf.py", source)
+        self.assertIn('"profileSummaryStatus":"%s"', source)
         self.assertIn('infrastructure_failure "UI layout dump failed"', source)
         self.assertIn('oracle_failure "UI oracle check failed: $a"', source)
 

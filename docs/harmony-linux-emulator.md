@@ -103,6 +103,44 @@ screenshot and SmartPerf artifacts and binds the HAP and screenshot SHA-256.
 SmartPerf data is a relative emulator regression signal only; the result
 explicitly records that absolute power and thermal authority are unavailable.
 
+## Relative performance feedback
+
+Add stable run and environment identities to normalize SmartPerf automatically:
+
+```sh
+scripts/agentlab-harmony-emulator.sh run-case \
+  ... \
+  --ui-scenario examples/harmony-emulator/tutu-cookie-dismiss.ui \
+  --task-id harmony-tutu-cookie-dismiss \
+  --source-id artifact-sha256:<hap-sha256> \
+  --profile-run-id candidate-001 \
+  --environment-id hwlinux:emulator-26.0.0.400:phone-x86-class-a
+```
+
+The runner retains `smartperf.txt` and creates `smartperf-summary.json`. The
+normalizer follows the [official SP_daemon command format](https://gitee.com/openharmony/developtools_smartperf_host/blob/master/smartperf_device/device_command/README_zh.md),
+including its `order:n key=value` samples,
+retains unknown numeric fields, converts `fpsJitters` nanoseconds to frame
+interval milliseconds, and reports FPS, application CPU, PSS and GPU load as
+canonical relative metrics. Current, voltage and thermal fields remain raw,
+non-gating emulator evidence.
+
+Compare a candidate only with a baseline from the same task and exact
+environment identity:
+
+```sh
+python3 scripts/compare-smartperf.py \
+  --baseline baseline/smartperf-summary.json \
+  --candidate candidate/smartperf-summary.json \
+  --output candidate/smartperf-comparison.json
+```
+
+Default guardrails require at least 90% of baseline median FPS and limit mean
+CPU growth to 20%, mean PSS growth to 15%, and frame-interval p95 growth to 20%.
+Missing required metrics or an environment mismatch is insufficient evidence,
+not a pass or failure. A detected regression is a review candidate and never an
+automatic case rejection or release decision.
+
 ## Evaluation-instance export
 
 Build the normalizer and convert an immutable case directory:

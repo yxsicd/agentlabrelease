@@ -300,6 +300,7 @@ fn exports_harmony_device_checks_and_raw_evidence() {
             "subjectTaskSucceeded":true,
             "failureClass":"none",
             "profileStatus":"collected",
+            "profileSummaryStatus":"normalized",
             "powerThermalAuthority":"unavailable_on_emulator"
         }),
     );
@@ -309,6 +310,20 @@ fn exports_harmony_device_checks_and_raw_evidence() {
     )
     .unwrap();
     fs::write(evidence.join("smartperf.txt"), "fps=60\n").unwrap();
+    write(
+        &evidence.join("smartperf-summary.json"),
+        json!({
+            "schema":"agentlab.smartperf_summary.v1",
+            "taskId":"harmony-case",
+            "sourceIdentity":"artifact-sha256:hap",
+            "runId":"harmony",
+            "environmentIdentity":"hwlinux:emulator-26.0.0.400:class-a",
+            "sampleCount":3,
+            "profileValid":true,
+            "canonicalMetrics":{"fps":{"count":3,"p50":60.0,"unit":"frames-per-second"}},
+            "authority":{"absolutePowerThermal":"unavailable-on-emulator"}
+        }),
+    );
     let out = root.join("out");
     assert!(Command::new(env!("CARGO_BIN_EXE_agentlab-asset-model"))
         .args([
@@ -323,7 +338,7 @@ fn exports_harmony_device_checks_and_raw_evidence() {
         .success());
     let instance = out.join("instances/harmony");
     let checks = rows(&instance.join("checks.jsonl"));
-    assert_eq!(checks.len(), 5);
+    assert_eq!(checks.len(), 6);
     assert!(checks.iter().all(|row| row["passed"] == true));
     assert_eq!(
         checks
@@ -345,8 +360,19 @@ fn exports_harmony_device_checks_and_raw_evidence() {
         assessments[0]["powerThermalAuthority"],
         "unavailable_on_emulator"
     );
+    let performance = rows(&instance.join("performance_assessments.jsonl"));
+    assert_eq!(performance.len(), 1);
+    assert_eq!(
+        performance[0]["environmentIdentity"],
+        "hwlinux:emulator-26.0.0.400:class-a"
+    );
+    assert_eq!(performance[0]["profileValid"], true);
+    assert_eq!(
+        performance[0]["authority"]["absolutePowerThermal"],
+        "unavailable-on-emulator"
+    );
     let files = rows(&instance.join("evidence_files.jsonl"));
-    assert_eq!(files.len(), 3);
+    assert_eq!(files.len(), 4);
     assert!(files
         .iter()
         .all(|row| row["archiveUri"] == "file:///evidence"));

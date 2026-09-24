@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -eu
 
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
 TOOLS_BYTES=932070897
 TOOLS_SHA256=ad1eb9a255b6fc6f022a646bd536ef230d66e47aea1f9177a793924b83ebb649
 IMAGE_BYTES=1568108769
@@ -159,6 +161,8 @@ run_case() {
   ui_scenario=
   task_id=
   source_id=
+  profile_run_id=
+  environment_id=
   boot_mode=coldboot
   profile_samples=3
   keep_running=false
@@ -178,6 +182,8 @@ run_case() {
       --ui-scenario) [ "$#" -ge 2 ] || die "--ui-scenario requires a path"; ui_scenario=$2; shift 2 ;;
       --task-id) [ "$#" -ge 2 ] || die "--task-id requires an id"; task_id=$2; shift 2 ;;
       --source-id) [ "$#" -ge 2 ] || die "--source-id requires an id"; source_id=$2; shift 2 ;;
+      --profile-run-id) [ "$#" -ge 2 ] || die "--profile-run-id requires an id"; profile_run_id=$2; shift 2 ;;
+      --environment-id) [ "$#" -ge 2 ] || die "--environment-id requires an id"; environment_id=$2; shift 2 ;;
       --boot-mode) [ "$#" -ge 2 ] || die "--boot-mode requires a value"; boot_mode=$2; shift 2 ;;
       --profile-samples) [ "$#" -ge 2 ] || die "--profile-samples requires a count"; profile_samples=$2; shift 2 ;;
       --keep-running) keep_running=true; shift ;;
@@ -225,6 +231,16 @@ run_case() {
   else
     [ -z "$task_id" ] && [ -z "$source_id" ] ||
       die "--task-id and --source-id require --ui-scenario"
+  fi
+  if [ -n "$profile_run_id$environment_id" ]; then
+    [ -n "$ui_scenario" ] || die "profile identity requires --ui-scenario"
+    [ -n "$profile_run_id" ] && [ -n "$environment_id" ] ||
+      die "--profile-run-id and --environment-id must be supplied together"
+    validate_token "profile run id" "$profile_run_id"
+    validate_token "environment id" "$environment_id"
+    need python3
+    [ -f "$SCRIPT_DIR/summarize-smartperf.py" ] ||
+      die "SmartPerf normalizer not found beside runner"
   fi
   [ ! -e "$output" ] || die "refusing to overwrite existing output: $output"
   preflight
@@ -490,13 +506,32 @@ run_case() {
   else
     profile_status=unavailable
   fi
+  profile_summary_status=not-requested
+  profile_summary_artifact=
+  if [ -n "$profile_run_id" ] && [ "$profile_status" = collected ]; then
+    if python3 "$SCRIPT_DIR/summarize-smartperf.py" \
+        --input "$output/smartperf.txt" \
+        --task-id "$task_id" \
+        --source-identity "$source_id" \
+        --run-id "$profile_run_id" \
+        --environment-identity "$environment_id" \
+        --minimum-samples "$profile_samples" \
+        --output "$output/smartperf-summary.json" \
+        >"$output/smartperf-summary.log" 2>&1; then
+      profile_summary_status=normalized
+      profile_summary_artifact=smartperf-summary.json
+    else
+      profile_summary_status=normalization-failed
+    fi
+  fi
   terminal_status=passed
   if [ -n "$ui_scenario" ]; then
-    printf '{"schema":"agentlab.harmony_emulator_case_result.v2","status":"passed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","profileStatus":"%s","resetAppData":%s,"powerThermalAuthority":"unavailable_on_emulator","artifacts":{"uninstall":"uninstall.log","install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","uiActions":"ui-actions.tsv","uiChecks":"ui-checks.tsv","screenshot":"%s","smartperf":"smartperf.txt"}}\n' \
+    printf '{"schema":"agentlab.harmony_emulator_case_result.v2","status":"passed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","profileStatus":"%s","profileSummaryStatus":"%s","resetAppData":%s,"powerThermalAuthority":"unavailable_on_emulator","artifacts":{"uninstall":"uninstall.log","install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","uiActions":"ui-actions.tsv","uiChecks":"ui-checks.tsv","screenshot":"%s","smartperf":"smartperf.txt","smartperfSummary":"%s"}}\n' \
       "$task_id" "$source_id" "$instance" "$target" "$bundle" "$ability" "$hap_sha" \
       "$(cat "$output/screenshot.sha256")" "$scenario_id" "$scenario_sha" "$oracle_status" \
       "$assessment_status" "$infrastructure_available" "$subject_task_succeeded" "$failure_class" \
-      "$profile_status" "$reset_app_data" "$(basename "$screenshot")" >"$output/result.json"
+      "$profile_status" "$profile_summary_status" "$reset_app_data" "$(basename "$screenshot")" \
+      "$profile_summary_artifact" >"$output/result.json"
   else
     printf '{"schema":"agentlab.harmony_emulator_case_result.v1","status":"passed","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","profileStatus":"%s","powerThermalAuthority":"unavailable_on_emulator","artifacts":{"install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","screenshot":"%s","smartperf":"smartperf.txt"}}\n' \
       "$instance" "$target" "$bundle" "$ability" "$hap_sha" \
@@ -518,7 +553,7 @@ usage() {
     '  agentlab-harmony-emulator.sh verify-assets TOOLS_ARCHIVE IMAGE_ARCHIVE' \
     '  agentlab-harmony-emulator.sh verify-install INSTALL_ROOT' \
     '  agentlab-harmony-emulator.sh install --tools PATH --image PATH --root PATH --acknowledge-vendor-agreements' \
-    '  agentlab-harmony-emulator.sh run-case --root INSTALL_ROOT --image-root PATH --instance-path PATH --instance NAME --hdc-port PORT --hap PATH --bundle ID --ability NAME --output PATH [--ui-scenario PATH --task-id ID --source-id ID] [--reset-app-data] [--boot-mode coldboot|reset|snapshot] [--profile-samples N] [--keep-running]' \
+    '  agentlab-harmony-emulator.sh run-case --root INSTALL_ROOT --image-root PATH --instance-path PATH --instance NAME --hdc-port PORT --hap PATH --bundle ID --ability NAME --output PATH [--ui-scenario PATH --task-id ID --source-id ID] [--profile-run-id ID --environment-id ID] [--reset-app-data] [--boot-mode coldboot|reset|snapshot] [--profile-samples N] [--keep-running]' \
     '  For an existing vendor layout, replace --root with --tools-root PATH.'
 }
 
