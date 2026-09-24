@@ -429,7 +429,10 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
         frozen["qualificationMatrix"]["deviceChecks"]["status"],
         "separate-gate"
     );
-    assert_eq!(frozen["qualificationMatrix"]["freshness"]["qualified"], false);
+    assert_eq!(
+        frozen["qualificationMatrix"]["freshness"]["qualified"],
+        false
+    );
     assert_eq!(frozen["construction"]["status"], "candidate-unverified");
     assert_eq!(frozen["constructionQuality"]["qualifiedForReview"], true);
     assert_eq!(frozen["automaticPromotion"], false);
@@ -447,8 +450,7 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
         "{}",
         String::from_utf8_lossy(&qualification.stderr)
     );
-    let qualification_result: Value =
-        serde_json::from_slice(&qualification.stdout).unwrap();
+    let qualification_result: Value = serde_json::from_slice(&qualification.stdout).unwrap();
     assert_eq!(qualification_result["repairChecks"], 5);
     assert_eq!(qualification_result["preservationChecks"], 1);
 
