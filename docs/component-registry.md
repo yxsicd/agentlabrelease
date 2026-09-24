@@ -58,7 +58,12 @@ python3 scripts/verify-docker-image-archive.py \
   --receipt <verification.json>
 ```
 
-The verifier streams the archive, binds the selected tag to its manifest
-entry and config member, and fails closed on archive, descriptor, reference or
-image-ID drift. A metadata-only correction must use a new immutable descriptor
-Release; keep the unchanged large archive at its existing immutable URL.
+The verifier streams the archive, binds the selected tag to its Docker config
+member and (when present) the OCI index/manifest, and fails closed on archive,
+descriptor, reference or identity drift. Docker's classic store commonly
+reports the config digest as `.Id`; the containerd image store may report the
+OCI manifest digest instead. Admission must accept only the two identities
+proven from the same archive receipt, never equate them or accept an arbitrary
+locally tagged image. A real metadata-only correction must use a new immutable
+descriptor Release; keep the unchanged large archive at its existing immutable
+URL.

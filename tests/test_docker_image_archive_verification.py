@@ -14,6 +14,7 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/verify-docker-image-archive.py"
 FAST_INSTALL = ROOT / "scripts/ci-fast-subject-install.sh"
+QUALIFICATION = ROOT / "release/qualifications/runtime-image-identity-e4c326e"
 
 
 class DockerImageArchiveVerificationTests(unittest.TestCase):
@@ -183,6 +184,27 @@ class DockerImageArchiveVerificationTests(unittest.TestCase):
         self.assertIn('--expected-reference "${values[3]}"', source)
         self.assertIn("ociManifestDigest", source)
         self.assertIn('[[ "$identity_matches" == true ]]', source)
+
+    def test_real_hwlinux_qualification_separates_identity_dialects(self) -> None:
+        summary = json.loads((QUALIFICATION / "summary.json").read_text())
+        archive = json.loads((QUALIFICATION / "archive-verification.json").read_text())
+        loaded = json.loads(
+            (QUALIFICATION / "loaded-identity-verification.json").read_text()
+        )
+        self.assertEqual(summary["status"], "passed")
+        self.assertEqual(archive["status"], "passed")
+        self.assertEqual(loaded["status"], "passed")
+        self.assertEqual(archive["image"]["imageId"], summary["dockerConfigImageId"])
+        self.assertEqual(
+            archive["image"]["ociManifestDigest"], summary["ociManifestDigest"]
+        )
+        self.assertIn(loaded["actual"], loaded["admitted"])
+        for name, evidence in summary["evidence"].items():
+            with self.subTest(name=name):
+                self.assertEqual(
+                    hashlib.sha256((QUALIFICATION / evidence["path"]).read_bytes()).hexdigest(),
+                    evidence["sha256"],
+                )
 
 
 if __name__ == "__main__":
