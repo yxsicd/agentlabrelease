@@ -21,3 +21,24 @@ declared baseline, reference and meaningful negative variants, at least two
 participant profiles have enough valid trials, and the score crosses the
 declared threshold. Infrastructure-invalid attempts are retained but excluded
 from ability scoring. The report never promotes a case automatically.
+
+Real run evidence enters the same scorer through a revision-fenced collection
+manifest:
+
+```sh
+python3 scripts/collect-case-attempts.py \
+  --manifest campaign/attempts.json \
+  --output campaign/discrimination-input.json
+python3 scripts/score-case-discrimination.py \
+  --input campaign/discrimination-input.json \
+  --output campaign/case-discrimination-report.json
+```
+
+The collection manifest uses schema `agentlab.case_attempt_collection.v1` and
+binds one exact `sourceRevision` and `methodRevision`. Each case names a
+calibration JSON file and each attempt names a participant plus an evidence
+directory containing `summary.json` and `decision-package.json`. Paths are
+relative to the manifest so the campaign remains portable. The collector
+hashes both evidence files, accepts task success only from an independently
+produced assessed decision package, and records infrastructure-unavailable
+runs with a null verdict so they cannot become false Agent failures.
