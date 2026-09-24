@@ -120,6 +120,53 @@ pinned repositories plus content manifest are the reproducible authority. A
 failure retains the partial workspace and logs. The build receipt is the input
 required by the emulator bridge, not an automatic case-promotion decision.
 
+## Resume the frozen-case Harmony loop
+
+`run-harmony-evaluation-loop.py` is the control-plane bridge for the two
+operational gates above. It accepts an exact `frozen-calibrated` case, a
+digest-bound build plan, a digest-bound run template, and the exact build and
+run programs. The template uses
+`agentlab.harmony_evaluation_run_template.v1`; it contains the same case,
+Oracle, runtime and performance bindings as a normal run plan, but deliberately
+omits `buildReceipt` and `artifact`. The loop fills those two fields only from
+the successful build output and emits the ordinary
+`agentlab.harmony_evaluation_run_plan.v1` consumed by the emulator bridge.
+
+```json
+{
+  "schema": "agentlab.harmony_evaluation_loop_plan.v1",
+  "loopId": "case-42-hwlinux-r1",
+  "evaluationCase": {"path": "/evidence/case.json", "sha256": "..."},
+  "buildPlan": {"path": "/evidence/build-plan.json", "sha256": "..."},
+  "runTemplate": {"path": "/evidence/run-template.json", "sha256": "..."},
+  "buildProgram": {"path": "/agentlab/scripts/build-harmony-evaluation-artifact.py", "sha256": "..."},
+  "runProgram": {"path": "/agentlab/scripts/run-harmony-evaluation-case.py", "sha256": "..."},
+  "automaticPromotion": false
+}
+```
+
+Run or resume with the same command:
+
+```sh
+python3 scripts/run-harmony-evaluation-loop.py \
+  --plan /evidence/loop-plan.json \
+  --output /evidence/case-42-hwlinux-r1
+```
+
+The output directory is created at the start and contains an atomically updated
+`loop-state.json`. A failed build or emulator assessment is marked
+`failed-resumable`; repeating the command with the identical plan retries that
+stage while validating and reusing any earlier passed stage. Plan drift,
+completed-evidence drift, program drift, or a generated run-plan mismatch fails
+closed. A command that leaves an invalid final stage directory is marked
+`failed-integrity` instead of pretending it can be safely retried; that evidence
+requires operator review and a new loop identity. The successful
+`loop-receipt.json` is still
+`passed-review-required`, sets `automaticPromotion=false`, and stops at
+`maintainer-adjudication-and-next-analysis-cut`. It therefore automates the
+repeatable operational path without turning runtime feedback into benchmark
+truth or silently bypassing the review and recalibration boundary.
+
 ## Close assessed failures into the next analysis cut
 
 The trusted assessed campaign keeps the frozen case unchanged, runs fresh trials
