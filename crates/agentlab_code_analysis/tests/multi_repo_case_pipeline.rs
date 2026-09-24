@@ -173,8 +173,8 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
         fs::read(repeated_calibration_root.join("summary.json")).unwrap()
     );
     let oracle_sha256 = digest(&fs::read(example.join("oracle.mjs")).unwrap());
-    let plan = json!({
-        "schema":"agentlab.multi_repo_case_plan.v1",
+    let intent = json!({
+        "schema":"agentlab.multi_repo_case_intent.v1",
         "caseId":"case-cross-repo-retry-policy-v1",
         "candidateId":candidate_id,
         "sourceSetSha256":source_set,
@@ -208,8 +208,80 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
             "stale-consumer":{"turn-1":true,"turn-2":false}
         }
     });
+    let intent_path = fixture.0.join("intent.json");
+    fs::write(&intent_path, serde_json::to_vec_pretty(&intent).unwrap()).unwrap();
+    let proposal_path = fixture.0.join("proposal.json");
+    let proposed = run(Command::new("python3")
+        .arg(repository_root.join("scripts/propose-multi-repo-case-plan.py"))
+        .arg("--difficulty")
+        .arg(&difficulty_path)
+        .arg("--intent")
+        .arg(&intent_path)
+        .arg("--output")
+        .arg(&proposal_path));
+    assert!(
+        proposed.status.success(),
+        "{}",
+        String::from_utf8_lossy(&proposed.stderr)
+    );
+    let proposal: Value = serde_json::from_slice(&fs::read(&proposal_path).unwrap()).unwrap();
+    assert_eq!(proposal["status"], "review-required");
+    assert_eq!(proposal["automaticPromotion"], false);
+    assert_eq!(proposal["allowedEdits"].as_array().unwrap().len(), 3);
+    let risk_ids: Vec<_> = proposal["risks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| row["id"].clone())
+        .collect();
+    let proposal_sha256 = digest(&fs::read(&proposal_path).unwrap());
+    let review = json!({
+        "schema":"agentlab.multi_repo_case_plan_review.v1",
+        "proposalSha256":proposal_sha256,
+        "verdict":"approve-for-calibration",
+        "reviewer":"fixture-maintainer",
+        "acknowledgedRiskIds":risk_ids,
+        "rationale":"The staged behavior and independent Oracle match the pinned recursive impact surface."
+    });
+    let review_path = fixture.0.join("review.json");
+    fs::write(&review_path, serde_json::to_vec_pretty(&review).unwrap()).unwrap();
     let plan_path = fixture.0.join("plan.json");
-    fs::write(&plan_path, serde_json::to_vec_pretty(&plan).unwrap()).unwrap();
+    let reviewed = run(Command::new("python3")
+        .arg(repository_root.join("scripts/review-multi-repo-case-plan.py"))
+        .arg("--proposal")
+        .arg(&proposal_path)
+        .arg("--review")
+        .arg(&review_path)
+        .arg("--output")
+        .arg(&plan_path));
+    assert!(
+        reviewed.status.success(),
+        "{}",
+        String::from_utf8_lossy(&reviewed.stderr)
+    );
+    let reviewed_plan: Value = serde_json::from_slice(&fs::read(&plan_path).unwrap()).unwrap();
+    assert_eq!(reviewed_plan["schema"], "agentlab.multi_repo_case_plan.v2");
+    assert_eq!(reviewed_plan["review"]["proposalSha256"], proposal_sha256);
+
+    let mut stale_review = review.clone();
+    stale_review["proposalSha256"] = json!("0".repeat(64));
+    let stale_review_path = fixture.0.join("stale-review.json");
+    fs::write(
+        &stale_review_path,
+        serde_json::to_vec_pretty(&stale_review).unwrap(),
+    )
+    .unwrap();
+    let stale_reviewed = run(Command::new("python3")
+        .arg(repository_root.join("scripts/review-multi-repo-case-plan.py"))
+        .arg("--proposal")
+        .arg(&proposal_path)
+        .arg("--review")
+        .arg(&stale_review_path)
+        .arg("--output")
+        .arg(fixture.0.join("stale-plan.json")));
+    assert!(!stale_reviewed.status.success());
+    assert!(String::from_utf8_lossy(&stale_reviewed.stderr)
+        .contains("review does not bind the exact proposal"));
     let case_path = fixture.0.join("evaluation-case.json");
     let generated = run(Command::new("python3")
         .arg(repository_root.join("scripts/generate-multi-repo-case.py"))
@@ -217,6 +289,10 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
         .arg(&difficulty_path)
         .arg("--plan")
         .arg(&plan_path)
+        .arg("--proposal")
+        .arg(&proposal_path)
+        .arg("--review")
+        .arg(&review_path)
         .arg("--calibration")
         .arg(calibration_root.join("summary.json"))
         .arg("--output")
@@ -237,6 +313,32 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
     assert!(!frozen_text.contains("policyFor(tier)"));
     assert!(!frozen_text.contains("for (let attempts"));
 
+    let mut changed_after_review = reviewed_plan.clone();
+    changed_after_review["title"] = json!("Changed after exact review");
+    let changed_plan_path = fixture.0.join("changed-plan.json");
+    fs::write(
+        &changed_plan_path,
+        serde_json::to_vec_pretty(&changed_after_review).unwrap(),
+    )
+    .unwrap();
+    let changed_rejected = run(Command::new("python3")
+        .arg(repository_root.join("scripts/generate-multi-repo-case.py"))
+        .arg("--difficulty")
+        .arg(&difficulty_path)
+        .arg("--plan")
+        .arg(&changed_plan_path)
+        .arg("--proposal")
+        .arg(&proposal_path)
+        .arg("--review")
+        .arg(&review_path)
+        .arg("--calibration")
+        .arg(calibration_root.join("summary.json"))
+        .arg("--output")
+        .arg(fixture.0.join("changed-case.json")));
+    assert!(!changed_rejected.status.success());
+    assert!(String::from_utf8_lossy(&changed_rejected.stderr)
+        .contains("v2 plan differs from reviewed proposal"));
+
     let mut tampered: Value =
         serde_json::from_slice(&fs::read(calibration_root.join("summary.json")).unwrap()).unwrap();
     tampered["variants"]["reference"]["stages"]["turn-2"]["pass"] = json!(false);
@@ -252,6 +354,10 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
         .arg(&difficulty_path)
         .arg("--plan")
         .arg(&plan_path)
+        .arg("--proposal")
+        .arg(&proposal_path)
+        .arg("--review")
+        .arg(&review_path)
         .arg("--calibration")
         .arg(&tampered_path)
         .arg("--output")

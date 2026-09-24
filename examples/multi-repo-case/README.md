@@ -7,7 +7,9 @@ evaluation case:
 exact Git source set
   -> cross-repository module graph
   -> recursive change-impact difficulty
-  -> semantic case plan
+  -> semantic intent
+  -> review-required plan proposal
+  -> exact proposal review
   -> independent executable Oracle
   -> baseline/reference/wrong-variant calibration
   -> frozen evaluation case
@@ -34,10 +36,33 @@ state rather than merely repeating the first check.
 
 First run `agentlab-multi-repo-analysis` on exact committed checkouts as
 described in [`docs/multi-repository-analysis.md`](../../docs/multi-repository-analysis.md).
-Select a dependency-supported candidate and author a
-`agentlab.multi_repo_case_plan.v1` plan. The plan contains Agent-visible demands,
-allowed edit paths, check IDs, the Oracle digest and expected calibration
-matrix. It does not contain reference source.
+Select a dependency-supported candidate and author an
+`agentlab.multi_repo_case_intent.v1` intent. It contains Agent-visible demands,
+check IDs, the Oracle digest and expected calibration matrix, but no reference
+source. Construct a proposal; the script derives the allowed edit surface and
+records analysis evidence plus known qualification risks:
+
+```sh
+python3 scripts/propose-multi-repo-case-plan.py \
+  --difficulty /tmp/analysis/difficulty_candidates.json \
+  --intent /tmp/case-intent.json \
+  --output /tmp/case-plan-proposal.json
+```
+
+The output remains `review-required` and has `automaticPromotion: false`. A
+review decision must bind its exact SHA-256, approve only calibration, identify
+the reviewer, give a rationale and acknowledge every recorded risk. Compile
+that decision into a v2 plan:
+
+```sh
+python3 scripts/review-multi-repo-case-plan.py \
+  --proposal /tmp/case-plan-proposal.json \
+  --review /tmp/case-plan-review.json \
+  --output /tmp/case-plan.json
+```
+
+A changed proposal invalidates the review. The resulting plan retains both
+proposal and decision digests for calibration lineage.
 
 Run the independent calibration:
 
@@ -56,9 +81,16 @@ Freeze the case only after calibration succeeds:
 python3 scripts/generate-multi-repo-case.py \
   --difficulty /tmp/analysis/difficulty_candidates.json \
   --plan /tmp/case-plan.json \
+  --proposal /tmp/case-plan-proposal.json \
+  --review /tmp/case-plan-review.json \
   --calibration /tmp/multi-repo-calibration/summary.json \
   --output /tmp/multi-repo-evaluation-case.json
 ```
+
+For v2 plans the freezer independently rereads both evidence files, verifies
+their digests and confirms every calibrated plan field is identical to the
+reviewed proposal. Legacy v1 plans remain accepted without claiming this
+stronger review lineage.
 
 Copy the frozen case into campaign evidence as
 `multi-repo-evaluation-case.json` and its exact calibration summary as
@@ -68,8 +100,9 @@ their digest/source-set/candidate/Oracle linkage and writes an
 
 ## Evidence boundary
 
-The deterministic generator validates lineage and calibration; it does not
-invent the semantic requirement. A maintainer or construction Agent must still
-produce and review the semantic plan. The checked fixture qualifies the
-executable VM seam only. Harmony compilation, UI behavior, emulator deployment,
-performance and assessed-Agent discrimination are independent later gates.
+The deterministic proposer derives scope and exposes risks; it does not invent
+or prove the semantic requirement. A maintainer or construction Agent must
+still supply the intent, and an explicit reviewer must approve the exact
+proposal before calibration. The checked fixture qualifies the executable VM
+seam only. Harmony compilation, UI behavior, emulator deployment, performance
+and assessed-Agent discrimination are independent later gates.

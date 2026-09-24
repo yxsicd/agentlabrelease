@@ -81,5 +81,7 @@ This separation prevents a large dependency cone or an unresolved import from
 being mistaken for a useful benchmark merely because it looks difficult.
 
 The executable [multi-repository case fixture](../examples/multi-repo-case/README.md)
-implements the next step: a reviewed semantic plan, independent runtime Oracle,
-four calibration variants, frozen task output and TableGit persistence.
+implements the next step: a machine-constructed but non-promoted proposal,
+digest-bound explicit review, independent runtime Oracle, four calibration
+variants, frozen task output and TableGit persistence. Dependency evidence can
+derive edit scope and construction risks; it does not establish semantic truth.
