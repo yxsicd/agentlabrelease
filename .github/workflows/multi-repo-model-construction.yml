@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      AGENTLAB_ROOT: ${{ runner.temp }}/multi-repo-model-construction
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/multi-repo-model-construction
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_MODEL: ${{ inputs.model }}
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}

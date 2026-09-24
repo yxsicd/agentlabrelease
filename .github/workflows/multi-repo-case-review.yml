@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      AGENTLAB_ROOT: ${{ runner.temp }}/multi-repo-case-review
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/multi-repo-case-review
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Verify and recover the trusted construction evidence
