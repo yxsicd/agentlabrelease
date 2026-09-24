@@ -1,0 +1,222 @@
+{
+  "schema": "agentlab.component_registry.v1",
+  "generatedFromRevision": "c52eb41e7ff177fd029b815e31a9121f9d3bf7d6",
+  "scope": "current-alpha11-assembly-components",
+  "policy": {
+    "unchangedAction": "reuse",
+    "changedAction": "publish-new-immutable-component",
+    "aggregateAction": "reference-only",
+    "sourceCommitRole": "audit-not-sole-rebuild-key"
+  },
+  "components": [
+    {
+      "id": "agentlab-control-linux-x64",
+      "kind": "control",
+      "platform": "linux-x64",
+      "status": "selected",
+      "immutableRef": "control-24fb4ec0-linux-x64",
+      "source": {
+        "repository": "https://github.com/yxsicd/dinddocs",
+        "revision": "24fb4ec0beaff395b790bf4d1678f7f2a9c76a3c"
+      },
+      "inputIdentity": {
+        "mode": "legacy-published-v1",
+        "effectiveInputDigest": "32e2bad6644ebe5c2df9265defd1d68e2cb540e6e29979dda0259d535f17a039"
+      },
+      "assets": [
+        {
+          "id": "agentlabctl-linux-x64",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-24fb4ec0-linux-x64/agentlabctl-linux-x64",
+          "bytes": 4532144,
+          "sha256": "51cec430e1c0a3741bab77f387ee90ed7349746a2d87ff39a275b4f975eab886"
+        }
+      ]
+    },
+    {
+      "id": "agentlab-composition-installer-linux-x64",
+      "kind": "installer",
+      "platform": "linux-x64",
+      "status": "selected",
+      "immutableRef": "installer-24fb4ec0-linux-x64",
+      "source": {
+        "repository": "https://github.com/yxsicd/dinddocs",
+        "revision": "24fb4ec0beaff395b790bf4d1678f7f2a9c76a3c"
+      },
+      "inputIdentity": {
+        "mode": "legacy-published-v1",
+        "effectiveInputDigest": "3c51c3101568be3fabfda8a4d237824aecff248b96e34dc54b35d78f4ad9efab"
+      },
+      "assets": [
+        {
+          "id": "agentlab-composition-install.sh",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/installer-24fb4ec0-linux-x64/agentlab-composition-install.sh",
+          "bytes": 4653,
+          "sha256": "f0cfce3d0842bfd36b41ec3a4c593b41779d461ca3359c6cf2256728ce42ad04"
+        }
+      ]
+    },
+    {
+      "id": "agentlab-alpha10-environment-lock",
+      "kind": "composition",
+      "platform": "linux-x64",
+      "status": "selected-base-composition",
+      "immutableRef": "candidate-agentlab-alpha10-24fb4ec0-linux-x64",
+      "source": {
+        "repository": "https://github.com/yxsicd/dinddocs",
+        "revision": "24fb4ec0beaff395b790bf4d1678f7f2a9c76a3c"
+      },
+      "inputIdentity": {
+        "mode": "legacy-published-v1",
+        "effectiveInputDigest": "76271ea8b1febc3e33852d775f8a41d84bce72e9226d197883d8d0a752e4c9df"
+      },
+      "assets": [
+        {
+          "id": "environment-lock.json",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/candidate-agentlab-alpha10-24fb4ec0-linux-x64/environment-lock.json",
+          "bytes": 6515,
+          "sha256": "dcb27623ef9f3f5a92c0eb759120989cafcf25ace8873945a043242cb41fd1eb"
+        }
+      ]
+    },
+    {
+      "id": "agentlab-runtime-linux-x64",
+      "kind": "runtime",
+      "platform": "linux-x64",
+      "status": "selected",
+      "immutableRef": "runtime-24fb4ec0-linux-x64",
+      "source": {
+        "repository": "https://github.com/yxsicd/dinddocs",
+        "revision": "24fb4ec0beaff395b790bf4d1678f7f2a9c76a3c"
+      },
+      "inputIdentity": {
+        "mode": "legacy-published-v1",
+        "effectiveInputDigest": "94db5544e3aca8742458dacf21cb930879f7e19857b6a5c1bc328f905e541678"
+      },
+      "assets": [
+        {
+          "id": "agentlab-runtime-archive",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/runtime-24fb4ec0-linux-x64/agentlab-pack-agentlab-release-24fb4ec0-linux-x64.tar.zst",
+          "bytes": 33378281,
+          "sha256": "e78188d3151644208dcc3502240602184ac8b30d3d13e26d1c2fffb479071cc4"
+        },
+        {
+          "id": "agentlab-runtime-descriptor",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/runtime-24fb4ec0-linux-x64/agentlab-pack-agentlab-release-24fb4ec0-linux-x64.tar.zst.json",
+          "bytes": 462,
+          "sha256": "26a9b442094a885229f9486bc2e3e00fa9a39b55579d4d544989e1058e4ce07a"
+        }
+      ]
+    },
+    {
+      "id": "harmony-cli-linux-x64",
+      "kind": "harmony",
+      "platform": "linux-x64",
+      "status": "selected",
+      "immutableRef": "harmony-linux-x64-6.1.1.300",
+      "source": {
+        "repository": "https://developer.huawei.com/consumer/en/deveco-studio/"
+      },
+      "inputIdentity": {
+        "mode": "legacy-published-v1",
+        "effectiveInputDigest": "4c678fbc6d6d87cf6d1797918f685f24788573b539ee5bc7788e19f13d5fbcb3"
+      },
+      "assets": [
+        {
+          "id": "harmony-cli-archive",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-linux-x64-6.1.1.300/harmony-linux-x64-6.1.1.300.tar.zst",
+          "bytes": 989968633,
+          "sha256": "8fc2199afaea5055c6a3ff762b7b58a9475c5ff7b6c30285336014dc647927c2"
+        }
+      ]
+    },
+    {
+      "id": "mcpgit-program-linux-x64",
+      "kind": "mcpgit",
+      "platform": "linux-x64",
+      "status": "selected",
+      "immutableRef": "mcpgit-git-c0c3a53fe68904e017de7505bf47436d068938e5-linux-amd64",
+      "source": {
+        "repository": "https://github.com/yxsicd/MCPGit",
+        "revision": "c0c3a53fe68904e017de7505bf47436d068938e5"
+      },
+      "inputIdentity": {
+        "mode": "legacy-published-v1",
+        "effectiveInputDigest": "a07e46e837c25c36c2887169253fe57931eae40a28e27b5de49205a5a76eba7c"
+      },
+      "assets": [
+        {
+          "id": "mcpgit-program-archive",
+          "url": "https://github.com/yxsicd/mcpgitrelease/releases/download/mcpgit-git-c0c3a53fe68904e017de7505bf47436d068938e5-linux-amd64/mcpgit-program-git-c0c3a53fe68904e017de7505bf47436d068938e5-x86_64-unknown-linux-musl.tar.gz",
+          "bytes": 33039121,
+          "sha256": "382e3bbf97350b7e61f331095fd20b0ca71dd749c9f9712474b11cd03f597eee"
+        }
+      ]
+    },
+    {
+      "id": "agentlab-developer-tools-linux-x64",
+      "kind": "tools",
+      "platform": "linux-x64",
+      "status": "selected",
+      "immutableRef": "tools-e443b17a-linux-x64",
+      "source": {
+        "repository": "https://github.com/yxsicd/dinddocs"
+      },
+      "inputIdentity": {
+        "mode": "legacy-published-v1",
+        "effectiveInputDigest": "f4c939f78d8e7a0f8aa5e0535fb470a182f498a27cfd271b973d902cf7d36aa2"
+      },
+      "assets": [
+        {
+          "id": "agentlab-developer-tools-archive",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/tools-e443b17a-linux-x64/agentlab-pack-developer-tools-e443b17a-linux-x64.tar.zst",
+          "bytes": 29154352,
+          "sha256": "58bc13e984f7219a560017592bdee11a6874a15099faaa1d40b0f2542d489b6e"
+        }
+      ]
+    },
+    {
+      "id": "harmony-emulator-command-line-tools",
+      "kind": "harmony-emulator-tools",
+      "platform": "linux-x64",
+      "status": "selected",
+      "immutableRef": "harmony-emulator-linux-x64-26.0.0.821",
+      "source": {
+        "repository": "https://developer.huawei.com/consumer/en/deveco-studio/"
+      },
+      "inputIdentity": {
+        "mode": "external-payload-v1",
+        "effectiveInputDigest": "7db8e040007b5b71dc7be4e3641d05b4ac69fc697c51b13713f7c018578414c6"
+      },
+      "assets": [
+        {
+          "id": "commandline-tools-linux-x64-26.0.0.821.tar.zst",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-emulator-linux-x64-26.0.0.821/commandline-tools-linux-x64-26.0.0.821.tar.zst",
+          "bytes": 932070897,
+          "sha256": "ad1eb9a255b6fc6f022a646bd536ef230d66e47aea1f9177a793924b83ebb649"
+        }
+      ]
+    },
+    {
+      "id": "harmony-emulator-phone-x86-image",
+      "kind": "harmony-system-image",
+      "platform": "linux-x64",
+      "status": "selected",
+      "immutableRef": "harmony-emulator-linux-x64-26.0.0.821",
+      "source": {
+        "repository": "https://developer.huawei.com/consumer/en/deveco-studio/"
+      },
+      "inputIdentity": {
+        "mode": "external-payload-v1",
+        "effectiveInputDigest": "941d78403eb21f5838aa1e4b21af434c012f4a1acd4e99bf8f8cc1e573f30f3f"
+      },
+      "assets": [
+        {
+          "id": "HarmonyOS-7.0.0-phone_all_x86.tar.zst",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-emulator-linux-x64-26.0.0.821/HarmonyOS-7.0.0-phone_all_x86.tar.zst",
+          "bytes": 1568108769,
+          "sha256": "75c537cb6dc62291f96f0f247c148de653c9c6633c4dc5b0c34cc254909ae671"
+        }
+      ]
+    }
+  ]
+}

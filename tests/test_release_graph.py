@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import pathlib
 import sys
@@ -50,6 +51,30 @@ def closure() -> dict:
 class ReleaseGraphTests(unittest.TestCase):
     def test_valid_immutable_closure(self) -> None:
         MODULE.validate_closure(closure())
+
+    def test_alpha11_closure_matches_component_registry(self) -> None:
+        closure_value = json.loads(
+            (ROOT / "release/closures/v0.1.0-alpha.11.json").read_text()
+        )
+        registry_path = ROOT / "release/components/registry.json"
+        registry_bytes = registry_path.read_bytes()
+        registry = json.loads(registry_bytes)
+        self.assertEqual(
+            closure_value["componentRegistry"]["sha256"],
+            hashlib.sha256(registry_bytes).hexdigest(),
+        )
+        MODULE.validate_closure(closure_value, registry, registry_bytes)
+
+    def test_alpha11_registry_asset_drift_is_rejected(self) -> None:
+        closure_value = json.loads(
+            (ROOT / "release/closures/v0.1.0-alpha.11.json").read_text()
+        )
+        registry_path = ROOT / "release/components/registry.json"
+        registry_bytes = registry_path.read_bytes()
+        registry = json.loads(registry_bytes)
+        closure_value["assets"][-1]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "differs from registry"):
+            MODULE.validate_closure(closure_value, registry, registry_bytes)
 
     def test_mutable_aldev_is_rejected(self) -> None:
         value = closure()

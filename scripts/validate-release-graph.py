@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import pathlib
 import re
@@ -64,7 +65,51 @@ def validate_asset(asset: Any) -> None:
             fail("image identity requires distinct manifest/config SHA-256 digests")
 
 
-def validate_closure(value: dict[str, Any]) -> None:
+def validate_registry_binding(
+    value: dict[str, Any], registry: dict[str, Any], registry_bytes: bytes
+) -> None:
+    binding = value.get("componentRegistry")
+    if not isinstance(binding, dict):
+        fail("componentRegistry binding required")
+    if binding.get("schema") != "agentlab.component_registry.v1":
+        fail("componentRegistry schema mismatch")
+    if hashlib.sha256(registry_bytes).hexdigest() != binding.get("sha256"):
+        fail("componentRegistry digest mismatch")
+    if registry.get("schema") != binding["schema"]:
+        fail("loaded component registry schema mismatch")
+
+    components = registry.get("components")
+    if not isinstance(components, list):
+        fail("component registry entries required")
+    by_id = {item.get("id"): item for item in components if isinstance(item, dict)}
+    selected = {item_id for item_id, item in by_id.items() if item.get("status", "").startswith("selected")}
+    referenced: set[str] = set()
+    for asset in value["assets"]:
+        component_id = asset.get("registryComponent")
+        if not isinstance(component_id, str) or component_id not in by_id:
+            fail("release asset must reference a registered component")
+        referenced.add(component_id)
+        candidates = by_id[component_id].get("assets") or []
+        if not any(
+            item.get("url") == asset["url"]
+            and item.get("bytes") == asset["bytes"]
+            and item.get("sha256") == asset["sha256"]
+            for item in candidates
+        ):
+            fail(f"release asset differs from registry component {component_id}")
+    if referenced != selected:
+        fail("closure selection differs from selected component registry entries")
+
+    reuse = value.get("reuse")
+    if not isinstance(reuse, dict) or reuse.get("selectedComponentCount") != len(selected):
+        fail("reuse summary selected component count mismatch")
+    if reuse.get("newBinaryBuildCount") != 0 or reuse.get("newBinaryUploadCount") != 0:
+        fail("reference-only aggregate may not claim new binary builds or uploads")
+
+
+def validate_closure(
+    value: dict[str, Any], registry: dict[str, Any] | None = None, registry_bytes: bytes = b""
+) -> None:
     if value.get("schema") != CLOSURE_SCHEMA:
         fail("unsupported release closure schema")
     if not isinstance(value.get("releaseVersion"), str) or not value["releaseVersion"]:
@@ -116,6 +161,8 @@ def validate_closure(value: dict[str, Any]) -> None:
             fail("invalid target compatibility status")
         if not isinstance(target.get("platform"), str) or not target["platform"]:
             fail("target compatibility platform required")
+    if registry is not None:
+        validate_registry_binding(value, registry, registry_bytes)
 
 
 def validate_target(value: dict[str, Any]) -> None:
@@ -150,9 +197,16 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--closure", action="append", default=[])
     parser.add_argument("--target", action="append", default=[])
+    parser.add_argument("--registry")
     args = parser.parse_args()
+    registry_bytes = b""
+    registry = None
+    if args.registry:
+        registry_path = pathlib.Path(args.registry)
+        registry_bytes = registry_path.read_bytes()
+        registry = json.loads(registry_bytes)
     for raw in args.closure:
-        validate_closure(load(pathlib.Path(raw)))
+        validate_closure(load(pathlib.Path(raw)), registry, registry_bytes)
     for raw in args.target:
         validate_target(load(pathlib.Path(raw)))
     if not args.closure and not args.target:
