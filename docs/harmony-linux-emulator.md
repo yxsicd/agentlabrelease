@@ -411,6 +411,15 @@ failed UI-check evidence. Infrastructure-unavailable output, malformed failure
 evidence or identity drift still fails the bridge. The default policy remains
 `require-pass` for qualification and reference runs.
 
+For multi-attempt assessed campaigns, use
+`scripts/run-harmony-assessed-campaign.py`. It skips the device gate for
+already-failed static attempts, runs only statically passing Agent workspaces
+through the resumable HAP/emulator path, composes static and device verdicts,
+and invokes the ordinary discrimination and feedback tools. This controller is
+sequential for one declared emulator instance; multi-instance scheduling is a
+separate resource-allocation layer and must preserve one exact runtime and HDC
+binding per attempt.
+
 ```sh
 python3 scripts/run-harmony-evaluation-case.py \
   --plan /absolute/path/harmony-evaluation-run-plan.json \
