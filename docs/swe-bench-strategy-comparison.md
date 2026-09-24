@@ -145,10 +145,13 @@ smaller than SWE-bench's:
     not yet semantic proof: the lifecycle hypothesis, five-file edit surface,
     repair/preservation checks and Oracle still require independent review and
     calibration. The two source projects now have revision-bound project roots
-    and build modules, but the exact `hwlinux` host has only the emulator/runtime
-    substrate: its source-build preflight fails closed because the Harmony SDK,
-    `ohpm`, and Hvigor CLI are absent. A prior install of an existing HAP is not
-    counted as a baseline build of either repository.
+    and build modules. The API 20 guide project has two clean, member-equivalent
+    baseline HAP builds; one exact HAP also installs, launches and retains a live
+    process on `hwlinux`. This qualifies a cross-host baseline build/runtime
+    smoke, not the proposed business UI behavior. The API 23/24 code-workshop
+    build remains unqualified because matching DevEco 6.1 tooling is absent, and
+    the exact `hwlinux` host still has only the emulator/runtime substrate rather
+    than a source-build SDK.
 11. The richer API-localizing full run takes 257.65 seconds and emits roughly
     297 MiB of fact rows plus 25 MiB of difficulty candidates. Git blob reads
     are batched, but AST analysis is still single-process and there is no

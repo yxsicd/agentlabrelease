@@ -37,7 +37,9 @@
     "the same exact API call is observed in both repositories",
     "target and reference call facts bind exact owners, spans and revisions",
     "editable and context source bytes bind Git blob OIDs and SHA-256 digests",
-    "repair, preservation, device and performance checks are proposed separately"
+    "repair, preservation, device and performance checks are proposed separately",
+    "guide-snippets API 20 baseline builds successfully with two member-equivalent clean HAPs",
+    "one exact baseline HAP installs, launches and retains a live process on the Linux x86 emulator"
   ],
   "notQualified": [
     "ArkWeb API-version semantics",
@@ -45,8 +47,9 @@
     "expanded edit-path relevance",
     "reference implementation",
     "independent localization review",
-    "repository builds",
-    "Linux emulator behavior",
+    "code-workshop API 23/24 source build",
+    "guide-snippets business UI Oracle",
+    "proposed business UI behavior on the Linux emulator",
     "startup-performance improvement",
     "participant discrimination"
   ],
@@ -55,6 +58,12 @@
     "status": "blocked-missing-toolchain",
     "qualified": false,
     "boundary": "The retained emulator install receipt used an existing HAP; it is not a source-build receipt for either pinned repository."
+  },
+  "guideBaselineBuildRuntime": {
+    "path": "guide-api20-build-runtime.json",
+    "status": "baseline-build-runtime-qualified",
+    "businessUiOracleQualified": false,
+    "automaticPromotion": false
   },
   "automaticPromotion": false
 }
