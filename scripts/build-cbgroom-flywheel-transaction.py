@@ -129,9 +129,12 @@ def main():
         ("assessment-feedback-candidates.json", "assessment-feedback-candidates"),
         ("smartperf-baseline-summary.json", "smartperf-baseline-summary"),
         ("smartperf-candidate-summary.json", "smartperf-candidate-summary"),
+        ("smartperf-candidate-repeat-summary.json", "smartperf-candidate-repeat-summary"),
         ("harmony-baseline-result.json", "harmony-functional-result"),
         ("harmony-candidate-result.json", "harmony-functional-result"),
+        ("harmony-candidate-repeat-result.json", "harmony-functional-repeat-result"),
         ("smartperf-comparison.json", "smartperf-comparison"),
+        ("smartperf-repeat-comparison.json", "smartperf-repeat-comparison"),
         ("performance-policy.json", "harmony-performance-policy"),
         ("profile-workload.tsv", "harmony-profile-workload"),
         ("performance-calibration.json", "harmony-performance-calibration"),
@@ -818,6 +821,7 @@ def main():
             raise SystemExit("SmartPerf decision contradicts comparison metrics")
         calibration_binding = None
         calibration_evidence_ids = []
+        repeatability_verified = False
         if performance_calibration:
             if performance_calibration.get("schema") != "agentlab.performance_calibration.v1":
                 raise SystemExit("unsupported performance calibration schema")
@@ -881,16 +885,147 @@ def main():
                 raise SystemExit("performance calibration comparison digest mismatch")
             if authority.get("relativePerformance") != "smartperf-emulator-proxy" or authority.get("absolutePowerThermal") != "unavailable-on-emulator":
                 raise SystemExit("performance calibration overclaims measurement authority")
+            repeatability = performance_calibration.get("repeatability")
+            repeatability_binding = None
+            if repeatability:
+                repeat_summary_path = evidence / "smartperf-candidate-repeat-summary.json"
+                repeat_result_path = evidence / "harmony-candidate-repeat-result.json"
+                repeat_comparison_path = evidence / "smartperf-repeat-comparison.json"
+                repeat_summary = load(repeat_summary_path)
+                repeat_result = load(repeat_result_path)
+                repeat_comparison = load(repeat_comparison_path)
+                if not all(isinstance(value, dict) for value in (repeat_summary, repeat_result, repeat_comparison)):
+                    raise SystemExit("performance calibration repeatability requires retained repeat evidence")
+                if repeatability.get("status") != "reproduced" or repeatability.get("minimumCandidateRuns") != 2:
+                    raise SystemExit("performance calibration repeatability contract is invalid")
+                if repeat_summary.get("schema") != "agentlab.smartperf_summary.v2" or repeat_result.get("schema") != "agentlab.harmony_emulator_case_result.v3":
+                    raise SystemExit("performance calibration repeat evidence schema is invalid")
+                if repeat_comparison.get("schema") != "agentlab.smartperf_comparison.v3":
+                    raise SystemExit("performance calibration repeat comparison schema is invalid")
+                if repeatability.get("candidateRunIds") != [performance.get("candidateRunId"), repeat_summary.get("runId")]:
+                    raise SystemExit("performance calibration repeat run identities differ")
+                if repeatability.get("comparisonSha256s") != [sha256(comparison_path), sha256(repeat_comparison_path)]:
+                    raise SystemExit("performance calibration repeat comparison digest mismatch")
+                if (
+                    repeat_comparison.get("taskId") != task_id
+                    or repeat_comparison.get("baselineRunId") != performance.get("baselineRunId")
+                    or repeat_comparison.get("baselineSourceIdentity") != performance.get("baselineSourceIdentity")
+                    or repeat_comparison.get("candidateRunId") != repeat_summary.get("runId")
+                    or repeat_comparison.get("candidateSourceIdentity") != performance.get("candidateSourceIdentity")
+                    or repeat_comparison.get("environmentIdentity") != performance.get("environmentIdentity")
+                    or repeat_comparison.get("performancePolicy") != performance.get("performancePolicy")
+                    or repeat_comparison.get("profileWorkload") != performance.get("profileWorkload")
+                    or repeat_comparison.get("baselineSummarySha256") != canonical_json_sha256(baseline_summary)
+                    or repeat_comparison.get("comparable") is not True
+                    or repeat_comparison.get("decision") != decision
+                ):
+                    raise SystemExit("performance calibration repeat comparison differs from primary contract")
+                if repeat_comparison.get("candidateSummarySha256") != canonical_json_sha256(repeat_summary):
+                    raise SystemExit("performance calibration repeat summary digest differs")
+                if (
+                    repeat_summary.get("taskId") != task_id
+                    or repeat_summary.get("sourceIdentity") != performance.get("candidateSourceIdentity")
+                    or repeat_summary.get("environmentIdentity") != performance.get("environmentIdentity")
+                    or repeat_summary.get("performancePolicy") != candidate_summary.get("performancePolicy")
+                    or repeat_summary.get("profileWorkload") != candidate_summary.get("profileWorkload")
+                    or repeat_summary.get("profileValid") is not True
+                ):
+                    raise SystemExit("performance calibration repeat summary differs from primary contract")
+                repeat_gate = repeat_comparison.get("functionalGate") or {}
+                repeat_candidate_gate = repeat_gate.get("candidate") or {}
+                if (
+                    repeat_gate.get("passed") is not True
+                    or repeat_gate.get("baseline") != baseline_gate
+                    or repeat_candidate_gate.get("resultSha256") != canonical_json_sha256(repeat_result)
+                    or repeat_candidate_gate.get("passed") is not True
+                    or repeat_candidate_gate.get("profileRunId") != repeat_summary.get("runId")
+                    or repeat_candidate_gate.get("assessmentStatus") != repeat_result.get("assessmentStatus")
+                    or repeat_candidate_gate.get("infrastructureAvailable") is not repeat_result.get("infrastructureAvailable")
+                    or repeat_candidate_gate.get("subjectTaskSucceeded") is not repeat_result.get("subjectTaskSucceeded")
+                    or repeat_candidate_gate.get("oracleStatus") != repeat_result.get("oracleStatus")
+                    or repeat_candidate_gate.get("scenarioId") != repeat_result.get("scenarioId")
+                    or repeat_candidate_gate.get("scenarioSha256") != repeat_result.get("scenarioSha256")
+                    or repeat_candidate_gate.get("environmentIdentity") != repeat_result.get("environmentIdentity")
+                    or repeat_candidate_gate.get("sourceIdentity") != repeat_result.get("sourceIdentity")
+                    or repeat_result.get("profileRunId") != repeat_summary.get("runId")
+                    or repeat_result.get("sourceIdentity") != performance.get("candidateSourceIdentity")
+                    or repeat_result.get("hapSha256") != str(performance.get("candidateSourceIdentity", "")).removeprefix("artifact-sha256:")
+                    or repeat_result.get("scenarioId") != functional_oracle.get("scenarioId")
+                    or repeat_result.get("scenarioSha256") != functional_oracle.get("scenarioSha256")
+                    or repeat_result.get("oracleStatus") != "passed"
+                    or repeat_result.get("assessmentStatus") != "assessed"
+                    or repeat_result.get("infrastructureAvailable") is not True
+                    or repeat_result.get("subjectTaskSucceeded") is not True
+                    or repeat_result.get("status") != "passed"
+                    or repeat_result.get("failureClass") != "none"
+                    or repeat_result.get("environmentIdentity") != performance.get("environmentIdentity")
+                    or repeat_result.get("performancePolicyId") != performance["performancePolicy"]["id"]
+                    or repeat_result.get("performancePolicySha256") != performance["performancePolicy"]["sha256"]
+                    or repeat_result.get("profileWorkloadId") != performance["profileWorkload"]["id"]
+                    or repeat_result.get("profileWorkloadSha256") != performance["profileWorkload"]["sha256"]
+                ):
+                    raise SystemExit("performance calibration repeat functional evidence differs")
+                repeat_metrics = repeat_comparison.get("metrics") or []
+                required_metrics = retained_policy.get("requiredMetrics") or []
+                if len(repeat_metrics) != len(required_metrics):
+                    raise SystemExit("performance calibration repeat metrics differ from policy")
+                for actual, specification in zip(repeat_metrics, required_metrics):
+                    name = specification.get("metric")
+                    statistic = specification.get("statistic")
+                    before = ((baseline_summary.get("canonicalMetrics") or {}).get(name) or {}).get(statistic)
+                    after = ((repeat_summary.get("canonicalMetrics") or {}).get(name) or {}).get(statistic)
+                    if not isinstance(before, (int, float)) or before <= 0 or not isinstance(after, (int, float)):
+                        raise SystemExit("performance calibration repeat metric is unusable")
+                    ratio = after / before
+                    if specification.get("direction") == "lower":
+                        threshold = specification.get("maximumRelativeIncrease")
+                        status = "passed" if isinstance(threshold, (int, float)) and ratio <= 1.0 + threshold else "regressed"
+                        guardrail = {"maximumRelativeIncrease": threshold}
+                    elif specification.get("direction") == "higher":
+                        threshold = specification.get("minimumCandidateToBaselineRatio")
+                        status = "passed" if isinstance(threshold, (int, float)) and ratio >= threshold else "regressed"
+                        guardrail = {"minimumCandidateToBaselineRatio": threshold}
+                    else:
+                        raise SystemExit("performance calibration repeat policy direction is invalid")
+                    if actual != {
+                        "metric": name,
+                        "statistic": statistic,
+                        "baseline": before,
+                        "candidate": after,
+                        "candidateToBaselineRatio": ratio,
+                        "guardrail": guardrail,
+                        "status": status,
+                    }:
+                        raise SystemExit("performance calibration repeat metric contradicts retained evidence")
+                primary_regressions = sorted(row["metric"] for row in metrics if row.get("status") == "regressed")
+                repeat_regressions = sorted(row["metric"] for row in repeat_metrics if row.get("status") == "regressed")
+                consistent_regressions = sorted(set(primary_regressions) & set(repeat_regressions))
+                if not consistent_regressions or repeatability.get("consistentRegressedMetrics") != consistent_regressions:
+                    raise SystemExit("performance calibration repeat regression is not consistent")
+                repeatability_binding = {
+                    "status": "reproduced",
+                    "candidateRunIds": repeatability["candidateRunIds"],
+                    "comparisonSha256s": repeatability["comparisonSha256s"],
+                    "consistentRegressedMetrics": consistent_regressions,
+                }
+                repeatability_verified = True
             calibration_sha256 = sha256(evidence / "performance-calibration.json")
             calibration_binding = {
                 "id": performance_calibration.get("id"),
                 "sha256": calibration_sha256,
                 "applicationSource": application_source,
                 "controlledMutation": mutation,
+                **({"repeatability": repeatability_binding} if repeatability_binding else {}),
             }
             if not isinstance(calibration_binding["id"], str) or not calibration_binding["id"]:
                 raise SystemExit("performance calibration requires id")
             calibration_evidence_ids = [f"evidence-{args.run_id}-performance-calibration"]
+            if repeatability_verified:
+                calibration_evidence_ids.extend([
+                    f"evidence-{args.run_id}-smartperf-candidate-repeat-summary",
+                    f"evidence-{args.run_id}-harmony-candidate-repeat-result",
+                    f"evidence-{args.run_id}-smartperf-repeat-comparison",
+                ])
         suffix = hashlib.sha256(
             f"{task_id}|{performance.get('candidateRunId')}|{performance.get('environmentIdentity')}".encode()
         ).hexdigest()[:16]
@@ -952,9 +1087,9 @@ def main():
                     "caseReady": False,
                     "required": [
                         "maintainer-adjudication",
-                        "repeatable-emulator-regression",
                         "independent-functional-and-performance-calibration",
-                    ],
+                    ] + ([] if repeatability_verified else ["repeatable-emulator-regression"]),
+                    "verified": (["repeatable-emulator-regression"] if repeatability_verified else []),
                 },
                 "evidenceIds": [
                     f"evidence-{args.run_id}-smartperf-baseline-summary",

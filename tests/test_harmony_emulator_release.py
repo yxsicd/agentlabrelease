@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import hashlib
 import pathlib
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -185,6 +186,22 @@ class HarmonyEmulatorReleaseTests(unittest.TestCase):
             calibration["candidate"]["controlledMutation"]["bytes"],
             64 * 1024 * 1024,
         )
+        repeat_comparison_path = CONTROLLED_REGRESSION / "smartperf-repeat-comparison.json"
+        repeat_comparison = json.loads(repeat_comparison_path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            hashlib.sha256(repeat_comparison_path.read_bytes()).hexdigest(),
+            "707432cefa5db06b5642bb52ace25f68c5e5edeb4c0e33e8025154da27188097",
+        )
+        self.assertEqual(repeat_comparison["decision"], "performance-regression-candidate")
+        self.assertTrue(repeat_comparison["functionalGate"]["passed"])
+        self.assertEqual(
+            next(
+                row
+                for row in repeat_comparison["metrics"]
+                if row["metric"] == "appPssKiB"
+            )["status"],
+            "regressed",
+        )
         with tempfile.TemporaryDirectory() as raw:
             output = pathlib.Path(raw) / "transaction.json"
             completed = subprocess.run(
@@ -225,6 +242,52 @@ class HarmonyEmulatorReleaseTests(unittest.TestCase):
                 difficulty["performanceCalibration"]["id"],
                 "tutu-retained-memory-64m-v1",
             )
+            self.assertEqual(
+                difficulty["verificationContract"]["verified"],
+                ["repeatable-emulator-regression"],
+            )
+            self.assertNotIn(
+                "repeatable-emulator-regression",
+                difficulty["verificationContract"]["required"],
+            )
+            self.assertEqual(
+                difficulty["performanceCalibration"]["repeatability"][
+                    "consistentRegressedMetrics"
+                ],
+                ["appPssKiB"],
+            )
+            self.assertEqual(len(difficulty["evidenceIds"]), 11)
+
+    def test_real_repeatability_evidence_fails_closed_when_tampered(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            evidence = pathlib.Path(raw) / "evidence"
+            shutil.copytree(CONTROLLED_REGRESSION, evidence)
+            repeat_summary_path = evidence / "smartperf-candidate-repeat-summary.json"
+            repeat_summary = json.loads(repeat_summary_path.read_text(encoding="utf-8"))
+            repeat_summary["canonicalMetrics"]["appPssKiB"]["mean"] = 170392.0
+            repeat_summary_path.write_text(json.dumps(repeat_summary), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts/build-cbgroom-flywheel-transaction.py"),
+                    "--evidence",
+                    str(evidence),
+                    "--revision",
+                    "0" * 40,
+                    "--run-id",
+                    "tampered-repeatability-replay",
+                    "--github-repository",
+                    "example/agentlab",
+                    "--caller-person-id",
+                    "person-test",
+                    "--output",
+                    str(pathlib.Path(raw) / "transaction.json"),
+                ],
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("repeat summary digest differs", completed.stderr)
 
 
 if __name__ == "__main__":

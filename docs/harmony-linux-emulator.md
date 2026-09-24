@@ -236,14 +236,25 @@ guardrail). The exact comparison SHA256 is
 `eb875ee462cfc3ce6cac1dcf73a35cbf1e509f8c14d3e3579c02819e056cee10`
 and its decision is `performance-regression-candidate`.
 
+The same candidate HAP was then rerun from another cold boot with the same
+Oracle, environment, policy, workload and 12-sample contract. The function gate
+passed again; mean PSS was 236526 KiB (+38.81% over the same baseline), so
+`appPssKiB` independently regressed in both candidate runs. CPU was 5.1621% in
+the repeat and remained within its guardrail. The retained repeat comparison is
+`smartperf-repeat-comparison.json`, SHA256
+`707432cefa5db06b5642bb52ace25f68c5e5edeb4c0e33e8025154da27188097`.
+
 When `performance-calibration.json` is present, the flywheel transaction builder
 fails closed on any drift in HAPs, application/harness revisions, source-file
 mutation, functional Oracle, environment, policy, workload, comparison digest,
 expected decision or measurement authority. A valid package adds the calibration
-as an eighth evidence reference and binds it into both the review-only decision
-and the non-ready difficulty. It still sets `automaticPromotion=false` and
-`caseReady=false`; one controlled positive does not establish repeatability or
-authorize publication to TableGit.
+and any repeat run as evidence references and binds them into both the
+review-only decision and the non-ready difficulty. Repeatability is marked
+verified only when both exact comparisons independently identify at least one
+common regressed metric. It still sets `automaticPromotion=false` and
+`caseReady=false`; repeatability does not replace maintainer adjudication or an
+independent functional/performance calibration and does not authorize TableGit
+publication.
 
 ## Evaluation-instance export
 
@@ -278,7 +289,8 @@ the supported scope unless an independently qualified translation layer exists.
 The bounded `run-case` install/deploy/launch/process/screenshot/profile path,
 the declarative UI action/layout-text Oracle path, Tutu cookie-dismiss functional
 calibration, controlled CPU/PSS regression detection, and evaluation-instance
-export have been qualified on `hwlinux`. General application-specific semantic
-Oracle calibration, repeatability across hosts/runs, live TableGit import/replay,
-host graphics coverage and real-device power/thermal calibration remain separate
-gates.
+export have been qualified on `hwlinux`; the controlled PSS signal has also been
+reproduced across two cold-boot candidate runs on that host. General
+application-specific semantic Oracle calibration, cross-host repeatability, live
+TableGit import/replay, host graphics coverage and real-device power/thermal
+calibration remain separate gates.

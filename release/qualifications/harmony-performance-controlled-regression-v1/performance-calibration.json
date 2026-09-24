@@ -39,6 +39,21 @@
   },
   "comparisonSha256": "eb875ee462cfc3ce6cac1dcf73a35cbf1e509f8c14d3e3579c02819e056cee10",
   "expectedDecision": "performance-regression-candidate",
+  "repeatability": {
+    "status": "reproduced",
+    "minimumCandidateRuns": 2,
+    "candidateRunIds": [
+      "tutu-controlled-regression-candidate-v1",
+      "tutu-controlled-regression-candidate-v2"
+    ],
+    "comparisonSha256s": [
+      "eb875ee462cfc3ce6cac1dcf73a35cbf1e509f8c14d3e3579c02819e056cee10",
+      "707432cefa5db06b5642bb52ace25f68c5e5edeb4c0e33e8025154da27188097"
+    ],
+    "consistentRegressedMetrics": [
+      "appPssKiB"
+    ]
+  },
   "authority": {
     "relativePerformance": "smartperf-emulator-proxy",
     "absolutePowerThermal": "unavailable-on-emulator"
