@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
+import grp
 import pathlib
 import shutil
 import subprocess
@@ -170,6 +172,73 @@ class HarmonyAssessedHandoffTests(unittest.TestCase):
         completed = self.execute(RESOLVE, "--handoff", self.handoff, "--host-profile", profile, "--host-root", host, "--output", self.base / "plan.json")
         self.assertEqual(completed.returncode, 1)
         self.assertIn("SHA256 differs", completed.stderr)
+
+    def test_kvm_profile_without_execution_preflight_is_rejected(self) -> None:
+        self.prepare()
+        host = self.base / "host"
+        profile = self.host_profile(host)
+        value = json.loads(profile.read_text())
+        value["device"]["runtime"]["environmentIdentity"] = "hwlinux:harmonyos:x86:kvm"
+        profile.write_text(json.dumps(value))
+        completed = self.execute(
+            RESOLVE,
+            "--handoff",
+            self.handoff,
+            "--host-profile",
+            profile,
+            "--host-root",
+            host,
+            "--output",
+            self.base / "plan.json",
+        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("requires executionPreflight", completed.stderr)
+
+    def test_kvm_profile_carries_valid_execution_preflight(self) -> None:
+        self.prepare()
+        host = self.base / "host"
+        profile = self.host_profile(host)
+        value = json.loads(profile.read_text())
+        value["device"]["runtime"]["environmentIdentity"] = "hwlinux:harmonyos:x86:kvm"
+        value["executionPreflight"] = {
+            "requiredGroups": [grp.getgrgid(os.getegid()).gr_name],
+            "requiredDevices": [{"path": "/dev/null", "read": True, "write": True}],
+        }
+        profile.write_text(json.dumps(value))
+        plan = self.base / "plan.json"
+        completed = self.execute(
+            RESOLVE,
+            "--handoff",
+            self.handoff,
+            "--host-profile",
+            profile,
+            "--host-root",
+            host,
+            "--output",
+            plan,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        resolved = json.loads(plan.read_text())
+        self.assertEqual(resolved["executionPreflight"], value["executionPreflight"])
+
+    def test_real_hwlinux_qualification_retains_review_boundary(self) -> None:
+        receipt = json.loads(
+            (
+                ROOT
+                / "release/qualifications/harmony-portable-handoff-hwlinux-2be1911/summary.json"
+            ).read_text()
+        )
+        self.assertEqual(
+            receipt["schema"], "agentlab.harmony_portable_handoff_qualification.v1"
+        )
+        self.assertEqual(receipt["status"], "assessed-review-required")
+        self.assertEqual(receipt["assessment"]["deviceAttemptCount"], 2)
+        self.assertEqual(receipt["assessment"]["discriminationScore"], 1.0)
+        self.assertTrue(receipt["assessment"]["strongOutcome"])
+        self.assertFalse(receipt["assessment"]["weakOutcome"])
+        self.assertEqual(receipt["assessment"]["weakFailureClass"], "oracle")
+        self.assertEqual(receipt["outputs"]["evidenceFileCount"], 202)
+        self.assertFalse(receipt["automaticPromotion"])
 
 
 if __name__ == "__main__":

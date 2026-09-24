@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import grp
 import hashlib
 import json
 import os
@@ -97,6 +98,63 @@ def require_directory(value: Any, label: str) -> pathlib.Path:
     if not path.is_dir() or path.is_symlink():
         raise CampaignError(f"{label} is not a regular directory: {path}")
     return path
+
+
+def validate_execution_preflight(
+    plan: dict[str, Any], device: dict[str, Any]
+) -> dict[str, Any] | None:
+    runtime = device.get("runtime")
+    environment_identity = (
+        runtime.get("environmentIdentity") if isinstance(runtime, dict) else None
+    )
+    preflight = plan.get("executionPreflight")
+    kvm_environment = isinstance(environment_identity, str) and "kvm" in environment_identity.split(":")
+    if preflight is None:
+        if kvm_environment:
+            raise CampaignError("KVM campaign requires executionPreflight")
+        return None
+    if not isinstance(preflight, dict):
+        raise CampaignError("executionPreflight must be an object")
+    groups = preflight.get("requiredGroups")
+    devices = preflight.get("requiredDevices")
+    if not isinstance(groups, list) or not groups or not all(
+        isinstance(name, str) and name for name in groups
+    ):
+        raise CampaignError("executionPreflight requiredGroups must be non-empty strings")
+    if not isinstance(devices, list) or not devices:
+        raise CampaignError("executionPreflight requiredDevices must be non-empty")
+    active_groups = set(os.getgroups()) | {os.getegid()}
+    for name in groups:
+        try:
+            group_id = grp.getgrnam(name).gr_gid
+        except KeyError as error:
+            raise CampaignError(f"required execution group is absent: {name}") from error
+        if group_id not in active_groups:
+            raise CampaignError(
+                f"current execution identity has not activated required group: {name}"
+            )
+    normalized_devices = []
+    for index, row in enumerate(devices):
+        if not isinstance(row, dict):
+            raise CampaignError(f"executionPreflight device {index} must be an object")
+        raw_path = row.get("path")
+        if not isinstance(raw_path, str) or not pathlib.Path(raw_path).is_absolute():
+            raise CampaignError(
+                f"executionPreflight device {index} path must be absolute"
+            )
+        if row.get("read") is not True or row.get("write") is not True:
+            raise CampaignError(
+                f"executionPreflight device {index} must require read and write access"
+            )
+        path = pathlib.Path(raw_path)
+        if not path.exists() or path.is_symlink():
+            raise CampaignError(f"required execution device is absent or unsafe: {path}")
+        if not os.access(path, os.R_OK) or not os.access(path, os.W_OK):
+            raise CampaignError(
+                f"current execution identity cannot read and write required device: {path}"
+            )
+        normalized_devices.append({"path": str(path), "read": True, "write": True})
+    return {"requiredGroups": groups, "requiredDevices": normalized_devices}
 
 
 def binding(path: pathlib.Path) -> dict[str, str]:
@@ -233,6 +291,7 @@ def validate_plan(plan_path: pathlib.Path) -> dict[str, Any]:
         raise CampaignError("device fields must not override campaign-generated bindings")
     if device.get("subjectOutcomePolicy") != "retain-assessed-failure":
         raise CampaignError("campaign device policy must retain assessed failures")
+    execution_preflight = validate_execution_preflight(plan, device)
     mappings = plan.get("sourceMaterialization")
     build = plan.get("build")
     if not isinstance(mappings, list) or not mappings or not isinstance(build, dict):
@@ -254,6 +313,7 @@ def validate_plan(plan_path: pathlib.Path) -> dict[str, Any]:
         "device": device,
         "mappings": mappings,
         "build": build,
+        "executionPreflight": execution_preflight,
     }
 
 

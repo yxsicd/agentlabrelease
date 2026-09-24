@@ -290,6 +290,20 @@ or modes, introduced a symlink, escaped either root, changed static identity, or
 if the hwlinux profile no longer matches installed tools. The resolved plan is
 still review-required and does not auto-promote a case.
 
+For KVM-backed profiles, declare an `executionPreflight` with the required
+group and character device. The campaign controller checks the active process
+identity and device access before creating output or building a HAP. Membership
+in `/etc/group` alone is insufficient for a long-lived service whose process
+groups have not been refreshed.
+
+The first real portable-handoff qualification is retained at
+`release/qualifications/harmony-portable-handoff-hwlinux-2be1911/summary.json`.
+It records a fail-closed KVM permission attempt, successful resumable execution
+under the active `kvm` group, a 134 ms evidence-only replay, two device attempts,
+strong pass versus weak Oracle failure, SmartPerf collection on the passing arm,
+and discrimination score 1.0. It binds the complete 202-file remote evidence
+tree while leaving promotion review-required.
+
 ## Close assessed failures into the next analysis cut
 
 The trusted assessed campaign keeps the frozen case unchanged, runs fresh trials

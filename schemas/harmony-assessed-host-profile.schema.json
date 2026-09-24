@@ -15,6 +15,28 @@
       "required": ["build", "loop", "run", "compose", "collect", "score", "feedback"],
       "additionalProperties": {"$ref": "#/$defs/file"}
     },
+    "executionPreflight": {
+      "type": "object",
+      "required": ["requiredGroups", "requiredDevices"],
+      "properties": {
+        "requiredGroups": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "requiredDevices": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["path", "read", "write"],
+            "properties": {
+              "path": {"type": "string", "pattern": "^/"},
+              "read": {"const": true},
+              "write": {"const": true}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "requiredTrials": {"type": "integer", "minimum": 1},
     "eligibilityThreshold": {"type": "number", "minimum": 0, "maximum": 1},
     "automaticPromotion": {"const": false}

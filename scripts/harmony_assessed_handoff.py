@@ -252,6 +252,28 @@ def host_file(host_root: Path, value: Any, label: str, *, executable: bool = Fal
     return path
 
 
+def normalize_execution_preflight(value: Any, *, required: bool) -> dict[str, Any] | None:
+    if value is None:
+        require(not required, "KVM host profile requires executionPreflight")
+        return None
+    require(isinstance(value, dict), "executionPreflight must be an object")
+    groups = value.get("requiredGroups")
+    devices = value.get("requiredDevices")
+    require(
+        isinstance(groups, list)
+        and bool(groups)
+        and all(isinstance(name, str) and name for name in groups),
+        "executionPreflight requiredGroups must be non-empty strings",
+    )
+    require(isinstance(devices, list) and bool(devices), "executionPreflight requiredDevices must be non-empty")
+    for index, row in enumerate(devices):
+        require(isinstance(row, dict), f"executionPreflight device {index} must be an object")
+        path = row.get("path")
+        require(isinstance(path, str) and Path(path).is_absolute(), f"executionPreflight device {index} path must be absolute")
+        require(row.get("read") is True and row.get("write") is True, f"executionPreflight device {index} must require read and write access")
+    return {"requiredGroups": groups, "requiredDevices": devices}
+
+
 def verify_handoff(handoff_path: Path) -> tuple[dict[str, Any], Path, list[dict[str, Any]]]:
     handoff = load(handoff_path, "campaign handoff")
     require(handoff.get("schema") == HANDOFF_SCHEMA, "unsupported campaign handoff schema")
@@ -359,6 +381,12 @@ def resolve(handoff_path: Path, profile_path: Path, host_root: Path, output: Pat
     performance = {"policy": str(policy), "policySha256": sha256(policy), "workload": str(workload), "workloadSha256": sha256(workload)}
     device = {key: value for key, value in device_raw.items() if key not in {"functionalOracle", "runtime", "performance"}}
     device.update({"functionalOracle": functional, "runtime": runtime, "performance": performance})
+    environment_identity = runtime.get("environmentIdentity")
+    execution_preflight = normalize_execution_preflight(
+        profile.get("executionPreflight"),
+        required=isinstance(environment_identity, str)
+        and "kvm" in environment_identity.split(":"),
+    )
     evaluation_case = verify_portable_file(handoff_path.resolve().parent, handoff.get("evaluationCase"), "evaluation case")
     value = {
         "schema": PLAN_SCHEMA,
@@ -371,6 +399,7 @@ def resolve(handoff_path: Path, profile_path: Path, host_root: Path, output: Pat
         "build": build,
         "device": device,
         "programs": programs,
+        "executionPreflight": execution_preflight,
         "requiredTrials": profile.get("requiredTrials", 3),
         "eligibilityThreshold": profile.get("eligibilityThreshold", 0.6),
         "automaticPromotion": False,

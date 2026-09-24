@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import grp
 import hashlib
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -274,6 +276,27 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 1)
         self.assertIn("summary differs from campaign plan", completed.stderr)
         self.assertFalse(output.exists())
+
+    def test_kvm_campaign_requires_explicit_execution_preflight(self) -> None:
+        plan = json.loads(self.plan.read_text())
+        plan["device"]["runtime"]["environmentIdentity"] = "hwlinux:harmonyos:x86:kvm"
+        self.plan.write_text(json.dumps(plan))
+        output = self.root / "missing-kvm-preflight"
+        rejected = self.execute(output)
+        self.assertEqual(rejected.returncode, 1)
+        self.assertIn("KVM campaign requires executionPreflight", rejected.stderr)
+        self.assertFalse(output.exists())
+
+    def test_kvm_campaign_accepts_active_group_and_device(self) -> None:
+        plan = json.loads(self.plan.read_text())
+        plan["device"]["runtime"]["environmentIdentity"] = "hwlinux:harmonyos:x86:kvm"
+        plan["executionPreflight"] = {
+            "requiredGroups": [grp.getgrgid(os.getegid()).gr_name],
+            "requiredDevices": [{"path": "/dev/null", "read": True, "write": True}],
+        }
+        self.plan.write_text(json.dumps(plan))
+        completed = self.execute(self.root / "valid-kvm-preflight")
+        self.assertEqual(completed.returncode, 0, completed.stderr)
 
 
 if __name__ == "__main__":

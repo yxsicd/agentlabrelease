@@ -463,6 +463,22 @@ SmartPerf policy/workload and controller programs. Keeping these authorities
 separate lets the same immutable static artifact be replayed after relocation
 without recording one machine's paths in GitHub evidence.
 
+KVM profiles must also bind an execution preflight, for example:
+
+```json
+{
+  "executionPreflight": {
+    "requiredGroups": ["kvm"],
+    "requiredDevices": [{"path": "/dev/kvm", "read": true, "write": true}]
+  }
+}
+```
+
+The group must be active in the exact process launching the campaign. A user
+listed in the `kvm` group can still lack access when a long-running AgentWeb or
+systemd process predates that membership. The controller rejects this condition
+before creating campaign output or spending build/emulator capacity.
+
 ```sh
 python3 scripts/run-harmony-evaluation-case.py \
   --plan /absolute/path/harmony-evaluation-run-plan.json \
