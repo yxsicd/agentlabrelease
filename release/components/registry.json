@@ -17,11 +17,21 @@
       "immutableRef": "control-24fb4ec0-linux-x64",
       "source": {
         "repository": "https://github.com/yxsicd/dinddocs",
-        "revision": "24fb4ec0beaff395b790bf4d1678f7f2a9c76a3c"
+        "revision": "24fb4ec0beaff395b790bf4d1678f7f2a9c76a3c",
+        "ownedPaths": [
+          "tools/opencode/chatproxy/sandbox-rs"
+        ]
       },
       "inputIdentity": {
-        "mode": "legacy-published-v1",
-        "effectiveInputDigest": "32e2bad6644ebe5c2df9265defd1d68e2cb540e6e29979dda0259d535f17a039"
+        "mode": "git-tree-v1",
+        "effectiveInputDigest": "e19dd4889e12abf1435c8af8560b45f40399083fb632511632575922f00617f8",
+        "buildRecipePaths": [
+          "tools/opencode/chatproxy/scripts/agentlabctl-build.sh"
+        ],
+        "dependencies": {
+          "rustTarget": "x86_64-unknown-linux-musl",
+          "buildProfile": "release-static-musl-v1"
+        }
       },
       "assets": [
         {

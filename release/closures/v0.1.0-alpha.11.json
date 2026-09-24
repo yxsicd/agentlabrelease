@@ -11,7 +11,7 @@
   "componentRegistry": {
     "schema": "agentlab.component_registry.v1",
     "path": "release/components/registry.json",
-    "sha256": "d30850ee5af455fd362125261acac14abfc520f01bee549e9b607801658c7cf2"
+    "sha256": "d65d9ed90631d3caf34164706052bffe95573eab093bfd17758e9e2493c2a90c"
   },
   "requiredSchemas": {
     "controlApi": "agentlabctl.release.v1",
