@@ -120,7 +120,11 @@ smaller than SWE-bench's:
    to distinct GitHub actors and verify GitHub OIDC/Sigstore attestations before
    producing a second attested adjudication. The protocol has not yet produced a
    real reviewed case, and there is still no representative Verified-like
-   dataset or measured population-level reviewer disagreement.
+   dataset or measured population-level reviewer disagreement. A trusted-main
+   population workflow now freezes multiple adjudication run IDs, reverifies
+   every member, reports per-dimension disagreement with Wilson intervals and
+   signs the exact cohort report; it has not yet been exercised on a real case
+   population and cannot qualify representativeness by itself.
 4. The independent Oracle is digest-bound. One real Harmony UI candidate now
    has a controlled `FAIL_TO_PASS` replay: the frozen baseline stays on
    `pages/Index`, while a one-line page-registration variant reaches
@@ -282,9 +286,10 @@ underspecified or contaminated case.
 3. Exercise the reviewed feedback-to-analysis bridge on a real source update
    and prove that the successor case retains prior failure lineage without
    mutating the old case.
-4. Exercise the implemented multi-reviewer adjudication across a representative
-   case sample and report per-dimension and population-level disagreement;
-   default unknown evidence to review-required, never qualified.
+4. Exercise the implemented multi-reviewer adjudication and population reporter
+   across a predeclared case sample; independently review the sampling frame,
+   then interpret the retained per-dimension counts, Wilson intervals and
+   reviewer reuse. Default unknown evidence to review-required, never qualified.
 5. Localize at least five of the 22 real shared-contract clusters into narrow
    change hypotheses, then add repair/preservation checks and independent
    review before running repeated strong/weak/middle participant trials.

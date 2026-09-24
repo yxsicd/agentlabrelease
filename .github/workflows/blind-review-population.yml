@@ -1,0 +1,121 @@
+name: Blind review population report
+on:
+  workflow_dispatch:
+    inputs:
+      cohort_id:
+        description: Stable identifier for this frozen reviewed-case cohort
+        required: true
+        type: string
+      adjudication_run_ids:
+        description: JSON array of at least two authenticated adjudication run IDs
+        required: true
+        type: string
+      sampling_frame_description:
+        description: Human-readable boundary of the source population sampled
+        required: true
+        type: string
+      selection_policy:
+        description: Exact rule used to select this cohort before outcomes were summarized
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  artifact-metadata: write
+  attestations: write
+  contents: read
+  id-token: write
+
+jobs:
+  summarize:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/blind-review-population
+      COHORT_ID: ${{ inputs.cohort_id }}
+      RUN_IDS_JSON: ${{ inputs.adjudication_run_ids }}
+      SAMPLING_FRAME_DESCRIPTION: ${{ inputs.sampling_frame_description }}
+      SELECTION_POLICY: ${{ inputs.selection_policy }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Freeze and recover the exact adjudication cohort
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/bundles"
+          python3 - <<'PY'
+          import json, os, pathlib
+          raw = json.loads(os.environ["RUN_IDS_JSON"])
+          assert isinstance(raw, list) and 2 <= len(raw) <= 50
+          ids = []
+          for value in raw:
+              text = str(value)
+              assert text.isdigit() and int(text) > 0
+              ids.append(int(text))
+          assert len(ids) == len(set(ids))
+          pathlib.Path(os.environ["AGENTLAB_ROOT"], "run-ids.txt").write_text(
+              "".join(f"{value}\n" for value in ids), encoding="utf-8"
+          )
+          PY
+          while IFS= read -r run_id; do
+            mkdir -p "$AGENTLAB_ROOT/bundles/$run_id"
+            gh run download "$run_id" --repo "$GITHUB_REPOSITORY" \
+              --name blind-case-authenticated-adjudication \
+              --dir "$AGENTLAB_ROOT/bundles/$run_id"
+          done < "$AGENTLAB_ROOT/run-ids.txt"
+          python3 - <<'PY'
+          import json, os, pathlib
+          root = pathlib.Path(os.environ["AGENTLAB_ROOT"])
+          cases = []
+          case_ids = set()
+          for text in root.joinpath("run-ids.txt").read_text().splitlines():
+              run_id = int(text)
+              bundle = root / "bundles" / text
+              value = json.loads((bundle / "authenticated-adjudication.json").read_text())
+              case_id = value["caseId"]
+              assert isinstance(case_id, str) and case_id and case_id not in case_ids
+              case_ids.add(case_id)
+              cases.append({
+                  "caseId": case_id,
+                  "bundle": f"bundles/{run_id}",
+                  "repository": os.environ["GITHUB_REPOSITORY"],
+                  "adjudicationRunId": run_id,
+              })
+          manifest = {
+              "schema": "agentlab.blind_review_population_manifest.v1",
+              "cohortId": os.environ["COHORT_ID"],
+              "methodRevision": os.environ["GITHUB_SHA"],
+              "samplingFrame": {
+                  "id": os.environ["COHORT_ID"],
+                  "description": os.environ["SAMPLING_FRAME_DESCRIPTION"],
+                  "selectionPolicy": os.environ["SELECTION_POLICY"],
+                  "declaredRepresentative": False,
+              },
+              "cases": sorted(cases, key=lambda row: row["caseId"]),
+          }
+          root.joinpath("population-manifest.json").write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+          )
+          PY
+      - name: Reverify every case and compute population disagreement
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 scripts/summarize-blind-review-population.py \
+            --manifest "$AGENTLAB_ROOT/population-manifest.json" \
+            --output "$AGENTLAB_ROOT/population"
+          sha256sum "$AGENTLAB_ROOT/population/report.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Sign the exact population report with GitHub OIDC provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: ${{ env.AGENTLAB_ROOT }}/population/report.json
+      - name: Preserve the frozen cohort report and raw online verification
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: blind-review-population-report
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/population/

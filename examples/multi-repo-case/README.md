@@ -371,6 +371,15 @@ process reconstructs its cut, decision and provenance lineage. Review consensus
 alone cannot set `blindAssessmentQualified`; the authenticated identity,
 attested provenance, filesystem, credential and network gates must all pass.
 
+After at least two authenticated adjudications exist, freeze their exact run
+IDs in an `agentlab.blind_review_population_manifest.v1` manifest and run
+`scripts/summarize-blind-review-population.py`. The trusted-main
+`Blind review population report` workflow automates recovery, online
+reverification, per-dimension agreement/disagreement statistics, raw evidence
+retention and signing of the resulting report. This report measures the chosen
+cohort only: v1 deliberately refuses a representative-population declaration,
+model-training exclusion or unseen-Agent eligibility.
+
 Copy the frozen case into campaign evidence as
 `multi-repo-evaluation-case.json` and its exact calibration summary as
 `multi-repo-calibration.json`. For a constructed case, also copy the exact

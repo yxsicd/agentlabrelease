@@ -199,6 +199,31 @@ authenticated review boundary and all filesystem, external-credential and
 network-egress runtime gates are true. The functional pass/fail verdict remains
 separate from that boundary qualification.
 
+## Population-level review evidence
+
+One authenticated case is not evidence that a benchmark population is valid.
+`scripts/summarize-blind-review-population.py` accepts a frozen manifest of at
+least two adjudication workflow runs. Every listed bundle is recovered by exact
+run ID, independently reverified online, and reconstructed before it enters the
+denominator. A missing, invalid or identity-mismatched case fails the entire
+report instead of being silently excluded after its outcome is known.
+
+For every review dimension, the report retains qualified, rejected, unknown
+and disagreement case counts, the exact denominator, the disagreement rate and
+a 95% Wilson interval. It also records reviewer reuse across cases, exact case
+membership, bundle evidence hashes and the raw final-attestation verification
+for each member. `blind-review-population.yml` performs this operation on
+trusted `main`, signs the exact report with GitHub OIDC provenance, and uploads
+the manifest, report and raw verification evidence together.
+
+The v1 manifest requires `declaredRepresentative=false`. The resulting report
+always keeps `populationRepresentativenessQualified=false`,
+`modelTrainingExclusionQualified=false` and
+`eligibleForUnseenAgentDiscrimination=false`. Population representativeness
+requires a later independent sampling-frame review; neither case count nor low
+reviewer disagreement can establish it automatically. The public repository
+currently contains protocol tests, not a completed real reviewed cohort.
+
 ## Evidence boundary
 
 A structurally valid cut is eligible for a blind pilot only. It is not yet
