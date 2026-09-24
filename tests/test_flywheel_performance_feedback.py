@@ -107,7 +107,14 @@ class FlywheelPerformanceFeedbackTests(unittest.TestCase):
             "powerThermalAuthority": "unavailable_on_emulator",
         }
 
-    def prepare(self, root: pathlib.Path, mutate=None, v2: bool = False, v3: bool = False) -> pathlib.Path:
+    def prepare(
+        self,
+        root: pathlib.Path,
+        mutate=None,
+        v2: bool = False,
+        v3: bool = False,
+        controlled_calibration: bool = False,
+    ) -> pathlib.Path:
         evidence = root / "evidence"
         evidence.mkdir()
         (evidence / "summary.json").write_text(
@@ -256,6 +263,53 @@ class FlywheelPerformanceFeedbackTests(unittest.TestCase):
         (evidence / "smartperf-baseline-summary.json").write_text(json.dumps(baseline))
         (evidence / "smartperf-candidate-summary.json").write_text(json.dumps(candidate))
         (evidence / "smartperf-comparison.json").write_text(json.dumps(report))
+        if controlled_calibration:
+            comparison_sha = hashlib.sha256(
+                (evidence / "smartperf-comparison.json").read_bytes()
+            ).hexdigest()
+            (evidence / "performance-calibration.json").write_text(
+                json.dumps(
+                    {
+                        "schema": "agentlab.performance_calibration.v1",
+                        "id": "retained-memory-64m-v1",
+                        "taskId": report["taskId"],
+                        "harnessRevision": "1" * 40,
+                        "applicationSource": {
+                            "repository": "https://example.invalid/application.git",
+                            "revision": "3" * 40,
+                            "path": "entry/src/main/ets/pages/Template.ets",
+                        },
+                        "baseline": {"sourceIdentity": baseline["sourceIdentity"]},
+                        "candidate": {
+                            "sourceIdentity": candidate["sourceIdentity"],
+                            "baseSourceIdentity": baseline["sourceIdentity"],
+                            "controlledMutation": {
+                                "id": "retain-64m",
+                                "kind": "retained-memory",
+                                "bytes": 64 * 1024 * 1024,
+                                "sourcePath": "entry/src/main/ets/pages/Template.ets",
+                                "baseSourceFileSha256": "4" * 64,
+                                "candidateSourceFileSha256": "5" * 64,
+                            },
+                        },
+                        "functionalOracle": {
+                            "scenarioId": "bounded-ui-case",
+                            "scenarioSha256": "c" * 64,
+                            "expected": "passed-both",
+                        },
+                        "environmentIdentity": report["environmentIdentity"],
+                        "performancePolicy": report["performancePolicy"],
+                        "profileWorkload": report["profileWorkload"],
+                        "comparisonSha256": comparison_sha,
+                        "expectedDecision": report["decision"],
+                        "authority": {
+                            "relativePerformance": "smartperf-emulator-proxy",
+                            "absolutePowerThermal": "unavailable-on-emulator",
+                        },
+                        "automaticPromotion": False,
+                    }
+                )
+            )
         return evidence
 
     def test_performance_regression_becomes_review_only_durable_decision(self) -> None:
@@ -338,7 +392,56 @@ class FlywheelPerformanceFeedbackTests(unittest.TestCase):
             self.assertEqual(decision["performancePolicy"]["id"], "emulator-cpu-memory-relative-v1")
             self.assertEqual(decision["profileWorkload"]["id"], "tutu-scroll-v1")
             self.assertEqual(len(decision["evidenceIds"]), 7)
-            self.assertEqual(difficulty["profileWorkload"]["sha256"], hashlib.sha256(WORKLOAD_PATH.read_bytes()).hexdigest())
+            self.assertEqual(
+                difficulty["profileWorkload"]["sha256"],
+                hashlib.sha256(WORKLOAD_PATH.read_bytes()).hexdigest(),
+            )
+
+    def test_controlled_calibration_is_bound_to_decision_and_difficulty(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            output = root / "transaction.json"
+            completed = self.run_builder(
+                self.prepare(root, v3=True, controlled_calibration=True), output
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            payload = json.loads(output.read_text())
+            rows = [
+                operation["row"]
+                for table in payload["arguments"]["tables"]
+                for operation in table["operations"]
+            ]
+            decision = next(
+                row
+                for row in rows
+                if row.get("schema") == "agentlab.performance_feedback_decision.v1"
+            )
+            difficulty = next(
+                row
+                for row in rows
+                if row.get("dimensionId") == "functionally-correct-performance-regression"
+            )
+            for row in (decision, difficulty):
+                self.assertEqual(
+                    row["performanceCalibration"]["id"], "retained-memory-64m-v1"
+                )
+                self.assertEqual(
+                    row["performanceCalibration"]["controlledMutation"]["bytes"],
+                    64 * 1024 * 1024,
+                )
+                self.assertEqual(len(row["evidenceIds"]), 8)
+
+    def test_tampered_controlled_calibration_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            evidence = self.prepare(root, v3=True, controlled_calibration=True)
+            path = evidence / "performance-calibration.json"
+            calibration = json.loads(path.read_text())
+            calibration["candidate"]["controlledMutation"]["bytes"] = 0
+            path.write_text(json.dumps(calibration))
+            completed = self.run_builder(evidence, root / "transaction.json")
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("positive byte count", completed.stderr)
 
     def test_tampered_retained_policy_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

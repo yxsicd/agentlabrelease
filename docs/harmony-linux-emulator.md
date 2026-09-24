@@ -218,6 +218,33 @@ Case-discrimination collection accepts this evidence only as
 normalized summary and executed-action hashes before carrying the functional
 verdict into scoring.
 
+### Controlled-regression calibration
+
+The first positive calibration of the regression detector is checked in at
+`release/qualifications/harmony-performance-controlled-regression-v1`. Baseline
+and candidate were built from the same generated Tutu project rooted at exact
+ASRelease revision `71fa3710a9e31af33ffb90d031270c11a1dbaab3`. The candidate
+changed only `Template.ets`: it retains and touches 64 MiB while leaving the UI
+and independent cookie-dismiss Oracle unchanged. The calibration manifest binds
+both HAP identities, both source-file digests, that controlled mutation, the
+Oracle, environment, policy, workload and raw comparison digest.
+
+Both fresh cold-boot runs passed the same function gate and normalized 12
+samples. Mean CPU changed from 6.5085% to 7.2289% (+11.07%, within the 20%
+guardrail). Mean PSS changed from 170392 to 239204 KiB (+40.38%, beyond the 15%
+guardrail). The exact comparison SHA256 is
+`eb875ee462cfc3ce6cac1dcf73a35cbf1e509f8c14d3e3579c02819e056cee10`
+and its decision is `performance-regression-candidate`.
+
+When `performance-calibration.json` is present, the flywheel transaction builder
+fails closed on any drift in HAPs, application/harness revisions, source-file
+mutation, functional Oracle, environment, policy, workload, comparison digest,
+expected decision or measurement authority. A valid package adds the calibration
+as an eighth evidence reference and binds it into both the review-only decision
+and the non-ready difficulty. It still sets `automaticPromotion=false` and
+`caseReady=false`; one controlled positive does not establish repeatability or
+authorize publication to TableGit.
+
 ## Evaluation-instance export
 
 Build the normalizer and convert an immutable case directory:
@@ -249,7 +276,9 @@ establish ARM-native application compatibility. The current image declares
 `abi: x86`; an application containing only ARM native libraries remains outside
 the supported scope unless an independently qualified translation layer exists.
 The bounded `run-case` install/deploy/launch/process/screenshot/profile path,
-the declarative UI action/layout-text Oracle path, and evaluation-instance
-export have been qualified on `hwlinux`. Application-specific semantic Oracle
-calibration, live TableGit import/replay, host graphics coverage and real-device
-power/thermal calibration remain separate gates.
+the declarative UI action/layout-text Oracle path, Tutu cookie-dismiss functional
+calibration, controlled CPU/PSS regression detection, and evaluation-instance
+export have been qualified on `hwlinux`. General application-specific semantic
+Oracle calibration, repeatability across hosts/runs, live TableGit import/replay,
+host graphics coverage and real-device power/thermal calibration remain separate
+gates.

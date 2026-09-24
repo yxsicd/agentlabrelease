@@ -72,6 +72,7 @@ def main():
     multi_repo_construction = load(evidence / "multi-repo-construction-receipt.json") or {}
     multi_repo_construction_quality = load(evidence / "multi-repo-construction-quality.json") or {}
     assessment_feedback = load(evidence / "assessment-feedback-candidates.json") or {}
+    performance_calibration = load(evidence / "performance-calibration.json") or {}
     multi_repo_difficulty = difficulty.get("schema") == "agentlab.difficulty_candidates.v2"
     if multi_repo_difficulty:
         source_set_sha256 = difficulty.get("sourceSetSha256")
@@ -133,6 +134,7 @@ def main():
         ("smartperf-comparison.json", "smartperf-comparison"),
         ("performance-policy.json", "harmony-performance-policy"),
         ("profile-workload.tsv", "harmony-profile-workload"),
+        ("performance-calibration.json", "harmony-performance-calibration"),
         ("environment-fingerprint.json", "environment-fingerprint"),
     ):
         path = evidence / filename
@@ -814,6 +816,81 @@ def main():
             raise SystemExit("SmartPerf comparable must be boolean")
         if decision != expected:
             raise SystemExit("SmartPerf decision contradicts comparison metrics")
+        calibration_binding = None
+        calibration_evidence_ids = []
+        if performance_calibration:
+            if performance_calibration.get("schema") != "agentlab.performance_calibration.v1":
+                raise SystemExit("unsupported performance calibration schema")
+            if performance_calibration.get("automaticPromotion") is not False:
+                raise SystemExit("performance calibration must not auto-promote")
+            if performance_calibration.get("taskId") != task_id:
+                raise SystemExit("performance calibration task differs from comparison")
+            if performance_calibration.get("harnessRevision") != source_revision:
+                raise SystemExit("performance calibration harness revision differs from run")
+            if performance_calibration.get("environmentIdentity") != performance.get("environmentIdentity"):
+                raise SystemExit("performance calibration environment differs from comparison")
+            if performance_calibration.get("expectedDecision") != decision:
+                raise SystemExit("performance calibration expected decision differs from comparison")
+            baseline_calibration = performance_calibration.get("baseline") or {}
+            candidate_calibration = performance_calibration.get("candidate") or {}
+            mutation = candidate_calibration.get("controlledMutation") or {}
+            application_source = performance_calibration.get("applicationSource") or {}
+            functional_oracle = performance_calibration.get("functionalOracle") or {}
+            authority = performance_calibration.get("authority") or {}
+            if baseline_calibration.get("sourceIdentity") != performance.get("baselineSourceIdentity"):
+                raise SystemExit("performance calibration baseline HAP differs from comparison")
+            if candidate_calibration.get("sourceIdentity") != performance.get("candidateSourceIdentity"):
+                raise SystemExit("performance calibration candidate HAP differs from comparison")
+            if candidate_calibration.get("baseSourceIdentity") != baseline_calibration.get("sourceIdentity"):
+                raise SystemExit("performance calibration candidate does not bind the baseline HAP")
+            if not isinstance(application_source.get("repository"), str) or not application_source["repository"]:
+                raise SystemExit("performance calibration requires application repository")
+            if not isinstance(application_source.get("revision"), str) or not REVISION.fullmatch(application_source["revision"]):
+                raise SystemExit("performance calibration requires exact application revision")
+            if not isinstance(mutation.get("id"), str) or not mutation["id"]:
+                raise SystemExit("performance calibration requires controlled mutation identity")
+            if mutation.get("kind") not in {"retained-memory", "bounded-cpu", "combined-cpu-memory"}:
+                raise SystemExit("unsupported performance calibration mutation kind")
+            if not isinstance(mutation.get("bytes"), int) or mutation["bytes"] <= 0:
+                raise SystemExit("performance calibration mutation requires positive byte count")
+            if not isinstance(mutation.get("sourcePath"), str) or not mutation["sourcePath"]:
+                raise SystemExit("performance calibration mutation requires source path")
+            for field in ("baseSourceFileSha256", "candidateSourceFileSha256"):
+                if not isinstance(mutation.get(field), str) or not SHA256.fullmatch(mutation[field]):
+                    raise SystemExit(f"performance calibration mutation requires exact {field}")
+            if mutation["baseSourceFileSha256"] == mutation["candidateSourceFileSha256"]:
+                raise SystemExit("performance calibration mutation did not change the source file")
+            functional_gate = performance.get("functionalGate") or {}
+            baseline_gate = functional_gate.get("baseline") or {}
+            candidate_gate = functional_gate.get("candidate") or {}
+            if (
+                functional_oracle.get("scenarioId") != baseline_gate.get("scenarioId")
+                or functional_oracle.get("scenarioId") != candidate_gate.get("scenarioId")
+                or functional_oracle.get("scenarioSha256") != baseline_gate.get("scenarioSha256")
+                or functional_oracle.get("scenarioSha256") != candidate_gate.get("scenarioSha256")
+                or functional_oracle.get("expected") != "passed-both"
+                or functional_gate.get("passed") is not True
+            ):
+                raise SystemExit("performance calibration functional Oracle differs from comparison")
+            if performance_calibration.get("performancePolicy") != performance.get("performancePolicy"):
+                raise SystemExit("performance calibration policy differs from comparison")
+            if performance_calibration.get("profileWorkload") != performance.get("profileWorkload"):
+                raise SystemExit("performance calibration workload differs from comparison")
+            comparison_path = evidence / "smartperf-comparison.json"
+            if performance_calibration.get("comparisonSha256") != sha256(comparison_path):
+                raise SystemExit("performance calibration comparison digest mismatch")
+            if authority.get("relativePerformance") != "smartperf-emulator-proxy" or authority.get("absolutePowerThermal") != "unavailable-on-emulator":
+                raise SystemExit("performance calibration overclaims measurement authority")
+            calibration_sha256 = sha256(evidence / "performance-calibration.json")
+            calibration_binding = {
+                "id": performance_calibration.get("id"),
+                "sha256": calibration_sha256,
+                "applicationSource": application_source,
+                "controlledMutation": mutation,
+            }
+            if not isinstance(calibration_binding["id"], str) or not calibration_binding["id"]:
+                raise SystemExit("performance calibration requires id")
+            calibration_evidence_ids = [f"evidence-{args.run_id}-performance-calibration"]
         suffix = hashlib.sha256(
             f"{task_id}|{performance.get('candidateRunId')}|{performance.get('environmentIdentity')}".encode()
         ).hexdigest()[:16]
@@ -837,6 +914,7 @@ def main():
                 f"evidence-{args.run_id}-smartperf-candidate-summary",
                 *functional_evidence_ids,
                 *policy_evidence_ids,
+                *calibration_evidence_ids,
                 f"evidence-{args.run_id}-smartperf-comparison",
             ],
             "automaticPromotion": False,
@@ -846,6 +924,7 @@ def main():
                 "performancePolicy": performance.get("performancePolicy"),
                 "profileWorkload": performance.get("profileWorkload"),
             } if performance_schema == "agentlab.smartperf_comparison.v3" else {}),
+            **({"performanceCalibration": calibration_binding} if calibration_binding else {}),
         })
         if (
             performance_schema in {
@@ -882,6 +961,7 @@ def main():
                     f"evidence-{args.run_id}-smartperf-candidate-summary",
                     *functional_evidence_ids,
                     *policy_evidence_ids,
+                    *calibration_evidence_ids,
                     f"evidence-{args.run_id}-smartperf-comparison",
                 ],
                 "automaticPromotion": False,
@@ -890,6 +970,7 @@ def main():
                     "performancePolicy": performance.get("performancePolicy"),
                     "profileWorkload": performance.get("profileWorkload"),
                 } if performance_schema == "agentlab.smartperf_comparison.v3" else {}),
+                **({"performanceCalibration": calibration_binding} if calibration_binding else {}),
             })
 
     tables = [{"path": path, "operations": operations} for path, operations in groups.items() if operations]

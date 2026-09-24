@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import pathlib
+import subprocess
+import sys
+import tempfile
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -11,6 +15,9 @@ SCENARIO = ROOT / "examples/harmony-emulator/tutu-cookie-dismiss.ui"
 PROFILE_WORKLOAD = ROOT / "examples/harmony-emulator/tutu-scroll.profile"
 PERFORMANCE_POLICY = ROOT / "examples/harmony-emulator/emulator-cpu-memory-relative.performance.json"
 ASSET_MODEL = ROOT / "crates/agentlab_code_analysis/src/asset_model.rs"
+CONTROLLED_REGRESSION = (
+    ROOT / "release/qualifications/harmony-performance-controlled-regression-v1"
+)
 
 
 class HarmonyEmulatorReleaseTests(unittest.TestCase):
@@ -153,6 +160,71 @@ class HarmonyEmulatorReleaseTests(unittest.TestCase):
             self.assertIn(operation, operations)
         self.assertNotIn("absolute-power", operations)
         self.assertNotIn("thermal", operations)
+
+    def test_real_controlled_regression_replays_into_non_ready_difficulty(self) -> None:
+        comparison_path = CONTROLLED_REGRESSION / "smartperf-comparison.json"
+        comparison = json.loads(comparison_path.read_text(encoding="utf-8"))
+        calibration = json.loads(
+            (CONTROLLED_REGRESSION / "performance-calibration.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(
+            hashlib.sha256(comparison_path.read_bytes()).hexdigest(),
+            "eb875ee462cfc3ce6cac1dcf73a35cbf1e509f8c14d3e3579c02819e056cee10",
+        )
+        self.assertEqual(comparison["decision"], "performance-regression-candidate")
+        self.assertTrue(comparison["functionalGate"]["passed"])
+        self.assertEqual(
+            next(row for row in comparison["metrics"] if row["metric"] == "appPssKiB")[
+                "status"
+            ],
+            "regressed",
+        )
+        self.assertEqual(
+            calibration["candidate"]["controlledMutation"]["bytes"],
+            64 * 1024 * 1024,
+        )
+        with tempfile.TemporaryDirectory() as raw:
+            output = pathlib.Path(raw) / "transaction.json"
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts/build-cbgroom-flywheel-transaction.py"),
+                    "--evidence",
+                    str(CONTROLLED_REGRESSION),
+                    "--revision",
+                    "0" * 40,
+                    "--run-id",
+                    "controlled-regression-replay",
+                    "--github-repository",
+                    "example/agentlab",
+                    "--caller-person-id",
+                    "person-test",
+                    "--output",
+                    str(output),
+                ],
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            payload = json.loads(output.read_text())
+            rows = [
+                operation["row"]
+                for table in payload["arguments"]["tables"]
+                for operation in table["operations"]
+            ]
+            difficulty = next(
+                row
+                for row in rows
+                if row.get("dimensionId") == "functionally-correct-performance-regression"
+            )
+            self.assertFalse(difficulty["verificationContract"]["caseReady"])
+            self.assertFalse(difficulty["automaticPromotion"])
+            self.assertEqual(
+                difficulty["performanceCalibration"]["id"],
+                "tutu-retained-memory-64m-v1",
+            )
 
 
 if __name__ == "__main__":
