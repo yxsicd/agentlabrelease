@@ -1,0 +1,61 @@
+{
+  "automaticPromotion": false,
+  "baselineSourceIdentity": "artifact-sha256:cb28263c81b0e45cb909c6576f377e4ba704b2401c17a8c542ec2df7e9d74164",
+  "candidateRunIds": [
+    "tutu-controlled-regression-v1-candidate-v1",
+    "tutu-controlled-regression-v1-candidate-v2"
+  ],
+  "candidateSourceIdentity": "artifact-sha256:e1ff7ee955a3ad2cfe239c721e1c65b7e4087030f26537e79c928d13da34e8a1",
+  "comparatorSha256": "749316c76866081f750c9f2dafe6039d4ed3f82806f2582a055155edaf71bfa9",
+  "consistentRegressedMetrics": [
+    "appPssKiB"
+  ],
+  "phases": [
+    {
+      "exitCode": 0,
+      "phase": "baseline",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutSha256": "052c4d8576e5d7108df3786acb497b781e526f695155ff6569e12e6fa5bf26ee"
+    },
+    {
+      "attempts": 2,
+      "elapsedSeconds": 1.0,
+      "exitCode": 0,
+      "phase": "port-release-after-baseline"
+    },
+    {
+      "exitCode": 0,
+      "phase": "candidate-1",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutSha256": "4ff6a951ab099277f0db2fbfbb65a3de45c84e2db6ad06b90566239f4acbfee1"
+    },
+    {
+      "attempts": 2,
+      "elapsedSeconds": 1.001,
+      "exitCode": 0,
+      "phase": "port-release-after-candidate-1"
+    },
+    {
+      "exitCode": 0,
+      "phase": "candidate-2",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutSha256": "e07f9a06dd12fa9512ba689b6d0dd98a91b76b6699db1ce7bf1e6b668c3960d6"
+    },
+    {
+      "exitCode": 0,
+      "phase": "compare-1",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "exitCode": 0,
+      "phase": "compare-2",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "planSha256": "803e0448590c9b0f974293b56034a2e47e5959461702ef775c26fc8bd6c49ccd",
+  "runnerSha256": "ac97a2d440490b822dea899c1a37f79038f8d5ff9b1fe7ad8258429faee0fecb",
+  "schema": "agentlab.harmony_performance_calibration_run.v1",
+  "status": "passed"
+}

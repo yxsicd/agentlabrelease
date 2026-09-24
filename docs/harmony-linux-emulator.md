@@ -250,6 +250,17 @@ be released (120 seconds by default, bounded to at most 300). This prevents a
 stopped instance that is still draining from being mistaken for the next fresh
 instance; a release timeout is retained as its own failed phase.
 
+The first real orchestrated replay ran on `hwlinux` from harness revision
+`c40d90fd7da93d01eb6aab3212e81c23ef615e86`. It completed all seven recorded
+phases in 270.566 seconds. Both one-second port-release phases required two
+probes, all three UI Oracles passed, and both independent comparisons reported
+`appPssKiB` regression. Baseline/candidate/repeat mean PSS were
+173344/239498/239810 KiB; mean CPU was 5.8048%/6.1168%/5.3576%. The run receipt
+is retained as `automated-calibration-run.json`, SHA256
+`9cd7c9e0673a15b0f4d016e5621fb03710d57cde4cd1b59c93f5915eb55cc3bb`.
+The full raw result remains on the execution host at
+`performance-regression-calibration/automated-calibration-c40d90f-v3`.
+
 If any phase or identity check fails, the final output is not created. The
 adjacent hidden `.stage-*` directory is retained with phase logs, partial raw
 evidence and `failure.json` for diagnosis. Neither success nor failure permits

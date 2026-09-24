@@ -258,6 +258,23 @@ class HarmonyEmulatorReleaseTests(unittest.TestCase):
             )
             self.assertEqual(len(difficulty["evidenceIds"]), 11)
 
+    def test_real_automated_calibration_receipt_is_fail_closed(self) -> None:
+        receipt_path = CONTROLLED_REGRESSION / "automated-calibration-run.json"
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            hashlib.sha256(receipt_path.read_bytes()).hexdigest(),
+            "9cd7c9e0673a15b0f4d016e5621fb03710d57cde4cd1b59c93f5915eb55cc3bb",
+        )
+        self.assertEqual(receipt["status"], "passed")
+        self.assertFalse(receipt["automaticPromotion"])
+        self.assertEqual(receipt["consistentRegressedMetrics"], ["appPssKiB"])
+        self.assertEqual(len(receipt["phases"]), 7)
+        self.assertTrue(all(phase["exitCode"] == 0 for phase in receipt["phases"]))
+        self.assertEqual(
+            [phase["attempts"] for phase in receipt["phases"] if "attempts" in phase],
+            [2, 2],
+        )
+
     def test_real_repeatability_evidence_fails_closed_when_tampered(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             evidence = pathlib.Path(raw) / "evidence"
