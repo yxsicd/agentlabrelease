@@ -407,11 +407,50 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
     assert_eq!(frozen["sources"].as_array().unwrap().len(), 3);
     assert_eq!(frozen["stages"].as_array().unwrap().len(), 2);
     assert_eq!(frozen["calibration"]["qualified"], true);
+    assert_eq!(
+        frozen["qualificationMatrix"]["schema"],
+        "agentlab.case_qualification_matrix.v1"
+    );
+    assert_eq!(
+        frozen["qualificationMatrix"]["repairChecks"]
+            .as_array()
+            .unwrap()
+            .len(),
+        5
+    );
+    assert_eq!(
+        frozen["qualificationMatrix"]["preservationChecks"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    assert_eq!(
+        frozen["qualificationMatrix"]["deviceChecks"]["status"],
+        "separate-gate"
+    );
+    assert_eq!(frozen["qualificationMatrix"]["freshness"]["qualified"], false);
     assert_eq!(frozen["construction"]["status"], "candidate-unverified");
     assert_eq!(frozen["constructionQuality"]["qualifiedForReview"], true);
     assert_eq!(frozen["automaticPromotion"], false);
     assert!(!frozen_text.contains("policyFor(tier)"));
     assert!(!frozen_text.contains("for (let attempts"));
+
+    let qualification = run(Command::new("python3")
+        .arg(repository_root.join("scripts/validate-case-qualification.py"))
+        .arg("--case")
+        .arg(&case_path)
+        .arg("--calibration")
+        .arg(calibration_root.join("summary.json")));
+    assert!(
+        qualification.status.success(),
+        "{}",
+        String::from_utf8_lossy(&qualification.stderr)
+    );
+    let qualification_result: Value =
+        serde_json::from_slice(&qualification.stdout).unwrap();
+    assert_eq!(qualification_result["repairChecks"], 5);
+    assert_eq!(qualification_result["preservationChecks"], 1);
 
     let mut changed_after_review = reviewed_plan.clone();
     changed_after_review["title"] = json!("Changed after exact review");

@@ -177,6 +177,26 @@ python3 scripts/generate-multi-repo-case.py \
   --output /tmp/multi-repo-evaluation-case.json
 ```
 
+The freezer now derives an embedded
+`agentlab.case_qualification_matrix.v1` from the per-check calibration
+receipts. A check that fails on the baseline and passes on the reference is a
+`repairCheck`; a check that passes on both is a `preservationCheck`. Freezing
+fails unless both classes exist, the reference passes every check, repeated
+check verdicts remain stable across cumulative stages, and the aggregate stage
+verdict agrees with its individual checks. Validate the retained matrix again
+from the independent calibration bytes with:
+
+```sh
+python3 scripts/validate-case-qualification.py \
+  --case /tmp/multi-repo-evaluation-case.json \
+  --calibration /tmp/multi-repo-calibration/summary.json
+```
+
+The JSON shape is published at
+`schemas/case-qualification-matrix.schema.json`. Device checks, performance
+guardrails and freshness/contamination review remain explicit pending gates;
+static calibration cannot silently qualify them.
+
 For v2 plans the freezer independently rereads both evidence files, verifies
 their digests and confirms every calibrated plan field is identical to the
 reviewed proposal. Legacy v1 plans remain accepted without claiming this

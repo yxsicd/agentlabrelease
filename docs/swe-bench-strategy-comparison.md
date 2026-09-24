@@ -137,8 +137,9 @@ one real closed-path proof, not a large, statistically qualified benchmark.
 
 ## Adopted qualification model
 
-Every generated case should carry a qualification matrix that generalizes the
-SWE-bench split without copying its single-repository assumptions:
+Every newly generated multi-repository case now carries a qualification matrix
+that generalizes the SWE-bench split without copying its single-repository
+assumptions:
 
 ```json
 {
@@ -180,15 +181,15 @@ underspecified or contaminated case.
 
 ## Ordered implementation consequences
 
-1. Add the qualification-matrix schema and validator, then emit it from the
-   multi-repository case generator. Existing Oracle/calibration evidence should
-   populate it rather than be duplicated.
-2. Require baseline/reference/wrong-variant replay to classify repair and
-   preservation checks before a case becomes `frozen-calibrated`.
-3. Add freshness/contamination declarations and an independent review receipt;
-   default unknown evidence to review-required, never qualified.
-4. Generate a portable device-handoff bundle from the static campaign, then
+1. Extend the implemented qualification matrix with evidence-backed
+   freshness/contamination declarations and a stronger independent review
+   receipt; unknown evidence already remains review-required, never qualified.
+2. Generate a portable device-handoff bundle from the static campaign, then
    resolve only host-specific emulator/build paths on the qualified Linux host.
+3. Require the device campaign to extend, rather than overwrite, the static
+   repair/preservation matrix with exact UI and performance gate receipts.
+4. Add independent multi-reviewer adjudication and disagreement measurement;
+   default unknown evidence to review-required, never qualified.
 5. Run repeated strong/weak/middle participant trials on at least five cases
    from a representative 20,000-line Harmony source set and report confidence
    intervals, exclusions and infrastructure failures.
@@ -207,4 +208,3 @@ now dominate public coding benchmarks: case invalidity and contamination.
 - [Introducing SWE-bench Verified](https://openai.com/index/introducing-swe-bench-verified/)
 - [Why SWE-bench Verified no longer measures frontier coding capabilities](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/)
 - [Separating signal from noise in coding evaluations](https://openai.com/index/separating-signal-from-noise-coding-evaluations/)
-

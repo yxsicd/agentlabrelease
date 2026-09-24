@@ -94,6 +94,10 @@ jobs:
             --construction-quality "$AGENTLAB_ROOT/source/construction/intent-quality.json" \
             --calibration "$AGENTLAB_ROOT/calibration/summary.json" \
             --output "$AGENTLAB_ROOT/evaluation-case.json"
+          python3 scripts/validate-case-qualification.py \
+            --case "$AGENTLAB_ROOT/evaluation-case.json" \
+            --calibration "$AGENTLAB_ROOT/calibration/summary.json" \
+            | tee "$AGENTLAB_ROOT/case-qualification-validation.json"
           sha256sum "$AGENTLAB_ROOT/evaluation-case.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve exact review, calibration and frozen case lineage
         if: always()

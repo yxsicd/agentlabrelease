@@ -8,6 +8,8 @@ import json
 import re
 from pathlib import Path
 
+from case_qualification import build_matrix, validate_matrix
+
 
 SHA256 = re.compile(r"[0-9a-f]{64}")
 REVISION = re.compile(r"[0-9a-f]{40}")
@@ -176,6 +178,15 @@ def main():
 
     plan_sha256 = digest(args.plan)
     calibration_sha256 = digest(args.calibration)
+    qualification_matrix = build_matrix(
+        case_id=case_id,
+        source_set_sha256=source_set,
+        stages=stages,
+        oracle=oracle,
+        calibration=calibration,
+        calibration_sha256=calibration_sha256,
+        review=plan.get("review"),
+    )
     output = {
         "schema": "agentlab.multi_repo_evaluation_case.v1",
         "id": case_id,
@@ -204,14 +215,17 @@ def main():
         },
         "construction": plan.get("construction"),
         "constructionQuality": plan.get("constructionQuality"),
+        "qualificationMatrix": qualification_matrix,
         "lineage": {
             "difficultyEvidenceSha256": digest(args.difficulty),
             "planSha256": plan_sha256,
             "calibrationSha256": calibration_sha256,
+            "review": plan.get("review"),
         },
         "automaticPromotion": False,
         "assessmentBoundary": "Exact pinned source set and executable fixture oracle; Harmony build, emulator rendering and device performance remain separate gates.",
     }
+    validate_matrix(output, calibration, calibration_sha256)
     require(not args.output.exists(), "refusing to overwrite frozen case")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(output, indent=2, sort_keys=True) + "\n")

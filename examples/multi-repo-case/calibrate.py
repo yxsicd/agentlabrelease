@@ -78,6 +78,10 @@ def main():
                 "receiptSha256": hashlib.sha256(process.stdout.encode()).hexdigest(),
                 "checkCount": len(receipt["checks"]),
                 "checkIds": [row["id"] for row in receipt["checks"]],
+                "checks": [
+                    {"id": row["id"], "pass": row["pass"]}
+                    for row in receipt["checks"]
+                ],
             }
         results[name] = {"sourceSha256": tree_digest(root), "stages": stages}
 
