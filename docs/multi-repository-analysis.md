@@ -104,6 +104,22 @@ independent Harmony materialization/build step over the reviewed source set.
 Missing or mismatched lineage fails before emulator launch; result or SmartPerf
 identity drift retains the failed execution and cannot promote the case.
 
+The corresponding build-side producer is
+[`build-harmony-evaluation-artifact.py`](../scripts/build-harmony-evaluation-artifact.py).
+It never copies a checkout's current working tree. For every source in the
+frozen case, the plan maps a committed directory from the exact revision into a
+fresh project workspace. The producer checks the exact `origin`, resolves the
+40-character commit, reads only Git tree/blob objects, rejects symlinks,
+submodules, traversal and target collisions, then invokes one SHA-bound build
+executable without a shell. This makes uncommitted or generated checkout bytes
+ineligible for the source lineage.
+
+On success it retains `artifact.hap`, `source-materialization.json`, build logs
+and `build-receipt.json`; the disposable workspace is removed because the
+pinned repositories plus content manifest are the reproducible authority. A
+failure retains the partial workspace and logs. The build receipt is the input
+required by the emulator bridge, not an automatic case-promotion decision.
+
 ## Close assessed failures into the next analysis cut
 
 The trusted assessed campaign keeps the frozen case unchanged, runs fresh trials

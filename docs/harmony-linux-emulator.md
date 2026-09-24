@@ -349,6 +349,29 @@ evidence.
 
 ### Frozen multi-repository case execution
 
+First produce a HAP and independent build receipt from exact Git objects using
+`scripts/build-harmony-evaluation-artifact.py`. Its
+`agentlab.harmony_case_build_plan.v1` input binds the frozen case, one or more
+source-directory mappings for every repository, and a build contract containing
+the executable SHA256, argument vector, working directory, relative HAP path,
+bounded timeout and explicit non-secret environment:
+
+```sh
+python3 scripts/build-harmony-evaluation-artifact.py \
+  --plan /absolute/path/harmony-case-build-plan.json \
+  --output /absolute/path/new-harmony-build
+```
+
+The producer resolves every mapping from the case's exact Git revision and
+`origin`; it reads committed blobs rather than working-tree files. It invokes
+the builder without a shell in its own process group and terminates that group
+on timeout. Success emits `artifact.hap`, `source-materialization.json`, build
+logs and an `agentlab.harmony_case_build_receipt.v1` with
+`buildAuthority=independent-harmony-build` and `automaticPromotion=false`.
+Failure keeps the hidden staging workspace and logs. Plans must not contain
+credentials; secret-bearing signing and AGC flows remain outside this unsigned
+emulator-build lane.
+
 Use `scripts/run-harmony-evaluation-case.py` when a reviewed, calibrated
 multi-repository case has been independently materialized and built as a
 Harmony HAP. Its `agentlab.harmony_evaluation_run_plan.v1` plan binds:
