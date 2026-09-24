@@ -44,7 +44,7 @@ def main():
 
     plan = {
         "schema": "agentlab.multi_repo_case_plan.v2",
-        **{key: proposal[key] for key in ("caseId", "candidateId", "sourceSetSha256", "title", "allowedEdits", "stages", "oracle", "calibrationExpectations")},
+        **{key: proposal[key] for key in ("caseId", "candidateId", "sourceSetSha256", "title", "allowedEdits", "stages", "oracle", "calibrationExpectations", "construction")},
         "review": {
             "authority": "explicit-proposal-review",
             "reviewer": review["reviewer"],

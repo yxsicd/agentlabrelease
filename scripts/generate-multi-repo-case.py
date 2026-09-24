@@ -70,7 +70,7 @@ def main():
         require(decision.get("verdict") == review.get("verdict"), "review verdict mismatch")
         require(decision.get("reviewer") == review.get("reviewer"), "reviewer mismatch")
         require(sorted(decision.get("acknowledgedRiskIds", [])) == review.get("acknowledgedRiskIds"), "review risk acknowledgements mismatch")
-        reviewed_fields = ("caseId", "candidateId", "sourceSetSha256", "title", "allowedEdits", "stages", "oracle", "calibrationExpectations")
+        reviewed_fields = ("caseId", "candidateId", "sourceSetSha256", "title", "allowedEdits", "stages", "oracle", "calibrationExpectations", "construction")
         require(all(plan.get(key) == proposal.get(key) for key in reviewed_fields), "v2 plan differs from reviewed proposal")
     else:
         require(args.proposal is None and args.review is None, "proposal and review evidence require a v2 plan")
@@ -189,6 +189,7 @@ def main():
                 name: row.get("sourceSha256") for name, row in results.items()
             },
         },
+        "construction": plan.get("construction"),
         "lineage": {
             "difficultyEvidenceSha256": digest(args.difficulty),
             "planSha256": plan_sha256,

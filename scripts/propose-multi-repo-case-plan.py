@@ -29,6 +29,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--difficulty", type=Path, required=True)
     parser.add_argument("--intent", type=Path, required=True)
+    parser.add_argument("--construction-receipt", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -40,6 +41,20 @@ def main():
     source_set = difficulty.get("sourceSetSha256")
     require(isinstance(source_set, str) and SHA256.fullmatch(source_set), "difficulty requires sourceSetSha256")
     require(intent.get("sourceSetSha256") == source_set, "intent source set mismatch")
+    construction = intent.get("construction")
+    if construction is not None:
+        require(args.construction_receipt is not None, "constructed intent requires construction receipt")
+        construction_receipt = load(args.construction_receipt)
+        require(construction_receipt.get("schema") == "agentlab.multi_repo_intent_construction_receipt.v1", "unsupported construction receipt schema")
+        require(digest(args.construction_receipt) == construction.get("receiptSha256"), "construction receipt digest mismatch")
+        require(construction_receipt.get("status") == construction.get("status") == "candidate-unverified", "construction must remain an unverified candidate")
+        require(construction_receipt.get("participantId") == construction.get("participantId"), "construction participant mismatch")
+        require(construction_receipt.get("sourceSetSha256") == source_set, "construction source set mismatch")
+        require(construction_receipt.get("candidateId") == intent.get("candidateId"), "construction candidate mismatch")
+        require(construction_receipt.get("semanticKnowledgeVerified") is False and construction.get("semanticKnowledgeVerified") is False, "construction must not claim verified semantics")
+        require(construction_receipt.get("automaticPromotion") is False and construction.get("automaticPromotion") is False, "construction must not auto-promote")
+    else:
+        require(args.construction_receipt is None, "construction receipt requires constructed intent")
 
     candidates = {row.get("id"): row for row in difficulty.get("candidates", []) if isinstance(row, dict)}
     candidate_id = intent.get("candidateId")
@@ -94,6 +109,7 @@ def main():
         "stages": normalized_stages,
         "oracle": oracle,
         "calibrationExpectations": expectations,
+        "construction": construction,
         "constructionEvidence": {
             "mechanism": candidate.get("mechanism"),
             "seed": candidate.get("seed"),

@@ -172,44 +172,91 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
         fs::read(calibration_root.join("summary.json")).unwrap(),
         fs::read(repeated_calibration_root.join("summary.json")).unwrap()
     );
-    let oracle_sha256 = digest(&fs::read(example.join("oracle.mjs")).unwrap());
-    let intent = json!({
-        "schema":"agentlab.multi_repo_case_intent.v1",
-        "caseId":"case-cross-repo-retry-policy-v1",
-        "candidateId":candidate_id,
-        "sourceSetSha256":source_set,
-        "title":"Propagate retry policy across contract, service and application repositories",
-        "allowedEdits":[
-            {"repositoryId":"contracts","path":"src/policy.ts"},
-            {"repositoryId":"service","path":"src/reservation.ts"},
-            {"repositoryId":"app","path":"src/checkout.ts"}
-        ],
-        "stages":[
-            {
-                "id":"turn-1",
-                "demand":"Add premium policy with three attempts while preserving the standard one-attempt boundary. Make the service obey the shared policy and report the actual attempt count.",
-                "checkIds":["standard-one-attempt","premium-third-attempt","premium-exhaustion"]
-            },
-            {
-                "id":"turn-2",
-                "demand":"Update the application result mapping to preserve tier and actual attempt count for accepted and exhausted requests without changing retry ownership.",
-                "checkIds":["accepted-consumer-output","fallback-consumer-output","standard-consumer-output"]
-            }
-        ],
-        "oracle":{
-            "sha256":oracle_sha256,
-            "authority":"independent-executable-oracle",
-            "receiptSchema":"agentlab.multi_repo_oracle_receipt.v1"
-        },
-        "calibrationExpectations":{
-            "baseline":{"turn-1":false,"turn-2":false},
-            "reference":{"turn-1":true,"turn-2":true},
-            "hardcoded-premium":{"turn-1":false,"turn-2":false},
-            "stale-consumer":{"turn-1":true,"turn-2":false}
-        }
-    });
-    let intent_path = fixture.0.join("intent.json");
-    fs::write(&intent_path, serde_json::to_vec_pretty(&intent).unwrap()).unwrap();
+    let oracle_contract_path = example.join("oracle-contract.json");
+    let oracle_contract: Value =
+        serde_json::from_slice(&fs::read(&oracle_contract_path).unwrap()).unwrap();
+    assert_eq!(
+        oracle_contract["oracleSha256"],
+        digest(&fs::read(example.join("oracle.mjs")).unwrap())
+    );
+    let construction_root = fixture.0.join("construction");
+    let construct = |output: &Path| {
+        run(Command::new("python3")
+            .arg(repository_root.join("scripts/run-multi-repo-intent-construction.py"))
+            .arg("--manifest")
+            .arg(&manifest_path)
+            .arg("--difficulty")
+            .arg(&difficulty_path)
+            .arg("--facts")
+            .arg(analysis_root.join("workspace_facts.jsonl"))
+            .arg("--candidate-id")
+            .arg(candidate_id)
+            .arg("--oracle-contract")
+            .arg(&oracle_contract_path)
+            .arg("--participant")
+            .arg(example.join("mock-construction-agent.py"))
+            .arg("--participant-id")
+            .arg("deterministic-construction-fixture-v1")
+            .arg("--output")
+            .arg(output))
+    };
+    let constructed = construct(&construction_root);
+    assert!(
+        constructed.status.success(),
+        "{}",
+        String::from_utf8_lossy(&constructed.stderr)
+    );
+    let repeated_construction_root = fixture.0.join("repeated-construction");
+    assert!(construct(&repeated_construction_root).status.success());
+    assert_eq!(
+        fs::read(construction_root.join("intent.json")).unwrap(),
+        fs::read(repeated_construction_root.join("intent.json")).unwrap()
+    );
+    assert_eq!(
+        fs::read(construction_root.join("construction-receipt.json")).unwrap(),
+        fs::read(repeated_construction_root.join("construction-receipt.json")).unwrap()
+    );
+    let construction_receipt: Value = serde_json::from_slice(
+        &fs::read(construction_root.join("construction-receipt.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(construction_receipt["status"], "candidate-unverified");
+    assert_eq!(construction_receipt["semanticKnowledgeVerified"], false);
+    assert_eq!(
+        construction_receipt["sourceFiles"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
+    let request_text =
+        fs::read_to_string(construction_root.join("workspace/construction-request.json")).unwrap();
+    assert!(!request_text.contains("calibrationExpectations"));
+    assert!(!request_text.contains("policyFor(tier)"));
+    let intent_path = construction_root.join("intent.json");
+    let mut changed_construction_receipt = construction_receipt.clone();
+    changed_construction_receipt["participantId"] = json!("substituted-participant");
+    let changed_construction_receipt_path = fixture.0.join("changed-construction-receipt.json");
+    fs::write(
+        &changed_construction_receipt_path,
+        serde_json::to_vec_pretty(&changed_construction_receipt).unwrap(),
+    )
+    .unwrap();
+    let changed_construction_rejected = run(Command::new("python3")
+        .arg(repository_root.join("scripts/propose-multi-repo-case-plan.py"))
+        .arg("--difficulty")
+        .arg(&difficulty_path)
+        .arg("--intent")
+        .arg(&intent_path)
+        .arg("--construction-receipt")
+        .arg(&changed_construction_receipt_path)
+        .arg("--output")
+        .arg(fixture.0.join("changed-construction-proposal.json")));
+    assert!(!changed_construction_rejected.status.success());
+    assert!(
+        String::from_utf8_lossy(&changed_construction_rejected.stderr)
+            .contains("construction receipt digest mismatch")
+    );
     let proposal_path = fixture.0.join("proposal.json");
     let proposed = run(Command::new("python3")
         .arg(repository_root.join("scripts/propose-multi-repo-case-plan.py"))
@@ -217,6 +264,8 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
         .arg(&difficulty_path)
         .arg("--intent")
         .arg(&intent_path)
+        .arg("--construction-receipt")
+        .arg(construction_root.join("construction-receipt.json"))
         .arg("--output")
         .arg(&proposal_path));
     assert!(
@@ -309,6 +358,7 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
     assert_eq!(frozen["sources"].as_array().unwrap().len(), 3);
     assert_eq!(frozen["stages"].as_array().unwrap().len(), 2);
     assert_eq!(frozen["calibration"]["qualified"], true);
+    assert_eq!(frozen["construction"]["status"], "candidate-unverified");
     assert_eq!(frozen["automaticPromotion"], false);
     assert!(!frozen_text.contains("policyFor(tier)"));
     assert!(!frozen_text.contains("for (let attempts"));

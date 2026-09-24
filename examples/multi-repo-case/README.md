@@ -7,7 +7,9 @@ evaluation case:
 exact Git source set
   -> cross-repository module graph
   -> recursive change-impact difficulty
-  -> semantic intent
+  -> exact affected source + relevant facts
+  -> replaceable construction participant
+  -> captured semantic-intent candidate
   -> review-required plan proposal
   -> exact proposal review
   -> independent executable Oracle
@@ -36,16 +38,38 @@ state rather than merely repeating the first check.
 
 First run `agentlab-multi-repo-analysis` on exact committed checkouts as
 described in [`docs/multi-repository-analysis.md`](../../docs/multi-repository-analysis.md).
-Select a dependency-supported candidate and author an
-`agentlab.multi_repo_case_intent.v1` intent. It contains Agent-visible demands,
-check IDs, the Oracle digest and expected calibration matrix, but no reference
-source. Construct a proposal; the script derives the allowed edit surface and
-records analysis evidence plus known qualification risks:
+Select a dependency-supported candidate and run a construction participant. The
+Harness materializes only the affected files from the exact Git revisions,
+selects the related facts and gives the participant a behavior/check contract
+without reference source, calibration variants or Oracle implementation. It
+retains the request, participant digest, command, stdout/stderr, draft and
+lifecycle evidence. The included participant is a deterministic transport
+fixture; replace `--participant` and its identity with an actual construction
+Agent adapter for semantic construction:
+
+```sh
+python3 scripts/run-multi-repo-intent-construction.py \
+  --manifest /tmp/multi-repo-manifest.json \
+  --difficulty /tmp/analysis/difficulty_candidates.json \
+  --facts /tmp/analysis/workspace_facts.jsonl \
+  --candidate-id <difficulty-id> \
+  --oracle-contract examples/multi-repo-case/oracle-contract.json \
+  --participant examples/multi-repo-case/mock-construction-agent.py \
+  --participant-id deterministic-construction-fixture-v1 \
+  --output /tmp/intent-construction
+```
+
+The deterministic receipt and `intent.json` remain
+`candidate-unverified`; `semanticKnowledgeVerified` and `automaticPromotion`
+are false. Construct a proposal; the proposer independently verifies the
+construction receipt, derives the allowed edit surface and records analysis
+evidence plus known qualification risks:
 
 ```sh
 python3 scripts/propose-multi-repo-case-plan.py \
   --difficulty /tmp/analysis/difficulty_candidates.json \
-  --intent /tmp/case-intent.json \
+  --intent /tmp/intent-construction/intent.json \
+  --construction-receipt /tmp/intent-construction/construction-receipt.json \
   --output /tmp/case-plan-proposal.json
 ```
 
@@ -94,15 +118,19 @@ stronger review lineage.
 
 Copy the frozen case into campaign evidence as
 `multi-repo-evaluation-case.json` and its exact calibration summary as
-`multi-repo-calibration.json`; `build-cbgroom-flywheel-transaction.py` validates
-their digest/source-set/candidate/Oracle linkage and writes an
-`evaluation_cases` row linked to both evidence objects.
+`multi-repo-calibration.json`. For a constructed case, also copy the exact
+receipt as `multi-repo-construction-receipt.json`.
+`build-cbgroom-flywheel-transaction.py` validates all
+digest/source-set/candidate/participant/Oracle links and writes an
+`evaluation_cases` row linked to all retained evidence objects.
 
 ## Evidence boundary
 
-The deterministic proposer derives scope and exposes risks; it does not invent
-or prove the semantic requirement. A maintainer or construction Agent must
-still supply the intent, and an explicit reviewer must approve the exact
-proposal before calibration. The checked fixture qualifies the executable VM
-seam only. Harmony compilation, UI behavior, emulator deployment, performance
-and assessed-Agent discrimination are independent later gates.
+The construction participant proposes semantic intent from exact scoped source,
+facts and a behavior contract; its output is not semantic truth. The
+deterministic proposer derives scope and exposes risks, and an explicit reviewer
+must approve the exact proposal before calibration. The included mock proves
+the capture/protocol/lineage path, not model quality. The checked fixture
+qualifies the executable VM seam only. Harmony compilation, UI behavior,
+emulator deployment, performance and assessed-Agent discrimination are
+independent later gates.

@@ -103,6 +103,20 @@ class MultiRepoDifficultyFlywheelTests(unittest.TestCase):
             }
             calibration_bytes = json.dumps(calibration).encode()
             (evidence / "multi-repo-calibration.json").write_bytes(calibration_bytes)
+            construction = {
+                "schema": "agentlab.multi_repo_intent_construction_receipt.v1",
+                "status": "candidate-unverified",
+                "participantId": "builder-fixture-v1",
+                "participantSha256": "5" * 64,
+                "sourceSetSha256": self.evidence()["sourceSetSha256"],
+                "candidateId": "difficulty-stable",
+                "semanticKnowledgeVerified": False,
+                "automaticPromotion": False,
+            }
+            construction_bytes = json.dumps(construction).encode()
+            (evidence / "multi-repo-construction-receipt.json").write_bytes(
+                construction_bytes
+            )
             case = {
                 "schema": "agentlab.multi_repo_evaluation_case.v1",
                 "id": "case-multi-repo",
@@ -119,6 +133,13 @@ class MultiRepoDifficultyFlywheelTests(unittest.TestCase):
                 "calibration": {
                     "qualified": True,
                     "summarySha256": hashlib.sha256(calibration_bytes).hexdigest(),
+                },
+                "construction": {
+                    "status": "candidate-unverified",
+                    "participantId": "builder-fixture-v1",
+                    "receiptSha256": hashlib.sha256(construction_bytes).hexdigest(),
+                    "semanticKnowledgeVerified": False,
+                    "automaticPromotion": False,
                 },
                 "automaticPromotion": False,
             }
@@ -154,7 +175,17 @@ class MultiRepoDifficultyFlywheelTests(unittest.TestCase):
                 [
                     "evidence-run-multi-repo-multi-repo-evaluation-case",
                     "evidence-run-multi-repo-multi-repo-calibration",
+                    "evidence-run-multi-repo-multi-repo-construction-receipt",
                 ],
+            )
+            construction_ref = next(
+                operation["row"]
+                for operation in tables["evidence_refs"]
+                if operation["row"]["kind"]
+                == "multi-repo-construction-receipt"
+            )
+            self.assertEqual(
+                construction_ref["sourceSetSha256"], expected_source_set
             )
 
     def test_rejects_automatic_promotion(self):
