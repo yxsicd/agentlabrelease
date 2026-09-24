@@ -160,6 +160,45 @@ Its next gate is authenticated reviewer identity plus artifact provenance. The
 public fixture has regression coverage for the protocol but no real review
 decisions, so its current assessment qualification remains unchanged.
 
+Two trusted-main manual workflows implement that next gate without accepting a
+self-declared identity as authority:
+
+1. `blind-case-independent-review.yml` recovers an exact successful frozen-case
+   run, reconstructs the same request, rejects the recorded constructor as the
+   reviewer, binds `github.actor` to the decision, and signs the decision with a
+   GitHub OIDC/Sigstore artifact attestation.
+2. `blind-case-review-adjudication.yml` requires two different review run IDs,
+   downloads their artifacts, verifies each run through the GitHub API, and runs
+   `gh attestation verify` against the exact repository, signer workflow, main
+   ref and source commit. It then checks that the two authenticated GitHub
+   accounts differ and signs the resulting adjudication itself.
+
+The authenticated adjudication retains the raw run metadata, attestation
+verification output, decisions and provenance receipts. It may set
+`reviewerIdentityAuthenticationQualified=true` and
+`blindPilotReviewQualified=true` only when all four review dimensions reached
+unanimous qualified consensus. This authenticates distinct GitHub accounts and
+workflow provenance, not real-world legal identity or model-training exclusion;
+`eligibleForUnseenAgentDiscrimination` therefore remains false.
+
+These workflows become dispatchable only after the workflow files are present
+on the repository default branch. Until an actual pair of trusted-main reviews
+and the final attestation are produced and independently verified, this is an
+implemented protocol rather than completed review evidence.
+
+The assessed-campaign workflow accepts that adjudication by run ID. Before any
+model attempt it downloads the exact bundle and re-verifies the final
+attestation against the adjudication workflow, repository, main ref, source
+commit and GitHub-hosted runner policy. The campaign artifact retains the raw
+parsed verification statement together with the exact enforcement policy,
+subject digest, workflow run/attempt and source revision. Each assessment
+process repeats the online verification and reconstructs the internal
+cut/request/decision/provenance lineage. `blindAssessmentQualified` becomes
+true only when this
+authenticated review boundary and all filesystem, external-credential and
+network-egress runtime gates are true. The functional pass/fail verdict remains
+separate from that boundary qualification.
+
 ## Evidence boundary
 
 A structurally valid cut is eligible for a blind pilot only. It is not yet

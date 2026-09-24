@@ -307,6 +307,13 @@ class MultiRepoAssessmentTests(unittest.TestCase):
             self.assertTrue(summary["subjectTaskSucceeded"])
             self.assertTrue(summary["blindDispatch"]["interfaceInputQualified"])
             self.assertFalse(summary["blindDispatch"]["filesystemIsolationQualified"])
+            self.assertFalse(summary["blindDispatch"]["authenticatedReviewProvided"])
+            self.assertFalse(
+                summary["blindDispatch"]["reviewerIdentityAuthenticationQualified"]
+            )
+            self.assertFalse(
+                summary["blindDispatch"]["unseenAgentDiscriminationQualified"]
+            )
             self.assertFalse(summary["blindDispatch"]["blindAssessmentQualified"])
             requests = list((output / "participant-evidence").glob("*-request.json"))
             self.assertTrue(requests)

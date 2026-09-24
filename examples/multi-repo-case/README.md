@@ -357,10 +357,19 @@ exact participant/evaluator identities, collect at least two
 constructor-distinct reviewer records and adjudicate semantic leakage,
 contamination risk, specification fairness and Oracle breadth. Unknowns and
 reviewer disagreement fail closed. The CLI records distinct identities but does
-not authenticate them, so authenticated reviewer and artifact provenance remain
-a separate gate. This review chain also does not establish model-training
-exclusion or unseen-Agent eligibility, and the public fixture ships no real
-review decisions.
+not authenticate them. The trusted-main review and adjudication workflows bind
+two distinct GitHub actors to OIDC/Sigstore-attested decisions before identity
+qualification can become true. This review chain still does not establish
+model-training exclusion or unseen-Agent eligibility, and the public fixture
+ships no real review decisions.
+
+When an authenticated adjudication exists, pass its workflow run ID to the
+assessed campaign as `authenticated_review_run_id`. The campaign downloads and
+re-verifies the signed adjudication before model execution, retains that raw
+verification and exact policy in the campaign artifact, and every assessment
+process reconstructs its cut, decision and provenance lineage. Review consensus
+alone cannot set `blindAssessmentQualified`; the authenticated identity,
+attested provenance, filesystem, credential and network gates must all pass.
 
 Copy the frozen case into campaign evidence as
 `multi-repo-evaluation-case.json` and its exact calibration summary as

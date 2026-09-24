@@ -1,0 +1,156 @@
+name: Blind case authenticated review adjudication
+on:
+  workflow_dispatch:
+    inputs:
+      frozen_case_run_id:
+        description: Successful trusted-main frozen-case run containing the exact blind cut
+        required: true
+        type: string
+      first_review_run_id:
+        description: First successful attested independent-review run
+        required: true
+        type: string
+      second_review_run_id:
+        description: Second successful attested independent-review run
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  artifact-metadata: write
+  attestations: write
+  contents: read
+  id-token: write
+
+jobs:
+  adjudicate:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/blind-case-review-adjudication
+      REVIEW_WORKFLOW_PATH: .github/workflows/blind-case-independent-review.yml
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Recover the exact blind cut and reconstruct its review request
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.frozen_case_run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/source"
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" \
+            > "$AGENTLAB_ROOT/source-run.json"
+          python3 - <<'PY'
+          import json, os
+          root = os.environ["AGENTLAB_ROOT"]
+          value = json.load(open(root + "/source-run.json"))
+          assert value["repository"]["full_name"] == os.environ["GITHUB_REPOSITORY"]
+          assert value["path"] == ".github/workflows/multi-repo-case-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["head_branch"] == "main"
+          assert value["status"] == "completed" and value["conclusion"] == "success"
+          constructor = value["actor"]["login"]
+          assert constructor and constructor == value["triggering_actor"]["login"]
+          open(root + "/constructor.txt", "w").write(constructor + "\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("constructor=" + constructor + "\n")
+          PY
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-frozen-case --dir "$AGENTLAB_ROOT/source"
+          python3 scripts/review-blind-case-cut.py prepare \
+            --cut "$AGENTLAB_ROOT/source/blind-cut" \
+            --constructor "$(cat "$AGENTLAB_ROOT/constructor.txt")" \
+            --output "$AGENTLAB_ROOT/request.json"
+      - name: Recover and cryptographically verify both reviewer decisions
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FIRST_RUN_ID: ${{ inputs.first_review_run_id }}
+          SECOND_RUN_ID: ${{ inputs.second_review_run_id }}
+          CONSTRUCTOR: ${{ steps.source.outputs.constructor }}
+        run: |
+          set -euo pipefail
+          [[ "$FIRST_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$SECOND_RUN_ID" =~ ^[0-9]+$ ]]
+          test "$FIRST_RUN_ID" != "$SECOND_RUN_ID"
+          for pair in "first:$FIRST_RUN_ID" "second:$SECOND_RUN_ID"; do
+            label=${pair%%:*}
+            run_id=${pair#*:}
+            mkdir -p "$AGENTLAB_ROOT/$label"
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" \
+              > "$AGENTLAB_ROOT/$label/run.json"
+            gh run download "$run_id" --repo "$GITHUB_REPOSITORY" \
+              --name blind-case-independent-review --dir "$AGENTLAB_ROOT/$label/artifact"
+            cmp "$AGENTLAB_ROOT/request.json" "$AGENTLAB_ROOT/$label/artifact/request.json"
+            gh attestation verify "$AGENTLAB_ROOT/$label/artifact/decision.json" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/$REVIEW_WORKFLOW_PATH" \
+              --source-ref refs/heads/main \
+              --source-digest "$GITHUB_SHA" \
+              --deny-self-hosted-runners \
+              --format json > "$AGENTLAB_ROOT/$label/attestation-verification.json"
+            python3 scripts/authenticate-blind-case-review.py authenticate \
+              --request "$AGENTLAB_ROOT/request.json" \
+              --decision "$AGENTLAB_ROOT/$label/artifact/decision.json" \
+              --run-metadata "$AGENTLAB_ROOT/$label/run.json" \
+              --attestation-verification "$AGENTLAB_ROOT/$label/attestation-verification.json" \
+              --repository "$GITHUB_REPOSITORY" \
+              --workflow-path "$REVIEW_WORKFLOW_PATH" \
+              --expected-head-sha "$GITHUB_SHA" \
+              --output "$AGENTLAB_ROOT/$label/provenance.json"
+          done
+          python3 - <<'PY'
+          import json, os
+          root = os.environ["AGENTLAB_ROOT"]
+          constructor = os.environ["CONSTRUCTOR"]
+          rows = [json.load(open(root + f"/{label}/provenance.json")) for label in ("first", "second")]
+          assert len({row["reviewer"] for row in rows}) == 2
+          assert len({row["workflowRunId"] for row in rows}) == 2
+          assert all(row["reviewer"] != constructor for row in rows)
+          PY
+      - name: Produce the authenticated fail-closed adjudication
+        run: |
+          set -euo pipefail
+          python3 scripts/authenticate-blind-case-review.py adjudicate \
+            --cut "$AGENTLAB_ROOT/source/blind-cut" \
+            --request "$AGENTLAB_ROOT/request.json" \
+            --review "$AGENTLAB_ROOT/first/artifact/decision.json" \
+            --review "$AGENTLAB_ROOT/second/artifact/decision.json" \
+            --provenance "$AGENTLAB_ROOT/first/provenance.json" \
+            --provenance "$AGENTLAB_ROOT/second/provenance.json" \
+            --repository "$GITHUB_REPOSITORY" \
+            --workflow-path "$REVIEW_WORKFLOW_PATH" \
+            --expected-head-sha "$GITHUB_SHA" \
+            --output "$AGENTLAB_ROOT/authenticated-adjudication.json"
+          python3 scripts/authenticate-blind-case-review.py validate \
+            --cut "$AGENTLAB_ROOT/source/blind-cut" \
+            --request "$AGENTLAB_ROOT/request.json" \
+            --review "$AGENTLAB_ROOT/first/artifact/decision.json" \
+            --review "$AGENTLAB_ROOT/second/artifact/decision.json" \
+            --provenance "$AGENTLAB_ROOT/first/provenance.json" \
+            --provenance "$AGENTLAB_ROOT/second/provenance.json" \
+            --repository "$GITHUB_REPOSITORY" \
+            --workflow-path "$REVIEW_WORKFLOW_PATH" \
+            --expected-head-sha "$GITHUB_SHA" \
+            --adjudication "$AGENTLAB_ROOT/authenticated-adjudication.json"
+          sha256sum "$AGENTLAB_ROOT/authenticated-adjudication.json" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Sign the authenticated adjudication with GitHub OIDC provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: ${{ env.AGENTLAB_ROOT }}/authenticated-adjudication.json
+      - name: Preserve authenticated review and raw verification evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: blind-case-authenticated-adjudication
+          if-no-files-found: error
+          include-hidden-files: true
+          path: |
+            ${{ env.AGENTLAB_ROOT }}/authenticated-adjudication.json
+            ${{ env.AGENTLAB_ROOT }}/request.json
+            ${{ env.AGENTLAB_ROOT }}/source-run.json
+            ${{ env.AGENTLAB_ROOT }}/source/blind-cut/
+            ${{ env.AGENTLAB_ROOT }}/first/
+            ${{ env.AGENTLAB_ROOT }}/second/

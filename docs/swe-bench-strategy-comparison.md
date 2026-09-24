@@ -116,9 +116,11 @@ smaller than SWE-bench's:
 3. The construction participant, deterministic intent checks and maintainer
    review exist. A new exact-digest review protocol now requires at least two
    constructor-distinct reviewer records, four explicit verdict dimensions and
-   an adjudicated disagreement rate. Reviewer identity authentication remains a
-   separate fail-closed gate. There is still no representative Verified-like
-   reviewed dataset or measured population-level reviewer disagreement.
+   an adjudicated disagreement rate. Trusted-main workflows now bind decisions
+   to distinct GitHub actors and verify GitHub OIDC/Sigstore attestations before
+   producing a second attested adjudication. The protocol has not yet produced a
+   real reviewed case, and there is still no representative Verified-like
+   dataset or measured population-level reviewer disagreement.
 4. The independent Oracle is digest-bound. One real Harmony UI candidate now
    has a controlled `FAIL_TO_PASS` replay: the frozen baseline stays on
    `pages/Index`, while a one-line page-registration variant reaches
@@ -236,10 +238,17 @@ content. This closes the structural hidden-Oracle packaging gap. It does not
 automatically perform semantic-leak or contamination review. The separate
 review protocol freezes the exact cut identities, rejects a reviewer identifier
 equal to the recorded constructor, requires at least two unique decision
-records, and fails closed on unknowns or disagreement. The CLI does not
-authenticate those identities, so consensus is recorded without qualifying a
-blind pilot. It also cannot prove model-training exclusion; every v1
-adjudication therefore remains ineligible for unseen-Agent discrimination.
+records, and fails closed on unknowns or disagreement. The local CLI records
+consensus without qualifying identity. The trusted-main workflow path upgrades
+that boundary only after GitHub run metadata and signed artifact attestations
+bind two distinct GitHub actors, an exact workflow, main ref and source commit.
+It still cannot prove model-training exclusion; every v1 adjudication therefore
+remains ineligible for unseen-Agent discrimination.
+The assessed campaign consumes only a run-addressed adjudication, independently
+re-verifies its final attestation online, reconstructs all internal digests and
+retains the raw final verification statement plus its exact enforcement policy.
+It requires the three runtime isolation dimensions before reporting a qualified
+blind-assessment boundary.
 The reviewed multi-repository workflow now produces that cut, stages only its
 participant projection, and binds the exact participant manifest into every
 stage request and attempt decision. Assessed Pi turns now execute in a
@@ -261,9 +270,10 @@ underspecified or contaminated case.
 ## Ordered implementation consequences
 
 1. Use the implemented blind-cut, least-mounted participant runtime and
-   multi-reviewer adjudication on a new private or held-out case set; add
-   authenticated reviewer/artifact provenance and retain model-training
-   exclusion as unknown unless separately evidenced.
+   multi-reviewer adjudication on a new private or held-out case set; execute
+   and independently verify the implemented authenticated reviewer/artifact
+   provenance, while retaining model-training exclusion as unknown unless
+   separately evidenced.
 2. Broaden `PASS_TO_PASS` coverage beyond the candidate's three qualified
    routes, independently review Oracle breadth/fairness, and only then accept a
    reference repair. The device campaign must extend, rather than
@@ -294,3 +304,5 @@ now dominate public coding benchmarks: case invalidity and contamination.
 - [Introducing SWE-bench Verified](https://openai.com/index/introducing-swe-bench-verified/)
 - [Why SWE-bench Verified no longer measures frontier coding capabilities](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/)
 - [Separating signal from noise in coding evaluations](https://openai.com/index/separating-signal-from-noise-coding-evaluations/)
+- [GitHub artifact attestations](https://docs.github.com/en/actions/concepts/security/artifact-attestations)
+- [Using artifact attestations](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations)

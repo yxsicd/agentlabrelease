@@ -76,6 +76,91 @@ def validate_participant_runtime(
     )
 
 
+def validate_authenticated_review(bundle: Path, repository: str, run_id: int):
+    module_path = Path(__file__).with_name("authenticate-blind-case-review.py")
+    spec = importlib.util.spec_from_file_location(
+        "agentlab_authenticated_blind_review_runtime", module_path
+    )
+    require(
+        spec is not None and spec.loader is not None,
+        "authenticated blind review validator is unavailable",
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.verify_authenticated_bundle_online(
+        bundle.absolute(), repository, run_id
+    )
+
+
+def blind_dispatch_qualification(blind_dispatch, runtime_validation, authenticated_review):
+    return {
+        "provided": blind_dispatch is not None,
+        "interfaceInputQualified": blind_dispatch is not None,
+        "participantManifestSha256": (
+            blind_dispatch.get("participantManifestSha256")
+            if blind_dispatch is not None
+            else None
+        ),
+        "filesystemIsolationRequired": blind_dispatch is not None,
+        "filesystemIsolationQualified": bool(
+            runtime_validation
+            and runtime_validation.get("filesystemIsolationQualified") is True
+        ),
+        "externalCredentialIsolationQualified": bool(
+            runtime_validation
+            and runtime_validation.get("externalCredentialIsolationQualified") is True
+        ),
+        "networkEgressIsolationQualified": bool(
+            runtime_validation
+            and runtime_validation.get("networkEgressIsolationQualified") is True
+        ),
+        "runtimeExecutor": runtime_validation.get("executor") if runtime_validation else None,
+        "runtimeImageId": runtime_validation.get("imageId") if runtime_validation else None,
+        "authenticatedReviewProvided": authenticated_review is not None,
+        "reviewConsensusQualified": bool(
+            authenticated_review
+            and authenticated_review.get("reviewConsensusQualified") is True
+        ),
+        "reviewerIdentityAuthenticationQualified": bool(
+            authenticated_review
+            and authenticated_review.get("reviewerIdentityAuthenticationQualified") is True
+        ),
+        "attestedWorkflowProvenanceQualified": bool(
+            authenticated_review
+            and authenticated_review.get("attestedWorkflowProvenanceQualified") is True
+        ),
+        "semanticLeakReviewQualified": bool(
+            authenticated_review
+            and authenticated_review.get("semanticLeakReviewConsensusQualified") is True
+            and authenticated_review.get("reviewerIdentityAuthenticationQualified") is True
+        ),
+        "contaminationRiskReviewQualified": bool(
+            authenticated_review
+            and authenticated_review.get("contaminationRiskReviewConsensusQualified") is True
+            and authenticated_review.get("reviewerIdentityAuthenticationQualified") is True
+        ),
+        "modelTrainingExclusionQualified": bool(
+            authenticated_review
+            and authenticated_review.get("modelTrainingExclusionQualified") is True
+        ),
+        "unseenAgentDiscriminationQualified": bool(
+            authenticated_review
+            and authenticated_review.get("eligibleForUnseenAgentDiscrimination") is True
+        ),
+        "blindAssessmentQualified": bool(
+            blind_dispatch
+            and runtime_validation
+            and runtime_validation.get("filesystemIsolationQualified") is True
+            and runtime_validation.get("externalCredentialIsolationQualified") is True
+            and runtime_validation.get("networkEgressIsolationQualified") is True
+            and authenticated_review
+            and authenticated_review.get("blindPilotReviewQualified") is True
+            and authenticated_review.get("reviewerIdentityAuthenticationQualified") is True
+            and authenticated_review.get("attestedWorkflowProvenanceQualified") is True
+        ),
+    }
+
+
 def git(root: Path, *arguments: str, text=False):
     result = subprocess.run(
         ["git", "-C", str(root), *arguments], capture_output=True, text=text
@@ -228,6 +313,9 @@ def main():
     parser.add_argument("--blind-participant-root", type=Path)
     parser.add_argument("--blind-dispatch-receipt", type=Path)
     parser.add_argument("--participant-runtime-config", type=Path)
+    parser.add_argument("--authenticated-review-bundle", type=Path)
+    parser.add_argument("--authenticated-review-repository")
+    parser.add_argument("--authenticated-review-run-id", type=int)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -257,6 +345,31 @@ def main():
         )
         require(blind_dispatch.get("caseId") == case.get("id"), "blind dispatch case identity differs")
         require(blind_dispatch.get("sourceSetSha256") == source_set, "blind dispatch source set differs")
+    review_arguments = (
+        args.authenticated_review_bundle,
+        args.authenticated_review_repository,
+        args.authenticated_review_run_id,
+    )
+    require(
+        all(value is None for value in review_arguments)
+        or all(value is not None for value in review_arguments),
+        "authenticated review bundle, repository and run id must be supplied together",
+    )
+    authenticated_review = None
+    if args.authenticated_review_bundle is not None:
+        require(blind_dispatch is not None, "authenticated review requires a blind dispatch")
+        authenticated_review = validate_authenticated_review(
+            args.authenticated_review_bundle,
+            args.authenticated_review_repository,
+            args.authenticated_review_run_id,
+        )
+        require(authenticated_review.get("caseId") == case.get("id"), "authenticated review case identity differs")
+        require(authenticated_review.get("sourceSetSha256") == source_set, "authenticated review source set differs")
+        require(
+            authenticated_review.get("participantManifestSha256")
+            == blind_dispatch.get("participantManifestSha256"),
+            "authenticated review participant manifest differs",
+        )
     if args.participant_runtime_config is not None:
         require(blind_dispatch is not None, "isolated participant runtime requires a blind dispatch")
         require(args.participant_runtime_config.resolve().is_file(), "participant runtime config is absent")
@@ -282,6 +395,11 @@ def main():
     require(isinstance(stages, list) and len(stages) >= 2, "case requires staged demands")
 
     args.output.mkdir(parents=True)
+    if authenticated_review is not None:
+        write_json(
+            args.output / "authenticated-review-validation.json",
+            authenticated_review,
+        )
     workspace = args.output / "workspace"
     evidence = args.output / "participant-evidence"
     oracle_evidence = args.output / "oracle"
@@ -464,31 +582,11 @@ def main():
         "startedAt": started_at,
         "endedAt": ended_at,
         "durationMs": duration_ms,
-        "blindDispatch": {
-            "provided": blind_dispatch is not None,
-            "interfaceInputQualified": blind_dispatch is not None,
-            "participantManifestSha256": (
-                blind_dispatch.get("participantManifestSha256")
-                if blind_dispatch is not None
-                else None
-            ),
-            "filesystemIsolationRequired": blind_dispatch is not None,
-            "filesystemIsolationQualified": bool(
-                runtime_validation
-                and runtime_validation.get("filesystemIsolationQualified") is True
-            ),
-            "externalCredentialIsolationQualified": bool(
-                runtime_validation
-                and runtime_validation.get("externalCredentialIsolationQualified") is True
-            ),
-            "networkEgressIsolationQualified": bool(
-                runtime_validation
-                and runtime_validation.get("networkEgressIsolationQualified") is True
-            ),
-            "runtimeExecutor": runtime_validation.get("executor") if runtime_validation else None,
-            "runtimeImageId": runtime_validation.get("imageId") if runtime_validation else None,
-            "blindAssessmentQualified": False,
-        },
+        "blindDispatch": blind_dispatch_qualification(
+            blind_dispatch,
+            runtime_validation,
+            authenticated_review,
+        ),
         "assessmentBoundary": "Exact committed source materialized without Git metadata and evaluated by the frozen VM-module Oracle; no Harmony build, UI, emulator or performance claim.",
     }
     decision = {

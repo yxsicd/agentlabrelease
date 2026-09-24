@@ -6,6 +6,10 @@ on:
         description: Successful trusted-main case-review run to assess
         required: true
         type: string
+      authenticated_review_run_id:
+        description: Optional successful attested blind-review adjudication run
+        required: false
+        type: string
       model_a:
         description: First exact LM Gateway model profile
         required: true
@@ -29,6 +33,7 @@ on:
 permissions:
   contents: read
   actions: read
+  attestations: read
 
 concurrency:
   group: multi-repo-assessed-campaign
@@ -78,6 +83,23 @@ jobs:
           python3 scripts/build-blind-case-cut.py validate-dispatch \
             --participant-root "$RUNNER_TEMP/agentlab-blind-participant" \
             --receipt "$AGENTLAB_ROOT/blind-dispatch-receipt.json"
+      - name: Recover and independently verify authenticated review adjudication
+        if: inputs.authenticated_review_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REVIEW_RUN_ID: ${{ inputs.authenticated_review_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$REVIEW_RUN_ID" =~ ^[0-9]+$ ]]
+          gh run download "$REVIEW_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name blind-case-authenticated-adjudication \
+            --dir "$AGENTLAB_ROOT/authenticated-review"
+          python3 scripts/authenticate-blind-case-review.py verify-online \
+            --bundle "$AGENTLAB_ROOT/authenticated-review" \
+            --repository "$GITHUB_REPOSITORY" \
+            --run-id "$REVIEW_RUN_ID" \
+            --verification-output "$AGENTLAB_ROOT/authenticated-review-final-attestation-verification.json" \
+            | tee "$AGENTLAB_ROOT/authenticated-review-validation.json"
       - name: Install a separately contained Pi runtime
         run: |
           mkdir -p "$RUNNER_TEMP/pi-runtime"
@@ -99,6 +121,7 @@ jobs:
       - name: Run fresh staged attempts for both model profiles
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+          GH_TOKEN: ${{ github.token }}
           AGENTLAB_PI_BINARY: ${{ github.workspace }}/scripts/run-pi-in-docker.py
           MODEL_A: ${{ inputs.model_a }}
           MODEL_B: ${{ inputs.model_b }}
@@ -106,6 +129,14 @@ jobs:
         run: |
           [[ "$MODEL_A" != "$MODEL_B" ]]
           mkdir -p "$AGENTLAB_ROOT/runs"
+          review_args=()
+          if [[ -n "${{ inputs.authenticated_review_run_id }}" ]]; then
+            review_args=(
+              --authenticated-review-bundle "$AGENTLAB_ROOT/authenticated-review"
+              --authenticated-review-repository "$GITHUB_REPOSITORY"
+              --authenticated-review-run-id "${{ inputs.authenticated_review_run_id }}"
+            )
+          fi
           for arm in a b; do
             if [[ "$arm" == a ]]; then model="$MODEL_A"; else model="$MODEL_B"; fi
             for trial in $(seq 1 "$TRIALS"); do
@@ -120,6 +151,7 @@ jobs:
                 --blind-participant-root "$RUNNER_TEMP/agentlab-blind-participant" \
                 --blind-dispatch-receipt "$AGENTLAB_ROOT/blind-dispatch-receipt.json" \
                 --participant-runtime-config "$AGENTLAB_ROOT/participant-runtime.json" \
+                "${review_args[@]}" \
                 --participant-id "pi-${model}" --output "$output"
               status=$?
               set -e
