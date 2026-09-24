@@ -116,10 +116,13 @@ smaller than SWE-bench's:
 3. The construction participant, deterministic intent checks and maintainer
    review exist, but there is no Verified-like multi-reviewer qualification
    dataset or measured inter-reviewer disagreement.
-4. The independent Oracle is digest-bound, but cases do not yet expose a
-   uniform repair-versus-preservation classification equivalent to
-   `FAIL_TO_PASS` and `PASS_TO_PASS` across static, device and performance
-   gates.
+4. The independent Oracle is digest-bound. One real Harmony UI candidate now
+   has a controlled `FAIL_TO_PASS` replay: the frozen baseline stays on
+   `pages/Index`, while a one-line page-registration variant reaches
+   `pages/UserAgent_four` and renders `Example Domain` under the exact same
+   scenario. This is not yet a uniform repair-versus-preservation contract:
+   `PASS_TO_PASS` preservation checks, independent review and reference/gold
+   acceptance remain absent.
 5. Freshness and contamination are not yet explicit case fields. Private
    repositories reduce public leakage but do not prove that a model has not
    seen related code, issues or fixes.
@@ -147,8 +150,14 @@ smaller than SWE-bench's:
     calibration. The two source projects now have revision-bound project roots
     and build modules. The API 20 guide project has two clean, member-equivalent
     baseline HAP builds; one exact HAP also installs, launches and retains a live
-    process on `hwlinux`. This qualifies a cross-host baseline build/runtime
-    smoke, not the proposed business UI behavior. The API 23/24 code-workshop
+    process on `hwlinux`. A stronger visible-text Oracle then exposed an
+    important calibration failure: the earlier `assert-no-text UserAgent_four`
+    searched serialized layout metadata and falsely failed a successful route
+    because `pagePath=pages/UserAgent_four` contained the same substring. The
+    replacement Oracle asserts visible `Example Domain`; it fails on the exact
+    baseline HAP and passes on a controlled one-line page-registration variant.
+    This qualifies a candidate repair check and Oracle-design lesson, not a
+    reviewed reference repair or business UI case. The API 23/24 code-workshop
     build remains unqualified because matching DevEco 6.1 tooling is absent, and
     the exact `hwlinux` host still has only the emulator/runtime substrate rather
     than a source-build SDK.
@@ -209,8 +218,10 @@ underspecified or contaminated case.
 1. Extend the implemented qualification matrix with evidence-backed
    freshness/contamination declarations and a stronger independent review
    receipt; unknown evidence already remains review-required, never qualified.
-2. Require the device campaign to extend, rather than overwrite, the static
-   repair/preservation matrix with exact UI and performance gate receipts.
+2. Add `PASS_TO_PASS` preservation assertions to the real UserAgent_four device
+   candidate, independently review Oracle breadth/fairness, and only then accept
+   a reference repair. The device campaign must extend, rather than overwrite,
+   the static repair/preservation matrix with exact UI and performance receipts.
 3. Exercise the reviewed feedback-to-analysis bridge on a real source update
    and prove that the successor case retains prior failure lineage without
    mutating the old case.

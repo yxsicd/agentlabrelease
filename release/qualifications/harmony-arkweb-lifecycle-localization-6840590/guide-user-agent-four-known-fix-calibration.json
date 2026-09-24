@@ -1,0 +1,160 @@
+{
+  "schema": "agentlab.harmony_ui_known_fix_calibration.v1",
+  "status": "controlled-fail-to-pass-observed",
+  "automaticPromotion": false,
+  "baselineSource": {
+    "repositoryId": "guide-snippets",
+    "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+    "hapSha256": "af20e2c0aa516b7853a0f99c03f0b6b0aa5fe9b73b89144a3f082f490a67a97a",
+    "sourceIdentity": "artifact-sha256:af20e2c0aa516b7853a0f99c03f0b6b0aa5fe9b73b89144a3f082f490a67a97a"
+  },
+  "knownFix": {
+    "classification": "controlled-calibration-variant-not-gold",
+    "revision": "83660b76a3b98aa736ed09c1a2e7935ba9ba2922",
+    "parentRevision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+    "tree": "5bf0278dbadefe4fb91047576056b6ef6c5b08cd",
+    "changedFiles": 1,
+    "insertions": 1,
+    "deletions": 0,
+    "path": "ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/resources/base/profile/main_pages.json",
+    "patchPath": "guide-user-agent-four-known-fix.patch",
+    "change": "Register pages/UserAgent_four in the Stage page profile.",
+    "patchSha256": "60b6f7ea0879fd126b84fd4921a45679c360b908b19fbdf0a20e48b9ac7dbf56",
+    "beforeFileSha256": "1c2128638e4483c79d9824e3a3c3fe26b197623577931d8928b50866b59a7da8",
+    "afterFileSha256": "7d9b8bf311f719887325d8562738bf1e7f58324c60a8319639b8c1faf2c92cf6",
+    "hapSha256": "c4b77a4f1aeebbf74786af79299dd315b2074ee7f0735a6682bdf6abb1128f90",
+    "hapBytes": 182348,
+    "sourceIdentity": "artifact-sha256:c4b77a4f1aeebbf74786af79299dd315b2074ee7f0735a6682bdf6abb1128f90"
+  },
+  "build": {
+    "host": "youdeMac-mini.local",
+    "platform": "darwin-arm64",
+    "devEcoStudioVersion": "6.0.2",
+    "sdkVersion": "6.0.2.130",
+    "ohpmVersion": "6.0.1",
+    "hvigorVersion": "6.22.3",
+    "command": "hvigorw.js clean --mode module -p product=default assembleHap --analyze=normal --parallel --incremental --daemon",
+    "status": "successful"
+  },
+  "transfer": {
+    "transport": "LAN HTTP",
+    "sourceAddress": "192.168.0.129:8765",
+    "destination": "/home/huawei/agentlab-source-builds/guide-snippets-71bbb391/entry-default-useragent-four-known-fix-83660b76.hap",
+    "verifiedSha256": "c4b77a4f1aeebbf74786af79299dd315b2074ee7f0735a6682bdf6abb1128f90",
+    "verifiedBytes": 182348,
+    "operationId": "exec-00000000000001ee",
+    "traceId": "9ff808a0-5a49-47a7-8fc4-f35f705a8d48"
+  },
+  "scenario": {
+    "path": "guide-user-agent-four-target.ui",
+    "id": "guide-user-agent-four-target",
+    "sha256": "8306a8ff39fc4754df31a04a351bf76e0ca5070ca0bd2e8f598ec77a7f39727c",
+    "tap": [628, 1606],
+    "repairAssertion": "Example Domain is visible after selecting UserAgent_four."
+  },
+  "supersededOracleFinding": {
+    "scenarioSha256": "f66ac9e6ac8f16ed9ee31f33b37766faf3e88b90936fc1548a8bf95f163e06a8",
+    "knownFixResultSha256": "12d7515a6cfc091af10a74303e3af53e6432e447c75631dcd7c7523514747701",
+    "reportedStatus": "failed",
+    "observedPagePath": "pages/UserAgent_four",
+    "observedVisibleText": "Example Domain",
+    "falseFailure": true,
+    "cause": "assert-no-text searched serialized layout metadata and matched pagePath=pages/UserAgent_four rather than visible text",
+    "retainedEvidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-useragent-four-known-fix-83660b76-f66ac9e6-v1"
+  },
+  "baselineAttempt": {
+    "executionAuthority": {
+      "routeDecision": "peer_direct",
+      "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+      "host": "huawei-ThinkCentre-M920t",
+      "operationId": "exec-00000000000001f2",
+      "traceIds": [
+        "9c9c86ca-3334-4eae-a026-836945cae933",
+        "2ad859ff-3877-4e41-87da-620b6d61eec9",
+        "334add0c-6b14-4303-85d5-871862aee0ac"
+      ]
+    },
+    "result": {
+      "schema": "agentlab.harmony_emulator_case_result.v2",
+      "status": "failed",
+      "oracleStatus": "failed",
+      "assessmentStatus": "assessed",
+      "infrastructureAvailable": true,
+      "subjectTaskSucceeded": false,
+      "failureClass": "oracle",
+      "hapSha256": "af20e2c0aa516b7853a0f99c03f0b6b0aa5fe9b73b89144a3f082f490a67a97a",
+      "scenarioSha256": "8306a8ff39fc4754df31a04a351bf76e0ca5070ca0bd2e8f598ec77a7f39727c"
+    },
+    "resultSha256": "d7714a7aaa3a575f01635be2b5e1f9e1c19c0f6725daaf8cb3a24cf1666b7ae4",
+    "actionsSha256": "4e23f5c5e05bc288248fd1aee6140e408ba94746be949c8ac70fbd0b7b1fbe38",
+    "checksSha256": "23440084837339a1776d67d2f03ae2c34a108c2ef9c73507a68474ffaefab8e5",
+    "layoutBeforeSha256": "4254449c4810b5834846d68103b1cbc44e30c9516443f2a08226ff3ae1a25069",
+    "layoutAfterSha256": "4254449c4810b5834846d68103b1cbc44e30c9516443f2a08226ff3ae1a25069",
+    "observedPagePathAfter": "pages/Index",
+    "repairCheckPassed": false,
+    "evidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-useragent-four-baseline-target-8306a8ff-v1"
+  },
+  "knownFixAttempt": {
+    "executionAuthority": {
+      "routeDecision": "peer_direct",
+      "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+      "host": "huawei-ThinkCentre-M920t",
+      "operationId": "exec-00000000000001f3",
+      "traceIds": [
+        "866ba081-4e9e-42e2-b1e8-9eb3d14f550b",
+        "40a949f3-95d1-4da4-8999-360f309c36c5",
+        "334add0c-6b14-4303-85d5-871862aee0ac"
+      ]
+    },
+    "result": {
+      "schema": "agentlab.harmony_emulator_case_result.v2",
+      "status": "passed",
+      "oracleStatus": "passed",
+      "assessmentStatus": "assessed",
+      "infrastructureAvailable": true,
+      "subjectTaskSucceeded": true,
+      "failureClass": "none",
+      "hapSha256": "c4b77a4f1aeebbf74786af79299dd315b2074ee7f0735a6682bdf6abb1128f90",
+      "scenarioSha256": "8306a8ff39fc4754df31a04a351bf76e0ca5070ca0bd2e8f598ec77a7f39727c"
+    },
+    "resultSha256": "a73e1daea7b6ed9c802f3c7fb4d3b48a6417a8724e8831f5ae6ae136a102c14c",
+    "actionsSha256": "4e23f5c5e05bc288248fd1aee6140e408ba94746be949c8ac70fbd0b7b1fbe38",
+    "checksSha256": "d31feebc1457a8bbbdcd303b4de1b9d66dccd4834017e2800e2b85553b2a4318",
+    "layoutBeforeSha256": "15a14f7e277056cb9521dd8bebb9eb37324c5c5b5eeac040aec32d4a30dc99e3",
+    "layoutAfterSha256": "ae7608dd4685d7778bc1dfbde7290494238921f508962fa3ba4eca76e33bb81f",
+    "observedPagePathAfter": "pages/UserAgent_four",
+    "observedVisibleTextAfter": "Example Domain",
+    "repairCheckPassed": true,
+    "evidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-useragent-four-known-fix-target-83660b76-8306a8ff-v1"
+  },
+  "qualificationMatrix": {
+    "repairChecks": {
+      "failToPassObserved": true,
+      "sameScenario": true,
+      "sameEnvironment": true
+    },
+    "preservationChecks": {
+      "defined": false,
+      "passToPassObserved": false
+    },
+    "review": {
+      "independent": false,
+      "knownFixAcceptedAsReference": false
+    }
+  },
+  "qualificationScope": {
+    "controlledKnownFix": true,
+    "businessSemanticAssertionObserved": true,
+    "candidateFailToPass": true,
+    "businessUiOracleQualified": false,
+    "independentReview": false,
+    "referenceRepair": false,
+    "preservationPassToPass": false,
+    "performanceComparison": false
+  },
+  "remainingGates": [
+    "Add preservation checks that pass on both baseline and known-fix HAPs.",
+    "Obtain independent fairness and Oracle-breadth review before accepting a gold/reference repair.",
+    "Only after functional qualification, run repeated identical performance workloads."
+  ]
+}
