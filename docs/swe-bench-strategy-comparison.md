@@ -157,8 +157,11 @@ smaller than SWE-bench's:
    Collection independently reconstructs that process aggregate, discrimination
    reports retain process coverage and participant Wilson intervals, and a
    trusted-main suite composer joins those results to the authenticated review
-   population. Dependency-discovery quality, subjective/objective consistency
-   and equivalent process coverage for every Harmony/device adapter remain open.
+   population. The assessed Harmony campaign now adds independently bound
+   build/emulator duration, UI action/check, workload-action and SmartPerf-sample
+   evidence to the same process contract. Dependency-discovery quality,
+   subjective/objective consistency and equivalent coverage for standalone or
+   non-emulator device adapters remain open.
 10. Real-source candidate precision remains uneven. The largest module-level
     clusters span 1,567 to 3,018 files, far wider than SWE-bench's issue-level
     repair contracts. The new API-call pass proves that one `@kit.ArkWeb`
@@ -298,10 +301,10 @@ underspecified or contaminated case.
    change hypotheses, then add repair/preservation checks and independent
    review before running repeated strong/weak/middle participant trials.
    Report confidence intervals, exclusions and infrastructure failures.
-6. Exercise the implemented suite scorecard on real reviewed campaigns, then
-   extend the same process contract to Harmony/device adapters and add
-   dependency-discovery plus subjective/objective consistency without replacing
-   raw trajectories or independently executable verdict evidence.
+6. Exercise the implemented suite scorecard on real reviewed static-plus-Harmony
+   campaigns, extend the process contract beyond the assessed emulator adapter,
+   and add dependency-discovery plus subjective/objective consistency without
+   replacing raw trajectories or independently executable verdict evidence.
 
 This ordering copies SWE-bench's most valuable discipline—hidden executable
 repair and preservation evidence—while addressing the two failure modes that

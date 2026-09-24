@@ -10,6 +10,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -287,7 +288,9 @@ def main() -> int:
                 message = "Harmony build program drifted before execution"
                 fail_stage(output, state, "build", message)
                 raise LoopError(message)
+            build_started = time.monotonic()
             completed = run_program(validated["builder"], validated["buildPlanPath"], output / "build")
+            build_duration_ms = round((time.monotonic() - build_started) * 1000)
             retain_command(output, "build", completed)
             if completed.returncode != 0:
                 message = f"Harmony build program failed with exit {completed.returncode}"
@@ -323,6 +326,7 @@ def main() -> int:
                 "endedAt": datetime.now(timezone.utc).isoformat(),
                 "receiptSha256": sha256(receipt_path),
                 "artifactSha256": sha256(artifact_path),
+                "durationMs": build_duration_ms,
             })
             state["nextGate"] = "harmony-emulator-assessment"
             write_json(output / "loop-state.json", state)
@@ -349,7 +353,11 @@ def main() -> int:
                 message = "Harmony run program drifted before execution"
                 fail_stage(output, state, "emulatorAssessment", message)
                 raise LoopError(message)
+            assessment_started = time.monotonic()
             completed = run_program(validated["runner"], run_plan_path, assessment)
+            assessment_duration_ms = round(
+                (time.monotonic() - assessment_started) * 1000
+            )
             retain_command(output, "assessment", completed)
             if completed.returncode != 0:
                 message = f"Harmony emulator assessment failed with exit {completed.returncode}"
@@ -413,6 +421,7 @@ def main() -> int:
                 "status": "passed" if device_succeeded else "assessed-failure",
                 "endedAt": datetime.now(timezone.utc).isoformat(),
                 "bindingSha256": sha256(binding_path),
+                "durationMs": assessment_duration_ms,
             })
 
         build_receipt = load(receipt_path, "build receipt")
@@ -450,6 +459,27 @@ def main() -> int:
                     "assessmentDecisionSha256",
                     "finalSourceStateSha256",
                 )
+            }
+        device_process = binding.get("deviceProcessMeasurement")
+        build_duration_ms = state["stages"]["build"].get("durationMs")
+        assessment_duration_ms = state["stages"]["emulatorAssessment"].get(
+            "durationMs"
+        )
+        if (
+            isinstance(device_process, dict)
+            and device_process.get("schema")
+            == "agentlab.harmony_device_process_measurement.v1"
+            and isinstance(build_duration_ms, int)
+            and build_duration_ms >= 0
+            and isinstance(assessment_duration_ms, int)
+            and assessment_duration_ms >= 0
+        ):
+            receipt["processMeasurement"] = {
+                "schema": "agentlab.harmony_evaluation_loop_process_measurement.v1",
+                "buildDurationMs": build_duration_ms,
+                "emulatorAssessmentDurationMs": assessment_duration_ms,
+                "runnerDurationMs": device_process.get("runnerDurationMs"),
+                "totalDurationMs": build_duration_ms + assessment_duration_ms,
             }
         receipt_path_final = output / "loop-receipt.json"
         if receipt_path_final.exists() and load(receipt_path_final, "loop receipt") != receipt:

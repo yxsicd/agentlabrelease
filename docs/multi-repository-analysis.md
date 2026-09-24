@@ -301,6 +301,18 @@ turn a repeatable `harmony-device` failure into a non-ready difficulty candidate
 for the next maintainer-reviewed analysis cut. The composition receipt remains
 review-required and never mutates the frozen case or reusable knowledge.
 
+The trusted emulator wrapper also records an
+`agentlab.harmony_device_process_measurement.v1` binding over runner wall time,
+retained UI action/check rows, dynamic profile-workload action rows and
+SmartPerf sample count. The resumable loop separately retains build and complete
+emulator-assessment duration. The compound composer verifies each retained
+digest, row count and timing relationship, then folds the complete build/device
+stage into the same independently
+reconstructable `agentlab.assessment_process_measurement.v1` used by static
+multi-repository attempts. A read-only UI scenario may legitimately have zero
+UI actions, but it must retain at least one UI check; a passing profiled run
+must retain workload actions and samples.
+
 ### Run the assessed campaign through the device gate
 
 `run-harmony-assessed-campaign.py` makes the device gate part of the trusted

@@ -37,7 +37,14 @@ result={"schema":"agentlab.harmony_emulator_case_result.v3","status":"passed" if
  "infrastructureAvailable":True,"subjectTaskSucceeded":passed,"failureClass":"none" if passed else "oracle",
  "powerThermalAuthority":"unavailable_on_emulator"}
 (execution/"result.json").write_text(json.dumps(result))
-if not passed: (execution/"ui-checks.tsv").write_text("ready\tfalse\ttext\tmissing\n")
+(execution/"ui-actions.tsv").write_text("1\tlaunch\tapp\n")
+(execution/"ui-checks.tsv").write_text("ready\t%s\ttext\tready\n" % str(passed).lower())
+if passed: (execution/"profile-workload-actions.tsv").write_text("1\tswipe\t1,2,3,4,5\n")
+if passed: (execution/"smartperf-summary.json").write_text(json.dumps({"profileValid":True,"sampleCount":3}))
+process_evidence={
+ "uiActions":{"sha256":digest(execution/"ui-actions.tsv"),"rowCount":1},
+ "uiChecks":{"sha256":digest(execution/"ui-checks.tsv"),"rowCount":1},
+ "profileWorkloadActions":{"sha256":digest(execution/"profile-workload-actions.tsv"),"rowCount":1} if passed else None}
 assessed={key:build[key] for key in ("participantId","subjectWorkspaceSha256","assessmentSummarySha256","assessmentDecisionSha256","finalSourceStateSha256")}
 binding={"schema":"agentlab.harmony_evaluation_binding.v1","status":"passed-review-required" if passed else "assessed-failure-review-required",
  "caseId":case["id"],"sourceSetSha256":case["sourceSetSha256"],"evaluationCaseSha256":plan["evaluationCase"]["sha256"],
@@ -45,7 +52,11 @@ binding={"schema":"agentlab.harmony_evaluation_binding.v1","status":"passed-revi
  "subjectTaskSucceeded":passed,"failureClass":"none" if passed else "oracle","assessedWorkspace":assessed,
  "resultSha256":digest(execution/"result.json"),"environmentIdentity":"hwlinux:test",
  "performancePolicySha256":plan["performance"]["policySha256"],"profileWorkloadSha256":plan["performance"]["workloadSha256"],
- "smartperfSummarySha256":"9"*64 if passed else None,"automaticPromotion":False}
+ "smartperfSummarySha256":digest(execution/"smartperf-summary.json") if passed else None,
+ "deviceProcessMeasurement":{"schema":"agentlab.harmony_device_process_measurement.v1","runnerDurationMs":0,
+  "uiActionCount":1,"uiCheckCount":1,"profileWorkloadActionCount":1 if passed else 0,
+  "smartPerfSampleCount":3 if passed else 0,"functionalOraclePass":passed,"profileCollected":passed,
+  "evidence":process_evidence},"automaticPromotion":False}
 (out/"evaluation-binding.json").write_text(json.dumps(binding))
 '''
 
@@ -147,12 +158,44 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
             "infrastructureAvailable": True,
             "subjectTaskSucceeded": True,
         }
-        phases = [{"stageId": "static", "scopeValid": True, "oraclePass": True}]
+        phases = [
+            {
+                "stageId": "static",
+                "participantCompleted": True,
+                "changedPaths": ["app/Index.ets"],
+                "changedPathCount": 1,
+                "unauthorizedPaths": [],
+                "unauthorizedPathCount": 0,
+                "scopeValid": True,
+                "oraclePass": True,
+                "participantDurationMs": 10,
+                "oracleDurationMs": 2,
+                "stageDurationMs": 13,
+                "cumulativeCheckCount": 1,
+            }
+        ]
+        process = {
+            "schema": "agentlab.assessment_process_measurement.v1",
+            "stageCount": 1,
+            "participantCompletedStageCount": 1,
+            "oracleExecutedStageCount": 1,
+            "oraclePassedStageCount": 1,
+            "scopeViolationStageCount": 0,
+            "changedPathCount": 1,
+            "unauthorizedPathCount": 0,
+            "oracleRecoveryCount": 0,
+            "oracleRegressionCount": 0,
+            "participantDurationMs": 10,
+            "oracleDurationMs": 2,
+            "stageDurationMs": 13,
+            "attemptDurationMs": 15,
+            "processMeasurementQualified": True,
+        }
         (root / "summary.json").write_text(
-            json.dumps({**common, "schema": "agentlab.multi_repo_assessment_summary.v1", "finalWorkspaceSha256": canonical(state), "stages": phases})
+            json.dumps({**common, "schema": "agentlab.multi_repo_assessment_summary.v1", "finalWorkspaceSha256": canonical(state), "stages": phases, "durationMs": 15, "processMeasurement": process})
         )
         (root / "decision-package.json").write_text(
-            json.dumps({**common, "schema": "agentlab.harness_decision_package.v1", "phaseVerdicts": phases, "automaticPromotion": False})
+            json.dumps({**common, "schema": "agentlab.harness_decision_package.v1", "phaseVerdicts": phases, "processMeasurement": process, "automaticPromotion": False})
         )
         return root
 
@@ -227,6 +270,7 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
         self.assertEqual(summary["deviceAttemptCount"], 2)
         self.assertEqual(summary["eligibleCaseIds"], ["campaign-case"])
         self.assertEqual(report["ranking"][0]["metrics"]["discriminationScore"], 1.0)
+        self.assertTrue(report["ranking"][0]["processAwareEligible"])
         candidates = [row for row in feedback["candidates"] if row["stageId"] == "harmony-device"]
         self.assertEqual(len(candidates), 1)
         self.assertFalse(candidates[0]["verificationContract"]["caseReady"])
@@ -253,6 +297,8 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
         decision["subjectTaskSucceeded"] = False
         summary["stages"][0]["oraclePass"] = False
         decision["phaseVerdicts"][0]["oraclePass"] = False
+        summary["processMeasurement"]["oraclePassedStageCount"] = 0
+        decision["processMeasurement"]["oraclePassedStageCount"] = 0
         (self.weak / "summary.json").write_text(json.dumps(summary))
         (self.weak / "decision-package.json").write_text(json.dumps(decision))
         self.write_plan()

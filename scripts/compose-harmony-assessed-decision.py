@@ -63,6 +63,155 @@ def require_file(path: pathlib.Path, label: str) -> pathlib.Path:
     return resolved
 
 
+def process_measurement(phases: list[dict[str, Any]], duration_ms: int) -> dict[str, Any]:
+    oracle_outcomes = [
+        row["oraclePass"] for row in phases if isinstance(row.get("oraclePass"), bool)
+    ]
+    return {
+        "schema": "agentlab.assessment_process_measurement.v1",
+        "stageCount": len(phases),
+        "participantCompletedStageCount": sum(
+            row["participantCompleted"] for row in phases
+        ),
+        "oracleExecutedStageCount": len(oracle_outcomes),
+        "oraclePassedStageCount": sum(value is True for value in oracle_outcomes),
+        "scopeViolationStageCount": sum(not row["scopeValid"] for row in phases),
+        "changedPathCount": sum(row["changedPathCount"] for row in phases),
+        "unauthorizedPathCount": sum(row["unauthorizedPathCount"] for row in phases),
+        "oracleRecoveryCount": sum(
+            previous is False and current is True
+            for previous, current in zip(oracle_outcomes, oracle_outcomes[1:])
+        ),
+        "oracleRegressionCount": sum(
+            previous is True and current is False
+            for previous, current in zip(oracle_outcomes, oracle_outcomes[1:])
+        ),
+        "participantDurationMs": sum(row["participantDurationMs"] for row in phases),
+        "oracleDurationMs": sum(row["oracleDurationMs"] for row in phases),
+        "stageDurationMs": sum(row["stageDurationMs"] for row in phases),
+        "attemptDurationMs": duration_ms,
+        "processMeasurementQualified": True,
+    }
+
+
+def validate_static_process(
+    summary: dict[str, Any], decision: dict[str, Any], phases: list[dict[str, Any]]
+) -> tuple[dict[str, Any] | None, int | None]:
+    process = summary.get("processMeasurement")
+    if process is None:
+        if decision.get("processMeasurement") is not None:
+            raise CompositionError("static process measurement is unbound")
+        return None, None
+    if process != decision.get("processMeasurement"):
+        raise CompositionError("static process measurement differs between authorities")
+    duration_ms = summary.get("durationMs")
+    if not isinstance(duration_ms, int) or duration_ms < 0:
+        raise CompositionError("static process duration is invalid")
+    for phase in phases:
+        if not isinstance(phase, dict):
+            raise CompositionError("static process phase is invalid")
+        for field in (
+            "participantDurationMs",
+            "oracleDurationMs",
+            "stageDurationMs",
+            "changedPathCount",
+            "unauthorizedPathCount",
+            "cumulativeCheckCount",
+        ):
+            if not isinstance(phase.get(field), int) or phase[field] < 0:
+                raise CompositionError(f"static process phase {field} is invalid")
+        if (
+            not isinstance(phase.get("changedPaths"), list)
+            or phase["changedPathCount"] != len(phase["changedPaths"])
+            or not isinstance(phase.get("unauthorizedPaths"), list)
+            or phase["unauthorizedPathCount"] != len(phase["unauthorizedPaths"])
+            or not isinstance(phase.get("participantCompleted"), bool)
+            or not isinstance(phase.get("scopeValid"), bool)
+        ):
+            raise CompositionError("static process phase evidence is inconsistent")
+    if process != process_measurement(phases, duration_ms):
+        raise CompositionError("static process measurement differs from retained phases")
+    return process, duration_ms
+
+
+def validate_device_process(
+    root: pathlib.Path, binding: dict[str, Any], device_succeeded: bool
+) -> dict[str, Any] | None:
+    process = binding.get("deviceProcessMeasurement")
+    if process is None:
+        return None
+    if not isinstance(process, dict) or process.get("schema") != "agentlab.harmony_device_process_measurement.v1":
+        raise CompositionError("Harmony device process measurement schema differs")
+    integer_fields = (
+        "runnerDurationMs",
+        "uiActionCount",
+        "uiCheckCount",
+        "profileWorkloadActionCount",
+        "smartPerfSampleCount",
+    )
+    if not all(isinstance(process.get(field), int) and process[field] >= 0 for field in integer_fields):
+        raise CompositionError("Harmony device process measurement is invalid")
+    if process.get("functionalOraclePass") is not device_succeeded:
+        raise CompositionError("Harmony device process Oracle verdict differs")
+    if process.get("profileCollected") is not device_succeeded:
+        raise CompositionError("Harmony device process profile verdict differs")
+    evidence = process.get("evidence")
+    if not isinstance(evidence, dict) or set(evidence) != {
+        "uiActions", "uiChecks", "profileWorkloadActions"
+    }:
+        raise CompositionError("Harmony device process evidence set differs")
+    paths = {
+        "uiActions": root / "assessment/execution/ui-actions.tsv",
+        "uiChecks": root / "assessment/execution/ui-checks.tsv",
+        "profileWorkloadActions": root / "assessment/execution/profile-workload-actions.tsv",
+    }
+    counts = {
+        "uiActions": "uiActionCount",
+        "uiChecks": "uiCheckCount",
+        "profileWorkloadActions": "profileWorkloadActionCount",
+    }
+    for name, path in paths.items():
+        reference = evidence[name]
+        if reference is None:
+            if path.exists() or process[counts[name]] != 0:
+                raise CompositionError(f"Harmony device {name} absence differs")
+            continue
+        if not isinstance(reference, dict) or set(reference) != {"sha256", "rowCount"}:
+            raise CompositionError(f"Harmony device {name} evidence is invalid")
+        retained = require_file(path, f"Harmony device {name} evidence")
+        rows = [line for line in retained.read_text(encoding="utf-8").splitlines() if line.strip()]
+        if (
+            reference.get("sha256") != sha256(retained)
+            or reference.get("rowCount") != len(rows)
+            or process[counts[name]] != len(rows)
+        ):
+            raise CompositionError(f"Harmony device {name} evidence differs")
+    if process["uiCheckCount"] < 1:
+        raise CompositionError("Harmony device process has no UI checks")
+    summary_path = root / "assessment/execution/smartperf-summary.json"
+    if device_succeeded:
+        summary_path = require_file(summary_path, "Harmony SmartPerf summary")
+        summary = load(summary_path, "Harmony SmartPerf summary")
+        if (
+            binding.get("smartperfSummarySha256") != sha256(summary_path)
+            or summary.get("profileValid") is not True
+            or summary.get("sampleCount") != process["smartPerfSampleCount"]
+        ):
+            raise CompositionError("Harmony SmartPerf process evidence differs")
+    elif (
+        summary_path.exists()
+        or binding.get("smartperfSummarySha256") is not None
+        or process["smartPerfSampleCount"] != 0
+    ):
+        raise CompositionError("failing Harmony device overclaims SmartPerf process evidence")
+    if device_succeeded and (
+        process["profileWorkloadActionCount"] < 1
+        or process["smartPerfSampleCount"] < 1
+    ):
+        raise CompositionError("passing Harmony device process evidence is incomplete")
+    return process
+
+
 def validate_static(root: pathlib.Path) -> dict[str, Any]:
     summary_path = require_file(root / "summary.json", "static assessment summary")
     decision_path = require_file(root / "decision-package.json", "static decision package")
@@ -105,6 +254,7 @@ def validate_static(root: pathlib.Path) -> dict[str, Any]:
     )
     if subject_workspace_sha256 != canonical_sha256(final_state):
         raise CompositionError("static summary does not bind the final source state")
+    process, duration_ms = validate_static_process(summary, decision, phases)
     return {
         **fields,
         "summaryPath": summary_path,
@@ -115,6 +265,8 @@ def validate_static(root: pathlib.Path) -> dict[str, Any]:
         "stateSha256": sha256(state_path),
         "subjectWorkspaceSha256": subject_workspace_sha256,
         "phases": phases,
+        "processMeasurement": process,
+        "durationMs": duration_ms,
     }
 
 
@@ -185,6 +337,34 @@ def validate_loop(root: pathlib.Path, static: dict[str, Any]) -> dict[str, Any]:
             or result.get("failureClass") != "oracle"
         ):
             raise CompositionError("failing Harmony result is not an assessed Oracle failure")
+    device_process = validate_device_process(root, binding, device_succeeded)
+    loop_process = receipt.get("processMeasurement")
+    if device_process is not None:
+        if (
+            not isinstance(loop_process, dict)
+            or loop_process.get("schema")
+            != "agentlab.harmony_evaluation_loop_process_measurement.v1"
+        ):
+            raise CompositionError("Harmony loop process measurement is absent")
+        for field in (
+            "buildDurationMs",
+            "emulatorAssessmentDurationMs",
+            "runnerDurationMs",
+            "totalDurationMs",
+        ):
+            if not isinstance(loop_process.get(field), int) or loop_process[field] < 0:
+                raise CompositionError(f"Harmony loop process {field} is invalid")
+        if (
+            loop_process["runnerDurationMs"] != device_process["runnerDurationMs"]
+            or loop_process["totalDurationMs"]
+            != loop_process["buildDurationMs"]
+            + loop_process["emulatorAssessmentDurationMs"]
+            or loop_process["runnerDurationMs"]
+            > loop_process["emulatorAssessmentDurationMs"]
+        ):
+            raise CompositionError("Harmony loop and device process measurements differ")
+    elif loop_process is not None:
+        raise CompositionError("Harmony loop has an unbound process measurement")
     return {
         "deviceSucceeded": device_succeeded,
         "failureClass": result.get("failureClass"),
@@ -199,6 +379,8 @@ def validate_loop(root: pathlib.Path, static: dict[str, Any]) -> dict[str, Any]:
         "performancePolicySha256": binding.get("performancePolicySha256"),
         "profileWorkloadSha256": binding.get("profileWorkloadSha256"),
         "smartperfSummarySha256": binding.get("smartperfSummarySha256"),
+        "processMeasurement": device_process,
+        "loopProcessMeasurement": loop_process,
     }
 
 
@@ -230,8 +412,30 @@ def main() -> int:
             "hapSha256": device["hapSha256"],
             "environmentIdentity": device["environmentIdentity"],
         }
+        if device["processMeasurement"] is not None:
+            device_process = device["processMeasurement"]
+            loop_process = device["loopProcessMeasurement"]
+            phase.update(
+                {
+                    "changedPathCount": 0,
+                    "unauthorizedPathCount": 0,
+                    "participantDurationMs": 0,
+                    "oracleDurationMs": loop_process["emulatorAssessmentDurationMs"],
+                    "stageDurationMs": loop_process["totalDurationMs"],
+                    "cumulativeCheckCount": device_process["uiCheckCount"],
+                    "deviceProcessMeasurement": device_process,
+                }
+            )
         phases = [*static["phases"], phase]
         verdict = device["deviceSucceeded"]
+        process = None
+        duration_ms = None
+        if static["processMeasurement"] is not None and device["processMeasurement"] is not None:
+            duration_ms = (
+                static["durationMs"]
+                + device["loopProcessMeasurement"]["totalDurationMs"]
+            )
+            process = process_measurement(phases, duration_ms)
         summary = {
             "schema": "agentlab.harmony_compound_assessment_summary.v1",
             "taskId": static["taskId"],
@@ -253,6 +457,9 @@ def main() -> int:
             "smartperfSummarySha256": device["smartperfSummarySha256"],
             "assessmentBoundary": "Static frozen Oracle plus exact assessed-workspace Harmony HAP and operator-owned emulator UI Oracle; absolute device power and thermal remain unavailable.",
         }
+        if process is not None:
+            summary["durationMs"] = duration_ms
+            summary["processMeasurement"] = process
         decision = {
             "schema": "agentlab.harness_decision_package.v1",
             "taskId": static["taskId"],
@@ -274,6 +481,8 @@ def main() -> int:
             "automaticPromotion": False,
             "harnessPolicy": "Static scope/Oracle and device UI Oracle are independent verdict gates; infrastructure failure is never converted to Agent failure.",
         }
+        if process is not None:
+            decision["processMeasurement"] = process
         write_json(stage / "summary.json", summary)
         write_json(stage / "decision-package.json", decision)
         write_json(

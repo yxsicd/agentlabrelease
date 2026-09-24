@@ -29,8 +29,13 @@ participant/Oracle/stage duration, changed and unauthorized path counts, scope
 violations, and Oracle false-to-true recovery or true-to-false regression. The
 collector rejects summary/decision or aggregate/stage disagreement. The scorer
 reports process coverage per participant and case, plus a 95% Wilson interval
-for every participant pass rate. Legacy or emulator evidence without this
-contract remains outcome-scoreable but has `processAwareEligible=false`.
+for every participant pass rate. Legacy or standalone emulator evidence without
+this contract remains outcome-scoreable but has `processAwareEligible=false`.
+Assessed Harmony campaigns now close that gap: the trusted emulator wrapper
+binds runner duration, UI action/check rows, profile-workload actions and
+SmartPerf sample count; the loop adds independent build and assessment wall
+time, and the compound composer rechecks those retained bytes before appending
+a measured `harmony-device` stage to the static process evidence.
 
 `scripts/compose-agent-suite-scorecard.py` then joins an authenticated blind
 review population to exactly one discrimination report per reviewed case. The

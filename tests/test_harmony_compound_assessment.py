@@ -62,7 +62,39 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
             "infrastructureAvailable": True,
             "subjectTaskSucceeded": True,
         }
-        phases = [{"stageId": "static", "scopeValid": True, "oraclePass": True}]
+        phases = [
+            {
+                "stageId": "static",
+                "participantCompleted": True,
+                "changedPaths": ["app/Index.ets"],
+                "changedPathCount": 1,
+                "unauthorizedPaths": [],
+                "unauthorizedPathCount": 0,
+                "scopeValid": True,
+                "oraclePass": True,
+                "participantDurationMs": 10,
+                "oracleDurationMs": 2,
+                "stageDurationMs": 13,
+                "cumulativeCheckCount": 1,
+            }
+        ]
+        process = {
+            "schema": "agentlab.assessment_process_measurement.v1",
+            "stageCount": 1,
+            "participantCompletedStageCount": 1,
+            "oracleExecutedStageCount": 1,
+            "oraclePassedStageCount": 1,
+            "scopeViolationStageCount": 0,
+            "changedPathCount": 1,
+            "unauthorizedPathCount": 0,
+            "oracleRecoveryCount": 0,
+            "oracleRegressionCount": 0,
+            "participantDurationMs": 10,
+            "oracleDurationMs": 2,
+            "stageDurationMs": 13,
+            "attemptDurationMs": 15,
+            "processMeasurementQualified": True,
+        }
         self.write_json(
             root / "summary.json",
             {
@@ -70,6 +102,8 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
                 "schema": "agentlab.multi_repo_assessment_summary.v1",
                 "finalWorkspaceSha256": canonical(state),
                 "stages": phases,
+                "durationMs": 15,
+                "processMeasurement": process,
             },
         )
         self.write_json(
@@ -78,6 +112,7 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
                 **common,
                 "schema": "agentlab.harness_decision_package.v1",
                 "phaseVerdicts": phases,
+                "processMeasurement": process,
                 "automaticPromotion": False,
             },
         )
@@ -104,6 +139,37 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
                 "powerThermalAuthority": "unavailable_on_emulator",
             },
         )
+        execution = root / "assessment/execution"
+        (execution / "ui-actions.tsv").write_text("1\tlaunch\tapp\n")
+        (execution / "ui-checks.tsv").write_text(
+            f"ready\t{str(passed).lower()}\ttext\tready\n"
+        )
+        if passed:
+            (execution / "profile-workload-actions.tsv").write_text(
+                "1\tswipe\t1,2,3,4,5\n"
+            )
+            self.write_json(
+                execution / "smartperf-summary.json",
+                {"profileValid": True, "sampleCount": 3},
+            )
+        evidence = {
+            "uiActions": {
+                "sha256": digest(execution / "ui-actions.tsv"),
+                "rowCount": 1,
+            },
+            "uiChecks": {
+                "sha256": digest(execution / "ui-checks.tsv"),
+                "rowCount": 1,
+            },
+            "profileWorkloadActions": (
+                {
+                    "sha256": digest(execution / "profile-workload-actions.tsv"),
+                    "rowCount": 1,
+                }
+                if passed
+                else None
+            ),
+        }
         assessed = {
             "participantId": participant,
             "subjectWorkspaceSha256": json.loads((static / "summary.json").read_text())["finalWorkspaceSha256"],
@@ -128,7 +194,20 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
                 "environmentIdentity": "hwlinux:phone-x86",
                 "performancePolicySha256": "4" * 64,
                 "profileWorkloadSha256": "5" * 64,
-                "smartperfSummarySha256": "6" * 64 if passed else None,
+                "smartperfSummarySha256": (
+                    digest(execution / "smartperf-summary.json") if passed else None
+                ),
+                "deviceProcessMeasurement": {
+                    "schema": "agentlab.harmony_device_process_measurement.v1",
+                    "runnerDurationMs": 20,
+                    "uiActionCount": 1,
+                    "uiCheckCount": 1,
+                    "profileWorkloadActionCount": 1 if passed else 0,
+                    "smartPerfSampleCount": 3 if passed else 0,
+                    "functionalOraclePass": passed,
+                    "profileCollected": passed,
+                    "evidence": evidence,
+                },
                 "assessedWorkspace": assessed,
                 "automaticPromotion": False,
             },
@@ -146,6 +225,13 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
                 "hapSha256": hap,
                 "evaluationBindingSha256": digest(binding_path),
                 "assessedWorkspace": assessed,
+                "processMeasurement": {
+                    "schema": "agentlab.harmony_evaluation_loop_process_measurement.v1",
+                    "buildDurationMs": 5,
+                    "emulatorAssessmentDurationMs": 25,
+                    "runnerDurationMs": 20,
+                    "totalDurationMs": 30,
+                },
                 "automaticPromotion": False,
             },
         )
@@ -203,6 +289,8 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
         self.assertFalse(decision["subjectTaskSucceeded"])
         self.assertEqual(decision["phaseVerdicts"][-1]["stageId"], "harmony-device")
         self.assertFalse(decision["phaseVerdicts"][-1]["oraclePass"])
+        self.assertEqual(decision["processMeasurement"]["stageCount"], 2)
+        self.assertEqual(decision["processMeasurement"]["oracleRegressionCount"], 1)
         self.assertEqual(receipt["status"], "assessed-review-required")
         self.assertFalse(receipt["automaticPromotion"])
 
@@ -229,6 +317,7 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
         collected = COLLECTOR.build_input(manifest, self.root.resolve())
         report = SCORER.build_report(collected, 1, 0.6)
         self.assertTrue(report["ranking"][0]["eligible"])
+        self.assertTrue(report["ranking"][0]["processAwareEligible"])
         case = {
             "schema": "agentlab.multi_repo_evaluation_case.v1",
             "id": self.case_id,
@@ -258,6 +347,34 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 1)
         failure = json.loads(next((self.root / "compound").glob(".drift.stage-*/failure.json")).read_text())
         self.assertIn("exact statically passing attempt", failure["error"])
+
+    def test_device_process_evidence_drift_is_rejected(self) -> None:
+        static = self.make_static("process-drift", "strong")
+        loop = self.make_loop("process-drift", static, "strong", True)
+        (loop / "assessment/execution/ui-checks.tsv").write_text(
+            "ready\tfalse\ttext\ttampered\n"
+        )
+        output = self.root / "compound/process-drift"
+        completed = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT),
+                "--static-assessment",
+                str(static),
+                "--harmony-loop",
+                str(loop),
+                "--output",
+                str(output),
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 1)
+        failure = json.loads(
+            next((self.root / "compound").glob(".process-drift.stage-*/failure.json")).read_text()
+        )
+        self.assertIn("uiChecks evidence differs", failure["error"])
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from typing import Any
 
 
@@ -33,6 +34,17 @@ def sha256(path: pathlib.Path) -> str:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def retained_rows(path: pathlib.Path, label: str, *, required: bool) -> dict[str, Any] | None:
+    if not path.is_file():
+        if required:
+            raise EvaluationRunError(f"Harmony execution did not retain {label}")
+        return None
+    rows = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if required and not rows:
+        raise EvaluationRunError(f"Harmony execution retained empty {label}")
+    return {"sha256": sha256(path), "rowCount": len(rows)}
 
 
 def load_object(path: pathlib.Path) -> dict[str, Any]:
@@ -388,12 +400,14 @@ def main() -> int:
         plan = load_object(plan_path)
         validated = validate_plan(plan)
         execution = stage / "execution"
+        runner_started = time.monotonic()
         completed = subprocess.run(
             runner_command(validated, execution),
             text=True,
             capture_output=True,
             check=False,
         )
+        runner_duration_ms = round((time.monotonic() - runner_started) * 1000)
         stdout_path = stage / "runner.stdout.log"
         stderr_path = stage / "runner.stderr.log"
         stdout_path.write_text(completed.stdout, encoding="utf-8")
@@ -427,10 +441,40 @@ def main() -> int:
             summary = load_object(summary_path)
             validate_summary(summary, validated)
             summary_sha256 = sha256(summary_path)
+            smartperf_sample_count = summary["sampleCount"]
         else:
             if summary_path.exists():
                 raise EvaluationRunError("functionally failing Harmony run must not claim a profile summary")
             summary_sha256 = None
+            smartperf_sample_count = 0
+        ui_actions = retained_rows(
+            execution / "ui-actions.tsv", "UI action evidence", required=False
+        )
+        ui_checks = retained_rows(
+            execution / "ui-checks.tsv", "UI check evidence", required=True
+        )
+        profile_actions = retained_rows(
+            execution / "profile-workload-actions.tsv",
+            "profile workload action evidence",
+            required=subject_succeeded,
+        )
+        device_process = {
+            "schema": "agentlab.harmony_device_process_measurement.v1",
+            "runnerDurationMs": runner_duration_ms,
+            "uiActionCount": ui_actions["rowCount"] if ui_actions else 0,
+            "uiCheckCount": ui_checks["rowCount"],
+            "profileWorkloadActionCount": (
+                profile_actions["rowCount"] if profile_actions else 0
+            ),
+            "smartPerfSampleCount": smartperf_sample_count,
+            "functionalOraclePass": subject_succeeded,
+            "profileCollected": subject_succeeded,
+            "evidence": {
+                "uiActions": ui_actions,
+                "uiChecks": ui_checks,
+                "profileWorkloadActions": profile_actions,
+            },
+        }
         binding = {
             "schema": BINDING_SCHEMA,
             "status": (
@@ -452,6 +496,7 @@ def main() -> int:
             "profileWorkloadSha256": validated["workloadSha256"],
             "resultSha256": sha256(result_path),
             "smartperfSummarySha256": summary_sha256,
+            "deviceProcessMeasurement": device_process,
             "subjectTaskSucceeded": subject_succeeded,
             "failureClass": result.get("failureClass"),
             "runnerStdoutSha256": sha256(stdout_path),

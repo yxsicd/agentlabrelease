@@ -77,10 +77,16 @@ summary = {
     "authority": {"absolutePowerThermal": "unavailable-on-emulator"},
 }
 (output / "result.json").write_text(json.dumps(result))
+if not os.environ.get("SYNTHETIC_NO_UI_ACTIONS"):
+    (output / "ui-actions.tsv").write_text("1\tlaunch\tcom.example.synthetic\n")
+(output / "ui-checks.tsv").write_text(
+    "ready\tfalse\tassert-text\tReady\n" if subject_failed
+    else "ready\ttrue\tassert-text\tReady\n"
+)
 if subject_failed:
-    (output / "ui-checks.tsv").write_text("ready\tfalse\tassert-text\tReady\n")
     raise SystemExit(9)
 (output / "smartperf-summary.json").write_text(json.dumps(summary))
+(output / "profile-workload-actions.tsv").write_text("1\tswipe\t1,2,3,4,5\n")
 '''
 
 
@@ -219,6 +225,12 @@ class HarmonyEvaluationCaseRunnerTests(unittest.TestCase):
             f"artifact-sha256:{digest(self.hap)}",
         )
         self.assertEqual(result["sourceSetSha256"], self.source_set)
+        process = binding["deviceProcessMeasurement"]
+        self.assertEqual(process["uiActionCount"], 1)
+        self.assertEqual(process["uiCheckCount"], 1)
+        self.assertEqual(process["profileWorkloadActionCount"], 1)
+        self.assertEqual(process["smartPerfSampleCount"], 3)
+        self.assertGreaterEqual(process["runnerDurationMs"], 0)
 
     def test_hap_drift_is_rejected_before_runner(self) -> None:
         plan = json.loads(self.plan.read_text())
@@ -233,6 +245,16 @@ class HarmonyEvaluationCaseRunnerTests(unittest.TestCase):
         stage = next(self.root.glob(".evidence.stage-*"))
         failure = json.loads((stage / "failure.json").read_text())
         self.assertIn("HAP SHA256 differs from run plan", failure["error"])
+
+    def test_read_only_ui_oracle_retains_zero_action_process_measurement(self) -> None:
+        output = self.root / "read-only-evidence"
+        completed = self.run_case(output, {"SYNTHETIC_NO_UI_ACTIONS": "1"})
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        binding = json.loads((output / "evaluation-binding.json").read_text())
+        process = binding["deviceProcessMeasurement"]
+        self.assertEqual(process["uiActionCount"], 0)
+        self.assertIsNone(process["evidence"]["uiActions"])
+        self.assertEqual(process["uiCheckCount"], 1)
 
     def test_result_source_set_drift_retains_failed_execution(self) -> None:
         output = self.root / "evidence"
