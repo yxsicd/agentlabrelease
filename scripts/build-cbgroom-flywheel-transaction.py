@@ -75,6 +75,7 @@ def main():
         ("summary.json", "subject-summary"),
         ("decision-package.json", "harness-decision-package"),
         ("difficulty-candidates.json", "difficulty-candidates"),
+        ("case-discrimination-report.json", "case-discrimination-report"),
         ("environment-fingerprint.json", "environment-fingerprint"),
     ):
         path = evidence / filename
@@ -234,6 +235,37 @@ def main():
             "evidenceIds": [f"evidence-{args.run_id}-difficulty-candidates"],
             "observation": {"producerRun": args.run_id, "reproducible": candidate.get("reproducible")},
         })
+
+    discrimination = load(evidence / "case-discrimination-report.json") or {}
+    if discrimination:
+        if discrimination.get("schema") != "agentlab.case_discrimination_report.v1":
+            raise SystemExit("unsupported case discrimination report schema")
+        policy = discrimination.get("policy") or {}
+        if policy.get("automaticPromotion") is not False:
+            raise SystemExit("case discrimination report must not auto-promote")
+        for row in discrimination.get("ranking") or []:
+            case_id = row.get("caseId")
+            decision = row.get("decision")
+            if not isinstance(case_id, str) or not case_id or not isinstance(decision, str):
+                raise SystemExit("invalid case discrimination ranking row")
+            suffix = hashlib.sha256(case_id.encode()).hexdigest()[:16]
+            insert("decisions", {
+                "id": f"decision-{args.run_id}-case-{suffix}",
+                "schema": "agentlab.case_selection_decision.v1",
+                "caseId": case_id,
+                "taskId": case_id,
+                "sourceRevision": discrimination.get("sourceRevision") or summary.get("sourceRevision"),
+                "methodRevision": discrimination.get("methodRevision"),
+                "decision": decision,
+                "eligible": bool(row.get("eligible")),
+                "calibrationPassed": bool(row.get("calibrationPassed")),
+                "evidenceComplete": bool(row.get("evidenceComplete")),
+                "metrics": row.get("metrics") or {},
+                "denominators": discrimination.get("denominators") or {},
+                "evidenceIds": [f"evidence-{args.run_id}-case-discrimination-report"],
+                "automaticPromotion": False,
+                "nextAction": policy.get("nextAction"),
+            })
 
     tables = [{"path": path, "operations": operations} for path, operations in groups.items() if operations]
     if not tables:
