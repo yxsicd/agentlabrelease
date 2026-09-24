@@ -224,16 +224,25 @@ assumptions:
 - `review` records specification fairness, Oracle breadth, coverage and
   difficulty judgments independently of the case constructor.
 
+The release now provides a fail-closed blind-cut builder that turns one private
+maintenance source into sibling participant and evaluator bundles plus an outer
+digest-bound receipt. The participant manifest cannot enumerate evaluator
+files, the evaluator binds the exact participant manifest, and validation
+rejects extra files, symlinks, digest drift and byte-identical cross-bundle
+content. This closes the structural hidden-Oracle packaging gap. It does not
+perform semantic-leak or contamination review and therefore marks every v1 cut
+ineligible for unseen-Agent discrimination until later independent gates close.
+
 No aggregate difficulty score may compensate for a failed qualification
 dimension. In particular, high participant separation cannot promote an
 underspecified or contaminated case.
 
 ## Ordered implementation consequences
 
-1. Cut a new private or held-out case set with the implemented
-   freshness/contamination declaration, keep participant runs blind, and add a
-   stronger independent review receipt; unknown evidence remains
-   review-required, never qualified.
+1. Use the implemented blind-cut builder on a new private or held-out case set,
+   mount only its participant root during assessment, then add contamination,
+   semantic-leak and stronger independent review receipts; unknown evidence
+   remains review-required, never qualified.
 2. Broaden `PASS_TO_PASS` coverage beyond the candidate's three qualified
    routes, independently review Oracle breadth/fairness, and only then accept a
    reference repair. The device campaign must extend, rather than
