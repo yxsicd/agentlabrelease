@@ -182,6 +182,35 @@ def normalize_process_measurement(
             fail(f"{attempt_id} process scope verdict is invalid")
         if stage.get("oraclePass") is not None and not isinstance(stage.get("oraclePass"), bool):
             fail(f"{attempt_id} process Oracle verdict is invalid")
+        claim = stage.get("participantSelfAssessment")
+        if claim is not None:
+            if not isinstance(claim, dict):
+                fail(f"{attempt_id} participant self-assessment is invalid")
+            expected_pass = claim.get("expectedOraclePass")
+            confidence = claim.get("confidence")
+            if (
+                not isinstance(expected_pass, bool)
+                or not isinstance(confidence, (int, float))
+                or isinstance(confidence, bool)
+                or not 0.0 <= confidence <= 1.0
+            ):
+                fail(f"{attempt_id} participant self-assessment claim is invalid")
+            oracle_pass = stage.get("oraclePass")
+            probability = float(confidence) if expected_pass else 1.0 - float(confidence)
+            comparable = isinstance(oracle_pass, bool)
+            expected_claim = {
+                "schema": "agentlab.participant_self_assessment.v1",
+                "expectedOraclePass": expected_pass,
+                "confidence": float(confidence),
+                "predictedPassProbability": probability,
+                "agreement": expected_pass == oracle_pass if comparable else None,
+                "brierScore": (
+                    (probability - float(oracle_pass)) ** 2 if comparable else None
+                ),
+                "authority": "participant-claim-not-a-verdict",
+            }
+            if claim != expected_claim:
+                fail(f"{attempt_id} participant self-assessment derivation differs")
     oracle_outcomes = [
         stage["oraclePass"]
         for stage in stages
@@ -214,6 +243,35 @@ def normalize_process_measurement(
         "attemptDurationMs": duration_ms,
         "processMeasurementQualified": True,
     }
+    self_assessments = [
+        stage.get("participantSelfAssessment")
+        for stage in stages
+        if isinstance(stage.get("participantSelfAssessment"), dict)
+    ]
+    if self_assessments:
+        comparable = [
+            row for row in self_assessments if isinstance(row.get("agreement"), bool)
+        ]
+        expected["participantSelfAssessment"] = {
+            "schema": "agentlab.participant_self_assessment_summary.v1",
+            "stageCount": len(stages),
+            "reportedStageCount": len(self_assessments),
+            "comparableStageCount": len(comparable),
+            "agreementCount": sum(row["agreement"] for row in comparable),
+            "coverageRate": len(self_assessments) / len(stages),
+            "agreementRate": (
+                sum(row["agreement"] for row in comparable) / len(comparable)
+                if comparable
+                else None
+            ),
+            "meanBrierScore": (
+                sum(row["brierScore"] for row in comparable) / len(comparable)
+                if comparable
+                else None
+            ),
+            "coverageQualified": len(comparable) == len(stages),
+            "authority": "participant-claim-compared-with-operator-oracle-not-a-verdict",
+        }
     if process != expected:
         fail(f"{attempt_id} process measurement differs from retained stages")
     return process

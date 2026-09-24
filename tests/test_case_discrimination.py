@@ -84,6 +84,18 @@ class CaseDiscriminationTests(unittest.TestCase):
             "stageDurationMs": 16,
             "attemptDurationMs": 20,
             "processMeasurementQualified": True,
+            "participantSelfAssessment": {
+                "schema": "agentlab.participant_self_assessment_summary.v1",
+                "stageCount": 2,
+                "reportedStageCount": 2,
+                "comparableStageCount": 2,
+                "agreementCount": 2,
+                "coverageRate": 1.0,
+                "agreementRate": 1.0,
+                "meanBrierScore": 0.04,
+                "coverageQualified": True,
+                "authority": "participant-claim-compared-with-operator-oracle-not-a-verdict",
+            },
         }
         case = self.value["cases"][0]
         case["attempts"] = []
@@ -102,6 +114,17 @@ class CaseDiscriminationTests(unittest.TestCase):
         self.assertTrue(row["eligible"])
         self.assertTrue(row["processAwareEligible"])
         self.assertTrue(row["processMeasurement"]["coverageQualified"])
+        self.assertTrue(
+            row["processMeasurement"]["participantSelfAssessment"]["coverageQualified"]
+        )
+        self.assertEqual(
+            row["processMeasurement"]["participantSelfAssessment"]["agreementRate"],
+            1.0,
+        )
+        self.assertEqual(
+            row["processMeasurement"]["participantSelfAssessment"]["meanBrierScore"],
+            0.04,
+        )
         self.assertTrue(row["metrics"]["observedExtremePassRateWilson95Separated"])
         strong = next(
             profile

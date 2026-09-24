@@ -159,9 +159,15 @@ smaller than SWE-bench's:
    trusted-main suite composer joins those results to the authenticated review
    population. The assessed Harmony campaign now adds independently bound
    build/emulator duration, UI action/check, workload-action and SmartPerf-sample
-   evidence to the same process contract. Dependency-discovery quality,
-   subjective/objective consistency and equivalent coverage for standalone or
-   non-emulator device adapters remain open.
+   evidence to the same process contract. The multi-repository protocol can
+   now capture a participant's pre-verdict prediction and confidence, then
+   independently report Oracle agreement and Brier score. This closes the
+   mechanism for subjective/objective consistency, but the shipped mock is not
+   evidence about a real model and adapters must not synthesize an unreported
+   claim. Dependency-discovery quality remains open: the participant currently
+   sees the allowed edit surface, and historical/gold touched paths are not a
+   unique correct dependency answer. Equivalent coverage for standalone or
+   non-emulator device adapters also remains open.
 10. Real-source candidate precision remains uneven. The largest module-level
     clusters span 1,567 to 3,018 files, far wider than SWE-bench's issue-level
     repair contracts. The new API-call pass proves that one `@kit.ArkWeb`

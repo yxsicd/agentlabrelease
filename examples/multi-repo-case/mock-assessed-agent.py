@@ -54,7 +54,20 @@ def main():
                 (workspace / "app/src/checkout.ts").write_text(APP)
         if profile == "scope-drift":
             (workspace / "participant-note.txt").write_text("unauthorized")
-        print(json.dumps({"ok": True, "stageId": stage, "profile": profile}), flush=True)
+        print(
+            json.dumps(
+                {
+                    "ok": True,
+                    "stageId": stage,
+                    "profile": profile,
+                    "selfAssessment": {
+                        "expectedOraclePass": profile != "baseline",
+                        "confidence": 0.9,
+                    },
+                }
+            ),
+            flush=True,
+        )
 
 
 if __name__ == "__main__":

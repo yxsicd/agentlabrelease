@@ -175,7 +175,7 @@ def process_measurement(stage_results, duration_ms):
         previous is True and current is False
         for previous, current in zip(oracle_outcomes, oracle_outcomes[1:])
     )
-    return {
+    value = {
         "schema": "agentlab.assessment_process_measurement.v1",
         "stageCount": len(stage_results),
         "participantCompletedStageCount": sum(
@@ -199,6 +199,67 @@ def process_measurement(stage_results, duration_ms):
         "stageDurationMs": sum(row.get("stageDurationMs", 0) for row in stage_results),
         "attemptDurationMs": duration_ms,
         "processMeasurementQualified": bool(stage_results),
+    }
+    self_assessments = [
+        row.get("participantSelfAssessment")
+        for row in stage_results
+        if isinstance(row.get("participantSelfAssessment"), dict)
+    ]
+    if self_assessments:
+        comparable = [
+            row for row in self_assessments if isinstance(row.get("agreement"), bool)
+        ]
+        value["participantSelfAssessment"] = {
+            "schema": "agentlab.participant_self_assessment_summary.v1",
+            "stageCount": len(stage_results),
+            "reportedStageCount": len(self_assessments),
+            "comparableStageCount": len(comparable),
+            "agreementCount": sum(row["agreement"] for row in comparable),
+            "coverageRate": len(self_assessments) / len(stage_results),
+            "agreementRate": (
+                sum(row["agreement"] for row in comparable) / len(comparable)
+                if comparable
+                else None
+            ),
+            "meanBrierScore": (
+                sum(row["brierScore"] for row in comparable) / len(comparable)
+                if comparable
+                else None
+            ),
+            "coverageQualified": len(comparable) == len(stage_results),
+            "authority": "participant-claim-compared-with-operator-oracle-not-a-verdict",
+        }
+    return value
+
+
+def participant_self_assessment(response, oracle_pass):
+    claim = response.get("selfAssessment")
+    if claim is None:
+        return None
+    require(isinstance(claim, dict), "participant selfAssessment must be an object")
+    require(
+        set(claim) == {"expectedOraclePass", "confidence"},
+        "participant selfAssessment fields differ",
+    )
+    expected = claim.get("expectedOraclePass")
+    confidence = claim.get("confidence")
+    require(isinstance(expected, bool), "participant expectedOraclePass must be boolean")
+    require(
+        isinstance(confidence, (int, float))
+        and not isinstance(confidence, bool)
+        and 0.0 <= confidence <= 1.0,
+        "participant selfAssessment confidence must be in 0..1",
+    )
+    probability = float(confidence) if expected else 1.0 - float(confidence)
+    comparable = isinstance(oracle_pass, bool)
+    return {
+        "schema": "agentlab.participant_self_assessment.v1",
+        "expectedOraclePass": expected,
+        "confidence": float(confidence),
+        "predictedPassProbability": probability,
+        "agreement": expected == oracle_pass if comparable else None,
+        "brierScore": (probability - float(oracle_pass)) ** 2 if comparable else None,
+        "authority": "participant-claim-not-a-verdict",
     }
 
 
@@ -589,6 +650,12 @@ def main():
                     "oracleDurationMs": oracle_duration_ms,
                     "stageDurationMs": stage_duration_ms,
                     "cumulativeCheckCount": len(cumulative_checks),
+                    "participantSelfAssessment": participant_self_assessment(
+                        response if participant_ok else {},
+                        oracle_receipt.get("pass")
+                        if oracle_receipt and not oracle_error
+                        else None,
+                    ),
                 }
             )
             if participant_error or oracle_error:

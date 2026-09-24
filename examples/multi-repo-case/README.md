@@ -337,7 +337,10 @@ transport failures produce `infrastructure-unavailable` with a null verdict;
 valid runs that fail behavior or edit scope remain assessed failures.
 
 `mock-assessed-agent.py` provides baseline, reference and scope-drift protocol
-fixtures for deterministic Harness regression only. Their separation score is
+fixtures for deterministic Harness regression only. It also emits an optional
+pre-Oracle `selfAssessment` with `expectedOraclePass` and `confidence`; the
+Harness compares that claim with the independent Oracle and derives agreement
+and Brier score without changing the verdict. Its separation or calibration is
 not evidence about a real model. A run without `--participant-runtime-config`
 is host-process compatibility mode and keeps
 `filesystemIsolationQualified=false`. The assessed workflow freezes an exact

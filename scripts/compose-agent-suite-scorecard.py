@@ -192,6 +192,18 @@ def validate_discrimination(
     require(process.get("coverageRate") == process["measuredAttemptCount"] / process["validAttemptCount"], f"{case_id} process coverage differs")
     require(process.get("coverageQualified") is (process["measuredAttemptCount"] == process["validAttemptCount"]), f"{case_id} process qualification differs")
     require(row.get("processAwareEligible") is (row.get("eligible") is True and process["coverageQualified"] is True), f"{case_id} process-aware eligibility differs")
+    self_assessment = process.get("participantSelfAssessment")
+    require(isinstance(self_assessment, dict), f"{case_id} participant self-assessment measurement is absent")
+    require(isinstance(self_assessment.get("measuredAttemptCount"), int) and 0 <= self_assessment["measuredAttemptCount"] <= process["validAttemptCount"], f"{case_id} participant self-assessment denominator is invalid")
+    require(self_assessment.get("coverageRate") == self_assessment["measuredAttemptCount"] / process["validAttemptCount"], f"{case_id} participant self-assessment coverage differs")
+    require(self_assessment.get("coverageQualified") is (self_assessment["measuredAttemptCount"] == process["validAttemptCount"]), f"{case_id} participant self-assessment qualification differs")
+    comparable = self_assessment.get("comparableStageCount")
+    agreement = self_assessment.get("agreementCount")
+    require(isinstance(comparable, int) and comparable >= 0 and isinstance(agreement, int) and 0 <= agreement <= comparable, f"{case_id} participant self-assessment comparison counts are invalid")
+    require(self_assessment.get("agreementRate") == (agreement / comparable if comparable else None), f"{case_id} participant self-assessment agreement differs")
+    brier = self_assessment.get("meanBrierScore")
+    require((comparable == 0 and brier is None) or (comparable > 0 and isinstance(brier, (int, float)) and not isinstance(brier, bool) and 0.0 <= brier <= 1.0), f"{case_id} participant self-assessment Brier score is invalid")
+    require(self_assessment.get("authority") == "participant-claim-compared-with-operator-oracle-not-a-verdict", f"{case_id} participant self-assessment authority differs")
     return value, row
 
 
@@ -329,6 +341,8 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
             profile_totals[participant]["passedTrials"] += profile["passedTrials"]
         review_qualified = population_row.get("blindPilotReviewQualified") is True
         process_qualified = row["processMeasurement"]["coverageQualified"] is True
+        self_assessment = row["processMeasurement"]["participantSelfAssessment"]
+        self_assessment_qualified = self_assessment["coverageQualified"] is True
         outcome_qualified = row.get("eligible") is True
         qualified = (
             review_qualified
@@ -348,6 +362,9 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
                 "reviewQualified": review_qualified,
                 "outcomeDiscriminationEligible": outcome_qualified,
                 "processMeasurementCoverageQualified": process_qualified,
+                "participantSelfAssessmentCoverageQualified": self_assessment_qualified,
+                "participantSelfAssessmentAgreementRate": self_assessment["agreementRate"],
+                "participantSelfAssessmentMeanBrierScore": self_assessment["meanBrierScore"],
                 "expectedCapabilityOrderQualified": expected_order,
                 "strongestMinusWeakestPassRate": strongest["passRate"] - weakest["passRate"],
                 "strongestWeakestWilson95Separated": interval_separated,
@@ -385,6 +402,9 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
         )
     case_count = len(case_rows)
     measurement_qualified = qualified_count == case_count
+    self_assessment_measurement_qualified = all(
+        row["participantSelfAssessmentCoverageQualified"] for row in case_rows
+    )
     return {
         "schema": SCORECARD_SCHEMA,
         "suiteId": suite_id,
@@ -412,6 +432,7 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
         "cases": case_rows,
         "qualification": {
             "suiteMeasurementQualified": measurement_qualified,
+            "participantSelfAssessmentMeasurementQualified": self_assessment_measurement_qualified,
             "qualifiedCaseRate": qualified_count / case_count,
             "qualifiedCaseRateWilson95": scorer.wilson_interval(qualified_count, case_count),
             "populationRepresentativenessQualified": False,

@@ -112,6 +112,58 @@ def validate_process_measurement(value: Any, case_id: str, attempt_id: str) -> d
         fail(f"{case_id} {attempt_id} completed stage count is invalid")
     if value["oraclePassedStageCount"] > value["oracleExecutedStageCount"]:
         fail(f"{case_id} {attempt_id} Oracle stage count is invalid")
+    self_assessment = value.get("participantSelfAssessment")
+    if self_assessment is not None:
+        if (
+            not isinstance(self_assessment, dict)
+            or self_assessment.get("schema")
+            != "agentlab.participant_self_assessment_summary.v1"
+            or self_assessment.get("authority")
+            != "participant-claim-compared-with-operator-oracle-not-a-verdict"
+        ):
+            fail(f"{case_id} {attempt_id} participant self-assessment summary is invalid")
+        counts = (
+            "stageCount",
+            "reportedStageCount",
+            "comparableStageCount",
+            "agreementCount",
+        )
+        if not all(
+            isinstance(self_assessment.get(field), int)
+            and self_assessment[field] >= 0
+            for field in counts
+        ):
+            fail(f"{case_id} {attempt_id} participant self-assessment counts are invalid")
+        if not (
+            self_assessment["stageCount"] == value["stageCount"]
+            and self_assessment["agreementCount"]
+            <= self_assessment["comparableStageCount"]
+            <= self_assessment["reportedStageCount"]
+            <= self_assessment["stageCount"]
+            and self_assessment.get("coverageRate")
+            == self_assessment["reportedStageCount"] / self_assessment["stageCount"]
+            and self_assessment.get("coverageQualified")
+            is (
+                self_assessment["comparableStageCount"]
+                == self_assessment["stageCount"]
+            )
+        ):
+            fail(f"{case_id} {attempt_id} participant self-assessment coverage differs")
+        comparable = self_assessment["comparableStageCount"]
+        expected_agreement = (
+            self_assessment["agreementCount"] / comparable if comparable else None
+        )
+        if self_assessment.get("agreementRate") != expected_agreement:
+            fail(f"{case_id} {attempt_id} participant self-assessment agreement differs")
+        brier = self_assessment.get("meanBrierScore")
+        if comparable and (
+            not isinstance(brier, (int, float))
+            or isinstance(brier, bool)
+            or not 0.0 <= brier <= 1.0
+        ):
+            fail(f"{case_id} {attempt_id} participant self-assessment Brier score is invalid")
+        if not comparable and brier is not None:
+            fail(f"{case_id} {attempt_id} participant self-assessment Brier score differs")
     return value
 
 
@@ -154,6 +206,17 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
     for participant_id, attempt_rows in sorted(profiles.items()):
         verdicts = [row["verdict"] for row in attempt_rows]
         process_rows = [row["process"] for row in attempt_rows if row["process"] is not None]
+        self_assessment_rows = [
+            row["participantSelfAssessment"]
+            for row in process_rows
+            if isinstance(row.get("participantSelfAssessment"), dict)
+        ]
+        self_assessment_comparable = sum(
+            row["comparableStageCount"] for row in self_assessment_rows
+        )
+        self_assessment_agreement = sum(
+            row["agreementCount"] for row in self_assessment_rows
+        )
         passed = sum(verdicts)
         count = len(attempt_rows)
         rate = passed / count
@@ -189,6 +252,39 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
                     "totalScopeViolationStageCount": sum(
                         row["scopeViolationStageCount"] for row in process_rows
                     ),
+                    "participantSelfAssessment": {
+                        "measuredTrials": len(self_assessment_rows),
+                        "coverageRate": len(self_assessment_rows) / count,
+                        "coverageQualified": len(self_assessment_rows) == count,
+                        "stageCount": sum(
+                            row["stageCount"] for row in self_assessment_rows
+                        ),
+                        "reportedStageCount": sum(
+                            row["reportedStageCount"] for row in self_assessment_rows
+                        ),
+                        "comparableStageCount": sum(
+                            row["comparableStageCount"] for row in self_assessment_rows
+                        ),
+                        "agreementCount": sum(
+                            row["agreementCount"] for row in self_assessment_rows
+                        ),
+                        "agreementRate": (
+                            self_assessment_agreement / self_assessment_comparable
+                            if self_assessment_comparable
+                            else None
+                        ),
+                        "meanBrierScore": (
+                            sum(
+                                row["meanBrierScore"] * row["comparableStageCount"]
+                                for row in self_assessment_rows
+                                if row["meanBrierScore"] is not None
+                            )
+                            / self_assessment_comparable
+                            if self_assessment_comparable
+                            else None
+                        ),
+                        "authority": "participant-claim-compared-with-operator-oracle-not-a-verdict",
+                    },
                 },
             }
         )
@@ -214,6 +310,19 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
     eligible = calibrated and evidence_complete and score >= threshold
     process_measured = sum(
         row["processMeasurement"]["measuredTrials"] for row in profile_rows
+    )
+    self_assessment_profiles = [
+        row["processMeasurement"]["participantSelfAssessment"]
+        for row in profile_rows
+    ]
+    self_assessment_measured = sum(
+        row["measuredTrials"] for row in self_assessment_profiles
+    )
+    self_assessment_comparable = sum(
+        row["comparableStageCount"] for row in self_assessment_profiles
+    )
+    self_assessment_agreement = sum(
+        row["agreementCount"] for row in self_assessment_profiles
     )
     process_coverage_qualified = total > 0 and process_measured == total
     if len(profile_rows) >= 2:
@@ -254,7 +363,36 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
             "measuredAttemptCount": process_measured,
             "coverageRate": process_measured / total if total else 0.0,
             "coverageQualified": process_coverage_qualified,
-            "note": "Operator-owned stage timing, change, scope and Oracle transition evidence; participant intent quality is not inferred.",
+            "participantSelfAssessment": {
+                "measuredAttemptCount": self_assessment_measured,
+                "coverageRate": self_assessment_measured / total if total else 0.0,
+                "coverageQualified": total > 0 and self_assessment_measured == total,
+                "stageCount": sum(row["stageCount"] for row in self_assessment_profiles),
+                "reportedStageCount": sum(
+                    row["reportedStageCount"] for row in self_assessment_profiles
+                ),
+                "comparableStageCount": self_assessment_comparable,
+                "agreementCount": sum(
+                    row["agreementCount"] for row in self_assessment_profiles
+                ),
+                "agreementRate": (
+                    self_assessment_agreement / self_assessment_comparable
+                    if self_assessment_comparable
+                    else None
+                ),
+                "meanBrierScore": (
+                    sum(
+                        row["meanBrierScore"] * row["comparableStageCount"]
+                        for row in self_assessment_profiles
+                        if row["meanBrierScore"] is not None
+                    )
+                    / self_assessment_comparable
+                    if self_assessment_comparable
+                    else None
+                ),
+                "authority": "participant-claim-compared-with-operator-oracle-not-a-verdict",
+            },
+            "note": "Operator-owned stage timing, change, scope and Oracle transition evidence. Optional participant self-assessment is a claim compared with the independent Oracle, not a verdict.",
         },
         "evidenceComplete": evidence_complete,
         "eligible": eligible,

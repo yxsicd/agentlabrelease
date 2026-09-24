@@ -37,12 +37,25 @@ SmartPerf sample count; the loop adds independent build and assessment wall
 time, and the compound composer rechecks those retained bytes before appending
 a measured `harmony-device` stage to the static process evidence.
 
+Multi-repository participants may optionally report whether they expect the
+next independent Oracle to pass and their confidence in that prediction. The
+Harness records the claim before exposing the Oracle result; the collector
+rederives agreement and Brier score from retained stage evidence; and the
+scorer reports claim coverage, agreement and weighted mean Brier score. Missing
+claims do not affect the functional verdict or ordinary process eligibility,
+but keep the separate participant-self-assessment measurement unqualified.
+These values measure calibration of an explicit claim, not correctness of the
+participant's explanation or dependency discovery.
+
 `scripts/compose-agent-suite-scorecard.py` then joins an authenticated blind
 review population to exactly one discrimination report per reviewed case. The
 manifest freezes the expected participant capability order before inspecting
 the outcomes. A case-level scorecard qualifies only when review, outcome,
 process coverage, declared ordering and strongest-versus-weakest Wilson
 separation all pass. Aggregate micro pass rates retain their trial denominators.
+The suite separately reports whether every valid attempt carried a comparable
+participant self-assessment; this metric is non-gating and retains the
+`participant-claim...not-a-verdict` authority marker.
 The resulting suite measurement still cannot establish representative sampling,
 model-training exclusion or unseen-Agent eligibility and never auto-promotes.
 

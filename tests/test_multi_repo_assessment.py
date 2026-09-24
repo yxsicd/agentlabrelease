@@ -201,6 +201,28 @@ class MultiRepoAssessmentTests(unittest.TestCase):
             self.assertEqual(
                 reference_summary["processMeasurement"]["stageCount"], 2
             )
+            self.assertEqual(
+                reference_summary["processMeasurement"]["participantSelfAssessment"],
+                {
+                    "schema": "agentlab.participant_self_assessment_summary.v1",
+                    "stageCount": 2,
+                    "reportedStageCount": 2,
+                    "comparableStageCount": 2,
+                    "agreementCount": 2,
+                    "coverageRate": 1.0,
+                    "agreementRate": 1.0,
+                    "meanBrierScore": 0.009999999999999995,
+                    "coverageQualified": True,
+                    "authority": "participant-claim-compared-with-operator-oracle-not-a-verdict",
+                },
+            )
+            self.assertTrue(
+                all(
+                    row["participantSelfAssessment"]["authority"]
+                    == "participant-claim-not-a-verdict"
+                    for row in reference_summary["stages"]
+                )
+            )
             self.assertTrue(
                 all(row["scopeValid"] for row in reference_summary["stages"])
             )

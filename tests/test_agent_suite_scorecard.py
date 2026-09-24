@@ -23,8 +23,8 @@ SCORER = load_module("suite_fixture_discrimination", ROOT / "scripts/score-case-
 SUITE = load_module("agent_suite_scorecard", ROOT / "scripts/compose-agent-suite-scorecard.py")
 
 
-def process() -> dict:
-    return {
+def process(*, self_assessment: bool = False) -> dict:
+    value = {
         "schema": "agentlab.assessment_process_measurement.v1",
         "stageCount": 2,
         "participantCompletedStageCount": 2,
@@ -41,6 +41,20 @@ def process() -> dict:
         "attemptDurationMs": 30,
         "processMeasurementQualified": True,
     }
+    if self_assessment:
+        value["participantSelfAssessment"] = {
+            "schema": "agentlab.participant_self_assessment_summary.v1",
+            "stageCount": 2,
+            "reportedStageCount": 2,
+            "comparableStageCount": 2,
+            "agreementCount": 2,
+            "coverageRate": 1.0,
+            "agreementRate": 1.0,
+            "meanBrierScore": 0.04,
+            "coverageQualified": True,
+            "authority": "participant-claim-compared-with-operator-oracle-not-a-verdict",
+        }
+    return value
 
 
 class AgentSuiteScorecardTests(unittest.TestCase):
@@ -142,6 +156,7 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         *,
         reverse: bool = False,
         process_evidence: bool = True,
+        self_assessment: bool = False,
     ) -> Path:
         calibration = {
             "infrastructureValid": True,
@@ -171,7 +186,9 @@ class AgentSuiteScorecardTests(unittest.TestCase):
                     "taskPassed": passed,
                 }
                 if process_evidence:
-                    attempt["processMeasurement"] = process()
+                    attempt["processMeasurement"] = process(
+                        self_assessment=self_assessment
+                    )
                 attempts.append(attempt)
         report = SCORER.build_report(
             {
@@ -230,6 +247,15 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         self.assertTrue(
             all(row["strongestWeakestWilson95Separated"] for row in value["cases"])
         )
+        self.assertFalse(
+            value["qualification"]["participantSelfAssessmentMeasurementQualified"]
+        )
+        self.assertTrue(
+            all(
+                not row["participantSelfAssessmentCoverageQualified"]
+                for row in value["cases"]
+            )
+        )
         weak, strong = value["aggregateParticipantProfiles"]
         self.assertEqual(weak["microPassRate"], 0.0)
         self.assertEqual(strong["microPassRate"], 1.0)
@@ -242,6 +268,29 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         self.assertFalse(value["qualification"]["suiteMeasurementQualified"])
         failed = next(row for row in value["cases"] if row["caseId"] == "case-b")
         self.assertFalse(failed["reviewQualified"])
+
+    def test_participant_self_assessment_coverage_is_separate_and_non_gating(self) -> None:
+        for index, case_id in enumerate(self.source_sets, 1):
+            self.reports[case_id] = self.write_discrimination(
+                case_id, index, self_assessment=True
+            )
+            self.write_attestation(
+                self.report_attestations[case_id], self.reports[case_id], 2000 + index
+            )
+        self.write_manifest()
+        value = SUITE.build_scorecard(self.manifest)
+        self.assertTrue(value["qualification"]["suiteMeasurementQualified"])
+        self.assertTrue(
+            value["qualification"]["participantSelfAssessmentMeasurementQualified"]
+        )
+        self.assertTrue(
+            all(
+                row["participantSelfAssessmentCoverageQualified"]
+                and row["participantSelfAssessmentAgreementRate"] == 1.0
+                and row["participantSelfAssessmentMeanBrierScore"] == 0.04
+                for row in value["cases"]
+            )
+        )
 
     def test_declared_capability_order_is_not_recovered_from_outcomes(self) -> None:
         self.reports["case-b"] = self.write_discrimination("case-b", 2, reverse=True)

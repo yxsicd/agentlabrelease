@@ -313,6 +313,15 @@ class CollectCaseAttemptsTests(unittest.TestCase):
                     "oracleDurationMs": 3,
                     "stageDurationMs": 17,
                     "cumulativeCheckCount": 2,
+                    "participantSelfAssessment": {
+                        "schema": "agentlab.participant_self_assessment.v1",
+                        "expectedOraclePass": True,
+                        "confidence": 0.8,
+                        "predictedPassProbability": 0.8,
+                        "agreement": True,
+                        "brierScore": 0.03999999999999998,
+                        "authority": "participant-claim-not-a-verdict",
+                    },
                 }
             ]
             process = {
@@ -331,6 +340,18 @@ class CollectCaseAttemptsTests(unittest.TestCase):
                 "stageDurationMs": 17,
                 "attemptDurationMs": 20,
                 "processMeasurementQualified": True,
+                "participantSelfAssessment": {
+                    "schema": "agentlab.participant_self_assessment_summary.v1",
+                    "stageCount": 1,
+                    "reportedStageCount": 1,
+                    "comparableStageCount": 1,
+                    "agreementCount": 1,
+                    "coverageRate": 1.0,
+                    "agreementRate": 1.0,
+                    "meanBrierScore": 0.03999999999999998,
+                    "coverageQualified": True,
+                    "authority": "participant-claim-compared-with-operator-oracle-not-a-verdict",
+                },
             }
             common = {
                 "taskId": self.case_id,
@@ -360,6 +381,18 @@ class CollectCaseAttemptsTests(unittest.TestCase):
             self.assertEqual(
                 collected["cases"][0]["attempts"][0]["processMeasurement"],
                 process,
+            )
+
+            tampered = json.loads((evidence / "summary.json").read_text())
+            tampered["stages"][0]["participantSelfAssessment"]["brierScore"] = 0.4
+            self.write_json(evidence / "summary.json", tampered)
+            with self.assertRaisesRegex(ValueError, "self-assessment derivation differs"):
+                COLLECTOR.build_input(
+                    self.multi_repo_manifest([attempt]), root.resolve()
+                )
+            self.write_json(
+                evidence / "summary.json",
+                {**common, "stages": stages, "durationMs": 20},
             )
 
             decision = json.loads((evidence / "decision-package.json").read_text())

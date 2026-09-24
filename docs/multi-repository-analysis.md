@@ -313,6 +313,21 @@ multi-repository attempts. A read-only UI scenario may legitimately have zero
 UI actions, but it must retain at least one UI check; a passing profiled run
 must retain workload actions and samples.
 
+The static participant protocol also accepts an optional pre-Oracle
+`selfAssessment` containing `expectedOraclePass` and confidence in `0..1`. The
+Harness derives pass probability, agreement and Brier score only after the
+independent Oracle runs. Collection reconstructs those fields from retained
+stage evidence, and discrimination scoring reports coverage and weighted
+calibration at participant, case and suite levels. The claim never changes the
+Oracle verdict or promotion eligibility, and adapters must not manufacture a
+confidence value from process success.
+
+This is not yet a dependency-discovery score. The current staged request shows
+the reviewed allowed-edit surface, while a reference patch's touched paths are
+only one possible implementation. A valid future measure needs a hidden,
+revision-bound program-analysis contract that accepts behaviorally equivalent
+dependency explanations instead of rewarding path imitation.
+
 ### Run the assessed campaign through the device gate
 
 `run-harmony-assessed-campaign.py` makes the device gate part of the trusted
