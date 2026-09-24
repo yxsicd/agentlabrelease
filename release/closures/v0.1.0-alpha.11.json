@@ -11,7 +11,7 @@
   "componentRegistry": {
     "schema": "agentlab.component_registry.v1",
     "path": "release/components/registry.json",
-    "sha256": "d65d9ed90631d3caf34164706052bffe95573eab093bfd17758e9e2493c2a90c"
+    "sha256": "2bfdfcf0fc56c38cb76c1208f028c305e113fd0fc31d3f1789cf3e658cf2dbec"
   },
   "requiredSchemas": {
     "controlApi": "agentlabctl.release.v1",
@@ -84,6 +84,51 @@
       "registryComponent": "agentlab-developer-tools-linux-x64"
     },
     {
+      "id": "agentlab-runtime-image-linux-x64",
+      "kind": "container-image",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/image-fa05788f-linux-x64/chatproxy-agentlab-git-fa05788f-linux-x64.docker.tar.zst",
+      "sha256": "f5dddac4b52b81abd2e88f4f8e8eac246b4bfd71ae3eb904141d073a4ee4a477",
+      "bytes": 305740544,
+      "immutableRef": "image-fa05788f-linux-x64",
+      "registryComponent": "agentlab-runtime-image-linux-x64"
+    },
+    {
+      "id": "harmony-build-kit-v5-linux-x64",
+      "kind": "harmony-build-kit",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-buildkit-v5-linux-x64/agentlab-pack-harmony-build-kit-buildkit-v5-linux-x64.tar.zst",
+      "sha256": "4106f23863e7524d2e44489fb4199d8493422d12fd1c2fafb298d5a83eac68a5",
+      "bytes": 3511,
+      "immutableRef": "harmony-buildkit-v5-linux-x64",
+      "registryComponent": "harmony-build-kit-v5-linux-x64"
+    },
+    {
+      "id": "agentlab-sessionfs-linux-x64",
+      "kind": "sessionfs",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/sessionfs-a4d9fb7-linux-x64/alsessionfsd-a4d9fb7-linux-x64",
+      "sha256": "52b47c3575e9e43013ccdbfb283127c6bfb58cf18ae6aae4c31f81996b03ec7a",
+      "bytes": 590496,
+      "immutableRef": "sessionfs-a4d9fb7-linux-x64",
+      "registryComponent": "agentlab-sessionfs-linux-x64"
+    },
+    {
+      "id": "agentlab-session-sdk-linux-x64",
+      "kind": "session-sdk",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/session-sdk-c075105a-linux-x64/agentlab-session-sdk-c075105a-linux-x64",
+      "sha256": "15fe671317f0f4ee7a79b54776aca4d62f629c5b571063c3fc20a05fe24475c3",
+      "bytes": 5219632,
+      "immutableRef": "session-sdk-c075105a-linux-x64",
+      "registryComponent": "agentlab-session-sdk-linux-x64"
+    },
+    {
+      "id": "harmony-emulator-bundle-manifest",
+      "kind": "harmony-emulator-manifest",
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-emulator-linux-x64-26.0.0.821/harmony-emulator-linux-x64-26.0.0.821.json",
+      "sha256": "36536c9b129c3570427441bcea29be2662e3b9293710a2b1d80e28ba9da9f593",
+      "bytes": 3625,
+      "immutableRef": "harmony-emulator-linux-x64-26.0.0.821",
+      "registryComponent": "harmony-emulator-bundle-manifest"
+    },
+    {
       "id": "harmony-emulator-command-line-tools",
       "kind": "harmony-emulator-tools",
       "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-emulator-linux-x64-26.0.0.821/commandline-tools-linux-x64-26.0.0.821.tar.zst",
@@ -104,7 +149,7 @@
   ],
   "reuse": {
     "policy": "unchanged-components-are-referenced-without-rebuild-or-upload",
-    "selectedComponentCount": 9,
+    "selectedComponentCount": 14,
     "newBinaryBuildCount": 0,
     "newBinaryUploadCount": 0,
     "largeAssetsReused": [

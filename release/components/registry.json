@@ -185,6 +185,149 @@
       ]
     },
     {
+      "id": "agentlab-runtime-image-linux-x64",
+      "kind": "container-image",
+      "platform": "linux-x64",
+      "status": "selected",
+      "immutableRef": "image-fa05788f-linux-x64",
+      "source": {
+        "repository": "https://github.com/yxsicd/dinddocs"
+      },
+      "inputIdentity": {
+        "mode": "legacy-published-v1",
+        "effectiveInputDigest": "bb2dd67412f106c98bf376de1e438a851aa6869a94c2607f596ad1621fa6b70e"
+      },
+      "assets": [
+        {
+          "id": "agentlab-runtime-image-archive",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/image-fa05788f-linux-x64/chatproxy-agentlab-git-fa05788f-linux-x64.docker.tar.zst",
+          "bytes": 305740544,
+          "sha256": "f5dddac4b52b81abd2e88f4f8e8eac246b4bfd71ae3eb904141d073a4ee4a477"
+        },
+        {
+          "id": "agentlab-runtime-image-descriptor",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/image-fa05788f-linux-x64/chatproxy-agentlab-git-fa05788f-linux-x64.docker.tar.zst.json",
+          "bytes": 552,
+          "sha256": "adc6bc42a323284a4edc4ebadc814475d3a0d8c7bca42da47fdcb0f9ce7b4559"
+        }
+      ]
+    },
+    {
+      "id": "harmony-build-kit-v5-linux-x64",
+      "kind": "harmony-build-kit",
+      "platform": "linux-x64",
+      "status": "selected",
+      "immutableRef": "harmony-buildkit-v5-linux-x64",
+      "source": {
+        "repository": "https://github.com/yxsicd/dinddocs"
+      },
+      "inputIdentity": {
+        "mode": "legacy-published-v1",
+        "effectiveInputDigest": "8e999dc9e5751ab4aac3f92cdf57905a6bdc00bf608a9ed7d942e1a8cef62d84"
+      },
+      "assets": [
+        {
+          "id": "harmony-build-kit-archive",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-buildkit-v5-linux-x64/agentlab-pack-harmony-build-kit-buildkit-v5-linux-x64.tar.zst",
+          "bytes": 3511,
+          "sha256": "4106f23863e7524d2e44489fb4199d8493422d12fd1c2fafb298d5a83eac68a5"
+        },
+        {
+          "id": "harmony-build-kit-descriptor",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-buildkit-v5-linux-x64/agentlab-pack-harmony-build-kit-buildkit-v5-linux-x64.tar.zst.json",
+          "bytes": 470,
+          "sha256": "e6e5be72718e18ff2ca73f8e2c5bcbe4fab83db48fb65f6f3210326688c483db"
+        }
+      ]
+    },
+    {
+      "id": "agentlab-sessionfs-linux-x64",
+      "kind": "sessionfs",
+      "platform": "linux-x64",
+      "status": "selected",
+      "immutableRef": "sessionfs-a4d9fb7-linux-x64",
+      "source": {
+        "repository": "https://github.com/yxsicd/dinddocs",
+        "revision": "a4d9fb7cf341e9d161713e4088e107bdfaaccc2d"
+      },
+      "inputIdentity": {
+        "mode": "legacy-published-v1",
+        "effectiveInputDigest": "8d5a95995d4291f7d4da4486c5a807e9513a1cf638fb160f0df7f36058439c7f"
+      },
+      "assets": [
+        {
+          "id": "alsessionfsd-linux-x64",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/sessionfs-a4d9fb7-linux-x64/alsessionfsd-a4d9fb7-linux-x64",
+          "bytes": 590496,
+          "sha256": "52b47c3575e9e43013ccdbfb283127c6bfb58cf18ae6aae4c31f81996b03ec7a"
+        },
+        {
+          "id": "alsessionfsd-descriptor",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/sessionfs-a4d9fb7-linux-x64/alsessionfsd-a4d9fb7-linux-x64.json",
+          "bytes": 436,
+          "sha256": "b5a6ab809d9bfbc90ce1ef836be9816f94e2cec991dae48dbcaac002f35a649b"
+        }
+      ]
+    },
+    {
+      "id": "agentlab-session-sdk-linux-x64",
+      "kind": "session-sdk",
+      "platform": "linux-x64",
+      "status": "selected",
+      "immutableRef": "session-sdk-c075105a-linux-x64",
+      "source": {
+        "repository": "https://github.com/yxsicd/dinddocs",
+        "revision": "c075105a7ea7f37ef036ea016a71149f7d83c112"
+      },
+      "inputIdentity": {
+        "mode": "legacy-published-v1",
+        "effectiveInputDigest": "50b1d6b96e467ad62093108cea28ad838182ed7ba61661cfe77768b238e7f1eb"
+      },
+      "assets": [
+        {
+          "id": "agentlab-session-sdk-linux-x64",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/session-sdk-c075105a-linux-x64/agentlab-session-sdk-c075105a-linux-x64",
+          "bytes": 5219632,
+          "sha256": "15fe671317f0f4ee7a79b54776aca4d62f629c5b571063c3fc20a05fe24475c3"
+        },
+        {
+          "id": "agentlab-session-sdk-descriptor",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/session-sdk-c075105a-linux-x64/session-sdk-c075105a.json",
+          "bytes": 982,
+          "sha256": "c85d4168ed4e1a92c9003bd02d1cff3b82f80bc986c4a011e3533d8d176d7317"
+        },
+        {
+          "id": "session-template-inventory",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/session-sdk-c075105a-linux-x64/session-template-inventory.json",
+          "bytes": 88069,
+          "sha256": "fe7e7359dd1b282a67c851462359643eaa0c1ad6924c53d2b47638b09dba2aa3"
+        }
+      ]
+    },
+    {
+      "id": "harmony-emulator-bundle-manifest",
+      "kind": "harmony-emulator-manifest",
+      "platform": "linux-x64",
+      "status": "selected",
+      "immutableRef": "harmony-emulator-linux-x64-26.0.0.821",
+      "source": {
+        "repository": "https://github.com/yxsicd/agentlabrelease",
+        "revision": "c52eb41e7ff177fd029b815e31a9121f9d3bf7d6"
+      },
+      "inputIdentity": {
+        "mode": "external-payload-v1",
+        "effectiveInputDigest": "87d32cd4dc4f137b9c4cfe481844407650deba673add89dd38c14a12f932173c"
+      },
+      "assets": [
+        {
+          "id": "harmony-emulator-linux-x64-26.0.0.821.json",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-emulator-linux-x64-26.0.0.821/harmony-emulator-linux-x64-26.0.0.821.json",
+          "bytes": 3625,
+          "sha256": "36536c9b129c3570427441bcea29be2662e3b9293710a2b1d80e28ba9da9f593"
+        }
+      ]
+    },
+    {
       "id": "harmony-emulator-command-line-tools",
       "kind": "harmony-emulator-tools",
       "platform": "linux-x64",
