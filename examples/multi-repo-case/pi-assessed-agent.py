@@ -27,7 +27,10 @@ def load_blind_input(root_value):
     if hashlib.sha256(body).hexdigest() != task_rows[0].get("sha256"):
         raise RuntimeError("blind participant task digest differs")
     task = json.loads(body)
-    if task.get("schema") != "agentlab.multi_repo_participant_task.v1":
+    if task.get("schema") not in {
+        "agentlab.multi_repo_participant_task.v1",
+        "agentlab.multi_repo_participant_task.v2",
+    }:
         raise RuntimeError("unsupported blind participant task")
     stages = task.get("stages")
     if not isinstance(stages, list) or not stages:
@@ -36,14 +39,17 @@ def load_blind_input(root_value):
     if len(stage_map) != len(stages) or not all(isinstance(key, str) and isinstance(value, str) for key, value in stage_map.items()):
         raise RuntimeError("blind participant stages are invalid")
     allowed = (manifest.get("constraints") or {}).get("allowedEditPaths")
-    if not isinstance(allowed, list) or not allowed or not all(isinstance(path, str) for path in allowed):
-        raise RuntimeError("blind participant allowed edit paths are absent")
+    if task["schema"].endswith(".v1"):
+        if not isinstance(allowed, list) or not allowed or not all(isinstance(path, str) for path in allowed):
+            raise RuntimeError("blind participant allowed edit paths are absent")
+    elif allowed is not None:
+        raise RuntimeError("v2 blind participant manifest leaks allowed edit paths")
     return {
         "manifestSha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
         "caseId": task.get("caseId"),
         "sourceSetSha256": task.get("sourceSetSha256"),
         "stages": stage_map,
-        "allowedEdits": sorted(allowed),
+        "allowedEdits": sorted(allowed) if allowed is not None else None,
     }
 
 
@@ -78,7 +84,11 @@ def main():
             stage = message["stageId"]
             request = json.loads(Path(message["requestPath"]).read_text())
             demand = request["demand"]
-            allowed_edits = sorted(request["allowedEdits"])
+            allowed_edits = (
+                sorted(request["allowedEdits"])
+                if "allowedEdits" in request
+                else None
+            )
             if blind_input is not None:
                 if request.get("blindParticipantManifestSha256") != blind_input["manifestSha256"]:
                     raise RuntimeError("stage request blind manifest digest differs")
@@ -90,12 +100,17 @@ def main():
                     raise RuntimeError("stage request differs from blind edit constraints")
                 demand = blind_input["stages"][stage]
                 allowed_edits = blind_input["allowedEdits"]
+            scope_instruction = (
+                f"You may edit only these paths: {', '.join(allowed_edits)}."
+                if allowed_edits is not None
+                else "Choose the necessary edit surface from source evidence; the Harness enforces the hidden scope independently."
+            )
             prompt = f"""You are the assessed Code Agent. Work only inside the current multi-repository workspace.
 Implement this user demand while preserving prior-stage behavior:
 
 {demand}
 
-You may edit only these paths: {', '.join(allowed_edits)}.
+{scope_instruction}
 Do not inspect parent directories, Harness evidence, Oracle code, reference implementations, or hidden solutions.
 Use source inspection and file tools, make the actual edits, and briefly report completion.
 """

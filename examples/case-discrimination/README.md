@@ -47,6 +47,14 @@ but keep the separate participant-self-assessment measurement unqualified.
 These values measure calibration of an explicit claim, not correctness of the
 participant's explanation or dependency discovery.
 
+Dependency-aware multi-repository attempts add a distinct process measurement.
+Its hidden obligations are backed by stable IDs in exact-revision program facts,
+and its participant request does not reveal the private allowed-edit surface.
+The scorer aggregates required-obligation coverage and measurement coverage;
+extra claims remain `unadjudicatedClaimCount` and precision is explicitly not
+claimed. This metric is non-gating for functional success and cannot replace
+Oracle calibration.
+
 `scripts/compose-agent-suite-scorecard.py` then joins an authenticated blind
 review population to exactly one discrimination report per reviewed case. The
 manifest freezes the expected participant capability order before inspecting

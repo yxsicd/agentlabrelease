@@ -355,6 +355,34 @@ a blocked direct external connection are required before
 `networkEgressIsolationQualified=true`. Freshness, semantic leakage and
 contamination remain review-required, so `blindAssessmentQualified` stays false.
 
+### Hidden dependency-discovery protocol
+
+Do not evaluate dependency discovery while revealing `allowedEdits`. Build a
+hidden contract from exact analyzer facts and a reviewed obligation plan, then
+derive a new immutable case binding:
+
+```sh
+python3 scripts/build-dependency-discovery-contract.py \
+  --case /tmp/multi-repo-evaluation-case.json \
+  --program-facts /tmp/analysis/workspace_facts.jsonl \
+  --plan /tmp/dependency-discovery-plan.json \
+  --output /tmp/dependency-discovery-contract.json
+python3 scripts/bind-dependency-discovery-case.py \
+  --case /tmp/multi-repo-evaluation-case.json \
+  --dependency-contract /tmp/dependency-discovery-contract.json \
+  --program-facts /tmp/analysis/workspace_facts.jsonl \
+  --output /tmp/dependency-aware-case.json
+```
+
+Pass the same hidden contract and facts to blind-cut preparation and assessment
+with `--dependency-contract` and `--program-facts`. The v2 participant bundle
+and stage request omit the allowed edit surface, while the Harness privately
+enforces it. Each participant may return `dependencyClaims` containing
+`relation`, `source`, `target` and `rationale`. Scoring measures recall of
+hidden required obligations; alternative reviewed fact routes are accepted and
+extra claims remain unadjudicated. It never claims precision or substitutes for
+the independent functional Oracle.
+
 For a private or held-out cut, `scripts/review-blind-case-cut.py` can freeze the
 exact participant/evaluator identities, collect at least two
 constructor-distinct reviewer records and adjudicate semantic leakage,

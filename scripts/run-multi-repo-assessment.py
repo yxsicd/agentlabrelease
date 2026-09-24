@@ -229,6 +229,29 @@ def process_measurement(stage_results, duration_ms):
             "coverageQualified": len(comparable) == len(stage_results),
             "authority": "participant-claim-compared-with-operator-oracle-not-a-verdict",
         }
+    dependency_rows = [
+        row.get("dependencyDiscovery")
+        for row in stage_results
+        if isinstance(row.get("dependencyDiscovery"), dict)
+    ]
+    if dependency_rows:
+        obligations = sum(row["obligationCount"] for row in dependency_rows)
+        covered = sum(row["coveredObligationCount"] for row in dependency_rows)
+        value["dependencyDiscovery"] = {
+            "schema": "agentlab.dependency_discovery_summary.v1",
+            "stageCount": len(stage_results),
+            "measuredStageCount": len(dependency_rows),
+            "claimCount": sum(row["claimCount"] for row in dependency_rows),
+            "obligationCount": obligations,
+            "coveredObligationCount": covered,
+            "requiredObligationCoverage": covered / obligations if obligations else None,
+            "coverageQualified": bool(obligations) and covered == obligations,
+            "unadjudicatedClaimCount": sum(
+                row["unadjudicatedClaimCount"] for row in dependency_rows
+            ),
+            "precisionClaimed": False,
+            "authority": "hidden-revision-bound-program-fact-obligations-not-gold-path-imitation",
+        }
     return value
 
 
@@ -260,6 +283,193 @@ def participant_self_assessment(response, oracle_pass):
         "agreement": expected == oracle_pass if comparable else None,
         "brierScore": (probability - float(oracle_pass)) ** 2 if comparable else None,
         "authority": "participant-claim-not-a-verdict",
+    }
+
+
+def dependency_endpoint(value, label):
+    require(isinstance(value, dict), f"{label} must be an object")
+    require(set(value) == {"repositoryId", "path"}, f"{label} fields differ")
+    repository_id = value.get("repositoryId")
+    require(isinstance(repository_id, str) and repository_id, f"{label} repository is required")
+    return {
+        "repositoryId": repository_id,
+        "path": safe_source_path(value.get("path")).as_posix(),
+    }
+
+
+def dependency_claim(value, label, *, participant):
+    require(isinstance(value, dict), f"{label} must be an object")
+    fields = {"relation", "source", "target"}
+    if participant:
+        fields.add("rationale")
+    else:
+        fields.add("factIds")
+    require(set(value) == fields, f"{label} fields differ")
+    relation = value.get("relation")
+    require(isinstance(relation, str) and relation, f"{label} relation is required")
+    normalized = {
+        "relation": relation,
+        "source": dependency_endpoint(value.get("source"), f"{label} source"),
+        "target": dependency_endpoint(value.get("target"), f"{label} target"),
+    }
+    if participant:
+        rationale = value.get("rationale")
+        require(isinstance(rationale, str) and rationale.strip(), f"{label} rationale is required")
+        normalized["rationale"] = rationale.strip()
+    else:
+        fact_ids = value.get("factIds")
+        require(
+            isinstance(fact_ids, list)
+            and fact_ids
+            and len(fact_ids) == len(set(fact_ids))
+            and all(isinstance(fact_id, str) and fact_id for fact_id in fact_ids),
+            f"{label} factIds are invalid",
+        )
+        normalized["factIds"] = sorted(fact_ids)
+    return normalized
+
+
+def validate_dependency_discovery(case, contract_path, facts_path):
+    binding = case.get("dependencyDiscovery")
+    supplied = contract_path is not None or facts_path is not None
+    if binding is None:
+        require(not supplied, "dependency discovery inputs are not bound by the case")
+        return None
+    require(contract_path is not None and facts_path is not None, "dependency contract and program facts are required")
+    require(isinstance(binding, dict), "dependency discovery binding is invalid")
+    require(
+        binding.get("schema") == "agentlab.dependency_discovery_binding.v1",
+        "dependency discovery binding schema differs",
+    )
+    require(
+        binding.get("participantEditScopeVisible") is False,
+        "dependency discovery binding must hide participant edit scope",
+    )
+    require(
+        binding.get("precisionClaimed") is False,
+        "dependency discovery binding cannot claim precision",
+    )
+    contract_path = contract_path.resolve()
+    facts_path = facts_path.resolve()
+    require(contract_path.is_file() and facts_path.is_file(), "dependency discovery evidence is absent")
+    require(digest(contract_path) == binding.get("contractSha256"), "dependency contract digest differs")
+    require(digest(facts_path) == binding.get("programFactsSha256"), "program facts digest differs")
+    fact_rows = []
+    for line_number, line in enumerate(facts_path.read_text().splitlines(), 1):
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        require(isinstance(row, dict), f"program fact line {line_number} is invalid")
+        fact_rows.append(row)
+    fact_index = {row.get("id"): row for row in fact_rows if isinstance(row.get("id"), str)}
+    require(len(fact_index) == len(fact_rows) and fact_index, "program fact identities are invalid")
+    revisions = {
+        row["id"]: row.get("revision") for row in case.get("sources", [])
+    }
+    contract = load(contract_path)
+    require(contract.get("schema") == "agentlab.dependency_discovery_contract.v1", "dependency contract schema differs")
+    require(contract.get("caseId") == case.get("id"), "dependency contract case differs")
+    require(contract.get("sourceSetSha256") == case.get("sourceSetSha256"), "dependency contract source set differs")
+    require(contract.get("programFactsSha256") == digest(facts_path), "dependency contract facts digest differs")
+    require(contract.get("automaticPromotion") is False, "dependency contract cannot auto-promote")
+    require(
+        contract.get("precisionPolicy")
+        == "required-obligation-recall-only-extra-claims-unadjudicated",
+        "dependency contract precision policy differs",
+    )
+    require(
+        contract.get("authority")
+        == "revision-bound-program-facts-reviewed-obligation-plan",
+        "dependency contract authority differs",
+    )
+    stages = contract.get("stages")
+    require(isinstance(stages, list) and stages, "dependency contract stages are absent")
+    stage_index = {}
+    for stage in stages:
+        require(isinstance(stage, dict) and set(stage) == {"stageId", "obligations"}, "dependency contract stage fields differ")
+        stage_id = stage.get("stageId")
+        require(isinstance(stage_id, str) and stage_id not in stage_index, "dependency contract stage identity is invalid")
+        obligations = stage.get("obligations")
+        require(isinstance(obligations, list) and obligations, f"{stage_id} dependency obligations are absent")
+        normalized_obligations = []
+        obligation_ids = set()
+        for obligation in obligations:
+            require(isinstance(obligation, dict) and set(obligation) == {"id", "acceptedClaims"}, f"{stage_id} dependency obligation fields differ")
+            obligation_id = obligation.get("id")
+            require(isinstance(obligation_id, str) and obligation_id and obligation_id not in obligation_ids, f"{stage_id} dependency obligation identity is invalid")
+            obligation_ids.add(obligation_id)
+            accepted = obligation.get("acceptedClaims")
+            require(isinstance(accepted, list) and accepted, f"{obligation_id} has no accepted claims")
+            normalized_claims = []
+            for index, claim in enumerate(accepted):
+                normalized = dependency_claim(claim, f"{obligation_id} accepted claim {index}", participant=False)
+                for endpoint in (normalized["source"], normalized["target"]):
+                    require(endpoint["repositoryId"] in revisions, f"{obligation_id} references unknown repository")
+                for fact_id in normalized["factIds"]:
+                    require(fact_id in fact_index, f"{obligation_id} references unknown program fact")
+                    fact = fact_index[fact_id]
+                    repository_id = fact.get("repositoryId")
+                    require(repository_id in revisions, f"{fact_id} repository identity differs")
+                    require(fact.get("sourceRevision") == revisions[repository_id], f"{fact_id} source revision differs")
+                    require(
+                        fact.get("kind") == normalized["relation"]
+                        and fact.get("repositoryId")
+                        == normalized["source"]["repositoryId"]
+                        and fact.get("path") == normalized["source"]["path"]
+                        and fact.get("targetRepositoryId")
+                        == normalized["target"]["repositoryId"]
+                        and fact.get("targetPath") == normalized["target"]["path"],
+                        f"{fact_id} does not support the accepted dependency claim",
+                    )
+                normalized_claims.append(normalized)
+            normalized_obligations.append({"id": obligation_id, "acceptedClaims": normalized_claims})
+        stage_index[stage_id] = normalized_obligations
+    require(set(stage_index) == {row.get("id") for row in case.get("stages", [])}, "dependency contract stage set differs")
+    return stage_index
+
+
+def participant_dependency_discovery(response, obligations):
+    claims = response.get("dependencyClaims")
+    if claims is None:
+        claims = []
+    require(isinstance(claims, list), "participant dependencyClaims must be an array")
+    normalized = [
+        dependency_claim(claim, f"participant dependency claim {index}", participant=True)
+        for index, claim in enumerate(claims)
+    ]
+    identities = [
+        (claim["relation"], tuple(claim["source"].items()), tuple(claim["target"].items()))
+        for claim in normalized
+    ]
+    require(len(identities) == len(set(identities)), "participant dependency claims are duplicated")
+    matches = []
+    matched_claim_indexes = set()
+    for obligation in obligations:
+        accepted = {
+            (
+                claim["relation"],
+                tuple(claim["source"].items()),
+                tuple(claim["target"].items()),
+            )
+            for claim in obligation["acceptedClaims"]
+        }
+        indexes = [index for index, identity in enumerate(identities) if identity in accepted]
+        if indexes:
+            matched_claim_indexes.add(indexes[0])
+        matches.append({"obligationId": obligation["id"], "covered": bool(indexes)})
+    covered = sum(row["covered"] for row in matches)
+    return {
+        "schema": "agentlab.dependency_discovery_stage_measurement.v1",
+        "claimCount": len(normalized),
+        "obligationCount": len(obligations),
+        "coveredObligationCount": covered,
+        "requiredObligationCoverage": covered / len(obligations),
+        "coverageQualified": covered == len(obligations),
+        "unadjudicatedClaimCount": len(normalized) - len(matched_claim_indexes),
+        "obligations": matches,
+        "participantClaims": normalized,
+        "precisionClaimed": False,
+        "authority": "hidden-revision-bound-program-fact-obligations-not-gold-path-imitation",
     }
 
 
@@ -418,6 +628,8 @@ def main():
     parser.add_argument("--authenticated-review-bundle", type=Path)
     parser.add_argument("--authenticated-review-repository")
     parser.add_argument("--authenticated-review-run-id", type=int)
+    parser.add_argument("--dependency-contract", type=Path)
+    parser.add_argument("--program-facts", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -429,6 +641,9 @@ def main():
     require(case.get("automaticPromotion") is False, "case must not auto-promote")
     source_set = case.get("sourceSetSha256")
     require(isinstance(source_set, str) and SHA256.fullmatch(source_set), "case source set is invalid")
+    dependency_stages = validate_dependency_discovery(
+        case, args.dependency_contract, args.program_facts
+    )
     require(manifest.get("schema") == "agentlab.multi_repo_manifest.v1", "unsupported manifest schema")
     oracle = args.oracle.resolve()
     require(oracle.is_file() and digest(oracle) == (case.get("oracle") or {}).get("sha256"), "Oracle digest mismatch")
@@ -542,17 +757,18 @@ def main():
             require(isinstance(check_ids, list) and check_ids, "stage checks are required")
             cumulative_checks.extend(check_ids)
             request_path = evidence / f"{stage_id}-request.json"
-            write_json(
-                request_path,
-                {
-                    "schema": "agentlab.multi_repo_assessed_stage_request.v1",
+            participant_request = {
+                    "schema": (
+                        "agentlab.multi_repo_assessed_stage_request.v2"
+                        if dependency_stages is not None
+                        else "agentlab.multi_repo_assessed_stage_request.v1"
+                    ),
                     "caseId": case["id"],
                     "title": case["title"],
                     "stageId": stage_id,
                     "demand": demand,
                     "sourceSetSha256": source_set,
                     "repositories": sorted(case_sources),
-                    "allowedEdits": sorted(allowed),
                     "priorStageCount": len(stage_results),
                     "oracleVisibleToParticipant": False,
                     "blindParticipantManifestSha256": (
@@ -560,8 +776,11 @@ def main():
                         if blind_dispatch is not None
                         else None
                     ),
-                },
-            )
+                    "editScopeVisibleToParticipant": dependency_stages is None,
+                }
+            if dependency_stages is None:
+                participant_request["allowedEdits"] = sorted(allowed)
+            write_json(request_path, participant_request)
             before = tree_state(workspace)
             participant_ok = False
             participant_error = None
@@ -655,6 +874,14 @@ def main():
                         oracle_receipt.get("pass")
                         if oracle_receipt and not oracle_error
                         else None,
+                    ),
+                    "dependencyDiscovery": (
+                        participant_dependency_discovery(
+                            response if participant_ok else {},
+                            dependency_stages[stage_id],
+                        )
+                        if dependency_stages is not None
+                        else None
                     ),
                 }
             )

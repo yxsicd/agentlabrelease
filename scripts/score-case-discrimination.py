@@ -164,6 +164,42 @@ def validate_process_measurement(value: Any, case_id: str, attempt_id: str) -> d
             fail(f"{case_id} {attempt_id} participant self-assessment Brier score is invalid")
         if not comparable and brier is not None:
             fail(f"{case_id} {attempt_id} participant self-assessment Brier score differs")
+    dependency = value.get("dependencyDiscovery")
+    if dependency is not None:
+        if (
+            not isinstance(dependency, dict)
+            or dependency.get("schema") != "agentlab.dependency_discovery_summary.v1"
+            or dependency.get("authority")
+            != "hidden-revision-bound-program-fact-obligations-not-gold-path-imitation"
+            or dependency.get("precisionClaimed") is not False
+        ):
+            fail(f"{case_id} {attempt_id} dependency discovery summary is invalid")
+        counts = (
+            "stageCount",
+            "measuredStageCount",
+            "claimCount",
+            "obligationCount",
+            "coveredObligationCount",
+            "unadjudicatedClaimCount",
+        )
+        if not all(
+            isinstance(dependency.get(field), int) and dependency[field] >= 0
+            for field in counts
+        ):
+            fail(f"{case_id} {attempt_id} dependency discovery counts are invalid")
+        obligations = dependency["obligationCount"]
+        covered = dependency["coveredObligationCount"]
+        if not (
+            dependency["stageCount"] == value["stageCount"]
+            and dependency["measuredStageCount"] <= dependency["stageCount"]
+            and covered <= obligations
+            and dependency["unadjudicatedClaimCount"] <= dependency["claimCount"]
+            and dependency.get("requiredObligationCoverage")
+            == (covered / obligations if obligations else None)
+            and dependency.get("coverageQualified")
+            is (bool(obligations) and covered == obligations)
+        ):
+            fail(f"{case_id} {attempt_id} dependency discovery derivation differs")
     return value
 
 
@@ -216,6 +252,17 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
         )
         self_assessment_agreement = sum(
             row["agreementCount"] for row in self_assessment_rows
+        )
+        dependency_rows = [
+            row["dependencyDiscovery"]
+            for row in process_rows
+            if isinstance(row.get("dependencyDiscovery"), dict)
+        ]
+        dependency_obligations = sum(
+            row["obligationCount"] for row in dependency_rows
+        )
+        dependency_covered = sum(
+            row["coveredObligationCount"] for row in dependency_rows
         )
         passed = sum(verdicts)
         count = len(attempt_rows)
@@ -285,6 +332,26 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
                         ),
                         "authority": "participant-claim-compared-with-operator-oracle-not-a-verdict",
                     },
+                    "dependencyDiscovery": {
+                        "measuredTrials": len(dependency_rows),
+                        "coverageRate": len(dependency_rows) / count,
+                        "measurementCoverageQualified": len(dependency_rows) == count,
+                        "claimCount": sum(row["claimCount"] for row in dependency_rows),
+                        "obligationCount": dependency_obligations,
+                        "coveredObligationCount": dependency_covered,
+                        "requiredObligationCoverage": (
+                            dependency_covered / dependency_obligations
+                            if dependency_obligations
+                            else None
+                        ),
+                        "coverageQualified": bool(dependency_obligations)
+                        and dependency_covered == dependency_obligations,
+                        "unadjudicatedClaimCount": sum(
+                            row["unadjudicatedClaimCount"] for row in dependency_rows
+                        ),
+                        "precisionClaimed": False,
+                        "authority": "hidden-revision-bound-program-fact-obligations-not-gold-path-imitation",
+                    },
                 },
             }
         )
@@ -323,6 +390,17 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
     )
     self_assessment_agreement = sum(
         row["agreementCount"] for row in self_assessment_profiles
+    )
+    dependency_profiles = [
+        row["processMeasurement"]["dependencyDiscovery"]
+        for row in profile_rows
+    ]
+    dependency_measured = sum(row["measuredTrials"] for row in dependency_profiles)
+    dependency_obligations = sum(
+        row["obligationCount"] for row in dependency_profiles
+    )
+    dependency_covered = sum(
+        row["coveredObligationCount"] for row in dependency_profiles
     )
     process_coverage_qualified = total > 0 and process_measured == total
     if len(profile_rows) >= 2:
@@ -391,6 +469,27 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
                     else None
                 ),
                 "authority": "participant-claim-compared-with-operator-oracle-not-a-verdict",
+            },
+            "dependencyDiscovery": {
+                "measuredAttemptCount": dependency_measured,
+                "coverageRate": dependency_measured / total if total else 0.0,
+                "measurementCoverageQualified": total > 0
+                and dependency_measured == total,
+                "claimCount": sum(row["claimCount"] for row in dependency_profiles),
+                "obligationCount": dependency_obligations,
+                "coveredObligationCount": dependency_covered,
+                "requiredObligationCoverage": (
+                    dependency_covered / dependency_obligations
+                    if dependency_obligations
+                    else None
+                ),
+                "coverageQualified": bool(dependency_obligations)
+                and dependency_covered == dependency_obligations,
+                "unadjudicatedClaimCount": sum(
+                    row["unadjudicatedClaimCount"] for row in dependency_profiles
+                ),
+                "precisionClaimed": False,
+                "authority": "hidden-revision-bound-program-fact-obligations-not-gold-path-imitation",
             },
             "note": "Operator-owned stage timing, change, scope and Oracle transition evidence. Optional participant self-assessment is a claim compared with the independent Oracle, not a verdict.",
         },

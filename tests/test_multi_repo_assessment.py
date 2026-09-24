@@ -83,6 +83,7 @@ class MultiRepoAssessmentTests(unittest.TestCase):
         case: pathlib.Path,
         profile: str,
         blind_dispatch: tuple[pathlib.Path, pathlib.Path] | None = None,
+        dependency_evidence: tuple[pathlib.Path, pathlib.Path] | None = None,
     ):
         output = root / "runs" / profile
         environment = dict(os.environ)
@@ -108,6 +109,11 @@ class MultiRepoAssessmentTests(unittest.TestCase):
                 "--blind-participant-root", str(blind_dispatch[0]),
                 "--blind-dispatch-receipt", str(blind_dispatch[1]),
             ])
+        if dependency_evidence is not None:
+            command.extend([
+                "--dependency-contract", str(dependency_evidence[0]),
+                "--program-facts", str(dependency_evidence[1]),
+            ])
         completed = subprocess.run(
             command,
             cwd=ROOT,
@@ -118,6 +124,80 @@ class MultiRepoAssessmentTests(unittest.TestCase):
         )
         self.assertEqual(completed.returncode, 0, completed.stderr)
         return output, json.loads((output / "summary.json").read_text())
+
+    def bind_dependency_discovery(
+        self, root: pathlib.Path, case_path: pathlib.Path
+    ) -> tuple[pathlib.Path, pathlib.Path]:
+        case = json.loads(case_path.read_text())
+        revisions = {row["id"]: row["revision"] for row in case["sources"]}
+        facts_path = root / "program-facts.jsonl"
+        facts = [
+            {
+                "id": "fact-service-contracts",
+                "kind": "module-dependency",
+                "repositoryId": "service",
+                "path": "src/reservation.ts",
+                "sourceRevision": revisions["service"],
+                "targetRepositoryId": "contracts",
+                "targetPath": "src/policy.ts",
+            },
+            {
+                "id": "fact-app-service",
+                "kind": "module-dependency",
+                "repositoryId": "app",
+                "path": "src/checkout.ts",
+                "sourceRevision": revisions["app"],
+                "targetRepositoryId": "service",
+                "targetPath": "src/reservation.ts",
+            },
+        ]
+        facts_path.write_text("".join(json.dumps(row) + "\n" for row in facts))
+        facts_sha = hashlib.sha256(facts_path.read_bytes()).hexdigest()
+        contract_path = root / "dependency-contract.json"
+        contract_path.write_text(json.dumps({
+            "schema": "agentlab.dependency_discovery_contract.v1",
+            "caseId": case["id"],
+            "sourceSetSha256": case["sourceSetSha256"],
+            "programFactsSha256": facts_sha,
+            "stages": [
+                {
+                    "stageId": "turn-1",
+                    "obligations": [{
+                        "id": "reservation-consumes-policy",
+                        "acceptedClaims": [{
+                            "relation": "module-dependency",
+                            "source": {"repositoryId": "service", "path": "src/reservation.ts"},
+                            "target": {"repositoryId": "contracts", "path": "src/policy.ts"},
+                            "factIds": ["fact-service-contracts"],
+                        }],
+                    }],
+                },
+                {
+                    "stageId": "turn-2",
+                    "obligations": [{
+                        "id": "checkout-consumes-reservation",
+                        "acceptedClaims": [{
+                            "relation": "module-dependency",
+                            "source": {"repositoryId": "app", "path": "src/checkout.ts"},
+                            "target": {"repositoryId": "service", "path": "src/reservation.ts"},
+                            "factIds": ["fact-app-service"],
+                        }],
+                    }],
+                },
+            ],
+            "precisionPolicy": "required-obligation-recall-only-extra-claims-unadjudicated",
+            "authority": "revision-bound-program-facts-reviewed-obligation-plan",
+            "automaticPromotion": False,
+        }))
+        case["dependencyDiscovery"] = {
+            "schema": "agentlab.dependency_discovery_binding.v1",
+            "contractSha256": hashlib.sha256(contract_path.read_bytes()).hexdigest(),
+            "programFactsSha256": facts_sha,
+            "participantEditScopeVisible": False,
+            "precisionClaimed": False,
+        }
+        case_path.write_text(json.dumps(case))
+        return contract_path, facts_path
 
     def prepare_blind_dispatch(self, root: pathlib.Path, case_path: pathlib.Path):
         case = json.loads(case_path.read_text())
@@ -341,6 +421,35 @@ class MultiRepoAssessmentTests(unittest.TestCase):
             decision = json.loads((output / "decision-package.json").read_text())
             self.assertTrue(decision["infrastructureAvailable"])
             self.assertFalse(decision["subjectTaskSucceeded"])
+
+    def test_hidden_revision_bound_dependency_discovery_is_measured(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            manifest, case = self.prepare(root)
+            dependency = self.bind_dependency_discovery(root, case)
+            output, summary = self.run_attempt(
+                root, manifest, case, "reference", dependency_evidence=dependency
+            )
+            measurement = summary["processMeasurement"]["dependencyDiscovery"]
+            self.assertTrue(measurement["coverageQualified"])
+            self.assertEqual(measurement["requiredObligationCoverage"], 1.0)
+            self.assertFalse(measurement["precisionClaimed"])
+            self.assertEqual(measurement["unadjudicatedClaimCount"], 0)
+            requests = list((output / "participant-evidence").glob("*-request.json"))
+            self.assertEqual(len(requests), 2)
+            for request in requests:
+                value = json.loads(request.read_text())
+                self.assertEqual(
+                    value["schema"],
+                    "agentlab.multi_repo_assessed_stage_request.v2",
+                )
+                self.assertFalse(value["editScopeVisibleToParticipant"])
+                self.assertNotIn("allowedEdits", value)
+            first = summary["stages"][0]["dependencyDiscovery"]
+            self.assertEqual(first["obligations"], [{
+                "obligationId": "reservation-consumes-policy",
+                "covered": True,
+            }])
 
     def test_blind_dispatch_is_bound_but_not_claimed_as_filesystem_isolation(self):
         with tempfile.TemporaryDirectory() as raw:

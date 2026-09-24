@@ -73,6 +73,8 @@ def project(
     method_revision: str,
     constructed_at: str,
     source_visibility: str,
+    dependency_contract_path: Path | None = None,
+    program_facts_path: Path | None = None,
 ) -> dict[str, Any]:
     require(REVISION.fullmatch(method_revision) is not None, "method revision must be exact")
     require(constructed_at, "constructed-at is required")
@@ -98,16 +100,49 @@ def project(
     require(isinstance(sources, list) and len(sources) >= 2, "multi-repository sources are required")
     require(isinstance(allowed, list) and allowed, "allowed edit surface is required")
     require(isinstance(stages, list) and stages, "participant stages are required")
+    dependency_binding = case.get("dependencyDiscovery")
+    dependency_enabled = dependency_binding is not None
+    require(
+        dependency_enabled
+        == (dependency_contract_path is not None and program_facts_path is not None),
+        "dependency discovery binding and evaluator evidence must be supplied together",
+    )
+    if dependency_enabled:
+        require(
+            isinstance(dependency_binding, dict)
+            and dependency_binding.get("schema")
+            == "agentlab.dependency_discovery_binding.v1",
+            "dependency discovery binding is invalid",
+        )
+        dependency_contract_path = regular(
+            dependency_contract_path, "dependency discovery contract"
+        )
+        program_facts_path = regular(program_facts_path, "program facts"
+        )
+        require(
+            digest(dependency_contract_path) == dependency_binding.get("contractSha256"),
+            "dependency discovery contract digest differs",
+        )
+        require(
+            digest(program_facts_path) == dependency_binding.get("programFactsSha256"),
+            "program facts digest differs",
+        )
     participant_task = {
-        "schema": "agentlab.multi_repo_participant_task.v1",
+        "schema": (
+            "agentlab.multi_repo_participant_task.v2"
+            if dependency_enabled
+            else "agentlab.multi_repo_participant_task.v1"
+        ),
         "caseId": case_id,
         "title": case.get("title"),
         "sourceSetSha256": source_set,
         "sources": sources,
-        "allowedEdits": allowed,
         "stages": [{"id": row.get("id"), "demand": row.get("demand")} for row in stages],
         "oracleVisibleToParticipant": False,
+        "editScopeVisibleToParticipant": not dependency_enabled,
     }
+    if not dependency_enabled:
+        participant_task["allowedEdits"] = allowed
     require(all(isinstance(row["id"], str) and isinstance(row["demand"], str) for row in participant_task["stages"]), "participant stage projection is invalid")
     with tempfile.TemporaryDirectory(prefix="agentlab-blind-projection-") as raw:
         source_root = Path(raw)
@@ -121,6 +156,12 @@ def project(
         shutil.copyfile(oracle_path, evaluator_root / "oracle.mjs")
         shutil.copyfile(calibration_path, evaluator_root / "calibration.json")
         shutil.copyfile(review_path, evaluator_root / "review.json")
+        if dependency_enabled:
+            shutil.copyfile(
+                dependency_contract_path,
+                evaluator_root / "dependency-discovery-contract.json",
+            )
+            shutil.copyfile(program_facts_path, evaluator_root / "program-facts.jsonl")
         evaluator_reference = evaluator_root / "reference"
         evaluator_reference.mkdir()
         reference_files = []
@@ -143,6 +184,24 @@ def project(
             {"path": "oracle.mjs", "role": "oracle", "sha256": digest(evaluator_root / "oracle.mjs")},
             {"path": "calibration.json", "role": "review", "sha256": digest(evaluator_root / "calibration.json")},
             {"path": "review.json", "role": "review", "sha256": digest(evaluator_root / "review.json")},
+            *(
+                [
+                    {
+                        "path": "dependency-discovery-contract.json",
+                        "role": "analysis",
+                        "sha256": digest(
+                            evaluator_root / "dependency-discovery-contract.json"
+                        ),
+                    },
+                    {
+                        "path": "program-facts.jsonl",
+                        "role": "analysis",
+                        "sha256": digest(evaluator_root / "program-facts.jsonl"),
+                    },
+                ]
+                if dependency_enabled
+                else []
+            ),
             *[
                 {"path": path.relative_to(evaluator_root).as_posix(), "role": "reference", "sha256": digest(path)}
                 for path in reference_files
@@ -157,10 +216,18 @@ def project(
             "participantFiles": participant_files,
             "evaluatorFiles": evaluator_files,
             "participantConstraints": {
-                "allowedEditPaths": sorted(f"{row['repositoryId']}/{row['path']}" for row in allowed),
                 "budget": {"stages": len(stages)},
                 "environmentRef": "release-locked-multi-repo-assessment",
                 "networkPolicy": "operator-gateway-only",
+                **(
+                    {}
+                    if dependency_enabled
+                    else {
+                        "allowedEditPaths": sorted(
+                            f"{row['repositoryId']}/{row['path']}" for row in allowed
+                        )
+                    }
+                ),
             },
             "freshness": {
                 "sourceVisibility": source_visibility,
@@ -185,6 +252,8 @@ def main() -> int:
     parser.add_argument("--method-revision", required=True)
     parser.add_argument("--constructed-at", required=True)
     parser.add_argument("--source-visibility", choices=("private-maintenance", "held-out-public-revision"), default="held-out-public-revision")
+    parser.add_argument("--dependency-contract", type=Path)
+    parser.add_argument("--program-facts", type=Path)
     args = parser.parse_args()
     try:
         receipt = project(
@@ -197,6 +266,8 @@ def main() -> int:
             method_revision=args.method_revision,
             constructed_at=args.constructed_at,
             source_visibility=args.source_visibility,
+            dependency_contract_path=args.dependency_contract,
+            program_facts_path=args.program_facts,
         )
     except (ProjectionError, OSError, ValueError) as error:
         print(f"multi-repository blind cut invalid: {error}", file=sys.stderr)

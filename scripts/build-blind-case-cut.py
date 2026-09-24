@@ -22,7 +22,7 @@ SHA256 = re.compile(r"[0-9a-f]{64}")
 REVISION = re.compile(r"[0-9a-f]{40}")
 TOKEN = re.compile(r"[A-Za-z0-9_.:-]+")
 PARTICIPANT_ROLES = {"task", "source", "context", "constraint"}
-EVALUATOR_ROLES = {"oracle", "reference", "preservation", "review"}
+EVALUATOR_ROLES = {"oracle", "reference", "preservation", "review", "analysis"}
 
 
 class BlindCutError(ValueError):

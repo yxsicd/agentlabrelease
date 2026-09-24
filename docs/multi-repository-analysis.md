@@ -322,11 +322,38 @@ calibration at participant, case and suite levels. The claim never changes the
 Oracle verdict or promotion eligibility, and adapters must not manufacture a
 confidence value from process success.
 
-This is not yet a dependency-discovery score. The current staged request shows
-the reviewed allowed-edit surface, while a reference patch's touched paths are
-only one possible implementation. A valid future measure needs a hidden,
-revision-bound program-analysis contract that accepts behaviorally equivalent
-dependency explanations instead of rewarding path imitation.
+Dependency discovery now has a separate v2 measurement path. The contract
+builder accepts a reviewed obligation plan containing stable program-fact IDs,
+independently verifies every fact against the case's exact repository revision,
+and derives claim endpoints from `module-dependency` facts. An obligation may
+name several accepted fact IDs, so supported alternative dependency routes can
+receive credit. The derived case binder freezes the contract and fact-file
+digests without changing the original calibrated case artifact.
+
+```sh
+python3 scripts/build-dependency-discovery-contract.py \
+  --case case.json \
+  --program-facts workspace_facts.jsonl \
+  --plan dependency-plan.json \
+  --output dependency-contract.json
+python3 scripts/bind-dependency-discovery-case.py \
+  --case case.json \
+  --dependency-contract dependency-contract.json \
+  --program-facts workspace_facts.jsonl \
+  --output dependency-aware-case.json
+```
+
+For a dependency-aware case, blind-cut preparation keeps the contract and
+program facts in the evaluator bundle. The participant task, participant
+manifest and stage requests omit allowed edit paths; the Harness still enforces
+the private scope after each turn. Participant `dependencyClaims` identify a
+relation plus source/target repository paths and rationale. The Harness matches
+them against hidden obligations before reporting required-obligation coverage.
+Extra claims are retained as unadjudicated and `precisionClaimed=false`; a gold
+patch's touched paths are never treated as the unique answer. Collection,
+discrimination and suite composition preserve this metric separately from the
+functional Oracle verdict. Current evidence is deterministic protocol coverage,
+not proof that real Agents are discriminated by it.
 
 ### Run the assessed campaign through the device gate
 

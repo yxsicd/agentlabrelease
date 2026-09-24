@@ -33,6 +33,25 @@ export async function checkout(tier, backend) {
 }
 """
 
+DEPENDENCY_CLAIMS = {
+    "turn-1": [
+        {
+            "relation": "module-dependency",
+            "source": {"repositoryId": "service", "path": "src/reservation.ts"},
+            "target": {"repositoryId": "contracts", "path": "src/policy.ts"},
+            "rationale": "The reservation loop consumes the retry policy contract.",
+        }
+    ],
+    "turn-2": [
+        {
+            "relation": "module-dependency",
+            "source": {"repositoryId": "app", "path": "src/checkout.ts"},
+            "target": {"repositoryId": "service", "path": "src/reservation.ts"},
+            "rationale": "Checkout renders the reservation result and attempt count.",
+        }
+    ],
+}
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -64,6 +83,7 @@ def main():
                         "expectedOraclePass": profile != "baseline",
                         "confidence": 0.9,
                     },
+                    "dependencyClaims": DEPENDENCY_CLAIMS[stage],
                 }
             ),
             flush=True,

@@ -96,6 +96,19 @@ class CaseDiscriminationTests(unittest.TestCase):
                 "coverageQualified": True,
                 "authority": "participant-claim-compared-with-operator-oracle-not-a-verdict",
             },
+            "dependencyDiscovery": {
+                "schema": "agentlab.dependency_discovery_summary.v1",
+                "stageCount": 2,
+                "measuredStageCount": 2,
+                "claimCount": 3,
+                "obligationCount": 2,
+                "coveredObligationCount": 2,
+                "requiredObligationCoverage": 1.0,
+                "coverageQualified": True,
+                "unadjudicatedClaimCount": 1,
+                "precisionClaimed": False,
+                "authority": "hidden-revision-bound-program-fact-obligations-not-gold-path-imitation",
+            },
         }
         case = self.value["cases"][0]
         case["attempts"] = []
@@ -125,6 +138,12 @@ class CaseDiscriminationTests(unittest.TestCase):
             row["processMeasurement"]["participantSelfAssessment"]["meanBrierScore"],
             0.04,
         )
+        dependency = row["processMeasurement"]["dependencyDiscovery"]
+        self.assertTrue(dependency["measurementCoverageQualified"])
+        self.assertTrue(dependency["coverageQualified"])
+        self.assertEqual(dependency["requiredObligationCoverage"], 1.0)
+        self.assertEqual(dependency["unadjudicatedClaimCount"], 10)
+        self.assertFalse(dependency["precisionClaimed"])
         self.assertTrue(row["metrics"]["observedExtremePassRateWilson95Separated"])
         strong = next(
             profile

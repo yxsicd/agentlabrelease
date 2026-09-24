@@ -211,6 +211,69 @@ def normalize_process_measurement(
             }
             if claim != expected_claim:
                 fail(f"{attempt_id} participant self-assessment derivation differs")
+        dependency = stage.get("dependencyDiscovery")
+        if dependency is not None:
+            if (
+                not isinstance(dependency, dict)
+                or dependency.get("schema")
+                != "agentlab.dependency_discovery_stage_measurement.v1"
+                or dependency.get("authority")
+                != "hidden-revision-bound-program-fact-obligations-not-gold-path-imitation"
+                or dependency.get("precisionClaimed") is not False
+            ):
+                fail(f"{attempt_id} dependency discovery measurement is invalid")
+            obligations = dependency.get("obligations")
+            claims = dependency.get("participantClaims")
+            if not isinstance(obligations, list) or not isinstance(claims, list):
+                fail(f"{attempt_id} dependency discovery evidence is absent")
+            for claim_index, dependency_claim in enumerate(claims):
+                if (
+                    not isinstance(dependency_claim, dict)
+                    or set(dependency_claim)
+                    != {"relation", "source", "target", "rationale"}
+                    or not isinstance(dependency_claim.get("relation"), str)
+                    or not dependency_claim["relation"]
+                    or not isinstance(dependency_claim.get("rationale"), str)
+                    or not dependency_claim["rationale"].strip()
+                ):
+                    fail(f"{attempt_id} dependency claim {claim_index} is invalid")
+                for endpoint_name in ("source", "target"):
+                    endpoint = dependency_claim.get(endpoint_name)
+                    if (
+                        not isinstance(endpoint, dict)
+                        or set(endpoint) != {"repositoryId", "path"}
+                        or not all(
+                            isinstance(endpoint.get(field), str)
+                            and endpoint[field]
+                            for field in ("repositoryId", "path")
+                        )
+                    ):
+                        fail(
+                            f"{attempt_id} dependency claim {claim_index} {endpoint_name} is invalid"
+                        )
+            if (
+                dependency.get("claimCount") != len(claims)
+                or dependency.get("obligationCount") != len(obligations)
+                or not obligations
+                or not all(
+                    isinstance(row, dict)
+                    and set(row) == {"obligationId", "covered"}
+                    and isinstance(row.get("obligationId"), str)
+                    and isinstance(row.get("covered"), bool)
+                    for row in obligations
+                )
+            ):
+                fail(f"{attempt_id} dependency discovery denominators differ")
+            covered = sum(row["covered"] for row in obligations)
+            if (
+                dependency.get("coveredObligationCount") != covered
+                or dependency.get("requiredObligationCoverage")
+                != covered / len(obligations)
+                or dependency.get("coverageQualified") is not (covered == len(obligations))
+                or not isinstance(dependency.get("unadjudicatedClaimCount"), int)
+                or not 0 <= dependency["unadjudicatedClaimCount"] <= len(claims)
+            ):
+                fail(f"{attempt_id} dependency discovery derivation differs")
     oracle_outcomes = [
         stage["oraclePass"]
         for stage in stages
@@ -271,6 +334,29 @@ def normalize_process_measurement(
             ),
             "coverageQualified": len(comparable) == len(stages),
             "authority": "participant-claim-compared-with-operator-oracle-not-a-verdict",
+        }
+    dependency_rows = [
+        stage.get("dependencyDiscovery")
+        for stage in stages
+        if isinstance(stage.get("dependencyDiscovery"), dict)
+    ]
+    if dependency_rows:
+        obligations = sum(row["obligationCount"] for row in dependency_rows)
+        covered = sum(row["coveredObligationCount"] for row in dependency_rows)
+        expected["dependencyDiscovery"] = {
+            "schema": "agentlab.dependency_discovery_summary.v1",
+            "stageCount": len(stages),
+            "measuredStageCount": len(dependency_rows),
+            "claimCount": sum(row["claimCount"] for row in dependency_rows),
+            "obligationCount": obligations,
+            "coveredObligationCount": covered,
+            "requiredObligationCoverage": covered / obligations if obligations else None,
+            "coverageQualified": bool(obligations) and covered == obligations,
+            "unadjudicatedClaimCount": sum(
+                row["unadjudicatedClaimCount"] for row in dependency_rows
+            ),
+            "precisionClaimed": False,
+            "authority": "hidden-revision-bound-program-fact-obligations-not-gold-path-imitation",
         }
     if process != expected:
         fail(f"{attempt_id} process measurement differs from retained stages")

@@ -70,6 +70,49 @@ class PrepareMultiRepoBlindCutTests(unittest.TestCase):
             self.assertTrue((output / "evaluator/oracle.mjs").is_file())
             self.assertTrue((output / "evaluator/reference/contracts.ts").is_file())
 
+    def test_dependency_contract_remains_evaluator_only_and_hides_edit_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = fixture(root)
+            facts = root / "program-facts.jsonl"
+            facts.write_text(json.dumps({
+                "id": "fact-app-contracts",
+                "kind": "module-dependency",
+                "repositoryId": "app",
+                "path": "src/app.ts",
+                "sourceRevision": "2" * 40,
+            }) + "\n")
+            facts_sha = hashlib.sha256(facts.read_bytes()).hexdigest()
+            contract = root / "dependency-contract.json"
+            contract.write_text(json.dumps({
+                "schema": "agentlab.dependency_discovery_contract.v1",
+                "programFactsSha256": facts_sha,
+            }))
+            case = json.loads(paths["case"].read_text())
+            case["dependencyDiscovery"] = {
+                "schema": "agentlab.dependency_discovery_binding.v1",
+                "contractSha256": hashlib.sha256(contract.read_bytes()).hexdigest(),
+                "programFactsSha256": facts_sha,
+            }
+            paths["case"].write_text(json.dumps(case))
+            output = root / "cut"
+            MODULE.project(
+                case_path=paths["case"], oracle_path=paths["oracle"],
+                reference_root=paths["reference"], calibration_path=paths["calibration"],
+                review_path=paths["review"], output=output, method_revision="b" * 40,
+                constructed_at="2026-09-24T00:00:00Z", source_visibility="held-out-public-revision",
+                dependency_contract_path=contract, program_facts_path=facts,
+            )
+            task = json.loads((output / "participant/task.json").read_text())
+            manifest = json.loads((output / "participant/manifest.json").read_text())
+            self.assertEqual(task["schema"], "agentlab.multi_repo_participant_task.v2")
+            self.assertFalse(task["editScopeVisibleToParticipant"])
+            self.assertNotIn("allowedEdits", task)
+            self.assertNotIn("allowedEditPaths", manifest["constraints"])
+            self.assertTrue((output / "evaluator/dependency-discovery-contract.json").is_file())
+            self.assertTrue((output / "evaluator/program-facts.jsonl").is_file())
+            self.assertNotIn("dependency", json.dumps(manifest))
+
     def test_rejects_oracle_drift(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

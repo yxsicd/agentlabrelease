@@ -23,7 +23,7 @@ SCORER = load_module("suite_fixture_discrimination", ROOT / "scripts/score-case-
 SUITE = load_module("agent_suite_scorecard", ROOT / "scripts/compose-agent-suite-scorecard.py")
 
 
-def process(*, self_assessment: bool = False) -> dict:
+def process(*, self_assessment: bool = False, dependency_discovery: bool = False) -> dict:
     value = {
         "schema": "agentlab.assessment_process_measurement.v1",
         "stageCount": 2,
@@ -53,6 +53,20 @@ def process(*, self_assessment: bool = False) -> dict:
             "meanBrierScore": 0.04,
             "coverageQualified": True,
             "authority": "participant-claim-compared-with-operator-oracle-not-a-verdict",
+        }
+    if dependency_discovery:
+        value["dependencyDiscovery"] = {
+            "schema": "agentlab.dependency_discovery_summary.v1",
+            "stageCount": 2,
+            "measuredStageCount": 2,
+            "claimCount": 2,
+            "obligationCount": 2,
+            "coveredObligationCount": 2,
+            "requiredObligationCoverage": 1.0,
+            "coverageQualified": True,
+            "unadjudicatedClaimCount": 0,
+            "precisionClaimed": False,
+            "authority": "hidden-revision-bound-program-fact-obligations-not-gold-path-imitation",
         }
     return value
 
@@ -157,6 +171,7 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         reverse: bool = False,
         process_evidence: bool = True,
         self_assessment: bool = False,
+        dependency_discovery: bool = False,
     ) -> Path:
         calibration = {
             "infrastructureValid": True,
@@ -187,7 +202,8 @@ class AgentSuiteScorecardTests(unittest.TestCase):
                 }
                 if process_evidence:
                     attempt["processMeasurement"] = process(
-                        self_assessment=self_assessment
+                        self_assessment=self_assessment,
+                        dependency_discovery=dependency_discovery,
                     )
                 attempts.append(attempt)
         report = SCORER.build_report(
@@ -248,6 +264,12 @@ class AgentSuiteScorecardTests(unittest.TestCase):
             all(row["strongestWeakestWilson95Separated"] for row in value["cases"])
         )
         self.assertFalse(
+            value["qualification"]["dependencyDiscoveryMeasurementQualified"]
+        )
+        self.assertFalse(
+            value["qualification"]["dependencyDiscoveryCoverageQualified"]
+        )
+        self.assertFalse(
             value["qualification"]["participantSelfAssessmentMeasurementQualified"]
         )
         self.assertTrue(
@@ -302,6 +324,29 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         failed = next(row for row in value["cases"] if row["caseId"] == "case-b")
         self.assertFalse(failed["expectedCapabilityOrderQualified"])
         self.assertFalse(failed["scorecardQualified"])
+
+    def test_dependency_discovery_is_reported_without_becoming_a_verdict(self) -> None:
+        for index, case_id in enumerate(self.source_sets, 1):
+            self.reports[case_id] = self.write_discrimination(
+                case_id, index, dependency_discovery=True
+            )
+            self.write_attestation(
+                self.report_attestations[case_id], self.reports[case_id], 2000 + index
+            )
+        self.write_manifest()
+        value = SUITE.build_scorecard(self.manifest)
+        self.assertTrue(value["qualification"]["suiteMeasurementQualified"])
+        self.assertTrue(
+            value["qualification"]["dependencyDiscoveryMeasurementQualified"]
+        )
+        self.assertTrue(
+            value["qualification"]["dependencyDiscoveryCoverageQualified"]
+        )
+        self.assertTrue(all(
+            row["dependencyDiscoveryRequiredObligationCoverage"] == 1.0
+            and row["dependencyDiscoveryUnadjudicatedClaimCount"] == 0
+            for row in value["cases"]
+        ))
 
     def test_missing_process_evidence_is_explicitly_unqualified(self) -> None:
         self.reports["case-b"] = self.write_discrimination(

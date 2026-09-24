@@ -322,6 +322,24 @@ class CollectCaseAttemptsTests(unittest.TestCase):
                         "brierScore": 0.03999999999999998,
                         "authority": "participant-claim-not-a-verdict",
                     },
+                    "dependencyDiscovery": {
+                        "schema": "agentlab.dependency_discovery_stage_measurement.v1",
+                        "claimCount": 1,
+                        "obligationCount": 1,
+                        "coveredObligationCount": 1,
+                        "requiredObligationCoverage": 1.0,
+                        "coverageQualified": True,
+                        "unadjudicatedClaimCount": 0,
+                        "obligations": [{"obligationId": "dependency-one", "covered": True}],
+                        "participantClaims": [{
+                            "relation": "module-dependency",
+                            "source": {"repositoryId": "app", "path": "src/app.ts"},
+                            "target": {"repositoryId": "contracts", "path": "src/policy.ts"},
+                            "rationale": "The app consumes the shared policy.",
+                        }],
+                        "precisionClaimed": False,
+                        "authority": "hidden-revision-bound-program-fact-obligations-not-gold-path-imitation",
+                    },
                 }
             ]
             process = {
@@ -351,6 +369,19 @@ class CollectCaseAttemptsTests(unittest.TestCase):
                     "meanBrierScore": 0.03999999999999998,
                     "coverageQualified": True,
                     "authority": "participant-claim-compared-with-operator-oracle-not-a-verdict",
+                },
+                "dependencyDiscovery": {
+                    "schema": "agentlab.dependency_discovery_summary.v1",
+                    "stageCount": 1,
+                    "measuredStageCount": 1,
+                    "claimCount": 1,
+                    "obligationCount": 1,
+                    "coveredObligationCount": 1,
+                    "requiredObligationCoverage": 1.0,
+                    "coverageQualified": True,
+                    "unadjudicatedClaimCount": 0,
+                    "precisionClaimed": False,
+                    "authority": "hidden-revision-bound-program-fact-obligations-not-gold-path-imitation",
                 },
             }
             common = {

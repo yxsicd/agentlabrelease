@@ -164,10 +164,16 @@ smaller than SWE-bench's:
    independently report Oracle agreement and Brier score. This closes the
    mechanism for subjective/objective consistency, but the shipped mock is not
    evidence about a real model and adapters must not synthesize an unreported
-   claim. Dependency-discovery quality remains open: the participant currently
-   sees the allowed edit surface, and historical/gold touched paths are not a
-   unique correct dependency answer. Equivalent coverage for standalone or
-   non-emulator device adapters also remains open.
+   claim. A new dependency-discovery v2 path removes the allowed-edit surface
+   from the participant task, manifest and stage request. Hidden obligations
+   are derived from exact-revision program facts, may accept several supported
+   dependency relations, score required-obligation recall, and leave extra
+   claims unadjudicated instead of inventing precision. This closes the
+   mechanism and deterministic fixture, not real-model evidence: no repeated
+   real Agent campaign has yet established dependency-discovery discrimination.
+   Historical/gold touched paths remain explicitly ineligible as a unique
+   answer. Equivalent coverage for standalone or non-emulator device adapters
+   also remains open.
 10. Real-source candidate precision remains uneven. The largest module-level
     clusters span 1,567 to 3,018 files, far wider than SWE-bench's issue-level
     repair contracts. The new API-call pass proves that one `@kit.ArkWeb`

@@ -204,6 +204,18 @@ def validate_discrimination(
     brier = self_assessment.get("meanBrierScore")
     require((comparable == 0 and brier is None) or (comparable > 0 and isinstance(brier, (int, float)) and not isinstance(brier, bool) and 0.0 <= brier <= 1.0), f"{case_id} participant self-assessment Brier score is invalid")
     require(self_assessment.get("authority") == "participant-claim-compared-with-operator-oracle-not-a-verdict", f"{case_id} participant self-assessment authority differs")
+    dependency = process.get("dependencyDiscovery")
+    require(isinstance(dependency, dict), f"{case_id} dependency discovery measurement is absent")
+    require(isinstance(dependency.get("measuredAttemptCount"), int) and 0 <= dependency["measuredAttemptCount"] <= process["validAttemptCount"], f"{case_id} dependency discovery denominator is invalid")
+    require(dependency.get("coverageRate") == dependency["measuredAttemptCount"] / process["validAttemptCount"], f"{case_id} dependency discovery measurement coverage differs")
+    require(dependency.get("measurementCoverageQualified") is (dependency["measuredAttemptCount"] == process["validAttemptCount"]), f"{case_id} dependency discovery measurement qualification differs")
+    obligation_count = dependency.get("obligationCount")
+    covered_count = dependency.get("coveredObligationCount")
+    require(isinstance(obligation_count, int) and obligation_count >= 0 and isinstance(covered_count, int) and 0 <= covered_count <= obligation_count, f"{case_id} dependency discovery obligation counts are invalid")
+    require(dependency.get("requiredObligationCoverage") == (covered_count / obligation_count if obligation_count else None), f"{case_id} dependency discovery obligation coverage differs")
+    require(dependency.get("coverageQualified") is (bool(obligation_count) and covered_count == obligation_count), f"{case_id} dependency discovery qualification differs")
+    require(dependency.get("precisionClaimed") is False, f"{case_id} dependency discovery cannot claim precision")
+    require(dependency.get("authority") == "hidden-revision-bound-program-fact-obligations-not-gold-path-imitation", f"{case_id} dependency discovery authority differs")
     return value, row
 
 
@@ -343,6 +355,10 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
         process_qualified = row["processMeasurement"]["coverageQualified"] is True
         self_assessment = row["processMeasurement"]["participantSelfAssessment"]
         self_assessment_qualified = self_assessment["coverageQualified"] is True
+        dependency = row["processMeasurement"]["dependencyDiscovery"]
+        dependency_measurement_qualified = (
+            dependency["measurementCoverageQualified"] is True
+        )
         outcome_qualified = row.get("eligible") is True
         qualified = (
             review_qualified
@@ -365,6 +381,10 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
                 "participantSelfAssessmentCoverageQualified": self_assessment_qualified,
                 "participantSelfAssessmentAgreementRate": self_assessment["agreementRate"],
                 "participantSelfAssessmentMeanBrierScore": self_assessment["meanBrierScore"],
+                "dependencyDiscoveryMeasurementCoverageQualified": dependency_measurement_qualified,
+                "dependencyDiscoveryCoverageQualified": dependency["coverageQualified"],
+                "dependencyDiscoveryRequiredObligationCoverage": dependency["requiredObligationCoverage"],
+                "dependencyDiscoveryUnadjudicatedClaimCount": dependency["unadjudicatedClaimCount"],
                 "expectedCapabilityOrderQualified": expected_order,
                 "strongestMinusWeakestPassRate": strongest["passRate"] - weakest["passRate"],
                 "strongestWeakestWilson95Separated": interval_separated,
@@ -405,6 +425,12 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
     self_assessment_measurement_qualified = all(
         row["participantSelfAssessmentCoverageQualified"] for row in case_rows
     )
+    dependency_discovery_measurement_qualified = all(
+        row["dependencyDiscoveryMeasurementCoverageQualified"] for row in case_rows
+    )
+    dependency_discovery_coverage_qualified = all(
+        row["dependencyDiscoveryCoverageQualified"] for row in case_rows
+    )
     return {
         "schema": SCORECARD_SCHEMA,
         "suiteId": suite_id,
@@ -433,6 +459,8 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
         "qualification": {
             "suiteMeasurementQualified": measurement_qualified,
             "participantSelfAssessmentMeasurementQualified": self_assessment_measurement_qualified,
+            "dependencyDiscoveryMeasurementQualified": dependency_discovery_measurement_qualified,
+            "dependencyDiscoveryCoverageQualified": dependency_discovery_coverage_qualified,
             "qualifiedCaseRate": qualified_count / case_count,
             "qualifiedCaseRateWilson95": scorer.wilson_interval(qualified_count, case_count),
             "populationRepresentativenessQualified": False,
