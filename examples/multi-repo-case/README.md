@@ -352,6 +352,16 @@ a blocked direct external connection are required before
 `networkEgressIsolationQualified=true`. Freshness, semantic leakage and
 contamination remain review-required, so `blindAssessmentQualified` stays false.
 
+For a private or held-out cut, `scripts/review-blind-case-cut.py` can freeze the
+exact participant/evaluator identities, collect at least two
+constructor-distinct reviewer records and adjudicate semantic leakage,
+contamination risk, specification fairness and Oracle breadth. Unknowns and
+reviewer disagreement fail closed. The CLI records distinct identities but does
+not authenticate them, so authenticated reviewer and artifact provenance remain
+a separate gate. This review chain also does not establish model-training
+exclusion or unseen-Agent eligibility, and the public fixture ships no real
+review decisions.
+
 Copy the frozen case into campaign evidence as
 `multi-repo-evaluation-case.json` and its exact calibration summary as
 `multi-repo-calibration.json`. For a constructed case, also copy the exact

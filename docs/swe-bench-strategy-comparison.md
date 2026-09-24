@@ -114,8 +114,11 @@ smaller than SWE-bench's:
    and separates a strong and weak participant, but does not establish
    population-level discrimination, variance or repeatability across devices.
 3. The construction participant, deterministic intent checks and maintainer
-   review exist, but there is no Verified-like multi-reviewer qualification
-   dataset or measured inter-reviewer disagreement.
+   review exist. A new exact-digest review protocol now requires at least two
+   constructor-distinct reviewer records, four explicit verdict dimensions and
+   an adjudicated disagreement rate. Reviewer identity authentication remains a
+   separate fail-closed gate. There is still no representative Verified-like
+   reviewed dataset or measured population-level reviewer disagreement.
 4. The independent Oracle is digest-bound. One real Harmony UI candidate now
    has a controlled `FAIL_TO_PASS` replay: the frozen baseline stays on
    `pages/Index`, while a one-line page-registration variant reaches
@@ -230,8 +233,13 @@ digest-bound receipt. The participant manifest cannot enumerate evaluator
 files, the evaluator binds the exact participant manifest, and validation
 rejects extra files, symlinks, digest drift and byte-identical cross-bundle
 content. This closes the structural hidden-Oracle packaging gap. It does not
-perform semantic-leak or contamination review and therefore marks every v1 cut
-ineligible for unseen-Agent discrimination until later independent gates close.
+automatically perform semantic-leak or contamination review. The separate
+review protocol freezes the exact cut identities, rejects a reviewer identifier
+equal to the recorded constructor, requires at least two unique decision
+records, and fails closed on unknowns or disagreement. The CLI does not
+authenticate those identities, so consensus is recorded without qualifying a
+blind pilot. It also cannot prove model-training exclusion; every v1
+adjudication therefore remains ineligible for unseen-Agent discrimination.
 The reviewed multi-repository workflow now produces that cut, stages only its
 participant projection, and binds the exact participant manifest into every
 stage request and attempt decision. Assessed Pi turns now execute in a
@@ -252,10 +260,10 @@ underspecified or contaminated case.
 
 ## Ordered implementation consequences
 
-1. Use the implemented blind-cut and validated least-mounted participant runtime
-   on a new private or held-out case set, then add contamination, semantic-leak
-   and stronger independent review receipts; unknown evidence remains
-   review-required, never qualified.
+1. Use the implemented blind-cut, least-mounted participant runtime and
+   multi-reviewer adjudication on a new private or held-out case set; add
+   authenticated reviewer/artifact provenance and retain model-training
+   exclusion as unknown unless separately evidenced.
 2. Broaden `PASS_TO_PASS` coverage beyond the candidate's three qualified
    routes, independently review Oracle breadth/fairness, and only then accept a
    reference repair. The device campaign must extend, rather than
@@ -264,7 +272,8 @@ underspecified or contaminated case.
 3. Exercise the reviewed feedback-to-analysis bridge on a real source update
    and prove that the successor case retains prior failure lineage without
    mutating the old case.
-4. Add independent multi-reviewer adjudication and disagreement measurement;
+4. Exercise the implemented multi-reviewer adjudication across a representative
+   case sample and report per-dimension and population-level disagreement;
    default unknown evidence to review-required, never qualified.
 5. Localize at least five of the 22 real shared-contract clusters into narrow
    change hypotheses, then add repair/preservation checks and independent

@@ -101,6 +101,65 @@ lacks contamination and semantic-leak qualification, so
 `blindAssessmentQualified` remains false. Host-process and mock runs without
 validated runtime receipts continue to report filesystem isolation false.
 
+## Independent review and adjudication
+
+The release also provides an immutable multi-reviewer chain for the judgments
+that cannot be established by container topology alone. First freeze an exact
+request from the already-built cut:
+
+```bash
+python3 scripts/review-blind-case-cut.py prepare \
+  --cut /private/cuts/case-001 \
+  --constructor case-author \
+  --output /operator-evidence/case-001-review-request.json
+```
+
+Each recorded reviewer must be different from the recorded constructor and must bind the
+exact request digest, reviewer-supplied evidence digests and a verdict for all four
+dimensions: semantic leakage, contamination risk, specification fairness and
+Oracle breadth. Verdicts are `qualified`, `rejected` or `unknown`; omitted or
+unknown evidence never passes.
+
+```bash
+python3 scripts/review-blind-case-cut.py decide \
+  --request /operator-evidence/case-001-review-request.json \
+  --expected-request-sha256 '<reviewed digest>' \
+  --reviewer reviewer-a \
+  --semantic-leakage qualified \
+  --contamination-risk qualified \
+  --specification-fairness qualified \
+  --oracle-breadth qualified \
+  --evidence-sha256 '<retained evidence digest>' \
+  --rationale '<independent rationale>' \
+  --output /operator-evidence/case-001-review-a.json
+```
+
+`adjudicate` requires at least two unique recorded reviewer identities, retains
+every decision digest, and reports per-dimension unanimity plus an exact
+disagreement rate. Review consensus qualifies only when every recorded reviewer
+marks every dimension qualified. Any rejection, unknown or disagreement fails
+closed.
+
+```bash
+python3 scripts/review-blind-case-cut.py adjudicate \
+  --cut /private/cuts/case-001 \
+  --request /operator-evidence/case-001-review-request.json \
+  --review /operator-evidence/case-001-review-a.json \
+  --review /operator-evidence/case-001-review-b.json \
+  --output /operator-evidence/case-001-adjudication.json
+```
+
+The CLI can prove exact lineage, distinct recorded identifiers and consensus;
+it cannot authenticate that those identifiers belong to different people.
+Every v1 adjudication therefore keeps
+`reviewerIdentityAuthenticationQualified=false`,
+`blindPilotReviewQualified=false`,
+`modelTrainingExclusionQualified=false`,
+`eligibleForUnseenAgentDiscrimination=false` and `automaticPromotion=false`.
+Its next gate is authenticated reviewer identity plus artifact provenance. The
+public fixture has regression coverage for the protocol but no real review
+decisions, so its current assessment qualification remains unchanged.
+
 ## Evidence boundary
 
 A structurally valid cut is eligible for a blind pilot only. It is not yet
@@ -109,8 +168,8 @@ status as declaration-only; the builder cannot prove who previously accessed
 the source or whether related bytes entered model training. That later gate
 requires:
 
-1. independent semantic-leak review of the participant task and source;
-2. contamination review for the selected participant/model boundary;
+1. completed multi-reviewer semantic-leak review of the participant task and source;
+2. completed contamination-risk review for the selected participant/model boundary;
 3. independent specification, Oracle breadth and reference review;
 4. frozen participant/model/environment identities and repeated valid trials;
 5. a new maintenance cut after observing operational outcomes.
