@@ -90,6 +90,13 @@ bounded operations are `wait-text`, `tap`, `swipe`, `key`, `sleep`,
 bundle before installation so state from a prior case cannot silently satisfy
 the Oracle.
 
+Version 2 results also expose `assessmentStatus`, `infrastructureAvailable`,
+`subjectTaskSucceeded` and `failureClass`. A failed bounded UI assertion is an
+assessed task failure. Boot, HDC, layout-transfer and input-control failures are
+infrastructure failures and carry a null task verdict. This distinction is
+preserved when `collect-case-attempts.py` ingests emulator attempts for
+cross-participant discrimination scoring.
+
 The output directory is immutable-by-convention: the runner refuses to
 overwrite it. `result.json` references the raw install, bundle, launch, process,
 screenshot and SmartPerf artifacts and binds the HAP and screenshot SHA-256.

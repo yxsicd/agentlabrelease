@@ -89,11 +89,17 @@ class HarmonyEmulatorReleaseTests(unittest.TestCase):
         self.assertIn("ui-actions.tsv", source)
         self.assertIn("ui-checks.tsv", source)
         self.assertIn('"oracleStatus":"%s"', source)
+        self.assertIn('"assessmentStatus":"%s"', source)
+        self.assertIn('"infrastructureAvailable":%s', source)
+        self.assertIn('"subjectTaskSucceeded":%s', source)
+        self.assertIn('infrastructure_failure "UI layout dump failed"', source)
+        self.assertIn('oracle_failure "UI oracle check failed: $a"', source)
 
     def test_asset_model_exports_harmony_evaluation_instances(self) -> None:
         source = ASSET_MODEL.read_text(encoding="utf-8")
         self.assertIn("agentlab.harmony_emulator_case_result.v2", source)
         self.assertIn('"device_assessments"', source)
+        self.assertIn('"subjectTaskSucceeded":result["subjectTaskSucceeded"]', source)
         self.assertIn("operator-owned-device-runner", source)
         self.assertIn("operator-owned-ui-oracle", source)
         self.assertIn('"evidence_files"', source)

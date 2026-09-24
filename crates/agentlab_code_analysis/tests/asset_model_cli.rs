@@ -295,6 +295,10 @@ fn exports_harmony_device_checks_and_raw_evidence() {
             "scenarioId":"dismiss",
             "scenarioSha256":"scenario",
             "oracleStatus":"passed",
+            "assessmentStatus":"assessed",
+            "infrastructureAvailable":true,
+            "subjectTaskSucceeded":true,
+            "failureClass":"none",
             "profileStatus":"collected",
             "powerThermalAuthority":"unavailable_on_emulator"
         }),
@@ -332,6 +336,10 @@ fn exports_harmony_device_checks_and_raw_evidence() {
     assert_eq!(assessments.len(), 1);
     assert_eq!(assessments[0]["functionalPassed"], true);
     assert_eq!(assessments[0]["oraclePassed"], true);
+    assert_eq!(assessments[0]["assessmentStatus"], "assessed");
+    assert_eq!(assessments[0]["infrastructureAvailable"], true);
+    assert_eq!(assessments[0]["subjectTaskSucceeded"], true);
+    assert_eq!(assessments[0]["failureClass"], "none");
     assert_eq!(assessments[0]["profileCollected"], true);
     assert_eq!(
         assessments[0]["powerThermalAuthority"],

@@ -42,3 +42,10 @@ relative to the manifest so the campaign remains portable. The collector
 hashes both evidence files, accepts task success only from an independently
 produced assessed decision package, and records infrastructure-unavailable
 runs with a null verdict so they cannot become false Agent failures.
+
+Harmony emulator attempts use the same manifest with
+`evidenceKind: harmony-emulator-v2`, an exact `sourceIdentity`, and an evidence
+directory containing the runner's `result.json`. Only the explicit assessed
+UI-oracle verdict is scored. Emulator/HDC infrastructure failures remain null,
+excluded verdicts; old results without the explicit assessment fields are not
+guessed into a participant outcome.

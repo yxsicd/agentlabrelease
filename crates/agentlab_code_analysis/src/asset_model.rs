@@ -185,6 +185,10 @@ fn harmony_instance(root: &Path, run: &str, archive: &str, result: Value) -> Tab
             "hapSha256":result["hapSha256"],
             "functionalPassed":functional_passed,
             "oraclePassed":oracle_passed,
+            "assessmentStatus":result["assessmentStatus"],
+            "infrastructureAvailable":result["infrastructureAvailable"],
+            "subjectTaskSucceeded":result["subjectTaskSucceeded"],
+            "failureClass":result["failureClass"],
             "profileCollected":result["profileStatus"] == "collected",
             "powerThermalAuthority":result["powerThermalAuthority"],
             "authority":"operator-owned-device-runner"

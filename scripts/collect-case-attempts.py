@@ -13,6 +13,7 @@ from typing import Any
 MANIFEST_SCHEMA = "agentlab.case_attempt_collection.v1"
 OUTPUT_SCHEMA = "agentlab.case_discrimination_input.v1"
 DECISION_SCHEMA = "agentlab.harness_decision_package.v1"
+EMULATOR_SCHEMA = "agentlab.harmony_emulator_case_result.v2"
 REVISION = re.compile(r"[0-9a-f]{40}")
 
 
@@ -57,6 +58,96 @@ def evidence_ref(path: pathlib.Path, root: pathlib.Path) -> dict[str, Any]:
         "sha256": sha256(path),
         "byteLength": path.stat().st_size,
     }
+
+
+def collect_harness_attempt(
+    attempt: dict[str, Any],
+    attempt_id: str,
+    case_id: str,
+    source_revision: str,
+    evidence_dir: pathlib.Path,
+    manifest_dir: pathlib.Path,
+) -> tuple[bool, bool | None, str, dict[str, Any]]:
+    summary_path = evidence_dir / "summary.json"
+    decision_path = evidence_dir / "decision-package.json"
+    summary = load_object(summary_path, f"{attempt_id} summary")
+    decision = load_object(decision_path, f"{attempt_id} decision package")
+    if decision.get("schema") != DECISION_SCHEMA:
+        fail(f"{attempt_id} unsupported decision package schema")
+    for label, document in (("summary", summary), ("decision package", decision)):
+        if document.get("taskId") != case_id:
+            fail(f"{attempt_id} {label} taskId does not match {case_id}")
+        if document.get("sourceRevision") != source_revision:
+            fail(f"{attempt_id} {label} sourceRevision mismatch")
+
+    infrastructure_valid = (
+        decision.get("assessmentStatus") == "assessed"
+        and decision.get("infrastructureAvailable") is True
+    )
+    verdict = decision.get("subjectTaskSucceeded")
+    if infrastructure_valid and not isinstance(verdict, bool):
+        fail(f"{attempt_id} assessed run requires boolean subjectTaskSucceeded")
+    return (
+        infrastructure_valid,
+        verdict if infrastructure_valid else None,
+        "independent-harness-decision-package",
+        {
+            "summary": evidence_ref(summary_path, manifest_dir),
+            "decisionPackage": evidence_ref(decision_path, manifest_dir),
+        },
+    )
+
+
+def collect_emulator_attempt(
+    attempt: dict[str, Any],
+    attempt_id: str,
+    case_id: str,
+    evidence_dir: pathlib.Path,
+    manifest_dir: pathlib.Path,
+) -> tuple[bool, bool | None, str, dict[str, Any]]:
+    result_path = evidence_dir / "result.json"
+    result = load_object(result_path, f"{attempt_id} emulator result")
+    if result.get("schema") != EMULATOR_SCHEMA:
+        fail(f"{attempt_id} unsupported emulator result schema")
+    if result.get("taskId") != case_id:
+        fail(f"{attempt_id} emulator taskId does not match {case_id}")
+    expected_identity = attempt.get("sourceIdentity")
+    if not isinstance(expected_identity, str) or not expected_identity:
+        fail(f"{attempt_id} sourceIdentity required for emulator evidence")
+    if result.get("sourceIdentity") != expected_identity:
+        fail(f"{attempt_id} emulator sourceIdentity mismatch")
+    if result.get("powerThermalAuthority") != "unavailable_on_emulator":
+        fail(f"{attempt_id} emulator power/thermal authority is invalid")
+
+    assessment_status = result.get("assessmentStatus")
+    infrastructure_available = result.get("infrastructureAvailable")
+    verdict = result.get("subjectTaskSucceeded")
+    if assessment_status == "assessed" and infrastructure_available is True:
+        if not isinstance(verdict, bool):
+            fail(f"{attempt_id} assessed emulator run requires boolean verdict")
+        if verdict and not (
+            result.get("status") == "passed" and result.get("oracleStatus") == "passed"
+        ):
+            fail(f"{attempt_id} passing emulator verdict contradicts result status")
+        if not verdict and not (
+            result.get("status") == "failed" and result.get("oracleStatus") == "failed"
+        ):
+            fail(f"{attempt_id} failing emulator verdict contradicts result status")
+        infrastructure_valid = True
+    elif (
+        assessment_status == "infrastructure-unavailable"
+        and infrastructure_available is False
+        and verdict is None
+    ):
+        infrastructure_valid = False
+    else:
+        fail(f"{attempt_id} emulator assessment fields are inconsistent")
+    return (
+        infrastructure_valid,
+        verdict if infrastructure_valid else None,
+        "operator-owned-harmony-ui-oracle",
+        {"emulatorResult": evidence_ref(result_path, manifest_dir)},
+    )
 
 
 def build_input(manifest: dict[str, Any], manifest_dir: pathlib.Path) -> dict[str, Any]:
@@ -109,37 +200,35 @@ def build_input(manifest: dict[str, Any], manifest_dir: pathlib.Path) -> dict[st
             evidence_dir = portable_path(
                 manifest_dir, attempt.get("evidence"), f"{attempt_id} evidence"
             )
-            summary_path = evidence_dir / "summary.json"
-            decision_path = evidence_dir / "decision-package.json"
-            summary = load_object(summary_path, f"{attempt_id} summary")
-            decision = load_object(decision_path, f"{attempt_id} decision package")
-            if decision.get("schema") != DECISION_SCHEMA:
-                fail(f"{attempt_id} unsupported decision package schema")
-            for label, document in (("summary", summary), ("decision package", decision)):
-                if document.get("taskId") != case_id:
-                    fail(f"{attempt_id} {label} taskId does not match {case_id}")
-                if document.get("sourceRevision") != source_revision:
-                    fail(f"{attempt_id} {label} sourceRevision mismatch")
-
-            infrastructure_valid = (
-                decision.get("assessmentStatus") == "assessed"
-                and decision.get("infrastructureAvailable") is True
-            )
-            verdict = decision.get("subjectTaskSucceeded")
-            if infrastructure_valid and not isinstance(verdict, bool):
-                fail(f"{attempt_id} assessed run requires boolean subjectTaskSucceeded")
+            evidence_kind = attempt.get("evidenceKind", "harness-decision-package")
+            if evidence_kind == "harness-decision-package":
+                infrastructure_valid, verdict, verdict_source, evidence = (
+                    collect_harness_attempt(
+                        attempt,
+                        attempt_id,
+                        case_id,
+                        source_revision,
+                        evidence_dir,
+                        manifest_dir,
+                    )
+                )
+            elif evidence_kind == "harmony-emulator-v2":
+                infrastructure_valid, verdict, verdict_source, evidence = (
+                    collect_emulator_attempt(
+                        attempt, attempt_id, case_id, evidence_dir, manifest_dir
+                    )
+                )
+            else:
+                fail(f"{attempt_id} unsupported evidenceKind: {evidence_kind}")
             output_attempts.append(
                 {
                     "attemptId": attempt_id,
                     "participantId": participant_id,
                     "producerRun": attempt.get("producerRun"),
                     "infrastructureValid": infrastructure_valid,
-                    "taskPassed": verdict if infrastructure_valid else None,
-                    "verdictSource": "independent-harness-decision-package",
-                    "evidence": {
-                        "summary": evidence_ref(summary_path, manifest_dir),
-                        "decisionPackage": evidence_ref(decision_path, manifest_dir),
-                    },
+                    "taskPassed": verdict,
+                    "verdictSource": verdict_source,
+                    "evidence": evidence,
                 }
             )
         output_cases.append(
@@ -157,7 +246,10 @@ def build_input(manifest: dict[str, Any], manifest_dir: pathlib.Path) -> dict[st
         "methodRevision": method_revision,
         "cases": output_cases,
         "collectionPolicy": {
-            "verdictAuthority": "decision-package.json",
+            "verdictAuthorities": [
+                "decision-package.json",
+                "operator-owned-harmony-ui-oracle",
+            ],
             "infrastructureFailureIsAgentFailure": False,
             "automaticPromotion": False,
         },

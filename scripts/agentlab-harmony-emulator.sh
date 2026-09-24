@@ -238,6 +238,10 @@ run_case() {
   started=false
   terminal_status=failed
   oracle_status=not-run
+  assessment_status=infrastructure-unavailable
+  infrastructure_available=false
+  subject_task_succeeded=null
+  failure_class=infrastructure
   layout_ordinal=0
   action_ordinal=0
   last_layout=
@@ -253,28 +257,67 @@ run_case() {
     layout_name=$(printf 'ui-layout-%03d.json' "$layout_ordinal")
     remote_layout="/data/local/tmp/agentlab-$scenario_id-$layout_ordinal.json"
     "$hdc" -t "$target" shell uitest dumpLayout -p "$remote_layout" \
-      >"$output/$layout_name.dump.log" 2>&1
+      >"$output/$layout_name.dump.log" 2>&1 ||
+      infrastructure_failure "UI layout dump failed"
     "$hdc" -t "$target" file recv "$remote_layout" "$output/$layout_name" \
-      >"$output/$layout_name.recv.log" 2>&1
+      >"$output/$layout_name.recv.log" 2>&1 ||
+      infrastructure_failure "UI layout receive failed"
     last_layout="$output/$layout_name"
+  }
+  infrastructure_failure() {
+    assessment_status=infrastructure-unavailable
+    infrastructure_available=false
+    subject_task_succeeded=null
+    failure_class=infrastructure
+    die "$*"
+  }
+  oracle_failure() {
+    assessment_status=assessed
+    infrastructure_available=true
+    subject_task_succeeded=false
+    failure_class=oracle
+    die "$*"
+  }
+  ui_validate_token() {
+    label=$1
+    value=$2
+    case "$value" in
+      ''|*[!A-Za-z0-9_.:-]*) infrastructure_failure "$label contains unsupported characters: $value" ;;
+    esac
+  }
+  ui_validate_integer() {
+    label=$1
+    value=$2
+    minimum=$3
+    maximum=$4
+    case "$value" in
+      ''|*[!0-9]*) infrastructure_failure "$label must be numeric" ;;
+    esac
+    [ "$value" -ge "$minimum" ] && [ "$value" -le "$maximum" ] ||
+      infrastructure_failure "$label must be in $minimum..$maximum"
   }
   run_ui_scenario() {
     oracle_status=failed
+    assessment_status=assessed
+    infrastructure_available=true
+    subject_task_succeeded=false
+    failure_class=oracle
     while IFS=$'\t' read -r operation a b c d e || [ -n "$operation$a$b$c$d$e" ]; do
       case "$operation" in
         ''|'#'*) continue ;;
         schema)
           [ "$a" = "agentlab.harmony_ui_scenario.v1" ] && [ -z "$b$c$d$e" ] ||
-            die "invalid UI scenario schema line"
+            infrastructure_failure "invalid UI scenario schema line"
           ;;
         case)
           [ "$a" = "$scenario_id" ] && [ -z "$b$c$d$e" ] ||
-            die "invalid UI scenario case line"
+            infrastructure_failure "invalid UI scenario case line"
           ;;
         wait-text)
-          validate_token "UI check label" "$a"
-          validate_integer "wait-text timeout" "$b" 1 120
-          [ -n "$c" ] && [ -z "$d$e" ] || die "wait-text requires LABEL TIMEOUT TEXT"
+          ui_validate_token "UI check label" "$a"
+          ui_validate_integer "wait-text timeout" "$b" 1 120
+          [ -n "$c" ] && [ -z "$d$e" ] ||
+            infrastructure_failure "wait-text requires LABEL TIMEOUT TEXT"
           wait_attempt=1
           wait_passed=false
           while [ "$wait_attempt" -le "$b" ]; do
@@ -286,43 +329,47 @@ run_case() {
             sleep 1
             wait_attempt=$((wait_attempt + 1))
           done
-          record_ui_check "$a" "$wait_passed" wait-text "$c"
-          [ "$wait_passed" = true ] || die "UI wait-text check failed: $a"
+          record_ui_check "$a" "$wait_passed" wait-text "$c" ||
+            infrastructure_failure "UI check evidence write failed"
+          [ "$wait_passed" = true ] || oracle_failure "UI wait-text check failed: $a"
           ;;
         tap)
-          validate_integer "tap x" "$a" 0 10000
-          validate_integer "tap y" "$b" 0 10000
-          [ -z "$c$d$e" ] || die "tap requires X Y"
+          ui_validate_integer "tap x" "$a" 0 10000
+          ui_validate_integer "tap y" "$b" 0 10000
+          [ -z "$c$d$e" ] || infrastructure_failure "tap requires X Y"
           "$hdc" -t "$target" shell uitest uiInput click "$a" "$b" \
-            >>"$output/ui-input.log" 2>&1
-          record_ui_action tap "$a,$b"
+            >>"$output/ui-input.log" 2>&1 || infrastructure_failure "UI tap failed"
+          record_ui_action tap "$a,$b" || infrastructure_failure "UI action evidence write failed"
           ;;
         swipe)
-          validate_integer "swipe x1" "$a" 0 10000
-          validate_integer "swipe y1" "$b" 0 10000
-          validate_integer "swipe x2" "$c" 0 10000
-          validate_integer "swipe y2" "$d" 0 10000
-          validate_integer "swipe duration" "$e" 1 60000
+          ui_validate_integer "swipe x1" "$a" 0 10000
+          ui_validate_integer "swipe y1" "$b" 0 10000
+          ui_validate_integer "swipe x2" "$c" 0 10000
+          ui_validate_integer "swipe y2" "$d" 0 10000
+          ui_validate_integer "swipe duration" "$e" 1 60000
           "$hdc" -t "$target" shell uitest uiInput swipe "$a" "$b" "$c" "$d" "$e" \
-            >>"$output/ui-input.log" 2>&1
-          record_ui_action swipe "$a,$b,$c,$d,$e"
+            >>"$output/ui-input.log" 2>&1 || infrastructure_failure "UI swipe failed"
+          record_ui_action swipe "$a,$b,$c,$d,$e" ||
+            infrastructure_failure "UI action evidence write failed"
           ;;
         key)
-          validate_integer "key code" "$a" 0 1000
-          [ -z "$b$c$d$e" ] || die "key requires KEYCODE"
+          ui_validate_integer "key code" "$a" 0 1000
+          [ -z "$b$c$d$e" ] || infrastructure_failure "key requires KEYCODE"
           "$hdc" -t "$target" shell uitest uiInput keyEvent "$a" \
-            >>"$output/ui-input.log" 2>&1
-          record_ui_action key "$a"
+            >>"$output/ui-input.log" 2>&1 || infrastructure_failure "UI key event failed"
+          record_ui_action key "$a" || infrastructure_failure "UI action evidence write failed"
           ;;
         sleep)
-          validate_integer "sleep milliseconds" "$a" 0 60000
-          [ -z "$b$c$d$e" ] || die "sleep requires MILLISECONDS"
+          ui_validate_integer "sleep milliseconds" "$a" 0 60000
+          [ -z "$b$c$d$e" ] ||
+            infrastructure_failure "sleep requires MILLISECONDS"
           sleep "$(awk -v ms="$a" 'BEGIN { printf "%.3f", ms / 1000 }')"
-          record_ui_action sleep "$a"
+          record_ui_action sleep "$a" || infrastructure_failure "UI action evidence write failed"
           ;;
         assert-text|assert-no-text)
-          validate_token "UI check label" "$a"
-          [ -n "$b" ] && [ -z "$c$d$e" ] || die "$operation requires LABEL TEXT"
+          ui_validate_token "UI check label" "$a"
+          [ -n "$b" ] && [ -z "$c$d$e" ] ||
+            infrastructure_failure "$operation requires LABEL TEXT"
           dump_ui_layout
           check_passed=false
           if LC_ALL=C grep -F -- "$b" "$last_layout" >/dev/null; then
@@ -330,13 +377,16 @@ run_case() {
           else
             [ "$operation" = assert-no-text ] && check_passed=true
           fi
-          record_ui_check "$a" "$check_passed" "$operation" "$b"
-          [ "$check_passed" = true ] || die "UI oracle check failed: $a"
+          record_ui_check "$a" "$check_passed" "$operation" "$b" ||
+            infrastructure_failure "UI check evidence write failed"
+          [ "$check_passed" = true ] || oracle_failure "UI oracle check failed: $a"
           ;;
-        *) die "unsupported UI scenario operation: $operation" ;;
+        *) infrastructure_failure "unsupported UI scenario operation: $operation" ;;
       esac
     done <"$ui_scenario"
     oracle_status=passed
+    subject_task_succeeded=true
+    failure_class=none
   }
   cleanup_case() {
     rc=$?
@@ -346,9 +396,10 @@ run_case() {
     fi
     if [ "$terminal_status" != passed ]; then
       if [ -n "$ui_scenario" ]; then
-        printf '{"schema":"agentlab.harmony_emulator_case_result.v2","status":"failed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","powerThermalAuthority":"unavailable_on_emulator"}\n' \
+        printf '{"schema":"agentlab.harmony_emulator_case_result.v2","status":"failed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","powerThermalAuthority":"unavailable_on_emulator"}\n' \
           "$task_id" "$source_id" "$instance" "$target" "$bundle" "$ability" "$hap_sha" \
-          "$scenario_id" "$scenario_sha" "$oracle_status" >"$output/result.json"
+          "$scenario_id" "$scenario_sha" "$oracle_status" "$assessment_status" \
+          "$infrastructure_available" "$subject_task_succeeded" "$failure_class" >"$output/result.json"
       else
         printf '{"schema":"agentlab.harmony_emulator_case_result.v1","status":"failed","instance":"%s","target":"%s","bundle":"%s","ability":"%s"}\n' \
           "$instance" "$target" "$bundle" "$ability" >"$output/result.json"
@@ -441,9 +492,10 @@ run_case() {
   fi
   terminal_status=passed
   if [ -n "$ui_scenario" ]; then
-    printf '{"schema":"agentlab.harmony_emulator_case_result.v2","status":"passed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","profileStatus":"%s","resetAppData":%s,"powerThermalAuthority":"unavailable_on_emulator","artifacts":{"uninstall":"uninstall.log","install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","uiActions":"ui-actions.tsv","uiChecks":"ui-checks.tsv","screenshot":"%s","smartperf":"smartperf.txt"}}\n' \
+    printf '{"schema":"agentlab.harmony_emulator_case_result.v2","status":"passed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","profileStatus":"%s","resetAppData":%s,"powerThermalAuthority":"unavailable_on_emulator","artifacts":{"uninstall":"uninstall.log","install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","uiActions":"ui-actions.tsv","uiChecks":"ui-checks.tsv","screenshot":"%s","smartperf":"smartperf.txt"}}\n' \
       "$task_id" "$source_id" "$instance" "$target" "$bundle" "$ability" "$hap_sha" \
       "$(cat "$output/screenshot.sha256")" "$scenario_id" "$scenario_sha" "$oracle_status" \
+      "$assessment_status" "$infrastructure_available" "$subject_task_succeeded" "$failure_class" \
       "$profile_status" "$reset_app_data" "$(basename "$screenshot")" >"$output/result.json"
   else
     printf '{"schema":"agentlab.harmony_emulator_case_result.v1","status":"passed","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","profileStatus":"%s","powerThermalAuthority":"unavailable_on_emulator","artifacts":{"install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","screenshot":"%s","smartperf":"smartperf.txt"}}\n' \

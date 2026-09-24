@@ -93,6 +93,38 @@ class CollectCaseAttemptsTests(unittest.TestCase):
             },
         )
 
+    def write_emulator_result(
+        self,
+        root: pathlib.Path,
+        attempt_id: str,
+        *,
+        passed: bool | None,
+        infrastructure: bool,
+    ) -> str:
+        source_identity = f"artifact-sha256:{'a' * 64}"
+        assessed = infrastructure and isinstance(passed, bool)
+        self.write_json(
+            root / "runs" / attempt_id / "result.json",
+            {
+                "schema": "agentlab.harmony_emulator_case_result.v2",
+                "status": "passed" if passed is True else "failed",
+                "taskId": self.case_id,
+                "sourceIdentity": source_identity,
+                "hapSha256": "a" * 64,
+                "scenarioId": "bounded-ui-case",
+                "scenarioSha256": "b" * 64,
+                "oracleStatus": (
+                    "passed" if passed is True else "failed" if assessed else "not-run"
+                ),
+                "assessmentStatus": "assessed" if assessed else "infrastructure-unavailable",
+                "infrastructureAvailable": infrastructure,
+                "subjectTaskSucceeded": passed if assessed else None,
+                "failureClass": "none" if passed is True else "oracle" if assessed else "infrastructure",
+                "powerThermalAuthority": "unavailable_on_emulator",
+            },
+        )
+        return source_identity
+
     def test_collected_evidence_flows_into_eligible_score(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = pathlib.Path(raw)
@@ -163,6 +195,85 @@ class CollectCaseAttemptsTests(unittest.TestCase):
                                 "attemptId": "drifted",
                                 "participantId": "candidate",
                                 "evidence": "runs/drifted",
+                            }
+                        ]
+                    ),
+                    root.resolve(),
+                )
+
+    def test_emulator_oracle_result_becomes_scored_attempt(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            self.write_calibration(root)
+            identity = self.write_emulator_result(
+                root, "emulator-pass", passed=True, infrastructure=True
+            )
+            collected = COLLECTOR.build_input(
+                self.manifest(
+                    [
+                        {
+                            "attemptId": "emulator-pass",
+                            "participantId": "candidate",
+                            "evidenceKind": "harmony-emulator-v2",
+                            "sourceIdentity": identity,
+                            "evidence": "runs/emulator-pass",
+                        }
+                    ]
+                ),
+                root.resolve(),
+            )
+            attempt = collected["cases"][0]["attempts"][0]
+            self.assertTrue(attempt["infrastructureValid"])
+            self.assertTrue(attempt["taskPassed"])
+            self.assertEqual(
+                attempt["verdictSource"], "operator-owned-harmony-ui-oracle"
+            )
+            self.assertEqual(
+                len(attempt["evidence"]["emulatorResult"]["sha256"]), 64
+            )
+
+    def test_emulator_infrastructure_failure_is_excluded(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            self.write_calibration(root)
+            identity = self.write_emulator_result(
+                root, "emulator-infra", passed=None, infrastructure=False
+            )
+            collected = COLLECTOR.build_input(
+                self.manifest(
+                    [
+                        {
+                            "attemptId": "emulator-infra",
+                            "participantId": "candidate",
+                            "evidenceKind": "harmony-emulator-v2",
+                            "sourceIdentity": identity,
+                            "evidence": "runs/emulator-infra",
+                        }
+                    ]
+                ),
+                root.resolve(),
+            )
+            attempt = collected["cases"][0]["attempts"][0]
+            self.assertFalse(attempt["infrastructureValid"])
+            self.assertIsNone(attempt["taskPassed"])
+
+    def test_emulator_source_identity_mismatch_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            self.write_calibration(root)
+            self.write_emulator_result(
+                root, "emulator-drift", passed=True, infrastructure=True
+            )
+            with self.assertRaisesRegex(ValueError, "sourceIdentity mismatch"):
+                COLLECTOR.build_input(
+                    self.manifest(
+                        [
+                            {
+                                "attemptId": "emulator-drift",
+                                "participantId": "candidate",
+                                "evidenceKind": "harmony-emulator-v2",
+                                "sourceIdentity": "artifact-sha256:" + "c" * 64,
+                                "evidence": "runs/emulator-drift",
                             }
                         ]
                     ),
