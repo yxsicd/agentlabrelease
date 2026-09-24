@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import pathlib
+import socket
 import subprocess
 import sys
 import tempfile
@@ -228,7 +229,12 @@ class HarmonyPerformanceCalibrationRunnerTests(unittest.TestCase):
         )
         self.assertFalse(calibration["automaticPromotion"])
         self.assertFalse(receipt["automaticPromotion"])
-        self.assertEqual([row["exitCode"] for row in receipt["phases"]], [0, 0, 0, 0, 0])
+        self.assertEqual(
+            [row["exitCode"] for row in receipt["phases"]],
+            [0, 0, 0, 0, 0, 0, 0],
+        )
+        self.assertEqual(receipt["phases"][1]["phase"], "port-release-after-baseline")
+        self.assertEqual(receipt["phases"][3]["phase"], "port-release-after-candidate-1")
         self.assertTrue((output / "raw/candidate-02/result.json").is_file())
 
     def test_failed_candidate_retains_partial_stage_and_no_final_output(self) -> None:
@@ -243,7 +249,9 @@ class HarmonyPerformanceCalibrationRunnerTests(unittest.TestCase):
         self.assertEqual(len(stages), 1)
         failure = json.loads((stages[0] / "failure.json").read_text())
         self.assertEqual(failure["status"], "failed")
-        self.assertEqual([row["exitCode"] for row in failure["phases"]], [0, 0, 19])
+        self.assertEqual(
+            [row["exitCode"] for row in failure["phases"]], [0, 0, 0, 0, 19]
+        )
         self.assertTrue((stages[0] / "raw/baseline/result.json").is_file())
         self.assertTrue((stages[0] / "raw/candidate-01/result.json").is_file())
 
@@ -268,6 +276,33 @@ class HarmonyPerformanceCalibrationRunnerTests(unittest.TestCase):
         failure = json.loads((stage / "failure.json").read_text())
         self.assertIn("candidate sourceIdentity differs", failure["error"])
         self.assertEqual(failure["phases"], [])
+
+    def test_bound_hdc_port_stops_the_next_cold_run(self) -> None:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+            for port in range(16555, 14999, -1):
+                try:
+                    listener.bind(("127.0.0.1", port))
+                    break
+                except OSError:
+                    continue
+            else:
+                self.fail("no test port available in the runner's HDC range")
+            listener.listen()
+            value = self.plan_value()
+            value["runtime"]["hdcPort"] = port
+            value["runtime"]["portReleaseTimeoutSeconds"] = 1
+            self.plan.write_text(json.dumps(value), encoding="utf-8")
+            output = self.root / "occupied-port"
+            completed = self.run_calibration(output)
+        self.assertEqual(completed.returncode, 1)
+        stage = next(self.root.glob(".occupied-port.stage-*"))
+        failure = json.loads((stage / "failure.json").read_text())
+        self.assertIn("did not release", failure["error"])
+        self.assertEqual(
+            [row["phase"] for row in failure["phases"]],
+            ["baseline", "port-release-after-baseline"],
+        )
+        self.assertEqual(failure["phases"][-1]["exitCode"], 1)
 
 
 if __name__ == "__main__":

@@ -245,6 +245,11 @@ comparisons expose at least one common regressed metric. A success is atomically
 published at the requested output path with the raw runs, comparisons,
 `performance-calibration.json` and `calibration-run.json`.
 
+Between cold runs, the orchestrator also waits for the configured HDC port to
+be released (120 seconds by default, bounded to at most 300). This prevents a
+stopped instance that is still draining from being mistaken for the next fresh
+instance; a release timeout is retained as its own failed phase.
+
 If any phase or identity check fails, the final output is not created. The
 adjacent hidden `.stage-*` directory is retained with phase logs, partial raw
 evidence and `failure.json` for diagnosis. Neither success nor failure permits

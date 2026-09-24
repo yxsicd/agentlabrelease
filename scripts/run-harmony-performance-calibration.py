@@ -9,9 +9,11 @@ import os
 import pathlib
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
+import time
 from typing import Any
 
 
@@ -96,6 +98,45 @@ def run_phase(
     )
     if completed.returncode != 0:
         raise CalibrationError(f"phase failed: {phase} (exit {completed.returncode})")
+
+
+def wait_for_port_release(
+    port: int,
+    timeout_seconds: int,
+    phase: str,
+    phases: list[dict[str, Any]],
+) -> None:
+    started = time.monotonic()
+    attempts = 0
+    while True:
+        attempts += 1
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.settimeout(0.25)
+            released = probe.connect_ex(("127.0.0.1", port)) != 0
+        elapsed = time.monotonic() - started
+        if released:
+            phases.append(
+                {
+                    "phase": phase,
+                    "exitCode": 0,
+                    "attempts": attempts,
+                    "elapsedSeconds": round(elapsed, 3),
+                }
+            )
+            return
+        if elapsed >= timeout_seconds:
+            phases.append(
+                {
+                    "phase": phase,
+                    "exitCode": 1,
+                    "attempts": attempts,
+                    "elapsedSeconds": round(elapsed, 3),
+                }
+            )
+            raise CalibrationError(
+                f"emulator HDC port {port} did not release within {timeout_seconds} seconds"
+            )
+        time.sleep(1)
 
 
 def validate_run_output(
@@ -272,6 +313,7 @@ def validate_plan(plan: dict[str, Any]) -> dict[str, Any]:
         "environmentIdentity": require_token(runtime.get("environmentIdentity"), "environmentIdentity"),
         "bootMode": runtime.get("bootMode", "coldboot"),
         "profileSamples": runtime.get("profileSamples", 12),
+        "portReleaseTimeoutSeconds": runtime.get("portReleaseTimeoutSeconds", 120),
     }
     if runtime["bootMode"] not in {"coldboot", "reset", "snapshot"}:
         raise CalibrationError("unsupported bootMode")
@@ -279,6 +321,11 @@ def validate_plan(plan: dict[str, Any]) -> dict[str, Any]:
         raise CalibrationError("hdcPort must be in 10000..16555")
     if not isinstance(runtime["profileSamples"], int) or not 1 <= runtime["profileSamples"] <= 60:
         raise CalibrationError("profileSamples must be in 1..60")
+    if (
+        not isinstance(runtime["portReleaseTimeoutSeconds"], int)
+        or not 1 <= runtime["portReleaseTimeoutSeconds"] <= 300
+    ):
+        raise CalibrationError("portReleaseTimeoutSeconds must be in 1..300")
     policy = require_path(plan.get("performancePolicy"), "performance policy")
     policy_value = load_object(policy)
     if policy_value.get("schema") != "agentlab.harmony_performance_policy.v1":
@@ -353,6 +400,12 @@ def main() -> int:
             stage,
             phases,
         )
+        wait_for_port_release(
+            validated["runtime"]["hdcPort"],
+            validated["runtime"]["portReleaseTimeoutSeconds"],
+            "port-release-after-baseline",
+            phases,
+        )
         for index, candidate_output in enumerate(candidate_outputs):
             run_phase(
                 runner_command(
@@ -364,6 +417,13 @@ def main() -> int:
                 stage,
                 phases,
             )
+            if index == 0:
+                wait_for_port_release(
+                    validated["runtime"]["hdcPort"],
+                    validated["runtime"]["portReleaseTimeoutSeconds"],
+                    "port-release-after-candidate-1",
+                    phases,
+                )
 
         validate_run_output(
             baseline_output,
