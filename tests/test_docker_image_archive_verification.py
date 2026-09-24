@@ -111,7 +111,7 @@ class DockerImageArchiveVerificationTests(unittest.TestCase):
         self.assertNotEqual(completed.returncode, 0)
         self.assertIn("path traversal", completed.stderr)
 
-    def test_oci_manifest_indirection_uses_nested_config_digest_as_image_id(self) -> None:
+    def test_oci_layout_keeps_config_image_id_distinct_from_manifest_digest(self) -> None:
         config_digest = hashlib.sha256(self.config).hexdigest()
         image_manifest = json.dumps(
             {
@@ -126,10 +126,23 @@ class DockerImageArchiveVerificationTests(unittest.TestCase):
             separators=(",", ":"),
         ).encode()
         manifest_digest = hashlib.sha256(image_manifest).hexdigest()
+        index = json.dumps(
+            {
+                "schemaVersion": 2,
+                "manifests": [
+                    {
+                        "digest": "sha256:" + manifest_digest,
+                        "annotations": {
+                            "org.opencontainers.image.ref.name": self.reference.rsplit(":", 1)[-1]
+                        },
+                    }
+                ],
+            }
+        ).encode()
         docker_manifest = json.dumps(
             [
                 {
-                    "Config": "blobs/sha256/" + manifest_digest,
+                    "Config": "blobs/sha256/" + config_digest,
                     "RepoTags": [self.reference],
                     "Layers": [],
                 }
@@ -139,6 +152,7 @@ class DockerImageArchiveVerificationTests(unittest.TestCase):
             for name, content in (
                 ("blobs/sha256/" + config_digest, self.config),
                 ("blobs/sha256/" + manifest_digest, image_manifest),
+                ("index.json", index),
                 ("manifest.json", docker_manifest),
             ):
                 info = tarfile.TarInfo(name)
@@ -153,7 +167,9 @@ class DockerImageArchiveVerificationTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         receipt = json.loads(completed.stdout)
         self.assertEqual(receipt["image"]["imageId"], self.image_id)
-        self.assertEqual(receipt["image"]["manifestDigest"], "sha256:" + manifest_digest)
+        self.assertEqual(
+            receipt["image"]["ociManifestDigest"], "sha256:" + manifest_digest
+        )
         self.assertEqual(
             receipt["image"]["configMember"], "blobs/sha256/" + config_digest
         )
@@ -165,6 +181,8 @@ class DockerImageArchiveVerificationTests(unittest.TestCase):
         self.assertLess(verification, docker_load)
         self.assertIn('--expected-image-id "${values[2]}"', source)
         self.assertIn('--expected-reference "${values[3]}"', source)
+        self.assertIn("ociManifestDigest", source)
+        self.assertIn('[[ "$identity_matches" == true ]]', source)
 
 
 if __name__ == "__main__":

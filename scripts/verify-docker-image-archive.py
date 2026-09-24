@@ -123,24 +123,44 @@ def verify(
             "matching manifest entry does not declare Config")
     require(config_path in member_digests,
             "manifest Config member is missing from the archive")
-    archive_manifest_digest = "sha256:" + member_digests[config_path]
-    actual_image_id = archive_manifest_digest
-    actual_config_path = config_path
-    config_content = metadata_members.get(config_path)
-    if config_content is not None:
-        candidate = json.loads(config_content)
-        nested = candidate.get("config") if isinstance(candidate, dict) else None
-        nested_digest = nested.get("digest") if isinstance(nested, dict) else None
-        if isinstance(nested_digest, str) and nested_digest.startswith("sha256:"):
-            nested_hex = nested_digest.removeprefix("sha256:")
-            require(len(nested_hex) == 64 and all(c in "0123456789abcdef" for c in nested_hex),
-                    "OCI manifest config digest is invalid")
-            actual_config_path = "blobs/sha256/" + nested_hex
-            require(member_digests.get(actual_config_path) == nested_hex,
-                    "OCI config blob is missing or does not match its digest")
-            actual_image_id = nested_digest
+    actual_image_id = "sha256:" + member_digests[config_path]
     require(actual_image_id == expected_image_id,
             f"image ID mismatch: expected {expected_image_id}, got {actual_image_id}")
+
+    oci_manifest_digest = None
+    index_content = metadata_members.get("index.json")
+    if index_content is not None:
+        index = json.loads(index_content)
+        index_manifests = index.get("manifests") if isinstance(index, dict) else None
+        require(isinstance(index_manifests, list) and index_manifests,
+                "OCI index does not declare manifests")
+        reference_tag = expected_reference.rsplit(":", 1)[-1]
+        index_matches = []
+        for row in index_manifests:
+            annotations = row.get("annotations", {}) if isinstance(row, dict) else {}
+            names = {
+                annotations.get("org.opencontainers.image.ref.name"),
+                annotations.get("io.containerd.image.name"),
+            }
+            if reference_tag in names or expected_reference in names or len(index_manifests) == 1:
+                index_matches.append(row)
+        require(len(index_matches) == 1,
+                "OCI index must select exactly one manifest for the expected reference")
+        digest = index_matches[0].get("digest")
+        require(isinstance(digest, str) and digest.startswith("sha256:"),
+                "OCI index manifest digest is invalid")
+        digest_hex = digest.removeprefix("sha256:")
+        oci_manifest_path = "blobs/sha256/" + digest_hex
+        require(member_digests.get(oci_manifest_path) == digest_hex,
+                "OCI manifest blob is missing or does not match its digest")
+        manifest_content = metadata_members.get(oci_manifest_path)
+        require(manifest_content is not None, "OCI manifest exceeds metadata safety limit")
+        oci_manifest = json.loads(manifest_content)
+        nested_config = oci_manifest.get("config") if isinstance(oci_manifest, dict) else None
+        require(isinstance(nested_config, dict)
+                and nested_config.get("digest") == actual_image_id,
+                "OCI manifest config digest does not match Docker image ID")
+        oci_manifest_digest = digest
 
     descriptor_sha256 = None
     if descriptor_path is not None:
@@ -174,9 +194,8 @@ def verify(
         "image": {
             "reference": expected_reference,
             "imageId": actual_image_id,
-            "manifestDigest": archive_manifest_digest,
-            "manifestMember": config_path,
-            "configMember": actual_config_path,
+            "ociManifestDigest": oci_manifest_digest,
+            "configMember": config_path,
         },
         "descriptorSha256": descriptor_sha256,
     }
