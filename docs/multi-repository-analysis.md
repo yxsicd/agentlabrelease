@@ -88,6 +88,22 @@ Oracle, four calibration variants, frozen task output and TableGit persistence.
 Dependency evidence can derive edit scope and construction risks; neither it,
 a lexical quality gate nor an Agent draft establishes semantic truth.
 
+For a frozen case whose reviewed implementation target is Harmony, the next
+boundary is now executable rather than implicit. The
+[`run-harmony-evaluation-case.py`](../scripts/run-harmony-evaluation-case.py)
+bridge accepts only a `frozen-calibrated` multi-repository case plus an
+independent `agentlab.harmony_case_build_receipt.v1`. That receipt must bind the
+exact case digest, source-set digest, every repository revision, source
+materialization digest, build-tool digest and resulting HAP digest. The bridge
+then binds those identities to the exact emulator runner, UI Oracle,
+environment, performance policy and workload before executing the HAP.
+
+This does not turn an arbitrary multi-repository case into a Harmony case and
+does not manufacture build authority. A build receipt must come from an
+independent Harmony materialization/build step over the reviewed source set.
+Missing or mismatched lineage fails before emulator launch; result or SmartPerf
+identity drift retains the failed execution and cannot promote the case.
+
 ## Close assessed failures into the next analysis cut
 
 The trusted assessed campaign keeps the frozen case unchanged, runs fresh trials

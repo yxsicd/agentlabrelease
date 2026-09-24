@@ -347,6 +347,44 @@ mutates TableGit. Publication remains a separate operator-owned action against
 the still-current expected revision; a prepared transaction is not publication
 evidence.
 
+### Frozen multi-repository case execution
+
+Use `scripts/run-harmony-evaluation-case.py` when a reviewed, calibrated
+multi-repository case has been independently materialized and built as a
+Harmony HAP. Its `agentlab.harmony_evaluation_run_plan.v1` plan binds:
+
+- the frozen case path and SHA256;
+- an `agentlab.harmony_case_build_receipt.v1` path and SHA256;
+- the exact HAP path and SHA256;
+- the UI Oracle path, identity and SHA256;
+- the executable emulator runner and SHA256;
+- exact runtime directories, emulator instance, port, bundle, ability and
+  environment identity;
+- exact performance policy and profile workload digests; and
+- `automaticPromotion=false`.
+
+The independent build receipt must have `status=passed`,
+`buildAuthority=independent-harmony-build`, and bind the case ID/digest,
+source-set digest, complete pinned source list, HAP digest, build-tool digest
+and source-materialization digest. It is evidence supplied by the build owner;
+the emulator bridge does not synthesize it.
+
+```sh
+python3 scripts/run-harmony-evaluation-case.py \
+  --plan /absolute/path/harmony-evaluation-run-plan.json \
+  --output /absolute/path/new-evaluation-evidence
+```
+
+Success atomically retains the raw emulator execution, runner logs and
+`evaluation-binding.json` with status `passed-review-required`. The bridge
+rechecks every input after execution, then verifies functional result,
+source-set identity, HAP, Oracle, run/environment identity, normalized
+SmartPerf sample contract, policy/workload identity and the emulator-only
+power/thermal authority boundary. A failed runner or any identity drift keeps
+the hidden staging directory and `failure.json`; it never creates the requested
+final output. Even a successful binding remains review-required and cannot
+promote an evaluation case automatically.
+
 ## Evaluation-instance export
 
 Build the normalizer and convert an immutable case directory:
