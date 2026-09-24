@@ -177,6 +177,8 @@ def validate_process_measurement(value: Any, case_id: str, attempt_id: str) -> d
         counts = (
             "stageCount",
             "measuredStageCount",
+            "missingStageCount",
+            "invalidStageCount",
             "claimCount",
             "obligationCount",
             "coveredObligationCount",
@@ -192,12 +194,20 @@ def validate_process_measurement(value: Any, case_id: str, attempt_id: str) -> d
         if not (
             dependency["stageCount"] == value["stageCount"]
             and dependency["measuredStageCount"] <= dependency["stageCount"]
+            and dependency["measuredStageCount"]
+            + dependency["missingStageCount"]
+            + dependency["invalidStageCount"]
+            == dependency["stageCount"]
             and covered <= obligations
             and dependency["unadjudicatedClaimCount"] <= dependency["claimCount"]
             and dependency.get("requiredObligationCoverage")
             == (covered / obligations if obligations else None)
             and dependency.get("coverageQualified")
-            is (bool(obligations) and covered == obligations)
+            is (
+                dependency["measuredStageCount"] == dependency["stageCount"]
+                and bool(obligations)
+                and covered == obligations
+            )
         ):
             fail(f"{case_id} {attempt_id} dependency discovery derivation differs")
     return value
@@ -257,6 +267,11 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
             row["dependencyDiscovery"]
             for row in process_rows
             if isinstance(row.get("dependencyDiscovery"), dict)
+        ]
+        dependency_measured_rows = [
+            row
+            for row in dependency_rows
+            if row["measuredStageCount"] == row["stageCount"]
         ]
         dependency_obligations = sum(
             row["obligationCount"] for row in dependency_rows
@@ -333,9 +348,15 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
                         "authority": "participant-claim-compared-with-operator-oracle-not-a-verdict",
                     },
                     "dependencyDiscovery": {
-                        "measuredTrials": len(dependency_rows),
-                        "coverageRate": len(dependency_rows) / count,
-                        "measurementCoverageQualified": len(dependency_rows) == count,
+                        "measuredTrials": len(dependency_measured_rows),
+                        "coverageRate": len(dependency_measured_rows) / count,
+                        "measurementCoverageQualified": len(dependency_measured_rows) == count,
+                        "missingStageCount": sum(
+                            row["missingStageCount"] for row in dependency_rows
+                        ),
+                        "invalidStageCount": sum(
+                            row["invalidStageCount"] for row in dependency_rows
+                        ),
                         "claimCount": sum(row["claimCount"] for row in dependency_rows),
                         "obligationCount": dependency_obligations,
                         "coveredObligationCount": dependency_covered,
@@ -344,7 +365,8 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
                             if dependency_obligations
                             else None
                         ),
-                        "coverageQualified": bool(dependency_obligations)
+                        "coverageQualified": len(dependency_measured_rows) == count
+                        and bool(dependency_obligations)
                         and dependency_covered == dependency_obligations,
                         "unadjudicatedClaimCount": sum(
                             row["unadjudicatedClaimCount"] for row in dependency_rows
@@ -475,6 +497,12 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
                 "coverageRate": dependency_measured / total if total else 0.0,
                 "measurementCoverageQualified": total > 0
                 and dependency_measured == total,
+                "missingStageCount": sum(
+                    row["missingStageCount"] for row in dependency_profiles
+                ),
+                "invalidStageCount": sum(
+                    row["invalidStageCount"] for row in dependency_profiles
+                ),
                 "claimCount": sum(row["claimCount"] for row in dependency_profiles),
                 "obligationCount": dependency_obligations,
                 "coveredObligationCount": dependency_covered,
@@ -483,7 +511,9 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
                     if dependency_obligations
                     else None
                 ),
-                "coverageQualified": bool(dependency_obligations)
+                "coverageQualified": total > 0
+                and dependency_measured == total
+                and bool(dependency_obligations)
                 and dependency_covered == dependency_obligations,
                 "unadjudicatedClaimCount": sum(
                     row["unadjudicatedClaimCount"] for row in dependency_profiles

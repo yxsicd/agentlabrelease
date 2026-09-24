@@ -50,7 +50,9 @@ def safe_path(value: Any, label: str) -> str:
     return value
 
 
-def load_facts(path: Path, revisions: dict[str, str]) -> dict[str, dict[str, Any]]:
+def load_facts(
+    path: Path, sources: dict[str, dict[str, str]]
+) -> dict[str, dict[str, Any]]:
     rows = {}
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
@@ -66,9 +68,29 @@ def load_facts(path: Path, revisions: dict[str, str]) -> dict[str, dict[str, Any
         require(isinstance(row, dict), f"program fact line {number} is not an object")
         fact_id = row.get("id")
         require(isinstance(fact_id, str) and fact_id and fact_id not in rows, "program fact identity is invalid")
-        repository_id = row.get("repositoryId")
-        require(repository_id in revisions, f"{fact_id} repository is outside the source set")
-        require(row.get("sourceRevision") == revisions[repository_id], f"{fact_id} source revision differs")
+        if row.get("kind") == "module-dependency":
+            source_repository_id = row.get("sourceRepositoryId")
+            target_repository_id = row.get("targetRepositoryId")
+            require(
+                source_repository_id in sources,
+                f"{fact_id} source repository is outside the source set",
+            )
+            require(
+                target_repository_id in sources,
+                f"{fact_id} target repository is outside the source set",
+            )
+            source = sources[source_repository_id]
+            target = sources[target_repository_id]
+            require(
+                row.get("sourceIdentity")
+                == f"git:{source['repository']}@{source['revision']}",
+                f"{fact_id} source revision differs",
+            )
+            require(
+                row.get("targetIdentity")
+                == f"git:{target['repository']}@{target['revision']}",
+                f"{fact_id} target revision differs",
+            )
         rows[fact_id] = row
     require(rows, "program facts are empty")
     return rows
@@ -83,8 +105,8 @@ def claim_from_fact(row: dict[str, Any]) -> dict[str, Any]:
     return {
         "relation": relation,
         "source": {
-            "repositoryId": row["repositoryId"],
-            "path": safe_path(row.get("path"), f"{fact_id} source path"),
+            "repositoryId": row["sourceRepositoryId"],
+            "path": safe_path(row.get("sourcePath"), f"{fact_id} source path"),
         },
         "target": {
             "repositoryId": target_repository,
@@ -100,20 +122,61 @@ def build(case_path: Path, facts_path: Path, plan_path: Path) -> dict[str, Any]:
     require(case.get("status") == "frozen-calibrated", "evaluation case is not frozen")
     source_set = case.get("sourceSetSha256")
     require(isinstance(source_set, str) and SHA256.fullmatch(source_set), "case source set is invalid")
-    revisions = {}
+    sources = {}
     for source in case.get("sources") or []:
         require(isinstance(source, dict), "case source is invalid")
         repository_id = source.get("id")
         revision = source.get("revision")
-        require(isinstance(repository_id, str) and repository_id not in revisions, "case source identity is invalid")
+        repository = source.get("repository")
+        require(isinstance(repository_id, str) and repository_id not in sources, "case source identity is invalid")
+        require(isinstance(repository, str) and repository, "case source repository is invalid")
         require(isinstance(revision, str) and REVISION.fullmatch(revision), "case source revision is invalid")
-        revisions[repository_id] = revision
-    require(len(revisions) >= 2, "case is not multi-repository")
-    facts = load_facts(facts_path, revisions)
+        sources[repository_id] = {"repository": repository, "revision": revision}
+    require(len(sources) >= 2, "case is not multi-repository")
+    facts = load_facts(facts_path, sources)
     plan = load_object(plan_path, "dependency discovery plan")
-    require(plan.get("schema") == "agentlab.dependency_discovery_plan.v1", "unsupported dependency discovery plan")
+    require(
+        plan.get("schema") == "agentlab.dependency_discovery_plan.v2",
+        "unsupported dependency discovery plan",
+    )
+    review = plan.get("review") or {}
+    require(
+        review.get("authority") == "explicit-dependency-plan-review",
+        "dependency plan lacks explicit review authority",
+    )
+    require(
+        review.get("verdict") == "approve-for-contract",
+        "dependency plan was not approved for contract construction",
+    )
+    require(
+        isinstance(review.get("reviewer"), str) and review["reviewer"],
+        "dependency plan reviewer is absent",
+    )
+    require(
+        isinstance(review.get("proposalSha256"), str)
+        and SHA256.fullmatch(review["proposalSha256"])
+        and isinstance(review.get("decisionSha256"), str)
+        and SHA256.fullmatch(review["decisionSha256"]),
+        "dependency plan review digests are invalid",
+    )
     require(plan.get("caseId") == case.get("id"), "dependency plan case differs")
+    require(plan.get("candidateId") == case.get("difficultyId"), "dependency plan candidate differs")
     require(plan.get("sourceSetSha256") == source_set, "dependency plan source set differs")
+    case_lineage = case.get("lineage") or {}
+    case_review = case_lineage.get("review") or {}
+    require(
+        plan.get("casePlanProposalSha256") == case_review.get("proposalSha256"),
+        "dependency plan case-plan proposal differs",
+    )
+    require(
+        plan.get("difficultyEvidenceSha256")
+        == case_lineage.get("difficultyEvidenceSha256"),
+        "dependency plan difficulty evidence differs",
+    )
+    require(
+        plan.get("programFactsSha256") == digest(facts_path),
+        "dependency plan program facts differ",
+    )
     require(plan.get("automaticPromotion") is False, "dependency plan cannot auto-promote")
     case_stage_ids = [row.get("id") for row in case.get("stages") or []]
     plan_stages = plan.get("stages")
@@ -139,7 +202,7 @@ def build(case_path: Path, facts_path: Path, plan_path: Path) -> dict[str, Any]:
             for fact_id in fact_ids:
                 require(fact_id in facts, f"{obligation_id} references unknown fact {fact_id}")
                 claim = claim_from_fact(facts[fact_id])
-                require(claim["target"]["repositoryId"] in revisions, f"{fact_id} target repository is outside the source set")
+                require(claim["target"]["repositoryId"] in sources, f"{fact_id} target repository is outside the source set")
                 identity = json.dumps({key: claim[key] for key in ("relation", "source", "target")}, sort_keys=True)
                 if identity not in identities:
                     accepted.append(claim)
@@ -153,6 +216,8 @@ def build(case_path: Path, facts_path: Path, plan_path: Path) -> dict[str, Any]:
         "caseId": case["id"],
         "sourceSetSha256": source_set,
         "programFactsSha256": digest(facts_path),
+        "obligationPlanSha256": digest(plan_path),
+        "obligationPlanReview": plan.get("review"),
         "stages": stages,
         "precisionPolicy": "required-obligation-recall-only-extra-claims-unadjudicated",
         "authority": "revision-bound-program-facts-reviewed-obligation-plan",

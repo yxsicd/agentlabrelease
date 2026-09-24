@@ -75,6 +75,34 @@ class PiAssessedBlindInputTests(unittest.TestCase):
             self.assertEqual(value["caseId"], "case-2")
             self.assertIsNone(value["allowedEdits"])
 
+    def test_native_final_message_dependency_claims_are_strictly_extracted(self):
+        claim = {
+            "relation": "module-dependency",
+            "source": {"repositoryId": "app", "path": "src/app.ts"},
+            "target": {"repositoryId": "contracts", "path": "src/policy.ts"},
+            "rationale": "The app imports the shared policy.",
+        }
+        content = (
+            "Completed.\n"
+            + MODULE.CLAIMS_START
+            + json.dumps([claim])
+            + MODULE.CLAIMS_END
+        )
+        parsed = MODULE.parse_dependency_claims(content)
+        self.assertEqual(parsed["status"], "reported")
+        self.assertEqual(parsed["claims"], [claim])
+        self.assertIsNone(parsed["error"])
+
+    def test_missing_and_malformed_native_claim_markers_are_not_synthesized(self):
+        missing = MODULE.parse_dependency_claims("Completed without a claim block.")
+        self.assertEqual(missing, {"status": "missing", "claims": None, "error": None})
+        malformed = MODULE.parse_dependency_claims(
+            MODULE.CLAIMS_START + "not-json" + MODULE.CLAIMS_END
+        )
+        self.assertEqual(malformed["status"], "invalid")
+        self.assertIsNone(malformed["claims"])
+        self.assertIn("JSON is invalid", malformed["error"])
+
 
 if __name__ == "__main__":
     unittest.main()

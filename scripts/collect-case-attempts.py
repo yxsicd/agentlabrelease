@@ -224,6 +224,19 @@ def normalize_process_measurement(
                 fail(f"{attempt_id} dependency discovery measurement is invalid")
             obligations = dependency.get("obligations")
             claims = dependency.get("participantClaims")
+            submission_status = dependency.get("submissionStatus")
+            measurement_qualified = dependency.get("measurementQualified")
+            validation_error = dependency.get("validationError")
+            if (
+                submission_status not in {"reported", "missing", "invalid"}
+                or measurement_qualified is not (submission_status == "reported")
+                or (
+                    submission_status == "invalid"
+                    and not (isinstance(validation_error, str) and validation_error)
+                )
+                or (submission_status != "invalid" and validation_error is not None)
+            ):
+                fail(f"{attempt_id} dependency discovery submission status is invalid")
             if not isinstance(obligations, list) or not isinstance(claims, list):
                 fail(f"{attempt_id} dependency discovery evidence is absent")
             for claim_index, dependency_claim in enumerate(claims):
@@ -269,7 +282,8 @@ def normalize_process_measurement(
                 dependency.get("coveredObligationCount") != covered
                 or dependency.get("requiredObligationCoverage")
                 != covered / len(obligations)
-                or dependency.get("coverageQualified") is not (covered == len(obligations))
+                or dependency.get("coverageQualified")
+                is not (measurement_qualified and covered == len(obligations))
                 or not isinstance(dependency.get("unadjudicatedClaimCount"), int)
                 or not 0 <= dependency["unadjudicatedClaimCount"] <= len(claims)
             ):
@@ -343,15 +357,24 @@ def normalize_process_measurement(
     if dependency_rows:
         obligations = sum(row["obligationCount"] for row in dependency_rows)
         covered = sum(row["coveredObligationCount"] for row in dependency_rows)
+        measured = sum(row["measurementQualified"] for row in dependency_rows)
         expected["dependencyDiscovery"] = {
             "schema": "agentlab.dependency_discovery_summary.v1",
             "stageCount": len(stages),
-            "measuredStageCount": len(dependency_rows),
+            "measuredStageCount": measured,
+            "missingStageCount": sum(
+                row["submissionStatus"] == "missing" for row in dependency_rows
+            ),
+            "invalidStageCount": sum(
+                row["submissionStatus"] == "invalid" for row in dependency_rows
+            ),
             "claimCount": sum(row["claimCount"] for row in dependency_rows),
             "obligationCount": obligations,
             "coveredObligationCount": covered,
             "requiredObligationCoverage": covered / obligations if obligations else None,
-            "coverageQualified": bool(obligations) and covered == obligations,
+            "coverageQualified": measured == len(stages)
+            and bool(obligations)
+            and covered == obligations,
             "unadjudicatedClaimCount": sum(
                 row["unadjudicatedClaimCount"] for row in dependency_rows
             ),

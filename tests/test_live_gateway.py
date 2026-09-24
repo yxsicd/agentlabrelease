@@ -1,4 +1,5 @@
 import http.server
+import hashlib
 import importlib.util
 import json
 import os
@@ -147,6 +148,46 @@ class GatewayCaptureTests(unittest.TestCase):
             self.assertIn(b'native startup diagnostic',(evidence/'banner-events.jsonl').read_bytes())
             errors=json.loads((evidence/'banner-native-parse-errors.json').read_text())
             self.assertEqual(len(errors),1)
+
+    def test_native_final_assistant_message_is_returned_and_digest_bound(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"AGENTLAB_LM_GATEWAY_KEY": "synthetic-key"}
+        ):
+            root = Path(tmp)
+            evidence = root / "evidence"
+            evidence.mkdir()
+            participant = MODULE.Participant(
+                evidence,
+                root / "state",
+                sys.executable,
+                "http://127.0.0.1:1",
+                "test-model",
+            )
+            lifecycle = {}
+            try:
+                result = participant._run_turn(
+                    [
+                        sys.executable,
+                        "-c",
+                        "import json; "
+                        "print(json.dumps({'type':'tool_execution_end'})); "
+                        "print(json.dumps({'type':'message_end','message':{'role':'assistant','content':'native final'}}))",
+                    ],
+                    root,
+                    {"PATH": os.environ["PATH"]},
+                    "final",
+                    lifecycle,
+                )
+            finally:
+                participant.close()
+            self.assertEqual(result["content"], "native final")
+            final_path = evidence / "final-final-assistant-message.json"
+            self.assertTrue(final_path.is_file())
+            self.assertEqual(
+                lifecycle["finalAssistantMessageSha256"],
+                hashlib.sha256(final_path.read_bytes()).hexdigest(),
+            )
+            self.assertTrue(lifecycle["finalAssistantTextPresent"])
 
     def test_disconnect_still_captures_complete_upstream(self):
         release=threading.Event()

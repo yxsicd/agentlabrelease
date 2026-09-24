@@ -59,6 +59,8 @@ def process(*, self_assessment: bool = False, dependency_discovery: bool = False
             "schema": "agentlab.dependency_discovery_summary.v1",
             "stageCount": 2,
             "measuredStageCount": 2,
+            "missingStageCount": 0,
+            "invalidStageCount": 0,
             "claimCount": 2,
             "obligationCount": 2,
             "coveredObligationCount": 2,

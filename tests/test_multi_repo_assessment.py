@@ -129,26 +129,28 @@ class MultiRepoAssessmentTests(unittest.TestCase):
         self, root: pathlib.Path, case_path: pathlib.Path
     ) -> tuple[pathlib.Path, pathlib.Path]:
         case = json.loads(case_path.read_text())
-        revisions = {row["id"]: row["revision"] for row in case["sources"]}
+        sources = {row["id"]: row for row in case["sources"]}
         facts_path = root / "program-facts.jsonl"
         facts = [
             {
                 "id": "fact-service-contracts",
                 "kind": "module-dependency",
-                "repositoryId": "service",
-                "path": "src/reservation.ts",
-                "sourceRevision": revisions["service"],
+                "sourceRepositoryId": "service",
+                "sourcePath": "src/reservation.ts",
+                "sourceIdentity": "git:{repository}@{revision}".format(**sources["service"]),
                 "targetRepositoryId": "contracts",
                 "targetPath": "src/policy.ts",
+                "targetIdentity": "git:{repository}@{revision}".format(**sources["contracts"]),
             },
             {
                 "id": "fact-app-service",
                 "kind": "module-dependency",
-                "repositoryId": "app",
-                "path": "src/checkout.ts",
-                "sourceRevision": revisions["app"],
+                "sourceRepositoryId": "app",
+                "sourcePath": "src/checkout.ts",
+                "sourceIdentity": "git:{repository}@{revision}".format(**sources["app"]),
                 "targetRepositoryId": "service",
                 "targetPath": "src/reservation.ts",
+                "targetIdentity": "git:{repository}@{revision}".format(**sources["service"]),
             },
         ]
         facts_path.write_text("".join(json.dumps(row) + "\n" for row in facts))
@@ -159,6 +161,12 @@ class MultiRepoAssessmentTests(unittest.TestCase):
             "caseId": case["id"],
             "sourceSetSha256": case["sourceSetSha256"],
             "programFactsSha256": facts_sha,
+            "obligationPlanSha256": "8" * 64,
+            "obligationPlanReview": {
+                "authority": "explicit-dependency-plan-review",
+                "reviewer": "reviewer-a",
+                "verdict": "approve-for-contract",
+            },
             "stages": [
                 {
                     "stageId": "turn-1",

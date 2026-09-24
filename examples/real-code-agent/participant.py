@@ -1,6 +1,7 @@
 """Operator-owned gateway capture and a replaceable Pi participant launcher."""
 import http.server
 import base64
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -243,8 +244,9 @@ class Participant:
                      'providerReasoningEffort': self.active_reasoning_effort}
         started = time.monotonic()
         turn_error = None
+        turn_result = None
         try:
-            self._run_turn(command, project, env, label, lifecycle)
+            turn_result = self._run_turn(command, project, env, label, lifecycle)
         except RuntimeError as error:
             turn_error = error
         finally:
@@ -291,6 +293,7 @@ class Participant:
         if marker is not None and marker not in source.read_text():
             raise RuntimeError(f'{label}: Agent did not change actual source')
         print(f'{label}: real {self.implementation} turn completed', flush=True)
+        return turn_result
 
     def _run_turn(self, command, project, env, label, lifecycle):
         with (self.evidence / f'{label}-events.jsonl').open('wb') as out, \
@@ -330,6 +333,33 @@ class Participant:
             raise RuntimeError(f'{label}: ' + '; '.join(errors))
         if not any(e.get('type') == 'tool_execution_end' for e in events):
             raise RuntimeError(f'{label}: no completed native tool call')
+        final_messages = [
+            e['message'] for e in events
+            if e.get('type') == 'message_end'
+            and isinstance(e.get('message'), dict)
+            and e['message'].get('role') == 'assistant'
+            and e['message'].get('stopReason') != 'error'
+        ]
+        final_message = final_messages[-1] if final_messages else None
+        final_content = final_message.get('content') if final_message else None
+        if isinstance(final_content, list):
+            final_content = ''.join(
+                row.get('text', '')
+                for row in final_content
+                if isinstance(row, dict) and row.get('type') == 'text'
+            )
+        if final_content is not None and not isinstance(final_content, str):
+            final_content = None
+        lifecycle['finalAssistantMessagePresent'] = final_message is not None
+        lifecycle['finalAssistantTextPresent'] = final_content is not None
+        if final_message is not None:
+            final_bytes = (json.dumps(final_message, ensure_ascii=False, sort_keys=True) + '\n').encode()
+            final_path = self.evidence / f'{label}-final-assistant-message.json'
+            final_path.write_bytes(final_bytes)
+            lifecycle['finalAssistantMessageSha256'] = hashlib.sha256(final_bytes).hexdigest()
+        else:
+            lifecycle['finalAssistantMessageSha256'] = None
+        return {'message': final_message, 'content': final_content}
 
     def close(self):
         self.server.shutdown()

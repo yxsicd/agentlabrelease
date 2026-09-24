@@ -132,6 +132,20 @@ jobs:
           [[ "$MODEL_A" != "$MODEL_B" ]]
           mkdir -p "$AGENTLAB_ROOT/runs"
           review_args=()
+          dependency_args=()
+          if python3 - <<'PY'
+          import json, os
+          case = json.load(open(os.environ["AGENTLAB_ROOT"] + "/case/evaluation-case.json"))
+          raise SystemExit(0 if case.get("dependencyDiscovery") is not None else 1)
+          PY
+          then
+            test -f "$AGENTLAB_ROOT/case/blind-cut/evaluator/dependency-discovery-contract.json"
+            test -f "$AGENTLAB_ROOT/case/blind-cut/evaluator/program-facts.jsonl"
+            dependency_args=(
+              --dependency-contract "$AGENTLAB_ROOT/case/blind-cut/evaluator/dependency-discovery-contract.json"
+              --program-facts "$AGENTLAB_ROOT/case/blind-cut/evaluator/program-facts.jsonl"
+            )
+          fi
           if [[ -n "${{ inputs.authenticated_review_run_id }}" ]]; then
             review_args=(
               --authenticated-review-bundle "$AGENTLAB_ROOT/authenticated-review"
@@ -153,6 +167,7 @@ jobs:
                 --blind-participant-root "$RUNNER_TEMP/agentlab-blind-participant" \
                 --blind-dispatch-receipt "$AGENTLAB_ROOT/blind-dispatch-receipt.json" \
                 --participant-runtime-config "$AGENTLAB_ROOT/participant-runtime.json" \
+                "${dependency_args[@]}" \
                 "${review_args[@]}" \
                 --participant-id "pi-${model}" --output "$output"
               status=$?

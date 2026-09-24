@@ -11,6 +11,41 @@ import sys
 import hashlib
 
 
+CLAIMS_START = "<agentlab_dependency_claims>"
+CLAIMS_END = "</agentlab_dependency_claims>"
+
+
+def parse_dependency_claims(content):
+    if not isinstance(content, str):
+        return {"status": "missing", "claims": None, "error": None}
+    if content.count(CLAIMS_START) == 0 and content.count(CLAIMS_END) == 0:
+        return {"status": "missing", "claims": None, "error": None}
+    if content.count(CLAIMS_START) != 1 or content.count(CLAIMS_END) != 1:
+        return {
+            "status": "invalid",
+            "claims": None,
+            "error": "dependency claim markers must occur exactly once",
+        }
+    start = content.index(CLAIMS_START) + len(CLAIMS_START)
+    end = content.index(CLAIMS_END, start)
+    payload = content[start:end].strip()
+    try:
+        claims = json.loads(payload)
+    except json.JSONDecodeError as error:
+        return {
+            "status": "invalid",
+            "claims": None,
+            "error": f"dependency claim JSON is invalid: {error.msg}",
+        }
+    if not isinstance(claims, list):
+        return {
+            "status": "invalid",
+            "claims": None,
+            "error": "dependency claim payload must be an array",
+        }
+    return {"status": "reported", "claims": claims, "error": None}
+
+
 def load_blind_input(root_value):
     if not root_value:
         return None
@@ -105,6 +140,18 @@ def main():
                 if allowed_edits is not None
                 else "Choose the necessary edit surface from source evidence; the Harness enforces the hidden scope independently."
             )
+            dependency_instruction = ""
+            if request.get("schema") == "agentlab.multi_repo_assessed_stage_request.v2":
+                dependency_instruction = f"""
+Before finishing, report the direct cross-repository dependencies you relied on.
+Append exactly one block whose body is a JSON array:
+{CLAIMS_START}
+[
+  {{"relation":"module-dependency","source":{{"repositoryId":"repo","path":"path"}},"target":{{"repositoryId":"repo","path":"path"}},"rationale":"source-based reason"}}
+]
+{CLAIMS_END}
+Use an empty array only if you found no relevant direct dependency. Do not guess hidden fact IDs or allowed edit paths.
+"""
             prompt = f"""You are the assessed Code Agent. Work only inside the current multi-repository workspace.
 Implement this user demand while preserving prior-stage behavior:
 
@@ -113,11 +160,27 @@ Implement this user demand while preserving prior-stage behavior:
 {scope_instruction}
 Do not inspect parent directories, Harness evidence, Oracle code, reference implementations, or hidden solutions.
 Use source inspection and file tools, make the actual edits, and briefly report completion.
+{dependency_instruction}
 """
             try:
                 with contextlib.redirect_stdout(sys.stderr):
-                    participant.turn(stage, Path(message["workspace"]), prompt=prompt)
-                response = {"ok": True, "stageId": stage}
+                    turn_result = participant.turn(
+                        stage, Path(message["workspace"]), prompt=prompt
+                    )
+                parsed_claims = parse_dependency_claims(
+                    turn_result.get("content") if isinstance(turn_result, dict) else None
+                )
+                response = {
+                    "ok": True,
+                    "stageId": stage,
+                    "dependencyClaimSubmission": {
+                        "status": parsed_claims["status"],
+                        "source": "native-final-assistant-message",
+                        "error": parsed_claims["error"],
+                    },
+                }
+                if parsed_claims["status"] == "reported":
+                    response["dependencyClaims"] = parsed_claims["claims"]
             except Exception as error:
                 response = {"ok": False, "stageId": stage, "error": f"{type(error).__name__}: {error}"}
             print(json.dumps(response), flush=True)

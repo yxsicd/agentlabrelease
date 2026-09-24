@@ -98,6 +98,15 @@ jobs:
             --quality-report "$AGENTLAB_ROOT/construction/intent-quality.json" \
             --output "$AGENTLAB_ROOT/case-plan-proposal.json"
           sha256sum "$AGENTLAB_ROOT/case-plan-proposal.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Propose hidden dependency obligations from exact recursive evidence
+        run: |
+          python3 scripts/propose-dependency-discovery-plan.py \
+            --case-plan-proposal "$AGENTLAB_ROOT/case-plan-proposal.json" \
+            --difficulty "$AGENTLAB_ROOT/analysis/difficulty_candidates.json" \
+            --program-facts "$AGENTLAB_ROOT/analysis/workspace_facts.jsonl" \
+            --output "$AGENTLAB_ROOT/dependency-discovery-plan-proposal.json"
+          sha256sum "$AGENTLAB_ROOT/dependency-discovery-plan-proposal.json" \
+            >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve the operator-owned calibration fixture
         run: |
           mkdir -p "$AGENTLAB_ROOT/operator-fixture"

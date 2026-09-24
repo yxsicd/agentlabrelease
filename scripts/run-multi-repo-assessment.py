@@ -237,15 +237,24 @@ def process_measurement(stage_results, duration_ms):
     if dependency_rows:
         obligations = sum(row["obligationCount"] for row in dependency_rows)
         covered = sum(row["coveredObligationCount"] for row in dependency_rows)
+        measured = sum(row["measurementQualified"] for row in dependency_rows)
         value["dependencyDiscovery"] = {
             "schema": "agentlab.dependency_discovery_summary.v1",
             "stageCount": len(stage_results),
-            "measuredStageCount": len(dependency_rows),
+            "measuredStageCount": measured,
+            "missingStageCount": sum(
+                row["submissionStatus"] == "missing" for row in dependency_rows
+            ),
+            "invalidStageCount": sum(
+                row["submissionStatus"] == "invalid" for row in dependency_rows
+            ),
             "claimCount": sum(row["claimCount"] for row in dependency_rows),
             "obligationCount": obligations,
             "coveredObligationCount": covered,
             "requiredObligationCoverage": covered / obligations if obligations else None,
-            "coverageQualified": bool(obligations) and covered == obligations,
+            "coverageQualified": measured == len(stage_results)
+            and bool(obligations)
+            and covered == obligations,
             "unadjudicatedClaimCount": sum(
                 row["unadjudicatedClaimCount"] for row in dependency_rows
             ),
@@ -363,14 +372,31 @@ def validate_dependency_discovery(case, contract_path, facts_path):
         fact_rows.append(row)
     fact_index = {row.get("id"): row for row in fact_rows if isinstance(row.get("id"), str)}
     require(len(fact_index) == len(fact_rows) and fact_index, "program fact identities are invalid")
-    revisions = {
-        row["id"]: row.get("revision") for row in case.get("sources", [])
+    sources = {
+        row["id"]: {
+            "repository": row.get("repository"),
+            "revision": row.get("revision"),
+        }
+        for row in case.get("sources", [])
     }
     contract = load(contract_path)
     require(contract.get("schema") == "agentlab.dependency_discovery_contract.v1", "dependency contract schema differs")
     require(contract.get("caseId") == case.get("id"), "dependency contract case differs")
     require(contract.get("sourceSetSha256") == case.get("sourceSetSha256"), "dependency contract source set differs")
     require(contract.get("programFactsSha256") == digest(facts_path), "dependency contract facts digest differs")
+    require(
+        isinstance(contract.get("obligationPlanSha256"), str)
+        and SHA256.fullmatch(contract["obligationPlanSha256"]),
+        "dependency contract obligation plan digest is invalid",
+    )
+    plan_review = contract.get("obligationPlanReview") or {}
+    require(
+        plan_review.get("authority") == "explicit-dependency-plan-review"
+        and plan_review.get("verdict") == "approve-for-contract"
+        and isinstance(plan_review.get("reviewer"), str)
+        and plan_review["reviewer"],
+        "dependency contract lacks explicit obligation review",
+    )
     require(contract.get("automaticPromotion") is False, "dependency contract cannot auto-promote")
     require(
         contract.get("precisionPolicy")
@@ -404,18 +430,31 @@ def validate_dependency_discovery(case, contract_path, facts_path):
             for index, claim in enumerate(accepted):
                 normalized = dependency_claim(claim, f"{obligation_id} accepted claim {index}", participant=False)
                 for endpoint in (normalized["source"], normalized["target"]):
-                    require(endpoint["repositoryId"] in revisions, f"{obligation_id} references unknown repository")
+                    require(endpoint["repositoryId"] in sources, f"{obligation_id} references unknown repository")
                 for fact_id in normalized["factIds"]:
                     require(fact_id in fact_index, f"{obligation_id} references unknown program fact")
                     fact = fact_index[fact_id]
-                    repository_id = fact.get("repositoryId")
-                    require(repository_id in revisions, f"{fact_id} repository identity differs")
-                    require(fact.get("sourceRevision") == revisions[repository_id], f"{fact_id} source revision differs")
+                    source_repository_id = fact.get("sourceRepositoryId")
+                    target_repository_id = fact.get("targetRepositoryId")
+                    require(source_repository_id in sources, f"{fact_id} source repository identity differs")
+                    require(target_repository_id in sources, f"{fact_id} target repository identity differs")
+                    source = sources[source_repository_id]
+                    target = sources[target_repository_id]
+                    require(
+                        fact.get("sourceIdentity")
+                        == f"git:{source['repository']}@{source['revision']}",
+                        f"{fact_id} source revision differs",
+                    )
+                    require(
+                        fact.get("targetIdentity")
+                        == f"git:{target['repository']}@{target['revision']}",
+                        f"{fact_id} target revision differs",
+                    )
                     require(
                         fact.get("kind") == normalized["relation"]
-                        and fact.get("repositoryId")
+                        and fact.get("sourceRepositoryId")
                         == normalized["source"]["repositoryId"]
-                        and fact.get("path") == normalized["source"]["path"]
+                        and fact.get("sourcePath") == normalized["source"]["path"]
                         and fact.get("targetRepositoryId")
                         == normalized["target"]["repositoryId"]
                         and fact.get("targetPath") == normalized["target"]["path"],
@@ -429,19 +468,66 @@ def validate_dependency_discovery(case, contract_path, facts_path):
 
 
 def participant_dependency_discovery(response, obligations):
-    claims = response.get("dependencyClaims")
-    if claims is None:
-        claims = []
-    require(isinstance(claims, list), "participant dependencyClaims must be an array")
-    normalized = [
-        dependency_claim(claim, f"participant dependency claim {index}", participant=True)
-        for index, claim in enumerate(claims)
-    ]
+    claims_present = "dependencyClaims" in response
+    claims = response.get("dependencyClaims") if claims_present else []
+    submission = response.get("dependencyClaimSubmission")
+    submission_status = "reported" if claims_present else "missing"
+    validation_error = None
+    if submission is not None:
+        if not isinstance(submission, dict) or submission.get("status") not in {
+            "reported",
+            "missing",
+            "invalid",
+        }:
+            submission_status = "invalid"
+            validation_error = "dependency claim submission metadata is invalid"
+        else:
+            submission_status = submission["status"]
+            if submission_status == "reported" and not claims_present:
+                submission_status = "invalid"
+                validation_error = "reported dependency claims are absent"
+            elif submission_status != "reported" and claims_present:
+                submission_status = "invalid"
+                validation_error = "dependency claims conflict with submission status"
+            elif submission_status == "invalid":
+                error = submission.get("error")
+                validation_error = (
+                    error
+                    if isinstance(error, str) and error
+                    else "participant dependency claim submission is invalid"
+                )
+    normalized = []
+    if submission_status == "reported":
+        try:
+            require(isinstance(claims, list), "participant dependencyClaims must be an array")
+            normalized = [
+                dependency_claim(
+                    claim,
+                    f"participant dependency claim {index}",
+                    participant=True,
+                )
+                for index, claim in enumerate(claims)
+            ]
+            identities = [
+                (
+                    claim["relation"],
+                    tuple(claim["source"].items()),
+                    tuple(claim["target"].items()),
+                )
+                for claim in normalized
+            ]
+            require(
+                len(identities) == len(set(identities)),
+                "participant dependency claims are duplicated",
+            )
+        except (TypeError, ValueError) as error:
+            submission_status = "invalid"
+            validation_error = str(error)
+            normalized = []
     identities = [
         (claim["relation"], tuple(claim["source"].items()), tuple(claim["target"].items()))
         for claim in normalized
     ]
-    require(len(identities) == len(set(identities)), "participant dependency claims are duplicated")
     matches = []
     matched_claim_indexes = set()
     for obligation in obligations:
@@ -457,14 +543,18 @@ def participant_dependency_discovery(response, obligations):
         if indexes:
             matched_claim_indexes.add(indexes[0])
         matches.append({"obligationId": obligation["id"], "covered": bool(indexes)})
+    measurement_qualified = submission_status == "reported"
     covered = sum(row["covered"] for row in matches)
     return {
         "schema": "agentlab.dependency_discovery_stage_measurement.v1",
+        "submissionStatus": submission_status,
+        "measurementQualified": measurement_qualified,
+        "validationError": validation_error,
         "claimCount": len(normalized),
         "obligationCount": len(obligations),
         "coveredObligationCount": covered,
         "requiredObligationCoverage": covered / len(obligations),
-        "coverageQualified": covered == len(obligations),
+        "coverageQualified": measurement_qualified and covered == len(obligations),
         "unadjudicatedClaimCount": len(normalized) - len(matched_claim_indexes),
         "obligations": matches,
         "participantClaims": normalized,

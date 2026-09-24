@@ -42,6 +42,8 @@ class MultiRepoModelConstructionTest(unittest.TestCase):
         self.assertIn("if: always()", workflow)
         self.assertIn("multi-repo-model-construction", workflow)
         self.assertIn("operator-fixture/oracle.mjs", workflow)
+        self.assertIn("scripts/propose-dependency-discovery-plan.py", workflow)
+        self.assertIn("dependency-discovery-plan-proposal.json", workflow)
 
     def test_review_and_campaign_workflows_preserve_trusted_boundaries(self):
         review = (ROOT / ".github/workflows/multi-repo-case-review.yml").read_text()
@@ -55,6 +57,7 @@ class MultiRepoModelConstructionTest(unittest.TestCase):
         self.assertIn(".github/workflows/multi-repo-model-construction.yml", review)
         self.assertIn(".github/workflows/multi-repo-case-review.yml", campaign)
         self.assertIn('--expected-sha256 "$EXPECTED_PROPOSAL_SHA256"', review)
+        self.assertIn('--expected-sha256 "$EXPECTED_DEPENDENCY_PLAN_SHA256"', review)
         self.assertIn('--rationale "$REVIEW_RATIONALE"', review)
         self.assertNotIn("--rationale '${{ inputs.rationale }}'", review)
         self.assertIn("source/operator-fixture/calibrate.py", review)
@@ -67,6 +70,10 @@ class MultiRepoModelConstructionTest(unittest.TestCase):
         self.assertIn("scripts/prepare-harmony-assessed-handoff.py", campaign)
         self.assertIn("harmony-device-handoff.json", campaign)
         self.assertIn("validate-case-qualification.py", review)
+        self.assertIn("scripts/review-dependency-discovery-plan.py decide", review)
+        self.assertIn("scripts/review-dependency-discovery-plan.py compile", review)
+        self.assertIn("scripts/build-dependency-discovery-contract.py", review)
+        self.assertIn("scripts/bind-dependency-discovery-case.py", review)
         self.assertIn("scripts/prepare-multi-repo-blind-cut.py", review)
         self.assertIn('scripts/build-blind-case-cut.py validate', review)
         self.assertIn('scripts/build-blind-case-cut.py stage-participant', campaign)
@@ -75,6 +82,8 @@ class MultiRepoModelConstructionTest(unittest.TestCase):
         self.assertIn("scripts/prepare-participant-runtime.py", campaign)
         self.assertIn("scripts/run-pi-in-docker.py", campaign)
         self.assertIn('--participant-runtime-config "$AGENTLAB_ROOT/participant-runtime.json"', campaign)
+        self.assertIn('--dependency-contract "$AGENTLAB_ROOT/case/blind-cut/evaluator/dependency-discovery-contract.json"', campaign)
+        self.assertIn('--program-facts "$AGENTLAB_ROOT/case/blind-cut/evaluator/program-facts.jsonl"', campaign)
         self.assertIn('--forbid "$AGENTLAB_ROOT/case"', campaign)
 
     def test_fixture_script_is_release_manifested(self):

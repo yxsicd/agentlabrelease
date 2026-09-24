@@ -324,6 +324,9 @@ class CollectCaseAttemptsTests(unittest.TestCase):
                     },
                     "dependencyDiscovery": {
                         "schema": "agentlab.dependency_discovery_stage_measurement.v1",
+                        "submissionStatus": "reported",
+                        "measurementQualified": True,
+                        "validationError": None,
                         "claimCount": 1,
                         "obligationCount": 1,
                         "coveredObligationCount": 1,
@@ -374,6 +377,8 @@ class CollectCaseAttemptsTests(unittest.TestCase):
                     "schema": "agentlab.dependency_discovery_summary.v1",
                     "stageCount": 1,
                     "measuredStageCount": 1,
+                    "missingStageCount": 0,
+                    "invalidStageCount": 0,
                     "claimCount": 1,
                     "obligationCount": 1,
                     "coveredObligationCount": 1,

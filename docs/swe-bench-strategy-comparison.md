@@ -168,9 +168,13 @@ smaller than SWE-bench's:
    from the participant task, manifest and stage request. Hidden obligations
    are derived from exact-revision program facts, may accept several supported
    dependency relations, score required-obligation recall, and leave extra
-   claims unadjudicated instead of inventing precision. This closes the
-   mechanism and deterministic fixture, not real-model evidence: no repeated
-   real Agent campaign has yet established dependency-discovery discrimination.
+   claims unadjudicated instead of inventing precision. Native Pi final messages
+   now carry a strict structured claim block; missing and invalid submissions
+   remain distinct from reported claims, and trusted-main review/campaign
+   workflows carry the explicitly reviewed contract and evaluator-only facts
+   end to end. This closes the mechanism and deterministic fixture, not
+   real-model evidence: no repeated real Agent campaign has yet established
+   dependency-discovery discrimination.
    Historical/gold touched paths remain explicitly ineligible as a unique
    answer. Equivalent coverage for standalone or non-emulator device adapters
    also remains open.

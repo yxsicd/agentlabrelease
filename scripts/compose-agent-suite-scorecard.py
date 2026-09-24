@@ -209,6 +209,7 @@ def validate_discrimination(
     require(isinstance(dependency.get("measuredAttemptCount"), int) and 0 <= dependency["measuredAttemptCount"] <= process["validAttemptCount"], f"{case_id} dependency discovery denominator is invalid")
     require(dependency.get("coverageRate") == dependency["measuredAttemptCount"] / process["validAttemptCount"], f"{case_id} dependency discovery measurement coverage differs")
     require(dependency.get("measurementCoverageQualified") is (dependency["measuredAttemptCount"] == process["validAttemptCount"]), f"{case_id} dependency discovery measurement qualification differs")
+    require(isinstance(dependency.get("missingStageCount"), int) and dependency["missingStageCount"] >= 0 and isinstance(dependency.get("invalidStageCount"), int) and dependency["invalidStageCount"] >= 0, f"{case_id} dependency discovery submission counts are invalid")
     obligation_count = dependency.get("obligationCount")
     covered_count = dependency.get("coveredObligationCount")
     require(isinstance(obligation_count, int) and obligation_count >= 0 and isinstance(covered_count, int) and 0 <= covered_count <= obligation_count, f"{case_id} dependency discovery obligation counts are invalid")
@@ -385,6 +386,8 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
                 "dependencyDiscoveryCoverageQualified": dependency["coverageQualified"],
                 "dependencyDiscoveryRequiredObligationCoverage": dependency["requiredObligationCoverage"],
                 "dependencyDiscoveryUnadjudicatedClaimCount": dependency["unadjudicatedClaimCount"],
+                "dependencyDiscoveryMissingStageCount": dependency["missingStageCount"],
+                "dependencyDiscoveryInvalidStageCount": dependency["invalidStageCount"],
                 "expectedCapabilityOrderQualified": expected_order,
                 "strongestMinusWeakestPassRate": strongest["passRate"] - weakest["passRate"],
                 "strongestWeakestWilson95Separated": interval_separated,

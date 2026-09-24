@@ -322,8 +322,12 @@ calibration at participant, case and suite levels. The claim never changes the
 Oracle verdict or promotion eligibility, and adapters must not manufacture a
 confidence value from process success.
 
-Dependency discovery now has a separate v2 measurement path. The contract
-builder accepts a reviewed obligation plan containing stable program-fact IDs,
+Dependency discovery now has a separate v2 measurement path. The construction
+workflow derives a review-required obligation proposal only from the selected
+recursive candidate's native `module-dependency` evidence and groups it by
+dependency depth. The case-review workflow requires the operator-provided
+digest and risk acknowledgements before compiling a v2 reviewed plan. The
+contract builder accepts that plan containing stable program-fact IDs,
 independently verifies every fact against the case's exact repository revision,
 and derives claim endpoints from `module-dependency` facts. An obligation may
 name several accepted fact IDs, so supported alternative dependency routes can
@@ -352,8 +356,13 @@ them against hidden obligations before reporting required-obligation coverage.
 Extra claims are retained as unadjudicated and `precisionClaimed=false`; a gold
 patch's touched paths are never treated as the unique answer. Collection,
 discrimination and suite composition preserve this metric separately from the
-functional Oracle verdict. Current evidence is deterministic protocol coverage,
-not proof that real Agents are discriminated by it.
+functional Oracle verdict. The assessed Pi adapter extracts claims only from an
+explicit marker block in the retained native final assistant message; missing
+and malformed submissions are reported separately. The trusted-main campaign
+passes the evaluator-only contract and facts from the validated blind cut into
+every run. Current evidence is deterministic protocol coverage, not proof that
+real Agents are discriminated by it; a real trusted-main campaign is still
+required.
 
 ### Run the assessed campaign through the device gate
 

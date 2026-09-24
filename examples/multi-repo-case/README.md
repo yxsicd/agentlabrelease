@@ -335,6 +335,12 @@ available only to the host adapter, not to Pi or its PID namespace.
 `agentlab.case_attempt_collection.v2` campaign. Participant/runtime or Oracle
 transport failures produce `infrastructure-unavailable` with a null verdict;
 valid runs that fail behavior or edit scope remain assessed failures.
+For a dependency-aware v2 task, the native final assistant message must contain
+exactly one `<agentlab_dependency_claims>` JSON-array block. The adapter retains
+the complete native message and its digest, reports `reported`, `missing` or
+`invalid`, and never manufactures dependency claims from exit status or changed
+paths. Missing or malformed claims remain a process-measurement failure while
+the independent functional Oracle still owns the task verdict.
 
 `mock-assessed-agent.py` provides baseline, reference and scope-drift protocol
 fixtures for deterministic Harness regression only. It also emits an optional
@@ -358,10 +364,29 @@ contamination remain review-required, so `blindAssessmentQualified` stays false.
 ### Hidden dependency-discovery protocol
 
 Do not evaluate dependency discovery while revealing `allowedEdits`. Build a
-hidden contract from exact analyzer facts and a reviewed obligation plan, then
-derive a new immutable case binding:
+hidden contract from exact analyzer facts and an explicitly reviewed obligation
+plan, then derive a new immutable case binding. The trusted construction path
+first groups the selected recursive candidate's native `module-dependency`
+evidence by dependency depth; this remains a review proposal rather than an
+automatic Oracle:
 
 ```sh
+python3 scripts/propose-dependency-discovery-plan.py \
+  --case-plan-proposal /tmp/case-plan-proposal.json \
+  --difficulty /tmp/analysis/difficulty_candidates.json \
+  --program-facts /tmp/analysis/workspace_facts.jsonl \
+  --output /tmp/dependency-plan-proposal.json
+python3 scripts/review-dependency-discovery-plan.py decide \
+  --proposal /tmp/dependency-plan-proposal.json \
+  --expected-sha256 "$REVIEWED_DEPENDENCY_PLAN_SHA256" \
+  --reviewer "$REVIEWER" \
+  --acknowledged-risk-ids dependency-obligation-fairness,dependency-route-completeness \
+  --rationale "$DEPENDENCY_PLAN_RATIONALE" \
+  --output /tmp/dependency-plan-review.json
+python3 scripts/review-dependency-discovery-plan.py compile \
+  --proposal /tmp/dependency-plan-proposal.json \
+  --review /tmp/dependency-plan-review.json \
+  --output /tmp/dependency-discovery-plan.json
 python3 scripts/build-dependency-discovery-contract.py \
   --case /tmp/multi-repo-evaluation-case.json \
   --program-facts /tmp/analysis/workspace_facts.jsonl \

@@ -10,12 +10,24 @@ on:
         description: Exact proposal digest inspected by the reviewer
         required: true
         type: string
+      expected_dependency_plan_sha256:
+        description: Exact hidden dependency-plan proposal digest inspected by the reviewer
+        required: true
+        type: string
       acknowledged_risk_ids:
         description: Comma-separated proposal risk IDs, exactly as reviewed
         required: true
         type: string
       rationale:
         description: Why this exact proposal is approved for calibration
+        required: true
+        type: string
+      acknowledged_dependency_risk_ids:
+        description: Comma-separated dependency-plan risk IDs, exactly as reviewed
+        required: true
+        type: string
+      dependency_plan_rationale:
+        description: Why these hidden obligations are fair and source-inferable
         required: true
         type: string
 
@@ -67,6 +79,24 @@ jobs:
             --proposal "$AGENTLAB_ROOT/source/case-plan-proposal.json" \
             --review "$AGENTLAB_ROOT/case-plan-review.json" \
             --output "$AGENTLAB_ROOT/case-plan.json"
+      - name: Bind explicit operator review to hidden dependency obligations
+        env:
+          EXPECTED_DEPENDENCY_PLAN_SHA256: ${{ inputs.expected_dependency_plan_sha256 }}
+          REVIEWER: ${{ github.actor }}
+          ACKNOWLEDGED_DEPENDENCY_RISK_IDS: ${{ inputs.acknowledged_dependency_risk_ids }}
+          DEPENDENCY_PLAN_RATIONALE: ${{ inputs.dependency_plan_rationale }}
+        run: |
+          python3 scripts/review-dependency-discovery-plan.py decide \
+            --proposal "$AGENTLAB_ROOT/source/dependency-discovery-plan-proposal.json" \
+            --expected-sha256 "$EXPECTED_DEPENDENCY_PLAN_SHA256" \
+            --reviewer "$REVIEWER" \
+            --acknowledged-risk-ids "$ACKNOWLEDGED_DEPENDENCY_RISK_IDS" \
+            --rationale "$DEPENDENCY_PLAN_RATIONALE" \
+            --output "$AGENTLAB_ROOT/dependency-discovery-plan-review.json"
+          python3 scripts/review-dependency-discovery-plan.py compile \
+            --proposal "$AGENTLAB_ROOT/source/dependency-discovery-plan-proposal.json" \
+            --review "$AGENTLAB_ROOT/dependency-discovery-plan-review.json" \
+            --output "$AGENTLAB_ROOT/dependency-discovery-plan.json"
       - name: Re-run the independent executable calibration
         run: |
           mapfile -t identity < <(python3 - <<'PY'
@@ -93,6 +123,16 @@ jobs:
             --review "$AGENTLAB_ROOT/case-plan-review.json" \
             --construction-quality "$AGENTLAB_ROOT/source/construction/intent-quality.json" \
             --calibration "$AGENTLAB_ROOT/calibration/summary.json" \
+            --output "$AGENTLAB_ROOT/base-evaluation-case.json"
+          python3 scripts/build-dependency-discovery-contract.py \
+            --case "$AGENTLAB_ROOT/base-evaluation-case.json" \
+            --program-facts "$AGENTLAB_ROOT/source/analysis/workspace_facts.jsonl" \
+            --plan "$AGENTLAB_ROOT/dependency-discovery-plan.json" \
+            --output "$AGENTLAB_ROOT/dependency-discovery-contract.json"
+          python3 scripts/bind-dependency-discovery-case.py \
+            --case "$AGENTLAB_ROOT/base-evaluation-case.json" \
+            --dependency-contract "$AGENTLAB_ROOT/dependency-discovery-contract.json" \
+            --program-facts "$AGENTLAB_ROOT/source/analysis/workspace_facts.jsonl" \
             --output "$AGENTLAB_ROOT/evaluation-case.json"
           python3 scripts/validate-case-qualification.py \
             --case "$AGENTLAB_ROOT/evaluation-case.json" \
@@ -107,6 +147,8 @@ jobs:
             --reference-root "$AGENTLAB_ROOT/source/operator-fixture/reference" \
             --calibration "$AGENTLAB_ROOT/calibration/summary.json" \
             --review "$AGENTLAB_ROOT/case-plan-review.json" \
+            --dependency-contract "$AGENTLAB_ROOT/dependency-discovery-contract.json" \
+            --program-facts "$AGENTLAB_ROOT/source/analysis/workspace_facts.jsonl" \
             --method-revision "$GITHUB_SHA" \
             --constructed-at "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
             --source-visibility held-out-public-revision \
