@@ -563,6 +563,139 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "automaticPromotion":false
         }));
     }
+    let mut calls_by_file: BTreeMap<(String, String), Vec<(String, String)>> = BTreeMap::new();
+    for row in facts
+        .iter()
+        .filter(|row| row.get("kind").and_then(Value::as_str) == Some("call"))
+    {
+        calls_by_file
+            .entry((
+                row["repositoryId"].as_str().unwrap().to_owned(),
+                row["path"].as_str().unwrap().to_owned(),
+            ))
+            .or_default()
+            .push((
+                row["targetExpression"].as_str().unwrap().to_owned(),
+                row["id"].as_str().unwrap().to_owned(),
+            ));
+    }
+    let mut shared_external_api_calls: BTreeMap<
+        (String, String, String),
+        Vec<(String, String, String, String)>,
+    > = BTreeMap::new();
+    for row in facts.iter().filter(|row| {
+        row.get("kind").and_then(Value::as_str) == Some("module-reference")
+            && row.get("resolution").and_then(Value::as_str) == Some("unresolved")
+            && row
+                .get("specifier")
+                .and_then(Value::as_str)
+                .is_some_and(|specifier| !specifier.starts_with('.'))
+    }) {
+        let repository_id = row["repositoryId"].as_str().unwrap();
+        let path = row["path"].as_str().unwrap();
+        let module_fact_id = row["id"].as_str().unwrap();
+        let Some(bindings) = row.get("importedBindings").and_then(Value::as_array) else {
+            continue;
+        };
+        for binding in bindings {
+            let Some(exported) = binding.get("exported").and_then(Value::as_str) else {
+                continue;
+            };
+            let Some(local) = binding.get("local").and_then(Value::as_str) else {
+                continue;
+            };
+            for (target, call_fact_id) in calls_by_file
+                .get(&(repository_id.to_owned(), path.to_owned()))
+                .into_iter()
+                .flatten()
+            {
+                let normalized_target = if target == local {
+                    Some(exported.to_owned())
+                } else {
+                    target.strip_prefix(&format!("{local}.")).map(|suffix| {
+                        if exported == "*" {
+                            suffix.to_owned()
+                        } else {
+                            format!("{exported}.{suffix}")
+                        }
+                    })
+                };
+                let Some(normalized_target) = normalized_target else {
+                    continue;
+                };
+                shared_external_api_calls
+                    .entry((
+                        row["specifier"].as_str().unwrap().to_owned(),
+                        exported.to_owned(),
+                        normalized_target,
+                    ))
+                    .or_default()
+                    .push((
+                        repository_id.to_owned(),
+                        path.to_owned(),
+                        module_fact_id.to_owned(),
+                        call_fact_id.to_owned(),
+                    ));
+            }
+        }
+    }
+    let mut shared_external_api_call_count = 0usize;
+    for ((specifier, exported_symbol, call_target), mut observations) in shared_external_api_calls {
+        observations.sort();
+        observations.dedup();
+        let affected_repositories = observations
+            .iter()
+            .map(|(repository_id, _, _, _)| repository_id)
+            .collect::<BTreeSet<_>>();
+        if affected_repositories.len() < 2 {
+            continue;
+        }
+        shared_external_api_call_count += 1;
+        let affected = observations
+            .iter()
+            .map(|(repository_id, path, _, _)| (repository_id, path))
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .map(|(repository_id, path)| {
+                json!({"repositoryId":repository_id,"path":path,"dependencyDepth":1})
+            })
+            .collect::<Vec<_>>();
+        let evidence = observations
+            .iter()
+            .flat_map(|(_, _, module_fact_id, call_fact_id)| [module_fact_id, call_fact_id])
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        candidates.push(json!({
+            "id":stable_id("difficulty", &["shared-external-api-call-contract",&specifier,&exported_symbol,&call_target]),
+            "schema":"agentlab.difficulty_point.v1",
+            "dimensionId":"multi-repository-change-impact",
+            "primaryDimension":"program-analysis",
+            "relationType":"shared-external-api-call-contract",
+            "mechanism":"same external API call target is observed across repository boundaries",
+            "status":"candidate",
+            "maturityState":"candidate",
+            "seed":{
+                "specifier":specifier,
+                "exportedSymbol":exported_symbol,
+                "callTarget":call_target
+            },
+            "affectedFiles":affected,
+            "affectedRepositoryCount":affected_repositories.len(),
+            "maxDependencyDepth":1,
+            "evidenceIds":evidence,
+            "verificationContract":{
+                "caseReady":false,
+                "required":[
+                    "external API version and behavioral contract",
+                    "call-site lifecycle and error-path semantics",
+                    "repository-specific repair and preservation checks",
+                    "cross-repository behavior oracle"
+                ]
+            },
+            "automaticPromotion":false
+        }));
+    }
     for row in facts.iter().filter(|row| {
         row.get("kind").and_then(Value::as_str) == Some("module-reference")
             && row.get("resolution").and_then(Value::as_str) == Some("unresolved")
@@ -609,7 +742,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let source_set_sha256 = digest(&serde_json::to_vec(&source_set)?);
     let difficulty = json!({
         "schema":"agentlab.difficulty_candidates.v2",
-        "method":"revision-fenced multi-repository dependency graph, recursive reverse impact closure and shared external module contract clustering",
+        "method":"revision-fenced multi-repository dependency graph, recursive reverse impact closure, shared external module clustering and imported-binding API-call localization",
         "sourceSetSha256":source_set_sha256,
         "sources":source_set["repositories"],
         "moduleBindings":source_set["moduleBindings"],
@@ -639,6 +772,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "moduleDependencyEdges":edges.len(),
         "crossRepositoryEdges":edges.iter().filter(|edge|edge["sourceRepositoryId"]!=edge["targetRepositoryId"]).count(),
         "sharedExternalModuleContracts":shared_external_module_count,
+        "sharedExternalApiCallContracts":shared_external_api_call_count,
         "unresolvedModuleReferences":unresolved,
         "difficultyCandidates":difficulty["candidates"].as_array().unwrap().len(),
         "workspaceFactsSha256":digest(&fact_bytes),

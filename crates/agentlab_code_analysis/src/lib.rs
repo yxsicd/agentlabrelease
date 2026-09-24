@@ -26,6 +26,50 @@ fn span(node: Node) -> Value {
         "startLine":node.start_position().row+1,"endLine":node.end_position().row+1,
         "startColumnByte":node.start_position().column,"endColumnByte":node.end_position().column})
 }
+fn import_bindings(node: Node, source: &[u8]) -> Vec<Value> {
+    fn collect(node: Node, source: &[u8], rows: &mut Vec<Value>) {
+        match node.kind() {
+            "import_specifier" => {
+                let exported = field(node, "name", source);
+                let local = node
+                    .child_by_field_name("alias")
+                    .map(|alias| text(alias, source).to_owned())
+                    .unwrap_or_else(|| exported.clone());
+                rows.push(json!({"kind":"named","exported":exported,"local":local}));
+                return;
+            }
+            "namespace_import" => {
+                let mut cursor = node.walk();
+                if let Some(local) = node
+                    .named_children(&mut cursor)
+                    .find(|child| child.kind() == "identifier")
+                {
+                    rows.push(
+                        json!({"kind":"namespace","exported":"*","local":text(local,source)}),
+                    );
+                }
+                return;
+            }
+            _ => {}
+        }
+        let mut cursor = node.walk();
+        for child in node.named_children(&mut cursor) {
+            collect(child, source, rows);
+        }
+    }
+
+    let mut rows = Vec::new();
+    collect(node, source, &mut rows);
+    rows.sort_by_key(|row| {
+        (
+            row["kind"].as_str().unwrap().to_owned(),
+            row["exported"].as_str().unwrap().to_owned(),
+            row["local"].as_str().unwrap().to_owned(),
+        )
+    });
+    rows.dedup();
+    rows
+}
 pub struct Analysis {
     pub rows: Vec<Value>,
     pub has_errors: bool,
@@ -73,6 +117,7 @@ impl Collector<'_> {
                         .get(1..literal.len().saturating_sub(1))
                         .unwrap_or("");
                     self.emit(node,"module-reference",specifier,json!({"specifier":specifier,
+                        "importedBindings":if node.kind()=="import_statement" {import_bindings(node,self.source)} else {Vec::new()},
                         "statement":text(node,self.source),"resolution":"unresolved",
                         "referenceType":if node.kind()=="import_statement" {"import"} else {"export"}}));
                 }
@@ -197,6 +242,24 @@ mod tests {
             .find(|row| row["kind"] == "property" && row["name"] == "other")
             .unwrap();
         assert_eq!(other["decorators"], json!([]));
+    }
+
+    #[test]
+    fn module_references_retain_named_and_aliased_import_bindings() {
+        let source = b"import { webview, router as nav } from '@kit.ArkWeb'; webview.WebviewController.initializeWebEngine(); nav.pushUrl({url:'x'});";
+        let result = analyze("Index.ets", source, "workspace-cut").unwrap();
+        let module = result
+            .rows
+            .iter()
+            .find(|row| row["kind"] == "module-reference")
+            .unwrap();
+        assert_eq!(
+            module["importedBindings"],
+            json!([
+                {"kind":"named","exported":"router","local":"nav"},
+                {"kind":"named","exported":"webview","local":"webview"}
+            ])
+        );
     }
     #[test]
     fn state_styles_gap_is_fixed_without_breaking_normal_objects() {

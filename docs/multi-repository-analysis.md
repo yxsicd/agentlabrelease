@@ -71,6 +71,12 @@ The output directory contains:
   shared platform/package contract change surface, not a claim that the
   repositories depend on one another. It binds the portable source-set digest,
   not local checkout paths. `automaticPromotion` is false.
+- A `shared-external-api-call-contract` candidate is narrower: the analyzer
+  binds a named or aliased import to a syntactic call target in the same file,
+  normalizes the local alias back to the exported symbol, and requires the same
+  module/export/call tuple in at least two repositories. Module-reference and
+  call facts are both retained as evidence. This is call-site localization,
+  not type resolution or proof that the calls have identical lifecycle needs.
 - `multi_repo_analysis.json`: analyzer/grammar identity, exact repository cuts,
   counts and SHA-256 digests for both evidence files.
 
@@ -85,6 +91,14 @@ non-ready. Qualification must independently establish the external contract's
 version and semantics, repository-specific builds, and a cross-repository
 behavior Oracle. This supports real repositories that consume the same Harmony
 platform API without inventing a source-to-source import edge.
+
+Shared external API-call candidates remain non-ready too. Before seed
+extraction, a maintainer must establish the API version and behavioral
+contract, lifecycle/error semantics, repository-specific repair and
+preservation checks, and a cross-repository Oracle. Alias normalization avoids
+splitting the same API merely because repositories use different local names;
+namespace/default imports and dynamic property access retain their explicit
+coverage limitations.
 
 The first real two-repository source qualification is retained at
 `release/qualifications/harmony-real-multi-repo-34661ff/summary.json`. It binds

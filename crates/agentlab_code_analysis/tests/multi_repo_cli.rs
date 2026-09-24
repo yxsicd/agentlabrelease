@@ -308,14 +308,14 @@ fn shared_external_module_contract_becomes_non_ready_multi_repo_candidate() {
         "one",
         &[(
             "src/first.ets",
-            "import { router } from '@kit.ArkUI'; export function first() { return router; }",
+            "import { router } from '@kit.ArkUI'; export function first() { router.pushUrl({url:'first'}); }",
         )],
     );
     let (two, revision_two) = fixture.repository(
         "two",
         &[(
             "src/second.ets",
-            "import { router } from '@kit.ArkUI'; export function second() { return router; }",
+            "import { router as nav } from '@kit.ArkUI'; export function second() { nav.pushUrl({url:'second'}); }",
         )],
     );
     let manifest = json!({
@@ -333,6 +333,7 @@ fn shared_external_module_contract_becomes_non_ready_multi_repo_candidate() {
     );
     let receipt: Value = serde_json::from_slice(&result.stdout).unwrap();
     assert_eq!(receipt["sharedExternalModuleContracts"], 1);
+    assert_eq!(receipt["sharedExternalApiCallContracts"], 1);
     let difficulty: Value = serde_json::from_slice(
         &fs::read(
             fixture
@@ -354,6 +355,18 @@ fn shared_external_module_contract_becomes_non_ready_multi_repo_candidate() {
     assert_eq!(candidate["evidenceIds"].as_array().unwrap().len(), 2);
     assert_eq!(candidate["verificationContract"]["caseReady"], false);
     assert_eq!(candidate["automaticPromotion"], false);
+    let api_candidate = difficulty["candidates"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["relationType"] == "shared-external-api-call-contract")
+        .unwrap();
+    assert_eq!(api_candidate["seed"]["specifier"], "@kit.ArkUI");
+    assert_eq!(api_candidate["seed"]["exportedSymbol"], "router");
+    assert_eq!(api_candidate["seed"]["callTarget"], "router.pushUrl");
+    assert_eq!(api_candidate["affectedFiles"].as_array().unwrap().len(), 2);
+    assert_eq!(api_candidate["evidenceIds"].as_array().unwrap().len(), 4);
+    assert_eq!(api_candidate["verificationContract"]["caseReady"], false);
 }
 
 #[test]
