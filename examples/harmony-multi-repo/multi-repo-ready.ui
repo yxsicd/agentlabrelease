@@ -1,2 +1,4 @@
-wait-layout-text	Multi Repo Ready	60
-assert-layout-text	Multi Repo Ready
+schema	agentlab.harmony_ui_scenario.v1
+case	multi-repo-ready
+wait-text	multi-repo-ready-visible	30	Multi Repo Ready
+assert-text	multi-repo-ready-retained	Multi Repo Ready
