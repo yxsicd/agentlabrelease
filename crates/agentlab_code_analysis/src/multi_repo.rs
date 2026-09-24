@@ -438,7 +438,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let difficulty = json!({
         "schema":"agentlab.difficulty_candidates.v2",
         "method":"revision-fenced multi-repository dependency graph and recursive reverse impact closure",
-        "manifestSha256":digest(&manifest_bytes),
         "sourceSetSha256":source_set_sha256,
         "sources":source_set["repositories"],
         "moduleBindings":source_set["moduleBindings"],

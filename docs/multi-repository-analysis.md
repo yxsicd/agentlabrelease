@@ -55,7 +55,8 @@ The output directory contains:
   module-dependency edges. Every edge binds both source and target source
   identities.
 - `difficulty_candidates.json`: unresolved module boundaries and recursively
-  derived reverse-dependency impact surfaces. `automaticPromotion` is false.
+  derived reverse-dependency impact surfaces. It binds the portable source-set
+  digest, not local checkout paths. `automaticPromotion` is false.
 - `multi_repo_analysis.json`: analyzer/grammar identity, exact repository cuts,
   counts and SHA-256 digests for both evidence files.
 
@@ -78,3 +79,7 @@ it is not yet a task. Promotion requires all of the following:
 
 This separation prevents a large dependency cone or an unresolved import from
 being mistaken for a useful benchmark merely because it looks difficult.
+
+The executable [multi-repository case fixture](../examples/multi-repo-case/README.md)
+implements the next step: a reviewed semantic plan, independent runtime Oracle,
+four calibration variants, frozen task output and TableGit persistence.

@@ -30,6 +30,8 @@ these separate checks do not qualify the complete whitebox evaluation chain.
 - Read [`RELEASES.md`](RELEASES.md) for version scope and limitations.
 - Use [revision-fenced multi-repository analysis](docs/multi-repository-analysis.md)
   to derive explicit dependency graphs and non-promoted difficulty candidates.
+- Use the [calibrated multi-repository case pipeline](examples/multi-repo-case/README.md)
+  to turn a reviewed candidate into a frozen task with an executable Oracle.
 - Use the [Linux emulator integration](docs/harmony-linux-emulator.md) for the operator-supplied HarmonyOS x86 emulator path.
 - Verify downloaded files with `manifest.json`, `provenance.json`, and
   `SHA256SUMS`.

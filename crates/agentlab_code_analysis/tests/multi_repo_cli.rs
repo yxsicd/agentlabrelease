@@ -233,6 +233,39 @@ fn exact_three_repository_graph_drives_recursive_difficulty_candidates() {
         )
         .unwrap()
     );
+
+    // Moving the exact object databases changes the local manifest receipt but
+    // not portable facts or difficulty evidence.
+    let mut relocated = manifest.clone();
+    for entry in relocated["repositories"].as_array_mut().unwrap() {
+        let id = entry["id"].as_str().unwrap();
+        let original = PathBuf::from(entry["root"].as_str().unwrap());
+        let target = fixture.root.join(format!("relocated-{id}"));
+        let result = Command::new("git")
+            .arg("clone")
+            .arg("-q")
+            .arg(original)
+            .arg(&target)
+            .output()
+            .unwrap();
+        assert!(result.status.success());
+        entry["root"] = json!(target);
+    }
+    let third = fixture.run(&relocated, "relocated");
+    assert!(third.status.success());
+    assert_eq!(
+        fs::read(fixture.root.join("first-output/workspace_facts.jsonl")).unwrap(),
+        fs::read(fixture.root.join("relocated-output/workspace_facts.jsonl")).unwrap()
+    );
+    assert_eq!(
+        fs::read(fixture.root.join("first-output/difficulty_candidates.json")).unwrap(),
+        fs::read(
+            fixture
+                .root
+                .join("relocated-output/difficulty_candidates.json")
+        )
+        .unwrap()
+    );
 }
 
 #[test]

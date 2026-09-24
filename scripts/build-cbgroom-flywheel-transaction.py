@@ -61,6 +61,8 @@ def main():
     summary = load(evidence / "summary.json") or {}
     decision = load(evidence / "decision-package.json") or {}
     difficulty = load(evidence / "difficulty-candidates.json") or {}
+    multi_repo_case = load(evidence / "multi-repo-evaluation-case.json") or {}
+    multi_repo_calibration = load(evidence / "multi-repo-calibration.json") or {}
     multi_repo_difficulty = difficulty.get("schema") == "agentlab.difficulty_candidates.v2"
     if multi_repo_difficulty:
         source_set_sha256 = difficulty.get("sourceSetSha256")
@@ -92,6 +94,7 @@ def main():
     groups = {name: [] for name in (
         "difficulty_points", "checkpoints", "interventions", "crossings",
         "decisions", "capability_profiles", "evidence_refs", "execution_environments",
+        "evaluation_cases",
     )}
 
     def insert(path, row):
@@ -107,6 +110,8 @@ def main():
         ("summary.json", "subject-summary"),
         ("decision-package.json", "harness-decision-package"),
         ("difficulty-candidates.json", "difficulty-candidates"),
+        ("multi-repo-evaluation-case.json", "multi-repo-evaluation-case"),
+        ("multi-repo-calibration.json", "multi-repo-calibration"),
         ("case-discrimination-report.json", "case-discrimination-report"),
         ("smartperf-comparison.json", "smartperf-comparison"),
         ("environment-fingerprint.json", "environment-fingerprint"),
@@ -129,7 +134,54 @@ def main():
                 evidence_row["sourceSetSha256"] = difficulty["sourceSetSha256"]
                 evidence_row["sources"] = difficulty["sources"]
                 evidence_row.pop("sourceRevision", None)
+            if filename == "multi-repo-evaluation-case.json" and multi_repo_case:
+                evidence_row["sourceSetSha256"] = multi_repo_case.get("sourceSetSha256")
+                evidence_row["sources"] = multi_repo_case.get("sources")
+                evidence_row.pop("sourceRevision", None)
+            if filename == "multi-repo-calibration.json" and multi_repo_calibration:
+                evidence_row["sourceSetSha256"] = multi_repo_calibration.get("sourceSetSha256")
+                evidence_row["sources"] = multi_repo_case.get("sources") or difficulty.get("sources")
+                evidence_row.pop("sourceRevision", None)
             insert("evidence_refs", evidence_row)
+
+    if multi_repo_case:
+        if multi_repo_case.get("schema") != "agentlab.multi_repo_evaluation_case.v1":
+            raise SystemExit("unsupported multi-repository evaluation case schema")
+        case_id = multi_repo_case.get("id")
+        case_source_set = multi_repo_case.get("sourceSetSha256")
+        oracle = multi_repo_case.get("oracle") or {}
+        calibration = multi_repo_case.get("calibration") or {}
+        if not isinstance(case_id, str) or not case_id:
+            raise SystemExit("multi-repository evaluation case requires id")
+        if multi_repo_case.get("status") != "frozen-calibrated":
+            raise SystemExit("multi-repository evaluation case is not frozen and calibrated")
+        if multi_repo_case.get("automaticPromotion") is not False:
+            raise SystemExit("multi-repository evaluation case must not claim automatic promotion")
+        if not isinstance(case_source_set, str) or not re.fullmatch(r"[0-9a-f]{64}", case_source_set):
+            raise SystemExit("multi-repository evaluation case requires sourceSetSha256")
+        if multi_repo_difficulty and case_source_set != difficulty["sourceSetSha256"]:
+            raise SystemExit("multi-repository evaluation case source set differs from difficulty evidence")
+        if oracle.get("authority") != "independent-executable-oracle" or not re.fullmatch(r"[0-9a-f]{64}", str(oracle.get("sha256", ""))):
+            raise SystemExit("multi-repository evaluation case requires an independent oracle")
+        if calibration.get("qualified") is not True or not re.fullmatch(r"[0-9a-f]{64}", str(calibration.get("summarySha256", ""))):
+            raise SystemExit("multi-repository evaluation case requires qualified calibration")
+        calibration_path = evidence / "multi-repo-calibration.json"
+        if multi_repo_calibration.get("schema") != "agentlab.multi_repo_calibration.v1":
+            raise SystemExit("multi-repository evaluation case requires retained calibration evidence")
+        if sha256(calibration_path) != calibration["summarySha256"]:
+            raise SystemExit("multi-repository calibration evidence digest mismatch")
+        if multi_repo_calibration.get("candidateId") != multi_repo_case.get("difficultyId"):
+            raise SystemExit("multi-repository calibration candidate differs from frozen case")
+        if multi_repo_calibration.get("sourceSetSha256") != case_source_set:
+            raise SystemExit("multi-repository calibration source set differs from frozen case")
+        if multi_repo_calibration.get("oracleSha256") != oracle["sha256"]:
+            raise SystemExit("multi-repository calibration oracle differs from frozen case")
+        case_row = dict(multi_repo_case)
+        case_row["evidenceIds"] = [
+            f"evidence-{args.run_id}-multi-repo-evaluation-case",
+            f"evidence-{args.run_id}-multi-repo-calibration",
+        ]
+        insert("evaluation_cases", case_row)
 
     environment = load(evidence / "environment-fingerprint.json") or {}
     if environment:

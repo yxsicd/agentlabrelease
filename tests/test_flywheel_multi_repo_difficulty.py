@@ -93,6 +93,36 @@ class MultiRepoDifficultyFlywheelTests(unittest.TestCase):
             (evidence / "difficulty-candidates.json").write_text(
                 json.dumps(self.evidence())
             )
+            calibration = {
+                "schema": "agentlab.multi_repo_calibration.v1",
+                "candidateId": "difficulty-stable",
+                "sourceSetSha256": self.evidence()["sourceSetSha256"],
+                "oracleSha256": "4" * 64,
+                "infrastructureAvailable": True,
+                "variants": {},
+            }
+            calibration_bytes = json.dumps(calibration).encode()
+            (evidence / "multi-repo-calibration.json").write_bytes(calibration_bytes)
+            case = {
+                "schema": "agentlab.multi_repo_evaluation_case.v1",
+                "id": "case-multi-repo",
+                "difficultyId": "difficulty-stable",
+                "kind": "task",
+                "status": "frozen-calibrated",
+                "sourceSetSha256": self.evidence()["sourceSetSha256"],
+                "sources": self.evidence()["sources"],
+                "stages": [{"id": "turn-1"}, {"id": "turn-2"}],
+                "oracle": {
+                    "authority": "independent-executable-oracle",
+                    "sha256": "4" * 64,
+                },
+                "calibration": {
+                    "qualified": True,
+                    "summarySha256": hashlib.sha256(calibration_bytes).hexdigest(),
+                },
+                "automaticPromotion": False,
+            }
+            (evidence / "multi-repo-evaluation-case.json").write_text(json.dumps(case))
             output = Path(tmp) / "transaction.json"
             result = self.run_builder(evidence, output)
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -115,6 +145,17 @@ class MultiRepoDifficultyFlywheelTests(unittest.TestCase):
             )
             self.assertNotIn("sourceRevision", ref)
             self.assertEqual(ref["sourceSetSha256"], expected_source_set)
+            persisted_case = tables["evaluation_cases"][0]["row"]
+            self.assertEqual(persisted_case["id"], "case-multi-repo")
+            self.assertEqual(persisted_case["sourceSetSha256"], expected_source_set)
+            self.assertTrue(persisted_case["calibration"]["qualified"])
+            self.assertEqual(
+                persisted_case["evidenceIds"],
+                [
+                    "evidence-run-multi-repo-multi-repo-evaluation-case",
+                    "evidence-run-multi-repo-multi-repo-calibration",
+                ],
+            )
 
     def test_rejects_automatic_promotion(self):
         with tempfile.TemporaryDirectory() as tmp:
