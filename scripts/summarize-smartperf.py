@@ -14,7 +14,7 @@ from typing import Any
 
 SCHEMA = "agentlab.smartperf_summary.v1"
 ENTRY = re.compile(
-    r"order:\d+\s+([A-Za-z][A-Za-z0-9_]*)=(.*?)(?=\s+order:\d+\s+|$)"
+    r"order:(\d+)\s+([A-Za-z][A-Za-z0-9_]*)=(.*?)(?=\s+order:\d+\s+|$)"
 )
 CANONICAL = {
     "fps": ("fps", "frames-per-second"),
@@ -72,29 +72,61 @@ def is_non_gating_power_thermal(name: str) -> bool:
 def parse_samples(text: str) -> list[dict[str, str]]:
     samples: list[dict[str, str]] = []
     current: dict[str, str] | None = None
+    mode: str | None = None
+    last_order = -1
     for line in text.splitlines():
         if "Print START" in line:
             if current is not None:
                 fail("nested SmartPerf sample start")
+            if mode == "bare":
+                fail("mixed marked and bare SmartPerf samples")
+            mode = "marked"
             current = {}
+            last_order = -1
             continue
         if "Print END" in line:
-            if current is None:
+            if mode != "marked" or current is None:
                 fail("SmartPerf sample end without start")
             if not current:
                 fail("empty SmartPerf sample")
             samples.append(current)
             current = None
+            last_order = -1
             continue
-        if current is None:
+        matches = list(ENTRY.finditer(line.strip()))
+        if not matches:
             continue
-        for match in ENTRY.finditer(line.strip()):
-            name, value = match.groups()
+        if mode == "marked" and current is None:
+            continue
+        if mode is None:
+            mode = "bare"
+        for match in matches:
+            order_text, name, value = match.groups()
+            order = int(order_text)
+            if mode == "bare" and current is None:
+                if order != 0:
+                    fail("bare SmartPerf sample must start at order:0")
+                current = {}
+                last_order = -1
+            elif mode == "bare" and order <= last_order:
+                if order != 0:
+                    fail("bare SmartPerf sample order must reset at order:0")
+                if not current:
+                    fail("empty SmartPerf sample")
+                samples.append(current)
+                current = {}
+                last_order = -1
+            if order <= last_order:
+                fail("SmartPerf sample order is not strictly increasing")
+            assert current is not None
             if name in current:
                 fail(f"duplicate SmartPerf field in one sample: {name}")
             current[name] = value.strip()
-    if current is not None:
+            last_order = order
+    if mode == "marked" and current is not None:
         fail("unterminated SmartPerf sample")
+    if mode == "bare" and current:
+        samples.append(current)
     if not samples:
         fail("no SmartPerf samples found")
     return samples
@@ -125,7 +157,7 @@ def build_summary(
     for sample in samples:
         for name, value in sample.items():
             if name == "fpsJitters":
-                for item in value.split(";;"):
+                for item in (item for item in value.split(";;") if item):
                     parsed = numeric(item)
                     if parsed is None or parsed < 0:
                         fail("fpsJitters must contain non-negative nanoseconds")

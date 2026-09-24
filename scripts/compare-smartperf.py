@@ -191,13 +191,25 @@ def build_comparison(
                 }
             )
             continue
+        if before <= 0:
+            rows.append(
+                {
+                    "metric": name,
+                    "statistic": statistic,
+                    "status": "unusable-baseline",
+                    "baseline": before,
+                    "candidate": after,
+                    "candidateToBaselineRatio": None,
+                }
+            )
+            continue
         if direction == "higher":
-            ratio = after / before if before > 0 else None
-            passed = ratio is not None and ratio >= threshold
+            ratio = after / before
+            passed = ratio >= threshold
             limit = {"minimumCandidateToBaselineRatio": threshold}
         else:
-            ratio = after / before if before > 0 else None
-            passed = ratio is not None and ratio <= 1.0 + threshold
+            ratio = after / before
+            passed = ratio <= 1.0 + threshold
             limit = {"maximumRelativeIncrease": threshold}
         rows.append(
             {
@@ -214,8 +226,11 @@ def build_comparison(
     missing = any(row["status"] == "missing" for row in rows)
     if missing:
         reasons.append("required-metric-missing")
+    unusable = any(row["status"] == "unusable-baseline" for row in rows)
+    if unusable:
+        reasons.append("required-metric-unusable-baseline")
     regressed = any(row["status"] == "regressed" for row in rows)
-    comparable = not reasons and not missing
+    comparable = not reasons
     if not comparable:
         decision = "insufficient-comparable-evidence"
     elif regressed:

@@ -123,11 +123,14 @@ scripts/agentlab-harmony-emulator.sh run-case \
 
 The runner retains `smartperf.txt` and creates `smartperf-summary.json`. The
 normalizer follows the [official SP_daemon command format](https://gitee.com/openharmony/developtools_smartperf_host/blob/master/smartperf_device/device_command/README_zh.md),
-including its `order:n key=value` samples,
+including both marker-delimited samples and device streams whose
+`order:n key=value` sequence starts a new sample whenever `order:0` recurs,
 retains unknown numeric fields, converts `fpsJitters` nanoseconds to frame
 interval milliseconds, and reports FPS, application CPU, PSS and GPU load as
 canonical relative metrics. Current, voltage and thermal fields remain raw,
-non-gating emulator evidence.
+non-gating emulator evidence. An empty `fpsJitters` field is retained as an
+unavailable frame metric; it is never converted into a fabricated zero. A zero
+baseline for a ratio guardrail is likewise unusable evidence, not a regression.
 
 Compare a candidate only with a baseline from the same task and exact
 environment identity:
@@ -160,6 +163,25 @@ digests and rejects any task, run, environment, HAP identity, functional verdict
 or authority drift. A functionally passing v2 regression becomes a non-ready,
 non-promoted `difficulty_point` for maintainer adjudication and repeated
 calibration; a legacy v1 profile-only comparison remains a decision record only.
+
+### hwlinux function-bound static-page canary
+
+The first real v2 paired canary for this contract is retained on `hwlinux` at
+`/home/huawei/agentlab-canary-3c97b38`. Two fresh cold boots ran the same
+Tutu HAP (`df057e…e148`), UI scenario (`f5b7d6…0afb`), emulator instance and
+environment identity. Both functional results were assessed and Oracle-passing,
+and both normalized five markerless device samples. The final comparison is
+`smartperf-comparison-v2.json`, 3,414 bytes, SHA256
+`96d304d64f658d9358e9a75a1724b2cd31162121b8cde93dfba9a3ec035d7305`.
+
+This is deliberately a fail-closed result, not a performance pass. The page was
+static during the SmartPerf window, so both runs reported zero FPS and no frame
+interval samples. The functional gate passed, CPU and PSS guardrails passed,
+but the comparison returned `insufficient-comparable-evidence` with
+`required-metric-missing` and `required-metric-unusable-baseline`. A future
+performance qualification must execute a bounded repeatable dynamic workload
+during the profiling window; it must not reinterpret a static zero-FPS sample
+as either a pass or a regression.
 
 ## Evaluation-instance export
 

@@ -1446,3 +1446,23 @@ Produce target-instance guidance for this stage as TableGit Skill rows,
 separate from the structured facts/tasks/results. Follow
 [the two-layer methodology](../agentlab-skill-methodology/SKILL.md) for
 method/source lineage and independent layer/role fields.
+
+## Harmony emulator function-bound SmartPerf checkpoint
+
+The real `hwlinux` canary at `/home/huawei/agentlab-canary-3c97b38` closed the
+first exact functional-result-to-SmartPerf-v2 path. Two cold-boot runs used the
+same HAP, scenario, emulator instance and environment identity; both independent
+UI Oracles passed and both five-sample device streams normalized. Real
+`SP_daemon` output on this image is a bare `order:n key=value` stream whose
+sample boundary is the next `order:0`; it does not emit the `Print START/END`
+markers used by earlier fixtures. The normalizer must accept both forms and
+must treat an empty `fpsJitters` field as unavailable evidence.
+
+The retained comparison SHA256 is
+`96d304d64f658d9358e9a75a1724b2cd31162121b8cde93dfba9a3ec035d7305`.
+Its functional gate passed, while the overall decision remained
+`insufficient-comparable-evidence`: the static page yielded zero baseline FPS
+and no frame-interval samples. Keep zero ratio baselines explicitly unusable,
+never label them as regressions. Before claiming emulator performance
+qualification, add a bounded repeatable dynamic workload inside the SmartPerf
+window and prove the same workload identity across baseline and candidate.

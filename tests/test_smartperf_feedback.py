@@ -101,6 +101,27 @@ class SmartPerfFeedbackTests(unittest.TestCase):
         self.assertIn("gpuTemp", value["authority"]["nonGatingPowerThermalMetrics"])
         self.assertIn("futureMetric", value["unknownNumericMetricNames"])
 
+    def test_markerless_device_stream_uses_order_zero_as_sample_boundary(self) -> None:
+        raw = b"""\
+order:0 ProcCpuUsage=1.0
+order:1 fps=0
+order:2 fpsJitters=
+order:3 pss=174551
+order:0 ProcCpuUsage=2.0
+order:1 fps=0
+order:2 fpsJitters=
+order:3 pss=174552
+order:0 ProcCpuUsage=3.0
+order:1 fps=0
+order:2 fpsJitters=
+order:3 pss=174553
+"""
+        value = summary(raw, "artifact:device", "device")
+        self.assertTrue(value["profileValid"])
+        self.assertEqual(value["sampleCount"], 3)
+        self.assertEqual(value["canonicalMetrics"]["appCpuUsagePercent"]["mean"], 2.0)
+        self.assertNotIn("frameIntervalMs", value["canonicalMetrics"])
+
     def test_relative_guardrails_accept_stable_candidate(self) -> None:
         baseline = summary(raw_profile(60, 10, 100000, 16.0), "artifact:base", "base")
         candidate = summary(
@@ -216,6 +237,19 @@ class SmartPerfFeedbackTests(unittest.TestCase):
         self.assertFalse(report["comparable"])
         self.assertEqual(report["decision"], "insufficient-comparable-evidence")
         self.assertIn("environment-mismatch", report["incomparabilityReasons"])
+
+    def test_zero_fps_baseline_is_unusable_not_a_regression(self) -> None:
+        baseline = summary(raw_profile(0, 10, 100000, 16.0), "artifact:base", "base")
+        candidate = summary(raw_profile(0, 9, 99000, 15.0), "artifact:candidate", "candidate")
+        report = COMPARE.build_comparison(baseline, candidate, 0.90, 0.20, 0.15, 0.20)
+        fps = next(row for row in report["metrics"] if row["metric"] == "fps")
+        self.assertEqual(fps["status"], "unusable-baseline")
+        self.assertFalse(report["comparable"])
+        self.assertEqual(report["decision"], "insufficient-comparable-evidence")
+        self.assertIn(
+            "required-metric-unusable-baseline", report["incomparabilityReasons"]
+        )
+        self.assertFalse(any(row["status"] == "regressed" for row in report["metrics"]))
 
     def test_truncated_sample_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "unterminated"):
