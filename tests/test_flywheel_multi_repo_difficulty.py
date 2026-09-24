@@ -117,6 +117,20 @@ class MultiRepoDifficultyFlywheelTests(unittest.TestCase):
             (evidence / "multi-repo-construction-receipt.json").write_bytes(
                 construction_bytes
             )
+            quality = {
+                "schema": "agentlab.multi_repo_intent_quality.v1",
+                "qualifiedForReview": True,
+                "candidateId": "difficulty-stable",
+                "sourceSetSha256": self.evidence()["sourceSetSha256"],
+                "constructionReceiptSha256": hashlib.sha256(
+                    construction_bytes
+                ).hexdigest(),
+                "policy": {"automaticPromotion": False},
+            }
+            quality_bytes = json.dumps(quality).encode()
+            (evidence / "multi-repo-construction-quality.json").write_bytes(
+                quality_bytes
+            )
             case = {
                 "schema": "agentlab.multi_repo_evaluation_case.v1",
                 "id": "case-multi-repo",
@@ -140,6 +154,11 @@ class MultiRepoDifficultyFlywheelTests(unittest.TestCase):
                     "receiptSha256": hashlib.sha256(construction_bytes).hexdigest(),
                     "semanticKnowledgeVerified": False,
                     "automaticPromotion": False,
+                },
+                "constructionQuality": {
+                    "qualifiedForReview": True,
+                    "reportSha256": hashlib.sha256(quality_bytes).hexdigest(),
+                    "policy": {"automaticPromotion": False},
                 },
                 "automaticPromotion": False,
             }
@@ -176,6 +195,7 @@ class MultiRepoDifficultyFlywheelTests(unittest.TestCase):
                     "evidence-run-multi-repo-multi-repo-evaluation-case",
                     "evidence-run-multi-repo-multi-repo-calibration",
                     "evidence-run-multi-repo-multi-repo-construction-receipt",
+                    "evidence-run-multi-repo-multi-repo-construction-quality",
                 ],
             )
             construction_ref = next(

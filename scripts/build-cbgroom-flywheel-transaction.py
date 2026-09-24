@@ -64,6 +64,7 @@ def main():
     multi_repo_case = load(evidence / "multi-repo-evaluation-case.json") or {}
     multi_repo_calibration = load(evidence / "multi-repo-calibration.json") or {}
     multi_repo_construction = load(evidence / "multi-repo-construction-receipt.json") or {}
+    multi_repo_construction_quality = load(evidence / "multi-repo-construction-quality.json") or {}
     multi_repo_difficulty = difficulty.get("schema") == "agentlab.difficulty_candidates.v2"
     if multi_repo_difficulty:
         source_set_sha256 = difficulty.get("sourceSetSha256")
@@ -114,6 +115,7 @@ def main():
         ("multi-repo-evaluation-case.json", "multi-repo-evaluation-case"),
         ("multi-repo-calibration.json", "multi-repo-calibration"),
         ("multi-repo-construction-receipt.json", "multi-repo-construction-receipt"),
+        ("multi-repo-construction-quality.json", "multi-repo-construction-quality"),
         ("case-discrimination-report.json", "case-discrimination-report"),
         ("smartperf-comparison.json", "smartperf-comparison"),
         ("environment-fingerprint.json", "environment-fingerprint"),
@@ -146,6 +148,10 @@ def main():
                 evidence_row.pop("sourceRevision", None)
             if filename == "multi-repo-construction-receipt.json" and multi_repo_construction:
                 evidence_row["sourceSetSha256"] = multi_repo_construction.get("sourceSetSha256")
+                evidence_row["sources"] = multi_repo_case.get("sources") or difficulty.get("sources")
+                evidence_row.pop("sourceRevision", None)
+            if filename == "multi-repo-construction-quality.json" and multi_repo_construction_quality:
+                evidence_row["sourceSetSha256"] = multi_repo_construction_quality.get("sourceSetSha256")
                 evidence_row["sources"] = multi_repo_case.get("sources") or difficulty.get("sources")
                 evidence_row.pop("sourceRevision", None)
             insert("evidence_refs", evidence_row)
@@ -201,6 +207,23 @@ def main():
             if multi_repo_construction.get("semanticKnowledgeVerified") is not False or multi_repo_construction.get("automaticPromotion") is not False:
                 raise SystemExit("multi-repository construction evidence overclaims qualification")
             construction_evidence_id = f"evidence-{args.run_id}-multi-repo-construction-receipt"
+            construction_quality = multi_repo_case.get("constructionQuality") or {}
+            quality_path = evidence / "multi-repo-construction-quality.json"
+            if multi_repo_construction_quality.get("schema") != "agentlab.multi_repo_intent_quality.v1":
+                raise SystemExit("constructed multi-repository case requires retained construction quality")
+            if sha256(quality_path) != construction_quality.get("reportSha256"):
+                raise SystemExit("multi-repository construction quality digest mismatch")
+            if multi_repo_construction_quality.get("qualifiedForReview") is not True or construction_quality.get("qualifiedForReview") is not True:
+                raise SystemExit("multi-repository construction did not qualify for review")
+            if multi_repo_construction_quality.get("candidateId") != multi_repo_case.get("difficultyId") or multi_repo_construction_quality.get("sourceSetSha256") != case_source_set:
+                raise SystemExit("multi-repository construction quality lineage mismatch")
+            if multi_repo_construction_quality.get("constructionReceiptSha256") != construction.get("receiptSha256"):
+                raise SystemExit("multi-repository construction quality receipt mismatch")
+            if (multi_repo_construction_quality.get("policy") or {}).get("automaticPromotion") is not False:
+                raise SystemExit("multi-repository construction quality must not auto-promote")
+            construction_quality_evidence_id = f"evidence-{args.run_id}-multi-repo-construction-quality"
+        else:
+            construction_quality_evidence_id = None
         case_row = dict(multi_repo_case)
         case_row["evidenceIds"] = [
             f"evidence-{args.run_id}-multi-repo-evaluation-case",
@@ -208,6 +231,7 @@ def main():
         ]
         if construction_evidence_id:
             case_row["evidenceIds"].append(construction_evidence_id)
+            case_row["evidenceIds"].append(construction_quality_evidence_id)
         insert("evaluation_cases", case_row)
 
     environment = load(evidence / "environment-fingerprint.json") or {}

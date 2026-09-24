@@ -32,8 +32,8 @@ these separate checks do not qualify the complete whitebox evaluation chain.
   to derive explicit dependency graphs and non-promoted difficulty candidates.
 - Use the [calibrated multi-repository case pipeline](examples/multi-repo-case/README.md)
   to capture a replaceable construction participant, construct a review-required
-  proposal, bind an explicit review, and turn the approved plan into a frozen
-  task with an executable Oracle.
+  proposal, apply a leakage/coverage/stage-separation preflight, bind an explicit
+  review, and turn the approved plan into a frozen task with an executable Oracle.
 - Use the [Linux emulator integration](docs/harmony-linux-emulator.md) for the operator-supplied HarmonyOS x86 emulator path.
 - Verify downloaded files with `manifest.json`, `provenance.json`, and
   `SHA256SUMS`.

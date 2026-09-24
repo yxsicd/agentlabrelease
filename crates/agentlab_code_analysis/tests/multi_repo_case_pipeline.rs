@@ -234,6 +234,49 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
     assert!(!request_text.contains("calibrationExpectations"));
     assert!(!request_text.contains("policyFor(tier)"));
     let intent_path = construction_root.join("intent.json");
+    let quality_path = construction_root.join("intent-quality.json");
+    let quality = run(Command::new("python3")
+        .arg(repository_root.join("scripts/score-multi-repo-intent.py"))
+        .arg("--intent")
+        .arg(&intent_path)
+        .arg("--construction-receipt")
+        .arg(construction_root.join("construction-receipt.json"))
+        .arg("--oracle-contract")
+        .arg(&oracle_contract_path)
+        .arg("--output")
+        .arg(&quality_path));
+    assert!(
+        quality.status.success(),
+        "{}",
+        String::from_utf8_lossy(&quality.stderr)
+    );
+    let quality_report: Value = serde_json::from_slice(&fs::read(&quality_path).unwrap()).unwrap();
+    assert_eq!(quality_report["qualifiedForReview"], true);
+    assert_eq!(quality_report["policy"]["automaticPromotion"], false);
+    let mut generic_intent: Value =
+        serde_json::from_slice(&fs::read(&intent_path).unwrap()).unwrap();
+    generic_intent["stages"][0]["demand"] = json!("Update the behavior.");
+    let generic_intent_path = fixture.0.join("generic-intent.json");
+    fs::write(
+        &generic_intent_path,
+        serde_json::to_vec_pretty(&generic_intent).unwrap(),
+    )
+    .unwrap();
+    let generic_quality_path = fixture.0.join("generic-quality.json");
+    let generic_quality = run(Command::new("python3")
+        .arg(repository_root.join("scripts/score-multi-repo-intent.py"))
+        .arg("--intent")
+        .arg(&generic_intent_path)
+        .arg("--construction-receipt")
+        .arg(construction_root.join("construction-receipt.json"))
+        .arg("--oracle-contract")
+        .arg(&oracle_contract_path)
+        .arg("--output")
+        .arg(&generic_quality_path));
+    assert_eq!(generic_quality.status.code(), Some(2));
+    let generic_report: Value =
+        serde_json::from_slice(&fs::read(&generic_quality_path).unwrap()).unwrap();
+    assert_eq!(generic_report["qualifiedForReview"], false);
     let mut changed_construction_receipt = construction_receipt.clone();
     changed_construction_receipt["participantId"] = json!("substituted-participant");
     let changed_construction_receipt_path = fixture.0.join("changed-construction-receipt.json");
@@ -250,6 +293,8 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
         .arg(&intent_path)
         .arg("--construction-receipt")
         .arg(&changed_construction_receipt_path)
+        .arg("--quality-report")
+        .arg(&quality_path)
         .arg("--output")
         .arg(fixture.0.join("changed-construction-proposal.json")));
     assert!(!changed_construction_rejected.status.success());
@@ -266,6 +311,8 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
         .arg(&intent_path)
         .arg("--construction-receipt")
         .arg(construction_root.join("construction-receipt.json"))
+        .arg("--quality-report")
+        .arg(&quality_path)
         .arg("--output")
         .arg(&proposal_path));
     assert!(
@@ -342,6 +389,8 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
         .arg(&proposal_path)
         .arg("--review")
         .arg(&review_path)
+        .arg("--construction-quality")
+        .arg(&quality_path)
         .arg("--calibration")
         .arg(calibration_root.join("summary.json"))
         .arg("--output")
@@ -359,6 +408,7 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
     assert_eq!(frozen["stages"].as_array().unwrap().len(), 2);
     assert_eq!(frozen["calibration"]["qualified"], true);
     assert_eq!(frozen["construction"]["status"], "candidate-unverified");
+    assert_eq!(frozen["constructionQuality"]["qualifiedForReview"], true);
     assert_eq!(frozen["automaticPromotion"], false);
     assert!(!frozen_text.contains("policyFor(tier)"));
     assert!(!frozen_text.contains("for (let attempts"));
@@ -381,6 +431,8 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
         .arg(&proposal_path)
         .arg("--review")
         .arg(&review_path)
+        .arg("--construction-quality")
+        .arg(&quality_path)
         .arg("--calibration")
         .arg(calibration_root.join("summary.json"))
         .arg("--output")
@@ -408,6 +460,8 @@ fn recursive_candidate_becomes_a_calibrated_case_without_exposing_reference_sour
         .arg(&proposal_path)
         .arg("--review")
         .arg(&review_path)
+        .arg("--construction-quality")
+        .arg(&quality_path)
         .arg("--calibration")
         .arg(&tampered_path)
         .arg("--output")

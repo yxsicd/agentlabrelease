@@ -59,17 +59,51 @@ python3 scripts/run-multi-repo-intent-construction.py \
   --output /tmp/intent-construction
 ```
 
+`pi-construction-agent.py` is the model-backed adapter. It reuses the same
+operator-owned forwarding proxy and complete native/gateway capture as the real
+Code Agent examples. The outer Harness passes credentials only to this adapter;
+Pi receives the local proxy credential rather than the external Gateway key:
+
+```sh
+export AGENTLAB_LM_GATEWAY_URL=https://gateway.example.invalid
+export AGENTLAB_LM_GATEWAY_KEY='<operator credential>'
+export AGENTLAB_MODEL=glm-5.3-flash
+python3 scripts/run-multi-repo-intent-construction.py \
+  --manifest /tmp/multi-repo-manifest.json \
+  --difficulty /tmp/analysis/difficulty_candidates.json \
+  --facts /tmp/analysis/workspace_facts.jsonl \
+  --candidate-id <difficulty-id> \
+  --oracle-contract examples/multi-repo-case/oracle-contract.json \
+  --participant examples/multi-repo-case/pi-construction-agent.py \
+  --participant-id pi-glm-5.3-flash \
+  --output /tmp/intent-construction
+```
+
 The deterministic receipt and `intent.json` remain
 `candidate-unverified`; `semanticKnowledgeVerified` and `automaticPromotion`
-are false. Construct a proposal; the proposer independently verifies the
-construction receipt, derives the allowed edit surface and records analysis
-evidence plus known qualification risks:
+are false. Before review, apply the deterministic leakage, behavior-coverage
+and stage-separation preflight:
+
+```sh
+python3 scripts/score-multi-repo-intent.py \
+  --intent /tmp/intent-construction/intent.json \
+  --construction-receipt /tmp/intent-construction/construction-receipt.json \
+  --oracle-contract examples/multi-repo-case/oracle-contract.json \
+  --output /tmp/intent-construction/intent-quality.json
+```
+
+This lexical gate is intentionally narrow: it can reject generic, duplicated or
+leaking demands, but cannot prove semantic correctness or Agent discrimination.
+Construct a proposal; the proposer independently verifies both construction
+receipt and qualified quality report, derives the allowed edit surface and
+records analysis evidence plus known qualification risks:
 
 ```sh
 python3 scripts/propose-multi-repo-case-plan.py \
   --difficulty /tmp/analysis/difficulty_candidates.json \
   --intent /tmp/intent-construction/intent.json \
   --construction-receipt /tmp/intent-construction/construction-receipt.json \
+  --quality-report /tmp/intent-construction/intent-quality.json \
   --output /tmp/case-plan-proposal.json
 ```
 
@@ -107,6 +141,7 @@ python3 scripts/generate-multi-repo-case.py \
   --plan /tmp/case-plan.json \
   --proposal /tmp/case-plan-proposal.json \
   --review /tmp/case-plan-review.json \
+  --construction-quality /tmp/intent-construction/intent-quality.json \
   --calibration /tmp/multi-repo-calibration/summary.json \
   --output /tmp/multi-repo-evaluation-case.json
 ```
@@ -120,6 +155,7 @@ Copy the frozen case into campaign evidence as
 `multi-repo-evaluation-case.json` and its exact calibration summary as
 `multi-repo-calibration.json`. For a constructed case, also copy the exact
 receipt as `multi-repo-construction-receipt.json`.
+Copy the pre-review report as `multi-repo-construction-quality.json`.
 `build-cbgroom-flywheel-transaction.py` validates all
 digest/source-set/candidate/participant/Oracle links and writes an
 `evaluation_cases` row linked to all retained evidence objects.

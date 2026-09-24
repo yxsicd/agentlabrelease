@@ -30,6 +30,7 @@ def main():
     parser.add_argument("--difficulty", type=Path, required=True)
     parser.add_argument("--intent", type=Path, required=True)
     parser.add_argument("--construction-receipt", type=Path)
+    parser.add_argument("--quality-report", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -43,8 +44,9 @@ def main():
     require(intent.get("sourceSetSha256") == source_set, "intent source set mismatch")
     construction = intent.get("construction")
     if construction is not None:
-        require(args.construction_receipt is not None, "constructed intent requires construction receipt")
+        require(args.construction_receipt is not None and args.quality_report is not None, "constructed intent requires construction receipt and quality report")
         construction_receipt = load(args.construction_receipt)
+        quality = load(args.quality_report)
         require(construction_receipt.get("schema") == "agentlab.multi_repo_intent_construction_receipt.v1", "unsupported construction receipt schema")
         require(digest(args.construction_receipt) == construction.get("receiptSha256"), "construction receipt digest mismatch")
         require(construction_receipt.get("status") == construction.get("status") == "candidate-unverified", "construction must remain an unverified candidate")
@@ -53,8 +55,20 @@ def main():
         require(construction_receipt.get("candidateId") == intent.get("candidateId"), "construction candidate mismatch")
         require(construction_receipt.get("semanticKnowledgeVerified") is False and construction.get("semanticKnowledgeVerified") is False, "construction must not claim verified semantics")
         require(construction_receipt.get("automaticPromotion") is False and construction.get("automaticPromotion") is False, "construction must not auto-promote")
+        require(quality.get("schema") == "agentlab.multi_repo_intent_quality.v1", "unsupported construction quality schema")
+        require(quality.get("qualifiedForReview") is True, "construction intent did not qualify for review")
+        require(quality.get("intentSha256") == digest(args.intent), "construction quality intent mismatch")
+        require(quality.get("constructionReceiptSha256") == digest(args.construction_receipt), "construction quality receipt mismatch")
+        require(quality.get("candidateId") == intent.get("candidateId") and quality.get("sourceSetSha256") == source_set, "construction quality lineage mismatch")
+        require((quality.get("policy") or {}).get("automaticPromotion") is False, "construction quality must not auto-promote")
+        construction_quality = {
+            "qualifiedForReview": True,
+            "reportSha256": digest(args.quality_report),
+            "policy": quality.get("policy"),
+        }
     else:
-        require(args.construction_receipt is None, "construction receipt requires constructed intent")
+        require(args.construction_receipt is None and args.quality_report is None, "construction evidence requires constructed intent")
+        construction_quality = None
 
     candidates = {row.get("id"): row for row in difficulty.get("candidates", []) if isinstance(row, dict)}
     candidate_id = intent.get("candidateId")
@@ -110,6 +124,7 @@ def main():
         "oracle": oracle,
         "calibrationExpectations": expectations,
         "construction": construction,
+        "constructionQuality": construction_quality,
         "constructionEvidence": {
             "mechanism": candidate.get("mechanism"),
             "seed": candidate.get("seed"),

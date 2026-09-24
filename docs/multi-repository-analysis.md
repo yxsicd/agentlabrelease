@@ -83,6 +83,7 @@ being mistaken for a useful benchmark merely because it looks difficult.
 The executable [multi-repository case fixture](../examples/multi-repo-case/README.md)
 implements the next step: exact affected-source materialization, a captured and
 replaceable construction participant, a non-promoted proposal, digest-bound
-explicit review, independent runtime Oracle, four calibration variants, frozen
-task output and TableGit persistence. Dependency evidence can derive edit scope
-and construction risks; neither it nor an Agent draft establishes semantic truth.
+deterministic pre-review quality report, explicit review, independent runtime
+Oracle, four calibration variants, frozen task output and TableGit persistence.
+Dependency evidence can derive edit scope and construction risks; neither it,
+a lexical quality gate nor an Agent draft establishes semantic truth.

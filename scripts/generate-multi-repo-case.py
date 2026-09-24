@@ -44,6 +44,7 @@ def main():
     parser.add_argument("--plan", type=Path, required=True)
     parser.add_argument("--proposal", type=Path)
     parser.add_argument("--review", type=Path)
+    parser.add_argument("--construction-quality", type=Path)
     parser.add_argument("--calibration", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
@@ -70,10 +71,22 @@ def main():
         require(decision.get("verdict") == review.get("verdict"), "review verdict mismatch")
         require(decision.get("reviewer") == review.get("reviewer"), "reviewer mismatch")
         require(sorted(decision.get("acknowledgedRiskIds", [])) == review.get("acknowledgedRiskIds"), "review risk acknowledgements mismatch")
-        reviewed_fields = ("caseId", "candidateId", "sourceSetSha256", "title", "allowedEdits", "stages", "oracle", "calibrationExpectations", "construction")
+        reviewed_fields = ("caseId", "candidateId", "sourceSetSha256", "title", "allowedEdits", "stages", "oracle", "calibrationExpectations", "construction", "constructionQuality")
         require(all(plan.get(key) == proposal.get(key) for key in reviewed_fields), "v2 plan differs from reviewed proposal")
+        if plan.get("construction") is not None:
+            require(args.construction_quality is not None, "constructed v2 plan requires construction quality evidence")
+            quality = load(args.construction_quality)
+            quality_summary = plan.get("constructionQuality") or {}
+            require(quality.get("schema") == "agentlab.multi_repo_intent_quality.v1", "unsupported construction quality evidence")
+            require(quality.get("qualifiedForReview") is True and quality_summary.get("qualifiedForReview") is True, "construction intent did not qualify for review")
+            require(digest(args.construction_quality) == quality_summary.get("reportSha256"), "construction quality evidence digest mismatch")
+            require(quality.get("candidateId") == plan.get("candidateId") and quality.get("sourceSetSha256") == plan.get("sourceSetSha256"), "construction quality lineage mismatch")
+            require(quality.get("constructionReceiptSha256") == (plan.get("construction") or {}).get("receiptSha256"), "construction quality receipt mismatch")
+            require((quality.get("policy") or {}).get("automaticPromotion") is False, "construction quality must not auto-promote")
+        else:
+            require(args.construction_quality is None, "construction quality evidence requires constructed plan")
     else:
-        require(args.proposal is None and args.review is None, "proposal and review evidence require a v2 plan")
+        require(args.proposal is None and args.review is None and args.construction_quality is None, "proposal, review and construction quality evidence require a v2 plan")
     source_set = difficulty.get("sourceSetSha256")
     require(isinstance(source_set, str) and SHA256.fullmatch(source_set), "difficulty requires sourceSetSha256")
     validate_sources(difficulty.get("sources"))
@@ -190,6 +203,7 @@ def main():
             },
         },
         "construction": plan.get("construction"),
+        "constructionQuality": plan.get("constructionQuality"),
         "lineage": {
             "difficultyEvidenceSha256": digest(args.difficulty),
             "planSha256": plan_sha256,

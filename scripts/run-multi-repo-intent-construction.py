@@ -184,7 +184,15 @@ def main():
         "executableSha256": participant_sha256,
         "argv": ["python3", "<participant>", "--request", request_path.name, "--output", draft_path.name],
     })
-    environment = {key: os.environ[key] for key in ("PATH", "LANG", "LC_ALL", "TMPDIR") if key in os.environ}
+    environment = {
+        key: os.environ[key]
+        for key in (
+            "PATH", "LANG", "LC_ALL", "TMPDIR", "AGENTLAB_LM_GATEWAY_URL",
+            "AGENTLAB_LM_GATEWAY_KEY", "AGENTLAB_MODEL", "AGENTLAB_PROVIDER_ROUTE",
+            "AGENTLAB_PI_BINARY",
+        )
+        if key in os.environ
+    }
     started_at = datetime.now(timezone.utc).isoformat()
     started = time.monotonic()
     timed_out = False
@@ -224,6 +232,19 @@ def main():
         require(isinstance(stage.get("demand"), str) and stage["demand"], "construction stage demand is required")
         require(stage.get("checkIds") == expected_checks[stage["id"]], "construction checks differ from Oracle contract")
 
+    participant_evidence_root = workspace / "participant-evidence"
+    participant_evidence_files = []
+    if participant_evidence_root.is_dir():
+        for path in sorted(item for item in participant_evidence_root.rglob("*") if item.is_file()):
+            participant_evidence_files.append({
+                "path": path.relative_to(participant_evidence_root).as_posix(),
+                "sha256": digest(path),
+                "byteLength": path.stat().st_size,
+            })
+    participant_evidence_manifest = json.dumps(
+        participant_evidence_files, sort_keys=True, separators=(",", ":")
+    ).encode()
+
     receipt = {
         "schema": "agentlab.multi_repo_intent_construction_receipt.v1",
         "status": "candidate-unverified",
@@ -235,6 +256,8 @@ def main():
         "draftSha256": digest(draft_path),
         "factsSha256": digest(facts_path),
         "oracleContractSha256": digest(args.oracle_contract),
+        "participantEvidenceSha256": digest_bytes(participant_evidence_manifest),
+        "participantEvidenceFiles": participant_evidence_files,
         "sourceFiles": source_rows,
         "semanticKnowledgeVerified": False,
         "automaticPromotion": False,
