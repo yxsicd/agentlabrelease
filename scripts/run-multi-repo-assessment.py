@@ -10,6 +10,7 @@ from pathlib import Path, PurePosixPath
 import re
 import selectors
 import signal
+import stat
 import subprocess
 import sys
 import time
@@ -77,6 +78,7 @@ def tree_state(root: Path):
         rows[path.relative_to(root).as_posix()] = {
             "sha256": digest(path),
             "byteLength": path.stat().st_size,
+            "unixMode": stat.S_IMODE(path.stat().st_mode),
         }
     return rows
 

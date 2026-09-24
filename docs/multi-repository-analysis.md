@@ -167,6 +167,34 @@ requires operator review and a new loop identity. The successful
 repeatable operational path without turning runtime feedback into benchmark
 truth or silently bypassing the review and recalibration boundary.
 
+### Build the assessed Agent output, not the frozen baseline
+
+For an assessed-Agent campaign, the ordinary Git-object builder is the wrong
+producer: it intentionally reconstructs the frozen baseline and therefore
+cannot prove that a device ran the Agent's edits.
+`build-harmony-assessed-workspace.py` closes that identity gap. Its
+`agentlab.harmony_assessed_workspace_build_plan.v1` binds the frozen case plus
+the exact Harness `summary.json`, `decision-package.json`,
+`final-source-state.json`, assessment workspace, source-to-project mappings and
+build tool. It accepts only an infrastructure-valid, independently assessed,
+statically passing attempt.
+
+Before building, the producer rejects symlinks and verifies the entire current
+workspace bytes and executable modes against the final source-state manifest. It then copies only
+manifest-bound bytes into a fresh disposable project, rather than building the
+participant-owned directory in place. The resulting ordinary Harmony build
+receipt uses
+`buildAuthority=independent-harmony-assessed-workspace-build` and additionally
+binds participant ID, subject-workspace digest, assessment summary, decision
+package and final-source-state digests. The emulator bridge and resumable loop
+preserve those fields into their bindings and receipts.
+
+This gate deliberately excludes attempts that already failed the static Oracle:
+their independent failure evidence remains valid without spending device
+capacity. Passing this build still does not mean the Agent passed the device
+gate; it only proves that the HAP submitted to that gate came from the exact
+assessed Agent workspace.
+
 ## Close assessed failures into the next analysis cut
 
 The trusted assessed campaign keeps the frozen case unchanged, runs fresh trials

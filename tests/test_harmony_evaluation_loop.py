@@ -26,7 +26,11 @@ artifact = out / "artifact.hap"; artifact.write_bytes(b"loop-bound-hap")
 digest = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
 receipt = {"schema":"agentlab.harmony_case_build_receipt.v1","status":"passed","caseId":case["id"],
  "evaluationCaseSha256":digest(case_path),"sourceSetSha256":case["sourceSetSha256"],"sources":case["sources"],
- "planSha256":digest(plan_path),"hapSha256":digest(artifact),"automaticPromotion":False}
+ "planSha256":digest(plan_path),"hapSha256":digest(artifact),"buildAuthority":"independent-harmony-build","automaticPromotion":False}
+if plan["schema"] == "agentlab.harmony_assessed_workspace_build_plan.v1":
+    receipt.update({"buildAuthority":"independent-harmony-assessed-workspace-build","participantId":"agent-profile-a",
+      "subjectWorkspaceSha256":"1"*64,"assessmentSummarySha256":"2"*64,
+      "assessmentDecisionSha256":"3"*64,"finalSourceStateSha256":"4"*64})
 (out / "build-receipt.json").write_text(json.dumps(receipt))
 '''
 
@@ -37,11 +41,14 @@ p = argparse.ArgumentParser(); p.add_argument("--plan", required=True); p.add_ar
 marker = pathlib.Path(os.environ.get("LOOP_RUN_FAIL_MARKER", "/never/fail"))
 if os.environ.get("LOOP_RUN_FAIL_ONCE") and not marker.exists():
     marker.write_text("failed once"); raise SystemExit(11)
-plan = json.loads(pathlib.Path(a.plan).read_text()); out = pathlib.Path(a.output); out.mkdir()
+plan = json.loads(pathlib.Path(a.plan).read_text()); build = json.loads(pathlib.Path(plan["buildReceipt"]["path"]).read_text()); out = pathlib.Path(a.output); out.mkdir()
 digest = lambda path: hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
 binding = {"schema":"agentlab.harmony_evaluation_binding.v1","status":"passed-review-required",
  "evaluationCaseSha256":plan["evaluationCase"]["sha256"],"buildReceiptSha256":digest(plan["buildReceipt"]["path"]),
- "hapSha256":digest(plan["artifact"]["path"]),"automaticPromotion":False}
+ "hapSha256":digest(plan["artifact"]["path"]),"buildAuthority":build["buildAuthority"],"automaticPromotion":False}
+if build["buildAuthority"] == "independent-harmony-assessed-workspace-build":
+    binding["assessedWorkspace"] = {key: build[key] for key in ("participantId","subjectWorkspaceSha256",
+      "assessmentSummarySha256","assessmentDecisionSha256","finalSourceStateSha256")}
 (out / "evaluation-binding.json").write_text(json.dumps(binding))
 '''
 
@@ -147,6 +154,24 @@ class HarmonyEvaluationLoopTests(unittest.TestCase):
         changed = self.run_loop(output)
         self.assertEqual(changed.returncode, 1)
         self.assertIn("existing loop state", changed.stderr)
+
+    def test_assessed_workspace_lineage_survives_the_resumable_loop(self) -> None:
+        build_plan = json.loads(self.build_plan.read_text())
+        build_plan["schema"] = "agentlab.harmony_assessed_workspace_build_plan.v1"
+        self.build_plan.write_text(json.dumps(build_plan))
+        loop_plan = json.loads(self.plan.read_text())
+        loop_plan["buildPlan"]["sha256"] = digest(self.build_plan)
+        self.plan.write_text(json.dumps(loop_plan))
+        output = self.root / "loop-output"
+        completed = self.run_loop(output)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        receipt = json.loads((output / "loop-receipt.json").read_text())
+        self.assertEqual(
+            receipt["buildAuthority"],
+            "independent-harmony-assessed-workspace-build",
+        )
+        self.assertEqual(receipt["assessedWorkspace"]["participantId"], "agent-profile-a")
+        self.assertEqual(receipt["assessedWorkspace"]["subjectWorkspaceSha256"], "1" * 64)
 
     def test_failed_assessment_resumes_without_rebuilding(self) -> None:
         output = self.root / "loop-output"

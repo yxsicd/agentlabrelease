@@ -107,7 +107,10 @@ def validate_plan(plan_path: pathlib.Path) -> dict[str, Any]:
     build_plan = load(build_plan_path, "Harmony build plan")
     build_case = build_plan.get("evaluationCase") or {}
     if (
-        build_plan.get("schema") != "agentlab.harmony_case_build_plan.v1"
+        build_plan.get("schema") not in {
+            "agentlab.harmony_case_build_plan.v1",
+            "agentlab.harmony_assessed_workspace_build_plan.v1",
+        }
         or build_plan.get("automaticPromotion") is not False
         or pathlib.Path(build_case.get("path", "")).resolve() != case_path
         or build_case.get("sha256") != case_sha256
@@ -237,6 +240,10 @@ def completed_build(output: pathlib.Path, state: dict[str, Any]) -> tuple[pathli
         receipt.get("schema") != "agentlab.harmony_case_build_receipt.v1"
         or receipt.get("status") != "passed"
         or receipt.get("automaticPromotion") is not False
+        or receipt.get("buildAuthority") not in {
+            "independent-harmony-build",
+            "independent-harmony-assessed-workspace-build",
+        }
         or receipt.get("hapSha256") != sha256(artifact_path)
     ):
         raise LoopError("completed build stage evidence is invalid")
@@ -292,6 +299,16 @@ def main() -> int:
                 receipt_path = output / "build/build-receipt.json"
                 artifact_path = output / "build/artifact.hap"
                 receipt = load(receipt_path, "build receipt")
+                if (
+                    receipt.get("schema") != "agentlab.harmony_case_build_receipt.v1"
+                    or receipt.get("status") != "passed"
+                    or receipt.get("automaticPromotion") is not False
+                    or receipt.get("buildAuthority") not in {
+                        "independent-harmony-build",
+                        "independent-harmony-assessed-workspace-build",
+                    }
+                ):
+                    raise LoopError("build program returned an unsupported build receipt")
                 if receipt.get("planSha256") != validated["buildPlanSha256"]:
                     raise LoopError("build receipt does not bind the loop's build plan")
                 if receipt.get("evaluationCaseSha256") != validated["caseSha256"]:
@@ -355,6 +372,22 @@ def main() -> int:
                     or binding.get("hapSha256") != sha256(artifact_path)
                 ):
                     raise LoopError("emulator assessment binding differs from the loop lineage")
+                build_receipt = load(receipt_path, "build receipt")
+                if binding.get("buildAuthority") != build_receipt.get("buildAuthority"):
+                    raise LoopError("emulator assessment build authority differs from build receipt")
+                if build_receipt.get("buildAuthority") == "independent-harmony-assessed-workspace-build":
+                    expected_assessment = {
+                        key: build_receipt.get(key)
+                        for key in (
+                            "participantId",
+                            "subjectWorkspaceSha256",
+                            "assessmentSummarySha256",
+                            "assessmentDecisionSha256",
+                            "finalSourceStateSha256",
+                        )
+                    }
+                    if binding.get("assessedWorkspace") != expected_assessment:
+                        raise LoopError("emulator assessment lost assessed-workspace lineage")
             except (LoopError, OSError) as error:
                 fail_stage(output, state, "emulatorAssessment", str(error), resumable=False)
                 raise
@@ -364,6 +397,7 @@ def main() -> int:
                 "bindingSha256": sha256(binding_path),
             })
 
+        build_receipt = load(receipt_path, "build receipt")
         receipt = {
             "schema": RECEIPT_SCHEMA,
             "status": "passed-review-required",
@@ -380,9 +414,21 @@ def main() -> int:
             "hapSha256": sha256(artifact_path),
             "runPlanSha256": sha256(run_plan_path),
             "evaluationBindingSha256": sha256(binding_path),
+            "buildAuthority": build_receipt.get("buildAuthority"),
             "automaticPromotion": False,
             "nextGate": "maintainer-adjudication-and-next-analysis-cut",
         }
+        if build_receipt.get("buildAuthority") == "independent-harmony-assessed-workspace-build":
+            receipt["assessedWorkspace"] = {
+                key: build_receipt.get(key)
+                for key in (
+                    "participantId",
+                    "subjectWorkspaceSha256",
+                    "assessmentSummarySha256",
+                    "assessmentDecisionSha256",
+                    "finalSourceStateSha256",
+                )
+            }
         receipt_path_final = output / "loop-receipt.json"
         if receipt_path_final.exists() and load(receipt_path_final, "loop receipt") != receipt:
             raise LoopError("existing loop receipt differs from recomputed evidence")

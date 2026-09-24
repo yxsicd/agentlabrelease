@@ -238,6 +238,31 @@ class HarmonyEvaluationCaseRunnerTests(unittest.TestCase):
         self.assertIn("sourceIdentity differs", failure["error"])
         self.assertTrue((stage / "execution/result.json").is_file())
 
+    def test_assessed_workspace_build_lineage_reaches_emulator_binding(self) -> None:
+        build = json.loads(self.build.read_text())
+        build.update(
+            {
+                "buildAuthority": "independent-harmony-assessed-workspace-build",
+                "participantId": "agent-profile-a",
+                "subjectWorkspaceSha256": "1" * 64,
+                "assessmentSummarySha256": "2" * 64,
+                "assessmentDecisionSha256": "3" * 64,
+                "finalSourceStateSha256": "4" * 64,
+            }
+        )
+        self.build.write_text(json.dumps(build))
+        self.write_plan()
+        output = self.root / "evidence"
+        completed = self.run_case(output)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        binding = json.loads((output / "evaluation-binding.json").read_text())
+        self.assertEqual(
+            binding["buildAuthority"],
+            "independent-harmony-assessed-workspace-build",
+        )
+        self.assertEqual(binding["assessedWorkspace"]["participantId"], "agent-profile-a")
+        self.assertEqual(binding["assessedWorkspace"]["subjectWorkspaceSha256"], "1" * 64)
+
     def test_existing_output_is_never_overwritten(self) -> None:
         output = self.root / "evidence"
         output.mkdir()

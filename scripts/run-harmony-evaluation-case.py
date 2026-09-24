@@ -142,7 +142,11 @@ def validate_plan(plan: dict[str, Any]) -> dict[str, Any]:
         raise EvaluationRunError("Harmony build receipt did not pass")
     if build.get("automaticPromotion") is not False:
         raise EvaluationRunError("Harmony build receipt must not auto-promote")
-    if build.get("buildAuthority") != "independent-harmony-build":
+    build_authority = build.get("buildAuthority")
+    if build_authority not in {
+        "independent-harmony-build",
+        "independent-harmony-assessed-workspace-build",
+    }:
         raise EvaluationRunError("Harmony build receipt authority is unsupported")
     if (
         build.get("caseId") != case_id
@@ -153,6 +157,24 @@ def validate_plan(plan: dict[str, Any]) -> dict[str, Any]:
         raise EvaluationRunError("Harmony build receipt lineage differs from evaluation case")
     require_digest(build.get("buildToolSha256"), "Harmony build tool sha256")
     require_digest(build.get("sourceMaterializationSha256"), "source materialization sha256")
+    assessed_workspace = None
+    if build_authority == "independent-harmony-assessed-workspace-build":
+        participant_id = require_token(build.get("participantId"), "assessment participantId")
+        assessed_workspace = {
+            "participantId": participant_id,
+            "subjectWorkspaceSha256": require_digest(
+                build.get("subjectWorkspaceSha256"), "subject workspace sha256"
+            ),
+            "assessmentSummarySha256": require_digest(
+                build.get("assessmentSummarySha256"), "assessment summary sha256"
+            ),
+            "assessmentDecisionSha256": require_digest(
+                build.get("assessmentDecisionSha256"), "assessment decision sha256"
+            ),
+            "finalSourceStateSha256": require_digest(
+                build.get("finalSourceStateSha256"), "final source state sha256"
+            ),
+        }
 
     artifact = plan.get("artifact") or {}
     hap = require_file(artifact.get("path"), "HAP artifact")
@@ -215,6 +237,8 @@ def validate_plan(plan: dict[str, Any]) -> dict[str, Any]:
         "buildPath": build_path,
         "buildSha256": build_sha256,
         "build": build,
+        "buildAuthority": build_authority,
+        "assessedWorkspace": assessed_workspace,
         "hap": hap,
         "hapSha256": hap_sha256,
         "scenario": scenario,
@@ -369,6 +393,7 @@ def main() -> int:
             "sourceSetSha256": validated["sourceSetSha256"],
             "sources": validated["sources"],
             "buildReceiptSha256": validated["buildSha256"],
+            "buildAuthority": validated["buildAuthority"],
             "hapSha256": validated["hapSha256"],
             "runnerSha256": validated["runtime"]["runnerSha256"],
             "functionalOracleSha256": validated["scenarioSha256"],
@@ -383,6 +408,8 @@ def main() -> int:
             "automaticPromotion": False,
             "nextGate": "maintainer-adjudication-and-independent-case-calibration",
         }
+        if validated["assessedWorkspace"] is not None:
+            binding["assessedWorkspace"] = validated["assessedWorkspace"]
         write_json(stage / "evaluation-binding.json", binding)
         stage.rename(output)
         print(

@@ -387,10 +387,18 @@ Harmony HAP. Its `agentlab.harmony_evaluation_run_plan.v1` plan binds:
 - `automaticPromotion=false`.
 
 The independent build receipt must have `status=passed`,
-`buildAuthority=independent-harmony-build`, and bind the case ID/digest,
+`buildAuthority=independent-harmony-build` (or the separately validated
+`independent-harmony-assessed-workspace-build` authority), and bind the case ID/digest,
 source-set digest, complete pinned source list, HAP digest, build-tool digest
 and source-materialization digest. It is evidence supplied by the build owner;
 the emulator bridge does not synthesize it.
+
+The assessed-workspace authority is produced only by
+`scripts/build-harmony-assessed-workspace.py`. In addition to the common receipt
+contract it binds the exact successful Harness decision, participant identity,
+final source-state and subject-workspace digest. Those identities are copied to
+`evaluation-binding.json`, so a device result cannot be silently attributed to
+the frozen baseline or to another Agent attempt.
 
 ```sh
 python3 scripts/run-harmony-evaluation-case.py \
