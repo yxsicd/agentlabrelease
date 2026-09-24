@@ -64,6 +64,8 @@ class MultiRepoModelConstructionTest(unittest.TestCase):
         self.assertIn("scripts/derive-assessment-feedback.py", campaign)
         self.assertIn("assessment-feedback-candidates.json", campaign)
         self.assertIn("multi-repo-evaluation-case.json", campaign)
+        self.assertIn("scripts/prepare-harmony-assessed-handoff.py", campaign)
+        self.assertIn("harmony-device-handoff.json", campaign)
         self.assertIn("validate-case-qualification.py", review)
 
     def test_fixture_script_is_release_manifested(self):

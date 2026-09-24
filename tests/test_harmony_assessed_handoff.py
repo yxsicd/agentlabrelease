@@ -1,0 +1,176 @@
+from __future__ import annotations
+
+import hashlib
+import importlib.util
+import json
+import pathlib
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+PREPARE = ROOT / "scripts/prepare-harmony-assessed-handoff.py"
+RESOLVE = ROOT / "scripts/resolve-harmony-assessed-handoff.py"
+
+
+def digest(path: pathlib.Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def canonical(value) -> str:
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+class HarmonyAssessedHandoffTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.base = pathlib.Path(self.temp.name)
+        self.static = self.base / "static"
+        self.static.mkdir()
+        self.source_set = "a" * 64
+        self.write_json(
+            self.static / "multi-repo-evaluation-case.json",
+            {
+                "schema": "agentlab.multi_repo_evaluation_case.v1",
+                "id": "portable-case",
+                "status": "frozen-calibrated",
+                "sourceSetSha256": self.source_set,
+                "calibration": {"qualified": True},
+                "automaticPromotion": False,
+            },
+        )
+        calibration = {"schema": "agentlab.multi_repo_calibration.v1", "sourceSetSha256": self.source_set, "qualified": True}
+        self.write_json(self.static / "multi-repo-calibration.json", calibration)
+        self.write_json(self.static / "case/calibration/summary.json", calibration)
+        attempts = []
+        for attempt_id, participant in (("strong-1", "strong"), ("weak-1", "weak")):
+            self.assessment(attempt_id, participant)
+            attempts.append({"attemptId": attempt_id, "participantId": participant, "producerRun": "8123", "evidence": f"runs/{attempt_id}"})
+        self.write_json(
+            self.static / "attempts.json",
+            {
+                "schema": "agentlab.case_attempt_collection.v2",
+                "sourceSetSha256": self.source_set,
+                "methodRevision": "b" * 40,
+                "cases": [{"id": "portable-case", "calibration": "case/calibration/summary.json", "attempts": attempts}],
+            },
+        )
+        self.handoff = self.static / "harmony-device-handoff.json"
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def write_json(self, path: pathlib.Path, value) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(value), encoding="utf-8")
+
+    def assessment(self, attempt_id: str, participant: str) -> None:
+        root = self.static / "runs" / attempt_id
+        workspace = root / "workspace"
+        (workspace / "app").mkdir(parents=True)
+        (workspace / "contracts/src").mkdir(parents=True)
+        (workspace / "app/Index.ets").write_text(f"Text('{participant}')\n")
+        (workspace / "contracts/src/policy.ets").write_text("export const policy = true\n")
+        state = {}
+        for path in sorted(item for item in workspace.rglob("*") if item.is_file()):
+            state[path.relative_to(workspace).as_posix()] = {
+                "sha256": digest(path),
+                "byteLength": path.stat().st_size,
+                "unixMode": path.stat().st_mode & 0o777,
+            }
+        common = {"taskId": "portable-case", "sourceSetSha256": self.source_set, "participantId": participant, "assessmentStatus": "assessed", "infrastructureAvailable": True, "subjectTaskSucceeded": True}
+        self.write_json(root / "final-source-state.json", state)
+        self.write_json(root / "summary.json", {**common, "schema": "agentlab.multi_repo_assessment_summary.v1", "finalWorkspaceSha256": canonical(state)})
+        self.write_json(root / "decision-package.json", {**common, "schema": "agentlab.harness_decision_package.v1", "automaticPromotion": False})
+
+    def execute(self, *arguments: pathlib.Path | str):
+        return subprocess.run([sys.executable, *map(str, arguments)], text=True, capture_output=True, check=False)
+
+    def prepare(self):
+        completed = self.execute(PREPARE, "--root", self.static, "--output", self.handoff)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def host_profile(self, host: pathlib.Path) -> pathlib.Path:
+        host.mkdir()
+        program = host / "program.py"
+        program.write_text("#!/usr/bin/env python3\n")
+        program.chmod(0o755)
+        oracle = host / "scenario.ui"; oracle.write_text("check text ready\n")
+        policy = host / "policy.json"; policy.write_text("{}\n")
+        workload = host / "workload.tsv"; workload.write_text("0\ttap\t1\t1\n")
+        for directory in ("tools", "image", "instance"):
+            (host / directory).mkdir()
+        binding = lambda path: {"path": path.relative_to(host).as_posix(), "sha256": digest(path)}
+        value = {
+            "schema": "agentlab.harmony_assessed_host_profile.v1",
+            "profileId": "hwlinux-test",
+            "sourceMaterialization": [{"sourceId": "app", "sourcePath": ".", "targetPath": "entry"}],
+            "build": {"executable": binding(program), "arguments": [], "workingDirectory": ".", "artifactPath": "build/output.hap", "timeoutSeconds": 30, "environment": {}},
+            "device": {
+                "subjectOutcomePolicy": "retain-assessed-failure",
+                "functionalOracle": {**binding(oracle), "scenarioId": "ready"},
+                "runtime": {"runner": binding(program), "toolsRoot": "tools", "imageRoot": "image", "instancePath": "instance", "instance": "phone", "hdcPort": 15555, "bundle": "com.example.app", "ability": "EntryAbility", "environmentIdentity": "hwlinux:test", "bootMode": "coldboot", "profileSamples": 3},
+                "performance": {"policy": binding(policy), "workload": binding(workload)},
+            },
+            "programs": {name: binding(program) for name in ("build", "loop", "run", "compose", "collect", "score", "feedback")},
+            "requiredTrials": 1,
+            "eligibilityThreshold": 0.6,
+            "automaticPromotion": False,
+        }
+        profile = host / "profile.json"
+        self.write_json(profile, value)
+        return profile
+
+    def test_relocated_handoff_resolves_to_existing_campaign_plan(self) -> None:
+        self.prepare()
+        relocated = self.base / "relocated"
+        shutil.copytree(self.static, relocated)
+        host = self.base / "host"
+        profile = self.host_profile(host)
+        plan = self.base / "plan.json"
+        completed = self.execute(RESOLVE, "--handoff", relocated / self.handoff.name, "--host-profile", profile, "--host-root", host, "--output", plan)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        value = json.loads(plan.read_text())
+        self.assertEqual(value["schema"], "agentlab.harmony_assessed_campaign_plan.v1")
+        self.assertEqual(len(value["attempts"]), 2)
+        self.assertTrue(all(pathlib.Path(row["assessment"]["path"]).is_absolute() for row in value["attempts"]))
+        spec = importlib.util.spec_from_file_location("campaign", ROOT / "scripts/run-harmony-assessed-campaign.py")
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        validated = module.validate_plan(plan)
+        self.assertEqual(validated["caseId"], "portable-case")
+
+    def test_workspace_mutation_after_transfer_is_rejected(self) -> None:
+        self.prepare()
+        (self.static / "runs/strong-1/workspace/app/Index.ets").write_text("mutated\n")
+        host = self.base / "host"
+        profile = self.host_profile(host)
+        completed = self.execute(RESOLVE, "--handoff", self.handoff, "--host-profile", profile, "--host-root", host, "--output", self.base / "plan.json")
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("workspace tree differs", completed.stderr)
+
+    def test_relative_path_escape_is_rejected(self) -> None:
+        self.prepare()
+        value = json.loads(self.handoff.read_text())
+        value["evaluationCase"]["path"] = "../outside.json"
+        self.handoff.write_text(json.dumps(value))
+        host = self.base / "host"
+        profile = self.host_profile(host)
+        completed = self.execute(RESOLVE, "--handoff", self.handoff, "--host-profile", profile, "--host-root", host, "--output", self.base / "plan.json")
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("safe relative path", completed.stderr)
+
+    def test_host_file_digest_drift_is_rejected(self) -> None:
+        self.prepare()
+        host = self.base / "host"
+        profile = self.host_profile(host)
+        (host / "program.py").write_text("#!/usr/bin/env python3\nprint('changed')\n")
+        completed = self.execute(RESOLVE, "--handoff", self.handoff, "--host-profile", profile, "--host-root", host, "--output", self.base / "plan.json")
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("SHA256 differs", completed.stderr)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -258,9 +258,37 @@ python3 scripts/run-harmony-assessed-campaign.py \
 ```
 
 Run the controller on the qualified Linux Harmony emulator host. A
-GitHub-hosted static campaign success is not device evidence; transfer the
-complete frozen static attempt evidence and construct a new path-resolved,
-digest-bound campaign plan on the emulator host.
+GitHub-hosted static campaign success is not device evidence. The trusted
+workflow now creates `harmony-device-handoff.json` before uploading the complete
+campaign artifact. That manifest contains only relocation-safe relative paths
+and binds the frozen case, calibration, attempt collection, every static
+summary/decision/final-state file, and the complete assessed workspace tree.
+It can therefore move as one directory without weakening identity.
+
+On the qualified emulator host, keep mutable host topology out of that portable
+artifact. Declare it separately as an
+`agentlab.harmony_assessed_host_profile.v1`: source materialization, independent
+build command, runtime/instance directories, functional Oracle, performance
+policy/workload and all controller program files. All file paths in this profile
+are relative to an explicit host root and carry exact SHA256 values. Resolve the
+two authorities into the existing path-bound campaign plan, then execute it:
+
+```sh
+python3 scripts/resolve-harmony-assessed-handoff.py \
+  --handoff /evidence/static/harmony-device-handoff.json \
+  --host-profile /home/huawei/agentlab/hwlinux-host-profile.json \
+  --host-root /home/huawei \
+  --output /evidence/harmony-assessed-campaign-plan.json
+
+python3 scripts/run-harmony-assessed-campaign.py \
+  --plan /evidence/harmony-assessed-campaign-plan.json \
+  --output /evidence/harmony-assessed-campaign
+```
+
+Resolution fails before emulator use if transfer omitted a file, changed bytes
+or modes, introduced a symlink, escaped either root, changed static identity, or
+if the hwlinux profile no longer matches installed tools. The resolved plan is
+still review-required and does not auto-promote a case.
 
 ## Close assessed failures into the next analysis cut
 

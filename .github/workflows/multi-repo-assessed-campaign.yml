@@ -169,6 +169,11 @@ jobs:
           (root / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
           PY
           cat "$AGENTLAB_ROOT/assessment-feedback-candidates.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Freeze relocation-safe Harmony device handoff
+        run: |
+          python3 scripts/prepare-harmony-assessed-handoff.py \
+            --root "$AGENTLAB_ROOT" \
+            --output "$AGENTLAB_ROOT/harmony-device-handoff.json"
       - name: Preserve complete model, source, Oracle and scoring evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
