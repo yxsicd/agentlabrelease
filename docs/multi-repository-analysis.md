@@ -86,6 +86,13 @@ version and semantics, repository-specific builds, and a cross-repository
 behavior Oracle. This supports real repositories that consume the same Harmony
 platform API without inventing a source-to-source import edge.
 
+The first real two-repository source qualification is retained at
+`release/qualifications/harmony-real-multi-repo-34661ff/summary.json`. It binds
+12,711 analyzed files, 881,650 text lines, 404,308 facts, 22 shared-contract
+clusters, two audited non-UTF-8 exclusions and the exact evidence digests. Its
+status is `analysis-qualified-case-review-required`: the clusters are discovery
+evidence, not evaluation cases.
+
 ## From difficulty to a valid evaluation case
 
 A recursive impact candidate describes where a change may be discriminating;

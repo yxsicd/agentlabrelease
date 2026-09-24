@@ -105,9 +105,11 @@ loop that can search for cases which separate participant capabilities.
 The architecture is broader, but its present empirical coverage is much
 smaller than SWE-bench's:
 
-1. The multi-repository path is proven on a controlled fixture, not yet on the
-   benchmark goal of a representative Harmony source set of at least 20,000
-   lines with at least five independently qualified candidate scenarios.
+1. The multi-repository path now has a real fixed-revision Harmony source run:
+   12,711 analyzed files and 881,650 text lines across two repositories yielded
+   404,308 facts and 22 shared external-contract clusters. This clears the
+   source-volume and raw-candidate discovery threshold, but none of those
+   clusters is yet an independently qualified scenario.
 2. One real Linux Harmony assessed campaign proves the static-to-device path
    and separates a strong and weak participant, but does not establish
    population-level discrimination, variance or repeatability across devices.
@@ -135,6 +137,15 @@ smaller than SWE-bench's:
 9. Process-level scoring—per-turn dependency discovery, deviations, recovery,
    decision impact, elapsed time and subjective/objective consistency—is not
    yet one uniform scorecard for every case.
+10. Real-source candidate precision is still weak. The largest shared-contract
+    clusters span 1,567 to 3,018 files; they identify a platform-wide change
+    surface, not the narrow issue-level repair contract that makes a SWE-bench
+    task executable and fair. Semantic/version evidence, change localization
+    and repair/preservation checks must shrink each cluster before review.
+11. The current full run takes 181.14 seconds and emits roughly 294 MiB of fact
+    rows plus 19 MiB of difficulty candidates. Git blob reads are batched, but
+    AST analysis is still single-process and there is no revision-aware
+    incremental cache or early candidate prefilter.
 
 Until these gaps close, AgentLab can claim a richer executable architecture and
 one real closed-path proof, not a large, statistically qualified benchmark.
@@ -195,9 +206,10 @@ underspecified or contaminated case.
    mutating the old case.
 4. Add independent multi-reviewer adjudication and disagreement measurement;
    default unknown evidence to review-required, never qualified.
-5. Run repeated strong/weak/middle participant trials on at least five cases
-   from a representative 20,000-line Harmony source set and report confidence
-   intervals, exclusions and infrastructure failures.
+5. Localize at least five of the 22 real shared-contract clusters into narrow
+   change hypotheses, then add repair/preservation checks and independent
+   review before running repeated strong/weak/middle participant trials.
+   Report confidence intervals, exclusions and infrastructure failures.
 6. Unify outcome and process measurements into a per-turn scorecard while
    retaining raw trajectories and independently executable verdict evidence.
 
