@@ -25,7 +25,7 @@ def main():
         "caseId": "case-cross-repo-retry-policy-v1",
         "candidateId": request["candidateId"],
         "sourceSetSha256": request["sourceSetSha256"],
-        "title": f"Propagate behavior from {candidate['seed']['repositoryId']} across {candidate['affectedRepositoryCount']} repositories",
+        "title": f"Propagate behavior from {candidate['seed'].get('repositoryId', candidate['seed'].get('specifier', 'the selected contract'))} across {candidate['affectedRepositoryCount']} repositories",
         "stages": stages,
     }
     args.output.write_text(json.dumps(draft, indent=2, sort_keys=True) + "\n")

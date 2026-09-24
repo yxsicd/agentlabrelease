@@ -134,9 +134,36 @@ def main():
     }
     allowed = plan.get("allowedEdits")
     require(isinstance(allowed, list) and allowed, "allowedEdits are required")
-    for edit in allowed:
-        identity = (edit.get("repositoryId"), edit.get("path")) if isinstance(edit, dict) else None
-        require(identity in affected, f"allowed edit {identity!r} is outside the analyzed impact surface")
+    allowed_identities = [
+        (row.get("repositoryId"), row.get("path"))
+        for row in allowed
+        if isinstance(row, dict)
+    ]
+    require(len(allowed_identities) == len(allowed), "allowed edit identity is invalid")
+    require(all(repository_id and path for repository_id, path in allowed_identities), "allowed edit identity is incomplete")
+    require(len(allowed_identities) == len(set(allowed_identities)), "allowed edits must be unique")
+    localization = (plan.get("construction") or {}).get("localization")
+    if candidate.get("relationType") == "shared-external-api-call-contract":
+        require(isinstance(localization, dict), "shared external API-call case requires reviewed localization lineage")
+        require(localization.get("status") == "reviewed-for-intent-construction", "API-call localization was not reviewed")
+        require(localization.get("candidateId") == candidate_id, "API-call localization candidate mismatch")
+        require(localization.get("sourceSetSha256") == source_set, "API-call localization source set mismatch")
+        require(localization.get("automaticPromotion") is False, "API-call localization must not auto-promote")
+        localized_allowed = {
+            (row.get("repositoryId"), row.get("path"))
+            for row in localization.get("editablePaths", [])
+            if isinstance(row, dict)
+        }
+        require(localized_allowed, "API-call localization has no editable paths")
+        require(
+            set(allowed_identities) == localized_allowed,
+            "allowed edits differ from the reviewed API-call localization",
+        )
+    else:
+        require(localization is None, "non-API case must not carry API-call localization")
+        for edit in allowed:
+            identity = (edit.get("repositoryId"), edit.get("path")) if isinstance(edit, dict) else None
+            require(identity in affected, f"allowed edit {identity!r} is outside the analyzed impact surface")
 
     oracle = plan.get("oracle") or {}
     oracle_digest = oracle.get("sha256")
@@ -222,6 +249,7 @@ def main():
             "calibrationSha256": calibration_sha256,
             "review": plan.get("review"),
             "feedbackAnalysisCut": plan.get("feedbackAnalysisCut"),
+            "apiCallLocalization": localization,
         },
         "automaticPromotion": False,
         "assessmentBoundary": "Exact pinned source set and executable fixture oracle; Harmony build, emulator rendering and device performance remain separate gates.",

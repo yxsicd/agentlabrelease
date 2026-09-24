@@ -13,6 +13,8 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+from api_call_localization import localization_summary, validate_reviewed_localization
+
 
 SHA256 = re.compile(r"[0-9a-f]{64}")
 REVISION = re.compile(r"[0-9a-f]{40}")
@@ -57,6 +59,9 @@ def main():
     parser.add_argument("--oracle-contract", type=Path, required=True)
     parser.add_argument("--participant", type=Path, required=True)
     parser.add_argument("--participant-id", required=True)
+    parser.add_argument("--localization", type=Path)
+    parser.add_argument("--localization-proposal", type=Path)
+    parser.add_argument("--localization-review", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -76,6 +81,30 @@ def main():
     require(candidate.get("dimensionId") == "multi-repository-change-impact", "construction requires recursive multi-repository impact")
     require(candidate.get("maturityState") == "candidate", "difficulty must still be a candidate")
     require(candidate.get("affectedRepositoryCount", 0) >= 2, "candidate does not cross repositories")
+    localization_paths = (
+        args.localization,
+        args.localization_proposal,
+        args.localization_review,
+    )
+    localization = None
+    localization_lineage = None
+    if candidate.get("relationType") == "shared-external-api-call-contract":
+        require(all(localization_paths), "shared external API-call construction requires reviewed localization evidence")
+        localization = validate_reviewed_localization(
+            args.localization,
+            args.localization_proposal,
+            args.localization_review,
+            candidate_id=args.candidate_id,
+            source_set_sha256=source_set,
+        )
+        localization_lineage = localization_summary(
+            args.localization,
+            args.localization_proposal,
+            args.localization_review,
+            localization,
+        )
+    else:
+        require(not any(localization_paths), "localization evidence is only valid for shared external API-call candidates")
 
     repositories = {}
     canonical_sources = {}
@@ -85,7 +114,11 @@ def main():
         require(isinstance(repository_id, str) and repository_id, "manifest repository id is required")
         require(isinstance(revision, str) and REVISION.fullmatch(revision), "manifest revision must be exact")
         require(repository_id not in repositories, "duplicate manifest repository id")
-        repositories[repository_id] = {"root": Path(row.get("root", "")), "revision": revision}
+        repositories[repository_id] = {
+            "root": Path(row.get("root", "")),
+            "revision": revision,
+            "repository": row.get("repository"),
+        }
         canonical_sources[repository_id] = {"id": repository_id, "repository": row.get("repository"), "revision": revision}
     require(sorted(canonical_sources.values(), key=lambda row: row["id"]) == sorted(difficulty.get("sources", []), key=lambda row: row["id"]), "manifest sources differ from difficulty evidence")
 
@@ -113,7 +146,20 @@ def main():
     evidence = args.output / "evidence"
     workspace.mkdir(parents=True)
     evidence.mkdir()
-    affected = sorted(candidate.get("affectedFiles", []), key=lambda row: (row.get("repositoryId", ""), row.get("path", "")))
+    if localization is None:
+        materialized = [
+            {**row, "role": "editable", "editable": True}
+            for row in candidate.get("affectedFiles", [])
+        ]
+    else:
+        materialized = [
+            {**row, "dependencyDepth": None, "role": "editable", "editable": True}
+            for row in localization["editablePaths"]
+        ] + [
+            {**row, "dependencyDepth": None, "role": "context", "editable": False}
+            for row in localization["contextPaths"]
+        ]
+    affected = sorted(materialized, key=lambda row: (row.get("repositoryId", ""), row.get("path", "")))
     source_rows = []
     affected_keys = set()
     for row in affected:
@@ -124,6 +170,27 @@ def main():
         require(key not in affected_keys, "duplicate affected source identity")
         affected_keys.add(key)
         raw = git_show(repositories[repository_id]["root"], repositories[repository_id]["revision"], path)
+        if localization is not None:
+            require(digest_bytes(raw) == row.get("sha256"), "localized source bytes differ from reviewed evidence")
+            require(len(raw) == row.get("byteLength"), "localized source length differs from reviewed evidence")
+            blob = subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repositories[repository_id]["root"]),
+                    "rev-parse",
+                    f"{repositories[repository_id]['revision']}:{path}",
+                ],
+                capture_output=True,
+                text=True,
+            )
+            require(blob.returncode == 0, "cannot resolve localized Git blob identity")
+            require(blob.stdout.strip() == row.get("gitBlobOid"), "localized Git blob differs from reviewed evidence")
+            require(
+                row.get("sourceIdentity")
+                == f"git:{repositories[repository_id]['repository']}@{repositories[repository_id]['revision']}",
+                "localized source identity differs from the manifest",
+            )
         target = sources_root / repository_id / path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(raw)
@@ -131,6 +198,8 @@ def main():
             "repositoryId": repository_id,
             "path": path,
             "dependencyDepth": row.get("dependencyDepth"),
+            "role": row.get("role"),
+            "editable": row.get("editable"),
             "workspacePath": target.relative_to(workspace).as_posix(),
             "sha256": digest_bytes(raw),
             "byteLength": len(raw),
@@ -156,6 +225,17 @@ def main():
         "candidateId": args.candidate_id,
         "sourceSetSha256": source_set,
         "candidate": candidate,
+        "localization": None if localization is None else {
+            "status": localization["status"],
+            "hypothesis": localization["hypothesis"],
+            "apiContract": localization["apiContract"],
+            "targetCallSites": localization["targetCallSites"],
+            "referenceCallSites": localization["referenceCallSites"],
+            "editablePaths": localization_lineage["editablePaths"],
+            "contextPaths": localization_lineage["contextPaths"],
+            "proposedChecks": localization["proposedChecks"],
+            "boundary": "Reviewed localization authorizes intent construction only; it is not a reference implementation or qualified Oracle.",
+        },
         "sources": source_rows,
         "factsPath": facts_path.relative_to(workspace).as_posix(),
         "factCount": len(relevant_facts),
@@ -259,6 +339,7 @@ def main():
         "participantEvidenceSha256": digest_bytes(participant_evidence_manifest),
         "participantEvidenceFiles": participant_evidence_files,
         "sourceFiles": source_rows,
+        "localization": localization_lineage,
         "semanticKnowledgeVerified": False,
         "automaticPromotion": False,
     }
@@ -283,6 +364,7 @@ def main():
             "receiptSha256": digest(receipt_path),
             "semanticKnowledgeVerified": False,
             "automaticPromotion": False,
+            "localization": localization_lineage,
         },
     }
     intent_path = args.output / "intent.json"

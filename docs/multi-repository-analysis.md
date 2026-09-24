@@ -126,6 +126,15 @@ SHA-256 and acknowledges every risk. Only
 retains `automaticPromotion: false`; build, functional, device, performance and
 discrimination qualification are later gates.
 
+The intent-construction runner now enforces that boundary. A
+`shared-external-api-call-contract` cannot enter construction without the exact
+reviewed localization, proposal and review decision. It independently checks
+their digests and reviewed fields, verifies every materialized file against the
+pinned byte identity, exposes context paths as read-only, and carries the
+localization lineage into the construction receipt and intent. The plan builder
+then derives `allowedEdits` from the reviewed editable paths, not from the broad
+candidate cluster. The case freezer rejects any later edit-surface drift.
+
 ## From difficulty to a valid evaluation case
 
 A recursive impact candidate describes where a change may be discriminating;

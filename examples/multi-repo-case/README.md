@@ -57,18 +57,53 @@ python3 scripts/propose-api-call-case-localization.py \
 
 An independent maintainer must review the exact proposal digest, the semantic
 hypothesis and every path that expands beyond the localized calls. Compile the
-decision with `review-api-call-case-localization.py`. The resulting artifact
+decision with:
+
+```sh
+python3 scripts/review-api-call-case-localization.py \
+  --proposal /tmp/api-call-localization-proposal.json \
+  --review /tmp/api-call-localization-review.json \
+  --output /tmp/api-call-localization.json
+```
+
+The resulting artifact
 only authorizes intent construction; it does not qualify a case or expose a
 reference implementation. The ArkWeb real-source example at
 `release/qualifications/harmony-arkweb-lifecycle-localization-6840590/` stops at
 this review boundary on purpose.
 
+For a `shared-external-api-call-contract`, intent construction fails closed
+unless all three exact localization artifacts are supplied:
+
+```sh
+python3 scripts/run-multi-repo-intent-construction.py \
+  --manifest /tmp/multi-repo-manifest.json \
+  --difficulty /tmp/analysis/difficulty_candidates.json \
+  --facts /tmp/analysis/workspace_facts.jsonl \
+  --candidate-id <shared-external-api-call-candidate-id> \
+  --localization /tmp/api-call-localization.json \
+  --localization-proposal /tmp/api-call-localization-proposal.json \
+  --localization-review /tmp/api-call-localization-review.json \
+  --oracle-contract /tmp/operator-owned-oracle-contract.json \
+  --participant <construction-adapter.py> \
+  --participant-id <construction-participant-id> \
+  --output /tmp/intent-construction
+```
+
+The Harness materializes reviewed editable paths and read-only context paths,
+verifies their pinned bytes, and labels them separately. The downstream case
+plan derives `allowedEdits` only from the reviewed editable paths. It neither
+silently grants the broad module cluster nor rejects an explicitly reviewed
+lifecycle path merely because that path was outside the original call sites.
+
 ## Commands
 
 First run `agentlab-multi-repo-analysis` on exact committed checkouts as
 described in [`docs/multi-repository-analysis.md`](../../docs/multi-repository-analysis.md).
-Select a dependency-supported candidate and run a construction participant. The
-Harness materializes only the affected files from the exact Git revisions,
+Select a dependency-supported candidate and run a construction participant. For
+a shared external API-call candidate, complete the localization review above
+first. The
+Harness materializes only the reviewed source surface from the exact Git revisions,
 selects the related facts and gives the participant a behavior/check contract
 without reference source, calibration variants or Oracle implementation. It
 retains the request, participant digest, command, stdout/stderr, draft and

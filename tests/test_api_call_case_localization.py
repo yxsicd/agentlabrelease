@@ -10,6 +10,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PROPOSE = ROOT / "scripts/propose-api-call-case-localization.py"
 REVIEW = ROOT / "scripts/review-api-call-case-localization.py"
+CONSTRUCT = ROOT / "scripts/run-multi-repo-intent-construction.py"
+SCORE = ROOT / "scripts/score-multi-repo-intent.py"
+PLAN = ROOT / "scripts/propose-multi-repo-case-plan.py"
+REVIEW_PLAN = ROOT / "scripts/review-multi-repo-case-plan.py"
+FREEZE = ROOT / "scripts/generate-multi-repo-case.py"
+CALIBRATE = ROOT / "examples/multi-repo-case/calibrate.py"
+MOCK = ROOT / "examples/multi-repo-case/mock-construction-agent.py"
+ORACLE = ROOT / "examples/multi-repo-case/oracle-contract.json"
 
 
 def file_digest(path):
@@ -218,6 +226,159 @@ class ApiCallCaseLocalizationTest(unittest.TestCase):
             self.assertEqual(result["review"]["proposalSha256"], file_digest(proposal_path))
             self.assertFalse(result["automaticPromotion"])
 
+            construction = root / "construction"
+            constructed = subprocess.run(
+                [
+                    sys.executable,
+                    str(CONSTRUCT),
+                    "--manifest",
+                    str(manifest),
+                    "--difficulty",
+                    str(difficulty),
+                    "--facts",
+                    str(facts),
+                    "--candidate-id",
+                    "difficulty-api",
+                    "--oracle-contract",
+                    str(ORACLE),
+                    "--participant",
+                    str(MOCK),
+                    "--participant-id",
+                    "deterministic-localization-test",
+                    "--localization",
+                    str(reviewed_path),
+                    "--localization-proposal",
+                    str(proposal_path),
+                    "--localization-review",
+                    str(review),
+                    "--output",
+                    str(construction),
+                ],
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(constructed.returncode, 0, constructed.stderr)
+            receipt = json.loads((construction / "construction-receipt.json").read_text())
+            self.assertEqual(receipt["localization"]["sha256"], file_digest(reviewed_path))
+            self.assertEqual(len(receipt["localization"]["editablePaths"]), 4)
+            self.assertEqual(len(receipt["localization"]["contextPaths"]), 2)
+            self.assertEqual(len(receipt["sourceFiles"]), 6)
+            self.assertEqual(sum(row["editable"] for row in receipt["sourceFiles"]), 4)
+
+            quality = construction / "intent-quality.json"
+            scored = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCORE),
+                    "--intent",
+                    str(construction / "intent.json"),
+                    "--construction-receipt",
+                    str(construction / "construction-receipt.json"),
+                    "--oracle-contract",
+                    str(ORACLE),
+                    "--output",
+                    str(quality),
+                ],
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(scored.returncode, 0, scored.stderr)
+            plan_path = root / "case-plan-proposal.json"
+            planned = subprocess.run(
+                [
+                    sys.executable,
+                    str(PLAN),
+                    "--difficulty",
+                    str(difficulty),
+                    "--intent",
+                    str(construction / "intent.json"),
+                    "--construction-receipt",
+                    str(construction / "construction-receipt.json"),
+                    "--quality-report",
+                    str(quality),
+                    "--output",
+                    str(plan_path),
+                ],
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(planned.returncode, 0, planned.stderr)
+            plan = json.loads(plan_path.read_text())
+            self.assertEqual(
+                {(row["repositoryId"], row["path"]) for row in plan["allowedEdits"]},
+                {(row["repositoryId"], row["path"]) for row in proposal["editablePaths"]},
+            )
+            self.assertNotIn(("one", "reference.ets"), {(row["repositoryId"], row["path"]) for row in plan["allowedEdits"]})
+
+            plan_review = self.write(
+                root,
+                "case-plan-review.json",
+                {
+                    "schema": "agentlab.multi_repo_case_plan_review.v1",
+                    "proposalSha256": file_digest(plan_path),
+                    "reviewer": "independent-case-reviewer",
+                    "rationale": "The reviewed localization and staged checks are suitable for calibration.",
+                    "acknowledgedRiskIds": [row["id"] for row in plan["risks"]],
+                    "verdict": "approve-for-calibration",
+                },
+            )
+            reviewed_plan = root / "case-plan.json"
+            reviewed = subprocess.run(
+                [sys.executable, str(REVIEW_PLAN), "--proposal", str(plan_path), "--review", str(plan_review), "--output", str(reviewed_plan)],
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(reviewed.returncode, 0, reviewed.stderr)
+            calibration_root = root / "calibration"
+            calibrated = subprocess.run(
+                [
+                    sys.executable,
+                    str(CALIBRATE),
+                    "--baseline",
+                    str(ROOT / "examples/multi-repo-case/baseline"),
+                    "--reference",
+                    str(ROOT / "examples/multi-repo-case/reference"),
+                    "--source-set-sha256",
+                    "a" * 64,
+                    "--candidate-id",
+                    "difficulty-api",
+                    "--output",
+                    str(calibration_root),
+                ],
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(calibrated.returncode, 0, calibrated.stderr)
+            frozen_path = root / "case.json"
+            frozen = subprocess.run(
+                [
+                    sys.executable,
+                    str(FREEZE),
+                    "--difficulty",
+                    str(difficulty),
+                    "--plan",
+                    str(reviewed_plan),
+                    "--proposal",
+                    str(plan_path),
+                    "--review",
+                    str(plan_review),
+                    "--construction-quality",
+                    str(quality),
+                    "--calibration",
+                    str(calibration_root / "summary.json"),
+                    "--output",
+                    str(frozen_path),
+                ],
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(frozen.returncode, 0, frozen.stderr)
+            frozen_case = json.loads(frozen_path.read_text())
+            self.assertEqual(
+                frozen_case["lineage"]["apiCallLocalization"]["sha256"],
+                file_digest(reviewed_path),
+            )
+
     def test_proposal_rejects_call_outside_candidate(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -249,6 +410,38 @@ class ApiCallCaseLocalizationTest(unittest.TestCase):
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("outside the candidate", result.stderr)
+
+    def test_api_call_construction_rejects_localization_bypass(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest, difficulty, facts, _ = self.fixture(root)
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(CONSTRUCT),
+                    "--manifest",
+                    str(manifest),
+                    "--difficulty",
+                    str(difficulty),
+                    "--facts",
+                    str(facts),
+                    "--candidate-id",
+                    "difficulty-api",
+                    "--oracle-contract",
+                    str(ORACLE),
+                    "--participant",
+                    str(MOCK),
+                    "--participant-id",
+                    "must-not-run",
+                    "--output",
+                    str(root / "construction"),
+                ],
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("requires reviewed localization evidence", result.stderr)
+            self.assertFalse((root / "construction").exists())
 
 
 if __name__ == "__main__":

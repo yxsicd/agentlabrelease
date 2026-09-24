@@ -58,6 +58,7 @@ def main():
         require(construction_receipt.get("candidateId") == intent.get("candidateId"), "construction candidate mismatch")
         require(construction_receipt.get("semanticKnowledgeVerified") is False and construction.get("semanticKnowledgeVerified") is False, "construction must not claim verified semantics")
         require(construction_receipt.get("automaticPromotion") is False and construction.get("automaticPromotion") is False, "construction must not auto-promote")
+        require(construction_receipt.get("localization") == construction.get("localization"), "construction localization lineage mismatch")
         require(quality.get("schema") == "agentlab.multi_repo_intent_quality.v1", "unsupported construction quality schema")
         require(quality.get("qualifiedForReview") is True, "construction intent did not qualify for review")
         require(quality.get("intentSha256") == digest(args.intent), "construction quality intent mismatch")
@@ -82,8 +83,20 @@ def main():
     require(candidate.get("affectedRepositoryCount", 0) >= 2, "candidate must cross repository boundaries")
     affected = candidate.get("affectedFiles")
     require(isinstance(affected, list) and affected, "candidate has no affected files")
+    localization = (construction or {}).get("localization")
+    if candidate.get("relationType") == "shared-external-api-call-contract":
+        require(isinstance(localization, dict), "shared external API-call plan requires reviewed localization lineage")
+        require(localization.get("status") == "reviewed-for-intent-construction", "API-call localization was not reviewed")
+        require(localization.get("candidateId") == candidate_id, "API-call localization candidate mismatch")
+        require(localization.get("sourceSetSha256") == source_set, "API-call localization source set mismatch")
+        require(localization.get("automaticPromotion") is False, "API-call localization must not auto-promote")
+        allowed_source = localization.get("editablePaths")
+    else:
+        require(localization is None, "non-API candidate must not carry API-call localization")
+        allowed_source = affected
+    require(isinstance(allowed_source, list) and allowed_source, "allowed edit source is empty")
     allowed = sorted(
-        ({"repositoryId": row.get("repositoryId"), "path": row.get("path")} for row in affected),
+        ({"repositoryId": row.get("repositoryId"), "path": row.get("path")} for row in allowed_source),
         key=lambda row: (row["repositoryId"], row["path"]),
     )
     require(all(row["repositoryId"] and row["path"] for row in allowed), "affected file identity is incomplete")
@@ -179,6 +192,7 @@ def main():
             "affectedRepositoryCount": candidate.get("affectedRepositoryCount"),
             "maxDependencyDepth": candidate.get("maxDependencyDepth"),
             "evidenceIds": candidate.get("evidenceIds"),
+            "localization": localization,
         },
         "risks": [
             {"id": "semantic-intent-unverified", "statement": "The semantic intent is supplied input, not a conclusion of dependency analysis."},
