@@ -5,8 +5,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import uuid
 from pathlib import Path
+
+
+REVISION = re.compile(r"[0-9a-f]{40}")
 
 
 def load(path: Path):
@@ -240,6 +244,15 @@ def main():
     if discrimination:
         if discrimination.get("schema") != "agentlab.case_discrimination_report.v1":
             raise SystemExit("unsupported case discrimination report schema")
+        discrimination_source = discrimination.get("sourceRevision")
+        method_revision = discrimination.get("methodRevision")
+        if not isinstance(discrimination_source, str) or not REVISION.fullmatch(discrimination_source):
+            raise SystemExit("case discrimination sourceRevision must be an exact Git revision")
+        if not isinstance(method_revision, str) or not REVISION.fullmatch(method_revision):
+            raise SystemExit("case discrimination methodRevision must be an exact Git revision")
+        summary_source = summary.get("sourceRevision")
+        if summary_source and discrimination_source != summary_source:
+            raise SystemExit("case discrimination sourceRevision does not match run summary")
         policy = discrimination.get("policy") or {}
         if policy.get("automaticPromotion") is not False:
             raise SystemExit("case discrimination report must not auto-promote")
@@ -254,8 +267,8 @@ def main():
                 "schema": "agentlab.case_selection_decision.v1",
                 "caseId": case_id,
                 "taskId": case_id,
-                "sourceRevision": discrimination.get("sourceRevision") or summary.get("sourceRevision"),
-                "methodRevision": discrimination.get("methodRevision"),
+                "sourceRevision": discrimination_source,
+                "methodRevision": method_revision,
                 "decision": decision,
                 "eligible": bool(row.get("eligible")),
                 "calibrationPassed": bool(row.get("calibrationPassed")),

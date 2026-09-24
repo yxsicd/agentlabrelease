@@ -11,6 +11,28 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 class FlywheelCaseDiscriminationTests(unittest.TestCase):
+    def run_builder(self, evidence: pathlib.Path, output: pathlib.Path):
+        return subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts/build-cbgroom-flywheel-transaction.py"),
+                "--evidence",
+                str(evidence),
+                "--revision",
+                "2" * 40,
+                "--run-id",
+                "fixture-run",
+                "--github-repository",
+                "example/agentlab",
+                "--caller-person-id",
+                "00000000-0000-0000-0000-000000000001",
+                "--output",
+                str(output),
+            ],
+            text=True,
+            capture_output=True,
+        )
+
     def test_ranked_cases_become_durable_review_decisions(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = pathlib.Path(raw)
@@ -38,27 +60,8 @@ class FlywheelCaseDiscriminationTests(unittest.TestCase):
             ).stdout
             (evidence / "case-discrimination-report.json").write_text(report)
             output = root / "transaction.json"
-            subprocess.run(
-                [
-                    sys.executable,
-                    str(ROOT / "scripts/build-cbgroom-flywheel-transaction.py"),
-                    "--evidence",
-                    str(evidence),
-                    "--revision",
-                    "2" * 40,
-                    "--run-id",
-                    "fixture-run",
-                    "--github-repository",
-                    "example/agentlab",
-                    "--caller-person-id",
-                    "00000000-0000-0000-0000-000000000001",
-                    "--output",
-                    str(output),
-                ],
-                text=True,
-                capture_output=True,
-                check=True,
-            )
+            completed = self.run_builder(evidence, output)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
             payload = json.loads(output.read_text())
             tables = {
                 table["path"]: [operation["row"] for operation in table["operations"]]
@@ -78,6 +81,32 @@ class FlywheelCaseDiscriminationTests(unittest.TestCase):
             self.assertTrue(
                 any(row["kind"] == "case-discrimination-report" for row in refs)
             )
+
+    def test_report_from_another_source_revision_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            evidence = root / "evidence"
+            evidence.mkdir()
+            (evidence / "summary.json").write_text(
+                json.dumps({"sourceRevision": "3" * 40, "taskId": "campaign"})
+            )
+            report = json.loads(
+                subprocess.run(
+                    [
+                        sys.executable,
+                        str(ROOT / "scripts/score-case-discrimination.py"),
+                        "--input",
+                        str(ROOT / "examples/case-discrimination/fixture.json"),
+                    ],
+                    text=True,
+                    capture_output=True,
+                    check=True,
+                ).stdout
+            )
+            (evidence / "case-discrimination-report.json").write_text(json.dumps(report))
+            completed = self.run_builder(evidence, root / "transaction.json")
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("does not match run summary", completed.stderr)
 
 
 if __name__ == "__main__":

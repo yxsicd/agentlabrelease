@@ -6,10 +6,12 @@ import argparse
 import json
 import math
 import pathlib
+import re
 from typing import Any
 
 INPUT_SCHEMA = "agentlab.case_discrimination_input.v1"
 OUTPUT_SCHEMA = "agentlab.case_discrimination_report.v1"
+REVISION = re.compile(r"[0-9a-f]{40}")
 
 
 def fail(message: str) -> None:
@@ -141,6 +143,10 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
 def build_report(value: dict[str, Any], required_trials: int, threshold: float) -> dict[str, Any]:
     if value.get("schema") != INPUT_SCHEMA:
         fail("unsupported case discrimination input schema")
+    for field in ("sourceRevision", "methodRevision"):
+        revision = value.get(field)
+        if not isinstance(revision, str) or not REVISION.fullmatch(revision):
+            fail(f"{field} must be a lowercase 40-character Git revision")
     if required_trials < 1:
         fail("required trials must be positive")
     if not 0.0 <= threshold <= 1.0:

@@ -59,6 +59,11 @@ class CaseDiscriminationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "attemptId must be unique"):
             MODULE.score_case(case, 3, 0.6)
 
+    def test_unfenced_source_revision_is_rejected(self) -> None:
+        self.value["sourceRevision"] = "main"
+        with self.assertRaisesRegex(ValueError, "sourceRevision must be"):
+            MODULE.build_report(self.value, 3, 0.6)
+
 
 if __name__ == "__main__":
     unittest.main()
