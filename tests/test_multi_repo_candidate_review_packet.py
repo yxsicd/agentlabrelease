@@ -238,9 +238,14 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
         index = json.loads((root / "review-packets/index.json").read_text())
         proposal_sha = hashlib.sha256((root / "current-method-proposal.json").read_bytes()).hexdigest()
         self.assertEqual(index["currentMethodProposalSha256"], proposal_sha)
+        self.assertEqual(index["schema"], "agentlab.multi_repo_candidate_review_packet_index.v2")
+        self.assertEqual(index["packetMethodRevisions"], [
+            "5d730d1fbc7a6fa6eaee58fc4f7d580bb7a39469",
+            "390c81268f38dbada8ab3e0a19423b69967aa63f",
+        ])
         self.assertFalse(index["semanticReviewCompleted"])
         self.assertFalse(index["automaticPromotion"])
-        self.assertEqual(len(index["packets"]), 2)
+        self.assertEqual(len(index["packets"]), 3)
         for row in index["packets"]:
             path = root / "review-packets" / row["path"]
             self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), row["sha256"])
@@ -248,14 +253,17 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
             self.assertEqual(value["candidateId"], row["candidateId"])
             self.assertEqual(value["status"], "independent-semantic-review-required")
             self.assertEqual(value["lineage"]["currentMethodProposalSha256"], proposal_sha)
-            self.assertEqual(
-                value["sweStyleTaskContract"]["satisfiedByThisPacket"],
-                ["exact base source set", "source-localized call evidence"],
-            )
+            expected = ["exact base source set", "source-localized call evidence"]
+            if row["path"] == "image-create-image-packer.json":
+                expected.append("owner-scoped call-neighborhood evidence")
+            self.assertEqual(value["sweStyleTaskContract"]["satisfiedByThisPacket"], expected)
             self.assertFalse(value["automaticPromotion"])
 
         alert = json.loads((root / "review-packets/alert-dialog.json").read_text())
         calls = json.loads((root / "review-packets/call-make-call.json").read_text())
+        image_packer = json.loads(
+            (root / "review-packets/image-create-image-packer.json").read_text()
+        )
         alert_source = "\n".join(
             line["text"] for site in alert["callSiteEvidence"] for line in site["excerpt"]
         )
@@ -266,6 +274,18 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
         self.assertIn("handleConfirm", alert_source)
         self.assertIn("call.makeCall('',", call_source)
         self.assertIn("url.substring(6)", call_source)
+        self.assertEqual(image_packer["ownerEvidenceCoverage"]["ownerCount"], 12)
+        self.assertEqual(image_packer["ownerEvidenceCoverage"]["completeOwnerCount"], 12)
+        self.assertEqual(image_packer["ownerEvidenceCoverage"]["boundedExcerptOwnerCount"], 0)
+        self.assertEqual(image_packer["ownerEvidenceCoverage"]["unresolvedOwnerCount"], 0)
+        release_owners = sum(
+            any(
+                (call.get("targetExpression") or "").endswith(".release")
+                for call in owner["callFacts"]
+            )
+            for owner in image_packer["ownerContextEvidence"]
+        )
+        self.assertEqual(release_owners, 6)
 
 
 if __name__ == "__main__":

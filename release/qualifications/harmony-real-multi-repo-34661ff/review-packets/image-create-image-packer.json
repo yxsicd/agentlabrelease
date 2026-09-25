@@ -1,0 +1,5453 @@
+{
+  "apiContract": {
+    "callTarget": "image.createImagePacker",
+    "exportedSymbol": "image",
+    "specifier": "@kit.ImageKit"
+  },
+  "automaticPromotion": false,
+  "callSiteEvidence": [
+    {
+      "excerpt": [
+        {
+          "line": 140,
+          "text": "    let tmpFile: fileIo.File | undefined;"
+        },
+        {
+          "line": 141,
+          "text": "    let packer: image.ImagePacker | undefined;"
+        },
+        {
+          "line": 142,
+          "text": "    try {"
+        },
+        {
+          "line": 143,
+          "text": "      packer = image.createImagePacker();"
+        },
+        {
+          "line": 144,
+          "text": "      const packOpts: image.PackingOption = { format: 'image/png', quality: 100 };"
+        },
+        {
+          "line": 145,
+          "text": "      const fileName = `${Date.now()}.png`;"
+        },
+        {
+          "line": 146,
+          "text": "      const dstPath = `${context.filesDir}/${fileName}`;"
+        },
+        {
+          "line": 147,
+          "text": "      tmpFile ="
+        },
+        {
+          "line": 148,
+          "text": "        await fileIo.open(dstPath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC);"
+        }
+      ],
+      "excerptSha256": "ea3af6b7b5ccc837486af55bf9c3d0498e6f0ff694965f40a70b89e2616b1f4f",
+      "factId": "workspace-fact-584b2987f48e6eb1e4f1efc3",
+      "gitBlobOid": "65f019d1fd115de48ab6637c9c5a3579e9e57d1b",
+      "kind": "call",
+      "owner": "ImagePreview::savePixelMapToSandBoxFile",
+      "path": "features/devpractices/src/main/ets/view/ImagePreview.ets",
+      "projectBoundaryCandidates": [
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "features/devpractices"
+        }
+      ],
+      "repositoryId": "code-workshop",
+      "sourceByteLength": 15002,
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git@7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+      "sourceSha256": "5477b1a37dba09f792beef42a24b459b1191ddfa00a1fa744ae1bf6734a48bf5",
+      "span": {
+        "endByte": 5917,
+        "endColumnByte": 40,
+        "endLine": 143,
+        "startByte": 5892,
+        "startColumnByte": 15,
+        "startLine": 143
+      },
+      "targetExpression": "image.createImagePacker"
+    },
+    {
+      "excerpt": [
+        {
+          "line": 84,
+          "text": "        const helper = photoAccessHelper.getPhotoAccessHelper(this.context);"
+        },
+        {
+          "line": 85,
+          "text": "        const uri = await helper.createAsset(photoAccessHelper.PhotoType.IMAGE, 'png');"
+        },
+        {
+          "line": 86,
+          "text": "        const file = await fileIo.open(uri, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);"
+        },
+        {
+          "line": 87,
+          "text": "        const imagePackerApi: image.ImagePacker = image.createImagePacker();"
+        },
+        {
+          "line": 88,
+          "text": "        const packOpts: image.PackingOption = {"
+        },
+        {
+          "line": 89,
+          "text": "          format: 'image/png',"
+        },
+        {
+          "line": 90,
+          "text": "          quality: 100,"
+        },
+        {
+          "line": 91,
+          "text": "        };"
+        },
+        {
+          "line": 92,
+          "text": "        imagePackerApi.packToData(this.mergedImage, packOpts).then((data) => {"
+        }
+      ],
+      "excerptSha256": "109dc9d8436a3ee72d1de1ab5ee65207b667729233394a6db55f748700881e6f",
+      "factId": "workspace-fact-4e64afee9f4aaa70879febe1",
+      "gitBlobOid": "8e31d50575f07f074fa5017785208876a99d5d72",
+      "kind": "call",
+      "owner": "SnapshotPreview::saveSnapshot",
+      "path": "ArkUISample/ComponentSnapshot/entry/src/main/ets/view/SnapshotPreview.ets",
+      "projectBoundaryCandidates": [
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "ArkUISample/ComponentSnapshot"
+        },
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "ArkUISample/ComponentSnapshot/entry"
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "sourceByteLength": 9957,
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "sourceSha256": "5194dcabba54dbcca0757da0cf38e1a4d632798abebe95d5bf65ad6a66ba1ac7",
+      "span": {
+        "endByte": 3455,
+        "endColumnByte": 75,
+        "endLine": 87,
+        "startByte": 3430,
+        "startColumnByte": 50,
+        "startLine": 87
+      },
+      "targetExpression": "image.createImagePacker"
+    },
+    {
+      "excerpt": [
+        {
+          "line": 190,
+          "text": "              try {"
+        },
+        {
+          "line": 191,
+          "text": "                // onClick触发后5秒内通过createAsset接口创建图片文件，5秒后createAsset权限收回。"
+        },
+        {
+          "line": 192,
+          "text": "                let filePath = await this.phAccessHelper.createAsset(photoAccessHelper.PhotoType.IMAGE, 'jpeg');"
+        },
+        {
+          "line": 193,
+          "text": "                const imagePacker = image.createImagePacker();"
+        },
+        {
+          "line": 194,
+          "text": "                if (this.curPixelMap === undefined) {"
+        },
+        {
+          "line": 195,
+          "text": "                  return;"
+        },
+        {
+          "line": 196,
+          "text": "                }"
+        },
+        {
+          "line": 197,
+          "text": "                const mode = fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE;"
+        },
+        {
+          "line": 198,
+          "text": "                let buffer: ArrayBuffer = await imagePacker.packToData(this.curPixelMap, {"
+        }
+      ],
+      "excerptSha256": "5a5024f44417cd44db1128d0e854a40db05eae14d42444b6e60d7016ddc5c960",
+      "factId": "workspace-fact-944a4401bcce77221f093821",
+      "gitBlobOid": "f4ffb1de543710072ade997886ae2d44921089f7",
+      "kind": "call",
+      "owner": "EditPage::build",
+      "path": "Media/Camera/MoreResolution/entry/src/main/ets/pages/EditPage.ets",
+      "projectBoundaryCandidates": [
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Camera/MoreResolution"
+        },
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Camera/MoreResolution/entry"
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "sourceByteLength": 11892,
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "sourceSha256": "103fec2759354577d1dcef7d5a78719e325693291983a965415ef7159464ce97",
+      "span": {
+        "endByte": 8029,
+        "endColumnByte": 61,
+        "endLine": 193,
+        "startByte": 8004,
+        "startColumnByte": 36,
+        "startLine": 193
+      },
+      "targetExpression": "image.createImagePacker"
+    },
+    {
+      "excerpt": [
+        {
+          "line": 201,
+          "text": "              try {"
+        },
+        {
+          "line": 202,
+          "text": "                // onClick触发后5秒内通过createAsset接口创建图片文件，5秒后createAsset权限收回。"
+        },
+        {
+          "line": 203,
+          "text": "                let filePath = await this.phAccessHelper.createAsset(photoAccessHelper.PhotoType.IMAGE, 'jpeg');"
+        },
+        {
+          "line": 204,
+          "text": "                const imagePacker = image.createImagePacker();"
+        },
+        {
+          "line": 205,
+          "text": "                if (this.curPixelMap === undefined) {"
+        },
+        {
+          "line": 206,
+          "text": "                  return;"
+        },
+        {
+          "line": 207,
+          "text": "                }"
+        },
+        {
+          "line": 208,
+          "text": "                const mode = fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE;"
+        },
+        {
+          "line": 209,
+          "text": "                let buffer: ArrayBuffer = await imagePacker.packToData(this.curPixelMap, {"
+        }
+      ],
+      "excerptSha256": "10b087bf30cc164f737e23381412ae6ba9725d0d2a0d06eaa570f9206537c372",
+      "factId": "workspace-fact-794e3dbc155554e2848f166f",
+      "gitBlobOid": "006465a4e89714b656e01b0598d9baeeacd905af",
+      "kind": "call",
+      "owner": "EditPage::build",
+      "path": "Media/Camera/preconfig/entry/src/main/ets/pages/EditPage.ets",
+      "projectBoundaryCandidates": [
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Camera/preconfig"
+        },
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Camera/preconfig/entry"
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "sourceByteLength": 12868,
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "sourceSha256": "1a8c4e2d1ebf6da738c0424ae6a54bc954dfe35752602372516255d2669e16df",
+      "span": {
+        "endByte": 8401,
+        "endColumnByte": 61,
+        "endLine": 204,
+        "startByte": 8376,
+        "startColumnByte": 36,
+        "startLine": 204
+      },
+      "targetExpression": "image.createImagePacker"
+    },
+    {
+      "excerpt": [
+        {
+          "line": 184,
+          "text": "// [Start packToData_picture]"
+        },
+        {
+          "line": 185,
+          "text": "async function packing(picture: image.Picture, packOpts: image.PackingOption) {"
+        },
+        {
+          "line": 186,
+          "text": "  // [Start create_picturePacker]"
+        },
+        {
+          "line": 187,
+          "text": "  const imagePackerApi = image.createImagePacker();"
+        },
+        {
+          "line": 188,
+          "text": "  // [End create_picturePacker]"
+        },
+        {
+          "line": 189,
+          "text": "  try {"
+        },
+        {
+          "line": 190,
+          "text": "    let data = await imagePackerApi.packing(picture, packOpts);"
+        },
+        {
+          "line": 191,
+          "text": "    // [StartExclude copyData_toShow]"
+        },
+        {
+          "line": 192,
+          "text": "    copyData = data;"
+        }
+      ],
+      "excerptSha256": "e15d1eb8a11e46a5d033eca8230abe82ee731e4db4bcc7a28499ff4e092614e1",
+      "factId": "workspace-fact-21f9d8b617cd4c87e74484e4",
+      "gitBlobOid": "9b951109bb828a994f755b2633bbf912e5420da3",
+      "kind": "call",
+      "owner": "packing",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "projectBoundaryCandidates": [
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Image/ImageArkTSSample"
+        },
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Image/ImageArkTSSample/entry"
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "sourceByteLength": 23461,
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "sourceSha256": "5cfbdf70ffe96b5fe52a3ccdfc6726e82ddbb1adfcb7e8c5102bfd269b75b356",
+      "span": {
+        "endByte": 7540,
+        "endColumnByte": 50,
+        "endLine": 187,
+        "startByte": 7515,
+        "startColumnByte": 25,
+        "startLine": 187
+      },
+      "targetExpression": "image.createImagePacker"
+    },
+    {
+      "excerpt": [
+        {
+          "line": 207,
+          "text": "  try {"
+        },
+        {
+          "line": 208,
+          "text": "    const path : string = context.cacheDir + '/picture.jpg';"
+        },
+        {
+          "line": 209,
+          "text": "    file = fileIo.openSync(path, fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE);"
+        },
+        {
+          "line": 210,
+          "text": "    imagePackerApi = image.createImagePacker();"
+        },
+        {
+          "line": 211,
+          "text": "    await imagePackerApi.packToFile(picture, file.fd, packOpts);"
+        },
+        {
+          "line": 212,
+          "text": "  } catch (error) {"
+        },
+        {
+          "line": 213,
+          "text": "    console.error('Failed to pack the picture to file. And the error is: ' + error);"
+        },
+        {
+          "line": 214,
+          "text": "  } finally {"
+        },
+        {
+          "line": 215,
+          "text": "    if (file) {"
+        }
+      ],
+      "excerptSha256": "d7ec1cec85f95eedf7ccf655d90d13d5e94fb281393a8681d75c83d2c1194e1d",
+      "factId": "workspace-fact-4812dfe091aa6753446be284",
+      "gitBlobOid": "9b951109bb828a994f755b2633bbf912e5420da3",
+      "kind": "call",
+      "owner": "packToFile",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "projectBoundaryCandidates": [
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Image/ImageArkTSSample"
+        },
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Image/ImageArkTSSample/entry"
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "sourceByteLength": 23461,
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "sourceSha256": "5cfbdf70ffe96b5fe52a3ccdfc6726e82ddbb1adfcb7e8c5102bfd269b75b356",
+      "span": {
+        "endByte": 8448,
+        "endColumnByte": 46,
+        "endLine": 210,
+        "startByte": 8423,
+        "startColumnByte": 21,
+        "startLine": 210
+      },
+      "targetExpression": "image.createImagePacker"
+    },
+    {
+      "excerpt": [
+        {
+          "line": 143,
+          "text": ""
+        },
+        {
+          "line": 144,
+          "text": "// [Start packToFile_pixelMap]"
+        },
+        {
+          "line": 145,
+          "text": "async function packToFileFromPixelMap(context : Context, pixelMap : image.PixelMap) {"
+        },
+        {
+          "line": 146,
+          "text": "  const imagePackerApi = image.createImagePacker();"
+        },
+        {
+          "line": 147,
+          "text": "  // quality默认值为0，建议不低于80；本示例统一设置为90，兼顾图片质量和文件体积。"
+        },
+        {
+          "line": 148,
+          "text": "  let packOpts : image.PackingOption = { format: 'image/jpeg', quality: 90 };"
+        },
+        {
+          "line": 149,
+          "text": "  const path : string = context.cacheDir + '/pixel_map.jpg';"
+        },
+        {
+          "line": 150,
+          "text": "  let file: fileIo.File | undefined = undefined;"
+        },
+        {
+          "line": 151,
+          "text": "  try {"
+        }
+      ],
+      "excerptSha256": "e55de7e5256da714ad45d8d1ca70d4fa57ac3700ecd111eac7bad1e6b1039225",
+      "factId": "workspace-fact-9edd5bd98f4f4134bad6435b",
+      "gitBlobOid": "9b951109bb828a994f755b2633bbf912e5420da3",
+      "kind": "call",
+      "owner": "packToFileFromPixelMap",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "projectBoundaryCandidates": [
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Image/ImageArkTSSample"
+        },
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Image/ImageArkTSSample/entry"
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "sourceByteLength": 23461,
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "sourceSha256": "5cfbdf70ffe96b5fe52a3ccdfc6726e82ddbb1adfcb7e8c5102bfd269b75b356",
+      "span": {
+        "endByte": 5771,
+        "endColumnByte": 50,
+        "endLine": 146,
+        "startByte": 5746,
+        "startColumnByte": 25,
+        "startLine": 146
+      },
+      "targetExpression": "image.createImagePacker"
+    },
+    {
+      "excerpt": [
+        {
+          "line": 125,
+          "text": ""
+        },
+        {
+          "line": 126,
+          "text": "// [Start packToData_imageSource]"
+        },
+        {
+          "line": 127,
+          "text": "async function packToDataFromImageSource(imageSource : image.ImageSource) {"
+        },
+        {
+          "line": 128,
+          "text": "  const imagePackerApi = image.createImagePacker();"
+        },
+        {
+          "line": 129,
+          "text": "  // quality默认值为0，建议不低于80；本示例统一设置为90，兼顾图片质量和文件体积。"
+        },
+        {
+          "line": 130,
+          "text": "  let packOpts : image.PackingOption = { format: 'image/jpeg', quality: 90 };"
+        },
+        {
+          "line": 131,
+          "text": "  try {"
+        },
+        {
+          "line": 132,
+          "text": "    let data = await imagePackerApi.packToData(imageSource, packOpts);"
+        },
+        {
+          "line": 133,
+          "text": "    // data 为编码获取到的文件流，写入文件保存即可得到一张图片。"
+        }
+      ],
+      "excerptSha256": "8b8345565f48e8cbcdbe4d7c5b0a70d20749f97f31b748a166414d95ea0309fa",
+      "factId": "workspace-fact-aedc9ade9862405f332cb8dc",
+      "gitBlobOid": "9b951109bb828a994f755b2633bbf912e5420da3",
+      "kind": "call",
+      "owner": "packToDataFromImageSource",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "projectBoundaryCandidates": [
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Image/ImageArkTSSample"
+        },
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Image/ImageArkTSSample/entry"
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "sourceByteLength": 23461,
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "sourceSha256": "5cfbdf70ffe96b5fe52a3ccdfc6726e82ddbb1adfcb7e8c5102bfd269b75b356",
+      "span": {
+        "endByte": 4947,
+        "endColumnByte": 50,
+        "endLine": 128,
+        "startByte": 4922,
+        "startColumnByte": 25,
+        "startLine": 128
+      },
+      "targetExpression": "image.createImagePacker"
+    },
+    {
+      "excerpt": [
+        {
+          "line": 163,
+          "text": ""
+        },
+        {
+          "line": 164,
+          "text": "// [Start packToFile_imageSource]"
+        },
+        {
+          "line": 165,
+          "text": "async function packToFileFromImageSource(context : Context, imageSource : image.ImageSource) {"
+        },
+        {
+          "line": 166,
+          "text": "  const imagePackerApi = image.createImagePacker();"
+        },
+        {
+          "line": 167,
+          "text": "  // quality默认值为0，建议不低于80；本示例统一设置为90，兼顾图片质量和文件体积。"
+        },
+        {
+          "line": 168,
+          "text": "  let packOpts : image.PackingOption = { format: 'image/jpeg', quality: 90 };"
+        },
+        {
+          "line": 169,
+          "text": "  const filePath : string = context.cacheDir + '/image_source.jpg';"
+        },
+        {
+          "line": 170,
+          "text": "  let file: fileIo.File | undefined = undefined;"
+        },
+        {
+          "line": 171,
+          "text": "  try {"
+        }
+      ],
+      "excerptSha256": "7673383d5b2b104e00497b9f63de92f32ec9c48d77abf3de8e900cf1dd04eae8",
+      "factId": "workspace-fact-af61a9b7235dc27b157d564a",
+      "gitBlobOid": "9b951109bb828a994f755b2633bbf912e5420da3",
+      "kind": "call",
+      "owner": "packToFileFromImageSource",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "projectBoundaryCandidates": [
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Image/ImageArkTSSample"
+        },
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Image/ImageArkTSSample/entry"
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "sourceByteLength": 23461,
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "sourceSha256": "5cfbdf70ffe96b5fe52a3ccdfc6726e82ddbb1adfcb7e8c5102bfd269b75b356",
+      "span": {
+        "endByte": 6637,
+        "endColumnByte": 50,
+        "endLine": 166,
+        "startByte": 6612,
+        "startColumnByte": 25,
+        "startLine": 166
+      },
+      "targetExpression": "image.createImagePacker"
+    },
+    {
+      "excerpt": [
+        {
+          "line": 100,
+          "text": "// [Start packToData_pixelMap]"
+        },
+        {
+          "line": 101,
+          "text": "async function packToDataFromPixelMap(pixelMap : image.PixelMap) {"
+        },
+        {
+          "line": 102,
+          "text": "  // [Start create_packer]"
+        },
+        {
+          "line": 103,
+          "text": "  const imagePackerApi = image.createImagePacker();"
+        },
+        {
+          "line": 104,
+          "text": "  // [End create_packer]"
+        },
+        {
+          "line": 105,
+          "text": "  // [Start create_packOpts]"
+        },
+        {
+          "line": 106,
+          "text": "  // quality默认值为0，建议不低于80；本示例统一设置为90，兼顾图片质量和文件体积。"
+        },
+        {
+          "line": 107,
+          "text": "  let packOpts : image.PackingOption = { format: 'image/jpeg', quality: 90 };"
+        },
+        {
+          "line": 108,
+          "text": "  // [End create_packOpts]"
+        }
+      ],
+      "excerptSha256": "97dceaf4559b644a66b9254a31e1cfaec2b3c24efb83d264a82504ed4f6221f1",
+      "factId": "workspace-fact-ff0834680b1812f09b07fdd4",
+      "gitBlobOid": "9b951109bb828a994f755b2633bbf912e5420da3",
+      "kind": "call",
+      "owner": "packToDataFromPixelMap",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "projectBoundaryCandidates": [
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Image/ImageArkTSSample"
+        },
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Image/ImageArkTSSample/entry"
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "sourceByteLength": 23461,
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "sourceSha256": "5cfbdf70ffe96b5fe52a3ccdfc6726e82ddbb1adfcb7e8c5102bfd269b75b356",
+      "span": {
+        "endByte": 3788,
+        "endColumnByte": 50,
+        "endLine": 103,
+        "startByte": 3763,
+        "startColumnByte": 25,
+        "startLine": 103
+      },
+      "targetExpression": "image.createImagePacker"
+    },
+    {
+      "excerpt": [
+        {
+          "line": 24,
+          "text": "  // 首先获取图片文件的fd，创建ImageSource。"
+        },
+        {
+          "line": 25,
+          "text": "  const imageSource : image.ImageSource = image.createImageSource(fd);"
+        },
+        {
+          "line": 26,
+          "text": "  // 创建ImagePacker，以便调用图片编码接口。"
+        },
+        {
+          "line": 27,
+          "text": "  const imagePackerApi = image.createImagePacker();"
+        },
+        {
+          "line": 28,
+          "text": "  // 配置图片编码选项："
+        },
+        {
+          "line": 29,
+          "text": "  // format应使用标准的mimetype格式，如：\"image/jpeg\"、\"image/png\"、\"image/heic\"；"
+        },
+        {
+          "line": 30,
+          "text": "  // quality默认值为0，建议不低于80；本示例统一设置为90，兼顾图片质量和文件体积；"
+        },
+        {
+          "line": 31,
+          "text": "  // needsPackProperties参数，用于控制编码时是否保存图片属性信息。默认值为false，即不保存。"
+        },
+        {
+          "line": 32,
+          "text": "  let packOpts : image.PackingOption = { format:'image/jpeg', quality:90, needsPackProperties:false };"
+        }
+      ],
+      "excerptSha256": "328270e6a45fe69dc2013264585f5dc5961ff3ddcacf221e156912188656a41c",
+      "factId": "workspace-fact-d6d31ca0879d96959ba382cd",
+      "gitBlobOid": "fe973fae92c0910274be729f8e02bc02803f5bb7",
+      "kind": "call",
+      "owner": "reEncoding",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/TranscodingUtility.ets",
+      "projectBoundaryCandidates": [
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Image/ImageArkTSSample"
+        },
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "Media/Image/ImageArkTSSample/entry"
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "sourceByteLength": 2592,
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "sourceSha256": "d522d5cf2e15ee4f1ef79fbcec7ddb849f915a57224832969617abc9c41a1398",
+      "span": {
+        "endByte": 1205,
+        "endColumnByte": 50,
+        "endLine": 27,
+        "startByte": 1180,
+        "startColumnByte": 25,
+        "startLine": 27
+      },
+      "targetExpression": "image.createImagePacker"
+    },
+    {
+      "excerpt": [
+        {
+          "line": 25,
+          "text": "    hichecker.addCheckRule(hichecker.RULE_CAUTION_PRINT_LOG|hichecker.RULE_THREAD_CHECK_SLOW_PROCESS);"
+        },
+        {
+          "line": 26,
+          "text": "    let filePath: string = this.context.filesDir + '/test.JPG';"
+        },
+        {
+          "line": 27,
+          "text": "    const imageSourceObj: image.ImageSource = image.createImageSource(filePath);"
+        },
+        {
+          "line": 28,
+          "text": "    const imagePackerObj: image.ImagePacker = image.createImagePacker();"
+        },
+        {
+          "line": 29,
+          "text": "    let packOpts: image.PackingOption = { format:\"image/jpeg\", quality:98 };"
+        },
+        {
+          "line": 30,
+          "text": "    try {"
+        },
+        {
+          "line": 31,
+          "text": "      imagePackerObj.packToData(imageSourceObj, packOpts);"
+        },
+        {
+          "line": 32,
+          "text": "    } catch (error) {"
+        },
+        {
+          "line": 33,
+          "text": "      console.error(`error code: ${(error as BusinessError).code}, error msg: ${(error as BusinessError).message}`);"
+        }
+      ],
+      "excerptSha256": "02d9e126679ed43a104de231ed4283893f3429bd78eb3db74a9945f57c41768c",
+      "factId": "workspace-fact-200701b34271008efe8bee3b",
+      "gitBlobOid": "06077615079411e3827c97f6cff0fc9a63ec2086",
+      "kind": "call",
+      "owner": "EntryAbility::onCreate",
+      "path": "PerformanceAnalysisKit/PerformanceAnalysisTool/entry/src/main/ets/entryability/EntryAbility.ets",
+      "projectBoundaryCandidates": [
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "PerformanceAnalysisKit/PerformanceAnalysisTool"
+        },
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "PerformanceAnalysisKit/PerformanceAnalysisTool/entry"
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "sourceByteLength": 2867,
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "sourceSha256": "6f886cddfcd3c8d1871a77894b762cc65100bcf91bf6adf2c2522b79f8b8d632",
+      "span": {
+        "endByte": 1351,
+        "endColumnByte": 71,
+        "endLine": 28,
+        "startByte": 1326,
+        "startColumnByte": 46,
+        "startLine": 28
+      },
+      "targetExpression": "image.createImagePacker"
+    }
+  ],
+  "candidateId": "difficulty-edcc0a335e8d61a4150431a0",
+  "candidateSha256": "ed720dcc8022d2d2e206964dd04ac8471f9707610c8f809060fe165fb56c6918",
+  "lineage": {
+    "analysisRunSha256": "9579febb61c23a19fc6acfbdfc6da2635f5c131e1d90a198faa7cae8957aee36",
+    "currentMethodProposalSha256": "d151b6ed91f8dfb6650e36d49546b70ebfa44641bc34fccba16369067c4ea93e",
+    "difficultyEvidenceSha256": "d6b010bb0cf8dd71702dc6b88ac9f303dee64e9c25de3b117966efddcb9db72e",
+    "manifestSha256": "3c212538c1a3f6e7489b217d2207e401e86e6444222e1eb98c856878a9780332",
+    "proposalMethodRevision": "b4635d78f3ca8275ce09882f200ce4ead4aff9c1",
+    "workspaceFactsSha256": "a164c323ca7847117aa08b0f30b5b3895bce0787fb0539684ef7286cfbf35d79"
+  },
+  "mechanism": "same external API call target is observed across repository boundaries",
+  "ownerContextEvidence": [
+    {
+      "callFacts": [
+        {
+          "factId": "workspace-fact-584b2987f48e6eb1e4f1efc3",
+          "span": {
+            "endByte": 5917,
+            "endColumnByte": 40,
+            "endLine": 143,
+            "startByte": 5892,
+            "startColumnByte": 15,
+            "startLine": 143
+          },
+          "targetExpression": "image.createImagePacker"
+        },
+        {
+          "factId": "workspace-fact-800c0cf23214f19799d9b4b5",
+          "span": {
+            "endByte": 6038,
+            "endColumnByte": 36,
+            "endLine": 145,
+            "startByte": 6028,
+            "startColumnByte": 26,
+            "startLine": 145
+          },
+          "targetExpression": "Date.now"
+        },
+        {
+          "factId": "workspace-fact-e140e0bdbae35b4b9373156c",
+          "span": {
+            "endByte": 6230,
+            "endColumnByte": 111,
+            "endLine": 148,
+            "startByte": 6133,
+            "startColumnByte": 14,
+            "startLine": 148
+          },
+          "targetExpression": "fileIo.open"
+        },
+        {
+          "factId": "workspace-fact-025ccc39c4e40d9fc46c21c6",
+          "span": {
+            "endByte": 6293,
+            "endColumnByte": 61,
+            "endLine": 149,
+            "startByte": 6244,
+            "startColumnByte": 12,
+            "startLine": 149
+          },
+          "targetExpression": "packer.packToFile"
+        },
+        {
+          "factId": "workspace-fact-0596d30e72f05e3a54a8a616",
+          "span": {
+            "endByte": 6339,
+            "endColumnByte": 44,
+            "endLine": 150,
+            "startByte": 6308,
+            "startColumnByte": 13,
+            "startLine": 150
+          },
+          "targetExpression": "fileUri.getUriFromPath"
+        },
+        {
+          "factId": "workspace-fact-d2b3301c62c6de1f9d8c036e",
+          "span": {
+            "endByte": 6508,
+            "endColumnByte": 80,
+            "endLine": 153,
+            "startByte": 6369,
+            "startColumnByte": 6,
+            "startLine": 152
+          },
+          "targetExpression": "Logger.error"
+        },
+        {
+          "factId": "workspace-fact-5facee8b4781b84ee243c43f",
+          "span": {
+            "endByte": 6613,
+            "endColumnByte": 35,
+            "endLine": 157,
+            "startByte": 6592,
+            "startColumnByte": 14,
+            "startLine": 157
+          },
+          "targetExpression": "fileIo.close"
+        },
+        {
+          "factId": "workspace-fact-6578e219b62cf62fd0975549",
+          "span": {
+            "endByte": 6681,
+            "endColumnByte": 24,
+            "endLine": 160,
+            "startByte": 6665,
+            "startColumnByte": 8,
+            "startLine": 160
+          },
+          "targetExpression": "packer.release"
+        }
+      ],
+      "excerpt": [
+        {
+          "line": 140,
+          "text": "    let tmpFile: fileIo.File | undefined;"
+        },
+        {
+          "line": 141,
+          "text": "    let packer: image.ImagePacker | undefined;"
+        },
+        {
+          "line": 142,
+          "text": "    try {"
+        },
+        {
+          "line": 143,
+          "text": "      packer = image.createImagePacker();"
+        },
+        {
+          "line": 144,
+          "text": "      const packOpts: image.PackingOption = { format: 'image/png', quality: 100 };"
+        },
+        {
+          "line": 145,
+          "text": "      const fileName = `${Date.now()}.png`;"
+        },
+        {
+          "line": 146,
+          "text": "      const dstPath = `${context.filesDir}/${fileName}`;"
+        },
+        {
+          "line": 147,
+          "text": "      tmpFile ="
+        },
+        {
+          "line": 148,
+          "text": "        await fileIo.open(dstPath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC);"
+        },
+        {
+          "line": 149,
+          "text": "      await packer.packToFile(pixelMap, tmpFile.fd, packOpts);"
+        },
+        {
+          "line": 150,
+          "text": "      return fileUri.getUriFromPath(dstPath);"
+        },
+        {
+          "line": 151,
+          "text": "    } catch (error) {"
+        },
+        {
+          "line": 152,
+          "text": "      Logger.error(TAG, `savePixelMapToSandBoxFile failed, code:"
+        },
+        {
+          "line": 153,
+          "text": "      ${(error as BusinessError).code}, msg: ${(error as BusinessError).code}}`);"
+        },
+        {
+          "line": 154,
+          "text": "      return '';"
+        },
+        {
+          "line": 155,
+          "text": "    } finally {"
+        },
+        {
+          "line": 156,
+          "text": "      if (tmpFile !== undefined) {"
+        },
+        {
+          "line": 157,
+          "text": "        await fileIo.close(tmpFile);"
+        },
+        {
+          "line": 158,
+          "text": "      }"
+        },
+        {
+          "line": 159,
+          "text": "      if (packer !== undefined) {"
+        },
+        {
+          "line": 160,
+          "text": "        packer.release();"
+        },
+        {
+          "line": 161,
+          "text": "      }"
+        },
+        {
+          "line": 162,
+          "text": "    }"
+        },
+        {
+          "line": 163,
+          "text": "  }"
+        },
+        {
+          "line": 164,
+          "text": ""
+        }
+      ],
+      "excerptSha256": "53a70295b96f9a3c9b5c48f9983b815116f96bf92c58b2a6501566c067e72cc8",
+      "owner": "ImagePreview::savePixelMapToSandBoxFile",
+      "ownerLineCount": 25,
+      "ownerSourceByteLength": 1019,
+      "ownerSourceSha256": "434def9cf35d599d0faf0b666c78fb6b9138985bfb35a8007e9c4a4e663dc45f",
+      "ownerSpan": {
+        "endByte": 6700,
+        "endColumnByte": 3,
+        "endLine": 163,
+        "startByte": 5681,
+        "startColumnByte": 2,
+        "startLine": 139
+      },
+      "path": "features/devpractices/src/main/ets/view/ImagePreview.ets",
+      "repositoryId": "code-workshop",
+      "status": "complete",
+      "symbolFactId": "workspace-fact-d80fa0d305aaf1a20023e3b6"
+    },
+    {
+      "callFacts": [
+        {
+          "factId": "workspace-fact-b7223b9793439da715691457",
+          "span": {
+            "endByte": 3192,
+            "endColumnByte": 75,
+            "endLine": 84,
+            "startByte": 3140,
+            "startColumnByte": 23,
+            "startLine": 84
+          },
+          "targetExpression": "photoAccessHelper.getPhotoAccessHelper"
+        },
+        {
+          "factId": "workspace-fact-e640f7cb8ed595d7c1e059fd",
+          "span": {
+            "endByte": 3280,
+            "endColumnByte": 86,
+            "endLine": 85,
+            "startByte": 3220,
+            "startColumnByte": 26,
+            "startLine": 85
+          },
+          "targetExpression": "helper.createAsset"
+        },
+        {
+          "factId": "workspace-fact-80a95a4104ebdaa6527eea61",
+          "span": {
+            "endByte": 3378,
+            "endColumnByte": 96,
+            "endLine": 86,
+            "startByte": 3309,
+            "startColumnByte": 27,
+            "startLine": 86
+          },
+          "targetExpression": "fileIo.open"
+        },
+        {
+          "factId": "workspace-fact-4e64afee9f4aaa70879febe1",
+          "span": {
+            "endByte": 3455,
+            "endColumnByte": 75,
+            "endLine": 87,
+            "startByte": 3430,
+            "startColumnByte": 50,
+            "startLine": 87
+          },
+          "targetExpression": "image.createImagePacker"
+        },
+        {
+          "factId": "workspace-fact-d111c7499103ff0e94697c30",
+          "span": {
+            "endByte": 3632,
+            "endColumnByte": 61,
+            "endLine": 92,
+            "startByte": 3579,
+            "startColumnByte": 8,
+            "startLine": 92
+          },
+          "targetExpression": "imagePackerApi.packToData"
+        },
+        {
+          "factId": "workspace-fact-d6a357025b3e04b9292517ae",
+          "span": {
+            "endByte": 4100,
+            "endColumnByte": 10,
+            "endLine": 101,
+            "startByte": 3579,
+            "startColumnByte": 8,
+            "startLine": 92
+          },
+          "targetExpression": "imagePackerApi.packToData(this.mergedImage, packOpts).then"
+        },
+        {
+          "factId": "workspace-fact-eaa94664f8ac51fb2e6facd1",
+          "span": {
+            "endByte": 4256,
+            "endColumnByte": 10,
+            "endLine": 103,
+            "startByte": 3579,
+            "startColumnByte": 8,
+            "startLine": 92
+          },
+          "targetExpression": "imagePackerApi.packToData(this.mergedImage, packOpts).then((data) => {\n          fileIo.writeSync(file.fd, data);\n          fileIo.closeSync(file.fd);\n          Logger.info(TAG, `Succeeded in packToFile`);\n          this.getUIContext().getPromptAction().showToast({\n            // 请将$r('app.string.save_album_success')替换为实际资源文件，在本示例中该资源文件的value值为\"Saved to album\"\n            message: $r('app.string.save_album_success'),\n            duration: 1800\n          })\n        }).catch"
+        },
+        {
+          "factId": "workspace-fact-50e9f1b34a431e7abf3e8b8c",
+          "span": {
+            "endByte": 3691,
+            "endColumnByte": 41,
+            "endLine": 93,
+            "startByte": 3660,
+            "startColumnByte": 10,
+            "startLine": 93
+          },
+          "targetExpression": "fileIo.writeSync"
+        },
+        {
+          "factId": "workspace-fact-9abc1e3ed651327ce63646b9",
+          "span": {
+            "endByte": 3728,
+            "endColumnByte": 35,
+            "endLine": 94,
+            "startByte": 3703,
+            "startColumnByte": 10,
+            "startLine": 94
+          },
+          "targetExpression": "fileIo.closeSync"
+        },
+        {
+          "factId": "workspace-fact-fe094a45809ca2bb807c26de",
+          "span": {
+            "endByte": 3783,
+            "endColumnByte": 53,
+            "endLine": 95,
+            "startByte": 3740,
+            "startColumnByte": 10,
+            "startLine": 95
+          },
+          "targetExpression": "Logger.info"
+        },
+        {
+          "factId": "workspace-fact-ccd81087bf8f998af8095f70",
+          "span": {
+            "endByte": 3814,
+            "endColumnByte": 29,
+            "endLine": 96,
+            "startByte": 3795,
+            "startColumnByte": 10,
+            "startLine": 96
+          },
+          "targetExpression": "this.getUIContext"
+        },
+        {
+          "factId": "workspace-fact-69c7c755f26b69a2bdf52567",
+          "span": {
+            "endByte": 3832,
+            "endColumnByte": 47,
+            "endLine": 96,
+            "startByte": 3795,
+            "startColumnByte": 10,
+            "startLine": 96
+          },
+          "targetExpression": "this.getUIContext().getPromptAction"
+        },
+        {
+          "factId": "workspace-fact-10a2fea5dbdfde42d19c42e8",
+          "span": {
+            "endByte": 4089,
+            "endColumnByte": 12,
+            "endLine": 100,
+            "startByte": 3795,
+            "startColumnByte": 10,
+            "startLine": 96
+          },
+          "targetExpression": "this.getUIContext().getPromptAction().showToast"
+        },
+        {
+          "factId": "workspace-fact-ba913ffd6319196799f4128f",
+          "span": {
+            "endByte": 4048,
+            "endColumnByte": 56,
+            "endLine": 98,
+            "startByte": 4013,
+            "startColumnByte": 21,
+            "startLine": 98
+          },
+          "targetExpression": "$r"
+        },
+        {
+          "factId": "workspace-fact-e0494a43473acdfa0626ae5a",
+          "span": {
+            "endByte": 4244,
+            "endColumnByte": 109,
+            "endLine": 102,
+            "startByte": 4145,
+            "startColumnByte": 10,
+            "startLine": 102
+          },
+          "targetExpression": "Logger.error"
+        },
+        {
+          "factId": "workspace-fact-de2fddb2ab092caec53da608",
+          "span": {
+            "endByte": 4332,
+            "endColumnByte": 27,
+            "endLine": 106,
+            "startByte": 4311,
+            "startColumnByte": 6,
+            "startLine": 106
+          },
+          "targetExpression": "this.closeSnapPopup"
+        },
+        {
+          "factId": "workspace-fact-4b576b01d47051d3152ac30b",
+          "span": {
+            "endByte": 4531,
+            "endColumnByte": 100,
+            "endLine": 110,
+            "startByte": 4437,
+            "startColumnByte": 6,
+            "startLine": 110
+          },
+          "targetExpression": "Logger.error"
+        }
+      ],
+      "excerpt": [
+        {
+          "line": 82,
+          "text": "    try {"
+        },
+        {
+          "line": 83,
+          "text": "      if (result === SaveButtonOnClickResult.SUCCESS) {"
+        },
+        {
+          "line": 84,
+          "text": "        const helper = photoAccessHelper.getPhotoAccessHelper(this.context);"
+        },
+        {
+          "line": 85,
+          "text": "        const uri = await helper.createAsset(photoAccessHelper.PhotoType.IMAGE, 'png');"
+        },
+        {
+          "line": 86,
+          "text": "        const file = await fileIo.open(uri, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);"
+        },
+        {
+          "line": 87,
+          "text": "        const imagePackerApi: image.ImagePacker = image.createImagePacker();"
+        },
+        {
+          "line": 88,
+          "text": "        const packOpts: image.PackingOption = {"
+        },
+        {
+          "line": 89,
+          "text": "          format: 'image/png',"
+        },
+        {
+          "line": 90,
+          "text": "          quality: 100,"
+        },
+        {
+          "line": 91,
+          "text": "        };"
+        },
+        {
+          "line": 92,
+          "text": "        imagePackerApi.packToData(this.mergedImage, packOpts).then((data) => {"
+        },
+        {
+          "line": 93,
+          "text": "          fileIo.writeSync(file.fd, data);"
+        },
+        {
+          "line": 94,
+          "text": "          fileIo.closeSync(file.fd);"
+        },
+        {
+          "line": 95,
+          "text": "          Logger.info(TAG, `Succeeded in packToFile`);"
+        },
+        {
+          "line": 96,
+          "text": "          this.getUIContext().getPromptAction().showToast({"
+        },
+        {
+          "line": 97,
+          "text": "            // 请将$r('app.string.save_album_success')替换为实际资源文件，在本示例中该资源文件的value值为\"Saved to album\""
+        },
+        {
+          "line": 98,
+          "text": "            message: $r('app.string.save_album_success'),"
+        },
+        {
+          "line": 99,
+          "text": "            duration: 1800"
+        },
+        {
+          "line": 100,
+          "text": "          })"
+        },
+        {
+          "line": 101,
+          "text": "        }).catch((error: BusinessError) => {"
+        },
+        {
+          "line": 102,
+          "text": "          Logger.error(TAG, `Failed to packToFile. Error code is ${error.code}, message is ${error.message}`);"
+        },
+        {
+          "line": 103,
+          "text": "        });"
+        },
+        {
+          "line": 104,
+          "text": "      }"
+        },
+        {
+          "line": 105,
+          "text": "      // [StartExclude save_snapshot1]"
+        },
+        {
+          "line": 106,
+          "text": "      this.closeSnapPopup();"
+        },
+        {
+          "line": 107,
+          "text": "      // [EndExclude save_snapshot1]"
+        },
+        {
+          "line": 108,
+          "text": "    } catch (err) {"
+        },
+        {
+          "line": 109,
+          "text": "      let error = err as BusinessError;"
+        },
+        {
+          "line": 110,
+          "text": "      Logger.error(TAG, `saveSnapshot err, errCode: ${error.code}, error message: ${error.message}`);"
+        },
+        {
+          "line": 111,
+          "text": "    }"
+        },
+        {
+          "line": 112,
+          "text": "  }"
+        },
+        {
+          "line": 113,
+          "text": "  // [End save_snapshot1]"
+        }
+      ],
+      "excerptSha256": "a29080412f57c2fe764baf1a5f6333e7fd852810ec345399e45a671a51cb90a2",
+      "owner": "SnapshotPreview::saveSnapshot",
+      "ownerLineCount": 32,
+      "ownerSourceByteLength": 1554,
+      "ownerSourceSha256": "9e274fa7eb3ad79c722fb2d259d2721d4d44556a96988b168c7c5f3d301f932b",
+      "ownerSpan": {
+        "endByte": 4542,
+        "endColumnByte": 3,
+        "endLine": 112,
+        "startByte": 2988,
+        "startColumnByte": 8,
+        "startLine": 81
+      },
+      "path": "ArkUISample/ComponentSnapshot/entry/src/main/ets/view/SnapshotPreview.ets",
+      "repositoryId": "guide-snippets",
+      "status": "complete",
+      "symbolFactId": "workspace-fact-7f0673dbec2fa545b7020965"
+    },
+    {
+      "callFacts": [
+        {
+          "factId": "workspace-fact-a4b388364b4b98b621dbf85f",
+          "span": {
+            "endByte": 6246,
+            "endColumnByte": 44,
+            "endLine": 160,
+            "startByte": 6216,
+            "startColumnByte": 14,
+            "startLine": 160
+          },
+          "targetExpression": "$r"
+        },
+        {
+          "factId": "workspace-fact-e3ac6d8d74f7823fb397964c",
+          "span": {
+            "endByte": 6355,
+            "endColumnByte": 44,
+            "endLine": 163,
+            "startByte": 6323,
+            "startColumnByte": 12,
+            "startLine": 163
+          },
+          "targetExpression": "Logger.info"
+        },
+        {
+          "factId": "workspace-fact-5dd3e9a03423922b46942dc8",
+          "span": {
+            "endByte": 6388,
+            "endColumnByte": 31,
+            "endLine": 164,
+            "startByte": 6369,
+            "startColumnByte": 12,
+            "startLine": 164
+          },
+          "targetExpression": "this.getUIContext"
+        },
+        {
+          "factId": "workspace-fact-a49f5b93c3706cbbc8b75683",
+          "span": {
+            "endByte": 6400,
+            "endColumnByte": 43,
+            "endLine": 164,
+            "startByte": 6369,
+            "startColumnByte": 12,
+            "startLine": 164
+          },
+          "targetExpression": "this.getUIContext().getRouter"
+        },
+        {
+          "factId": "workspace-fact-c520f22235b224d519197f56",
+          "span": {
+            "endByte": 6407,
+            "endColumnByte": 50,
+            "endLine": 164,
+            "startByte": 6369,
+            "startColumnByte": 12,
+            "startLine": 164
+          },
+          "targetExpression": "this.getUIContext().getRouter().back"
+        },
+        {
+          "factId": "workspace-fact-c7230e2e8619090c01126f00",
+          "span": {
+            "endByte": 6620,
+            "endColumnByte": 87,
+            "endLine": 169,
+            "startByte": 6598,
+            "startColumnByte": 65,
+            "startLine": 169
+          },
+          "targetExpression": "CameraService.is2in1"
+        },
+        {
+          "factId": "workspace-fact-a74c6e02e37bd4de0b3281d1",
+          "span": {
+            "endByte": 6660,
+            "endColumnByte": 36,
+            "endLine": 170,
+            "startByte": 6639,
+            "startColumnByte": 15,
+            "startLine": 170
+          },
+          "targetExpression": "$r"
+        },
+        {
+          "factId": "workspace-fact-8036d0793fccd09e88a0660c",
+          "span": {
+            "endByte": 6819,
+            "endColumnByte": 53,
+            "endLine": 174,
+            "startByte": 6800,
+            "startColumnByte": 34,
+            "startLine": 174
+          },
+          "targetExpression": "GlobalContext.get"
+        },
+        {
+          "factId": "workspace-fact-eb3712bdc9d9d4d1b9786fd6",
+          "span": {
+            "endByte": 6868,
+            "endColumnByte": 102,
+            "endLine": 174,
+            "startByte": 6800,
+            "startColumnByte": 34,
+            "startLine": 174
+          },
+          "targetExpression": "GlobalContext.get().getT"
+        },
+        {
+          "factId": "workspace-fact-682d9e14a9b33153a6e52637",
+          "span": {
+            "endByte": 6941,
+            "endColumnByte": 71,
+            "endLine": 175,
+            "startByte": 6904,
+            "startColumnByte": 34,
+            "startLine": 175
+          },
+          "targetExpression": "this.mediaLibSavePhoto"
+        },
+        {
+          "factId": "workspace-fact-261ddb585b07e78e6cdba96a",
+          "span": {
+            "endByte": 6976,
+            "endColumnByte": 33,
+            "endLine": 176,
+            "startByte": 6957,
+            "startColumnByte": 14,
+            "startLine": 176
+          },
+          "targetExpression": "GlobalContext.get"
+        },
+        {
+          "factId": "workspace-fact-4e371c6ffeb935b525dacb98",
+          "span": {
+            "endByte": 6994,
+            "endColumnByte": 51,
+            "endLine": 176,
+            "startByte": 6957,
+            "startColumnByte": 14,
+            "startLine": 176
+          },
+          "targetExpression": "GlobalContext.get().getPromptAction"
+        },
+        {
+          "factId": "workspace-fact-f6b3b77b0fd4f20bde0b100c",
+          "span": {
+            "endByte": 7159,
+            "endColumnByte": 16,
+            "endLine": 180,
+            "startByte": 6957,
+            "startColumnByte": 14,
+            "startLine": 176
+          },
+          "targetExpression": "GlobalContext.get().getPromptAction()?.showToast"
+        },
+        {
+          "factId": "workspace-fact-5e1c0f06be9c06939f6db0fe",
+          "span": {
+            "endByte": 7272,
+            "endColumnByte": 86,
+            "endLine": 183,
+            "startByte": 7250,
+            "startColumnByte": 64,
+            "startLine": 183
+          },
+          "targetExpression": "CameraService.is2in1"
+        },
+        {
+          "factId": "workspace-fact-0c42910cf204d96eea5f4bef",
+          "span": {
+            "endByte": 7593,
+            "endColumnByte": 118,
+            "endLine": 186,
+            "startByte": 7487,
+            "startColumnByte": 12,
+            "startLine": 186
+          },
+          "targetExpression": "Logger.info"
+        },
+        {
+          "factId": "workspace-fact-bf71545e51d3a95ef4c5affe",
+          "span": {
+            "endByte": 7966,
+            "endColumnByte": 111,
+            "endLine": 192,
+            "startByte": 7892,
+            "startColumnByte": 37,
+            "startLine": 192
+          },
+          "targetExpression": "this.phAccessHelper.createAsset"
+        },
+        {
+          "factId": "workspace-fact-944a4401bcce77221f093821",
+          "span": {
+            "endByte": 8029,
+            "endColumnByte": 61,
+            "endLine": 193,
+            "startByte": 8004,
+            "startColumnByte": 36,
+            "startLine": 193
+          },
+          "targetExpression": "image.createImagePacker"
+        },
+        {
+          "factId": "workspace-fact-e774b7ea852ac9c6677c6d25",
+          "span": {
+            "endByte": 8392,
+            "endColumnByte": 18,
+            "endLine": 201,
+            "startByte": 8259,
+            "startColumnByte": 48,
+            "startLine": 198
+          },
+          "targetExpression": "imagePacker.packToData"
+        },
+        {
+          "factId": "workspace-fact-7a7c4aa8f49b0d33c17b6a3c",
+          "span": {
+            "endByte": 8502,
+            "endColumnByte": 47,
+            "endLine": 203,
+            "startByte": 8473,
+            "startColumnByte": 18,
+            "startLine": 203
+          },
+          "targetExpression": "fileIo.write"
+        },
+        {
+          "factId": "workspace-fact-aebd53f0616dff5d52e9764e",
+          "span": {
+            "endByte": 8579,
+            "endColumnByte": 20,
+            "endLine": 205,
+            "startByte": 8473,
+            "startColumnByte": 18,
+            "startLine": 203
+          },
+          "targetExpression": "fileIo.write(file.fd, buffer).then"
+        },
+        {
+          "factId": "workspace-fact-a467f0b58db94171f811ccf6",
+          "span": {
+            "endByte": 8557,
+            "endColumnByte": 41,
+            "endLine": 204,
+            "startByte": 8536,
+            "startColumnByte": 20,
+            "startLine": 204
+          },
+          "targetExpression": "fileIo.close"
+        },
+        {
+          "factId": "workspace-fact-45b2a8d04120ca5e1e7f8a22",
+          "span": {
+            "endByte": 8642,
+            "endColumnByte": 42,
+            "endLine": 207,
+            "startByte": 8616,
+            "startColumnByte": 16,
+            "startLine": 207
+          },
+          "targetExpression": "this.curPixelMap.release"
+        },
+        {
+          "factId": "workspace-fact-88b354a2f32aadb6ae21ff1f",
+          "span": {
+            "endByte": 8681,
+            "endColumnByte": 37,
+            "endLine": 208,
+            "startByte": 8660,
+            "startColumnByte": 16,
+            "startLine": 208
+          },
+          "targetExpression": "imagePacker.release"
+        },
+        {
+          "factId": "workspace-fact-1ec267f1d3e26d8837d476a9",
+          "span": {
+            "endByte": 8747,
+            "endColumnByte": 35,
+            "endLine": 210,
+            "startByte": 8728,
+            "startColumnByte": 16,
+            "startLine": 210
+          },
+          "targetExpression": "GlobalContext.get"
+        },
+        {
+          "factId": "workspace-fact-0c02c8b48141c4ac4700e1b4",
+          "span": {
+            "endByte": 8765,
+            "endColumnByte": 53,
+            "endLine": 210,
+            "startByte": 8728,
+            "startColumnByte": 16,
+            "startLine": 210
+          },
+          "targetExpression": "GlobalContext.get().getPromptAction"
+        },
+        {
+          "factId": "workspace-fact-7e18caa715262bbf73922bda",
+          "span": {
+            "endByte": 8938,
+            "endColumnByte": 18,
+            "endLine": 214,
+            "startByte": 8728,
+            "startColumnByte": 16,
+            "startLine": 210
+          },
+          "targetExpression": "GlobalContext.get().getPromptAction()?.showToast"
+        },
+        {
+          "factId": "workspace-fact-bbff1a849d82fa92ffc7a44a",
+          "span": {
+            "endByte": 9056,
+            "endColumnByte": 34,
+            "endLine": 218,
+            "startByte": 9040,
+            "startColumnByte": 18,
+            "startLine": 218
+          },
+          "targetExpression": "fileIo.close"
+        },
+        {
+          "factId": "workspace-fact-6ab9decf987bf41bc0618f51",
+          "span": {
+            "endByte": 9818,
+            "endColumnByte": 12,
+            "endLine": 241,
+            "startByte": 9721,
+            "startColumnByte": 10,
+            "startLine": 238
+          },
+          "targetExpression": "Video"
+        },
+        {
+          "factId": "workspace-fact-16555478eb054f686435de3f",
+          "span": {
+            "endByte": 9861,
+            "endColumnByte": 42,
+            "endLine": 242,
+            "startByte": 9721,
+            "startColumnByte": 10,
+            "startLine": 238
+          },
+          "targetExpression": "Video({\n            src: this.videoUri,\n            controller: this.videoController\n          })\n            .width"
+        },
+        {
+          "factId": "workspace-fact-f55637fa1bef8f9401489e27",
+          "span": {
+            "endByte": 9907,
+            "endColumnByte": 45,
+            "endLine": 243,
+            "startByte": 9721,
+            "startColumnByte": 10,
+            "startLine": 238
+          },
+          "targetExpression": "Video({\n            src: this.videoUri,\n            controller: this.videoController\n          })\n            .width(Constants.FULL_PERCENT)\n            .height"
+        },
+        {
+          "factId": "workspace-fact-e185fcf0f026eafe40181569",
+          "span": {
+            "endByte": 9944,
+            "endColumnByte": 36,
+            "endLine": 244,
+            "startByte": 9721,
+            "startColumnByte": 10,
+            "startLine": 238
+          },
+          "targetExpression": "Video({\n            src: this.videoUri,\n            controller: this.videoController\n          })\n            .width(Constants.FULL_PERCENT)\n            .height(Constants.EIGHTY_PERCENT)\n            .controls"
+        },
+        {
+          "factId": "workspace-fact-36dd7bc12900408d03200485",
+          "span": {
+            "endByte": 9985,
+            "endColumnByte": 40,
+            "endLine": 245,
+            "startByte": 9721,
+            "startColumnByte": 10,
+            "startLine": 238
+          },
+          "targetExpression": "Video({\n            src: this.videoUri,\n            controller: this.videoController\n          })\n            .width(Constants.FULL_PERCENT)\n            .height(Constants.EIGHTY_PERCENT)\n            .controls(this.controls)\n            .objectFit"
+        },
+        {
+          "factId": "workspace-fact-5872c2be26b296b0dea8d3a7",
+          "span": {
+            "endByte": 10242,
+            "endColumnByte": 14,
+            "endLine": 253,
+            "startByte": 9721,
+            "startColumnByte": 10,
+            "startLine": 238
+          },
+          "targetExpression": "Video({\n            src: this.videoUri,\n            controller: this.videoController\n          })\n            .width(Constants.FULL_PERCENT)\n            .height(Constants.EIGHTY_PERCENT)\n            .controls(this.controls)\n            .objectFit(ImageFit.Contain)\n            .onClick"
+        },
+        {
+          "factId": "workspace-fact-b061c4a90a6b4423b159b78b",
+          "span": {
+            "endByte": 10323,
+            "endColumnByte": 14,
+            "endLine": 256,
+            "startByte": 9721,
+            "startColumnByte": 10,
+            "startLine": 238
+          },
+          "targetExpression": "Video({\n            src: this.videoUri,\n            controller: this.videoController\n          })\n            .width(Constants.FULL_PERCENT)\n            .height(Constants.EIGHTY_PERCENT)\n            .controls(this.controls)\n            .objectFit(ImageFit.Contain)\n            .onClick(() => {\n              if (this.controls) {\n                this.videoController?.start();\n              } else {\n                this.videoController?.stop();\n              }\n              this.controls = !this.controls;\n            })\n            .onFinish"
+        },
+        {
+          "factId": "workspace-fact-ba43c10e39a5de8e5a236e3a",
+          "span": {
+            "endByte": 10095,
+            "endColumnByte": 45,
+            "endLine": 248,
+            "startByte": 10066,
+            "startColumnByte": 16,
+            "startLine": 248
+          },
+          "targetExpression": "this.videoController?.start"
+        },
+        {
+          "factId": "workspace-fact-ad9b495098379ae1bff8c11a",
+          "span": {
+            "endByte": 10164,
+            "endColumnByte": 44,
+            "endLine": 250,
+            "startByte": 10136,
+            "startColumnByte": 16,
+            "startLine": 250
+          },
+          "targetExpression": "this.videoController?.stop"
+        },
+        {
+          "factId": "workspace-fact-ccc77f6c6ad510d5a55e83fe",
+          "span": {
+            "endByte": 10629,
+            "endColumnByte": 22,
+            "endLine": 264,
+            "startByte": 10617,
+            "startColumnByte": 10,
+            "startLine": 264
+          },
+          "targetExpression": "SaveButton"
+        },
+        {
+          "factId": "workspace-fact-f3e4a3092b60dd8ddbb6418e",
+          "span": {
+            "endByte": 11701,
+            "endColumnByte": 12,
+            "endLine": 284,
+            "startByte": 10617,
+            "startColumnByte": 10,
+            "startLine": 264
+          },
+          "targetExpression": "SaveButton().onClick"
+        },
+        {
+          "factId": "workspace-fact-d32dee25444e483ae76d1b58",
+          "span": {
+            "endByte": 10820,
+            "endColumnByte": 118,
+            "endLine": 265,
+            "startByte": 10714,
+            "startColumnByte": 12,
+            "startLine": 265
+          },
+          "targetExpression": "Logger.info"
+        },
+        {
+          "factId": "workspace-fact-0423a6ae9bd15c5e0a16d314",
+          "span": {
+            "endByte": 11160,
+            "endColumnByte": 105,
+            "endLine": 270,
+            "startByte": 11087,
+            "startColumnByte": 32,
+            "startLine": 270
+          },
+          "targetExpression": "this.phAccessHelper.createAsset"
+        },
+        {
+          "factId": "workspace-fact-b219b7e9e3471cff3026fa6c",
+          "span": {
+            "endByte": 11275,
+            "endColumnByte": 62,
+            "endLine": 272,
+            "startByte": 11237,
+            "startColumnByte": 24,
+            "startLine": 272
+          },
+          "targetExpression": "this.readWriteFile"
+        },
+        {
+          "factId": "workspace-fact-df71f13fb501dea2bf906d10",
+          "span": {
+            "endByte": 11438,
+            "endColumnByte": 80,
+            "endLine": 276,
+            "startByte": 11417,
+            "startColumnByte": 59,
+            "startLine": 276
+          },
+          "targetExpression": "JSON.stringify"
+        },
+        {
+          "factId": "workspace-fact-ffddf3e81563dd81b94452b0",
+          "span": {
+            "endByte": 11439,
+            "endColumnByte": 81,
+            "endLine": 276,
+            "startByte": 11374,
+            "startColumnByte": 16,
+            "startLine": 276
+          },
+          "targetExpression": "Logger.error"
+        },
+        {
+          "factId": "workspace-fact-8bc1148694b89286ebac7060",
+          "span": {
+            "endByte": 11490,
+            "endColumnByte": 33,
+            "endLine": 278,
+            "startByte": 11471,
+            "startColumnByte": 14,
+            "startLine": 278
+          },
+          "targetExpression": "GlobalContext.get"
+        },
+        {
+          "factId": "workspace-fact-d5343154b2817cb3850a7ec4",
+          "span": {
+            "endByte": 11508,
+            "endColumnByte": 51,
+            "endLine": 278,
+            "startByte": 11471,
+            "startColumnByte": 14,
+            "startLine": 278
+          },
+          "targetExpression": "GlobalContext.get().getPromptAction"
+        },
+        {
+          "factId": "workspace-fact-7eb51dddf6ed2804b8e00920",
+          "span": {
+            "endByte": 11673,
+            "endColumnByte": 16,
+            "endLine": 282,
+            "startByte": 11471,
+            "startColumnByte": 14,
+            "startLine": 278
+          },
+          "targetExpression": "GlobalContext.get().getPromptAction()?.showToast"
+        },
+        {
+          "factId": "workspace-fact-d54aa2e05324a3a314c0d744",
+          "span": {
+            "endByte": 11885,
+            "endColumnByte": 60,
+            "endLine": 291,
+            "startByte": 11846,
+            "startColumnByte": 21,
+            "startLine": 291
+          },
+          "targetExpression": "$r"
+        }
+      ],
+      "excerpt": [
+        {
+          "line": 158,
+          "text": "    Column() {"
+        },
+        {
+          "line": 159,
+          "text": "      Row() {"
+        },
+        {
+          "line": 160,
+          "text": "        Image($r('app.media.ic_public_back'))"
+        },
+        {
+          "line": 161,
+          "text": "          .objectFit(ImageFit.Fill)"
+        },
+        {
+          "line": 162,
+          "text": "          .onClick(() => {"
+        },
+        {
+          "line": 163,
+          "text": "            Logger.info(TAG, 'back onClick');"
+        },
+        {
+          "line": 164,
+          "text": "            this.getUIContext().getRouter().back();"
+        },
+        {
+          "line": 165,
+          "text": "          })"
+        },
+        {
+          "line": 166,
+          "text": "          .width(Constants.BACK_ICON_SIZE)"
+        },
+        {
+          "line": 167,
+          "text": "          .height(Constants.BACK_ICON_SIZE)"
+        },
+        {
+          "line": 168,
+          "text": "          .id('return')"
+        },
+        {
+          "line": 169,
+          "text": "        if (this.sceneMode === camera.SceneMode.NORMAL_PHOTO && !CameraService.is2in1()) {"
+        },
+        {
+          "line": 170,
+          "text": "          Text($r('app.string.save'))"
+        },
+        {
+          "line": 171,
+          "text": "            .width(48)"
+        },
+        {
+          "line": 172,
+          "text": "            .height(Constants.BACK_ICON_SIZE)"
+        },
+        {
+          "line": 173,
+          "text": "            .onClick(async () => {"
+        },
+        {
+          "line": 174,
+          "text": "              let curPhotoAsset = GlobalContext.get().getT<photoAccessHelper.PhotoAsset>('photoAsset');"
+        },
+        {
+          "line": 175,
+          "text": "              let errCode = await this.mediaLibSavePhoto(curPhotoAsset);"
+        },
+        {
+          "line": 176,
+          "text": "              GlobalContext.get().getPromptAction()?.showToast({"
+        },
+        {
+          "line": 177,
+          "text": "                message: errCode == 0 ? \"保存成功\" : \"保存失败\","
+        },
+        {
+          "line": 178,
+          "text": "                duration: 2000,"
+        },
+        {
+          "line": 179,
+          "text": "                bottom: '50%'"
+        },
+        {
+          "line": 180,
+          "text": "              });"
+        },
+        {
+          "line": 181,
+          "text": "            })"
+        },
+        {
+          "line": 182,
+          "text": "        }"
+        },
+        {
+          "line": 183,
+          "text": "        if (this.sceneMode === camera.SceneMode.NORMAL_PHOTO && CameraService.is2in1()) {"
+        },
+        {
+          "line": 184,
+          "text": "          // 安全控件需要完全展示出来，不然result会返回TEMPORARY_AUTHORIZATION_FAILED"
+        },
+        {
+          "line": 185,
+          "text": "          SaveButton().onClick(async (event: ClickEvent, result: SaveButtonOnClickResult) => {"
+        },
+        {
+          "line": 186,
+          "text": "            Logger.info(TAG, `result == SaveButtonOnClickResult.SUCCESS ${result == SaveButtonOnClickResult.SUCCESS}`);"
+        },
+        {
+          "line": 187,
+          "text": "            if (result == SaveButtonOnClickResult.SUCCESS) {"
+        },
+        {
+          "line": 188,
+          "text": "              let fd = -1;"
+        },
+        {
+          "line": 189,
+          "text": "              let errCode = -1;"
+        },
+        {
+          "line": 190,
+          "text": "              try {"
+        },
+        {
+          "line": 191,
+          "text": "                // onClick触发后5秒内通过createAsset接口创建图片文件，5秒后createAsset权限收回。"
+        },
+        {
+          "line": 192,
+          "text": "                let filePath = await this.phAccessHelper.createAsset(photoAccessHelper.PhotoType.IMAGE, 'jpeg');"
+        },
+        {
+          "line": 193,
+          "text": "                const imagePacker = image.createImagePacker();"
+        },
+        {
+          "line": 194,
+          "text": "                if (this.curPixelMap === undefined) {"
+        },
+        {
+          "line": 195,
+          "text": "                  return;"
+        },
+        {
+          "line": 196,
+          "text": "                }"
+        },
+        {
+          "line": 197,
+          "text": "                const mode = fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE;"
+        },
+        {
+          "line": 198,
+          "text": "                let buffer: ArrayBuffer = await imagePacker.packToData(this.curPixelMap, {"
+        },
+        {
+          "line": 199,
+          "text": "                  format: 'image/jpeg',"
+        },
+        {
+          "line": 200,
+          "text": "                  quality: 100,"
+        },
+        {
+          "line": 201,
+          "text": "                });"
+        },
+        {
+          "line": 202,
+          "text": "                fileIo.open(filePath, mode).then((file) => {"
+        },
+        {
+          "line": 203,
+          "text": "                  fileIo.write(file.fd, buffer).then(() => {"
+        },
+        {
+          "line": 204,
+          "text": "                    fileIo.close(file.fd);"
+        },
+        {
+          "line": 205,
+          "text": "                  });"
+        },
+        {
+          "line": 206,
+          "text": "                })"
+        },
+        {
+          "line": 207,
+          "text": "                this.curPixelMap.release();"
+        },
+        {
+          "line": 208,
+          "text": "                imagePacker.release();"
+        },
+        {
+          "line": 209,
+          "text": "                errCode = 0;"
+        },
+        {
+          "line": 210,
+          "text": "                GlobalContext.get().getPromptAction()?.showToast({"
+        },
+        {
+          "line": 211,
+          "text": "                  message: errCode == 0 ? \"保存成功\" : \"保存失败\","
+        },
+        {
+          "line": 212,
+          "text": "                  duration: 2000,"
+        },
+        {
+          "line": 213,
+          "text": "                  bottom: '50%'"
+        },
+        {
+          "line": 214,
+          "text": "                });"
+        },
+        {
+          "line": 215,
+          "text": "              } catch (err) {"
+        },
+        {
+          "line": 216,
+          "text": "              } finally {"
+        },
+        {
+          "line": 217,
+          "text": "                if (fd) {"
+        },
+        {
+          "line": 218,
+          "text": "                  fileIo.close(fd);"
+        },
+        {
+          "line": 219,
+          "text": "                }"
+        },
+        {
+          "line": 220,
+          "text": "              }"
+        },
+        {
+          "line": 221,
+          "text": "            }"
+        },
+        {
+          "line": 222,
+          "text": "          })"
+        },
+        {
+          "line": 223,
+          "text": "        }"
+        },
+        {
+          "line": 224,
+          "text": "      }"
+        },
+        {
+          "line": 225,
+          "text": "      .padding({ left: Constants.BACK_ICON_MARGIN, right: Constants.BACK_ICON_MARGIN})"
+        },
+        {
+          "line": 226,
+          "text": "      .width(Constants.FULL_PERCENT)"
+        },
+        {
+          "line": 227,
+          "text": "      .layoutWeight(this.backIconLayoutWeight)"
+        },
+        {
+          "line": 228,
+          "text": "      .alignItems(VerticalAlign.Center)"
+        },
+        {
+          "line": 229,
+          "text": "      .justifyContent(FlexAlign.SpaceBetween)"
+        },
+        {
+          "line": 230,
+          "text": ""
+        },
+        {
+          "line": 231,
+          "text": "      Column() {"
+        },
+        {
+          "line": 232,
+          "text": "        if (this.sceneMode === camera.SceneMode.NORMAL_PHOTO) {"
+        },
+        {
+          "line": 233,
+          "text": "          Image(this.curPixelMap)"
+        },
+        {
+          "line": 234,
+          "text": "            .objectFit(ImageFit.Contain)"
+        },
+        {
+          "line": 235,
+          "text": "            .width(Constants.FULL_PERCENT)"
+        },
+        {
+          "line": 236,
+          "text": "            .height(Constants.EIGHTY_PERCENT)"
+        },
+        {
+          "line": 237,
+          "text": "        } else if (this.sceneMode === camera.SceneMode.NORMAL_VIDEO) {"
+        },
+        {
+          "line": 238,
+          "text": "          Video({"
+        },
+        {
+          "line": 239,
+          "text": "            src: this.videoUri,"
+        },
+        {
+          "line": 240,
+          "text": "            controller: this.videoController"
+        },
+        {
+          "line": 241,
+          "text": "          })"
+        },
+        {
+          "line": 242,
+          "text": "            .width(Constants.FULL_PERCENT)"
+        },
+        {
+          "line": 243,
+          "text": "            .height(Constants.EIGHTY_PERCENT)"
+        },
+        {
+          "line": 244,
+          "text": "            .controls(this.controls)"
+        },
+        {
+          "line": 245,
+          "text": "            .objectFit(ImageFit.Contain)"
+        },
+        {
+          "line": 246,
+          "text": "            .onClick(() => {"
+        },
+        {
+          "line": 247,
+          "text": "              if (this.controls) {"
+        },
+        {
+          "line": 248,
+          "text": "                this.videoController?.start();"
+        },
+        {
+          "line": 249,
+          "text": "              } else {"
+        },
+        {
+          "line": 250,
+          "text": "                this.videoController?.stop();"
+        },
+        {
+          "line": 251,
+          "text": "              }"
+        },
+        {
+          "line": 252,
+          "text": "              this.controls = !this.controls;"
+        },
+        {
+          "line": 253,
+          "text": "            })"
+        },
+        {
+          "line": 254,
+          "text": "            .onFinish(() => {"
+        },
+        {
+          "line": 255,
+          "text": "              this.controls = true;"
+        },
+        {
+          "line": 256,
+          "text": "            })"
+        },
+        {
+          "line": 257,
+          "text": "        }"
+        },
+        {
+          "line": 258,
+          "text": "      }"
+        },
+        {
+          "line": 259,
+          "text": "      .width(Constants.FULL_PERCENT)"
+        },
+        {
+          "line": 260,
+          "text": "      .layoutWeight(this.textLayoutWeight)"
+        },
+        {
+          "line": 261,
+          "text": "      Column() {"
+        },
+        {
+          "line": 262,
+          "text": "        if (this.sceneMode === camera.SceneMode.NORMAL_VIDEO) {"
+        },
+        {
+          "line": 263,
+          "text": "          // 安全控件需要完全展示出来，不然result会返回TEMPORARY_AUTHORIZATION_FAILED"
+        },
+        {
+          "line": 264,
+          "text": "          SaveButton().onClick(async (event: ClickEvent, result: SaveButtonOnClickResult) => {"
+        },
+        {
+          "line": 265,
+          "text": "            Logger.info(TAG, `result == SaveButtonOnClickResult.SUCCESS ${result == SaveButtonOnClickResult.SUCCESS}`);"
+        },
+        {
+          "line": 266,
+          "text": "            if (result == SaveButtonOnClickResult.SUCCESS) {"
+        },
+        {
+          "line": 267,
+          "text": "              let errCode = -1;"
+        },
+        {
+          "line": 268,
+          "text": "              try {"
+        },
+        {
+          "line": 269,
+          "text": "                // onClick触发后5秒内通过createAsset接口创建图片文件，5秒后createAsset权限收回。"
+        },
+        {
+          "line": 270,
+          "text": "                let uri = await this.phAccessHelper.createAsset(photoAccessHelper.PhotoType.VIDEO, 'mp4');"
+        },
+        {
+          "line": 271,
+          "text": "                if (this.videoUri !== undefined) {"
+        },
+        {
+          "line": 272,
+          "text": "                  await this.readWriteFile(this.videoUri, uri);"
+        },
+        {
+          "line": 273,
+          "text": "                  errCode = 0;"
+        },
+        {
+          "line": 274,
+          "text": "                }"
+        },
+        {
+          "line": 275,
+          "text": "              } catch (error) {"
+        },
+        {
+          "line": 276,
+          "text": "                Logger.error(TAG, \"SaveButton error is \" + JSON.stringify(error));"
+        },
+        {
+          "line": 277,
+          "text": "              }"
+        },
+        {
+          "line": 278,
+          "text": "              GlobalContext.get().getPromptAction()?.showToast({"
+        },
+        {
+          "line": 279,
+          "text": "                message: errCode == 0 ? \"保存成功\" : \"保存失败\","
+        },
+        {
+          "line": 280,
+          "text": "                duration: 2000,"
+        },
+        {
+          "line": 281,
+          "text": "                bottom: '50%'"
+        },
+        {
+          "line": 282,
+          "text": "              });"
+        },
+        {
+          "line": 283,
+          "text": "            }"
+        },
+        {
+          "line": 284,
+          "text": "          })"
+        },
+        {
+          "line": 285,
+          "text": "        }"
+        },
+        {
+          "line": 286,
+          "text": "      }"
+        },
+        {
+          "line": 287,
+          "text": "      .margin({bottom: 24})"
+        },
+        {
+          "line": 288,
+          "text": "    }"
+        },
+        {
+          "line": 289,
+          "text": "    .width(Constants.FULL_PERCENT)"
+        },
+        {
+          "line": 290,
+          "text": "    .height(Constants.FULL_PERCENT)"
+        },
+        {
+          "line": 291,
+          "text": "    .backgroundColor($r('app.color.dialog_background_color'))"
+        },
+        {
+          "line": 292,
+          "text": "  }"
+        },
+        {
+          "line": 293,
+          "text": "}"
+        }
+      ],
+      "excerptSha256": "7b6bb2826c9cb2e3e3bc421a05236cc92762e7503a24c234be53d901f3222604",
+      "owner": "EditPage::build",
+      "ownerLineCount": 136,
+      "ownerSourceByteLength": 5727,
+      "ownerSourceSha256": "840b4279eda58e7fbf212581bd2e2ca5e41d0a03855c44b8174192032efa7b6d",
+      "ownerSpan": {
+        "endByte": 11890,
+        "endColumnByte": 3,
+        "endLine": 292,
+        "startByte": 6163,
+        "startColumnByte": 2,
+        "startLine": 157
+      },
+      "path": "Media/Camera/MoreResolution/entry/src/main/ets/pages/EditPage.ets",
+      "repositoryId": "guide-snippets",
+      "status": "complete",
+      "symbolFactId": "workspace-fact-aa53ecb88463301e4791f6b4"
+    },
+    {
+      "callFacts": [
+        {
+          "factId": "workspace-fact-00606f99809a8366ff359150",
+          "span": {
+            "endByte": 6493,
+            "endColumnByte": 44,
+            "endLine": 168,
+            "startByte": 6463,
+            "startColumnByte": 14,
+            "startLine": 168
+          },
+          "targetExpression": "$r"
+        },
+        {
+          "factId": "workspace-fact-0b2c9855fea829e0d04bc767",
+          "span": {
+            "endByte": 6602,
+            "endColumnByte": 44,
+            "endLine": 171,
+            "startByte": 6570,
+            "startColumnByte": 12,
+            "startLine": 171
+          },
+          "targetExpression": "Logger.info"
+        },
+        {
+          "factId": "workspace-fact-50d86e625c2a3d8752d092d7",
+          "span": {
+            "endByte": 6635,
+            "endColumnByte": 31,
+            "endLine": 172,
+            "startByte": 6616,
+            "startColumnByte": 12,
+            "startLine": 172
+          },
+          "targetExpression": "this.getUIContext"
+        },
+        {
+          "factId": "workspace-fact-dabdce96f7e59f695ea91273",
+          "span": {
+            "endByte": 6647,
+            "endColumnByte": 43,
+            "endLine": 172,
+            "startByte": 6616,
+            "startColumnByte": 12,
+            "startLine": 172
+          },
+          "targetExpression": "this.getUIContext().getRouter"
+        },
+        {
+          "factId": "workspace-fact-22767aaef596b7301def0fbd",
+          "span": {
+            "endByte": 6654,
+            "endColumnByte": 50,
+            "endLine": 172,
+            "startByte": 6616,
+            "startColumnByte": 12,
+            "startLine": 172
+          },
+          "targetExpression": "this.getUIContext().getRouter().back"
+        },
+        {
+          "factId": "workspace-fact-45abddcd9b0ce4ee7038a6d6",
+          "span": {
+            "endByte": 6843,
+            "endColumnByte": 87,
+            "endLine": 176,
+            "startByte": 6821,
+            "startColumnByte": 65,
+            "startLine": 176
+          },
+          "targetExpression": "CameraService.is2in1"
+        },
+        {
+          "factId": "workspace-fact-1ab6a4118b62d37ca72e8883",
+          "span": {
+            "endByte": 6883,
+            "endColumnByte": 36,
+            "endLine": 177,
+            "startByte": 6862,
+            "startColumnByte": 15,
+            "startLine": 177
+          },
+          "targetExpression": "$r"
+        },
+        {
+          "factId": "workspace-fact-a8dfd70ea7744d573f551992",
+          "span": {
+            "endByte": 7042,
+            "endColumnByte": 53,
+            "endLine": 181,
+            "startByte": 7023,
+            "startColumnByte": 34,
+            "startLine": 181
+          },
+          "targetExpression": "GlobalContext.get"
+        },
+        {
+          "factId": "workspace-fact-a08f14db6f685385b19fb3c6",
+          "span": {
+            "endByte": 7091,
+            "endColumnByte": 102,
+            "endLine": 181,
+            "startByte": 7023,
+            "startColumnByte": 34,
+            "startLine": 181
+          },
+          "targetExpression": "GlobalContext.get().getT"
+        },
+        {
+          "factId": "workspace-fact-92f434bdca34c2964ea00e45",
+          "span": {
+            "endByte": 7164,
+            "endColumnByte": 71,
+            "endLine": 182,
+            "startByte": 7127,
+            "startColumnByte": 34,
+            "startLine": 182
+          },
+          "targetExpression": "this.mediaLibSavePhoto"
+        },
+        {
+          "factId": "workspace-fact-01c6958223fe75ca857dfa5c",
+          "span": {
+            "endByte": 7221,
+            "endColumnByte": 35,
+            "endLine": 184,
+            "startByte": 7202,
+            "startColumnByte": 16,
+            "startLine": 184
+          },
+          "targetExpression": "GlobalContext.get"
+        },
+        {
+          "factId": "workspace-fact-269db04fe8e0f10254c21cc3",
+          "span": {
+            "endByte": 7239,
+            "endColumnByte": 53,
+            "endLine": 184,
+            "startByte": 7202,
+            "startColumnByte": 16,
+            "startLine": 184
+          },
+          "targetExpression": "GlobalContext.get().getPromptAction"
+        },
+        {
+          "factId": "workspace-fact-ddebf45e84d93ed6bbf1a809",
+          "span": {
+            "endByte": 7412,
+            "endColumnByte": 18,
+            "endLine": 188,
+            "startByte": 7202,
+            "startColumnByte": 16,
+            "startLine": 184
+          },
+          "targetExpression": "GlobalContext.get().getPromptAction()?.showToast"
+        },
+        {
+          "factId": "workspace-fact-4600c55e24282a920a3e42a0",
+          "span": {
+            "endByte": 7514,
+            "endColumnByte": 72,
+            "endLine": 190,
+            "startByte": 7497,
+            "startColumnByte": 55,
+            "startLine": 190
+          },
+          "targetExpression": "JSON.stringify"
+        },
+        {
+          "factId": "workspace-fact-85eee9238f500eddc6c97bff",
+          "span": {
+            "endByte": 7515,
+            "endColumnByte": 73,
+            "endLine": 190,
+            "startByte": 7458,
+            "startColumnByte": 16,
+            "startLine": 190
+          },
+          "targetExpression": "Logger.error"
+        },
+        {
+          "factId": "workspace-fact-256f6a5e1b1154ebf2608400",
+          "span": {
+            "endByte": 7644,
+            "endColumnByte": 86,
+            "endLine": 194,
+            "startByte": 7622,
+            "startColumnByte": 64,
+            "startLine": 194
+          },
+          "targetExpression": "CameraService.is2in1"
+        },
+        {
+          "factId": "workspace-fact-6d1c79bea631fc60cdd3babb",
+          "span": {
+            "endByte": 7965,
+            "endColumnByte": 118,
+            "endLine": 197,
+            "startByte": 7859,
+            "startColumnByte": 12,
+            "startLine": 197
+          },
+          "targetExpression": "Logger.info"
+        },
+        {
+          "factId": "workspace-fact-7f448f28fbfc7d59850391dc",
+          "span": {
+            "endByte": 8338,
+            "endColumnByte": 111,
+            "endLine": 203,
+            "startByte": 8264,
+            "startColumnByte": 37,
+            "startLine": 203
+          },
+          "targetExpression": "this.phAccessHelper.createAsset"
+        },
+        {
+          "factId": "workspace-fact-794e3dbc155554e2848f166f",
+          "span": {
+            "endByte": 8401,
+            "endColumnByte": 61,
+            "endLine": 204,
+            "startByte": 8376,
+            "startColumnByte": 36,
+            "startLine": 204
+          },
+          "targetExpression": "image.createImagePacker"
+        },
+        {
+          "factId": "workspace-fact-3389531f0761382c2ef0ed1b",
+          "span": {
+            "endByte": 8764,
+            "endColumnByte": 18,
+            "endLine": 212,
+            "startByte": 8631,
+            "startColumnByte": 48,
+            "startLine": 209
+          },
+          "targetExpression": "imagePacker.packToData"
+        },
+        {
+          "factId": "workspace-fact-e6561811a6cfae14555fc188",
+          "span": {
+            "endByte": 8882,
+            "endColumnByte": 58,
+            "endLine": 214,
+            "startByte": 8842,
+            "startColumnByte": 18,
+            "startLine": 214
+          },
+          "targetExpression": "Logger.error"
+        },
+        {
+          "factId": "workspace-fact-1d509e0df80407f1b7f8060c",
+          "span": {
+            "endByte": 8999,
+            "endColumnByte": 49,
+            "endLine": 217,
+            "startByte": 8970,
+            "startColumnByte": 20,
+            "startLine": 217
+          },
+          "targetExpression": "fileIo.write"
+        },
+        {
+          "factId": "workspace-fact-6fa20f0a9e6b88d693c101df",
+          "span": {
+            "endByte": 9101,
+            "endColumnByte": 22,
+            "endLine": 219,
+            "startByte": 8970,
+            "startColumnByte": 20,
+            "startLine": 217
+          },
+          "targetExpression": "fileIo.write(file.fd, buffer).catch"
+        },
+        {
+          "factId": "workspace-fact-01b63d2a01db5e4cc6c7e60a",
+          "span": {
+            "endByte": 9288,
+            "endColumnByte": 22,
+            "endLine": 223,
+            "startByte": 8970,
+            "startColumnByte": 20,
+            "startLine": 217
+          },
+          "targetExpression": "fileIo.write(file.fd, buffer).catch(() => {\n                      Logger.error(TAG, 'fileIo.write error ' );\n                    }).then"
+        },
+        {
+          "factId": "workspace-fact-4ec6ec15c8e4eca1bc3dc9b0",
+          "span": {
+            "endByte": 9077,
+            "endColumnByte": 63,
+            "endLine": 218,
+            "startByte": 9036,
+            "startColumnByte": 22,
+            "startLine": 218
+          },
+          "targetExpression": "Logger.error"
+        },
+        {
+          "factId": "workspace-fact-b8a1876c4801ab77e3e404f4",
+          "span": {
+            "endByte": 9158,
+            "endColumnByte": 43,
+            "endLine": 220,
+            "startByte": 9137,
+            "startColumnByte": 22,
+            "startLine": 220
+          },
+          "targetExpression": "fileIo.close"
+        },
+        {
+          "factId": "workspace-fact-f5330d6951553dad4c1e535c",
+          "span": {
+            "endByte": 9264,
+            "endColumnByte": 24,
+            "endLine": 222,
+            "startByte": 9137,
+            "startColumnByte": 22,
+            "startLine": 220
+          },
+          "targetExpression": "fileIo.close(file.fd).catch"
+        },
+        {
+          "factId": "workspace-fact-e6065cc386a1a4c3e6c9d3ff",
+          "span": {
+            "endByte": 9238,
+            "endColumnByte": 65,
+            "endLine": 221,
+            "startByte": 9197,
+            "startColumnByte": 24,
+            "startLine": 221
+          },
+          "targetExpression": "Logger.error"
+        },
+        {
+          "factId": "workspace-fact-986ec95238ccd4a7b2c3a660",
+          "span": {
+            "endByte": 9371,
+            "endColumnByte": 42,
+            "endLine": 226,
+            "startByte": 9345,
+            "startColumnByte": 16,
+            "startLine": 226
+          },
+          "targetExpression": "this.curPixelMap.release"
+        },
+        {
+          "factId": "workspace-fact-6d6d6a698c2ca5c1c305961e",
+          "span": {
+            "endByte": 9410,
+            "endColumnByte": 37,
+            "endLine": 227,
+            "startByte": 9389,
+            "startColumnByte": 16,
+            "startLine": 227
+          },
+          "targetExpression": "imagePacker.release"
+        },
+        {
+          "factId": "workspace-fact-cbc6f8b810e4d97b4b8ea447",
+          "span": {
+            "endByte": 9476,
+            "endColumnByte": 35,
+            "endLine": 229,
+            "startByte": 9457,
+            "startColumnByte": 16,
+            "startLine": 229
+          },
+          "targetExpression": "GlobalContext.get"
+        },
+        {
+          "factId": "workspace-fact-0383d51ed1d46ca26b54ab3b",
+          "span": {
+            "endByte": 9494,
+            "endColumnByte": 53,
+            "endLine": 229,
+            "startByte": 9457,
+            "startColumnByte": 16,
+            "startLine": 229
+          },
+          "targetExpression": "GlobalContext.get().getPromptAction"
+        },
+        {
+          "factId": "workspace-fact-0d1f6f8787f214c1c822b5bb",
+          "span": {
+            "endByte": 9667,
+            "endColumnByte": 18,
+            "endLine": 233,
+            "startByte": 9457,
+            "startColumnByte": 16,
+            "startLine": 229
+          },
+          "targetExpression": "GlobalContext.get().getPromptAction()?.showToast"
+        },
+        {
+          "factId": "workspace-fact-352a8614e8a631be1fec9df6",
+          "span": {
+            "endByte": 9785,
+            "endColumnByte": 34,
+            "endLine": 237,
+            "startByte": 9769,
+            "startColumnByte": 18,
+            "startLine": 237
+          },
+          "targetExpression": "fileIo.close"
+        },
+        {
+          "factId": "workspace-fact-a9d6cd101463f3715059ff79",
+          "span": {
+            "endByte": 9883,
+            "endColumnByte": 20,
+            "endLine": 239,
+            "startByte": 9769,
+            "startColumnByte": 18,
+            "startLine": 237
+          },
+          "targetExpression": "fileIo.close(fd).catch"
+        },
+        {
+          "factId": "workspace-fact-130748dc5b2a48044093b238",
+          "span": {
+            "endByte": 9861,
+            "endColumnByte": 61,
+            "endLine": 238,
+            "startByte": 9820,
+            "startColumnByte": 20,
+            "startLine": 238
+          },
+          "targetExpression": "Logger.error"
+        },
+        {
+          "factId": "workspace-fact-861037b171ea0e5d32ea5fa9",
+          "span": {
+            "endByte": 10645,
+            "endColumnByte": 12,
+            "endLine": 262,
+            "startByte": 10548,
+            "startColumnByte": 10,
+            "startLine": 259
+          },
+          "targetExpression": "Video"
+        },
+        {
+          "factId": "workspace-fact-f3c90fe5d168ab36ece44591",
+          "span": {
+            "endByte": 10688,
+            "endColumnByte": 42,
+            "endLine": 263,
+            "startByte": 10548,
+            "startColumnByte": 10,
+            "startLine": 259
+          },
+          "targetExpression": "Video({\n            src: this.videoUri,\n            controller: this.videoController\n          })\n            .width"
+        },
+        {
+          "factId": "workspace-fact-2277ed39646a74863f458ffb",
+          "span": {
+            "endByte": 10734,
+            "endColumnByte": 45,
+            "endLine": 264,
+            "startByte": 10548,
+            "startColumnByte": 10,
+            "startLine": 259
+          },
+          "targetExpression": "Video({\n            src: this.videoUri,\n            controller: this.videoController\n          })\n            .width(Constants.FULL_PERCENT)\n            .height"
+        },
+        {
+          "factId": "workspace-fact-a4369e798f9fdf814f3e2c79",
+          "span": {
+            "endByte": 10771,
+            "endColumnByte": 36,
+            "endLine": 265,
+            "startByte": 10548,
+            "startColumnByte": 10,
+            "startLine": 259
+          },
+          "targetExpression": "Video({\n            src: this.videoUri,\n            controller: this.videoController\n          })\n            .width(Constants.FULL_PERCENT)\n            .height(Constants.EIGHTY_PERCENT)\n            .controls"
+        },
+        {
+          "factId": "workspace-fact-2729b2732daf280b1ed31a6c",
+          "span": {
+            "endByte": 10812,
+            "endColumnByte": 40,
+            "endLine": 266,
+            "startByte": 10548,
+            "startColumnByte": 10,
+            "startLine": 259
+          },
+          "targetExpression": "Video({\n            src: this.videoUri,\n            controller: this.videoController\n          })\n            .width(Constants.FULL_PERCENT)\n            .height(Constants.EIGHTY_PERCENT)\n            .controls(this.controls)\n            .objectFit"
+        },
+        {
+          "factId": "workspace-fact-e10f69fe9bac93b6579714b5",
+          "span": {
+            "endByte": 11069,
+            "endColumnByte": 14,
+            "endLine": 274,
+            "startByte": 10548,
+            "startColumnByte": 10,
+            "startLine": 259
+          },
+          "targetExpression": "Video({\n            src: this.videoUri,\n            controller: this.videoController\n          })\n            .width(Constants.FULL_PERCENT)\n            .height(Constants.EIGHTY_PERCENT)\n            .controls(this.controls)\n            .objectFit(ImageFit.Contain)\n            .onClick"
+        },
+        {
+          "factId": "workspace-fact-5a18cdd6f5fde03c936da492",
+          "span": {
+            "endByte": 11150,
+            "endColumnByte": 14,
+            "endLine": 277,
+            "startByte": 10548,
+            "startColumnByte": 10,
+            "startLine": 259
+          },
+          "targetExpression": "Video({\n            src: this.videoUri,\n            controller: this.videoController\n          })\n            .width(Constants.FULL_PERCENT)\n            .height(Constants.EIGHTY_PERCENT)\n            .controls(this.controls)\n            .objectFit(ImageFit.Contain)\n            .onClick(() => {\n              if (this.controls) {\n                this.videoController?.start();\n              } else {\n                this.videoController?.stop();\n              }\n              this.controls = !this.controls;\n            })\n            .onFinish"
+        },
+        {
+          "factId": "workspace-fact-4cd7b7bb7390975c535f5ff8",
+          "span": {
+            "endByte": 10922,
+            "endColumnByte": 45,
+            "endLine": 269,
+            "startByte": 10893,
+            "startColumnByte": 16,
+            "startLine": 269
+          },
+          "targetExpression": "this.videoController?.start"
+        },
+        {
+          "factId": "workspace-fact-354bc3c2e05d8ae909b25cec",
+          "span": {
+            "endByte": 10991,
+            "endColumnByte": 44,
+            "endLine": 271,
+            "startByte": 10963,
+            "startColumnByte": 16,
+            "startLine": 271
+          },
+          "targetExpression": "this.videoController?.stop"
+        },
+        {
+          "factId": "workspace-fact-137e71fdbc87de4d11e2f208",
+          "span": {
+            "endByte": 11456,
+            "endColumnByte": 22,
+            "endLine": 285,
+            "startByte": 11444,
+            "startColumnByte": 10,
+            "startLine": 285
+          },
+          "targetExpression": "SaveButton"
+        },
+        {
+          "factId": "workspace-fact-afb9125c8d643784d91e68f2",
+          "span": {
+            "endByte": 12677,
+            "endColumnByte": 12,
+            "endLine": 309,
+            "startByte": 11444,
+            "startColumnByte": 10,
+            "startLine": 285
+          },
+          "targetExpression": "SaveButton().onClick"
+        },
+        {
+          "factId": "workspace-fact-69a2157ee784b9e8e8381495",
+          "span": {
+            "endByte": 11647,
+            "endColumnByte": 118,
+            "endLine": 286,
+            "startByte": 11541,
+            "startColumnByte": 12,
+            "startLine": 286
+          },
+          "targetExpression": "Logger.info"
+        },
+        {
+          "factId": "workspace-fact-f25a760a91fa9c59a953c8ab",
+          "span": {
+            "endByte": 11987,
+            "endColumnByte": 105,
+            "endLine": 291,
+            "startByte": 11914,
+            "startColumnByte": 32,
+            "startLine": 291
+          },
+          "targetExpression": "this.phAccessHelper.createAsset"
+        },
+        {
+          "factId": "workspace-fact-045bc4587fccaf2046d709c0",
+          "span": {
+            "endByte": 12102,
+            "endColumnByte": 62,
+            "endLine": 293,
+            "startByte": 12064,
+            "startColumnByte": 24,
+            "startLine": 293
+          },
+          "targetExpression": "this.readWriteFile"
+        },
+        {
+          "factId": "workspace-fact-03421bc5ca585120e017e59e",
+          "span": {
+            "endByte": 12265,
+            "endColumnByte": 80,
+            "endLine": 297,
+            "startByte": 12244,
+            "startColumnByte": 59,
+            "startLine": 297
+          },
+          "targetExpression": "JSON.stringify"
+        },
+        {
+          "factId": "workspace-fact-88f115b8808751162c795056",
+          "span": {
+            "endByte": 12266,
+            "endColumnByte": 81,
+            "endLine": 297,
+            "startByte": 12201,
+            "startColumnByte": 16,
+            "startLine": 297
+          },
+          "targetExpression": "Logger.error"
+        },
+        {
+          "factId": "workspace-fact-00a85ce259623aaf8e2f8a90",
+          "span": {
+            "endByte": 12339,
+            "endColumnByte": 35,
+            "endLine": 300,
+            "startByte": 12320,
+            "startColumnByte": 16,
+            "startLine": 300
+          },
+          "targetExpression": "GlobalContext.get"
+        },
+        {
+          "factId": "workspace-fact-951aa2069c0e742703353f1c",
+          "span": {
+            "endByte": 12357,
+            "endColumnByte": 53,
+            "endLine": 300,
+            "startByte": 12320,
+            "startColumnByte": 16,
+            "startLine": 300
+          },
+          "targetExpression": "GlobalContext.get().getPromptAction"
+        },
+        {
+          "factId": "workspace-fact-fe93d7a8819a25e2d4bcaf17",
+          "span": {
+            "endByte": 12530,
+            "endColumnByte": 18,
+            "endLine": 304,
+            "startByte": 12320,
+            "startColumnByte": 16,
+            "startLine": 300
+          },
+          "targetExpression": "GlobalContext.get().getPromptAction()?.showToast"
+        },
+        {
+          "factId": "workspace-fact-6df511395ffdf3461f50cbff",
+          "span": {
+            "endByte": 12632,
+            "endColumnByte": 72,
+            "endLine": 306,
+            "startByte": 12615,
+            "startColumnByte": 55,
+            "startLine": 306
+          },
+          "targetExpression": "JSON.stringify"
+        },
+        {
+          "factId": "workspace-fact-1d04f058c5d30cdb6575076a",
+          "span": {
+            "endByte": 12633,
+            "endColumnByte": 73,
+            "endLine": 306,
+            "startByte": 12576,
+            "startColumnByte": 16,
+            "startLine": 306
+          },
+          "targetExpression": "Logger.error"
+        },
+        {
+          "factId": "workspace-fact-fe65b1879285009b056e39e5",
+          "span": {
+            "endByte": 12861,
+            "endColumnByte": 60,
+            "endLine": 316,
+            "startByte": 12822,
+            "startColumnByte": 21,
+            "startLine": 316
+          },
+          "targetExpression": "$r"
+        }
+      ],
+      "excerpt": [
+        {
+          "line": 166,
+          "text": "    Column() {"
+        },
+        {
+          "line": 167,
+          "text": "      Row() {"
+        },
+        {
+          "line": 168,
+          "text": "        Image($r('app.media.ic_public_back'))"
+        },
+        {
+          "line": 169,
+          "text": "          .objectFit(ImageFit.Fill)"
+        },
+        {
+          "line": 170,
+          "text": "          .onClick(() => {"
+        },
+        {
+          "line": 171,
+          "text": "            Logger.info(TAG, 'back onClick');"
+        },
+        {
+          "line": 172,
+          "text": "            this.getUIContext().getRouter().back();"
+        },
+        {
+          "line": 173,
+          "text": "          })"
+        },
+        {
+          "line": 174,
+          "text": "          .width(Constants.BACK_ICON_SIZE)"
+        },
+        {
+          "line": 175,
+          "text": "          .height(Constants.BACK_ICON_SIZE)"
+        },
+        {
+          "line": 176,
+          "text": "        if (this.sceneMode === camera.SceneMode.NORMAL_PHOTO && !CameraService.is2in1()) {"
+        },
+        {
+          "line": 177,
+          "text": "          Text($r('app.string.save'))"
+        },
+        {
+          "line": 178,
+          "text": "            .width(48)"
+        },
+        {
+          "line": 179,
+          "text": "            .height(Constants.BACK_ICON_SIZE)"
+        },
+        {
+          "line": 180,
+          "text": "            .onClick(async () => {"
+        },
+        {
+          "line": 181,
+          "text": "              let curPhotoAsset = GlobalContext.get().getT<photoAccessHelper.PhotoAsset>('photoAsset');"
+        },
+        {
+          "line": 182,
+          "text": "              let errCode = await this.mediaLibSavePhoto(curPhotoAsset);"
+        },
+        {
+          "line": 183,
+          "text": "              try {"
+        },
+        {
+          "line": 184,
+          "text": "                GlobalContext.get().getPromptAction()?.showToast({"
+        },
+        {
+          "line": 185,
+          "text": "                  message: errCode == 0 ? '保存成功' : '保存失败',"
+        },
+        {
+          "line": 186,
+          "text": "                  duration: 2000,"
+        },
+        {
+          "line": 187,
+          "text": "                  bottom: '50%'"
+        },
+        {
+          "line": 188,
+          "text": "                });"
+        },
+        {
+          "line": 189,
+          "text": "              } catch (e) {"
+        },
+        {
+          "line": 190,
+          "text": "                Logger.error(TAG, 'showToast error ' + JSON.stringify(e));"
+        },
+        {
+          "line": 191,
+          "text": "              }"
+        },
+        {
+          "line": 192,
+          "text": "            })"
+        },
+        {
+          "line": 193,
+          "text": "        }"
+        },
+        {
+          "line": 194,
+          "text": "        if (this.sceneMode === camera.SceneMode.NORMAL_PHOTO && CameraService.is2in1()) {"
+        },
+        {
+          "line": 195,
+          "text": "          // 安全控件需要完全展示出来，不然result会返回TEMPORARY_AUTHORIZATION_FAILED"
+        },
+        {
+          "line": 196,
+          "text": "          SaveButton().onClick(async (event: ClickEvent, result: SaveButtonOnClickResult) => {"
+        },
+        {
+          "line": 197,
+          "text": "            Logger.info(TAG, `result == SaveButtonOnClickResult.SUCCESS ${result == SaveButtonOnClickResult.SUCCESS}`);"
+        },
+        {
+          "line": 198,
+          "text": "            if (result == SaveButtonOnClickResult.SUCCESS) {"
+        },
+        {
+          "line": 199,
+          "text": "              let fd = -1;"
+        },
+        {
+          "line": 200,
+          "text": "              let errCode = -1;"
+        },
+        {
+          "line": 201,
+          "text": "              try {"
+        },
+        {
+          "line": 202,
+          "text": "                // onClick触发后5秒内通过createAsset接口创建图片文件，5秒后createAsset权限收回。"
+        },
+        {
+          "line": 203,
+          "text": "                let filePath = await this.phAccessHelper.createAsset(photoAccessHelper.PhotoType.IMAGE, 'jpeg');"
+        },
+        {
+          "line": 204,
+          "text": "                const imagePacker = image.createImagePacker();"
+        },
+        {
+          "line": 205,
+          "text": "                if (this.curPixelMap === undefined) {"
+        },
+        {
+          "line": 206,
+          "text": "                  return;"
+        },
+        {
+          "line": 207,
+          "text": "                }"
+        },
+        {
+          "line": 208,
+          "text": "                const mode = fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE;"
+        },
+        {
+          "line": 209,
+          "text": "                let buffer: ArrayBuffer = await imagePacker.packToData(this.curPixelMap, {"
+        },
+        {
+          "line": 210,
+          "text": "                  format: 'image/jpeg',"
+        },
+        {
+          "line": 211,
+          "text": "                  quality: 100,"
+        },
+        {
+          "line": 212,
+          "text": "                });"
+        },
+        {
+          "line": 213,
+          "text": "                fileIo.open(filePath, mode).catch(() => {"
+        },
+        {
+          "line": 214,
+          "text": "                  Logger.error(TAG, 'fileIo.open error ' );"
+        },
+        {
+          "line": 215,
+          "text": "                }).then((file) => {"
+        },
+        {
+          "line": 216,
+          "text": "                  if (file) {"
+        },
+        {
+          "line": 217,
+          "text": "                    fileIo.write(file.fd, buffer).catch(() => {"
+        },
+        {
+          "line": 218,
+          "text": "                      Logger.error(TAG, 'fileIo.write error ' );"
+        },
+        {
+          "line": 219,
+          "text": "                    }).then(() => {"
+        },
+        {
+          "line": 220,
+          "text": "                      fileIo.close(file.fd).catch(() => {"
+        },
+        {
+          "line": 221,
+          "text": "                        Logger.error(TAG, 'fileIo.close error ' );"
+        },
+        {
+          "line": 222,
+          "text": "                      });"
+        },
+        {
+          "line": 223,
+          "text": "                    });"
+        },
+        {
+          "line": 224,
+          "text": "                  }"
+        },
+        {
+          "line": 225,
+          "text": "                })"
+        },
+        {
+          "line": 226,
+          "text": "                this.curPixelMap.release();"
+        },
+        {
+          "line": 227,
+          "text": "                imagePacker.release();"
+        },
+        {
+          "line": 228,
+          "text": "                errCode = 0;"
+        },
+        {
+          "line": 229,
+          "text": "                GlobalContext.get().getPromptAction()?.showToast({"
+        },
+        {
+          "line": 230,
+          "text": "                  message: errCode == 0 ? '保存成功' : '保存失败',"
+        },
+        {
+          "line": 231,
+          "text": "                  duration: 2000,"
+        },
+        {
+          "line": 232,
+          "text": "                  bottom: '50%'"
+        },
+        {
+          "line": 233,
+          "text": "                });"
+        },
+        {
+          "line": 234,
+          "text": "              } catch (err) {"
+        },
+        {
+          "line": 235,
+          "text": "              } finally {"
+        },
+        {
+          "line": 236,
+          "text": "                if (fd) {"
+        },
+        {
+          "line": 237,
+          "text": "                  fileIo.close(fd).catch(() => {"
+        },
+        {
+          "line": 238,
+          "text": "                    Logger.error(TAG, ' fileIo.close error ');"
+        },
+        {
+          "line": 239,
+          "text": "                  });"
+        },
+        {
+          "line": 240,
+          "text": "                }"
+        },
+        {
+          "line": 241,
+          "text": "              }"
+        },
+        {
+          "line": 242,
+          "text": "            }"
+        },
+        {
+          "line": 243,
+          "text": "          })"
+        },
+        {
+          "line": 244,
+          "text": "        }"
+        },
+        {
+          "line": 245,
+          "text": "      }"
+        },
+        {
+          "line": 246,
+          "text": "      .padding({ left: Constants.BACK_ICON_MARGIN, right: Constants.BACK_ICON_MARGIN})"
+        },
+        {
+          "line": 247,
+          "text": "      .width(Constants.FULL_PERCENT)"
+        },
+        {
+          "line": 248,
+          "text": "      .layoutWeight(this.backIconLayoutWeight)"
+        },
+        {
+          "line": 249,
+          "text": "      .alignItems(VerticalAlign.Center)"
+        },
+        {
+          "line": 250,
+          "text": "      .justifyContent(FlexAlign.SpaceBetween)"
+        },
+        {
+          "line": 251,
+          "text": ""
+        },
+        {
+          "line": 252,
+          "text": "      Column() {"
+        },
+        {
+          "line": 253,
+          "text": "        if (this.sceneMode === camera.SceneMode.NORMAL_PHOTO) {"
+        },
+        {
+          "line": 254,
+          "text": "          Image(this.curPixelMap)"
+        },
+        {
+          "line": 255,
+          "text": "            .objectFit(ImageFit.Contain)"
+        },
+        {
+          "line": 256,
+          "text": "            .width(Constants.FULL_PERCENT)"
+        },
+        {
+          "line": 257,
+          "text": "            .height(Constants.EIGHTY_PERCENT)"
+        },
+        {
+          "line": 258,
+          "text": "        } else if (this.sceneMode === camera.SceneMode.NORMAL_VIDEO) {"
+        },
+        {
+          "line": 259,
+          "text": "          Video({"
+        },
+        {
+          "line": 260,
+          "text": "            src: this.videoUri,"
+        },
+        {
+          "line": 261,
+          "text": "            controller: this.videoController"
+        },
+        {
+          "line": 262,
+          "text": "          })"
+        },
+        {
+          "line": 263,
+          "text": "            .width(Constants.FULL_PERCENT)"
+        },
+        {
+          "line": 264,
+          "text": "            .height(Constants.EIGHTY_PERCENT)"
+        },
+        {
+          "line": 265,
+          "text": "            .controls(this.controls)"
+        },
+        {
+          "line": 266,
+          "text": "            .objectFit(ImageFit.Contain)"
+        },
+        {
+          "line": 267,
+          "text": "            .onClick(() => {"
+        },
+        {
+          "line": 268,
+          "text": "              if (this.controls) {"
+        },
+        {
+          "line": 269,
+          "text": "                this.videoController?.start();"
+        },
+        {
+          "line": 270,
+          "text": "              } else {"
+        },
+        {
+          "line": 271,
+          "text": "                this.videoController?.stop();"
+        },
+        {
+          "line": 272,
+          "text": "              }"
+        },
+        {
+          "line": 273,
+          "text": "              this.controls = !this.controls;"
+        },
+        {
+          "line": 274,
+          "text": "            })"
+        },
+        {
+          "line": 275,
+          "text": "            .onFinish(() => {"
+        },
+        {
+          "line": 276,
+          "text": "              this.controls = true;"
+        },
+        {
+          "line": 277,
+          "text": "            })"
+        },
+        {
+          "line": 278,
+          "text": "        }"
+        },
+        {
+          "line": 279,
+          "text": "      }"
+        },
+        {
+          "line": 280,
+          "text": "      .width(Constants.FULL_PERCENT)"
+        },
+        {
+          "line": 281,
+          "text": "      .layoutWeight(this.textLayoutWeight)"
+        },
+        {
+          "line": 282,
+          "text": "      Column() {"
+        },
+        {
+          "line": 283,
+          "text": "        if (this.sceneMode === camera.SceneMode.NORMAL_VIDEO) {"
+        },
+        {
+          "line": 284,
+          "text": "          // 安全控件需要完全展示出来，不然result会返回TEMPORARY_AUTHORIZATION_FAILED"
+        },
+        {
+          "line": 285,
+          "text": "          SaveButton().onClick(async (event: ClickEvent, result: SaveButtonOnClickResult) => {"
+        },
+        {
+          "line": 286,
+          "text": "            Logger.info(TAG, `result == SaveButtonOnClickResult.SUCCESS ${result == SaveButtonOnClickResult.SUCCESS}`);"
+        },
+        {
+          "line": 287,
+          "text": "            if (result == SaveButtonOnClickResult.SUCCESS) {"
+        },
+        {
+          "line": 288,
+          "text": "              let errCode = -1;"
+        },
+        {
+          "line": 289,
+          "text": "              try {"
+        },
+        {
+          "line": 290,
+          "text": "                // onClick触发后5秒内通过createAsset接口创建图片文件，5秒后createAsset权限收回。"
+        },
+        {
+          "line": 291,
+          "text": "                let uri = await this.phAccessHelper.createAsset(photoAccessHelper.PhotoType.VIDEO, 'mp4');"
+        },
+        {
+          "line": 292,
+          "text": "                if (this.videoUri !== undefined) {"
+        },
+        {
+          "line": 293,
+          "text": "                  await this.readWriteFile(this.videoUri, uri);"
+        },
+        {
+          "line": 294,
+          "text": "                  errCode = 0;"
+        },
+        {
+          "line": 295,
+          "text": "                }"
+        },
+        {
+          "line": 296,
+          "text": "              } catch (error) {"
+        },
+        {
+          "line": 297,
+          "text": "                Logger.error(TAG, 'SaveButton error is ' + JSON.stringify(error));"
+        },
+        {
+          "line": 298,
+          "text": "              }"
+        },
+        {
+          "line": 299,
+          "text": "              try {"
+        },
+        {
+          "line": 300,
+          "text": "                GlobalContext.get().getPromptAction()?.showToast({"
+        },
+        {
+          "line": 301,
+          "text": "                  message: errCode == 0 ? '保存成功' : '保存失败',"
+        },
+        {
+          "line": 302,
+          "text": "                  duration: 2000,"
+        },
+        {
+          "line": 303,
+          "text": "                  bottom: '50%'"
+        },
+        {
+          "line": 304,
+          "text": "                });"
+        },
+        {
+          "line": 305,
+          "text": "              } catch (e) {"
+        },
+        {
+          "line": 306,
+          "text": "                Logger.error(TAG, 'showToast error ' + JSON.stringify(e));"
+        },
+        {
+          "line": 307,
+          "text": "              }"
+        },
+        {
+          "line": 308,
+          "text": "            }"
+        },
+        {
+          "line": 309,
+          "text": "          })"
+        },
+        {
+          "line": 310,
+          "text": "        }"
+        },
+        {
+          "line": 311,
+          "text": "      }"
+        },
+        {
+          "line": 312,
+          "text": "      .margin({bottom: 24})"
+        },
+        {
+          "line": 313,
+          "text": "    }"
+        },
+        {
+          "line": 314,
+          "text": "    .width(Constants.FULL_PERCENT)"
+        },
+        {
+          "line": 315,
+          "text": "    .height(Constants.FULL_PERCENT)"
+        },
+        {
+          "line": 316,
+          "text": "    .backgroundColor($r('app.color.dialog_background_color'))"
+        },
+        {
+          "line": 317,
+          "text": "  }"
+        },
+        {
+          "line": 318,
+          "text": "}"
+        }
+      ],
+      "excerptSha256": "456a32cf6fe380c60262c2a187355a0bf75076fddcfe268d29893ab4c0718bda",
+      "owner": "EditPage::build",
+      "ownerLineCount": 153,
+      "ownerSourceByteLength": 6456,
+      "ownerSourceSha256": "ae70bde1b69ce6386f3b8f1465855f80806ea69fbe03506530deca9e69d41f62",
+      "ownerSpan": {
+        "endByte": 12866,
+        "endColumnByte": 3,
+        "endLine": 317,
+        "startByte": 6410,
+        "startColumnByte": 2,
+        "startLine": 165
+      },
+      "path": "Media/Camera/preconfig/entry/src/main/ets/pages/EditPage.ets",
+      "repositoryId": "guide-snippets",
+      "status": "complete",
+      "symbolFactId": "workspace-fact-d4960980b9a294be3c397628"
+    },
+    {
+      "callFacts": [
+        {
+          "factId": "workspace-fact-aedc9ade9862405f332cb8dc",
+          "span": {
+            "endByte": 4947,
+            "endColumnByte": 50,
+            "endLine": 128,
+            "startByte": 4922,
+            "startColumnByte": 25,
+            "startLine": 128
+          },
+          "targetExpression": "image.createImagePacker"
+        },
+        {
+          "factId": "workspace-fact-69f6f460e48dfdff5949e2f0",
+          "span": {
+            "endByte": 5220,
+            "endColumnByte": 69,
+            "endLine": 132,
+            "startByte": 5172,
+            "startColumnByte": 21,
+            "startLine": 132
+          },
+          "targetExpression": "imagePackerApi.packToData"
+        },
+        {
+          "factId": "workspace-fact-58bf2c6b7ef9ea0bb18cfde1",
+          "span": {
+            "endByte": 5557,
+            "endColumnByte": 87,
+            "endLine": 139,
+            "startByte": 5474,
+            "startColumnByte": 4,
+            "startLine": 139
+          },
+          "targetExpression": "console.error"
+        }
+      ],
+      "excerpt": [
+        {
+          "line": 128,
+          "text": "  const imagePackerApi = image.createImagePacker();"
+        },
+        {
+          "line": 129,
+          "text": "  // quality默认值为0，建议不低于80；本示例统一设置为90，兼顾图片质量和文件体积。"
+        },
+        {
+          "line": 130,
+          "text": "  let packOpts : image.PackingOption = { format: 'image/jpeg', quality: 90 };"
+        },
+        {
+          "line": 131,
+          "text": "  try {"
+        },
+        {
+          "line": 132,
+          "text": "    let data = await imagePackerApi.packToData(imageSource, packOpts);"
+        },
+        {
+          "line": 133,
+          "text": "    // data 为编码获取到的文件流，写入文件保存即可得到一张图片。"
+        },
+        {
+          "line": 134,
+          "text": "    // [StartExclude copyData_toShow]"
+        },
+        {
+          "line": 135,
+          "text": "    copyData = new ArrayBuffer(0);"
+        },
+        {
+          "line": 136,
+          "text": "    copyData = data;"
+        },
+        {
+          "line": 137,
+          "text": "    // [EndExclude copyData_toShow]"
+        },
+        {
+          "line": 138,
+          "text": "  } catch (error) {"
+        },
+        {
+          "line": 139,
+          "text": "    console.error('Failed to pack the imageSource to data. And the error is: ' + error);"
+        },
+        {
+          "line": 140,
+          "text": "  }"
+        },
+        {
+          "line": 141,
+          "text": "}"
+        },
+        {
+          "line": 142,
+          "text": "// [End packToData_imageSource]"
+        }
+      ],
+      "excerptSha256": "c8b5e6f79af90e86f2b7f3786a0878e7720aed304a029d6d2530b88e11a0b00d",
+      "owner": "packToDataFromImageSource",
+      "ownerLineCount": 15,
+      "ownerSourceByteLength": 746,
+      "ownerSourceSha256": "3ebbda252366a4684d4029d1b4cff1f4b76308c0fece83ad0d0115294a99636e",
+      "ownerSpan": {
+        "endByte": 5566,
+        "endColumnByte": 1,
+        "endLine": 141,
+        "startByte": 4820,
+        "startColumnByte": 0,
+        "startLine": 127
+      },
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "repositoryId": "guide-snippets",
+      "status": "complete",
+      "symbolFactId": "workspace-fact-93960c6f52eeff4dba093cd8"
+    },
+    {
+      "callFacts": [
+        {
+          "factId": "workspace-fact-ff0834680b1812f09b07fdd4",
+          "span": {
+            "endByte": 3788,
+            "endColumnByte": 50,
+            "endLine": 103,
+            "startByte": 3763,
+            "startColumnByte": 25,
+            "startLine": 103
+          },
+          "targetExpression": "image.createImagePacker"
+        },
+        {
+          "factId": "workspace-fact-5369c0e51938e0b96f6c25ae",
+          "span": {
+            "endByte": 4408,
+            "endColumnByte": 66,
+            "endLine": 114,
+            "startByte": 4363,
+            "startColumnByte": 21,
+            "startLine": 114
+          },
+          "targetExpression": "imagePackerApi.packToData"
+        },
+        {
+          "factId": "workspace-fact-a344b2e9b3f3c2ecc0367b85",
+          "span": {
+            "endByte": 4742,
+            "endColumnByte": 84,
+            "endLine": 121,
+            "startByte": 4662,
+            "startColumnByte": 4,
+            "startLine": 121
+          },
+          "targetExpression": "console.error"
+        }
+      ],
+      "excerpt": [
+        {
+          "line": 102,
+          "text": "  // [Start create_packer]"
+        },
+        {
+          "line": 103,
+          "text": "  const imagePackerApi = image.createImagePacker();"
+        },
+        {
+          "line": 104,
+          "text": "  // [End create_packer]"
+        },
+        {
+          "line": 105,
+          "text": "  // [Start create_packOpts]"
+        },
+        {
+          "line": 106,
+          "text": "  // quality默认值为0，建议不低于80；本示例统一设置为90，兼顾图片质量和文件体积。"
+        },
+        {
+          "line": 107,
+          "text": "  let packOpts : image.PackingOption = { format: 'image/jpeg', quality: 90 };"
+        },
+        {
+          "line": 108,
+          "text": "  // [End create_packOpts]"
+        },
+        {
+          "line": 109,
+          "text": "  // [Start packOpts_isHdr]"
+        },
+        {
+          "line": 110,
+          "text": "  // 资源本身为hdr且设备支持HDR编码则会编码为hdr内容(需要资源本身为hdr且设备支持HDR编码，支持jpeg格式)。"
+        },
+        {
+          "line": 111,
+          "text": "  packOpts.desiredDynamicRange = image.PackingDynamicRange.AUTO;"
+        },
+        {
+          "line": 112,
+          "text": "  // [End packOpts_isHdr]"
+        },
+        {
+          "line": 113,
+          "text": "  try{"
+        },
+        {
+          "line": 114,
+          "text": "    let data = await imagePackerApi.packToData(pixelMap, packOpts);"
+        },
+        {
+          "line": 115,
+          "text": "    // data 为编码获取到的文件流，写入文件保存即可得到一张图片。"
+        },
+        {
+          "line": 116,
+          "text": "    // [StartExclude copyData_toShow]"
+        },
+        {
+          "line": 117,
+          "text": "    copyData = new ArrayBuffer(0);"
+        },
+        {
+          "line": 118,
+          "text": "    copyData = data;"
+        },
+        {
+          "line": 119,
+          "text": "    // [EndExclude copyData_toShow]"
+        },
+        {
+          "line": 120,
+          "text": "  } catch (error) {"
+        },
+        {
+          "line": 121,
+          "text": "    console.error('Failed to pack the pixelMap to data. And the error is: ' + error);"
+        },
+        {
+          "line": 122,
+          "text": "  }"
+        },
+        {
+          "line": 123,
+          "text": "}"
+        },
+        {
+          "line": 124,
+          "text": "// [End packToData_pixelMap]"
+        }
+      ],
+      "excerptSha256": "f4cc8eb1195cb96df1d5a4da1cd517386d8a54565f6392bb59cdedae8c96f154",
+      "owner": "packToDataFromPixelMap",
+      "ownerLineCount": 23,
+      "ownerSourceByteLength": 1109,
+      "ownerSourceSha256": "47e9ad8cca0e0d9b84d04e21331eac39918b3c12170f2e4dacbd5ae66c1f16d8",
+      "ownerSpan": {
+        "endByte": 4751,
+        "endColumnByte": 1,
+        "endLine": 123,
+        "startByte": 3642,
+        "startColumnByte": 0,
+        "startLine": 101
+      },
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "repositoryId": "guide-snippets",
+      "status": "complete",
+      "symbolFactId": "workspace-fact-cb76a8066064994053de827e"
+    },
+    {
+      "callFacts": [
+        {
+          "factId": "workspace-fact-0c826bc222fddf79fd777ded",
+          "span": {
+            "endByte": 8400,
+            "endColumnByte": 85,
+            "endLine": 209,
+            "startByte": 8326,
+            "startColumnByte": 11,
+            "startLine": 209
+          },
+          "targetExpression": "fileIo.openSync"
+        },
+        {
+          "factId": "workspace-fact-4812dfe091aa6753446be284",
+          "span": {
+            "endByte": 8448,
+            "endColumnByte": 46,
+            "endLine": 210,
+            "startByte": 8423,
+            "startColumnByte": 21,
+            "startLine": 210
+          },
+          "targetExpression": "image.createImagePacker"
+        },
+        {
+          "factId": "workspace-fact-a792ffd3821cd2a5933ae927",
+          "span": {
+            "endByte": 8513,
+            "endColumnByte": 63,
+            "endLine": 211,
+            "startByte": 8460,
+            "startColumnByte": 10,
+            "startLine": 211
+          },
+          "targetExpression": "imagePackerApi.packToFile"
+        },
+        {
+          "factId": "workspace-fact-665df72139c3eb12462a1dca",
+          "span": {
+            "endByte": 8619,
+            "endColumnByte": 83,
+            "endLine": 213,
+            "startByte": 8540,
+            "startColumnByte": 4,
+            "startLine": 213
+          },
+          "targetExpression": "console.error"
+        },
+        {
+          "factId": "workspace-fact-34d346d14a81b0bc09864111",
+          "span": {
+            "endByte": 8685,
+            "endColumnByte": 31,
+            "endLine": 216,
+            "startByte": 8660,
+            "startColumnByte": 6,
+            "startLine": 216
+          },
+          "targetExpression": "fileIo.closeSync"
+        },
+        {
+          "factId": "workspace-fact-4ce215435a1fe60189c12427",
+          "span": {
+            "endByte": 8758,
+            "endColumnByte": 36,
+            "endLine": 219,
+            "startByte": 8734,
+            "startColumnByte": 12,
+            "startLine": 219
+          },
+          "targetExpression": "imagePackerApi.release"
+        }
+      ],
+      "excerpt": [
+        {
+          "line": 205,
+          "text": "  let imagePackerApi: image.ImagePacker | undefined = undefined;"
+        },
+        {
+          "line": 206,
+          "text": "  let file: fileIo.File | undefined = undefined;"
+        },
+        {
+          "line": 207,
+          "text": "  try {"
+        },
+        {
+          "line": 208,
+          "text": "    const path : string = context.cacheDir + '/picture.jpg';"
+        },
+        {
+          "line": 209,
+          "text": "    file = fileIo.openSync(path, fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE);"
+        },
+        {
+          "line": 210,
+          "text": "    imagePackerApi = image.createImagePacker();"
+        },
+        {
+          "line": 211,
+          "text": "    await imagePackerApi.packToFile(picture, file.fd, packOpts);"
+        },
+        {
+          "line": 212,
+          "text": "  } catch (error) {"
+        },
+        {
+          "line": 213,
+          "text": "    console.error('Failed to pack the picture to file. And the error is: ' + error);"
+        },
+        {
+          "line": 214,
+          "text": "  } finally {"
+        },
+        {
+          "line": 215,
+          "text": "    if (file) {"
+        },
+        {
+          "line": 216,
+          "text": "      fileIo.closeSync(file.fd);"
+        },
+        {
+          "line": 217,
+          "text": "    }"
+        },
+        {
+          "line": 218,
+          "text": "    if (imagePackerApi) {"
+        },
+        {
+          "line": 219,
+          "text": "      await imagePackerApi.release();"
+        },
+        {
+          "line": 220,
+          "text": "    }"
+        },
+        {
+          "line": 221,
+          "text": "  }"
+        },
+        {
+          "line": 222,
+          "text": "}"
+        },
+        {
+          "line": 223,
+          "text": "// [End packToFile_picture]"
+        }
+      ],
+      "excerptSha256": "f2411dcd8756232eec5d898a02066d567b5e63f34d7f410181e9ec1872d7e1a8",
+      "owner": "packToFile",
+      "ownerLineCount": 19,
+      "ownerSourceByteLength": 743,
+      "ownerSourceSha256": "c7341fcd6b79f36fbc4f547104b8f5fa3f058b89485eaa662bea0335d58f75fd",
+      "ownerSpan": {
+        "endByte": 8774,
+        "endColumnByte": 1,
+        "endLine": 222,
+        "startByte": 8031,
+        "startColumnByte": 0,
+        "startLine": 204
+      },
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "repositoryId": "guide-snippets",
+      "status": "complete",
+      "symbolFactId": "workspace-fact-9fe48291ec12e53c4319c99e"
+    },
+    {
+      "callFacts": [
+        {
+          "factId": "workspace-fact-af61a9b7235dc27b157d564a",
+          "span": {
+            "endByte": 6637,
+            "endColumnByte": 50,
+            "endLine": 166,
+            "startByte": 6612,
+            "startColumnByte": 25,
+            "startLine": 166
+          },
+          "targetExpression": "image.createImagePacker"
+        },
+        {
+          "factId": "workspace-fact-1e92a83a5ca4e4a8bc8109a9",
+          "span": {
+            "endByte": 7045,
+            "endColumnByte": 89,
+            "endLine": 172,
+            "startByte": 6967,
+            "startColumnByte": 11,
+            "startLine": 172
+          },
+          "targetExpression": "fileIo.openSync"
+        },
+        {
+          "factId": "workspace-fact-bdbbf58fb5991c72cba9e5b7",
+          "span": {
+            "endByte": 7114,
+            "endColumnByte": 67,
+            "endLine": 173,
+            "startByte": 7057,
+            "startColumnByte": 10,
+            "startLine": 173
+          },
+          "targetExpression": "imagePackerApi.packToFile"
+        },
+        {
+          "factId": "workspace-fact-a85a6950a31b8387c03a21c7",
+          "span": {
+            "endByte": 7224,
+            "endColumnByte": 87,
+            "endLine": 175,
+            "startByte": 7141,
+            "startColumnByte": 4,
+            "startLine": 175
+          },
+          "targetExpression": "console.error"
+        },
+        {
+          "factId": "workspace-fact-d24e46250fe5919869607cfd",
+          "span": {
+            "endByte": 7290,
+            "endColumnByte": 31,
+            "endLine": 178,
+            "startByte": 7265,
+            "startColumnByte": 6,
+            "startLine": 178
+          },
+          "targetExpression": "fileIo.closeSync"
+        }
+      ],
+      "excerpt": [
+        {
+          "line": 166,
+          "text": "  const imagePackerApi = image.createImagePacker();"
+        },
+        {
+          "line": 167,
+          "text": "  // quality默认值为0，建议不低于80；本示例统一设置为90，兼顾图片质量和文件体积。"
+        },
+        {
+          "line": 168,
+          "text": "  let packOpts : image.PackingOption = { format: 'image/jpeg', quality: 90 };"
+        },
+        {
+          "line": 169,
+          "text": "  const filePath : string = context.cacheDir + '/image_source.jpg';"
+        },
+        {
+          "line": 170,
+          "text": "  let file: fileIo.File | undefined = undefined;"
+        },
+        {
+          "line": 171,
+          "text": "  try {"
+        },
+        {
+          "line": 172,
+          "text": "    file = fileIo.openSync(filePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE);"
+        },
+        {
+          "line": 173,
+          "text": "    await imagePackerApi.packToFile(imageSource, file.fd, packOpts);"
+        },
+        {
+          "line": 174,
+          "text": "  } catch (error) {"
+        },
+        {
+          "line": 175,
+          "text": "    console.error('Failed to pack the imageSource to file. And the error is: ' + error);"
+        },
+        {
+          "line": 176,
+          "text": "  } finally {"
+        },
+        {
+          "line": 177,
+          "text": "    if (file) {"
+        },
+        {
+          "line": 178,
+          "text": "      fileIo.closeSync(file.fd);"
+        },
+        {
+          "line": 179,
+          "text": "    }"
+        },
+        {
+          "line": 180,
+          "text": "  }"
+        },
+        {
+          "line": 181,
+          "text": "}"
+        },
+        {
+          "line": 182,
+          "text": "// [End packToFile_imageSource]"
+        }
+      ],
+      "excerptSha256": "c109ecd39236e79c1e4f403234782ee93d3dd2babdac25f4f44c5e6b6ad0079b",
+      "owner": "packToFileFromImageSource",
+      "ownerLineCount": 17,
+      "ownerSourceByteLength": 814,
+      "ownerSourceSha256": "e2b4972039f9786f5b7148e0d402e842fb3313d2dd687f0ea6d58573fff5511f",
+      "ownerSpan": {
+        "endByte": 7306,
+        "endColumnByte": 1,
+        "endLine": 181,
+        "startByte": 6492,
+        "startColumnByte": 0,
+        "startLine": 165
+      },
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "repositoryId": "guide-snippets",
+      "status": "complete",
+      "symbolFactId": "workspace-fact-ffc44892f6a9aa3633e208cd"
+    },
+    {
+      "callFacts": [
+        {
+          "factId": "workspace-fact-9edd5bd98f4f4134bad6435b",
+          "span": {
+            "endByte": 5771,
+            "endColumnByte": 50,
+            "endLine": 146,
+            "startByte": 5746,
+            "startColumnByte": 25,
+            "startLine": 146
+          },
+          "targetExpression": "image.createImagePacker"
+        },
+        {
+          "factId": "workspace-fact-3968bf87ae9b304040ba3038",
+          "span": {
+            "endByte": 6168,
+            "endColumnByte": 85,
+            "endLine": 152,
+            "startByte": 6094,
+            "startColumnByte": 11,
+            "startLine": 152
+          },
+          "targetExpression": "fileIo.openSync"
+        },
+        {
+          "factId": "workspace-fact-8c24223585dca5985c362e73",
+          "span": {
+            "endByte": 6234,
+            "endColumnByte": 64,
+            "endLine": 153,
+            "startByte": 6180,
+            "startColumnByte": 10,
+            "startLine": 153
+          },
+          "targetExpression": "imagePackerApi.packToFile"
+        },
+        {
+          "factId": "workspace-fact-6c2d079e6f4d193ab5a7cb7e",
+          "span": {
+            "endByte": 6341,
+            "endColumnByte": 84,
+            "endLine": 155,
+            "startByte": 6261,
+            "startColumnByte": 4,
+            "startLine": 155
+          },
+          "targetExpression": "console.error"
+        },
+        {
+          "factId": "workspace-fact-02c179c8d97423cbf4846ebc",
+          "span": {
+            "endByte": 6407,
+            "endColumnByte": 31,
+            "endLine": 158,
+            "startByte": 6382,
+            "startColumnByte": 6,
+            "startLine": 158
+          },
+          "targetExpression": "fileIo.closeSync"
+        }
+      ],
+      "excerpt": [
+        {
+          "line": 146,
+          "text": "  const imagePackerApi = image.createImagePacker();"
+        },
+        {
+          "line": 147,
+          "text": "  // quality默认值为0，建议不低于80；本示例统一设置为90，兼顾图片质量和文件体积。"
+        },
+        {
+          "line": 148,
+          "text": "  let packOpts : image.PackingOption = { format: 'image/jpeg', quality: 90 };"
+        },
+        {
+          "line": 149,
+          "text": "  const path : string = context.cacheDir + '/pixel_map.jpg';"
+        },
+        {
+          "line": 150,
+          "text": "  let file: fileIo.File | undefined = undefined;"
+        },
+        {
+          "line": 151,
+          "text": "  try {"
+        },
+        {
+          "line": 152,
+          "text": "    file = fileIo.openSync(path, fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE);"
+        },
+        {
+          "line": 153,
+          "text": "    await imagePackerApi.packToFile(pixelMap, file.fd, packOpts);"
+        },
+        {
+          "line": 154,
+          "text": "  } catch (error) {"
+        },
+        {
+          "line": 155,
+          "text": "    console.error('Failed to pack the pixelMap to file. And the error is: ' + error);"
+        },
+        {
+          "line": 156,
+          "text": "  } finally {"
+        },
+        {
+          "line": 157,
+          "text": "    if (file) {"
+        },
+        {
+          "line": 158,
+          "text": "      fileIo.closeSync(file.fd);"
+        },
+        {
+          "line": 159,
+          "text": "    }"
+        },
+        {
+          "line": 160,
+          "text": "  }"
+        },
+        {
+          "line": 161,
+          "text": "}"
+        },
+        {
+          "line": 162,
+          "text": "// [End packToFile_pixelMap]"
+        }
+      ],
+      "excerptSha256": "19376ca2d8a9648e236a6141f899bf0044e6b77e79d6b1d8cf119f60d117a946",
+      "owner": "packToFileFromPixelMap",
+      "ownerLineCount": 17,
+      "ownerSourceByteLength": 788,
+      "ownerSourceSha256": "46e845a4a9926005d50a3a6c56fc86e01ddc9be60510b05a7766d9ae128eed7d",
+      "ownerSpan": {
+        "endByte": 6423,
+        "endColumnByte": 1,
+        "endLine": 161,
+        "startByte": 5635,
+        "startColumnByte": 0,
+        "startLine": 145
+      },
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "repositoryId": "guide-snippets",
+      "status": "complete",
+      "symbolFactId": "workspace-fact-5a3f1b1c754749592b883e98"
+    },
+    {
+      "callFacts": [
+        {
+          "factId": "workspace-fact-21f9d8b617cd4c87e74484e4",
+          "span": {
+            "endByte": 7540,
+            "endColumnByte": 50,
+            "endLine": 187,
+            "startByte": 7515,
+            "startColumnByte": 25,
+            "startLine": 187
+          },
+          "targetExpression": "image.createImagePacker"
+        },
+        {
+          "factId": "workspace-fact-8a96296e6dd803a611d7e981",
+          "span": {
+            "endByte": 7647,
+            "endColumnByte": 62,
+            "endLine": 190,
+            "startByte": 7606,
+            "startColumnByte": 21,
+            "startLine": 190
+          },
+          "targetExpression": "imagePackerApi.packing"
+        },
+        {
+          "factId": "workspace-fact-3755f078fb35daaff517f21b",
+          "span": {
+            "endByte": 7799,
+            "endColumnByte": 51,
+            "endLine": 194,
+            "startByte": 7752,
+            "startColumnByte": 4,
+            "startLine": 194
+          },
+          "targetExpression": "console.info"
+        },
+        {
+          "factId": "workspace-fact-4e868c250c821f944546500a",
+          "span": {
+            "endByte": 7906,
+            "endColumnByte": 83,
+            "endLine": 196,
+            "startByte": 7827,
+            "startColumnByte": 4,
+            "startLine": 196
+          },
+          "targetExpression": "console.error"
+        },
+        {
+          "factId": "workspace-fact-d81f2624d2d36ee08cc30d90",
+          "span": {
+            "endByte": 7958,
+            "endColumnByte": 34,
+            "endLine": 198,
+            "startByte": 7934,
+            "startColumnByte": 10,
+            "startLine": 198
+          },
+          "targetExpression": "imagePackerApi.release"
+        }
+      ],
+      "excerpt": [
+        {
+          "line": 186,
+          "text": "  // [Start create_picturePacker]"
+        },
+        {
+          "line": 187,
+          "text": "  const imagePackerApi = image.createImagePacker();"
+        },
+        {
+          "line": 188,
+          "text": "  // [End create_picturePacker]"
+        },
+        {
+          "line": 189,
+          "text": "  try {"
+        },
+        {
+          "line": 190,
+          "text": "    let data = await imagePackerApi.packing(picture, packOpts);"
+        },
+        {
+          "line": 191,
+          "text": "    // [StartExclude copyData_toShow]"
+        },
+        {
+          "line": 192,
+          "text": "    copyData = data;"
+        },
+        {
+          "line": 193,
+          "text": "    // [EndExclude copyData_toShow]"
+        },
+        {
+          "line": 194,
+          "text": "    console.info('Succeeded in packing the image.');"
+        },
+        {
+          "line": 195,
+          "text": "  } catch (error) {"
+        },
+        {
+          "line": 196,
+          "text": "    console.error('Failed to pack the picture to data. And the error is: ' + error);"
+        },
+        {
+          "line": 197,
+          "text": "  } finally {"
+        },
+        {
+          "line": 198,
+          "text": "    await imagePackerApi.release();"
+        },
+        {
+          "line": 199,
+          "text": "  }"
+        },
+        {
+          "line": 200,
+          "text": "}"
+        },
+        {
+          "line": 201,
+          "text": "// [End packToData_picture]"
+        }
+      ],
+      "excerptSha256": "365fe6fe5898adee9a64bb654422a7aa4a4bdb2b42df946de25cfdad9f6b7239",
+      "owner": "packing",
+      "ownerLineCount": 16,
+      "ownerSourceByteLength": 593,
+      "ownerSourceSha256": "7977394cd46cc44d61f05d035cc1e68f65ee334456977de9a6e6ddf196fa5916",
+      "ownerSpan": {
+        "endByte": 7967,
+        "endColumnByte": 1,
+        "endLine": 200,
+        "startByte": 7374,
+        "startColumnByte": 0,
+        "startLine": 185
+      },
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "repositoryId": "guide-snippets",
+      "status": "complete",
+      "symbolFactId": "workspace-fact-1e95e65d718d656fe120b00d"
+    },
+    {
+      "callFacts": [
+        {
+          "factId": "workspace-fact-0b5fdb2956ad115657a369dd",
+          "span": {
+            "endByte": 1092,
+            "endColumnByte": 69,
+            "endLine": 25,
+            "startByte": 1065,
+            "startColumnByte": 42,
+            "startLine": 25
+          },
+          "targetExpression": "image.createImageSource"
+        },
+        {
+          "factId": "workspace-fact-d6d31ca0879d96959ba382cd",
+          "span": {
+            "endByte": 1205,
+            "endColumnByte": 50,
+            "endLine": 27,
+            "startByte": 1180,
+            "startColumnByte": 25,
+            "startLine": 27
+          },
+          "targetExpression": "image.createImagePacker"
+        },
+        {
+          "factId": "workspace-fact-401bb5c683f291e205689e3f",
+          "span": {
+            "endByte": 1895,
+            "endColumnByte": 93,
+            "endLine": 36,
+            "startByte": 1817,
+            "startColumnByte": 15,
+            "startLine": 36
+          },
+          "targetExpression": "fileIo.openSync"
+        },
+        {
+          "factId": "workspace-fact-e8b65409521bee0221c86a76",
+          "span": {
+            "endByte": 1959,
+            "endColumnByte": 61,
+            "endLine": 37,
+            "startByte": 1902,
+            "startColumnByte": 4,
+            "startLine": 37
+          },
+          "targetExpression": "imagePackerApi.packToFile"
+        },
+        {
+          "factId": "workspace-fact-43f16fc6402f412355cedb35",
+          "span": {
+            "endByte": 2104,
+            "endColumnByte": 6,
+            "endLine": 40,
+            "startByte": 1902,
+            "startColumnByte": 4,
+            "startLine": 37
+          },
+          "targetExpression": "imagePackerApi.packToFile(imageSource, file.fd, packOpts).then"
+        },
+        {
+          "factId": "workspace-fact-00326d9105d5b8394ecde63f",
+          "span": {
+            "endByte": 2321,
+            "endColumnByte": 6,
+            "endLine": 43,
+            "startByte": 1902,
+            "startColumnByte": 4,
+            "startLine": 37
+          },
+          "targetExpression": "imagePackerApi.packToFile(imageSource, file.fd, packOpts).then(() => {\r\n      promptAction.showToast({ message: `Succeed to pack the image.`});\r\n      console.info('Succeed to pack the image.');\r\n    }).catch"
+        },
+        {
+          "factId": "workspace-fact-ea2df2261d9a32b361294595",
+          "span": {
+            "endByte": 2456,
+            "endColumnByte": 6,
+            "endLine": 47,
+            "startByte": 1902,
+            "startColumnByte": 4,
+            "startLine": 37
+          },
+          "targetExpression": "imagePackerApi.packToFile(imageSource, file.fd, packOpts).then(() => {\r\n      promptAction.showToast({ message: `Succeed to pack the image.`});\r\n      console.info('Succeed to pack the image.');\r\n    }).catch((error : BusinessError) => {\n      promptAction.showToast({ message: 'Failed to pack the image. And the error is: ' + error});\n      console.error('Failed to pack the image. And the error is: ' + error);\n    }).finally"
+        },
+        {
+          "factId": "workspace-fact-ba4910fb0321316b7a10b590",
+          "span": {
+            "endByte": 2044,
+            "endColumnByte": 70,
+            "endLine": 38,
+            "startByte": 1980,
+            "startColumnByte": 6,
+            "startLine": 38
+          },
+          "targetExpression": "promptAction.showToast"
+        },
+        {
+          "factId": "workspace-fact-d2836c6f4df026426dd1c3ef",
+          "span": {
+            "endByte": 2095,
+            "endColumnByte": 48,
+            "endLine": 39,
+            "startByte": 2053,
+            "startColumnByte": 6,
+            "startLine": 39
+          },
+          "targetExpression": "console.info"
+        },
+        {
+          "factId": "workspace-fact-99f9986d8cfcfbf97113e126",
+          "span": {
+            "endByte": 2236,
+            "endColumnByte": 96,
+            "endLine": 41,
+            "startByte": 2146,
+            "startColumnByte": 6,
+            "startLine": 41
+          },
+          "targetExpression": "promptAction.showToast"
+        },
+        {
+          "factId": "workspace-fact-1289bf90c82a14105b4c9456",
+          "span": {
+            "endByte": 2313,
+            "endColumnByte": 75,
+            "endLine": 42,
+            "startByte": 2244,
+            "startColumnByte": 6,
+            "startLine": 42
+          },
+          "targetExpression": "console.error"
+        },
+        {
+          "factId": "workspace-fact-be1a1b7a7153f6bac71ddb5c",
+          "span": {
+            "endByte": 2375,
+            "endColumnByte": 31,
+            "endLine": 44,
+            "startByte": 2350,
+            "startColumnByte": 6,
+            "startLine": 44
+          },
+          "targetExpression": "fileIo.closeSync"
+        },
+        {
+          "factId": "workspace-fact-ac184b7a65e3281cfef48abd",
+          "span": {
+            "endByte": 2410,
+            "endColumnByte": 33,
+            "endLine": 45,
+            "startByte": 2389,
+            "startColumnByte": 12,
+            "startLine": 45
+          },
+          "targetExpression": "imageSource.release"
+        },
+        {
+          "factId": "workspace-fact-602903e15cd11ce12a7f798d",
+          "span": {
+            "endByte": 2448,
+            "endColumnByte": 36,
+            "endLine": 46,
+            "startByte": 2424,
+            "startColumnByte": 12,
+            "startLine": 46
+          },
+          "targetExpression": "imagePackerApi.release"
+        },
+        {
+          "factId": "workspace-fact-d5fa65c8b230a7493d9da6ea",
+          "span": {
+            "endByte": 2551,
+            "endColumnByte": 73,
+            "endLine": 49,
+            "startByte": 2482,
+            "startColumnByte": 4,
+            "startLine": 49
+          },
+          "targetExpression": "console.error"
+        }
+      ],
+      "excerpt": [
+        {
+          "line": 24,
+          "text": "  // 首先获取图片文件的fd，创建ImageSource。"
+        },
+        {
+          "line": 25,
+          "text": "  const imageSource : image.ImageSource = image.createImageSource(fd);"
+        },
+        {
+          "line": 26,
+          "text": "  // 创建ImagePacker，以便调用图片编码接口。"
+        },
+        {
+          "line": 27,
+          "text": "  const imagePackerApi = image.createImagePacker();"
+        },
+        {
+          "line": 28,
+          "text": "  // 配置图片编码选项："
+        },
+        {
+          "line": 29,
+          "text": "  // format应使用标准的mimetype格式，如：\"image/jpeg\"、\"image/png\"、\"image/heic\"；"
+        },
+        {
+          "line": 30,
+          "text": "  // quality默认值为0，建议不低于80；本示例统一设置为90，兼顾图片质量和文件体积；"
+        },
+        {
+          "line": 31,
+          "text": "  // needsPackProperties参数，用于控制编码时是否保存图片属性信息。默认值为false，即不保存。"
+        },
+        {
+          "line": 32,
+          "text": "  let packOpts : image.PackingOption = { format:'image/jpeg', quality:90, needsPackProperties:false };"
+        },
+        {
+          "line": 33,
+          "text": "  // 指定图片编码文件的存放路径。"
+        },
+        {
+          "line": 34,
+          "text": "  const filePath : string = context.cacheDir + '/result.jpg';"
+        },
+        {
+          "line": 35,
+          "text": "  try {"
+        },
+        {
+          "line": 36,
+          "text": "    let file = fileIo.openSync(filePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE);"
+        },
+        {
+          "line": 37,
+          "text": "    imagePackerApi.packToFile(imageSource, file.fd, packOpts).then(() => {"
+        },
+        {
+          "line": 38,
+          "text": "      promptAction.showToast({ message: `Succeed to pack the image.`});"
+        },
+        {
+          "line": 39,
+          "text": "      console.info('Succeed to pack the image.');"
+        },
+        {
+          "line": 40,
+          "text": "    }).catch((error : BusinessError) => {"
+        },
+        {
+          "line": 41,
+          "text": "      promptAction.showToast({ message: 'Failed to pack the image. And the error is: ' + error});"
+        },
+        {
+          "line": 42,
+          "text": "      console.error('Failed to pack the image. And the error is: ' + error);"
+        },
+        {
+          "line": 43,
+          "text": "    }).finally(async () => {"
+        },
+        {
+          "line": 44,
+          "text": "      fileIo.closeSync(file.fd);"
+        },
+        {
+          "line": 45,
+          "text": "      await imageSource.release();"
+        },
+        {
+          "line": 46,
+          "text": "      await imagePackerApi.release();"
+        },
+        {
+          "line": 47,
+          "text": "    })"
+        },
+        {
+          "line": 48,
+          "text": "  } catch (error) {"
+        },
+        {
+          "line": 49,
+          "text": "    console.error('Failed to pack the image. And the error is: ' + error);"
+        },
+        {
+          "line": 50,
+          "text": "  }"
+        },
+        {
+          "line": 51,
+          "text": "}"
+        },
+        {
+          "line": 52,
+          "text": "// [End transcoding_example]"
+        }
+      ],
+      "excerptSha256": "1c615eb4d8ad4fe0138c164b747b95c86a7ac14dc1634d49af7cb21a01e5caf4",
+      "owner": "reEncoding",
+      "ownerLineCount": 29,
+      "ownerSourceByteLength": 1669,
+      "ownerSourceSha256": "1191011c83904f51e79dbf0a31aad18138b500d5673bd24e17f5d0a294beedb7",
+      "ownerSpan": {
+        "endByte": 2560,
+        "endColumnByte": 1,
+        "endLine": 51,
+        "startByte": 891,
+        "startColumnByte": 7,
+        "startLine": 23
+      },
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/TranscodingUtility.ets",
+      "repositoryId": "guide-snippets",
+      "status": "complete",
+      "symbolFactId": "workspace-fact-9dc32154c285dcb8cd4985bb"
+    },
+    {
+      "callFacts": [
+        {
+          "factId": "workspace-fact-a627542aaba072c70f713a29",
+          "span": {
+            "endByte": 1133,
+            "endColumnByte": 101,
+            "endLine": 25,
+            "startByte": 1036,
+            "startColumnByte": 4,
+            "startLine": 25
+          },
+          "targetExpression": "hichecker.addCheckRule"
+        },
+        {
+          "factId": "workspace-fact-d18d5782f7e09f5f2b10a25a",
+          "span": {
+            "endByte": 1278,
+            "endColumnByte": 79,
+            "endLine": 27,
+            "startByte": 1245,
+            "startColumnByte": 46,
+            "startLine": 27
+          },
+          "targetExpression": "image.createImageSource"
+        },
+        {
+          "factId": "workspace-fact-200701b34271008efe8bee3b",
+          "span": {
+            "endByte": 1351,
+            "endColumnByte": 71,
+            "endLine": 28,
+            "startByte": 1326,
+            "startColumnByte": 46,
+            "startLine": 28
+          },
+          "targetExpression": "image.createImagePacker"
+        },
+        {
+          "factId": "workspace-fact-0e3809efaecf5a53ab75fb2e",
+          "span": {
+            "endByte": 1497,
+            "endColumnByte": 57,
+            "endLine": 31,
+            "startByte": 1446,
+            "startColumnByte": 6,
+            "startLine": 31
+          },
+          "targetExpression": "imagePackerObj.packToData"
+        },
+        {
+          "factId": "workspace-fact-6303ed73edfa6c2783411dae",
+          "span": {
+            "endByte": 1636,
+            "endColumnByte": 115,
+            "endLine": 33,
+            "startByte": 1527,
+            "startColumnByte": 6,
+            "startLine": 33
+          },
+          "targetExpression": "console.error"
+        },
+        {
+          "factId": "workspace-fact-4f26c2d88d40e912f6d084ca",
+          "span": {
+            "endByte": 1768,
+            "endColumnByte": 67,
+            "endLine": 36,
+            "startByte": 1705,
+            "startColumnByte": 4,
+            "startLine": 36
+          },
+          "targetExpression": "hilog.info"
+        }
+      ],
+      "excerpt": [
+        {
+          "line": 24,
+          "text": "     // 添加检测规则，规则意义见检测模式API参考"
+        },
+        {
+          "line": 25,
+          "text": "    hichecker.addCheckRule(hichecker.RULE_CAUTION_PRINT_LOG|hichecker.RULE_THREAD_CHECK_SLOW_PROCESS);"
+        },
+        {
+          "line": 26,
+          "text": "    let filePath: string = this.context.filesDir + '/test.JPG';"
+        },
+        {
+          "line": 27,
+          "text": "    const imageSourceObj: image.ImageSource = image.createImageSource(filePath);"
+        },
+        {
+          "line": 28,
+          "text": "    const imagePackerObj: image.ImagePacker = image.createImagePacker();"
+        },
+        {
+          "line": 29,
+          "text": "    let packOpts: image.PackingOption = { format:\"image/jpeg\", quality:98 };"
+        },
+        {
+          "line": 30,
+          "text": "    try {"
+        },
+        {
+          "line": 31,
+          "text": "      imagePackerObj.packToData(imageSourceObj, packOpts);"
+        },
+        {
+          "line": 32,
+          "text": "    } catch (error) {"
+        },
+        {
+          "line": 33,
+          "text": "      console.error(`error code: ${(error as BusinessError).code}, error msg: ${(error as BusinessError).message}`);"
+        },
+        {
+          "line": 34,
+          "text": "    }"
+        },
+        {
+          "line": 35,
+          "text": "    // 以上10行通过image子系统触发检测规则"
+        },
+        {
+          "line": 36,
+          "text": "    hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onCreate');"
+        },
+        {
+          "line": 37,
+          "text": "  }"
+        },
+        {
+          "line": 38,
+          "text": ""
+        }
+      ],
+      "excerptSha256": "dc65beca162a1f776a61033a70616da6fcb778f05e9c498ebdaf38c8664bfa3b",
+      "owner": "EntryAbility::onCreate",
+      "ownerLineCount": 15,
+      "ownerSourceByteLength": 878,
+      "ownerSourceSha256": "f8535187f5ba38feae8e1e81647fba3e6ed5d04f414d714186308aeb9e3f2c17",
+      "ownerSpan": {
+        "endByte": 1773,
+        "endColumnByte": 3,
+        "endLine": 37,
+        "startByte": 895,
+        "startColumnByte": 2,
+        "startLine": 23
+      },
+      "path": "PerformanceAnalysisKit/PerformanceAnalysisTool/entry/src/main/ets/entryability/EntryAbility.ets",
+      "repositoryId": "guide-snippets",
+      "status": "complete",
+      "symbolFactId": "workspace-fact-e0a899830da8766a8eebb4d5"
+    }
+  ],
+  "ownerEvidenceCoverage": {
+    "boundedExcerptOwnerCount": 0,
+    "completeOwnerCount": 12,
+    "interpretation": "Owner spans and same-owner calls are syntactic evidence; they do not resolve receiver types, dataflow or behavioral intent.",
+    "maxOwnerLines": 240,
+    "ownerCount": 12,
+    "unresolvedOwnerCount": 0
+  },
+  "packetMethodRevision": "390c81268f38dbada8ab3e0a19423b69967aa63f",
+  "requiredCalibration": {
+    "alternativeValid": "constructor-distinct repair passes the same checks",
+    "baseline": "expected issue behavior fails while infrastructure remains available",
+    "environment": "gold/reference execution proves each exact source and runtime before participant grading",
+    "meaningfulWrong": "plausible incomplete or wrong-boundary repair fails the intended check",
+    "reference": "known repair passes repair and preservation checks"
+  },
+  "reviewDecisionContract": {
+    "allowedVerdicts": [
+      "advance-to-case-contract",
+      "reject-as-noncoherent",
+      "defer-for-more-evidence"
+    ],
+    "requiredQuestionIds": [
+      "shared-behavior",
+      "observable-gap",
+      "prompt-completeness",
+      "repair-oracle",
+      "preservation-oracle",
+      "environment",
+      "cross-repo-necessity"
+    ],
+    "requiredRiskIds": [
+      "api-name-is-not-semantics",
+      "issue-contract-absent",
+      "build-boundary-unqualified",
+      "oracle-unqualified"
+    ],
+    "reviewerMustBeIndependentOfPacketGenerator": true,
+    "schema": "agentlab.multi_repo_candidate_semantic_review.v1"
+  },
+  "reviewQuestions": [
+    {
+      "id": "shared-behavior",
+      "question": "Do the call sites exercise one coherent cross-repository behavior rather than merely sharing an API name?"
+    },
+    {
+      "id": "observable-gap",
+      "question": "Is there an issue-level defect or extension whose pre-change failure is observable in every required repository?"
+    },
+    {
+      "id": "prompt-completeness",
+      "question": "Can the participant-facing prompt state every required behavior without revealing the repair?"
+    },
+    {
+      "id": "repair-oracle",
+      "question": "Can independent FAIL_TO_PASS checks accept structurally distinct valid repairs?"
+    },
+    {
+      "id": "preservation-oracle",
+      "question": "Can independent PASS_TO_PASS checks cover existing repository-specific behavior?"
+    },
+    {
+      "id": "environment",
+      "question": "Are exact SDK, build roots, modules and emulator capabilities reproducible for every source?"
+    },
+    {
+      "id": "cross-repo-necessity",
+      "question": "Does the task require coordinated multi-repository reasoning, rather than two unrelated single-repository tasks?"
+    }
+  ],
+  "risks": [
+    {
+      "id": "api-name-is-not-semantics",
+      "statement": "A shared call target does not establish a shared behavioral obligation."
+    },
+    {
+      "id": "issue-contract-absent",
+      "statement": "No participant-visible issue, repair behavior or preservation behavior has been approved."
+    },
+    {
+      "id": "build-boundary-unqualified",
+      "statement": "Marker-bearing ancestors have not been compiled or accepted as exact project/module roots."
+    },
+    {
+      "id": "oracle-unqualified",
+      "statement": "No baseline/reference/alternative/wrong calibration has executed for this candidate."
+    }
+  ],
+  "schema": "agentlab.multi_repo_candidate_review_packet.v1",
+  "selectionRoles": [
+    "median-api-call-file-count"
+  ],
+  "sourceProjectBoundary": {
+    "interpretation": "Marker-bearing ancestors are evidence candidates, not a qualified build root or module.",
+    "status": "review-required"
+  },
+  "sourceSetSha256": "c4923e499fbb0ca2ed4fd205c66d6353bbe2aa58935413e3c897183a25493ca9",
+  "status": "independent-semantic-review-required",
+  "sweStyleTaskContract": {
+    "required": [
+      "exact base source set",
+      "participant-visible problem statement",
+      "hidden FAIL_TO_PASS repair checks",
+      "hidden PASS_TO_PASS preservation checks",
+      "exact build and runtime environment identities",
+      "reference, alternative-valid and meaningful-wrong calibration receipts",
+      "blind participant/evaluator split"
+    ],
+    "satisfiedByThisPacket": [
+      "exact base source set",
+      "source-localized call evidence",
+      "owner-scoped call-neighborhood evidence"
+    ]
+  }
+}

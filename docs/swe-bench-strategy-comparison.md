@@ -374,15 +374,19 @@ No aggregate difficulty score may compensate for a failed qualification
 dimension. In particular, high participant separation cannot promote an
 underspecified or contaminated case.
 
-The two smallest current-method API candidates now also have digest-bound
-semantic-review packets with exact source excerpts and all marker-bearing
-project-boundary candidates. They expose why API-call equality alone is not a
-SWE-style task: the `AlertDialog` sites cover logout confirmation and Web alert
-result handling, while the `call.makeCall` sites cover an empty-number
-capability path and a `tel://` interception path. The packets require an
-independent answer on shared behavior, observable failure, prompt completeness,
-repair/preservation Oracles, environment reproducibility and genuine
-cross-repository necessity. They are review aids, not approved cases.
+Three current-method API candidates now have digest-bound semantic-review
+packets with exact source excerpts and all marker-bearing project-boundary
+candidates. They expose why API-call equality alone is not a SWE-style task:
+the `AlertDialog` sites cover logout confirmation and Web alert result handling,
+while the `call.makeCall` sites cover an empty-number capability path and a
+`tel://` interception path. The new `image.createImagePacker` packet goes one
+level deeper: it binds the complete enclosing owner and every same-owner call
+for 12 call sites across seven files. Six owner contexts show an ImagePacker
+`release` call and six do not, but that syntactic split is a review hypothesis,
+not a defect label. The packets require an independent answer on shared
+behavior, observable failure, prompt completeness, repair/preservation Oracles,
+environment reproducibility and genuine cross-repository necessity. They are
+review aids, not approved cases.
 
 ## Ordered implementation consequences
 
@@ -450,3 +454,6 @@ now dominate public coding benchmarks: case invalidity and contamination.
 - [Separating signal from noise in coding evaluations](https://openai.com/index/separating-signal-from-noise-coding-evaluations/)
 - [GitHub artifact attestations](https://docs.github.com/en/actions/concepts/security/artifact-attestations)
 - [Using artifact attestations](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations)
+- [HarmonyOS image API common mistakes](https://developer.huawei.com/consumer/cn/doc/doccenter-capabilities/image-common-mistakes)
+- [Using ImagePacker to encode pictures](https://developer.huawei.com/consumer/en/doc/harmonyos-guides-V13/image-picture-encoding-V13)
+- [Native ImagePacker guide](https://developer.huawei.com/consumer/en/doc/harmonyos-guides-V13/image-packer-c-V13)

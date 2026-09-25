@@ -1,7 +1,10 @@
 {
   "automaticPromotion": false,
   "currentMethodProposalSha256": "d151b6ed91f8dfb6650e36d49546b70ebfa44641bc34fccba16369067c4ea93e",
-  "packetMethodRevision": "5d730d1fbc7a6fa6eaee58fc4f7d580bb7a39469",
+  "packetMethodRevisions": [
+    "5d730d1fbc7a6fa6eaee58fc4f7d580bb7a39469",
+    "390c81268f38dbada8ab3e0a19423b69967aa63f"
+  ],
   "packets": [
     {
       "candidateId": "difficulty-029b14f310abe9975bbfdfa1",
@@ -14,10 +17,16 @@
       "path": "call-make-call.json",
       "sha256": "59db64b2cd5e21ca46641ddb335c2ae531ebe9f60c25fa0815667f9a15ea6818",
       "status": "independent-semantic-review-required"
+    },
+    {
+      "candidateId": "difficulty-edcc0a335e8d61a4150431a0",
+      "path": "image-create-image-packer.json",
+      "sha256": "35d2bc5d9d80d1d75ee8e5f6c353f7cd914a5b9fe59518098b0b13f09598b42c",
+      "status": "independent-semantic-review-required"
     }
   ],
-  "schema": "agentlab.multi_repo_candidate_review_packet_index.v1",
+  "schema": "agentlab.multi_repo_candidate_review_packet_index.v2",
   "semanticReviewCompleted": false,
   "sourceSetSha256": "c4923e499fbb0ca2ed4fd205c66d6353bbe2aa58935413e3c897183a25493ca9",
-  "status": "two-smallest-api-candidates-materialized-for-review"
+  "status": "three-api-candidates-materialized-for-review"
 }

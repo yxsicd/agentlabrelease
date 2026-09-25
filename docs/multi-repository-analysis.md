@@ -727,8 +727,8 @@ and retains the packet, normalized answers, decision and gate together. This is
 role/provenance evidence, not proof that the reviewer judgment is correct or
 that the candidate is representative.
 
-The two two-file API candidates in the retained shortlist now have exact-source
-review packets under
+Three API candidates in the retained shortlist now have exact-source review
+packets under
 `release/qualifications/harmony-real-multi-repo-34661ff/review-packets/`.
 Each packet binds the frozen candidate, facts, source blobs, line-numbered call
 context, marker-bearing project-root candidates and the method revision that
@@ -736,14 +736,30 @@ materialized the packet. It deliberately does not supply a task prompt or an
 Oracle. An independent reviewer must decide whether the call sites express one
 coherent cross-repository behavior before any case contract is written.
 
+New packets also bind the complete enclosing symbol when it is at most 240
+lines, plus every analyzer-observed call in that same owner. Larger owners use a
+bounded head/tail/call-neighborhood excerpt, and unresolved or bounded owners
+add a mandatory `owner-context-incomplete` risk. This lets a reviewer compare
+behavioral neighborhoods rather than isolated API spellings while preserving
+the boundary: owner spans and neighboring calls are syntactic evidence, not
+receiver-type, dataflow or intent proof.
+
 This gate matters in the real evidence. The two `AlertDialog` sites implement
 different product behavior (account logout confirmation versus Web alert result
 handling), while the two `call.makeCall` sites pass different inputs and live
 behind different lifecycle/capability boundaries. A shared API name is thus
 localization evidence, not semantic equivalence. Both packets remain
 `independent-semantic-review-required`, acknowledge the same four risks and
-state that only the exact base source set and source-localized call evidence
-satisfy the SWE-style task contract so far.
+remain unapproved.
+
+The third packet covers `image.createImagePacker`: 12 exact call sites across
+seven files and two repositories, with complete owner context for all 12. Six
+owners contain an analyzer-observed ImagePacker `release` call and six do not.
+That split is useful lifecycle-review evidence, but it is deliberately not
+classified as a defect: the exact SDK contract, escape/dataflow behavior,
+observable failure and acceptable repairs still require independent review and
+runtime calibration. The packet therefore adds owner-scoped call-neighborhood
+evidence to the SWE-style contract but does not advance to case construction.
 
 The approved state is now a consumed authority rather than advisory metadata.
 API-call localization proposal, localization review, construction-contract
