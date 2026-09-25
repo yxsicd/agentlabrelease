@@ -42,18 +42,35 @@ fn git(root: &Path, args: &[&str]) -> Result<Vec<u8>, Box<dyn std::error::Error>
     Ok(result.stdout)
 }
 
-fn git_blobs(
+fn supports_nul_batch_input(root: &Path) -> bool {
+    Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(["cat-file", "--batch", "-z"])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
+}
+
+fn git_batch_blobs(
     repository: &Repository,
     paths: &[String],
+    nul_input: bool,
 ) -> Result<BTreeMap<String, Vec<u8>>, Box<dyn std::error::Error>> {
+    if paths.is_empty() {
+        return Ok(BTreeMap::new());
+    }
     let mut child = Command::new("git")
         .arg("-C")
         .arg(&repository.root)
-        // `-z` keeps arbitrary path queries NUL-delimited while retaining the
-        // newline-delimited batch response supported by older Git releases.
-        // Uppercase `-Z` makes responses NUL-delimited too, but is not
-        // available on every Linux Git version AgentLab supports.
-        .args(["cat-file", "--batch", "-z"])
+        .args(if nul_input {
+            &["cat-file", "--batch", "-z"][..]
+        } else {
+            &["cat-file", "--batch"][..]
+        })
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -65,8 +82,10 @@ fn git_blobs(
     let revision = repository.revision.clone();
     let query_paths = paths.to_vec();
     let writer = std::thread::spawn(move || -> std::io::Result<()> {
+        let delimiter = if nul_input { b'\0' } else { b'\n' };
         for path in &query_paths {
-            stdin.write_all(format!("{revision}:{path}\0").as_bytes())?;
+            stdin.write_all(format!("{revision}:{path}").as_bytes())?;
+            stdin.write_all(&[delimiter])?;
         }
         Ok(())
     });
@@ -116,6 +135,32 @@ fn git_blobs(
             repository.root.display(),
             String::from_utf8_lossy(&stderr).trim()
         )));
+    }
+    Ok(blobs)
+}
+
+fn git_blobs(
+    repository: &Repository,
+    paths: &[String],
+) -> Result<BTreeMap<String, Vec<u8>>, Box<dyn std::error::Error>> {
+    if supports_nul_batch_input(&repository.root) {
+        return git_batch_blobs(repository, paths, true);
+    }
+
+    // Git before the `cat-file --batch -z` option accepts only line-delimited
+    // queries. Batch ordinary paths and read newline-containing paths through
+    // an argv-bound single-object query so no path byte is interpreted as a
+    // protocol delimiter.
+    let ordinary_paths = paths
+        .iter()
+        .filter(|path| !path.contains('\n'))
+        .cloned()
+        .collect::<Vec<_>>();
+    let mut blobs = git_batch_blobs(repository, &ordinary_paths, false)?;
+    for path in paths.iter().filter(|path| path.contains('\n')) {
+        let object = format!("{}:{path}", repository.revision);
+        let bytes = git(&repository.root, &["cat-file", "blob", &object])?;
+        blobs.insert(path.clone(), bytes);
     }
     Ok(blobs)
 }

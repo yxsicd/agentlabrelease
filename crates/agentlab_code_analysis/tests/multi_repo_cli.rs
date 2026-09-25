@@ -433,14 +433,8 @@ fn non_utf8_source_is_audited_without_aborting_the_source_set() {
 fn batch_blob_reads_preserve_newlines_in_committed_paths() {
     let mut fixture = Fixture::new();
     let unusual = "src/line\nbreak.ts";
-    let (one, revision_one) = fixture.repository(
-        "one",
-        &[(unusual, "export const unusual = 1;")],
-    );
-    let (two, revision_two) = fixture.repository(
-        "two",
-        &[("src/two.ts", "export const two = 2;")],
-    );
+    let (one, revision_one) = fixture.repository("one", &[(unusual, "export const unusual = 1;")]);
+    let (two, revision_two) = fixture.repository("two", &[("src/two.ts", "export const two = 2;")]);
     let manifest = json!({
         "schema":"agentlab.multi_repo_manifest.v1",
         "repositories":[
@@ -454,10 +448,12 @@ fn batch_blob_reads_preserve_newlines_in_committed_paths() {
         "{}",
         String::from_utf8_lossy(&result.stderr)
     );
-    let facts = rows(&fixture.root.join("newline-path-output/workspace_facts.jsonl"));
+    let facts = rows(
+        &fixture
+            .root
+            .join("newline-path-output/workspace_facts.jsonl"),
+    );
     assert!(facts.iter().any(|row| {
-        row["kind"] == "parse-file"
-            && row["repositoryId"] == "one"
-            && row["path"] == unusual
+        row["kind"] == "parse-file" && row["repositoryId"] == "one" && row["path"] == unusual
     }));
 }
