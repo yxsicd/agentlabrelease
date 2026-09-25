@@ -305,6 +305,13 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
             with self.assertRaisesRegex(PACKET.ReviewPacketError, "frozen review shortlist"):
                 PACKET.build_packet(manifest, difficulty, facts, proposal, candidate["id"], "3" * 40)
 
+    def test_packet_rejects_workspace_facts_not_bound_by_proposal(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths = self.fixture(Path(directory))
+            paths[2].write_text(paths[2].read_text() + "\n")
+            with self.assertRaisesRegex(PACKET.ReviewPacketError, "workspace facts differ"):
+                PACKET.build_packet(*paths[:4], paths[4]["id"], "3" * 40)
+
     def test_packet_lineage_binds_every_input(self):
         with tempfile.TemporaryDirectory() as directory:
             paths = self.fixture(Path(directory))
@@ -357,8 +364,12 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
         self.assertEqual(index["schema"], "agentlab.multi_repo_candidate_review_packet_index.v2")
         self.assertEqual(index["packetMethodRevisions"], [
             "5d730d1fbc7a6fa6eaee58fc4f7d580bb7a39469",
-            "05233f0e5bd63959af02ec39f2576c855ccb3aa0",
+            "d7417b24564d3d8a32930e64ea10d960e425a5f0",
         ])
+        self.assertEqual(index["supplementalContextMethods"], [{
+            "methodRevision": "f13c0439f5762a09ee32f4a2d02b6f074838187a",
+            "workspaceFactsSha256": "b8745ea924235dc8c24390b06042668c502a1981fea70c52c8d6e8cdde1493e2",
+        }])
         self.assertFalse(index["semanticReviewCompleted"])
         self.assertFalse(index["automaticPromotion"])
         self.assertEqual(len(index["packets"]), 3)
@@ -372,6 +383,7 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
             expected = ["exact base source set", "source-localized call evidence"]
             if row["path"] == "image-create-image-packer.json":
                 expected.append("owner-scoped call-neighborhood evidence")
+                expected.append("syntactic async and control-region evidence")
             self.assertEqual(value["sweStyleTaskContract"]["satisfiedByThisPacket"], expected)
             self.assertFalse(value["automaticPromotion"])
 
@@ -382,7 +394,7 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
         )
         self.assertEqual(
             image_packer["schema"],
-            "agentlab.multi_repo_candidate_review_packet.v2",
+            "agentlab.multi_repo_candidate_review_packet.v3",
         )
         alert_source = "\n".join(
             line["text"] for site in alert["callSiteEvidence"] for line in site["excerpt"]
@@ -427,6 +439,44 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
             for owner in image_packer["ownerContextEvidence"]
         )
         self.assertEqual(release_owners, 6)
+        self.assertEqual(image_packer["callControlContextCoverage"], {
+            "selectedCallCount": 12,
+            "awaitedCallCount": 0,
+            "callbackNestedCallCount": 2,
+            "controlRegionKindCounts": {
+                "arrow_function": 2,
+                "if_statement": 5,
+                "try_statement": 5,
+            },
+            "interpretation": (
+                "Ancestor syntax identifies lexical await, callback and control regions only. It does not "
+                "prove reachability, branch coverage, dominance, post-dominance or exception-safe cleanup."
+            ),
+        })
+        self.assertEqual(
+            image_packer["lineage"]["contextWorkspaceFactsSha256"],
+            "b8745ea924235dc8c24390b06042668c502a1981fea70c52c8d6e8cdde1493e2",
+        )
+        self.assertEqual(
+            image_packer["lineage"]["contextMethodRevision"],
+            "f13c0439f5762a09ee32f4a2d02b6f074838187a",
+        )
+        release_calls = [
+            call
+            for handle in image_packer["callResultHandleEvidence"]
+            for call in handle["directMemberCalls"]
+            if call["member"] == "release"
+        ]
+        self.assertEqual(sum(
+            any(region["syntaxKind"] == "finally_clause"
+                for region in call["controlContext"]["controlRegions"])
+            for call in release_calls
+        ), 3)
+        self.assertEqual(sum(
+            any(target["targetExpression"].endswith(".finally")
+                for target in call["controlContext"]["enclosingCalls"])
+            for call in release_calls
+        ), 1)
 
 
 if __name__ == "__main__":

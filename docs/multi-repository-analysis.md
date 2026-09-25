@@ -754,15 +754,23 @@ remain unapproved.
 
 The third packet covers `image.createImagePacker`: 12 exact call sites across
 seven files and two repositories, with complete owner context for all 12. The
-handle-aware v2 packet relates 10 calls to lexical binding initializers and two
+handle-aware v3 packet relates 10 calls to lexical binding initializers and two
 to assignments, with no unresolved or ambiguous result handles. Exact
 same-handle member spellings comprise six `packToData`, five `packToFile`, one
 `packing` and six `release` calls; six handles have no direct `release` spelling.
-That split is useful lifecycle-review evidence, but it is deliberately not
+Supplemental facts are generated from the same exact sources by a separately
+revision-bound analyzer without replacing the proposal-bound base facts. Of the
+six releases, three are lexically inside `finally_clause`, one is inside a
+Promise `.finally` callback, and two are in conditional callback paths without
+a cleanup-region ancestor. The 12 factory calls themselves span five `try`
+regions, five conditional regions and two callbacks. That split is useful
+lifecycle-review evidence, but it is deliberately not
 classified as a defect: the exact SDK contract, escape/dataflow behavior,
 observable failure and acceptable repairs still require independent review and
-runtime calibration. The packet therefore adds owner-scoped call-neighborhood
-evidence to the SWE-style contract but does not advance to case construction.
+runtime calibration. Lexical ancestry does not prove reachability, dominance,
+post-dominance or exception-safe cleanup. The packet therefore adds owner-scoped
+call-neighborhood and syntactic control-region evidence to the SWE-style
+contract but does not advance to case construction.
 
 The approved state is now a consumed authority rather than advisory metadata.
 API-call localization proposal, localization review, construction-contract

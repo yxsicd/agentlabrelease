@@ -3,7 +3,13 @@
   "currentMethodProposalSha256": "d151b6ed91f8dfb6650e36d49546b70ebfa44641bc34fccba16369067c4ea93e",
   "packetMethodRevisions": [
     "5d730d1fbc7a6fa6eaee58fc4f7d580bb7a39469",
-    "05233f0e5bd63959af02ec39f2576c855ccb3aa0"
+    "d7417b24564d3d8a32930e64ea10d960e425a5f0"
+  ],
+  "supplementalContextMethods": [
+    {
+      "methodRevision": "f13c0439f5762a09ee32f4a2d02b6f074838187a",
+      "workspaceFactsSha256": "b8745ea924235dc8c24390b06042668c502a1981fea70c52c8d6e8cdde1493e2"
+    }
   ],
   "packets": [
     {
@@ -21,7 +27,7 @@
     {
       "candidateId": "difficulty-edcc0a335e8d61a4150431a0",
       "path": "image-create-image-packer.json",
-      "sha256": "9b83a263ff1c38bfc3362932f0f8d67d8a6831dda6ad3c757a989f34ea68009b",
+      "sha256": "120bf37305983bdb393c4f694571ca2499d67c6eda0141efc49940ee9f3043c3",
       "status": "independent-semantic-review-required"
     }
   ],
