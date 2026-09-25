@@ -138,6 +138,118 @@ def source_evidence(
     }
 
 
+def owner_contexts(
+    repositories: dict[str, dict[str, Any]],
+    call_facts: list[dict[str, Any]],
+    all_facts: list[dict[str, Any]],
+    max_owner_lines: int,
+) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    symbols = {
+        (row.get("repositoryId"), row.get("path"), row.get("qualifiedName")): row
+        for row in all_facts
+        if row.get("kind") == "symbol" and isinstance(row.get("qualifiedName"), str)
+    }
+    calls_by_owner: dict[tuple[Any, Any, Any], list[dict[str, Any]]] = {}
+    for row in all_facts:
+        if row.get("kind") != "call":
+            continue
+        key = (row.get("repositoryId"), row.get("path"), row.get("owner"))
+        calls_by_owner.setdefault(key, []).append(row)
+    keys = sorted({
+        (row.get("repositoryId"), row.get("path"), row.get("owner"))
+        for row in call_facts
+    })
+    contexts = []
+    counts = {"complete": 0, "bounded-excerpt": 0, "unresolved-owner": 0}
+    for repository_id, path, owner in keys:
+        owner_calls = sorted(
+            calls_by_owner.get((repository_id, path, owner), []),
+            key=lambda row: (
+                (row.get("span") or {}).get("startLine", -1),
+                row.get("targetExpression", ""),
+                row.get("id", ""),
+            ),
+        )
+        call_rows = [
+            {
+                "factId": row.get("id"),
+                "targetExpression": row.get("targetExpression"),
+                "span": row.get("span"),
+            }
+            for row in owner_calls
+        ]
+        base = {
+            "repositoryId": repository_id,
+            "path": path,
+            "owner": owner,
+            "callFacts": call_rows,
+        }
+        symbol = symbols.get((repository_id, path, owner))
+        if symbol is None:
+            contexts.append({
+                **base,
+                "status": "unresolved-owner",
+                "symbolFactId": None,
+                "ownerSpan": None,
+                "ownerLineCount": None,
+                "ownerSourceSha256": None,
+                "ownerSourceByteLength": None,
+                "excerpt": [],
+                "excerptSha256": canonical_digest([]),
+            })
+            counts["unresolved-owner"] += 1
+            continue
+        repository = repositories[repository_id]
+        raw = git(repository["root"], "show", f"{repository['revision']}:{path}").stdout
+        text = raw.decode("utf-8")
+        lines = text.splitlines()
+        span = symbol.get("span") or {}
+        start_line = span.get("startLine")
+        end_line = span.get("endLine")
+        start_byte = span.get("startByte")
+        end_byte = span.get("endByte")
+        require(
+            isinstance(start_line, int) and isinstance(end_line, int)
+            and 0 <= start_line <= end_line < len(lines),
+            f"owner span is invalid for {repository_id}:{path}:{owner}",
+        )
+        require(
+            isinstance(start_byte, int) and isinstance(end_byte, int)
+            and 0 <= start_byte <= end_byte <= len(raw),
+            f"owner byte span is invalid for {repository_id}:{path}:{owner}",
+        )
+        owner_line_count = end_line - start_line + 1
+        if owner_line_count <= max_owner_lines:
+            selected_lines = range(start_line, end_line + 1)
+            status = "complete"
+        else:
+            selected = set(range(start_line, min(end_line + 1, start_line + 12)))
+            selected.update(range(max(start_line, end_line - 11), end_line + 1))
+            for call in owner_calls:
+                call_line = (call.get("span") or {}).get("startLine")
+                if isinstance(call_line, int):
+                    selected.update(
+                        range(max(start_line, call_line - 4), min(end_line + 1, call_line + 5))
+                    )
+            selected_lines = sorted(selected)
+            status = "bounded-excerpt"
+        excerpt = [{"line": index + 1, "text": lines[index]} for index in selected_lines]
+        owner_raw = raw[start_byte:end_byte]
+        contexts.append({
+            **base,
+            "status": status,
+            "symbolFactId": symbol.get("id"),
+            "ownerSpan": span,
+            "ownerLineCount": owner_line_count,
+            "ownerSourceSha256": hashlib.sha256(owner_raw).hexdigest(),
+            "ownerSourceByteLength": len(owner_raw),
+            "excerpt": excerpt,
+            "excerptSha256": canonical_digest(excerpt),
+        })
+        counts[status] += 1
+    return contexts, counts
+
+
 def build_packet(
     manifest_path: Path,
     difficulty_path: Path,
@@ -146,9 +258,11 @@ def build_packet(
     candidate_id: str,
     packet_method_revision: str,
     context_lines: int = 4,
+    max_owner_lines: int = 240,
 ) -> dict[str, Any]:
     require(REVISION.fullmatch(packet_method_revision) is not None, "packet method revision is invalid")
     require(0 <= context_lines <= 20, "context lines must be between zero and twenty")
+    require(40 <= max_owner_lines <= 1000, "max owner lines must be between forty and one thousand")
     manifest = load(manifest_path, "manifest")
     difficulty = load(difficulty_path, "difficulty evidence")
     proposal = load(proposal_path, "current-method proposal")
@@ -182,11 +296,13 @@ def build_packet(
     evidence_ids = candidate.get("evidenceIds")
     require(isinstance(evidence_ids, list) and evidence_ids, "candidate evidence ids are absent")
     selected_facts: dict[str, dict[str, Any]] = {}
+    all_facts: list[dict[str, Any]] = []
     require(facts_path.is_file() and not facts_path.is_symlink(), "workspace facts must be a regular file")
     for line in facts_path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         row = json.loads(line)
+        all_facts.append(row)
         if row.get("id") in evidence_ids:
             selected_facts[row["id"]] = row
     require(set(selected_facts) == set(evidence_ids), "candidate facts are incomplete")
@@ -209,10 +325,24 @@ def build_packet(
         source_evidence(repositories[row["repositoryId"]], row, context_lines)
         for row in call_facts
     ]
+    owner_rows, owner_counts = owner_contexts(
+        repositories, call_facts, all_facts, max_owner_lines
+    )
     project_boundary_status = (
         "review-required" if all(row["projectBoundaryCandidates"] for row in source_rows)
         else "incomplete"
     )
+    risks = [
+        {"id": "api-name-is-not-semantics", "statement": "A shared call target does not establish a shared behavioral obligation."},
+        {"id": "issue-contract-absent", "statement": "No participant-visible issue, repair behavior or preservation behavior has been approved."},
+        {"id": "build-boundary-unqualified", "statement": "Marker-bearing ancestors have not been compiled or accepted as exact project/module roots."},
+        {"id": "oracle-unqualified", "statement": "No baseline/reference/alternative/wrong calibration has executed for this candidate."},
+    ]
+    if owner_counts["bounded-excerpt"] or owner_counts["unresolved-owner"]:
+        risks.append({
+            "id": "owner-context-incomplete",
+            "statement": "At least one owner is unresolved or represented by a bounded excerpt rather than its complete source span.",
+        })
     return {
         "schema": "agentlab.multi_repo_candidate_review_packet.v1",
         "status": "independent-semantic-review-required",
@@ -224,6 +354,15 @@ def build_packet(
         "apiContract": seed,
         "mechanism": candidate.get("mechanism"),
         "callSiteEvidence": source_rows,
+        "ownerContextEvidence": owner_rows,
+        "ownerEvidenceCoverage": {
+            "ownerCount": len(owner_rows),
+            "completeOwnerCount": owner_counts["complete"],
+            "boundedExcerptOwnerCount": owner_counts["bounded-excerpt"],
+            "unresolvedOwnerCount": owner_counts["unresolved-owner"],
+            "maxOwnerLines": max_owner_lines,
+            "interpretation": "Owner spans and same-owner calls are syntactic evidence; they do not resolve receiver types, dataflow or behavioral intent.",
+        },
         "sourceProjectBoundary": {
             "status": project_boundary_status,
             "interpretation": "Marker-bearing ancestors are evidence candidates, not a qualified build root or module.",
@@ -254,14 +393,13 @@ def build_packet(
                 "reference, alternative-valid and meaningful-wrong calibration receipts",
                 "blind participant/evaluator split",
             ],
-            "satisfiedByThisPacket": ["exact base source set", "source-localized call evidence"],
+            "satisfiedByThisPacket": [
+                "exact base source set",
+                "source-localized call evidence",
+                "owner-scoped call-neighborhood evidence",
+            ],
         },
-        "risks": [
-            {"id": "api-name-is-not-semantics", "statement": "A shared call target does not establish a shared behavioral obligation."},
-            {"id": "issue-contract-absent", "statement": "No participant-visible issue, repair behavior or preservation behavior has been approved."},
-            {"id": "build-boundary-unqualified", "statement": "Marker-bearing ancestors have not been compiled or accepted as exact project/module roots."},
-            {"id": "oracle-unqualified", "statement": "No baseline/reference/alternative/wrong calibration has executed for this candidate."},
-        ],
+        "risks": risks,
         "reviewDecisionContract": {
             "schema": "agentlab.multi_repo_candidate_semantic_review.v1",
             "allowedVerdicts": ["advance-to-case-contract", "reject-as-noncoherent", "defer-for-more-evidence"],
@@ -269,10 +407,7 @@ def build_packet(
                 "shared-behavior", "observable-gap", "prompt-completeness", "repair-oracle",
                 "preservation-oracle", "environment", "cross-repo-necessity",
             ],
-            "requiredRiskIds": [
-                "api-name-is-not-semantics", "issue-contract-absent",
-                "build-boundary-unqualified", "oracle-unqualified",
-            ],
+            "requiredRiskIds": [row["id"] for row in risks],
             "reviewerMustBeIndependentOfPacketGenerator": True,
         },
         "lineage": {
@@ -296,6 +431,7 @@ def main() -> int:
     parser.add_argument("--candidate-id", required=True)
     parser.add_argument("--packet-method-revision", required=True)
     parser.add_argument("--context-lines", type=int, default=4)
+    parser.add_argument("--max-owner-lines", type=int, default=240)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
@@ -303,6 +439,7 @@ def main() -> int:
         value = build_packet(
             args.manifest, args.difficulty, args.facts, args.proposal,
             args.candidate_id, args.packet_method_revision, args.context_lines,
+            args.max_owner_lines,
         )
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(value, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")

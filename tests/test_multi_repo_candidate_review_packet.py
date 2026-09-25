@@ -72,6 +72,7 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
         for suffix, repository_id, repository, revision in (
             ("a", "repo-a", "a", rev_a), ("b", "repo-b", "b", rev_b),
         ):
+            body = "import { api } from '@kit/Test';\napi.run('" + suffix + "');\n"
             facts.append({
                 "id": f"fact-call-{suffix}",
                 "kind": "call",
@@ -81,6 +82,22 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
                 "targetExpression": "api.run",
                 "sourceIdentity": f"git:https://example.invalid/{repository}.git@{revision}",
                 "span": {"startLine": 1, "endLine": 1, "startByte": 38, "endByte": 51},
+            })
+            facts.append({
+                "id": f"fact-owner-{suffix}",
+                "kind": "symbol",
+                "repositoryId": repository_id,
+                "path": "project/src/page.ets",
+                "owner": None,
+                "qualifiedName": f"Owner{suffix.upper()}",
+                "symbol": f"Owner{suffix.upper()}",
+                "sourceIdentity": f"git:https://example.invalid/{repository}.git@{revision}",
+                "span": {
+                    "startLine": 0,
+                    "endLine": 1,
+                    "startByte": 0,
+                    "endByte": len(body.encode()),
+                },
             })
         facts_path = root / "facts.jsonl"
         facts_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in facts))
@@ -144,9 +161,22 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
                 for row in packet["callSiteEvidence"]
             ))
             self.assertEqual(packet["sourceProjectBoundary"]["status"], "review-required")
+            self.assertEqual(packet["ownerEvidenceCoverage"]["ownerCount"], 2)
+            self.assertEqual(packet["ownerEvidenceCoverage"]["completeOwnerCount"], 2)
+            self.assertEqual(packet["ownerEvidenceCoverage"]["boundedExcerptOwnerCount"], 0)
+            self.assertEqual(packet["ownerEvidenceCoverage"]["unresolvedOwnerCount"], 0)
+            self.assertTrue(all(row["status"] == "complete" for row in packet["ownerContextEvidence"]))
+            self.assertEqual(
+                {row["callFacts"][0]["targetExpression"] for row in packet["ownerContextEvidence"]},
+                {"api.run"},
+            )
             self.assertEqual(
                 packet["sweStyleTaskContract"]["satisfiedByThisPacket"],
-                ["exact base source set", "source-localized call evidence"],
+                [
+                    "exact base source set",
+                    "source-localized call evidence",
+                    "owner-scoped call-neighborhood evidence",
+                ],
             )
             self.assertFalse(packet["automaticPromotion"])
 
@@ -177,6 +207,31 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
                 paths[:4],
             ):
                 self.assertEqual(packet["lineage"][key], hashlib.sha256(path.read_bytes()).hexdigest())
+
+    def test_packet_fail_closes_when_owner_context_is_unresolved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths = self.fixture(Path(directory))
+            facts = [
+                json.loads(line)
+                for line in paths[2].read_text().splitlines()
+                if line.strip()
+            ]
+            paths[2].write_text(
+                "".join(
+                    json.dumps(row, sort_keys=True) + "\n"
+                    for row in facts
+                    if row["id"] != "fact-owner-b"
+                )
+            )
+            packet = PACKET.build_packet(*paths[:4], paths[4]["id"], "3" * 40)
+            self.assertEqual(packet["ownerEvidenceCoverage"]["unresolvedOwnerCount"], 1)
+            self.assertIn("owner-context-incomplete", {
+                row["id"] for row in packet["risks"]
+            })
+            self.assertIn(
+                "owner-context-incomplete",
+                packet["reviewDecisionContract"]["requiredRiskIds"],
+            )
 
     def test_retained_real_packets_are_exact_and_still_unqualified(self):
         root = ROOT / "release/qualifications/harmony-real-multi-repo-34661ff"
