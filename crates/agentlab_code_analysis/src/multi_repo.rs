@@ -530,7 +530,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         shared_external_module_count += 1;
         let affected = observations
             .iter()
-            .map(|(repository_id, path, _)| {
+            .map(|(repository_id, path, _)| (repository_id, path))
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .map(|(repository_id, path)| {
                 json!({"repositoryId":repository_id,"path":path,"dependencyDepth":1})
             })
             .collect::<Vec<_>>();

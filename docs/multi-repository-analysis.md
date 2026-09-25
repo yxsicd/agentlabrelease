@@ -121,7 +121,10 @@ Shared external-module candidates are grounded in exact import facts but remain
 non-ready. Qualification must independently establish the external contract's
 version and semantics, repository-specific builds, and a cross-repository
 behavior Oracle. This supports real repositories that consume the same Harmony
-platform API without inventing a source-to-source import edge.
+platform API without inventing a source-to-source import edge. Their
+`affectedFiles` identity is unique by repository and path even when one file
+contains several imports from the same module; every distinct import fact stays
+in `evidenceIds`.
 
 Shared external API-call candidates remain non-ready too. Before seed
 extraction, a maintainer must establish the API version and behavioral

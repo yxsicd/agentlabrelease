@@ -308,7 +308,7 @@ fn shared_external_module_contract_becomes_non_ready_multi_repo_candidate() {
         "one",
         &[(
             "src/first.ets",
-            "import { router } from '@kit.ArkUI'; export function first() { router.pushUrl({url:'first'}); }",
+            "import { router } from '@kit.ArkUI'; import { window } from '@kit.ArkUI'; export function first() { router.pushUrl({url:'first'}); window.getLastWindow(); }",
         )],
     );
     let (two, revision_two) = fixture.repository(
@@ -352,7 +352,7 @@ fn shared_external_module_contract_becomes_non_ready_multi_repo_candidate() {
     assert_eq!(candidate["seed"]["specifier"], "@kit.ArkUI");
     assert_eq!(candidate["affectedRepositoryCount"], 2);
     assert_eq!(candidate["affectedFiles"].as_array().unwrap().len(), 2);
-    assert_eq!(candidate["evidenceIds"].as_array().unwrap().len(), 2);
+    assert_eq!(candidate["evidenceIds"].as_array().unwrap().len(), 3);
     assert_eq!(candidate["verificationContract"]["caseReady"], false);
     assert_eq!(candidate["automaticPromotion"], false);
     let api_candidate = difficulty["candidates"]
