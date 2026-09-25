@@ -1511,3 +1511,19 @@ failed batch: the old runner completed 8 of 15 cases and produced 7 port-conflic
 infrastructure failures. After adding the readiness wait, the same 15 cases
 passed consecutively. Do not erase the first batch or reclassify its failures as
 participant or Oracle failures.
+
+## Harmony UI route-specific Oracle checkpoint
+
+Do not treat generic visible text as route identity. Two different ArkUI pages
+may intentionally render the same Web content, so an `assert-text` check can
+accept a meaningful wrong implementation that navigates to the wrong page.
+When the task semantics require a specific route, use scenario v2 and place an
+explicit `assert-page-path` before the visible-semantic assertion. Match the
+dedicated `pagePath` field exactly in the retained layout; do not grep the full
+serialized layout for a generic substring.
+
+Calibrate the Oracle with at least a failing baseline, a known repair, a
+structurally distinct alternative-valid implementation and a meaningful wrong
+implementation. Retain both the superseded false-pass evidence and the
+route-aware replay. Controlled variants are Oracle-calibration evidence only:
+never label them as Agent runs, unseen cases or accepted gold repairs.

@@ -71,23 +71,26 @@ def validate_result(
         digest(attempt.get(field), f"{label} {field}")
 
 
-def scenario_contract(path: Path) -> tuple[str, tuple[int, int], str, str]:
+def scenario_contract(path: Path) -> tuple[str, str, tuple[int, int], list[tuple[str, str]]]:
+    schemas: list[str] = []
     case_ids: list[str] = []
     taps: list[tuple[int, int]] = []
     assertions: list[tuple[str, str]] = []
     for raw in path.read_text(encoding="utf-8").splitlines():
         fields = raw.split("\t")
-        if fields[0] == "case" and len(fields) == 2:
+        if fields[0] == "schema" and len(fields) == 2:
+            schemas.append(fields[1])
+        elif fields[0] == "case" and len(fields) == 2:
             case_ids.append(fields[1])
         elif fields[0] == "tap" and len(fields) == 3:
             try:
                 taps.append((int(fields[1]), int(fields[2])))
             except ValueError as error:
                 raise CalibrationError("scenario tap coordinates must be integers") from error
-        elif fields[0] in ("assert-text", "assert-no-text") and len(fields) == 3:
+        elif fields[0] in ("assert-text", "assert-no-text", "assert-page-path") and len(fields) == 3:
             assertions.append((fields[0], fields[2]))
-    require(len(case_ids) == 1 and len(taps) == 1 and len(assertions) == 1, "scenario must have one case, tap and assertion")
-    return case_ids[0], taps[0], assertions[0][0], assertions[0][1]
+    require(len(schemas) == 1 and len(case_ids) == 1 and len(taps) == 1 and assertions, "scenario must have one schema, case, tap and assertion")
+    return schemas[0], case_ids[0], taps[0], assertions
 
 
 def validate_scenario_descriptor(value: object, label: str, base_dir: Path | None) -> tuple[dict, str]:
@@ -101,7 +104,10 @@ def validate_scenario_descriptor(value: object, label: str, base_dir: Path | Non
         path = base_dir / str(descriptor.get("path", ""))
         require(path.is_file(), f"{label} file is missing")
         require(hashlib.sha256(path.read_bytes()).hexdigest() == scenario_sha, f"{label} file digest differs")
-        case_id, tap, assertion_kind, assertion = scenario_contract(path)
+        schema, case_id, tap, assertions = scenario_contract(path)
+        require(schema == "agentlab.harmony_ui_scenario.v1", f"{label} must use scenario v1")
+        require(len(assertions) == 1, f"{label} must have exactly one assertion")
+        assertion_kind, assertion = assertions[0]
         require(case_id == descriptor.get("id"), f"{label} case id differs")
         require(list(tap) == descriptor.get("tap"), f"{label} tap differs")
         require(assertion_kind == descriptor.get("assertionKind"), f"{label} assertion kind differs")
@@ -112,7 +118,7 @@ def validate_scenario_descriptor(value: object, label: str, base_dir: Path | Non
 def validate(value: object, base_dir: Path | None = None) -> dict:
     require(isinstance(value, dict), "calibration must be a JSON object")
     data = value
-    require(data.get("schema") == "agentlab.harmony_ui_known_fix_calibration.v3", "unsupported schema")
+    require(data.get("schema") == "agentlab.harmony_ui_known_fix_calibration.v4", "unsupported schema")
     require(data.get("status") == "controlled-fail-to-pass-observed", "unsupported status")
     require(data.get("automaticPromotion") is False, "automaticPromotion must be false")
 
@@ -193,6 +199,46 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
     require(alternative_transfer.get("verifiedSha256") == alternative_hap, "alternative-valid transferred HAP digest differs")
     require(alternative_transfer.get("verifiedBytes") == alternative.get("hapBytes"), "alternative-valid transferred HAP bytes differ")
 
+    wrong = data.get("wrongRouteVariant")
+    require(isinstance(wrong, dict), "wrongRouteVariant is required")
+    require(wrong.get("id") == "user-agent-four-to-user-agent-three", "wrong-route id differs")
+    require(
+        wrong.get("classification") == "controlled-meaningful-wrong-implementation-not-agent-not-gold",
+        "wrong-route variant must remain a controlled non-Agent non-gold implementation",
+    )
+    require(
+        revision(wrong.get("sourceRevision"), "wrong-route source revision") == known.get("revision"),
+        "wrong-route variant must start from the known-fix source revision",
+    )
+    wrong_path = str(wrong.get("path", ""))
+    require(wrong_path.endswith("/pages/Index.ets"), "wrong-route variant must identify Index.ets")
+    require(known.get("path") != wrong_path, "wrong-route variant must not change the known-fix path")
+    require(
+        wrong.get("changedFiles") == 1 and wrong.get("insertions") == 2 and wrong.get("deletions") == 2,
+        "wrong-route diff statistics differ",
+    )
+    require(wrong.get("change") == "Route the UserAgent_four control to pages/UserAgent_three.", "wrong-route change differs")
+    for field in ("patchSha256", "beforeFileSha256", "afterFileSha256", "mainPagesSha256"):
+        digest(wrong.get(field), f"wrong-route {field}")
+    require(wrong.get("mainPagesSha256") == known.get("afterFileSha256"), "wrong-route main_pages must retain the known fix")
+    if base_dir is not None:
+        wrong_patch_path = base_dir / str(wrong.get("patchPath", ""))
+        require(wrong_patch_path.is_file(), "wrong-route patch file is missing")
+        require(hashlib.sha256(wrong_patch_path.read_bytes()).hexdigest() == wrong.get("patchSha256"), "wrong-route patch digest differs")
+    wrong_hap = digest(wrong.get("hapSha256"), "wrong-route HAP")
+    require(wrong_hap not in (baseline_hap, known_hap, alternative_hap), "wrong-route HAP must have a distinct identity")
+    require(wrong.get("sourceIdentity") == f"artifact-sha256:{wrong_hap}", "wrong-route source identity differs")
+    require(isinstance(wrong.get("hapBytes"), int) and wrong["hapBytes"] > 0, "wrong-route HAP bytes are required")
+    wrong_build = wrong.get("build")
+    require(isinstance(wrong_build, dict) and wrong_build.get("status") == "successful", "wrong-route build must be successful")
+    wrong_transfer = wrong.get("transfer")
+    require(isinstance(wrong_transfer, dict), "wrong-route transfer is required")
+    require(wrong_transfer.get("transport") == "AWMCP RGW HTTP binary stream", "wrong-route transfer transport differs")
+    require(str(wrong_transfer.get("fromPeerId", "")).startswith("lgw_"), "wrong-route source peer is required")
+    require(str(wrong_transfer.get("toPeerId", "")).startswith("lgw_"), "wrong-route target peer is required")
+    require(wrong_transfer.get("verifiedSha256") == wrong_hap, "wrong-route transferred HAP digest differs")
+    require(wrong_transfer.get("verifiedBytes") == wrong.get("hapBytes"), "wrong-route transferred HAP bytes differ")
+
     transfer = data.get("transfer")
     require(isinstance(transfer, dict), "transfer is required")
     require(transfer.get("transport") == "LAN HTTP", "known-fix transfer must use LAN HTTP")
@@ -202,15 +248,27 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
     scenario = data.get("scenario")
     require(isinstance(scenario, dict), "scenario is required")
     scenario_sha = digest(scenario.get("sha256"), "scenario")
-    require(scenario.get("repairAssertion") == "Example Domain is visible after selecting UserAgent_four.", "repair assertion differs")
+    require(
+        scenario.get("repairAssertion")
+        == "The exact pages/UserAgent_four route is active and Example Domain is visible after selecting UserAgent_four.",
+        "repair assertion differs",
+    )
     if base_dir is not None:
         path = base_dir / str(scenario.get("path", ""))
         require(path.is_file(), "scenario file is missing")
         require(hashlib.sha256(path.read_bytes()).hexdigest() == scenario_sha, "scenario file digest differs")
-        case_id, tap, assertion_kind, assertion = scenario_contract(path)
+        schema, case_id, tap, assertions = scenario_contract(path)
         require(case_id == scenario.get("id"), "scenario case id differs")
         require(list(tap) == scenario.get("tap"), "scenario tap differs")
-        require(assertion_kind == "assert-text" and assertion == "Example Domain", "scenario must assert target-page visible semantics")
+        require(schema == "agentlab.harmony_ui_scenario.v2", "target scenario must use scenario v2")
+        require(
+            assertions
+            == [
+                ("assert-page-path", "pages/UserAgent_four"),
+                ("assert-text", "Example Domain"),
+            ],
+            "scenario must assert exact target route and visible semantics",
+        )
 
     preservation_scenario, preservation_sha = validate_scenario_descriptor(
         data.get("preservationScenario"), "preservation scenario", base_dir
@@ -231,6 +289,17 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
     digest(superseded.get("scenarioSha256"), "superseded scenario")
     digest(superseded.get("knownFixResultSha256"), "superseded result")
 
+    visible_only = data.get("supersededVisibleOnlyWrongRouteFinding")
+    require(isinstance(visible_only, dict), "supersededVisibleOnlyWrongRouteFinding is required")
+    require(visible_only.get("falsePass") is True, "visible-only wrong-route finding must retain the false pass")
+    require(visible_only.get("reportedStatus") == "passed", "visible-only wrong-route status differs")
+    require(visible_only.get("observedPagePathAfter") == "pages/UserAgent_three", "visible-only finding must retain the wrong route")
+    require(visible_only.get("observedVisibleTextAfter") == "Example Domain", "visible-only finding must retain the aliased text")
+    require("visible text" in str(visible_only.get("cause", "")), "visible-only finding cause must identify text aliasing")
+    require(visible_only.get("hapSha256") == wrong_hap, "visible-only finding HAP differs")
+    for field in ("scenarioSha256", "resultSha256", "actionsSha256", "checksSha256", "layoutBeforeSha256", "layoutAfterSha256"):
+        digest(visible_only.get(field), f"visible-only wrong-route {field}")
+
     rejected_preservation = data.get("rejectedPreservationAttempt")
     require(isinstance(rejected_preservation, dict), "rejectedPreservationAttempt is required")
     require(rejected_preservation.get("status") == "failed" and rejected_preservation.get("infrastructureAvailable") is True, "rejected preservation attempt must retain an assessed failure")
@@ -242,11 +311,15 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
     validate_result(data.get("baselineAttempt"), "baseline attempt", hap_sha=baseline_hap, scenario_sha=scenario_sha, passed=False)
     validate_result(data.get("knownFixAttempt"), "known-fix attempt", hap_sha=known_hap, scenario_sha=scenario_sha, passed=True)
     validate_result(data.get("alternativeValidAttempt"), "alternative-valid attempt", hap_sha=alternative_hap, scenario_sha=scenario_sha, passed=True)
+    validate_result(data.get("wrongRouteAttempt"), "wrong-route attempt", hap_sha=wrong_hap, scenario_sha=scenario_sha, passed=False)
     require(data["baselineAttempt"].get("observedPagePathAfter") == "pages/Index", "baseline must remain on Index")
     require(data["knownFixAttempt"].get("observedPagePathAfter") == "pages/UserAgent_four", "known fix must reach target page")
     require(data["knownFixAttempt"].get("observedVisibleTextAfter") == "Example Domain", "known fix target semantics differ")
     require(data["alternativeValidAttempt"].get("observedPagePathAfter") == "pages/UserAgent_four", "alternative-valid solution must reach target page")
     require(data["alternativeValidAttempt"].get("observedVisibleTextAfter") == "Example Domain", "alternative-valid target semantics differ")
+    require(data["wrongRouteAttempt"].get("observedPagePathAfter") == "pages/UserAgent_three", "wrong-route attempt must retain the observed wrong page")
+    require(data["wrongRouteAttempt"].get("routeCheckPassed") is False, "wrong-route exact route check must fail")
+    require(data["wrongRouteAttempt"].get("visibleTextAliased") is True, "wrong-route shared visible text must be recorded")
     validate_result(data.get("baselinePreservationAttempt"), "baseline preservation attempt", hap_sha=baseline_hap, scenario_sha=preservation_sha, passed=True, check_field="preservationCheckPassed")
     validate_result(data.get("knownFixPreservationAttempt"), "known-fix preservation attempt", hap_sha=known_hap, scenario_sha=preservation_sha, passed=True, check_field="preservationCheckPassed")
     validate_result(data.get("alternativeValidPreservationAttempt"), "alternative-valid preservation attempt", hap_sha=alternative_hap, scenario_sha=preservation_sha, passed=True, check_field="preservationCheckPassed")
@@ -306,6 +379,18 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
     require(fixed_runner.get("allConsecutive") is True, "fixed-runner replay must be consecutive")
     require(campaign.get("scenarioCount") == 5 and campaign.get("variantCount") == 3, "expanded campaign dimensions differ")
 
+    route_campaign = data.get("routeAwareCalibrationCampaign")
+    require(isinstance(route_campaign, dict), "route-aware calibration campaign is required")
+    route_runner = route_campaign.get("runner")
+    require(isinstance(route_runner, dict), "route-aware campaign runner is required")
+    require(route_runner.get("sha256") == "76eac95a34582d01742110672bc049f62f41bedaf1eaaaaa8b85e8f19022bc55", "route-aware runner identity differs")
+    require(str(route_runner.get("path", "")).endswith("agentlab-harmony-emulator-page-path-76eac95a.sh"), "route-aware runner path differs")
+    require(route_campaign.get("operationId") == "exec-00000000000002b2", "route-aware operation differs")
+    require(route_campaign.get("durationMs") == 166508, "route-aware duration differs")
+    require(route_campaign.get("variantCount") == 4, "route-aware variant count differs")
+    require(route_campaign.get("verdicts") == ["failed", "passed", "passed", "failed"], "route-aware verdict matrix differs")
+    require(route_campaign.get("hdcPortReleased") is True, "route-aware campaign must release the HDC port")
+
     freshness = data.get("freshness")
     require(isinstance(freshness, dict), "freshness declaration is required")
     require(freshness.get("schema") == "agentlab.case_freshness.v1", "unsupported freshness schema")
@@ -324,6 +409,12 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
     require(isinstance(matrix, dict), "qualificationMatrix is required")
     repairs = matrix.get("repairChecks")
     require(isinstance(repairs, dict) and all(repairs.get(key) is True for key in ("failToPassObserved", "sameScenario", "sameEnvironment")), "repair checks must bind the controlled comparison")
+    negative = matrix.get("meaningfulNegativeVariant")
+    require(isinstance(negative, dict), "meaningful negative qualification is required")
+    for field in ("defined", "oldOracleFalsePassObserved", "exactRouteFailureObserved", "sameScenario", "sameEnvironment"):
+        require(negative.get(field) is True, f"meaningful negative {field} must be observed")
+    require(negative.get("expectedPagePath") == "pages/UserAgent_four", "meaningful negative expected route differs")
+    require(negative.get("observedPagePath") == "pages/UserAgent_three", "meaningful negative observed route differs")
     preservation = matrix.get("preservationChecks")
     require(isinstance(preservation, dict) and all(preservation.get(key) is True for key in ("defined", "passToPassObserved", "sameScenario", "sameEnvironment")), "preservation checks must bind the controlled comparison")
     require(preservation.get("caseCount") == len(preservation_ids) == 8, "preservation matrix case count differs")
@@ -352,6 +443,8 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
         route_coverage.get("alternativeIndexSha256") == after_files[alternative_index_paths[0]],
         "alternative Index identity differs",
     )
+    require(route_coverage.get("wrongRouteIndexSha256") == wrong.get("afterFileSha256"), "wrong-route Index identity differs")
+    require(wrong.get("beforeFileSha256") == baseline_index_sha, "wrong-route variant must start from the unchanged Index")
     require(route_coverage.get("indexRouteCount") == 9, "Index route count differs")
     require(route_coverage.get("targetRouteCount") == 1, "target route count differs")
     require(route_coverage.get("preservationRouteCount") == len(preservation_ids) == 8, "preservation route count differs")
@@ -366,6 +459,8 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
         "repairPassed",
         "preservationPassed",
         "allDeviceScenariosPassed",
+        "meaningfulNegativeDefined",
+        "routeSpecificOracleObserved",
     ):
         require(breadth.get(field) is True, f"oracle breadth {field} must be observed")
     require(breadth.get("referenceOverlapPathCount") == 0, "oracle breadth reference overlap count differs")
@@ -376,7 +471,7 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
 
     scope = data.get("qualificationScope")
     require(isinstance(scope, dict), "qualificationScope is required")
-    for field in ("controlledKnownFix", "businessSemanticAssertionObserved", "candidateFailToPass", "preservationPassToPass", "completeExistingRoutePreservation", "alternativeValidQualified", "freshnessDeclared"):
+    for field in ("controlledKnownFix", "businessSemanticAssertionObserved", "candidateFailToPass", "preservationPassToPass", "completeExistingRoutePreservation", "alternativeValidQualified", "meaningfulNegativeVariantQualified", "routeSpecificOracleObserved", "freshnessDeclared"):
         require(scope.get(field) is True, f"{field} must be observed")
     for field in ("businessUiOracleQualified", "independentReview", "referenceRepair", "unseenAgentDiscrimination", "performanceComparison"):
         require(scope.get(field) is False, f"{field} must remain unqualified")

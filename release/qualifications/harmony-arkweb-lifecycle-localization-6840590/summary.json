@@ -44,6 +44,7 @@
     "one controlled one-line page-registration variant changes an identical target-page semantic Oracle from FAIL to PASS on the Linux emulator",
     "all eight pre-existing routes pass on baseline, known-fix and structurally distinct alternative HAPs under the same Linux emulator environment, for 24 preservation runs; four routes bind positive visible semantics",
     "one structurally distinct named-route implementation overlaps no known-fix path, leaves main_pages.json byte-identical to baseline, and passes the target plus all eight preservation scenarios on the same Linux emulator",
+    "a meaningful wrong-route implementation proved the visible-text-only target Oracle could falsely pass pages/UserAgent_three; the v2 exact-page-path plus visible-semantic Oracle yields FAIL/PASS/PASS/FAIL across baseline, known-fix, alternative-valid and wrong-route HAPs",
     "the emulator runner waits for HDC port release after stop; a retained 8-pass/7-infrastructure-failure batch was followed by a consecutive 15-of-15 replay",
     "the public synthetic calibration declares its freshness and contamination boundary and is explicitly ineligible for unseen-Agent discrimination"
   ],
@@ -91,6 +92,10 @@
     "stopReadinessRunnerQualified": true,
     "alternativeValidQualified": true,
     "alternativeValidId": "named-route",
+    "meaningfulNegativeVariantQualified": true,
+    "meaningfulNegativeVariantId": "user-agent-four-to-user-agent-three",
+    "routeSpecificOracleObserved": true,
+    "routeAwareVerdicts": ["failed", "passed", "passed", "failed"],
     "oracleBreadthDeviceScenarioCount": 9,
     "freshnessDeclared": true,
     "unseenAgentDiscrimination": false,

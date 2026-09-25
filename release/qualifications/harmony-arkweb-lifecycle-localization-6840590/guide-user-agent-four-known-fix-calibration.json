@@ -1,5 +1,5 @@
 {
-  "schema": "agentlab.harmony_ui_known_fix_calibration.v3",
+  "schema": "agentlab.harmony_ui_known_fix_calibration.v4",
   "status": "controlled-fail-to-pass-observed",
   "automaticPromotion": false,
   "baselineSource": {
@@ -71,6 +71,44 @@
       "verifiedBytes": 182509
     }
   },
+  "wrongRouteVariant": {
+    "id": "user-agent-four-to-user-agent-three",
+    "classification": "controlled-meaningful-wrong-implementation-not-agent-not-gold",
+    "executedAt": "2026-09-25",
+    "sourceRevision": "83660b76a3b98aa736ed09c1a2e7935ba9ba2922",
+    "changedFiles": 1,
+    "insertions": 2,
+    "deletions": 2,
+    "path": "ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/pages/Index.ets",
+    "patchPath": "guide-user-agent-four-wrong-route-negative.patch",
+    "patchSha256": "ae5a28dbec0a8afd879da255c358b6b1e06b32ac05a396e6424d6846aa5828d4",
+    "change": "Route the UserAgent_four control to pages/UserAgent_three.",
+    "beforeFileSha256": "31b95691f3c953d737a069edf7d7ba6367eb04f271d839f5a58657b001b4dd97",
+    "afterFileSha256": "6aa262209e9ef97c1100513104be4c99134eb04a6482bcae51fc3e9e9f671417",
+    "mainPagesSha256": "7d9b8bf311f719887325d8562738bf1e7f58324c60a8319639b8c1faf2c92cf6",
+    "hapSha256": "27b55c013da2899cc890868fcc24f3258d577834c280d4b6015f4543896d9715",
+    "hapBytes": 182348,
+    "sourceIdentity": "artifact-sha256:27b55c013da2899cc890868fcc24f3258d577834c280d4b6015f4543896d9715",
+    "build": {
+      "host": "youdeMac-mini.local",
+      "platform": "darwin-arm64",
+      "devEcoStudioVersion": "6.0.2",
+      "sdkVersion": "6.0.2.130",
+      "ohpmVersion": "6.0.1",
+      "hvigorVersion": "6.22.3",
+      "command": "hvigorw.js clean --mode module -p product=default assembleHap --analyze=normal --parallel --incremental --daemon",
+      "durationSeconds": 10.121,
+      "status": "successful"
+    },
+    "transfer": {
+      "transport": "AWMCP RGW HTTP binary stream",
+      "fromPeerId": "lgw_6a6445475d38480bbd370d5fc8eefec6",
+      "toPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+      "destination": "/home/huawei/agentlab-source-builds/entry-default-useragent-four-wrong-route-27b55c01.hap",
+      "verifiedSha256": "27b55c013da2899cc890868fcc24f3258d577834c280d4b6015f4543896d9715",
+      "verifiedBytes": 182348
+    }
+  },
   "build": {
     "host": "youdeMac-mini.local",
     "platform": "darwin-arm64",
@@ -93,9 +131,9 @@
   "scenario": {
     "path": "guide-user-agent-four-target.ui",
     "id": "guide-user-agent-four-target",
-    "sha256": "8306a8ff39fc4754df31a04a351bf76e0ca5070ca0bd2e8f598ec77a7f39727c",
+    "sha256": "b783ca3c1da357449623a4b004d44e3d64af8ed1891b4acf5b4301cf3f72a42e",
     "tap": [628, 1606],
-    "repairAssertion": "Example Domain is visible after selecting UserAgent_four."
+    "repairAssertion": "The exact pages/UserAgent_four route is active and Example Domain is visible after selecting UserAgent_four."
   },
   "preservationScenario": {
     "path": "guide-dom-storage-preservation.ui",
@@ -117,6 +155,23 @@
     "cause": "assert-no-text searched serialized layout metadata and matched pagePath=pages/UserAgent_four rather than visible text",
     "retainedEvidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-useragent-four-known-fix-83660b76-f66ac9e6-v1"
   },
+  "supersededVisibleOnlyWrongRouteFinding": {
+    "scenarioSha256": "8306a8ff39fc4754df31a04a351bf76e0ca5070ca0bd2e8f598ec77a7f39727c",
+    "hapSha256": "27b55c013da2899cc890868fcc24f3258d577834c280d4b6015f4543896d9715",
+    "resultSha256": "ab4a9fe538d1fdec2264a84b792dfc764eb0eda9aac2c9e4a60646abe39ef77f",
+    "actionsSha256": "4e23f5c5e05bc288248fd1aee6140e408ba94746be949c8ac70fbd0b7b1fbe38",
+    "checksSha256": "d31feebc1457a8bbbdcd303b4de1b9d66dccd4834017e2800e2b85553b2a4318",
+    "layoutBeforeSha256": "8fcbaa9e118ed4d525299911ac77816f746463bf43b47940d5aa86f2a2b670a4",
+    "layoutAfterSha256": "25810541b2d7e0b1aa500f0a7bc19c661a9c648cafd99989c87e8f104bbf7e2d",
+    "reportedStatus": "passed",
+    "observedPagePathAfter": "pages/UserAgent_three",
+    "observedVisibleTextAfter": "Example Domain",
+    "falsePass": true,
+    "cause": "The visible text assertion aliased across UserAgent_three and UserAgent_four, so visible text alone could not identify the intended route.",
+    "operationId": "exec-00000000000002af",
+    "traceId": "ec3a6d8e-6103-40be-a942-d19b22f26209",
+    "retainedEvidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-useragent-four-wrong-route-visible-only-v2"
+  },
   "rejectedPreservationAttempt": {
     "scenarioSha256": "0a2a4cb85e43edd33e77d3517eefc6c32bff431bd6ccb2974c569b7801c76abb",
     "resultSha256": "9ea90e1f96c2b6ad2a1eb1fb2f7d920de95a9feb7b74050e31fcafcfd855a56d",
@@ -131,11 +186,9 @@
       "routeDecision": "peer_direct",
       "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
       "host": "huawei-ThinkCentre-M920t",
-      "operationId": "exec-00000000000001f2",
+      "operationId": "exec-00000000000002b2",
       "traceIds": [
-        "9c9c86ca-3334-4eae-a026-836945cae933",
-        "2ad859ff-3877-4e41-87da-620b6d61eec9",
-        "334add0c-6b14-4303-85d5-871862aee0ac"
+        "fd33d0aa-d45f-4def-b204-26ea2791d001"
       ]
     },
     "result": {
@@ -147,27 +200,25 @@
       "subjectTaskSucceeded": false,
       "failureClass": "oracle",
       "hapSha256": "af20e2c0aa516b7853a0f99c03f0b6b0aa5fe9b73b89144a3f082f490a67a97a",
-      "scenarioSha256": "8306a8ff39fc4754df31a04a351bf76e0ca5070ca0bd2e8f598ec77a7f39727c"
+      "scenarioSha256": "b783ca3c1da357449623a4b004d44e3d64af8ed1891b4acf5b4301cf3f72a42e"
     },
-    "resultSha256": "d7714a7aaa3a575f01635be2b5e1f9e1c19c0f6725daaf8cb3a24cf1666b7ae4",
+    "resultSha256": "33dd74a7cf4138d6ebac956a9cb4d04ba2306c89967a2791662c64e9a1485c42",
     "actionsSha256": "4e23f5c5e05bc288248fd1aee6140e408ba94746be949c8ac70fbd0b7b1fbe38",
-    "checksSha256": "23440084837339a1776d67d2f03ae2c34a108c2ef9c73507a68474ffaefab8e5",
-    "layoutBeforeSha256": "4254449c4810b5834846d68103b1cbc44e30c9516443f2a08226ff3ae1a25069",
-    "layoutAfterSha256": "4254449c4810b5834846d68103b1cbc44e30c9516443f2a08226ff3ae1a25069",
+    "checksSha256": "ed346684220ce15a3c817932c3fd1d0044df030ce39d35766371610b1eb160a9",
+    "layoutBeforeSha256": "5b0dc37f7993f57e0d774e703d6d7c8cdefeff2c11d12889badbddac1aace185",
+    "layoutAfterSha256": "5b0dc37f7993f57e0d774e703d6d7c8cdefeff2c11d12889badbddac1aace185",
     "observedPagePathAfter": "pages/Index",
     "repairCheckPassed": false,
-    "evidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-useragent-four-baseline-target-8306a8ff-v1"
+    "evidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-useragent-four-route-aware-baseline-v1"
   },
   "knownFixAttempt": {
     "executionAuthority": {
       "routeDecision": "peer_direct",
       "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
       "host": "huawei-ThinkCentre-M920t",
-      "operationId": "exec-00000000000001f3",
+      "operationId": "exec-00000000000002b2",
       "traceIds": [
-        "866ba081-4e9e-42e2-b1e8-9eb3d14f550b",
-        "40a949f3-95d1-4da4-8999-360f309c36c5",
-        "334add0c-6b14-4303-85d5-871862aee0ac"
+        "fd33d0aa-d45f-4def-b204-26ea2791d001"
       ]
     },
     "result": {
@@ -179,27 +230,26 @@
       "subjectTaskSucceeded": true,
       "failureClass": "none",
       "hapSha256": "c4b77a4f1aeebbf74786af79299dd315b2074ee7f0735a6682bdf6abb1128f90",
-      "scenarioSha256": "8306a8ff39fc4754df31a04a351bf76e0ca5070ca0bd2e8f598ec77a7f39727c"
+      "scenarioSha256": "b783ca3c1da357449623a4b004d44e3d64af8ed1891b4acf5b4301cf3f72a42e"
     },
-    "resultSha256": "a73e1daea7b6ed9c802f3c7fb4d3b48a6417a8724e8831f5ae6ae136a102c14c",
+    "resultSha256": "c81e78a4ec9e46eb47e4418beb633c2de010e63841edb112e97f8da798f7c1ca",
     "actionsSha256": "4e23f5c5e05bc288248fd1aee6140e408ba94746be949c8ac70fbd0b7b1fbe38",
-    "checksSha256": "d31feebc1457a8bbbdcd303b4de1b9d66dccd4834017e2800e2b85553b2a4318",
-    "layoutBeforeSha256": "15a14f7e277056cb9521dd8bebb9eb37324c5c5b5eeac040aec32d4a30dc99e3",
-    "layoutAfterSha256": "ae7608dd4685d7778bc1dfbde7290494238921f508962fa3ba4eca76e33bb81f",
+    "checksSha256": "4c3b06c01b362306495a3469bc22d88049fd63ece778d78a6e7b6eedab555d79",
+    "layoutBeforeSha256": "9cdb94233cf23e810a4fe73561f5a3c56c5357c184a7662864e65285ff99a469",
+    "layoutAfterSha256": "780dcea27ed23fa48a6ef282ff95f42f0ea651109083fe23c40208b64f1071ff",
     "observedPagePathAfter": "pages/UserAgent_four",
     "observedVisibleTextAfter": "Example Domain",
     "repairCheckPassed": true,
-    "evidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-useragent-four-known-fix-target-83660b76-8306a8ff-v1"
+    "evidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-useragent-four-route-aware-known-fix-v1"
   },
   "alternativeValidAttempt": {
     "executionAuthority": {
       "routeDecision": "peer_direct",
       "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
       "host": "huawei-ThinkCentre-M920t",
-      "operationId": "exec-0000000000000252",
+      "operationId": "exec-00000000000002b2",
       "traceIds": [
-        "852d74a1-91cc-4e9b-a971-065dd2d91ba6",
-        "b86385e1-d609-4fc5-8587-7f9774425662"
+        "fd33d0aa-d45f-4def-b204-26ea2791d001"
       ]
     },
     "result": {
@@ -211,17 +261,50 @@
       "subjectTaskSucceeded": true,
       "failureClass": "none",
       "hapSha256": "2864e5175fad9c585307eb866b01d3a4bd0db557f8a451ecaf4268803b5835b4",
-      "scenarioSha256": "8306a8ff39fc4754df31a04a351bf76e0ca5070ca0bd2e8f598ec77a7f39727c"
+      "scenarioSha256": "b783ca3c1da357449623a4b004d44e3d64af8ed1891b4acf5b4301cf3f72a42e"
     },
-    "resultSha256": "0da348f952b710ea7994fbe0d36a3a7ef99a4c9844e17e55fb73057498a33816",
+    "resultSha256": "85ed55c5f3f7a8176aa76baa21e352c3e81ec351ca02a96b383e60df6a0b2d05",
     "actionsSha256": "4e23f5c5e05bc288248fd1aee6140e408ba94746be949c8ac70fbd0b7b1fbe38",
-    "checksSha256": "d31feebc1457a8bbbdcd303b4de1b9d66dccd4834017e2800e2b85553b2a4318",
-    "layoutBeforeSha256": "b23c035df42266af805eeb5a380e5880778fac1b1beee419c0656ad12fb9b752",
-    "layoutAfterSha256": "d6994d2560ff80e39552a7291daa1e8c6c2dad001b8b3e84cad16e2d8e575979",
+    "checksSha256": "4c3b06c01b362306495a3469bc22d88049fd63ece778d78a6e7b6eedab555d79",
+    "layoutBeforeSha256": "45dd44308f4f780d9ed3bf6f42e53f5f949804b34175cb19cd8d7e8975bff584",
+    "layoutAfterSha256": "fd6ef8670595e0d2327bac2e0e274015b492173bac7947622aca2b3b1832138e",
     "observedPagePathAfter": "pages/UserAgent_four",
     "observedVisibleTextAfter": "Example Domain",
     "repairCheckPassed": true,
-    "evidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-useragent-four-alternative-named-route-target-2864e517-8306a8ff-v3"
+    "evidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-useragent-four-route-aware-alternative-named-route-v1"
+  },
+  "wrongRouteAttempt": {
+    "executionAuthority": {
+      "routeDecision": "peer_direct",
+      "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+      "host": "huawei-ThinkCentre-M920t",
+      "operationId": "exec-00000000000002b2",
+      "traceIds": [
+        "fd33d0aa-d45f-4def-b204-26ea2791d001"
+      ]
+    },
+    "result": {
+      "schema": "agentlab.harmony_emulator_case_result.v2",
+      "status": "failed",
+      "oracleStatus": "failed",
+      "assessmentStatus": "assessed",
+      "infrastructureAvailable": true,
+      "subjectTaskSucceeded": false,
+      "failureClass": "oracle",
+      "hapSha256": "27b55c013da2899cc890868fcc24f3258d577834c280d4b6015f4543896d9715",
+      "scenarioSha256": "b783ca3c1da357449623a4b004d44e3d64af8ed1891b4acf5b4301cf3f72a42e"
+    },
+    "resultSha256": "d8f791f0a83cf35a1e6938f2061162ea1c663db1400b77da58157ac257017d7d",
+    "actionsSha256": "4e23f5c5e05bc288248fd1aee6140e408ba94746be949c8ac70fbd0b7b1fbe38",
+    "checksSha256": "ed346684220ce15a3c817932c3fd1d0044df030ce39d35766371610b1eb160a9",
+    "layoutBeforeSha256": "434afaf342463811a796b75b79d63fd275fa57fea4e7d839e3056c1b6e927ad8",
+    "layoutAfterSha256": "59d7d88dab79b5673eb96c239c40cb211592574b4c85d4b0b8b204cce8d7de99",
+    "observedPagePathAfter": "pages/UserAgent_three",
+    "observedVisibleTextAfter": "Example Domain",
+    "routeCheckPassed": false,
+    "visibleTextAliased": true,
+    "repairCheckPassed": false,
+    "evidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-useragent-four-route-aware-wrong-route-v1"
   },
   "baselinePreservationAttempt": {
     "executionAuthority": {
@@ -583,6 +666,23 @@
     "scenarioCount": 5,
     "variantCount": 3
   },
+  "routeAwareCalibrationCampaign": {
+    "executedAt": "2026-09-25",
+    "runner": {
+      "path": "/home/huawei/agentlab-source-builds/agentlab-harmony-emulator-page-path-76eac95a.sh",
+      "sha256": "76eac95a34582d01742110672bc049f62f41bedaf1eaaaaa8b85e8f19022bc55"
+    },
+    "operationId": "exec-00000000000002b2",
+    "traceIds": [
+      "fd33d0aa-d45f-4def-b204-26ea2791d001"
+    ],
+    "durationMs": 166508,
+    "variantOrder": ["baseline", "known-fix", "alternative-named-route", "wrong-route"],
+    "verdicts": ["failed", "passed", "passed", "failed"],
+    "variantCount": 4,
+    "allInfrastructureAvailable": true,
+    "hdcPortReleased": true
+  },
   "freshness": {
     "schema": "agentlab.case_freshness.v1",
     "constructionMode": "synthetic-controlled-calibration",
@@ -604,6 +704,15 @@
       "failToPassObserved": true,
       "sameScenario": true,
       "sameEnvironment": true
+    },
+    "meaningfulNegativeVariant": {
+      "defined": true,
+      "oldOracleFalsePassObserved": true,
+      "exactRouteFailureObserved": true,
+      "sameScenario": true,
+      "sameEnvironment": true,
+      "expectedPagePath": "pages/UserAgent_four",
+      "observedPagePath": "pages/UserAgent_three"
     },
     "preservationChecks": {
       "defined": true,
@@ -628,6 +737,7 @@
       "baselineIndexSha256": "31b95691f3c953d737a069edf7d7ba6367eb04f271d839f5a58657b001b4dd97",
       "knownFixIndexSha256": "31b95691f3c953d737a069edf7d7ba6367eb04f271d839f5a58657b001b4dd97",
       "alternativeIndexSha256": "a3985743f6e8aac094c019302fb5ee33df7c3f2bb3b9e8276c7ab52ed40f23a9",
+      "wrongRouteIndexSha256": "6aa262209e9ef97c1100513104be4c99134eb04a6482bcae51fc3e9e9f671417",
       "indexRouteCount": 9,
       "targetRouteCount": 1,
       "preservationRouteCount": 8,
@@ -643,7 +753,9 @@
       "preservationPassed": true,
       "preservationCaseCount": 8,
       "deviceScenarioCount": 9,
-      "allDeviceScenariosPassed": true
+      "allDeviceScenariosPassed": true,
+      "meaningfulNegativeDefined": true,
+      "routeSpecificOracleObserved": true
     },
     "review": {
       "independent": false,
@@ -660,12 +772,14 @@
     "preservationPassToPass": true,
     "completeExistingRoutePreservation": true,
     "alternativeValidQualified": true,
+    "meaningfulNegativeVariantQualified": true,
+    "routeSpecificOracleObserved": true,
     "freshnessDeclared": true,
     "unseenAgentDiscrimination": false,
     "performanceComparison": false
   },
   "remainingGates": [
-    "Obtain independent fairness review before accepting a gold/reference repair; one structurally distinct alternative-valid implementation now passes the repair check and all eight pre-existing-route preservation scenarios.",
+    "Obtain independent fairness review before accepting a gold/reference repair; one structurally distinct alternative-valid implementation passes while a meaningful wrong-route implementation fails the exact-route Oracle.",
     "Run a new private or held-out case cut before interpreting cross-Agent discrimination; this public calibration is no longer unseen.",
     "Only after functional qualification, run repeated identical performance workloads."
   ]

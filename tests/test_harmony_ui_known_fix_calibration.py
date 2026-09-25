@@ -23,12 +23,16 @@ def fixture(root: pathlib.Path) -> dict:
     alternative_patch = root / "alternative.patch"
     alternative_patch.write_text("structurally distinct named-route patch\n", encoding="utf-8")
     alternative_patch_sha = hashlib.sha256(alternative_patch.read_bytes()).hexdigest()
+    wrong_patch = root / "wrong-route.patch"
+    wrong_patch.write_text("meaningful wrong route patch\n", encoding="utf-8")
+    wrong_patch_sha = hashlib.sha256(wrong_patch.read_bytes()).hexdigest()
     scenario = root / "target.ui"
     scenario.write_text(
-        "schema\tagentlab.harmony_ui_scenario.v1\n"
+        "schema\tagentlab.harmony_ui_scenario.v2\n"
         "case\ttarget\n"
         "wait-text\tvisible\t30\tUserAgent_four\n"
         "tap\t628\t1606\n"
+        "assert-page-path\ttarget-route\tpages/UserAgent_four\n"
         "assert-text\ttarget-visible\tExample Domain\n",
         encoding="utf-8",
     )
@@ -63,7 +67,7 @@ def fixture(root: pathlib.Path) -> dict:
         encoding="utf-8",
     )
     cache_two_sha = hashlib.sha256(cache_two.read_bytes()).hexdigest()
-    baseline_hap, fixed_hap, alternative_hap = "a" * 64, "b" * 64, "3" * 64
+    baseline_hap, fixed_hap, alternative_hap, wrong_hap = "a" * 64, "b" * 64, "3" * 64, "2" * 64
     authority = {"routeDecision": "peer_direct", "targetPeerId": "lgw_" + "1" * 32, "operationId": "exec-1", "traceIds": ["trace"]}
     def attempt(hap: str, scenario_digest: str, passed: bool, check_field: str = "repairCheckPassed") -> dict:
         status = "passed" if passed else "failed"
@@ -87,6 +91,10 @@ def fixture(root: pathlib.Path) -> dict:
     alternative = attempt(alternative_hap, scenario_sha, True)
     alternative["observedPagePathAfter"] = "pages/UserAgent_four"
     alternative["observedVisibleTextAfter"] = "Example Domain"
+    wrong_route = attempt(wrong_hap, scenario_sha, False)
+    wrong_route["observedPagePathAfter"] = "pages/UserAgent_three"
+    wrong_route["routeCheckPassed"] = False
+    wrong_route["visibleTextAliased"] = True
     baseline_preservation = attempt(baseline_hap, preservation_sha, True, "preservationCheckPassed")
     baseline_preservation["observedPagePathAfter"] = "pages/DomStorage"
     fixed_preservation = attempt(fixed_hap, preservation_sha, True, "preservationCheckPassed")
@@ -147,7 +155,7 @@ def fixture(root: pathlib.Path) -> dict:
             )
         )
     return {
-        "schema": "agentlab.harmony_ui_known_fix_calibration.v3",
+        "schema": "agentlab.harmony_ui_known_fix_calibration.v4",
         "status": "controlled-fail-to-pass-observed",
         "automaticPromotion": False,
         "baselineSource": {"revision": "1" * 40, "hapSha256": baseline_hap, "sourceIdentity": f"artifact-sha256:{baseline_hap}"},
@@ -178,10 +186,28 @@ def fixture(root: pathlib.Path) -> dict:
                 "toPeerId": "lgw_" + "1" * 32, "verifiedSha256": alternative_hap, "verifiedBytes": 124,
             },
         },
+        "wrongRouteVariant": {
+            "id": "user-agent-four-to-user-agent-three",
+            "classification": "controlled-meaningful-wrong-implementation-not-agent-not-gold",
+            "sourceRevision": "2" * 40,
+            "changedFiles": 1, "insertions": 2, "deletions": 2,
+            "path": "project/entry/src/main/ets/pages/Index.ets",
+            "patchPath": "wrong-route.patch", "patchSha256": wrong_patch_sha,
+            "change": "Route the UserAgent_four control to pages/UserAgent_three.",
+            "beforeFileSha256": "a" * 64, "afterFileSha256": "2" * 64,
+            "mainPagesSha256": "5" * 64,
+            "hapSha256": wrong_hap, "hapBytes": 125,
+            "sourceIdentity": f"artifact-sha256:{wrong_hap}",
+            "build": {"status": "successful"},
+            "transfer": {
+                "transport": "AWMCP RGW HTTP binary stream", "fromPeerId": "lgw_" + "2" * 32,
+                "toPeerId": "lgw_" + "1" * 32, "verifiedSha256": wrong_hap, "verifiedBytes": 125,
+            },
+        },
         "transfer": {"transport": "LAN HTTP", "verifiedSha256": fixed_hap, "verifiedBytes": 123},
         "scenario": {
             "path": "target.ui", "id": "target", "sha256": scenario_sha, "tap": [628, 1606],
-            "repairAssertion": "Example Domain is visible after selecting UserAgent_four.",
+            "repairAssertion": "The exact pages/UserAgent_four route is active and Example Domain is visible after selecting UserAgent_four.",
         },
         "preservationScenario": {
             "path": "preservation.ui", "id": "preservation", "sha256": preservation_sha,
@@ -210,6 +236,15 @@ def fixture(root: pathlib.Path) -> dict:
             "scenarioCount": 5,
             "variantCount": 3,
         },
+        "routeAwareCalibrationCampaign": {
+            "runner": {
+                "path": "/home/huawei/agentlab-source-builds/agentlab-harmony-emulator-page-path-76eac95a.sh",
+                "sha256": "76eac95a34582d01742110672bc049f62f41bedaf1eaaaaa8b85e8f19022bc55",
+            },
+            "operationId": "exec-00000000000002b2", "durationMs": 166508,
+            "variantCount": 4, "verdicts": ["failed", "passed", "passed", "failed"],
+            "hdcPortReleased": True,
+        },
         "freshness": {
             "schema": "agentlab.case_freshness.v1", "constructionMode": "synthetic-controlled-calibration",
             "sourceRepositoryVisibility": "public", "sourceRevisionCommittedAt": "2026-09-12T15:18:36+08:00",
@@ -223,6 +258,13 @@ def fixture(root: pathlib.Path) -> dict:
             "falseFailure": True, "observedPagePath": "pages/UserAgent_four", "observedVisibleText": "Example Domain",
             "cause": "matched pagePath= metadata", "scenarioSha256": "6" * 64, "knownFixResultSha256": "7" * 64,
         },
+        "supersededVisibleOnlyWrongRouteFinding": {
+            "falsePass": True, "reportedStatus": "passed", "observedPagePathAfter": "pages/UserAgent_three",
+            "observedVisibleTextAfter": "Example Domain", "cause": "visible text is shared by both pages",
+            "hapSha256": wrong_hap, "scenarioSha256": "1" * 64, "resultSha256": "2" * 64,
+            "actionsSha256": "3" * 64, "checksSha256": "4" * 64,
+            "layoutBeforeSha256": "5" * 64, "layoutAfterSha256": "6" * 64,
+        },
         "rejectedPreservationAttempt": {
             "status": "failed", "infrastructureAvailable": True, "observedPagePath": "pages/DomStorage",
             "rejectionReason": "network assertion was environment-sensitive", "scenarioSha256": "8" * 64,
@@ -231,11 +273,17 @@ def fixture(root: pathlib.Path) -> dict:
         "baselineAttempt": baseline,
         "knownFixAttempt": fixed,
         "alternativeValidAttempt": alternative,
+        "wrongRouteAttempt": wrong_route,
         "baselinePreservationAttempt": baseline_preservation,
         "knownFixPreservationAttempt": fixed_preservation,
         "alternativeValidPreservationAttempt": alternative_preservation,
         "qualificationMatrix": {
             "repairChecks": {"failToPassObserved": True, "sameScenario": True, "sameEnvironment": True},
+            "meaningfulNegativeVariant": {
+                "defined": True, "oldOracleFalsePassObserved": True, "exactRouteFailureObserved": True,
+                "sameScenario": True, "sameEnvironment": True,
+                "expectedPagePath": "pages/UserAgent_four", "observedPagePath": "pages/UserAgent_three",
+            },
             "preservationChecks": {
                 "defined": True, "passToPassObserved": True, "sameScenario": True, "sameEnvironment": True,
                 "caseCount": 8, "positiveVisibleSemanticCaseCount": 4,
@@ -254,12 +302,14 @@ def fixture(root: pathlib.Path) -> dict:
                 "baselineIndexSha256": "a" * 64,
                 "knownFixIndexSha256": "a" * 64,
                 "alternativeIndexSha256": "6" * 64,
+                "wrongRouteIndexSha256": "2" * 64,
             },
             "oracleBreadth": {
                 "alternativeValidDefined": True, "structurallyDistinctFromKnownFix": True,
                 "referenceOverlapPathCount": 0, "baselineMainPagesUnchanged": True,
                 "repairPassed": True, "preservationPassed": True, "preservationCaseCount": 8,
                 "deviceScenarioCount": 9, "allDeviceScenariosPassed": True,
+                "meaningfulNegativeDefined": True, "routeSpecificOracleObserved": True,
             },
             "review": {"independent": False, "knownFixAcceptedAsReference": False},
         },
@@ -269,6 +319,7 @@ def fixture(root: pathlib.Path) -> dict:
             "preservationPassToPass": True, "completeExistingRoutePreservation": True,
             "freshnessDeclared": True,
             "alternativeValidQualified": True,
+            "meaningfulNegativeVariantQualified": True, "routeSpecificOracleObserved": True,
             "unseenAgentDiscrimination": False, "performanceComparison": False,
         },
     }
@@ -335,6 +386,28 @@ class HarmonyUiKnownFixCalibrationTests(unittest.TestCase):
             value = fixture(root)
             value["alternativeValidAttempt"]["result"]["status"] = "failed"
             with self.assertRaisesRegex(MODULE.CalibrationError, "status must be passed"):
+                MODULE.validate(value, root)
+
+    def test_meaningful_wrong_route_cannot_pass(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            value = fixture(root)
+            value["wrongRouteAttempt"]["result"].update(
+                status="passed",
+                oracleStatus="passed",
+                subjectTaskSucceeded=True,
+                failureClass="none",
+            )
+            value["wrongRouteAttempt"]["repairCheckPassed"] = True
+            with self.assertRaisesRegex(MODULE.CalibrationError, "status must be failed"):
+                MODULE.validate(value, root)
+
+    def test_meaningful_wrong_route_identity_is_required(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            value = fixture(root)
+            value["wrongRouteVariant"]["change"] = "generic broken implementation"
+            with self.assertRaisesRegex(MODULE.CalibrationError, "wrong-route change differs"):
                 MODULE.validate(value, root)
 
     def test_alternative_valid_cannot_overlap_known_fix_path(self) -> None:

@@ -209,6 +209,16 @@ qualifies complete existing-route breadth for that controlled calibration; it
 does not supply independent fairness review, broader case-population coverage
 or a gold repair.
 
+A controlled meaningful negative also demonstrates why the target Oracle must
+bind route identity rather than generic content alone. It changes the
+`UserAgent_four` button to navigate to `pages/UserAgent_three`; because both
+pages render `Example Domain`, the old visible-text-only scenario falsely
+passed. The v2 scenario adds an exact `assert-page-path pages/UserAgent_four`
+before the visible assertion. A same-environment four-variant replay therefore
+produces FAIL/PASS/PASS/FAIL for baseline, known-fix, alternative-valid and
+wrong-route HAPs. This is controlled Oracle calibration, not a participant or
+unseen-Agent run.
+
 The first call-localization qualification is retained at
 `release/qualifications/harmony-arkweb-lifecycle-localization-6840590/`. On the
 same frozen source set, it reduces the broad `@kit.ArkWeb` module cluster from

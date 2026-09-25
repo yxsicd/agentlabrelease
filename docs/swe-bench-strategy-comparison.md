@@ -167,8 +167,15 @@ smaller than SWE-bench's:
    to the failing baseline, and passes the same target plus all eight
    preservation scenarios on the same Linux emulator. This is direct evidence
    that the UI Oracle is not merely recognizing the known-fix implementation.
-   This closes pre-existing-route coverage for this sample, but independent
-   review and reference/gold acceptance remain absent.
+   A meaningful wrong implementation then kept the registered page set but
+   routed the `UserAgent_four` control to `pages/UserAgent_three`. Both pages
+   render `Example Domain`, so the earlier visible-text-only Oracle falsely
+   passed it. Scenario v2 now asserts the exact active `pagePath` before visible
+   semantics. On one four-HAP replay the route-aware verdicts were baseline
+   FAIL, known-fix PASS, alternative-valid PASS and wrong-route FAIL, all with
+   infrastructure available. This adds a real negative discrimination point
+   and closes pre-existing-route coverage for this sample, but independent
+   review, reference/gold acceptance and unseen-Agent evidence remain absent.
 5. Freshness and contamination are now explicit case fields. The controlled
    calibration truthfully records that it was synthesized from public source,
    published in the release PR and is therefore ineligible for future claims
@@ -232,8 +239,12 @@ smaller than SWE-bench's:
     important calibration failure: the earlier `assert-no-text UserAgent_four`
     searched serialized layout metadata and falsely failed a successful route
     because `pagePath=pages/UserAgent_four` contained the same substring. The
-    replacement Oracle asserts visible `Example Domain`; it fails on the exact
-    baseline HAP and passes on a controlled one-line page-registration variant.
+    replacement Oracle first asserted visible `Example Domain`; it fails on the
+    exact baseline HAP and passes on a controlled one-line page-registration
+    variant. A later wrong-route calibration showed that this text is shared by
+    `UserAgent_three` and `UserAgent_four`, so visible text alone produced a
+    false pass. The target scenario now requires both exact
+    `pages/UserAgent_four` route identity and the visible semantic text.
     A separate DomStorage scenario passes before and after the variant, closing
     the first real `PASS_TO_PASS` device check. Its first form—requiring remote
     Web content within two seconds—was rejected after a route-success/content-
@@ -246,8 +257,10 @@ smaller than SWE-bench's:
     structurally distinct named-route HAP pass all eight preservation routes,
     yielding 24 preservation runs; the latter also passes the target without
     changing the known-fix file. The nine-scenario breadth replay qualifies a
-    stronger implementation-independent repair/preservation Oracle and Oracle-design
-    lesson, not a reviewed reference repair, exhaustive regression suite,
+    stronger implementation-independent repair/preservation Oracle. A fourth
+    wrong-route HAP is rejected while the baseline fails and both valid
+    implementations pass, yielding direct route-specificity evidence and an
+    Oracle-design lesson—not a reviewed reference repair, exhaustive regression suite,
     business UI case or unseen Agent benchmark. The API 23/24 code-workshop
     build remains unqualified because matching DevEco 6.1 tooling is absent, and
     the exact `hwlinux` host still has only the emulator/runtime substrate rather

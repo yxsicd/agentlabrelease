@@ -235,11 +235,17 @@ run_case() {
   [ -f "$hap" ] || die "HAP not found: $hap"
   [ -f "$instance_path/$instance.ini" ] || die "emulator instance is not prepared: $instance"
   scenario_id=
+  scenario_schema=
   scenario_sha=
   if [ -n "$ui_scenario" ]; then
     [ -f "$ui_scenario" ] || die "UI scenario not found: $ui_scenario"
-    grep -q $'^schema\tagentlab.harmony_ui_scenario.v1$' "$ui_scenario" ||
-      die "UI scenario schema is missing or unsupported"
+    scenario_schema=$(awk -F '\t' '$1 == "schema" && NF == 2 { print $2 }' "$ui_scenario")
+    [ "$(grep -c $'^schema\t' "$ui_scenario")" -eq 1 ] ||
+      die "UI scenario must declare exactly one schema"
+    case "$scenario_schema" in
+      agentlab.harmony_ui_scenario.v1|agentlab.harmony_ui_scenario.v2) ;;
+      *) die "UI scenario schema is missing or unsupported" ;;
+    esac
     [ "$(grep -c $'^case\t' "$ui_scenario")" -eq 1 ] ||
       die "UI scenario must declare exactly one case"
     scenario_id=$(awk -F '\t' '$1 == "case" { print $2 }' "$ui_scenario")
@@ -399,7 +405,7 @@ run_case() {
       case "$operation" in
         ''|'#'*) continue ;;
         schema)
-          [ "$a" = "agentlab.harmony_ui_scenario.v1" ] && [ -z "$b$c$d$e" ] ||
+          [ "$a" = "$scenario_schema" ] && [ -z "$b$c$d$e" ] ||
             infrastructure_failure "invalid UI scenario schema line"
           ;;
         case)
@@ -473,6 +479,26 @@ run_case() {
           record_ui_check "$a" "$check_passed" "$operation" "$b" ||
             infrastructure_failure "UI check evidence write failed"
           [ "$check_passed" = true ] || oracle_failure "UI oracle check failed: $a"
+          ;;
+        assert-page-path)
+          [ "$scenario_schema" = "agentlab.harmony_ui_scenario.v2" ] ||
+            infrastructure_failure "assert-page-path requires UI scenario v2"
+          ui_validate_token "UI check label" "$a"
+          case "$b" in
+            pages/*) ;;
+            *) infrastructure_failure "assert-page-path requires LABEL pages/PATH" ;;
+          esac
+          [ -z "$c$d$e" ] ||
+            infrastructure_failure "assert-page-path requires LABEL pages/PATH"
+          dump_ui_layout
+          check_passed=false
+          if LC_ALL=C grep -F -- "\"pagePath\":\"$b\"" "$last_layout" >/dev/null ||
+              LC_ALL=C grep -F -- "pagePath\\\":\\\"$b\\\"" "$last_layout" >/dev/null; then
+            check_passed=true
+          fi
+          record_ui_check "$a" "$check_passed" assert-page-path "$b" ||
+            infrastructure_failure "UI check evidence write failed"
+          [ "$check_passed" = true ] || oracle_failure "UI page-path check failed: $a"
           ;;
         *) infrastructure_failure "unsupported UI scenario operation: $operation" ;;
       esac
