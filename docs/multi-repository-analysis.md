@@ -149,6 +149,17 @@ four evidence artifacts retained identical SHA-256 digests. This is a
 machine-local preliminary result without variance or cold-network claims; the
 structured record is `release/qualifications/harmony-real-multi-repo-34661ff/parallel-analysis-benchmark.json`.
 
+The exact source-set bundle cache was measured separately on the same 12,711
+files, host class and warm Git object database. One fresh-process bundle miss
+with eight workers took 16.76 seconds and populated the digest-checked bundle;
+the next fresh-process exact hit took 2.31 seconds, a 7.26x speedup, while all
+four authority artifact digests stayed byte-identical. The cache contained five
+files and 447,965,281 logical bytes. This path used same-filesystem hard links
+after streaming digest validation; copy fallback, GitHub Actions restore,
+changed-revision file-cache behavior, variance and cross-host performance are
+not qualified by that single trial. The structured record is
+`release/qualifications/harmony-real-multi-repo-34661ff/aggregate-cache-benchmark.json`.
+
 ## Evidence contract
 
 The output directory contains:

@@ -396,9 +396,12 @@ smaller than SWE-bench's:
    421,973,776 bytes of fact rows and 25,987,457 bytes of difficulty candidates.
    This is one machine-local trial per profile, not a population result. Graph
    and candidate aggregation remain serial. Cold, warm, corrupt-entry and
-   one-file-change tests prove cache reuse and byte-identical authority output;
-   its real-source performance benefit is not yet measured, and there is still
-   no early candidate prefilter.
+   one-file-change tests prove cache reuse and byte-identical authority output.
+   On the same source cut, an exact aggregate bundle hit took 2.31 seconds
+   after a 16.76-second bundle miss (7.26x), with byte-identical evidence. This
+   is again one same-filesystem machine-local trial; GitHub cache transport,
+   changed-revision file-cache benefit and population variance remain
+   unqualified, and there is still no early candidate prefilter.
 
 Until these gaps close, AgentLab can claim a richer executable architecture and
 one real closed-path proof, not a large, statistically qualified benchmark.
