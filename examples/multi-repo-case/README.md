@@ -203,24 +203,27 @@ auditable phases, with analysis as the required predecessor:
 6. One `Multi-repository model construction` run per selected member reproduces
    its arbitrary exact repositories, exposes only the reviewed source surface,
    and produces a review-required case proposal with its exact SHA-256.
-7. After inspecting each artifact, an operator dispatches
-   `Multi-repository case review and freeze` with the source run ID, exact
-   proposal digest, every risk ID and a rationale. The workflow accepts only a
-   successful construction run from `main`, reruns the retained calibration,
-   and freezes the reviewed case. It has no Gateway credential.
-8. `Multi-repository assessed-Agent campaign` accepts only a successful freeze
+7. `Multi-repository calibration bundle proposal` stages the exact driver,
+   Oracle and reference tree against the reviewed construction contract. A
+   separate `Multi-repository calibration bundle review` binds every byte, all
+   risks and the reviewer rationale.
+8. After inspecting each artifact, an operator dispatches
+   `Multi-repository case review and freeze` with the construction and reviewed
+   calibration-bundle run IDs, their exact digests, every case-plan risk ID and
+   a rationale. The workflow accepts only successful runs from `main`, executes
+   the reviewed bundle against the exact baseline, retains its run receipt and
+   freezes the reviewed case. It has no Gateway credential.
+9. `Multi-repository assessed-Agent campaign` accepts only a successful freeze
    run from `main`, reconstructs the reviewed sources, and executes two distinct
    model profiles for one or three fresh trials each. It retains every staged
    attempt and emits the v2 collection plus discrimination report.
 
-The exact-analysis, cohort and bounded model-construction phases are generic.
-The reviewed construction contract carries the exact source surface and declared
-Oracle contract, but deliberately does not claim that the Oracle executable,
-reference implementation or negative variants are qualified. The checked
-case-review/freeze workflow still expects this fixture's executable calibration
-bundle. A real arbitrary-source candidate therefore stops after its model case
-proposal until a later independently reviewed executable calibration bundle
-closes that boundary.
+The exact-analysis, cohort, bounded model-construction and executable-calibration
+phases are generic. The construction contract declares the Oracle behavior; the
+separate calibration bundle freezes and reviews the executable, reference and
+wrong-variant generator without exposing them to the participant. The included
+retry-policy bundle is a deterministic protocol proof, not evidence that an
+arbitrary real-source candidate has qualified.
 
 Freezing and scoring never auto-promote a case. A score is campaign evidence,
 not a publication decision. The campaign uses the Oracle retained by the

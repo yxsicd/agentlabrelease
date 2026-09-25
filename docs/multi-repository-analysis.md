@@ -176,13 +176,17 @@ credential-bearing model-construction workflow revalidates that contract,
 rematerializes the arbitrary exact source set, and exposes only the reviewed
 surface to the construction participant.
 
-This closes arbitrary-source analysis, cohort selection and bounded model-intent
-construction. It does not yet close arbitrary-source calibration: the reviewed
-contract binds an Oracle executable digest and expected checks, but does not
-carry or qualify the executable, a reference implementation or negative
-variants. The existing case-review/freeze workflow remains fixture-calibration
-specific, so a generic construction proposal intentionally stops before freeze
-until those executable inputs have their own exact reviewed bundle.
+Arbitrary-source calibration now has its own boundary. `Multi-repository
+calibration bundle proposal` binds the reviewed construction contract to exact
+driver and Oracle digests, a complete reference-tree manifest, declared wrong
+variant IDs and the expected staged verdicts. A separate exact-digest review
+produces `agentlab.multi_repo_calibration_bundle.v1`; case review accepts only
+that trusted-main artifact, revalidates every byte, executes it against the
+materialized baseline and retains `agentlab.multi_repo_calibration_bundle_run.v1`.
+The frozen case records the bundle, driver, reference-tree, construction-contract
+and run digests. Oracle and reference bytes remain evaluator-only. This closes
+the generic protocol, not empirical qualification: a real arbitrary-source
+bundle and representative case population still need execution and adjudication.
 
 The first call-localization qualification is retained at
 `release/qualifications/harmony-arkweb-lifecycle-localization-6840590/`. On the

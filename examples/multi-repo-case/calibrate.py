@@ -31,6 +31,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--baseline", type=Path, required=True)
     parser.add_argument("--reference", type=Path, required=True)
+    parser.add_argument("--oracle", type=Path, default=Path(__file__).with_name("oracle.mjs"))
     parser.add_argument("--source-set-sha256", required=True)
     parser.add_argument("--candidate-id", required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -56,7 +57,9 @@ def main():
     shutil.copyfile(args.baseline / "app/src/checkout.ts", stale / "app/src/checkout.ts")
     variants["stale-consumer"] = stale
 
-    oracle = Path(__file__).with_name("oracle.mjs")
+    oracle = args.oracle
+    if not oracle.is_file() or oracle.is_symlink():
+        raise RuntimeError("oracle must be a regular non-symlink file")
     results = {}
     for name, root in variants.items():
         stages = {}

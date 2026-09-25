@@ -1,0 +1,89 @@
+name: Multi-repository calibration bundle review
+on:
+  workflow_dispatch:
+    inputs:
+      proposal_run_id:
+        description: Successful trusted-main calibration-bundle proposal run
+        required: true
+        type: string
+      expected_proposal_sha256:
+        description: Exact proposal digest inspected by the reviewer
+        required: true
+        type: string
+      acknowledged_risk_ids:
+        description: Comma-separated calibration bundle risk IDs, exactly as reviewed
+        required: true
+        type: string
+      rationale:
+        description: Why these exact executable and reference bytes may calibrate the case
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  review:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/multi-repo-calibration-bundle-review
+      SOURCE_RUN_ID: ${{ inputs.proposal_run_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Verify and recover the exact bundle proposal
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/source" "$AGENTLAB_ROOT/output"
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$AGENTLAB_ROOT/source-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/source-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-calibration-bundle-proposal.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-calibration-bundle-proposal --dir "$AGENTLAB_ROOT/source"
+          cp -R "$AGENTLAB_ROOT/source/bundle" "$AGENTLAB_ROOT/output/bundle"
+          cp "$AGENTLAB_ROOT/source/calibration-bundle-proposal.json" "$AGENTLAB_ROOT/output/calibration-bundle-proposal.json"
+      - name: Bind explicit review and validate immutable bytes
+        env:
+          EXPECTED_PROPOSAL_SHA256: ${{ inputs.expected_proposal_sha256 }}
+          ACKNOWLEDGED_RISK_IDS: ${{ inputs.acknowledged_risk_ids }}
+          REVIEW_RATIONALE: ${{ inputs.rationale }}
+          REVIEWER: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          python3 scripts/multi-repo-calibration-bundle.py decide \
+            --proposal "$AGENTLAB_ROOT/output/calibration-bundle-proposal.json" \
+            --expected-sha256 "$EXPECTED_PROPOSAL_SHA256" \
+            --reviewer "$REVIEWER" \
+            --acknowledged-risk-ids "$ACKNOWLEDGED_RISK_IDS" \
+            --rationale "$REVIEW_RATIONALE" \
+            --output "$AGENTLAB_ROOT/output/calibration-bundle-review.json"
+          python3 scripts/multi-repo-calibration-bundle.py compile \
+            --proposal "$AGENTLAB_ROOT/output/calibration-bundle-proposal.json" \
+            --review "$AGENTLAB_ROOT/output/calibration-bundle-review.json" \
+            --output "$AGENTLAB_ROOT/output/calibration-bundle.json"
+          python3 scripts/multi-repo-calibration-bundle.py validate \
+            --bundle-root "$AGENTLAB_ROOT/output/bundle" \
+            --descriptor "$AGENTLAB_ROOT/output/bundle/descriptor.json" \
+            --construction-contract "$AGENTLAB_ROOT/output/bundle/construction-contract.json" \
+            --proposal "$AGENTLAB_ROOT/output/calibration-bundle-proposal.json" \
+            --review "$AGENTLAB_ROOT/output/calibration-bundle-review.json" \
+            --contract "$AGENTLAB_ROOT/output/calibration-bundle.json"
+          sha256sum "$AGENTLAB_ROOT/output/calibration-bundle.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve reviewed bundle and complete byte lineage
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-calibration-bundle-review
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/output/

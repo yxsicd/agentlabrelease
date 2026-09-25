@@ -6,6 +6,14 @@ on:
         description: Successful trusted-main model-construction run to review
         required: true
         type: string
+      calibration_bundle_review_run_id:
+        description: Successful trusted-main reviewed calibration-bundle run
+        required: true
+        type: string
+      expected_calibration_bundle_sha256:
+        description: Exact reviewed calibration-bundle digest
+        required: true
+        type: string
       expected_proposal_sha256:
         description: Exact proposal digest inspected by the reviewer
         required: true
@@ -61,6 +69,37 @@ jobs:
           PY
           gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
             --name multi-repo-model-construction --dir "$AGENTLAB_ROOT/source"
+      - name: Recover and verify the reviewed executable calibration bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CALIBRATION_BUNDLE_RUN_ID: ${{ inputs.calibration_bundle_review_run_id }}
+          EXPECTED_CALIBRATION_BUNDLE_SHA256: ${{ inputs.expected_calibration_bundle_sha256 }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/calibration-authority"
+          [[ "$CALIBRATION_BUNDLE_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_CALIBRATION_BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CALIBRATION_BUNDLE_RUN_ID" > "$AGENTLAB_ROOT/calibration-bundle-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/calibration-bundle-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-calibration-bundle-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$CALIBRATION_BUNDLE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-calibration-bundle-review --dir "$AGENTLAB_ROOT/calibration-authority"
+          [[ "$(sha256sum "$AGENTLAB_ROOT/calibration-authority/calibration-bundle.json" | cut -d' ' -f1)" == "$EXPECTED_CALIBRATION_BUNDLE_SHA256" ]]
+          cmp "$AGENTLAB_ROOT/calibration-authority/bundle/construction-contract.json" \
+            "$AGENTLAB_ROOT/source/contract/construction-contract.json"
+          python3 scripts/multi-repo-calibration-bundle.py validate \
+            --bundle-root "$AGENTLAB_ROOT/calibration-authority/bundle" \
+            --descriptor "$AGENTLAB_ROOT/calibration-authority/bundle/descriptor.json" \
+            --construction-contract "$AGENTLAB_ROOT/source/contract/construction-contract.json" \
+            --proposal "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-proposal.json" \
+            --review "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-review.json" \
+            --contract "$AGENTLAB_ROOT/calibration-authority/calibration-bundle.json"
       - name: Bind explicit operator review to the exact proposal
         env:
           EXPECTED_PROPOSAL_SHA256: ${{ inputs.expected_proposal_sha256 }}
@@ -99,41 +138,36 @@ jobs:
             --output "$AGENTLAB_ROOT/dependency-discovery-plan.json"
       - name: Re-run the independent executable calibration
         run: |
-          mapfile -t identity < <(python3 - <<'PY'
-          import json, os
-          root = os.environ["AGENTLAB_ROOT"] + "/source"
-          difficulty = json.load(open(root + "/analysis/difficulty_candidates.json"))
-          proposal = json.load(open(root + "/case-plan-proposal.json"))
-          print(difficulty["sourceSetSha256"])
-          print(proposal["candidateId"])
-          PY
-          )
-          python3 "$AGENTLAB_ROOT/source/operator-fixture/calibrate.py" \
+          set -euo pipefail
+          python3 scripts/multi-repo-calibration-bundle.py run \
+            --bundle-root "$AGENTLAB_ROOT/calibration-authority/bundle" \
+            --contract "$AGENTLAB_ROOT/calibration-authority/calibration-bundle.json" \
+            --proposal "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-proposal.json" \
+            --review "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-review.json" \
+            --construction-contract "$AGENTLAB_ROOT/source/contract/construction-contract.json" \
             --baseline "$AGENTLAB_ROOT/source/input/repositories" \
-            --reference "$AGENTLAB_ROOT/source/operator-fixture/reference" \
-            --source-set-sha256 "${identity[0]}" \
-            --candidate-id "${identity[1]}" \
             --output "$AGENTLAB_ROOT/calibration"
       - name: Freeze only the reviewed and calibrated case
         run: |
           python3 scripts/generate-multi-repo-case.py \
-            --difficulty "$AGENTLAB_ROOT/source/analysis/difficulty_candidates.json" \
+            --difficulty "$AGENTLAB_ROOT/source/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
             --plan "$AGENTLAB_ROOT/case-plan.json" \
             --proposal "$AGENTLAB_ROOT/source/case-plan-proposal.json" \
             --review "$AGENTLAB_ROOT/case-plan-review.json" \
             --construction-quality "$AGENTLAB_ROOT/source/construction/intent-quality.json" \
             --candidate-selection "$AGENTLAB_ROOT/source/candidate-selection.json" \
             --calibration "$AGENTLAB_ROOT/calibration/summary.json" \
+            --calibration-run "$AGENTLAB_ROOT/calibration/calibration-run.json" \
             --output "$AGENTLAB_ROOT/base-evaluation-case.json"
           python3 scripts/build-dependency-discovery-contract.py \
             --case "$AGENTLAB_ROOT/base-evaluation-case.json" \
-            --program-facts "$AGENTLAB_ROOT/source/analysis/workspace_facts.jsonl" \
+            --program-facts "$AGENTLAB_ROOT/source/cohort/source/analysis-source/analysis/workspace_facts.jsonl" \
             --plan "$AGENTLAB_ROOT/dependency-discovery-plan.json" \
             --output "$AGENTLAB_ROOT/dependency-discovery-contract.json"
           python3 scripts/bind-dependency-discovery-case.py \
             --case "$AGENTLAB_ROOT/base-evaluation-case.json" \
             --dependency-contract "$AGENTLAB_ROOT/dependency-discovery-contract.json" \
-            --program-facts "$AGENTLAB_ROOT/source/analysis/workspace_facts.jsonl" \
+            --program-facts "$AGENTLAB_ROOT/source/cohort/source/analysis-source/analysis/workspace_facts.jsonl" \
             --output "$AGENTLAB_ROOT/evaluation-case.json"
           python3 scripts/validate-case-qualification.py \
             --case "$AGENTLAB_ROOT/evaluation-case.json" \
@@ -142,14 +176,21 @@ jobs:
           sha256sum "$AGENTLAB_ROOT/evaluation-case.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Split participant input from evaluator authority
         run: |
+          mapfile -t calibration_paths < <(python3 - <<'PY'
+          import json, os
+          descriptor = json.load(open(os.environ["AGENTLAB_ROOT"] + "/calibration-authority/bundle/descriptor.json"))
+          print(descriptor["oraclePath"])
+          print(descriptor["referenceRoot"])
+          PY
+          )
           python3 scripts/prepare-multi-repo-blind-cut.py \
             --case "$AGENTLAB_ROOT/evaluation-case.json" \
-            --oracle "$AGENTLAB_ROOT/source/operator-fixture/oracle.mjs" \
-            --reference-root "$AGENTLAB_ROOT/source/operator-fixture/reference" \
+            --oracle "$AGENTLAB_ROOT/calibration-authority/bundle/${calibration_paths[0]}" \
+            --reference-root "$AGENTLAB_ROOT/calibration-authority/bundle/${calibration_paths[1]}" \
             --calibration "$AGENTLAB_ROOT/calibration/summary.json" \
             --review "$AGENTLAB_ROOT/case-plan-review.json" \
             --dependency-contract "$AGENTLAB_ROOT/dependency-discovery-contract.json" \
-            --program-facts "$AGENTLAB_ROOT/source/analysis/workspace_facts.jsonl" \
+            --program-facts "$AGENTLAB_ROOT/source/cohort/source/analysis-source/analysis/workspace_facts.jsonl" \
             --method-revision "$GITHUB_SHA" \
             --constructed-at "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
             --source-visibility held-out-public-revision \

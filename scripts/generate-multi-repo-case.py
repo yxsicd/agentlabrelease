@@ -104,6 +104,7 @@ def main():
     parser.add_argument("--construction-quality", type=Path)
     parser.add_argument("--candidate-selection", type=Path)
     parser.add_argument("--calibration", type=Path, required=True)
+    parser.add_argument("--calibration-run", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -271,6 +272,26 @@ def main():
 
     plan_sha256 = digest(args.plan)
     calibration_sha256 = digest(args.calibration)
+    calibration_run_binding = None
+    if args.calibration_run is not None:
+        calibration_run = load(args.calibration_run)
+        require(calibration_run.get("schema") == "agentlab.multi_repo_calibration_bundle_run.v1", "unsupported calibration bundle run")
+        require(calibration_run.get("status") == "passed", "calibration bundle run did not pass")
+        require(calibration_run.get("automaticPromotion") is False, "calibration bundle run can auto-promote")
+        require(calibration_run.get("candidateId") == candidate_id, "calibration bundle run candidate mismatch")
+        require(calibration_run.get("sourceSetSha256") == source_set, "calibration bundle run source set mismatch")
+        require(calibration_run.get("oracleSha256") == oracle_digest, "calibration bundle run Oracle mismatch")
+        require(calibration_run.get("summarySha256") == calibration_sha256, "calibration bundle run summary mismatch")
+        for field in ("calibrationBundleSha256", "constructionContractSha256", "descriptorSha256", "driverSha256", "referenceTreeSha256"):
+            require(isinstance(calibration_run.get(field), str) and SHA256.fullmatch(calibration_run[field]), f"calibration bundle run requires exact {field}")
+        calibration_run_binding = {
+            "runSha256": digest(args.calibration_run),
+            "bundleSha256": calibration_run["calibrationBundleSha256"],
+            "constructionContractSha256": calibration_run["constructionContractSha256"],
+            "descriptorSha256": calibration_run["descriptorSha256"],
+            "driverSha256": calibration_run["driverSha256"],
+            "referenceTreeSha256": calibration_run["referenceTreeSha256"],
+        }
     qualification_matrix = build_matrix(
         case_id=case_id,
         source_set_sha256=source_set,
@@ -305,6 +326,7 @@ def main():
             "variantSourceSha256": {
                 name: row.get("sourceSha256") for name, row in results.items()
             },
+            **({"executableBundle": calibration_run_binding} if calibration_run_binding else {}),
         },
         "construction": plan.get("construction"),
         "constructionQuality": plan.get("constructionQuality"),
@@ -313,6 +335,7 @@ def main():
             "difficultyEvidenceSha256": digest(args.difficulty),
             "planSha256": plan_sha256,
             "calibrationSha256": calibration_sha256,
+            **({"calibrationBundleRun": calibration_run_binding} if calibration_run_binding else {}),
             "review": plan.get("review"),
             "feedbackAnalysisCut": plan.get("feedbackAnalysisCut"),
             "apiCallLocalization": localization,

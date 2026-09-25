@@ -1,0 +1,13 @@
+{
+  "automaticPromotion": false,
+  "driverPath": "calibrate.py",
+  "oraclePath": "oracle.mjs",
+  "receiptSchema": "agentlab.multi_repo_oracle_receipt.v1",
+  "referenceRoot": "reference",
+  "runtime": "python3",
+  "schema": "agentlab.multi_repo_calibration_bundle_source.v1",
+  "variantIds": [
+    "hardcoded-premium",
+    "stale-consumer"
+  ]
+}

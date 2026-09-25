@@ -143,9 +143,12 @@ smaller than SWE-bench's:
    proposal/review pair freezes editable and context paths plus an operator-owned
    behavior/Oracle contract before the model runs, and construction rematerializes
    the arbitrary pinned repositories instead of the deterministic fixture. The
-   executable Oracle bytes, reference implementation, negative variants and
-   case-review/freeze workflow are still fixture-specific, so this does not yet
-   imply arbitrary-source calibration or case qualification.
+   executable calibration boundary is now generic too: a separate proposal and
+   exact-digest review bind the driver, Oracle, reference tree and declared
+   wrong variants before execution. Case freeze consumes only that reviewed
+   bundle and records a run receipt binding all executable inputs. This closes
+   the mechanism, but no arbitrary real-source bundle has yet been reviewed and
+   executed, so real selected-to-qualified yield remains unmeasured.
 4. The independent Oracle is digest-bound. One real Harmony UI candidate now
    has a controlled `FAIL_TO_PASS` replay: the frozen baseline stays on
    `pages/Index`, while a one-line page-registration variant reaches

@@ -71,8 +71,8 @@ jobs:
             --name multi-repo-frozen-case --dir "$AGENTLAB_ROOT/case"
       - name: Reconstruct the exact reviewed source repositories
         run: |
-          python3 scripts/prepare-multi-repo-construction-fixture.py \
-            --source "$AGENTLAB_ROOT/case/source/input/repositories" \
+          python3 scripts/prepare-multi-repo-analysis-sources.py \
+            --spec "$AGENTLAB_ROOT/case/source/cohort/source/analysis-source/source-spec.json" \
             --output "$AGENTLAB_ROOT/input"
       - name: Stage only the participant-visible blind input
         run: |
@@ -162,7 +162,7 @@ jobs:
               python3 scripts/run-multi-repo-assessment.py \
                 --case "$AGENTLAB_ROOT/case/evaluation-case.json" \
                 --manifest "$AGENTLAB_ROOT/input/manifest.json" \
-                --oracle "$AGENTLAB_ROOT/case/source/operator-fixture/oracle.mjs" \
+                --oracle "$AGENTLAB_ROOT/case/blind-cut/evaluator/oracle.mjs" \
                 --participant examples/multi-repo-case/pi-assessed-agent.py \
                 --blind-participant-root "$RUNNER_TEMP/agentlab-blind-participant" \
                 --blind-dispatch-receipt "$AGENTLAB_ROOT/blind-dispatch-receipt.json" \
