@@ -169,6 +169,10 @@ class CaseQualificationTest(unittest.TestCase):
         self.assertEqual(
             case["qualificationMatrix"]["deviceChecks"]["status"], "separate-gate"
         )
+        self.assertEqual(
+            case["qualificationMatrix"]["harmonyStandardTests"]["customUiOracleAuthority"],
+            "supplemental-only",
+        )
         self.assertFalse(case["qualificationMatrix"]["freshness"]["qualified"])
         self.assertTrue(
             case["qualificationMatrix"]["referenceReplay"]["alternativeValidQualified"]

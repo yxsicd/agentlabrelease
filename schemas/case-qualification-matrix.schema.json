@@ -14,6 +14,7 @@
     "preservationChecks",
     "stageChecks",
     "deviceChecks",
+    "harmonyStandardTests",
     "performanceGuardrails",
     "oracleAuthority",
     "referenceReplay",
@@ -44,6 +45,20 @@
       }
     },
     "deviceChecks": {"$ref": "#/$defs/separateGate"},
+    "harmonyStandardTests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "requiredForHarmonyCases", "acceptedFrameworks", "customUiOracleAuthority", "checks"],
+      "properties": {
+        "status": {"const": "separate-gate"},
+        "requiredForHarmonyCases": {"const": true},
+        "acceptedFrameworks": {
+          "const": ["instrument-test-ohosTest-hypium", "local-test-hypium", "deveco-testing-hypium-ui"]
+        },
+        "customUiOracleAuthority": {"const": "supplemental-only"},
+        "checks": {"type": "array", "maxItems": 0}
+      }
+    },
     "performanceGuardrails": {"$ref": "#/$defs/separateGate"},
     "oracleAuthority": {
       "type": "object",

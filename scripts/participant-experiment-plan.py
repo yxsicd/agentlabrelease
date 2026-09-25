@@ -15,6 +15,7 @@ SCHEMA = "agentlab.participant_experiment_plan.v1"
 SHA256 = re.compile(r"[0-9a-f]{64}")
 REVISION = re.compile(r"[0-9a-f]{40}")
 TOKEN = re.compile(r"[A-Za-z0-9_.:@/+\-]{1,200}")
+IMAGE_ID = re.compile(r"sha256:[0-9a-f]{64}")
 
 
 class ExperimentPlanError(ValueError):
@@ -61,6 +62,99 @@ def normalize_profiles(value: Any) -> list[dict[str, Any]]:
     return profiles
 
 
+def build_execution_protocol(
+    participant_adapter: Path,
+    participant_driver: Path,
+    participant_package_lock: Path,
+    runtime_config_path: Path,
+) -> dict[str, Any]:
+    repository_root = Path(__file__).resolve().parents[1]
+    try:
+        adapter_path = participant_adapter.resolve(strict=True).relative_to(repository_root).as_posix()
+        driver_path = participant_driver.resolve(strict=True).relative_to(repository_root).as_posix()
+        participant_package_lock.resolve(strict=True).relative_to(repository_root)
+    except ValueError as error:
+        raise ExperimentPlanError("participant implementation inputs must be repository-owned") from error
+    package_lock = load(participant_package_lock, "participant package lock")
+    runtime = load(runtime_config_path, "participant runtime config")
+    package = (package_lock.get("packages") or {}).get(
+        "node_modules/@mariozechner/pi-coding-agent"
+    )
+    require(isinstance(package, dict), "Pi package is absent from participant lock")
+    version = package.get("version")
+    require(isinstance(version, str) and TOKEN.fullmatch(version), "Pi package version is invalid")
+    require(runtime.get("schema") == "agentlab.participant_docker_runtime.v1", "participant runtime schema differs")
+    require(runtime.get("executor") == "docker", "participant runtime executor differs")
+    require(isinstance(runtime.get("imageId"), str) and IMAGE_ID.fullmatch(runtime["imageId"]), "participant runtime image ID is invalid")
+    lock_digest = digest(participant_package_lock)
+    require(runtime.get("piPackageLockSha256") == lock_digest, "participant runtime lock binding differs")
+    manifest_digest = runtime.get("participantManifestSha256")
+    require(isinstance(manifest_digest, str) and SHA256.fullmatch(manifest_digest), "participant manifest binding is invalid")
+    return {
+        "schema": "agentlab.participant_execution_protocol.v1",
+        "agentImplementation": "pi",
+        "agentPackage": "@mariozechner/pi-coding-agent",
+        "agentPackageVersion": version,
+        "participantAdapter": {
+            "path": adapter_path,
+            "sha256": digest(participant_adapter),
+        },
+        "participantDriver": {
+            "path": driver_path,
+            "sha256": digest(participant_driver),
+        },
+        "participantPackageLockSha256": lock_digest,
+        "participantRuntimeConfigSha256": digest(runtime_config_path),
+        "runtimeImageId": runtime["imageId"],
+        "participantManifestSha256": manifest_digest,
+        "promptAuthority": "digest-bound-adapter-driver-and-blind-case-manifest",
+        "sessionPolicy": "fresh-per-attempt-persistent-across-case-stages",
+        "thinkingMode": "off",
+        "reasoningEffort": None,
+        "extensionPolicy": "disabled",
+        "skillsPolicy": "disabled",
+        "contextFilePolicy": "disabled",
+        "turnTimeoutSeconds": 420,
+        "samplingPolicy": "provider-default-stochastic-repeated-trials",
+        "withinCampaignExecutionProtocolQualified": True,
+        "crossCampaignProviderReproducibilityQualified": False,
+    }
+
+
+def validate_execution_protocol(value: Any) -> dict[str, Any]:
+    require(isinstance(value, dict), "participant execution protocol must be an object")
+    require(set(value) == {
+        "schema", "agentImplementation", "agentPackage", "agentPackageVersion",
+        "participantAdapter", "participantDriver", "participantPackageLockSha256",
+        "participantRuntimeConfigSha256", "runtimeImageId", "participantManifestSha256",
+        "promptAuthority", "sessionPolicy", "thinkingMode", "reasoningEffort",
+        "extensionPolicy", "skillsPolicy", "contextFilePolicy", "turnTimeoutSeconds",
+        "samplingPolicy", "withinCampaignExecutionProtocolQualified",
+        "crossCampaignProviderReproducibilityQualified",
+    }, "participant execution protocol fields differ")
+    require(value.get("schema") == "agentlab.participant_execution_protocol.v1", "participant execution protocol schema differs")
+    require(value.get("agentImplementation") == "pi", "participant implementation differs")
+    require(value.get("agentPackage") == "@mariozechner/pi-coding-agent", "participant package differs")
+    require(isinstance(value.get("agentPackageVersion"), str) and TOKEN.fullmatch(value["agentPackageVersion"]), "participant package version is invalid")
+    for label in ("participantAdapter", "participantDriver"):
+        binding = value.get(label)
+        require(isinstance(binding, dict) and set(binding) == {"path", "sha256"}, f"{label} binding differs")
+        require(isinstance(binding.get("path"), str) and TOKEN.fullmatch(binding["path"]), f"{label} path is invalid")
+        require(isinstance(binding.get("sha256"), str) and SHA256.fullmatch(binding["sha256"]), f"{label} digest is invalid")
+    for label in ("participantPackageLockSha256", "participantRuntimeConfigSha256", "participantManifestSha256"):
+        require(isinstance(value.get(label), str) and SHA256.fullmatch(value[label]), f"{label} is invalid")
+    require(isinstance(value.get("runtimeImageId"), str) and IMAGE_ID.fullmatch(value["runtimeImageId"]), "runtime image ID is invalid")
+    require(value.get("promptAuthority") == "digest-bound-adapter-driver-and-blind-case-manifest", "prompt authority differs")
+    require(value.get("sessionPolicy") == "fresh-per-attempt-persistent-across-case-stages", "session policy differs")
+    require(value.get("thinkingMode") == "off" and value.get("reasoningEffort") is None, "reasoning policy differs")
+    require(all(value.get(field) == "disabled" for field in ("extensionPolicy", "skillsPolicy", "contextFilePolicy")), "participant extension policy differs")
+    require(value.get("turnTimeoutSeconds") == 420, "participant turn timeout differs")
+    require(value.get("samplingPolicy") == "provider-default-stochastic-repeated-trials", "sampling policy differs")
+    require(value.get("withinCampaignExecutionProtocolQualified") is True, "within-campaign execution protocol is not qualified")
+    require(value.get("crossCampaignProviderReproducibilityQualified") is False, "provider reproducibility must remain unqualified")
+    return value
+
+
 def derive(
     case_path: Path,
     profiles: Any,
@@ -68,6 +162,7 @@ def derive(
     trials: int,
     method_revision: str,
     case_review_run_id: int,
+    execution_protocol: dict[str, Any],
 ) -> dict[str, Any]:
     case = load(case_path, "evaluation case")
     case_id = case.get("id")
@@ -79,6 +174,7 @@ def derive(
     require(isinstance(method_revision, str) and REVISION.fullmatch(method_revision), "method revision is invalid")
     require(isinstance(case_review_run_id, int) and not isinstance(case_review_run_id, bool) and case_review_run_id > 0, "case review run id is invalid")
     normalized = normalize_profiles(profiles)
+    protocol = validate_execution_protocol(execution_protocol)
     return {
         "schema": SCHEMA,
         "status": "predeclared-before-attempts",
@@ -91,6 +187,7 @@ def derive(
         "trialsPerParticipant": trials,
         "participantProfileCount": len(normalized),
         "participantProfiles": normalized,
+        "executionProtocol": protocol,
         "automaticPromotion": False,
     }
 
@@ -117,10 +214,11 @@ def validate_plan(path: Path) -> dict[str, Any]:
     ])
     require(raw_profiles == profiles, "plan participant profile order or ordinals differ")
     require(value.get("participantProfileCount") == len(profiles), "plan participant profile count differs")
+    validate_execution_protocol(value.get("executionProtocol"))
     require(set(value) == {
         "schema", "status", "caseId", "sourceSetSha256", "evaluationCaseSha256",
         "caseReviewRunId", "methodRevision", "providerRoute", "trialsPerParticipant",
-        "participantProfileCount", "participantProfiles", "automaticPromotion",
+        "participantProfileCount", "participantProfiles", "executionProtocol", "automaticPromotion",
     }, "participant experiment plan fields differ")
     return value
 
@@ -135,6 +233,10 @@ def main() -> int:
     create.add_argument("--trials", type=int, required=True)
     create.add_argument("--method-revision", required=True)
     create.add_argument("--case-review-run-id", type=int, required=True)
+    create.add_argument("--participant-adapter", type=Path, required=True)
+    create.add_argument("--participant-driver", type=Path, required=True)
+    create.add_argument("--participant-package-lock", type=Path, required=True)
+    create.add_argument("--runtime-config", type=Path, required=True)
     create.add_argument("--output", type=Path, required=True)
     validate = commands.add_parser("validate")
     validate.add_argument("--plan", type=Path, required=True)
@@ -150,6 +252,12 @@ def main() -> int:
                 args.trials,
                 args.method_revision,
                 args.case_review_run_id,
+                build_execution_protocol(
+                    args.participant_adapter,
+                    args.participant_driver,
+                    args.participant_package_lock,
+                    args.runtime_config,
+                ),
             )
             args.output.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
             plan_path = args.output

@@ -410,6 +410,22 @@ independent Harmony materialization/build step over the reviewed source set.
 Missing or mismatched lineage fails before emulator launch; result or SmartPerf
 identity drift retains the failed execution and cannot promote the case.
 
+Harmony promotion also has a separate standard-test gate. The static
+qualification matrix now records accepted `ohosTest`/Hypium Instrument Test,
+Hypium Local Test and DevEco Testing Hypium UI lanes, while explicitly limiting
+the existing bounded `uitest` script to supplemental Oracle authority.
+`harmony-standard-test-contract.py` inventories digest-bound source assets and
+requires a passing execution receipt tied to the same case, source set and
+project-tree digest before standard-test execution is qualified. The current
+custom UI runner remains useful evidence, but it does not close this new gate.
+`run-harmony-instrument-test.py` now supplies the first native adapter for that
+gate: it installs the exact app/test HAP pair and requires ArkXtest's final
+non-empty result plus zero code markers (including worker aggregate markers), retaining digest-bound
+logs and a native report. Exit zero without those markers, a failing/error
+count, inconsistent totals, target/install failure, or later report tampering
+is rejected. Local Test and DevEco Testing Hypium UI still need separate native
+execution adapters.
+
 The corresponding build-side producer is
 [`build-harmony-evaluation-artifact.py`](../scripts/build-harmony-evaluation-artifact.py).
 It never copies a checkout's current working tree. For every source in the

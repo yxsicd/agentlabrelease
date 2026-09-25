@@ -119,6 +119,66 @@ screenshot and SmartPerf artifacts and binds the HAP and screenshot SHA-256.
 SmartPerf data is a relative emulator regression signal only; the result
 explicitly records that absolute power and thermal authority are unavailable.
 
+## Harmony standard-test boundary
+
+The tab-separated `uitest` scenario above is an operator-owned black-box Oracle,
+not a substitute for Harmony's standard application-test structure. A Harmony
+case should additionally expose at least one official lane:
+
+- Instrument Test under `src/ohosTest`, using `@ohos/hypium`, an
+  `ohosTest` build target and `OpenHarmonyTestRunner`;
+- Local Test under `src/test` for device-independent ArkTS logic; or
+- DevEco Testing Hypium UI automation with packaged Python testcases and
+  retained reports.
+
+Use `scripts/harmony-standard-test-contract.py inspect` to inventory those
+assets. The contract deliberately separates a source-qualified standard lane
+from a passing execution receipt bound to the same case, source set and project
+tree. Only the latter closes the standard-test execution gate. A custom `.ui`
+Oracle is recorded as `supplemental-only`; it can add exact product behavior but
+cannot by itself claim Harmony standard-test compliance. This follows Huawei's
+[developer testing service](https://developer.huawei.com/consumer/cn/testing/get-started/),
+which distinguishes Instrument Test, Local Test and Hypium UI automation, and
+keeps compatibility, stability, performance, power, security and UX as
+separate quality dimensions.
+
+For an `ohosTest` Instrument Test, run the app HAP and its test HAP against an
+already booted emulator target with the bounded executor:
+
+```sh
+python3 scripts/run-harmony-instrument-test.py \
+  --project-root /absolute/path/to/materialized-project \
+  --case-id case-42 \
+  --source-set-sha256 <frozen-source-set-sha256> \
+  --hdc /absolute/path/to/hdc \
+  --target <exact-hdc-target> \
+  --app-hap /absolute/path/to/app.hap \
+  --test-hap /absolute/path/to/app-ohosTest.hap \
+  --bundle com.example.app \
+  --module entry_test \
+  --runner OpenHarmonyTestRunner \
+  --output-dir /absolute/new/evidence-directory
+```
+
+The executor verifies that the target is present, installs both exact HAPs,
+uses an argument-vector `hdc shell aa test` invocation, and retains all command
+logs. It accepts a pass only when ArkXtest emits a non-empty, internally
+consistent `OHOS_REPORT_RESULT` with zero failures/errors and a final
+`OHOS_REPORT_CODE: 0` (or ArkXtest's worker aggregate `OHOS_REPORT_ALL_*`
+equivalents); process exit zero alone is insufficient. `receipt.json`
+binds the case, source set, project tree, HDC binary, both HAPs, command, native
+report and logs. Re-run `harmony-standard-test-contract.py inspect` with
+`--execution-receipt .../receipt.json` to close the gate; the validator reads
+and hashes the retained native report instead of trusting receipt claims.
+
+This executor currently closes the Instrument Test lane only. Local Test and
+DevEco Testing Hypium UI remain recognized source contracts but need their own
+native execution adapters before they may produce passing receipts. The
+ArkXtest command and result markers follow the official
+[ArkXtest guide](https://gitee.com/openharmony/docs/blob/master/en/application-dev/application-test/arkxtest-guidelines.md)
+and the upstream
+[ArkXtest implementation](https://github.com/openharmony/testfwk_arkxtest/blob/master/jsunit/src/module/report/OhReport.js).
+
 ## Relative performance feedback
 
 Add stable run and environment identities to normalize SmartPerf automatically:

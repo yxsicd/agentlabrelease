@@ -110,6 +110,14 @@ AgentLab's stronger target: install the produced HAP, drive the application and
 grade exact route, visible behavior and bounded performance evidence inside the
 runtime environment.
 
+That runtime advantage is valid only when Harmony cases also respect the
+platform test boundary. AgentLab now treats `src/ohosTest` Instrument Test with
+`@ohos/hypium`, Hypium Local Test and DevEco Testing Hypium UI as standard
+lanes. Its compact shell `uitest` scenarios are supplemental product Oracles,
+not replacements for standard test sources and reports. A case cannot claim
+Harmony standard-test execution without a passing receipt bound to the exact
+case, source set and project tree.
+
 ### Adopted hybrid supply decision
 
 AgentLab should therefore keep two independent candidate lanes and one shared
@@ -386,6 +394,15 @@ smaller than SWE-bench's:
 
 Until these gaps close, AgentLab can claim a richer executable architecture and
 one real closed-path proof, not a large, statistically qualified benchmark.
+
+The Harmony gap is now narrower but still explicit. A source/project-tree-bound
+standard-test contract recognizes `ohosTest`/Hypium Instrument Test, Local Test
+and DevEco Testing Hypium UI, while the first native executor implements the
+Instrument Test path. It requires ArkXtest's native final summary/code rather
+than treating process success or the custom black-box UI Oracle as equivalent
+to a standard test. We still lack Local Test and DevEco Testing execution
+adapters and a real retained Instrument Test replay on `hwlinux`, so this is a
+mechanically enforced lane, not yet corpus-scale Harmony validation.
 
 ## Adopted qualification model
 

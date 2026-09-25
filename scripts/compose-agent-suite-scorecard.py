@@ -487,9 +487,14 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
             participant_order == [row["participantId"] for row in participant_profiles],
             "participantOrder differs from the predeclared experiment profiles",
         )
+        participant_execution_protocol = plan_validator.validate_execution_protocol(
+            manifest.get("participantExecutionProtocol")
+        )
     else:
         require(manifest.get("participantProfiles") is None, "legacy scorecard manifest cannot claim predeclared participant profiles")
+        require(manifest.get("participantExecutionProtocol") is None, "legacy scorecard manifest cannot claim a predeclared execution protocol")
         participant_profiles = []
+        participant_execution_protocol = None
     population_source = manifest.get("reviewPopulation")
     require(
         isinstance(population_source, dict)
@@ -657,6 +662,10 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
                 and plan["methodRevision"] == campaign_method_revision
                 and plan["participantProfiles"] == participant_profiles,
                 f"{case_id} participant experiment plan identity differs",
+            )
+            require(
+                plan["executionProtocol"] == participant_execution_protocol,
+                f"{case_id} participant execution protocol differs",
             )
             require(
                 report["denominators"]["requiredTrialsPerParticipant"]
@@ -935,6 +944,7 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
         },
         "participantOrder": participant_order,
         "participantProfiles": participant_profiles,
+        "participantExecutionProtocol": participant_execution_protocol,
         "denominators": {
             "caseCount": case_count,
             "qualifiedCaseCount": qualified_count,

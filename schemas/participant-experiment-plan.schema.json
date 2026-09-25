@@ -4,7 +4,7 @@
   "title": "AgentLab predeclared participant capability experiment plan",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "status", "caseId", "sourceSetSha256", "evaluationCaseSha256", "caseReviewRunId", "methodRevision", "providerRoute", "trialsPerParticipant", "participantProfileCount", "participantProfiles", "automaticPromotion"],
+  "required": ["schema", "status", "caseId", "sourceSetSha256", "evaluationCaseSha256", "caseReviewRunId", "methodRevision", "providerRoute", "trialsPerParticipant", "participantProfileCount", "participantProfiles", "executionProtocol", "automaticPromotion"],
   "properties": {
     "schema": {"const": "agentlab.participant_experiment_plan.v1"},
     "status": {"const": "predeclared-before-attempts"},
@@ -31,10 +31,47 @@
         }
       }
     },
+    "executionProtocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "agentImplementation", "agentPackage", "agentPackageVersion", "participantAdapter", "participantDriver", "participantPackageLockSha256", "participantRuntimeConfigSha256", "runtimeImageId", "participantManifestSha256", "promptAuthority", "sessionPolicy", "thinkingMode", "reasoningEffort", "extensionPolicy", "skillsPolicy", "contextFilePolicy", "turnTimeoutSeconds", "samplingPolicy", "withinCampaignExecutionProtocolQualified", "crossCampaignProviderReproducibilityQualified"],
+      "properties": {
+        "schema": {"const": "agentlab.participant_execution_protocol.v1"},
+        "agentImplementation": {"const": "pi"},
+        "agentPackage": {"const": "@mariozechner/pi-coding-agent"},
+        "agentPackageVersion": {"$ref": "#/$defs/token"},
+        "participantAdapter": {"$ref": "#/$defs/fileBinding"},
+        "participantDriver": {"$ref": "#/$defs/fileBinding"},
+        "participantPackageLockSha256": {"$ref": "#/$defs/sha256"},
+        "participantRuntimeConfigSha256": {"$ref": "#/$defs/sha256"},
+        "runtimeImageId": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "participantManifestSha256": {"$ref": "#/$defs/sha256"},
+        "promptAuthority": {"const": "digest-bound-adapter-driver-and-blind-case-manifest"},
+        "sessionPolicy": {"const": "fresh-per-attempt-persistent-across-case-stages"},
+        "thinkingMode": {"const": "off"},
+        "reasoningEffort": {"type": "null"},
+        "extensionPolicy": {"const": "disabled"},
+        "skillsPolicy": {"const": "disabled"},
+        "contextFilePolicy": {"const": "disabled"},
+        "turnTimeoutSeconds": {"const": 420},
+        "samplingPolicy": {"const": "provider-default-stochastic-repeated-trials"},
+        "withinCampaignExecutionProtocolQualified": {"const": true},
+        "crossCampaignProviderReproducibilityQualified": {"const": false}
+      }
+    },
     "automaticPromotion": {"const": false}
   },
   "$defs": {
     "token": {"type": "string", "pattern": "^[A-Za-z0-9_.:@/+\\-]{1,200}$"},
-    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "fileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"$ref": "#/$defs/token"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
   }
 }

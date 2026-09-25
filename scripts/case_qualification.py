@@ -187,6 +187,17 @@ def build_matrix(
             "status": "separate-gate",
             "checks": [],
         },
+        "harmonyStandardTests": {
+            "status": "separate-gate",
+            "requiredForHarmonyCases": True,
+            "acceptedFrameworks": [
+                "instrument-test-ohosTest-hypium",
+                "local-test-hypium",
+                "deveco-testing-hypium-ui",
+            ],
+            "customUiOracleAuthority": "supplemental-only",
+            "checks": [],
+        },
         "performanceGuardrails": {
             "status": "separate-gate",
             "checks": [],
@@ -266,9 +277,24 @@ def validate_matrix(case: dict, calibration: dict, calibration_sha256: str) -> d
     require(set(results) == {row["id"] for row in replay.get("variants", [])}, "reference replay variants mismatch")
 
     device = matrix.get("deviceChecks") or {}
+    harmony_standard = matrix.get("harmonyStandardTests") or {}
     performance = matrix.get("performanceGuardrails") or {}
     freshness = matrix.get("freshness") or {}
     require(device == {"status": "separate-gate", "checks": []}, "device qualification must remain a separate gate")
+    require(
+        harmony_standard == {
+            "status": "separate-gate",
+            "requiredForHarmonyCases": True,
+            "acceptedFrameworks": [
+                "instrument-test-ohosTest-hypium",
+                "local-test-hypium",
+                "deveco-testing-hypium-ui",
+            ],
+            "customUiOracleAuthority": "supplemental-only",
+            "checks": [],
+        },
+        "Harmony standard test qualification must remain a separate gate",
+    )
     require(performance == {"status": "separate-gate", "checks": []}, "performance qualification must remain a separate gate")
     require(freshness.get("status") == "unqualified-unknown" and freshness.get("qualified") is False, "unknown freshness must remain unqualified")
     return {
@@ -276,6 +302,6 @@ def validate_matrix(case: dict, calibration: dict, calibration_sha256: str) -> d
         "caseId": case["id"],
         "repairChecks": len(matrix["repairChecks"]),
         "preservationChecks": len(matrix["preservationChecks"]),
-        "runtimeGates": ["device", "performance"],
+        "runtimeGates": ["device", "harmony-standard-tests", "performance"],
         "freshnessStatus": freshness["status"],
     }

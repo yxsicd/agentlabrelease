@@ -76,6 +76,64 @@ def validate_participant_runtime(
     )
 
 
+def validate_experiment_plan_binding(
+    plan_path: Path,
+    case: dict,
+    participant: Path,
+    participant_id: str,
+    runtime_config: Path,
+):
+    module_path = Path(__file__).with_name("participant-experiment-plan.py")
+    spec = importlib.util.spec_from_file_location("agentlab_participant_experiment_plan", module_path)
+    require(spec is not None and spec.loader is not None, "participant experiment plan validator is unavailable")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    plan = module.validate_plan(plan_path.absolute())
+    require(plan.get("caseId") == case.get("id"), "participant experiment plan case differs")
+    require(plan.get("sourceSetSha256") == case.get("sourceSetSha256"), "participant experiment plan source set differs")
+    profiles = {
+        row["participantId"]: row for row in plan["participantProfiles"]
+    }
+    require(participant_id in profiles, "participant identity is absent from the experiment plan")
+    profile = profiles[participant_id]
+    require(os.environ.get("AGENTLAB_MODEL") == profile["model"], "participant model differs from the experiment plan")
+    require(os.environ.get("AGENTLAB_PROVIDER_ROUTE") == plan["providerRoute"], "participant provider route differs from the experiment plan")
+    protocol = plan["executionProtocol"]
+    root = Path(__file__).resolve().parents[1]
+    require(digest(participant) == protocol["participantAdapter"]["sha256"], "participant adapter differs from the experiment plan")
+    driver = root / protocol["participantDriver"]["path"]
+    require(driver.is_file() and digest(driver) == protocol["participantDriver"]["sha256"], "participant driver differs from the experiment plan")
+    require(digest(runtime_config) == protocol["participantRuntimeConfigSha256"], "participant runtime config differs from the experiment plan")
+    runtime = load(runtime_config)
+    require(runtime.get("imageId") == protocol["runtimeImageId"], "participant runtime image differs from the experiment plan")
+    require(runtime.get("piPackageLockSha256") == protocol["participantPackageLockSha256"], "participant package lock differs from the experiment plan")
+    require(runtime.get("participantManifestSha256") == protocol["participantManifestSha256"], "participant manifest differs from the experiment plan")
+    return {
+        "planSha256": digest(plan_path),
+        "participantOrdinal": profile["ordinal"],
+        "participantId": participant_id,
+        "model": profile["model"],
+        "providerRoute": plan["providerRoute"],
+        "executionProtocol": protocol,
+    }
+
+
+def validate_native_participant_identity(path: Path, binding: dict) -> dict:
+    value = load(path)
+    protocol = binding["executionProtocol"]
+    require(value.get("implementation") == protocol["agentImplementation"], "native participant implementation differs")
+    require(value.get("packageVersion") == protocol["agentPackageVersion"], "native participant package version differs")
+    require(value.get("model") == binding["model"], "native participant model differs")
+    require(value.get("providerRoute") == binding["providerRoute"], "native participant provider route differs")
+    require(value.get("reasoningEffort") == protocol["reasoningEffort"], "native participant reasoning effort differs")
+    require(value.get("piThinkingMode") == protocol["thinkingMode"], "native participant thinking mode differs")
+    return {
+        "path": path.name,
+        "sha256": digest(path),
+        "identityQualified": True,
+    }
+
+
 def validate_authenticated_review(bundle: Path, repository: str, run_id: int):
     module_path = Path(__file__).with_name("authenticate-blind-case-review.py")
     spec = importlib.util.spec_from_file_location(
@@ -715,6 +773,7 @@ def main():
     parser.add_argument("--blind-participant-root", type=Path)
     parser.add_argument("--blind-dispatch-receipt", type=Path)
     parser.add_argument("--participant-runtime-config", type=Path)
+    parser.add_argument("--experiment-plan", type=Path)
     parser.add_argument("--authenticated-review-bundle", type=Path)
     parser.add_argument("--authenticated-review-repository")
     parser.add_argument("--authenticated-review-run-id", type=int)
@@ -780,6 +839,19 @@ def main():
     if args.participant_runtime_config is not None:
         require(blind_dispatch is not None, "isolated participant runtime requires a blind dispatch")
         require(args.participant_runtime_config.resolve().is_file(), "participant runtime config is absent")
+    require(
+        (args.experiment_plan is None) or args.participant_runtime_config is not None,
+        "participant experiment plan requires an isolated runtime config",
+    )
+    experiment_binding = None
+    if args.experiment_plan is not None:
+        experiment_binding = validate_experiment_plan_binding(
+            args.experiment_plan.resolve(),
+            case,
+            participant,
+            args.participant_id,
+            args.participant_runtime_config.resolve(),
+        )
 
     case_sources = {row["id"]: row for row in case.get("sources", [])}
     manifest_sources = {row["id"]: row for row in manifest.get("repositories", [])}
@@ -1001,6 +1073,16 @@ def main():
         infrastructure_errors.append(
             {"stageId": None, "source": "participant", "error": f"protocol exited {participant_exit}"}
         )
+    native_participant_evidence = None
+    if experiment_binding is not None:
+        try:
+            native_participant_evidence = validate_native_participant_identity(
+                evidence / "participant.json", experiment_binding
+            )
+        except Exception as error:
+            infrastructure_errors.append(
+                {"stageId": None, "source": "participant-experiment-plan", "error": f"{type(error).__name__}: {error}"}
+            )
     assessed = not infrastructure_errors and len(stage_results) == len(stages)
     succeeded = (
         all(row["scopeValid"] and row["oraclePass"] is True for row in stage_results)
@@ -1026,6 +1108,14 @@ def main():
         "endedAt": ended_at,
         "durationMs": duration_ms,
         "processMeasurement": process,
+        "participantExperiment": (
+            {
+                **experiment_binding,
+                "nativeParticipantEvidence": native_participant_evidence,
+            }
+            if experiment_binding is not None
+            else None
+        ),
         "blindDispatch": blind_dispatch_qualification(
             blind_dispatch,
             runtime_validation,
@@ -1043,6 +1133,7 @@ def main():
         "subjectTaskSucceeded": succeeded,
         "phaseVerdicts": stage_results,
         "processMeasurement": process,
+        "participantExperiment": summary["participantExperiment"],
         "launchErrors": infrastructure_errors,
         "blindDispatch": summary["blindDispatch"],
         "automaticPromotion": False,

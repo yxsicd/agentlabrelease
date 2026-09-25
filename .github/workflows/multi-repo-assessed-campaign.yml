@@ -71,25 +71,6 @@ jobs:
           python3 scripts/prepare-multi-repo-analysis-sources.py \
             --spec "$AGENTLAB_ROOT/case/source/cohort/source/analysis-source/source-spec.json" \
             --output "$AGENTLAB_ROOT/input"
-      - name: Freeze the ordered participant experiment before attempts
-        run: |
-          set -euo pipefail
-          python3 scripts/participant-experiment-plan.py create \
-            --case "$AGENTLAB_ROOT/case/evaluation-case.json" \
-            --profiles-json "$PARTICIPANT_PROFILES_JSON" \
-            --provider-route "$AGENTLAB_PROVIDER_ROUTE" \
-            --trials "$TRIALS" \
-            --method-revision "$GITHUB_SHA" \
-            --case-review-run-id "${{ inputs.case_run_id }}" \
-            --output "$AGENTLAB_ROOT/participant-experiment-plan.json"
-          python3 scripts/participant-experiment-plan.py validate \
-            --plan "$AGENTLAB_ROOT/participant-experiment-plan.json" \
-            --case "$AGENTLAB_ROOT/case/evaluation-case.json"
-          sha256sum "$AGENTLAB_ROOT/participant-experiment-plan.json" >> "$GITHUB_STEP_SUMMARY"
-      - name: Sign the pre-outcome participant experiment plan
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
-        with:
-          subject-path: ${{ env.AGENTLAB_ROOT }}/participant-experiment-plan.json
       - name: Stage only the participant-visible blind input
         run: |
           python3 scripts/build-blind-case-cut.py validate \
@@ -136,6 +117,29 @@ jobs:
             --forbid "$AGENTLAB_ROOT/case" \
             --forbid "$AGENTLAB_ROOT/blind-dispatch-receipt.json" \
             --output "$AGENTLAB_ROOT/participant-runtime.json"
+      - name: Freeze the ordered participant experiment and exact execution protocol before attempts
+        run: |
+          set -euo pipefail
+          python3 scripts/participant-experiment-plan.py create \
+            --case "$AGENTLAB_ROOT/case/evaluation-case.json" \
+            --profiles-json "$PARTICIPANT_PROFILES_JSON" \
+            --provider-route "$AGENTLAB_PROVIDER_ROUTE" \
+            --trials "$TRIALS" \
+            --method-revision "$GITHUB_SHA" \
+            --case-review-run-id "${{ inputs.case_run_id }}" \
+            --participant-adapter examples/multi-repo-case/pi-assessed-agent.py \
+            --participant-driver examples/real-code-agent/participant.py \
+            --participant-package-lock examples/real-code-agent/participant/package-lock.json \
+            --runtime-config "$AGENTLAB_ROOT/participant-runtime.json" \
+            --output "$AGENTLAB_ROOT/participant-experiment-plan.json"
+          python3 scripts/participant-experiment-plan.py validate \
+            --plan "$AGENTLAB_ROOT/participant-experiment-plan.json" \
+            --case "$AGENTLAB_ROOT/case/evaluation-case.json"
+          sha256sum "$AGENTLAB_ROOT/participant-experiment-plan.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Sign the pre-outcome participant experiment plan
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: ${{ env.AGENTLAB_ROOT }}/participant-experiment-plan.json
       - name: Run fresh staged attempts for every predeclared capability tier
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
@@ -191,6 +195,7 @@ jobs:
                 --blind-participant-root "$RUNNER_TEMP/agentlab-blind-participant" \
                 --blind-dispatch-receipt "$AGENTLAB_ROOT/blind-dispatch-receipt.json" \
                 --participant-runtime-config "$AGENTLAB_ROOT/participant-runtime.json" \
+                --experiment-plan "$AGENTLAB_ROOT/participant-experiment-plan.json" \
                 "${dependency_args[@]}" \
                 "${review_args[@]}" \
                 --participant-id "$participant_id" --output "$output"

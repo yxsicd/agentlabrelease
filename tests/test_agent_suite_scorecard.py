@@ -314,6 +314,30 @@ class AgentSuiteScorecardTests(unittest.TestCase):
             for ordinal, (participant, model) in enumerate(profiles)
         ]
         value["participantOrder"] = [participant for participant, _ in profiles]
+        execution_protocol = {
+            "schema": "agentlab.participant_execution_protocol.v1",
+            "agentImplementation": "pi",
+            "agentPackage": "@mariozechner/pi-coding-agent",
+            "agentPackageVersion": "0.73.1",
+            "participantAdapter": {"path": "examples/multi-repo-case/pi-assessed-agent.py", "sha256": "1" * 64},
+            "participantDriver": {"path": "examples/real-code-agent/participant.py", "sha256": "2" * 64},
+            "participantPackageLockSha256": "3" * 64,
+            "participantRuntimeConfigSha256": "4" * 64,
+            "runtimeImageId": "sha256:" + "5" * 64,
+            "participantManifestSha256": "6" * 64,
+            "promptAuthority": "digest-bound-adapter-driver-and-blind-case-manifest",
+            "sessionPolicy": "fresh-per-attempt-persistent-across-case-stages",
+            "thinkingMode": "off",
+            "reasoningEffort": None,
+            "extensionPolicy": "disabled",
+            "skillsPolicy": "disabled",
+            "contextFilePolicy": "disabled",
+            "turnTimeoutSeconds": 420,
+            "samplingPolicy": "provider-default-stochastic-repeated-trials",
+            "withinCampaignExecutionProtocolQualified": True,
+            "crossCampaignProviderReproducibilityQualified": False,
+        }
+        value["participantExecutionProtocol"] = execution_protocol
         for index, row in enumerate(value["cases"], 1):
             plan = self.root / f"plan-{index}.json"
             plan.write_text(
@@ -330,6 +354,7 @@ class AgentSuiteScorecardTests(unittest.TestCase):
                         "trialsPerParticipant": trials,
                         "participantProfileCount": len(profiles),
                         "participantProfiles": value["participantProfiles"],
+                        "executionProtocol": execution_protocol,
                         "automaticPromotion": False,
                     },
                     indent=2,

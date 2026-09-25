@@ -135,6 +135,7 @@ jobs:
           cases = []
           case_ids = set()
           participant_profiles = None
+          participant_execution_protocol = None
           for text in root.joinpath("campaign-run-ids.txt").read_text().splitlines():
               run_id = int(text)
               run = json.loads((root / "campaigns" / text / "run.json").read_text())
@@ -167,8 +168,10 @@ jobs:
               assert report_participants == set(plan_order)
               if participant_profiles is None:
                   participant_profiles = plan["participantProfiles"]
+                  participant_execution_protocol = plan["executionProtocol"]
               else:
                   assert plan["participantProfiles"] == participant_profiles
+                  assert plan["executionProtocol"] == participant_execution_protocol
               source_run_id = run_id
               import_verification = None
               import_attestation = None
@@ -214,6 +217,7 @@ jobs:
                   "attestationVerification": "population-attestation-verification.json",
               },
               "participantProfiles": participant_profiles,
+              "participantExecutionProtocol": participant_execution_protocol,
               "participantOrder": [row["participantId"] for row in participant_profiles],
               "cases": sorted(cases, key=lambda row: row["caseId"]),
           }
