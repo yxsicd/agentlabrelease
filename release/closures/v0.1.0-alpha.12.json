@@ -234,7 +234,7 @@
       "public-install-deploy-smoke-candidate-btrfs",
       "public-install-deploy-smoke-release-closure"
     ],
-    "sourceGitSha": "9cea8fa7e6ac8cba5085802f835e09bb1a1ff984",
+    "sourceGitSha": "4a365104cfd74af4c648f83ecb21d87ea3a9e787",
     "taggedCleanInstallRequired": true
   },
   "releaseTag": "v0.1.0-alpha.12",
@@ -262,7 +262,7 @@
   "sources": {
     "agentlabGitSha": "24fb4ec0beaff395b790bf4d1678f7f2a9c76a3c",
     "llmrsGitSha": "96447aa08879794e3c77c448dedbfe028186a1df",
-    "releaseGitSha": "9cea8fa7e6ac8cba5085802f835e09bb1a1ff984"
+    "releaseGitSha": "4a365104cfd74af4c648f83ecb21d87ea3a9e787"
   },
   "status": "developer-preview-candidate",
   "targetCompatibility": {

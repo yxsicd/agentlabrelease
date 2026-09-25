@@ -4,7 +4,7 @@
     {
       "assetCount": 22,
       "path": "release/closures/v0.1.0-alpha.12.json",
-      "releaseGitSha": "9cea8fa7e6ac8cba5085802f835e09bb1a1ff984",
+      "releaseGitSha": "4a365104cfd74af4c648f83ecb21d87ea3a9e787",
       "releaseTag": "v0.1.0-alpha.12",
       "remoteAssets": [
         {
@@ -206,10 +206,10 @@
           "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-emulator-linux-x64-26.0.0.821/HarmonyOS-7.0.0-phone_all_x86.tar.zst"
         }
       ],
-      "sha256": "87da1e472ca248a4f6d35c7b38410faf0d819ae0816f7d7abac320e7d6dbea35"
+      "sha256": "c10dd513e6b07c0cbba1291a0e314497124b20b3add97f44740c54875a71194a"
     }
   ],
-  "observedAt": "2026-09-25T17:52:34+00:00",
+  "observedAt": "2026-09-25T18:16:57+00:00",
   "registrySha256": "0d9301df415a8a21b9534ca8f5731aa21869586d6e994178e6da5268e680c84f",
   "remote": true,
   "schema": "agentlab.release_graph_validation.v1",
