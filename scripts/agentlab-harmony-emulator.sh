@@ -308,6 +308,25 @@ run_case() {
   fi
   target="127.0.0.1:$hdc_port"
   started=false
+  port_listening() {
+    (exec 3<>"/dev/tcp/127.0.0.1/$hdc_port") >/dev/null 2>&1
+  }
+  stop_emulator() {
+    stop_log=$1
+    "$emulator" -stop "$instance" -instancePath "$instance_path" \
+      >>"$stop_log" 2>&1 || return 1
+    stop_deadline=$((SECONDS + 30))
+    while [ "$SECONDS" -lt "$stop_deadline" ]; do
+      if ! port_listening; then
+        started=false
+        return 0
+      fi
+      sleep 1
+    done
+    printf 'emulator HDC port remained bound after stop: %s\n' "$hdc_port" \
+      >>"$stop_log"
+    return 1
+  }
   terminal_status=failed
   oracle_status=not-run
   assessment_status=infrastructure-unavailable
@@ -501,8 +520,7 @@ run_case() {
   cleanup_case() {
     rc=$?
     if [ "$started" = true ] && [ "$keep_running" != true ]; then
-      "$emulator" -stop "$instance" -instancePath "$instance_path" \
-        >>"$output/emulator-stop.log" 2>&1 || true
+      stop_emulator "$output/emulator-stop.log" || true
     fi
     if [ "$terminal_status" != passed ]; then
       if [ -n "$ui_scenario" ]; then
@@ -669,6 +687,10 @@ run_case() {
       fi
     fi
   fi
+  if [ "$keep_running" != true ]; then
+    stop_emulator "$output/emulator-stop.log" ||
+      infrastructure_failure "emulator did not release HDC port after stop"
+  fi
   terminal_status=passed
   if [ -n "$ui_scenario" ]; then
     case_result_schema=agentlab.harmony_emulator_case_result.v2
@@ -700,10 +722,6 @@ run_case() {
   fi
   printf 'case passed: result=%s/result.json\n' "$output"
   trap - EXIT INT TERM
-  if [ "$keep_running" != true ]; then
-    "$emulator" -stop "$instance" -instancePath "$instance_path" \
-      >"$output/emulator-stop.log" 2>&1
-  fi
 }
 
 usage() {

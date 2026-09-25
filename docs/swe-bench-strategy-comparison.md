@@ -158,17 +158,17 @@ smaller than SWE-bench's:
    has a controlled `FAIL_TO_PASS` replay: the frozen baseline stays on
    `pages/Index`, while a one-line page-registration variant reaches
    `pages/UserAgent_four` and renders `Example Domain` under the exact same
-   scenario. Three independent routes now supply real `PASS_TO_PASS`
-   preservation checks on both HAPs: DomStorage binds route identity plus an
-   absent Index control, while UserAgent_one and Cache_two each bind route
-   identity plus positive visible semantics. A second, structurally distinct
-   named-route implementation changes two ArkTS files, shares no changed path
+   scenario. All eight pre-existing Index routes now supply real `PASS_TO_PASS`
+   preservation checks on baseline, known-fix and alternative HAPs: 24 device
+   runs in total, with four routes binding positive visible semantics. A second,
+   structurally distinct named-route implementation changes two ArkTS files,
+   shares no changed path
    with the page-registration variant, leaves `main_pages.json` byte-identical
-   to the failing baseline, and passes the same target plus all three
+   to the failing baseline, and passes the same target plus all eight
    preservation scenarios on the same Linux emulator. This is direct evidence
    that the UI Oracle is not merely recognizing the known-fix implementation.
-   It is still not a uniform contract: full pre-existing-route coverage,
-   independent review and reference/gold acceptance remain absent.
+   This closes pre-existing-route coverage for this sample, but independent
+   review and reference/gold acceptance remain absent.
 5. Freshness and contamination are now explicit case fields. The controlled
    calibration truthfully records that it was synthesized from public source,
    published in the release PR and is therefore ineligible for future claims
@@ -239,12 +239,14 @@ smaller than SWE-bench's:
     Web content within two seconds—was rejected after a route-success/content-
     delay failure; the retained form checks that an Index-only control is absent
     and separately binds the observed `pages/DomStorage` path. Two more
-    preservation routes now bind `pages/UserAgent_one` plus visible
-    `getUserAgent`, and `pages/Cache_two` plus visible `removeCache`, on both
-    baseline and known-fix HAPs. A structurally distinct named-route HAP also
-    passes the target and all three preservation routes without changing the
-    known-fix file. The four-scenario breadth replay qualifies a stronger
-    implementation-independent repair/preservation Oracle and Oracle-design
+    preservation routes bind `pages/UserAgent_one` plus visible `getUserAgent`,
+    and `pages/Cache_two` plus visible `removeCache`. Five further scenarios
+    close the remaining UserAgent_two, UserAgent_three, CookieManagement,
+    Cache_one and UseMotionDirSensor routes. Baseline, known-fix and a
+    structurally distinct named-route HAP pass all eight preservation routes,
+    yielding 24 preservation runs; the latter also passes the target without
+    changing the known-fix file. The nine-scenario breadth replay qualifies a
+    stronger implementation-independent repair/preservation Oracle and Oracle-design
     lesson, not a reviewed reference repair, exhaustive regression suite,
     business UI case or unseen Agent benchmark. The API 23/24 code-workshop
     build remains unqualified because matching DevEco 6.1 tooling is absent, and
@@ -345,14 +347,14 @@ underspecified or contaminated case.
    and independently verify the implemented authenticated reviewer/artifact
    provenance, while retaining model-training exclusion as unknown unless
    separately evidenced.
-2. Broaden `PASS_TO_PASS` coverage beyond the candidate's three qualified
-   routes. The static calibration protocol requires a digest-bound
-   alternative-valid implementation in addition to the reference and wrong
+2. Carry the now-complete eight-route `PASS_TO_PASS` matrix into independent
+   fairness review and additional held-out cases. The static calibration
+   protocol requires a digest-bound alternative-valid implementation in
+   addition to the reference and wrong
    variants; the real Harmony UI Oracle now exercises that breadth rule with a
-   non-overlapping named-route implementation across all four device scenarios.
-   Independently review fairness, extend route coverage, and only then accept a
-   reference repair.
-   The device campaign must extend, rather than
+   non-overlapping named-route implementation across all nine device scenarios.
+   Independently review fairness, expand the case population, and only then
+   accept a reference repair. The device campaign must extend, rather than
    overwrite, the static repair/preservation matrix with exact UI and
    performance receipts.
 3. Exercise the reviewed feedback-to-analysis bridge on a real source update

@@ -93,7 +93,15 @@ def fixture(root: pathlib.Path) -> dict:
     fixed_preservation["observedPagePathAfter"] = "pages/DomStorage"
     alternative_preservation = attempt(alternative_hap, preservation_sha, True, "preservationCheckPassed")
     alternative_preservation["observedPagePathAfter"] = "pages/DomStorage"
-    def preservation_case(case_id: str, path: str, scenario_digest: str, tap: list[int], text: str, page: str) -> dict:
+    def preservation_case(
+        case_id: str,
+        path: str,
+        scenario_digest: str,
+        tap: list[int],
+        text: str,
+        page: str,
+        assertion_kind: str = "assert-text",
+    ) -> dict:
         baseline_attempt = attempt(baseline_hap, scenario_digest, True, "preservationCheckPassed")
         baseline_attempt.update(observedPagePathAfter=page, observedVisibleTextAfter=text)
         fixed_attempt = attempt(fixed_hap, scenario_digest, True, "preservationCheckPassed")
@@ -104,14 +112,42 @@ def fixture(root: pathlib.Path) -> dict:
             "id": case_id,
             "scenario": {
                 "path": path, "id": case_id, "sha256": scenario_digest, "tap": tap,
-                "assertionKind": "assert-text", "assertionText": text, "expectedPagePath": page,
+                "assertionKind": assertion_kind, "assertionText": text, "expectedPagePath": page,
             },
             "baselineAttempt": baseline_attempt,
             "knownFixAttempt": fixed_attempt,
             "alternativeValidAttempt": alternative_attempt,
         }
+    extra_cases = []
+    for case_id, filename, tap, assertion_kind, text, page in [
+        ("user-agent-two", "user-agent-two.ui", [628, 381], "assert-no-text", "Cache_two", "pages/UserAgent_two"),
+        ("user-agent-three", "user-agent-three.ui", [628, 556], "assert-text", "getCustomUserAgent", "pages/UserAgent_three"),
+        ("cookie-management", "cookie-management.ui", [628, 731], "assert-text", "configCookieSync", "pages/CookieManagement"),
+        ("cache-one", "cache-one.ui", [628, 906], "assert-no-text", "Cache_two", "pages/Cache_one"),
+        ("use-motion-dir-sensor", "use-motion.ui", [628, 1431], "assert-no-text", "Cache_two", "pages/UseMotionDirSensor"),
+    ]:
+        path = root / filename
+        path.write_text(
+            "schema\tagentlab.harmony_ui_scenario.v1\n"
+            f"case\t{case_id}\n"
+            f"wait-text\tvisible\t30\t{case_id}\n"
+            f"tap\t{tap[0]}\t{tap[1]}\n"
+            f"{assertion_kind}\tsemantic\t{text}\n",
+            encoding="utf-8",
+        )
+        extra_cases.append(
+            preservation_case(
+                case_id,
+                filename,
+                hashlib.sha256(path.read_bytes()).hexdigest(),
+                tap,
+                text,
+                page,
+                assertion_kind,
+            )
+        )
     return {
-        "schema": "agentlab.harmony_ui_known_fix_calibration.v2",
+        "schema": "agentlab.harmony_ui_known_fix_calibration.v3",
         "status": "controlled-fail-to-pass-observed",
         "automaticPromotion": False,
         "baselineSource": {"revision": "1" * 40, "hapSha256": baseline_hap, "sourceIdentity": f"artifact-sha256:{baseline_hap}"},
@@ -155,7 +191,25 @@ def fixture(root: pathlib.Path) -> dict:
         "additionalPreservationCases": [
             preservation_case("user-agent-one", "user-agent-one.ui", user_agent_one_sha, [628, 206], "getUserAgent", "pages/UserAgent_one"),
             preservation_case("cache-two", "cache-two.ui", cache_two_sha, [628, 1081], "removeCache", "pages/Cache_two"),
+            *extra_cases,
         ],
+        "expandedPreservationCampaign": {
+            "executedAt": "2026-09-25",
+            "runner": {
+                "path": "/home/huawei/agentlab-source-builds/agentlab-harmony-emulator-stop-ready-7f7a9b00.sh",
+                "sha256": "7f7a9b005d6d86ca0ef0f9d5778ec7056ec3f2faed9c020fbe6436379bcc8d26",
+            },
+            "oldRunnerFailure": {
+                "operationId": "exec-000000000000027b", "passed": 8, "infrastructureFailed": 7,
+                "classification": "emulator-stop-readiness",
+            },
+            "fixedRunner": {
+                "operationId": "exec-000000000000028b", "traceIds": ["trace-a", "trace-b"],
+                "passed": 15, "failed": 0, "durationMs": 647982, "allConsecutive": True,
+            },
+            "scenarioCount": 5,
+            "variantCount": 3,
+        },
         "freshness": {
             "schema": "agentlab.case_freshness.v1", "constructionMode": "synthetic-controlled-calibration",
             "sourceRepositoryVisibility": "public", "sourceRevisionCommittedAt": "2026-09-12T15:18:36+08:00",
@@ -184,21 +238,36 @@ def fixture(root: pathlib.Path) -> dict:
             "repairChecks": {"failToPassObserved": True, "sameScenario": True, "sameEnvironment": True},
             "preservationChecks": {
                 "defined": True, "passToPassObserved": True, "sameScenario": True, "sameEnvironment": True,
-                "caseCount": 3, "positiveVisibleSemanticCaseCount": 2,
-                "caseIds": ["preservation", "user-agent-one", "cache-two"],
+                "caseCount": 8, "positiveVisibleSemanticCaseCount": 4,
+                "caseIds": [
+                    "preservation", "user-agent-one", "cache-two", "user-agent-two",
+                    "user-agent-three", "cookie-management", "cache-one", "use-motion-dir-sensor",
+                ],
+            },
+            "routeCoverage": {
+                "indexRouteCount": 9, "targetRouteCount": 1, "preservationRouteCount": 8,
+                "allIndexRoutesCovered": True, "variantPreservationRuns": 24,
+                "routeIds": [
+                    "UserAgent_one", "UserAgent_two", "UserAgent_three", "CookieManagement",
+                    "Cache_one", "Cache_two", "DomStorage", "UseMotionDirSensor", "UserAgent_four",
+                ],
+                "baselineIndexSha256": "a" * 64,
+                "knownFixIndexSha256": "a" * 64,
+                "alternativeIndexSha256": "6" * 64,
             },
             "oracleBreadth": {
                 "alternativeValidDefined": True, "structurallyDistinctFromKnownFix": True,
                 "referenceOverlapPathCount": 0, "baselineMainPagesUnchanged": True,
-                "repairPassed": True, "preservationPassed": True, "preservationCaseCount": 3,
-                "allFourDeviceScenariosPassed": True,
+                "repairPassed": True, "preservationPassed": True, "preservationCaseCount": 8,
+                "deviceScenarioCount": 9, "allDeviceScenariosPassed": True,
             },
             "review": {"independent": False, "knownFixAcceptedAsReference": False},
         },
         "qualificationScope": {
             "controlledKnownFix": True, "businessSemanticAssertionObserved": True, "candidateFailToPass": True,
             "businessUiOracleQualified": False, "independentReview": False, "referenceRepair": False,
-            "preservationPassToPass": True, "freshnessDeclared": True,
+            "preservationPassToPass": True, "completeExistingRoutePreservation": True,
+            "freshnessDeclared": True,
             "alternativeValidQualified": True,
             "unseenAgentDiscrimination": False, "performanceComparison": False,
         },
@@ -301,6 +370,14 @@ class HarmonyUiKnownFixCalibrationTests(unittest.TestCase):
             value = fixture(root)
             value["additionalPreservationCases"][0]["scenario"]["assertionText"] = "forged"
             with self.assertRaisesRegex(MODULE.CalibrationError, "assertion text differs"):
+                MODULE.validate(value, root)
+
+    def test_fixed_runner_replay_must_retain_all_fifteen_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            value = fixture(root)
+            value["expandedPreservationCampaign"]["fixedRunner"]["passed"] = 14
+            with self.assertRaisesRegex(MODULE.CalibrationError, "fixed-runner result counts differ"):
                 MODULE.validate(value, root)
 
 

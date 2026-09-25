@@ -202,9 +202,12 @@ UI calibration, not only by the deterministic protocol fixture. Besides the
 one-line page-registration variant, a named-route implementation changes two
 ArkTS files, overlaps none of the known-fix paths and leaves the failing
 baseline's `main_pages.json` byte-identical. Its exact HAP passes the target
-scenario and all three preservation scenarios on the same Linux emulator. This
-qualifies Oracle breadth for that controlled calibration; it does not supply
-independent fairness review, exhaustive route coverage or a gold repair.
+scenario and all eight pre-existing-route preservation scenarios on the same
+Linux emulator. Baseline, known-fix and alternative HAPs therefore contribute
+24 preservation runs, with four positive visible-semantic assertions. This
+qualifies complete existing-route breadth for that controlled calibration; it
+does not supply independent fairness review, broader case-population coverage
+or a gold repair.
 
 The first call-localization qualification is retained at
 `release/qualifications/harmony-arkweb-lifecycle-localization-6840590/`. On the

@@ -112,7 +112,7 @@ def validate_scenario_descriptor(value: object, label: str, base_dir: Path | Non
 def validate(value: object, base_dir: Path | None = None) -> dict:
     require(isinstance(value, dict), "calibration must be a JSON object")
     data = value
-    require(data.get("schema") == "agentlab.harmony_ui_known_fix_calibration.v2", "unsupported schema")
+    require(data.get("schema") == "agentlab.harmony_ui_known_fix_calibration.v3", "unsupported schema")
     require(data.get("status") == "controlled-fail-to-pass-observed", "unsupported status")
     require(data.get("automaticPromotion") is False, "automaticPromotion must be false")
 
@@ -154,6 +154,8 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
     paths = alternative.get("paths")
     require(isinstance(paths, list) and len(paths) == 2 and len(set(paths)) == 2, "alternative-valid solution must change exactly two distinct paths")
     require(known.get("path") not in paths, "alternative-valid solution must not overlap the known-fix path")
+    alternative_index_paths = [path for path in paths if str(path).endswith("/pages/Index.ets")]
+    require(len(alternative_index_paths) == 1, "alternative-valid solution must identify Index.ets")
     require(alternative.get("referenceOverlapPaths") == [], "alternative-valid solution must declare zero reference path overlap")
     require(
         alternative.get("changedFiles") == 2
@@ -253,7 +255,7 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
     require(data["alternativeValidPreservationAttempt"].get("observedPagePathAfter") == "pages/DomStorage", "alternative-valid preservation must reach DomStorage")
 
     additional = data.get("additionalPreservationCases")
-    require(isinstance(additional, list) and len(additional) == 2, "exactly two additional preservation cases are required")
+    require(isinstance(additional, list) and len(additional) == 7, "exactly seven additional preservation cases are required")
     preservation_ids = [preservation_scenario.get("id")]
     positive_visible_semantic_cases = 0
     for index, item in enumerate(additional):
@@ -280,6 +282,30 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
             require(alternative_attempt.get("observedVisibleTextAfter") == expected_text, f"{label} alternative-valid visible text differs")
     require(len(set(preservation_ids)) == len(preservation_ids), "preservation case ids must be unique")
 
+    campaign = data.get("expandedPreservationCampaign")
+    require(isinstance(campaign, dict), "expanded preservation campaign is required")
+    require(campaign.get("executedAt") == "2026-09-25", "expanded campaign execution date differs")
+    runner = campaign.get("runner")
+    require(isinstance(runner, dict), "expanded campaign runner is required")
+    require(
+        runner.get("sha256") == "7f7a9b005d6d86ca0ef0f9d5778ec7056ec3f2faed9c020fbe6436379bcc8d26",
+        "expanded campaign runner identity differs",
+    )
+    require(str(runner.get("path", "")).endswith("agentlab-harmony-emulator-stop-ready-7f7a9b00.sh"), "expanded campaign runner path differs")
+    old_runner = campaign.get("oldRunnerFailure")
+    require(isinstance(old_runner, dict), "old-runner failure evidence is required")
+    require(old_runner.get("operationId") == "exec-000000000000027b", "old-runner operation differs")
+    require(old_runner.get("passed") == 8 and old_runner.get("infrastructureFailed") == 7, "old-runner result counts differ")
+    require(old_runner.get("classification") == "emulator-stop-readiness", "old-runner failure classification differs")
+    fixed_runner = campaign.get("fixedRunner")
+    require(isinstance(fixed_runner, dict), "fixed-runner replay evidence is required")
+    require(fixed_runner.get("operationId") == "exec-000000000000028b", "fixed-runner operation differs")
+    require(isinstance(fixed_runner.get("traceIds"), list) and len(fixed_runner["traceIds"]) == 2, "fixed-runner traces differ")
+    require(fixed_runner.get("passed") == 15 and fixed_runner.get("failed") == 0, "fixed-runner result counts differ")
+    require(fixed_runner.get("durationMs") == 647982, "fixed-runner duration differs")
+    require(fixed_runner.get("allConsecutive") is True, "fixed-runner replay must be consecutive")
+    require(campaign.get("scenarioCount") == 5 and campaign.get("variantCount") == 3, "expanded campaign dimensions differ")
+
     freshness = data.get("freshness")
     require(isinstance(freshness, dict), "freshness declaration is required")
     require(freshness.get("schema") == "agentlab.case_freshness.v1", "unsupported freshness schema")
@@ -300,9 +326,37 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
     require(isinstance(repairs, dict) and all(repairs.get(key) is True for key in ("failToPassObserved", "sameScenario", "sameEnvironment")), "repair checks must bind the controlled comparison")
     preservation = matrix.get("preservationChecks")
     require(isinstance(preservation, dict) and all(preservation.get(key) is True for key in ("defined", "passToPassObserved", "sameScenario", "sameEnvironment")), "preservation checks must bind the controlled comparison")
-    require(preservation.get("caseCount") == 3, "preservation matrix case count differs")
-    require(preservation.get("positiveVisibleSemanticCaseCount") == positive_visible_semantic_cases == 2, "preservation semantic case count differs")
+    require(preservation.get("caseCount") == len(preservation_ids) == 8, "preservation matrix case count differs")
+    require(preservation.get("positiveVisibleSemanticCaseCount") == positive_visible_semantic_cases == 4, "preservation semantic case count differs")
     require(preservation.get("caseIds") == preservation_ids, "preservation matrix case ids differ")
+    route_coverage = matrix.get("routeCoverage")
+    require(isinstance(route_coverage, dict), "route coverage qualification is required")
+    require(
+        route_coverage.get("routeIds")
+        == [
+            "UserAgent_one",
+            "UserAgent_two",
+            "UserAgent_three",
+            "CookieManagement",
+            "Cache_one",
+            "Cache_two",
+            "DomStorage",
+            "UseMotionDirSensor",
+            "UserAgent_four",
+        ],
+        "Index route inventory differs",
+    )
+    baseline_index_sha = digest(route_coverage.get("baselineIndexSha256"), "route coverage baseline Index")
+    require(route_coverage.get("knownFixIndexSha256") == baseline_index_sha, "known-fix Index must equal baseline")
+    require(
+        route_coverage.get("alternativeIndexSha256") == after_files[alternative_index_paths[0]],
+        "alternative Index identity differs",
+    )
+    require(route_coverage.get("indexRouteCount") == 9, "Index route count differs")
+    require(route_coverage.get("targetRouteCount") == 1, "target route count differs")
+    require(route_coverage.get("preservationRouteCount") == len(preservation_ids) == 8, "preservation route count differs")
+    require(route_coverage.get("allIndexRoutesCovered") is True, "all Index routes must be covered")
+    require(route_coverage.get("variantPreservationRuns") == 24, "variant preservation run count differs")
     breadth = matrix.get("oracleBreadth")
     require(isinstance(breadth, dict), "oracle breadth qualification is required")
     for field in (
@@ -311,17 +365,18 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
         "baselineMainPagesUnchanged",
         "repairPassed",
         "preservationPassed",
-        "allFourDeviceScenariosPassed",
+        "allDeviceScenariosPassed",
     ):
         require(breadth.get(field) is True, f"oracle breadth {field} must be observed")
     require(breadth.get("referenceOverlapPathCount") == 0, "oracle breadth reference overlap count differs")
-    require(breadth.get("preservationCaseCount") == 3, "oracle breadth preservation case count differs")
+    require(breadth.get("preservationCaseCount") == len(preservation_ids) == 8, "oracle breadth preservation case count differs")
+    require(breadth.get("deviceScenarioCount") == 9, "oracle breadth device scenario count differs")
     review = matrix.get("review")
     require(isinstance(review, dict) and review.get("independent") is False and review.get("knownFixAcceptedAsReference") is False, "known fix must remain unreviewed and non-reference")
 
     scope = data.get("qualificationScope")
     require(isinstance(scope, dict), "qualificationScope is required")
-    for field in ("controlledKnownFix", "businessSemanticAssertionObserved", "candidateFailToPass", "preservationPassToPass", "alternativeValidQualified", "freshnessDeclared"):
+    for field in ("controlledKnownFix", "businessSemanticAssertionObserved", "candidateFailToPass", "preservationPassToPass", "completeExistingRoutePreservation", "alternativeValidQualified", "freshnessDeclared"):
         require(scope.get(field) is True, f"{field} must be observed")
     for field in ("businessUiOracleQualified", "independentReview", "referenceRepair", "unseenAgentDiscrimination", "performanceComparison"):
         require(scope.get(field) is False, f"{field} must remain unqualified")

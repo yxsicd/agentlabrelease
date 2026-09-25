@@ -1498,3 +1498,16 @@ v3 decision was `within-relative-guardrails` and comparable. Retain comparison
 SHA256 `bb3ad5cd3e6a84405dee9119c97af8d74a6968181c941b600cc58ea3ed21c7e5`
 as the real checkpoint. FPS remained zero and frame intervals absent, so this
 qualifies only the declared CPU/PSS policy lane.
+
+## Harmony emulator stop-readiness checkpoint
+
+Sequential cold-boot campaigns must treat emulator shutdown as incomplete until
+the HDC endpoint port is no longer listening. The vendor stop command can return
+while port 10100 is still bound; immediately starting the next instance then
+produces an infrastructure failure that can be mistaken for application flake.
+The runner must stop the emulator, wait with a bounded timeout for port release,
+and fail as infrastructure if the endpoint remains occupied. Preserve the
+failed batch: the old runner completed 8 of 15 cases and produced 7 port-conflict
+infrastructure failures. After adding the readiness wait, the same 15 cases
+passed consecutively. Do not erase the first batch or reclassify its failures as
+participant or Oracle failures.

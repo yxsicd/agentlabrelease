@@ -1,0 +1,6 @@
+schema	agentlab.harmony_ui_scenario.v1
+case	guide-user-agent-three-preservation
+wait-text	user-agent-three-visible	30	UserAgent_three
+tap	628	556
+sleep	1000
+assert-text	custom-user-agent-visible	getCustomUserAgent
