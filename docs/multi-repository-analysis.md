@@ -37,6 +37,16 @@ delimiters remain newline-terminated in both batch modes. This preserves
 unusual committed paths without requiring either `-z` or the newer uppercase
 `-Z` protocol on the older Git shipped on the hwlinux execution host.
 
+The compatibility path was exercised on hwlinux with Git 2.34.1 at AgentLab
+commit `0ce25f9`. The retained two-repository Harmony input at
+`/home/huawei/.agentlab/evidence/harmony-assessed-ohostest-aa799f9/manifest.json`
+completed with source-set SHA-256
+`7f96da1f672e7e9286e759cc6c95f29f4b9cc1b50987a53e0d1d465d0c04a8d8`,
+167 facts and 22 difficulty candidates. The resulting analysis and candidate
+artifacts have SHA-256 digests
+`dfea0f4e680f139ab6e483078632dab5f998614054e755e9c42db7b749d58735`
+and `a2c220246694376ba07b4f6a3cb63d4173f6c956de86dd902f311cbf3dceb9ad`.
+
 Before analysis, the workflow re-fetches two bounded Git blob-size tiers (8 KiB
 and 32 KiB). This coalesces the large population of small source files into a
 few resumable packs. Any larger source blobs remain explicit in the transport
