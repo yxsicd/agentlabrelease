@@ -264,6 +264,29 @@ deadline is an infrastructure failure: the gate invokes the exact instance's
 official stop command, waits for the launcher process to exit, and retains the
 failure-stop log instead of leaking an emulator into a later retry.
 
+The integrated hwlinux canary at
+`/home/huawei/.agentlab/evidence/harmony-assessed-ohostest-aa799f9/campaign-output`
+then exercised this complete ordering against method revision
+`d788ac47b9989f7f57d8250acc087b55beb6e2d0`. Both strong and weak assessed
+workspaces built their application and `ohosTest` HAPs and passed the native
+Hypium runner. The strong variant passed the independent UI Oracle and retained
+three SmartPerf samples (mean application CPU 2.542 reported percent and mean
+PSS 33,011 KiB); the weak variant passed the same static and native standard
+tests but failed the device-visible text Oracle as intended. The campaign
+summary SHA256 is `53c68106…4f07`, its discrimination report SHA256 is
+`1cf515fd…f1be`, and the resulting score is 1.0 with both attempts covered.
+The run ended with no HDC target or emulator process. Absolute power and
+thermal authority remains unavailable on this emulator.
+
+That run also exposed an important host preflight requirement. A long-lived
+service may not inherit group membership added after it started. The emulator
+process must have all of `kvm`, `render`, and `video`, with read/write access to
+`/dev/kvm`, `/dev/vhost-net`, `/dev/dri/card1`, and `/dev/dri/renderD128`.
+KVM-only execution produced EGL permission errors and never exposed HDC;
+refreshing all three groups removed the errors and reduced standard-test cold
+startup to the ordinary tens-of-seconds range. These devices and groups belong
+in `executionPreflight`, not in an undocumented operator workaround.
+
 ## Relative performance feedback
 
 Add stable run and environment identities to normalize SmartPerf automatically:

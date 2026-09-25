@@ -503,6 +503,18 @@ the default 180-second HDC deadline up to 900 seconds for slow hosts; a timed-ou
 start is stopped through the exact emulator instance and logged before the
 stage is reported as resumable infrastructure failure.
 
+The first complete hwlinux campaign carrying this gate is retained at
+`/home/huawei/.agentlab/evidence/harmony-assessed-ohostest-aa799f9/campaign-output`.
+Its two exact-revision workspaces both passed static assessment, independent
+Harmony build, and source-bound `ohosTest`; only the strong variant passed the
+device UI Oracle and therefore entered SmartPerf collection. The report marks
+the case `high-discrimination-candidate`, with discrimination score 1.0,
+process coverage 1.0, two infrastructure-valid device attempts, one profiled
+successful attempt, and no excluded attempts. Summary and report SHA256 values
+are respectively `53c68106…4f07` and `1cf515fd…f1be`. The evidence remains
+review-required and non-promoting; one trial per profile does not establish a
+population confidence claim.
+
 ### Build the assessed Agent output, not the frozen baseline
 
 For an assessed-Agent campaign, the ordinary Git-object builder is the wrong
