@@ -134,6 +134,8 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
             "sourceSetSha256": "a" * 64,
             "analysisRunSha256": "b" * 64,
             "proposalMethodRevision": "2" * 40,
+            "difficultyEvidenceSha256": hashlib.sha256(difficulty.read_bytes()).hexdigest(),
+            "programFactsSha256": hashlib.sha256(facts_path.read_bytes()).hexdigest(),
             "proposedCandidates": [{
                 "id": candidate["id"],
                 "candidateSha256": PACKET.canonical_digest(candidate),
@@ -242,6 +244,49 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
             "packToFile",
         )
 
+    def test_v3_packet_binds_supplemental_control_context_without_replacing_base_facts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths = self.fixture(Path(directory))
+            context_rows = []
+            for line in paths[2].read_text().splitlines():
+                row = json.loads(line)
+                if row.get("kind") == "call":
+                    row["controlContext"] = {
+                        "awaitAncestorCount": 1,
+                        "callbackDepth": 0,
+                        "controlRegions": [{
+                            "syntaxKind": "try_statement",
+                            "span": row["span"],
+                        }],
+                        "enclosingCalls": [],
+                        "resolution": "syntactic-ancestor-context",
+                    }
+                context_rows.append(row)
+            context = Path(directory) / "context-facts.jsonl"
+            context.write_text(
+                "".join(json.dumps(row, sort_keys=True) + "\n" for row in context_rows)
+            )
+            packet = PACKET.build_packet(
+                *paths[:4], paths[4]["id"], "3" * 40, 4, 240,
+                context, "4" * 40,
+            )
+            self.assertEqual(packet["schema"], "agentlab.multi_repo_candidate_review_packet.v3")
+            self.assertEqual(packet["callControlContextCoverage"]["selectedCallCount"], 2)
+            self.assertEqual(packet["callControlContextCoverage"]["awaitedCallCount"], 2)
+            self.assertEqual(
+                packet["callControlContextCoverage"]["controlRegionKindCounts"],
+                {"try_statement": 2},
+            )
+            self.assertEqual(
+                packet["lineage"]["contextWorkspaceFactsSha256"],
+                hashlib.sha256(context.read_bytes()).hexdigest(),
+            )
+            self.assertEqual(packet["lineage"]["contextMethodRevision"], "4" * 40)
+            self.assertIn(
+                "syntactic async and control-region evidence",
+                packet["sweStyleTaskContract"]["satisfiedByThisPacket"],
+            )
+
     def test_packet_rejects_candidate_drift_and_non_shortlisted_candidate(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -249,7 +294,7 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
             value = json.loads(difficulty.read_text())
             value["candidates"][0]["seed"]["callTarget"] = "api.changed"
             difficulty.write_text(json.dumps(value, sort_keys=True) + "\n")
-            with self.assertRaisesRegex(PACKET.ReviewPacketError, "candidate digest differs"):
+            with self.assertRaisesRegex(PACKET.ReviewPacketError, "difficulty evidence differs"):
                 PACKET.build_packet(manifest, difficulty, facts, proposal, candidate["id"], "3" * 40)
 
             value["candidates"][0] = candidate
@@ -285,6 +330,9 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
                     if row["id"] != "fact-owner-b"
                 )
             )
+            proposal = json.loads(paths[3].read_text())
+            proposal["programFactsSha256"] = hashlib.sha256(paths[2].read_bytes()).hexdigest()
+            paths[3].write_text(json.dumps(proposal, sort_keys=True) + "\n")
             packet = PACKET.build_packet(*paths[:4], paths[4]["id"], "3" * 40)
             self.assertEqual(packet["ownerEvidenceCoverage"]["unresolvedOwnerCount"], 1)
             self.assertIn("owner-context-incomplete", {

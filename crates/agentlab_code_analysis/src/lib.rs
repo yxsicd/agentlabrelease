@@ -26,6 +26,47 @@ fn span(node: Node) -> Value {
         "startLine":node.start_position().row+1,"endLine":node.end_position().row+1,
         "startColumnByte":node.start_position().column,"endColumnByte":node.end_position().column})
 }
+fn call_control_context(node: Node, source: &[u8]) -> Value {
+    let mut control_regions = Vec::new();
+    let mut enclosing_calls = Vec::new();
+    let mut await_ancestor_count = 0usize;
+    let mut callback_depth = 0usize;
+    let mut current = node.parent();
+    while let Some(parent) = current {
+        match parent.kind() {
+            "method_definition"
+            | "function_declaration"
+            | "class_declaration"
+            | "abstract_class_declaration"
+            | "struct_declaration" => break,
+            "await_expression" => await_ancestor_count += 1,
+            "arrow_function" | "function_expression" => {
+                callback_depth += 1;
+                control_regions.push(json!({"syntaxKind":parent.kind(),"span":span(parent)}));
+            }
+            "try_statement" | "catch_clause" | "finally_clause" | "if_statement"
+            | "switch_case" | "for_statement" | "for_in_statement" | "while_statement"
+            | "do_statement" | "ternary_expression" => {
+                control_regions.push(json!({"syntaxKind":parent.kind(),"span":span(parent)}));
+            }
+            "call_expression" => {
+                let target = field(parent, "function", source);
+                if !target.is_empty() {
+                    enclosing_calls.push(json!({"targetExpression":target,"span":span(parent)}));
+                }
+            }
+            _ => {}
+        }
+        current = parent.parent();
+    }
+    json!({
+        "awaitAncestorCount":await_ancestor_count,
+        "callbackDepth":callback_depth,
+        "controlRegions":control_regions,
+        "enclosingCalls":enclosing_calls,
+        "resolution":"syntactic-ancestor-context"
+    })
+}
 fn import_bindings(node: Node, source: &[u8]) -> Vec<Value> {
     fn collect(node: Node, source: &[u8], rows: &mut Vec<Value>) {
         match node.kind() {
@@ -162,7 +203,7 @@ impl Collector<'_> {
             }
             "call_expression" => {
                 let target = field(node, "function", self.source);
-                self.emit(node,"call",&format!("{owner}::{target}"),json!({"targetExpression":target,"owner":owner,"resolution":"syntactic-unresolved"}));
+                self.emit(node,"call",&format!("{owner}::{target}"),json!({"targetExpression":target,"owner":owner,"resolution":"syntactic-unresolved","controlContext":call_control_context(node,self.source)}));
             }
             "decorator" => {
                 let expression = text(node, self.source);
@@ -321,6 +362,34 @@ mod tests {
             .rows
             .iter()
             .any(|r| r["kind"] == "assignment" && r["leftExpression"] == "this.value"));
+    }
+    #[test]
+    fn calls_retain_syntactic_async_and_cleanup_context() {
+        let result = analyze(
+            "A.ets",
+            b"async function run() { const x = await api.make(); try { await x.use(); } finally { x.release(); } }",
+            "cut",
+        )
+        .unwrap();
+        let call = |target: &str| {
+            result
+                .rows
+                .iter()
+                .find(|row| row["kind"] == "call" && row["targetExpression"] == target)
+                .unwrap()
+        };
+        assert_eq!(call("api.make")["controlContext"]["awaitAncestorCount"], 1);
+        assert_eq!(call("x.use")["controlContext"]["awaitAncestorCount"], 1);
+        assert!(call("x.use")["controlContext"]["controlRegions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["syntaxKind"] == "try_statement"));
+        assert!(call("x.release")["controlContext"]["controlRegions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["syntaxKind"] == "finally_clause"));
     }
     #[test]
     fn whitespace_keeps_ids_and_invalid_syntax_is_evidence() {

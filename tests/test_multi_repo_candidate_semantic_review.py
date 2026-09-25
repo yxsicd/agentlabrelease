@@ -67,7 +67,7 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
             },
             "automaticPromotion": False,
         }
-        if schema == REVIEW.PACKET_SCHEMA_V2:
+        if schema in {REVIEW.PACKET_SCHEMA_V2, REVIEW.PACKET_SCHEMA_V3}:
             value["callResultHandleEvidence"] = [{
                 "selectedCallFactId": "fact-call", "status": "unbound-result",
             }]
@@ -78,6 +78,17 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
                 "unboundResultCount": 1,
                 "ambiguousContainerCount": 0,
                 "directMemberNameCounts": {},
+            }
+        if schema == REVIEW.PACKET_SCHEMA_V3:
+            value["callControlContextEvidence"] = [{
+                "factId": "fact-call",
+                "controlContext": {"resolution": "syntactic-ancestor-context"},
+            }]
+            value["callControlContextCoverage"] = {
+                "selectedCallCount": 1,
+                "awaitedCallCount": 0,
+                "callbackNestedCallCount": 0,
+                "controlRegionKindCounts": {},
             }
         path.write_text(json.dumps(value, sort_keys=True) + "\n")
         return path
@@ -90,6 +101,21 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
                 root,
                 "defer-for-more-evidence",
                 {"observable-gap": "unknown"},
+            )
+            decision = root / "decision.json"
+            decision.write_text(json.dumps(value, sort_keys=True) + "\n")
+            gate = REVIEW.compile_gate(packet, decision)
+            self.assertEqual(gate["status"], "deferred-for-more-evidence")
+            self.assertFalse(gate["allowsCaseContract"])
+
+    def test_v3_control_context_packet_uses_the_same_fail_closed_review_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            packet = self.packet(root, REVIEW.PACKET_SCHEMA_V3)
+            value = self.decide(
+                root,
+                "defer-for-more-evidence",
+                {"repair-oracle": "unknown"},
             )
             decision = root / "decision.json"
             decision.write_text(json.dumps(value, sort_keys=True) + "\n")

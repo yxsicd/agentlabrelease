@@ -170,14 +170,16 @@ def owner_contexts(
                 row.get("id", ""),
             ),
         )
-        call_rows = [
-            {
+        call_rows = []
+        for row in owner_calls:
+            call_row = {
                 "factId": row.get("id"),
                 "targetExpression": row.get("targetExpression"),
                 "span": row.get("span"),
             }
-            for row in owner_calls
-        ]
+            if isinstance(row.get("controlContext"), dict):
+                call_row["controlContext"] = row["controlContext"]
+            call_rows.append(call_row)
         base = {
             "repositoryId": repository_id,
             "path": path,
@@ -327,13 +329,16 @@ def call_result_handles(
                     match = direct_member.fullmatch(target) if isinstance(target, str) else None
                     if match:
                         member = match.group(1)
-                        direct_calls.append({
+                        direct_call = {
                             "factId": row.get("id"),
                             "member": member,
                             "targetExpression": target,
                             "span": row.get("span"),
                             "afterSelectedCall": isinstance(start, int) and start >= factory_end,
-                        })
+                        }
+                        if isinstance(row.get("controlContext"), dict):
+                            direct_call["controlContext"] = row["controlContext"]
+                        direct_calls.append(direct_call)
                         member_counts[member] = member_counts.get(member, 0) + 1
                 elif (
                     row.get("kind") == "assignment"
@@ -384,6 +389,56 @@ def call_result_handles(
     return evidence, coverage
 
 
+def call_control_contexts(
+    call_facts: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    rows = []
+    kinds: dict[str, int] = {}
+    awaited = 0
+    callback = 0
+    for fact in call_facts:
+        context = fact.get("controlContext")
+        require(isinstance(context, dict), f"control context is absent: {fact.get('id')}")
+        await_count = context.get("awaitAncestorCount")
+        callback_depth = context.get("callbackDepth")
+        regions = context.get("controlRegions")
+        enclosing = context.get("enclosingCalls")
+        require(isinstance(await_count, int) and await_count >= 0, "await context is invalid")
+        require(isinstance(callback_depth, int) and callback_depth >= 0, "callback context is invalid")
+        require(isinstance(regions, list), "control regions are invalid")
+        require(isinstance(enclosing, list), "enclosing calls are invalid")
+        awaited += int(await_count > 0)
+        callback += int(callback_depth > 0)
+        for region in regions:
+            require(isinstance(region, dict), "control region is invalid")
+            kind = region.get("syntaxKind")
+            require(isinstance(kind, str) and kind, "control region kind is invalid")
+            kinds[kind] = kinds.get(kind, 0) + 1
+        rows.append({
+            "factId": fact.get("id"),
+            "repositoryId": fact.get("repositoryId"),
+            "path": fact.get("path"),
+            "owner": fact.get("owner"),
+            "targetExpression": fact.get("targetExpression"),
+            "span": fact.get("span"),
+            "controlContext": context,
+        })
+    rows.sort(key=lambda row: (
+        row.get("repositoryId", ""), row.get("path", ""),
+        row.get("owner", ""), row.get("factId", ""),
+    ))
+    return rows, {
+        "selectedCallCount": len(rows),
+        "awaitedCallCount": awaited,
+        "callbackNestedCallCount": callback,
+        "controlRegionKindCounts": dict(sorted(kinds.items())),
+        "interpretation": (
+            "Ancestor syntax identifies lexical await, callback and control regions only. It does not "
+            "prove reachability, branch coverage, dominance, post-dominance or exception-safe cleanup."
+        ),
+    }
+
+
 def build_packet(
     manifest_path: Path,
     difficulty_path: Path,
@@ -393,6 +448,8 @@ def build_packet(
     packet_method_revision: str,
     context_lines: int = 4,
     max_owner_lines: int = 240,
+    context_facts_path: Path | None = None,
+    context_method_revision: str | None = None,
 ) -> dict[str, Any]:
     require(REVISION.fullmatch(packet_method_revision) is not None, "packet method revision is invalid")
     require(0 <= context_lines <= 20, "context lines must be between zero and twenty")
@@ -407,6 +464,14 @@ def build_packet(
         "unsupported current-method proposal",
     )
     require(proposal.get("automaticPromotion") is False, "current-method proposal can auto-promote")
+    require(
+        file_digest(difficulty_path) == proposal.get("difficultyEvidenceSha256"),
+        "difficulty evidence differs from current-method proposal",
+    )
+    require(
+        file_digest(facts_path) == proposal.get("programFactsSha256"),
+        "workspace facts differ from current-method proposal",
+    )
     require(proposal.get("sourceSetSha256") == difficulty.get("sourceSetSha256"), "source set differs")
     shortlist = {
         row.get("id"): row
@@ -455,14 +520,62 @@ def build_packet(
         },
         "call facts do not cover every affected repository",
     )
+    using_context_facts = context_facts_path is not None or context_method_revision is not None
+    require(
+        (context_facts_path is None) == (context_method_revision is None),
+        "context facts and context method revision must be supplied together",
+    )
+    analysis_facts = all_facts
+    context_facts_sha256 = None
+    if using_context_facts:
+        require(
+            isinstance(context_method_revision, str)
+            and REVISION.fullmatch(context_method_revision) is not None,
+            "context method revision is invalid",
+        )
+        require(
+            context_facts_path is not None
+            and context_facts_path.is_file()
+            and not context_facts_path.is_symlink(),
+            "context workspace facts must be a regular file",
+        )
+        context_facts = [
+            json.loads(line)
+            for line in context_facts_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        context_by_id = {
+            row.get("id"): row for row in context_facts if row.get("id") in evidence_ids
+        }
+        require(set(context_by_id) == set(evidence_ids), "context facts omit candidate calls")
+        stable_fields = (
+            "id", "kind", "repositoryId", "path", "owner",
+            "targetExpression", "sourceIdentity", "span",
+        )
+        for fact_id in evidence_ids:
+            require(
+                {key: selected_facts[fact_id].get(key) for key in stable_fields}
+                == {key: context_by_id[fact_id].get(key) for key in stable_fields},
+                f"context fact stable projection differs: {fact_id}",
+            )
+        analysis_facts = context_facts
+        call_facts = sorted(
+            (context_by_id[fact_id] for fact_id in evidence_ids),
+            key=lambda row: (row.get("repositoryId", ""), row.get("path", ""), row.get("id", "")),
+        )
+        context_facts_sha256 = file_digest(context_facts_path)
     source_rows = [
         source_evidence(repositories[row["repositoryId"]], row, context_lines)
         for row in call_facts
     ]
     owner_rows, owner_counts = owner_contexts(
-        repositories, call_facts, all_facts, max_owner_lines
+        repositories, call_facts, analysis_facts, max_owner_lines
     )
-    handle_rows, handle_coverage = call_result_handles(call_facts, all_facts)
+    handle_rows, handle_coverage = call_result_handles(call_facts, analysis_facts)
+    control_rows = None
+    control_coverage = None
+    if using_context_facts:
+        control_rows, control_coverage = call_control_contexts(call_facts)
     project_boundary_status = (
         "review-required" if all(row["projectBoundaryCandidates"] for row in source_rows)
         else "incomplete"
@@ -478,8 +591,11 @@ def build_packet(
             "id": "owner-context-incomplete",
             "statement": "At least one owner is unresolved or represented by a bounded excerpt rather than its complete source span.",
         })
-    return {
-        "schema": "agentlab.multi_repo_candidate_review_packet.v2",
+    packet = {
+        "schema": (
+            "agentlab.multi_repo_candidate_review_packet.v3"
+            if using_context_facts else "agentlab.multi_repo_candidate_review_packet.v2"
+        ),
         "status": "independent-semantic-review-required",
         "candidateId": candidate_id,
         "candidateSha256": canonical_digest(candidate),
@@ -554,9 +670,18 @@ def build_packet(
             "currentMethodProposalSha256": file_digest(proposal_path),
             "analysisRunSha256": proposal.get("analysisRunSha256"),
             "proposalMethodRevision": proposal.get("proposalMethodRevision"),
+            "contextWorkspaceFactsSha256": context_facts_sha256,
+            "contextMethodRevision": context_method_revision,
         },
         "automaticPromotion": False,
     }
+    if using_context_facts:
+        packet["callControlContextEvidence"] = control_rows
+        packet["callControlContextCoverage"] = control_coverage
+        packet["sweStyleTaskContract"]["satisfiedByThisPacket"].append(
+            "syntactic async and control-region evidence"
+        )
+    return packet
 
 
 def main() -> int:
@@ -569,6 +694,8 @@ def main() -> int:
     parser.add_argument("--packet-method-revision", required=True)
     parser.add_argument("--context-lines", type=int, default=4)
     parser.add_argument("--max-owner-lines", type=int, default=240)
+    parser.add_argument("--context-facts", type=Path)
+    parser.add_argument("--context-method-revision")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
@@ -577,6 +704,8 @@ def main() -> int:
             args.manifest, args.difficulty, args.facts, args.proposal,
             args.candidate_id, args.packet_method_revision, args.context_lines,
             args.max_owner_lines,
+            args.context_facts,
+            args.context_method_revision,
         )
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(value, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
