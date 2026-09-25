@@ -55,6 +55,40 @@ The candidate still requires its declared CI checks, a tagged clean install and
 Linux emulator acceptance before it can become a qualified developer preview.
 Generating a closure does not create a tag, GitHub Release or channel promotion.
 
+Linux emulator acceptance must be regenerated for the exact closure source cut;
+an older successful campaign is not transferable. Start from a retained campaign
+template and rebind every executable, the UI Oracle and the five Harmony runtime
+assets to the candidate:
+
+```sh
+python3 scripts/prepare-release-harmony-acceptance.py \
+  --closure release/closures/v0.1.0-alpha.12.json \
+  --template-plan /retained/evidence/campaign-plan.json \
+  --repository-root "$PWD" \
+  --campaign-id alpha12-release-acceptance \
+  --output /retained/evidence/alpha12-release-acceptance-plan.json
+```
+
+Run that plan with `run-harmony-assessed-campaign.py` under the target host's
+active KVM, render and video groups. After the emulator and HDC target have been
+stopped, retain cleanup evidence and validate the output:
+
+```sh
+python3 scripts/validate-release-harmony-acceptance.py \
+  --closure release/closures/v0.1.0-alpha.12.json \
+  --plan /retained/evidence/alpha12-release-acceptance-plan.json \
+  --campaign-output /retained/evidence/alpha12-release-acceptance/campaign-output \
+  --cleanup-evidence /retained/evidence/alpha12-release-acceptance/cleanup.json \
+  --output /retained/evidence/alpha12-release-acceptance/acceptance.json
+```
+
+The validator requires real ohosTest/Hypium success for both variants, at least
+one functional Oracle pass with valid SmartPerf proxy samples, at least one
+meaningful Oracle failure whose performance collection was skipped, exact
+closure/campaign digests, a direct-peer inspection trail, and zero remaining
+emulator processes or HDC targets. It preserves the physical-device and
+absolute-power/thermal boundary and never authorizes automatic promotion.
+
 Before proposing a tag, independently verify that every referenced GitHub
 Release asset still exists with the closure's exact server-reported size and
 SHA-256, including assets hosted by another repository:

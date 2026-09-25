@@ -12,7 +12,9 @@ release-method source commit `9cea8fa7e6ac8cba5085802f835e09bb1a1ff984`
 to 14 already-published immutable components and all 22 registered payload and
 descriptor assets without rebuilding or uploading any unchanged binary. It
 remains a developer-preview candidate until tagged clean-install and
-Linux-emulator acceptance are retained.
+release-bound Linux-emulator acceptance are retained. The acceptance plan and
+receipt workflow is documented in [the immutable Release Graph](docs/release-graph.md);
+older emulator evidence cannot qualify a newer closure.
 
 Component-based publication now uses [reference-only environment releases](docs/component-publication.md).
 Tagged releases additionally use an [immutable Release Graph](docs/release-graph.md)
