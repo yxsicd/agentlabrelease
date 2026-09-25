@@ -276,7 +276,12 @@ tests but failed the device-visible text Oracle as intended. The campaign
 summary SHA256 is `53c68106…4f07`, its discrimination report SHA256 is
 `1cf515fd…f1be`, and the resulting score is 1.0 with both attempts covered.
 The run ended with no HDC target or emulator process. Absolute power and
-thermal authority remains unavailable on this emulator.
+thermal authority remains unavailable on this emulator. The compact immutable
+qualification record is checked in at
+`release/qualifications/harmony-assessed-ohostest-hwlinux-aa799f9/summary.json`;
+it explicitly classifies the two inputs as controlled fixture variants rather
+than external Agent submissions and retains the one-trial and emulator-only
+limits.
 
 That run also exposed an important host preflight requirement. A long-lived
 service may not inherit group membership added after it started. The emulator

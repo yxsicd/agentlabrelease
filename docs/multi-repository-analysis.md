@@ -673,7 +673,12 @@ process coverage 1.0, two infrastructure-valid device attempts, one profiled
 successful attempt, and no excluded attempts. Summary and report SHA256 values
 are respectively `53c68106…4f07` and `1cf515fd…f1be`. The evidence remains
 review-required and non-promoting; one trial per profile does not establish a
-population confidence claim.
+population confidence claim. A release-controlled digest and scope record is
+retained at
+`release/qualifications/harmony-assessed-ohostest-hwlinux-aa799f9/summary.json`;
+the underlying inputs remain controlled strong/weak fixtures, so this closes
+the operational workflow but not unseen-Agent or external-repository
+generalization.
 
 ### Build the assessed Agent output, not the frozen baseline
 

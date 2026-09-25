@@ -281,6 +281,43 @@ class HarmonyAssessedHandoffTests(unittest.TestCase):
         self.assertEqual(receipt["outputs"]["evidenceFileCount"], 202)
         self.assertFalse(receipt["automaticPromotion"])
 
+    def test_real_hwlinux_ohostest_qualification_retains_empirical_boundary(self) -> None:
+        receipt = json.loads(
+            (
+                ROOT
+                / "release/qualifications/harmony-assessed-ohostest-hwlinux-aa799f9/summary.json"
+            ).read_text()
+        )
+        self.assertEqual(
+            receipt["schema"], "agentlab.harmony_assessed_ohostest_qualification.v1"
+        )
+        self.assertEqual(receipt["status"], "assessed-review-required")
+        self.assertFalse(receipt["automaticPromotion"])
+        self.assertEqual(receipt["assessment"]["deviceAttemptCount"], 2)
+        self.assertEqual(receipt["assessment"]["discriminationScore"], 1.0)
+        self.assertFalse(receipt["assessment"]["extremePassRateWilson95Separated"])
+        for attempt in ("strong-ohostest-1", "weak-ohostest-1"):
+            self.assertTrue(
+                receipt["attempts"][attempt]["standardTest"]["subjectTaskSucceeded"]
+            )
+        self.assertEqual(
+            receipt["attempts"]["weak-ohostest-1"]["device"]["failureClass"],
+            "oracle",
+        )
+        self.assertEqual(
+            receipt["attempts"]["strong-ohostest-1"]["performance"]["sampleCount"],
+            3,
+        )
+        self.assertFalse(receipt["feedback"]["caseReady"])
+        self.assertEqual(
+            receipt["qualificationBoundary"]["sourcePopulation"],
+            "controlled strong and weak fixture variants, not external model submissions",
+        )
+        self.assertIn(
+            "absolute power or thermal measurement",
+            receipt["qualificationBoundary"]["notQualified"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

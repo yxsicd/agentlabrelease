@@ -1,0 +1,144 @@
+{
+  "assessment": {
+    "attemptCount": 2,
+    "deviceAttemptCount": 2,
+    "discriminationScore": 1.0,
+    "eligible": true,
+    "evidenceComplete": true,
+    "extremePassRateWilson95Separated": false,
+    "feedbackCandidateCount": 1,
+    "processAwareEligible": true,
+    "validAttemptCount": 2
+  },
+  "attempts": {
+    "strong-ohostest-1": {
+      "device": {
+        "failureClass": "none",
+        "hapSha256": "61cbce5ac48feaf98c327ea69f84c8e66339506555b5b1829a427c36dbcd7624",
+        "infrastructureAvailable": true,
+        "oracleStatus": "passed",
+        "resultSha256": "3a41d9993edefc0e58113ad74d016778e0c67ba9c9a2593a8d526e497f64bfd3",
+        "status": "passed",
+        "subjectTaskSucceeded": true
+      },
+      "performance": {
+        "absolutePowerThermalAuthority": "unavailable-on-emulator",
+        "appCpuUsagePercentMean": 2.5416666666666665,
+        "appPssKiBMean": 33011.0,
+        "profileValid": true,
+        "relativePerformanceAuthority": "smartperf-emulator-proxy",
+        "sampleCount": 3,
+        "summarySha256": "aef955a02fcd9d54b80236d02a9a687bb55db7580341b707ad3ea3bb33fd4133"
+      },
+      "standardTest": {
+        "failureClass": "none",
+        "framework": "instrument-test-ohosTest-hypium",
+        "projectTreeSha256": "2bc54dc8b9d581ef9892d25451ec1df0ad4243e98e0b588439448b79773c94a9",
+        "receiptSha256": "7f4eb690bcac1cd62538de351080aec1c90f8778567356e72145aa28574be0de",
+        "sourceStandardTestReceiptSha256": "f7b941cec9e598cdc06ff4cb682c2f4346a759d406729a63f7be0eb1adb22ac9",
+        "status": "passed-review-required",
+        "subjectTaskSucceeded": true
+      }
+    },
+    "weak-ohostest-1": {
+      "device": {
+        "failureClass": "oracle",
+        "hapSha256": "a314a9a42283103b6aaaf3570e48d037256c15b8f753b54bc6afd345f10cc589",
+        "infrastructureAvailable": true,
+        "oracleStatus": "failed",
+        "resultSha256": "8d5ae5c735ae81bfff6f9c3a8de2412fa2351f2829bc93d6921294bb237c56b5",
+        "status": "failed",
+        "subjectTaskSucceeded": false
+      },
+      "performance": {
+        "reason": "functional-oracle-failed",
+        "status": "not-run"
+      },
+      "standardTest": {
+        "failureClass": "none",
+        "framework": "instrument-test-ohosTest-hypium",
+        "projectTreeSha256": "117dac410fab97e8ddc66fae581de833bb032265ca601d107d9f0637307090aa",
+        "receiptSha256": "3e011817b4aba671fe063247e78f080cad6dfd886eeab1ed76731371a002462e",
+        "sourceStandardTestReceiptSha256": "0336c5f1fb9e4dd5bdbfbb9afe63f304a308377a8c9f3bf3df6e81758982a321",
+        "status": "passed-review-required",
+        "subjectTaskSucceeded": true
+      }
+    }
+  },
+  "automaticPromotion": false,
+  "campaignId": "hwlinux-ohostest-aa799f9",
+  "caseId": "harmony-assessed-ohostest-device-discrimination",
+  "environmentIdentity": "hwlinux:harmonyos-7.0.0:x86:kvm",
+  "evidence": {
+    "assessmentFeedbackSha256": "d1917ccb2a1cb736deff4c241a3aa4b053099e2f5614053440b0d409875ab6d3",
+    "campaignSummarySha256": "53c681067068889f11a037fb795ac472d8e0b477200cfaa4399ee1cb0c584f07",
+    "discriminationReportSha256": "1cf515fd1ebf7474a6294bd7963d21ce1cbc02ee881cd5cb424b7ccc06b1f1be",
+    "fileCount": 1927,
+    "manifestSha256": "9b1352e812e5b961520dfde30258585646dfa246a1d23bb4c0faf583dfe4ba4b",
+    "retainedByteLength": 27309958,
+    "retainedRoot": "/home/huawei/.agentlab/evidence/harmony-assessed-ohostest-aa799f9",
+    "treeDigestAlgorithm": "sha256(sorted(relative-path + NUL + binary-file-sha256 + LF))",
+    "treeSha256": "e67ae14f980e05f8b0dd8bef4bb958ee8ca6d9261e7198dfd116d56a8de576a2"
+  },
+  "feedback": {
+    "automaticPromotion": false,
+    "candidateId": "assessment-feedback-a6a1b3d8a4ce4835db0c",
+    "caseReady": false,
+    "failureMode": "oracle-failure",
+    "nextGate": "maintainer-adjudication-and-new-analysis-cut",
+    "required": [
+      "maintainer-adjudication",
+      "new-source-and-analysis-cut",
+      "independent-oracle-calibration"
+    ]
+  },
+  "methodRevision": "d788ac47b9989f7f57d8250acc087b55beb6e2d0",
+  "qualificationBoundary": {
+    "notQualified": [
+      "external-agent behavior or unseen-agent generalization",
+      "population-level discrimination confidence or repeatability",
+      "baseline-versus-candidate performance regression",
+      "absolute power or thermal measurement",
+      "physical-device behavior",
+      "automatic case promotion"
+    ],
+    "qualified": [
+      "controlled two-repository fixture materialization",
+      "independent Harmony application and ohosTest builds for both assessed workspaces",
+      "source-bound native ohosTest execution before device assessment",
+      "functional Oracle separation of the strong and weak variants",
+      "functional-pass-gated SmartPerf collection on the Linux x86 KVM emulator"
+    ],
+    "sourcePopulation": "controlled strong and weak fixture variants, not external model submissions"
+  },
+  "recordedFromRevision": "9e9e8adb5e0dd71a25becece91e32314d5e0915f",
+  "remoteInspection": {
+    "cleanupVerified": {
+      "emulatorProcessCount": 0,
+      "hdcTargets": []
+    },
+    "logicalGatewayId": "agentweb-ai",
+    "operationIds": [
+      "exec-00000000000003ab",
+      "exec-00000000000003ac",
+      "exec-00000000000003ad"
+    ],
+    "routeDecision": "peer_direct",
+    "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a"
+  },
+  "schema": "agentlab.harmony_assessed_ohostest_qualification.v1",
+  "sourceRepositories": [
+    {
+      "id": "app",
+      "repositoryClass": "controlled-fixture",
+      "revision": "c9940ac264bc47dec903c2c815cb62b11283ee28"
+    },
+    {
+      "id": "contracts",
+      "repositoryClass": "controlled-fixture",
+      "revision": "0a7b3b179a97dbaf82e7025a531573c7090b015c"
+    }
+  ],
+  "sourceSetSha256": "7f96da1f672e7e9286e759cc6c95f29f4b9cc1b50987a53e0d1d465d0c04a8d8",
+  "status": "assessed-review-required"
+}
