@@ -8,6 +8,7 @@ import json
 import math
 import pathlib
 import re
+import statistics
 from typing import Any
 
 INPUT_SCHEMAS = {
@@ -255,10 +256,13 @@ def validate_stage_coverage(
         if "harmony-device" in stage_ids:
             fail(f"{case_id} {attempt_id} harmony-device coverage is absent")
         return value
+    required_device_keys = {
+        "executed", "oraclePass", "profileCollected", "smartPerfSampleCount"
+    }
     if (
         not isinstance(device, dict)
-        or set(device)
-        != {"executed", "oraclePass", "profileCollected", "smartPerfSampleCount"}
+        or not required_device_keys.issubset(device)
+        or not set(device) <= required_device_keys.union({"performanceObservation"})
         or device.get("executed") is not True
         or not isinstance(device.get("oraclePass"), bool)
         or device["oraclePass"] is not verdict
@@ -276,7 +280,156 @@ def validate_stage_coverage(
         )
     ):
         fail(f"{case_id} {attempt_id} harmony-device coverage is invalid")
+    observation = device.get("performanceObservation")
+    if observation is not None:
+        metrics = observation.get("metricValues") if isinstance(observation, dict) else None
+        authority = observation.get("authority") if isinstance(observation, dict) else None
+        digests = (
+            observation.get("performancePolicySha256"),
+            observation.get("profileWorkloadSha256"),
+            observation.get("smartperfSummarySha256"),
+        ) if isinstance(observation, dict) else ()
+        valid_metrics = isinstance(metrics, dict) and bool(metrics)
+        if valid_metrics:
+            for name, metric in metrics.items():
+                valid_metrics = (
+                    isinstance(name, str)
+                    and bool(name)
+                    and isinstance(metric, dict)
+                    and set(metric) == {"statistic", "value", "unit", "direction"}
+                    and metric.get("statistic") in {"mean", "p50", "p95"}
+                    and isinstance(metric.get("value"), (int, float))
+                    and not isinstance(metric.get("value"), bool)
+                    and math.isfinite(metric["value"])
+                    and isinstance(metric.get("unit"), str)
+                    and bool(metric["unit"])
+                    and metric.get("direction") in {"lower", "higher"}
+                )
+                if not valid_metrics:
+                    break
+        if (
+            not isinstance(observation, dict)
+            or set(observation)
+            != {
+                "schema",
+                "environmentIdentity",
+                "performancePolicySha256",
+                "profileWorkloadSha256",
+                "smartperfSummarySha256",
+                "sampleCount",
+                "metricValues",
+                "authority",
+            }
+            or observation.get("schema")
+            != "agentlab.harmony_performance_observation.v1"
+            or not isinstance(observation.get("environmentIdentity"), str)
+            or not observation["environmentIdentity"]
+            or len(digests) != 3
+            or not all(
+                isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value)
+                for value in digests
+            )
+            or observation.get("sampleCount") != device["smartPerfSampleCount"]
+            or not valid_metrics
+            or authority
+            != {
+                "functional": "none",
+                "relativePerformance": "smartperf-emulator-proxy",
+                "absolutePowerThermal": "unavailable-on-emulator",
+            }
+            or device["oraclePass"] is not True
+        ):
+            fail(f"{case_id} {attempt_id} performance observation is invalid")
     return value
+
+
+def summarize_performance_observations(
+    device_rows: list[dict[str, Any]], successful_attempts: int
+) -> dict[str, Any]:
+    observations = [
+        row["performanceObservation"]
+        for row in device_rows
+        if isinstance(row.get("performanceObservation"), dict)
+    ]
+    identities = {
+        (
+            row["environmentIdentity"],
+            row["performancePolicySha256"],
+            row["profileWorkloadSha256"],
+        )
+        for row in observations
+    }
+    identity_consistent = len(identities) <= 1
+    metric_name_sets = {frozenset(row["metricValues"]) for row in observations}
+    if len(metric_name_sets) > 1:
+        identity_consistent = False
+    coverage_qualified = (
+        successful_attempts > 0 and len(observations) == successful_attempts
+    )
+    metric_names = (
+        set.intersection(*(set(row["metricValues"]) for row in observations))
+        if observations
+        else set()
+    )
+    metrics: dict[str, Any] = {}
+    for name in sorted(metric_names):
+        definitions = {
+            (
+                row["metricValues"][name]["statistic"],
+                row["metricValues"][name]["unit"],
+                row["metricValues"][name]["direction"],
+            )
+            for row in observations
+        }
+        if len(definitions) != 1:
+            identity_consistent = False
+            continue
+        statistic, unit, direction = next(iter(definitions))
+        values = [float(row["metricValues"][name]["value"]) for row in observations]
+        mean = statistics.fmean(values)
+        deviation = statistics.stdev(values) if len(values) >= 2 else None
+        metrics[name] = {
+            "statistic": statistic,
+            "unit": unit,
+            "direction": direction,
+            "observedTrials": len(values),
+            "min": min(values),
+            "max": max(values),
+            "mean": mean,
+            "sampleStandardDeviation": deviation,
+            "coefficientOfVariation": (
+                deviation / abs(mean)
+                if deviation is not None and mean != 0.0
+                else None
+            ),
+        }
+    repeatability_qualified = (
+        coverage_qualified
+        and identity_consistent
+        and len(observations) >= 2
+        and bool(metrics)
+    )
+    identity = None
+    if len(identities) == 1:
+        environment, policy, workload = next(iter(identities))
+        identity = {
+            "environmentIdentity": environment,
+            "performancePolicySha256": policy,
+            "profileWorkloadSha256": workload,
+        }
+    return {
+        "observedTrials": len(observations),
+        "successfulTrialCoverageQualified": coverage_qualified,
+        "identityConsistent": identity_consistent,
+        "repeatabilityQualified": repeatability_qualified,
+        "identity": identity,
+        "metrics": metrics,
+        "authority": {
+            "functional": "none",
+            "relativePerformance": "smartperf-emulator-proxy",
+            "absolutePowerThermal": "unavailable-on-emulator",
+        },
+    }
 
 
 def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> dict[str, Any]:
@@ -363,6 +516,9 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
         profiled_successful_device_rows = sum(
             row["oraclePass"] and row["profileCollected"]
             for row in device_rows
+        )
+        performance_feedback = summarize_performance_observations(
+            device_rows, successful_attempts
         )
         passed = sum(verdicts)
         count = len(attempt_rows)
@@ -475,6 +631,7 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
                         "smartPerfSampleCount": sum(
                             row["smartPerfSampleCount"] for row in device_rows
                         ),
+                        "performanceFeedback": performance_feedback,
                         "authority": "operator-owned-harmony-ui-oracle-with-functional-pass-gated-smartperf",
                     },
                 },
@@ -537,6 +694,16 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
     )
     profiled_successful_attempts = sum(
         row["profiledSuccessfulDeviceTrials"] for row in harmony_profiles
+    )
+    performance_profiles = [row["performanceFeedback"] for row in harmony_profiles]
+    successful_performance_profiles = [
+        feedback
+        for row, feedback in zip(harmony_profiles, performance_profiles)
+        if row["successfulTrials"] > 0
+    ]
+    performance_feedback_qualified = (
+        bool(successful_performance_profiles)
+        and all(row["repeatabilityQualified"] for row in successful_performance_profiles)
     )
     successful_device_coverage_qualified = (
         successful_attempts > 0
@@ -659,6 +826,18 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
                 "smartPerfSampleCount": sum(
                     row["smartPerfSampleCount"] for row in harmony_profiles
                 ),
+                "performanceObservationCount": sum(
+                    row["observedTrials"] for row in performance_profiles
+                ),
+                "repeatablePerformanceProfileCount": sum(
+                    row["repeatabilityQualified"] for row in performance_profiles
+                ),
+                "performanceFeedbackQualified": performance_feedback_qualified,
+                "performanceAuthority": {
+                    "functional": "none",
+                    "relativePerformance": "smartperf-emulator-proxy",
+                    "absolutePowerThermal": "unavailable-on-emulator",
+                },
                 "authority": "operator-owned-harmony-ui-oracle-with-functional-pass-gated-smartperf",
             },
             "note": "Operator-owned stage timing, change, scope and Oracle transition evidence. Optional participant self-assessment is a claim compared with the independent Oracle, not a verdict.",

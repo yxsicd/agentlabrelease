@@ -330,6 +330,29 @@ def validate_discrimination(
             == "operator-owned-harmony-ui-oracle-with-functional-pass-gated-smartperf",
             f"{case_id} {participant_id} Harmony device qualification differs",
         )
+        performance = profile_harmony.get("performanceFeedback")
+        require(
+            isinstance(performance, dict)
+            and isinstance(performance.get("observedTrials"), int)
+            and 0 <= performance["observedTrials"] <= profile_harmony["successfulDeviceTrials"]
+            and performance.get("successfulTrialCoverageQualified")
+            is (passed > 0 and performance["observedTrials"] == passed)
+            and isinstance(performance.get("identityConsistent"), bool)
+            and performance.get("repeatabilityQualified")
+            is (
+                performance["successfulTrialCoverageQualified"]
+                and performance["identityConsistent"]
+                and performance["observedTrials"] >= 2
+                and bool(performance.get("metrics"))
+            )
+            and performance.get("authority")
+            == {
+                "functional": "none",
+                "relativePerformance": "smartperf-emulator-proxy",
+                "absolutePowerThermal": "unavailable-on-emulator",
+            },
+            f"{case_id} {participant_id} Harmony performance feedback differs",
+        )
     process = row.get("processMeasurement")
     require(isinstance(process, dict), f"{case_id} process measurement is absent")
     require(isinstance(process.get("validAttemptCount"), int) and process["validAttemptCount"] > 0, f"{case_id} process denominator is invalid")
@@ -370,6 +393,8 @@ def validate_discrimination(
         "successfulDeviceAttemptCount",
         "profiledSuccessfulAttemptCount",
         "smartPerfSampleCount",
+        "performanceObservationCount",
+        "repeatablePerformanceProfileCount",
     )
     require(
         all(
@@ -414,6 +439,16 @@ def validate_discrimination(
                 "smartPerfSampleCount"
             ]
             for profile in profiles
+        )
+        and harmony["performanceObservationCount"]
+        == sum(
+            profile["processMeasurement"]["harmonyDevice"]["performanceFeedback"]["observedTrials"]
+            for profile in profiles
+        )
+        and harmony["repeatablePerformanceProfileCount"]
+        == sum(
+            profile["processMeasurement"]["harmonyDevice"]["performanceFeedback"]["repeatabilityQualified"]
+            for profile in profiles
         ),
         f"{case_id} Harmony device aggregate differs from participant profiles",
     )
@@ -444,6 +479,28 @@ def validate_discrimination(
         harmony.get("authority")
         == "operator-owned-harmony-ui-oracle-with-functional-pass-gated-smartperf",
         f"{case_id} Harmony device authority differs",
+    )
+    successful_performance_profiles = [
+        profile["processMeasurement"]["harmonyDevice"]["performanceFeedback"]
+        for profile in profiles
+        if profile["passedTrials"] > 0
+    ]
+    require(
+        harmony.get("performanceFeedbackQualified")
+        is (
+            bool(successful_performance_profiles)
+            and all(
+                feedback["repeatabilityQualified"]
+                for feedback in successful_performance_profiles
+            )
+        )
+        and harmony.get("performanceAuthority")
+        == {
+            "functional": "none",
+            "relativePerformance": "smartperf-emulator-proxy",
+            "absolutePowerThermal": "unavailable-on-emulator",
+        },
+        f"{case_id} Harmony performance aggregate differs",
     )
     return value, row
 

@@ -607,6 +607,19 @@ class AgentSuiteScorecardTests(unittest.TestCase):
                 "successfulAttemptDeviceCoverageQualified": False,
                 "profiledSuccessCoverageQualified": False,
                 "smartPerfSampleCount": 0,
+                "performanceFeedback": {
+                    "observedTrials": 0,
+                    "successfulTrialCoverageQualified": False,
+                    "identityConsistent": True,
+                    "repeatabilityQualified": False,
+                    "identity": None,
+                    "metrics": {},
+                    "authority": {
+                        "functional": "none",
+                        "relativePerformance": "smartperf-emulator-proxy",
+                        "absolutePowerThermal": "unavailable-on-emulator",
+                    },
+                },
                 "authority": "operator-owned-harmony-ui-oracle-with-functional-pass-gated-smartperf",
             }
         harmony = report["ranking"][0]["processMeasurement"]["harmonyDevice"]
@@ -619,6 +632,14 @@ class AgentSuiteScorecardTests(unittest.TestCase):
                 "profiledSuccessCoverageQualified": False,
                 "endToEndEvidenceQualified": False,
                 "smartPerfSampleCount": 0,
+                "performanceObservationCount": 0,
+                "repeatablePerformanceProfileCount": 0,
+                "performanceFeedbackQualified": False,
+                "performanceAuthority": {
+                    "functional": "none",
+                    "relativePerformance": "smartperf-emulator-proxy",
+                    "absolutePowerThermal": "unavailable-on-emulator",
+                },
             }
         )
         self.reports["case-b"].write_text(json.dumps(report))

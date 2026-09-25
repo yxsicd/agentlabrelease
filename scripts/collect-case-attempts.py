@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import pathlib
 import re
 from typing import Any
@@ -474,12 +475,81 @@ def normalize_stage_coverage(
             fail(f"{attempt_id} failing harmony-device overclaims performance evidence")
         if verdict is not row.get("oraclePass"):
             fail(f"{attempt_id} harmony-device verdict differs from final verdict")
+        observation = row.get("performanceObservation")
+        if observation is not None:
+            expected_keys = {
+                "schema",
+                "environmentIdentity",
+                "performancePolicySha256",
+                "profileWorkloadSha256",
+                "smartperfSummarySha256",
+                "sampleCount",
+                "metricValues",
+                "authority",
+            }
+            digests = (
+                observation.get("performancePolicySha256"),
+                observation.get("profileWorkloadSha256"),
+                observation.get("smartperfSummarySha256"),
+            ) if isinstance(observation, dict) else ()
+            metrics = observation.get("metricValues") if isinstance(observation, dict) else None
+            authority = observation.get("authority") if isinstance(observation, dict) else None
+            valid_metrics = isinstance(metrics, dict) and bool(metrics)
+            if valid_metrics:
+                for name, metric in metrics.items():
+                    valid_metrics = (
+                        isinstance(name, str)
+                        and bool(name)
+                        and isinstance(metric, dict)
+                        and set(metric) == {"statistic", "value", "unit", "direction"}
+                        and metric.get("statistic") in {"mean", "p50", "p95"}
+                        and isinstance(metric.get("value"), (int, float))
+                        and not isinstance(metric.get("value"), bool)
+                        and math.isfinite(metric["value"])
+                        and isinstance(metric.get("unit"), str)
+                        and bool(metric["unit"])
+                        and metric.get("direction") in {"lower", "higher"}
+                    )
+                    if not valid_metrics:
+                        break
+            if (
+                not isinstance(observation, dict)
+                or set(observation) != expected_keys
+                or observation.get("schema")
+                != "agentlab.harmony_performance_observation.v1"
+                or not isinstance(observation.get("environmentIdentity"), str)
+                or not observation["environmentIdentity"]
+                or observation["environmentIdentity"] != row.get("environmentIdentity")
+                or len(digests) != 3
+                or not all(
+                    isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value)
+                    for value in digests
+                )
+                or observation["performancePolicySha256"]
+                != summary.get("performancePolicySha256")
+                or observation["profileWorkloadSha256"]
+                != summary.get("profileWorkloadSha256")
+                or observation["smartperfSummarySha256"]
+                != summary.get("smartperfSummarySha256")
+                or observation.get("sampleCount") != measurement["smartPerfSampleCount"]
+                or not valid_metrics
+                or authority
+                != {
+                    "functional": "none",
+                    "relativePerformance": "smartperf-emulator-proxy",
+                    "absolutePowerThermal": "unavailable-on-emulator",
+                }
+                or row.get("oraclePass") is not True
+            ):
+                fail(f"{attempt_id} harmony-device performance observation is invalid")
         device = {
             "executed": True,
             "oraclePass": row["oraclePass"],
             "profileCollected": measurement["profileCollected"],
             "smartPerfSampleCount": measurement["smartPerfSampleCount"],
         }
+        if observation is not None:
+            device["performanceObservation"] = observation
     return {
         "schema": "agentlab.assessment_stage_coverage.v1",
         "stageIds": stage_ids,

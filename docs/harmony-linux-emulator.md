@@ -422,6 +422,16 @@ functional gate. The resulting discrimination score is 1.0 with no excluded
 attempts. One review-only `harmony-device` feedback candidate was derived and
 automatic promotion remained false.
 
+Current scoring also preserves policy-selected SmartPerf observations through
+the compound device stage. When a participant has at least two successful
+attempts under the same environment, performance policy and workload, the
+report computes the cross-attempt min/max/mean, sample standard deviation and
+coefficient of variation and marks that profile's performance feedback
+repeatable. A single passing run, including this historical canary, remains an
+observation rather than repeatability evidence. Functional Oracle authority is
+unchanged; emulator measurements remain relative CPU/PSS feedback and do not
+claim absolute power or thermal qualification.
+
 The campaign summary SHA256 is
 `13e3fe304d29a7434a8d0af87e316ac45579e46f40975561f8643f2745cdcb8b`;
 the discrimination-report SHA256 is

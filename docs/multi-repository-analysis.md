@@ -819,6 +819,19 @@ For each attempt, the controller applies a cost and authority gate:
 4. all terminal evidence is collected into one ordinary v2 attempt manifest,
    scored, and converted into review-required feedback candidates.
 
+For a passing device attempt whose normalized profile is SmartPerf v2, the
+compound decision now carries a compact performance observation: exact
+environment, policy, workload and SmartPerf-summary identities plus the
+policy-selected canonical statistic for every required metric. Collection
+revalidates that observation against the terminal stage and summary hashes.
+Scoring then reports per-participant min/max/mean, sample standard deviation
+and coefficient of variation across attempts. It marks the performance feedback
+repeatable only when at least two successful attempts have complete observations
+under one identical environment/policy/workload identity. These descriptive
+metrics never change the functional verdict or discrimination score, and their
+authority remains an emulator relative-performance proxy with no absolute power
+or thermal claim.
+
 The output contains `campaign-state.json` from the first mutation. Re-running
 the identical command resumes a failed Harmony stage and reuses completed
 attempts while rechecking frozen inputs and recorded evidence digests. Plan,

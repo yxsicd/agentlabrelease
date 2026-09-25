@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import pathlib
 import re
 import shutil
@@ -136,10 +137,10 @@ def validate_static_process(
 
 def validate_device_process(
     root: pathlib.Path, binding: dict[str, Any], device_succeeded: bool
-) -> dict[str, Any] | None:
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     process = binding.get("deviceProcessMeasurement")
     if process is None:
-        return None
+        return None, None
     if not isinstance(process, dict) or process.get("schema") != "agentlab.harmony_device_process_measurement.v1":
         raise CompositionError("Harmony device process measurement schema differs")
     integer_fields = (
@@ -209,7 +210,81 @@ def validate_device_process(
         or process["smartPerfSampleCount"] < 1
     ):
         raise CompositionError("passing Harmony device process evidence is incomplete")
-    return process
+    observation = None
+    if device_succeeded and summary.get("schema") == "agentlab.smartperf_summary.v2":
+        environment_identity = summary.get("environmentIdentity")
+        policy = summary.get("performancePolicy")
+        workload = summary.get("profileWorkload")
+        canonical = summary.get("canonicalMetrics")
+        authority = summary.get("authority")
+        if (
+            summary.get("taskId") != binding.get("caseId")
+            or summary.get("sourceIdentity")
+            != f"artifact-sha256:{binding.get('hapSha256')}"
+            or not isinstance(binding.get("runId"), str)
+            or not binding["runId"]
+            or summary.get("runId") != binding["runId"]
+            or not isinstance(environment_identity, str)
+            or not environment_identity
+            or environment_identity != binding.get("environmentIdentity")
+            or not isinstance(policy, dict)
+            or policy.get("sha256") != binding.get("performancePolicySha256")
+            or not isinstance(workload, dict)
+            or workload.get("sha256") != binding.get("profileWorkloadSha256")
+            or not isinstance(canonical, dict)
+            or not isinstance(authority, dict)
+            or authority.get("functional") != "none"
+            or authority.get("relativePerformance") != "smartperf-emulator-proxy"
+            or authority.get("absolutePowerThermal") != "unavailable-on-emulator"
+        ):
+            raise CompositionError("Harmony SmartPerf observation identity differs")
+        required = policy.get("requiredMetrics")
+        if not isinstance(required, list) or not required:
+            raise CompositionError("Harmony SmartPerf required metrics are absent")
+        metric_values: dict[str, Any] = {}
+        for requirement in required:
+            if not isinstance(requirement, dict):
+                raise CompositionError("Harmony SmartPerf metric requirement is invalid")
+            name = requirement.get("metric")
+            statistic = requirement.get("statistic")
+            direction = requirement.get("direction")
+            metric = canonical.get(name) if isinstance(name, str) else None
+            value = metric.get(statistic) if isinstance(metric, dict) else None
+            unit = metric.get("unit") if isinstance(metric, dict) else None
+            if (
+                not isinstance(name, str)
+                or not name
+                or name in metric_values
+                or statistic not in {"mean", "p50", "p95"}
+                or direction not in {"lower", "higher"}
+                or not isinstance(value, (int, float))
+                or isinstance(value, bool)
+                or not math.isfinite(value)
+                or not isinstance(unit, str)
+                or not unit
+            ):
+                raise CompositionError("Harmony SmartPerf required metric is unavailable")
+            metric_values[name] = {
+                "statistic": statistic,
+                "value": value,
+                "unit": unit,
+                "direction": direction,
+            }
+        observation = {
+            "schema": "agentlab.harmony_performance_observation.v1",
+            "environmentIdentity": environment_identity,
+            "performancePolicySha256": policy["sha256"],
+            "profileWorkloadSha256": workload["sha256"],
+            "smartperfSummarySha256": binding["smartperfSummarySha256"],
+            "sampleCount": summary["sampleCount"],
+            "metricValues": metric_values,
+            "authority": {
+                "functional": "none",
+                "relativePerformance": "smartperf-emulator-proxy",
+                "absolutePowerThermal": "unavailable-on-emulator",
+            },
+        }
+    return process, observation
 
 
 def validate_static(root: pathlib.Path) -> dict[str, Any]:
@@ -320,6 +395,7 @@ def validate_loop(root: pathlib.Path, static: dict[str, Any]) -> dict[str, Any]:
             "standardSha256": sha256(standard_path),
             "hapSha256": require_digest(receipt.get("hapSha256"), "Harmony HAP sha256"),
             "processMeasurement": None,
+            "performanceObservation": None,
             "loopProcessMeasurement": None,
         }
     binding_path = require_file(
@@ -379,7 +455,9 @@ def validate_loop(root: pathlib.Path, static: dict[str, Any]) -> dict[str, Any]:
             or result.get("failureClass") != "oracle"
         ):
             raise CompositionError("failing Harmony result is not an assessed Oracle failure")
-    device_process = validate_device_process(root, binding, device_succeeded)
+    device_process, performance_observation = validate_device_process(
+        root, binding, device_succeeded
+    )
     loop_process = receipt.get("processMeasurement")
     if device_process is not None:
         if (
@@ -427,6 +505,7 @@ def validate_loop(root: pathlib.Path, static: dict[str, Any]) -> dict[str, Any]:
         "profileWorkloadSha256": binding.get("profileWorkloadSha256"),
         "smartperfSummarySha256": binding.get("smartperfSummarySha256"),
         "processMeasurement": device_process,
+        "performanceObservation": performance_observation,
         "loopProcessMeasurement": loop_process,
     }
 
@@ -480,6 +559,8 @@ def main() -> int:
                     "deviceProcessMeasurement": device_process,
                 }
             )
+        if device["performanceObservation"] is not None:
+            phase["performanceObservation"] = device["performanceObservation"]
         phases = [*static["phases"], phase]
         verdict = device["deviceSucceeded"]
         process = None

@@ -118,7 +118,14 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
         )
         return root
 
-    def make_loop(self, name: str, static: pathlib.Path, participant: str, passed: bool) -> pathlib.Path:
+    def make_loop(
+        self,
+        name: str,
+        static: pathlib.Path,
+        participant: str,
+        passed: bool,
+        cpu_value: float = 10.0,
+    ) -> pathlib.Path:
         root = self.root / name / "loop"
         result_path = root / "assessment/execution/result.json"
         hap = "3" * 64
@@ -150,7 +157,37 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
             )
             self.write_json(
                 execution / "smartperf-summary.json",
-                {"profileValid": True, "sampleCount": 3},
+                {
+                    "schema": "agentlab.smartperf_summary.v2",
+                    "taskId": self.case_id,
+                    "sourceIdentity": f"artifact-sha256:{hap}",
+                    "runId": name,
+                    "profileValid": True,
+                    "sampleCount": 3,
+                    "environmentIdentity": "hwlinux:phone-x86",
+                    "performancePolicy": {
+                        "sha256": "4" * 64,
+                        "requiredMetrics": [
+                            {
+                                "metric": "appCpuUsagePercent",
+                                "statistic": "mean",
+                                "direction": "lower",
+                            }
+                        ],
+                    },
+                    "profileWorkload": {"sha256": "5" * 64},
+                    "canonicalMetrics": {
+                        "appCpuUsagePercent": {
+                            "mean": cpu_value,
+                            "unit": "reported-percent",
+                        }
+                    },
+                    "authority": {
+                        "functional": "none",
+                        "relativePerformance": "smartperf-emulator-proxy",
+                        "absolutePowerThermal": "unavailable-on-emulator",
+                    },
+                },
             )
         evidence = {
             "uiActions": {
@@ -206,6 +243,7 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
                 "hapSha256": hap,
                 "resultSha256": digest(result_path),
                 "environmentIdentity": "hwlinux:phone-x86",
+                "runId": name,
                 "performancePolicySha256": "4" * 64,
                 "profileWorkloadSha256": "5" * 64,
                 "smartperfSummarySha256": (
@@ -253,9 +291,15 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
         )
         return root
 
-    def compose(self, name: str, participant: str, passed: bool) -> pathlib.Path:
+    def compose(
+        self,
+        name: str,
+        participant: str,
+        passed: bool,
+        cpu_value: float = 10.0,
+    ) -> pathlib.Path:
         static = self.make_static(name, participant)
-        loop = self.make_loop(name, static, participant, passed)
+        loop = self.make_loop(name, static, participant, passed, cpu_value)
         output = self.root / "compound" / name
         completed = subprocess.run(
             [
@@ -399,6 +443,56 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
         self.assertEqual(len(candidates), 1)
         self.assertEqual(candidates[0]["failureMode"], "oracle-failure")
         self.assertFalse(candidates[0]["verificationContract"]["caseReady"])
+
+    def test_repeated_device_profiles_surface_performance_variance(self) -> None:
+        attempts = [
+            ("strong-1", "strong", True, 10.0),
+            ("strong-2", "strong", True, 14.0),
+            ("weak-1", "weak", False, 0.0),
+            ("weak-2", "weak", False, 0.0),
+        ]
+        evidence = {
+            attempt_id: self.compose(attempt_id, participant, passed, cpu)
+            for attempt_id, participant, passed, cpu in attempts
+        }
+        calibration_path = self.root / "calibration.json"
+        self.write_json(calibration_path, self.calibration())
+        manifest = {
+            "schema": "agentlab.case_attempt_collection.v2",
+            "sourceSetSha256": self.source_set,
+            "methodRevision": "9" * 40,
+            "cases": [
+                {
+                    "id": self.case_id,
+                    "calibration": "calibration.json",
+                    "attempts": [
+                        {
+                            "attemptId": attempt_id,
+                            "participantId": participant,
+                            "evidence": evidence[attempt_id].relative_to(self.root).as_posix(),
+                        }
+                        for attempt_id, participant, _passed, _cpu in attempts
+                    ],
+                }
+            ],
+        }
+        collected = COLLECTOR.build_input(manifest, self.root.resolve())
+        report = SCORER.build_report(collected, 2, 0.6)
+        row = report["ranking"][0]
+        strong = next(
+            profile
+            for profile in row["participantProfiles"]
+            if profile["participantId"] == "strong"
+        )
+        feedback = strong["processMeasurement"]["harmonyDevice"]["performanceFeedback"]
+        cpu = feedback["metrics"]["appCpuUsagePercent"]
+        self.assertTrue(feedback["repeatabilityQualified"])
+        self.assertEqual(cpu["observedTrials"], 2)
+        self.assertEqual(cpu["mean"], 12.0)
+        self.assertAlmostEqual(cpu["sampleStandardDeviation"], 2.8284271247461903)
+        self.assertTrue(
+            row["processMeasurement"]["harmonyDevice"]["performanceFeedbackQualified"]
+        )
 
     def test_static_decision_digest_drift_is_rejected(self) -> None:
         static = self.make_static("drift", "weak")
