@@ -22,6 +22,21 @@ MUTABLE_URL_FRAGMENTS = (
 )
 REQUIRED_ASSET_KINDS = {"control", "composition", "runtime", "harmony", "mcpgit", "tools"}
 SUPPORTED_TARGET_STATUS = {"qualified", "experimental", "unsupported"}
+SUPPORTED_CLOSURE_STATUS = {
+    "assembly-candidate-unqualified",
+    "developer-preview-candidate",
+    "qualified-developer-preview",
+}
+DEVELOPER_PREVIEW_CHECKS = {
+    "validate",
+    "service-protocol-demo",
+    "participant-runtime-isolation",
+    "rust-local-contract",
+    "pinned-harmony-syntax-coverage",
+    "public-install-deploy-smoke-alprod-copy-tree",
+    "public-install-deploy-smoke-candidate-copy",
+    "public-install-deploy-smoke-candidate-btrfs",
+}
 
 
 def fail(message: str) -> None:
@@ -73,6 +88,8 @@ def validate_registry_binding(
         fail("componentRegistry binding required")
     if binding.get("schema") != "agentlab.component_registry.v1":
         fail("componentRegistry schema mismatch")
+    if binding.get("path") != "release/components/registry.json":
+        fail("componentRegistry path mismatch")
     if hashlib.sha256(registry_bytes).hexdigest() != binding.get("sha256"):
         fail("componentRegistry digest mismatch")
     if registry.get("schema") != binding["schema"]:
@@ -116,13 +133,20 @@ def validate_closure(
         fail("releaseVersion required")
     if not isinstance(value.get("releaseTag"), str) or not value["releaseTag"]:
         fail("releaseTag required")
+    if value["releaseTag"] != f"v{value['releaseVersion']}":
+        fail("releaseTag must exactly match releaseVersion")
     if value["releaseTag"].lower() in MUTABLE_REFS:
         fail("releaseTag must be immutable")
+    status = value.get("status")
+    if status is not None and status not in SUPPORTED_CLOSURE_STATUS:
+        fail("unsupported release closure status")
     sources = value.get("sources")
     if not isinstance(sources, dict):
         fail("sources required")
     if not hex_value(sources.get("agentlabGitSha"), 40) or not hex_value(sources.get("llmrsGitSha"), 40):
         fail("source revisions must be exact 40-hex")
+    if status is not None and not hex_value(sources.get("releaseGitSha"), 40):
+        fail("current release closure requires exact releaseGitSha")
 
     schemas = value.get("requiredSchemas")
     required_schema_fields = {"controlApi", "lockSchema", "receiptSchema", "componentGraphSchema"}
@@ -163,6 +187,33 @@ def validate_closure(
             fail("target compatibility platform required")
     if registry is not None:
         validate_registry_binding(value, registry, registry_bytes)
+    if status == "developer-preview-candidate":
+        scope = value.get("developerPreviewScope")
+        expected_scope = {
+            "multiRepositorySemanticAndProgramAnalysis": "included",
+            "recursiveDifficultyFeedback": "included",
+            "reviewedCalibratedCaseGeneration": "included",
+            "linuxHarmonyEmulatorExecution": "experimental",
+            "relativePerformanceFeedback": "experimental",
+            "absolutePowerThermal": "not-qualified",
+            "automaticPromotion": False,
+        }
+        if scope != expected_scope:
+            fail("developer preview scope differs")
+        plan = value.get("qualificationPlan")
+        if not isinstance(plan, dict):
+            fail("developer preview qualification plan required")
+        checks = plan.get("requiredChecks")
+        if (
+            plan.get("sourceGitSha") != sources.get("releaseGitSha")
+            or not isinstance(checks, list)
+            or len(checks) != len(set(checks))
+            or set(checks) != DEVELOPER_PREVIEW_CHECKS
+            or plan.get("taggedCleanInstallRequired") is not True
+            or plan.get("linuxEmulatorAcceptanceRequired") is not True
+            or plan.get("automaticPromotion") is not False
+        ):
+            fail("developer preview qualification plan differs")
 
 
 def validate_target(value: dict[str, Any]) -> None:

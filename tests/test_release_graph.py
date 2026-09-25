@@ -76,6 +76,32 @@ class ReleaseGraphTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "differs from registry"):
             MODULE.validate_closure(closure_value, registry, registry_bytes)
 
+    def test_current_closure_requires_release_source_identity(self) -> None:
+        value = closure()
+        value["status"] = "developer-preview-candidate"
+        with self.assertRaisesRegex(ValueError, "releaseGitSha"):
+            MODULE.validate_closure(value)
+        value["sources"]["releaseGitSha"] = "3" * 40
+        value["status"] = "assembly-candidate-unqualified"
+        MODULE.validate_closure(value)
+
+    def test_release_tag_must_match_version(self) -> None:
+        value = closure()
+        value["releaseTag"] = "v0.1.0-alpha.99"
+        with self.assertRaisesRegex(ValueError, "exactly match"):
+            MODULE.validate_closure(value)
+
+    def test_preview_candidate_requires_exact_scope_and_plan(self) -> None:
+        registry_path = ROOT / "release/components/registry.json"
+        registry_bytes = registry_path.read_bytes()
+        registry = json.loads(registry_bytes)
+        value = json.loads(
+            (ROOT / "release/closures/v0.1.0-alpha.11.json").read_text()
+        )
+        value["status"] = "developer-preview-candidate"
+        with self.assertRaisesRegex(ValueError, "scope"):
+            MODULE.validate_closure(value, registry, registry_bytes)
+
     def test_mutable_aldev_is_rejected(self) -> None:
         value = closure()
         value["assets"][0]["url"] = (

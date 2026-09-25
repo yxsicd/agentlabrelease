@@ -6,7 +6,7 @@ AgentLab separates **release identity**, **composition identity**, **control ide
 
 A tagged release uses `agentlab.release_closure.v1` as its replay authority. The closure binds:
 
-- exact AgentLab and LLMRS source revisions;
+- exact AgentLab, LLMRS and release-method source revisions;
 - immutable control, composition, runtime, Harmony, MCPGit and tools assets;
 - SHA-256 and byte size for every asset;
 - the required control API, environment-lock, composition-receipt and component-graph schemas;
@@ -18,6 +18,32 @@ A tagged closure must never reference `aldev`, `almain`, `alprod`, `latest` or `
 Assets referenced by an immutable closure are retention authority. They must not be deleted merely because a mutable channel no longer uses them.
 
 OCI image identity is explicit: the manifest digest and config digest are different facts. A host-local Docker image ID is not a substitute for either.
+
+## Reference-only preview composition
+
+Create a new preview closure from an already validated closure and the current
+component registry with:
+
+```sh
+python3 scripts/compose-release-closure.py \
+  --base release/closures/v0.1.0-alpha.11.json \
+  --registry release/components/registry.json \
+  --version 0.1.0-alpha.12 \
+  --release-source-revision <exact-40-character-commit> \
+  --output release/closures/v0.1.0-alpha.12.json
+```
+
+The source revision must resolve to a local commit and the version must advance
+the base alpha. The composer first validates the base against the exact registry,
+then preserves the entire asset list byte-for-byte. It records zero new binary
+builds and uploads, publishes the bounded developer-preview scope, and leaves
+automatic promotion disabled. The resulting metadata commit may follow the
+source cut it describes; `sources.releaseGitSha` is the exact implementation
+cut under qualification, not a self-referential digest of the JSON commit.
+
+The candidate still requires its declared CI checks, a tagged clean install and
+Linux emulator acceptance before it can become a qualified developer preview.
+Generating a closure does not create a tag, GitHub Release or channel promotion.
 
 ## Target descriptors
 
