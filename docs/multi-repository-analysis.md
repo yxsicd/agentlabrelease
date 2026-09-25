@@ -444,10 +444,11 @@ required by the emulator bridge, not an automatic case-promotion decision.
 
 ## Resume the frozen-case Harmony loop
 
-`run-harmony-evaluation-loop.py` is the control-plane bridge for the two
-operational gates above. It accepts an exact `frozen-calibrated` case, a
-digest-bound build plan, a digest-bound run template, and the exact build and
-run programs. The template uses
+`run-harmony-evaluation-loop.py` is the control-plane bridge for three ordered
+operational gates: assessed-workspace build, source-bound `ohosTest`, then
+emulator UI/performance. It accepts an exact `frozen-calibrated` case,
+digest-bound build and standard-test plans, a digest-bound run template, and
+the exact programs. The UI template uses
 `agentlab.harmony_evaluation_run_template.v1`; it contains the same case,
 Oracle, runtime and performance bindings as a normal run plan, but deliberately
 omits `buildReceipt` and `artifact`. The loop fills those two fields only from
@@ -460,8 +461,10 @@ the successful build output and emits the ordinary
   "loopId": "case-42-hwlinux-r1",
   "evaluationCase": {"path": "/evidence/case.json", "sha256": "..."},
   "buildPlan": {"path": "/evidence/build-plan.json", "sha256": "..."},
+  "standardTestTemplate": {"path": "/evidence/standard-test-template.json", "sha256": "..."},
   "runTemplate": {"path": "/evidence/run-template.json", "sha256": "..."},
   "buildProgram": {"path": "/agentlab/scripts/build-harmony-evaluation-artifact.py", "sha256": "..."},
+  "standardTestProgram": {"path": "/agentlab/scripts/run-harmony-assessed-standard-test.py", "sha256": "..."},
   "runProgram": {"path": "/agentlab/scripts/run-harmony-evaluation-case.py", "sha256": "..."},
   "automaticPromotion": false
 }
@@ -489,6 +492,11 @@ retryable infrastructure error. Both set `automaticPromotion=false` and stop at
 `maintainer-adjudication-and-next-analysis-cut`. It therefore automates the
 repeatable operational path without turning runtime feedback into benchmark
 truth or silently bypassing the review and recalibration boundary.
+
+An `ohosTest` assertion failure is retained as terminal assessed evidence with
+`failureClass=standard-test` and skips UI/performance collection. HDC target,
+installation, or tool failures remain resumable infrastructure failures. Only a
+lineage-bound passing standard-test receipt can enter emulator performance.
 
 ### Build the assessed Agent output, not the frozen baseline
 

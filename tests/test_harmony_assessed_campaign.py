@@ -24,7 +24,7 @@ out.write_bytes((root/"entry/Index.ets").read_bytes() + (root/"shared/policy.ets
 
 
 RUNNER = r'''#!/usr/bin/env python3
-import argparse, hashlib, json, pathlib
+import argparse, hashlib, json, os, pathlib
 p=argparse.ArgumentParser(); p.add_argument("--plan"); p.add_argument("--output"); a=p.parse_args()
 plan=json.loads(pathlib.Path(a.plan).read_text()); build_path=pathlib.Path(plan["buildReceipt"]["path"]); build=json.loads(build_path.read_text())
 out=pathlib.Path(a.output); execution=out/"execution"; execution.mkdir(parents=True)
@@ -58,6 +58,21 @@ binding={"schema":"agentlab.harmony_evaluation_binding.v1","status":"passed-revi
   "smartPerfSampleCount":3 if passed else 0,"functionalOraclePass":passed,"profileCollected":passed,
   "evidence":process_evidence},"automaticPromotion":False}
 (out/"evaluation-binding.json").write_text(json.dumps(binding))
+'''
+
+
+STANDARD = r'''#!/usr/bin/env python3
+import argparse, hashlib, json, os, pathlib
+p=argparse.ArgumentParser(); p.add_argument("--plan"); p.add_argument("--output"); a=p.parse_args()
+plan=json.loads(pathlib.Path(a.plan).read_text()); build_path=pathlib.Path(plan["buildReceipt"]["path"]); build=json.loads(build_path.read_text())
+out=pathlib.Path(a.output); out.mkdir(); digest=lambda path: hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
+assessed={key:build[key] for key in ("participantId","subjectWorkspaceSha256","assessmentSummarySha256","assessmentDecisionSha256","finalSourceStateSha256")}
+passed=build["participantId"] != os.environ.get("CAMPAIGN_STANDARD_FAIL_PARTICIPANT")
+receipt={"schema":"agentlab.harmony_assessed_standard_test_receipt.v1","status":"passed-review-required" if passed else "assessed-failure-review-required",
+ "caseId":"campaign-case","evaluationCaseSha256":plan["evaluationCase"]["sha256"],"sourceSetSha256":"a"*64,
+ "buildReceiptSha256":digest(build_path),"subjectTaskSucceeded":passed,"failureClass":"none" if passed else "standard-test",
+ "assessedWorkspace":assessed,"automaticPromotion":False}
+(out/"receipt.json").write_text(json.dumps(receipt))
 '''
 
 
@@ -111,6 +126,7 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
             )
         )
         self.builder = self.executable("builder.py", BUILDER)
+        self.standard = self.executable("standard.py", STANDARD)
         self.runner = self.executable("runner.py", RUNNER)
         self.scenario = self.file("scenario.ui", "check text ready\n")
         self.policy = self.file("policy.json", "{}\n")
@@ -202,6 +218,7 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
     def write_plan(self) -> None:
         programs = {
             "build": ROOT / "scripts/build-harmony-assessed-workspace.py",
+            "standardTest": self.standard,
             "loop": ROOT / "scripts/run-harmony-evaluation-loop.py",
             "run": self.runner,
             "compose": ROOT / "scripts/compose-harmony-assessed-decision.py",
@@ -228,6 +245,10 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
                 "arguments": ["--workspace", "{workspace}", "--artifact", "{artifact}"],
                 "workingDirectory": ".", "artifactPath": "build/output.hap", "timeoutSeconds": 30, "environment": {},
             },
+            "standardTest": {
+                "sourceExecutor": self.bind(self.standard),
+                "configuration": {},
+            },
             "device": {
                 "subjectOutcomePolicy": "retain-assessed-failure",
                 "functionalOracle": {"path": str(self.scenario), "sha256": digest(self.scenario), "scenarioId": "ready"},
@@ -253,10 +274,10 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
             "finalSourceStateSha256": digest(root / "final-source-state.json"),
         }
 
-    def execute(self, output: pathlib.Path):
+    def execute(self, output: pathlib.Path, env=None):
         return subprocess.run(
             [sys.executable, str(SCRIPT), "--plan", str(self.plan), "--output", str(output)],
-            text=True, capture_output=True, check=False,
+            text=True, capture_output=True, check=False, env={**os.environ, **(env or {})},
         )
 
     def test_static_passes_run_device_and_close_feedback_loop(self) -> None:
@@ -279,6 +300,23 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
         repeated = self.execute(output)
         self.assertEqual(repeated.returncode, 0, repeated.stderr)
         self.assertEqual(json.loads((output / "summary.json").read_text()), summary)
+
+    def test_standard_failure_enters_scoring_and_skips_device_performance(self) -> None:
+        output = self.root / "standard-failure-output"
+        completed = self.execute(
+            output, {"CAMPAIGN_STANDARD_FAIL_PARTICIPANT": "weak"}
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        decision = json.loads(
+            (output / "attempts/weak-1/evidence/decision-package.json").read_text()
+        )
+        loop_state = json.loads(
+            (output / "attempts/weak-1/harmony-loop/loop-state.json").read_text()
+        )
+        self.assertEqual(decision["phaseVerdicts"][-1]["stageId"], "harmony-standard-test")
+        self.assertFalse(decision["subjectTaskSucceeded"])
+        self.assertEqual(loop_state["stages"]["emulatorAssessment"]["status"], "pending")
+        self.assertFalse((output / "attempts/weak-1/harmony-loop/assessment").exists())
 
     def test_plan_drift_is_rejected_on_resume(self) -> None:
         output = self.root / "campaign-output"

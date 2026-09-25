@@ -272,11 +272,60 @@ def validate_static(root: pathlib.Path) -> dict[str, Any]:
 
 def validate_loop(root: pathlib.Path, static: dict[str, Any]) -> dict[str, Any]:
     receipt_path = require_file(root / "loop-receipt.json", "Harmony loop receipt")
+    receipt = load(receipt_path, "Harmony loop receipt")
+    standard_path = require_file(
+        root / "standard-test/receipt.json", "Harmony assessed standard-test receipt"
+    )
+    standard = load(standard_path, "Harmony assessed standard-test receipt")
+    assessed = {
+        "participantId": static["participantId"],
+        "subjectWorkspaceSha256": static["subjectWorkspaceSha256"],
+        "assessmentSummarySha256": static["summarySha256"],
+        "assessmentDecisionSha256": static["decisionSha256"],
+        "finalSourceStateSha256": static["stateSha256"],
+    }
+    if (
+        standard.get("schema") != "agentlab.harmony_assessed_standard_test_receipt.v1"
+        or standard.get("caseId") != static["taskId"]
+        or standard.get("sourceSetSha256") != static["sourceSetSha256"]
+        or standard.get("assessedWorkspace") != assessed
+        or standard.get("automaticPromotion") is not False
+        or receipt.get("standardTestReceiptSha256") != sha256(standard_path)
+    ):
+        raise CompositionError("Harmony standard-test evidence differs from static attempt")
+    standard_succeeded = standard.get("subjectTaskSucceeded")
+    expected_standard_status = (
+        "passed-review-required" if standard_succeeded is True else
+        "assessed-failure-review-required" if standard_succeeded is False else None
+    )
+    if standard.get("status") != expected_standard_status:
+        raise CompositionError("Harmony standard-test status contradicts its verdict")
+    if standard_succeeded is False:
+        if (
+            receipt.get("schema") != "agentlab.harmony_evaluation_loop_receipt.v1"
+            or receipt.get("status") != "assessed-failure-review-required"
+            or receipt.get("failureClass") != "standard-test"
+            or receipt.get("subjectTaskSucceeded") is not False
+            or receipt.get("assessedWorkspace") != assessed
+            or receipt.get("automaticPromotion") is not False
+        ):
+            raise CompositionError("Harmony loop did not retain the standard-test failure")
+        return {
+            "deviceSucceeded": False,
+            "deviceSkipped": True,
+            "failureClass": "standard-test",
+            "receiptPath": receipt_path,
+            "standardPath": standard_path,
+            "receiptSha256": sha256(receipt_path),
+            "standardSha256": sha256(standard_path),
+            "hapSha256": require_digest(receipt.get("hapSha256"), "Harmony HAP sha256"),
+            "processMeasurement": None,
+            "loopProcessMeasurement": None,
+        }
     binding_path = require_file(
         root / "assessment/evaluation-binding.json", "Harmony evaluation binding"
     )
     result_path = require_file(root / "assessment/execution/result.json", "Harmony result")
-    receipt = load(receipt_path, "Harmony loop receipt")
     binding = load(binding_path, "Harmony evaluation binding")
     result = load(result_path, "Harmony result")
     allowed_statuses = {
@@ -304,13 +353,6 @@ def validate_loop(root: pathlib.Path, static: dict[str, Any]) -> dict[str, Any]:
         raise CompositionError("Harmony loop receipt does not bind evaluation binding")
     if binding.get("resultSha256") != sha256(result_path):
         raise CompositionError("Harmony evaluation binding does not bind result")
-    assessed = {
-        "participantId": static["participantId"],
-        "subjectWorkspaceSha256": static["subjectWorkspaceSha256"],
-        "assessmentSummarySha256": static["summarySha256"],
-        "assessmentDecisionSha256": static["decisionSha256"],
-        "finalSourceStateSha256": static["stateSha256"],
-    }
     if receipt.get("assessedWorkspace") != assessed or binding.get("assessedWorkspace") != assessed:
         raise CompositionError("Harmony evidence does not bind the exact static Agent workspace")
     result_expected = {
@@ -348,6 +390,7 @@ def validate_loop(root: pathlib.Path, static: dict[str, Any]) -> dict[str, Any]:
             raise CompositionError("Harmony loop process measurement is absent")
         for field in (
             "buildDurationMs",
+            "standardTestDurationMs",
             "emulatorAssessmentDurationMs",
             "runnerDurationMs",
             "totalDurationMs",
@@ -358,6 +401,7 @@ def validate_loop(root: pathlib.Path, static: dict[str, Any]) -> dict[str, Any]:
             loop_process["runnerDurationMs"] != device_process["runnerDurationMs"]
             or loop_process["totalDurationMs"]
             != loop_process["buildDurationMs"]
+            + loop_process["standardTestDurationMs"]
             + loop_process["emulatorAssessmentDurationMs"]
             or loop_process["runnerDurationMs"]
             > loop_process["emulatorAssessmentDurationMs"]
@@ -367,6 +411,7 @@ def validate_loop(root: pathlib.Path, static: dict[str, Any]) -> dict[str, Any]:
         raise CompositionError("Harmony loop has an unbound process measurement")
     return {
         "deviceSucceeded": device_succeeded,
+        "deviceSkipped": False,
         "failureClass": result.get("failureClass"),
         "receiptPath": receipt_path,
         "bindingPath": binding_path,
@@ -374,6 +419,8 @@ def validate_loop(root: pathlib.Path, static: dict[str, Any]) -> dict[str, Any]:
         "receiptSha256": sha256(receipt_path),
         "bindingSha256": sha256(binding_path),
         "resultSha256": sha256(result_path),
+        "standardPath": standard_path,
+        "standardSha256": sha256(standard_path),
         "hapSha256": require_digest(receipt.get("hapSha256"), "Harmony HAP sha256"),
         "environmentIdentity": binding.get("environmentIdentity"),
         "performancePolicySha256": binding.get("performancePolicySha256"),
@@ -400,18 +447,25 @@ def main() -> int:
         static = validate_static(args.static_assessment.resolve())
         device = validate_loop(args.harmony_loop.resolve(), static)
         phase = {
-            "stageId": "harmony-device",
+            "stageId": "harmony-standard-test" if device["deviceSkipped"] else "harmony-device",
             "participantCompleted": True,
             "changedPaths": [],
             "unauthorizedPaths": [],
             "scopeValid": True,
             "oraclePass": device["deviceSucceeded"],
-            "oracleReceiptSha256": device["resultSha256"],
+            "oracleReceiptSha256": (
+                device["standardSha256"]
+                if device["deviceSkipped"] else device["resultSha256"]
+            ),
             "workspaceSha256": static["subjectWorkspaceSha256"],
-            "authority": "operator-owned-harmony-ui-oracle",
+            "authority": (
+                "source-bound-ohosTest-oracle"
+                if device["deviceSkipped"] else "operator-owned-harmony-ui-oracle"
+            ),
             "hapSha256": device["hapSha256"],
-            "environmentIdentity": device["environmentIdentity"],
         }
+        if not device["deviceSkipped"]:
+            phase["environmentIdentity"] = device["environmentIdentity"]
         if device["processMeasurement"] is not None:
             device_process = device["processMeasurement"]
             loop_process = device["loopProcessMeasurement"]
@@ -450,13 +504,17 @@ def main() -> int:
             "staticAssessmentSummarySha256": static["summarySha256"],
             "staticDecisionSha256": static["decisionSha256"],
             "harmonyLoopReceiptSha256": device["receiptSha256"],
-            "harmonyEvaluationBindingSha256": device["bindingSha256"],
-            "harmonyResultSha256": device["resultSha256"],
-            "performancePolicySha256": device["performancePolicySha256"],
-            "profileWorkloadSha256": device["profileWorkloadSha256"],
-            "smartperfSummarySha256": device["smartperfSummarySha256"],
-            "assessmentBoundary": "Static frozen Oracle plus exact assessed-workspace Harmony HAP and operator-owned emulator UI Oracle; absolute device power and thermal remain unavailable.",
+            "harmonyStandardTestReceiptSha256": device["standardSha256"],
+            "assessmentBoundary": "Static frozen Oracle plus exact assessed-workspace source-bound ohosTest; emulator UI and performance run only after the standard-test gate passes.",
         }
+        if not device["deviceSkipped"]:
+            summary.update({
+                "harmonyEvaluationBindingSha256": device["bindingSha256"],
+                "harmonyResultSha256": device["resultSha256"],
+                "performancePolicySha256": device["performancePolicySha256"],
+                "profileWorkloadSha256": device["profileWorkloadSha256"],
+                "smartperfSummarySha256": device["smartperfSummarySha256"],
+            })
         if process is not None:
             summary["durationMs"] = duration_ms
             summary["processMeasurement"] = process
@@ -475,12 +533,16 @@ def main() -> int:
                 "staticDecisionSha256": static["decisionSha256"],
                 "finalSourceStateSha256": static["stateSha256"],
                 "harmonyLoopReceiptSha256": device["receiptSha256"],
-                "harmonyEvaluationBindingSha256": device["bindingSha256"],
-                "harmonyResultSha256": device["resultSha256"],
+                "harmonyStandardTestReceiptSha256": device["standardSha256"],
             },
             "automaticPromotion": False,
-            "harnessPolicy": "Static scope/Oracle and device UI Oracle are independent verdict gates; infrastructure failure is never converted to Agent failure.",
+            "harnessPolicy": "Static scope/Oracle, source-bound ohosTest, and device UI Oracle are ordered independent verdict gates; infrastructure failure is never converted to Agent failure.",
         }
+        if not device["deviceSkipped"]:
+            decision["compoundEvidence"].update({
+                "harmonyEvaluationBindingSha256": device["bindingSha256"],
+                "harmonyResultSha256": device["resultSha256"],
+            })
         if process is not None:
             decision["processMeasurement"] = process
         write_json(stage / "summary.json", summary)

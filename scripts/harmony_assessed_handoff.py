@@ -343,7 +343,7 @@ def resolve(handoff_path: Path, profile_path: Path, host_root: Path, output: Pat
     require(host_root.is_dir(), "host root is invalid")
     programs_raw = profile.get("programs")
     require(isinstance(programs_raw, dict), "host program bindings are required")
-    program_modes = {"build": True, "loop": True, "run": True, "compose": True, "collect": False, "score": False, "feedback": False}
+    program_modes = {"build": True, "standardTest": True, "loop": True, "run": True, "compose": True, "collect": False, "score": False, "feedback": False}
     programs = {}
     for name, executable in program_modes.items():
         path = host_file(host_root, programs_raw.get(name), f"{name} program", executable=executable)
@@ -355,6 +355,24 @@ def resolve(handoff_path: Path, profile_path: Path, host_root: Path, output: Pat
     build = {key: value for key, value in build_raw.items() if key != "executable"}
     build["executable"] = str(executable)
     build["executableSha256"] = sha256(executable)
+    standard_raw = profile.get("standardTest")
+    require(isinstance(standard_raw, dict), "host standardTest configuration is required")
+    source_executor = host_file(
+        host_root, standard_raw.get("sourceExecutor"),
+        "source standard-test executor", executable=True,
+    )
+    standard_configuration = standard_raw.get("configuration")
+    require(isinstance(standard_configuration, dict), "host standardTest.configuration is required")
+    standard_test = {
+        "sourceExecutor": {"path": str(source_executor), "sha256": sha256(source_executor)},
+        "configuration": dict(standard_configuration),
+    }
+    for key, label in (("hvigorw", "hvigorw"), ("hdc", "hdc")):
+        binding_value = standard_configuration.get(key)
+        if binding_value is not None:
+            standard_test["configuration"][key] = str(
+                host_file(host_root, binding_value, label, executable=True)
+            )
     device_raw = profile.get("device")
     require(isinstance(device_raw, dict), "host device configuration is required")
     functional_raw = device_raw.get("functionalOracle")
@@ -397,6 +415,7 @@ def resolve(handoff_path: Path, profile_path: Path, host_root: Path, output: Pat
         "attempts": attempts,
         "sourceMaterialization": profile.get("sourceMaterialization"),
         "build": build,
+        "standardTest": standard_test,
         "device": device,
         "programs": programs,
         "executionPreflight": execution_preflight,

@@ -17,6 +17,7 @@ from typing import Any
 
 PLAN_SCHEMA = "agentlab.harmony_evaluation_loop_plan.v1"
 TEMPLATE_SCHEMA = "agentlab.harmony_evaluation_run_template.v1"
+STANDARD_TEMPLATE_SCHEMA = "agentlab.harmony_assessed_standard_test_template.v1"
 STATE_SCHEMA = "agentlab.harmony_evaluation_loop_state.v1"
 RECEIPT_SCHEMA = "agentlab.harmony_evaluation_loop_receipt.v1"
 SHA256 = re.compile(r"[0-9a-f]{64}")
@@ -131,7 +132,25 @@ def validate_plan(plan_path: pathlib.Path) -> dict[str, Any]:
     if "buildReceipt" in template or "artifact" in template:
         raise LoopError("run template must leave buildReceipt and artifact to the loop")
 
+    standard_template_path = bound_file(
+        plan.get("standardTestTemplate"), "Harmony standard-test template"
+    )
+    standard_template = load(standard_template_path, "Harmony standard-test template")
+    standard_case = standard_template.get("evaluationCase") or {}
+    if (
+        standard_template.get("schema") != STANDARD_TEMPLATE_SCHEMA
+        or standard_template.get("automaticPromotion") is not False
+        or pathlib.Path(standard_case.get("path", "")).resolve() != case_path
+        or standard_case.get("sha256") != case_sha256
+    ):
+        raise LoopError("Harmony standard-test template does not bind the exact frozen case")
+    if "buildReceipt" in standard_template or "projectRoot" in standard_template:
+        raise LoopError("standard-test template must leave runtime build bindings to the loop")
+
     builder = bound_file(plan.get("buildProgram"), "Harmony build program", executable=True)
+    standard_tester = bound_file(
+        plan.get("standardTestProgram"), "Harmony standard-test program", executable=True
+    )
     runner = bound_file(plan.get("runProgram"), "Harmony run program", executable=True)
     return {
         "planSha256": plan_sha256,
@@ -145,8 +164,13 @@ def validate_plan(plan_path: pathlib.Path) -> dict[str, Any]:
         "templatePath": template_path,
         "templateSha256": sha256(template_path),
         "template": template,
+        "standardTemplatePath": standard_template_path,
+        "standardTemplateSha256": sha256(standard_template_path),
+        "standardTemplate": standard_template,
         "builder": builder,
         "builderSha256": sha256(builder),
+        "standardTester": standard_tester,
+        "standardTesterSha256": sha256(standard_tester),
         "runner": runner,
         "runnerSha256": sha256(runner),
     }
@@ -163,6 +187,7 @@ def new_state(validated: dict[str, Any]) -> dict[str, Any]:
         "sourceSetSha256": validated["sourceSetSha256"],
         "stages": {
             "build": {"status": "pending", "attempts": 0},
+            "standardTest": {"status": "pending", "attempts": 0},
             "emulatorAssessment": {"status": "pending", "attempts": 0},
         },
         "automaticPromotion": False,
@@ -184,7 +209,7 @@ def validate_resume(state: dict[str, Any], validated: dict[str, Any]) -> None:
         if state.get(key) != value:
             raise LoopError(f"existing loop state {key} differs from the exact plan")
     stages = state.get("stages")
-    if not isinstance(stages, dict) or set(stages) != {"build", "emulatorAssessment"}:
+    if not isinstance(stages, dict) or set(stages) != {"build", "standardTest", "emulatorAssessment"}:
         raise LoopError("existing loop state has an invalid stage set")
 
 
@@ -262,6 +287,44 @@ def make_run_plan(validated: dict[str, Any], receipt: pathlib.Path, artifact: pa
     return run_plan
 
 
+def make_standard_test_plan(validated: dict[str, Any], receipt: pathlib.Path) -> dict[str, Any]:
+    plan = dict(validated["standardTemplate"])
+    plan["schema"] = "agentlab.harmony_assessed_standard_test_plan.v1"
+    plan["buildReceipt"] = {"path": str(receipt), "sha256": sha256(receipt)}
+    plan["projectRoot"] = str(receipt.parent / "project")
+    return plan
+
+
+def validate_standard_receipt(
+    path: pathlib.Path, validated: dict[str, Any], build_receipt: pathlib.Path
+) -> dict[str, Any]:
+    receipt = load(path, "assessed standard-test receipt")
+    expected_workspace = {
+        key: load(build_receipt, "build receipt").get(key)
+        for key in (
+            "participantId", "subjectWorkspaceSha256", "assessmentSummarySha256",
+            "assessmentDecisionSha256", "finalSourceStateSha256",
+        )
+    }
+    passed = receipt.get("subjectTaskSucceeded")
+    expected_status = (
+        "passed-review-required" if passed is True else
+        "assessed-failure-review-required" if passed is False else None
+    )
+    if (
+        receipt.get("schema") != "agentlab.harmony_assessed_standard_test_receipt.v1"
+        or receipt.get("status") != expected_status
+        or receipt.get("caseId") != validated["caseId"]
+        or receipt.get("evaluationCaseSha256") != validated["caseSha256"]
+        or receipt.get("sourceSetSha256") != validated["sourceSetSha256"]
+        or receipt.get("buildReceiptSha256") != sha256(build_receipt)
+        or receipt.get("assessedWorkspace") != expected_workspace
+        or receipt.get("automaticPromotion") is not False
+    ):
+        raise LoopError("standard-test receipt differs from the assessed build lineage")
+    return receipt
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--plan", type=pathlib.Path, required=True)
@@ -328,8 +391,101 @@ def main() -> int:
                 "artifactSha256": sha256(artifact_path),
                 "durationMs": build_duration_ms,
             })
-            state["nextGate"] = "harmony-emulator-assessment"
+            state["nextGate"] = "harmony-standard-test"
             write_json(output / "loop-state.json", state)
+
+        expected_standard_plan = make_standard_test_plan(validated, receipt_path)
+        standard_plan_path = output / "standard-test-plan.json"
+        if standard_plan_path.exists():
+            if load(standard_plan_path, "generated standard-test plan") != expected_standard_plan:
+                raise LoopError("generated standard-test plan drifted; refusing to resume")
+        else:
+            write_json(standard_plan_path, expected_standard_plan)
+
+        standard_output = output / "standard-test"
+        standard_receipt_path = standard_output / "receipt.json"
+        if state["stages"]["standardTest"].get("status") in {"passed", "assessed-failure"}:
+            if (
+                not standard_receipt_path.is_file()
+                or state["stages"]["standardTest"].get("receiptSha256") != sha256(standard_receipt_path)
+            ):
+                raise LoopError("completed standard-test evidence drifted after recording")
+            standard_receipt = validate_standard_receipt(
+                standard_receipt_path, validated, receipt_path
+            )
+        else:
+            record_stage_start(output, state, "standardTest", "harmony-standard-test")
+            if sha256(validated["standardTester"]) != validated["standardTesterSha256"]:
+                message = "Harmony standard-test program drifted before execution"
+                fail_stage(output, state, "standardTest", message)
+                raise LoopError(message)
+            standard_started = time.monotonic()
+            completed = run_program(
+                validated["standardTester"], standard_plan_path, standard_output
+            )
+            standard_duration_ms = round((time.monotonic() - standard_started) * 1000)
+            retain_command(output, "standard-test", completed)
+            if completed.returncode != 0:
+                message = f"Harmony standard-test infrastructure failed with exit {completed.returncode}"
+                fail_stage(output, state, "standardTest", message, resumable=True)
+                raise LoopError(message)
+            try:
+                if sha256(validated["standardTester"]) != validated["standardTesterSha256"]:
+                    raise LoopError("Harmony standard-test program drifted during execution")
+                standard_receipt = validate_standard_receipt(
+                    standard_receipt_path, validated, receipt_path
+                )
+            except (LoopError, OSError) as error:
+                fail_stage(output, state, "standardTest", str(error), resumable=False)
+                raise
+            standard_succeeded = standard_receipt["subjectTaskSucceeded"]
+            state["stages"]["standardTest"].update({
+                "status": "passed" if standard_succeeded else "assessed-failure",
+                "endedAt": datetime.now(timezone.utc).isoformat(),
+                "receiptSha256": sha256(standard_receipt_path),
+                "durationMs": standard_duration_ms,
+            })
+            state["nextGate"] = (
+                "harmony-emulator-assessment"
+                if standard_succeeded else "maintainer-adjudication-and-next-analysis-cut"
+            )
+            write_json(output / "loop-state.json", state)
+
+        standard_succeeded = standard_receipt["subjectTaskSucceeded"]
+        if not standard_succeeded:
+            build_receipt = load(receipt_path, "build receipt")
+            receipt = {
+                "schema": RECEIPT_SCHEMA,
+                "status": "assessed-failure-review-required",
+                "loopId": validated["loopId"],
+                "planSha256": validated["planSha256"],
+                "caseId": validated["caseId"],
+                "evaluationCaseSha256": validated["caseSha256"],
+                "sourceSetSha256": validated["sourceSetSha256"],
+                "buildPlanSha256": validated["buildPlanSha256"],
+                "standardTestTemplateSha256": validated["standardTemplateSha256"],
+                "buildProgramSha256": validated["builderSha256"],
+                "standardTestProgramSha256": validated["standardTesterSha256"],
+                "buildReceiptSha256": sha256(receipt_path),
+                "hapSha256": sha256(artifact_path),
+                "standardTestPlanSha256": sha256(standard_plan_path),
+                "standardTestReceiptSha256": sha256(standard_receipt_path),
+                "subjectTaskSucceeded": False,
+                "failureClass": "standard-test",
+                "buildAuthority": build_receipt.get("buildAuthority"),
+                "assessedWorkspace": standard_receipt["assessedWorkspace"],
+                "automaticPromotion": False,
+                "nextGate": "maintainer-adjudication-and-next-analysis-cut",
+            }
+            receipt_path_final = output / "loop-receipt.json"
+            if receipt_path_final.exists() and load(receipt_path_final, "loop receipt") != receipt:
+                raise LoopError("existing loop receipt differs from recomputed evidence")
+            write_json(receipt_path_final, receipt)
+            state["status"] = receipt["status"]
+            state["nextGate"] = receipt["nextGate"]
+            write_json(output / "loop-state.json", state)
+            print(json.dumps({"ok": True, "output": str(output), "status": receipt["status"], "resumable": True}, sort_keys=True))
+            return 0
 
         expected_run_plan = make_run_plan(validated, receipt_path, artifact_path)
         run_plan_path = output / "run-plan.json"
@@ -436,12 +592,16 @@ def main() -> int:
             "evaluationCaseSha256": validated["caseSha256"],
             "sourceSetSha256": validated["sourceSetSha256"],
             "buildPlanSha256": validated["buildPlanSha256"],
+            "standardTestTemplateSha256": validated["standardTemplateSha256"],
             "runTemplateSha256": validated["templateSha256"],
             "buildProgramSha256": validated["builderSha256"],
+            "standardTestProgramSha256": validated["standardTesterSha256"],
             "runProgramSha256": validated["runnerSha256"],
             "buildReceiptSha256": sha256(receipt_path),
             "hapSha256": sha256(artifact_path),
             "runPlanSha256": sha256(run_plan_path),
+            "standardTestPlanSha256": sha256(standard_plan_path),
+            "standardTestReceiptSha256": sha256(standard_receipt_path),
             "evaluationBindingSha256": sha256(binding_path),
             "subjectTaskSucceeded": device_succeeded,
             "failureClass": binding.get("failureClass"),
@@ -462,6 +622,7 @@ def main() -> int:
             }
         device_process = binding.get("deviceProcessMeasurement")
         build_duration_ms = state["stages"]["build"].get("durationMs")
+        standard_duration_ms = state["stages"]["standardTest"].get("durationMs")
         assessment_duration_ms = state["stages"]["emulatorAssessment"].get(
             "durationMs"
         )
@@ -471,15 +632,18 @@ def main() -> int:
             == "agentlab.harmony_device_process_measurement.v1"
             and isinstance(build_duration_ms, int)
             and build_duration_ms >= 0
+            and isinstance(standard_duration_ms, int)
+            and standard_duration_ms >= 0
             and isinstance(assessment_duration_ms, int)
             and assessment_duration_ms >= 0
         ):
             receipt["processMeasurement"] = {
                 "schema": "agentlab.harmony_evaluation_loop_process_measurement.v1",
                 "buildDurationMs": build_duration_ms,
+                "standardTestDurationMs": standard_duration_ms,
                 "emulatorAssessmentDurationMs": assessment_duration_ms,
                 "runnerDurationMs": device_process.get("runnerDurationMs"),
-                "totalDurationMs": build_duration_ms + assessment_duration_ms,
+                "totalDurationMs": build_duration_ms + standard_duration_ms + assessment_duration_ms,
             }
         receipt_path_final = output / "loop-receipt.json"
         if receipt_path_final.exists() and load(receipt_path_final, "loop receipt") != receipt:

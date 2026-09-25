@@ -265,6 +265,7 @@ def validate_plan(plan_path: pathlib.Path) -> dict[str, Any]:
         raise CampaignError("program bindings are required")
     program_names = {
         "build": True,
+        "standardTest": True,
         "loop": True,
         "run": True,
         "compose": True,
@@ -292,6 +293,17 @@ def validate_plan(plan_path: pathlib.Path) -> dict[str, Any]:
     if device.get("subjectOutcomePolicy") != "retain-assessed-failure":
         raise CampaignError("campaign device policy must retain assessed failures")
     execution_preflight = validate_execution_preflight(plan, device)
+    standard_test = plan.get("standardTest")
+    if not isinstance(standard_test, dict):
+        raise CampaignError("standardTest configuration is required")
+    source_executor = bound_file(
+        standard_test.get("sourceExecutor"),
+        "source standard-test executor",
+        executable=True,
+    )
+    standard_configuration = standard_test.get("configuration")
+    if not isinstance(standard_configuration, dict):
+        raise CampaignError("standardTest.configuration is required")
     mappings = plan.get("sourceMaterialization")
     build = plan.get("build")
     if not isinstance(mappings, list) or not mappings or not isinstance(build, dict):
@@ -311,6 +323,8 @@ def validate_plan(plan_path: pathlib.Path) -> dict[str, Any]:
         "threshold": float(threshold),
         "programs": programs,
         "device": device,
+        "sourceStandardTestExecutor": source_executor,
+        "standardTestConfiguration": standard_configuration,
         "mappings": mappings,
         "build": build,
         "executionPreflight": execution_preflight,
@@ -400,13 +414,24 @@ def generated_plans(
     }
     run_path = root / "run-template.json"
     write_or_verify(run_path, run_template, "generated run template")
+    standard_template = {
+        "schema": "agentlab.harmony_assessed_standard_test_template.v1",
+        "evaluationCase": binding(validated["casePath"]),
+        "sourceExecutor": binding(validated["sourceStandardTestExecutor"]),
+        "configuration": validated["standardTestConfiguration"],
+        "automaticPromotion": False,
+    }
+    standard_path = root / "standard-test-template.json"
+    write_or_verify(standard_path, standard_template, "generated standard-test template")
     loop_plan = {
         "schema": "agentlab.harmony_evaluation_loop_plan.v1",
         "loopId": f"{validated['campaignId']}.{attempt['attemptId']}",
         "evaluationCase": binding(validated["casePath"]),
         "buildPlan": binding(build_path),
+        "standardTestTemplate": binding(standard_path),
         "runTemplate": binding(run_path),
         "buildProgram": binding(validated["programs"]["build"]),
+        "standardTestProgram": binding(validated["programs"]["standardTest"]),
         "runProgram": binding(validated["programs"]["run"]),
         "automaticPromotion": False,
     }

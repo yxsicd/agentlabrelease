@@ -371,7 +371,9 @@ def main() -> int:
         return 2
     output.parent.mkdir(parents=True, exist_ok=True)
     stage = pathlib.Path(tempfile.mkdtemp(prefix=f".{output.name}.stage-", dir=output.parent))
-    workspace = stage / "workspace"
+    # Retain the exact materialized project so the mandatory source-level
+    # ohosTest gate evaluates the same assessed workspace that produced the HAP.
+    workspace = stage / "project"
     workspace.mkdir()
     try:
         plan_path = args.plan.resolve()
@@ -441,6 +443,7 @@ def main() -> int:
             "finalSourceStateSha256": materialization["finalSourceStateSha256"],
             "sourceMaterializationSha256": sha256(materialization_path),
             "sourceMaterializationContentSha256": canonical_sha256(materialization),
+            "materializedProjectPath": "project",
             "buildToolSha256": validated["executableSha256"],
             "buildCommandSha256": canonical_sha256(command_binding),
             "planSha256": plan_sha256,
@@ -454,7 +457,6 @@ def main() -> int:
             "automaticPromotion": False,
         }
         write_json(stage / "build-receipt.json", receipt)
-        shutil.rmtree(workspace)
         stage.rename(output)
         print(json.dumps({"ok": True, "output": str(output), "participantId": validated["participantId"], "hapSha256": receipt["hapSha256"]}, sort_keys=True))
         return 0

@@ -249,8 +249,11 @@ remained `b0c7a6f3…3349`. The nested native report again recorded one pass,
 zero failures/errors and final code zero. The top-level source-to-test receipt
 is SHA256 `87e16027…61d9`. This closes the operational gap between the prior
 source build and prebuilt-package executor for this exact canary; campaign-wide
-standard-test enforcement still requires wiring the receipt into every
-assessed attempt.
+`run-harmony-assessed-standard-test.py` now binds that source receipt to the
+exact assessed workspace and build receipt. The assessed campaign executes it
+between build and UI/performance for every statically passing attempt. Native
+assertion failures become `failureClass=standard-test`; infrastructure failures
+remain retryable and cannot be counted against the Agent.
 
 ## Relative performance feedback
 

@@ -23,6 +23,7 @@ if os.environ.get("LOOP_FAIL_ONCE") and not marker.exists():
 plan_path = pathlib.Path(a.plan); plan = json.loads(plan_path.read_text()); case_path = pathlib.Path(plan["evaluationCase"]["path"])
 case = json.loads(case_path.read_text()); out = pathlib.Path(a.output); out.mkdir()
 artifact = out / "artifact.hap"; artifact.write_bytes(b"loop-bound-hap")
+(out / "project").mkdir()
 digest = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
 receipt = {"schema":"agentlab.harmony_case_build_receipt.v1","status":"passed","caseId":case["id"],
  "evaluationCaseSha256":digest(case_path),"sourceSetSha256":case["sourceSetSha256"],"sources":case["sources"],
@@ -30,8 +31,27 @@ receipt = {"schema":"agentlab.harmony_case_build_receipt.v1","status":"passed","
 if plan["schema"] == "agentlab.harmony_assessed_workspace_build_plan.v1":
     receipt.update({"buildAuthority":"independent-harmony-assessed-workspace-build","participantId":"agent-profile-a",
       "subjectWorkspaceSha256":"1"*64,"assessmentSummarySha256":"2"*64,
-      "assessmentDecisionSha256":"3"*64,"finalSourceStateSha256":"4"*64})
+      "assessmentDecisionSha256":"3"*64,"finalSourceStateSha256":"4"*64,
+      "materializedProjectPath":"project"})
 (out / "build-receipt.json").write_text(json.dumps(receipt))
+'''
+
+
+STANDARD_PROGRAM = r'''#!/usr/bin/env python3
+import argparse, hashlib, json, os, pathlib
+p = argparse.ArgumentParser(); p.add_argument("--plan", required=True); p.add_argument("--output", required=True); a = p.parse_args()
+marker = pathlib.Path(os.environ.get("LOOP_STANDARD_FAIL_MARKER", "/never/fail"))
+if os.environ.get("LOOP_STANDARD_FAIL_ONCE") and not marker.exists():
+    marker.write_text("failed once"); raise SystemExit(12)
+plan = json.loads(pathlib.Path(a.plan).read_text()); build_path = pathlib.Path(plan["buildReceipt"]["path"]); build = json.loads(build_path.read_text())
+out = pathlib.Path(a.output); out.mkdir(); digest=lambda path: hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
+passed = not os.environ.get("LOOP_STANDARD_SUBJECT_FAIL")
+assessed={key:build.get(key) for key in ("participantId","subjectWorkspaceSha256","assessmentSummarySha256","assessmentDecisionSha256","finalSourceStateSha256")}
+receipt={"schema":"agentlab.harmony_assessed_standard_test_receipt.v1","status":"passed-review-required" if passed else "assessed-failure-review-required",
+ "caseId":"loop-case","evaluationCaseSha256":plan["evaluationCase"]["sha256"],"sourceSetSha256":"a"*64,
+ "buildReceiptSha256":digest(build_path),"subjectTaskSucceeded":passed,"failureClass":"none" if passed else "standard-test",
+ "assessedWorkspace":assessed,"automaticPromotion":False}
+(out / "receipt.json").write_text(json.dumps(receipt))
 '''
 
 
@@ -78,6 +98,7 @@ class HarmonyEvaluationLoopTests(unittest.TestCase):
             "automaticPromotion": False,
         }))
         self.build_program = self.executable("build.py", BUILD_PROGRAM)
+        self.standard_program = self.executable("standard.py", STANDARD_PROGRAM)
         self.run_program = self.executable("run.py", RUN_PROGRAM)
         self.build_plan = self.root / "build-plan.json"
         self.build_plan.write_text(json.dumps({
@@ -92,14 +113,22 @@ class HarmonyEvaluationLoopTests(unittest.TestCase):
             "runId": "loop-run",
             "automaticPromotion": False,
         }))
+        self.standard_template = self.root / "standard-template.json"
+        self.standard_template.write_text(json.dumps({
+            "schema": "agentlab.harmony_assessed_standard_test_template.v1",
+            "evaluationCase": {"path": str(self.case), "sha256": digest(self.case)},
+            "automaticPromotion": False,
+        }))
         self.plan = self.root / "loop-plan.json"
         self.plan.write_text(json.dumps({
             "schema": "agentlab.harmony_evaluation_loop_plan.v1",
             "loopId": "synthetic-loop",
             "evaluationCase": {"path": str(self.case), "sha256": digest(self.case)},
             "buildPlan": {"path": str(self.build_plan), "sha256": digest(self.build_plan)},
+            "standardTestTemplate": {"path": str(self.standard_template), "sha256": digest(self.standard_template)},
             "runTemplate": {"path": str(self.template), "sha256": digest(self.template)},
             "buildProgram": {"path": str(self.build_program), "sha256": digest(self.build_program)},
+            "standardTestProgram": {"path": str(self.standard_program), "sha256": digest(self.standard_program)},
             "runProgram": {"path": str(self.run_program), "sha256": digest(self.run_program)},
             "automaticPromotion": False,
         }))
@@ -129,6 +158,7 @@ class HarmonyEvaluationLoopTests(unittest.TestCase):
         self.assertEqual(receipt["status"], "passed-review-required")
         self.assertEqual(receipt["nextGate"], "maintainer-adjudication-and-next-analysis-cut")
         self.assertEqual(state["stages"]["build"]["attempts"], 1)
+        self.assertEqual(state["stages"]["standardTest"]["attempts"], 1)
         self.assertEqual(state["stages"]["emulatorAssessment"]["attempts"], 1)
         self.assertEqual(generated["schema"], "agentlab.harmony_evaluation_run_plan.v1")
         self.assertFalse(receipt["automaticPromotion"])
@@ -190,7 +220,20 @@ class HarmonyEvaluationLoopTests(unittest.TestCase):
         self.assertEqual(second.returncode, 0, second.stderr)
         resumed = json.loads((output / "loop-state.json").read_text())
         self.assertEqual(resumed["stages"]["build"]["attempts"], 1)
+        self.assertEqual(resumed["stages"]["standardTest"]["attempts"], 1)
         self.assertEqual(resumed["stages"]["emulatorAssessment"]["attempts"], 2)
+
+    def test_standard_test_failure_is_terminal_and_skips_device_performance(self) -> None:
+        output = self.root / "loop-output"
+        completed = self.run_loop(output, {"LOOP_STANDARD_SUBJECT_FAIL": "1"})
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        receipt = json.loads((output / "loop-receipt.json").read_text())
+        state = json.loads((output / "loop-state.json").read_text())
+        self.assertEqual(receipt["failureClass"], "standard-test")
+        self.assertFalse(receipt["subjectTaskSucceeded"])
+        self.assertEqual(state["stages"]["standardTest"]["status"], "assessed-failure")
+        self.assertEqual(state["stages"]["emulatorAssessment"]["status"], "pending")
+        self.assertFalse((output / "assessment").exists())
 
     def test_assessed_device_failure_is_terminal_evidence_not_retryable_infrastructure(self) -> None:
         output = self.root / "loop-output"

@@ -111,13 +111,21 @@ class HarmonyAssessedHandoffTests(unittest.TestCase):
             "profileId": "hwlinux-test",
             "sourceMaterialization": [{"sourceId": "app", "sourcePath": ".", "targetPath": "entry"}],
             "build": {"executable": binding(program), "arguments": [], "workingDirectory": ".", "artifactPath": "build/output.hap", "timeoutSeconds": 30, "environment": {}},
+            "standardTest": {
+                "sourceExecutor": binding(program),
+                "configuration": {
+                    "hvigorw": binding(program), "hdc": binding(program),
+                    "buildModule": "entry", "appHap": "app.hap", "testHap": "test.hap",
+                    "target": "device", "bundle": "com.example.app", "testModule": "entry_test",
+                },
+            },
             "device": {
                 "subjectOutcomePolicy": "retain-assessed-failure",
                 "functionalOracle": {**binding(oracle), "scenarioId": "ready"},
                 "runtime": {"runner": binding(program), "toolsRoot": "tools", "imageRoot": "image", "instancePath": "instance", "instance": "phone", "hdcPort": 15555, "bundle": "com.example.app", "ability": "EntryAbility", "environmentIdentity": "hwlinux:test", "bootMode": "coldboot", "profileSamples": 3},
                 "performance": {"policy": binding(policy), "workload": binding(workload)},
             },
-            "programs": {name: binding(program) for name in ("build", "loop", "run", "compose", "collect", "score", "feedback")},
+            "programs": {name: binding(program) for name in ("build", "standardTest", "loop", "run", "compose", "collect", "score", "feedback")},
             "requiredTrials": 1,
             "eligibilityThreshold": 0.6,
             "automaticPromotion": False,

@@ -178,6 +178,20 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
             "finalSourceStateSha256": digest(static / "final-source-state.json"),
         }
         status = "passed-review-required" if passed else "assessed-failure-review-required"
+        standard_path = root / "standard-test/receipt.json"
+        self.write_json(
+            standard_path,
+            {
+                "schema": "agentlab.harmony_assessed_standard_test_receipt.v1",
+                "status": "passed-review-required",
+                "caseId": self.case_id,
+                "sourceSetSha256": self.source_set,
+                "subjectTaskSucceeded": True,
+                "failureClass": "none",
+                "assessedWorkspace": assessed,
+                "automaticPromotion": False,
+            },
+        )
         binding_path = root / "assessment/evaluation-binding.json"
         self.write_json(
             binding_path,
@@ -224,13 +238,15 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
                 "failureClass": "none" if passed else "oracle",
                 "hapSha256": hap,
                 "evaluationBindingSha256": digest(binding_path),
+                "standardTestReceiptSha256": digest(standard_path),
                 "assessedWorkspace": assessed,
                 "processMeasurement": {
                     "schema": "agentlab.harmony_evaluation_loop_process_measurement.v1",
                     "buildDurationMs": 5,
+                    "standardTestDurationMs": 7,
                     "emulatorAssessmentDurationMs": 25,
                     "runnerDurationMs": 20,
-                    "totalDurationMs": 30,
+                    "totalDurationMs": 37,
                 },
                 "automaticPromotion": False,
             },
@@ -293,6 +309,40 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
         self.assertEqual(decision["processMeasurement"]["oracleRegressionCount"], 1)
         self.assertEqual(receipt["status"], "assessed-review-required")
         self.assertFalse(receipt["automaticPromotion"])
+
+    def test_standard_test_failure_is_scored_without_device_execution(self) -> None:
+        static = self.make_static("standard-fail", "weak")
+        loop = self.make_loop("standard-fail", static, "weak", True)
+        standard_path = loop / "standard-test/receipt.json"
+        standard = json.loads(standard_path.read_text())
+        standard.update({
+            "status": "assessed-failure-review-required",
+            "subjectTaskSucceeded": False,
+            "failureClass": "standard-test",
+        })
+        self.write_json(standard_path, standard)
+        loop_path = loop / "loop-receipt.json"
+        receipt = json.loads(loop_path.read_text())
+        receipt.update({
+            "status": "assessed-failure-review-required",
+            "subjectTaskSucceeded": False,
+            "failureClass": "standard-test",
+            "standardTestReceiptSha256": digest(standard_path),
+        })
+        self.write_json(loop_path, receipt)
+        output = self.root / "compound/standard-fail"
+        completed = subprocess.run(
+            [sys.executable, str(SCRIPT), "--static-assessment", str(static),
+             "--harmony-loop", str(loop), "--output", str(output)],
+            text=True, capture_output=True, check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        decision = json.loads((output / "decision-package.json").read_text())
+        phase = decision["phaseVerdicts"][-1]
+        self.assertEqual(phase["stageId"], "harmony-standard-test")
+        self.assertEqual(phase["authority"], "source-bound-ohosTest-oracle")
+        self.assertFalse(phase["oraclePass"])
+        self.assertNotIn("harmonyEvaluationBindingSha256", decision["compoundEvidence"])
 
     def test_compound_attempts_score_and_derive_device_difficulty(self) -> None:
         strong = self.compose("strong", "strong", True)

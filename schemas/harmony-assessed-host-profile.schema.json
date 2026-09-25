@@ -3,16 +3,25 @@
   "$id": "https://agentlab.invalid/schemas/harmony-assessed-host-profile.schema.json",
   "title": "AgentLab qualified Harmony host profile",
   "type": "object",
-  "required": ["schema", "profileId", "sourceMaterialization", "build", "device", "programs", "automaticPromotion"],
+  "required": ["schema", "profileId", "sourceMaterialization", "build", "standardTest", "device", "programs", "automaticPromotion"],
   "properties": {
     "schema": {"const": "agentlab.harmony_assessed_host_profile.v1"},
     "profileId": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"},
     "sourceMaterialization": {"type": "array", "minItems": 1, "items": {"type": "object"}},
     "build": {"type": "object", "required": ["executable"], "properties": {"executable": {"$ref": "#/$defs/file"}}, "additionalProperties": true},
+    "standardTest": {
+      "type": "object",
+      "required": ["sourceExecutor", "configuration"],
+      "properties": {
+        "sourceExecutor": {"$ref": "#/$defs/file"},
+        "configuration": {"type": "object"}
+      },
+      "additionalProperties": false
+    },
     "device": {"type": "object"},
     "programs": {
       "type": "object",
-      "required": ["build", "loop", "run", "compose", "collect", "score", "feedback"],
+      "required": ["build", "standardTest", "loop", "run", "compose", "collect", "score", "feedback"],
       "additionalProperties": {"$ref": "#/$defs/file"}
     },
     "executionPreflight": {
