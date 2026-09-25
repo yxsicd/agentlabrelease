@@ -92,6 +92,43 @@ class HarmonyAssessedStandardTestTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 1)
         self.assertFalse((self.root / "output/receipt.json").exists())
 
+    def test_campaign_owned_emulator_lifecycle_is_started_and_stopped(self) -> None:
+        state = self.root / "target.state"
+        tools = self.root / "tools"
+        (tools / "bin").mkdir(parents=True)
+        (tools / "sdk/default/openharmony/toolchains").mkdir(parents=True)
+        emulator = tools / "bin/Emulator"
+        emulator.write_text(
+            "#!/usr/bin/env python3\nimport pathlib,sys\n"
+            f"p=pathlib.Path({str(state)!r})\n"
+            "p.write_text('up') if '-start' in sys.argv else p.unlink(missing_ok=True)\n"
+        )
+        emulator.chmod(0o755)
+        hdc = tools / "sdk/default/openharmony/toolchains/hdc"
+        hdc.write_text(
+            "#!/usr/bin/env python3\nimport pathlib,sys\n"
+            f"print('127.0.0.1:15555') if pathlib.Path({str(state)!r}).exists() else None\n"
+        )
+        hdc.chmod(0o755)
+        image = self.root / "image"; image.mkdir()
+        instances = self.root / "instances"; instances.mkdir()
+        (instances / "phone.ini").write_text("instance\n")
+        plan = json.loads(self.plan.read_text())
+        plan["configuration"].update({"hdc": str(hdc), "target": "127.0.0.1:15555"})
+        plan["emulator"] = {
+            "toolsRoot": str(tools), "imageRoot": str(image),
+            "instancePath": str(instances), "instance": "phone",
+            "hdcPort": 15555, "bootMode": "coldboot",
+        }
+        self.plan.write_text(json.dumps(plan))
+        completed = self.run_gate("passed")
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertFalse(state.exists())
+        receipt = json.loads((self.root / "output/receipt.json").read_text())
+        self.assertRegex(receipt["emulatorLifecycleSha256"], r"^[0-9a-f]{64}$")
+        lifecycle = json.loads((self.root / "output/emulator-lifecycle.json").read_text())
+        self.assertEqual(lifecycle["status"], "stopped-cleanly")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -253,7 +253,11 @@ source build and prebuilt-package executor for this exact canary; campaign-wide
 exact assessed workspace and build receipt. The assessed campaign executes it
 between build and UI/performance for every statically passing attempt. Native
 assertion failures become `failureClass=standard-test`; infrastructure failures
-remain retryable and cannot be counted against the Agent.
+remain retryable and cannot be counted against the Agent. The campaign owns a
+separate cold emulator lifecycle for this gate, records its start/stop identity,
+and requires it to stop cleanly before the UI/performance runner starts its own
+measurement lifecycle; the gate therefore does not depend on a manually
+pre-started HDC target or contaminate the subsequent cold-run timing window.
 
 ## Relative performance feedback
 

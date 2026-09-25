@@ -292,6 +292,12 @@ def validate_plan(plan_path: pathlib.Path) -> dict[str, Any]:
         raise CampaignError("device fields must not override campaign-generated bindings")
     if device.get("subjectOutcomePolicy") != "retain-assessed-failure":
         raise CampaignError("campaign device policy must retain assessed failures")
+    runtime = device.get("runtime")
+    emulator_fields = (
+        "toolsRoot", "imageRoot", "instancePath", "instance", "hdcPort", "bootMode"
+    )
+    if not isinstance(runtime, dict) or any(key not in runtime for key in emulator_fields):
+        raise CampaignError("device runtime must define the standard-test emulator lifecycle")
     execution_preflight = validate_execution_preflight(plan, device)
     standard_test = plan.get("standardTest")
     if not isinstance(standard_test, dict):
@@ -419,6 +425,12 @@ def generated_plans(
         "evaluationCase": binding(validated["casePath"]),
         "sourceExecutor": binding(validated["sourceStandardTestExecutor"]),
         "configuration": validated["standardTestConfiguration"],
+        "emulator": {
+            key: validated["device"]["runtime"][key]
+            for key in (
+                "toolsRoot", "imageRoot", "instancePath", "instance", "hdcPort", "bootMode"
+            )
+        },
         "automaticPromotion": False,
     }
     standard_path = root / "standard-test-template.json"

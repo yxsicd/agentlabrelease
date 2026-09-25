@@ -10,6 +10,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 from typing import Any
 
 
@@ -56,6 +57,101 @@ def bound_file(value: Any, label: str, *, executable: bool = False) -> Path:
     if not isinstance(expected, str) or SHA256.fullmatch(expected) is None or sha256(path) != expected:
         raise StandardGateError(f"{label} SHA256 differs from plan")
     return path
+
+
+def target_connected(hdc: Path, target: str) -> bool:
+    completed = subprocess.run(
+        [str(hdc), "list", "targets"], text=True, capture_output=True,
+        timeout=15, check=False,
+    )
+    return completed.returncode == 0 and target in completed.stdout.split()
+
+
+def wait_target(hdc: Path, target: str, *, present: bool, timeout: int) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            if target_connected(hdc, target) is present:
+                return True
+        except subprocess.TimeoutExpired:
+            pass
+        time.sleep(1)
+    return False
+
+
+def start_emulator(config: dict[str, Any], output: Path, hdc: Path) -> dict[str, Any]:
+    required = ("toolsRoot", "imageRoot", "instancePath", "instance", "hdcPort", "bootMode")
+    if any(key not in config for key in required):
+        raise StandardGateError("emulator lifecycle configuration is incomplete")
+    tools_root = Path(config["toolsRoot"]).resolve()
+    image_root = Path(config["imageRoot"]).resolve()
+    instance_path = Path(config["instancePath"]).resolve()
+    instance = config["instance"]
+    port = config["hdcPort"]
+    boot_mode = config["bootMode"]
+    if (
+        not isinstance(instance, str) or not instance
+        or not isinstance(port, int) or not 10000 <= port <= 16555
+        or boot_mode not in {"coldboot", "reset", "snapshot"}
+    ):
+        raise StandardGateError("emulator lifecycle identity is invalid")
+    emulator = tools_root / "bin/Emulator"
+    if not emulator.is_file() or not os.access(emulator, os.X_OK):
+        raise StandardGateError(f"emulator executable is absent: {emulator}")
+    if not image_root.is_dir() or not (instance_path / f"{instance}.ini").is_file():
+        raise StandardGateError("emulator image or instance is absent")
+    target = f"127.0.0.1:{port}"
+    if target_connected(hdc, target):
+        stopped = subprocess.run(
+            [str(emulator), "-stop", instance, "-instancePath", str(instance_path)],
+            text=True, capture_output=True, timeout=30, check=False,
+        )
+        (output / "emulator-prestop.log").write_text(
+            stopped.stdout + stopped.stderr, encoding="utf-8"
+        )
+        if stopped.returncode != 0 or not wait_target(hdc, target, present=False, timeout=30):
+            raise StandardGateError("pre-existing emulator target could not be stopped")
+    command = [
+        str(emulator), "-start", instance, "-instancePath", str(instance_path),
+        "-imageRoot", str(image_root), "-bootMode", boot_mode, "-noWindow",
+        "-hdcPort", str(port),
+    ]
+    log = (output / "emulator-start.log").open("w", encoding="utf-8")
+    process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT)
+    if not wait_target(hdc, target, present=True, timeout=180):
+        log.close()
+        process.poll()
+        raise StandardGateError("emulator did not expose the standard-test HDC target")
+    log.close()
+    return {
+        "emulator": emulator,
+        "instancePath": instance_path,
+        "instance": instance,
+        "target": target,
+        "process": process,
+        "command": command,
+    }
+
+
+def stop_emulator(lifecycle: dict[str, Any], output: Path, hdc: Path) -> None:
+    completed = subprocess.run(
+        [str(lifecycle["emulator"]), "-stop", lifecycle["instance"],
+         "-instancePath", str(lifecycle["instancePath"])],
+        text=True, capture_output=True, timeout=30, check=False,
+    )
+    (output / "emulator-stop.log").write_text(
+        completed.stdout + completed.stderr, encoding="utf-8"
+    )
+    if completed.returncode != 0 or not wait_target(
+        hdc, lifecycle["target"], present=False, timeout=30
+    ):
+        raise StandardGateError("standard-test emulator did not stop cleanly")
+    process = lifecycle["process"]
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.terminate()
+        process.wait(timeout=5)
 
 
 def main() -> int:
@@ -107,7 +203,35 @@ def main() -> int:
         ]
         if config.get("testClass"):
             command.extend(["--test-class", config["testClass"]])
-        completed = subprocess.run(command, text=True, capture_output=True, check=False)
+        emulator_config = plan.get("emulator")
+        lifecycle = None
+        lifecycle_receipt_path = None
+        hdc = Path(config.get("hdc", "hdc")).resolve()
+        if emulator_config is not None:
+            if not isinstance(emulator_config, dict):
+                raise StandardGateError("emulator lifecycle must be an object")
+            if not hdc.is_file() or not os.access(hdc, os.X_OK):
+                raise StandardGateError(f"HDC executable is absent: {hdc}")
+            expected_target = f"127.0.0.1:{emulator_config.get('hdcPort')}"
+            if config["target"] != expected_target:
+                raise StandardGateError("standard-test target differs from emulator lifecycle")
+            lifecycle = start_emulator(emulator_config, output, hdc)
+        try:
+            completed = subprocess.run(command, text=True, capture_output=True, check=False)
+        finally:
+            if lifecycle is not None:
+                stop_emulator(lifecycle, output, hdc)
+                lifecycle_receipt_path = output / "emulator-lifecycle.json"
+                write_json(lifecycle_receipt_path, {
+                    "schema": "agentlab.harmony_standard_test_emulator_lifecycle.v1",
+                    "status": "stopped-cleanly",
+                    "target": lifecycle["target"],
+                    "instance": lifecycle["instance"],
+                    "command": lifecycle["command"],
+                    "startLogSha256": sha256(output / "emulator-start.log"),
+                    "stopLogSha256": sha256(output / "emulator-stop.log"),
+                    "automaticPromotion": False,
+                })
         (output / "executor.stdout.log").write_text(completed.stdout, encoding="utf-8")
         (output / "executor.stderr.log").write_text(completed.stderr, encoding="utf-8")
         source_receipt_path = source_output / "receipt.json"
@@ -142,6 +266,10 @@ def main() -> int:
             "projectTreeSha256": source.get("projectTreeSha256"),
             "framework": source.get("framework"),
             "sourceStandardTestReceiptSha256": sha256(source_receipt_path),
+            "emulatorLifecycleSha256": (
+                sha256(lifecycle_receipt_path)
+                if lifecycle_receipt_path is not None else None
+            ),
             "subjectTaskSucceeded": passed,
             "failureClass": "none" if passed else "standard-test",
             "assessedWorkspace": assessed,

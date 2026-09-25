@@ -3,7 +3,7 @@
   "$id": "https://agentlab.invalid/schemas/harmony-assessed-standard-test-receipt.schema.json",
   "title": "Assessed workspace Harmony standard-test receipt",
   "type": "object",
-  "required": ["schema", "status", "caseId", "evaluationCaseSha256", "sourceSetSha256", "buildReceiptSha256", "projectTreeSha256", "framework", "sourceStandardTestReceiptSha256", "subjectTaskSucceeded", "failureClass", "assessedWorkspace", "automaticPromotion"],
+  "required": ["schema", "status", "caseId", "evaluationCaseSha256", "sourceSetSha256", "buildReceiptSha256", "projectTreeSha256", "framework", "sourceStandardTestReceiptSha256", "emulatorLifecycleSha256", "subjectTaskSucceeded", "failureClass", "assessedWorkspace", "automaticPromotion"],
   "properties": {
     "schema": {"const": "agentlab.harmony_assessed_standard_test_receipt.v1"},
     "status": {"enum": ["passed-review-required", "assessed-failure-review-required"]},
@@ -14,6 +14,9 @@
     "projectTreeSha256": {"$ref": "#/$defs/sha256"},
     "framework": {"const": "instrument-test-ohosTest-hypium"},
     "sourceStandardTestReceiptSha256": {"$ref": "#/$defs/sha256"},
+    "emulatorLifecycleSha256": {
+      "oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]
+    },
     "subjectTaskSucceeded": {"type": "boolean"},
     "failureClass": {"enum": ["none", "standard-test"]},
     "assessedWorkspace": {"type": "object"},
