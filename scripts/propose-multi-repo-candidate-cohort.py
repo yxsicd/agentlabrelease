@@ -59,6 +59,11 @@ def candidate_summary(candidate: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": candidate_id,
         "candidateSha256": canonical_digest(candidate),
+        "caseSource": {
+            "lane": "derived",
+            "strategy": "semantic-program-analysis",
+            "authority": "exact-difficulty-evidence",
+        },
         "relationType": relation_type,
         "affectedRepositoryCount": repository_count,
         "maxDependencyDepth": depth,
@@ -114,7 +119,7 @@ def review_shortlist(eligible: list[dict[str, Any]]) -> dict[str, Any]:
             selected[row["id"]] = {
                 key: row[key]
                 for key in (
-                    "id", "candidateSha256", "relationType", "affectedRepositoryCount",
+                    "id", "candidateSha256", "caseSource", "relationType", "affectedRepositoryCount",
                     "maxDependencyDepth", "affectedFileCount",
                 )
             }

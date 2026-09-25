@@ -496,6 +496,17 @@ def main() -> int:
                 "--calibration", calibration / "summary.json",
             ),
         )
+        case_supply_report = case_root / "case-supply-report.json"
+        runner.run(
+            "case-supply-summarize",
+            python(
+                "summarize-case-supply.py",
+                "--cohort", cohort,
+                "--case", evaluation_case,
+                "--method-revision", args.method_revision,
+                "--output", case_supply_report,
+            ),
+        )
 
         blind_cut = args.output / "blind-cut"
         runner.run(
@@ -618,6 +629,17 @@ def main() -> int:
             and replay.get("alternativeValidCount") == 1,
             "alternative-valid Oracle breadth qualification differs",
         )
+        supply = load(case_supply_report)
+        require(
+            supply["denominators"]["functionalQualifiedCaseCount"] == 1
+            and supply["denominators"]["endToEndQualifiedCaseCount"] == 0,
+            "case supply qualification tiers differ",
+        )
+        require(
+            supply["laneCoverage"]["observedLanes"] == ["derived"]
+            and supply["laneCoverage"]["unobservedLanes"] == ["natural"],
+            "case supply lane coverage differs",
+        )
 
         summary = {
             "schema": "agentlab.multi_repo_golden_path.v1",
@@ -632,6 +654,7 @@ def main() -> int:
             "calibrationBundleSha256": digest(bundle_contract),
             "calibrationRunSha256": digest(calibration / "calibration-run.json"),
             "evaluationCaseSha256": digest(evaluation_case),
+            "caseSupplyReportSha256": digest(case_supply_report),
             "blindCutReceiptSha256": digest(blind_cut / "cut-receipt.json"),
             "attempts": {
                 "baseline": {"subjectTaskSucceeded": False, "summarySha256": digest(attempts / "baseline/summary.json")},

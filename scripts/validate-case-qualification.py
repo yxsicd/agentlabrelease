@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 
 from case_qualification import validate_matrix
+from case_supply import validate_case_supply
 
 
 def main() -> None:
@@ -19,6 +20,7 @@ def main() -> None:
     calibration = json.loads(args.calibration.read_text())
     digest = hashlib.sha256(args.calibration.read_bytes()).hexdigest()
     result = validate_matrix(case, calibration, digest)
+    result["caseSupply"] = validate_case_supply(case)
     result["qualificationMatrixSha256"] = hashlib.sha256(
         json.dumps(case["qualificationMatrix"], sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
@@ -27,4 +29,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

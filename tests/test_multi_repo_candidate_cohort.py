@@ -165,6 +165,8 @@ class MultiRepoCandidateCohortTests(unittest.TestCase):
             self.assertEqual(selected["schema"], "agentlab.multi_repo_candidate_selection.v2")
             self.assertEqual(selected["candidateId"], "candidate-deep")
             self.assertEqual(selected["proposalMethodRevision"], "4" * 40)
+            self.assertEqual(selected["caseSource"]["lane"], "derived")
+            self.assertEqual(selected["caseSource"]["strategy"], "semantic-program-analysis")
             self.assertFalse(selected["declaredRepresentative"])
 
     def test_review_rejects_single_or_unknown_selection(self):

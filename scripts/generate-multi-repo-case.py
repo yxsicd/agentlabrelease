@@ -9,6 +9,11 @@ import re
 from pathlib import Path
 
 from case_qualification import build_matrix, validate_matrix
+from case_supply import (
+    build_qualification_receipt,
+    derived_program_analysis_source,
+    validate_case_supply,
+)
 
 
 SHA256 = re.compile(r"[0-9a-f]{64}")
@@ -82,6 +87,15 @@ def candidate_cohort_lineage(selection_path, difficulty_path, candidate_id, sour
         "candidate cohort selection method revision is invalid",
     )
     require(isinstance(selection.get("cohortId"), str) and selection["cohortId"], "candidate cohort identity is invalid")
+    require(
+        selection.get("caseSource")
+        == {
+            "lane": "derived",
+            "strategy": "semantic-program-analysis",
+            "authority": "exact-difficulty-evidence",
+        },
+        "candidate cohort source classification is invalid",
+    )
     return {
         "cohortId": selection["cohortId"],
         "cohortSha256": selection["cohortSha256"],
@@ -90,6 +104,7 @@ def candidate_cohort_lineage(selection_path, difficulty_path, candidate_id, sour
         "difficultyEvidenceSha256": selection["difficultyEvidenceSha256"],
         "methodRevision": selection["methodRevision"],
         "selectionSha256": digest(selection_path),
+        "caseSource": selection["caseSource"],
         "declaredRepresentative": False,
         "automaticPromotion": False,
     }
@@ -344,6 +359,19 @@ def main():
         calibration_sha256=calibration_sha256,
         review=plan.get("review"),
     )
+    case_source = derived_program_analysis_source(
+        candidate_id=candidate_id,
+        source_set_sha256=source_set,
+        difficulty_evidence_sha256=digest(args.difficulty),
+        candidate_sha256=canonical_digest(candidate),
+    )
+    qualification_receipt = build_qualification_receipt(
+        case_id=case_id,
+        candidate_id=candidate_id,
+        case_source=case_source,
+        qualification_matrix=qualification_matrix,
+        calibration_sha256=calibration_sha256,
+    )
     output = {
         "schema": "agentlab.multi_repo_evaluation_case.v1",
         "id": case_id,
@@ -374,7 +402,9 @@ def main():
         },
         "construction": plan.get("construction"),
         "constructionQuality": plan.get("constructionQuality"),
+        "caseSource": case_source,
         "qualificationMatrix": qualification_matrix,
+        "qualificationReceipt": qualification_receipt,
         "lineage": {
             "difficultyEvidenceSha256": digest(args.difficulty),
             "planSha256": plan_sha256,
@@ -389,6 +419,7 @@ def main():
         "assessmentBoundary": "Exact pinned source set and executable fixture oracle; Harmony build, emulator rendering and device performance remain separate gates.",
     }
     validate_matrix(output, calibration, calibration_sha256)
+    validate_case_supply(output)
     require(not args.output.exists(), "refusing to overwrite frozen case")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(output, indent=2, sort_keys=True) + "\n")

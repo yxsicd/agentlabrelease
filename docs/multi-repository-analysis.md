@@ -174,6 +174,25 @@ candidate substitution or duplicate use, and carries all selected but
 unadjudicated candidate IDs into the case-yield denominator. The v2 Agent suite
 scorecard preserves that denominator alongside model discrimination evidence.
 
+Candidate adjudication yield is not case qualification yield. Every newly
+generated analyzer-backed case now carries an `agentlab.case_source.v1` record
+that classifies it as `derived / semantic-program-analysis` and binds the exact
+difficulty evidence plus candidate digest. Its separate
+`agentlab.case_qualification_receipt.v1` binds the source record, calibration
+summary and qualification matrix while keeping semantic review, functional
+calibration, device, performance and freshness gates distinct. Functional
+qualification requires both review and calibration; device and performance are
+separate pending gates and freshness remains unqualified/unknown. The receipt
+therefore cannot turn a static frozen case into an end-to-end Harmony case.
+
+`summarize-case-supply.py` joins an exact reviewed cohort to zero or more frozen
+cases and reports three non-interchangeable yields: frozen-case, functional-
+qualified and end-to-end-qualified. It reports each source lane and strategy as
+a separate stratum and explicitly lists unobserved planned lanes. The current
+multi-repository path consequently reports only the derived lane; the natural
+Issue/PR or operator-failure lane is not implemented and cannot be inferred
+from blind-review adjudication.
+
 The first real two-repository source qualification is retained at
 `release/qualifications/harmony-real-multi-repo-34661ff/summary.json`. It binds
 12,711 analyzed files, 881,650 text lines, 404,308 facts, 22 shared-contract
@@ -220,7 +239,7 @@ The frozen case records the bundle, driver, reference and alternative-tree,
 construction-contract and run digests. Oracle, reference and alternative-valid
 bytes remain evaluator-only. This closes
 the generic protocol. Release CI runs the entire deterministic protocol as one
-37-phase evidence chain and requires baseline failure, reference success, full
+38-phase evidence chain and requires baseline failure, reference success, full
 hidden-dependency coverage and process-aware discrimination score `1.0`. That
 proves cross-phase compatibility, not empirical qualification: a real
 arbitrary-source bundle and representative case population still need human

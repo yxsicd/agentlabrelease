@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-qualification-receipt.schema.json",
+  "title": "AgentLab case qualification receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "caseId",
+    "candidateId",
+    "caseSourceSha256",
+    "lane",
+    "strategy",
+    "qualificationMatrixSha256",
+    "calibrationSha256",
+    "gates",
+    "functionalQualification",
+    "endToEndQualification",
+    "status",
+    "automaticPromotion"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.case_qualification_receipt.v1"},
+    "caseId": {"type": "string", "minLength": 1},
+    "candidateId": {"type": "string", "minLength": 1},
+    "caseSourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "lane": {"enum": ["natural", "derived"]},
+    "strategy": {
+      "enum": [
+        "historical-repair",
+        "operator-reported-failure",
+        "semantic-program-analysis",
+        "controlled-mutation",
+        "participant-failure-feedback"
+      ]
+    },
+    "qualificationMatrixSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "calibrationSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["semanticReview", "functionalCalibration", "device", "performance", "freshness"],
+      "properties": {
+        "semanticReview": {"enum": ["qualified", "legacy-unreviewed"]},
+        "functionalCalibration": {"const": "qualified"},
+        "device": {"const": "pending-separate-gate"},
+        "performance": {"const": "pending-separate-gate"},
+        "freshness": {"const": "unqualified-unknown"}
+      }
+    },
+    "functionalQualification": {"type": "boolean"},
+    "endToEndQualification": {"const": false},
+    "status": {"enum": ["functional-qualified-end-to-end-pending", "calibration-qualified-review-pending"]},
+    "automaticPromotion": {"const": false}
+  }
+}

@@ -207,7 +207,7 @@ smaller than SWE-bench's:
    exact-digest review bind the driver, Oracle, reference tree and declared
    wrong variants before execution. Case freeze consumes only that reviewed
    bundle and records a run receipt binding all executable inputs. This closes
-   the mechanism. Public CI now executes one 37-phase deterministic golden path
+   the mechanism. Public CI now executes one 38-phase deterministic golden path
    across analysis, cohort, construction, calibration, blind dispatch and
    baseline/reference discrimination, so cross-phase compatibility is directly
    proven rather than inferred from isolated tests. It is still a fixture with
@@ -353,8 +353,10 @@ one real closed-path proof, not a large, statistically qualified benchmark.
 ## Adopted qualification model
 
 Every newly generated multi-repository case now carries a qualification matrix
-that generalizes the SWE-bench split without copying its single-repository
-assumptions:
+plus digest-bound source and qualification receipts. The receipts retain the
+natural/derived source stratum and prevent functional calibration from being
+reported as end-to-end qualification. The matrix generalizes the SWE-bench
+split without copying its single-repository assumptions:
 
 ```json
 {

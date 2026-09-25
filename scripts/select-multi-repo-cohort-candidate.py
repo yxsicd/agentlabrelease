@@ -74,12 +74,23 @@ def select(cohort_path: Path, difficulty_path: Path, expected_cohort_sha256: str
     candidates = {row.get("id"): row for row in difficulty.get("candidates") or [] if isinstance(row, dict)}
     require(candidate_id in candidates, "candidate is absent from exact difficulty evidence")
     require(canonical_digest(candidates[candidate_id]) == selected_by_id[candidate_id].get("candidateSha256"), "candidate bytes differ from reviewed cohort")
+    case_source = selected_by_id[candidate_id].get("caseSource")
+    require(
+        case_source
+        == {
+            "lane": "derived",
+            "strategy": "semantic-program-analysis",
+            "authority": "exact-difficulty-evidence",
+        },
+        "selected candidate source classification is invalid",
+    )
     return {
         "schema": "agentlab.multi_repo_candidate_selection.v2",
         "cohortId": cohort["cohortId"],
         "cohortSha256": expected_cohort_sha256,
         "candidateId": candidate_id,
         "candidateSha256": selected_by_id[candidate_id]["candidateSha256"],
+        "caseSource": case_source,
         "sourceSetSha256": cohort["sourceSetSha256"],
         "difficultyEvidenceSha256": cohort["difficultyEvidenceSha256"],
         "methodRevision": cohort["methodRevision"],
