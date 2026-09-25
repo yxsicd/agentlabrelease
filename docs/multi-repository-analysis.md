@@ -100,6 +100,29 @@ splitting the same API merely because repositories use different local names;
 namespace/default imports and dynamic property access retain their explicit
 coverage limitations.
 
+## Predeclare a candidate cohort before construction
+
+Candidate discovery is not case qualification, and choosing one promising row
+after seeing participant outcomes would bias the benchmark. The trusted-main
+cohort workflow therefore freezes the sampling decision first:
+
+1. `propose-multi-repo-candidate-cohort.py` binds the exact difficulty bytes,
+   source-set digest and method revision; retains the eligible denominator and
+   every exclusion; and reports relation, repository-count and recursive-depth
+   strata.
+2. `review-multi-repo-candidate-cohort.py decide` requires the exact proposal
+   digest, at least two eligible IDs, all risk acknowledgements and a reviewer
+   rationale. `compile` creates an immutable, non-representative cohort.
+3. `select-multi-repo-cohort-candidate.py` permits construction of one reviewed
+   member only when the cohort digest and reproduced difficulty bytes match.
+
+The proposal and review workflows carry no model Gateway credential. Model
+construction is a later run per selected member. The cohort does not promote a
+difficulty point, guarantee that every selected candidate will yield a fair
+case, or authorize population claims. Failed specification, Oracle,
+calibration, blind-review and runtime cases remain visible as yield losses
+rather than being silently removed from the denominator.
+
 The first real two-repository source qualification is retained at
 `release/qualifications/harmony-real-multi-repo-34661ff/summary.json`. It binds
 12,711 analyzed files, 881,650 text lines, 404,308 facts, 22 shared-contract

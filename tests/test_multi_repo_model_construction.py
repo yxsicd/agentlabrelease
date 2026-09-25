@@ -44,6 +44,10 @@ class MultiRepoModelConstructionTest(unittest.TestCase):
         self.assertIn("operator-fixture/oracle.mjs", workflow)
         self.assertIn("scripts/propose-dependency-discovery-plan.py", workflow)
         self.assertIn("dependency-discovery-plan-proposal.json", workflow)
+        self.assertIn("cohort_review_run_id", workflow)
+        self.assertIn("expected_cohort_sha256", workflow)
+        self.assertIn("scripts/select-multi-repo-cohort-candidate.py", workflow)
+        self.assertNotIn('row["seed"]["repositoryId"] == "contracts"', workflow)
 
     def test_review_and_campaign_workflows_preserve_trusted_boundaries(self):
         review = (ROOT / ".github/workflows/multi-repo-case-review.yml").read_text()

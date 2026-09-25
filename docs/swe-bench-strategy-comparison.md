@@ -125,6 +125,13 @@ smaller than SWE-bench's:
    every member, reports per-dimension disagreement with Wilson intervals and
    signs the exact cohort report; it has not yet been exercised on a real case
    population and cannot qualify representativeness by itself.
+   The discovery-to-construction gap is now closed mechanically: a trusted-main
+   proposal freezes all eligible candidates, exclusions and strata; a separate
+   exact-digest review predeclares at least two members; and model construction
+   accepts only one verified cohort member per run. This imports SWE-bench's
+   curation discipline without claiming a Verified-like population. It has not
+   yet been exercised over the 22 real-source clusters, and selected-to-qualified
+   case yield remains unmeasured.
 4. The independent Oracle is digest-bound. One real Harmony UI candidate now
    has a controlled `FAIL_TO_PASS` replay: the frozen baseline stays on
    `pages/Index`, while a one-line page-registration variant reaches
@@ -309,15 +316,19 @@ underspecified or contaminated case.
 3. Exercise the reviewed feedback-to-analysis bridge on a real source update
    and prove that the successor case retains prior failure lineage without
    mutating the old case.
-4. Exercise the implemented multi-reviewer adjudication and population reporter
-   across a predeclared case sample; independently review the sampling frame,
-   then interpret the retained per-dimension counts, Wilson intervals and
-   reviewer reuse. Default unknown evidence to review-required, never qualified.
-5. Localize at least five of the 22 real shared-contract clusters into narrow
+4. Exercise the implemented candidate-cohort proposal/review over the real
+   22-cluster source cut, predeclare at least five localized candidates, and run
+   one independent construction/review chain per member. Report every exclusion
+   and the selected-to-qualified yield.
+5. Exercise the multi-reviewer adjudication and population reporter across that
+   predeclared case sample; interpret the retained per-dimension counts, Wilson
+   intervals and reviewer reuse. Default unknown evidence to review-required,
+   never qualified.
+6. Localize at least five of the 22 real shared-contract clusters into narrow
    change hypotheses, then add repair/preservation checks and independent
    review before running repeated strong/weak/middle participant trials.
    Report confidence intervals, exclusions and infrastructure failures.
-6. Exercise the implemented suite scorecard on real reviewed static-plus-Harmony
+7. Exercise the implemented suite scorecard on real reviewed static-plus-Harmony
    campaigns, extend the process contract beyond the assessed emulator adapter,
    and add dependency-discovery plus subjective/objective consistency without
    replacing raw trajectories or independently executable verdict evidence.

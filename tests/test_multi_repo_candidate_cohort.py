@@ -1,0 +1,179 @@
+from __future__ import annotations
+
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import tempfile
+import unittest
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(module)
+    return module
+
+
+PROPOSER = load_module("candidate_cohort_proposer", ROOT / "scripts/propose-multi-repo-candidate-cohort.py")
+REVIEW = load_module("candidate_cohort_review", ROOT / "scripts/review-multi-repo-candidate-cohort.py")
+SELECT = load_module("candidate_cohort_select", ROOT / "scripts/select-multi-repo-cohort-candidate.py")
+
+
+class MultiRepoCandidateCohortTests(unittest.TestCase):
+    def fixture(self, root: Path):
+        candidates = [
+            {
+                "id": "candidate-deep",
+                "schema": "agentlab.difficulty_point.v1",
+                "dimensionId": "multi-repository-change-impact",
+                "status": "candidate",
+                "maturityState": "candidate",
+                "seed": {"repositoryId": "contracts", "path": "src/policy.ts"},
+                "affectedFiles": [
+                    {"repositoryId": "contracts", "path": "src/policy.ts", "dependencyDepth": 0},
+                    {"repositoryId": "service", "path": "src/service.ts", "dependencyDepth": 1},
+                    {"repositoryId": "app", "path": "src/app.ts", "dependencyDepth": 2},
+                ],
+                "affectedRepositoryCount": 3,
+                "maxDependencyDepth": 2,
+                "automaticPromotion": False,
+            },
+            {
+                "id": "candidate-shared-api",
+                "schema": "agentlab.difficulty_point.v1",
+                "dimensionId": "multi-repository-change-impact",
+                "relationType": "shared-external-api-call-contract",
+                "status": "candidate",
+                "maturityState": "candidate",
+                "seed": {"specifier": "@kit.ArkWeb", "callTarget": "initialize"},
+                "affectedFiles": [
+                    {"repositoryId": "app", "path": "src/a.ts", "dependencyDepth": 1},
+                    {"repositoryId": "service", "path": "src/b.ts", "dependencyDepth": 1},
+                ],
+                "affectedRepositoryCount": 2,
+                "maxDependencyDepth": 1,
+                "automaticPromotion": False,
+            },
+            {
+                "id": "candidate-unresolved",
+                "schema": "agentlab.difficulty_point.v1",
+                "dimensionId": "unresolved-module-boundary",
+                "status": "candidate",
+                "maturityState": "candidate",
+                "automaticPromotion": False,
+            },
+        ]
+        difficulty = root / "difficulty.json"
+        difficulty.write_text(json.dumps({
+            "schema": "agentlab.difficulty_candidates.v2",
+            "sourceSetSha256": "a" * 64,
+            "sources": [
+                {"id": "app", "repository": "repo-app", "revision": "1" * 40},
+                {"id": "service", "repository": "repo-service", "revision": "2" * 40},
+                {"id": "contracts", "repository": "repo-contracts", "revision": "3" * 40},
+            ],
+            "candidates": candidates,
+            "automaticPromotion": False,
+        }, sort_keys=True) + "\n")
+        proposal_value = PROPOSER.propose(difficulty, "cohort-1", "4" * 40)
+        proposal = root / "proposal.json"
+        proposal.write_text(json.dumps(proposal_value, sort_keys=True) + "\n")
+        return difficulty, proposal, candidates
+
+    def reviewed(self, root: Path):
+        difficulty, proposal, candidates = self.fixture(root)
+        proposal_sha = hashlib.sha256(proposal.read_bytes()).hexdigest()
+        review_value = REVIEW.decide(
+            proposal,
+            proposal_sha,
+            "candidate-deep,candidate-shared-api",
+            "reviewer-a",
+            "candidate-to-case-yield,sampling-frame-coverage,selection-bias",
+            "Predeclared diversity across depth and relation strata.",
+        )
+        review = root / "review.json"
+        review.write_text(json.dumps(review_value, sort_keys=True) + "\n")
+        cohort_value = REVIEW.compile_cohort(proposal, review)
+        cohort = root / "cohort.json"
+        cohort.write_text(json.dumps(cohort_value, sort_keys=True) + "\n")
+        return difficulty, proposal, review, cohort, candidates
+
+    def test_proposal_retains_denominator_exclusions_and_strata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            difficulty, proposal, _ = self.fixture(Path(directory))
+            value = json.loads(proposal.read_text())
+            self.assertEqual(value["samplingFrame"]["eligibleCount"], 2)
+            self.assertEqual(value["samplingFrame"]["excludedCount"], 1)
+            self.assertEqual(value["excludedCandidates"], [{
+                "id": "candidate-unresolved",
+                "reason": "outside-multi-repository-change-impact-dimension",
+            }])
+            self.assertEqual(value["samplingFrame"]["strata"]["maxDependencyDepth"], {"1": 1, "2": 1})
+            self.assertFalse(value["samplingFrame"]["declaredRepresentative"])
+            self.assertEqual(value["difficultyEvidenceSha256"], hashlib.sha256(difficulty.read_bytes()).hexdigest())
+
+    def test_reviewed_member_resolves_against_exact_difficulty_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            difficulty, _, _, cohort, _ = self.reviewed(root)
+            cohort_sha = hashlib.sha256(cohort.read_bytes()).hexdigest()
+            selected = SELECT.select(cohort, difficulty, cohort_sha, "candidate-deep")
+            self.assertEqual(selected["schema"], "agentlab.multi_repo_candidate_selection.v2")
+            self.assertEqual(selected["candidateId"], "candidate-deep")
+            self.assertFalse(selected["declaredRepresentative"])
+
+    def test_review_rejects_single_or_unknown_selection(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _, proposal, _ = self.fixture(root)
+            proposal_sha = hashlib.sha256(proposal.read_bytes()).hexdigest()
+            with self.assertRaisesRegex(REVIEW.CohortReviewError, "at least two"):
+                REVIEW.decide(proposal, proposal_sha, "candidate-deep", "reviewer", "candidate-to-case-yield,sampling-frame-coverage,selection-bias", "rationale")
+            with self.assertRaisesRegex(REVIEW.CohortReviewError, "ineligible or unknown"):
+                REVIEW.decide(proposal, proposal_sha, "candidate-deep,unknown", "reviewer", "candidate-to-case-yield,sampling-frame-coverage,selection-bias", "rationale")
+
+    def test_selection_rejects_difficulty_tampering_and_nonmember(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            difficulty, _, _, cohort, candidates = self.reviewed(root)
+            cohort_sha = hashlib.sha256(cohort.read_bytes()).hexdigest()
+            with self.assertRaisesRegex(SELECT.SelectionError, "not a member"):
+                SELECT.select(cohort, difficulty, cohort_sha, "candidate-unresolved")
+            value = json.loads(difficulty.read_text())
+            value["candidates"][0]["maxDependencyDepth"] = 9
+            difficulty.write_text(json.dumps(value, sort_keys=True) + "\n")
+            with self.assertRaisesRegex(SELECT.SelectionError, "difficulty evidence digest differs"):
+                SELECT.select(cohort, difficulty, cohort_sha, candidates[0]["id"])
+
+    def test_compile_rejects_hand_edited_review_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _, proposal, review, _, _ = self.reviewed(root)
+            value = json.loads(review.read_text())
+            value["reviewer"] = ""
+            review.write_text(json.dumps(value, sort_keys=True) + "\n")
+            with self.assertRaisesRegex(REVIEW.CohortReviewError, "reviewer is absent"):
+                REVIEW.compile_cohort(proposal, review)
+
+    def test_workflows_split_proposal_review_and_secret_bearing_construction(self):
+        proposal = (ROOT / ".github/workflows/multi-repo-candidate-cohort.yml").read_text()
+        review = (ROOT / ".github/workflows/multi-repo-candidate-cohort-review.yml").read_text()
+        construction = (ROOT / ".github/workflows/multi-repo-model-construction.yml").read_text()
+        self.assertIn("scripts/propose-multi-repo-candidate-cohort.py", proposal)
+        self.assertNotIn("AGENTLAB_LM_GATEWAY_KEY", proposal + review)
+        self.assertIn("scripts/review-multi-repo-candidate-cohort.py decide", review)
+        self.assertIn("scripts/review-multi-repo-candidate-cohort.py compile", review)
+        self.assertIn(".github/workflows/multi-repo-candidate-cohort.yml", review)
+        self.assertIn(".github/workflows/multi-repo-candidate-cohort-review.yml", construction)
+        self.assertIn("scripts/select-multi-repo-cohort-candidate.py", construction)
+        self.assertNotIn('row["seed"]["repositoryId"] == "contracts"', construction)
+        self.assertEqual(construction.count("secrets.AGENTLAB_LM_GATEWAY_KEY"), 1)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -164,27 +164,36 @@ python3 scripts/score-multi-repo-intent.py \
 
 This lexical gate is intentionally narrow: it can reject generic, duplicated or
 leaking demands, but cannot prove semantic correctness or Agent discrimination.
-After this workflow reaches the trusted default branch, an operator can dispatch
-`Multi-repository model construction`. It creates reproducible Git fixture
-revisions, runs the real Pi adapter with the repository Gateway secret, applies
-this quality gate without the secret, and uploads the complete source, native
-model/Gateway, receipt and quality evidence. It also retains the operator-owned
-reference, calibration driver and Oracle from that same revision, outside the
-participant input. The credential-bearing job is manual and is rejected unless
-its ref is exactly `refs/heads/main`; pull requests continue to exercise only
-the deterministic mock path.
+Before model construction, dispatch `Multi-repository candidate cohort
+proposal`. It analyzes the exact source set, records every eligible and excluded
+candidate, and reports relation/depth/repository-count strata without claiming
+representativeness. A separate `Multi-repository candidate cohort review` run
+binds an operator's exact digest, rationale, risk acknowledgements and at least
+two predeclared candidate IDs. Each later `Multi-repository model construction`
+run accepts one member of that frozen cohort, reproduces the difficulty bytes,
+and fails if the cohort, candidate or source evidence drifts. Only then does it
+run the real Pi adapter with the repository Gateway secret, apply the quality
+gate without the secret, and upload the complete source, native model/Gateway,
+receipt and quality evidence. It also retains the operator-owned reference,
+calibration driver and Oracle from that same revision, outside participant
+input. Credential-bearing construction is manual and is rejected unless its ref
+is exactly `refs/heads/main`; proposal and review have no Gateway credential.
 
-The trusted-main campaign is deliberately split into three independently
+The trusted-main campaign is deliberately split into five independently
 auditable manual runs:
 
-1. `Multi-repository model construction` produces a review-required proposal
-   and prints its exact SHA-256.
-2. After inspecting that artifact, an operator dispatches
+1. `Multi-repository candidate cohort proposal` freezes the exact eligible
+   denominator, exclusions and strata.
+2. `Multi-repository candidate cohort review` predeclares at least two members
+   for independent construction; it never declares the sample representative.
+3. One `Multi-repository model construction` run per selected member produces a
+   review-required case proposal and prints its exact SHA-256.
+4. After inspecting each artifact, an operator dispatches
    `Multi-repository case review and freeze` with the source run ID, exact
    proposal digest, every risk ID and a rationale. The workflow accepts only a
    successful construction run from `main`, reruns the retained calibration,
    and freezes the reviewed case. It has no Gateway credential.
-3. `Multi-repository assessed-Agent campaign` accepts only a successful freeze
+5. `Multi-repository assessed-Agent campaign` accepts only a successful freeze
    run from `main`, reconstructs the reviewed sources, and executes two distinct
    model profiles for one or three fresh trials each. It retains every staged
    attempt and emits the v2 collection plus discrimination report.
@@ -192,6 +201,11 @@ auditable manual runs:
 Freezing and scoring never auto-promote a case. A score is campaign evidence,
 not a publication decision. The campaign uses the Oracle retained by the
 construction run, so a later change on `main` cannot silently alter the case.
+The existing blind-review population workflow summarizes the resulting
+independently adjudicated cases. Its v1 manifest does not yet bind case
+difficulty IDs back to this candidate cohort, so that final membership
+reconciliation remains an explicit operator check rather than a qualified
+machine-enforced claim.
 
 For a feedback-derived successor, first run a new exact multi-repository
 analysis cut, then use `propose-feedback-analysis-cut.py` and

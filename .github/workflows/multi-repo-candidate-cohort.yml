@@ -1,0 +1,44 @@
+name: Multi-repository candidate cohort proposal
+on:
+  workflow_dispatch:
+    inputs:
+      cohort_id:
+        description: Stable identifier for this predeclared sampling frame
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  propose:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/multi-repo-candidate-cohort
+      COHORT_ID: ${{ inputs.cohort_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Build exact multi-repository analysis evidence
+        run: |
+          cargo build --locked -p agentlab_code_analysis --bin agentlab-multi-repo-analysis
+          python3 scripts/prepare-multi-repo-construction-fixture.py \
+            --source examples/multi-repo-case/baseline \
+            --output "$AGENTLAB_ROOT/input"
+          target/debug/agentlab-multi-repo-analysis \
+            "$AGENTLAB_ROOT/input/manifest.json" "$AGENTLAB_ROOT/analysis"
+      - name: Propose the complete eligible sampling frame
+        run: |
+          python3 scripts/propose-multi-repo-candidate-cohort.py \
+            --difficulty "$AGENTLAB_ROOT/analysis/difficulty_candidates.json" \
+            --cohort-id "$COHORT_ID" \
+            --method-revision "$GITHUB_SHA" \
+            --output "$AGENTLAB_ROOT/candidate-cohort-proposal.json"
+          sha256sum "$AGENTLAB_ROOT/candidate-cohort-proposal.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve proposal and exact analyzer evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-candidate-cohort-proposal
+          if-no-files-found: error
+          path: ${{ env.AGENTLAB_ROOT }}/

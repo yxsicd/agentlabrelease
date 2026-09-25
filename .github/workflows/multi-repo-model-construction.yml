@@ -12,8 +12,21 @@ on:
         required: true
         default: glm
         type: string
+      cohort_review_run_id:
+        description: Successful trusted-main reviewed candidate-cohort run
+        required: true
+        type: string
+      expected_cohort_sha256:
+        description: Exact reviewed cohort digest used for this construction
+        required: true
+        type: string
+      candidate_id:
+        description: One exact member of the predeclared reviewed cohort
+        required: true
+        type: string
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -32,35 +45,46 @@ jobs:
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_MODEL: ${{ inputs.model }}
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
+      SOURCE_RUN_ID: ${{ inputs.cohort_review_run_id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Recover the exact reviewed candidate cohort
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$AGENTLAB_ROOT/cohort"
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$AGENTLAB_ROOT/cohort-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/cohort-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-candidate-cohort-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-candidate-cohort-review --dir "$AGENTLAB_ROOT/cohort"
       - name: Build the revision-fenced analysis binary
         run: cargo build --locked -p agentlab_code_analysis --bin agentlab-multi-repo-analysis
-      - name: Materialize three deterministic Git repositories and analyze them
+      - name: Reproduce exact source evidence and resolve one reviewed member
         id: analysis
+        env:
+          EXPECTED_COHORT_SHA256: ${{ inputs.expected_cohort_sha256 }}
+          CANDIDATE_ID: ${{ inputs.candidate_id }}
         run: |
           python3 scripts/prepare-multi-repo-construction-fixture.py \
             --source examples/multi-repo-case/baseline \
             --output "$AGENTLAB_ROOT/input"
           target/debug/agentlab-multi-repo-analysis \
             "$AGENTLAB_ROOT/input/manifest.json" "$AGENTLAB_ROOT/analysis"
-          python3 - <<'PY'
-          import json, os, pathlib
-          root = pathlib.Path(os.environ["AGENTLAB_ROOT"])
-          difficulty = json.loads((root / "analysis/difficulty_candidates.json").read_text())
-          matches = [row for row in difficulty["candidates"]
-                     if row["dimensionId"] == "multi-repository-change-impact"
-                     and row["seed"]["repositoryId"] == "contracts"
-                     and row["affectedRepositoryCount"] == 3]
-          assert len(matches) == 1, matches
-          selection = {"schema": "agentlab.multi_repo_candidate_selection.v1",
-                       "candidateId": matches[0]["id"],
-                       "sourceSetSha256": difficulty["sourceSetSha256"],
-                       "automaticPromotion": False}
-          (root / "candidate-selection.json").write_text(json.dumps(selection, indent=2) + "\n")
-          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
-              output.write("candidate_id=" + selection["candidateId"] + "\n")
-          PY
+          python3 scripts/select-multi-repo-cohort-candidate.py \
+            --cohort "$AGENTLAB_ROOT/cohort/candidate-cohort.json" \
+            --difficulty "$AGENTLAB_ROOT/analysis/difficulty_candidates.json" \
+            --expected-cohort-sha256 "$EXPECTED_COHORT_SHA256" \
+            --candidate-id "$CANDIDATE_ID" \
+            --output "$AGENTLAB_ROOT/candidate-selection.json"
+          echo "candidate_id=$CANDIDATE_ID" >> "$GITHUB_OUTPUT"
       - name: Install a separately contained Pi runtime
         run: |
           mkdir -p "$RUNNER_TEMP/pi-runtime"
