@@ -541,6 +541,50 @@ strong pass versus weak Oracle failure, SmartPerf collection on the passing arm,
 and discrimination score 1.0. It binds the complete 202-file remote evidence
 tree while leaving promotion review-required.
 
+### Import completed device evidence into the trusted scorecard path
+
+Device execution and GitHub provenance are separate authorities. The emulator
+host cannot turn a locally written report into trusted-main evidence merely by
+uploading that report. After a campaign reaches `assessed-review-required`, use
+the release import tool to create one deterministic ZIP containing the complete
+campaign tree, resolved plan and host profile. The bundle manifest indexes every
+member by path, byte length, Unix mode and SHA256, and binds the exact successful
+static workflow run and its portable handoff:
+
+```sh
+gh api repos/yxsicd/agentlabrelease/actions/runs/$STATIC_RUN_ID \
+  > /evidence/source-run.json
+python3 scripts/import-harmony-device-campaign.py prepare \
+  --campaign /evidence/harmony-assessed-campaign \
+  --handoff /evidence/static/harmony-device-handoff.json \
+  --host-profile /home/huawei/agentlab/hwlinux-host-profile.json \
+  --plan /evidence/harmony-assessed-campaign-plan.json \
+  --source-run /evidence/source-run.json \
+  --output /evidence/harmony-device-campaign.zip
+sha256sum /evidence/harmony-device-campaign.zip
+```
+
+Publish that exact ZIP under a new evidence release tag; do not replace an
+existing asset. This lane is for controlled benchmark evidence only: inspect
+the indexed file set before publication and never include Gateway credentials,
+private Agent homes, unrelated user data or production captures. Dispatch
+`harmony-device-campaign-import.yml` with the static
+run ID, release tag, asset name and SHA256. The trusted-main workflow downloads
+the original static artifact independently, rejects archive traversal,
+symlinks, unindexed files, source-run or handoff substitution, plan/profile
+drift, campaign-state drift and evidence digest drift. It then reconstructs the
+attempt collection, discrimination report and feedback with trusted repository
+code. The reconstructed report and import receipt receive separate GitHub OIDC
+attestations and are preserved as `harmony-device-assessed-campaign`.
+
+`agent-suite-scorecard.yml` accepts either the original static campaign run or
+this device-import run. It keeps the source assessment method revision distinct
+from the later import workflow revision and requires both device-import and
+report attestations. A static run remains explicitly unqualified for Harmony
+end-to-end coverage; an imported run is still review-required and qualifies
+only when its reconstructed stage/process evidence satisfies the device and
+SmartPerf gates.
+
 ## Close assessed failures into the next analysis cut
 
 The trusted assessed campaign keeps the frozen case unchanged, runs fresh trials

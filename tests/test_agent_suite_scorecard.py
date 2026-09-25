@@ -472,6 +472,73 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         self.assertFalse(value["qualification"]["suiteMeasurementQualified"])
         self.assertFalse(value["qualification"]["harmonyEndToEndEvidenceQualified"])
 
+    def write_device_bound_manifest(self) -> Path:
+        value = json.loads(self.manifest.read_text())
+        value["schema"] = "agentlab.agent_suite_scorecard_manifest.v2"
+        for row in value["cases"]:
+            row.update(
+                {
+                    "assessedCampaignWorkflowPath": ".github/workflows/multi-repo-assessed-campaign.yml",
+                    "assessedCampaignMethodRevision": "d" * 40,
+                    "sourceAssessedCampaignRunId": row["assessedCampaignRunId"],
+                    "deviceImportVerification": None,
+                    "deviceImportAttestationVerification": None,
+                }
+            )
+        device = value["cases"][1]
+        device["assessedCampaignWorkflowPath"] = (
+            ".github/workflows/harmony-device-campaign-import.yml"
+        )
+        device["assessedCampaignWorkflowHeadSha"] = "e" * 40
+        device["sourceAssessedCampaignRunId"] = 7777
+        verification = self.root / "case-b-import-verification.json"
+        verification.write_text(
+            json.dumps(
+                {
+                    "schema": "agentlab.harmony_device_campaign_import_verification.v1",
+                    "status": "verified-review-required",
+                    "caseId": "case-b",
+                    "sourceSetSha256": self.source_sets["case-b"],
+                    "sourceMethodRevision": "d" * 40,
+                    "verificationMethodRevision": "e" * 40,
+                    "sourceAssessedCampaign": {"runId": 7777},
+                    "trustedReconstruction": {
+                        "discriminationReportSha256": hashlib.sha256(
+                            self.reports["case-b"].read_bytes()
+                        ).hexdigest()
+                    },
+                    "harmonyEndToEndEvidenceQualified": True,
+                    "automaticPromotion": False,
+                }
+            )
+        )
+        verification_attestation = self.root / "case-b-import-attestation.json"
+        self.write_attestation(verification_attestation, verification, 2002)
+        device["deviceImportVerification"] = verification.name
+        device["deviceImportAttestationVerification"] = (
+            verification_attestation.name
+        )
+        self.manifest.write_text(json.dumps(value, indent=2))
+        return verification
+
+    def test_attested_device_import_keeps_source_and_verifier_revisions_distinct(self) -> None:
+        self.write_device_bound_manifest()
+        value = SUITE.build_scorecard(self.manifest)
+        device = next(row for row in value["cases"] if row["caseId"] == "case-b")
+        self.assertEqual(device["assessedCampaignMethodRevision"], "d" * 40)
+        self.assertEqual(device["assessedCampaignWorkflowHeadSha"], "e" * 40)
+        self.assertEqual(device["sourceAssessedCampaignRunId"], 7777)
+        self.assertIn("deviceImportEvidence", device)
+        self.assertTrue(device["scorecardQualified"])
+
+    def test_device_import_receipt_must_bind_reconstructed_report(self) -> None:
+        verification = self.write_device_bound_manifest()
+        value = json.loads(verification.read_text())
+        value["trustedReconstruction"]["discriminationReportSha256"] = "0" * 64
+        verification.write_text(json.dumps(value))
+        with self.assertRaisesRegex(SUITE.ScorecardError, "report digest differs"):
+            SUITE.build_scorecard(self.manifest)
+
     def test_scorecard_membership_must_equal_reviewed_population(self) -> None:
         self.write_manifest(case_ids=["case-a"])
         with self.assertRaisesRegex(SUITE.ScorecardError, "exactly match"):
@@ -514,8 +581,10 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         self.assertIn("github.ref == 'refs/heads/main'", workflow)
         self.assertIn("blind-review-population-report", workflow)
         self.assertIn("multi-repo-assessed-campaign", workflow)
+        self.assertIn("harmony-device-assessed-campaign", workflow)
         self.assertIn(".github/workflows/blind-review-population.yml", workflow)
         self.assertIn(".github/workflows/multi-repo-assessed-campaign.yml", workflow)
+        self.assertIn(".github/workflows/harmony-device-campaign-import.yml", workflow)
         self.assertIn('run["head_branch"] == "main"', workflow)
         self.assertIn('run["conclusion"] == "success"', workflow)
         self.assertIn("participantOrder", workflow)

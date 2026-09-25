@@ -175,8 +175,14 @@ smaller than SWE-bench's:
    emulator results are not substitutes for calibrated real-device energy
    measurements.
 7. The portable static-to-Linux handoff is now implemented and qualified on
-   `hwlinux`, but it has one real campaign rather than cross-host repeatability
-   evidence.
+   `hwlinux`. A completed-device-evidence importer now binds every bundle member,
+   independently recovers the authoritative static handoff, reconstructs the
+   discrimination report under trusted-main code, attests the report and import
+   receipt separately, and lets the suite preserve source-method versus import-
+   workflow revisions. The mechanism has tamper and lineage-drift regression
+   coverage, but the retained historical canary has not yet passed through a
+   merged trusted-main import run, and there is still one real campaign rather
+   than cross-host repeatability evidence.
 8. Assessed feedback can now enter a separately reviewed new source/analysis
    cut and survive into successor-case lineage. It has deterministic regression
    coverage, but has not yet been exercised on a representative real source

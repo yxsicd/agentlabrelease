@@ -13,6 +13,7 @@ from typing import Any
 
 
 MANIFEST_SCHEMA = "agentlab.agent_suite_scorecard_manifest.v1"
+DEVICE_BOUND_MANIFEST_SCHEMA = "agentlab.agent_suite_scorecard_manifest.v2"
 SCORECARD_SCHEMA = "agentlab.agent_suite_scorecard.v1"
 COHORT_BOUND_SCORECARD_SCHEMA = "agentlab.agent_suite_scorecard.v2"
 REVISION = re.compile(r"[0-9a-f]{40}")
@@ -385,7 +386,11 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
     manifest_path = manifest_path.resolve(strict=True)
     root = manifest_path.parent
     manifest = load_object(manifest_path, "Agent suite scorecard manifest")
-    require(manifest.get("schema") == MANIFEST_SCHEMA, "unsupported Agent suite scorecard manifest schema")
+    manifest_schema = manifest.get("schema")
+    require(
+        manifest_schema in {MANIFEST_SCHEMA, DEVICE_BOUND_MANIFEST_SCHEMA},
+        "unsupported Agent suite scorecard manifest schema",
+    )
     suite_id = manifest.get("suiteId")
     require(isinstance(suite_id, str) and TOKEN.fullmatch(suite_id), "suiteId is invalid")
     method_revision = manifest.get("methodRevision")
@@ -461,16 +466,28 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
         for participant in participant_order
     }
     for case in cases:
-        require(
-            set(case)
-            == {
+        legacy_fields = {
                 "caseId",
                 "assessedCampaignRunId",
                 "assessedCampaignRunAttempt",
                 "assessedCampaignWorkflowHeadSha",
                 "discriminationReport",
                 "discriminationAttestationVerification",
-            },
+        }
+        device_bound_fields = legacy_fields | {
+            "assessedCampaignWorkflowPath",
+            "assessedCampaignMethodRevision",
+            "sourceAssessedCampaignRunId",
+            "deviceImportVerification",
+            "deviceImportAttestationVerification",
+        }
+        require(
+            set(case)
+            == (
+                device_bound_fields
+                if manifest_schema == DEVICE_BOUND_MANIFEST_SCHEMA
+                else legacy_fields
+            ),
             "scorecard case fields differ",
         )
         case_id = case["caseId"]
@@ -480,6 +497,32 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
         require(isinstance(campaign_run_attempt, int) and campaign_run_attempt > 0, f"{case_id} assessed campaign run attempt is invalid")
         campaign_head_sha = case.get("assessedCampaignWorkflowHeadSha")
         require(isinstance(campaign_head_sha, str) and REVISION.fullmatch(campaign_head_sha), f"{case_id} assessed campaign revision is invalid")
+        if manifest_schema == DEVICE_BOUND_MANIFEST_SCHEMA:
+            campaign_workflow = case.get("assessedCampaignWorkflowPath")
+            require(
+                campaign_workflow
+                in {
+                    ".github/workflows/multi-repo-assessed-campaign.yml",
+                    ".github/workflows/harmony-device-campaign-import.yml",
+                },
+                f"{case_id} assessed campaign workflow is invalid",
+            )
+            campaign_method_revision = case.get("assessedCampaignMethodRevision")
+            require(
+                isinstance(campaign_method_revision, str)
+                and REVISION.fullmatch(campaign_method_revision),
+                f"{case_id} assessed campaign method revision is invalid",
+            )
+            source_campaign_run_id = case.get("sourceAssessedCampaignRunId")
+            require(
+                isinstance(source_campaign_run_id, int)
+                and source_campaign_run_id > 0,
+                f"{case_id} source assessed campaign run id is invalid",
+            )
+        else:
+            campaign_workflow = ".github/workflows/multi-repo-assessed-campaign.yml"
+            campaign_method_revision = campaign_head_sha
+            source_campaign_run_id = campaign_run_id
         population_row = population_cases[case_id]
         report_path = portable_file(root, case.get("discriminationReport"), f"{case_id} discrimination report")
         report, row = validate_discrimination(
@@ -488,7 +531,7 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
             population_row["sourceSetSha256"],
             participant_order,
         )
-        require(report["methodRevision"] == campaign_head_sha, f"{case_id} discrimination method revision differs from its workflow run")
+        require(report["methodRevision"] == campaign_method_revision, f"{case_id} discrimination method revision differs from its declared method")
         discrimination_attestation_path = portable_file(
             root,
             case.get("discriminationAttestationVerification"),
@@ -501,6 +544,64 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
             campaign_run_attempt,
             f"{case_id} discrimination attestation verification",
         )
+        device_import_evidence = None
+        if campaign_workflow == ".github/workflows/harmony-device-campaign-import.yml":
+            import_path = portable_file(
+                root,
+                case.get("deviceImportVerification"),
+                f"{case_id} device import verification",
+            )
+            imported = load_object(import_path, f"{case_id} device import verification")
+            require(
+                imported.get("schema")
+                == "agentlab.harmony_device_campaign_import_verification.v1"
+                and imported.get("status") == "verified-review-required",
+                f"{case_id} device import verification status differs",
+            )
+            require(
+                imported.get("caseId") == case_id
+                and imported.get("sourceSetSha256")
+                == population_row["sourceSetSha256"]
+                and imported.get("sourceMethodRevision")
+                == campaign_method_revision
+                and imported.get("verificationMethodRevision") == campaign_head_sha
+                and (imported.get("sourceAssessedCampaign") or {}).get("runId")
+                == source_campaign_run_id
+                and imported.get("automaticPromotion") is False,
+                f"{case_id} device import identity differs",
+            )
+            reconstruction = imported.get("trustedReconstruction") or {}
+            require(
+                reconstruction.get("discriminationReportSha256")
+                == digest(report_path),
+                f"{case_id} device import report digest differs",
+            )
+            import_attestation_path = portable_file(
+                root,
+                case.get("deviceImportAttestationVerification"),
+                f"{case_id} device import attestation verification",
+            )
+            import_attestation = validate_attestation_verification(
+                import_attestation_path,
+                import_path,
+                campaign_run_id,
+                campaign_run_attempt,
+                f"{case_id} device import attestation verification",
+            )
+            device_import_evidence = {
+                "verificationPath": import_path.relative_to(root).as_posix(),
+                "verificationSha256": digest(import_path),
+                "attestationVerificationPath": import_attestation_path.relative_to(root).as_posix(),
+                "attestationVerificationSha256": import_attestation["sha256"],
+            }
+        else:
+            require(
+                campaign_method_revision == campaign_head_sha
+                and source_campaign_run_id == campaign_run_id
+                and case.get("deviceImportVerification") is None
+                and case.get("deviceImportAttestationVerification") is None,
+                f"{case_id} static campaign provenance differs",
+            )
         profiles = {profile["participantId"]: profile for profile in row["participantProfiles"]}
         rates = [profiles[participant]["passRate"] for participant in participant_order]
         expected_order = all(lower <= upper for lower, upper in zip(rates, rates[1:]))
@@ -523,6 +624,12 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
         )
         harmony = row["processMeasurement"]["harmonyDevice"]
         harmony_end_to_end_qualified = harmony["endToEndEvidenceQualified"] is True
+        if device_import_evidence is not None:
+            require(
+                imported.get("harmonyEndToEndEvidenceQualified")
+                is harmony_end_to_end_qualified,
+                f"{case_id} device import Harmony qualification differs",
+            )
         outcome_qualified = row.get("eligible") is True
         qualified = (
             review_qualified
@@ -544,7 +651,10 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
                 "reviewPopulationAdjudicationRunId": population_row["adjudicationRunId"],
                 "assessedCampaignRunId": campaign_run_id,
                 "assessedCampaignRunAttempt": campaign_run_attempt,
+                "assessedCampaignWorkflowPath": campaign_workflow,
                 "assessedCampaignWorkflowHeadSha": campaign_head_sha,
+                "assessedCampaignMethodRevision": campaign_method_revision,
+                "sourceAssessedCampaignRunId": source_campaign_run_id,
                 "reviewQualified": review_qualified,
                 "outcomeDiscriminationEligible": outcome_qualified,
                 "processMeasurementCoverageQualified": process_qualified,
@@ -578,6 +688,11 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
                     "attestationVerificationPath": discrimination_attestation_path.relative_to(root).as_posix(),
                     "attestationVerificationSha256": discrimination_attestation["sha256"],
                 },
+                **(
+                    {"deviceImportEvidence": device_import_evidence}
+                    if device_import_evidence is not None
+                    else {}
+                ),
             }
         )
     case_rows.sort(key=lambda row: row["caseId"])

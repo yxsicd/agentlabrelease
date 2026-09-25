@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/harmony-device-campaign-import-verification.schema.json",
+  "title": "AgentLab trusted Harmony device campaign import verification",
+  "type": "object",
+  "required": [
+    "schema",
+    "status",
+    "bundleSha256",
+    "bundleManifestSha256",
+    "sourceAssessedCampaign",
+    "sourceHandoffSha256",
+    "campaignId",
+    "caseId",
+    "sourceSetSha256",
+    "sourceMethodRevision",
+    "verificationMethodRevision",
+    "trustedReconstruction",
+    "harmonyEndToEndEvidenceQualified",
+    "automaticPromotion",
+    "nextGate"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.harmony_device_campaign_import_verification.v1"},
+    "status": {"const": "verified-review-required"},
+    "bundleSha256": {"$ref": "#/$defs/sha256"},
+    "bundleManifestSha256": {"$ref": "#/$defs/sha256"},
+    "sourceAssessedCampaign": {"type": "object"},
+    "sourceHandoffSha256": {"$ref": "#/$defs/sha256"},
+    "campaignId": {"type": "string", "minLength": 1},
+    "caseId": {"type": "string", "minLength": 1},
+    "sourceSetSha256": {"$ref": "#/$defs/sha256"},
+    "sourceMethodRevision": {"$ref": "#/$defs/revision"},
+    "verificationMethodRevision": {"$ref": "#/$defs/revision"},
+    "trustedReconstruction": {
+      "type": "object",
+      "required": [
+        "discriminationInputSha256",
+        "discriminationReportSha256",
+        "assessmentFeedbackSha256",
+        "originalInputMatched",
+        "originalReportMatched",
+        "originalFeedbackMatched"
+      ],
+      "properties": {
+        "discriminationInputSha256": {"$ref": "#/$defs/sha256"},
+        "discriminationReportSha256": {"$ref": "#/$defs/sha256"},
+        "assessmentFeedbackSha256": {"$ref": "#/$defs/sha256"},
+        "originalInputMatched": {"type": "boolean"},
+        "originalReportMatched": {"type": "boolean"},
+        "originalFeedbackMatched": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "harmonyEndToEndEvidenceQualified": {"type": "boolean"},
+    "automaticPromotion": {"const": false},
+    "nextGate": {"const": "suite-composition-or-maintainer-adjudication"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+  },
+  "additionalProperties": false
+}

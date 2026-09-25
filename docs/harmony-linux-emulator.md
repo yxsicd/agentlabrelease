@@ -253,6 +253,18 @@ The campaign summary SHA256 is
 `13e3fe304d29a7434a8d0af87e316ac45579e46f40975561f8643f2745cdcb8b`;
 the discrimination-report SHA256 is
 `40efda306ac46448742449b353662961d8b7b8fc8ef03ccc3a7fc9aca4d81fc1`.
+
+Completed campaigns now have a fail-closed route back into trusted-main suite
+composition. `scripts/import-harmony-device-campaign.py prepare` packages the
+complete device campaign, resolved plan and host profile while binding the
+original static workflow run and handoff. The trusted
+`harmony-device-campaign-import.yml` workflow independently recovers that
+static artifact, verifies the complete ZIP member index, reconstructs scoring
+from raw attempt evidence and separately attests the reconstructed report and
+import receipt. It does not attest that arbitrary uploaded JSON is true, and it
+does not turn an emulator into power or thermal authority. The mechanism has
+deterministic tamper and lineage-drift coverage; the retained historical canary
+has not yet been repackaged and processed by a merged trusted-main import run.
 The run also exposed and fixed a Linux portability defect: assessed Git blobs
 previously inherited the host `umask` and could become mode `0664`, while the
 downstream builder accepts only Git-representable `0644` and `0755`. Revision

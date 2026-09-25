@@ -11,7 +11,7 @@ on:
         required: true
         type: string
       assessed_campaign_run_ids:
-        description: JSON array of one assessed campaign run per reviewed case
+        description: JSON array of one static or Harmony-device-import campaign run per reviewed case
         required: true
         type: string
       participant_order:
@@ -76,8 +76,22 @@ jobs:
             mkdir -p "$AGENTLAB_ROOT/campaigns/$run_id"
             gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" \
               > "$AGENTLAB_ROOT/campaigns/$run_id/run.json"
+            workflow_path=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["path"])' \
+              "$AGENTLAB_ROOT/campaigns/$run_id/run.json")
+            case "$workflow_path" in
+              .github/workflows/multi-repo-assessed-campaign.yml)
+                artifact_name=multi-repo-assessed-campaign
+                ;;
+              .github/workflows/harmony-device-campaign-import.yml)
+                artifact_name=harmony-device-assessed-campaign
+                ;;
+              *)
+                printf 'unsupported assessed campaign workflow: %s\n' "$workflow_path" >&2
+                exit 1
+                ;;
+            esac
             gh run download "$run_id" --repo "$GITHUB_REPOSITORY" \
-              --name multi-repo-assessed-campaign \
+              --name "$artifact_name" \
               --dir "$AGENTLAB_ROOT/campaigns/$run_id"
           done < "$AGENTLAB_ROOT/campaign-run-ids.txt"
       - name: Freeze exact suite membership and participant capability order
@@ -95,13 +109,23 @@ jobs:
             --format json > "$AGENTLAB_ROOT/population-attestation-verification.json"
           while IFS= read -r run_id; do
             campaign_head_sha=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["head_sha"])' "$AGENTLAB_ROOT/campaigns/$run_id/run.json")
+            campaign_workflow=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["path"])' "$AGENTLAB_ROOT/campaigns/$run_id/run.json")
             gh attestation verify "$AGENTLAB_ROOT/campaigns/$run_id/case-discrimination-report.json" \
               --repo "$GITHUB_REPOSITORY" \
-              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/multi-repo-assessed-campaign.yml" \
+              --signer-workflow "$GITHUB_REPOSITORY/$campaign_workflow" \
               --source-ref refs/heads/main \
               --source-digest "$campaign_head_sha" \
               --deny-self-hosted-runners \
               --format json > "$AGENTLAB_ROOT/campaigns/$run_id/attestation-verification.json"
+            if [[ "$campaign_workflow" == ".github/workflows/harmony-device-campaign-import.yml" ]]; then
+              gh attestation verify "$AGENTLAB_ROOT/campaigns/$run_id/import-verification.json" \
+                --repo "$GITHUB_REPOSITORY" \
+                --signer-workflow "$GITHUB_REPOSITORY/$campaign_workflow" \
+                --source-ref refs/heads/main \
+                --source-digest "$campaign_head_sha" \
+                --deny-self-hosted-runners \
+                --format json > "$AGENTLAB_ROOT/campaigns/$run_id/import-attestation-verification.json"
+            fi
           done < "$AGENTLAB_ROOT/campaign-run-ids.txt"
           python3 - <<'PY'
           import json, os, pathlib
@@ -118,7 +142,10 @@ jobs:
               run_id = int(text)
               run = json.loads((root / "campaigns" / text / "run.json").read_text())
               assert run["repository"]["full_name"] == os.environ["GITHUB_REPOSITORY"]
-              assert run["path"] == ".github/workflows/multi-repo-assessed-campaign.yml"
+              assert run["path"] in {
+                  ".github/workflows/multi-repo-assessed-campaign.yml",
+                  ".github/workflows/harmony-device-campaign-import.yml",
+              }
               assert run["event"] == "workflow_dispatch"
               assert run["head_branch"] == "main"
               assert run["status"] == "completed" and run["conclusion"] == "success"
@@ -130,16 +157,39 @@ jobs:
               case_id = ranking[0]["caseId"]
               assert isinstance(case_id, str) and case_id and case_id not in case_ids
               case_ids.add(case_id)
+              source_run_id = run_id
+              import_verification = None
+              import_attestation = None
+              if run["path"] == ".github/workflows/harmony-device-campaign-import.yml":
+                  import_path = root / "campaigns" / text / "import-verification.json"
+                  imported = json.loads(import_path.read_text())
+                  assert imported["schema"] == "agentlab.harmony_device_campaign_import_verification.v1"
+                  assert imported["status"] == "verified-review-required"
+                  assert imported["caseId"] == case_id
+                  assert imported["sourceSetSha256"] == value["sourceSetSha256"]
+                  assert imported["sourceMethodRevision"] == value["methodRevision"]
+                  assert imported["verificationMethodRevision"] == run["head_sha"]
+                  assert imported["automaticPromotion"] is False
+                  source_run_id = imported["sourceAssessedCampaign"]["runId"]
+                  import_verification = f"campaigns/{run_id}/import-verification.json"
+                  import_attestation = f"campaigns/{run_id}/import-attestation-verification.json"
+              else:
+                  assert value["methodRevision"] == run["head_sha"]
               cases.append({
                   "caseId": case_id,
                   "assessedCampaignRunId": run_id,
                   "assessedCampaignRunAttempt": run["run_attempt"],
+                  "assessedCampaignWorkflowPath": run["path"],
                   "assessedCampaignWorkflowHeadSha": run["head_sha"],
+                  "assessedCampaignMethodRevision": value["methodRevision"],
+                  "sourceAssessedCampaignRunId": source_run_id,
                   "discriminationReport": f"campaigns/{run_id}/case-discrimination-report.json",
                   "discriminationAttestationVerification": f"campaigns/{run_id}/attestation-verification.json",
+                  "deviceImportVerification": import_verification,
+                  "deviceImportAttestationVerification": import_attestation,
               })
           manifest = {
-              "schema": "agentlab.agent_suite_scorecard_manifest.v1",
+              "schema": "agentlab.agent_suite_scorecard_manifest.v2",
               "suiteId": os.environ["SUITE_ID"],
               "methodRevision": os.environ["GITHUB_SHA"],
               "reviewPopulation": {
@@ -169,6 +219,12 @@ jobs:
               "$AGENTLAB_ROOT/output/source-runs/campaigns/$run_id.json"
             cp "$AGENTLAB_ROOT/campaigns/$run_id/attestation-verification.json" \
               "$AGENTLAB_ROOT/output/source-runs/campaigns/$run_id-attestation-verification.json"
+            if [[ -f "$AGENTLAB_ROOT/campaigns/$run_id/import-verification.json" ]]; then
+              cp "$AGENTLAB_ROOT/campaigns/$run_id/import-verification.json" \
+                "$AGENTLAB_ROOT/output/source-runs/campaigns/$run_id-import-verification.json"
+              cp "$AGENTLAB_ROOT/campaigns/$run_id/import-attestation-verification.json" \
+                "$AGENTLAB_ROOT/output/source-runs/campaigns/$run_id-import-attestation-verification.json"
+            fi
           done < "$AGENTLAB_ROOT/campaign-run-ids.txt"
           python3 scripts/compose-agent-suite-scorecard.py \
             --manifest "$AGENTLAB_ROOT/scorecard-manifest.json" \
