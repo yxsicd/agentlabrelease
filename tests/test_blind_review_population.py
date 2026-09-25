@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -119,6 +120,86 @@ class BlindReviewPopulationTests(unittest.TestCase):
         }
         self.manifest.write_text(json.dumps(value, indent=2), encoding="utf-8")
 
+    def write_cohort_bound_manifest(self) -> None:
+        cohort = {
+            "schema": "agentlab.multi_repo_candidate_cohort.v1",
+            "cohortId": "candidate-cohort-one",
+            "methodRevision": "a" * 40,
+            "sourceSetSha256": "a" * 64,
+            "difficultyEvidenceSha256": "e" * 64,
+            "samplingFrame": {
+                "description": "All exact-source eligible candidates.",
+                "selectionPolicy": "Three candidates selected before construction.",
+                "declaredRepresentative": False,
+                "eligibleCount": 3,
+                "excludedCount": 0,
+                "strata": {},
+            },
+            "selectedCandidates": [
+                {"id": f"candidate-{name}", "candidateSha256": character * 64}
+                for name, character in (("a", "1"), ("b", "2"), ("c", "3"))
+            ],
+            "selectedCandidateCount": 3,
+            "review": {
+                "authority": "explicit-candidate-cohort-review",
+                "verdict": "approve-for-independent-case-construction",
+                "reviewer": "reviewer-a",
+                "proposalSha256": "4" * 64,
+                "decisionSha256": "5" * 64,
+                "acknowledgedRiskIds": ["candidate-to-case-yield"],
+            },
+            "declaredRepresentative": False,
+            "automaticPromotion": False,
+        }
+        cohort_path = self.root / "candidate-cohort.json"
+        cohort_path.write_text(json.dumps(cohort, sort_keys=True) + "\n")
+        cohort_sha = hashlib.sha256(cohort_path.read_bytes()).hexdigest()
+        cases = []
+        for index, (run_id, value) in enumerate(self.values.items()):
+            candidate_id = f"candidate-{'ab'[index]}"
+            candidate = cohort["selectedCandidates"][index]
+            evaluation_case = {
+                "schema": "agentlab.multi_repo_evaluation_case.v1",
+                "id": value["caseId"],
+                "difficultyId": candidate_id,
+                "sourceSetSha256": "a" * 64,
+                "lineage": {
+                    "candidateCohort": {
+                        "cohortId": cohort["cohortId"],
+                        "cohortSha256": cohort_sha,
+                        "candidateId": candidate_id,
+                        "candidateSha256": candidate["candidateSha256"],
+                        "difficultyEvidenceSha256": cohort["difficultyEvidenceSha256"],
+                        "methodRevision": cohort["methodRevision"],
+                        "selectionSha256": "f" * 64,
+                        "declaredRepresentative": False,
+                        "automaticPromotion": False,
+                    }
+                },
+            }
+            path = self.root / "bundles" / str(run_id) / "source/blind-cut/evaluator/evaluation-case.json"
+            path.write_text(json.dumps(evaluation_case, sort_keys=True) + "\n")
+            cases.append({
+                "caseId": value["caseId"],
+                "candidateId": candidate_id,
+                "bundle": f"bundles/{run_id}",
+                "repository": "example/agentlab",
+                "adjudicationRunId": run_id,
+            })
+        self.manifest.write_text(json.dumps({
+            "schema": "agentlab.blind_review_population_manifest.v2",
+            "cohortId": cohort["cohortId"],
+            "methodRevision": cohort["methodRevision"],
+            "candidateCohort": {"path": "candidate-cohort.json", "sha256": cohort_sha},
+            "samplingFrame": {
+                "id": cohort["cohortId"],
+                "description": cohort["samplingFrame"]["description"],
+                "selectionPolicy": cohort["samplingFrame"]["selectionPolicy"],
+                "declaredRepresentative": False,
+            },
+            "cases": cases,
+        }, indent=2))
+
     def verifier(self, bundle: Path, repository: str, run_id: int, output: Path):
         self.assertEqual(repository, "example/agentlab")
         self.assertEqual(bundle.name, str(run_id))
@@ -205,6 +286,25 @@ class BlindReviewPopulationTests(unittest.TestCase):
             MODULE.produce(self.manifest, output, self.verifier)
         self.assertFalse(output.exists())
 
+    def test_candidate_cohort_membership_retains_unadjudicated_denominator(self) -> None:
+        self.write_cohort_bound_manifest()
+        report = MODULE.produce(self.manifest, self.root / "cohort-bound", self.verifier)
+        self.assertEqual(report["denominators"]["selectedCandidateCount"], 3)
+        self.assertEqual(report["denominators"]["adjudicatedCandidateCount"], 2)
+        self.assertEqual(report["denominators"]["unadjudicatedCandidateCount"], 1)
+        self.assertAlmostEqual(report["denominators"]["caseYieldRate"], 2 / 3)
+        self.assertEqual(report["candidateCohort"]["unadjudicatedCandidateIds"], ["candidate-c"])
+        self.assertTrue(report["qualification"]["candidateCohortMembershipQualified"])
+        self.assertTrue((self.root / "cohort-bound/candidate-cohort.json").is_file())
+
+    def test_candidate_cohort_rejects_posthoc_case_substitution(self) -> None:
+        self.write_cohort_bound_manifest()
+        value = json.loads(self.manifest.read_text())
+        value["cases"][1]["candidateId"] = "candidate-c"
+        self.manifest.write_text(json.dumps(value))
+        with self.assertRaisesRegex(MODULE.PopulationReviewError, "candidate identity differs"):
+            MODULE.produce(self.manifest, self.root / "substituted", self.verifier)
+
     def test_online_verification_policy_tamper_rejects_entire_report(self) -> None:
         def tampered(bundle: Path, repository: str, run_id: int, output: Path):
             result = self.verifier(bundle, repository, run_id, output)
@@ -251,6 +351,9 @@ class BlindReviewPopulationTests(unittest.TestCase):
         self.assertIn("summarize-blind-review-population.py", workflow)
         self.assertIn("GH_TOKEN: ${{ github.token }}", workflow)
         self.assertIn("declaredRepresentative\": False", workflow)
+        self.assertIn("candidate_cohort_review_run_id", workflow)
+        self.assertIn("agentlab.blind_review_population_manifest.v2", workflow)
+        self.assertIn("evaluation-case.json", workflow)
         self.assertIn("id-token: write", workflow)
         self.assertIn("attestations: write", workflow)
         self.assertIn(

@@ -14,6 +14,7 @@ from typing import Any
 
 MANIFEST_SCHEMA = "agentlab.agent_suite_scorecard_manifest.v1"
 SCORECARD_SCHEMA = "agentlab.agent_suite_scorecard.v1"
+COHORT_BOUND_SCORECARD_SCHEMA = "agentlab.agent_suite_scorecard.v2"
 REVISION = re.compile(r"[0-9a-f]{40}")
 SHA256 = re.compile(r"[0-9a-f]{64}")
 TOKEN = re.compile(r"[A-Za-z0-9_.:@/-]{1,200}")
@@ -107,18 +108,33 @@ def scorer_module():
 
 def validate_population(path: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     value = load_object(path, "blind review population report")
-    require(value.get("schema") == "agentlab.blind_review_population_report.v1", "population report schema differs")
+    population_schema = value.get("schema")
+    require(
+        population_schema
+        in {
+            "agentlab.blind_review_population_report.v1",
+            "agentlab.blind_review_population_report.v2",
+        },
+        "population report schema differs",
+    )
+    cohort_bound = population_schema == "agentlab.blind_review_population_report.v2"
     require(isinstance(value.get("cohortId"), str) and TOKEN.fullmatch(value["cohortId"]), "population cohort identity is invalid")
     require(isinstance(value.get("methodRevision"), str) and REVISION.fullmatch(value["methodRevision"]), "population method revision is invalid")
     require(isinstance(value.get("caseMembershipSha256"), str) and SHA256.fullmatch(value["caseMembershipSha256"]), "population membership digest is invalid")
     cases = value.get("cases")
     require(isinstance(cases, list) and len(cases) >= 2, "population report requires at least two cases")
     rows: dict[str, dict[str, Any]] = {}
+    candidate_ids: set[str] = set()
     for row in cases:
         require(isinstance(row, dict), "population case is invalid")
         case_id = row.get("caseId")
         require(isinstance(case_id, str) and TOKEN.fullmatch(case_id), "population case identity is invalid")
         require(case_id not in rows, f"duplicate population case: {case_id}")
+        if cohort_bound:
+            candidate_id = row.get("candidateId")
+            require(isinstance(candidate_id, str) and TOKEN.fullmatch(candidate_id), f"{case_id} population candidate identity is invalid")
+            require(candidate_id not in candidate_ids, f"duplicate population candidate: {candidate_id}")
+            candidate_ids.add(candidate_id)
         require(isinstance(row.get("sourceSetSha256"), str) and SHA256.fullmatch(row["sourceSetSha256"]), f"{case_id} population source set is invalid")
         require(isinstance(row.get("adjudicationRunId"), int) and row["adjudicationRunId"] > 0, f"{case_id} population adjudication run is invalid")
         require(isinstance(row.get("blindPilotReviewQualified"), bool), f"{case_id} population review qualification is invalid")
@@ -136,12 +152,38 @@ def validate_population(path: Path) -> tuple[dict[str, Any], dict[str, dict[str,
     denominators = value.get("denominators")
     require(isinstance(denominators, dict), "population denominators are invalid")
     require(denominators.get("caseCount") == len(rows), "population case denominator differs")
+    if cohort_bound:
+        selected_count = denominators.get("selectedCandidateCount")
+        adjudicated_count = denominators.get("adjudicatedCandidateCount")
+        unadjudicated_count = denominators.get("unadjudicatedCandidateCount")
+        require(isinstance(selected_count, int) and selected_count >= 2, "population selected candidate denominator is invalid")
+        require(adjudicated_count == len(rows) == len(candidate_ids), "population adjudicated candidate denominator differs")
+        require(unadjudicated_count == selected_count - adjudicated_count, "population unadjudicated candidate denominator differs")
+        require(denominators.get("caseYieldRate") == adjudicated_count / selected_count, "population case yield differs")
     qualification = value.get("qualification")
     require(isinstance(qualification, dict), "population qualification is invalid")
     require(qualification.get("allCasesAuthenticatedAndAttested") is True, "population cases are not all authenticated")
     require(qualification.get("populationRepresentativenessQualified") is False, "population report overclaims representativeness")
     require(qualification.get("modelTrainingExclusionQualified") is False, "population report overclaims model-training exclusion")
     require(qualification.get("eligibleForUnseenAgentDiscrimination") is False, "population report overclaims unseen-Agent eligibility")
+    if cohort_bound:
+        require(qualification.get("candidateCohortMembershipQualified") is True, "population candidate cohort membership is not qualified")
+        cohort = value.get("candidateCohort")
+        require(isinstance(cohort, dict), "population candidate cohort evidence is absent")
+        cohort_source_set = cohort.get("sourceSetSha256")
+        require(isinstance(cohort_source_set, str) and SHA256.fullmatch(cohort_source_set), "population candidate cohort source set is invalid")
+        require(all(row["sourceSetSha256"] == cohort_source_set for row in rows.values()), "population case source set differs from candidate cohort")
+        require(cohort.get("declaredRepresentative") is False, "population candidate cohort overclaims representativeness")
+        selected_ids = cohort.get("selectedCandidateIds")
+        adjudicated_ids = cohort.get("adjudicatedCandidateIds")
+        unadjudicated_ids = cohort.get("unadjudicatedCandidateIds")
+        require(isinstance(selected_ids, list) and selected_ids == sorted(set(selected_ids)), "population selected candidate index is invalid")
+        require(adjudicated_ids == sorted(candidate_ids), "population adjudicated candidate index differs")
+        require(isinstance(unadjudicated_ids, list) and unadjudicated_ids == sorted(set(selected_ids) - candidate_ids), "population unadjudicated candidate index differs")
+        evidence = cohort.get("evidence")
+        require(isinstance(evidence, dict), "population candidate cohort evidence reference is invalid")
+        evidence_path = portable_file(path.parent, evidence.get("path"), "population candidate cohort evidence")
+        require(digest(evidence_path) == evidence.get("sha256"), "population candidate cohort evidence digest differs")
     policy = value.get("policy")
     require(isinstance(policy, dict) and policy.get("automaticPromotion") is False, "population report cannot auto-promote")
     return value, rows
@@ -371,6 +413,11 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
         case_rows.append(
             {
                 "caseId": case_id,
+                **(
+                    {"candidateId": population_row["candidateId"]}
+                    if population.get("schema") == "agentlab.blind_review_population_report.v2"
+                    else {}
+                ),
                 "sourceSetSha256": population_row["sourceSetSha256"],
                 "reviewPopulationAdjudicationRunId": population_row["adjudicationRunId"],
                 "assessedCampaignRunId": campaign_run_id,
@@ -435,7 +482,11 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
         row["dependencyDiscoveryCoverageQualified"] for row in case_rows
     )
     return {
-        "schema": SCORECARD_SCHEMA,
+        "schema": (
+            COHORT_BOUND_SCORECARD_SCHEMA
+            if population.get("schema") == "agentlab.blind_review_population_report.v2"
+            else SCORECARD_SCHEMA
+        ),
         "suiteId": suite_id,
         "methodRevision": method_revision,
         "manifestSha256": digest(manifest_path),
@@ -449,12 +500,30 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
             "attestationVerificationSha256": population_attestation["sha256"],
             "caseMembershipSha256": population["caseMembershipSha256"],
             "populationRepresentativenessQualified": False,
+            **(
+                {
+                    "candidateCohortMembershipQualified": True,
+                    "candidateCohortSha256": population["candidateCohort"]["evidence"]["sha256"],
+                }
+                if population.get("schema") == "agentlab.blind_review_population_report.v2"
+                else {}
+            ),
         },
         "participantOrder": participant_order,
         "denominators": {
             "caseCount": case_count,
             "qualifiedCaseCount": qualified_count,
             "validAttemptCount": sum(row["validTrials"] for row in aggregate_profiles),
+            **(
+                {
+                    "selectedCandidateCount": population["denominators"]["selectedCandidateCount"],
+                    "adjudicatedCandidateCount": population["denominators"]["adjudicatedCandidateCount"],
+                    "unadjudicatedCandidateCount": population["denominators"]["unadjudicatedCandidateCount"],
+                    "caseYieldRate": population["denominators"]["caseYieldRate"],
+                }
+                if population.get("schema") == "agentlab.blind_review_population_report.v2"
+                else {}
+            ),
             "successEvent": "independent taskPassed verdict from an infrastructure-valid attempt",
         },
         "aggregateParticipantProfiles": aggregate_profiles,

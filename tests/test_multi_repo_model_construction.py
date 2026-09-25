@@ -79,6 +79,7 @@ class MultiRepoModelConstructionTest(unittest.TestCase):
         self.assertIn("scripts/build-dependency-discovery-contract.py", review)
         self.assertIn("scripts/bind-dependency-discovery-case.py", review)
         self.assertIn("scripts/prepare-multi-repo-blind-cut.py", review)
+        self.assertIn('--candidate-selection "$AGENTLAB_ROOT/source/candidate-selection.json"', review)
         self.assertIn('scripts/build-blind-case-cut.py validate', review)
         self.assertIn('scripts/build-blind-case-cut.py stage-participant', campaign)
         self.assertIn('--blind-participant-root "$RUNNER_TEMP/agentlab-blind-participant"', campaign)

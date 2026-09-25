@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 
@@ -22,6 +23,8 @@ def load_module(name: str, path: Path):
 PROPOSER = load_module("candidate_cohort_proposer", ROOT / "scripts/propose-multi-repo-candidate-cohort.py")
 REVIEW = load_module("candidate_cohort_review", ROOT / "scripts/review-multi-repo-candidate-cohort.py")
 SELECT = load_module("candidate_cohort_select", ROOT / "scripts/select-multi-repo-cohort-candidate.py")
+sys.path.insert(0, str(ROOT / "scripts"))
+CASE_GENERATOR = load_module("candidate_cohort_case_generator", ROOT / "scripts/generate-multi-repo-case.py")
 
 
 class MultiRepoCandidateCohortTests(unittest.TestCase):
@@ -173,6 +176,30 @@ class MultiRepoCandidateCohortTests(unittest.TestCase):
         self.assertIn("scripts/select-multi-repo-cohort-candidate.py", construction)
         self.assertNotIn('row["seed"]["repositoryId"] == "contracts"', construction)
         self.assertEqual(construction.count("secrets.AGENTLAB_LM_GATEWAY_KEY"), 1)
+
+    def test_frozen_case_lineage_binds_exact_selection_and_difficulty(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            difficulty, _, _, cohort, _ = self.reviewed(root)
+            cohort_sha = hashlib.sha256(cohort.read_bytes()).hexdigest()
+            selection_value = SELECT.select(cohort, difficulty, cohort_sha, "candidate-deep")
+            selection = root / "selection.json"
+            selection.write_text(json.dumps(selection_value, sort_keys=True) + "\n")
+            lineage = CASE_GENERATOR.candidate_cohort_lineage(
+                selection, difficulty, "candidate-deep", "a" * 64
+            )
+            self.assertEqual(lineage["cohortSha256"], cohort_sha)
+            self.assertEqual(
+                lineage["selectionSha256"],
+                hashlib.sha256(selection.read_bytes()).hexdigest(),
+            )
+            value = json.loads(difficulty.read_text())
+            value["candidates"][0]["maxDependencyDepth"] = 10
+            difficulty.write_text(json.dumps(value, sort_keys=True) + "\n")
+            with self.assertRaisesRegex(ValueError, "difficulty evidence differs"):
+                CASE_GENERATOR.candidate_cohort_lineage(
+                    selection, difficulty, "candidate-deep", "a" * 64
+                )
 
 
 if __name__ == "__main__":

@@ -23,6 +23,12 @@ def digest(path: Path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def canonical_digest(value):
+    return hashlib.sha256(
+        json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
 def require(condition, message):
     if not condition:
         raise ValueError(message)
@@ -40,6 +46,55 @@ def validate_sources(sources):
     require(len(ids) == len(set(ids)), "source ids must be unique")
 
 
+def candidate_cohort_lineage(selection_path, difficulty_path, candidate_id, source_set):
+    selection = load(selection_path)
+    difficulty = load(difficulty_path)
+    require(
+        selection.get("schema") == "agentlab.multi_repo_candidate_selection.v2",
+        "unsupported candidate cohort selection",
+    )
+    require(selection.get("candidateId") == candidate_id, "candidate cohort selection differs from plan")
+    require(selection.get("sourceSetSha256") == source_set, "candidate cohort selection source set differs")
+    require(
+        selection.get("difficultyEvidenceSha256") == digest(difficulty_path),
+        "candidate cohort selection difficulty evidence differs",
+    )
+    candidates = {
+        row.get("id"): row
+        for row in difficulty.get("candidates") or []
+        if isinstance(row, dict) and isinstance(row.get("id"), str)
+    }
+    require(candidate_id in candidates, "candidate cohort selection is absent from difficulty evidence")
+    require(
+        selection.get("candidateSha256") == canonical_digest(candidates[candidate_id]),
+        "candidate cohort selection candidate bytes differ",
+    )
+    require(selection.get("declaredRepresentative") is False, "candidate cohort selection overclaims representativeness")
+    require(selection.get("automaticPromotion") is False, "candidate cohort selection can auto-promote")
+    for field in ("cohortSha256", "candidateSha256", "difficultyEvidenceSha256"):
+        require(
+            isinstance(selection.get(field), str) and SHA256.fullmatch(selection[field]),
+            f"candidate cohort selection {field} is invalid",
+        )
+    require(
+        isinstance(selection.get("methodRevision"), str)
+        and REVISION.fullmatch(selection["methodRevision"]),
+        "candidate cohort selection method revision is invalid",
+    )
+    require(isinstance(selection.get("cohortId"), str) and selection["cohortId"], "candidate cohort identity is invalid")
+    return {
+        "cohortId": selection["cohortId"],
+        "cohortSha256": selection["cohortSha256"],
+        "candidateId": selection["candidateId"],
+        "candidateSha256": selection["candidateSha256"],
+        "difficultyEvidenceSha256": selection["difficultyEvidenceSha256"],
+        "methodRevision": selection["methodRevision"],
+        "selectionSha256": digest(selection_path),
+        "declaredRepresentative": False,
+        "automaticPromotion": False,
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--difficulty", type=Path, required=True)
@@ -47,6 +102,7 @@ def main():
     parser.add_argument("--proposal", type=Path)
     parser.add_argument("--review", type=Path)
     parser.add_argument("--construction-quality", type=Path)
+    parser.add_argument("--candidate-selection", type=Path)
     parser.add_argument("--calibration", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
@@ -105,6 +161,16 @@ def main():
     require(candidate.get("maturityState") == "candidate", "difficulty must still be a candidate")
     require((candidate.get("verificationContract") or {}).get("caseReady") is False, "difficulty is already marked case-ready")
     require(plan.get("sourceSetSha256") == source_set, "plan source set mismatch")
+    cohort_lineage = (
+        candidate_cohort_lineage(
+            args.candidate_selection,
+            args.difficulty,
+            candidate_id,
+            source_set,
+        )
+        if args.candidate_selection is not None
+        else None
+    )
 
     case_id = plan.get("caseId")
     title = plan.get("title")
@@ -250,6 +316,7 @@ def main():
             "review": plan.get("review"),
             "feedbackAnalysisCut": plan.get("feedbackAnalysisCut"),
             "apiCallLocalization": localization,
+            **({"candidateCohort": cohort_lineage} if cohort_lineage is not None else {}),
         },
         "automaticPromotion": False,
         "assessmentBoundary": "Exact pinned source set and executable fixture oracle; Harmony build, emulator rendering and device performance remain separate gates.",

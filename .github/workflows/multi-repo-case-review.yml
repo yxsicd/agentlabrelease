@@ -122,6 +122,7 @@ jobs:
             --proposal "$AGENTLAB_ROOT/source/case-plan-proposal.json" \
             --review "$AGENTLAB_ROOT/case-plan-review.json" \
             --construction-quality "$AGENTLAB_ROOT/source/construction/intent-quality.json" \
+            --candidate-selection "$AGENTLAB_ROOT/source/candidate-selection.json" \
             --calibration "$AGENTLAB_ROOT/calibration/summary.json" \
             --output "$AGENTLAB_ROOT/base-evaluation-case.json"
           python3 scripts/build-dependency-discovery-contract.py \

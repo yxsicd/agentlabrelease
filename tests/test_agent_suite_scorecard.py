@@ -133,6 +133,36 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         }
         self.population.write_text(json.dumps(value, indent=2))
 
+    def write_cohort_bound_population(self) -> None:
+        cohort_evidence = self.root / "candidate-cohort.json"
+        cohort_evidence.write_text('{"schema":"agentlab.multi_repo_candidate_cohort.v1"}\n')
+        value = json.loads(self.population.read_text())
+        value["schema"] = "agentlab.blind_review_population_report.v2"
+        for index, row in enumerate(value["cases"]):
+            row["candidateId"] = f"candidate-{'ab'[index]}"
+        value["denominators"].update({
+            "selectedCandidateCount": 3,
+            "adjudicatedCandidateCount": 2,
+            "unadjudicatedCandidateCount": 1,
+            "caseYieldRate": 2 / 3,
+        })
+        value["qualification"]["candidateCohortMembershipQualified"] = True
+        value["candidateCohort"] = {
+            "cohortId": value["cohortId"],
+            "sourceSetSha256": "a" * 64,
+            "methodRevision": value["methodRevision"],
+            "selectedCandidateIds": ["candidate-a", "candidate-b", "candidate-c"],
+            "adjudicatedCandidateIds": ["candidate-a", "candidate-b"],
+            "unadjudicatedCandidateIds": ["candidate-c"],
+            "evidence": {
+                "path": cohort_evidence.name,
+                "sha256": hashlib.sha256(cohort_evidence.read_bytes()).hexdigest(),
+                "byteLength": cohort_evidence.stat().st_size,
+            },
+            "declaredRepresentative": False,
+        }
+        self.population.write_text(json.dumps(value, indent=2))
+
     def write_attestation(self, output: Path, subject: Path, run_id: int) -> None:
         output.write_text(
             json.dumps(
@@ -292,6 +322,30 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         self.assertFalse(value["qualification"]["suiteMeasurementQualified"])
         failed = next(row for row in value["cases"] if row["caseId"] == "case-b")
         self.assertFalse(failed["reviewQualified"])
+
+    def test_cohort_bound_population_preserves_candidate_yield_in_suite(self) -> None:
+        self.source_sets["case-b"] = "a" * 64
+        for index, case_id in enumerate(self.source_sets, 1):
+            self.reports[case_id] = self.write_discrimination(case_id, index)
+            self.write_attestation(
+                self.report_attestations[case_id], self.reports[case_id], 2000 + index
+            )
+        self.write_population()
+        self.write_cohort_bound_population()
+        self.write_attestation(self.population_attestation, self.population, 9001)
+        self.write_manifest()
+        value = SUITE.build_scorecard(self.manifest)
+        self.assertEqual(value["schema"], "agentlab.agent_suite_scorecard.v2")
+        self.assertEqual(value["denominators"]["selectedCandidateCount"], 3)
+        self.assertEqual(value["denominators"]["unadjudicatedCandidateCount"], 1)
+        self.assertAlmostEqual(value["denominators"]["caseYieldRate"], 2 / 3)
+        self.assertEqual(
+            [row["candidateId"] for row in value["cases"]],
+            ["candidate-a", "candidate-b"],
+        )
+        self.assertTrue(
+            value["reviewPopulation"]["candidateCohortMembershipQualified"]
+        )
 
     def test_participant_self_assessment_coverage_is_separate_and_non_gating(self) -> None:
         for index, case_id in enumerate(self.source_sets, 1):

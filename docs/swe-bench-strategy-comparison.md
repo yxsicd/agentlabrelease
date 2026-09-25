@@ -129,9 +129,12 @@ smaller than SWE-bench's:
    proposal freezes all eligible candidates, exclusions and strata; a separate
    exact-digest review predeclares at least two members; and model construction
    accepts only one verified cohort member per run. This imports SWE-bench's
-   curation discipline without claiming a Verified-like population. It has not
-   yet been exercised over the 22 real-source clusters, and selected-to-qualified
-   case yield remains unmeasured.
+   curation discipline without claiming a Verified-like population. Frozen
+   evaluator cases and the v2 population report now bind that cohort end to end,
+   reject post-hoc candidate substitution, and retain unadjudicated selections
+   in the case-yield denominator. The mechanism has not yet been exercised over
+   the 22 real-source clusters, so real selected-to-qualified yield remains
+   unmeasured.
 4. The independent Oracle is digest-bound. One real Harmony UI candidate now
    has a controlled `FAIL_TO_PASS` replay: the frozen baseline stays on
    `pages/Index`, while a one-line page-registration variant reaches

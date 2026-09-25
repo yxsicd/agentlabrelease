@@ -17,7 +17,9 @@ from typing import Any, Callable
 
 
 MANIFEST_SCHEMA = "agentlab.blind_review_population_manifest.v1"
+COHORT_BOUND_MANIFEST_SCHEMA = "agentlab.blind_review_population_manifest.v2"
 REPORT_SCHEMA = "agentlab.blind_review_population_report.v1"
+COHORT_BOUND_REPORT_SCHEMA = "agentlab.blind_review_population_report.v2"
 DIMENSIONS = (
     "semanticLeakage",
     "contaminationRisk",
@@ -86,6 +88,21 @@ def portable_directory(root: Path, value: Any, label: str) -> Path:
     except (OSError, ValueError) as error:
         raise PopulationReviewError(f"{label} path escapes or is absent") from error
     require(resolved.is_dir(), f"{label} path must be a directory")
+    return resolved
+
+
+def portable_file(root: Path, value: Any, label: str) -> Path:
+    require(isinstance(value, str) and value, f"{label} path is required")
+    relative = Path(value)
+    require(not relative.is_absolute(), f"{label} path must be relative")
+    unresolved = root / relative
+    require(not unresolved.is_symlink(), f"{label} path must not be a symlink")
+    try:
+        resolved = unresolved.resolve(strict=True)
+        resolved.relative_to(root)
+    except (OSError, ValueError) as error:
+        raise PopulationReviewError(f"{label} path escapes or is absent") from error
+    require(resolved.is_file(), f"{label} path must be a file")
     return resolved
 
 
@@ -160,6 +177,118 @@ def validate_sampling_frame(value: Any) -> dict[str, Any]:
         "selectionPolicy": value["selectionPolicy"].strip(),
         "declaredRepresentative": False,
     }
+
+
+def validate_candidate_cohort(
+    manifest: dict[str, Any], manifest_root: Path, cohort_id: str
+) -> tuple[dict[str, Any], Path, dict[str, dict[str, Any]]]:
+    reference = manifest.get("candidateCohort")
+    require(
+        isinstance(reference, dict) and set(reference) == {"path", "sha256"},
+        "candidateCohort reference fields differ",
+    )
+    expected_digest = reference.get("sha256")
+    require(
+        isinstance(expected_digest, str) and SHA256.fullmatch(expected_digest),
+        "candidate cohort digest is invalid",
+    )
+    path = portable_file(manifest_root, reference.get("path"), "candidate cohort")
+    require(digest(path) == expected_digest, "candidate cohort digest differs")
+    cohort = load_object(path, "candidate cohort")
+    require(
+        cohort.get("schema") == "agentlab.multi_repo_candidate_cohort.v1",
+        "unsupported candidate cohort schema",
+    )
+    require(cohort.get("cohortId") == cohort_id, "population and candidate cohort identities differ")
+    require(cohort.get("declaredRepresentative") is False, "candidate cohort overclaims representativeness")
+    require(cohort.get("automaticPromotion") is False, "candidate cohort can auto-promote")
+    require(
+        isinstance(cohort.get("sourceSetSha256"), str)
+        and SHA256.fullmatch(cohort["sourceSetSha256"]),
+        "candidate cohort source set is invalid",
+    )
+    require(
+        isinstance(cohort.get("difficultyEvidenceSha256"), str)
+        and SHA256.fullmatch(cohort["difficultyEvidenceSha256"]),
+        "candidate cohort difficulty digest is invalid",
+    )
+    require(
+        isinstance(cohort.get("methodRevision"), str)
+        and REVISION.fullmatch(cohort["methodRevision"]),
+        "candidate cohort method revision is invalid",
+    )
+    candidates = cohort.get("selectedCandidates")
+    require(isinstance(candidates, list) and len(candidates) >= 2, "candidate cohort is too small")
+    by_id = {
+        row.get("id"): row
+        for row in candidates
+        if isinstance(row, dict) and isinstance(row.get("id"), str)
+    }
+    require(len(by_id) == len(candidates), "candidate cohort identities are invalid or duplicated")
+    require(cohort.get("selectedCandidateCount") == len(candidates), "candidate cohort count differs")
+    review = cohort.get("review")
+    require(
+        isinstance(review, dict)
+        and review.get("authority") == "explicit-candidate-cohort-review"
+        and review.get("verdict") == "approve-for-independent-case-construction",
+        "candidate cohort review authority differs",
+    )
+    require(isinstance(review.get("reviewer"), str) and review["reviewer"].strip(), "candidate cohort reviewer is absent")
+    for field in ("proposalSha256", "decisionSha256"):
+        require(
+            isinstance(review.get(field), str) and SHA256.fullmatch(review[field]),
+            f"candidate cohort review {field} is invalid",
+        )
+    require(
+        isinstance(review.get("acknowledgedRiskIds"), list)
+        and review["acknowledgedRiskIds"] == sorted(set(review["acknowledgedRiskIds"]))
+        and review["acknowledgedRiskIds"],
+        "candidate cohort review risk acknowledgements are invalid",
+    )
+    for candidate_id, row in by_id.items():
+        require(TOKEN.fullmatch(candidate_id) is not None, "candidate cohort member identity is invalid")
+        require(
+            isinstance(row.get("candidateSha256"), str)
+            and SHA256.fullmatch(row["candidateSha256"]),
+            f"{candidate_id} candidate digest is invalid",
+        )
+    return cohort, path, by_id
+
+
+def validate_case_candidate_lineage(
+    case_path: Path,
+    case_id: str,
+    candidate_id: str,
+    cohort: dict[str, Any],
+    cohort_sha256: str,
+    selected: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    case = load_object(case_path, f"{case_id} evaluation case")
+    require(case.get("schema") == "agentlab.multi_repo_evaluation_case.v1", f"{case_id} evaluation case schema differs")
+    require(case.get("id") == case_id, f"{case_id} frozen case identity differs")
+    require(case.get("difficultyId") == candidate_id, f"{case_id} candidate identity differs")
+    require(candidate_id in selected, f"{case_id} candidate is outside the reviewed cohort")
+    require(case.get("sourceSetSha256") == cohort.get("sourceSetSha256"), f"{case_id} candidate cohort source set differs")
+    lineage = (case.get("lineage") or {}).get("candidateCohort")
+    require(isinstance(lineage, dict), f"{case_id} candidate cohort lineage is absent")
+    expected = {
+        "cohortId": cohort["cohortId"],
+        "cohortSha256": cohort_sha256,
+        "candidateId": candidate_id,
+        "candidateSha256": selected[candidate_id]["candidateSha256"],
+        "difficultyEvidenceSha256": cohort["difficultyEvidenceSha256"],
+        "methodRevision": cohort["methodRevision"],
+        "declaredRepresentative": False,
+        "automaticPromotion": False,
+    }
+    for field, value in expected.items():
+        require(lineage.get(field) == value, f"{case_id} candidate cohort lineage {field} differs")
+    require(
+        isinstance(lineage.get("selectionSha256"), str)
+        and SHA256.fullmatch(lineage["selectionSha256"]),
+        f"{case_id} candidate selection digest is invalid",
+    )
+    return case
 
 
 def validate_adjudication(value: dict[str, Any], case_id: str) -> None:
@@ -238,12 +367,32 @@ def build_report(
     manifest_path = manifest_path.resolve(strict=True)
     manifest_root = manifest_path.parent
     manifest = load_object(manifest_path, "blind review population manifest")
-    require(manifest.get("schema") == MANIFEST_SCHEMA, "unsupported blind review population manifest schema")
+    manifest_schema = manifest.get("schema")
+    require(
+        manifest_schema in {MANIFEST_SCHEMA, COHORT_BOUND_MANIFEST_SCHEMA},
+        "unsupported blind review population manifest schema",
+    )
     cohort_id = manifest.get("cohortId")
     require(isinstance(cohort_id, str) and TOKEN.fullmatch(cohort_id), "cohortId is invalid")
     method_revision = manifest.get("methodRevision")
     require(isinstance(method_revision, str) and REVISION.fullmatch(method_revision), "methodRevision is invalid")
     sampling_frame = validate_sampling_frame(manifest.get("samplingFrame"))
+    cohort = None
+    cohort_path = None
+    selected_candidates: dict[str, dict[str, Any]] = {}
+    if manifest_schema == COHORT_BOUND_MANIFEST_SCHEMA:
+        cohort, cohort_path, selected_candidates = validate_candidate_cohort(
+            manifest, manifest_root, cohort_id
+        )
+        require(method_revision == cohort["methodRevision"], "population method revision differs from candidate cohort")
+        require(sampling_frame["id"] == cohort_id, "sampling frame identity differs from candidate cohort")
+        cohort_frame = cohort.get("samplingFrame") or {}
+        require(
+            sampling_frame["description"] == cohort_frame.get("description")
+            and sampling_frame["selectionPolicy"] == cohort_frame.get("selectionPolicy")
+            and cohort_frame.get("declaredRepresentative") is False,
+            "population sampling frame differs from candidate cohort",
+        )
     cases = manifest.get("cases")
     require(isinstance(cases, list) and len(cases) >= 2, "population report requires at least two cases")
     require(len(cases) <= 100, "population report supports at most 100 cases")
@@ -251,6 +400,7 @@ def build_report(
     seen_case_ids: set[str] = set()
     seen_run_ids: set[tuple[str, int]] = set()
     seen_bundles: set[Path] = set()
+    seen_candidate_ids: set[str] = set()
     case_rows = []
     reviewer_case_counts: dict[str, int] = {}
     statistics = {
@@ -265,8 +415,12 @@ def build_report(
 
     for case in cases:
         require(isinstance(case, dict), "population case must be an object")
-        require(set(case) == {"caseId", "bundle", "repository", "adjudicationRunId"}, "population case fields differ")
+        expected_case_fields = {"caseId", "bundle", "repository", "adjudicationRunId"}
+        if manifest_schema == COHORT_BOUND_MANIFEST_SCHEMA:
+            expected_case_fields.add("candidateId")
+        require(set(case) == expected_case_fields, "population case fields differ")
         case_id = case.get("caseId")
+        candidate_id = case.get("candidateId")
         repository = case.get("repository")
         run_id = case.get("adjudicationRunId")
         require(isinstance(case_id, str) and TOKEN.fullmatch(case_id), "population caseId is invalid")
@@ -274,15 +428,30 @@ def build_report(
         require(isinstance(repository, str) and REPOSITORY.fullmatch(repository), f"{case_id} repository is invalid")
         require(isinstance(run_id, int) and run_id > 0, f"{case_id} adjudication run id is invalid")
         require((repository, run_id) not in seen_run_ids, f"duplicate adjudication run: {repository}#{run_id}")
+        if manifest_schema == COHORT_BOUND_MANIFEST_SCHEMA:
+            require(isinstance(candidate_id, str) and TOKEN.fullmatch(candidate_id), f"{case_id} candidateId is invalid")
+            require(candidate_id not in seen_candidate_ids, f"duplicate population candidateId: {candidate_id}")
         bundle = portable_directory(manifest_root, case.get("bundle"), f"{case_id} bundle")
         require(bundle not in seen_bundles, f"duplicate population bundle: {bundle}")
         seen_case_ids.add(case_id)
         seen_run_ids.add((repository, run_id))
         seen_bundles.add(bundle)
+        if manifest_schema == COHORT_BOUND_MANIFEST_SCHEMA:
+            seen_candidate_ids.add(candidate_id)
 
         verification_path = verification_root / f"{case_id}.json"
         adjudication = verifier(bundle, repository, run_id, verification_path)
         validate_adjudication(adjudication, case_id)
+        if cohort is not None:
+            require(adjudication["sourceSetSha256"] == cohort["sourceSetSha256"], f"{case_id} adjudication source set differs from candidate cohort")
+            validate_case_candidate_lineage(
+                bundle / "source/blind-cut/evaluator/evaluation-case.json",
+                case_id,
+                candidate_id,
+                cohort,
+                digest(cohort_path),
+                selected_candidates,
+            )
         online_verification = validate_online_verification(
             verification_path,
             repository,
@@ -320,6 +489,11 @@ def build_report(
             "cutReceipt": bundle / "source/blind-cut/cut-receipt.json",
             "participantManifest": bundle / "source/blind-cut/participant/manifest.json",
             "evaluatorManifest": bundle / "source/blind-cut/evaluator/manifest.json",
+            **(
+                {"evaluationCase": bundle / "source/blind-cut/evaluator/evaluation-case.json"}
+                if cohort is not None
+                else {}
+            ),
             "firstDecision": bundle / "first/artifact/decision.json",
             "firstProvenance": bundle / "first/provenance.json",
             "secondDecision": bundle / "second/artifact/decision.json",
@@ -328,6 +502,7 @@ def build_report(
         case_rows.append(
             {
                 "caseId": case_id,
+                **({"candidateId": candidate_id} if cohort is not None else {}),
                 "cutId": adjudication["cutId"],
                 "sourceSetSha256": adjudication["sourceSetSha256"],
                 "participantManifestSha256": adjudication["participantManifestSha256"],
@@ -370,6 +545,7 @@ def build_report(
     membership = [
         {
             "caseId": row["caseId"],
+            **({"candidateId": row["candidateId"]} if cohort is not None else {}),
             "repository": row["repository"],
             "adjudicationRunId": row["adjudicationRunId"],
             "adjudicationRunAttempt": row["adjudicationRunAttempt"],
@@ -380,11 +556,16 @@ def build_report(
         for row in case_rows
     ]
     blind_pilot_count = sum(row["blindPilotReviewQualified"] for row in case_rows)
+    unadjudicated_candidate_ids = sorted(set(selected_candidates) - seen_candidate_ids)
     repeated_reviewers = sorted(
         reviewer for reviewer, count in reviewer_case_counts.items() if count > 1
     )
-    return {
-        "schema": REPORT_SCHEMA,
+    report = {
+        "schema": (
+            COHORT_BOUND_REPORT_SCHEMA
+            if cohort is not None
+            else REPORT_SCHEMA
+        ),
         "cohortId": cohort_id,
         "methodRevision": method_revision,
         "manifestSha256": digest(manifest_path),
@@ -396,6 +577,16 @@ def build_report(
             "uniqueAuthenticatedReviewerCount": len(reviewer_case_counts),
             "requiredDimensions": list(DIMENSIONS),
             "invalidCasePolicy": "fail-entire-report",
+            **(
+                {
+                    "selectedCandidateCount": len(selected_candidates),
+                    "adjudicatedCandidateCount": len(seen_candidate_ids),
+                    "unadjudicatedCandidateCount": len(unadjudicated_candidate_ids),
+                    "caseYieldRate": len(seen_candidate_ids) / len(selected_candidates),
+                }
+                if cohort is not None
+                else {}
+            ),
         },
         "reviewerReuse": {
             "reviewersWithMultipleCases": repeated_reviewers,
@@ -413,12 +604,27 @@ def build_report(
             "populationRepresentativenessQualified": False,
             "modelTrainingExclusionQualified": False,
             "eligibleForUnseenAgentDiscrimination": False,
+            **({"candidateCohortMembershipQualified": True} if cohort is not None else {}),
         },
         "policy": {
             "automaticPromotion": False,
             "nextAction": "independent-population-representativeness-review-and-agent-trials",
         },
     }
+    if cohort is not None:
+        retained_cohort = evidence_root / "candidate-cohort.json"
+        shutil.copy2(cohort_path, retained_cohort)
+        report["candidateCohort"] = {
+            "cohortId": cohort["cohortId"],
+            "sourceSetSha256": cohort["sourceSetSha256"],
+            "methodRevision": cohort["methodRevision"],
+            "selectedCandidateIds": sorted(selected_candidates),
+            "adjudicatedCandidateIds": sorted(seen_candidate_ids),
+            "unadjudicatedCandidateIds": unadjudicated_candidate_ids,
+            "evidence": evidence_ref(retained_cohort, evidence_root),
+            "declaredRepresentative": False,
+        }
+    return report
 
 
 def produce(manifest: Path, output: Path, verifier: Verifier = online_verifier) -> dict[str, Any]:

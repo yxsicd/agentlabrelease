@@ -201,11 +201,13 @@ auditable manual runs:
 Freezing and scoring never auto-promote a case. A score is campaign evidence,
 not a publication decision. The campaign uses the Oracle retained by the
 construction run, so a later change on `main` cannot silently alter the case.
-The existing blind-review population workflow summarizes the resulting
-independently adjudicated cases. Its v1 manifest does not yet bind case
-difficulty IDs back to this candidate cohort, so that final membership
-reconciliation remains an explicit operator check rather than a qualified
-machine-enforced claim.
+The blind-review population workflow now requires the reviewed candidate-cohort
+run and exact cohort digest. Frozen cases retain the candidate selection in
+evaluator-only lineage, so the population reporter independently proves every
+case belongs to the predeclared cohort and exact source set. Selected candidates
+that never become authenticated cases remain in the denominator and reduce the
+reported case-yield rate; they cannot disappear through post-hoc sample
+shrinking.
 
 For a feedback-derived successor, first run a new exact multi-repository
 analysis cut, then use `propose-feedback-analysis-cut.py` and
@@ -442,13 +444,18 @@ alone cannot set `blindAssessmentQualified`; the authenticated identity,
 attested provenance, filesystem, credential and network gates must all pass.
 
 After at least two authenticated adjudications exist, freeze their exact run
-IDs in an `agentlab.blind_review_population_manifest.v1` manifest and run
+IDs together with the reviewed candidate-cohort artifact in an
+`agentlab.blind_review_population_manifest.v2` manifest and run
 `scripts/summarize-blind-review-population.py`. The trusted-main
 `Blind review population report` workflow automates recovery, online
 reverification, per-dimension agreement/disagreement statistics, raw evidence
-retention and signing of the resulting report. This report measures the chosen
-cohort only: v1 deliberately refuses a representative-population declaration,
-model-training exclusion or unseen-Agent eligibility.
+retention and signing of the resulting report. It reads the evaluator-only
+frozen case from each attested bundle, verifies candidate ID, source set and
+cohort lineage, rejects duplicate/substituted candidates, and reports selected,
+adjudicated and unadjudicated denominators plus case yield. This still measures
+the chosen cohort only: v2 deliberately refuses a representative-population
+declaration, model-training exclusion or unseen-Agent eligibility. Legacy v1
+manifests remain readable but do not receive candidate-membership qualification.
 
 Once every reviewed case has an assessed campaign, the trusted-main
 `Agent suite scorecard` workflow accepts the population run, one campaign run
@@ -457,7 +464,9 @@ the exact producing workflows and revisions, joins case/source identities,
 requires complete operator-owned stage-process evidence, and reports both
 per-case and aggregate participant pass-rate Wilson intervals. A scorecard can
 qualify the measurement procedure; it cannot promote the selected cohort into
-a representative or unseen-Agent benchmark.
+a representative or unseen-Agent benchmark. For a v2 population it also carries
+the original candidate denominator and case-yield rate, so later discrimination
+scores cannot hide failed case construction or review yield.
 
 Copy the frozen case into campaign evidence as
 `multi-repo-evaluation-case.json` and its exact calibration summary as

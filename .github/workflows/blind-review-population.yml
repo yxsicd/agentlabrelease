@@ -2,20 +2,16 @@ name: Blind review population report
 on:
   workflow_dispatch:
     inputs:
-      cohort_id:
-        description: Stable identifier for this frozen reviewed-case cohort
+      candidate_cohort_review_run_id:
+        description: Successful trusted-main reviewed candidate-cohort run
+        required: true
+        type: string
+      expected_candidate_cohort_sha256:
+        description: Exact reviewed candidate-cohort digest defining the denominator
         required: true
         type: string
       adjudication_run_ids:
         description: JSON array of at least two authenticated adjudication run IDs
-        required: true
-        type: string
-      sampling_frame_description:
-        description: Human-readable boundary of the source population sampled
-        required: true
-        type: string
-      selection_policy:
-        description: Exact rule used to select this cohort before outcomes were summarized
         required: true
         type: string
 
@@ -33,12 +29,43 @@ jobs:
     timeout-minutes: 20
     env:
       AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/blind-review-population
-      COHORT_ID: ${{ inputs.cohort_id }}
+      CANDIDATE_COHORT_RUN_ID: ${{ inputs.candidate_cohort_review_run_id }}
+      EXPECTED_CANDIDATE_COHORT_SHA256: ${{ inputs.expected_candidate_cohort_sha256 }}
       RUN_IDS_JSON: ${{ inputs.adjudication_run_ids }}
-      SAMPLING_FRAME_DESCRIPTION: ${{ inputs.sampling_frame_description }}
-      SELECTION_POLICY: ${{ inputs.selection_policy }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Recover the predeclared candidate denominator
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$CANDIDATE_COHORT_RUN_ID" =~ ^[0-9]+$ ]]
+          mkdir -p "$AGENTLAB_ROOT/candidate-cohort-source"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CANDIDATE_COHORT_RUN_ID" \
+            > "$AGENTLAB_ROOT/candidate-cohort-run.json"
+          python3 - <<'PY'
+          import json, os
+          root = os.environ["AGENTLAB_ROOT"]
+          value = json.load(open(root + "/candidate-cohort-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-candidate-cohort-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$CANDIDATE_COHORT_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-candidate-cohort-review \
+            --dir "$AGENTLAB_ROOT/candidate-cohort-source"
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib
+          root = pathlib.Path(os.environ["AGENTLAB_ROOT"])
+          path = root / "candidate-cohort-source/candidate-cohort.json"
+          actual = hashlib.sha256(path.read_bytes()).hexdigest()
+          assert actual == os.environ["EXPECTED_CANDIDATE_COHORT_SHA256"]
+          cohort = json.loads(path.read_text())
+          assert cohort["schema"] == "agentlab.multi_repo_candidate_cohort.v1"
+          assert cohort["declaredRepresentative"] is False
+          assert cohort["automaticPromotion"] is False
+          PY
       - name: Freeze and recover the exact adjudication cohort
         env:
           GH_TOKEN: ${{ github.token }}
@@ -68,29 +95,39 @@ jobs:
           python3 - <<'PY'
           import json, os, pathlib
           root = pathlib.Path(os.environ["AGENTLAB_ROOT"])
+          cohort_path = root / "candidate-cohort-source/candidate-cohort.json"
+          cohort = json.loads(cohort_path.read_text())
           cases = []
           case_ids = set()
           for text in root.joinpath("run-ids.txt").read_text().splitlines():
               run_id = int(text)
               bundle = root / "bundles" / text
               value = json.loads((bundle / "authenticated-adjudication.json").read_text())
+              evaluation_case = json.loads(
+                  (bundle / "source/blind-cut/evaluator/evaluation-case.json").read_text()
+              )
               case_id = value["caseId"]
               assert isinstance(case_id, str) and case_id and case_id not in case_ids
               case_ids.add(case_id)
               cases.append({
                   "caseId": case_id,
+                  "candidateId": evaluation_case["difficultyId"],
                   "bundle": f"bundles/{run_id}",
                   "repository": os.environ["GITHUB_REPOSITORY"],
                   "adjudicationRunId": run_id,
               })
           manifest = {
-              "schema": "agentlab.blind_review_population_manifest.v1",
-              "cohortId": os.environ["COHORT_ID"],
-              "methodRevision": os.environ["GITHUB_SHA"],
+              "schema": "agentlab.blind_review_population_manifest.v2",
+              "cohortId": cohort["cohortId"],
+              "methodRevision": cohort["methodRevision"],
+              "candidateCohort": {
+                  "path": "candidate-cohort-source/candidate-cohort.json",
+                  "sha256": os.environ["EXPECTED_CANDIDATE_COHORT_SHA256"],
+              },
               "samplingFrame": {
-                  "id": os.environ["COHORT_ID"],
-                  "description": os.environ["SAMPLING_FRAME_DESCRIPTION"],
-                  "selectionPolicy": os.environ["SELECTION_POLICY"],
+                  "id": cohort["cohortId"],
+                  "description": cohort["samplingFrame"]["description"],
+                  "selectionPolicy": cohort["samplingFrame"]["selectionPolicy"],
                   "declaredRepresentative": False,
               },
               "cases": sorted(cases, key=lambda row: row["caseId"]),

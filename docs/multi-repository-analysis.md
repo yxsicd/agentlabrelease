@@ -123,6 +123,14 @@ case, or authorize population claims. Failed specification, Oracle,
 calibration, blind-review and runtime cases remain visible as yield losses
 rather than being silently removed from the denominator.
 
+Trusted-main case freezing now embeds the exact selection, cohort digest,
+candidate digest, difficulty digest and method revision only in evaluator
+lineage. The participant projection does not receive that metadata. The v2
+blind-review population reporter recovers the attested evaluator case, rejects
+candidate substitution or duplicate use, and carries all selected but
+unadjudicated candidate IDs into the case-yield denominator. The v2 Agent suite
+scorecard preserves that denominator alongside model discrimination evidence.
+
 The first real two-repository source qualification is retained at
 `release/qualifications/harmony-real-multi-repo-34661ff/summary.json`. It binds
 12,711 analyzed files, 881,650 text lines, 404,308 facts, 22 shared-contract
