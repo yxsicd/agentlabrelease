@@ -143,7 +143,10 @@ cohort workflow therefore freezes the sampling decision first:
 2. `propose-multi-repo-candidate-cohort.py` binds the exact difficulty bytes,
    source-set digest and method revision; retains the eligible denominator and
    every exclusion; and reports relation, repository-count and recursive-depth
-   strata.
+   strata. It also reports when a broad module-contract candidate has one or
+   more API-call candidates over an equal or smaller file set. These remain in
+   the denominator, but the reviewer is told to prefer the narrower evidence
+   unless the proposed task genuinely requires module-wide semantics.
 3. `review-multi-repo-candidate-cohort.py decide` requires the exact proposal
    digest, at least two eligible IDs, all risk acknowledgements and a reviewer
    rationale. `compile` creates an immutable, non-representative cohort.

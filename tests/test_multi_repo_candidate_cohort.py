@@ -120,6 +120,35 @@ class MultiRepoCandidateCohortTests(unittest.TestCase):
             self.assertFalse(value["samplingFrame"]["declaredRepresentative"])
             self.assertEqual(value["difficultyEvidenceSha256"], hashlib.sha256(difficulty.read_bytes()).hexdigest())
 
+    def test_module_candidate_advises_narrower_api_call_without_changing_denominator(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            difficulty, _, candidates = self.fixture(root)
+            value = json.loads(difficulty.read_text())
+            module = {
+                **candidates[1],
+                "id": "candidate-shared-module",
+                "relationType": "shared-external-module-contract",
+                "seed": {"specifier": "@kit.ArkWeb"},
+            }
+            value["candidates"].append(module)
+            difficulty.write_text(json.dumps(value, sort_keys=True) + "\n")
+            proposal = PROPOSER.propose(difficulty, "cohort-advisory", "5" * 40)
+            rows = {row["id"]: row for row in proposal["eligibleCandidates"]}
+            advisory = rows["candidate-shared-module"]["selectionAdvisory"]
+            self.assertEqual(advisory["classification"], "prefer-narrower-api-call")
+            self.assertEqual(advisory["narrowerApiCandidates"], [{
+                "id": "candidate-shared-api",
+                "callTarget": "initialize",
+                "affectedFileCount": 2,
+                "coverage": "equal-file-set",
+            }])
+            self.assertEqual(proposal["samplingFrame"]["eligibleCount"], 3)
+            self.assertEqual(
+                proposal["samplingFrame"]["selectionAdvisoryCounts"]["prefer-narrower-api-call"],
+                1,
+            )
+
     def test_reviewed_member_resolves_against_exact_difficulty_bytes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

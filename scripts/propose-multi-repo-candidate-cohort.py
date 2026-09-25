@@ -66,6 +66,46 @@ def candidate_summary(candidate: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def affected_file_ids(candidate: dict[str, Any]) -> set[tuple[str, str]]:
+    values = set()
+    for row in candidate.get("affectedFiles") or []:
+        if isinstance(row, dict) and isinstance(row.get("repositoryId"), str) and isinstance(row.get("path"), str):
+            values.add((row["repositoryId"], row["path"]))
+    return values
+
+
+def selection_advisory(
+    candidate: dict[str, Any],
+    api_candidates: list[dict[str, Any]],
+) -> dict[str, Any]:
+    relation_type = candidate.get("relationType") or "recursive-reverse-impact"
+    if relation_type == "shared-external-api-call-contract":
+        return {"classification": "api-call-specific", "narrowerApiCandidates": []}
+    if relation_type != "shared-external-module-contract":
+        return {"classification": "dependency-graph", "narrowerApiCandidates": []}
+    specifier = (candidate.get("seed") or {}).get("specifier")
+    candidate_files = affected_file_ids(candidate)
+    narrower = []
+    for other in api_candidates:
+        other_files = affected_file_ids(other)
+        if (
+            (other.get("seed") or {}).get("specifier") == specifier
+            and other_files
+            and other_files.issubset(candidate_files)
+        ):
+            narrower.append({
+                "id": other["id"],
+                "callTarget": (other.get("seed") or {}).get("callTarget"),
+                "affectedFileCount": len(other_files),
+                "coverage": "equal-file-set" if other_files == candidate_files else "subset-file-set",
+            })
+    narrower.sort(key=lambda row: (row["affectedFileCount"], row["id"]))
+    return {
+        "classification": "prefer-narrower-api-call" if narrower else "module-contract-only",
+        "narrowerApiCandidates": narrower,
+    }
+
+
 def propose(difficulty_path: Path, cohort_id: str, method_revision: str) -> dict[str, Any]:
     difficulty = load(difficulty_path)
     require(difficulty.get("schema") == "agentlab.difficulty_candidates.v2", "unsupported difficulty schema")
@@ -79,7 +119,7 @@ def propose(difficulty_path: Path, cohort_id: str, method_revision: str) -> dict
     candidates = difficulty.get("candidates")
     require(isinstance(candidates, list) and candidates, "difficulty candidates are absent")
 
-    eligible: list[dict[str, Any]] = []
+    eligible_source: list[dict[str, Any]] = []
     excluded: list[dict[str, str]] = []
     seen: set[str] = set()
     for candidate in sorted(candidates, key=lambda row: str(row.get("id"))):
@@ -104,7 +144,16 @@ def propose(difficulty_path: Path, cohort_id: str, method_revision: str) -> dict
         if reason:
             excluded.append({"id": candidate_id, "reason": reason})
         else:
-            eligible.append(candidate_summary(candidate))
+            eligible_source.append(candidate)
+    api_candidates = [
+        row for row in eligible_source
+        if row.get("relationType") == "shared-external-api-call-contract"
+    ]
+    eligible = []
+    for candidate in eligible_source:
+        summary = candidate_summary(candidate)
+        summary["selectionAdvisory"] = selection_advisory(candidate, api_candidates)
+        eligible.append(summary)
     require(len(eligible) >= 2, "sampling frame requires at least two eligible candidates")
 
     strata: dict[str, dict[str, int]] = {
@@ -116,6 +165,10 @@ def propose(difficulty_path: Path, cohort_id: str, method_revision: str) -> dict
         for field in strata:
             key = str(row[field])
             strata[field][key] = strata[field].get(key, 0) + 1
+    advisory_counts: dict[str, int] = {}
+    for row in eligible:
+        classification = row["selectionAdvisory"]["classification"]
+        advisory_counts[classification] = advisory_counts.get(classification, 0) + 1
     return {
         "schema": "agentlab.multi_repo_candidate_cohort_proposal.v1",
         "status": "review-required",
@@ -125,11 +178,12 @@ def propose(difficulty_path: Path, cohort_id: str, method_revision: str) -> dict
         "difficultyEvidenceSha256": file_digest(difficulty_path),
         "samplingFrame": {
             "description": "All analyzer-emitted, unpromoted multi-repository change-impact candidates in the exact source set.",
-            "selectionPolicy": "Reviewer predeclares at least two unique eligible candidate IDs before case construction or outcome measurement.",
+            "selectionPolicy": "Reviewer predeclares at least two unique eligible candidate IDs before case construction or outcome measurement. Prefer API-call-specific evidence over a module-contract candidate when the advisory identifies an equal or subset file-set candidate, unless the rationale requires module-wide semantics.",
             "declaredRepresentative": False,
             "eligibleCount": len(eligible),
             "excludedCount": len(excluded),
             "strata": strata,
+            "selectionAdvisoryCounts": advisory_counts,
         },
         "eligibleCandidates": eligible,
         "excludedCandidates": excluded,

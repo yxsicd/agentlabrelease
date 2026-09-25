@@ -236,7 +236,14 @@ smaller than SWE-bench's:
     proposed cross-repository targets. That is useful localization evidence,
     not yet semantic proof: the lifecycle hypothesis, five-file edit surface,
     repair/preservation checks and Oracle still require independent review and
-    calibration. The two source projects now have revision-bound project roots
+    calibration. Current-method proposal now makes this precision distinction
+    explicit: 19 of 22 module-contract candidates have an API-call-specific
+    candidate over an equal or subset file set. They remain visible in the
+    denominator, while selection advice prevents the broader row from consuming
+    review budget by default. For example, the two-file `@kit.TelephonyKit`
+    module row points to the same two files' narrower `call.makeCall` row. This
+    is a proposal-quality improvement, not semantic qualification of that call
+    contract. The two source projects now have revision-bound project roots
     and build modules. The API 20 guide project has two clean, member-equivalent
     baseline HAP builds; one exact HAP also installs, launches and retains a live
     process on `hwlinux`. A stronger visible-text Oracle then exposed an
