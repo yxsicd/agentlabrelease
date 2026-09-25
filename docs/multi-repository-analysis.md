@@ -497,6 +497,11 @@ An `ohosTest` assertion failure is retained as terminal assessed evidence with
 `failureClass=standard-test` and skips UI/performance collection. HDC target,
 installation, or tool failures remain resumable infrastructure failures. Only a
 lineage-bound passing standard-test receipt can enter emulator performance.
+The standard-test emulator is campaign-owned and separate from the subsequent
+cold UI/performance lifecycle. `device.runtime.bootTimeoutSeconds` may extend
+the default 180-second HDC deadline up to 900 seconds for slow hosts; a timed-out
+start is stopped through the exact emulator instance and logged before the
+stage is reported as resumable infrastructure failure.
 
 ### Build the assessed Agent output, not the frozen baseline
 

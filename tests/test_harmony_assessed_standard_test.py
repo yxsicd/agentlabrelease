@@ -129,6 +129,37 @@ class HarmonyAssessedStandardTestTests(unittest.TestCase):
         lifecycle = json.loads((self.root / "output/emulator-lifecycle.json").read_text())
         self.assertEqual(lifecycle["status"], "stopped-cleanly")
 
+    def test_emulator_boot_timeout_stops_failed_instance(self) -> None:
+        state = self.root / "target.state"
+        tools = self.root / "tools"
+        (tools / "bin").mkdir(parents=True)
+        (tools / "sdk/default/openharmony/toolchains").mkdir(parents=True)
+        emulator = tools / "bin/Emulator"
+        emulator.write_text(
+            "#!/usr/bin/env python3\nimport pathlib,sys\n"
+            f"p=pathlib.Path({str(state)!r})\n"
+            "p.write_text('up') if '-start' in sys.argv else p.unlink(missing_ok=True)\n"
+        )
+        emulator.chmod(0o755)
+        hdc = tools / "sdk/default/openharmony/toolchains/hdc"
+        hdc.write_text("#!/usr/bin/env python3\n")
+        hdc.chmod(0o755)
+        image = self.root / "image"; image.mkdir()
+        instances = self.root / "instances"; instances.mkdir()
+        (instances / "phone.ini").write_text("instance\n")
+        plan = json.loads(self.plan.read_text())
+        plan["configuration"].update({"hdc": str(hdc), "target": "127.0.0.1:15555"})
+        plan["emulator"] = {
+            "toolsRoot": str(tools), "imageRoot": str(image),
+            "instancePath": str(instances), "instance": "phone",
+            "hdcPort": 15555, "bootMode": "coldboot", "bootTimeoutSeconds": 1,
+        }
+        self.plan.write_text(json.dumps(plan))
+        completed = self.run_gate("passed")
+        self.assertEqual(completed.returncode, 1)
+        self.assertFalse(state.exists())
+        self.assertTrue((self.root / "output/emulator-start-failure-stop.log").is_file())
+
 
 if __name__ == "__main__":
     unittest.main()

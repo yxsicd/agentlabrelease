@@ -89,10 +89,12 @@ def start_emulator(config: dict[str, Any], output: Path, hdc: Path) -> dict[str,
     instance = config["instance"]
     port = config["hdcPort"]
     boot_mode = config["bootMode"]
+    boot_timeout = config.get("bootTimeoutSeconds", 180)
     if (
         not isinstance(instance, str) or not instance
         or not isinstance(port, int) or not 10000 <= port <= 16555
         or boot_mode not in {"coldboot", "reset", "snapshot"}
+        or not isinstance(boot_timeout, int) or not 1 <= boot_timeout <= 900
     ):
         raise StandardGateError("emulator lifecycle identity is invalid")
     emulator = tools_root / "bin/Emulator"
@@ -118,9 +120,20 @@ def start_emulator(config: dict[str, Any], output: Path, hdc: Path) -> dict[str,
     ]
     log = (output / "emulator-start.log").open("w", encoding="utf-8")
     process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT)
-    if not wait_target(hdc, target, present=True, timeout=180):
+    if not wait_target(hdc, target, present=True, timeout=boot_timeout):
         log.close()
-        process.poll()
+        stopped = subprocess.run(
+            [str(emulator), "-stop", instance, "-instancePath", str(instance_path)],
+            text=True, capture_output=True, timeout=30, check=False,
+        )
+        (output / "emulator-start-failure-stop.log").write_text(
+            stopped.stdout + stopped.stderr, encoding="utf-8"
+        )
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.terminate()
+            process.wait(timeout=5)
         raise StandardGateError("emulator did not expose the standard-test HDC target")
     log.close()
     return {

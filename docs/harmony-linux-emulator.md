@@ -258,6 +258,11 @@ separate cold emulator lifecycle for this gate, records its start/stop identity,
 and requires it to stop cleanly before the UI/performance runner starts its own
 measurement lifecycle; the gate therefore does not depend on a manually
 pre-started HDC target or contaminate the subsequent cold-run timing window.
+Hosts whose cold boot exceeds the default 180 seconds may set
+`runtime.bootTimeoutSeconds` (maximum 900). A boot that still misses its HDC
+deadline is an infrastructure failure: the gate invokes the exact instance's
+official stop command, waits for the launcher process to exit, and retains the
+failure-stop log instead of leaking an emulator into a later retry.
 
 ## Relative performance feedback
 

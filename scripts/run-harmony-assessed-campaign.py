@@ -420,17 +420,20 @@ def generated_plans(
     }
     run_path = root / "run-template.json"
     write_or_verify(run_path, run_template, "generated run template")
+    emulator = {
+        key: validated["device"]["runtime"][key]
+        for key in (
+            "toolsRoot", "imageRoot", "instancePath", "instance", "hdcPort", "bootMode"
+        )
+    }
+    if "bootTimeoutSeconds" in validated["device"]["runtime"]:
+        emulator["bootTimeoutSeconds"] = validated["device"]["runtime"]["bootTimeoutSeconds"]
     standard_template = {
         "schema": "agentlab.harmony_assessed_standard_test_template.v1",
         "evaluationCase": binding(validated["casePath"]),
         "sourceExecutor": binding(validated["sourceStandardTestExecutor"]),
         "configuration": validated["standardTestConfiguration"],
-        "emulator": {
-            key: validated["device"]["runtime"][key]
-            for key in (
-                "toolsRoot", "imageRoot", "instancePath", "instance", "hdcPort", "bootMode"
-            )
-        },
+        "emulator": emulator,
         "automaticPromotion": False,
     }
     standard_path = root / "standard-test-template.json"
