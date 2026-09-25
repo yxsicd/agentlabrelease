@@ -381,9 +381,12 @@ the `AlertDialog` sites cover logout confirmation and Web alert result handling,
 while the `call.makeCall` sites cover an empty-number capability path and a
 `tel://` interception path. The new `image.createImagePacker` packet goes one
 level deeper: it binds the complete enclosing owner and every same-owner call
-for 12 call sites across seven files. Six owner contexts show an ImagePacker
-`release` call and six do not, but that syntactic split is a review hypothesis,
-not a defect label. The packets require an independent answer on shared
+for 12 call sites across seven files. It also resolves all 12 selected call
+results to their lexical handles (10 binding initializers and two assignments),
+then separates exact same-handle calls from lookalike names. Six handles show a
+direct `release` spelling and six do not, but that syntactic split is a review
+hypothesis, not a defect label: aliases, escapes, control flow, exception safety
+and runtime release remain unresolved. The packets require an independent answer on shared
 behavior, observable failure, prompt completeness, repair/preservation Oracles,
 environment reproducibility and genuine cross-repository necessity. They are
 review aids, not approved cases.

@@ -303,7 +303,7 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
         self.assertEqual(index["schema"], "agentlab.multi_repo_candidate_review_packet_index.v2")
         self.assertEqual(index["packetMethodRevisions"], [
             "5d730d1fbc7a6fa6eaee58fc4f7d580bb7a39469",
-            "390c81268f38dbada8ab3e0a19423b69967aa63f",
+            "05233f0e5bd63959af02ec39f2576c855ccb3aa0",
         ])
         self.assertFalse(index["semanticReviewCompleted"])
         self.assertFalse(index["automaticPromotion"])
@@ -326,6 +326,10 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
         image_packer = json.loads(
             (root / "review-packets/image-create-image-packer.json").read_text()
         )
+        self.assertEqual(
+            image_packer["schema"],
+            "agentlab.multi_repo_candidate_review_packet.v2",
+        )
         alert_source = "\n".join(
             line["text"] for site in alert["callSiteEvidence"] for line in site["excerpt"]
         )
@@ -340,6 +344,27 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
         self.assertEqual(image_packer["ownerEvidenceCoverage"]["completeOwnerCount"], 12)
         self.assertEqual(image_packer["ownerEvidenceCoverage"]["boundedExcerptOwnerCount"], 0)
         self.assertEqual(image_packer["ownerEvidenceCoverage"]["unresolvedOwnerCount"], 0)
+        self.assertEqual(
+            image_packer["callResultHandleCoverage"],
+            {
+                "selectedCallCount": 12,
+                "bindingInitializerCount": 10,
+                "assignmentCount": 2,
+                "unboundResultCount": 0,
+                "ambiguousContainerCount": 0,
+                "directMemberNameCounts": {
+                    "packToData": 6,
+                    "packToFile": 5,
+                    "packing": 1,
+                    "release": 6,
+                },
+                "interpretation": (
+                    "Containment can associate a selected call with one lexical binding or assignment and "
+                    "enumerate exact direct-member call spellings on that handle. It does not prove aliases, "
+                    "escapes, receiver types, control-flow coverage, exception safety or runtime release."
+                ),
+            },
+        )
         release_owners = sum(
             any(
                 (call.get("targetExpression") or "").endswith(".release")

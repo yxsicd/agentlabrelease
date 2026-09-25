@@ -5,6 +5,430 @@
     "specifier": "@kit.ImageKit"
   },
   "automaticPromotion": false,
+  "callResultHandleCoverage": {
+    "ambiguousContainerCount": 0,
+    "assignmentCount": 2,
+    "bindingInitializerCount": 10,
+    "directMemberNameCounts": {
+      "packToData": 6,
+      "packToFile": 5,
+      "packing": 1,
+      "release": 6
+    },
+    "interpretation": "Containment can associate a selected call with one lexical binding or assignment and enumerate exact direct-member call spellings on that handle. It does not prove aliases, escapes, receiver types, control-flow coverage, exception safety or runtime release.",
+    "selectedCallCount": 12,
+    "unboundResultCount": 0
+  },
+  "callResultHandleEvidence": [
+    {
+      "definingFactId": "workspace-fact-05efe005906343006399c392",
+      "definingFactKind": "assignment",
+      "directMemberCalls": [
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-025ccc39c4e40d9fc46c21c6",
+          "member": "packToFile",
+          "span": {
+            "endByte": 6293,
+            "endColumnByte": 61,
+            "endLine": 149,
+            "startByte": 6244,
+            "startColumnByte": 12,
+            "startLine": 149
+          },
+          "targetExpression": "packer.packToFile"
+        },
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-6578e219b62cf62fd0975549",
+          "member": "release",
+          "span": {
+            "endByte": 6681,
+            "endColumnByte": 24,
+            "endLine": 160,
+            "startByte": 6665,
+            "startColumnByte": 8,
+            "startLine": 160
+          },
+          "targetExpression": "packer.release"
+        }
+      ],
+      "handleExpression": "packer",
+      "owner": "ImagePreview::savePixelMapToSandBoxFile",
+      "path": "features/devpractices/src/main/ets/view/ImagePreview.ets",
+      "repositoryId": "code-workshop",
+      "sameHandleReassignments": [],
+      "selectedCallFactId": "workspace-fact-584b2987f48e6eb1e4f1efc3",
+      "status": "assignment"
+    },
+    {
+      "definingFactId": "workspace-fact-257d20d646182c6a2181edfd",
+      "definingFactKind": "binding",
+      "directMemberCalls": [
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-d111c7499103ff0e94697c30",
+          "member": "packToData",
+          "span": {
+            "endByte": 3632,
+            "endColumnByte": 61,
+            "endLine": 92,
+            "startByte": 3579,
+            "startColumnByte": 8,
+            "startLine": 92
+          },
+          "targetExpression": "imagePackerApi.packToData"
+        }
+      ],
+      "handleExpression": "imagePackerApi",
+      "owner": "SnapshotPreview::saveSnapshot",
+      "path": "ArkUISample/ComponentSnapshot/entry/src/main/ets/view/SnapshotPreview.ets",
+      "repositoryId": "guide-snippets",
+      "sameHandleReassignments": [],
+      "selectedCallFactId": "workspace-fact-4e64afee9f4aaa70879febe1",
+      "status": "binding-initializer"
+    },
+    {
+      "definingFactId": "workspace-fact-b0bc29d9101b9b4c039e3a92",
+      "definingFactKind": "binding",
+      "directMemberCalls": [
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-e774b7ea852ac9c6677c6d25",
+          "member": "packToData",
+          "span": {
+            "endByte": 8392,
+            "endColumnByte": 18,
+            "endLine": 201,
+            "startByte": 8259,
+            "startColumnByte": 48,
+            "startLine": 198
+          },
+          "targetExpression": "imagePacker.packToData"
+        },
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-88b354a2f32aadb6ae21ff1f",
+          "member": "release",
+          "span": {
+            "endByte": 8681,
+            "endColumnByte": 37,
+            "endLine": 208,
+            "startByte": 8660,
+            "startColumnByte": 16,
+            "startLine": 208
+          },
+          "targetExpression": "imagePacker.release"
+        }
+      ],
+      "handleExpression": "imagePacker",
+      "owner": "EditPage::build",
+      "path": "Media/Camera/MoreResolution/entry/src/main/ets/pages/EditPage.ets",
+      "repositoryId": "guide-snippets",
+      "sameHandleReassignments": [],
+      "selectedCallFactId": "workspace-fact-944a4401bcce77221f093821",
+      "status": "binding-initializer"
+    },
+    {
+      "definingFactId": "workspace-fact-86f557026501eb63bac5f8ec",
+      "definingFactKind": "binding",
+      "directMemberCalls": [
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-3389531f0761382c2ef0ed1b",
+          "member": "packToData",
+          "span": {
+            "endByte": 8764,
+            "endColumnByte": 18,
+            "endLine": 212,
+            "startByte": 8631,
+            "startColumnByte": 48,
+            "startLine": 209
+          },
+          "targetExpression": "imagePacker.packToData"
+        },
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-6d6d6a698c2ca5c1c305961e",
+          "member": "release",
+          "span": {
+            "endByte": 9410,
+            "endColumnByte": 37,
+            "endLine": 227,
+            "startByte": 9389,
+            "startColumnByte": 16,
+            "startLine": 227
+          },
+          "targetExpression": "imagePacker.release"
+        }
+      ],
+      "handleExpression": "imagePacker",
+      "owner": "EditPage::build",
+      "path": "Media/Camera/preconfig/entry/src/main/ets/pages/EditPage.ets",
+      "repositoryId": "guide-snippets",
+      "sameHandleReassignments": [],
+      "selectedCallFactId": "workspace-fact-794e3dbc155554e2848f166f",
+      "status": "binding-initializer"
+    },
+    {
+      "definingFactId": "workspace-fact-d5ca3b6749d1f12dce426e38",
+      "definingFactKind": "binding",
+      "directMemberCalls": [
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-69f6f460e48dfdff5949e2f0",
+          "member": "packToData",
+          "span": {
+            "endByte": 5220,
+            "endColumnByte": 69,
+            "endLine": 132,
+            "startByte": 5172,
+            "startColumnByte": 21,
+            "startLine": 132
+          },
+          "targetExpression": "imagePackerApi.packToData"
+        }
+      ],
+      "handleExpression": "imagePackerApi",
+      "owner": "packToDataFromImageSource",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "repositoryId": "guide-snippets",
+      "sameHandleReassignments": [],
+      "selectedCallFactId": "workspace-fact-aedc9ade9862405f332cb8dc",
+      "status": "binding-initializer"
+    },
+    {
+      "definingFactId": "workspace-fact-4ec57b0a57e9ffc94d7eb306",
+      "definingFactKind": "binding",
+      "directMemberCalls": [
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-5369c0e51938e0b96f6c25ae",
+          "member": "packToData",
+          "span": {
+            "endByte": 4408,
+            "endColumnByte": 66,
+            "endLine": 114,
+            "startByte": 4363,
+            "startColumnByte": 21,
+            "startLine": 114
+          },
+          "targetExpression": "imagePackerApi.packToData"
+        }
+      ],
+      "handleExpression": "imagePackerApi",
+      "owner": "packToDataFromPixelMap",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "repositoryId": "guide-snippets",
+      "sameHandleReassignments": [],
+      "selectedCallFactId": "workspace-fact-ff0834680b1812f09b07fdd4",
+      "status": "binding-initializer"
+    },
+    {
+      "definingFactId": "workspace-fact-f09deb31e7bb450c55679d1a",
+      "definingFactKind": "assignment",
+      "directMemberCalls": [
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-a792ffd3821cd2a5933ae927",
+          "member": "packToFile",
+          "span": {
+            "endByte": 8513,
+            "endColumnByte": 63,
+            "endLine": 211,
+            "startByte": 8460,
+            "startColumnByte": 10,
+            "startLine": 211
+          },
+          "targetExpression": "imagePackerApi.packToFile"
+        },
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-4ce215435a1fe60189c12427",
+          "member": "release",
+          "span": {
+            "endByte": 8758,
+            "endColumnByte": 36,
+            "endLine": 219,
+            "startByte": 8734,
+            "startColumnByte": 12,
+            "startLine": 219
+          },
+          "targetExpression": "imagePackerApi.release"
+        }
+      ],
+      "handleExpression": "imagePackerApi",
+      "owner": "packToFile",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "repositoryId": "guide-snippets",
+      "sameHandleReassignments": [],
+      "selectedCallFactId": "workspace-fact-4812dfe091aa6753446be284",
+      "status": "assignment"
+    },
+    {
+      "definingFactId": "workspace-fact-72da92ba9c8a65cc02d7aa4a",
+      "definingFactKind": "binding",
+      "directMemberCalls": [
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-bdbbf58fb5991c72cba9e5b7",
+          "member": "packToFile",
+          "span": {
+            "endByte": 7114,
+            "endColumnByte": 67,
+            "endLine": 173,
+            "startByte": 7057,
+            "startColumnByte": 10,
+            "startLine": 173
+          },
+          "targetExpression": "imagePackerApi.packToFile"
+        }
+      ],
+      "handleExpression": "imagePackerApi",
+      "owner": "packToFileFromImageSource",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "repositoryId": "guide-snippets",
+      "sameHandleReassignments": [],
+      "selectedCallFactId": "workspace-fact-af61a9b7235dc27b157d564a",
+      "status": "binding-initializer"
+    },
+    {
+      "definingFactId": "workspace-fact-88d5403230554631868d8662",
+      "definingFactKind": "binding",
+      "directMemberCalls": [
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-8c24223585dca5985c362e73",
+          "member": "packToFile",
+          "span": {
+            "endByte": 6234,
+            "endColumnByte": 64,
+            "endLine": 153,
+            "startByte": 6180,
+            "startColumnByte": 10,
+            "startLine": 153
+          },
+          "targetExpression": "imagePackerApi.packToFile"
+        }
+      ],
+      "handleExpression": "imagePackerApi",
+      "owner": "packToFileFromPixelMap",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "repositoryId": "guide-snippets",
+      "sameHandleReassignments": [],
+      "selectedCallFactId": "workspace-fact-9edd5bd98f4f4134bad6435b",
+      "status": "binding-initializer"
+    },
+    {
+      "definingFactId": "workspace-fact-eb1a95e25ef36d2ab9b9462c",
+      "definingFactKind": "binding",
+      "directMemberCalls": [
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-8a96296e6dd803a611d7e981",
+          "member": "packing",
+          "span": {
+            "endByte": 7647,
+            "endColumnByte": 62,
+            "endLine": 190,
+            "startByte": 7606,
+            "startColumnByte": 21,
+            "startLine": 190
+          },
+          "targetExpression": "imagePackerApi.packing"
+        },
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-d81f2624d2d36ee08cc30d90",
+          "member": "release",
+          "span": {
+            "endByte": 7958,
+            "endColumnByte": 34,
+            "endLine": 198,
+            "startByte": 7934,
+            "startColumnByte": 10,
+            "startLine": 198
+          },
+          "targetExpression": "imagePackerApi.release"
+        }
+      ],
+      "handleExpression": "imagePackerApi",
+      "owner": "packing",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "repositoryId": "guide-snippets",
+      "sameHandleReassignments": [],
+      "selectedCallFactId": "workspace-fact-21f9d8b617cd4c87e74484e4",
+      "status": "binding-initializer"
+    },
+    {
+      "definingFactId": "workspace-fact-1a7e5eaf548cc31143e7e5de",
+      "definingFactKind": "binding",
+      "directMemberCalls": [
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-e8b65409521bee0221c86a76",
+          "member": "packToFile",
+          "span": {
+            "endByte": 1959,
+            "endColumnByte": 61,
+            "endLine": 37,
+            "startByte": 1902,
+            "startColumnByte": 4,
+            "startLine": 37
+          },
+          "targetExpression": "imagePackerApi.packToFile"
+        },
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-602903e15cd11ce12a7f798d",
+          "member": "release",
+          "span": {
+            "endByte": 2448,
+            "endColumnByte": 36,
+            "endLine": 46,
+            "startByte": 2424,
+            "startColumnByte": 12,
+            "startLine": 46
+          },
+          "targetExpression": "imagePackerApi.release"
+        }
+      ],
+      "handleExpression": "imagePackerApi",
+      "owner": "reEncoding",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/TranscodingUtility.ets",
+      "repositoryId": "guide-snippets",
+      "sameHandleReassignments": [],
+      "selectedCallFactId": "workspace-fact-d6d31ca0879d96959ba382cd",
+      "status": "binding-initializer"
+    },
+    {
+      "definingFactId": "workspace-fact-567f8c4fa4169522e9e41b48",
+      "definingFactKind": "binding",
+      "directMemberCalls": [
+        {
+          "afterSelectedCall": true,
+          "factId": "workspace-fact-0e3809efaecf5a53ab75fb2e",
+          "member": "packToData",
+          "span": {
+            "endByte": 1497,
+            "endColumnByte": 57,
+            "endLine": 31,
+            "startByte": 1446,
+            "startColumnByte": 6,
+            "startLine": 31
+          },
+          "targetExpression": "imagePackerObj.packToData"
+        }
+      ],
+      "handleExpression": "imagePackerObj",
+      "owner": "EntryAbility::onCreate",
+      "path": "PerformanceAnalysisKit/PerformanceAnalysisTool/entry/src/main/ets/entryability/EntryAbility.ets",
+      "repositoryId": "guide-snippets",
+      "sameHandleReassignments": [],
+      "selectedCallFactId": "workspace-fact-200701b34271008efe8bee3b",
+      "status": "binding-initializer"
+    }
+  ],
   "callSiteEvidence": [
     {
       "excerpt": [
@@ -5344,7 +5768,7 @@
     "ownerCount": 12,
     "unresolvedOwnerCount": 0
   },
-  "packetMethodRevision": "390c81268f38dbada8ab3e0a19423b69967aa63f",
+  "packetMethodRevision": "05233f0e5bd63959af02ec39f2576c855ccb3aa0",
   "requiredCalibration": {
     "alternativeValid": "constructor-distinct repair passes the same checks",
     "baseline": "expected issue behavior fails while infrastructure remains available",
@@ -5424,7 +5848,7 @@
       "statement": "No baseline/reference/alternative/wrong calibration has executed for this candidate."
     }
   ],
-  "schema": "agentlab.multi_repo_candidate_review_packet.v1",
+  "schema": "agentlab.multi_repo_candidate_review_packet.v2",
   "selectionRoles": [
     "median-api-call-file-count"
   ],

@@ -753,8 +753,11 @@ localization evidence, not semantic equivalence. Both packets remain
 remain unapproved.
 
 The third packet covers `image.createImagePacker`: 12 exact call sites across
-seven files and two repositories, with complete owner context for all 12. Six
-owners contain an analyzer-observed ImagePacker `release` call and six do not.
+seven files and two repositories, with complete owner context for all 12. The
+handle-aware v2 packet relates 10 calls to lexical binding initializers and two
+to assignments, with no unresolved or ambiguous result handles. Exact
+same-handle member spellings comprise six `packToData`, five `packToFile`, one
+`packing` and six `release` calls; six handles have no direct `release` spelling.
 That split is useful lifecycle-review evidence, but it is deliberately not
 classified as a defect: the exact SDK contract, escape/dataflow behavior,
 observable failure and acceptable repairs still require independent review and
