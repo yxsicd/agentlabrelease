@@ -93,12 +93,17 @@ jobs:
           [[ "$(sha256sum "$AGENTLAB_ROOT/calibration-authority/calibration-bundle.json" | cut -d' ' -f1)" == "$EXPECTED_CALIBRATION_BUNDLE_SHA256" ]]
           cmp "$AGENTLAB_ROOT/calibration-authority/bundle/construction-contract.json" \
             "$AGENTLAB_ROOT/source/contract/construction-contract.json"
+          source_args=()
+          if [[ -f "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-source.json" ]]; then
+            source_args=(--source-receipt "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-source.json")
+          fi
           python3 scripts/multi-repo-calibration-bundle.py validate \
             --bundle-root "$AGENTLAB_ROOT/calibration-authority/bundle" \
             --descriptor "$AGENTLAB_ROOT/calibration-authority/bundle/descriptor.json" \
             --construction-contract "$AGENTLAB_ROOT/source/contract/construction-contract.json" \
             --proposal "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-proposal.json" \
             --review "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-review.json" \
+            "${source_args[@]}" \
             --contract "$AGENTLAB_ROOT/calibration-authority/calibration-bundle.json"
       - name: Bind explicit operator review to the exact proposal
         env:
@@ -139,12 +144,17 @@ jobs:
       - name: Re-run the independent executable calibration
         run: |
           set -euo pipefail
+          source_args=()
+          if [[ -f "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-source.json" ]]; then
+            source_args=(--source-receipt "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-source.json")
+          fi
           python3 scripts/multi-repo-calibration-bundle.py run \
             --bundle-root "$AGENTLAB_ROOT/calibration-authority/bundle" \
             --contract "$AGENTLAB_ROOT/calibration-authority/calibration-bundle.json" \
             --proposal "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-proposal.json" \
             --review "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-review.json" \
             --construction-contract "$AGENTLAB_ROOT/source/contract/construction-contract.json" \
+            "${source_args[@]}" \
             --baseline "$AGENTLAB_ROOT/source/input/repositories" \
             --output "$AGENTLAB_ROOT/calibration"
       - name: Freeze only the reviewed and calibrated case

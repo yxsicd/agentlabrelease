@@ -14,8 +14,13 @@ from typing import Any
 
 
 SHA256 = re.compile(r"[0-9a-f]{64}")
+GIT_SHA = re.compile(r"[0-9a-f]{40}")
 TOKEN = re.compile(r"[A-Za-z0-9_.:-]{1,160}")
+PUBLIC_GITHUB_REPOSITORY = re.compile(
+    r"https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:\.git)?"
+)
 SOURCE_SCHEMA = "agentlab.multi_repo_calibration_bundle_source.v1"
+PORTABLE_SOURCE_SCHEMA = "agentlab.multi_repo_calibration_bundle_portable_source.v1"
 PROPOSAL_SCHEMA = "agentlab.multi_repo_calibration_bundle_proposal.v1"
 REVIEW_SCHEMA = "agentlab.multi_repo_calibration_bundle_review.v1"
 CONTRACT_SCHEMA = "agentlab.multi_repo_calibration_bundle.v1"
@@ -100,6 +105,85 @@ def file_manifest(root: Path, relative_root: Path) -> list[dict[str, Any]]:
 def manifest_digest(rows: list[dict[str, Any]]) -> str:
     raw = json.dumps(rows, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(raw).hexdigest()
+
+
+def complete_file_manifest(root: Path) -> list[dict[str, Any]]:
+    require(root.is_dir() and not root.is_symlink(), "portable bundle root must be a non-symlink directory")
+    root = root.resolve()
+    rows = []
+    for path in sorted(root.rglob("*")):
+        require(not path.is_symlink(), f"portable bundle contains a symlink: {path.relative_to(root)}")
+        require(path.is_dir() or path.is_file(), f"portable bundle contains a special file: {path.relative_to(root)}")
+        if path.is_file():
+            rows.append({
+                "path": path.relative_to(root).as_posix(),
+                "sha256": digest(path),
+                "bytes": path.stat().st_size,
+            })
+    require(rows, "portable bundle has no files")
+    return rows
+
+
+def portable_source_receipt(
+    bundle_root: Path,
+    construction_path: Path,
+    repository: str,
+    revision: str,
+    bundle_path: str,
+) -> dict[str, Any]:
+    require(
+        isinstance(repository, str) and PUBLIC_GITHUB_REPOSITORY.fullmatch(repository) is not None,
+        "portable source repository must be a credential-free public GitHub HTTPS URL",
+    )
+    require(GIT_SHA.fullmatch(revision) is not None, "portable source revision must be a full Git SHA")
+    relative_bundle = safe_relative(bundle_path, "portable source bundle path")
+    descriptor_path = bundle_root / "descriptor.json"
+    bundled_construction = bundle_root / "construction-contract.json"
+    proposal_path = bundle_root / "calibration-bundle-proposal.json"
+    require(digest(bundled_construction) == digest(construction_path), "portable source construction contract differs")
+    proposal = load(proposal_path, "portable source calibration proposal")
+    require(
+        proposal == propose(bundle_root, descriptor_path, bundled_construction),
+        "portable source proposal differs from exact bundle bytes",
+    )
+    construction = load(construction_path, "reviewed construction contract")
+    files = complete_file_manifest(bundle_root)
+    return {
+        "schema": PORTABLE_SOURCE_SCHEMA,
+        "status": "staged-for-calibration-proposal",
+        "source": {
+            "repository": repository,
+            "revision": revision,
+            "bundlePath": relative_bundle.as_posix(),
+        },
+        "candidateId": construction["candidateId"],
+        "candidateSha256": construction["candidateSha256"],
+        "sourceSetSha256": construction["sourceSetSha256"],
+        "constructionContractSha256": digest(construction_path),
+        "descriptorSha256": digest(descriptor_path),
+        "proposalSha256": digest(proposal_path),
+        "files": files,
+        "fileManifestSha256": manifest_digest(files),
+        "automaticPromotion": False,
+    }
+
+
+def validate_portable_source_receipt(receipt_path: Path, bundle_root: Path, construction_path: Path) -> dict[str, Any]:
+    receipt = load(receipt_path, "portable calibration bundle source receipt")
+    require(receipt.get("schema") == PORTABLE_SOURCE_SCHEMA, "unsupported portable source receipt")
+    require(receipt.get("status") == "staged-for-calibration-proposal", "portable source receipt status differs")
+    require(receipt.get("automaticPromotion") is False, "portable source receipt can auto-promote")
+    source = receipt.get("source")
+    require(isinstance(source, dict), "portable source identity is absent")
+    expected = portable_source_receipt(
+        bundle_root,
+        construction_path,
+        source.get("repository"),
+        source.get("revision"),
+        source.get("bundlePath"),
+    )
+    require(receipt == expected, "portable source receipt differs from exact bundle bytes")
+    return receipt
 
 
 def validate_source(bundle_root: Path, descriptor_path: Path, construction_path: Path) -> dict[str, Any]:
@@ -222,11 +306,16 @@ def validate_source(bundle_root: Path, descriptor_path: Path, construction_path:
     }
 
 
-def propose(bundle_root: Path, descriptor_path: Path, construction_path: Path) -> dict[str, Any]:
+def propose(
+    bundle_root: Path,
+    descriptor_path: Path,
+    construction_path: Path,
+    source_receipt_path: Path | None = None,
+) -> dict[str, Any]:
     validated = validate_source(bundle_root, descriptor_path, construction_path)
     descriptor = validated["descriptor"]
     construction = validated["construction"]
-    return {
+    result = {
         "schema": PROPOSAL_SCHEMA,
         "status": "review-required",
         "candidateId": construction["candidateId"],
@@ -260,6 +349,16 @@ def propose(bundle_root: Path, descriptor_path: Path, construction_path: Path) -
         },
         "automaticPromotion": False,
     }
+    if source_receipt_path is not None:
+        source = validate_portable_source_receipt(source_receipt_path, bundle_root, construction_path)
+        result["portableSource"] = {
+            "receiptSha256": digest(source_receipt_path),
+            "repository": source["source"]["repository"],
+            "revision": source["source"]["revision"],
+            "bundlePath": source["source"]["bundlePath"],
+            "fileManifestSha256": source["fileManifestSha256"],
+        }
+    return result
 
 
 def decide(proposal_path: Path, expected_sha256: str, reviewer: str, acknowledged: str, rationale: str) -> dict[str, Any]:
@@ -309,17 +408,36 @@ def compile_contract(proposal_path: Path, review_path: Path) -> dict[str, Any]:
     }
 
 
-def validate(contract_path: Path, proposal_path: Path, review_path: Path, bundle_root: Path, descriptor_path: Path, construction_path: Path) -> dict[str, Any]:
+def validate(
+    contract_path: Path,
+    proposal_path: Path,
+    review_path: Path,
+    bundle_root: Path,
+    descriptor_path: Path,
+    construction_path: Path,
+    source_receipt_path: Path | None = None,
+) -> dict[str, Any]:
     actual = load(contract_path, "reviewed calibration bundle")
-    require(load(proposal_path, "calibration bundle proposal") == propose(bundle_root, descriptor_path, construction_path), "calibration bundle proposal differs from exact inputs")
+    require(
+        load(proposal_path, "calibration bundle proposal")
+        == propose(bundle_root, descriptor_path, construction_path, source_receipt_path),
+        "calibration bundle proposal differs from exact inputs",
+    )
     require(actual == compile_contract(proposal_path, review_path), "reviewed calibration bundle differs from exact review")
     require(actual.get("status") == "reviewed-for-calibration", "calibration bundle status differs")
     return actual
 
 
-def stage(bundle_root: Path, descriptor_path: Path, construction_path: Path, proposal_path: Path, output: Path) -> None:
+def stage(
+    bundle_root: Path,
+    descriptor_path: Path,
+    construction_path: Path,
+    proposal_path: Path,
+    output: Path,
+    source_receipt_path: Path | None = None,
+) -> None:
     require(not output.exists(), f"refusing to overwrite output: {output}")
-    expected = propose(bundle_root, descriptor_path, construction_path)
+    expected = propose(bundle_root, descriptor_path, construction_path, source_receipt_path)
     require(load(proposal_path, "calibration bundle proposal") == expected, "calibration bundle proposal differs from exact inputs")
     output.mkdir(parents=True)
     shutil.copyfile(descriptor_path, output / "descriptor.json")
@@ -374,9 +492,26 @@ def validate_summary(summary: dict[str, Any], contract: dict[str, Any]) -> None:
             require(SHA256.fullmatch(actual[stage].get("receiptSha256", "")) is not None, f"calibration receipt digest missing for {variant}/{stage}")
 
 
-def run_bundle(bundle_root: Path, contract_path: Path, proposal_path: Path, review_path: Path, construction_path: Path, baseline: Path, output: Path) -> dict[str, Any]:
+def run_bundle(
+    bundle_root: Path,
+    contract_path: Path,
+    proposal_path: Path,
+    review_path: Path,
+    construction_path: Path,
+    baseline: Path,
+    output: Path,
+    source_receipt_path: Path | None = None,
+) -> dict[str, Any]:
     descriptor_path = bundle_root / "descriptor.json"
-    contract = validate(contract_path, proposal_path, review_path, bundle_root, descriptor_path, construction_path)
+    contract = validate(
+        contract_path,
+        proposal_path,
+        review_path,
+        bundle_root,
+        descriptor_path,
+        construction_path,
+        source_receipt_path,
+    )
     require(baseline.is_dir() and not baseline.is_symlink(), "baseline must be a non-symlink directory")
     require(not output.exists(), f"refusing to overwrite output: {output}")
     descriptor = contract["descriptor"]
@@ -441,6 +576,7 @@ def main() -> int:
         command.add_argument("--bundle-root", type=Path, required=True)
         command.add_argument("--descriptor", type=Path, required=True)
         command.add_argument("--construction-contract", type=Path, required=True)
+        command.add_argument("--source-receipt", type=Path)
     propose_command.add_argument("--output", type=Path, required=True)
     decide_command = commands.add_parser("decide")
     decide_command.add_argument("--proposal", type=Path, required=True)
@@ -460,12 +596,14 @@ def main() -> int:
     validate_command.add_argument("--proposal", type=Path, required=True)
     validate_command.add_argument("--review", type=Path, required=True)
     validate_command.add_argument("--contract", type=Path, required=True)
+    validate_command.add_argument("--source-receipt", type=Path)
     stage_command = commands.add_parser("stage")
     stage_command.add_argument("--bundle-root", type=Path, required=True)
     stage_command.add_argument("--descriptor", type=Path, required=True)
     stage_command.add_argument("--construction-contract", type=Path, required=True)
     stage_command.add_argument("--proposal", type=Path, required=True)
     stage_command.add_argument("--output", type=Path, required=True)
+    stage_command.add_argument("--source-receipt", type=Path)
     run_command = commands.add_parser("run")
     run_command.add_argument("--bundle-root", type=Path, required=True)
     run_command.add_argument("--contract", type=Path, required=True)
@@ -474,10 +612,22 @@ def main() -> int:
     run_command.add_argument("--construction-contract", type=Path, required=True)
     run_command.add_argument("--baseline", type=Path, required=True)
     run_command.add_argument("--output", type=Path, required=True)
+    run_command.add_argument("--source-receipt", type=Path)
+    source_command = commands.add_parser("source-receipt")
+    source_command.add_argument("--bundle-root", type=Path, required=True)
+    source_command.add_argument("--construction-contract", type=Path, required=True)
+    source_command.add_argument("--repository", required=True)
+    source_command.add_argument("--revision", required=True)
+    source_command.add_argument("--bundle-path", required=True)
+    source_command.add_argument("--output", type=Path, required=True)
+    validate_source_command = commands.add_parser("validate-source-receipt")
+    validate_source_command.add_argument("--receipt", type=Path, required=True)
+    validate_source_command.add_argument("--bundle-root", type=Path, required=True)
+    validate_source_command.add_argument("--construction-contract", type=Path, required=True)
     args = parser.parse_args()
     try:
         if args.command == "propose":
-            value = propose(args.bundle_root, args.descriptor, args.construction_contract)
+            value = propose(args.bundle_root, args.descriptor, args.construction_contract, args.source_receipt)
             write(args.output, value)
             result = {"ok": True, "proposalSha256": digest(args.output), "status": value["status"]}
         elif args.command == "decide":
@@ -489,14 +639,51 @@ def main() -> int:
             write(args.output, value)
             result = {"ok": True, "contractSha256": digest(args.output), "status": value["status"]}
         elif args.command == "validate":
-            value = validate(args.contract, args.proposal, args.review, args.bundle_root, args.descriptor, args.construction_contract)
+            value = validate(
+                args.contract,
+                args.proposal,
+                args.review,
+                args.bundle_root,
+                args.descriptor,
+                args.construction_contract,
+                args.source_receipt,
+            )
             result = {"ok": True, "contractSha256": digest(args.contract), "status": value["status"]}
         elif args.command == "stage":
-            stage(args.bundle_root, args.descriptor, args.construction_contract, args.proposal, args.output)
+            stage(
+                args.bundle_root,
+                args.descriptor,
+                args.construction_contract,
+                args.proposal,
+                args.output,
+                args.source_receipt,
+            )
             result = {"ok": True, "output": str(args.output)}
-        else:
-            value = run_bundle(args.bundle_root, args.contract, args.proposal, args.review, args.construction_contract, args.baseline, args.output)
+        elif args.command == "run":
+            value = run_bundle(
+                args.bundle_root,
+                args.contract,
+                args.proposal,
+                args.review,
+                args.construction_contract,
+                args.baseline,
+                args.output,
+                args.source_receipt,
+            )
             result = {"ok": True, "runSha256": digest(args.output / "calibration-run.json"), "status": value["status"]}
+        elif args.command == "source-receipt":
+            value = portable_source_receipt(
+                args.bundle_root,
+                args.construction_contract,
+                args.repository,
+                args.revision,
+                args.bundle_path,
+            )
+            write(args.output, value)
+            result = {"ok": True, "sourceReceiptSha256": digest(args.output), "status": value["status"]}
+        else:
+            value = validate_portable_source_receipt(args.receipt, args.bundle_root, args.construction_contract)
+            result = {"ok": True, "sourceReceiptSha256": digest(args.receipt), "status": value["status"]}
         print(json.dumps(result, sort_keys=True))
     except (BundleError, OSError, subprocess.TimeoutExpired, ValueError) as error:
         print(f"multi-repository calibration bundle invalid: {error}", file=sys.stderr)

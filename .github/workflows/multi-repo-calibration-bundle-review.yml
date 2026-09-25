@@ -53,6 +53,9 @@ jobs:
             --name multi-repo-calibration-bundle-proposal --dir "$AGENTLAB_ROOT/source"
           cp -R "$AGENTLAB_ROOT/source/bundle" "$AGENTLAB_ROOT/output/bundle"
           cp "$AGENTLAB_ROOT/source/calibration-bundle-proposal.json" "$AGENTLAB_ROOT/output/calibration-bundle-proposal.json"
+          if [[ -f "$AGENTLAB_ROOT/source/calibration-bundle-source.json" ]]; then
+            cp "$AGENTLAB_ROOT/source/calibration-bundle-source.json" "$AGENTLAB_ROOT/output/calibration-bundle-source.json"
+          fi
       - name: Bind explicit review and validate immutable bytes
         env:
           EXPECTED_PROPOSAL_SHA256: ${{ inputs.expected_proposal_sha256 }}
@@ -61,6 +64,10 @@ jobs:
           REVIEWER: ${{ github.actor }}
         run: |
           set -euo pipefail
+          source_args=()
+          if [[ -f "$AGENTLAB_ROOT/output/calibration-bundle-source.json" ]]; then
+            source_args=(--source-receipt "$AGENTLAB_ROOT/output/calibration-bundle-source.json")
+          fi
           python3 scripts/multi-repo-calibration-bundle.py decide \
             --proposal "$AGENTLAB_ROOT/output/calibration-bundle-proposal.json" \
             --expected-sha256 "$EXPECTED_PROPOSAL_SHA256" \
@@ -78,6 +85,7 @@ jobs:
             --construction-contract "$AGENTLAB_ROOT/output/bundle/construction-contract.json" \
             --proposal "$AGENTLAB_ROOT/output/calibration-bundle-proposal.json" \
             --review "$AGENTLAB_ROOT/output/calibration-bundle-review.json" \
+            "${source_args[@]}" \
             --contract "$AGENTLAB_ROOT/output/calibration-bundle.json"
           sha256sum "$AGENTLAB_ROOT/output/calibration-bundle.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve reviewed bundle and complete byte lineage

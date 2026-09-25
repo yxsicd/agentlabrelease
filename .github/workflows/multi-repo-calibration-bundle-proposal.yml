@@ -11,9 +11,16 @@ on:
         required: true
         type: string
       bundle_root:
-        description: Repository-relative calibration bundle source directory
-        required: true
-        default: examples/multi-repo-case
+        description: Repository-relative bundle directory; mutually exclusive with bundle_source_run_id
+        required: false
+        type: string
+      bundle_source_run_id:
+        description: Successful trusted-main portable calibration-bundle source run
+        required: false
+        type: string
+      expected_bundle_source_sha256:
+        description: Exact portable source receipt digest; required with bundle_source_run_id
+        required: false
         type: string
 
 permissions:
@@ -30,6 +37,8 @@ jobs:
       CONTRACT_RUN_ID: ${{ inputs.construction_contract_review_run_id }}
       EXPECTED_CONSTRUCTION_CONTRACT_SHA256: ${{ inputs.expected_construction_contract_sha256 }}
       BUNDLE_ROOT_INPUT: ${{ inputs.bundle_root }}
+      BUNDLE_SOURCE_RUN_ID: ${{ inputs.bundle_source_run_id }}
+      EXPECTED_BUNDLE_SOURCE_SHA256: ${{ inputs.expected_bundle_source_sha256 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Recover the exact reviewed construction contract
@@ -40,6 +49,14 @@ jobs:
           mkdir -p "$AGENTLAB_ROOT/contract"
           [[ "$CONTRACT_RUN_ID" =~ ^[0-9]+$ ]]
           [[ "$EXPECTED_CONSTRUCTION_CONTRACT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          if [[ -n "$BUNDLE_SOURCE_RUN_ID" ]]; then
+            [[ -z "$BUNDLE_ROOT_INPUT" ]]
+            [[ "$BUNDLE_SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+            [[ "$EXPECTED_BUNDLE_SOURCE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          else
+            [[ -n "$BUNDLE_ROOT_INPUT" ]]
+            [[ -z "$EXPECTED_BUNDLE_SOURCE_SHA256" ]]
+          fi
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CONTRACT_RUN_ID" > "$AGENTLAB_ROOT/contract-run.json"
           python3 - <<'PY'
           import json, os
@@ -52,10 +69,39 @@ jobs:
           gh run download "$CONTRACT_RUN_ID" --repo "$GITHUB_REPOSITORY" \
             --name multi-repo-construction-contract-review --dir "$AGENTLAB_ROOT/contract"
           [[ "$(sha256sum "$AGENTLAB_ROOT/contract/construction-contract.json" | cut -d' ' -f1)" == "$EXPECTED_CONSTRUCTION_CONTRACT_SHA256" ]]
+      - name: Recover and verify the portable calibration source
+        if: inputs.bundle_source_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/source"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BUNDLE_SOURCE_RUN_ID" > "$AGENTLAB_ROOT/source-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/source-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-calibration-bundle-source.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$BUNDLE_SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-calibration-bundle-source --dir "$AGENTLAB_ROOT/source"
+          [[ "$(sha256sum "$AGENTLAB_ROOT/source/calibration-bundle-source.json" | cut -d' ' -f1)" == "$EXPECTED_BUNDLE_SOURCE_SHA256" ]]
+          python3 scripts/multi-repo-calibration-bundle.py validate-source-receipt \
+            --receipt "$AGENTLAB_ROOT/source/calibration-bundle-source.json" \
+            --bundle-root "$AGENTLAB_ROOT/source/bundle" \
+            --construction-contract "$AGENTLAB_ROOT/contract/construction-contract.json"
       - name: Propose and stage the exact executable bundle
         run: |
           set -euo pipefail
-          BUNDLE_ROOT="$(python3 - <<'PY'
+          if [[ -n "$BUNDLE_SOURCE_RUN_ID" ]]; then
+            BUNDLE_ROOT="$AGENTLAB_ROOT/source/bundle"
+            DESCRIPTOR="$BUNDLE_ROOT/descriptor.json"
+            cp "$AGENTLAB_ROOT/source/calibration-bundle-source.json" "$AGENTLAB_ROOT/calibration-bundle-source.json"
+            SOURCE_ARGS=(--source-receipt "$AGENTLAB_ROOT/calibration-bundle-source.json")
+          else
+            BUNDLE_ROOT="$(python3 - <<'PY'
           import os, pathlib
           workspace = pathlib.Path(os.environ["GITHUB_WORKSPACE"]).resolve()
           value = os.environ["BUNDLE_ROOT_INPUT"]
@@ -66,18 +112,26 @@ jobs:
           assert target.is_relative_to(workspace) and target.is_dir() and not target.is_symlink()
           print(target)
           PY
-          )"
+            )"
+            DESCRIPTOR="$BUNDLE_ROOT/calibration-bundle.json"
+            SOURCE_ARGS=()
+          fi
           python3 scripts/multi-repo-calibration-bundle.py propose \
             --bundle-root "$BUNDLE_ROOT" \
-            --descriptor "$BUNDLE_ROOT/calibration-bundle.json" \
+            --descriptor "$DESCRIPTOR" \
             --construction-contract "$AGENTLAB_ROOT/contract/construction-contract.json" \
+            "${SOURCE_ARGS[@]}" \
             --output "$AGENTLAB_ROOT/calibration-bundle-proposal.json"
-          python3 scripts/multi-repo-calibration-bundle.py stage \
-            --bundle-root "$BUNDLE_ROOT" \
-            --descriptor "$BUNDLE_ROOT/calibration-bundle.json" \
-            --construction-contract "$AGENTLAB_ROOT/contract/construction-contract.json" \
-            --proposal "$AGENTLAB_ROOT/calibration-bundle-proposal.json" \
-            --output "$AGENTLAB_ROOT/bundle"
+          if [[ -n "$BUNDLE_SOURCE_RUN_ID" ]]; then
+            cp -R "$BUNDLE_ROOT" "$AGENTLAB_ROOT/bundle"
+          else
+            python3 scripts/multi-repo-calibration-bundle.py stage \
+              --bundle-root "$BUNDLE_ROOT" \
+              --descriptor "$DESCRIPTOR" \
+              --construction-contract "$AGENTLAB_ROOT/contract/construction-contract.json" \
+              --proposal "$AGENTLAB_ROOT/calibration-bundle-proposal.json" \
+              --output "$AGENTLAB_ROOT/bundle"
+          fi
           sha256sum "$AGENTLAB_ROOT/calibration-bundle-proposal.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve proposal and exact executable bytes
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

@@ -389,8 +389,19 @@ credential-bearing model-construction workflow revalidates that contract,
 rematerializes the arbitrary exact source set, and exposes only the reviewed
 surface to the construction participant.
 
-Arbitrary-source calibration now has its own boundary. `Multi-repository
-calibration bundle proposal` binds the reviewed construction contract to exact
+Arbitrary-source calibration now has its own boundary. A bundle may remain in
+this repository, or `Multi-repository calibration bundle source` can fetch a
+credential-free public GitHub repository at one exact 40-character commit and
+stage a repository-relative bundle as an independently retained artifact. Its
+portable-source receipt binds the repository, commit, bundle path, reviewed
+construction contract and every staged file byte; symlinks, path escapes,
+mutable refs and credential-bearing URLs fail closed. The downstream proposal
+workflow accepts either this exact receipt/run pair or a local bundle, never
+both, revalidates the complete manifest and carries the source receipt digest
+into the proposal and reviewed contract. The source stage cannot approve or
+promote a case.
+
+`Multi-repository calibration bundle proposal` binds the reviewed construction contract to exact
 driver and Oracle digests, complete reference and alternative-solution tree
 manifests, explicit variant roles, and the expected staged verdicts. At least
 one structurally distinct `alternative-valid` implementation must pass every
@@ -402,13 +413,16 @@ that trusted-main artifact, revalidates every byte, executes it against the
 materialized baseline and retains `agentlab.multi_repo_calibration_bundle_run.v1`.
 The frozen case records the bundle, driver, reference and alternative-tree,
 construction-contract and run digests. Oracle, reference and alternative-valid
-bytes remain evaluator-only. This closes
-the generic protocol. Release CI runs the entire deterministic protocol as one
+bytes remain evaluator-only. This closes the portable public-repository intake
+mechanism while preserving independent calibration and review. Release CI runs
+the entire deterministic protocol as one
 38-phase evidence chain and requires baseline failure, reference success, full
 hidden-dependency coverage and process-aware discrimination score `1.0`. That
-proves cross-phase compatibility, not empirical qualification: a real
-arbitrary-source bundle and representative case population still need human
-review, execution and adjudication.
+proves cross-phase compatibility, not empirical qualification: the portable
+workflow still needs a trusted-main run against a real external bundle, and a
+representative case population still needs human review, execution and
+adjudication. Private calibration repositories remain outside this
+credential-free source lane.
 
 The same alternative-valid rule is now exercised by the retained real Harmony
 UI calibration, not only by the deterministic protocol fixture. Besides the

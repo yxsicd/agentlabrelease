@@ -247,17 +247,23 @@ auditable phases, with analysis as the required predecessor:
 6. One `Multi-repository model construction` run per selected member reproduces
    its arbitrary exact repositories, exposes only the reviewed source surface,
    and produces a review-required case proposal with its exact SHA-256.
-7. `Multi-repository calibration bundle proposal` stages the exact driver,
-   Oracle and reference tree against the reviewed construction contract. A
-   separate `Multi-repository calibration bundle review` binds every byte, all
-   risks and the reviewer rationale.
-8. After inspecting each artifact, an operator dispatches
+7. For a bundle outside this release repository, `Multi-repository calibration
+   bundle source` fetches one credential-free public GitHub repository at an
+   exact commit and retains a manifest-bound portable source artifact. Local
+   fixture bundles may skip this step.
+8. `Multi-repository calibration bundle proposal` accepts exactly one local
+   bundle directory or portable-source run, stages the exact driver, Oracle and
+   solution trees against the reviewed construction contract, and binds any
+   portable source identity into its proposal. A separate `Multi-repository
+   calibration bundle review` binds every byte, all risks and the reviewer
+   rationale.
+9. After inspecting each artifact, an operator dispatches
    `Multi-repository case review and freeze` with the construction and reviewed
    calibration-bundle run IDs, their exact digests, every case-plan risk ID and
    a rationale. The workflow accepts only successful runs from `main`, executes
    the reviewed bundle against the exact baseline, retains its run receipt and
    freezes the reviewed case. It has no Gateway credential.
-9. `Multi-repository assessed-Agent campaign` accepts only a successful freeze
+10. `Multi-repository assessed-Agent campaign` accepts only a successful freeze
    run from `main`, reconstructs the reviewed sources, and executes two distinct
    model profiles for one or three fresh trials each. It retains every staged
    attempt and emits the v2 collection plus discrimination report.
