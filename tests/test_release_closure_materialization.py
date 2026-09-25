@@ -132,6 +132,10 @@ class ReleaseClosureMaterializationTests(unittest.TestCase):
         self.assertIn("AGENTLAB_RELEASE_CLOSURE: ${{ matrix.closure }}", workflow)
         self.assertIn('release_closure="${AGENTLAB_RELEASE_CLOSURE:-}"', smoke)
         self.assertIn("scripts/materialize-release-closure.py", smoke)
+        self.assertIn(
+            '"${parent_project}" "${child_project}" "${lock}"', smoke
+        )
+        self.assertNotIn('root / "downloads/environment-lock.json"', smoke)
 
 
 if __name__ == "__main__":

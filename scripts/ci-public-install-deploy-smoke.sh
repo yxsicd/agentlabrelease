@@ -333,10 +333,11 @@ op harmony.project.patch "${root}/05-patch-child.json" \
 op harmony.project.verify "${root}/06-verify-child.json" \
   "taskId=${child_task}" "projectRoot=${child_project}"
 
-python3 - "${root}" "${summary}" "${parent_project}" "${child_project}" <<'PY'
+python3 - "${root}" "${summary}" "${parent_project}" "${child_project}" "${lock}" <<'PY'
 import json, pathlib, sys
 root, summary_path = map(pathlib.Path, sys.argv[1:3])
 parent_project, child_project = map(pathlib.Path, sys.argv[3:5])
+lock_path = pathlib.Path(sys.argv[5])
 files = [root / f"{index:02d}-{name}.json" for index, name in [
     (1, "prepare"), (2, "create"), (3, "verify-parent"),
     (4, "fork"), (5, "patch-child"), (6, "verify-child"),
@@ -347,7 +348,7 @@ parent = parent_project / "entry/src/main/ets/pages/Index.ets"
 child = child_project / "entry/src/main/ets/pages/Index.ets"
 assert "AgentLab CI Iterated" not in parent.read_text()
 assert "AgentLab CI Iterated" in child.read_text()
-lock = json.loads((root / "downloads/environment-lock.json").read_text())
+lock = json.loads(lock_path.read_text())
 summary = {
     "schema": "agentlab.public_install_deploy_smoke.v1",
     "ok": True,
