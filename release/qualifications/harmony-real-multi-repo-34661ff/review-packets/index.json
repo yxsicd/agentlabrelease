@@ -3,7 +3,7 @@
   "currentMethodProposalSha256": "d151b6ed91f8dfb6650e36d49546b70ebfa44641bc34fccba16369067c4ea93e",
   "packetMethodRevisions": [
     "5d730d1fbc7a6fa6eaee58fc4f7d580bb7a39469",
-    "d7417b24564d3d8a32930e64ea10d960e425a5f0"
+    "c3b4a662cdeefcaf9be811994236e55c770ce9fd"
   ],
   "supplementalContextMethods": [
     {
@@ -27,7 +27,7 @@
     {
       "candidateId": "difficulty-edcc0a335e8d61a4150431a0",
       "path": "image-create-image-packer.json",
-      "sha256": "120bf37305983bdb393c4f694571ca2499d67c6eda0141efc49940ee9f3043c3",
+      "sha256": "9edbcb4b70d4c488f772f79b3046e642b4d45ff71424d31b9c76b38d313b6cb8",
       "status": "independent-semantic-review-required"
     }
   ],

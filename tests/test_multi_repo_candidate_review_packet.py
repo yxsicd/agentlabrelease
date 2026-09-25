@@ -422,7 +422,7 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
         self.assertEqual(index["schema"], "agentlab.multi_repo_candidate_review_packet_index.v2")
         self.assertEqual(index["packetMethodRevisions"], [
             "5d730d1fbc7a6fa6eaee58fc4f7d580bb7a39469",
-            "d7417b24564d3d8a32930e64ea10d960e425a5f0",
+            "c3b4a662cdeefcaf9be811994236e55c770ce9fd",
         ])
         self.assertEqual(index["supplementalContextMethods"], [{
             "methodRevision": "f13c0439f5762a09ee32f4a2d02b6f074838187a",

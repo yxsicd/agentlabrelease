@@ -385,11 +385,12 @@ for 12 call sites across seven files. It also resolves all 12 selected call
 results to their lexical handles (10 binding initializers and two assignments),
 then separates exact same-handle calls from lookalike names. Six handles show a
 direct `release` spelling and six do not, but that syntactic split is a review
-hypothesis, not a defect label. The v3 supplemental control facts refine the six
-releases into three lexical `finally` sites, one Promise `.finally` callback and
-two conditional callback sites without a cleanup-region ancestor. This is closer
-to SWE-style issue localization, while aliases, escapes, reachability, dominance,
-exception safety and runtime release remain unresolved. The packets require an independent answer on shared
+hypothesis, not a defect label. The v4 packet pairs those releases to their
+factory sites: two are matching `try/finally` shapes, one factory precedes a
+later `try/finally`, one uses a Promise `.finally` callback, and two are
+same-`try` calls that are not finalizers. This is closer to SWE-style issue
+localization, while aliases, escapes, reachability, dominance, exception safety
+and runtime release remain unresolved. The packets require an independent answer on shared
 behavior, observable failure, prompt completeness, repair/preservation Oracles,
 environment reproducibility and genuine cross-repository necessity. They are
 review aids, not approved cases.

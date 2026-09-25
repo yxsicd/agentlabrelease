@@ -5,6 +5,341 @@
     "specifier": "@kit.ImageKit"
   },
   "automaticPromotion": false,
+  "callCleanupPairingCoverage": {
+    "directReleaseCount": 6,
+    "handleStatusCounts": {
+      "later-try-finally": 1,
+      "matching-try-finally": 2,
+      "no-direct-release": 6,
+      "promise-finally-callback": 1,
+      "same-try-non-finalizer": 2
+    },
+    "interpretation": "Exact same-handle factory and release spellings are paired by byte order and shared ancestor spans. A matching try/finally or Promise.finally shape is lexical evidence only; it does not prove alias completeness, reachability, dominance, post-dominance, exception safety or runtime execution.",
+    "releaseRelationCounts": {
+      "later-try-finally": 1,
+      "matching-try-finally": 2,
+      "promise-finally-callback": 1,
+      "same-try-non-finalizer": 2
+    },
+    "selectedCallCount": 12
+  },
+  "callCleanupPairingEvidence": [
+    {
+      "handleExpression": "packer",
+      "owner": "ImagePreview::savePixelMapToSandBoxFile",
+      "path": "features/devpractices/src/main/ets/view/ImagePreview.ets",
+      "releasePairings": [
+        {
+          "interveningReassignmentFactIds": [],
+          "lexicallyAfterFactory": true,
+          "matchingTrySpans": [
+            {
+              "endByte": 6696,
+              "endColumnByte": 5,
+              "endLine": 162,
+              "startByte": 5871,
+              "startColumnByte": 4,
+              "startLine": 142
+            }
+          ],
+          "promiseFinallyEnclosingCalls": [],
+          "relation": "matching-try-finally",
+          "releaseFactId": "workspace-fact-6578e219b62cf62fd0975549",
+          "releaseFinallyClauseSpans": [
+            {
+              "endByte": 6696,
+              "endColumnByte": 5,
+              "endLine": 162,
+              "startByte": 6533,
+              "startColumnByte": 6,
+              "startLine": 155
+            }
+          ],
+          "releaseSpan": {
+            "endByte": 6681,
+            "endColumnByte": 24,
+            "endLine": 160,
+            "startByte": 6665,
+            "startColumnByte": 8,
+            "startLine": 160
+          },
+          "sameCallbackRegionSpans": []
+        }
+      ],
+      "repositoryId": "code-workshop",
+      "selectedCallFactId": "workspace-fact-584b2987f48e6eb1e4f1efc3",
+      "status": "matching-try-finally"
+    },
+    {
+      "handleExpression": "imagePackerApi",
+      "owner": "SnapshotPreview::saveSnapshot",
+      "path": "ArkUISample/ComponentSnapshot/entry/src/main/ets/view/SnapshotPreview.ets",
+      "releasePairings": [],
+      "repositoryId": "guide-snippets",
+      "selectedCallFactId": "workspace-fact-4e64afee9f4aaa70879febe1",
+      "status": "no-direct-release"
+    },
+    {
+      "handleExpression": "imagePacker",
+      "owner": "EditPage::build",
+      "path": "Media/Camera/MoreResolution/entry/src/main/ets/pages/EditPage.ets",
+      "releasePairings": [
+        {
+          "interveningReassignmentFactIds": [],
+          "lexicallyAfterFactory": true,
+          "matchingTrySpans": [
+            {
+              "endByte": 9091,
+              "endColumnByte": 15,
+              "endLine": 220,
+              "startByte": 7729,
+              "startColumnByte": 14,
+              "startLine": 190
+            }
+          ],
+          "promiseFinallyEnclosingCalls": [],
+          "relation": "same-try-non-finalizer",
+          "releaseFactId": "workspace-fact-88b354a2f32aadb6ae21ff1f",
+          "releaseFinallyClauseSpans": [],
+          "releaseSpan": {
+            "endByte": 8681,
+            "endColumnByte": 37,
+            "endLine": 208,
+            "startByte": 8660,
+            "startColumnByte": 16,
+            "startLine": 208
+          },
+          "sameCallbackRegionSpans": [
+            {
+              "endByte": 9117,
+              "endColumnByte": 11,
+              "endLine": 222,
+              "startByte": 7411,
+              "startColumnByte": 31,
+              "startLine": 185
+            }
+          ]
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "selectedCallFactId": "workspace-fact-944a4401bcce77221f093821",
+      "status": "same-try-non-finalizer"
+    },
+    {
+      "handleExpression": "imagePacker",
+      "owner": "EditPage::build",
+      "path": "Media/Camera/preconfig/entry/src/main/ets/pages/EditPage.ets",
+      "releasePairings": [
+        {
+          "interveningReassignmentFactIds": [],
+          "lexicallyAfterFactory": true,
+          "matchingTrySpans": [
+            {
+              "endByte": 9918,
+              "endColumnByte": 15,
+              "endLine": 241,
+              "startByte": 8101,
+              "startColumnByte": 14,
+              "startLine": 201
+            }
+          ],
+          "promiseFinallyEnclosingCalls": [],
+          "relation": "same-try-non-finalizer",
+          "releaseFactId": "workspace-fact-6d6d6a698c2ca5c1c305961e",
+          "releaseFinallyClauseSpans": [],
+          "releaseSpan": {
+            "endByte": 9410,
+            "endColumnByte": 37,
+            "endLine": 227,
+            "startByte": 9389,
+            "startColumnByte": 16,
+            "startLine": 227
+          },
+          "sameCallbackRegionSpans": [
+            {
+              "endByte": 9944,
+              "endColumnByte": 11,
+              "endLine": 243,
+              "startByte": 7783,
+              "startColumnByte": 31,
+              "startLine": 196
+            }
+          ]
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "selectedCallFactId": "workspace-fact-794e3dbc155554e2848f166f",
+      "status": "same-try-non-finalizer"
+    },
+    {
+      "handleExpression": "imagePackerApi",
+      "owner": "packToDataFromImageSource",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "releasePairings": [],
+      "repositoryId": "guide-snippets",
+      "selectedCallFactId": "workspace-fact-aedc9ade9862405f332cb8dc",
+      "status": "no-direct-release"
+    },
+    {
+      "handleExpression": "imagePackerApi",
+      "owner": "packToDataFromPixelMap",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "releasePairings": [],
+      "repositoryId": "guide-snippets",
+      "selectedCallFactId": "workspace-fact-ff0834680b1812f09b07fdd4",
+      "status": "no-direct-release"
+    },
+    {
+      "handleExpression": "imagePackerApi",
+      "owner": "packToFile",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "releasePairings": [
+        {
+          "interveningReassignmentFactIds": [],
+          "lexicallyAfterFactory": true,
+          "matchingTrySpans": [
+            {
+              "endByte": 8771,
+              "endColumnByte": 3,
+              "endLine": 221,
+              "startByte": 8248,
+              "startColumnByte": 2,
+              "startLine": 207
+            }
+          ],
+          "promiseFinallyEnclosingCalls": [],
+          "relation": "matching-try-finally",
+          "releaseFactId": "workspace-fact-4ce215435a1fe60189c12427",
+          "releaseFinallyClauseSpans": [
+            {
+              "endByte": 8771,
+              "endColumnByte": 3,
+              "endLine": 221,
+              "startByte": 8626,
+              "startColumnByte": 4,
+              "startLine": 214
+            }
+          ],
+          "releaseSpan": {
+            "endByte": 8758,
+            "endColumnByte": 36,
+            "endLine": 219,
+            "startByte": 8734,
+            "startColumnByte": 12,
+            "startLine": 219
+          },
+          "sameCallbackRegionSpans": []
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "selectedCallFactId": "workspace-fact-4812dfe091aa6753446be284",
+      "status": "matching-try-finally"
+    },
+    {
+      "handleExpression": "imagePackerApi",
+      "owner": "packToFileFromImageSource",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "releasePairings": [],
+      "repositoryId": "guide-snippets",
+      "selectedCallFactId": "workspace-fact-af61a9b7235dc27b157d564a",
+      "status": "no-direct-release"
+    },
+    {
+      "handleExpression": "imagePackerApi",
+      "owner": "packToFileFromPixelMap",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "releasePairings": [],
+      "repositoryId": "guide-snippets",
+      "selectedCallFactId": "workspace-fact-9edd5bd98f4f4134bad6435b",
+      "status": "no-direct-release"
+    },
+    {
+      "handleExpression": "imagePackerApi",
+      "owner": "packing",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/CodecUtility.ets",
+      "releasePairings": [
+        {
+          "interveningReassignmentFactIds": [],
+          "lexicallyAfterFactory": true,
+          "matchingTrySpans": [],
+          "promiseFinallyEnclosingCalls": [],
+          "relation": "later-try-finally",
+          "releaseFactId": "workspace-fact-d81f2624d2d36ee08cc30d90",
+          "releaseFinallyClauseSpans": [
+            {
+              "endByte": 7964,
+              "endColumnByte": 3,
+              "endLine": 199,
+              "startByte": 7913,
+              "startColumnByte": 4,
+              "startLine": 197
+            }
+          ],
+          "releaseSpan": {
+            "endByte": 7958,
+            "endColumnByte": 34,
+            "endLine": 198,
+            "startByte": 7934,
+            "startColumnByte": 10,
+            "startLine": 198
+          },
+          "sameCallbackRegionSpans": []
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "selectedCallFactId": "workspace-fact-21f9d8b617cd4c87e74484e4",
+      "status": "later-try-finally"
+    },
+    {
+      "handleExpression": "imagePackerApi",
+      "owner": "reEncoding",
+      "path": "Media/Image/ImageArkTSSample/entry/src/main/ets/tools/TranscodingUtility.ets",
+      "releasePairings": [
+        {
+          "interveningReassignmentFactIds": [],
+          "lexicallyAfterFactory": true,
+          "matchingTrySpans": [],
+          "promiseFinallyEnclosingCalls": [
+            {
+              "span": {
+                "endByte": 2456,
+                "endColumnByte": 6,
+                "endLine": 47,
+                "startByte": 1902,
+                "startColumnByte": 4,
+                "startLine": 37
+              },
+              "targetExpression": "imagePackerApi.packToFile(imageSource, file.fd, packOpts).then(() => {\r\n      promptAction.showToast({ message: `Succeed to pack the image.`});\r\n      console.info('Succeed to pack the image.');\r\n    }).catch((error : BusinessError) => {\n      promptAction.showToast({ message: 'Failed to pack the image. And the error is: ' + error});\n      console.error('Failed to pack the image. And the error is: ' + error);\n    }).finally"
+            }
+          ],
+          "relation": "promise-finally-callback",
+          "releaseFactId": "workspace-fact-602903e15cd11ce12a7f798d",
+          "releaseFinallyClauseSpans": [],
+          "releaseSpan": {
+            "endByte": 2448,
+            "endColumnByte": 36,
+            "endLine": 46,
+            "startByte": 2424,
+            "startColumnByte": 12,
+            "startLine": 46
+          },
+          "sameCallbackRegionSpans": []
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "selectedCallFactId": "workspace-fact-d6d31ca0879d96959ba382cd",
+      "status": "promise-finally-callback"
+    },
+    {
+      "handleExpression": "imagePackerObj",
+      "owner": "EntryAbility::onCreate",
+      "path": "PerformanceAnalysisKit/PerformanceAnalysisTool/entry/src/main/ets/entryability/EntryAbility.ets",
+      "releasePairings": [],
+      "repositoryId": "guide-snippets",
+      "selectedCallFactId": "workspace-fact-200701b34271008efe8bee3b",
+      "status": "no-direct-release"
+    }
+  ],
   "callControlContextCoverage": {
     "awaitedCallCount": 0,
     "callbackNestedCallCount": 2,
@@ -14905,7 +15240,7 @@
     "ownerCount": 12,
     "unresolvedOwnerCount": 0
   },
-  "packetMethodRevision": "d7417b24564d3d8a32930e64ea10d960e425a5f0",
+  "packetMethodRevision": "c3b4a662cdeefcaf9be811994236e55c770ce9fd",
   "requiredCalibration": {
     "alternativeValid": "constructor-distinct repair passes the same checks",
     "baseline": "expected issue behavior fails while infrastructure remains available",
@@ -14985,7 +15320,7 @@
       "statement": "No baseline/reference/alternative/wrong calibration has executed for this candidate."
     }
   ],
-  "schema": "agentlab.multi_repo_candidate_review_packet.v3",
+  "schema": "agentlab.multi_repo_candidate_review_packet.v4",
   "selectionRoles": [
     "median-api-call-file-count"
   ],
@@ -15009,7 +15344,8 @@
       "exact base source set",
       "source-localized call evidence",
       "owner-scoped call-neighborhood evidence",
-      "syntactic async and control-region evidence"
+      "syntactic async and control-region evidence",
+      "same-handle syntactic cleanup-pairing evidence"
     ]
   }
 }
