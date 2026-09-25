@@ -107,6 +107,61 @@ def scorer_module():
     return module
 
 
+def capability_resolution(
+    profiles: list[dict[str, Any]],
+    rate_field: str,
+    interval_field: str,
+) -> dict[str, Any]:
+    pairs = []
+    for lower, higher in zip(profiles, profiles[1:]):
+        gap = higher[rate_field] - lower[rate_field]
+        separated = (
+            higher[interval_field]["lower"]
+            > lower[interval_field]["upper"]
+        )
+        pairs.append(
+            {
+                "lowerParticipantId": lower["participantId"],
+                "higherParticipantId": higher["participantId"],
+                "lowerPassRate": lower[rate_field],
+                "higherPassRate": higher[rate_field],
+                "passRateGap": gap,
+                "strictlyOrdered": gap > 0.0,
+                "wilson95Separated": separated,
+            }
+        )
+    enough_tiers = len(profiles) >= 3
+    nondecreasing = all(row["passRateGap"] >= 0.0 for row in pairs)
+    strictly_increasing = all(row["strictlyOrdered"] for row in pairs)
+    all_separated = all(row["wilson95Separated"] for row in pairs)
+    qualified = enough_tiers and strictly_increasing and all_separated
+    if not enough_tiers:
+        status = "insufficient-participant-tiers"
+    elif not nondecreasing:
+        status = "capability-order-violation"
+    elif not strictly_increasing:
+        status = "adjacent-tiers-not-distinct"
+    elif not all_separated:
+        status = "collect-more-adjacent-trials"
+    else:
+        status = "qualified"
+    return {
+        "status": status,
+        "participantTierCount": len(profiles),
+        "adjacentPairCount": len(pairs),
+        "minimumAdjacentPassRateGap": min(
+            (row["passRateGap"] for row in pairs),
+            default=None,
+        ),
+        "expectedCapabilityOrderQualified": nondecreasing,
+        "strictlyIncreasing": strictly_increasing,
+        "allAdjacentWilson95Separated": all_separated,
+        "qualified": qualified,
+        "adjacentPairs": pairs,
+        "authority": "predeclared-weakest-to-strongest-order-with-adjacent-wilson-intervals",
+    }
+
+
 def validate_population(path: Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     value = load_object(path, "blind review population report")
     population_schema = value.get("schema")
@@ -603,8 +658,14 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
                 f"{case_id} static campaign provenance differs",
             )
         profiles = {profile["participantId"]: profile for profile in row["participantProfiles"]}
-        rates = [profiles[participant]["passRate"] for participant in participant_order]
+        ordered_profiles = [profiles[participant] for participant in participant_order]
+        rates = [profile["passRate"] for profile in ordered_profiles]
         expected_order = all(lower <= upper for lower, upper in zip(rates, rates[1:]))
+        resolution = capability_resolution(
+            ordered_profiles,
+            "passRate",
+            "passRateWilson95",
+        )
         weakest = profiles[participant_order[0]]
         strongest = profiles[participant_order[-1]]
         interval_separated = (
@@ -675,8 +736,10 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
                 "expectedCapabilityOrderQualified": expected_order,
                 "strongestMinusWeakestPassRate": strongest["passRate"] - weakest["passRate"],
                 "strongestWeakestWilson95Separated": interval_separated,
+                "capabilityResolution": resolution,
                 "scorecardQualified": qualified,
-                "participantProfiles": [profiles[participant] for participant in participant_order],
+                "capabilityResolutionQualified": qualified and resolution["qualified"],
+                "participantProfiles": ordered_profiles,
                 "reviewEvidence": {
                     "populationReportSha256": digest(population_path),
                     "adjudicationSha256": population_row["bundleEvidence"]["adjudication"]["sha256"],
@@ -712,8 +775,21 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
                 "microPassRateWilson95": scorer.wilson_interval(passed, valid),
             }
         )
+    aggregate_resolution = capability_resolution(
+        aggregate_profiles,
+        "microPassRate",
+        "microPassRateWilson95",
+    )
     case_count = len(case_rows)
     measurement_qualified = qualified_count == case_count
+    capability_resolution_qualified_count = sum(
+        row["capabilityResolutionQualified"] for row in case_rows
+    )
+    capability_resolution_measurement_qualified = (
+        measurement_qualified
+        and capability_resolution_qualified_count == case_count
+        and aggregate_resolution["qualified"]
+    )
     self_assessment_measurement_qualified = all(
         row["participantSelfAssessmentCoverageQualified"] for row in case_rows
     )
@@ -758,6 +834,9 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
         "denominators": {
             "caseCount": case_count,
             "qualifiedCaseCount": qualified_count,
+            "participantTierCount": len(participant_order),
+            "adjacentCapabilityPairCount": len(participant_order) - 1,
+            "capabilityResolutionQualifiedCaseCount": capability_resolution_qualified_count,
             "validAttemptCount": sum(row["validTrials"] for row in aggregate_profiles),
             **(
                 {
@@ -772,9 +851,16 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
             "successEvent": "independent taskPassed verdict from an infrastructure-valid attempt",
         },
         "aggregateParticipantProfiles": aggregate_profiles,
+        "aggregateCapabilityResolution": aggregate_resolution,
         "cases": case_rows,
         "qualification": {
             "suiteMeasurementQualified": measurement_qualified,
+            "capabilityResolutionMeasurementQualified": capability_resolution_measurement_qualified,
+            "capabilityResolutionQualifiedCaseRate": capability_resolution_qualified_count / case_count,
+            "capabilityResolutionQualifiedCaseRateWilson95": scorer.wilson_interval(
+                capability_resolution_qualified_count,
+                case_count,
+            ),
             "participantSelfAssessmentMeasurementQualified": self_assessment_measurement_qualified,
             "dependencyDiscoveryMeasurementQualified": dependency_discovery_measurement_qualified,
             "dependencyDiscoveryCoverageQualified": dependency_discovery_coverage_qualified,
@@ -788,7 +874,7 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
         },
         "policy": {
             "automaticPromotion": False,
-            "nextAction": "independent-sampling-frame-review-and-new-held-out-suite-run",
+            "nextAction": "independent-sampling-frame-review-and-held-out-three-tier-suite-run",
         },
     }
 

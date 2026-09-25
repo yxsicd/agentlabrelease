@@ -217,6 +217,7 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         process_evidence: bool = True,
         self_assessment: bool = False,
         dependency_discovery: bool = False,
+        tier_outcomes: dict[str, list[bool]] | None = None,
     ) -> Path:
         calibration = {
             "infrastructureValid": True,
@@ -234,11 +235,13 @@ class AgentSuiteScorecardTests(unittest.TestCase):
             ],
         }
         attempts = []
-        for participant, passed in (
-            ("weak", True if reverse else False),
-            ("strong", False if reverse else True),
-        ):
-            for trial in range(5):
+        if tier_outcomes is None:
+            tier_outcomes = {
+                "weak": [True if reverse else False] * 5,
+                "strong": [False if reverse else True] * 5,
+            }
+        for participant, outcomes in tier_outcomes.items():
+            for trial, passed in enumerate(outcomes):
                 attempt = {
                     "attemptId": f"{case_id}-{participant}-{trial}",
                     "participantId": participant,
@@ -322,6 +325,15 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         self.assertTrue(
             all(row["harmonyEndToEndEvidenceQualified"] for row in value["cases"])
         )
+        self.assertFalse(
+            value["qualification"]["capabilityResolutionMeasurementQualified"]
+        )
+        self.assertEqual(value["denominators"]["participantTierCount"], 2)
+        self.assertTrue(all(
+            row["capabilityResolution"]["status"]
+            == "insufficient-participant-tiers"
+            for row in value["cases"]
+        ))
         self.assertTrue(
             all(
                 not row["participantSelfAssessmentCoverageQualified"]
@@ -331,6 +343,78 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         weak, strong = value["aggregateParticipantProfiles"]
         self.assertEqual(weak["microPassRate"], 0.0)
         self.assertEqual(strong["microPassRate"], 1.0)
+
+    def test_three_predeclared_tiers_require_every_adjacent_pair_to_separate(self) -> None:
+        tiers = {
+            "weak": [False] * 20,
+            "middle": [False] * 10 + [True] * 10,
+            "strong": [True] * 20,
+        }
+        for index, case_id in enumerate(self.source_sets, 1):
+            self.reports[case_id] = self.write_discrimination(
+                case_id,
+                index,
+                tier_outcomes=tiers,
+            )
+            self.write_attestation(
+                self.report_attestations[case_id], self.reports[case_id], 2000 + index
+            )
+        self.write_manifest()
+        manifest = json.loads(self.manifest.read_text())
+        manifest["participantOrder"] = ["weak", "middle", "strong"]
+        self.manifest.write_text(json.dumps(manifest, indent=2))
+        value = SUITE.build_scorecard(self.manifest)
+        self.assertTrue(
+            value["qualification"]["capabilityResolutionMeasurementQualified"]
+        )
+        self.assertEqual(
+            value["denominators"]["capabilityResolutionQualifiedCaseCount"],
+            2,
+        )
+        self.assertTrue(value["aggregateCapabilityResolution"]["qualified"])
+        for row in value["cases"]:
+            resolution = row["capabilityResolution"]
+            self.assertEqual(resolution["status"], "qualified")
+            self.assertTrue(row["capabilityResolutionQualified"])
+            self.assertEqual(resolution["adjacentPairCount"], 2)
+            self.assertTrue(resolution["allAdjacentWilson95Separated"])
+            self.assertEqual(resolution["minimumAdjacentPassRateGap"], 0.5)
+
+    def test_extreme_separation_does_not_hide_an_overlapping_middle_tier(self) -> None:
+        tiers = {
+            "weak": [False] * 20,
+            "middle": [False] * 20,
+            "strong": [True] * 20,
+        }
+        for index, case_id in enumerate(self.source_sets, 1):
+            self.reports[case_id] = self.write_discrimination(
+                case_id,
+                index,
+                tier_outcomes=tiers,
+            )
+            self.write_attestation(
+                self.report_attestations[case_id], self.reports[case_id], 2000 + index
+            )
+        self.write_manifest()
+        manifest = json.loads(self.manifest.read_text())
+        manifest["participantOrder"] = ["weak", "middle", "strong"]
+        self.manifest.write_text(json.dumps(manifest, indent=2))
+        value = SUITE.build_scorecard(self.manifest)
+        self.assertTrue(value["qualification"]["suiteMeasurementQualified"])
+        self.assertFalse(
+            value["qualification"]["capabilityResolutionMeasurementQualified"]
+        )
+        self.assertEqual(
+            value["denominators"]["capabilityResolutionQualifiedCaseCount"],
+            0,
+        )
+        for row in value["cases"]:
+            self.assertTrue(row["strongestWeakestWilson95Separated"])
+            self.assertFalse(row["capabilityResolutionQualified"])
+            self.assertEqual(
+                row["capabilityResolution"]["status"],
+                "adjacent-tiers-not-distinct",
+            )
 
     def test_review_failure_keeps_suite_measurement_unqualified(self) -> None:
         self.write_population(unqualified="case-b")

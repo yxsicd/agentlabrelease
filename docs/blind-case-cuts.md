@@ -231,9 +231,16 @@ revision, attempt and successful conclusion before accepting the artifact. The
 scorecard requires exact case/source-set membership, a participant capability
 order declared before composition, complete operator-owned process measurement,
 the existing discrimination gate and non-overlapping strongest/weakest 95%
-Wilson intervals. It signs the exact output and retains the source-run metadata.
-Even a fully measured suite keeps benchmark-population qualification false until
-the sampling frame and model-exposure boundary receive independent evidence.
+Wilson intervals. Strongest/weakest separation remains the backward-compatible
+base gate; it is not evidence that the suite resolves intermediate capability
+levels. The scorecard therefore also reports every adjacent pair in the
+predeclared weakest-to-strongest order, including pass-rate gap and Wilson
+separation. The separate capability-resolution qualification requires at least
+three participant tiers and every adjacent pair to be strictly ordered with
+non-overlapping intervals. It signs the exact output and retains the source-run
+metadata. Even a fully measured suite keeps benchmark-population qualification
+false until the sampling frame and model-exposure boundary receive independent
+evidence.
 
 ## Evidence boundary
 

@@ -173,6 +173,11 @@ blind-review population reporter recovers the attested evaluator case, rejects
 candidate substitution or duplicate use, and carries all selected but
 unadjudicated candidate IDs into the case-yield denominator. The v2 Agent suite
 scorecard preserves that denominator alongside model discrimination evidence.
+It now distinguishes extreme weak/strong separation from full capability
+resolution: the latter requires a predeclared weak/middle/strong-or-richer
+ordering and separately separated Wilson intervals for every adjacent tier.
+Two extreme profiles may still qualify the historical base measurement, but
+can no longer be reported as resolving the intermediate capability frontier.
 
 Candidate adjudication yield is not case qualification yield. Every newly
 generated analyzer-backed case now carries an `agentlab.case_source.v1` record

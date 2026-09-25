@@ -520,9 +520,12 @@ waiting for an invalid task to fail during Agent evaluation.
    review before running repeated strong/weak/middle participant trials.
    Report confidence intervals, exclusions and infrastructure failures.
 7. Exercise the implemented suite scorecard on real reviewed static-plus-Harmony
-   campaigns, extend the process contract beyond the assessed emulator adapter,
-   and add dependency-discovery plus subjective/objective consistency without
-   replacing raw trajectories or independently executable verdict evidence.
+   campaigns using predeclared weak/middle/strong tiers. Require every adjacent
+   tier's Wilson intervals to separate before claiming capability resolution;
+   extreme-only separation remains a weaker base measurement. Extend the
+   process contract beyond the assessed emulator adapter, and add dependency-
+   discovery plus subjective/objective consistency without replacing raw
+   trajectories or independently executable verdict evidence.
 
 The suite scorer now fails closed on that first distinction: static-only
 discrimination evidence cannot qualify as a Harmony end-to-end result. It
