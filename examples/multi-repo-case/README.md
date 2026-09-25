@@ -164,10 +164,14 @@ python3 scripts/score-multi-repo-intent.py \
 
 This lexical gate is intentionally narrow: it can reject generic, duplicated or
 leaking demands, but cannot prove semantic correctness or Agent discrimination.
-Before model construction, dispatch `Multi-repository candidate cohort
-proposal`. It analyzes the exact source set, records every eligible and excluded
-candidate, and reports relation/depth/repository-count strata without claiming
-representativeness. A separate `Multi-repository candidate cohort review` run
+Before model construction, first dispatch `Multi-repository exact analysis`
+with an `agentlab.multi_repo_source_spec.v1` value containing exact public Git
+repositories and commits. Inspect its `analysis-run.json` digest, then dispatch
+`Multi-repository candidate cohort proposal` with that analysis run ID and
+digest. The proposal workflow downloads and revalidates the exact evidence,
+records every eligible and excluded candidate, and reports
+relation/depth/repository-count strata without claiming representativeness. A
+separate `Multi-repository candidate cohort review` run
 binds an operator's exact digest, rationale, risk acknowledgements and at least
 two predeclared candidate IDs. Each later `Multi-repository model construction`
 run accepts one member of that frozen cohort, reproduces the difficulty bytes,
@@ -179,24 +183,32 @@ calibration driver and Oracle from that same revision, outside participant
 input. Credential-bearing construction is manual and is rejected unless its ref
 is exactly `refs/heads/main`; proposal and review have no Gateway credential.
 
-The trusted-main campaign is deliberately split into five independently
-auditable manual runs:
+The trusted-main campaign is deliberately split into six independently
+auditable phases, with analysis as the required predecessor:
 
-1. `Multi-repository candidate cohort proposal` freezes the exact eligible
+1. `Multi-repository exact analysis` freezes and verifies the arbitrary public
+   source set and native program-analysis evidence.
+2. `Multi-repository candidate cohort proposal` freezes the exact eligible
    denominator, exclusions and strata.
-2. `Multi-repository candidate cohort review` predeclares at least two members
+3. `Multi-repository candidate cohort review` predeclares at least two members
    for independent construction; it never declares the sample representative.
-3. One `Multi-repository model construction` run per selected member produces a
+4. One `Multi-repository model construction` run per selected member produces a
    review-required case proposal and prints its exact SHA-256.
-4. After inspecting each artifact, an operator dispatches
+5. After inspecting each artifact, an operator dispatches
    `Multi-repository case review and freeze` with the source run ID, exact
    proposal digest, every risk ID and a rationale. The workflow accepts only a
    successful construction run from `main`, reruns the retained calibration,
    and freezes the reviewed case. It has no Gateway credential.
-5. `Multi-repository assessed-Agent campaign` accepts only a successful freeze
+6. `Multi-repository assessed-Agent campaign` accepts only a successful freeze
    run from `main`, reconstructs the reviewed sources, and executes two distinct
    model profiles for one or three fresh trials each. It retains every staged
    attempt and emits the v2 collection plus discrimination report.
+
+The exact-analysis and cohort phases are generic. The checked model-construction
+workflow after them is not yet generic: it still reconstructs this fixture and
+uses its reference implementation, calibration driver and Oracle. A real
+arbitrary-source candidate therefore stops after reviewed cohort selection until
+those construction inputs have their own independently reviewed contract.
 
 Freezing and scoring never auto-promote a case. A score is campaign evidence,
 not a publication decision. The campaign uses the Oracle retained by the

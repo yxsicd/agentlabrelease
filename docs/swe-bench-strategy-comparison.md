@@ -109,7 +109,12 @@ smaller than SWE-bench's:
    12,711 analyzed files and 881,650 text lines across two repositories yielded
    404,308 facts and 22 shared external-contract clusters. This clears the
    source-volume and raw-candidate discovery threshold, but none of those
-   clusters is yet an independently qualified scenario.
+   clusters is yet an independently qualified scenario. A new trusted-main
+   exact-analysis workflow accepts arbitrary public HTTPS repositories at exact
+   commits, retains a digest-bound native analysis run, and makes a separately
+   verified run the only input to cohort proposal. The mechanism is tested but
+   has not yet run on trusted `main`; the historical GitCode requalification is
+   also subject to upstream transfer reliability.
 2. One real Linux Harmony assessed campaign proves the static-to-device path
    and separates a strong and weak participant, but does not establish
    population-level discrimination, variance or repeatability across devices.
@@ -134,7 +139,10 @@ smaller than SWE-bench's:
    reject post-hoc candidate substitution, and retain unadjudicated selections
    in the case-yield denominator. The mechanism has not yet been exercised over
    the 22 real-source clusters, so real selected-to-qualified yield remains
-   unmeasured.
+   unmeasured. Generic construction is also still open: the current construction
+   workflow reconstructs the deterministic fixture and its fixture-specific
+   reference and Oracle, so arbitrary-source analysis and cohort admission do
+   not yet imply arbitrary-source case qualification.
 4. The independent Oracle is digest-bound. One real Harmony UI candidate now
    has a controlled `FAIL_TO_PASS` replay: the frozen baseline stays on
    `pages/Index`, while a one-line page-registration variant reaches

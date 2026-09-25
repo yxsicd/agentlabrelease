@@ -13,6 +13,24 @@ the declared revisions are authority.
 
 ## Input contract
 
+For a trusted-main run, the portable input is
+`agentlab.multi_repo_source_spec.v1`: two to sixteen credential-free public
+HTTPS repositories, exact 40-character commits, optional module bindings and
+`automaticPromotion: false`. The `Multi-repository exact analysis` workflow
+materializes those commits with Git's non-file/non-SSH protocol restrictions,
+bounded retries and a one-MiB blob partial-clone filter. It does not accept a
+branch, tag, local path, embedded credential, query string or private IP
+literal.
+
+The workflow converts that portable specification into the analyzer manifest
+below. Local absolute roots are transport fields only. It retains the source
+specification, manifest, complete native evidence and an
+`agentlab.multi_repo_analysis_run.v1` receipt that binds their SHA-256 digests,
+the source-set identity, counts and exact AgentLab method revision. A later
+candidate-cohort workflow accepts only a successful trusted-main analysis run
+ID plus the expected analysis-run digest, then revalidates the downloaded
+evidence before sampling.
+
 ```json
 {
   "schema": "agentlab.multi_repo_manifest.v1",
@@ -106,14 +124,17 @@ Candidate discovery is not case qualification, and choosing one promising row
 after seeing participant outcomes would bias the benchmark. The trusted-main
 cohort workflow therefore freezes the sampling decision first:
 
-1. `propose-multi-repo-candidate-cohort.py` binds the exact difficulty bytes,
+1. `multi-repo-analysis-run.py` first verifies the portable source
+   specification, runner-local manifest and every native analyzer evidence
+   digest from a separately retained exact-analysis run.
+2. `propose-multi-repo-candidate-cohort.py` binds the exact difficulty bytes,
    source-set digest and method revision; retains the eligible denominator and
    every exclusion; and reports relation, repository-count and recursive-depth
    strata.
-2. `review-multi-repo-candidate-cohort.py decide` requires the exact proposal
+3. `review-multi-repo-candidate-cohort.py decide` requires the exact proposal
    digest, at least two eligible IDs, all risk acknowledgements and a reviewer
    rationale. `compile` creates an immutable, non-representative cohort.
-3. `select-multi-repo-cohort-candidate.py` permits construction of one reviewed
+4. `select-multi-repo-cohort-candidate.py` permits construction of one reviewed
    member only when the cohort digest and reproduced difficulty bytes match.
 
 The proposal and review workflows carry no model Gateway credential. Model
@@ -137,6 +158,15 @@ The first real two-repository source qualification is retained at
 clusters, two audited non-UTF-8 exclusions and the exact evidence digests. Its
 status is `analysis-qualified-case-review-required`: the clusters are discovery
 evidence, not evaluation cases.
+
+That retained qualification predates the generic trusted-main analysis-run
+workflow. The workflow now makes an arbitrary exact source set admissible to
+cohort proposal, but it has not yet reproduced this historical GitCode source
+set on trusted `main`. More importantly, downstream model construction still
+uses the checked deterministic fixture and its fixture-specific Oracle and
+reference implementation. Generic source admission therefore closes the
+analysis-to-sampling boundary, not arbitrary-source case construction or
+qualification.
 
 The first call-localization qualification is retained at
 `release/qualifications/harmony-arkweb-lifecycle-localization-6840590/`. On the

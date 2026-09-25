@@ -1,0 +1,59 @@
+name: Multi-repository exact analysis
+on:
+  workflow_dispatch:
+    inputs:
+      source_spec_json:
+        description: Exact agentlab.multi_repo_source_spec.v1 JSON with public HTTPS repositories and 40-character commits
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/multi-repo-analysis
+      SOURCE_SPEC_JSON: ${{ inputs.source_spec_json }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Materialize exact public Git sources
+        run: |
+          mkdir -p "$AGENTLAB_ROOT"
+          python3 - <<'PY'
+          import os, pathlib
+          pathlib.Path(os.environ["AGENTLAB_ROOT"], "source-spec-input.json").write_text(
+              os.environ["SOURCE_SPEC_JSON"] + "\n", encoding="utf-8"
+          )
+          PY
+          python3 scripts/prepare-multi-repo-analysis-sources.py \
+            --spec "$AGENTLAB_ROOT/source-spec-input.json" \
+            --output "$AGENTLAB_ROOT/source"
+      - name: Analyze only committed bytes at exact revisions
+        run: |
+          cargo build --locked -p agentlab_code_analysis --bin agentlab-multi-repo-analysis
+          target/debug/agentlab-multi-repo-analysis \
+            "$AGENTLAB_ROOT/source/manifest.json" \
+            "$AGENTLAB_ROOT/source/analysis"
+          python3 scripts/multi-repo-analysis-run.py create \
+            --root "$AGENTLAB_ROOT/source" \
+            --method-revision "$GITHUB_SHA" \
+            --output "$AGENTLAB_ROOT/source/analysis-run.json"
+          python3 scripts/multi-repo-analysis-run.py validate \
+            --root "$AGENTLAB_ROOT/source" \
+            --run "$AGENTLAB_ROOT/source/analysis-run.json"
+          sha256sum "$AGENTLAB_ROOT/source/analysis-run.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve portable specification and complete analysis evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-analysis
+          if-no-files-found: error
+          include-hidden-files: true
+          path: |
+            ${{ env.AGENTLAB_ROOT }}/source/source-spec.json
+            ${{ env.AGENTLAB_ROOT }}/source/manifest.json
+            ${{ env.AGENTLAB_ROOT }}/source/analysis-run.json
+            ${{ env.AGENTLAB_ROOT }}/source/analysis/

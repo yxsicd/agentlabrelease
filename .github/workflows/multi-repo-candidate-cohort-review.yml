@@ -57,9 +57,11 @@ jobs:
           python3 - <<'PY'
           import json, os
           root = os.environ["AGENTLAB_ROOT"]
-          run = json.load(open(root + "/source-run.json"))
           proposal = json.load(open(root + "/source/candidate-cohort-proposal.json"))
-          assert proposal["methodRevision"] == run["head_sha"]
+          analysis = json.load(open(root + "/source/analysis-source/analysis-run.json"))
+          assert proposal["methodRevision"] == analysis["methodRevision"]
+          assert proposal["sourceSetSha256"] == analysis["sourceSetSha256"]
+          assert proposal["difficultyEvidenceSha256"] == analysis["difficultyEvidenceSha256"]
           PY
       - name: Bind explicit reviewer selection to the exact proposal
         env:
