@@ -458,7 +458,13 @@ Use `propose-api-call-case-localization.py` to compile an exact proposal from an
 already approved semantic packet/decision/gate triple, then have an independent
 maintainer create a decision that binds the proposal SHA-256 and acknowledges
 every localization risk. The proposer revalidates the semantic state machine,
-candidate digest and source-set identity before writing output. Only
+candidate digest and source-set identity before writing output. When supplied,
+it also binds the exact reviewed-cohort selection so the localization cannot be
+reattributed to an unreviewed candidate. The trusted-main
+`api-call-localization-proposal.yml` workflow recovers the cohort and semantic
+review artifacts, rematerializes the pinned repositories, normalizes the
+operator-owned target/reference/edit/context/check selection and produces that
+proposal without requiring a retained qualification directory. Only
 `review-api-call-case-localization.py` can produce a
 `reviewed-for-intent-construction` localization, and it independently
 revalidates the same three semantic artifacts. Even that reviewed artifact
@@ -475,13 +481,14 @@ localization lineage into the construction receipt and intent. The plan builder
 then derives `allowedEdits` from the reviewed editable paths, not from the broad
 candidate cluster. The case freezer rejects any later edit-surface drift.
 
-After this workflow reaches trusted `main`, a maintainer can dispatch
-`API-call localization independent review`. The job takes the retained
-qualification directory, exact proposal SHA-256, the trusted-main semantic
-review run and exact approved gate SHA-256, every risk ID and a rationale. It
-binds the authenticated GitHub actor as reviewer and uploads the semantic triple,
-proposal, decision and compiled reviewed localization together. It is
-intentionally secret-free and cannot run from a pull-request ref.
+After these workflows reach trusted `main`, a maintainer can dispatch
+`API-call localization independent review`. The job takes exactly one proposal
+source: either a retained qualification directory or a successful dynamic
+localization-proposal run. It also requires the exact proposal SHA-256, the
+trusted-main semantic-review run and approved gate SHA-256, every risk ID and a
+rationale. It binds the authenticated GitHub actor as reviewer and uploads the
+semantic triple, proposal, decision and compiled reviewed localization together.
+It is intentionally secret-free and cannot run from a pull-request ref.
 
 ## From difficulty to a valid evaluation case
 

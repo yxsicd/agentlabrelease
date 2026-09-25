@@ -78,6 +78,8 @@ def main():
     parser.add_argument("--facts", type=Path, required=True)
     parser.add_argument("--candidate-id", required=True)
     parser.add_argument("--selection", type=Path, required=True)
+    parser.add_argument("--cohort-selection", type=Path)
+    parser.add_argument("--candidate-cohort", type=Path)
     parser.add_argument("--semantic-packet", type=Path, required=True)
     parser.add_argument("--semantic-decision", type=Path, required=True)
     parser.add_argument("--semantic-gate", type=Path, required=True)
@@ -108,6 +110,92 @@ def main():
     require(candidate.get("affectedRepositoryCount", 0) >= 2, "candidate must span repositories")
     require((candidate.get("verificationContract") or {}).get("caseReady") is False, "candidate must remain non-ready")
     require(candidate.get("automaticPromotion") is False, "candidate must not auto-promote")
+    require(
+        (args.cohort_selection is None) == (args.candidate_cohort is None),
+        "reviewed cohort and its candidate selection must be supplied together",
+    )
+    cohort_selection_sha256 = None
+    candidate_cohort_sha256 = None
+    if args.cohort_selection is not None:
+        cohort_selection = load(args.cohort_selection)
+        cohort = load(args.candidate_cohort)
+        require(
+            cohort_selection.get("schema") == "agentlab.multi_repo_candidate_selection.v2",
+            "unsupported reviewed cohort selection schema",
+        )
+        require(
+            cohort.get("schema") == "agentlab.multi_repo_candidate_cohort.v1",
+            "unsupported reviewed candidate cohort schema",
+        )
+        require(
+            cohort.get("automaticPromotion") is False
+            and cohort.get("declaredRepresentative") is False,
+            "reviewed candidate cohort policy differs",
+        )
+        require(
+            cohort_selection.get("cohortSha256") == digest(args.candidate_cohort),
+            "reviewed candidate cohort digest mismatch",
+        )
+        require(
+            cohort_selection.get("cohortId") == cohort.get("cohortId"),
+            "reviewed candidate cohort identity mismatch",
+        )
+        require(
+            cohort_selection.get("candidateId") == args.candidate_id,
+            "reviewed cohort selection candidate mismatch",
+        )
+        require(
+            cohort_selection.get("candidateSha256") == canonical_digest(candidate),
+            "reviewed cohort selection candidate digest mismatch",
+        )
+        require(
+            cohort_selection.get("sourceSetSha256") == difficulty.get("sourceSetSha256"),
+            "reviewed cohort selection source set mismatch",
+        )
+        require(
+            cohort_selection.get("difficultyEvidenceSha256") == digest(args.difficulty),
+            "reviewed cohort selection difficulty digest mismatch",
+        )
+        for field in (
+            "sourceSetSha256", "difficultyEvidenceSha256", "methodRevision",
+            "proposalMethodRevision",
+        ):
+            require(
+                cohort_selection.get(field) == cohort.get(field),
+                f"reviewed cohort selection {field} mismatch",
+            )
+        selected = {
+            row.get("id"): row
+            for row in cohort.get("selectedCandidates") or []
+            if isinstance(row, dict)
+        }
+        require(
+            cohort.get("selectedCandidateCount") == len(selected) and len(selected) >= 2,
+            "reviewed candidate cohort membership is invalid",
+        )
+        require(args.candidate_id in selected, "candidate is not in the reviewed cohort")
+        require(
+            selected[args.candidate_id].get("candidateSha256") == canonical_digest(candidate),
+            "reviewed candidate cohort candidate digest mismatch",
+        )
+        require(
+            cohort_selection.get("caseSource") == selected[args.candidate_id].get("caseSource"),
+            "reviewed cohort selection source classification mismatch",
+        )
+        review = cohort.get("review")
+        require(
+            isinstance(review, dict)
+            and review.get("authority") == "explicit-candidate-cohort-review"
+            and review.get("verdict") == "approve-for-independent-case-construction",
+            "reviewed candidate cohort is not approved",
+        )
+        require(
+            cohort_selection.get("automaticPromotion") is False
+            and cohort_selection.get("declaredRepresentative") is False,
+            "reviewed cohort selection policy differs",
+        )
+        cohort_selection_sha256 = digest(args.cohort_selection)
+        candidate_cohort_sha256 = digest(args.candidate_cohort)
     semantic = validate_semantic_authorization(
         args.semantic_packet,
         args.semantic_decision,
@@ -261,6 +349,14 @@ def main():
             "difficultyEvidenceSha256": digest(args.difficulty),
             "workspaceFactsSha256": digest(args.facts),
             "selectionSha256": digest(args.selection),
+            **(
+                {"candidateCohortSelectionSha256": cohort_selection_sha256}
+                if cohort_selection_sha256 is not None else {}
+            ),
+            **(
+                {"candidateCohortSha256": candidate_cohort_sha256}
+                if candidate_cohort_sha256 is not None else {}
+            ),
             "semanticPacketSha256": semantic["packetSha256"],
             "semanticDecisionSha256": semantic["decisionSha256"],
             "semanticGateSha256": semantic["gateSha256"],

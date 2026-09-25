@@ -3,8 +3,14 @@ on:
   workflow_dispatch:
     inputs:
       qualification_path:
-        description: Gate-bound qualification directory below release/qualifications
-        required: true
+        description: Retained qualification directory; exclusive with proposal_run_id
+        required: false
+        default: ''
+        type: string
+      proposal_run_id:
+        description: Successful trusted-main dynamic localization-proposal run; exclusive with qualification_path
+        required: false
+        default: ''
         type: string
       expected_proposal_sha256:
         description: Exact localization proposal digest inspected by the reviewer
@@ -39,18 +45,27 @@ jobs:
     env:
       AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/api-call-localization-review
       QUALIFICATION_PATH: ${{ inputs.qualification_path }}
+      PROPOSAL_RUN_ID: ${{ inputs.proposal_run_id }}
       SEMANTIC_REVIEW_RUN_ID: ${{ inputs.semantic_review_run_id }}
       EXPECTED_SEMANTIC_GATE_SHA256: ${{ inputs.expected_semantic_gate_sha256 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Resolve the retained proposal without path escape
+      - name: Resolve one exact retained or dynamic proposal
         id: proposal
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           mkdir -p "$AGENTLAB_ROOT"
           python3 - <<'PY'
           import os, pathlib, re
           root = pathlib.Path.cwd().resolve()
           relative = os.environ["QUALIFICATION_PATH"]
+          run_id = os.environ["PROPOSAL_RUN_ID"]
+          assert bool(relative) != bool(run_id), "supply exactly one of qualification_path or proposal_run_id"
+          if run_id:
+              assert re.fullmatch(r"[0-9]+", run_id), run_id
+              raise SystemExit(0)
           assert re.fullmatch(r"release/qualifications/[A-Za-z0-9._/-]+", relative), relative
           proposal = (root / relative / "proposal.json").resolve()
           proposal.relative_to(root / "release" / "qualifications")
@@ -58,6 +73,23 @@ jobs:
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write("proposal_path=" + str(proposal) + "\n")
           PY
+          if [[ -n "$PROPOSAL_RUN_ID" ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PROPOSAL_RUN_ID" > "$AGENTLAB_ROOT/proposal-source-run.json"
+            python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/proposal-source-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/api-call-localization-proposal.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+            mkdir -p "$AGENTLAB_ROOT/dynamic"
+            gh run download "$PROPOSAL_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+              --name api-call-localization-proposal --dir "$AGENTLAB_ROOT/dynamic"
+            test -f "$AGENTLAB_ROOT/dynamic/proposal.json"
+            test ! -L "$AGENTLAB_ROOT/dynamic/proposal.json"
+            echo "proposal_path=$AGENTLAB_ROOT/dynamic/proposal.json" >> "$GITHUB_OUTPUT"
+          fi
       - name: Recover the exact approved semantic gate
         env:
           GH_TOKEN: ${{ github.token }}

@@ -272,6 +272,62 @@ class ApiCallCaseLocalizationTest(unittest.TestCase):
             root = Path(directory)
             manifest, difficulty, facts, selection = self.fixture(root)
             semantic_packet, semantic_decision, semantic_gate = self.semantic_authorization(root, difficulty)
+            candidate = json.loads(difficulty.read_text())["candidates"][0]
+            case_source = {
+                "lane": "derived",
+                "strategy": "semantic-program-analysis",
+                "authority": "exact-difficulty-evidence",
+            }
+            candidate_summary = {
+                "id": candidate["id"],
+                "candidateSha256": canonical_digest(candidate),
+                "caseSource": case_source,
+            }
+            candidate_cohort = self.write(
+                root,
+                "candidate-cohort.json",
+                {
+                    "schema": "agentlab.multi_repo_candidate_cohort.v1",
+                    "cohortId": "cohort-localization",
+                    "methodRevision": "1" * 40,
+                    "proposalMethodRevision": "2" * 40,
+                    "sourceSetSha256": "a" * 64,
+                    "difficultyEvidenceSha256": file_digest(difficulty),
+                    "selectedCandidates": [
+                        candidate_summary,
+                        {
+                            "id": "another-reviewed-candidate",
+                            "candidateSha256": "d" * 64,
+                            "caseSource": case_source,
+                        },
+                    ],
+                    "selectedCandidateCount": 2,
+                    "review": {
+                        "authority": "explicit-candidate-cohort-review",
+                        "verdict": "approve-for-independent-case-construction",
+                    },
+                    "declaredRepresentative": False,
+                    "automaticPromotion": False,
+                },
+            )
+            cohort_selection = self.write(
+                root,
+                "candidate-selection.json",
+                {
+                    "schema": "agentlab.multi_repo_candidate_selection.v2",
+                    "cohortId": "cohort-localization",
+                    "cohortSha256": file_digest(candidate_cohort),
+                    "candidateId": candidate["id"],
+                    "candidateSha256": canonical_digest(candidate),
+                    "caseSource": case_source,
+                    "sourceSetSha256": "a" * 64,
+                    "difficultyEvidenceSha256": file_digest(difficulty),
+                    "methodRevision": "1" * 40,
+                    "proposalMethodRevision": "2" * 40,
+                    "declaredRepresentative": False,
+                    "automaticPromotion": False,
+                },
+            )
             proposal_path = root / "proposal.json"
             proposed = subprocess.run(
                 [
@@ -287,6 +343,10 @@ class ApiCallCaseLocalizationTest(unittest.TestCase):
                     "difficulty-api",
                     "--selection",
                     str(selection),
+                    "--cohort-selection",
+                    str(cohort_selection),
+                    "--candidate-cohort",
+                    str(candidate_cohort),
                     "--semantic-packet",
                     str(semantic_packet),
                     "--semantic-decision",
@@ -311,7 +371,27 @@ class ApiCallCaseLocalizationTest(unittest.TestCase):
             self.assertTrue(all(row["gitBlobOid"] for row in proposal["editablePaths"]))
             self.assertTrue(proposal["semanticAuthorization"]["allowsCaseContract"])
             self.assertEqual(proposal["semanticAuthorization"]["gateSha256"], file_digest(semantic_gate))
+            self.assertEqual(
+                proposal["lineage"]["candidateCohortSelectionSha256"],
+                file_digest(cohort_selection),
+            )
+            self.assertEqual(
+                proposal["lineage"]["candidateCohortSha256"],
+                file_digest(candidate_cohort),
+            )
             self.assertFalse(proposal["automaticPromotion"])
+
+            drifted_selection = json.loads(cohort_selection.read_text())
+            drifted_selection["candidateSha256"] = "c" * 64
+            cohort_selection.write_text(json.dumps(drifted_selection, sort_keys=True) + "\n")
+            drift_command = list(proposed.args)
+            drift_command[-1] = str(root / "cohort-drift-proposal.json")
+            drifted = subprocess.run(
+                drift_command, text=True, capture_output=True
+            )
+            self.assertNotEqual(drifted.returncode, 0)
+            self.assertIn("reviewed cohort selection candidate digest mismatch", drifted.stderr)
+            self.assertFalse((root / "cohort-drift-proposal.json").exists())
 
             review = root / "review.json"
             decision = subprocess.run(
@@ -715,13 +795,26 @@ class ApiCallCaseLocalizationTest(unittest.TestCase):
             self.assertFalse((root / "construction").exists())
 
     def test_review_workflow_is_manual_trusted_main_and_secret_free(self):
+        proposal = (ROOT / ".github/workflows/api-call-localization-proposal.yml").read_text()
         workflow = (ROOT / ".github/workflows/api-call-localization-review.yml").read_text()
+        self.assertIn("multi-repo-candidate-cohort-review.yml", proposal)
+        self.assertIn("multi-repo-candidate-semantic-review.yml", proposal)
+        self.assertIn("scripts/multi-repo-analysis-run.py validate", proposal)
+        self.assertIn("scripts/prepare-multi-repo-analysis-sources.py", proposal)
+        self.assertIn("scripts/select-multi-repo-cohort-candidate.py", proposal)
+        self.assertIn("--cohort-selection", proposal)
+        self.assertIn("--candidate-cohort", proposal)
+        self.assertIn("propose-api-call-case-localization.py", proposal)
+        self.assertNotIn("secrets.", proposal)
         self.assertIn("github.event_name == 'workflow_dispatch'", workflow)
         self.assertIn("github.ref == 'refs/heads/main'", workflow)
         self.assertIn("github.actor", workflow)
         self.assertIn("create-api-call-localization-review.py", workflow)
         self.assertIn("review-api-call-case-localization.py", workflow)
         self.assertIn("expected_proposal_sha256", workflow)
+        self.assertIn("proposal_run_id", workflow)
+        self.assertIn("api-call-localization-proposal.yml", workflow)
+        self.assertIn("supply exactly one of qualification_path or proposal_run_id", workflow)
         self.assertIn("semantic_review_run_id", workflow)
         self.assertIn("expected_semantic_gate_sha256", workflow)
         self.assertIn("multi-repo-candidate-semantic-review.yml", workflow)
