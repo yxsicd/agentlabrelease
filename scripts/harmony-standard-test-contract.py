@@ -98,10 +98,17 @@ def inspect_lanes(root: Path, files: list[Path]) -> list[dict[str, Any]]:
         path for path in instrument_sources
         if "OpenHarmonyTestRunner" in text(path) and "Hypium" in text(path)
     ]
+    generated_runner_modules = [
+        path for path in files
+        if path.name == "module.json5"
+        and "ohosTest" in path.relative_to(root).parts
+        and re.search(r"[\"']?module[\"']?\s*:", text(path))
+        and not re.search(r"[\"']?srcEntry[\"']?\s*:", text(path))
+    ]
     build_profiles = [path for path in files if path.name == "build-profile.json5"]
     ohos_test_targets = [
         path for path in build_profiles
-        if re.search(r"\bname\s*:\s*['\"]ohosTest['\"]", text(path))
+        if re.search(r"[\"']?name[\"']?\s*:\s*['\"]ohosTest['\"]", text(path))
     ]
     package_manifests = [path for path in files if path.name == "oh-package.json5"]
     hypium_dependencies = [path for path in package_manifests if "@ohos/hypium" in text(path)]
@@ -129,20 +136,36 @@ def inspect_lanes(root: Path, files: list[Path]) -> list[dict[str, Any]]:
 
     lanes = []
     if instrument_sources or ohos_test_targets or hypium_dependencies:
-        qualified = bool(instrument_tests and instrument_runners and ohos_test_targets and hypium_dependencies)
+        runner_authority = (
+            "source-provided-OpenHarmonyTestRunner"
+            if instrument_runners
+            else (
+                "hvigor-GenerateOhosTestTemplate"
+                if generated_runner_modules
+                else None
+            )
+        )
+        qualified = bool(
+            instrument_tests and runner_authority and ohos_test_targets and hypium_dependencies
+        )
         lanes.append({
             "framework": "instrument-test-ohosTest-hypium",
             "sourceContractQualified": qualified,
             "deviceCapable": True,
             "executionInterface": "hdc-shell-aa-test-OpenHarmonyTestRunner",
+            "runnerAuthority": runner_authority,
             "evidence": evidence(
                 root,
-                instrument_tests + instrument_runners + ohos_test_targets + hypium_dependencies,
+                instrument_tests + instrument_runners + generated_runner_modules
+                + ohos_test_targets + hypium_dependencies,
             ),
             "missing": [
                 label for present, label in (
                     (instrument_tests, "hypium-test-source"),
-                    (instrument_runners, "OpenHarmonyTestRunner"),
+                    (
+                        instrument_runners or generated_runner_modules,
+                        "OpenHarmonyTestRunner-source-or-Hvigor-generated-template",
+                    ),
                     (ohos_test_targets, "ohosTest-build-target"),
                     (hypium_dependencies, "@ohos/hypium-dependency"),
                 ) if not present

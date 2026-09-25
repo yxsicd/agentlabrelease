@@ -126,7 +126,9 @@ not a substitute for Harmony's standard application-test structure. A Harmony
 case should additionally expose at least one official lane:
 
 - Instrument Test under `src/ohosTest`, using `@ohos/hypium`, an
-  `ohosTest` build target and `OpenHarmonyTestRunner`;
+  `ohosTest` build target and either a source-provided `OpenHarmonyTestRunner`
+  or the source-migrated `module.json5` form for which Hvigor's
+  `GenerateOhosTestTemplate` task creates that runner;
 - Local Test under `src/test` for device-independent ArkTS logic; or
 - DevEco Testing Hypium UI automation with packaged Python testcases and
   retained reports.
@@ -178,6 +180,30 @@ ArkXtest command and result markers follow the official
 [ArkXtest guide](https://gitee.com/openharmony/docs/blob/master/en/application-dev/application-test/arkxtest-guidelines.md)
 and the upstream
 [ArkXtest implementation](https://github.com/openharmony/testfwk_arkxtest/blob/master/jsunit/src/module/report/OhReport.js).
+
+### hwlinux real ohosTest canary
+
+The first real standard-test closure is retained on `hwlinux` at
+`/home/huawei/.agentlab/evidence/harmony-standard-real-20260925`. The source is
+the preserved `hmos-code-workshop` cut at revision
+`7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6`; its revision-derived source-set
+identity is `acf288df…e002` and its source-only project-tree SHA256 is
+`b0c7a6f3…3349`. Harmony SDK 6.1.1.125 / Hvigor 6.24.4 built the phone
+`ohosTest` target in 23.122 seconds. The build log executed
+`GenerateOhosTestTemplate` and generated `OpenHarmonyTestRunner.ets`, proving
+the source-migrated layout is a real standard path rather than a missing-runner
+error.
+
+The Linux x86 emulator accepted both exact unsigned debug artifacts: the
+393,655,699-byte app HAP (`a55f0f06…9285`) and 393,653,849-byte test HAP
+(`c513d81c…1b45`). `hdc shell aa test` then ran `phone_test` through
+`OpenHarmonyTestRunner`: one test ran and passed, with zero failures, zero
+errors, process exit zero and `OHOS_REPORT_CODE: 0`. The bound native report is
+SHA256 `8fc99273…4908`; reinspection of the receipt returned
+`qualified-standard-test-executed`. This qualifies this exact emulator,
+project, package pair and test run. It does not imply that unsigned packages
+are installable on production devices, nor does one passing test establish
+suite breadth or application-wide quality.
 
 ## Relative performance feedback
 

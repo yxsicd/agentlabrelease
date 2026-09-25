@@ -42,7 +42,7 @@ class HarmonyStandardTestContractTests(unittest.TestCase):
             )
             (project / "entry/build-profile.json5").parent.mkdir(parents=True, exist_ok=True)
             (project / "entry/build-profile.json5").write_text(
-                "{ targets: [{ name: 'default' }, { name: 'ohosTest' }] }\n"
+                '{ "targets": [{ "name": "default" }, { "name": "ohosTest" }] }\n'
             )
             (project / "oh-package.json5").write_text(
                 "{ devDependencies: { '@ohos/hypium': '1.0.21' } }\n"
@@ -157,8 +157,27 @@ class HarmonyStandardTestContractTests(unittest.TestCase):
             value = STANDARD.build_contract(project, "case-one", "a" * 64)
             self.assertFalse(value["deviceFunctionalStandardSourceQualified"])
             lane = value["standardTestLanes"][0]
-            self.assertIn("OpenHarmonyTestRunner", lane["missing"])
+            self.assertIn(
+                "OpenHarmonyTestRunner-source-or-Hvigor-generated-template", lane["missing"]
+            )
             self.assertIn("ohosTest-build-target", lane["missing"])
+
+    def test_source_migrated_ohos_test_uses_hvigor_generated_runner(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            project = self.fixture(Path(directory), complete=False)
+            module = project / "entry/src/ohosTest/module.json5"
+            module.write_text('{ "module": { "name": "entry_test", "type": "feature" } }\n')
+            (project / "entry/build-profile.json5").write_text(
+                "{ targets: [{ name: 'default' }, { name: 'ohosTest' }] }\n"
+            )
+            (project / "oh-package.json5").write_text(
+                "{ devDependencies: { '@ohos/hypium': '1.0.21' } }\n"
+            )
+            value = STANDARD.build_contract(project, "case-one", "a" * 64)
+            lane = value["standardTestLanes"][0]
+            self.assertTrue(lane["sourceContractQualified"])
+            self.assertEqual(lane["runnerAuthority"], "hvigor-GenerateOhosTestTemplate")
+            self.assertEqual(lane["missing"], [])
 
     def test_public_schema_matches_contract(self) -> None:
         schema = json.loads(
