@@ -24,6 +24,34 @@ exact Git source set
   -> TableGit evaluation_cases row
 ```
 
+Run that complete credential-free protocol proof as one retained evidence chain
+instead of inferring integration from separate commands:
+
+```sh
+cargo build --locked --release -p agentlab_code_analysis \
+  --bin agentlab-multi-repo-analysis
+python3 examples/multi-repo-case/run-golden-path.py \
+  --analyzer target/release/agentlab-multi-repo-analysis \
+  --method-revision "$(git rev-parse HEAD)" \
+  --output /tmp/agentlab-multi-repo-golden-path
+```
+
+The runner executes 37 fail-closed phases over the same source identity: exact
+analysis, reviewed two-member cohort, deep candidate selection, reviewed
+construction contract, deterministic construction participant, reviewed
+executable calibration bundle, case/dependency freeze, blind participant cut,
+baseline/reference assessment, collection and discrimination scoring. It keeps
+every command's stdout/stderr digest and produces
+`agentlab.multi_repo_golden_path.v1`. The expected fixture result is baseline
+failure, reference success and discrimination score `1.0` with process-aware
+eligibility and full hidden-dependency coverage.
+
+This is a protocol-integration qualification only. Its machine-authored review
+fixtures are not human semantic approval; the deterministic participants are not
+real models; filesystem isolation, authenticated blind review, Harmony build,
+emulator execution, performance and population representativeness remain false
+in the summary.
+
 The example spans `contracts`, `service` and `app`. Turn 1 adds a premium retry
 policy while preserving the standard boundary. Turn 2 updates the application
 result contract without moving retry ownership out of the service. The Oracle

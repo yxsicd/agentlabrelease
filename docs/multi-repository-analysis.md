@@ -185,8 +185,12 @@ that trusted-main artifact, revalidates every byte, executes it against the
 materialized baseline and retains `agentlab.multi_repo_calibration_bundle_run.v1`.
 The frozen case records the bundle, driver, reference-tree, construction-contract
 and run digests. Oracle and reference bytes remain evaluator-only. This closes
-the generic protocol, not empirical qualification: a real arbitrary-source
-bundle and representative case population still need execution and adjudication.
+the generic protocol. Release CI runs the entire deterministic protocol as one
+37-phase evidence chain and requires baseline failure, reference success, full
+hidden-dependency coverage and process-aware discrimination score `1.0`. That
+proves cross-phase compatibility, not empirical qualification: a real
+arbitrary-source bundle and representative case population still need human
+review, execution and adjudication.
 
 The first call-localization qualification is retained at
 `release/qualifications/harmony-arkweb-lifecycle-localization-6840590/`. On the

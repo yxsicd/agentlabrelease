@@ -57,6 +57,21 @@ jobs:
           cargo test --locked --workspace
           cargo build --locked --release --workspace
           python3 -m unittest discover -s tests -p test_mock_agent.py
+      - name: Run the integrated multi-repository golden path
+        run: |
+          python3 examples/multi-repo-case/run-golden-path.py \
+            --analyzer target/release/agentlab-multi-repo-analysis \
+            --method-revision "$GITHUB_SHA" \
+            --output "$RUNNER_TEMP/multi-repo-golden-path"
+          cat "$RUNNER_TEMP/multi-repo-golden-path/summary.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve the integrated golden-path evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-golden-path
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ runner.temp }}/multi-repo-golden-path/
   participant-runtime-isolation:
     runs-on: ubuntu-latest
     timeout-minutes: 10

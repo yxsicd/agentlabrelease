@@ -58,8 +58,13 @@ requests, responses, exact revisions and failures.
 
 ## Coverage boundary
 
-These examples exercise different parts of the product. They do not yet form
-one public end-to-end campaign through Chat Harness, a participant, LLM/MCP
+The multi-repository example now includes one credential-free integrated golden
+path across analysis, construction, calibration, blind dispatch, two participant
+profiles and discrimination scoring. It is a deterministic protocol proof, not
+a real-model or Harmony runtime campaign.
+
+The examples still do not form one public end-to-end campaign through Chat
+Harness, a real participant, LLM/MCP
 Gateway capture, TableGit and the mature SessionFS companion. The TableGit demo
 uses the released provisioning SDK tool; the Mock campaign uses the standalone
 storage service. Their passing results cannot be combined into a claim that

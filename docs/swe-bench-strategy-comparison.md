@@ -147,8 +147,13 @@ smaller than SWE-bench's:
    exact-digest review bind the driver, Oracle, reference tree and declared
    wrong variants before execution. Case freeze consumes only that reviewed
    bundle and records a run receipt binding all executable inputs. This closes
-   the mechanism, but no arbitrary real-source bundle has yet been reviewed and
-   executed, so real selected-to-qualified yield remains unmeasured.
+   the mechanism. Public CI now executes one 37-phase deterministic golden path
+   across analysis, cohort, construction, calibration, blind dispatch and
+   baseline/reference discrimination, so cross-phase compatibility is directly
+   proven rather than inferred from isolated tests. It is still a fixture with
+   machine-authored review identities; no arbitrary real-source bundle has yet
+   been human-reviewed and executed, so real selected-to-qualified yield remains
+   unmeasured.
 4. The independent Oracle is digest-bound. One real Harmony UI candidate now
    has a controlled `FAIL_TO_PASS` replay: the frozen baseline stays on
    `pages/Index`, while a one-line page-registration variant reaches
