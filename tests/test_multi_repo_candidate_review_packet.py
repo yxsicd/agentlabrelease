@@ -244,7 +244,7 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
             "packToFile",
         )
 
-    def test_v3_packet_binds_supplemental_control_context_without_replacing_base_facts(self):
+    def test_v4_packet_binds_supplemental_control_context_without_replacing_base_facts(self):
         with tempfile.TemporaryDirectory() as directory:
             paths = self.fixture(Path(directory))
             context_rows = []
@@ -270,7 +270,7 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
                 *paths[:4], paths[4]["id"], "3" * 40, 4, 240,
                 context, "4" * 40,
             )
-            self.assertEqual(packet["schema"], "agentlab.multi_repo_candidate_review_packet.v3")
+            self.assertEqual(packet["schema"], "agentlab.multi_repo_candidate_review_packet.v4")
             self.assertEqual(packet["callControlContextCoverage"]["selectedCallCount"], 2)
             self.assertEqual(packet["callControlContextCoverage"]["awaitedCallCount"], 2)
             self.assertEqual(
@@ -286,6 +286,64 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
                 "syntactic async and control-region evidence",
                 packet["sweStyleTaskContract"]["satisfiedByThisPacket"],
             )
+            self.assertEqual(
+                packet["callCleanupPairingCoverage"]["handleStatusCounts"],
+                {"no-direct-release": 2},
+            )
+            self.assertIn(
+                "same-handle syntactic cleanup-pairing evidence",
+                packet["sweStyleTaskContract"]["satisfiedByThisPacket"],
+            )
+
+    def test_cleanup_pairing_separates_finalizers_from_same_try_release(self):
+        try_span = {"startByte": 20, "endByte": 120}
+        factory_context = {
+            "controlRegions": [{"syntaxKind": "try_statement", "span": try_span}],
+            "enclosingCalls": [],
+        }
+        calls = [{
+            "id": "factory", "kind": "call", "repositoryId": "repo-a",
+            "path": "a.ets", "owner": "A::run", "targetExpression": "api.create",
+            "span": {"startByte": 30, "endByte": 42},
+            "controlContext": factory_context,
+        }]
+        handles = [{
+            "selectedCallFactId": "factory", "repositoryId": "repo-a",
+            "path": "a.ets", "owner": "A::run", "handleExpression": "handle",
+            "sameHandleReassignments": [],
+            "directMemberCalls": [
+                {
+                    "factId": "release-body", "member": "release",
+                    "span": {"startByte": 60, "endByte": 76},
+                    "controlContext": {
+                        "controlRegions": [{"syntaxKind": "try_statement", "span": try_span}],
+                        "enclosingCalls": [],
+                    },
+                },
+                {
+                    "factId": "release-finally", "member": "release",
+                    "span": {"startByte": 100, "endByte": 116},
+                    "controlContext": {
+                        "controlRegions": [
+                            {"syntaxKind": "finally_clause", "span": {"startByte": 90, "endByte": 120}},
+                            {"syntaxKind": "try_statement", "span": try_span},
+                        ],
+                        "enclosingCalls": [],
+                    },
+                },
+            ],
+        }]
+        evidence, coverage = PACKET.call_cleanup_pairings(calls, handles)
+        self.assertEqual(evidence[0]["status"], "multiple-release-shapes")
+        self.assertEqual(
+            [row["relation"] for row in evidence[0]["releasePairings"]],
+            ["same-try-non-finalizer", "matching-try-finally"],
+        )
+        self.assertEqual(coverage["directReleaseCount"], 2)
+        self.assertEqual(coverage["releaseRelationCounts"], {
+            "matching-try-finally": 1,
+            "same-try-non-finalizer": 1,
+        })
 
     def test_packet_rejects_candidate_drift_and_non_shortlisted_candidate(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -384,6 +442,7 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
             if row["path"] == "image-create-image-packer.json":
                 expected.append("owner-scoped call-neighborhood evidence")
                 expected.append("syntactic async and control-region evidence")
+                expected.append("same-handle syntactic cleanup-pairing evidence")
             self.assertEqual(value["sweStyleTaskContract"]["satisfiedByThisPacket"], expected)
             self.assertFalse(value["automaticPromotion"])
 
@@ -394,7 +453,7 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
         )
         self.assertEqual(
             image_packer["schema"],
-            "agentlab.multi_repo_candidate_review_packet.v3",
+            "agentlab.multi_repo_candidate_review_packet.v4",
         )
         alert_source = "\n".join(
             line["text"] for site in alert["callSiteEvidence"] for line in site["excerpt"]
@@ -477,6 +536,25 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
                 for target in call["controlContext"]["enclosingCalls"])
             for call in release_calls
         ), 1)
+        self.assertEqual(
+            image_packer["callCleanupPairingCoverage"]["handleStatusCounts"],
+            {
+                "later-try-finally": 1,
+                "matching-try-finally": 2,
+                "no-direct-release": 6,
+                "promise-finally-callback": 1,
+                "same-try-non-finalizer": 2,
+            },
+        )
+        self.assertEqual(
+            image_packer["callCleanupPairingCoverage"]["releaseRelationCounts"],
+            {
+                "later-try-finally": 1,
+                "matching-try-finally": 2,
+                "promise-finally-callback": 1,
+                "same-try-non-finalizer": 2,
+            },
+        )
 
 
 if __name__ == "__main__":

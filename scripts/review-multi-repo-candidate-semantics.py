@@ -17,7 +17,8 @@ TOKEN = re.compile(r"[A-Za-z0-9_.:@/-]{1,200}")
 PACKET_SCHEMA = "agentlab.multi_repo_candidate_review_packet.v1"
 PACKET_SCHEMA_V2 = "agentlab.multi_repo_candidate_review_packet.v2"
 PACKET_SCHEMA_V3 = "agentlab.multi_repo_candidate_review_packet.v3"
-PACKET_SCHEMAS = {PACKET_SCHEMA, PACKET_SCHEMA_V2, PACKET_SCHEMA_V3}
+PACKET_SCHEMA_V4 = "agentlab.multi_repo_candidate_review_packet.v4"
+PACKET_SCHEMAS = {PACKET_SCHEMA, PACKET_SCHEMA_V2, PACKET_SCHEMA_V3, PACKET_SCHEMA_V4}
 ANSWERS_SCHEMA = "agentlab.multi_repo_candidate_semantic_answers.v1"
 DECISION_SCHEMA = "agentlab.multi_repo_candidate_semantic_review.v1"
 GATE_SCHEMA = "agentlab.multi_repo_candidate_semantic_gate.v1"
@@ -54,7 +55,7 @@ def digest(path: Path) -> str:
 
 def validate_packet(packet: dict[str, Any]) -> None:
     require(packet.get("schema") in PACKET_SCHEMAS, "unsupported candidate review packet")
-    if packet.get("schema") in {PACKET_SCHEMA_V2, PACKET_SCHEMA_V3}:
+    if packet.get("schema") in {PACKET_SCHEMA_V2, PACKET_SCHEMA_V3, PACKET_SCHEMA_V4}:
         handle_evidence = packet.get("callResultHandleEvidence")
         handle_coverage = packet.get("callResultHandleCoverage")
         require(isinstance(handle_evidence, list), "v2 call-result handle evidence is absent")
@@ -63,7 +64,7 @@ def validate_packet(packet: dict[str, Any]) -> None:
             handle_coverage.get("selectedCallCount") == len(handle_evidence) > 0,
             "v2 call-result handle evidence count differs",
         )
-    if packet.get("schema") == PACKET_SCHEMA_V3:
+    if packet.get("schema") in {PACKET_SCHEMA_V3, PACKET_SCHEMA_V4}:
         control_evidence = packet.get("callControlContextEvidence")
         control_coverage = packet.get("callControlContextCoverage")
         require(isinstance(control_evidence, list), "v3 call-control evidence is absent")
@@ -71,6 +72,20 @@ def validate_packet(packet: dict[str, Any]) -> None:
         require(
             control_coverage.get("selectedCallCount") == len(control_evidence) > 0,
             "v3 call-control evidence count differs",
+        )
+    if packet.get("schema") == PACKET_SCHEMA_V4:
+        cleanup_evidence = packet.get("callCleanupPairingEvidence")
+        cleanup_coverage = packet.get("callCleanupPairingCoverage")
+        require(isinstance(cleanup_evidence, list), "v4 cleanup-pairing evidence is absent")
+        require(isinstance(cleanup_coverage, dict), "v4 cleanup-pairing coverage is absent")
+        require(
+            cleanup_coverage.get("selectedCallCount") == len(cleanup_evidence) > 0,
+            "v4 cleanup-pairing evidence count differs",
+        )
+        require(
+            cleanup_coverage.get("directReleaseCount")
+            == sum(len(row.get("releasePairings") or []) for row in cleanup_evidence),
+            "v4 cleanup-pairing release count differs",
         )
     require(
         packet.get("status") == "independent-semantic-review-required",

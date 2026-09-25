@@ -439,6 +439,148 @@ def call_control_contexts(
     }
 
 
+def call_cleanup_pairings(
+    call_facts: list[dict[str, Any]],
+    handle_rows: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Pair exact same-handle release spellings with lexical cleanup regions."""
+    factory_by_id = {row.get("id"): row for row in call_facts}
+    relation_counts: dict[str, int] = {}
+    handle_status_counts: dict[str, int] = {}
+    rows = []
+
+    def regions(context: dict[str, Any], kind: str) -> list[dict[str, Any]]:
+        selected = []
+        for row in context.get("controlRegions") or []:
+            require(isinstance(row, dict), "cleanup control region is invalid")
+            if row.get("syntaxKind") == kind:
+                span = row.get("span")
+                require(isinstance(span, dict), "cleanup control region span is absent")
+                require(
+                    isinstance(span.get("startByte"), int)
+                    and isinstance(span.get("endByte"), int),
+                    "cleanup control region byte span is invalid",
+                )
+                selected.append(span)
+        return selected
+
+    def span_key(value: dict[str, Any]) -> tuple[int, int]:
+        return value["startByte"], value["endByte"]
+
+    for handle in handle_rows:
+        factory_id = handle.get("selectedCallFactId")
+        factory = factory_by_id.get(factory_id)
+        require(factory is not None, f"cleanup factory fact is absent: {factory_id}")
+        factory_span = factory.get("span")
+        factory_context = factory.get("controlContext")
+        require(isinstance(factory_span, dict), "cleanup factory span is absent")
+        require(isinstance(factory_context, dict), "cleanup factory context is absent")
+        factory_end = factory_span.get("endByte")
+        require(isinstance(factory_end, int), "cleanup factory byte span is invalid")
+        factory_try = {span_key(row): row for row in regions(factory_context, "try_statement")}
+        factory_callbacks = {
+            span_key(row): row
+            for kind in ("arrow_function", "function_expression")
+            for row in regions(factory_context, kind)
+        }
+        releases = [
+            row for row in handle.get("directMemberCalls") or []
+            if row.get("member") == "release"
+        ]
+        pairings = []
+        for release in releases:
+            release_span = release.get("span")
+            release_context = release.get("controlContext")
+            require(isinstance(release_span, dict), "cleanup release span is absent")
+            require(isinstance(release_context, dict), "cleanup release context is absent")
+            release_start = release_span.get("startByte")
+            require(isinstance(release_start, int), "cleanup release byte span is invalid")
+            release_try = {
+                span_key(row): row for row in regions(release_context, "try_statement")
+            }
+            release_finally = regions(release_context, "finally_clause")
+            release_callbacks = {
+                span_key(row): row
+                for kind in ("arrow_function", "function_expression")
+                for row in regions(release_context, kind)
+            }
+            matching_try = [
+                factory_try[key] for key in sorted(factory_try.keys() & release_try.keys())
+            ]
+            same_callbacks = [
+                factory_callbacks[key]
+                for key in sorted(factory_callbacks.keys() & release_callbacks.keys())
+            ]
+            promise_finally = []
+            for enclosing in release_context.get("enclosingCalls") or []:
+                require(isinstance(enclosing, dict), "cleanup enclosing call is invalid")
+                target = enclosing.get("targetExpression")
+                if isinstance(target, str) and target.rstrip().endswith(".finally"):
+                    promise_finally.append(enclosing)
+            later_try_finally = bool(release_finally) and any(
+                span["startByte"] >= factory_end for span in release_try.values()
+            )
+            if promise_finally:
+                relation = "promise-finally-callback"
+            elif release_finally and matching_try:
+                relation = "matching-try-finally"
+            elif later_try_finally:
+                relation = "later-try-finally"
+            elif matching_try:
+                relation = "same-try-non-finalizer"
+            elif release_start >= factory_end:
+                relation = "lexically-later-direct-release"
+            else:
+                relation = "other-direct-release"
+            relation_counts[relation] = relation_counts.get(relation, 0) + 1
+            intervening = []
+            for reassignment in handle.get("sameHandleReassignments") or []:
+                reassignment_start = (reassignment.get("span") or {}).get("startByte")
+                if (
+                    isinstance(reassignment_start, int)
+                    and factory_end <= reassignment_start <= release_start
+                ):
+                    intervening.append(reassignment.get("factId"))
+            pairings.append({
+                "releaseFactId": release.get("factId"),
+                "releaseSpan": release_span,
+                "relation": relation,
+                "lexicallyAfterFactory": release_start >= factory_end,
+                "matchingTrySpans": matching_try,
+                "releaseFinallyClauseSpans": release_finally,
+                "sameCallbackRegionSpans": same_callbacks,
+                "promiseFinallyEnclosingCalls": promise_finally,
+                "interveningReassignmentFactIds": intervening,
+            })
+        if not pairings:
+            status = "no-direct-release"
+        else:
+            shapes = {row["relation"] for row in pairings}
+            status = next(iter(shapes)) if len(shapes) == 1 else "multiple-release-shapes"
+        handle_status_counts[status] = handle_status_counts.get(status, 0) + 1
+        rows.append({
+            "selectedCallFactId": factory_id,
+            "repositoryId": handle.get("repositoryId"),
+            "path": handle.get("path"),
+            "owner": handle.get("owner"),
+            "handleExpression": handle.get("handleExpression"),
+            "status": status,
+            "releasePairings": pairings,
+        })
+    return rows, {
+        "selectedCallCount": len(rows),
+        "directReleaseCount": sum(len(row["releasePairings"]) for row in rows),
+        "handleStatusCounts": dict(sorted(handle_status_counts.items())),
+        "releaseRelationCounts": dict(sorted(relation_counts.items())),
+        "interpretation": (
+            "Exact same-handle factory and release spellings are paired by byte order and shared "
+            "ancestor spans. A matching try/finally or Promise.finally shape is lexical evidence "
+            "only; it does not prove alias completeness, reachability, dominance, post-dominance, "
+            "exception safety or runtime execution."
+        ),
+    }
+
+
 def build_packet(
     manifest_path: Path,
     difficulty_path: Path,
@@ -580,8 +722,11 @@ def build_packet(
     handle_rows, handle_coverage = call_result_handles(call_facts, analysis_facts)
     control_rows = None
     control_coverage = None
+    cleanup_rows = None
+    cleanup_coverage = None
     if using_context_facts:
         control_rows, control_coverage = call_control_contexts(call_facts)
+        cleanup_rows, cleanup_coverage = call_cleanup_pairings(call_facts, handle_rows)
     project_boundary_status = (
         "review-required" if all(row["projectBoundaryCandidates"] for row in source_rows)
         else "incomplete"
@@ -599,7 +744,7 @@ def build_packet(
         })
     packet = {
         "schema": (
-            "agentlab.multi_repo_candidate_review_packet.v3"
+            "agentlab.multi_repo_candidate_review_packet.v4"
             if using_context_facts else "agentlab.multi_repo_candidate_review_packet.v2"
         ),
         "status": "independent-semantic-review-required",
@@ -684,8 +829,13 @@ def build_packet(
     if using_context_facts:
         packet["callControlContextEvidence"] = control_rows
         packet["callControlContextCoverage"] = control_coverage
+        packet["callCleanupPairingEvidence"] = cleanup_rows
+        packet["callCleanupPairingCoverage"] = cleanup_coverage
         packet["sweStyleTaskContract"]["satisfiedByThisPacket"].append(
             "syntactic async and control-region evidence"
+        )
+        packet["sweStyleTaskContract"]["satisfiedByThisPacket"].append(
+            "same-handle syntactic cleanup-pairing evidence"
         )
     return packet
 

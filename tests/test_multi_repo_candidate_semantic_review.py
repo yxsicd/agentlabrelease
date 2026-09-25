@@ -67,7 +67,11 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
             },
             "automaticPromotion": False,
         }
-        if schema in {REVIEW.PACKET_SCHEMA_V2, REVIEW.PACKET_SCHEMA_V3}:
+        if schema in {
+            REVIEW.PACKET_SCHEMA_V2,
+            REVIEW.PACKET_SCHEMA_V3,
+            REVIEW.PACKET_SCHEMA_V4,
+        }:
             value["callResultHandleEvidence"] = [{
                 "selectedCallFactId": "fact-call", "status": "unbound-result",
             }]
@@ -79,7 +83,7 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
                 "ambiguousContainerCount": 0,
                 "directMemberNameCounts": {},
             }
-        if schema == REVIEW.PACKET_SCHEMA_V3:
+        if schema in {REVIEW.PACKET_SCHEMA_V3, REVIEW.PACKET_SCHEMA_V4}:
             value["callControlContextEvidence"] = [{
                 "factId": "fact-call",
                 "controlContext": {"resolution": "syntactic-ancestor-context"},
@@ -89,6 +93,18 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
                 "awaitedCallCount": 0,
                 "callbackNestedCallCount": 0,
                 "controlRegionKindCounts": {},
+            }
+        if schema == REVIEW.PACKET_SCHEMA_V4:
+            value["callCleanupPairingEvidence"] = [{
+                "selectedCallFactId": "fact-call",
+                "status": "no-direct-release",
+                "releasePairings": [],
+            }]
+            value["callCleanupPairingCoverage"] = {
+                "selectedCallCount": 1,
+                "directReleaseCount": 0,
+                "handleStatusCounts": {"no-direct-release": 1},
+                "releaseRelationCounts": {},
             }
         path.write_text(json.dumps(value, sort_keys=True) + "\n")
         return path
@@ -116,6 +132,21 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
                 root,
                 "defer-for-more-evidence",
                 {"repair-oracle": "unknown"},
+            )
+            decision = root / "decision.json"
+            decision.write_text(json.dumps(value, sort_keys=True) + "\n")
+            gate = REVIEW.compile_gate(packet, decision)
+            self.assertEqual(gate["status"], "deferred-for-more-evidence")
+            self.assertFalse(gate["allowsCaseContract"])
+
+    def test_v4_cleanup_pairing_packet_uses_the_same_fail_closed_review_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            packet = self.packet(root, REVIEW.PACKET_SCHEMA_V4)
+            value = self.decide(
+                root,
+                "defer-for-more-evidence",
+                {"observable-gap": "unknown"},
             )
             decision = root / "decision.json"
             decision.write_text(json.dumps(value, sort_keys=True) + "\n")
