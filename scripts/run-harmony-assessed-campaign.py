@@ -75,6 +75,28 @@ def require_token(value: Any, label: str) -> str:
     return value
 
 
+def calibration_authoring_from_case(case: dict[str, Any]) -> dict[str, str] | None:
+    executable = (case.get("calibration") or {}).get("executableBundle") or {}
+    value = executable.get("calibrationAuthoring")
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise CampaignError("case calibration authoring lineage must be an object")
+    for field in ("receiptSha256", "draftManifestSha256", "participantSha256"):
+        require_digest(value.get(field), f"case calibration authoring {field}")
+    participant_id = require_token(value.get("participantId"), "case calibration authoring participantId")
+    method_revision = value.get("methodRevision")
+    if not isinstance(method_revision, str) or REVISION.fullmatch(method_revision) is None:
+        raise CampaignError("case calibration authoring methodRevision must be exact")
+    return {
+        "receiptSha256": value["receiptSha256"],
+        "draftManifestSha256": value["draftManifestSha256"],
+        "participantId": participant_id,
+        "participantSha256": value["participantSha256"],
+        "methodRevision": method_revision,
+    }
+
+
 def bound_file(binding: Any, label: str, *, executable: bool = False) -> pathlib.Path:
     if not isinstance(binding, dict):
         raise CampaignError(f"{label} binding is required")
@@ -241,6 +263,9 @@ def validate_plan(plan_path: pathlib.Path) -> dict[str, Any]:
         raise CampaignError("campaign requires a frozen calibrated non-promoted case")
     case_id = require_token(case.get("id"), "case id")
     source_set = require_digest(case.get("sourceSetSha256"), "case sourceSetSha256")
+    calibration_authoring = calibration_authoring_from_case(case)
+    if plan.get("calibrationAuthoring") != calibration_authoring:
+        raise CampaignError("campaign calibration authoring lineage differs from frozen case")
     calibration_path = bound_file(plan.get("calibration"), "calibration")
     method_revision = plan.get("methodRevision")
     if not isinstance(method_revision, str) or REVISION.fullmatch(method_revision) is None:
@@ -323,6 +348,7 @@ def validate_plan(plan_path: pathlib.Path) -> dict[str, Any]:
         "caseId": case_id,
         "sourceSetSha256": source_set,
         "calibrationPath": calibration_path,
+        "calibrationAuthoring": calibration_authoring,
         "methodRevision": method_revision,
         "attempts": attempts,
         "requiredTrials": required_trials,
@@ -611,6 +637,11 @@ def main() -> int:
             "caseId": validated["caseId"],
             "sourceSetSha256": validated["sourceSetSha256"],
             "methodRevision": validated["methodRevision"],
+            **(
+                {"calibrationAuthoring": validated["calibrationAuthoring"]}
+                if validated["calibrationAuthoring"] is not None
+                else {}
+            ),
             "attemptCount": len(validated["attempts"]),
             "deviceAttemptCount": sum(
                 row["status"] == "device-assessed" for row in state["attempts"].values()

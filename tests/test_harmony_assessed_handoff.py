@@ -33,6 +33,13 @@ class HarmonyAssessedHandoffTests(unittest.TestCase):
         self.static = self.base / "static"
         self.static.mkdir()
         self.source_set = "a" * 64
+        self.authoring = {
+            "receiptSha256": "1" * 64,
+            "draftManifestSha256": "2" * 64,
+            "participantId": "independent-evaluator",
+            "participantSha256": "3" * 64,
+            "methodRevision": "4" * 40,
+        }
         self.write_json(
             self.static / "multi-repo-evaluation-case.json",
             {
@@ -40,7 +47,10 @@ class HarmonyAssessedHandoffTests(unittest.TestCase):
                 "id": "portable-case",
                 "status": "frozen-calibrated",
                 "sourceSetSha256": self.source_set,
-                "calibration": {"qualified": True},
+                "calibration": {
+                    "qualified": True,
+                    "executableBundle": {"calibrationAuthoring": self.authoring},
+                },
                 "automaticPromotion": False,
             },
         )
@@ -146,11 +156,34 @@ class HarmonyAssessedHandoffTests(unittest.TestCase):
         value = json.loads(plan.read_text())
         self.assertEqual(value["schema"], "agentlab.harmony_assessed_campaign_plan.v1")
         self.assertEqual(len(value["attempts"]), 2)
+        self.assertEqual(value["calibrationAuthoring"], self.authoring)
         self.assertTrue(all(pathlib.Path(row["assessment"]["path"]).is_absolute() for row in value["attempts"]))
         spec = importlib.util.spec_from_file_location("campaign", ROOT / "scripts/run-harmony-assessed-campaign.py")
         module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
         validated = module.validate_plan(plan)
         self.assertEqual(validated["caseId"], "portable-case")
+        self.assertEqual(validated["calibrationAuthoring"], self.authoring)
+
+    def test_authoring_lineage_tampering_is_rejected_before_host_resolution(self) -> None:
+        self.prepare()
+        value = json.loads(self.handoff.read_text())
+        value["calibrationAuthoring"]["receiptSha256"] = "f" * 64
+        self.handoff.write_text(json.dumps(value))
+        host = self.base / "host"
+        profile = self.host_profile(host)
+        completed = self.execute(
+            RESOLVE,
+            "--handoff",
+            self.handoff,
+            "--host-profile",
+            profile,
+            "--host-root",
+            host,
+            "--output",
+            self.base / "plan.json",
+        )
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("authoring lineage differs", completed.stderr)
 
     def test_workspace_mutation_after_transfer_is_rejected(self) -> None:
         self.prepare()

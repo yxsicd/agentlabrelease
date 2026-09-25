@@ -561,6 +561,15 @@ independent Harmony materialization/build step over the reviewed source set.
 Missing or mismatched lineage fails before emulator launch; result or SmartPerf
 identity drift retains the failed execution and cannot promote the case.
 
+When the Oracle and calibration variants were authored by the independent
+evaluator workflow, that identity is not discarded at case freeze. The
+calibration run and frozen case retain the exact authoring-receipt digest, draft
+manifest, participant adapter digest and method revision. The portable Harmony
+handoff, host resolver and assessed-campaign controller independently require
+the same lineage and retain it in the final campaign summary. A hand-edited
+handoff therefore cannot substitute a different Oracle author before emulator
+execution even if the case and HAP files are otherwise present.
+
 Harmony promotion also has a separate standard-test gate. The static
 qualification matrix now records accepted `ohosTest`/Hypium Instrument Test,
 Hypium Local Test and DevEco Testing Hypium UI lanes, while explicitly limiting
@@ -900,8 +909,12 @@ the original static artifact independently, rejects archive traversal,
 symlinks, unindexed files, source-run or handoff substitution, plan/profile
 drift, campaign-state drift and evidence digest drift. It then reconstructs the
 attempt collection, discrimination report and feedback with trusted repository
-code. The reconstructed report and import receipt receive separate GitHub OIDC
-attestations and are preserved as `harmony-device-assessed-campaign`.
+code. The bundle and trusted import receipt also retain the independently
+authored calibration receipt, draft manifest, participant identity and exact
+authoring revision; substitution at the handoff, plan, campaign summary or
+bundle boundary fails closed. The reconstructed report and import receipt
+receive separate GitHub OIDC attestations and are preserved as
+`harmony-device-assessed-campaign`.
 
 `agent-suite-scorecard.yml` accepts either the original static campaign run or
 this device-import run. It keeps the source assessment method revision distinct

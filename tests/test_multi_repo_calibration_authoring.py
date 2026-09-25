@@ -174,6 +174,51 @@ class MultiRepoCalibrationAuthoringTests(unittest.TestCase):
                 calibration_proposal["calibrationAuthoring"]["draftManifestSha256"],
                 receipt["draftManifestSha256"],
             )
+            calibration_proposal_path = root / "calibration-proposal.json"
+            calibration_proposal_path.write_text(
+                json.dumps(calibration_proposal, indent=2, sort_keys=True) + "\n"
+            )
+            calibration_review_path = root / "calibration-review.json"
+            calibration_review_path.write_text(json.dumps(CALIBRATION.decide(
+                calibration_proposal_path,
+                digest(calibration_proposal_path),
+                "maintainer-independent",
+                ",".join(sorted(CALIBRATION.RISK_IDS)),
+                "The evaluator-authored calibration is approved only for protocol execution.",
+            ), indent=2, sort_keys=True) + "\n")
+            calibration_contract_path = root / "calibration-contract.json"
+            calibration_contract_path.write_text(json.dumps(
+                CALIBRATION.compile_contract(calibration_proposal_path, calibration_review_path),
+                indent=2,
+                sort_keys=True,
+            ) + "\n")
+            staged = root / "staged-calibration"
+            CALIBRATION.stage(
+                output / "draft/bundle",
+                output / "draft/bundle/calibration-bundle.json",
+                contract,
+                calibration_proposal_path,
+                staged,
+                None,
+                authoring_receipt,
+                output,
+            )
+            calibration_run = CALIBRATION.run_bundle(
+                staged,
+                calibration_contract_path,
+                calibration_proposal_path,
+                calibration_review_path,
+                contract,
+                ROOT / "examples/multi-repo-case/baseline",
+                root / "calibration-run",
+                None,
+                authoring_receipt,
+                output,
+            )
+            self.assertEqual(
+                calibration_run["calibrationAuthoring"],
+                calibration_proposal["calibrationAuthoring"],
+            )
 
             verify = subprocess.run([
                 sys.executable, str(SCRIPT), "validate", "--root", str(output)

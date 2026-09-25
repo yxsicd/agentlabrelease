@@ -633,6 +633,13 @@ def main() -> int:
         ranking = report["ranking"][0]
         baseline_summary = load(attempts / "baseline/summary.json")
         reference_summary = load(attempts / "reference/summary.json")
+        case_authoring = (
+            ((case.get("calibration") or {}).get("executableBundle") or {}).get("calibrationAuthoring")
+        )
+        require(
+            case_authoring == load(calibration / "calibration-run.json").get("calibrationAuthoring"),
+            "frozen case lost calibration authoring lineage",
+        )
         require(baseline_summary["subjectTaskSucceeded"] is False, "baseline unexpectedly passed")
         require(reference_summary["subjectTaskSucceeded"] is True, "reference unexpectedly failed")
         require(ranking["eligible"] is True, "case is not discrimination-eligible")

@@ -142,6 +142,10 @@ def verify_handoff_identity(
     for field in ("campaignId", "methodRevision"):
         require(plan.get(field) == handoff.get(field), f"plan {field} differs from handoff")
     require(
+        plan.get("calibrationAuthoring") == handoff.get("calibrationAuthoring"),
+        "plan calibration authoring differs from handoff",
+    )
+    require(
         handoff.get("methodRevision") == source_run["workflowHeadSha"],
         "handoff method revision differs from source workflow run",
     )
@@ -345,6 +349,11 @@ def prepare_bundle(
     )
     rows = [archive_row(path, name, mode) for path, name, mode in members]
     summary = load(campaign / "summary.json", "campaign summary")
+    calibration_authoring = handoff.get("calibrationAuthoring")
+    require(
+        summary.get("calibrationAuthoring") == calibration_authoring,
+        "campaign summary calibration authoring differs from handoff",
+    )
     manifest = {
         "schema": BUNDLE_SCHEMA,
         "campaignId": summary["campaignId"],
@@ -362,6 +371,8 @@ def prepare_bundle(
         "automaticPromotion": False,
         "nextGate": "trusted-main-import-and-attestation",
     }
+    if calibration_authoring is not None:
+        manifest["calibrationAuthoring"] = calibration_authoring
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, "x", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for path, name, mode in members:
@@ -457,14 +468,25 @@ def verify_bundle(
     plan_path = output / safe_relative((manifest.get("campaignPlan") or {}).get("path"), "campaign plan")
     profile = load(profile_path, "imported host profile")
     plan = load(plan_path, "imported campaign plan")
+    summary_path = output / "campaign/summary.json"
+    summary = load(summary_path, "imported campaign summary")
     for label, binding_value, path in (
         ("host profile", manifest.get("hostProfile"), profile_path),
         ("campaign plan", manifest.get("campaignPlan"), plan_path),
-        ("campaign summary", manifest.get("campaignSummary"), output / "campaign/summary.json"),
+        ("campaign summary", manifest.get("campaignSummary"), summary_path),
     ):
         require(isinstance(binding_value, dict), f"{label} binding is absent")
         require(binding_value.get("sha256") == sha256(path) and binding_value.get("byteLength") == path.stat().st_size, f"{label} binding differs")
     verify_handoff_identity(handoff, plan, source_run)
+    calibration_authoring = handoff.get("calibrationAuthoring")
+    require(
+        manifest.get("calibrationAuthoring") == calibration_authoring,
+        "bundle calibration authoring differs from authoritative handoff",
+    )
+    require(
+        summary.get("calibrationAuthoring") == calibration_authoring,
+        "campaign summary calibration authoring differs from authoritative handoff",
+    )
     verify_profile_plan(profile, plan)
     collected, report, feedback = validate_campaign(
         output / "campaign", static_root, handoff, profile, plan_path, plan
@@ -501,5 +523,7 @@ def verify_bundle(
         "automaticPromotion": False,
         "nextGate": "suite-composition-or-maintainer-adjudication",
     }
+    if calibration_authoring is not None:
+        verification["calibrationAuthoring"] = calibration_authoring
     (result_root / "import-verification.json").write_bytes(json_bytes(verification))
     return verification

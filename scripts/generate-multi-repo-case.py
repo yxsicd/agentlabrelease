@@ -41,6 +41,34 @@ def require(condition, message):
         raise ValueError(message)
 
 
+def validate_calibration_authoring(value):
+    require(isinstance(value, dict), "calibration authoring lineage must be an object")
+    for field in ("receiptSha256", "draftManifestSha256", "participantSha256"):
+        require(
+            isinstance(value.get(field), str) and SHA256.fullmatch(value[field]),
+            f"calibration authoring {field} is invalid",
+        )
+    require(
+        isinstance(value.get("participantId"), str) and value["participantId"],
+        "calibration authoring participantId is invalid",
+    )
+    require(
+        isinstance(value.get("methodRevision"), str)
+        and REVISION.fullmatch(value["methodRevision"]),
+        "calibration authoring methodRevision is invalid",
+    )
+    return {
+        field: value[field]
+        for field in (
+            "receiptSha256",
+            "draftManifestSha256",
+            "participantId",
+            "participantSha256",
+            "methodRevision",
+        )
+    }
+
+
 def validate_sources(sources):
     require(isinstance(sources, list) and len(sources) >= 2, "at least two pinned sources are required")
     ids = []
@@ -372,6 +400,10 @@ def main():
                 else {}
             ),
         }
+        if calibration_run.get("calibrationAuthoring") is not None:
+            calibration_run_binding["calibrationAuthoring"] = validate_calibration_authoring(
+                calibration_run["calibrationAuthoring"]
+            )
     qualification_matrix = build_matrix(
         case_id=case_id,
         source_set_sha256=source_set,

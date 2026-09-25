@@ -156,6 +156,7 @@ class HarmonyDeviceCampaignImportTests(unittest.TestCase):
                     "calibration": file_binding(self.root, self.fixture.calibration),
                     "attemptCollection": file_binding(self.root, collection_path),
                     "attempts": attempts,
+                    "calibrationAuthoring": self.fixture.authoring,
                     "automaticPromotion": False,
                     "nextGate": "resolve-on-qualified-harmony-host",
                 }
@@ -257,6 +258,8 @@ class HarmonyDeviceCampaignImportTests(unittest.TestCase):
         self.assertEqual(manifest["sourceAssessedCampaign"]["runId"], self.run_id)
         self.assertEqual(result["sourceMethodRevision"], "d" * 40)
         self.assertEqual(result["verificationMethodRevision"], "e" * 40)
+        self.assertEqual(manifest["calibrationAuthoring"], self.fixture.authoring)
+        self.assertEqual(result["calibrationAuthoring"], self.fixture.authoring)
         self.assertTrue(result["harmonyEndToEndEvidenceQualified"])
         self.assertTrue(
             report["ranking"][0]["processMeasurement"]["harmonyDevice"][
@@ -264,6 +267,30 @@ class HarmonyDeviceCampaignImportTests(unittest.TestCase):
             ]
         )
         self.assertFalse(result["automaticPromotion"])
+
+    def test_bundle_calibration_authoring_substitution_is_rejected(self) -> None:
+        self.prepare()
+        replacement = self.root / "authoring-substitution.zip"
+        with zipfile.ZipFile(self.archive) as source, zipfile.ZipFile(
+            replacement, "w"
+        ) as target:
+            for info in source.infolist():
+                body = source.read(info.filename)
+                if info.filename == "bundle-manifest.json":
+                    value = json.loads(body)
+                    value["calibrationAuthoring"]["participantId"] = "substitute"
+                    body = json.dumps(value).encode()
+                target.writestr(info, body)
+        with self.assertRaisesRegex(
+            IMPORT.ImportError, "bundle calibration authoring differs"
+        ):
+            IMPORT.verify_bundle(
+                replacement,
+                self.root,
+                self.source_run,
+                self.root / "authoring-substitution-import",
+                "e" * 40,
+            )
 
     def test_archive_member_tampering_is_rejected(self) -> None:
         self.prepare()

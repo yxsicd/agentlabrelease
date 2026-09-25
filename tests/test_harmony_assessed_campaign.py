@@ -92,6 +92,13 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
         self.root = pathlib.Path(self.temp.name)
         self.case = self.root / "case.json"
         self.source_set = "a" * 64
+        self.authoring = {
+            "receiptSha256": "1" * 64,
+            "draftManifestSha256": "2" * 64,
+            "participantId": "independent-evaluator",
+            "participantSha256": "3" * 64,
+            "methodRevision": "4" * 40,
+        }
         self.case.write_text(
             json.dumps(
                 {
@@ -104,7 +111,10 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
                         {"id": "contracts", "repository": "https://example.invalid/contracts", "revision": "c" * 40},
                     ],
                     "oracle": {"authority": "independent-executable-oracle"},
-                    "calibration": {"qualified": True},
+                    "calibration": {
+                        "qualified": True,
+                        "executableBundle": {"calibrationAuthoring": self.authoring},
+                    },
                     "automaticPromotion": False,
                 }
             )
@@ -231,6 +241,7 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
             "campaignId": "campaign-r1",
             "evaluationCase": self.bind(self.case),
             "calibration": self.bind(self.calibration),
+            "calibrationAuthoring": self.authoring,
             "methodRevision": "d" * 40,
             "attempts": [
                 {"attemptId": "strong-1", "participantId": "strong", "assessment": self.assessment_binding(self.strong)},
@@ -289,6 +300,7 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
         feedback = json.loads((output / "assessment-feedback-candidates.json").read_text())
         state = json.loads((output / "campaign-state.json").read_text())
         self.assertEqual(summary["deviceAttemptCount"], 2)
+        self.assertEqual(summary["calibrationAuthoring"], self.authoring)
         self.assertEqual(summary["eligibleCaseIds"], ["campaign-case"])
         self.assertEqual(report["ranking"][0]["metrics"]["discriminationScore"], 1.0)
         self.assertTrue(report["ranking"][0]["processAwareEligible"])
@@ -359,6 +371,16 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
         completed = self.execute(output)
         self.assertEqual(completed.returncode, 1)
         self.assertIn("summary differs from campaign plan", completed.stderr)
+        self.assertFalse(output.exists())
+
+    def test_authoring_lineage_drift_is_rejected_before_campaign_output(self) -> None:
+        plan = json.loads(self.plan.read_text())
+        plan["calibrationAuthoring"]["receiptSha256"] = "f" * 64
+        self.plan.write_text(json.dumps(plan))
+        output = self.root / "authoring-drift-output"
+        completed = self.execute(output)
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("authoring lineage differs", completed.stderr)
         self.assertFalse(output.exists())
 
     def test_kvm_campaign_requires_explicit_execution_preflight(self) -> None:

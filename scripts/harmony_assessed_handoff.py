@@ -71,6 +71,29 @@ def require_token(value: Any, label: str) -> str:
     return value
 
 
+def calibration_authoring_from_case(case: dict[str, Any]) -> dict[str, str] | None:
+    executable = (case.get("calibration") or {}).get("executableBundle") or {}
+    value = executable.get("calibrationAuthoring")
+    if value is None:
+        return None
+    require(isinstance(value, dict), "case calibration authoring lineage must be an object")
+    for field in ("receiptSha256", "draftManifestSha256", "participantSha256"):
+        require_digest(value.get(field), f"case calibration authoring {field}")
+    participant_id = require_token(value.get("participantId"), "case calibration authoring participantId")
+    method_revision = value.get("methodRevision")
+    require(
+        isinstance(method_revision, str) and REVISION.fullmatch(method_revision) is not None,
+        "case calibration authoring methodRevision must be exact",
+    )
+    return {
+        "receiptSha256": value["receiptSha256"],
+        "draftManifestSha256": value["draftManifestSha256"],
+        "participantId": participant_id,
+        "participantSha256": value["participantSha256"],
+        "methodRevision": method_revision,
+    }
+
+
 def safe_relative(value: Any, label: str) -> PurePosixPath:
     require(isinstance(value, str) and value, f"{label} path is required")
     path = PurePosixPath(value)
@@ -195,6 +218,7 @@ def prepare(root: Path, output: Path, campaign_id: str | None = None) -> dict[st
     require((case.get("calibration") or {}).get("qualified") is True, "case calibration is not qualified")
     case_id = require_token(case.get("id"), "case id")
     source_set = require_digest(case.get("sourceSetSha256"), "case sourceSetSha256")
+    calibration_authoring = calibration_authoring_from_case(case)
     require(calibration.get("schema") == "agentlab.multi_repo_calibration.v1", "unsupported calibration schema")
     require(calibration.get("sourceSetSha256") == source_set, "calibration source set differs")
     require(collection.get("schema") == "agentlab.case_attempt_collection.v2", "unsupported attempt collection schema")
@@ -230,6 +254,7 @@ def prepare(root: Path, output: Path, campaign_id: str | None = None) -> dict[st
         "calibration": portable_file(root, calibration_path, "calibration"),
         "attemptCollection": portable_file(root, collection_path, "attempt collection"),
         "attempts": attempts,
+        **({"calibrationAuthoring": calibration_authoring} if calibration_authoring else {}),
         "automaticPromotion": False,
         "nextGate": "resolve-on-qualified-harmony-host",
     }
@@ -286,6 +311,10 @@ def verify_handoff(handoff_path: Path) -> tuple[dict[str, Any], Path, list[dict[
     case_id = require_token(handoff.get("caseId"), "caseId")
     source_set = require_digest(handoff.get("sourceSetSha256"), "sourceSetSha256")
     require(case.get("id") == case_id and case.get("sourceSetSha256") == source_set, "handoff case identity differs from evaluation case")
+    require(
+        handoff.get("calibrationAuthoring") == calibration_authoring_from_case(case),
+        "handoff calibration authoring lineage differs from evaluation case",
+    )
     require(isinstance(handoff.get("methodRevision"), str) and REVISION.fullmatch(handoff["methodRevision"]) is not None, "handoff methodRevision is invalid")
     attempts_raw = handoff.get("attempts")
     require(isinstance(attempts_raw, list) and len(attempts_raw) >= 2, "handoff requires at least two attempts")
@@ -413,6 +442,11 @@ def resolve(handoff_path: Path, profile_path: Path, host_root: Path, output: Pat
         "calibration": {"path": str(calibration_path), "sha256": sha256(calibration_path)},
         "methodRevision": handoff["methodRevision"],
         "attempts": attempts,
+        **(
+            {"calibrationAuthoring": handoff["calibrationAuthoring"]}
+            if handoff.get("calibrationAuthoring") is not None
+            else {}
+        ),
         "sourceMaterialization": profile.get("sourceMaterialization"),
         "build": build,
         "standardTest": standard_test,

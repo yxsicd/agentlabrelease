@@ -641,6 +641,8 @@ def run_bundle(
         "variantRoles": summary["variantRoles"],
         "automaticPromotion": False,
     }
+    if contract.get("calibrationAuthoring") is not None:
+        receipt["calibrationAuthoring"] = contract["calibrationAuthoring"]
     write(output / "calibration-run.json", receipt)
     (output / "driver.stdout.log").write_text(process.stdout, encoding="utf-8")
     (output / "driver.stderr.log").write_text(process.stderr, encoding="utf-8")
