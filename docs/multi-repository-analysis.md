@@ -176,6 +176,20 @@ changed-revision file-cache behavior, variance and cross-host performance are
 not qualified by that single trial. The structured record is
 `release/qualifications/harmony-real-multi-repo-34661ff/aggregate-cache-benchmark.json`.
 
+The repository-projection layer was then measured on an exact changed-revision
+pair: the 556-file code-workshop repository changed while the 12,155-file
+guide-snippets repository stayed at its prior commit. One fresh component run
+hit the unchanged repository and rebuilt the changed one in 15.92 seconds,
+versus 21.08 seconds for the uncached control (1.32x wall speedup). User CPU
+fell from 19.04 to 9.31 seconds and maximum resident size from 3,038,134,272 to
+821,870,592 bytes (72.9% lower). All four authority artifacts were
+byte-identical. The initial two-repository component population took 23.75
+seconds, so exact bundle reuse remains the preferred unchanged-source-set path.
+This is one same-filesystem paired trial, not a population or cross-host claim;
+cache eviction and GitHub cache transport remain unqualified. The structured
+record is
+`release/qualifications/harmony-real-multi-repo-34661ff/component-cache-benchmark.json`.
+
 ## Evidence contract
 
 The output directory contains:

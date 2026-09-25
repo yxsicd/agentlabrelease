@@ -1,0 +1,117 @@
+{
+  "schema": "agentlab.multi_repo_component_cache_benchmark.v1",
+  "status": "machine-local-preliminary",
+  "methodRevision": "4734d697d53b32b9489853a66398f29ba734dde9",
+  "analyzer": {
+    "buildProfile": "release",
+    "sha256": "e29d4c2c51f5f260636e3ed2f8fe41569630a6484ee22b88dd320bbfa55d90bf",
+    "bytes": 5233680
+  },
+  "source": {
+    "repositories": 2,
+    "files": 12711,
+    "changedRepository": "code-workshop",
+    "changedRepositoryFiles": 556,
+    "reusedRepository": "guide-snippets",
+    "reusedRepositoryFiles": 12155,
+    "baselineChangedRepositoryRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+    "benchmarkChangedRepositoryRevision": "df6dc9197ca4865a6d1814cb6d634f1757c798f9",
+    "unchangedRepositoryRevision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+    "sourceSetSha256": "80d463ac79b6bd4eef4c76141cfb32e7b5000092dbbbd53687e386d782d2e091",
+    "facts": 404266,
+    "difficultyCandidates": 19373,
+    "gitObjectDatabase": "warm"
+  },
+  "host": {
+    "operatingSystem": "macOS 26.6.2 (25G83)",
+    "cpu": "Apple M4",
+    "logicalCpuCount": 10,
+    "cacheAndOutputSameFilesystem": true
+  },
+  "cache": {
+    "mode": "exact-repository-projection",
+    "authority": false,
+    "fileCacheEnabled": false,
+    "keyContract": "analyzer implementation digest + grammar digest + repository id + repository URL + committed revision",
+    "projectionArtifactsAtEnd": 12,
+    "projectionLogicalBytesAtEnd": 524321356,
+    "crossRepositoryResolutionRecomputed": true,
+    "exactSourceSetBundleRemainsPreferred": true
+  },
+  "seedTrial": {
+    "profile": "cold-component-population",
+    "processModel": "fresh-process-warm-git-object-database",
+    "jobs": 8,
+    "componentHits": 0,
+    "componentMisses": 2,
+    "componentWrites": 2,
+    "wallSeconds": 23.75,
+    "userCpuSeconds": 26.33,
+    "systemCpuSeconds": 2.14,
+    "maximumResidentBytes": 2935177216
+  },
+  "pairedChangedRevisionTrial": {
+    "componentReuse": {
+      "profile": "one-repository-changed",
+      "processModel": "fresh-process-warm-git-object-database",
+      "jobs": 8,
+      "bundleHits": 0,
+      "bundleMisses": 1,
+      "componentHits": 1,
+      "componentMisses": 1,
+      "componentWrites": 1,
+      "wallSeconds": 15.92,
+      "userCpuSeconds": 9.31,
+      "systemCpuSeconds": 1.01,
+      "maximumResidentBytes": 821870592
+    },
+    "uncachedControl": {
+      "profile": "one-repository-changed-uncached-control",
+      "processModel": "fresh-process-warm-git-object-database",
+      "jobs": 8,
+      "wallSeconds": 21.08,
+      "userCpuSeconds": 19.04,
+      "systemCpuSeconds": 1.5,
+      "maximumResidentBytes": 3038134272
+    },
+    "wallSpeedup": 1.32,
+    "userCpuSpeedup": 2.05,
+    "maximumResidentReductionPercent": 72.9
+  },
+  "artifacts": {
+    "workspaceFacts": {
+      "bytes": 421938166,
+      "sha256": "cef36833c9ed015e3790b8ec72b5352ccea2427927099d4491c92e3ad9e7730a"
+    },
+    "difficultyCandidates": {
+      "bytes": 25986668,
+      "sha256": "6d1ddc4cd10fca66be4c55ed30378a556f4aa7989bb5d752ab07139465c1ea81"
+    },
+    "unsupportedSources": {
+      "bytes": 902,
+      "sha256": "4ff136ee04e7db790405ef22546125326bda534b7f5e075ffa4b4126bb59f5d1"
+    },
+    "analysisReceipt": {
+      "bytes": 2343,
+      "sha256": "4e1ebcbd4f7e91861ee0008ed8beeb29e59f1b2f59cdd9f9cd47a97e16c112fe"
+    }
+  },
+  "artifactDigestsByteIdenticalAgainstUncachedControl": true,
+  "qualificationBoundary": {
+    "qualified": [
+      "one changed 556-file repository reuses one unchanged 12155-file repository projection",
+      "module resolution, dependency edges and difficulty candidates are recomputed for the changed source set",
+      "all four authority artifacts are byte-identical to the uncached changed-revision control",
+      "fresh-process wall, CPU and resident-memory measurements on one same-filesystem host"
+    ],
+    "notQualified": [
+      "population-level performance or variance",
+      "cross-host or GitHub Actions cache-restore speed",
+      "cold-network or cold-Git-object-database speed",
+      "bounded cache eviction or long-running storage growth",
+      "positive wall-time benefit from the separate per-file cache"
+    ]
+  },
+  "trialCountPerPairedProfile": 1,
+  "automaticPromotion": false
+}

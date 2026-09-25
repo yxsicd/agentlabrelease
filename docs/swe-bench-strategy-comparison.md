@@ -399,9 +399,16 @@ smaller than SWE-bench's:
    one-file-change tests prove cache reuse and byte-identical authority output.
    On the same source cut, an exact aggregate bundle hit took 2.31 seconds
    after a 16.76-second bundle miss (7.26x), with byte-identical evidence. This
-   is again one same-filesystem machine-local trial; GitHub cache transport,
-   changed-revision file-cache benefit and population variance remain
-   unqualified, and there is still no early candidate prefilter.
+   is again one same-filesystem machine-local trial. A separate exact
+   changed-revision trial changed the 556-file repository while reusing the
+   unchanged 12,155-file repository projection: 15.92 seconds versus 21.08
+   seconds uncached (1.32x), with user CPU reduced from 19.04 to 9.31 seconds,
+   maximum resident size reduced 72.9%, and all four authority artifacts
+   byte-identical. The trusted-main workflow therefore enables repository
+   projections, while exact bundles remain preferred and the finer per-file
+   cache remains disabled. GitHub cache transport, population variance,
+   bounded cache eviction and a positive changed-revision per-file-cache result
+   remain unqualified; there is still no early candidate prefilter.
 
 Until these gaps close, AgentLab can claim a richer executable architecture and
 one real closed-path proof, not a large, statistically qualified benchmark.
