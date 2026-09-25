@@ -188,11 +188,36 @@ def validate_registry_binding(
     if referenced != selected:
         fail("closure selection differs from selected component registry entries")
 
+    if value.get("status") == "developer-preview-candidate":
+        registered_assets = {
+            item["url"]: (component_id, item)
+            for component_id, component in by_id.items()
+            if component_id in selected
+            for item in component.get("assets", [])
+            if isinstance(item, dict) and isinstance(item.get("url"), str)
+        }
+        closure_assets = {item["url"]: item for item in value["assets"]}
+        if set(closure_assets) != set(registered_assets):
+            fail("developer preview closure does not contain every selected component asset")
+        for url, (component_id, registered) in registered_assets.items():
+            retained = closure_assets[url]
+            if (
+                retained.get("registryComponent") != component_id
+                or retained.get("sha256") != registered.get("sha256")
+                or retained.get("bytes") != registered.get("bytes")
+            ):
+                fail("developer preview component asset identity differs")
+
     reuse = value.get("reuse")
     if not isinstance(reuse, dict) or reuse.get("selectedComponentCount") != len(selected):
         fail("reuse summary selected component count mismatch")
     if reuse.get("newBinaryBuildCount") != 0 or reuse.get("newBinaryUploadCount") != 0:
         fail("reference-only aggregate may not claim new binary builds or uploads")
+    if (
+        value.get("status") == "developer-preview-candidate"
+        and reuse.get("reusedAssetCount") != len(value["assets"])
+    ):
+        fail("developer preview reused asset count mismatch")
 
 
 def validate_closure(

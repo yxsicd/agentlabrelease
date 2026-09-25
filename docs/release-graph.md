@@ -41,6 +41,14 @@ automatic promotion disabled. The resulting metadata commit may follow the
 source cut it describes; `sources.releaseGitSha` is the exact implementation
 cut under qualification, not a self-referential digest of the JSON commit.
 
+“Entire asset list” means every asset of every selected component, not one
+representative archive per component. Runtime, Harmony CLI, build kit, tools,
+container image and SessionFS descriptors are installation inputs and must be
+present beside their archives. Validation compares the closure URL set with the
+complete selected registry URL set and fails if either a payload or descriptor
+is omitted. `selectedComponentCount` and `reusedAssetCount` remain separate so
+component reuse is not confused with file coverage.
+
 The candidate still requires its declared CI checks, a tagged clean install and
 Linux emulator acceptance before it can become a qualified developer preview.
 Generating a closure does not create a tag, GitHub Release or channel promotion.

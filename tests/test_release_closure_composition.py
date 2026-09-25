@@ -41,7 +41,7 @@ class ReleaseClosureCompositionTests(unittest.TestCase):
         cls.registry_bytes = cls.registry_path.read_bytes()
         cls.registry = json.loads(cls.registry_bytes)
 
-    def test_composition_reuses_every_asset_without_binary_work(self) -> None:
+    def test_composition_closes_every_selected_component_asset_without_binary_work(self) -> None:
         value = MODULE.compose(
             self.base,
             self.registry,
@@ -51,7 +51,16 @@ class ReleaseClosureCompositionTests(unittest.TestCase):
         )
         self.assertEqual(value["releaseTag"], "v0.1.0-alpha.12")
         self.assertEqual(value["sources"]["releaseGitSha"], self.revision)
-        self.assertEqual(value["assets"], self.base["assets"])
+        expected_urls = {
+            asset["url"]
+            for component in self.registry["components"]
+            if component.get("status", "").startswith("selected")
+            for asset in component["assets"]
+        }
+        self.assertEqual({asset["url"] for asset in value["assets"]}, expected_urls)
+        self.assertGreater(len(value["assets"]), len(self.base["assets"]))
+        self.assertEqual(value["reuse"]["reusedAssetCount"], len(expected_urls))
+        self.assertEqual(len(value["assets"]), 22)
         self.assertEqual(value["reuse"]["newBinaryBuildCount"], 0)
         self.assertEqual(value["reuse"]["newBinaryUploadCount"], 0)
         self.assertEqual(
@@ -63,6 +72,27 @@ class ReleaseClosureCompositionTests(unittest.TestCase):
             "not-qualified",
         )
         self.assertFalse(value["qualificationPlan"]["automaticPromotion"])
+
+    def test_preview_rejects_omitting_one_registered_descriptor(self) -> None:
+        value = MODULE.compose(
+            self.base,
+            self.registry,
+            self.registry_bytes,
+            "0.1.0-alpha.12",
+            self.revision,
+        )
+        value["assets"] = [
+            asset
+            for asset in value["assets"]
+            if asset["id"] != "harmony-cli-descriptor"
+        ]
+        value["reuse"]["reusedAssetCount"] -= 1
+        with self.assertRaisesRegex(ValueError, "every selected component asset"):
+            MODULE.validator_module().validate_closure(
+                value,
+                self.registry,
+                self.registry_bytes,
+            )
 
     def test_cli_refuses_to_overwrite_closure(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

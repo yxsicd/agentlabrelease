@@ -54,18 +54,11 @@ class ReleaseGraphTests(unittest.TestCase):
     def test_valid_immutable_closure(self) -> None:
         MODULE.validate_closure(closure())
 
-    def test_alpha11_closure_matches_component_registry(self) -> None:
+    def test_alpha11_closure_remains_a_structurally_valid_historical_candidate(self) -> None:
         closure_value = json.loads(
             (ROOT / "release/closures/v0.1.0-alpha.11.json").read_text()
         )
-        registry_path = ROOT / "release/components/registry.json"
-        registry_bytes = registry_path.read_bytes()
-        registry = json.loads(registry_bytes)
-        self.assertEqual(
-            closure_value["componentRegistry"]["sha256"],
-            hashlib.sha256(registry_bytes).hexdigest(),
-        )
-        MODULE.validate_closure(closure_value, registry, registry_bytes)
+        MODULE.validate_closure(closure_value)
 
     def test_alpha12_is_source_bound_reference_only_preview_candidate(self) -> None:
         alpha11 = json.loads(
@@ -115,9 +108,9 @@ class ReleaseGraphTests(unittest.TestCase):
             self.assertIsInstance(row["assetId"], int)
             self.assertGreater(row["assetId"], 0)
 
-    def test_alpha11_registry_asset_drift_is_rejected(self) -> None:
+    def test_alpha12_registry_asset_drift_is_rejected(self) -> None:
         closure_value = json.loads(
-            (ROOT / "release/closures/v0.1.0-alpha.11.json").read_text()
+            (ROOT / "release/closures/v0.1.0-alpha.12.json").read_text()
         )
         registry_path = ROOT / "release/components/registry.json"
         registry_bytes = registry_path.read_bytes()

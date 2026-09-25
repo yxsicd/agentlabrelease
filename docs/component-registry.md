@@ -42,6 +42,13 @@ component assets by URL, byte count, SHA-256 and immutable tag. Promotion and
 new aggregate versions may reuse those references indefinitely. A no-op
 component change must not create a new component Release.
 
+Every file required to consume a selected component belongs to that component
+identity. This includes small descriptors and inventories as well as archives
+and executables. A developer-preview closure must contain the full selected
+registry asset set; listing one representative archive while omitting its
+descriptor is not a closed aggregate and is rejected. The registry therefore
+tracks component count independently from asset-file count.
+
 Container-image metadata has one additional content check. The compressed
 Docker archive SHA-256 identifies the transport bytes, while the image ID is
 the SHA-256 of the exact config object named by `manifest.json`; neither value

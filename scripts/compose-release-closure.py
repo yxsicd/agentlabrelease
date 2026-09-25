@@ -70,24 +70,76 @@ def compose(
     revision: str,
 ) -> dict[str, Any]:
     validator = validator_module()
-    validator.validate_closure(base, registry, registry_bytes)
+    validator.validate_closure(base)
     base_ordinal = alpha_ordinal(base.get("releaseVersion"), "base")
     next_ordinal = alpha_ordinal(version, "new")
     require(next_ordinal > base_ordinal, "new release version must advance the base alpha")
     require_local_commit(revision)
-    base_registry = base.get("componentRegistry") or {}
     registry_sha = hashlib.sha256(registry_bytes).hexdigest()
-    require(
-        base_registry.get("schema") == registry.get("schema")
-        and base_registry.get("sha256") == registry_sha,
-        "base closure does not bind the exact component registry",
-    )
     reuse = base.get("reuse") or {}
     require(
         reuse.get("newBinaryBuildCount") == 0
         and reuse.get("newBinaryUploadCount") == 0,
         "base closure is not reference-only",
     )
+    selected_components = [
+        component
+        for component in registry.get("components", [])
+        if isinstance(component, dict)
+        and str(component.get("status", "")).startswith("selected")
+    ]
+    require(selected_components, "component registry has no selected components")
+    registered_by_url = {
+        asset["url"]: (component, asset)
+        for component in selected_components
+        for asset in component.get("assets", [])
+        if isinstance(asset, dict) and isinstance(asset.get("url"), str)
+    }
+    for retained in base.get("assets", []):
+        registered = registered_by_url.get(retained.get("url"))
+        require(registered is not None, "base asset is absent from the new registry")
+        component, asset = registered
+        require(
+            retained.get("registryComponent") == component.get("id")
+            and retained.get("sha256") == asset.get("sha256")
+            and retained.get("bytes") == asset.get("bytes"),
+            "base asset identity differs from the new registry",
+        )
+    assets = []
+    asset_ids: set[str] = set()
+    asset_urls: set[str] = set()
+    for component in selected_components:
+        component_assets = component.get("assets")
+        require(
+            isinstance(component_assets, list) and component_assets,
+            f"selected component {component.get('id')} has no assets",
+        )
+        for asset in component_assets:
+            asset_id = asset.get("id") if isinstance(asset, dict) else None
+            url = asset.get("url") if isinstance(asset, dict) else None
+            require(
+                isinstance(asset_id, str)
+                and bool(asset_id)
+                and asset_id not in asset_ids,
+                "registered component asset IDs must be unique",
+            )
+            require(
+                isinstance(url, str) and bool(url) and url not in asset_urls,
+                "registered component asset URLs must be unique",
+            )
+            asset_ids.add(asset_id)
+            asset_urls.add(url)
+            assets.append(
+                {
+                    "id": asset_id,
+                    "kind": component["kind"],
+                    "url": url,
+                    "sha256": asset["sha256"],
+                    "bytes": asset["bytes"],
+                    "immutableRef": component["immutableRef"],
+                    "registryComponent": component["id"],
+                }
+            )
     result = copy.deepcopy(base)
     result["releaseVersion"] = version
     result["releaseTag"] = f"v{version}"
@@ -98,11 +150,16 @@ def compose(
         "path": "release/components/registry.json",
         "sha256": registry_sha,
     }
+    result["assets"] = assets
     result["reuse"] = {
         **reuse,
-        "selectedComponentCount": len(result["assets"]),
+        "selectedComponentCount": len(selected_components),
+        "reusedAssetCount": len(assets),
         "newBinaryBuildCount": 0,
         "newBinaryUploadCount": 0,
+        "largeAssetsReused": sorted(
+            asset["id"] for asset in assets if asset["bytes"] >= 256 * 1024 * 1024
+        ),
     }
     result["developerPreviewScope"] = {
         "multiRepositorySemanticAndProgramAnalysis": "included",
@@ -131,8 +188,18 @@ def compose(
     }
     validator.validate_closure(result, registry, registry_bytes)
     require(
-        result["assets"] == base["assets"],
-        "reference-only composition changed component assets",
+        all(
+            asset["url"] in asset_urls
+            and asset["sha256"]
+            == next(
+                registered["sha256"]
+                for component in selected_components
+                for registered in component["assets"]
+                if registered["url"] == asset["url"]
+            )
+            for asset in result["assets"]
+        ),
+        "reference-only composition changed component asset identity",
     )
     return result
 
@@ -162,7 +229,8 @@ def main() -> int:
             {
                 "ok": True,
                 "releaseTag": result["releaseTag"],
-                "reusedAssets": len(result["assets"]),
+                "reusedComponents": result["reuse"]["selectedComponentCount"],
+                "reusedAssets": result["reuse"]["reusedAssetCount"],
                 "newBinaryBuildCount": 0,
                 "newBinaryUploadCount": 0,
             },
