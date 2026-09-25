@@ -699,3 +699,23 @@ proposal review, calibration and final frozen-case lineage.
 It authorizes only construction of a new candidate. The old case stays frozen,
 the new difficulty stays non-ready, and every artifact keeps
 `automaticPromotion: false`.
+
+## Real-source semantic review packets
+
+The two two-file API candidates in the retained shortlist now have exact-source
+review packets under
+`release/qualifications/harmony-real-multi-repo-34661ff/review-packets/`.
+Each packet binds the frozen candidate, facts, source blobs, line-numbered call
+context, marker-bearing project-root candidates and the method revision that
+materialized the packet. It deliberately does not supply a task prompt or an
+Oracle. An independent reviewer must decide whether the call sites express one
+coherent cross-repository behavior before any case contract is written.
+
+This gate matters in the real evidence. The two `AlertDialog` sites implement
+different product behavior (account logout confirmation versus Web alert result
+handling), while the two `call.makeCall` sites pass different inputs and live
+behind different lifecycle/capability boundaries. A shared API name is thus
+localization evidence, not semantic equivalence. Both packets remain
+`independent-semantic-review-required`, acknowledge the same four risks and
+state that only the exact base source set and source-localized call evidence
+satisfy the SWE-style task contract so far.

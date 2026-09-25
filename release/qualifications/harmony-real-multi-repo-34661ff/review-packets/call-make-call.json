@@ -1,0 +1,320 @@
+{
+  "apiContract": {
+    "callTarget": "call.makeCall",
+    "exportedSymbol": "call",
+    "specifier": "@kit.TelephonyKit"
+  },
+  "automaticPromotion": false,
+  "callSiteEvidence": [
+    {
+      "excerpt": [
+        {
+          "line": 122,
+          "text": "      let isSupport = call.hasVoiceCapability();"
+        },
+        {
+          "line": 123,
+          "text": "      if (isSupport) {"
+        },
+        {
+          "line": 124,
+          "text": "        if (canIUse('SystemCapability.Applications.Contacts')) {"
+        },
+        {
+          "line": 125,
+          "text": "          call.makeCall('', (err: BusinessError) => {"
+        },
+        {
+          "line": 126,
+          "text": "            if (err) {"
+        },
+        {
+          "line": 127,
+          "text": "              Logger.error(TAG, `MakeCall fail, error code ${err.code}, message: ${err.message}`);"
+        },
+        {
+          "line": 128,
+          "text": "            } else {"
+        },
+        {
+          "line": 129,
+          "text": "              Logger.info(TAG, `MakeCall success`);"
+        },
+        {
+          "line": 130,
+          "text": "            }"
+        },
+        {
+          "line": 131,
+          "text": "          });"
+        },
+        {
+          "line": 132,
+          "text": "          return;"
+        },
+        {
+          "line": 133,
+          "text": "        }"
+        },
+        {
+          "line": 134,
+          "text": "      }"
+        },
+        {
+          "line": 135,
+          "text": "    }"
+        },
+        {
+          "line": 136,
+          "text": "    this.uiContext.showAlertDialog({"
+        }
+      ],
+      "excerptSha256": "315dfbdfc4c38436b2cdb99a45444aa24e1bf7b26a277711b35988aa7125cfbd",
+      "factId": "workspace-fact-b72c656fa462ebf976ec894e",
+      "gitBlobOid": "39b8ef63bf6d7ffd0aa06bcbd2a3a13c0eb43341",
+      "kind": "call",
+      "owner": "AppLinkingComponent::jumpToDial",
+      "path": "features/componentlibrary/src/main/ets/componentdetailview/applinking/component/AppLinkingBuilder.ets",
+      "projectBoundaryCandidates": [
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "features/componentlibrary"
+        }
+      ],
+      "repositoryId": "code-workshop",
+      "sourceByteLength": 5497,
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git@7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+      "sourceSha256": "efacc88d3934b253070173d274c9f7b7d3b82126a216b054eb5d879d3dc0936d",
+      "span": {
+        "endByte": 5164,
+        "endColumnByte": 12,
+        "endLine": 131,
+        "startByte": 4899,
+        "startColumnByte": 10,
+        "startLine": 125
+      },
+      "targetExpression": "call.makeCall"
+    },
+    {
+      "excerpt": [
+        {
+          "line": 31,
+          "text": "            // 判断链接是否为拨号链接"
+        },
+        {
+          "line": 32,
+          "text": "            if (url.indexOf('tel://') === 0) {"
+        },
+        {
+          "line": 33,
+          "text": "              // 跳转拨号界面"
+        },
+        {
+          "line": 34,
+          "text": "              call.makeCall(url.substring(6), (err) => {"
+        },
+        {
+          "line": 35,
+          "text": "                if (!err) {"
+        },
+        {
+          "line": 36,
+          "text": "                  console.info('make call succeeded.');"
+        },
+        {
+          "line": 37,
+          "text": "                } else {"
+        },
+        {
+          "line": 38,
+          "text": "                  console.info('make call fail, err is:' + JSON.stringify(err));"
+        },
+        {
+          "line": 39,
+          "text": "                }"
+        },
+        {
+          "line": 40,
+          "text": "              });"
+        },
+        {
+          "line": 41,
+          "text": "              return true;"
+        },
+        {
+          "line": 42,
+          "text": "            }"
+        },
+        {
+          "line": 43,
+          "text": "          }"
+        },
+        {
+          "line": 44,
+          "text": "          return false;"
+        },
+        {
+          "line": 45,
+          "text": "        })"
+        }
+      ],
+      "excerptSha256": "4234236fb7c7eb42180fb14224a71c6580ce68c3ae6a7c071df1b4884530919f",
+      "factId": "workspace-fact-d73a00aca278480879096af0",
+      "gitBlobOid": "b3910a04adfe3f383a3d55e244e03198d6582241",
+      "kind": "call",
+      "owner": "WebComponent::build",
+      "path": "ArkWeb/ManageWebPageLoadBrowse/ManagePageRedirectNav/entry/src/main/ets/pages/CrossApplicationRedirection.ets",
+      "projectBoundaryCandidates": [
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "ArkWeb/ManageWebPageLoadBrowse/ManagePageRedirectNav"
+        },
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "ArkWeb/ManageWebPageLoadBrowse/ManagePageRedirectNav/entry"
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "sourceByteLength": 1674,
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "sourceSha256": "3c06f3977254db59bc9dff86eb9a7bfc4c791c293ef49e1a70ccc852a560e6e3",
+      "span": {
+        "endByte": 1513,
+        "endColumnByte": 16,
+        "endLine": 40,
+        "startByte": 1246,
+        "startColumnByte": 14,
+        "startLine": 34
+      },
+      "targetExpression": "call.makeCall"
+    }
+  ],
+  "candidateId": "difficulty-fa0919a29ad04dc5bd418f97",
+  "candidateSha256": "07204c8bf7c2b7a6d0b619acc2b09208e689a9c00f2a720a998f13d8c65d2f46",
+  "lineage": {
+    "analysisRunSha256": "9579febb61c23a19fc6acfbdfc6da2635f5c131e1d90a198faa7cae8957aee36",
+    "currentMethodProposalSha256": "d151b6ed91f8dfb6650e36d49546b70ebfa44641bc34fccba16369067c4ea93e",
+    "difficultyEvidenceSha256": "d6b010bb0cf8dd71702dc6b88ac9f303dee64e9c25de3b117966efddcb9db72e",
+    "manifestSha256": "13050f6fe8b4d7d0cc3d79f7ed1d89cc3f9a6fccf6e432e496b4cc73a3e98d31",
+    "proposalMethodRevision": "b4635d78f3ca8275ce09882f200ce4ead4aff9c1",
+    "workspaceFactsSha256": "a164c323ca7847117aa08b0f30b5b3895bce0787fb0539684ef7286cfbf35d79"
+  },
+  "mechanism": "same external API call target is observed across repository boundaries",
+  "packetMethodRevision": "5d730d1fbc7a6fa6eaee58fc4f7d580bb7a39469",
+  "requiredCalibration": {
+    "alternativeValid": "constructor-distinct repair passes the same checks",
+    "baseline": "expected issue behavior fails while infrastructure remains available",
+    "environment": "gold/reference execution proves each exact source and runtime before participant grading",
+    "meaningfulWrong": "plausible incomplete or wrong-boundary repair fails the intended check",
+    "reference": "known repair passes repair and preservation checks"
+  },
+  "reviewDecisionContract": {
+    "allowedVerdicts": [
+      "advance-to-case-contract",
+      "reject-as-noncoherent",
+      "defer-for-more-evidence"
+    ],
+    "requiredQuestionIds": [
+      "shared-behavior",
+      "observable-gap",
+      "prompt-completeness",
+      "repair-oracle",
+      "preservation-oracle",
+      "environment",
+      "cross-repo-necessity"
+    ],
+    "requiredRiskIds": [
+      "api-name-is-not-semantics",
+      "issue-contract-absent",
+      "build-boundary-unqualified",
+      "oracle-unqualified"
+    ],
+    "reviewerMustBeIndependentOfPacketGenerator": true,
+    "schema": "agentlab.multi_repo_candidate_semantic_review.v1"
+  },
+  "reviewQuestions": [
+    {
+      "id": "shared-behavior",
+      "question": "Do the call sites exercise one coherent cross-repository behavior rather than merely sharing an API name?"
+    },
+    {
+      "id": "observable-gap",
+      "question": "Is there an issue-level defect or extension whose pre-change failure is observable in every required repository?"
+    },
+    {
+      "id": "prompt-completeness",
+      "question": "Can the participant-facing prompt state every required behavior without revealing the repair?"
+    },
+    {
+      "id": "repair-oracle",
+      "question": "Can independent FAIL_TO_PASS checks accept structurally distinct valid repairs?"
+    },
+    {
+      "id": "preservation-oracle",
+      "question": "Can independent PASS_TO_PASS checks cover existing repository-specific behavior?"
+    },
+    {
+      "id": "environment",
+      "question": "Are exact SDK, build roots, modules and emulator capabilities reproducible for every source?"
+    },
+    {
+      "id": "cross-repo-necessity",
+      "question": "Does the task require coordinated multi-repository reasoning, rather than two unrelated single-repository tasks?"
+    }
+  ],
+  "risks": [
+    {
+      "id": "api-name-is-not-semantics",
+      "statement": "A shared call target does not establish a shared behavioral obligation."
+    },
+    {
+      "id": "issue-contract-absent",
+      "statement": "No participant-visible issue, repair behavior or preservation behavior has been approved."
+    },
+    {
+      "id": "build-boundary-unqualified",
+      "statement": "Marker-bearing ancestors have not been compiled or accepted as exact project/module roots."
+    },
+    {
+      "id": "oracle-unqualified",
+      "statement": "No baseline/reference/alternative/wrong calibration has executed for this candidate."
+    }
+  ],
+  "schema": "agentlab.multi_repo_candidate_review_packet.v1",
+  "selectionRoles": [
+    "equal-file-set-replacement-for-smallest-deferred-module"
+  ],
+  "sourceProjectBoundary": {
+    "interpretation": "Marker-bearing ancestors are evidence candidates, not a qualified build root or module.",
+    "status": "review-required"
+  },
+  "sourceSetSha256": "c4923e499fbb0ca2ed4fd205c66d6353bbe2aa58935413e3c897183a25493ca9",
+  "status": "independent-semantic-review-required",
+  "sweStyleTaskContract": {
+    "required": [
+      "exact base source set",
+      "participant-visible problem statement",
+      "hidden FAIL_TO_PASS repair checks",
+      "hidden PASS_TO_PASS preservation checks",
+      "exact build and runtime environment identities",
+      "reference, alternative-valid and meaningful-wrong calibration receipts",
+      "blind participant/evaluator split"
+    ],
+    "satisfiedByThisPacket": [
+      "exact base source set",
+      "source-localized call evidence"
+    ]
+  }
+}

@@ -364,6 +364,16 @@ No aggregate difficulty score may compensate for a failed qualification
 dimension. In particular, high participant separation cannot promote an
 underspecified or contaminated case.
 
+The two smallest current-method API candidates now also have digest-bound
+semantic-review packets with exact source excerpts and all marker-bearing
+project-boundary candidates. They expose why API-call equality alone is not a
+SWE-style task: the `AlertDialog` sites cover logout confirmation and Web alert
+result handling, while the `call.makeCall` sites cover an empty-number
+capability path and a `tel://` interception path. The packets require an
+independent answer on shared behavior, observable failure, prompt completeness,
+repair/preservation Oracles, environment reproducibility and genuine
+cross-repository necessity. They are review aids, not approved cases.
+
 ## Ordered implementation consequences
 
 1. Use the implemented blind-cut, least-mounted participant runtime and

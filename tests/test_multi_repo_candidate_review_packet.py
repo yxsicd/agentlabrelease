@@ -178,6 +178,40 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
             ):
                 self.assertEqual(packet["lineage"][key], hashlib.sha256(path.read_bytes()).hexdigest())
 
+    def test_retained_real_packets_are_exact_and_still_unqualified(self):
+        root = ROOT / "release/qualifications/harmony-real-multi-repo-34661ff"
+        index = json.loads((root / "review-packets/index.json").read_text())
+        proposal_sha = hashlib.sha256((root / "current-method-proposal.json").read_bytes()).hexdigest()
+        self.assertEqual(index["currentMethodProposalSha256"], proposal_sha)
+        self.assertFalse(index["semanticReviewCompleted"])
+        self.assertFalse(index["automaticPromotion"])
+        self.assertEqual(len(index["packets"]), 2)
+        for row in index["packets"]:
+            path = root / "review-packets" / row["path"]
+            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), row["sha256"])
+            value = json.loads(path.read_text())
+            self.assertEqual(value["candidateId"], row["candidateId"])
+            self.assertEqual(value["status"], "independent-semantic-review-required")
+            self.assertEqual(value["lineage"]["currentMethodProposalSha256"], proposal_sha)
+            self.assertEqual(
+                value["sweStyleTaskContract"]["satisfiedByThisPacket"],
+                ["exact base source set", "source-localized call evidence"],
+            )
+            self.assertFalse(value["automaticPromotion"])
+
+        alert = json.loads((root / "review-packets/alert-dialog.json").read_text())
+        calls = json.loads((root / "review-packets/call-make-call.json").read_text())
+        alert_source = "\n".join(
+            line["text"] for site in alert["callSiteEvidence"] for line in site["excerpt"]
+        )
+        call_source = "\n".join(
+            line["text"] for site in calls["callSiteEvidence"] for line in site["excerpt"]
+        )
+        self.assertIn("logoutDirect", alert_source)
+        self.assertIn("handleConfirm", alert_source)
+        self.assertIn("call.makeCall('',", call_source)
+        self.assertIn("url.substring(6)", call_source)
+
 
 if __name__ == "__main__":
     unittest.main()
