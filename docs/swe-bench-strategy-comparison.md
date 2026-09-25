@@ -151,7 +151,13 @@ and test paths against the retained patches, and independently reconstructs
 the normalized candidate before preserving the workflow artifact. This gives
 AgentLab a reproducible SWE-style mining boundary without treating public
 history as a valid benchmark by default. Artifact-to-mixed-cohort automation
-and a genuinely fresh independently qualified record are still outstanding.
+now verifies both trusted-main source runs, reconstructs their exact artifacts,
+requires a common pinned source set and emits a digest-bound mixed-source
+receipt before proposing the shared review-required cohort. The existing
+independent reviewer accepts only the original analyzer proposal workflow or
+this exact mixed workflow and revalidates the appropriate source receipt. The
+mechanism is locally tested but has not run from merged trusted `main`; a
+genuinely fresh independently qualified record is still outstanding.
 
 ## AgentLab advantage
 

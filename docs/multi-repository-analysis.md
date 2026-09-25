@@ -223,9 +223,17 @@ digest-bound collection receipt. A second validation pass reconstructs the
 candidate from the retained manifest and evidence before artifact upload.
 
 That artifact is still source evidence, not a reviewed cohort or qualified
-case. Trusted-main automation for joining a collected natural artifact to an
-exact analyzer artifact remains the next operational boundary; until that is
-implemented, mixed-lane cohort proof remains local fixture evidence.
+case. `mixed-case-candidate-cohort.yml` now joins one exact analyzer artifact
+and one collected natural artifact only after independently checking both
+trusted-main workflow identities, requested receipt digests, source method
+revisions and the common pinned source set. `candidate-source-bundle.py`
+reconstructs the two source receipts and the merged candidate file, then binds
+both run IDs and metadata digests into a non-promoting receipt. The existing
+cohort reviewer accepts this exact workflow in addition to the analyzer-only
+proposal and revalidates the bundle before a human selection can be compiled.
+This closes the local and workflow mechanism; it has not yet executed from
+merged trusted `main`, and no fresh natural record has completed independent
+review or qualification.
 
 The first real two-repository source qualification is retained at
 `release/qualifications/harmony-real-multi-repo-34661ff/summary.json`. It binds

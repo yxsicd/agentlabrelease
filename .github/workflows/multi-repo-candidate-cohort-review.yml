@@ -41,6 +41,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           mkdir -p "$AGENTLAB_ROOT"
           [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$AGENTLAB_ROOT/source-run.json"
@@ -48,20 +49,41 @@ jobs:
           import json, os
           value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/source-run.json"))
           assert value["head_branch"] == "main"
-          assert value["path"] == ".github/workflows/multi-repo-candidate-cohort.yml"
+          assert value["path"] in {
+              ".github/workflows/multi-repo-candidate-cohort.yml",
+              ".github/workflows/mixed-case-candidate-cohort.yml",
+          }
           assert value["event"] == "workflow_dispatch"
           assert value["conclusion"] == "success"
           PY
           gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
             --name multi-repo-candidate-cohort-proposal --dir "$AGENTLAB_ROOT/source"
+          SOURCE_WORKFLOW="$(python3 -c 'import json,os; print(json.load(open(os.environ["AGENTLAB_ROOT"] + "/source-run.json"))["path"])')"
+          if [[ "$SOURCE_WORKFLOW" == ".github/workflows/multi-repo-candidate-cohort.yml" ]]; then
+            python3 scripts/multi-repo-analysis-run.py validate \
+              --root "$AGENTLAB_ROOT/source/analysis-source" \
+              --run "$AGENTLAB_ROOT/source/analysis-source/analysis-run.json"
+          else
+            python3 scripts/candidate-source-bundle.py validate \
+              --root "$AGENTLAB_ROOT/source" \
+              --bundle "$AGENTLAB_ROOT/source/candidate-source-bundle.json"
+          fi
           python3 - <<'PY'
           import json, os
           root = os.environ["AGENTLAB_ROOT"]
           proposal = json.load(open(root + "/source/candidate-cohort-proposal.json"))
-          analysis = json.load(open(root + "/source/analysis-source/analysis-run.json"))
-          assert proposal["methodRevision"] == analysis["methodRevision"]
-          assert proposal["sourceSetSha256"] == analysis["sourceSetSha256"]
-          assert proposal["difficultyEvidenceSha256"] == analysis["difficultyEvidenceSha256"]
+          source_run = json.load(open(root + "/source-run.json"))
+          assert proposal["proposalMethodRevision"] == source_run["head_sha"]
+          if source_run["path"] == ".github/workflows/multi-repo-candidate-cohort.yml":
+              source = json.load(open(root + "/source/analysis-source/analysis-run.json"))
+              expected_digest = source["difficultyEvidenceSha256"]
+          else:
+              source = json.load(open(root + "/source/candidate-source-bundle.json"))
+              expected_digest = source["mergedCandidateSourceSha256"]
+              assert source["methodRevision"] == source_run["head_sha"]
+          assert proposal["methodRevision"] == source["methodRevision"]
+          assert proposal["sourceSetSha256"] == source["sourceSetSha256"]
+          assert proposal["difficultyEvidenceSha256"] == expected_digest
           PY
       - name: Bind explicit reviewer selection to the exact proposal
         env:

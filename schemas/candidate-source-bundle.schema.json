@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/candidate-source-bundle.schema.json",
+  "title": "AgentLab exact mixed candidate-source bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "methodRevision", "sourceSetSha256", "mergedCandidateSourceSha256", "candidateCount", "candidateIds", "inputs", "automaticPromotion"],
+  "properties": {
+    "schema": {"const": "agentlab.candidate_source_bundle.v1"},
+    "methodRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "sourceSetSha256": {"$ref": "#/$defs/sha256"},
+    "mergedCandidateSourceSha256": {"$ref": "#/$defs/sha256"},
+    "candidateCount": {"type": "integer", "minimum": 2},
+    "candidateIds": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/id"}
+    },
+    "inputs": {
+      "type": "array",
+      "prefixItems": [
+        {"$ref": "#/$defs/input"},
+        {"$ref": "#/$defs/input"}
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]{1,160}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "workflowPath", "workflowRunId", "workflowRunHeadSha", "workflowRunMetadataSha256", "methodRevision", "receiptSchema", "receiptSha256", "candidateSourceSha256", "candidateIds"],
+      "properties": {
+        "kind": {"enum": ["derived-analysis", "natural-github-repair"]},
+        "workflowPath": {"type": "string", "pattern": "^\\.github/workflows/"},
+        "workflowRunId": {"type": "integer", "minimum": 1},
+        "workflowRunHeadSha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "workflowRunMetadataSha256": {"$ref": "#/$defs/sha256"},
+        "methodRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "receiptSchema": {"type": "string", "minLength": 1},
+        "receiptSha256": {"$ref": "#/$defs/sha256"},
+        "candidateSourceSha256": {"$ref": "#/$defs/sha256"},
+        "candidateIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id"}
+        }
+      }
+    }
+  }
+}
