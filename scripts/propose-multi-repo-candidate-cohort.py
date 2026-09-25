@@ -106,6 +106,75 @@ def selection_advisory(
     }
 
 
+def review_shortlist(eligible: list[dict[str, Any]]) -> dict[str, Any]:
+    selected: dict[str, dict[str, Any]] = {}
+
+    def add(row: dict[str, Any], role: str) -> None:
+        if row["id"] not in selected:
+            selected[row["id"]] = {
+                key: row[key]
+                for key in (
+                    "id", "candidateSha256", "relationType", "affectedRepositoryCount",
+                    "maxDependencyDepth", "affectedFileCount",
+                )
+            }
+            selected[row["id"]]["selectionRoles"] = []
+        selected[row["id"]]["selectionRoles"].append(role)
+
+    module_only = sorted(
+        (
+            row for row in eligible
+            if row["selectionAdvisory"]["classification"] == "module-contract-only"
+        ),
+        key=lambda row: (row["affectedFileCount"], row["id"]),
+    )
+    if module_only:
+        add(module_only[0], "smallest-module-contract-without-narrower-api")
+        add(module_only[-1], "largest-module-contract-without-narrower-api")
+
+    api_rows = sorted(
+        (
+            row for row in eligible
+            if row["selectionAdvisory"]["classification"] == "api-call-specific"
+        ),
+        key=lambda row: (row["affectedFileCount"], row["id"]),
+    )
+    if api_rows:
+        add(api_rows[0], "minimum-api-call-file-count")
+        add(api_rows[len(api_rows) // 2], "median-api-call-file-count")
+        add(api_rows[-1], "maximum-api-call-file-count")
+
+    deferred = sorted(
+        (
+            row for row in eligible
+            if any(
+                narrower["coverage"] == "equal-file-set"
+                for narrower in row["selectionAdvisory"]["narrowerApiCandidates"]
+            )
+        ),
+        key=lambda row: (row["affectedFileCount"], row["id"]),
+    )
+    if deferred:
+        replacements = sorted(
+            (
+                narrower for narrower in deferred[0]["selectionAdvisory"]["narrowerApiCandidates"]
+                if narrower["coverage"] == "equal-file-set"
+            ),
+            key=lambda row: (row["affectedFileCount"], row["id"]),
+        )
+        by_id = {row["id"]: row for row in eligible}
+        replacement = by_id[replacements[0]["id"]]
+        add(replacement, "equal-file-set-replacement-for-smallest-deferred-module")
+
+    return {
+        "status": "review-required",
+        "selectionPolicy": "Before case construction or outcome measurement, propose the minimum and maximum affected-file module-contract candidates that have no narrower API-call candidate, the minimum, median and maximum API-call candidates, and the equal-file-set API replacement for the smallest deferred module candidate; break ties by candidate ID.",
+        "candidates": list(selected.values()),
+        "candidateCount": len(selected),
+        "declaredRepresentative": False,
+    }
+
+
 def propose(difficulty_path: Path, cohort_id: str, method_revision: str) -> dict[str, Any]:
     difficulty = load(difficulty_path)
     require(difficulty.get("schema") == "agentlab.difficulty_candidates.v2", "unsupported difficulty schema")
@@ -185,6 +254,7 @@ def propose(difficulty_path: Path, cohort_id: str, method_revision: str) -> dict
             "strata": strata,
             "selectionAdvisoryCounts": advisory_counts,
         },
+        "reviewShortlist": review_shortlist(eligible),
         "eligibleCandidates": eligible,
         "excludedCandidates": excluded,
         "risks": [

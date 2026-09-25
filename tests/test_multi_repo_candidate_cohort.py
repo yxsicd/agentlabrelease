@@ -148,6 +148,13 @@ class MultiRepoCandidateCohortTests(unittest.TestCase):
                 proposal["samplingFrame"]["selectionAdvisoryCounts"]["prefer-narrower-api-call"],
                 1,
             )
+            shortlist = {row["id"]: row for row in proposal["reviewShortlist"]["candidates"]}
+            self.assertIn("candidate-shared-api", shortlist)
+            self.assertIn(
+                "equal-file-set-replacement-for-smallest-deferred-module",
+                shortlist["candidate-shared-api"]["selectionRoles"],
+            )
+            self.assertEqual(proposal["reviewShortlist"]["status"], "review-required")
 
     def test_reviewed_member_resolves_against_exact_difficulty_bytes(self):
         with tempfile.TemporaryDirectory() as directory:
