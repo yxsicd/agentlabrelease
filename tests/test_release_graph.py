@@ -71,11 +71,16 @@ class ReleaseGraphTests(unittest.TestCase):
         registry_bytes = registry_path.read_bytes()
         registry = json.loads(registry_bytes)
         MODULE.validate_closure(alpha12, registry, registry_bytes)
-        self.assertEqual(alpha12["assets"], alpha11["assets"])
+        self.assertTrue(
+            {asset["url"] for asset in alpha11["assets"]}.issubset(
+                {asset["url"] for asset in alpha12["assets"]}
+            )
+        )
         self.assertEqual(
             alpha12["sources"]["releaseGitSha"],
-            "069d8706edd7b37196edb7d08c487a971f97f746",
+            "2d7f13c140b637803dbd5b69d6b120196a3f3814",
         )
+        self.assertEqual(len(alpha12["assets"]), 22)
         self.assertEqual(alpha12["reuse"]["newBinaryBuildCount"], 0)
         self.assertEqual(alpha12["reuse"]["newBinaryUploadCount"], 0)
         self.assertEqual(alpha12["status"], "developer-preview-candidate")
@@ -139,9 +144,9 @@ class ReleaseGraphTests(unittest.TestCase):
         registry_bytes = registry_path.read_bytes()
         registry = json.loads(registry_bytes)
         value = json.loads(
-            (ROOT / "release/closures/v0.1.0-alpha.11.json").read_text()
+            (ROOT / "release/closures/v0.1.0-alpha.12.json").read_text()
         )
-        value["status"] = "developer-preview-candidate"
+        value.pop("developerPreviewScope")
         with self.assertRaisesRegex(ValueError, "scope"):
             MODULE.validate_closure(value, registry, registry_bytes)
 

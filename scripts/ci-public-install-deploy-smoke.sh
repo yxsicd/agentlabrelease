@@ -59,21 +59,32 @@ download() {
 release_url="https://github.com/${repo}/releases/download"
 lock="${downloads}/environment-lock.json"
 publication="${downloads}/publication.json"
-if [[ -n "${AGENTLAB_COMPOSITION_DIR:-}" ]]; then
-  cp "${AGENTLAB_COMPOSITION_DIR}/environment-lock.json" "${lock}"
-  cp "${AGENTLAB_COMPOSITION_DIR}/publication.json" "${publication}"
+release_closure="${AGENTLAB_RELEASE_CLOSURE:-}"
+if [[ -n "${release_closure}" ]]; then
+  materialized="${root}/closure-materialized"
+  python3 scripts/materialize-release-closure.py \
+    --closure "${release_closure}" \
+    --registry release/components/registry.json \
+    --output "${materialized}"
+  lock="${materialized}/environment-lock.json"
+  agentlabctl="${materialized}/agentlabctl"
+  source_revision="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["sourceRevision"])' "${lock}")"
 else
-  download "${release_url}/${channel}/agentlab-${channel}-publication.json" "${publication}"
-  lock_url="$(python3 - "$publication" "${release_url}/${channel}/agentlab-${channel}-publication.json" <<'PYURL'
+  if [[ -n "${AGENTLAB_COMPOSITION_DIR:-}" ]]; then
+    cp "${AGENTLAB_COMPOSITION_DIR}/environment-lock.json" "${lock}"
+    cp "${AGENTLAB_COMPOSITION_DIR}/publication.json" "${publication}"
+  else
+    download "${release_url}/${channel}/agentlab-${channel}-publication.json" "${publication}"
+    lock_url="$(python3 - "$publication" "${release_url}/${channel}/agentlab-${channel}-publication.json" <<'PYURL'
 import json, sys, urllib.parse
 p=json.load(open(sys.argv[1]))
 print(urllib.parse.urljoin(sys.argv[2], p['environmentLockUrl']) if p.get('environmentLockUrl') else sys.argv[2].replace('-publication.json', '-environment-lock.json'))
 PYURL
-  )"
-  download "$lock_url" "${lock}"
-fi
+    )"
+    download "$lock_url" "${lock}"
+  fi
 
-python3 - "${repo}" "${channel}" "${lock}" "${publication}" <<'PY'
+  python3 - "${repo}" "${channel}" "${lock}" "${publication}" <<'PY'
 import hashlib, json, pathlib, sys, urllib.parse
 
 repo, channel = sys.argv[1:3]
@@ -117,24 +128,24 @@ print(json.dumps({
 }, sort_keys=True))
 PY
 
-source_revision="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["sourceRevision"])' "${lock}")"
-# Runtime and controller are independent in every acquisition mode.
-source_short="$(python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); print(p.get("controllerSourceShort",p["sourceRevision"][:8]))' "${publication}")"
-control_release="${downloads}/matching-control-release.json"
-control_api="https://api.github.com/repos/${repo}/releases/tags/control-${source_short}-linux-x64"
-if [[ -n "${GITHUB_TOKEN:-}" ]]; then
-  curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 \
-    -H 'Accept: application/vnd.github+json' \
-    -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-    -H 'X-GitHub-Api-Version: 2022-11-28' \
-    "${control_api}" -o "${control_release}"
-else
-  curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 \
-    -H 'Accept: application/vnd.github+json' \
-    -H 'X-GitHub-Api-Version: 2022-11-28' \
-    "${control_api}" -o "${control_release}"
-fi
-readarray -t control < <(python3 - "${control_release}" "${source_short}" <<'PY'
+  source_revision="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["sourceRevision"])' "${lock}")"
+  # Runtime and controller are independent in channel and checked-in composition modes.
+  source_short="$(python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); print(p.get("controllerSourceShort",p["sourceRevision"][:8]))' "${publication}")"
+  control_release="${downloads}/matching-control-release.json"
+  control_api="https://api.github.com/repos/${repo}/releases/tags/control-${source_short}-linux-x64"
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 \
+      -H 'Accept: application/vnd.github+json' \
+      -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+      -H 'X-GitHub-Api-Version: 2022-11-28' \
+      "${control_api}" -o "${control_release}"
+  else
+    curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 \
+      -H 'Accept: application/vnd.github+json' \
+      -H 'X-GitHub-Api-Version: 2022-11-28' \
+      "${control_api}" -o "${control_release}"
+  fi
+  readarray -t control < <(python3 - "${control_release}" "${source_short}" <<'PY'
 import json, sys
 release = json.load(open(sys.argv[1]))
 short = sys.argv[2]
@@ -145,12 +156,13 @@ print(asset["browser_download_url"])
 print(asset["digest"].removeprefix("sha256:"))
 print(asset["size"])
 PY
-)
-agentlabctl="${install_bin}/agentlabctl"
-download "${control[0]}" "${agentlabctl}"
-[[ "$(wc -c < "${agentlabctl}")" == "${control[2]}" ]]
-printf '%s  %s\n' "${control[1]}" "${agentlabctl}" | sha256sum -c -
-chmod +x "${agentlabctl}"
+  )
+  agentlabctl="${install_bin}/agentlabctl"
+  download "${control[0]}" "${agentlabctl}"
+  [[ "$(wc -c < "${agentlabctl}")" == "${control[2]}" ]]
+  printf '%s  %s\n' "${control[1]}" "${agentlabctl}" | sha256sum -c -
+  chmod +x "${agentlabctl}"
+fi
 
 phase_started_ms=$(date +%s%3N)
 "${agentlabctl}" fetch composition \

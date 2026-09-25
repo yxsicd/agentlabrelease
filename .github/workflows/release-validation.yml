@@ -105,15 +105,23 @@ jobs:
           - target: alprod
             channel: alprod
             composition: ''
+            closure: ''
             backend: copy-tree
           - target: candidate-copy
             channel: candidate-20260913-40ecdf4b-sdk-c075105a-linux-x64
             composition: release/candidates/40ecdf4b-linux-x64
+            closure: ''
             backend: copy-tree
           - target: candidate-btrfs
             channel: candidate-20260913-40ecdf4b-sdk-c075105a-linux-x64
             composition: release/candidates/40ecdf4b-linux-x64
+            closure: ''
             backend: btrfs-subvolume
+          - target: alpha12-closure
+            channel: ''
+            composition: ''
+            closure: release/closures/v0.1.0-alpha.12.json
+            backend: copy-tree
     env:
       AGENTLAB_CI_ROOT: /tmp/agentlab-${{ matrix.target }}
     steps:
@@ -126,6 +134,7 @@ jobs:
         env:
           AGENTLAB_RELEASE_CHANNEL: ${{ matrix.channel }}
           AGENTLAB_COMPOSITION_DIR: ${{ matrix.composition }}
+          AGENTLAB_RELEASE_CLOSURE: ${{ matrix.closure }}
           AGENTLAB_RELEASE_REPO: yxsicd/agentlabrelease
           GITHUB_TOKEN: ${{ github.token }}
         run: scripts/ci-public-install-deploy-smoke.sh

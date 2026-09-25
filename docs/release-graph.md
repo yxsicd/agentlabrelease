@@ -34,12 +34,14 @@ python3 scripts/compose-release-closure.py \
 ```
 
 The source revision must resolve to a local commit and the version must advance
-the base alpha. The composer first validates the base against the exact registry,
-then preserves the entire asset list byte-for-byte. It records zero new binary
-builds and uploads, publishes the bounded developer-preview scope, and leaves
-automatic promotion disabled. The resulting metadata commit may follow the
-source cut it describes; `sources.releaseGitSha` is the exact implementation
-cut under qualification, not a self-referential digest of the JSON commit.
+the base alpha. The composer first validates the base and then selects the
+complete asset set for every component represented by that base from the exact
+registry. Existing asset records remain byte-for-byte unchanged. It records zero
+new binary builds and uploads, publishes the bounded developer-preview scope,
+and leaves automatic promotion disabled. The resulting metadata commit may
+follow the source cut it describes; `sources.releaseGitSha` is the exact
+implementation cut under qualification, not a self-referential digest of the
+JSON commit.
 
 “Entire asset list” means every asset of every selected component, not one
 representative archive per component. Runtime, Harmony CLI, build kit, tools,
@@ -69,6 +71,23 @@ Remote verification reads Release metadata and never downloads the multi-GB
 emulator archives. A receipt is write-once, binds the closure and registry
 digests, and records every observed GitHub asset ID, repository, tag, size and
 SHA-256 without authorizing promotion.
+
+To exercise installation from the closure rather than a mutable channel, first
+materialize its small bootstrap pair:
+
+```sh
+python3 scripts/materialize-release-closure.py \
+  --closure release/closures/v0.1.0-alpha.12.json \
+  --registry release/components/registry.json \
+  --output /tmp/agentlab-alpha12-bootstrap
+```
+
+The materializer validates the closure and registry, downloads and verifies the
+environment lock and controller, and proves that every artifact and descriptor
+required by the lock is in the closure. It does not download the large payloads
+or promote the candidate. Public CI passes this closure to
+`ci-public-install-deploy-smoke.sh`, which uses the verified bootstrap pair to
+fetch, install and run the same basic use case as the channel-based lanes.
 
 ## Target descriptors
 
