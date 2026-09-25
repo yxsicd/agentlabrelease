@@ -33,15 +33,30 @@
     },
     "feedback": {
       "type": "object",
-      "required": ["evidenceSha256", "candidateId", "stageId", "failureMode", "mechanism", "verificationContract"],
+      "required": ["evidenceSha256", "candidateId", "dimensionId", "primaryDimension", "stageId", "failureMode", "mechanism", "verificationContract"],
       "properties": {
         "evidenceSha256": {"$ref": "#/$defs/sha256"},
         "candidateId": {"type": "string", "minLength": 1},
+        "dimensionId": {"type": "string", "minLength": 1},
+        "primaryDimension": {"type": "string", "minLength": 1},
         "stageId": {"type": "string", "minLength": 1},
         "failureMode": {"type": "string", "minLength": 1},
         "mechanism": {"type": "string", "minLength": 1},
-        "verificationContract": {"type": "object"}
-      }
+        "verificationContract": {"type": "object"},
+        "performanceEvidence": {"$ref": "#/$defs/performanceEvidence"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"dimensionId": {"const": "assessed-agent-performance-separation"}}},
+          "then": {
+            "required": ["performanceEvidence"],
+            "properties": {
+              "primaryDimension": {"const": "performance-feedback"},
+              "failureMode": {"const": "repeatable-performance-separation"}
+            }
+          }
+        }
+      ]
     },
     "nextAnalysis": {
       "type": "object",
@@ -89,6 +104,32 @@
   },
   "$defs": {
     "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+    "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "performanceEvidence": {
+      "type": "object",
+      "required": ["environmentIdentity", "performancePolicySha256", "profileWorkloadSha256", "metric", "statistic", "unit", "direction", "bestParticipantId", "worstParticipantId", "meanDifference", "rangesSeparated", "authority"],
+      "properties": {
+        "environmentIdentity": {"type": "string", "minLength": 1},
+        "performancePolicySha256": {"$ref": "#/$defs/sha256"},
+        "profileWorkloadSha256": {"$ref": "#/$defs/sha256"},
+        "metric": {"type": "string", "minLength": 1},
+        "statistic": {"enum": ["mean", "p50", "p95"]},
+        "unit": {"type": "string", "minLength": 1},
+        "direction": {"enum": ["lower", "higher"]},
+        "bestParticipantId": {"type": "string", "minLength": 1},
+        "worstParticipantId": {"type": "string", "minLength": 1},
+        "meanDifference": {"type": "number", "exclusiveMinimum": 0},
+        "rangesSeparated": {"const": true},
+        "authority": {
+          "type": "object",
+          "required": ["functional", "relativePerformance", "absolutePowerThermal"],
+          "properties": {
+            "functional": {"const": "none"},
+            "relativePerformance": {"const": "smartperf-emulator-proxy"},
+            "absolutePowerThermal": {"const": "unavailable-on-emulator"}
+          }
+        }
+      }
+    }
   }
 }

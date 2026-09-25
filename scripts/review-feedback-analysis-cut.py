@@ -5,8 +5,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
+import re
 from pathlib import Path
 from typing import Any
+
+
+SHA256 = re.compile(r"[0-9a-f]{64}")
 
 
 def load(path: Path, label: str) -> dict[str, Any]:
@@ -49,13 +54,64 @@ def main() -> int:
     acknowledged = review.get("acknowledgedRiskIds")
     require(isinstance(acknowledged, list) and set(acknowledged) == risk_ids, "review must acknowledge every proposal risk exactly")
     require(review.get("automaticPromotion") is False, "review must not auto-promote")
+    feedback = proposal.get("feedback")
+    require(
+        isinstance(feedback, dict)
+        and isinstance(feedback.get("dimensionId"), str)
+        and bool(feedback["dimensionId"])
+        and isinstance(feedback.get("primaryDimension"), str)
+        and bool(feedback["primaryDimension"]),
+        "proposal feedback dimensions are invalid",
+    )
+    performance = feedback.get("performanceEvidence")
+    if feedback["dimensionId"] == "assessed-agent-performance-separation":
+        authority = performance.get("authority") if isinstance(performance, dict) else None
+        require(
+            feedback.get("primaryDimension") == "performance-feedback"
+            and feedback.get("failureMode") == "repeatable-performance-separation"
+            and isinstance(performance, dict)
+            and performance.get("rangesSeparated") is True
+            and isinstance(performance.get("environmentIdentity"), str)
+            and bool(performance["environmentIdentity"])
+            and all(
+                isinstance(performance.get(field), str)
+                and SHA256.fullmatch(performance[field])
+                for field in ("performancePolicySha256", "profileWorkloadSha256")
+            )
+            and isinstance(performance.get("metric"), str)
+            and bool(performance["metric"])
+            and performance.get("statistic") in {"mean", "p50", "p95"}
+            and isinstance(performance.get("unit"), str)
+            and bool(performance["unit"])
+            and performance.get("direction") in {"lower", "higher"}
+            and isinstance(performance.get("bestParticipantId"), str)
+            and bool(performance["bestParticipantId"])
+            and isinstance(performance.get("worstParticipantId"), str)
+            and bool(performance["worstParticipantId"])
+            and performance["bestParticipantId"] != performance["worstParticipantId"]
+            and isinstance(performance.get("meanDifference"), (int, float))
+            and not isinstance(performance["meanDifference"], bool)
+            and math.isfinite(performance["meanDifference"])
+            and performance["meanDifference"] > 0
+            and authority
+            == {
+                "functional": "none",
+                "relativePerformance": "smartperf-emulator-proxy",
+                "absolutePowerThermal": "unavailable-on-emulator",
+            }
+            and "independent-performance-calibration"
+            in (feedback.get("verificationContract") or {}).get("required", []),
+            "proposal performance feedback is invalid",
+        )
+    else:
+        require(performance is None, "non-performance proposal overclaims performance evidence")
 
     result = {
         "schema": "agentlab.feedback_analysis_cut.v1",
         "status": "reviewed-for-case-construction",
         "cutId": proposal.get("cutId"),
         "priorCase": proposal.get("priorCase"),
-        "feedback": proposal.get("feedback"),
+        "feedback": feedback,
         "nextAnalysis": proposal.get("nextAnalysis"),
         "change": proposal.get("change"),
         "review": {

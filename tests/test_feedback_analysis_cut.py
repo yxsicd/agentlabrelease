@@ -33,7 +33,7 @@ class FeedbackAnalysisCutTests(unittest.TestCase):
         path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
         return path
 
-    def fixture(self, root: pathlib.Path):
+    def fixture(self, root: pathlib.Path, *, performance: bool = False):
         prior_source_set = "a" * 64
         prior_case = {
             "schema": "agentlab.multi_repo_evaluation_case.v1",
@@ -53,6 +53,8 @@ class FeedbackAnalysisCutTests(unittest.TestCase):
                 {
                     "id": feedback_candidate_id,
                     "caseId": "prior-case",
+                    "dimensionId": "assessed-agent-stage-failure",
+                    "primaryDimension": "evaluation-feedback",
                     "stageId": "turn-2",
                     "failureMode": "oracle-failure",
                     "mechanism": "oracle-failure at frozen stage turn-2",
@@ -71,6 +73,38 @@ class FeedbackAnalysisCutTests(unittest.TestCase):
             ],
             "policy": {"automaticPromotion": False},
         }
+        if performance:
+            candidate = feedback["candidates"][0]
+            candidate.update(
+                {
+                    "dimensionId": "assessed-agent-performance-separation",
+                    "primaryDimension": "performance-feedback",
+                    "stageId": "harmony-device",
+                    "failureMode": "repeatable-performance-separation",
+                    "mechanism": "repeatable non-overlapping application CPU ranges",
+                    "performanceEvidence": {
+                        "environmentIdentity": "hwlinux:phone-x86",
+                        "performancePolicySha256": "7" * 64,
+                        "profileWorkloadSha256": "8" * 64,
+                        "metric": "appCpuUsagePercent",
+                        "statistic": "mean",
+                        "unit": "reported-percent",
+                        "direction": "lower",
+                        "bestParticipantId": "strong",
+                        "worstParticipantId": "medium",
+                        "meanDifference": 20.0,
+                        "rangesSeparated": True,
+                        "authority": {
+                            "functional": "none",
+                            "relativePerformance": "smartperf-emulator-proxy",
+                            "absolutePowerThermal": "unavailable-on-emulator",
+                        },
+                    },
+                }
+            )
+            candidate["verificationContract"]["required"].append(
+                "independent-performance-calibration"
+            )
         sources = [
             {"id": "contracts", "repository": "https://example.invalid/contracts.git", "revision": "2" * 40},
             {"id": "app", "repository": "https://example.invalid/app.git", "revision": "3" * 40},
@@ -152,7 +186,7 @@ class FeedbackAnalysisCutTests(unittest.TestCase):
     def test_reviewed_cut_is_accepted_by_case_proposer_and_retained(self):
         with tempfile.TemporaryDirectory() as raw:
             root = pathlib.Path(raw)
-            fixture = self.fixture(root)
+            fixture = self.fixture(root, performance=True)
             proposal_path = root / "feedback-cut-proposal.json"
             proposed = self.propose(fixture, proposal_path)
             self.assertEqual(proposed.returncode, 0, proposed.stderr)
@@ -160,6 +194,14 @@ class FeedbackAnalysisCutTests(unittest.TestCase):
             self.assertEqual(proposal["status"], "review-required")
             self.assertTrue(proposal["change"]["sourceSetChanged"])
             self.assertEqual(proposal["priorCase"]["immutability"], "retained-unchanged")
+            self.assertEqual(
+                proposal["feedback"]["dimensionId"],
+                "assessed-agent-performance-separation",
+            )
+            self.assertEqual(
+                proposal["feedback"]["performanceEvidence"]["metric"],
+                "appCpuUsagePercent",
+            )
             self.assertFalse(proposal["automaticPromotion"])
 
             review = {
@@ -181,6 +223,10 @@ class FeedbackAnalysisCutTests(unittest.TestCase):
             self.assertEqual(reviewed.returncode, 0, reviewed.stderr)
             cut = json.loads(cut_path.read_text())
             self.assertEqual(cut["status"], "reviewed-for-case-construction")
+            self.assertEqual(
+                cut["feedback"]["performanceEvidence"],
+                proposal["feedback"]["performanceEvidence"],
+            )
             self.assertFalse(cut["automaticPromotion"])
 
             intent = {
@@ -220,6 +266,10 @@ class FeedbackAnalysisCutTests(unittest.TestCase):
             case_proposal = json.loads(case_proposal_path.read_text())
             self.assertEqual(case_proposal["feedbackAnalysisCut"]["cutId"], cut["cutId"])
             self.assertEqual(case_proposal["feedbackAnalysisCut"]["sha256"], file_digest(cut_path))
+            self.assertEqual(
+                case_proposal["feedbackAnalysisCut"]["performanceEvidence"],
+                cut["feedback"]["performanceEvidence"],
+            )
 
             case_review = {
                 "schema": "agentlab.multi_repo_case_plan_review.v1",
@@ -303,6 +353,10 @@ class FeedbackAnalysisCutTests(unittest.TestCase):
             self.assertEqual(generated_case["lineage"]["feedbackAnalysisCut"]["priorCaseSha256"], cut["priorCase"]["caseSha256"])
             self.assertEqual(generated_case["lineage"]["feedbackAnalysisCut"]["feedbackEvidenceSha256"], cut["feedback"]["evidenceSha256"])
             self.assertEqual(generated_case["lineage"]["feedbackAnalysisCut"]["nextAnalysisReceiptSha256"], cut["nextAnalysis"]["analysisReceiptSha256"])
+            self.assertEqual(
+                generated_case["lineage"]["feedbackAnalysisCut"]["performanceEvidence"],
+                cut["feedback"]["performanceEvidence"],
+            )
             self.assertFalse(generated_case["automaticPromotion"])
 
     def test_rejects_reusing_same_source_and_method_cut(self):
@@ -360,10 +414,25 @@ class FeedbackAnalysisCutTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("exact proposal", result.stderr)
 
+    def test_performance_cut_rejects_unseparated_ranges(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = pathlib.Path(raw)
+            fixture = self.fixture(root, performance=True)
+            feedback = json.loads(fixture["feedback"].read_text())
+            feedback["candidates"][0]["performanceEvidence"]["rangesSeparated"] = False
+            fixture["feedback"] = self.write(root, "invalid-performance-feedback.json", feedback)
+            result = self.propose(fixture, root / "proposal.json")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("performance feedback evidence is invalid", result.stderr)
+
     def test_schema_is_published_for_reviewed_cut(self):
         schema = json.loads((ROOT / "schemas/feedback-analysis-cut.schema.json").read_text())
         self.assertEqual(schema["properties"]["automaticPromotion"]["const"], False)
         self.assertEqual(schema["properties"]["priorCase"]["properties"]["immutability"]["const"], "retained-unchanged")
+        self.assertIn(
+            "performanceEvidence",
+            schema["properties"]["feedback"]["properties"],
+        )
 
 
 if __name__ == "__main__":

@@ -441,6 +441,13 @@ or analysis cut, independent functional calibration and independent performance
 calibration. It never converts performance separation into an automatic Agent
 failure or case promotion.
 
+The reviewed feedback-to-analysis bridge preserves that complete performance
+identity through the proposal, maintainer decision, analysis cut, next case plan
+and frozen case lineage. Each boundary rechecks the policy/workload digests,
+separated-range claim and emulator-only authority. A later case therefore cannot
+silently drop or replace the performance reason that caused the recursive
+analysis, while independent performance calibration remains a mandatory gate.
+
 The campaign summary SHA256 is
 `13e3fe304d29a7434a8d0af87e316ac45579e46f40975561f8643f2745cdcb8b`;
 the discrimination-report SHA256 is

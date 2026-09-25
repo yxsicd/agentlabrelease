@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 from pathlib import Path
 from typing import Any
@@ -59,6 +60,58 @@ def validate_sources(sources: Any) -> list[dict[str, str]]:
     return normalized
 
 
+def validate_performance_evidence(candidate: dict[str, Any]) -> dict[str, Any] | None:
+    evidence = candidate.get("performanceEvidence")
+    performance = candidate.get("dimensionId") == "assessed-agent-performance-separation"
+    if not performance:
+        require(evidence is None, "non-performance feedback overclaims performance evidence")
+        return None
+    verification = candidate.get("verificationContract") or {}
+    authority = evidence.get("authority") if isinstance(evidence, dict) else None
+    require(
+        candidate.get("primaryDimension") == "performance-feedback"
+        and candidate.get("failureMode") == "repeatable-performance-separation",
+        "performance feedback classification differs",
+    )
+    require(
+        isinstance(evidence, dict)
+        and evidence.get("rangesSeparated") is True
+        and isinstance(evidence.get("environmentIdentity"), str)
+        and bool(evidence["environmentIdentity"])
+        and all(
+            isinstance(evidence.get(field), str) and SHA256.fullmatch(evidence[field])
+            for field in ("performancePolicySha256", "profileWorkloadSha256")
+        )
+        and isinstance(evidence.get("metric"), str)
+        and bool(evidence["metric"])
+        and evidence.get("statistic") in {"mean", "p50", "p95"}
+        and isinstance(evidence.get("unit"), str)
+        and bool(evidence["unit"])
+        and evidence.get("direction") in {"lower", "higher"}
+        and isinstance(evidence.get("bestParticipantId"), str)
+        and bool(evidence["bestParticipantId"])
+        and isinstance(evidence.get("worstParticipantId"), str)
+        and bool(evidence["worstParticipantId"])
+        and evidence["bestParticipantId"] != evidence["worstParticipantId"]
+        and isinstance(evidence.get("meanDifference"), (int, float))
+        and not isinstance(evidence["meanDifference"], bool)
+        and math.isfinite(evidence["meanDifference"])
+        and evidence["meanDifference"] > 0
+        and authority
+        == {
+            "functional": "none",
+            "relativePerformance": "smartperf-emulator-proxy",
+            "absolutePowerThermal": "unavailable-on-emulator",
+        },
+        "performance feedback evidence is invalid",
+    )
+    require(
+        "independent-performance-calibration" in verification.get("required", []),
+        "performance feedback does not require independent calibration",
+    )
+    return evidence
+
+
 def build_proposal(
     *,
     case: dict[str, Any],
@@ -92,12 +145,20 @@ def build_proposal(
     require(feedback_candidate.get("status") == "candidate", "feedback candidate is not reviewable")
     require(feedback_candidate.get("maturityState") == "candidate", "feedback candidate maturity changed")
     require(feedback_candidate.get("automaticPromotion") is False, "feedback candidate must not auto-promote")
+    require(
+        isinstance(feedback_candidate.get("dimensionId"), str)
+        and bool(feedback_candidate["dimensionId"])
+        and isinstance(feedback_candidate.get("primaryDimension"), str)
+        and bool(feedback_candidate["primaryDimension"]),
+        "feedback candidate dimensions are invalid",
+    )
     feedback_verification = feedback_candidate.get("verificationContract") or {}
     require(feedback_verification.get("caseReady") is False, "feedback candidate must remain non-ready")
     require(
         "new-source-and-analysis-cut" in feedback_verification.get("required", []),
         "feedback candidate does not require a new source and analysis cut",
     )
+    performance_evidence = validate_performance_evidence(feedback_candidate)
 
     require(analysis.get("schema") == "agentlab.multi_repo_analysis.v1", "unsupported next analysis receipt schema")
     require(analysis.get("automaticPromotion") is False, "next analysis must not auto-promote")
@@ -150,6 +211,31 @@ def build_proposal(
         "difficultyEvidenceSha256": digest(difficulty_path),
         "difficultyCandidateId": difficulty_candidate_id,
     }
+    risks = [
+        {
+            "id": "feedback-mechanism-alignment-unverified",
+            "statement": "A maintainer must judge whether the new program-analysis candidate explains the assessed feedback mechanism.",
+        },
+        {
+            "id": "semantic-intent-unverified",
+            "statement": "Program impact evidence does not establish a fair participant-visible behavior contract.",
+        },
+        {
+            "id": "oracle-and-calibration-pending",
+            "statement": "An independent Oracle and repair/preservation calibration are still required.",
+        },
+        {
+            "id": "freshness-and-contamination-pending",
+            "statement": "Freshness and contamination evidence remain separate qualification gates.",
+        },
+    ]
+    if performance_evidence is not None:
+        risks.append(
+            {
+                "id": "performance-calibration-and-authority-pending",
+                "statement": "The emulator signal requires independent performance calibration and cannot establish absolute power or thermal behavior.",
+            }
+        )
     return {
         "schema": "agentlab.feedback_analysis_cut_proposal.v1",
         "status": "review-required",
@@ -164,10 +250,17 @@ def build_proposal(
         "feedback": {
             "evidenceSha256": digest(feedback_path),
             "candidateId": feedback_candidate_id,
+            "dimensionId": feedback_candidate.get("dimensionId"),
+            "primaryDimension": feedback_candidate.get("primaryDimension"),
             "stageId": feedback_candidate.get("stageId"),
             "failureMode": feedback_candidate.get("failureMode"),
             "mechanism": feedback_candidate.get("mechanism"),
             "verificationContract": feedback_verification,
+            **(
+                {"performanceEvidence": performance_evidence}
+                if performance_evidence is not None
+                else {}
+            ),
         },
         "nextAnalysis": {
             "sourceSetSha256": next_source_set,
@@ -185,24 +278,7 @@ def build_proposal(
             "sourceSetChanged": source_changed,
             "methodRevisionChanged": method_changed,
         },
-        "risks": [
-            {
-                "id": "feedback-mechanism-alignment-unverified",
-                "statement": "A maintainer must judge whether the new program-analysis candidate explains the assessed failure mechanism.",
-            },
-            {
-                "id": "semantic-intent-unverified",
-                "statement": "Program impact evidence does not establish a fair participant-visible behavior contract.",
-            },
-            {
-                "id": "oracle-and-calibration-pending",
-                "statement": "An independent Oracle and repair/preservation calibration are still required.",
-            },
-            {
-                "id": "freshness-and-contamination-pending",
-                "statement": "Freshness and contamination evidence remain separate qualification gates.",
-            },
-        ],
+        "risks": risks,
         "reviewPolicy": {
             "requiredDecisionSchema": "agentlab.feedback_analysis_cut_review.v1",
             "requiredVerdict": "approve-for-case-construction",

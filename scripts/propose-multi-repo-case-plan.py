@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 from pathlib import Path
 
@@ -124,6 +125,54 @@ def main():
         require(cut_decision.get("automaticPromotion") is False, "feedback cut review must not auto-promote")
         require((reviewed_cut.get("priorCase") or {}).get("immutability") == "retained-unchanged", "feedback analysis cut does not preserve its prior case")
         require(all(reviewed_cut.get(key) == cut_proposal.get(key) for key in ("cutId", "priorCase", "feedback", "nextAnalysis", "change")), "reviewed feedback cut differs from its proposal")
+        cut_feedback = reviewed_cut.get("feedback") or {}
+        performance_evidence = cut_feedback.get("performanceEvidence")
+        if cut_feedback.get("dimensionId") == "assessed-agent-performance-separation":
+            authority = (
+                performance_evidence.get("authority")
+                if isinstance(performance_evidence, dict)
+                else None
+            )
+            require(
+                cut_feedback.get("primaryDimension") == "performance-feedback"
+                and cut_feedback.get("failureMode") == "repeatable-performance-separation"
+                and isinstance(performance_evidence, dict)
+                and performance_evidence.get("rangesSeparated") is True
+                and isinstance(performance_evidence.get("environmentIdentity"), str)
+                and bool(performance_evidence["environmentIdentity"])
+                and all(
+                    isinstance(performance_evidence.get(field), str)
+                    and SHA256.fullmatch(performance_evidence[field])
+                    for field in ("performancePolicySha256", "profileWorkloadSha256")
+                )
+                and isinstance(performance_evidence.get("metric"), str)
+                and bool(performance_evidence["metric"])
+                and performance_evidence.get("statistic") in {"mean", "p50", "p95"}
+                and isinstance(performance_evidence.get("unit"), str)
+                and bool(performance_evidence["unit"])
+                and performance_evidence.get("direction") in {"lower", "higher"}
+                and isinstance(performance_evidence.get("bestParticipantId"), str)
+                and bool(performance_evidence["bestParticipantId"])
+                and isinstance(performance_evidence.get("worstParticipantId"), str)
+                and bool(performance_evidence["worstParticipantId"])
+                and performance_evidence["bestParticipantId"]
+                != performance_evidence["worstParticipantId"]
+                and isinstance(performance_evidence.get("meanDifference"), (int, float))
+                and not isinstance(performance_evidence["meanDifference"], bool)
+                and math.isfinite(performance_evidence["meanDifference"])
+                and performance_evidence["meanDifference"] > 0
+                and authority
+                == {
+                    "functional": "none",
+                    "relativePerformance": "smartperf-emulator-proxy",
+                    "absolutePowerThermal": "unavailable-on-emulator",
+                }
+                and "independent-performance-calibration"
+                in (cut_feedback.get("verificationContract") or {}).get("required", []),
+                "feedback analysis cut performance evidence is invalid",
+            )
+        else:
+            require(performance_evidence is None, "non-performance feedback cut overclaims performance evidence")
         next_analysis = reviewed_cut.get("nextAnalysis") or {}
         require(next_analysis.get("sourceSetSha256") == source_set, "feedback analysis cut source set mismatch")
         require(next_analysis.get("candidateId") == candidate_id, "feedback analysis cut candidate mismatch")
@@ -143,11 +192,19 @@ def main():
             "priorCaseId": (reviewed_cut.get("priorCase") or {}).get("caseId"),
             "priorCaseSha256": (reviewed_cut.get("priorCase") or {}).get("caseSha256"),
             "priorSourceSetSha256": (reviewed_cut.get("priorCase") or {}).get("sourceSetSha256"),
-            "feedbackCandidateId": (reviewed_cut.get("feedback") or {}).get("candidateId"),
-            "feedbackEvidenceSha256": (reviewed_cut.get("feedback") or {}).get("evidenceSha256"),
+            "feedbackCandidateId": cut_feedback.get("candidateId"),
+            "feedbackDimensionId": cut_feedback.get("dimensionId"),
+            "feedbackPrimaryDimension": cut_feedback.get("primaryDimension"),
+            "feedbackFailureMode": cut_feedback.get("failureMode"),
+            "feedbackEvidenceSha256": cut_feedback.get("evidenceSha256"),
             "nextSourceSetSha256": next_analysis.get("sourceSetSha256"),
             "nextMethodRevision": next_analysis.get("methodRevision"),
             "nextAnalysisReceiptSha256": next_analysis.get("analysisReceiptSha256"),
+            **(
+                {"performanceEvidence": performance_evidence}
+                if performance_evidence is not None
+                else {}
+            ),
             "review": review,
         }
     else:

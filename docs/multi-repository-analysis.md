@@ -994,6 +994,15 @@ python3 scripts/propose-feedback-analysis-cut.py \
 The proposer re-derives the prior case identity, verifies the exact feedback,
 analysis receipt and difficulty bytes, reproduces the next source-set digest,
 and rejects a transition where neither source set nor method revision changed.
+For `assessed-agent-performance-separation`, it also revalidates and carries the
+exact emulator environment, performance-policy digest, workload digest, metric,
+statistic, direction, separated-range result and emulator-only authority. The
+independent review must acknowledge the additional performance-calibration and
+authority risk. The reviewed cut, case proposal, approved plan and generated
+case lineage all preserve this performance evidence; substitution or removal at
+any boundary fails closed. Thus a recursive case can be traced back to the
+specific repeatable performance signal without reclassifying that signal as a
+functional Oracle verdict.
 It deliberately does not claim that the two mechanisms are semantically
 aligned. An independent maintainer must review that judgment, acknowledge all
 remaining semantic, Oracle, calibration and freshness risks, and bind the exact
