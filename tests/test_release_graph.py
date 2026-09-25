@@ -78,7 +78,7 @@ class ReleaseGraphTests(unittest.TestCase):
         )
         self.assertEqual(
             alpha12["sources"]["releaseGitSha"],
-            "284b5cdbdc2a874cee5305ca665444bf327f44bd",
+            "9cea8fa7e6ac8cba5085802f835e09bb1a1ff984",
         )
         self.assertEqual(len(alpha12["assets"]), 22)
         self.assertEqual(alpha12["reuse"]["newBinaryBuildCount"], 0)

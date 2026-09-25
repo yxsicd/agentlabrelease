@@ -11,7 +11,7 @@ physical-device responsibility, and automatic case or channel promotion stays
 disabled.
 
 The closure binds release-method commit
-`284b5cdbdc2a874cee5305ca665444bf327f44bd` and reuses all 14 selected
+`9cea8fa7e6ac8cba5085802f835e09bb1a1ff984` and reuses all 14 selected
 immutable components across 22 registered payload and descriptor assets. New
 binary builds: 0. New binary uploads: 0. This candidate is not yet a published
 tag; it still requires its declared CI checks, a tagged clean install and

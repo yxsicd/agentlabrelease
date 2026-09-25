@@ -8,7 +8,7 @@ Current runtime candidate: `candidate-20260912-c22b7bfd-linux-x64`.
 The historical environment-kit preview remains `v0.1.0-alpha.9`.
 
 The current lightweight aggregate candidate is `v0.1.0-alpha.12`. It binds
-release-method source commit `284b5cdbdc2a874cee5305ca665444bf327f44bd`
+release-method source commit `9cea8fa7e6ac8cba5085802f835e09bb1a1ff984`
 to 14 already-published immutable components and all 22 registered payload and
 descriptor assets without rebuilding or uploading any unchanged binary. It
 remains a developer-preview candidate until tagged clean-install and

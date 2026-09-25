@@ -231,9 +231,10 @@
       "pinned-harmony-syntax-coverage",
       "public-install-deploy-smoke-alprod-copy-tree",
       "public-install-deploy-smoke-candidate-copy",
-      "public-install-deploy-smoke-candidate-btrfs"
+      "public-install-deploy-smoke-candidate-btrfs",
+      "public-install-deploy-smoke-release-closure"
     ],
-    "sourceGitSha": "284b5cdbdc2a874cee5305ca665444bf327f44bd",
+    "sourceGitSha": "9cea8fa7e6ac8cba5085802f835e09bb1a1ff984",
     "taggedCleanInstallRequired": true
   },
   "releaseTag": "v0.1.0-alpha.12",
@@ -261,7 +262,7 @@
   "sources": {
     "agentlabGitSha": "24fb4ec0beaff395b790bf4d1678f7f2a9c76a3c",
     "llmrsGitSha": "96447aa08879794e3c77c448dedbfe028186a1df",
-    "releaseGitSha": "284b5cdbdc2a874cee5305ca665444bf327f44bd"
+    "releaseGitSha": "9cea8fa7e6ac8cba5085802f835e09bb1a1ff984"
   },
   "status": "developer-preview-candidate",
   "targetCompatibility": {
