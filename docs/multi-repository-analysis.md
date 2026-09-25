@@ -162,11 +162,27 @@ evidence, not evaluation cases.
 That retained qualification predates the generic trusted-main analysis-run
 workflow. The workflow now makes an arbitrary exact source set admissible to
 cohort proposal, but it has not yet reproduced this historical GitCode source
-set on trusted `main`. More importantly, downstream model construction still
-uses the checked deterministic fixture and its fixture-specific Oracle and
-reference implementation. Generic source admission therefore closes the
-analysis-to-sampling boundary, not arbitrary-source case construction or
-qualification.
+set on trusted `main`.
+
+After cohort review, construction input is now a second predeclared boundary.
+`Multi-repository construction contract proposal` binds one exact cohort member
+to an operator-owned source surface and Oracle contract. A separate review run
+requires the exact proposal digest, all risk acknowledgements and a rationale,
+then emits `agentlab.multi_repo_construction_contract.v1`. The source surface
+must retain at least two repositories, cannot exceed the candidate's affected
+files, and separates editable paths from read-only context. API-call candidates
+must reproduce an independently reviewed localization exactly. The
+credential-bearing model-construction workflow revalidates that contract,
+rematerializes the arbitrary exact source set, and exposes only the reviewed
+surface to the construction participant.
+
+This closes arbitrary-source analysis, cohort selection and bounded model-intent
+construction. It does not yet close arbitrary-source calibration: the reviewed
+contract binds an Oracle executable digest and expected checks, but does not
+carry or qualify the executable, a reference implementation or negative
+variants. The existing case-review/freeze workflow remains fixture-calibration
+specific, so a generic construction proposal intentionally stops before freeze
+until those executable inputs have their own exact reviewed bundle.
 
 The first call-localization qualification is retained at
 `release/qualifications/harmony-arkweb-lifecycle-localization-6840590/`. On the

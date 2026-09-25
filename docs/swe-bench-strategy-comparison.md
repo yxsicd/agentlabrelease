@@ -139,10 +139,13 @@ smaller than SWE-bench's:
    reject post-hoc candidate substitution, and retain unadjudicated selections
    in the case-yield denominator. The mechanism has not yet been exercised over
    the 22 real-source clusters, so real selected-to-qualified yield remains
-   unmeasured. Generic construction is also still open: the current construction
-   workflow reconstructs the deterministic fixture and its fixture-specific
-   reference and Oracle, so arbitrary-source analysis and cohort admission do
-   not yet imply arbitrary-source case qualification.
+   unmeasured. Generic bounded construction is now mechanically closed: an exact
+   proposal/review pair freezes editable and context paths plus an operator-owned
+   behavior/Oracle contract before the model runs, and construction rematerializes
+   the arbitrary pinned repositories instead of the deterministic fixture. The
+   executable Oracle bytes, reference implementation, negative variants and
+   case-review/freeze workflow are still fixture-specific, so this does not yet
+   imply arbitrary-source calibration or case qualification.
 4. The independent Oracle is digest-bound. One real Harmony UI candidate now
    has a controlled `FAIL_TO_PASS` replay: the frozen baseline stays on
    `pages/Index`, while a one-line page-registration variant reaches

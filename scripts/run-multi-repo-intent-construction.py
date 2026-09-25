@@ -32,6 +32,10 @@ def digest(path: Path):
     return digest_bytes(path.read_bytes())
 
 
+def canonical_digest(value):
+    return digest_bytes(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode())
+
+
 def write_json(path: Path, value):
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
 
@@ -57,6 +61,7 @@ def main():
     parser.add_argument("--facts", type=Path, required=True)
     parser.add_argument("--candidate-id", required=True)
     parser.add_argument("--oracle-contract", type=Path, required=True)
+    parser.add_argument("--construction-contract", type=Path)
     parser.add_argument("--participant", type=Path, required=True)
     parser.add_argument("--participant-id", required=True)
     parser.add_argument("--localization", type=Path)
@@ -69,9 +74,25 @@ def main():
     manifest = load(args.manifest)
     difficulty = load(args.difficulty)
     oracle = load(args.oracle_contract)
+    construction_contract = None if args.construction_contract is None else load(args.construction_contract)
     require(manifest.get("schema") == "agentlab.multi_repo_manifest.v1", "unsupported manifest schema")
     require(difficulty.get("schema") == "agentlab.difficulty_candidates.v2", "unsupported difficulty schema")
     require(oracle.get("schema") == "agentlab.multi_repo_oracle_contract.v1", "unsupported Oracle contract schema")
+    if construction_contract is not None:
+        require(
+            construction_contract.get("schema") == "agentlab.multi_repo_construction_contract.v1"
+            and construction_contract.get("status") == "reviewed-for-model-construction",
+            "construction contract is not reviewed for model construction",
+        )
+        require(construction_contract.get("automaticPromotion") is False, "construction contract must not auto-promote")
+        require(construction_contract.get("oracleContract") == oracle, "construction contract Oracle differs")
+        require(construction_contract.get("oracleContractSha256") == digest(args.oracle_contract), "construction contract Oracle digest differs")
+        contract_review = construction_contract.get("review") or {}
+        require(contract_review.get("authority") == "explicit-maintainer-construction-review", "construction contract review authority differs")
+        require(contract_review.get("verdict") == "approve-for-model-construction", "construction contract was not approved")
+        require(isinstance(contract_review.get("reviewer"), str) and contract_review["reviewer"], "construction contract reviewer is absent")
+        risk_ids = {row.get("id") for row in construction_contract.get("risks") or [] if isinstance(row, dict)}
+        require(risk_ids and set(contract_review.get("acknowledgedRiskIds") or []) == risk_ids, "construction contract risks were not acknowledged")
     require(difficulty.get("automaticPromotion") is False, "difficulty evidence must not auto-promote")
     source_set = difficulty.get("sourceSetSha256")
     require(isinstance(source_set, str) and SHA256.fullmatch(source_set), "difficulty requires sourceSetSha256")
@@ -81,6 +102,11 @@ def main():
     require(candidate.get("dimensionId") == "multi-repository-change-impact", "construction requires recursive multi-repository impact")
     require(candidate.get("maturityState") == "candidate", "difficulty must still be a candidate")
     require(candidate.get("affectedRepositoryCount", 0) >= 2, "candidate does not cross repositories")
+    if construction_contract is not None:
+        require(construction_contract.get("candidateId") == args.candidate_id, "construction contract candidate differs")
+        require(construction_contract.get("candidateSha256") == canonical_digest(candidate), "construction contract candidate bytes differ")
+        require(construction_contract.get("sourceSetSha256") == source_set, "construction contract source set differs")
+        require(construction_contract.get("difficultyEvidenceSha256") == digest(args.difficulty), "construction contract difficulty differs")
     localization_paths = (
         args.localization,
         args.localization_proposal,
@@ -105,6 +131,8 @@ def main():
         )
     else:
         require(not any(localization_paths), "localization evidence is only valid for shared external API-call candidates")
+    if construction_contract is not None:
+        require(construction_contract.get("localization") == localization_lineage, "construction contract localization differs")
 
     repositories = {}
     canonical_sources = {}
@@ -146,7 +174,37 @@ def main():
     evidence = args.output / "evidence"
     workspace.mkdir(parents=True)
     evidence.mkdir()
-    if localization is None:
+    if construction_contract is not None:
+        surface = construction_contract.get("sourceSurface") or {}
+        require(surface.get("schema") == "agentlab.multi_repo_construction_surface.v1", "construction contract source surface differs")
+        require(surface.get("automaticPromotion") is False, "construction contract source surface can auto-promote")
+        editable_rows = surface.get("editablePaths") or []
+        context_rows = surface.get("contextPaths") or []
+        require(editable_rows and isinstance(context_rows, list), "construction contract source surface is invalid")
+        editable_keys = {(row.get("repositoryId"), row.get("path")) for row in editable_rows if isinstance(row, dict)}
+        context_keys = {(row.get("repositoryId"), row.get("path")) for row in context_rows if isinstance(row, dict)}
+        require(len(editable_keys) == len(editable_rows) and len(context_keys) == len(context_rows), "construction contract source paths are duplicated or invalid")
+        require(not editable_keys.intersection(context_keys), "construction contract editable and context paths overlap")
+        require(len({repository_id for repository_id, _ in editable_keys | context_keys}) >= 2, "construction contract source surface is not multi-repository")
+        if localization_lineage is None:
+            affected_keys = {
+                (row.get("repositoryId"), row.get("path"))
+                for row in candidate.get("affectedFiles") or []
+                if isinstance(row, dict)
+            }
+            require(editable_keys | context_keys <= affected_keys, "construction contract source surface exceeds candidate evidence")
+        else:
+            require(editable_keys == {(row["repositoryId"], row["path"]) for row in localization_lineage["editablePaths"]}, "construction contract editable paths differ from localization")
+            require(context_keys == {(row["repositoryId"], row["path"]) for row in localization_lineage["contextPaths"]}, "construction contract context paths differ from localization")
+        materialized = [
+            {**row, "dependencyDepth": None, "role": "editable", "editable": True}
+            for row in surface.get("editablePaths") or []
+        ] + [
+            {**row, "dependencyDepth": None, "role": "context", "editable": False}
+            for row in surface.get("contextPaths") or []
+        ]
+        require(materialized, "construction contract source surface is empty")
+    elif localization is None:
         materialized = [
             {**row, "role": "editable", "editable": True}
             for row in candidate.get("affectedFiles", [])
@@ -166,6 +224,12 @@ def main():
         repository_id = row.get("repositoryId")
         path = row.get("path")
         require(repository_id in repositories and isinstance(path, str) and path, "affected source identity is invalid")
+        require(
+            "\\" not in path
+            and not path.startswith("/")
+            and all(part not in ("", ".", "..") for part in path.split("/")),
+            "affected source path is unsafe",
+        )
         key = (repository_id, path)
         require(key not in affected_keys, "duplicate affected source identity")
         affected_keys.add(key)
@@ -336,6 +400,7 @@ def main():
         "draftSha256": digest(draft_path),
         "factsSha256": digest(facts_path),
         "oracleContractSha256": digest(args.oracle_contract),
+        "constructionContractSha256": None if args.construction_contract is None else digest(args.construction_contract),
         "participantEvidenceSha256": digest_bytes(participant_evidence_manifest),
         "participantEvidenceFiles": participant_evidence_files,
         "sourceFiles": source_rows,
@@ -365,6 +430,11 @@ def main():
             "semanticKnowledgeVerified": False,
             "automaticPromotion": False,
             "localization": localization_lineage,
+            "contract": None if args.construction_contract is None else {
+                "status": construction_contract["status"],
+                "sha256": digest(args.construction_contract),
+                "review": construction_contract.get("review"),
+            },
         },
     }
     intent_path = args.output / "intent.json"

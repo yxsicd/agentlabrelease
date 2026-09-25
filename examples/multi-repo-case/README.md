@@ -173,17 +173,19 @@ records every eligible and excluded candidate, and reports
 relation/depth/repository-count strata without claiming representativeness. A
 separate `Multi-repository candidate cohort review` run
 binds an operator's exact digest, rationale, risk acknowledgements and at least
-two predeclared candidate IDs. Each later `Multi-repository model construction`
-run accepts one member of that frozen cohort, reproduces the difficulty bytes,
-and fails if the cohort, candidate or source evidence drifts. Only then does it
-run the real Pi adapter with the repository Gateway secret, apply the quality
-gate without the secret, and upload the complete source, native model/Gateway,
-receipt and quality evidence. It also retains the operator-owned reference,
-calibration driver and Oracle from that same revision, outside participant
-input. Credential-bearing construction is manual and is rejected unless its ref
-is exactly `refs/heads/main`; proposal and review have no Gateway credential.
+two predeclared candidate IDs. For each selected member, dispatch the separate
+construction-contract proposal and exact-digest review workflows. They freeze
+the editable/context surface and operator-owned behavior/Oracle contract before
+any model result exists. `Multi-repository model construction` then revalidates
+that reviewed contract, rematerializes the exact repositories, and fails if the
+cohort, candidate, source surface, Oracle declaration or source evidence drifts.
+Only then does it run the real Pi adapter with the repository Gateway secret,
+apply the quality gate without the secret, and upload the complete source,
+native model/Gateway, receipt and quality evidence. Credential-bearing
+construction is manual and is rejected unless its ref is exactly
+`refs/heads/main`; proposal and review have no Gateway credential.
 
-The trusted-main campaign is deliberately split into six independently
+The trusted-main campaign is deliberately split into eight independently
 auditable phases, with analysis as the required predecessor:
 
 1. `Multi-repository exact analysis` freezes and verifies the arbitrary public
@@ -192,23 +194,33 @@ auditable phases, with analysis as the required predecessor:
    denominator, exclusions and strata.
 3. `Multi-repository candidate cohort review` predeclares at least two members
    for independent construction; it never declares the sample representative.
-4. One `Multi-repository model construction` run per selected member produces a
-   review-required case proposal and prints its exact SHA-256.
-5. After inspecting each artifact, an operator dispatches
+4. `Multi-repository construction contract proposal` binds one selected member
+   to an operator-owned editable/context source surface and behavior/Oracle
+   contract. API-call candidates must include their reviewed localization.
+5. `Multi-repository construction contract review` binds an authenticated
+   maintainer, exact proposal digest, all risks and a rationale before any model
+   credential is used.
+6. One `Multi-repository model construction` run per selected member reproduces
+   its arbitrary exact repositories, exposes only the reviewed source surface,
+   and produces a review-required case proposal with its exact SHA-256.
+7. After inspecting each artifact, an operator dispatches
    `Multi-repository case review and freeze` with the source run ID, exact
    proposal digest, every risk ID and a rationale. The workflow accepts only a
    successful construction run from `main`, reruns the retained calibration,
    and freezes the reviewed case. It has no Gateway credential.
-6. `Multi-repository assessed-Agent campaign` accepts only a successful freeze
+8. `Multi-repository assessed-Agent campaign` accepts only a successful freeze
    run from `main`, reconstructs the reviewed sources, and executes two distinct
    model profiles for one or three fresh trials each. It retains every staged
    attempt and emits the v2 collection plus discrimination report.
 
-The exact-analysis and cohort phases are generic. The checked model-construction
-workflow after them is not yet generic: it still reconstructs this fixture and
-uses its reference implementation, calibration driver and Oracle. A real
-arbitrary-source candidate therefore stops after reviewed cohort selection until
-those construction inputs have their own independently reviewed contract.
+The exact-analysis, cohort and bounded model-construction phases are generic.
+The reviewed construction contract carries the exact source surface and declared
+Oracle contract, but deliberately does not claim that the Oracle executable,
+reference implementation or negative variants are qualified. The checked
+case-review/freeze workflow still expects this fixture's executable calibration
+bundle. A real arbitrary-source candidate therefore stops after its model case
+proposal until a later independently reviewed executable calibration bundle
+closes that boundary.
 
 Freezing and scoring never auto-promote a case. A score is campaign evidence,
 not a publication decision. The campaign uses the Oracle retained by the

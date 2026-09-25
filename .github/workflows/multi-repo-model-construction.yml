@@ -24,6 +24,14 @@ on:
         description: One exact member of the predeclared reviewed cohort
         required: true
         type: string
+      construction_contract_review_run_id:
+        description: Successful trusted-main reviewed construction-contract run
+        required: true
+        type: string
+      expected_construction_contract_sha256:
+        description: Exact reviewed construction-contract digest
+        required: true
+        type: string
 
 permissions:
   actions: read
@@ -46,6 +54,8 @@ jobs:
       AGENTLAB_MODEL: ${{ inputs.model }}
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
       SOURCE_RUN_ID: ${{ inputs.cohort_review_run_id }}
+      CONTRACT_RUN_ID: ${{ inputs.construction_contract_review_run_id }}
+      EXPECTED_CONSTRUCTION_CONTRACT_SHA256: ${{ inputs.expected_construction_contract_sha256 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Recover the exact reviewed candidate cohort
@@ -65,25 +75,60 @@ jobs:
           PY
           gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
             --name multi-repo-candidate-cohort-review --dir "$AGENTLAB_ROOT/cohort"
-      - name: Build the revision-fenced analysis binary
-        run: cargo build --locked -p agentlab_code_analysis --bin agentlab-multi-repo-analysis
-      - name: Reproduce exact source evidence and resolve one reviewed member
+      - name: Recover and verify the reviewed construction contract
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/contract"
+          [[ "$CONTRACT_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_CONSTRUCTION_CONTRACT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CONTRACT_RUN_ID" > "$AGENTLAB_ROOT/contract-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/contract-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-construction-contract-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$CONTRACT_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-construction-contract-review --dir "$AGENTLAB_ROOT/contract"
+          [[ "$(sha256sum "$AGENTLAB_ROOT/contract/construction-contract.json" | cut -d' ' -f1)" == "$EXPECTED_CONSTRUCTION_CONTRACT_SHA256" ]]
+          localization_args=()
+          if [[ -f "$AGENTLAB_ROOT/contract/localization.json" ]]; then
+            localization_args=(
+              --localization "$AGENTLAB_ROOT/contract/localization.json"
+              --localization-proposal "$AGENTLAB_ROOT/contract/localization-proposal.json"
+              --localization-review "$AGENTLAB_ROOT/contract/localization-review.json"
+            )
+          fi
+          python3 scripts/multi-repo-construction-contract.py validate \
+            --selection "$AGENTLAB_ROOT/contract/candidate-selection.json" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
+            --surface "$AGENTLAB_ROOT/contract/source-surface.json" \
+            --oracle-contract "$AGENTLAB_ROOT/contract/oracle-contract.json" \
+            "${localization_args[@]}" \
+            --proposal "$AGENTLAB_ROOT/contract/construction-contract-proposal.json" \
+            --review "$AGENTLAB_ROOT/contract/construction-contract-review.json" \
+            --contract "$AGENTLAB_ROOT/contract/construction-contract.json"
+      - name: Materialize exact sources and resolve one reviewed member
         id: analysis
         env:
           EXPECTED_COHORT_SHA256: ${{ inputs.expected_cohort_sha256 }}
           CANDIDATE_ID: ${{ inputs.candidate_id }}
         run: |
-          python3 scripts/prepare-multi-repo-construction-fixture.py \
-            --source examples/multi-repo-case/baseline \
+          set -euo pipefail
+          python3 scripts/prepare-multi-repo-analysis-sources.py \
+            --spec "$AGENTLAB_ROOT/cohort/source/analysis-source/source-spec.json" \
             --output "$AGENTLAB_ROOT/input"
-          target/debug/agentlab-multi-repo-analysis \
-            "$AGENTLAB_ROOT/input/manifest.json" "$AGENTLAB_ROOT/analysis"
           python3 scripts/select-multi-repo-cohort-candidate.py \
             --cohort "$AGENTLAB_ROOT/cohort/candidate-cohort.json" \
-            --difficulty "$AGENTLAB_ROOT/analysis/difficulty_candidates.json" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
             --expected-cohort-sha256 "$EXPECTED_COHORT_SHA256" \
             --candidate-id "$CANDIDATE_ID" \
             --output "$AGENTLAB_ROOT/candidate-selection.json"
+          cmp "$AGENTLAB_ROOT/candidate-selection.json" "$AGENTLAB_ROOT/contract/candidate-selection.json"
           echo "candidate_id=$CANDIDATE_ID" >> "$GITHUB_OUTPUT"
       - name: Install a separately contained Pi runtime
         run: |
@@ -96,12 +141,23 @@ jobs:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
           AGENTLAB_PI_BINARY: ${{ runner.temp }}/pi-runtime/node_modules/.bin/pi
         run: |
+          set -euo pipefail
+          localization_args=()
+          if [[ -f "$AGENTLAB_ROOT/contract/localization.json" ]]; then
+            localization_args=(
+              --localization "$AGENTLAB_ROOT/contract/localization.json"
+              --localization-proposal "$AGENTLAB_ROOT/contract/localization-proposal.json"
+              --localization-review "$AGENTLAB_ROOT/contract/localization-review.json"
+            )
+          fi
           python3 scripts/run-multi-repo-intent-construction.py \
             --manifest "$AGENTLAB_ROOT/input/manifest.json" \
-            --difficulty "$AGENTLAB_ROOT/analysis/difficulty_candidates.json" \
-            --facts "$AGENTLAB_ROOT/analysis/workspace_facts.jsonl" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
+            --facts "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/workspace_facts.jsonl" \
             --candidate-id '${{ steps.analysis.outputs.candidate_id }}' \
-            --oracle-contract examples/multi-repo-case/oracle-contract.json \
+            --oracle-contract "$AGENTLAB_ROOT/contract/oracle-contract.json" \
+            --construction-contract "$AGENTLAB_ROOT/contract/construction-contract.json" \
+            "${localization_args[@]}" \
             --participant examples/multi-repo-case/pi-construction-agent.py \
             --participant-id "pi-${AGENTLAB_MODEL}" \
             --output "$AGENTLAB_ROOT/construction"
@@ -110,13 +166,13 @@ jobs:
           python3 scripts/score-multi-repo-intent.py \
             --intent "$AGENTLAB_ROOT/construction/intent.json" \
             --construction-receipt "$AGENTLAB_ROOT/construction/construction-receipt.json" \
-            --oracle-contract examples/multi-repo-case/oracle-contract.json \
+            --oracle-contract "$AGENTLAB_ROOT/contract/oracle-contract.json" \
             --output "$AGENTLAB_ROOT/construction/intent-quality.json"
           cat "$AGENTLAB_ROOT/construction/intent-quality.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Build the exact review-required proposal
         run: |
           python3 scripts/propose-multi-repo-case-plan.py \
-            --difficulty "$AGENTLAB_ROOT/analysis/difficulty_candidates.json" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
             --intent "$AGENTLAB_ROOT/construction/intent.json" \
             --construction-receipt "$AGENTLAB_ROOT/construction/construction-receipt.json" \
             --quality-report "$AGENTLAB_ROOT/construction/intent-quality.json" \
@@ -126,20 +182,10 @@ jobs:
         run: |
           python3 scripts/propose-dependency-discovery-plan.py \
             --case-plan-proposal "$AGENTLAB_ROOT/case-plan-proposal.json" \
-            --difficulty "$AGENTLAB_ROOT/analysis/difficulty_candidates.json" \
-            --program-facts "$AGENTLAB_ROOT/analysis/workspace_facts.jsonl" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
+            --program-facts "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/workspace_facts.jsonl" \
             --output "$AGENTLAB_ROOT/dependency-discovery-plan-proposal.json"
           sha256sum "$AGENTLAB_ROOT/dependency-discovery-plan-proposal.json" \
-            >> "$GITHUB_STEP_SUMMARY"
-      - name: Preserve the operator-owned calibration fixture
-        run: |
-          mkdir -p "$AGENTLAB_ROOT/operator-fixture"
-          cp -R examples/multi-repo-case/reference "$AGENTLAB_ROOT/operator-fixture/reference"
-          cp examples/multi-repo-case/calibrate.py \
-            examples/multi-repo-case/oracle.mjs \
-            "$AGENTLAB_ROOT/operator-fixture/"
-          sha256sum "$AGENTLAB_ROOT/operator-fixture/calibrate.py" \
-            "$AGENTLAB_ROOT/operator-fixture/oracle.mjs" \
             >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve source identities, native model capture and gate result
         if: always()

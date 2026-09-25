@@ -177,6 +177,9 @@ class MultiRepoCandidateCohortTests(unittest.TestCase):
         self.assertIn(".github/workflows/multi-repo-candidate-cohort.yml", review)
         self.assertIn(".github/workflows/multi-repo-candidate-cohort-review.yml", construction)
         self.assertIn("scripts/select-multi-repo-cohort-candidate.py", construction)
+        self.assertIn("construction_contract_review_run_id", construction)
+        self.assertIn("scripts/multi-repo-construction-contract.py validate", construction)
+        self.assertNotIn("prepare-multi-repo-construction-fixture.py", construction)
         self.assertNotIn('row["seed"]["repositoryId"] == "contracts"', construction)
         self.assertEqual(construction.count("secrets.AGENTLAB_LM_GATEWAY_KEY"), 1)
 

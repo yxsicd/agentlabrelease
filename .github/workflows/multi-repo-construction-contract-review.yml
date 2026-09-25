@@ -1,0 +1,98 @@
+name: Multi-repository construction contract review
+on:
+  workflow_dispatch:
+    inputs:
+      proposal_run_id:
+        description: Successful trusted-main construction-contract proposal run
+        required: true
+        type: string
+      expected_proposal_sha256:
+        description: Exact proposal digest inspected by the reviewer
+        required: true
+        type: string
+      acknowledged_risk_ids:
+        description: Comma-separated construction risk IDs, exactly as reviewed
+        required: true
+        type: string
+      rationale:
+        description: Why this source surface and behavior contract may enter model construction
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  review:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/multi-repo-construction-contract-review
+      SOURCE_RUN_ID: ${{ inputs.proposal_run_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Verify and recover the exact construction proposal
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/source" "$AGENTLAB_ROOT/output"
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$AGENTLAB_ROOT/source-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/source-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-construction-contract-proposal.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-construction-contract-proposal --dir "$AGENTLAB_ROOT/source"
+      - name: Bind explicit maintainer review and compile the contract
+        env:
+          EXPECTED_PROPOSAL_SHA256: ${{ inputs.expected_proposal_sha256 }}
+          ACKNOWLEDGED_RISK_IDS: ${{ inputs.acknowledged_risk_ids }}
+          REVIEW_RATIONALE: ${{ inputs.rationale }}
+          REVIEWER: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          cp -R "$AGENTLAB_ROOT/source/." "$AGENTLAB_ROOT/output/"
+          localization_args=()
+          if [[ -f "$AGENTLAB_ROOT/output/localization.json" ]]; then
+            localization_args=(
+              --localization "$AGENTLAB_ROOT/output/localization.json"
+              --localization-proposal "$AGENTLAB_ROOT/output/localization-proposal.json"
+              --localization-review "$AGENTLAB_ROOT/output/localization-review.json"
+            )
+          fi
+          python3 scripts/multi-repo-construction-contract.py decide \
+            --proposal "$AGENTLAB_ROOT/output/construction-contract-proposal.json" \
+            --expected-sha256 "$EXPECTED_PROPOSAL_SHA256" \
+            --reviewer "$REVIEWER" \
+            --acknowledged-risk-ids "$ACKNOWLEDGED_RISK_IDS" \
+            --rationale "$REVIEW_RATIONALE" \
+            --output "$AGENTLAB_ROOT/output/construction-contract-review.json"
+          python3 scripts/multi-repo-construction-contract.py compile \
+            --proposal "$AGENTLAB_ROOT/output/construction-contract-proposal.json" \
+            --review "$AGENTLAB_ROOT/output/construction-contract-review.json" \
+            --output "$AGENTLAB_ROOT/output/construction-contract.json"
+          python3 scripts/multi-repo-construction-contract.py validate \
+            --selection "$AGENTLAB_ROOT/output/candidate-selection.json" \
+            --difficulty "$AGENTLAB_ROOT/output/difficulty_candidates.json" \
+            --surface "$AGENTLAB_ROOT/output/source-surface.json" \
+            --oracle-contract "$AGENTLAB_ROOT/output/oracle-contract.json" \
+            "${localization_args[@]}" \
+            --proposal "$AGENTLAB_ROOT/output/construction-contract-proposal.json" \
+            --review "$AGENTLAB_ROOT/output/construction-contract-review.json" \
+            --contract "$AGENTLAB_ROOT/output/construction-contract.json"
+          sha256sum "$AGENTLAB_ROOT/output/construction-contract.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve reviewed contract and complete input lineage
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-construction-contract-review
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/output/

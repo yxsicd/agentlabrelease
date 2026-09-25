@@ -59,6 +59,14 @@ def main():
         require(construction_receipt.get("semanticKnowledgeVerified") is False and construction.get("semanticKnowledgeVerified") is False, "construction must not claim verified semantics")
         require(construction_receipt.get("automaticPromotion") is False and construction.get("automaticPromotion") is False, "construction must not auto-promote")
         require(construction_receipt.get("localization") == construction.get("localization"), "construction localization lineage mismatch")
+        contract = construction.get("contract")
+        if contract is not None:
+            require(contract.get("status") == "reviewed-for-model-construction", "construction contract was not reviewed")
+            require(isinstance(contract.get("sha256"), str) and SHA256.fullmatch(contract["sha256"]), "construction contract digest is invalid")
+            require(construction_receipt.get("constructionContractSha256") == contract["sha256"], "construction contract lineage mismatch")
+            require((contract.get("review") or {}).get("authority") == "explicit-maintainer-construction-review", "construction contract review authority differs")
+        else:
+            require(construction_receipt.get("constructionContractSha256") is None, "construction receipt has an unbound contract")
         require(quality.get("schema") == "agentlab.multi_repo_intent_quality.v1", "unsupported construction quality schema")
         require(quality.get("qualifiedForReview") is True, "construction intent did not qualify for review")
         require(quality.get("intentSha256") == digest(args.intent), "construction quality intent mismatch")
