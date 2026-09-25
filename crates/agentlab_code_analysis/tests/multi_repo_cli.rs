@@ -58,14 +58,16 @@ impl Fixture {
     }
 
     fn run(&self, manifest: &Value, name: &str) -> std::process::Output {
+        self.run_with_args(manifest, name, &[])
+    }
+
+    fn run_with_args(&self, manifest: &Value, name: &str, args: &[&str]) -> std::process::Output {
         let manifest_path = self.root.join(format!("{name}.json"));
         let output_path = self.root.join(format!("{name}-output"));
         fs::write(&manifest_path, serde_json::to_vec_pretty(manifest).unwrap()).unwrap();
-        Command::new(env!("CARGO_BIN_EXE_agentlab-multi-repo-analysis"))
-            .arg(manifest_path)
-            .arg(output_path)
-            .output()
-            .unwrap()
+        let mut command = Command::new(env!("CARGO_BIN_EXE_agentlab-multi-repo-analysis"));
+        command.args(args).arg(manifest_path).arg(output_path);
+        command.output().unwrap()
     }
 }
 
@@ -456,4 +458,67 @@ fn batch_blob_reads_preserve_newlines_in_committed_paths() {
     assert!(facts.iter().any(|row| {
         row["kind"] == "parse-file" && row["repositoryId"] == "one" && row["path"] == unusual
     }));
+}
+
+#[test]
+fn bounded_parallel_analysis_is_byte_deterministic() {
+    let mut fixture = Fixture::new();
+    let (one, revision_one) = fixture.repository(
+        "one",
+        &[
+            ("src/a.ts", "export function a() { return b(); }"),
+            ("src/b.ts", "export function b() { return 2; }"),
+            ("src/c.ets", "@Component struct C { build() { Text('c') } }"),
+        ],
+    );
+    let (two, revision_two) = fixture.repository(
+        "two",
+        &[
+            ("src/d.ts", "export function d() { return 4; }"),
+            ("src/e.ts", "export function e() { return d(); }"),
+        ],
+    );
+    let manifest = json!({
+        "schema":"agentlab.multi_repo_manifest.v1",
+        "repositories":[
+            {"id":"one","repository":"fixture://one","root":one,"revision":revision_one},
+            {"id":"two","repository":"fixture://two","root":two,"revision":revision_two}
+        ]
+    });
+    let serial = fixture.run_with_args(&manifest, "serial", &["--jobs", "1"]);
+    assert!(
+        serial.status.success(),
+        "{}",
+        String::from_utf8_lossy(&serial.stderr)
+    );
+    let parallel = fixture.run_with_args(&manifest, "parallel", &["--jobs", "4"]);
+    assert!(
+        parallel.status.success(),
+        "{}",
+        String::from_utf8_lossy(&parallel.stderr)
+    );
+    for artifact in [
+        "workspace_facts.jsonl",
+        "difficulty_candidates.json",
+        "unsupported_sources.jsonl",
+        "multi_repo_analysis.json",
+    ] {
+        assert_eq!(
+            fs::read(fixture.root.join("serial-output").join(artifact)).unwrap(),
+            fs::read(fixture.root.join("parallel-output").join(artifact)).unwrap(),
+            "{artifact} differs between serial and parallel analysis"
+        );
+    }
+}
+
+#[test]
+fn zero_analysis_workers_are_rejected() {
+    let fixture = Fixture::new();
+    let result = fixture.run_with_args(&json!({}), "zero-jobs", &["--jobs", "0"]);
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr).contains("--jobs must be a positive integer"));
+
+    let result = fixture.run_with_args(&json!({}), "too-many-jobs", &["--jobs", "65"]);
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr).contains("--jobs must not exceed 64"));
 }

@@ -5,6 +5,10 @@ use std::fs::{self, File};
 use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 use std::path::{Component, Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Mutex;
+
+const MAX_ANALYSIS_JOBS: usize = 64;
 
 #[derive(Clone)]
 struct Repository {
@@ -236,15 +240,80 @@ fn write_jsonl(path: &Path, rows: &[Value]) -> Result<Vec<u8>, Box<dyn std::erro
     Ok(bytes)
 }
 
+fn analyze_sources(
+    repository: &Repository,
+    paths: &[String],
+    blobs: &BTreeMap<String, Vec<u8>>,
+    jobs: usize,
+) -> Result<Vec<agentlab_code_analysis::Analysis>, Box<dyn std::error::Error>> {
+    if paths.is_empty() {
+        return Ok(Vec::new());
+    }
+    let next = AtomicUsize::new(0);
+    let results = Mutex::new(
+        std::iter::repeat_with(|| None)
+            .take(paths.len())
+            .collect::<Vec<Option<Result<agentlab_code_analysis::Analysis, String>>>>(),
+    );
+    let worker_count = jobs.min(paths.len());
+    std::thread::scope(|scope| {
+        for _ in 0..worker_count {
+            scope.spawn(|| loop {
+                let index = next.fetch_add(1, Ordering::Relaxed);
+                if index >= paths.len() {
+                    break;
+                }
+                let path = &paths[index];
+                let result = analyze(path, &blobs[path], &repository.revision);
+                results.lock().unwrap()[index] = Some(result);
+            });
+        }
+    });
+    results
+        .into_inner()
+        .map_err(|_| fail("analysis result lock poisoned"))?
+        .into_iter()
+        .enumerate()
+        .map(|(index, result)| {
+            result
+                .ok_or_else(|| fail(format!("missing analysis result for {}", paths[index])))?
+                .map_err(|error| fail(format!("analysis failed for {}: {error}", paths[index])))
+        })
+        .collect()
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
-    if args.len() != 2 {
-        return Err(fail(
-            "Usage: agentlab-multi-repo-analysis <manifest.json> <output-directory>",
-        ));
+    let (jobs, manifest_arg, output_arg) = match args.as_slice() {
+        [manifest, output] => (
+            std::thread::available_parallelism()
+                .map(usize::from)
+                .unwrap_or(1)
+                .min(8),
+            manifest,
+            output,
+        ),
+        [flag, count, manifest, output] if flag == "--jobs" => {
+            let count = count
+                .to_str()
+                .ok_or_else(|| fail("--jobs must be a positive integer"))?
+                .parse::<usize>()?;
+            if count == 0 {
+                return Err(fail("--jobs must be a positive integer"));
+            }
+            (count, manifest, output)
+        }
+        _ => {
+            return Err(fail(
+                "Usage: agentlab-multi-repo-analysis [--jobs N] <manifest.json> <output-directory>",
+            ));
+        }
+    };
+    if jobs > MAX_ANALYSIS_JOBS {
+        return Err(fail(format!("--jobs must not exceed {MAX_ANALYSIS_JOBS}")));
     }
-    let manifest_path = PathBuf::from(&args[0]);
-    let output = PathBuf::from(&args[1]);
+    let manifest_path = PathBuf::from(manifest_arg);
+    let output = PathBuf::from(output_arg);
     let manifest_bytes = fs::read(&manifest_path)?;
     let manifest: Value = serde_json::from_slice(&manifest_bytes)?;
     if manifest.get("schema").and_then(Value::as_str) != Some("agentlab.multi_repo_manifest.v1") {
@@ -329,12 +398,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .cloned()
             .collect::<Vec<_>>();
         let source_blobs = git_blobs(repository, &source_paths)?;
-        let mut source_file_candidate_count = 0usize;
+        let source_file_candidate_count = source_paths.len();
         let mut file_count = 0usize;
         let mut syntax_error_count = 0usize;
         let mut fact_count = 0usize;
+        let mut supported_paths = Vec::new();
         for path in &source_paths {
-            source_file_candidate_count += 1;
             let bytes = &source_blobs[path];
             if let Err(error) = std::str::from_utf8(&bytes) {
                 unsupported_sources.push(json!({
@@ -349,7 +418,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }));
                 continue;
             }
-            let analysis = analyze(path, &bytes, &repository.revision)?;
+            supported_paths.push(path.clone());
+        }
+        let analyses = analyze_sources(repository, &supported_paths, &source_blobs, jobs)?;
+        for analysis in analyses {
             file_count += 1;
             syntax_error_count += usize::from(analysis.has_errors);
             for mut row in analysis.rows {

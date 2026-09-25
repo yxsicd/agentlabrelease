@@ -103,6 +103,13 @@ cargo run --locked -p agentlab_code_analysis \
   /path/to/manifest.json /path/to/evidence
 ```
 
+AST extraction uses a bounded worker pool. By default it selects the available
+parallelism capped at eight workers; operators may select an explicit value
+from 1 through 64 with `--jobs N` before the manifest path. Results are joined
+in the original repository/path order, so worker scheduling cannot alter any
+evidence bytes or digest. The integration suite compares every emitted
+artifact between one-worker and four-worker executions.
+
 ## Evidence contract
 
 The output directory contains:
