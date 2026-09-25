@@ -10,6 +10,8 @@ import re
 import sys
 from typing import Any
 
+from case_supply import validate_case_source_classification
+
 
 SHA256 = re.compile(r"[0-9a-f]{64}")
 REVISION = re.compile(r"[0-9a-f]{40}")
@@ -59,18 +61,11 @@ def validate_proposal(proposal: dict[str, Any]) -> None:
     require(isinstance(rows, list) and len(rows) >= 2, "cohort proposal has fewer than two eligible candidates")
     ids = [row.get("id") for row in rows if isinstance(row, dict)]
     require(len(ids) == len(rows) == len(set(ids)), "eligible candidate identities are invalid")
-    require(
-        all(
-            row.get("caseSource")
-            == {
-                "lane": "derived",
-                "strategy": "semantic-program-analysis",
-                "authority": "exact-difficulty-evidence",
-            }
-            for row in rows
-        ),
-        "eligible candidate source classification is invalid",
-    )
+    for row in rows:
+        try:
+            validate_case_source_classification(row.get("caseSource"))
+        except ValueError as error:
+            raise CohortReviewError(f"eligible candidate source classification is invalid: {error}") from error
 
 
 def decide(proposal_path: Path, expected_sha256: str, selected_raw: str, reviewer: str, acknowledged_raw: str, rationale: str) -> dict[str, Any]:

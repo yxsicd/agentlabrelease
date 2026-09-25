@@ -134,6 +134,16 @@ and runtime qualification supplies the end-to-end behavior boundary. It is
 also more expensive, so qualified-case yield and cost per qualified case must
 become first-class operating metrics.
 
+The natural lane now has an implemented normalization boundary for coordinated
+multi-repository historical repairs and operator-reported failures. It binds
+exact repository revisions and content-addressed evidence, then joins the same
+reviewed cohort and qualification chain as analyzer-derived candidates. This
+closes a mechanism gap relative to SWE-bench-style repair mining, but it is not
+yet empirical coverage: no fresh held-out natural record has completed
+independent review, calibration, freeze and runtime qualification. The current
+proof is a mixed natural/derived fixture, so claims of natural-case yield or
+representativeness remain prohibited.
+
 ## AgentLab advantage
 
 AgentLab is designed around a broader unit of work than a historical patch:

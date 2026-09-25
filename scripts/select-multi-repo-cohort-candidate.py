@@ -10,6 +10,8 @@ import re
 import sys
 from typing import Any
 
+from case_supply import validate_case_source_classification
+
 
 SHA256 = re.compile(r"[0-9a-f]{64}")
 REVISION = re.compile(r"[0-9a-f]{40}")
@@ -75,15 +77,10 @@ def select(cohort_path: Path, difficulty_path: Path, expected_cohort_sha256: str
     require(candidate_id in candidates, "candidate is absent from exact difficulty evidence")
     require(canonical_digest(candidates[candidate_id]) == selected_by_id[candidate_id].get("candidateSha256"), "candidate bytes differ from reviewed cohort")
     case_source = selected_by_id[candidate_id].get("caseSource")
-    require(
-        case_source
-        == {
-            "lane": "derived",
-            "strategy": "semantic-program-analysis",
-            "authority": "exact-difficulty-evidence",
-        },
-        "selected candidate source classification is invalid",
-    )
+    try:
+        validate_case_source_classification(case_source)
+    except ValueError as error:
+        raise SelectionError(f"selected candidate source classification is invalid: {error}") from error
     return {
         "schema": "agentlab.multi_repo_candidate_selection.v2",
         "cohortId": cohort["cohortId"],

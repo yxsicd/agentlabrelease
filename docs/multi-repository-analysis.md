@@ -188,10 +188,27 @@ therefore cannot turn a static frozen case into an end-to-end Harmony case.
 `summarize-case-supply.py` joins an exact reviewed cohort to zero or more frozen
 cases and reports three non-interchangeable yields: frozen-case, functional-
 qualified and end-to-end-qualified. It reports each source lane and strategy as
-a separate stratum and explicitly lists unobserved planned lanes. The current
-multi-repository path consequently reports only the derived lane; the natural
-Issue/PR or operator-failure lane is not implemented and cannot be inferred
-from blind-review adjudication.
+a separate stratum and explicitly lists unobserved planned lanes.
+
+The natural-source entry is now executable rather than only a planned enum.
+`import-natural-case-source.py` accepts either a historical repair or an
+operator-reported failure, but only after binding an exact multi-repository
+source set and content-addressed evidence. Historical repairs require an Issue
+URL, exact fix revision and repair URL for every affected repository. Operator
+failures require an incident identity, observation time, reporter authority,
+failure report and reproduction evidence. Both forms require explicit observed-
+failure and preservation check identities. The importer emits an ordinary
+`agentlab.difficulty_candidates.v2` member with `caseReady=false`; source
+evidence is not qualification evidence and never auto-promotes a case.
+
+`merge-case-candidate-sources.py` can combine natural and derived candidate
+files only when their exact source-set digest, repository revisions and module
+bindings agree. The mixed population then uses the same predeclared cohort,
+review, one-member selection, construction, calibration and freeze path. A
+natural candidate cannot bypass prompt-fairness, alternative-valid,
+meaningful-wrong, freshness, device or performance gates. Current tests prove
+this fail-closed mechanism and a mixed-source cohort fixture; they do not prove
+that a real fresh natural case has been imported or qualified.
 
 The first real two-repository source qualification is retained at
 `release/qualifications/harmony-real-multi-repo-34661ff/summary.json`. It binds

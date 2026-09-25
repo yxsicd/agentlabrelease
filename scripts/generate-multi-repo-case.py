@@ -11,7 +11,9 @@ from pathlib import Path
 from case_qualification import build_matrix, validate_matrix
 from case_supply import (
     build_qualification_receipt,
+    case_source_classification,
     derived_program_analysis_source,
+    validate_case_source,
     validate_case_supply,
 )
 
@@ -51,6 +53,21 @@ def validate_sources(sources):
     require(len(ids) == len(set(ids)), "source ids must be unique")
 
 
+def resolve_case_source(candidate, candidate_id, source_set, difficulty_path):
+    case_source = candidate.get("caseSource")
+    if case_source is None:
+        return derived_program_analysis_source(
+            candidate_id=candidate_id,
+            source_set_sha256=source_set,
+            difficulty_evidence_sha256=digest(difficulty_path),
+            candidate_sha256=canonical_digest(candidate),
+        )
+    validate_case_source(case_source)
+    require(case_source.get("candidateId") == candidate_id, "natural case source candidate differs")
+    require(case_source.get("sourceSetSha256") == source_set, "natural case source set differs")
+    return case_source
+
+
 def candidate_cohort_lineage(selection_path, difficulty_path, candidate_id, source_set):
     selection = load(selection_path)
     difficulty = load(difficulty_path)
@@ -87,13 +104,18 @@ def candidate_cohort_lineage(selection_path, difficulty_path, candidate_id, sour
         "candidate cohort selection method revision is invalid",
     )
     require(isinstance(selection.get("cohortId"), str) and selection["cohortId"], "candidate cohort identity is invalid")
-    require(
-        selection.get("caseSource")
-        == {
+    candidate_source = candidates[candidate_id].get("caseSource")
+    expected_source = (
+        case_source_classification(validate_case_source(candidate_source))
+        if candidate_source is not None
+        else {
             "lane": "derived",
             "strategy": "semantic-program-analysis",
             "authority": "exact-difficulty-evidence",
-        },
+        }
+    )
+    require(
+        selection.get("caseSource") == expected_source,
         "candidate cohort source classification is invalid",
     )
     return {
@@ -359,12 +381,7 @@ def main():
         calibration_sha256=calibration_sha256,
         review=plan.get("review"),
     )
-    case_source = derived_program_analysis_source(
-        candidate_id=candidate_id,
-        source_set_sha256=source_set,
-        difficulty_evidence_sha256=digest(args.difficulty),
-        candidate_sha256=canonical_digest(candidate),
-    )
+    case_source = resolve_case_source(candidate, candidate_id, source_set, args.difficulty)
     qualification_receipt = build_qualification_receipt(
         case_id=case_id,
         candidate_id=candidate_id,

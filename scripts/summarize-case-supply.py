@@ -10,7 +10,7 @@ import re
 import sys
 from typing import Any
 
-from case_supply import validate_case_supply
+from case_supply import validate_case_source_classification, validate_case_supply
 
 
 SHA256 = re.compile(r"[0-9a-f]{64}")
@@ -51,15 +51,10 @@ def summarize(cohort_path: Path, case_paths: list[Path], method_revision: str) -
         candidate_id = row.get("id")
         require(isinstance(candidate_id, str) and candidate_id and candidate_id not in selected_by_id, "selected candidate identity is invalid")
         source = row.get("caseSource")
-        require(
-            source
-            == {
-                "lane": "derived",
-                "strategy": "semantic-program-analysis",
-                "authority": "exact-difficulty-evidence",
-            },
-            "selected candidate source classification is invalid",
-        )
+        try:
+            validate_case_source_classification(source)
+        except ValueError as error:
+            raise ValueError(f"selected candidate source classification is invalid: {error}") from error
         selected_by_id[candidate_id] = row
 
     cases: list[dict[str, Any]] = []

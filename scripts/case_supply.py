@@ -30,6 +30,39 @@ def canonical_digest(value: Any) -> str:
     ).hexdigest()
 
 
+def validate_case_source_classification(value: dict[str, Any]) -> dict[str, Any]:
+    require(isinstance(value, dict), "case source classification must be an object")
+    require(
+        set(value) == {"lane", "strategy", "authority"},
+        "case source classification fields differ",
+    )
+    lane = value.get("lane")
+    strategy = value.get("strategy")
+    require(lane in LANES, "case source classification lane is invalid")
+    require(strategy in STRATEGIES, "case source classification strategy is invalid")
+    if lane == "natural":
+        require(
+            strategy in {"historical-repair", "operator-reported-failure"},
+            "natural case source classification strategy is invalid",
+        )
+    else:
+        require(
+            strategy in {
+                "semantic-program-analysis",
+                "controlled-mutation",
+                "participant-failure-feedback",
+            },
+            "derived case source classification strategy is invalid",
+        )
+    require(isinstance(value.get("authority"), str) and value["authority"], "case source classification authority is required")
+    return value
+
+
+def case_source_classification(value: dict[str, Any]) -> dict[str, Any]:
+    validate_case_source(value)
+    return {key: value[key] for key in ("lane", "strategy", "authority")}
+
+
 def derived_program_analysis_source(
     *,
     candidate_id: str,
@@ -84,6 +117,9 @@ def validate_case_source(value: dict[str, Any]) -> dict[str, Any]:
         "case source source-set digest is invalid",
     )
     require(isinstance(value.get("authority"), str) and value["authority"], "case source authority is required")
+    validate_case_source_classification(
+        {key: value[key] for key in ("lane", "strategy", "authority")}
+    )
     evidence = value.get("evidence")
     require(isinstance(evidence, dict) and evidence, "case source evidence is required")
     require(

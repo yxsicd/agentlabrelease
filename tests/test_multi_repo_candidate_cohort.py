@@ -10,6 +10,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
 
 
 def load_module(name: str, path: Path):
@@ -23,7 +24,6 @@ def load_module(name: str, path: Path):
 PROPOSER = load_module("candidate_cohort_proposer", ROOT / "scripts/propose-multi-repo-candidate-cohort.py")
 REVIEW = load_module("candidate_cohort_review", ROOT / "scripts/review-multi-repo-candidate-cohort.py")
 SELECT = load_module("candidate_cohort_select", ROOT / "scripts/select-multi-repo-cohort-candidate.py")
-sys.path.insert(0, str(ROOT / "scripts"))
 CASE_GENERATOR = load_module("candidate_cohort_case_generator", ROOT / "scripts/generate-multi-repo-case.py")
 
 

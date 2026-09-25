@@ -10,6 +10,8 @@ import re
 import sys
 from typing import Any
 
+from case_supply import case_source_classification, validate_case_source
+
 
 SHA256 = re.compile(r"[0-9a-f]{64}")
 REVISION = re.compile(r"[0-9a-f]{40}")
@@ -56,14 +58,21 @@ def candidate_summary(candidate: dict[str, Any]) -> dict[str, Any]:
     require(isinstance(depth, int) and depth >= 1, f"{candidate_id} dependency depth is invalid")
     relation_type = candidate.get("relationType") or "recursive-reverse-impact"
     require(isinstance(relation_type, str) and TOKEN.fullmatch(relation_type), f"{candidate_id} relation type is invalid")
-    return {
-        "id": candidate_id,
-        "candidateSha256": canonical_digest(candidate),
-        "caseSource": {
+    source = candidate.get("caseSource")
+    if source is None:
+        source_classification = {
             "lane": "derived",
             "strategy": "semantic-program-analysis",
             "authority": "exact-difficulty-evidence",
-        },
+        }
+    else:
+        validate_case_source(source)
+        require(source.get("candidateId") == candidate_id, f"{candidate_id} case source candidate differs")
+        source_classification = case_source_classification(source)
+    return {
+        "id": candidate_id,
+        "candidateSha256": canonical_digest(candidate),
+        "caseSource": source_classification,
         "relationType": relation_type,
         "affectedRepositoryCount": repository_count,
         "maxDependencyDepth": depth,
@@ -238,13 +247,22 @@ def propose(
     require(len(eligible) >= 2, "sampling frame requires at least two eligible candidates")
 
     strata: dict[str, dict[str, int]] = {
+        "caseSourceLane": {},
+        "caseSourceStrategy": {},
         "relationType": {},
         "affectedRepositoryCount": {},
         "maxDependencyDepth": {},
     }
     for row in eligible:
-        for field in strata:
-            key = str(row[field])
+        values = {
+            "caseSourceLane": row["caseSource"]["lane"],
+            "caseSourceStrategy": row["caseSource"]["strategy"],
+            "relationType": row["relationType"],
+            "affectedRepositoryCount": row["affectedRepositoryCount"],
+            "maxDependencyDepth": row["maxDependencyDepth"],
+        }
+        for field, value in values.items():
+            key = str(value)
             strata[field][key] = strata[field].get(key, 0) + 1
     advisory_counts: dict[str, int] = {}
     for row in eligible:
