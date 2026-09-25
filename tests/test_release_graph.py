@@ -5,6 +5,8 @@ import hashlib
 import json
 import pathlib
 import sys
+import subprocess
+import tempfile
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -65,6 +67,54 @@ class ReleaseGraphTests(unittest.TestCase):
         )
         MODULE.validate_closure(closure_value, registry, registry_bytes)
 
+    def test_alpha12_is_source_bound_reference_only_preview_candidate(self) -> None:
+        alpha11 = json.loads(
+            (ROOT / "release/closures/v0.1.0-alpha.11.json").read_text()
+        )
+        alpha12 = json.loads(
+            (ROOT / "release/closures/v0.1.0-alpha.12.json").read_text()
+        )
+        registry_path = ROOT / "release/components/registry.json"
+        registry_bytes = registry_path.read_bytes()
+        registry = json.loads(registry_bytes)
+        MODULE.validate_closure(alpha12, registry, registry_bytes)
+        self.assertEqual(alpha12["assets"], alpha11["assets"])
+        self.assertEqual(
+            alpha12["sources"]["releaseGitSha"],
+            "069d8706edd7b37196edb7d08c487a971f97f746",
+        )
+        self.assertEqual(alpha12["reuse"]["newBinaryBuildCount"], 0)
+        self.assertEqual(alpha12["reuse"]["newBinaryUploadCount"], 0)
+        self.assertEqual(alpha12["status"], "developer-preview-candidate")
+        self.assertFalse(alpha12["developerPreviewScope"]["automaticPromotion"])
+
+    def test_alpha12_remote_asset_receipt_matches_closure(self) -> None:
+        closure_path = ROOT / "release/closures/v0.1.0-alpha.12.json"
+        closure_value = json.loads(closure_path.read_text())
+        receipt = json.loads(
+            (
+                ROOT
+                / "release/qualifications/alpha12-immutable-assets/summary.json"
+            ).read_text()
+        )
+        self.assertEqual(receipt["schema"], "agentlab.release_graph_validation.v1")
+        self.assertTrue(receipt["remote"])
+        self.assertFalse(receipt["automaticPromotion"])
+        self.assertEqual(len(receipt["closures"]), 1)
+        retained = receipt["closures"][0]
+        self.assertEqual(
+            retained["sha256"], hashlib.sha256(closure_path.read_bytes()).hexdigest()
+        )
+        self.assertEqual(retained["releaseTag"], closure_value["releaseTag"])
+        observed = {row["url"]: row for row in retained["remoteAssets"]}
+        self.assertEqual(set(observed), {row["url"] for row in closure_value["assets"]})
+        for asset in closure_value["assets"]:
+            row = observed[asset["url"]]
+            self.assertEqual(row["bytes"], asset["bytes"])
+            self.assertEqual(row["sha256"], asset["sha256"])
+            self.assertIsInstance(row["assetId"], int)
+            self.assertGreater(row["assetId"], 0)
+
     def test_alpha11_registry_asset_drift_is_rejected(self) -> None:
         closure_value = json.loads(
             (ROOT / "release/closures/v0.1.0-alpha.11.json").read_text()
@@ -121,6 +171,37 @@ class ReleaseGraphTests(unittest.TestCase):
         value["assets"][2]["sha256"] = ""
         with self.assertRaisesRegex(ValueError, "sha256"):
             MODULE.validate_closure(value)
+
+    def test_public_asset_url_resolves_repository_tag_and_name(self) -> None:
+        self.assertEqual(
+            MODULE.github_asset_location(
+                "https://github.com/yxsicd/agentlabrelease/releases/download/runtime-deadbeef/runtime.bin"
+            ),
+            ("yxsicd/agentlabrelease", "runtime-deadbeef", "runtime.bin"),
+        )
+        with self.assertRaisesRegex(ValueError, "canonical"):
+            MODULE.github_asset_location(
+                "https://github.com/yxsicd/agentlabrelease/releases/latest/runtime.bin"
+            )
+
+    def test_receipt_requires_remote_registry_and_never_overwrites(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            receipt = pathlib.Path(raw) / "receipt.json"
+            receipt.write_text("retained\n")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    "--closure", str(ROOT / "release/closures/v0.1.0-alpha.12.json"),
+                    "--registry", str(ROOT / "release/components/registry.json"),
+                    "--remote",
+                    "--receipt", str(receipt),
+                ],
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertEqual(receipt.read_text(), "retained\n")
 
     def test_oci_identity_does_not_overload_image_id(self) -> None:
         value = closure()

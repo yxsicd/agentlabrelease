@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import datetime
 import hashlib
 import json
+import os
 import pathlib
 import re
+import urllib.parse
+import urllib.request
 from typing import Any
 
 CLOSURE_SCHEMA = "agentlab.release_closure.v1"
@@ -78,6 +82,73 @@ def validate_asset(asset: Any) -> None:
         config = str(identity.get("ociConfigDigest", "")).removeprefix("sha256:")
         if not hex_value(manifest, 64) or not hex_value(config, 64):
             fail("image identity requires distinct manifest/config SHA-256 digests")
+
+
+def github_asset_location(url: str) -> tuple[str, str, str]:
+    parsed = urllib.parse.urlsplit(url)
+    parts = parsed.path.strip("/").split("/")
+    if (
+        parsed.scheme != "https"
+        or parsed.netloc != "github.com"
+        or parsed.query
+        or parsed.fragment
+        or len(parts) != 6
+        or parts[2:4] != ["releases", "download"]
+        or not all(parts)
+    ):
+        fail("asset must use a canonical GitHub release URL")
+    return f"{parts[0]}/{parts[1]}", parts[4], parts[5]
+
+
+def validate_remote_assets(assets: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    releases: dict[tuple[str, str], dict[str, Any]] = {}
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "agentlab-release-graph-validation",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    observations = []
+    for asset in assets:
+        repository, tag, name = github_asset_location(asset["url"])
+        key = (repository, tag)
+        if key not in releases:
+            request = urllib.request.Request(
+                f"https://api.github.com/repos/{repository}/releases/tags/{tag}",
+                headers=headers,
+            )
+            with urllib.request.urlopen(request, timeout=30) as response:
+                release = json.load(response)
+            if release.get("draft") is True:
+                fail(f"component release is a draft: {repository}@{tag}")
+            releases[key] = {
+                row.get("name"): row
+                for row in release.get("assets", [])
+                if isinstance(row, dict)
+            }
+        observed = releases[key].get(name)
+        if observed is None:
+            fail(f"missing public release asset: {repository}@{tag}/{name}")
+        if (
+            observed.get("browser_download_url") != asset["url"]
+            or observed.get("size") != asset["bytes"]
+            or observed.get("digest") != f"sha256:{asset['sha256']}"
+        ):
+            fail(f"public release asset identity differs: {repository}@{tag}/{name}")
+        observations.append(
+            {
+                "repository": repository,
+                "tag": tag,
+                "name": name,
+                "assetId": observed.get("id"),
+                "url": asset["url"],
+                "bytes": asset["bytes"],
+                "sha256": asset["sha256"],
+            }
+        )
+    return observations
 
 
 def validate_registry_binding(
@@ -249,6 +320,8 @@ def main() -> int:
     parser.add_argument("--closure", action="append", default=[])
     parser.add_argument("--target", action="append", default=[])
     parser.add_argument("--registry")
+    parser.add_argument("--remote", action="store_true")
+    parser.add_argument("--receipt", type=pathlib.Path)
     args = parser.parse_args()
     registry_bytes = b""
     registry = None
@@ -256,12 +329,68 @@ def main() -> int:
         registry_path = pathlib.Path(args.registry)
         registry_bytes = registry_path.read_bytes()
         registry = json.loads(registry_bytes)
+    if args.receipt is not None:
+        if not args.remote or registry is None:
+            fail("retained receipt requires --remote and --registry")
+        if args.receipt.exists():
+            fail(f"refusing to overwrite receipt: {args.receipt}")
+    closure_reports = []
     for raw in args.closure:
-        validate_closure(load(pathlib.Path(raw)), registry, registry_bytes)
+        closure_path = pathlib.Path(raw)
+        closure = load(closure_path)
+        validate_closure(closure, registry, registry_bytes)
+        observations = []
+        if args.remote:
+            observations = validate_remote_assets(closure["assets"])
+        closure_reports.append(
+            {
+                "path": closure_path.as_posix(),
+                "sha256": hashlib.sha256(closure_path.read_bytes()).hexdigest(),
+                "releaseTag": closure["releaseTag"],
+                "releaseGitSha": (closure.get("sources") or {}).get("releaseGitSha"),
+                "assetCount": len(closure["assets"]),
+                **({"remoteAssets": observations} if args.remote else {}),
+            }
+        )
     for raw in args.target:
         validate_target(load(pathlib.Path(raw)))
     if not args.closure and not args.target:
         parser.error("at least one --closure or --target is required")
+    receipt = {
+        "schema": "agentlab.release_graph_validation.v1",
+        "observedAt": datetime.datetime.now(datetime.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat(),
+        "registrySha256": (
+            hashlib.sha256(registry_bytes).hexdigest() if registry is not None else None
+        ),
+        "closures": closure_reports,
+        "targetCount": len(args.target),
+        "remote": args.remote,
+        "automaticPromotion": False,
+    }
+    if args.receipt is not None:
+        args.receipt.parent.mkdir(parents=True, exist_ok=True)
+        args.receipt.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "closureCount": len(closure_reports),
+                "targetCount": len(args.target),
+                "remote": args.remote,
+                "remoteAssetCount": sum(
+                    len(row.get("remoteAssets", [])) for row in closure_reports
+                ),
+                **(
+                    {"receipt": args.receipt.as_posix()}
+                    if args.receipt is not None
+                    else {}
+                ),
+            },
+            sort_keys=True,
+        )
+    )
     return 0
 
 

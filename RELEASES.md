@@ -1,5 +1,21 @@
 # Releases
 
+## v0.1.0-alpha.12 candidate
+
+First source-bound lightweight aggregate candidate for the complete public
+AgentLab evaluation method. It includes multi-repository semantic and program
+analysis, recursive difficulty feedback, reviewed and calibrated case
+generation, experimental Linux Harmony emulator execution and experimental
+relative SmartPerf feedback. Absolute power and thermal qualification remain a
+physical-device responsibility, and automatic case or channel promotion stays
+disabled.
+
+The closure binds release-method commit
+`069d8706edd7b37196edb7d08c487a971f97f746` and reuses all 14 selected
+immutable component references from Alpha.11. New binary builds: 0. New binary
+uploads: 0. This candidate is not yet a published tag; it still requires its
+declared CI checks, a tagged clean install and Linux-emulator acceptance.
+
 ## v0.1.0-alpha.9
 
 Makes install latency observable and the destructive ALD rehearsal reproducible.

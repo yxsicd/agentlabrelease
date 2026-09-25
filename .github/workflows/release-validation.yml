@@ -43,7 +43,7 @@ jobs:
           python3 scripts/validate-release.py
           python3 scripts/component-reuse.py validate --registry release/components/registry.json
           python3 scripts/validate-release-graph.py \
-            --closure release/closures/v0.1.0-alpha.11.json \
+            --closure release/closures/v0.1.0-alpha.12.json \
             --registry release/components/registry.json \
             --target release/targets/generic-linux-agentlab.json \
             --target release/targets/wsl2-agentlab.json

@@ -1,0 +1,145 @@
+{
+  "automaticPromotion": false,
+  "closures": [
+    {
+      "assetCount": 14,
+      "path": "release/closures/v0.1.0-alpha.12.json",
+      "releaseGitSha": "069d8706edd7b37196edb7d08c487a971f97f746",
+      "releaseTag": "v0.1.0-alpha.12",
+      "remoteAssets": [
+        {
+          "assetId": 582255673,
+          "bytes": 4532144,
+          "name": "agentlabctl-linux-x64",
+          "repository": "yxsicd/agentlabrelease",
+          "sha256": "51cec430e1c0a3741bab77f387ee90ed7349746a2d87ff39a275b4f975eab886",
+          "tag": "control-24fb4ec0-linux-x64",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/control-24fb4ec0-linux-x64/agentlabctl-linux-x64"
+        },
+        {
+          "assetId": 582310941,
+          "bytes": 4653,
+          "name": "agentlab-composition-install.sh",
+          "repository": "yxsicd/agentlabrelease",
+          "sha256": "f0cfce3d0842bfd36b41ec3a4c593b41779d461ca3359c6cf2256728ce42ad04",
+          "tag": "installer-24fb4ec0-linux-x64",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/installer-24fb4ec0-linux-x64/agentlab-composition-install.sh"
+        },
+        {
+          "assetId": 582271028,
+          "bytes": 6515,
+          "name": "environment-lock.json",
+          "repository": "yxsicd/agentlabrelease",
+          "sha256": "dcb27623ef9f3f5a92c0eb759120989cafcf25ace8873945a043242cb41fd1eb",
+          "tag": "candidate-agentlab-alpha10-24fb4ec0-linux-x64",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/candidate-agentlab-alpha10-24fb4ec0-linux-x64/environment-lock.json"
+        },
+        {
+          "assetId": 582254538,
+          "bytes": 33378281,
+          "name": "agentlab-pack-agentlab-release-24fb4ec0-linux-x64.tar.zst",
+          "repository": "yxsicd/agentlabrelease",
+          "sha256": "e78188d3151644208dcc3502240602184ac8b30d3d13e26d1c2fffb479071cc4",
+          "tag": "runtime-24fb4ec0-linux-x64",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/runtime-24fb4ec0-linux-x64/agentlab-pack-agentlab-release-24fb4ec0-linux-x64.tar.zst"
+        },
+        {
+          "assetId": 542534470,
+          "bytes": 989968633,
+          "name": "harmony-linux-x64-6.1.1.300.tar.zst",
+          "repository": "yxsicd/agentlabrelease",
+          "sha256": "8fc2199afaea5055c6a3ff762b7b58a9475c5ff7b6c30285336014dc647927c2",
+          "tag": "harmony-linux-x64-6.1.1.300",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-linux-x64-6.1.1.300/harmony-linux-x64-6.1.1.300.tar.zst"
+        },
+        {
+          "assetId": 539038105,
+          "bytes": 33039121,
+          "name": "mcpgit-program-git-c0c3a53fe68904e017de7505bf47436d068938e5-x86_64-unknown-linux-musl.tar.gz",
+          "repository": "yxsicd/mcpgitrelease",
+          "sha256": "382e3bbf97350b7e61f331095fd20b0ca71dd749c9f9712474b11cd03f597eee",
+          "tag": "mcpgit-git-c0c3a53fe68904e017de7505bf47436d068938e5-linux-amd64",
+          "url": "https://github.com/yxsicd/mcpgitrelease/releases/download/mcpgit-git-c0c3a53fe68904e017de7505bf47436d068938e5-linux-amd64/mcpgit-program-git-c0c3a53fe68904e017de7505bf47436d068938e5-x86_64-unknown-linux-musl.tar.gz"
+        },
+        {
+          "assetId": 555038577,
+          "bytes": 29154352,
+          "name": "agentlab-pack-developer-tools-e443b17a-linux-x64.tar.zst",
+          "repository": "yxsicd/agentlabrelease",
+          "sha256": "58bc13e984f7219a560017592bdee11a6874a15099faaa1d40b0f2542d489b6e",
+          "tag": "tools-e443b17a-linux-x64",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/tools-e443b17a-linux-x64/agentlab-pack-developer-tools-e443b17a-linux-x64.tar.zst"
+        },
+        {
+          "assetId": 559094583,
+          "bytes": 305740544,
+          "name": "chatproxy-agentlab-git-fa05788f-linux-x64.docker.tar.zst",
+          "repository": "yxsicd/agentlabrelease",
+          "sha256": "f5dddac4b52b81abd2e88f4f8e8eac246b4bfd71ae3eb904141d073a4ee4a477",
+          "tag": "image-fa05788f-linux-x64",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/image-fa05788f-linux-x64/chatproxy-agentlab-git-fa05788f-linux-x64.docker.tar.zst"
+        },
+        {
+          "assetId": 548707529,
+          "bytes": 3511,
+          "name": "agentlab-pack-harmony-build-kit-buildkit-v5-linux-x64.tar.zst",
+          "repository": "yxsicd/agentlabrelease",
+          "sha256": "4106f23863e7524d2e44489fb4199d8493422d12fd1c2fafb298d5a83eac68a5",
+          "tag": "harmony-buildkit-v5-linux-x64",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-buildkit-v5-linux-x64/agentlab-pack-harmony-build-kit-buildkit-v5-linux-x64.tar.zst"
+        },
+        {
+          "assetId": 559112341,
+          "bytes": 590496,
+          "name": "alsessionfsd-a4d9fb7-linux-x64",
+          "repository": "yxsicd/agentlabrelease",
+          "sha256": "52b47c3575e9e43013ccdbfb283127c6bfb58cf18ae6aae4c31f81996b03ec7a",
+          "tag": "sessionfs-a4d9fb7-linux-x64",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/sessionfs-a4d9fb7-linux-x64/alsessionfsd-a4d9fb7-linux-x64"
+        },
+        {
+          "assetId": 560605118,
+          "bytes": 5219632,
+          "name": "agentlab-session-sdk-c075105a-linux-x64",
+          "repository": "yxsicd/agentlabrelease",
+          "sha256": "15fe671317f0f4ee7a79b54776aca4d62f629c5b571063c3fc20a05fe24475c3",
+          "tag": "session-sdk-c075105a-linux-x64",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/session-sdk-c075105a-linux-x64/agentlab-session-sdk-c075105a-linux-x64"
+        },
+        {
+          "assetId": 585151847,
+          "bytes": 3625,
+          "name": "harmony-emulator-linux-x64-26.0.0.821.json",
+          "repository": "yxsicd/agentlabrelease",
+          "sha256": "36536c9b129c3570427441bcea29be2662e3b9293710a2b1d80e28ba9da9f593",
+          "tag": "harmony-emulator-linux-x64-26.0.0.821",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-emulator-linux-x64-26.0.0.821/harmony-emulator-linux-x64-26.0.0.821.json"
+        },
+        {
+          "assetId": 585152435,
+          "bytes": 932070897,
+          "name": "commandline-tools-linux-x64-26.0.0.821.tar.zst",
+          "repository": "yxsicd/agentlabrelease",
+          "sha256": "ad1eb9a255b6fc6f022a646bd536ef230d66e47aea1f9177a793924b83ebb649",
+          "tag": "harmony-emulator-linux-x64-26.0.0.821",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-emulator-linux-x64-26.0.0.821/commandline-tools-linux-x64-26.0.0.821.tar.zst"
+        },
+        {
+          "assetId": 585154299,
+          "bytes": 1568108769,
+          "name": "HarmonyOS-7.0.0-phone_all_x86.tar.zst",
+          "repository": "yxsicd/agentlabrelease",
+          "sha256": "75c537cb6dc62291f96f0f247c148de653c9c6633c4dc5b0c34cc254909ae671",
+          "tag": "harmony-emulator-linux-x64-26.0.0.821",
+          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/harmony-emulator-linux-x64-26.0.0.821/HarmonyOS-7.0.0-phone_all_x86.tar.zst"
+        }
+      ],
+      "sha256": "a6f9b0e5ecb6f95126204ed7f865466684da134400ded9cc1d7b0ba15d4efdc4"
+    }
+  ],
+  "observedAt": "2026-09-25T17:20:04+00:00",
+  "registrySha256": "2bfdfcf0fc56c38cb76c1208f028c305e113fd0fc31d3f1789cf3e658cf2dbec",
+  "remote": true,
+  "schema": "agentlab.release_graph_validation.v1",
+  "targetCount": 2
+}

@@ -45,6 +45,23 @@ The candidate still requires its declared CI checks, a tagged clean install and
 Linux emulator acceptance before it can become a qualified developer preview.
 Generating a closure does not create a tag, GitHub Release or channel promotion.
 
+Before proposing a tag, independently verify that every referenced GitHub
+Release asset still exists with the closure's exact server-reported size and
+SHA-256, including assets hosted by another repository:
+
+```sh
+python3 scripts/validate-release-graph.py \
+  --closure release/closures/v0.1.0-alpha.12.json \
+  --registry release/components/registry.json \
+  --remote \
+  --receipt release/qualifications/alpha12-immutable-assets/summary.json
+```
+
+Remote verification reads Release metadata and never downloads the multi-GB
+emulator archives. A receipt is write-once, binds the closure and registry
+digests, and records every observed GitHub asset ID, repository, tag, size and
+SHA-256 without authorizing promotion.
+
 ## Target descriptors
 
 Public target descriptors live in `release/targets/`.

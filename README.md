@@ -7,6 +7,12 @@ Agents.
 Current runtime candidate: `candidate-20260912-c22b7bfd-linux-x64`.
 The historical environment-kit preview remains `v0.1.0-alpha.9`.
 
+The current lightweight aggregate candidate is `v0.1.0-alpha.12`. It binds
+release-method source commit `069d8706edd7b37196edb7d08c487a971f97f746`
+to 14 already-published immutable components without rebuilding or uploading
+any unchanged binary. It remains a developer-preview candidate until tagged
+clean-install and Linux-emulator acceptance are retained.
+
 Component-based publication now uses [reference-only environment releases](docs/component-publication.md).
 Tagged releases additionally use an [immutable Release Graph](docs/release-graph.md)
 to bind exact component bytes, schema compatibility and target qualification
