@@ -57,6 +57,10 @@ def git(root: Path, *arguments: str, check: bool = True) -> subprocess.Completed
 
 def repository_map(manifest: dict[str, Any], difficulty: dict[str, Any]) -> dict[str, dict[str, Any]]:
     require(manifest.get("schema") == "agentlab.multi_repo_manifest.v1", "unsupported manifest schema")
+    require(
+        manifest.get("moduleBindings") == difficulty.get("moduleBindings"),
+        "manifest module bindings differ from difficulty evidence",
+    )
     rows: dict[str, dict[str, Any]] = {}
     projection = []
     for row in manifest.get("repositories") or []:
@@ -585,42 +589,35 @@ def build_packet(
     manifest_path: Path,
     difficulty_path: Path,
     facts_path: Path,
-    proposal_path: Path,
+    proposal_path: Path | None,
     candidate_id: str,
     packet_method_revision: str,
     context_lines: int = 4,
     max_owner_lines: int = 240,
     context_facts_path: Path | None = None,
     context_method_revision: str | None = None,
+    analysis_run_path: Path | None = None,
+    cohort_path: Path | None = None,
+    selection_path: Path | None = None,
+    analysis_manifest_path: Path | None = None,
 ) -> dict[str, Any]:
     require(REVISION.fullmatch(packet_method_revision) is not None, "packet method revision is invalid")
     require(0 <= context_lines <= 20, "context lines must be between zero and twenty")
     require(40 <= max_owner_lines <= 1000, "max owner lines must be between forty and one thousand")
     manifest = load(manifest_path, "manifest")
     difficulty = load(difficulty_path, "difficulty evidence")
-    proposal = load(proposal_path, "current-method proposal")
     require(difficulty.get("schema") == "agentlab.difficulty_candidates.v2", "unsupported difficulty schema")
     require(difficulty.get("automaticPromotion") is False, "difficulty evidence can auto-promote")
+    live_paths = (analysis_run_path, cohort_path, selection_path, analysis_manifest_path)
+    live_lineage = any(path is not None for path in live_paths)
     require(
-        proposal.get("schema") == "agentlab.real_multi_repo_current_method_proposal.v1",
-        "unsupported current-method proposal",
-    )
-    require(proposal.get("automaticPromotion") is False, "current-method proposal can auto-promote")
-    require(
-        file_digest(difficulty_path) == proposal.get("difficultyEvidenceSha256"),
-        "difficulty evidence differs from current-method proposal",
+        (proposal_path is not None) != live_lineage,
+        "supply either a current-method proposal or live reviewed-cohort lineage",
     )
     require(
-        file_digest(facts_path) == proposal.get("programFactsSha256"),
-        "workspace facts differ from current-method proposal",
+        not live_lineage or all(path is not None for path in live_paths),
+        "analysis run, analysis manifest, reviewed cohort and candidate selection must be supplied together",
     )
-    require(proposal.get("sourceSetSha256") == difficulty.get("sourceSetSha256"), "source set differs")
-    shortlist = {
-        row.get("id"): row
-        for row in proposal.get("proposedCandidates") or []
-        if isinstance(row, dict)
-    }
-    require(candidate_id in shortlist, "candidate is not in the frozen review shortlist")
     candidates = {
         row.get("id"): row
         for row in difficulty.get("candidates") or []
@@ -628,10 +625,141 @@ def build_packet(
     }
     require(candidate_id in candidates, "candidate is absent from difficulty evidence")
     candidate = candidates[candidate_id]
+    candidate_sha256 = canonical_digest(candidate)
+
+    if proposal_path is not None:
+        proposal = load(proposal_path, "current-method proposal")
+        require(
+            proposal.get("schema") == "agentlab.real_multi_repo_current_method_proposal.v1",
+            "unsupported current-method proposal",
+        )
+        require(proposal.get("automaticPromotion") is False, "current-method proposal can auto-promote")
+        require(
+            file_digest(difficulty_path) == proposal.get("difficultyEvidenceSha256"),
+            "difficulty evidence differs from current-method proposal",
+        )
+        require(
+            file_digest(facts_path) == proposal.get("programFactsSha256"),
+            "workspace facts differ from current-method proposal",
+        )
+        require(proposal.get("sourceSetSha256") == difficulty.get("sourceSetSha256"), "source set differs")
+        shortlist = {
+            row.get("id"): row
+            for row in proposal.get("proposedCandidates") or []
+            if isinstance(row, dict)
+        }
+        require(candidate_id in shortlist, "candidate is not in the frozen review shortlist")
+        require(candidate_sha256 == shortlist[candidate_id].get("candidateSha256"), "candidate digest differs from shortlist")
+        selection_roles = shortlist[candidate_id].get("selectionRoles")
+        lineage = {
+            "manifestSha256": file_digest(manifest_path),
+            "difficultyEvidenceSha256": file_digest(difficulty_path),
+            "workspaceFactsSha256": file_digest(facts_path),
+            "currentMethodProposalSha256": file_digest(proposal_path),
+            "analysisRunSha256": proposal.get("analysisRunSha256"),
+            "proposalMethodRevision": proposal.get("proposalMethodRevision"),
+        }
+    else:
+        analysis_run = load(analysis_run_path, "analysis run")
+        analysis_manifest = load(analysis_manifest_path, "analysis manifest")
+        cohort = load(cohort_path, "reviewed candidate cohort")
+        selection = load(selection_path, "candidate selection")
+        require(analysis_run.get("schema") == "agentlab.multi_repo_analysis_run.v1", "unsupported analysis run")
+        require(analysis_run.get("automaticPromotion") is False, "analysis run can auto-promote")
+        require(
+            analysis_manifest.get("schema") == "agentlab.multi_repo_manifest.v1",
+            "unsupported analysis manifest",
+        )
+        analysis_sources = sorted(
+            (
+                {key: row.get(key) for key in ("id", "repository", "revision")}
+                for row in analysis_manifest.get("repositories") or []
+                if isinstance(row, dict)
+            ),
+            key=lambda row: str(row.get("id")),
+        )
+        require(analysis_sources == difficulty.get("sources"), "analysis manifest sources differ")
+        require(
+            analysis_manifest.get("moduleBindings") == difficulty.get("moduleBindings"),
+            "analysis manifest module bindings differ",
+        )
+        require(
+            analysis_run.get("manifestSha256") == file_digest(analysis_manifest_path),
+            "analysis manifest differs from analysis run",
+        )
+        require(analysis_run.get("difficultyEvidenceSha256") == file_digest(difficulty_path), "difficulty evidence differs from analysis run")
+        require(analysis_run.get("programFactsSha256") == file_digest(facts_path), "workspace facts differ from analysis run")
+        require(analysis_run.get("sourceSetSha256") == difficulty.get("sourceSetSha256"), "analysis source set differs")
+        require(cohort.get("schema") == "agentlab.multi_repo_candidate_cohort.v1", "unsupported reviewed candidate cohort")
+        require(
+            cohort.get("automaticPromotion") is False
+            and cohort.get("declaredRepresentative") is False,
+            "reviewed candidate cohort policy differs",
+        )
+        require(cohort.get("difficultyEvidenceSha256") == file_digest(difficulty_path), "difficulty evidence differs from reviewed cohort")
+        require(cohort.get("sourceSetSha256") == difficulty.get("sourceSetSha256"), "reviewed cohort source set differs")
+        require(cohort.get("methodRevision") == analysis_run.get("methodRevision"), "reviewed cohort analysis method differs")
+        review = cohort.get("review")
+        require(isinstance(review, dict), "reviewed candidate cohort review is absent")
+        require(review.get("authority") == "explicit-candidate-cohort-review", "reviewed candidate cohort authority differs")
+        require(review.get("verdict") == "approve-for-independent-case-construction", "reviewed candidate cohort was not approved")
+        require(isinstance(review.get("reviewer"), str) and review["reviewer"].strip(), "reviewed candidate cohort reviewer is absent")
+        for field in ("proposalSha256", "decisionSha256"):
+            require(isinstance(review.get(field), str) and SHA256.fullmatch(review[field]), f"reviewed candidate cohort {field} is invalid")
+        selected_list = cohort.get("selectedCandidates") or []
+        require(isinstance(selected_list, list), "reviewed candidate cohort membership is invalid")
+        selected_rows = {
+            row.get("id"): row
+            for row in selected_list
+            if isinstance(row, dict)
+        }
+        require(
+            cohort.get("selectedCandidateCount") == len(selected_list)
+            and len(selected_list) == len(selected_rows)
+            and len(selected_rows) >= 2,
+            "reviewed candidate cohort membership is invalid",
+        )
+        for selected_id, selected_row in selected_rows.items():
+            require(selected_id in candidates, "reviewed cohort contains a candidate absent from difficulty evidence")
+            require(
+                canonical_digest(candidates[selected_id]) == selected_row.get("candidateSha256"),
+                "candidate digest differs from reviewed cohort",
+            )
+        require(candidate_id in selected_rows, "candidate is not a member of the reviewed cohort")
+        require(selection.get("schema") == "agentlab.multi_repo_candidate_selection.v2", "unsupported candidate selection")
+        require(
+            selection.get("automaticPromotion") is False
+            and selection.get("declaredRepresentative") is False,
+            "candidate selection policy differs",
+        )
+        require(selection.get("cohortId") == cohort.get("cohortId"), "candidate selection cohort identity differs")
+        require(selection.get("candidateId") == candidate_id, "candidate selection identity differs")
+        require(selection.get("candidateSha256") == candidate_sha256, "candidate digest differs from selection")
+        require(selection.get("caseSource") == selected_rows[candidate_id].get("caseSource"), "candidate selection source classification differs")
+        require(selection.get("cohortSha256") == file_digest(cohort_path), "candidate selection cohort digest differs")
+        for field in (
+            "sourceSetSha256", "difficultyEvidenceSha256", "methodRevision",
+            "proposalMethodRevision",
+        ):
+            require(selection.get(field) == cohort.get(field), f"candidate selection {field} differs")
+        selection_roles = selected_rows[candidate_id].get("selectionRoles") or [
+            "explicit-reviewed-cohort-member"
+        ]
+        lineage = {
+            "manifestSha256": file_digest(manifest_path),
+            "analysisManifestSha256": file_digest(analysis_manifest_path),
+            "materializedManifestSha256": file_digest(manifest_path),
+            "difficultyEvidenceSha256": file_digest(difficulty_path),
+            "workspaceFactsSha256": file_digest(facts_path),
+            "analysisRunSha256": file_digest(analysis_run_path),
+            "candidateCohortSha256": file_digest(cohort_path),
+            "candidateSelectionSha256": file_digest(selection_path),
+            "analysisMethodRevision": analysis_run.get("methodRevision"),
+            "proposalMethodRevision": cohort.get("proposalMethodRevision"),
+        }
     require(candidate.get("relationType") == "shared-external-api-call-contract", "candidate is not API-call-specific")
     require(candidate.get("automaticPromotion") is False, "candidate can auto-promote")
     require((candidate.get("verificationContract") or {}).get("caseReady") is False, "candidate unexpectedly claims case readiness")
-    require(canonical_digest(candidate) == shortlist[candidate_id].get("candidateSha256"), "candidate digest differs from shortlist")
     repositories = repository_map(manifest, difficulty)
 
     evidence_ids = candidate.get("evidenceIds")
@@ -749,8 +877,8 @@ def build_packet(
         ),
         "status": "independent-semantic-review-required",
         "candidateId": candidate_id,
-        "candidateSha256": canonical_digest(candidate),
-        "selectionRoles": shortlist[candidate_id].get("selectionRoles"),
+        "candidateSha256": candidate_sha256,
+        "selectionRoles": selection_roles,
         "packetMethodRevision": packet_method_revision,
         "sourceSetSha256": difficulty.get("sourceSetSha256"),
         "apiContract": seed,
@@ -815,12 +943,7 @@ def build_packet(
             "reviewerMustBeIndependentOfPacketGenerator": True,
         },
         "lineage": {
-            "manifestSha256": file_digest(manifest_path),
-            "difficultyEvidenceSha256": file_digest(difficulty_path),
-            "workspaceFactsSha256": file_digest(facts_path),
-            "currentMethodProposalSha256": file_digest(proposal_path),
-            "analysisRunSha256": proposal.get("analysisRunSha256"),
-            "proposalMethodRevision": proposal.get("proposalMethodRevision"),
+            **lineage,
             "contextWorkspaceFactsSha256": context_facts_sha256,
             "contextMethodRevision": context_method_revision,
         },
@@ -845,7 +968,11 @@ def main() -> int:
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--difficulty", type=Path, required=True)
     parser.add_argument("--facts", type=Path, required=True)
-    parser.add_argument("--proposal", type=Path, required=True)
+    parser.add_argument("--proposal", type=Path)
+    parser.add_argument("--analysis-run", type=Path)
+    parser.add_argument("--analysis-manifest", type=Path)
+    parser.add_argument("--cohort", type=Path)
+    parser.add_argument("--selection", type=Path)
     parser.add_argument("--candidate-id", required=True)
     parser.add_argument("--packet-method-revision", required=True)
     parser.add_argument("--context-lines", type=int, default=4)
@@ -862,6 +989,10 @@ def main() -> int:
             args.max_owner_lines,
             args.context_facts,
             args.context_method_revision,
+            args.analysis_run,
+            args.cohort,
+            args.selection,
+            args.analysis_manifest,
         )
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(value, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")

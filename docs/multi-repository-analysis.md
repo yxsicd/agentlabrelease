@@ -264,6 +264,13 @@ cohort workflow therefore freezes the sampling decision first:
    rationale. `compile` creates an immutable, non-representative cohort.
 4. `select-multi-repo-cohort-candidate.py` permits construction of one reviewed
    member only when the cohort digest and reproduced difficulty bytes match.
+5. For an API-call-specific member,
+   `multi-repo-candidate-review-packet.yml` recovers that exact reviewed cohort,
+   revalidates the original analysis run, rematerializes every public repository
+   at its pinned commit, selects the member again and builds source-localized
+   semantic evidence. The packet separately binds the original analysis
+   manifest and the runner-local materialized manifest, so stale absolute paths
+   cannot masquerade as portable source evidence.
 
 The proposal and review workflows carry no model Gateway credential. Model
 construction is a later run per selected member. The cohort does not promote a
@@ -941,9 +948,12 @@ semantic gate. Only an approved gate carries `allowsCaseContract: true`; reject
 and defer gates remain useful denominator evidence but cannot authorize case
 construction. `multi-repo-candidate-semantic-review.yml` exposes this protocol
 as a secret-free trusted-`main` manual workflow, binds the GitHub actor identity
-and retains the packet, normalized answers, decision and gate together. This is
-role/provenance evidence, not proof that the reviewer judgment is correct or
-that the candidate is representative.
+and retains the packet, normalized answers, decision and gate together. It
+accepts exactly one source: either a retained qualification packet or a
+successful trusted-main `multi-repo-candidate-review-packet.yml` run. Dynamic
+packets are therefore first-class inputs rather than files that must be manually
+copied into the repository. This is role/provenance evidence, not proof that the
+reviewer judgment is correct or that the candidate is representative.
 
 Three API candidates in the retained shortlist now have exact-source review
 packets under

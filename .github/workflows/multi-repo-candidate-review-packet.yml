@@ -1,0 +1,102 @@
+name: Multi-repository candidate review packet
+on:
+  workflow_dispatch:
+    inputs:
+      cohort_review_run_id:
+        description: Successful trusted-main reviewed candidate-cohort run
+        required: true
+        type: string
+      expected_cohort_sha256:
+        description: Exact reviewed cohort digest inspected before candidate selection
+        required: true
+        type: string
+      candidate_id:
+        description: API-call-specific member of the reviewed cohort
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  build:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/multi-repo-candidate-review-packet
+      SOURCE_RUN_ID: ${{ inputs.cohort_review_run_id }}
+      EXPECTED_COHORT_SHA256: ${{ inputs.expected_cohort_sha256 }}
+      CANDIDATE_ID: ${{ inputs.candidate_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Recover the exact reviewed cohort and analyzer evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/source" "$AGENTLAB_ROOT/output"
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_COHORT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$AGENTLAB_ROOT/source-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/source-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-candidate-cohort-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-candidate-cohort-review --dir "$AGENTLAB_ROOT/source"
+          python3 scripts/multi-repo-analysis-run.py validate \
+            --root "$AGENTLAB_ROOT/source/source/analysis-source" \
+            --run "$AGENTLAB_ROOT/source/source/analysis-source/analysis-run.json"
+          python3 scripts/prepare-multi-repo-analysis-sources.py \
+            --spec "$AGENTLAB_ROOT/source/source/analysis-source/source-spec.json" \
+            --output "$AGENTLAB_ROOT/materialized"
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib
+          root = pathlib.Path(os.environ["AGENTLAB_ROOT"])
+          cohort_path = root / "source/candidate-cohort.json"
+          cohort = json.loads(cohort_path.read_text())
+          proposal_run = json.loads((root / "source/source-run.json").read_text())
+          analysis_run = json.loads((root / "source/source/analysis-source/analysis-run.json").read_text())
+          assert hashlib.sha256(cohort_path.read_bytes()).hexdigest() == os.environ["EXPECTED_COHORT_SHA256"]
+          assert proposal_run["path"] == ".github/workflows/multi-repo-candidate-cohort.yml"
+          assert proposal_run["head_branch"] == "main" and proposal_run["conclusion"] == "success"
+          assert cohort["proposalMethodRevision"] == proposal_run["head_sha"]
+          assert cohort["methodRevision"] == analysis_run["methodRevision"]
+          PY
+      - name: Select one exact reviewed candidate
+        run: |
+          python3 scripts/select-multi-repo-cohort-candidate.py \
+            --cohort "$AGENTLAB_ROOT/source/candidate-cohort.json" \
+            --difficulty "$AGENTLAB_ROOT/source/source/analysis-source/analysis/difficulty_candidates.json" \
+            --expected-cohort-sha256 "$EXPECTED_COHORT_SHA256" \
+            --candidate-id "$CANDIDATE_ID" \
+            --output "$AGENTLAB_ROOT/output/selection.json"
+      - name: Materialize source-localized semantic review evidence
+        run: |
+          python3 scripts/build-multi-repo-candidate-review-packet.py \
+            --manifest "$AGENTLAB_ROOT/materialized/manifest.json" \
+            --difficulty "$AGENTLAB_ROOT/source/source/analysis-source/analysis/difficulty_candidates.json" \
+            --facts "$AGENTLAB_ROOT/source/source/analysis-source/analysis/workspace_facts.jsonl" \
+            --analysis-run "$AGENTLAB_ROOT/source/source/analysis-source/analysis-run.json" \
+            --analysis-manifest "$AGENTLAB_ROOT/source/source/analysis-source/manifest.json" \
+            --cohort "$AGENTLAB_ROOT/source/candidate-cohort.json" \
+            --selection "$AGENTLAB_ROOT/output/selection.json" \
+            --candidate-id "$CANDIDATE_ID" \
+            --packet-method-revision "$GITHUB_SHA" \
+            --context-facts "$AGENTLAB_ROOT/source/source/analysis-source/analysis/workspace_facts.jsonl" \
+            --context-method-revision "$(python3 -c 'import json,os; print(json.load(open(os.environ["AGENTLAB_ROOT"] + "/source/source/analysis-source/analysis-run.json"))["methodRevision"])')" \
+            --output "$AGENTLAB_ROOT/output/packet.json"
+          sha256sum "$AGENTLAB_ROOT/output/selection.json" \
+            "$AGENTLAB_ROOT/output/packet.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve the exact selection and review packet
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-candidate-review-packet
+          if-no-files-found: error
+          path: ${{ env.AGENTLAB_ROOT }}/output/

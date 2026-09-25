@@ -125,6 +125,7 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
             "schema": "agentlab.difficulty_candidates.v2",
             "sourceSetSha256": "a" * 64,
             "sources": sources,
+            "moduleBindings": {},
             "candidates": [candidate],
             "automaticPromotion": False,
         }, sort_keys=True) + "\n")
@@ -144,6 +145,88 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
             "automaticPromotion": False,
         }, sort_keys=True) + "\n")
         return manifest, difficulty, facts_path, proposal, candidate
+
+    def live_lineage(self, root: Path, paths):
+        manifest, difficulty, facts, _, candidate = paths
+        fact_rows = [json.loads(line) for line in facts.read_text().splitlines() if line]
+        for row in fact_rows:
+            if row.get("kind") == "call":
+                row["controlContext"] = {
+                    "awaitAncestorCount": 0,
+                    "callbackDepth": 0,
+                    "controlRegions": [],
+                    "enclosingCalls": [],
+                    "resolution": "syntactic-ancestor-context",
+                }
+        facts.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in fact_rows))
+        difficulty_value = json.loads(difficulty.read_text())
+        second = json.loads(json.dumps(candidate))
+        second["id"] = "difficulty-second"
+        second["relationType"] = "shared-external-module-contract"
+        difficulty_value["candidates"].append(second)
+        difficulty.write_text(json.dumps(difficulty_value, sort_keys=True) + "\n")
+        analysis_run = root / "analysis-run.json"
+        analysis_run.write_text(json.dumps({
+            "schema": "agentlab.multi_repo_analysis_run.v1",
+            "methodRevision": "2" * 40,
+            "sourceSetSha256": difficulty_value["sourceSetSha256"],
+            "manifestSha256": hashlib.sha256(manifest.read_bytes()).hexdigest(),
+            "difficultyEvidenceSha256": hashlib.sha256(difficulty.read_bytes()).hexdigest(),
+            "programFactsSha256": hashlib.sha256(facts.read_bytes()).hexdigest(),
+            "automaticPromotion": False,
+        }, sort_keys=True) + "\n")
+        selected = []
+        for row in difficulty_value["candidates"]:
+            selected.append({
+                "id": row["id"],
+                "candidateSha256": PACKET.canonical_digest(row),
+                "caseSource": {
+                    "lane": "derived",
+                    "strategy": "semantic-program-analysis",
+                    "authority": "exact-difficulty-evidence",
+                },
+                "relationType": row["relationType"],
+                "affectedRepositoryCount": row["affectedRepositoryCount"],
+                "maxDependencyDepth": row["maxDependencyDepth"],
+                "affectedFileCount": len(row["affectedFiles"]),
+            })
+        cohort = root / "cohort.json"
+        cohort.write_text(json.dumps({
+            "schema": "agentlab.multi_repo_candidate_cohort.v1",
+            "cohortId": "cohort-live",
+            "methodRevision": "2" * 40,
+            "proposalMethodRevision": "5" * 40,
+            "sourceSetSha256": difficulty_value["sourceSetSha256"],
+            "difficultyEvidenceSha256": hashlib.sha256(difficulty.read_bytes()).hexdigest(),
+            "samplingFrame": {"declaredRepresentative": False},
+            "selectedCandidates": selected,
+            "selectedCandidateCount": len(selected),
+            "review": {
+                "authority": "explicit-candidate-cohort-review",
+                "reviewer": "github:reviewer",
+                "proposalSha256": "6" * 64,
+                "decisionSha256": "7" * 64,
+                "verdict": "approve-for-independent-case-construction",
+            },
+            "declaredRepresentative": False,
+            "automaticPromotion": False,
+        }, sort_keys=True) + "\n")
+        selection = root / "selection.json"
+        selection.write_text(json.dumps({
+            "schema": "agentlab.multi_repo_candidate_selection.v2",
+            "cohortId": "cohort-live",
+            "cohortSha256": hashlib.sha256(cohort.read_bytes()).hexdigest(),
+            "candidateId": candidate["id"],
+            "candidateSha256": PACKET.canonical_digest(candidate),
+            "caseSource": selected[0]["caseSource"],
+            "sourceSetSha256": difficulty_value["sourceSetSha256"],
+            "difficultyEvidenceSha256": hashlib.sha256(difficulty.read_bytes()).hexdigest(),
+            "methodRevision": "2" * 40,
+            "proposalMethodRevision": "5" * 40,
+            "declaredRepresentative": False,
+            "automaticPromotion": False,
+        }, sort_keys=True) + "\n")
+        return analysis_run, cohort, selection
 
     def test_packet_binds_exact_sources_and_exposes_semantic_gap(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -380,6 +463,102 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
             ):
                 self.assertEqual(packet["lineage"][key], hashlib.sha256(path.read_bytes()).hexdigest())
 
+    def test_live_reviewed_cohort_lineage_builds_a_context_packet(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = self.fixture(root)
+            analysis_run, cohort, selection = self.live_lineage(root, paths)
+            materialized_manifest = root / "materialized-manifest.json"
+            materialized_value = json.loads(paths[0].read_text())
+            for repository in materialized_value["repositories"]:
+                repository["root"] += "/"
+            materialized_manifest.write_text(
+                json.dumps(materialized_value, sort_keys=True) + "\n"
+            )
+            packet = PACKET.build_packet(
+                materialized_manifest, paths[1], paths[2], None,
+                paths[4]["id"], "3" * 40,
+                context_facts_path=paths[2],
+                context_method_revision="2" * 40,
+                analysis_run_path=analysis_run,
+                cohort_path=cohort,
+                selection_path=selection,
+                analysis_manifest_path=paths[0],
+            )
+            self.assertEqual(packet["schema"], "agentlab.multi_repo_candidate_review_packet.v4")
+            self.assertEqual(packet["selectionRoles"], ["explicit-reviewed-cohort-member"])
+            self.assertNotIn("currentMethodProposalSha256", packet["lineage"])
+            self.assertNotEqual(
+                packet["lineage"]["analysisManifestSha256"],
+                packet["lineage"]["materializedManifestSha256"],
+            )
+            self.assertEqual(
+                packet["lineage"]["analysisManifestSha256"],
+                hashlib.sha256(paths[0].read_bytes()).hexdigest(),
+            )
+            self.assertEqual(
+                packet["lineage"]["analysisRunSha256"],
+                hashlib.sha256(analysis_run.read_bytes()).hexdigest(),
+            )
+            self.assertEqual(
+                packet["lineage"]["candidateCohortSha256"],
+                hashlib.sha256(cohort.read_bytes()).hexdigest(),
+            )
+            self.assertEqual(
+                packet["lineage"]["candidateSelectionSha256"],
+                hashlib.sha256(selection.read_bytes()).hexdigest(),
+            )
+
+    def test_live_lineage_rejects_fact_selection_and_cohort_drift(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = self.fixture(root)
+            analysis_run, cohort, selection = self.live_lineage(root, paths)
+            facts_bytes = paths[2].read_bytes()
+            paths[2].write_bytes(facts_bytes + b"\n")
+            with self.assertRaisesRegex(PACKET.ReviewPacketError, "workspace facts differ from analysis run"):
+                PACKET.build_packet(
+                    paths[0], paths[1], paths[2], None, paths[4]["id"], "3" * 40,
+                    analysis_run_path=analysis_run, cohort_path=cohort,
+                    selection_path=selection, analysis_manifest_path=paths[0],
+                )
+            paths[2].write_bytes(facts_bytes)
+
+            selection_value = json.loads(selection.read_text())
+            selection_value["candidateSha256"] = "8" * 64
+            selection.write_text(json.dumps(selection_value, sort_keys=True) + "\n")
+            with self.assertRaisesRegex(PACKET.ReviewPacketError, "candidate digest differs from selection"):
+                PACKET.build_packet(
+                    paths[0], paths[1], paths[2], None, paths[4]["id"], "3" * 40,
+                    analysis_run_path=analysis_run, cohort_path=cohort,
+                    selection_path=selection, analysis_manifest_path=paths[0],
+                )
+
+            selection_value["candidateSha256"] = PACKET.canonical_digest(paths[4])
+            selection.write_text(json.dumps(selection_value, sort_keys=True) + "\n")
+            cohort_value = json.loads(cohort.read_text())
+            cohort_value["review"]["verdict"] = "defer"
+            cohort.write_text(json.dumps(cohort_value, sort_keys=True) + "\n")
+            with self.assertRaisesRegex(PACKET.ReviewPacketError, "was not approved"):
+                PACKET.build_packet(
+                    paths[0], paths[1], paths[2], None, paths[4]["id"], "3" * 40,
+                    analysis_run_path=analysis_run, cohort_path=cohort,
+                    selection_path=selection, analysis_manifest_path=paths[0],
+                )
+
+    def test_packet_requires_one_complete_lineage_mode(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths = self.fixture(Path(directory))
+            with self.assertRaisesRegex(PACKET.ReviewPacketError, "either a current-method proposal"):
+                PACKET.build_packet(
+                    paths[0], paths[1], paths[2], None, paths[4]["id"], "3" * 40,
+                )
+            with self.assertRaisesRegex(PACKET.ReviewPacketError, "supplied together"):
+                PACKET.build_packet(
+                    paths[0], paths[1], paths[2], None, paths[4]["id"], "3" * 40,
+                    analysis_run_path=Path(directory) / "missing.json",
+                )
+
     def test_packet_fail_closes_when_owner_context_is_unresolved(self):
         with tempfile.TemporaryDirectory() as directory:
             paths = self.fixture(Path(directory))
@@ -555,6 +734,21 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
                 "same-try-non-finalizer": 2,
             },
         )
+
+    def test_dynamic_packet_workflow_rematerializes_and_binds_the_full_lineage(self):
+        workflow = (
+            ROOT / ".github/workflows/multi-repo-candidate-review-packet.yml"
+        ).read_text()
+        self.assertIn("github.ref == 'refs/heads/main'", workflow)
+        self.assertIn(".github/workflows/multi-repo-candidate-cohort-review.yml", workflow)
+        self.assertIn("scripts/multi-repo-analysis-run.py validate", workflow)
+        self.assertIn("scripts/prepare-multi-repo-analysis-sources.py", workflow)
+        self.assertIn("scripts/select-multi-repo-cohort-candidate.py", workflow)
+        self.assertIn("scripts/build-multi-repo-candidate-review-packet.py", workflow)
+        self.assertIn('--analysis-manifest "$AGENTLAB_ROOT/source/source/analysis-source/manifest.json"', workflow)
+        self.assertIn("multi-repo-candidate-review-packet", workflow)
+        self.assertNotIn("secrets.", workflow)
+        self.assertNotIn("AGENTLAB_LM_GATEWAY", workflow)
 
 
 if __name__ == "__main__":

@@ -3,8 +3,14 @@ on:
   workflow_dispatch:
     inputs:
       packet_path:
-        description: Candidate review packet below release/qualifications
-        required: true
+        description: Retained candidate review packet below release/qualifications; exclusive with packet_run_id
+        required: false
+        default: ''
+        type: string
+      packet_run_id:
+        description: Successful trusted-main dynamic candidate-review-packet run; exclusive with packet_path
+        required: false
+        default: ''
         type: string
       expected_packet_sha256:
         description: Exact packet digest inspected by the reviewer
@@ -32,6 +38,7 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -42,16 +49,25 @@ jobs:
     env:
       AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/candidate-semantic-review
       PACKET_RELATIVE_PATH: ${{ inputs.packet_path }}
+      PACKET_RUN_ID: ${{ inputs.packet_run_id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Resolve exact retained packet without path escape
+      - name: Resolve one exact retained or dynamic packet
         id: packet
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           mkdir -p "$AGENTLAB_ROOT"
           python3 - <<'PY'
           import os, pathlib, re
           root = pathlib.Path.cwd().resolve()
           relative = os.environ["PACKET_RELATIVE_PATH"]
+          run_id = os.environ["PACKET_RUN_ID"]
+          assert bool(relative) != bool(run_id), "supply exactly one of packet_path or packet_run_id"
+          if run_id:
+              assert re.fullmatch(r"[0-9]+", run_id), run_id
+              raise SystemExit(0)
           assert re.fullmatch(r"release/qualifications/[A-Za-z0-9._/-]+\.json", relative), relative
           packet = (root / relative).resolve()
           packet.relative_to(root / "release" / "qualifications")
@@ -59,6 +75,23 @@ jobs:
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write("packet_path=" + str(packet) + "\n")
           PY
+          if [[ -n "$PACKET_RUN_ID" ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PACKET_RUN_ID" > "$AGENTLAB_ROOT/packet-source-run.json"
+            python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/packet-source-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-candidate-review-packet.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+            mkdir -p "$AGENTLAB_ROOT/dynamic"
+            gh run download "$PACKET_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+              --name multi-repo-candidate-review-packet --dir "$AGENTLAB_ROOT/dynamic"
+            test -f "$AGENTLAB_ROOT/dynamic/packet.json"
+            test ! -L "$AGENTLAB_ROOT/dynamic/packet.json"
+            echo "packet_path=$AGENTLAB_ROOT/dynamic/packet.json" >> "$GITHUB_OUTPUT"
+          fi
       - name: Normalize reviewer answers
         env:
           ANSWERS_JSON: ${{ inputs.answers_json }}

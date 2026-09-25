@@ -281,6 +281,10 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
         self.assertIn("review-multi-repo-candidate-semantics.py compile", workflow)
         self.assertIn("review-multi-repo-candidate-semantics.py validate", workflow)
         self.assertIn("multi-repo-candidate-semantic-review", workflow)
+        self.assertIn("packet_run_id", workflow)
+        self.assertIn(".github/workflows/multi-repo-candidate-review-packet.yml", workflow)
+        self.assertIn("actions: read", workflow)
+        self.assertIn("supply exactly one of packet_path or packet_run_id", workflow)
         self.assertNotIn("secrets.", workflow)
 
 
