@@ -70,6 +70,7 @@ jobs:
             --difficulty "$AGENTLAB_ROOT/analysis-source/analysis/difficulty_candidates.json" \
             --cohort-id "$COHORT_ID" \
             --method-revision "$ANALYSIS_METHOD_REVISION" \
+            --proposal-method-revision "$GITHUB_SHA" \
             --output "$AGENTLAB_ROOT/candidate-cohort-proposal.json"
           sha256sum "$AGENTLAB_ROOT/candidate-cohort-proposal.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve proposal and exact analyzer evidence

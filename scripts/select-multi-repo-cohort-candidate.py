@@ -48,6 +48,7 @@ def select(cohort_path: Path, difficulty_path: Path, expected_cohort_sha256: str
     require(cohort.get("schema") == "agentlab.multi_repo_candidate_cohort.v1", "unsupported candidate cohort")
     require(cohort.get("automaticPromotion") is False and cohort.get("declaredRepresentative") is False, "candidate cohort policy differs")
     require(isinstance(cohort.get("methodRevision"), str) and REVISION.fullmatch(cohort["methodRevision"]), "candidate cohort method revision is invalid")
+    require(isinstance(cohort.get("proposalMethodRevision"), str) and REVISION.fullmatch(cohort["proposalMethodRevision"]), "candidate cohort proposal method revision is invalid")
     require(isinstance(cohort.get("sourceSetSha256"), str) and SHA256.fullmatch(cohort["sourceSetSha256"]), "candidate cohort source set is invalid")
     require(isinstance(cohort.get("difficultyEvidenceSha256"), str) and SHA256.fullmatch(cohort["difficultyEvidenceSha256"]), "candidate cohort difficulty digest is invalid")
     frame = cohort.get("samplingFrame")
@@ -82,6 +83,7 @@ def select(cohort_path: Path, difficulty_path: Path, expected_cohort_sha256: str
         "sourceSetSha256": cohort["sourceSetSha256"],
         "difficultyEvidenceSha256": cohort["difficultyEvidenceSha256"],
         "methodRevision": cohort["methodRevision"],
+        "proposalMethodRevision": cohort["proposalMethodRevision"],
         "declaredRepresentative": False,
         "automaticPromotion": False,
     }

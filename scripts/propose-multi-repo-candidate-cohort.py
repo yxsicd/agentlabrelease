@@ -175,12 +175,19 @@ def review_shortlist(eligible: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def propose(difficulty_path: Path, cohort_id: str, method_revision: str) -> dict[str, Any]:
+def propose(
+    difficulty_path: Path,
+    cohort_id: str,
+    method_revision: str,
+    proposal_method_revision: str | None = None,
+) -> dict[str, Any]:
     difficulty = load(difficulty_path)
     require(difficulty.get("schema") == "agentlab.difficulty_candidates.v2", "unsupported difficulty schema")
     require(difficulty.get("automaticPromotion") is False, "difficulty evidence can auto-promote")
     require(TOKEN.fullmatch(cohort_id) is not None, "cohort id is invalid")
     require(REVISION.fullmatch(method_revision) is not None, "method revision is invalid")
+    proposal_method_revision = proposal_method_revision or method_revision
+    require(REVISION.fullmatch(proposal_method_revision) is not None, "proposal method revision is invalid")
     source_set = difficulty.get("sourceSetSha256")
     require(isinstance(source_set, str) and SHA256.fullmatch(source_set), "source set digest is invalid")
     sources = difficulty.get("sources")
@@ -243,6 +250,7 @@ def propose(difficulty_path: Path, cohort_id: str, method_revision: str) -> dict
         "status": "review-required",
         "cohortId": cohort_id,
         "methodRevision": method_revision,
+        "proposalMethodRevision": proposal_method_revision,
         "sourceSetSha256": source_set,
         "difficultyEvidenceSha256": file_digest(difficulty_path),
         "samplingFrame": {
@@ -280,11 +288,17 @@ def main() -> int:
     parser.add_argument("--difficulty", type=Path, required=True)
     parser.add_argument("--cohort-id", required=True)
     parser.add_argument("--method-revision", required=True)
+    parser.add_argument("--proposal-method-revision", required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
         require(not args.output.exists(), f"refusing to overwrite output: {args.output}")
-        value = propose(args.difficulty, args.cohort_id, args.method_revision)
+        value = propose(
+            args.difficulty,
+            args.cohort_id,
+            args.method_revision,
+            args.proposal_method_revision,
+        )
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print(json.dumps({"ok": True, "proposalSha256": file_digest(args.output)}, sort_keys=True))

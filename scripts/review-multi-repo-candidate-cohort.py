@@ -12,6 +12,7 @@ from typing import Any
 
 
 SHA256 = re.compile(r"[0-9a-f]{64}")
+REVISION = re.compile(r"[0-9a-f]{40}")
 
 
 class CohortReviewError(ValueError):
@@ -47,6 +48,11 @@ def validate_proposal(proposal: dict[str, Any]) -> None:
     require(proposal.get("schema") == "agentlab.multi_repo_candidate_cohort_proposal.v1", "unsupported cohort proposal")
     require(proposal.get("status") == "review-required", "cohort proposal is not review-required")
     require(proposal.get("automaticPromotion") is False, "cohort proposal can auto-promote")
+    require(
+        isinstance(proposal.get("proposalMethodRevision"), str)
+        and REVISION.fullmatch(proposal["proposalMethodRevision"]),
+        "cohort proposal method revision is invalid",
+    )
     frame = proposal.get("samplingFrame")
     require(isinstance(frame, dict) and frame.get("declaredRepresentative") is False, "cohort proposal overclaims representativeness")
     rows = proposal.get("eligibleCandidates")
@@ -106,6 +112,7 @@ def compile_cohort(proposal_path: Path, review_path: Path) -> dict[str, Any]:
         "schema": "agentlab.multi_repo_candidate_cohort.v1",
         "cohortId": proposal["cohortId"],
         "methodRevision": proposal["methodRevision"],
+        "proposalMethodRevision": proposal["proposalMethodRevision"],
         "sourceSetSha256": proposal["sourceSetSha256"],
         "difficultyEvidenceSha256": proposal["difficultyEvidenceSha256"],
         "samplingFrame": proposal["samplingFrame"],

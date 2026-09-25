@@ -164,6 +164,7 @@ class MultiRepoCandidateCohortTests(unittest.TestCase):
             selected = SELECT.select(cohort, difficulty, cohort_sha, "candidate-deep")
             self.assertEqual(selected["schema"], "agentlab.multi_repo_candidate_selection.v2")
             self.assertEqual(selected["candidateId"], "candidate-deep")
+            self.assertEqual(selected["proposalMethodRevision"], "4" * 40)
             self.assertFalse(selected["declaredRepresentative"])
 
     def test_review_rejects_single_or_unknown_selection(self):
@@ -204,6 +205,7 @@ class MultiRepoCandidateCohortTests(unittest.TestCase):
         review = (ROOT / ".github/workflows/multi-repo-candidate-cohort-review.yml").read_text()
         construction = (ROOT / ".github/workflows/multi-repo-model-construction.yml").read_text()
         self.assertIn("scripts/propose-multi-repo-candidate-cohort.py", proposal)
+        self.assertIn('--proposal-method-revision "$GITHUB_SHA"', proposal)
         self.assertIn("analysis_run_id", proposal)
         self.assertIn("scripts/multi-repo-analysis-run.py validate", proposal)
         self.assertNotIn("prepare-multi-repo-construction-fixture.py", proposal)
