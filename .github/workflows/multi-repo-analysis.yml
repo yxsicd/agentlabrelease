@@ -42,14 +42,15 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ env.AGENTLAB_ROOT }}/ast-cache
-          key: agentlab-ast-${{ runner.os }}-${{ hashFiles('crates/agentlab_code_analysis/src/lib.rs', 'crates/agentlab_code_analysis/Cargo.toml', 'crates/agentlab_code_analysis/grammar/**') }}-${{ steps.sources.outputs.sha256 }}
+          key: agentlab-ast-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'crates/agentlab_code_analysis/build.rs', 'crates/agentlab_code_analysis/src/lib.rs', 'crates/agentlab_code_analysis/src/multi_repo.rs', 'crates/agentlab_code_analysis/Cargo.toml', 'crates/agentlab_code_analysis/grammar/**') }}-${{ steps.sources.outputs.sha256 }}
           restore-keys: |
-            agentlab-ast-${{ runner.os }}-${{ hashFiles('crates/agentlab_code_analysis/src/lib.rs', 'crates/agentlab_code_analysis/Cargo.toml', 'crates/agentlab_code_analysis/grammar/**') }}-
+            agentlab-ast-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'crates/agentlab_code_analysis/build.rs', 'crates/agentlab_code_analysis/src/lib.rs', 'crates/agentlab_code_analysis/src/multi_repo.rs', 'crates/agentlab_code_analysis/Cargo.toml', 'crates/agentlab_code_analysis/grammar/**') }}-
       - name: Analyze only committed bytes at exact revisions
         run: |
           cargo build --locked -p agentlab_code_analysis --bin agentlab-multi-repo-analysis
           target/debug/agentlab-multi-repo-analysis \
             --cache-dir "$AGENTLAB_ROOT/ast-cache" \
+            --cache-components \
             "$AGENTLAB_ROOT/source/manifest.json" \
             "$AGENTLAB_ROOT/source/analysis" \
             2> >(tee "$AGENTLAB_ROOT/source/analysis-cache-execution.json" >&2)

@@ -101,6 +101,7 @@ Run:
 cargo run --locked -p agentlab_code_analysis \
   --bin agentlab-multi-repo-analysis -- \
   --cache-dir /path/to/rebuildable-ast-cache \
+  --cache-components \
   /path/to/manifest.json /path/to/evidence
 ```
 
@@ -111,8 +112,9 @@ in the original repository/path order, so worker scheduling cannot alter any
 evidence bytes or digest. The integration suite compares every emitted
 artifact between one-worker and four-worker executions.
 
-`--cache-dir PATH` enables exact source-set bundle reuse. Add `--cache-files`
-to opt into revision-safe per-file AST reuse as well. File entries are
+`--cache-dir PATH` enables exact source-set bundle reuse. Add
+`--cache-components` to retain revision-fenced per-repository projections, or
+`--cache-files` to opt into revision-safe per-file AST reuse as well. File entries are
 content-addressed by the analyzer implementation digest, grammar digest,
 normalized source path and SHA-256 of the exact committed blob. Rows stored in
 the file cache exclude `sourceRevision`; a hit rematerializes that field from
@@ -122,23 +124,37 @@ confusing the two source cuts. Entry schema, key, payload digest, parser inputs
 and parse-file blob digest are checked before reuse. An absent, malformed or
 inconsistent entry is a miss and is rebuilt.
 
+A repository projection is keyed by analyzer and grammar digests plus the
+repository ID, repository URL and exact commit. It stores sorted base facts
+separately from compact module-reference, call and file-index projections.
+Module resolution, dependency edges and difficulty candidates are always
+rebuilt against the current complete source set and manifest bindings. Thus a
+one-repository revision change can reuse every unchanged repository without
+carrying stale cross-repository conclusions forward. Fact rows are merged by
+ID through a bounded-memory streaming writer; a projection's fact count and
+content digest are checked before it can contribute output. Checkout roots are
+excluded, so relocating an exact object database preserves reuse.
+
 The same cache also keeps a source-set bundle keyed by analyzer and grammar
 digests plus the portable repository revisions and module bindings. An exact
 bundle hit restores the three digest-checked semantic artifacts without AST or
 graph reconstruction, then rematerializes `multi_repo_analysis.json` with the
 current local manifest digest. Consequently an unchanged aggregate release can
 reuse prior analysis even when its checkout roots move, while a changed source
-set falls back to the per-file cache and recomputes the graph.
+set falls back to repository projections when enabled, then to parsing for
+every changed or absent projection. The finer per-file cache remains an
+independent opt-in fallback inside a repository miss.
 
 The cache is deliberately outside the evidence contract. It can be deleted at
 any time, it is never uploaded as analysis evidence, and it never replaces Git
 objects as source authority. Enabling it writes one
 `agentlab.analysis_cache_execution.v1` report to stderr with hit, miss, invalid
-entry and write counts; cache-local state therefore cannot change any of the
-four authority artifact bytes. The trusted-main workflow persists the bundle
-cache across runs but leaves the finer-grained file cache disabled until it
-demonstrates a positive real-source wall-time result; it retains only the
-execution report alongside the source and analysis evidence.
+entry and write counts for all three layers; cache-local state therefore cannot
+change any of the four authority artifact bytes. The trusted-main workflow
+persists the bundle and repository-projection layers. It leaves the
+finer-grained file cache disabled until that layer demonstrates a positive
+real-source wall-time result, and retains only the execution report alongside
+the source and analysis evidence.
 
 The retained current-method real-source benchmark records one fresh-process
 trial per profile on an Apple M4 with a warm Git object database. Across 12,711

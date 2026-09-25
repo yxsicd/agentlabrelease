@@ -753,6 +753,228 @@ fn content_addressed_cache_reuses_unchanged_committed_files_without_changing_evi
 }
 
 #[test]
+fn repository_component_cache_reuses_unchanged_revisions_without_changing_evidence() {
+    let mut fixture = Fixture::new();
+    let (one, revision_one) = fixture.repository(
+        "one",
+        &[
+            (
+                "src/changed.ts",
+                "import { shared } from '@demo/two'; export const value = shared + 1;",
+            ),
+            ("src/stable.ts", "export const stable = 1;"),
+        ],
+    );
+    let (two, revision_two) = fixture.repository(
+        "two",
+        &[
+            ("src/shared.ts", "export const shared = 2;"),
+            (
+                "src/other.ets",
+                "@Component struct Other { build() { Text('other') } }",
+            ),
+        ],
+    );
+    let manifest = json!({
+        "schema":"agentlab.multi_repo_manifest.v1",
+        "repositories":[
+            {"id":"one","repository":"fixture://one","root":one,"revision":revision_one},
+            {"id":"two","repository":"fixture://two","root":two,"revision":revision_two}
+        ],
+        "moduleBindings":{
+            "@demo/two":{"repositoryId":"two","path":"src/shared.ts"}
+        }
+    });
+    let cache = fixture.root.join("component-cache");
+    let cache_arg = cache.to_str().unwrap();
+    let cache_args = ["--cache-dir", cache_arg, "--cache-components"];
+
+    let cold = fixture.run_with_args(&manifest, "component-cold", &cache_args);
+    assert!(
+        cold.status.success(),
+        "{}",
+        String::from_utf8_lossy(&cold.stderr)
+    );
+    let cold_report: Value = serde_json::from_slice(&cold.stderr).unwrap();
+    assert_eq!(cold_report["componentCacheEnabled"], true);
+    assert_eq!(cold_report["componentHits"], 0);
+    assert_eq!(cold_report["componentMisses"], 2);
+    assert_eq!(cold_report["componentWrites"], 2);
+
+    fs::remove_dir_all(cache.join("bundles")).unwrap();
+    let warm = fixture.run_with_args(&manifest, "component-warm", &cache_args);
+    assert!(
+        warm.status.success(),
+        "{}",
+        String::from_utf8_lossy(&warm.stderr)
+    );
+    let warm_report: Value = serde_json::from_slice(&warm.stderr).unwrap();
+    assert_eq!(warm_report["componentHits"], 2);
+    assert_eq!(warm_report["componentMisses"], 0);
+    assert_eq!(warm_report["componentWrites"], 0);
+    for artifact in [
+        "workspace_facts.jsonl",
+        "difficulty_candidates.json",
+        "unsupported_sources.jsonl",
+        "multi_repo_analysis.json",
+    ] {
+        assert_eq!(
+            fs::read(fixture.root.join("component-cold-output").join(artifact)).unwrap(),
+            fs::read(fixture.root.join("component-warm-output").join(artifact)).unwrap(),
+            "{artifact} differs after repository component reuse"
+        );
+    }
+
+    fs::remove_dir_all(cache.join("bundles")).unwrap();
+    let mut relocated_manifest = manifest.clone();
+    for entry in relocated_manifest["repositories"].as_array_mut().unwrap() {
+        let id = entry["id"].as_str().unwrap();
+        let target = fixture.root.join(format!("component-relocated-{id}"));
+        let result = Command::new("git")
+            .arg("clone")
+            .arg("-q")
+            .arg(entry["root"].as_str().unwrap())
+            .arg(&target)
+            .output()
+            .unwrap();
+        assert!(result.status.success());
+        entry["root"] = json!(target);
+    }
+    let relocated = fixture.run_with_args(&relocated_manifest, "component-relocated", &cache_args);
+    assert!(relocated.status.success());
+    let relocated_report: Value = serde_json::from_slice(&relocated.stderr).unwrap();
+    assert_eq!(relocated_report["componentHits"], 2);
+    for artifact in [
+        "workspace_facts.jsonl",
+        "difficulty_candidates.json",
+        "unsupported_sources.jsonl",
+    ] {
+        assert_eq!(
+            fs::read(fixture.root.join("component-cold-output").join(artifact)).unwrap(),
+            fs::read(
+                fixture
+                    .root
+                    .join("component-relocated-output")
+                    .join(artifact)
+            )
+            .unwrap(),
+            "{artifact} differs after relocated repository component reuse"
+        );
+    }
+
+    fs::write(
+        fixture.repositories[0].join("src/changed.ts"),
+        "import { shared } from '@demo/two'; export const value = shared + 2;",
+    )
+    .unwrap();
+    git(&fixture.repositories[0], &["add", "src/changed.ts"]);
+    git(
+        &fixture.repositories[0],
+        &[
+            "-c",
+            "user.name=Multi repo test",
+            "-c",
+            "user.email=multi@example.invalid",
+            "commit",
+            "-qm",
+            "change one repository",
+        ],
+    );
+    let mut changed_manifest = manifest.clone();
+    changed_manifest["repositories"][0]["revision"] =
+        json!(git_output(&fixture.repositories[0], &["rev-parse", "HEAD"]));
+    fs::remove_dir_all(cache.join("bundles")).unwrap();
+    let incremental =
+        fixture.run_with_args(&changed_manifest, "component-incremental", &cache_args);
+    assert!(
+        incremental.status.success(),
+        "{}",
+        String::from_utf8_lossy(&incremental.stderr)
+    );
+    let incremental_report: Value = serde_json::from_slice(&incremental.stderr).unwrap();
+    assert_eq!(incremental_report["componentHits"], 1);
+    assert_eq!(incremental_report["componentMisses"], 1);
+    assert_eq!(incremental_report["componentWrites"], 1);
+    let control = fixture.run(&changed_manifest, "component-incremental-control");
+    assert!(control.status.success());
+    for artifact in [
+        "workspace_facts.jsonl",
+        "difficulty_candidates.json",
+        "unsupported_sources.jsonl",
+        "multi_repo_analysis.json",
+    ] {
+        assert_eq!(
+            fs::read(
+                fixture
+                    .root
+                    .join("component-incremental-output")
+                    .join(artifact)
+            )
+            .unwrap(),
+            fs::read(
+                fixture
+                    .root
+                    .join("component-incremental-control-output")
+                    .join(artifact)
+            )
+            .unwrap(),
+            "{artifact} differs between component reuse and uncached execution"
+        );
+    }
+
+    fs::remove_dir_all(cache.join("bundles")).unwrap();
+    let repository_cache = cache.join("repositories");
+    let mut corrupted = false;
+    for shard in fs::read_dir(repository_cache).unwrap() {
+        for entry in fs::read_dir(shard.unwrap().path()).unwrap() {
+            let root = entry.unwrap().path();
+            let index: Value =
+                serde_json::from_slice(&fs::read(root.join("index.json")).unwrap()).unwrap();
+            if index["repositoryId"] == "two" {
+                fs::write(root.join("base_facts.indexed-jsonl"), b"corrupt\n").unwrap();
+                corrupted = true;
+            }
+        }
+    }
+    assert!(corrupted);
+    let repaired = fixture.run_with_args(&changed_manifest, "component-repaired", &cache_args);
+    assert!(
+        repaired.status.success(),
+        "{}",
+        String::from_utf8_lossy(&repaired.stderr)
+    );
+    let repaired_report: Value = serde_json::from_slice(&repaired.stderr).unwrap();
+    assert_eq!(repaired_report["componentHits"], 1);
+    assert_eq!(repaired_report["componentMisses"], 1);
+    assert_eq!(repaired_report["componentWrites"], 1);
+    assert_eq!(repaired_report["invalidEntries"], 1);
+    for artifact in [
+        "workspace_facts.jsonl",
+        "difficulty_candidates.json",
+        "unsupported_sources.jsonl",
+        "multi_repo_analysis.json",
+    ] {
+        assert_eq!(
+            fs::read(
+                fixture
+                    .root
+                    .join("component-incremental-control-output")
+                    .join(artifact)
+            )
+            .unwrap(),
+            fs::read(
+                fixture
+                    .root
+                    .join("component-repaired-output")
+                    .join(artifact)
+            )
+            .unwrap(),
+            "{artifact} differs after repository cache repair"
+        );
+    }
+}
+
+#[test]
 fn zero_analysis_workers_are_rejected() {
     let fixture = Fixture::new();
     let result = fixture.run_with_args(&json!({}), "zero-jobs", &["--jobs", "0"]);
@@ -768,4 +990,13 @@ fn zero_analysis_workers_are_rejected() {
     assert!(
         String::from_utf8_lossy(&result.stderr).contains("--cache-files requires --cache-dir PATH")
     );
+
+    let result = fixture.run_with_args(
+        &json!({}),
+        "cache-components-without-root",
+        &["--cache-components"],
+    );
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr)
+        .contains("--cache-components requires --cache-dir PATH"));
 }

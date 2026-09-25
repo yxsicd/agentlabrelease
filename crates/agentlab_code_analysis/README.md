@@ -43,6 +43,7 @@ workspace bytes do not enter the result.
 cargo run --locked -p agentlab_code_analysis \
   --bin agentlab-multi-repo-analysis -- \
   --cache-dir /path/to/rebuildable-ast-cache \
+  --cache-components \
   multi-repo-manifest.json /tmp/multi-repo-evidence
 ```
 
@@ -64,8 +65,14 @@ finer-grained cache: each entry is addressed by analyzer and grammar digests,
 source path and the committed blob SHA-256, so unchanged files can survive a
 repository revision change while changed files are reparsed. That mode is not
 the workflow default because its current large-source wall-time benefit is not
-yet established. Missing or corrupt entries are rebuilt. Cached and uncached
-runs emit byte-identical authority artifacts; a separate
+yet established. `--cache-components` instead retains one revision-fenced
+repository projection: sorted base facts plus the compact module, call and
+file-index data needed to rebuild cross-repository edges and candidates. A
+source-set change can therefore reanalyze only changed repositories without
+trusting stale cross-repository resolution. This mode is enabled in the
+trusted-main workflow after a positive real-source changed-revision benchmark.
+Missing or corrupt entries are rebuilt. Cached and uncached runs emit
+byte-identical authority artifacts; a separate
 `agentlab.analysis_cache_execution.v1` line on stderr reports only
 execution-local hit/miss/repair counts.
 

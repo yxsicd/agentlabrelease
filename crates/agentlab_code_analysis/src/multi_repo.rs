@@ -13,6 +13,7 @@ const MAX_ANALYSIS_JOBS: usize = 64;
 const ANALYZER_ID: &str = "agentlab-multi-repo-analysis@0.1.0";
 const CACHE_SCHEMA: &str = "agentlab.ast_file_cache.v1";
 const BUNDLE_CACHE_SCHEMA: &str = "agentlab.analysis_bundle_cache.v1";
+const COMPONENT_CACHE_SCHEMA: &str = "agentlab.repository_analysis_cache.v1";
 const AUTHORITY_ARTIFACTS: [&str; 3] = [
     "workspace_facts.jsonl",
     "difficulty_candidates.json",
@@ -34,6 +35,16 @@ struct Binding {
     path: String,
 }
 
+struct RepositoryProjection {
+    base_facts: Vec<Value>,
+    cached_facts: Option<PathBuf>,
+    module_facts: Vec<Value>,
+    calls: Vec<Value>,
+    file_index: Vec<Value>,
+    receipt: Value,
+    unsupported_sources: Vec<Value>,
+}
+
 struct AnalysisCache {
     root: PathBuf,
     hits: AtomicUsize,
@@ -44,10 +55,18 @@ struct AnalysisCache {
     bundle_misses: AtomicUsize,
     bundle_writes: AtomicUsize,
     file_cache_enabled: bool,
+    component_cache_enabled: bool,
+    component_hits: AtomicUsize,
+    component_misses: AtomicUsize,
+    component_writes: AtomicUsize,
 }
 
 impl AnalysisCache {
-    fn new(root: PathBuf, file_cache_enabled: bool) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(
+        root: PathBuf,
+        file_cache_enabled: bool,
+        component_cache_enabled: bool,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         fs::create_dir_all(&root)?;
         Ok(Self {
             root,
@@ -59,6 +78,10 @@ impl AnalysisCache {
             bundle_misses: AtomicUsize::new(0),
             bundle_writes: AtomicUsize::new(0),
             file_cache_enabled,
+            component_cache_enabled,
+            component_hits: AtomicUsize::new(0),
+            component_misses: AtomicUsize::new(0),
+            component_writes: AtomicUsize::new(0),
         })
     }
 
@@ -334,13 +357,188 @@ impl AnalysisCache {
         Ok(())
     }
 
+    fn component_key(repository: &Repository) -> String {
+        digest(
+            format!(
+                "{COMPONENT_CACHE_SCHEMA}\0{ANALYZER_ID}\0{ANALYZER_DIGEST}\0{GRAMMAR_DIGEST}\0{}\0{}\0{}",
+                repository.id, repository.source, repository.revision
+            )
+            .as_bytes(),
+        )
+    }
+
+    fn component_root(&self, key: &str) -> PathBuf {
+        self.root.join("repositories").join(&key[..2]).join(key)
+    }
+
+    fn load_component(
+        &self,
+        repository: &Repository,
+    ) -> Result<Option<RepositoryProjection>, Box<dyn std::error::Error>> {
+        let key = Self::component_key(repository);
+        let component_root = self.component_root(&key);
+        let index_path = component_root.join("index.json");
+        if !index_path.exists() {
+            self.component_misses.fetch_add(1, Ordering::Relaxed);
+            return Ok(None);
+        }
+        let result = (|| -> Result<RepositoryProjection, Box<dyn std::error::Error>> {
+            let metadata = fs::symlink_metadata(&index_path)?;
+            if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
+                return Err(fail("repository cache index is not a regular file"));
+            }
+            let index: Value = serde_json::from_slice(&fs::read(&index_path)?)?;
+            if index.get("schema").and_then(Value::as_str) != Some(COMPONENT_CACHE_SCHEMA)
+                || index.get("key").and_then(Value::as_str) != Some(&key)
+                || index.get("analyzer").and_then(Value::as_str) != Some(ANALYZER_ID)
+                || index.get("analyzerDigest").and_then(Value::as_str) != Some(ANALYZER_DIGEST)
+                || index.get("grammarDigest").and_then(Value::as_str) != Some(GRAMMAR_DIGEST)
+                || index.get("repositoryId").and_then(Value::as_str) != Some(&repository.id)
+                || index.get("repository").and_then(Value::as_str) != Some(&repository.source)
+                || index.get("revision").and_then(Value::as_str) != Some(&repository.revision)
+            {
+                return Err(fail("repository cache index identity differs"));
+            }
+            let facts_path = component_root.join("base_facts.indexed-jsonl");
+            let projection_path = component_root.join("projection.json");
+            for path in [&facts_path, &projection_path] {
+                let metadata = fs::symlink_metadata(path)?;
+                if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
+                    return Err(fail("repository cache artifact is not a regular file"));
+                }
+            }
+            if index.get("baseFactsSha256").and_then(Value::as_str)
+                != Some(&file_digest(&facts_path)?)
+            {
+                return Err(fail("repository cache fact digest differs"));
+            }
+            let projection_bytes = fs::read(&projection_path)?;
+            if index.get("projectionSha256").and_then(Value::as_str)
+                != Some(&digest(&projection_bytes))
+            {
+                return Err(fail("repository cache projection digest differs"));
+            }
+            let projection: Value = serde_json::from_slice(&projection_bytes)?;
+            if projection.get("schema").and_then(Value::as_str)
+                != Some("agentlab.repository_analysis_projection.v1")
+                || projection.get("repositoryId").and_then(Value::as_str) != Some(&repository.id)
+                || projection.get("revision").and_then(Value::as_str) != Some(&repository.revision)
+            {
+                return Err(fail("repository cache projection identity differs"));
+            }
+            let array = |name: &str| -> Result<Vec<Value>, Box<dyn std::error::Error>> {
+                projection
+                    .get(name)
+                    .and_then(Value::as_array)
+                    .cloned()
+                    .ok_or_else(|| fail(format!("repository cache {name} is absent")))
+            };
+            let receipt = projection
+                .get("receipt")
+                .filter(|value| value.is_object())
+                .cloned()
+                .ok_or_else(|| fail("repository cache receipt is absent"))?;
+            if receipt.get("id").and_then(Value::as_str) != Some(&repository.id)
+                || receipt.get("repository").and_then(Value::as_str) != Some(&repository.source)
+                || receipt.get("revision").and_then(Value::as_str) != Some(&repository.revision)
+            {
+                return Err(fail("repository cache receipt identity differs"));
+            }
+            Ok(RepositoryProjection {
+                base_facts: Vec::new(),
+                cached_facts: Some(facts_path),
+                module_facts: array("moduleFacts")?,
+                calls: array("calls")?,
+                file_index: array("fileIndex")?,
+                receipt,
+                unsupported_sources: array("unsupportedSources")?,
+            })
+        })();
+        match result {
+            Ok(projection) => {
+                self.component_hits.fetch_add(1, Ordering::Relaxed);
+                Ok(Some(projection))
+            }
+            Err(_) => {
+                self.invalid_entries.fetch_add(1, Ordering::Relaxed);
+                self.component_misses.fetch_add(1, Ordering::Relaxed);
+                Ok(None)
+            }
+        }
+    }
+
+    fn store_component(
+        &self,
+        repository: &Repository,
+        projection: &RepositoryProjection,
+    ) -> Result<PathBuf, Box<dyn std::error::Error>> {
+        let key = Self::component_key(repository);
+        let component_root = self.component_root(&key);
+        fs::create_dir_all(&component_root)?;
+        let facts_path = component_root.join("base_facts.indexed-jsonl");
+        let temporary_suffix = format!(
+            ".tmp-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        );
+        let temporary_facts_path =
+            component_root.join(format!("base_facts.indexed-jsonl{temporary_suffix}"));
+        let mut ordered = projection.base_facts.iter().collect::<Vec<_>>();
+        ordered.sort_by_key(|row| row["id"].as_str().unwrap().to_owned());
+        let mut facts_output = BufWriter::new(File::create(&temporary_facts_path)?);
+        for row in ordered {
+            facts_output.write_all(row["id"].as_str().unwrap().as_bytes())?;
+            facts_output.write_all(b"\t")?;
+            serde_json::to_writer(&mut facts_output, row)?;
+            facts_output.write_all(b"\n")?;
+        }
+        facts_output.flush()?;
+        fs::rename(&temporary_facts_path, &facts_path)?;
+        let projection_value = json!({
+            "schema":"agentlab.repository_analysis_projection.v1",
+            "repositoryId":repository.id,
+            "revision":repository.revision,
+            "moduleFacts":projection.module_facts,
+            "calls":projection.calls,
+            "fileIndex":projection.file_index,
+            "receipt":projection.receipt,
+            "unsupportedSources":projection.unsupported_sources
+        });
+        let projection_bytes = serde_json::to_vec(&projection_value)?;
+        let projection_path = component_root.join("projection.json");
+        let temporary_projection_path =
+            component_root.join(format!("projection.json{temporary_suffix}"));
+        fs::write(&temporary_projection_path, &projection_bytes)?;
+        fs::rename(&temporary_projection_path, &projection_path)?;
+        let index = json!({
+            "schema":COMPONENT_CACHE_SCHEMA,
+            "key":key,
+            "analyzer":ANALYZER_ID,
+            "analyzerDigest":ANALYZER_DIGEST,
+            "grammarDigest":GRAMMAR_DIGEST,
+            "repositoryId":repository.id,
+            "repository":repository.source,
+            "revision":repository.revision,
+            "baseFactsSha256":file_digest(&facts_path)?,
+            "projectionSha256":digest(&projection_bytes)
+        });
+        let index_path = component_root.join("index.json");
+        let temporary_index_path = component_root.join(format!("index.json{temporary_suffix}"));
+        fs::write(&temporary_index_path, serde_json::to_vec(&index)?)?;
+        fs::rename(&temporary_index_path, &index_path)?;
+        self.component_writes.fetch_add(1, Ordering::Relaxed);
+        Ok(facts_path)
+    }
+
     fn report(&self) -> Value {
         json!({
             "schema":"agentlab.analysis_cache_execution.v1",
             "cacheAuthority":false,
             "bundleKeyContract":"analyzer implementation digest + grammar digest + portable source-set SHA-256",
+            "componentKeyContract":"analyzer implementation digest + grammar digest + repository id + repository URL + committed revision",
             "fileKeyContract":"analyzer implementation digest + grammar digest + source path + committed blob SHA-256",
             "fileCacheEnabled":self.file_cache_enabled,
+            "componentCacheEnabled":self.component_cache_enabled,
             "hits":self.hits.load(Ordering::Relaxed),
             "misses":self.misses.load(Ordering::Relaxed),
             "invalidEntries":self.invalid_entries.load(Ordering::Relaxed),
@@ -348,6 +546,9 @@ impl AnalysisCache {
             ,"bundleHits":self.bundle_hits.load(Ordering::Relaxed)
             ,"bundleMisses":self.bundle_misses.load(Ordering::Relaxed)
             ,"bundleWrites":self.bundle_writes.load(Ordering::Relaxed)
+            ,"componentHits":self.component_hits.load(Ordering::Relaxed)
+            ,"componentMisses":self.component_misses.load(Ordering::Relaxed)
+            ,"componentWrites":self.component_writes.load(Ordering::Relaxed)
         })
     }
 }
@@ -602,6 +803,140 @@ fn write_jsonl(path: &Path, rows: &[Value]) -> Result<Vec<u8>, Box<dyn std::erro
     Ok(bytes)
 }
 
+enum WorkspaceFactSource<'a> {
+    Cached {
+        reader: BufReader<File>,
+        line: Vec<u8>,
+        count: usize,
+        expected: usize,
+    },
+    Values {
+        rows: Vec<&'a Value>,
+        index: usize,
+    },
+}
+
+impl WorkspaceFactSource<'_> {
+    fn next_row(&mut self) -> Result<Option<(String, Vec<u8>)>, Box<dyn std::error::Error>> {
+        match self {
+            Self::Cached {
+                reader,
+                line,
+                count,
+                expected,
+            } => {
+                line.clear();
+                if reader.read_until(b'\n', line)? == 0 {
+                    if count != expected {
+                        return Err(fail("repository cache fact count differs from receipt"));
+                    }
+                    return Ok(None);
+                }
+                if line.last() != Some(&b'\n') {
+                    return Err(fail("repository cache fact row is unterminated"));
+                }
+                line.pop();
+                let separator = line
+                    .iter()
+                    .position(|byte| *byte == b'\t')
+                    .ok_or_else(|| fail("repository cache fact row has no index separator"))?;
+                let id = std::str::from_utf8(&line[..separator])?;
+                let payload = &line[separator + 1..];
+                if id.is_empty() || payload.first() != Some(&b'{') || payload.last() != Some(&b'}')
+                {
+                    return Err(fail("repository cache fact row is malformed"));
+                }
+                *count += 1;
+                if *count > *expected {
+                    return Err(fail("repository cache has excess fact rows"));
+                }
+                Ok(Some((id.to_owned(), payload.to_vec())))
+            }
+            Self::Values { rows, index } => {
+                let Some(row) = rows.get(*index) else {
+                    return Ok(None);
+                };
+                *index += 1;
+                Ok(Some((
+                    required_string(row, "id")?,
+                    serde_json::to_vec(row)?,
+                )))
+            }
+        }
+    }
+}
+
+fn write_workspace_facts(
+    path: &Path,
+    projections: &[RepositoryProjection],
+    module_facts: &[Value],
+    edges: &[Value],
+) -> Result<(usize, String), Box<dyn std::error::Error>> {
+    let mut sources = Vec::new();
+    for projection in projections {
+        let repository_fact_count = projection
+            .receipt
+            .get("facts")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| fail("repository receipt fact count is absent"))?
+            as usize;
+        let expected_base_fact_count = repository_fact_count
+            .checked_sub(projection.module_facts.len())
+            .ok_or_else(|| fail("repository receipt fact count is inconsistent"))?;
+        if let Some(cached_facts) = &projection.cached_facts {
+            sources.push(WorkspaceFactSource::Cached {
+                reader: BufReader::new(File::open(cached_facts)?),
+                line: Vec::new(),
+                count: 0,
+                expected: expected_base_fact_count,
+            });
+        } else {
+            if projection.base_facts.len() != expected_base_fact_count {
+                return Err(fail("repository fact count differs from receipt"));
+            }
+            let mut rows = projection.base_facts.iter().collect::<Vec<_>>();
+            rows.sort_by_key(|row| row["id"].as_str().unwrap());
+            sources.push(WorkspaceFactSource::Values { rows, index: 0 });
+        }
+    }
+    let mut derived_rows = module_facts.iter().chain(edges).collect::<Vec<_>>();
+    derived_rows.sort_by_key(|row| row["id"].as_str().unwrap());
+    sources.push(WorkspaceFactSource::Values {
+        rows: derived_rows,
+        index: 0,
+    });
+
+    let mut current = sources
+        .iter_mut()
+        .map(WorkspaceFactSource::next_row)
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut fact_count = 0usize;
+    let mut previous_id = None;
+    let mut output = BufWriter::new(File::create(path)?);
+    let mut hash = Sha256::new();
+    while let Some(source_index) = current
+        .iter()
+        .enumerate()
+        .filter_map(|(index, row)| row.as_ref().map(|(id, _)| (index, id)))
+        .min_by(|left, right| left.1.cmp(right.1))
+        .map(|(index, _)| index)
+    {
+        let (id, row) = current[source_index].take().unwrap();
+        if previous_id.as_ref() == Some(&id) {
+            return Err(fail("workspace facts contain duplicate ids"));
+        }
+        output.write_all(&row)?;
+        output.write_all(b"\n")?;
+        hash.update(&row);
+        hash.update(b"\n");
+        fact_count += 1;
+        previous_id = Some(id);
+        current[source_index] = sources[source_index].next_row()?;
+    }
+    output.flush()?;
+    Ok((fact_count, format!("{:x}", hash.finalize())))
+}
+
 fn analyze_sources(
     repository: &Repository,
     paths: &[String],
@@ -668,6 +1003,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .min(8);
     let mut cache_root = None;
     let mut cache_files = false;
+    let mut cache_components = false;
     let mut positional = Vec::new();
     let mut index = 0usize;
     while index < args.len() {
@@ -693,6 +1029,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             cache_root = Some(PathBuf::from(value));
         } else if args[index] == "--cache-files" {
             cache_files = true;
+        } else if args[index] == "--cache-components" {
+            cache_components = true;
         } else {
             positional.push(args[index].clone());
         }
@@ -700,7 +1038,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     if positional.len() != 2 {
         return Err(fail(
-            "Usage: agentlab-multi-repo-analysis [--jobs N] [--cache-dir PATH [--cache-files]] <manifest.json> <output-directory>",
+            "Usage: agentlab-multi-repo-analysis [--jobs N] [--cache-dir PATH [--cache-files] [--cache-components]] <manifest.json> <output-directory>",
         ));
     }
     if jobs > MAX_ANALYSIS_JOBS {
@@ -711,8 +1049,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if cache_files && cache_root.is_none() {
         return Err(fail("--cache-files requires --cache-dir PATH"));
     }
+    if cache_components && cache_root.is_none() {
+        return Err(fail("--cache-components requires --cache-dir PATH"));
+    }
     let cache = cache_root
-        .map(|root| AnalysisCache::new(root, cache_files))
+        .map(|root| AnalysisCache::new(root, cache_files, cache_components))
         .transpose()?;
     let manifest_bytes = fs::read(&manifest_path)?;
     let manifest_sha256 = digest(&manifest_bytes);
@@ -814,11 +1155,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let mut facts = Vec::new();
-    let mut module_facts = Vec::new();
-    let mut repository_receipts = Vec::new();
-    let mut unsupported_sources = Vec::new();
+    let mut projections = Vec::new();
     for repository in repositories.values() {
+        if let Some(cache) = cache.as_ref().filter(|cache| cache.component_cache_enabled) {
+            if let Some(projection) = cache.load_component(repository)? {
+                projections.push(projection);
+                continue;
+            }
+        }
         let source_paths = repository
             .files
             .iter()
@@ -831,6 +1175,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut syntax_error_count = 0usize;
         let mut fact_count = 0usize;
         let mut supported_paths = Vec::new();
+        let mut unsupported_sources = Vec::new();
         for path in &source_paths {
             let bytes = &source_blobs[path];
             if let Err(error) = std::str::from_utf8(&bytes) {
@@ -855,6 +1200,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             jobs,
             cache.as_ref().filter(|cache| cache.file_cache_enabled),
         )?;
+        let mut base_facts = Vec::new();
+        let mut module_facts = Vec::new();
+        let mut calls = Vec::new();
+        let mut file_index = Vec::new();
         for analysis in analyses {
             file_count += 1;
             syntax_error_count += usize::from(analysis.has_errors);
@@ -869,14 +1218,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "sourceIdentity".into(),
                     json!(format!("git:{}@{}", repository.source, repository.revision)),
                 );
-                if object.get("kind").and_then(Value::as_str) == Some("module-reference") {
-                    module_facts.push(facts.len());
+                match object.get("kind").and_then(Value::as_str) {
+                    Some("module-reference") => module_facts.push(row),
+                    kind => {
+                        if kind == Some("parse-file") {
+                            file_index.push(json!({
+                                "repositoryId":repository.id,
+                                "path":object["path"],
+                                "id":object["id"]
+                            }));
+                        } else if kind == Some("call") {
+                            calls.push(json!({
+                                "repositoryId":repository.id,
+                                "path":object["path"],
+                                "targetExpression":object["targetExpression"],
+                                "id":object["id"]
+                            }));
+                        }
+                        base_facts.push(row);
+                    }
                 }
-                facts.push(row);
                 fact_count += 1;
             }
         }
-        repository_receipts.push(json!({
+        let receipt = json!({
             "id":repository.id,
             "repository":repository.source,
             "revision":repository.revision,
@@ -886,12 +1251,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "unsupportedSources":source_file_candidate_count-file_count,
             "filesWithSyntaxErrors":syntax_error_count,
             "facts":fact_count
-        }));
+        });
+        let mut projection = RepositoryProjection {
+            base_facts,
+            cached_facts: None,
+            module_facts,
+            calls,
+            file_index,
+            receipt,
+            unsupported_sources,
+        };
+        if let Some(cache) = cache.as_ref().filter(|cache| cache.component_cache_enabled) {
+            projection.cached_facts = Some(cache.store_component(repository, &projection)?);
+            projection.base_facts.clear();
+        }
+        projections.push(projection);
     }
 
-    let file_index: BTreeMap<(String, String), String> = facts
+    let repository_receipts = projections
         .iter()
-        .filter(|row| row.get("kind").and_then(Value::as_str) == Some("parse-file"))
+        .map(|projection| projection.receipt.clone())
+        .collect::<Vec<_>>();
+    let unsupported_sources = projections
+        .iter()
+        .flat_map(|projection| projection.unsupported_sources.iter().cloned())
+        .collect::<Vec<_>>();
+    let mut module_facts = projections
+        .iter()
+        .flat_map(|projection| projection.module_facts.iter().cloned())
+        .collect::<Vec<_>>();
+    let file_index: BTreeMap<(String, String), String> = projections
+        .iter()
+        .flat_map(|projection| projection.file_index.iter())
         .map(|row| {
             (
                 (
@@ -903,10 +1294,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .collect();
     let mut edges = Vec::new();
-    for index in module_facts {
-        let repository_id = facts[index]["repositoryId"].as_str().unwrap().to_owned();
-        let importer = facts[index]["path"].as_str().unwrap().to_owned();
-        let specifier = facts[index]["specifier"].as_str().unwrap().to_owned();
+    for row in &mut module_facts {
+        let repository_id = row["repositoryId"].as_str().unwrap().to_owned();
+        let importer = row["path"].as_str().unwrap().to_owned();
+        let specifier = row["specifier"].as_str().unwrap().to_owned();
         let (resolved, unresolved_reason) = if specifier.starts_with('.') {
             match resolve_relative(&repositories[&repository_id], &importer, &specifier) {
                 Some(path) if file_index.contains_key(&(repository_id.clone(), path.clone())) => (
@@ -935,7 +1326,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 None => (None, "external-or-unbound-module"),
             }
         };
-        let object = facts[index].as_object_mut().unwrap();
+        let object = row.as_object_mut().unwrap();
         if let Some((target_repository, target_path, method)) = resolved {
             let target_fact_id = file_index
                 .get(&(target_repository.clone(), target_path.clone()))
@@ -1054,7 +1445,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let mut shared_external_modules: BTreeMap<String, Vec<(String, String, String)>> =
         BTreeMap::new();
-    for row in facts.iter().filter(|row| {
+    for row in module_facts.iter().filter(|row| {
         row.get("kind").and_then(Value::as_str) == Some("module-reference")
             && row.get("resolution").and_then(Value::as_str) == Some("unresolved")
             && row
@@ -1122,9 +1513,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }));
     }
     let mut calls_by_file: BTreeMap<(String, String), Vec<(String, String)>> = BTreeMap::new();
-    for row in facts
+    for row in projections
         .iter()
-        .filter(|row| row.get("kind").and_then(Value::as_str) == Some("call"))
+        .flat_map(|projection| projection.calls.iter())
     {
         calls_by_file
             .entry((
@@ -1141,7 +1532,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (String, String, String),
         Vec<(String, String, String, String)>,
     > = BTreeMap::new();
-    for row in facts.iter().filter(|row| {
+    for row in module_facts.iter().filter(|row| {
         row.get("kind").and_then(Value::as_str) == Some("module-reference")
             && row.get("resolution").and_then(Value::as_str) == Some("unresolved")
             && row
@@ -1254,7 +1645,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "automaticPromotion":false
         }));
     }
-    for row in facts.iter().filter(|row| {
+    for row in module_facts.iter().filter(|row| {
         row.get("kind").and_then(Value::as_str) == Some("module-reference")
             && row.get("resolution").and_then(Value::as_str) == Some("unresolved")
     }) {
@@ -1273,10 +1664,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }));
     }
     candidates.sort_by_key(|row| row["id"].as_str().unwrap().to_owned());
-    facts.extend(edges.clone());
-    facts.sort_by_key(|row| row["id"].as_str().unwrap().to_owned());
     fs::create_dir_all(&output)?;
-    let fact_bytes = write_jsonl(&output.join("workspace_facts.jsonl"), &facts)?;
+    let (fact_count, workspace_facts_sha256) = write_workspace_facts(
+        &output.join("workspace_facts.jsonl"),
+        &projections,
+        &module_facts,
+        &edges,
+    )?;
     let unsupported_source_bytes = write_jsonl(
         &output.join("unsupported_sources.jsonl"),
         &unsupported_sources,
@@ -1292,7 +1686,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
     let difficulty_bytes = serde_json::to_vec_pretty(&difficulty)?;
     fs::write(output.join("difficulty_candidates.json"), &difficulty_bytes)?;
-    let unresolved = facts
+    let unresolved = module_facts
         .iter()
         .filter(|row| {
             row.get("kind").and_then(Value::as_str) == Some("module-reference")
@@ -1308,7 +1702,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "grammar":GRAMMAR,
         "grammarDigest":GRAMMAR_DIGEST,
         "repositories":repository_receipts,
-        "facts":facts.len(),
+        "facts":fact_count,
         "unsupportedSources":unsupported_sources.len(),
         "unsupportedSourcesSha256":digest(&unsupported_source_bytes),
         "moduleDependencyEdges":edges.len(),
@@ -1317,7 +1711,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "sharedExternalApiCallContracts":shared_external_api_call_count,
         "unresolvedModuleReferences":unresolved,
         "difficultyCandidates":difficulty["candidates"].as_array().unwrap().len(),
-        "workspaceFactsSha256":digest(&fact_bytes),
+        "workspaceFactsSha256":workspace_facts_sha256,
         "difficultyCandidatesSha256":digest(&difficulty_bytes),
         "coverage":"committed UTF-8 ArkTS/TypeScript syntax facts plus relative-file and explicit-manifest module bindings; exact non-UTF-8 exclusions are recorded in unsupported_sources.jsonl; no compiler type resolution, dynamic import resolution, call-target resolution or dataflow",
         "automaticPromotion":false
