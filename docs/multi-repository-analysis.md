@@ -110,6 +110,15 @@ in the original repository/path order, so worker scheduling cannot alter any
 evidence bytes or digest. The integration suite compares every emitted
 artifact between one-worker and four-worker executions.
 
+The retained current-method real-source benchmark records one fresh-process
+trial per profile on an Apple M4 with a warm Git object database. Across 12,711
+files and 31,771,940 committed source bytes, one, four and eight workers took
+20.16 s, 15.27 s and 14.12 s respectively. The eight-worker run processed
+2.146 source MiB/s (444.4 ns/source byte), a 1.43x wall-time speedup, while all
+four evidence artifacts retained identical SHA-256 digests. This is a
+machine-local preliminary result without variance or cold-network claims; the
+structured record is `release/qualifications/harmony-real-multi-repo-34661ff/parallel-analysis-benchmark.json`.
+
 ## Evidence contract
 
 The output directory contains:

@@ -1,0 +1,92 @@
+{
+  "schema": "agentlab.multi_repo_parallel_analysis_benchmark.v1",
+  "status": "machine-local-preliminary",
+  "methodRevision": "2fe3622cdb0dd3ff65c467188547b361908183ce",
+  "analyzer": {
+    "buildProfile": "release",
+    "sha256": "cd09de6abf04cfa4d6f188b2de33b0e0658470bb2ddc26e75521f4137455d80b",
+    "bytes": 5166304
+  },
+  "source": {
+    "sourceSetSha256": "c4923e499fbb0ca2ed4fd205c66d6353bbe2aa58935413e3c897183a25493ca9",
+    "files": 12711,
+    "bytes": 31771940,
+    "facts": 404308,
+    "gitObjectDatabase": "warm"
+  },
+  "host": {
+    "operatingSystem": "macOS 26.6.2 (25G83)",
+    "cpu": "Apple M4",
+    "logicalCpuCount": 10
+  },
+  "artifacts": {
+    "workspaceFacts": {
+      "bytes": 421973776,
+      "sha256": "b8745ea924235dc8c24390b06042668c502a1981fea70c52c8d6e8cdde1493e2"
+    },
+    "difficultyCandidates": {
+      "bytes": 25987457,
+      "sha256": "d6b010bb0cf8dd71702dc6b88ac9f303dee64e9c25de3b117966efddcb9db72e"
+    },
+    "unsupportedSources": {
+      "bytes": 902,
+      "sha256": "4ff136ee04e7db790405ef22546125326bda534b7f5e075ffa4b4126bb59f5d1"
+    },
+    "analysisReceipt": {
+      "bytes": 2255,
+      "sha256": "a7ab8efc902f0b9f3b45212730426a5fd1a2860156f0f5d5329030172af58de5"
+    }
+  },
+  "trials": [
+    {
+      "jobs": 1,
+      "processModel": "fresh-process-warm-git-object-database",
+      "wallSeconds": 20.16,
+      "userCpuSeconds": 16.47,
+      "systemCpuSeconds": 0.94,
+      "sourceMiBPerSecond": 1.503,
+      "sourceNanosecondsPerByte": 634.5,
+      "filesPerSecond": 630.5,
+      "factsPerSecond": 20055.0,
+      "speedupOverOneWorker": 1.0
+    },
+    {
+      "jobs": 4,
+      "processModel": "fresh-process-warm-git-object-database",
+      "wallSeconds": 15.27,
+      "userCpuSeconds": 20.45,
+      "systemCpuSeconds": 1.35,
+      "sourceMiBPerSecond": 1.984,
+      "sourceNanosecondsPerByte": 480.6,
+      "filesPerSecond": 832.4,
+      "factsPerSecond": 26477.3,
+      "speedupOverOneWorker": 1.32
+    },
+    {
+      "jobs": 8,
+      "processModel": "fresh-process-warm-git-object-database",
+      "wallSeconds": 14.12,
+      "userCpuSeconds": 21.1,
+      "systemCpuSeconds": 1.36,
+      "sourceMiBPerSecond": 2.146,
+      "sourceNanosecondsPerByte": 444.4,
+      "filesPerSecond": 900.2,
+      "factsPerSecond": 28633.7,
+      "speedupOverOneWorker": 1.43
+    }
+  ],
+  "qualificationBoundary": {
+    "qualified": [
+      "bounded parallel AST extraction preserves byte-identical evidence",
+      "fresh-process wall time on one exact warmed source set and host"
+    ],
+    "notQualified": [
+      "population-level performance or variance",
+      "cross-host speedup",
+      "cold-network or cold-object-database speedup",
+      "parallelization of downstream graph and candidate aggregation"
+    ]
+  },
+  "trialCountPerProfile": 1,
+  "automaticPromotion": false
+}

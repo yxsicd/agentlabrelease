@@ -387,10 +387,15 @@ smaller than SWE-bench's:
     build remains unqualified because matching DevEco 6.1 tooling is absent, and
     the exact `hwlinux` host still has only the emulator/runtime substrate rather
     than a source-build SDK.
-11. The richer API-localizing full run takes 257.65 seconds and emits roughly
-    297 MiB of fact rows plus 25 MiB of difficulty candidates. Git blob reads
-    are batched, but AST analysis is still single-process and there is no
-    revision-aware incremental cache or early candidate prefilter.
+11. The richer API-localizing full run now uses bounded deterministic parallel
+   AST extraction. On one fresh-process Apple M4 measurement with a warm Git
+   object database, the exact 12,711-file cut improved from 20.16 seconds with
+   one worker to 14.12 seconds with eight workers (1.43x); all emitted evidence
+   digests remained byte-identical. The 31,771,940 source bytes produced
+   421,973,776 bytes of fact rows and 25,987,457 bytes of difficulty candidates.
+   This is one machine-local trial per profile, not a population result. Graph
+   and candidate aggregation remain serial, and there is still no
+   revision-aware incremental cache or early candidate prefilter.
 
 Until these gaps close, AgentLab can claim a richer executable architecture and
 one real closed-path proof, not a large, statistically qualified benchmark.
