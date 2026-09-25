@@ -10,6 +10,8 @@ exact Git source set
   -> exact API-call localization proposal
   -> independent localization review
   -> exact affected source + relevant facts
+  -> independent evaluator-authored source surface, Oracle, and calibration variants
+  -> exact authoring receipt and draft-manifest revalidation
   -> replaceable construction participant
   -> captured semantic-intent candidate
   -> review-required plan proposal
@@ -36,21 +38,23 @@ python3 examples/multi-repo-case/run-golden-path.py \
   --output /tmp/agentlab-multi-repo-golden-path
 ```
 
-The runner executes 37 fail-closed phases over the same source identity: exact
-analysis, reviewed two-member cohort, deep candidate selection, reviewed
-construction contract, deterministic construction participant, reviewed
-executable calibration bundle, case/dependency freeze, blind participant cut,
-baseline/reference assessment, collection and discrimination scoring. It keeps
-every command's stdout/stderr digest and produces
+The runner executes 40 fail-closed phases over the same source identity: exact
+analysis, reviewed two-member cohort, deep candidate selection, independent
+evaluator authoring and revalidation, reviewed construction contract,
+deterministic construction participant, reviewed executable calibration bundle,
+case/dependency freeze, blind participant cut, baseline/reference assessment,
+collection and discrimination scoring. The exact authoring receipt and draft
+manifest are bound through both construction and calibration. It keeps every
+command's stdout/stderr digest and produces
 `agentlab.multi_repo_golden_path.v1`. The expected fixture result is baseline
 failure, reference success and discrimination score `1.0` with process-aware
 eligibility and full hidden-dependency coverage.
 
-This is a protocol-integration qualification only. Its machine-authored review
-fixtures are not human semantic approval; the deterministic participants are not
-real models; filesystem isolation, authenticated blind review, Harmony build,
-emulator execution, performance and population representativeness remain false
-in the summary.
+This is a protocol-integration qualification only. The authoring participant is
+a deterministic independent-evaluator fixture, not a real model, and its
+machine-authored review fixtures are not human semantic approval. Filesystem
+isolation, authenticated blind review, Harmony build, emulator execution,
+performance and population representativeness remain false in the summary.
 
 The example spans `contracts`, `service` and `app`. Turn 1 adds a premium retry
 policy while preserving the standard boundary. Turn 2 updates the application

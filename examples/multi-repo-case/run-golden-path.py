@@ -217,21 +217,37 @@ def main() -> int:
             ),
         )
 
+        authoring = args.output / "calibration-authoring"
+        runner.run(
+            "calibration-authoring",
+            python(
+                "run-multi-repo-calibration-authoring.py", "run",
+                "--selection", selection,
+                "--difficulty", difficulty_path,
+                "--manifest", manifest_path,
+                "--facts", facts_path,
+                "--participant", FIXTURE / "mock-calibration-author.py",
+                "--participant-id", "deterministic-golden-path-independent-evaluator-fixture",
+                "--method-revision", args.method_revision,
+                "--output", authoring,
+            ),
+        )
+        runner.run(
+            "calibration-authoring-validate",
+            python(
+                "run-multi-repo-calibration-authoring.py", "validate",
+                "--root", authoring,
+            ),
+        )
+        authoring_receipt = authoring / "authoring-receipt.json"
+        authored_proposal = authoring / "construction-contract-proposal.json"
+
         construction_contract_root = args.output / "construction-contract"
-        surface = construction_contract_root / "source-surface.json"
-        write(surface, {
-            "schema": "agentlab.multi_repo_construction_surface.v1",
-            "editablePaths": [
-                {"repositoryId": row["repositoryId"], "path": row["path"]}
-                for row in candidate["affectedFiles"]
-            ],
-            "contextPaths": [],
-            "automaticPromotion": False,
-        })
+        surface = authoring / "draft/source-surface.json"
         contract_proposal = construction_contract_root / "proposal.json"
         contract_review = construction_contract_root / "review.json"
         construction_contract = construction_contract_root / "contract.json"
-        oracle_contract = FIXTURE / "oracle-contract.json"
+        oracle_contract = authoring / "draft/oracle-contract.json"
         runner.run(
             "construction-contract-propose",
             python(
@@ -240,6 +256,8 @@ def main() -> int:
                 "--difficulty", difficulty_path,
                 "--surface", surface,
                 "--oracle-contract", oracle_contract,
+                "--authoring-receipt", authoring_receipt,
+                "--authoring-proposal", authored_proposal,
                 "--output", contract_proposal,
             ),
         )
@@ -272,6 +290,8 @@ def main() -> int:
                 "--difficulty", difficulty_path,
                 "--surface", surface,
                 "--oracle-contract", oracle_contract,
+                "--authoring-receipt", authoring_receipt,
+                "--authoring-proposal", authored_proposal,
                 "--proposal", contract_proposal,
                 "--review", contract_review,
                 "--contract", construction_contract,
@@ -377,6 +397,7 @@ def main() -> int:
         )
 
         bundle_root = args.output / "calibration-authority"
+        authored_bundle = authoring / "draft/bundle"
         bundle_proposal = bundle_root / "proposal.json"
         bundle_review = bundle_root / "review.json"
         bundle_contract = bundle_root / "contract.json"
@@ -385,9 +406,11 @@ def main() -> int:
             "calibration-bundle-propose",
             python(
                 "multi-repo-calibration-bundle.py", "propose",
-                "--bundle-root", FIXTURE,
-                "--descriptor", FIXTURE / "calibration-bundle.json",
+                "--bundle-root", authored_bundle,
+                "--descriptor", authored_bundle / "calibration-bundle.json",
                 "--construction-contract", construction_contract,
+                "--authoring-receipt", authoring_receipt,
+                "--authoring-root", authoring,
                 "--output", bundle_proposal,
             ),
         )
@@ -416,10 +439,12 @@ def main() -> int:
             "calibration-bundle-stage",
             python(
                 "multi-repo-calibration-bundle.py", "stage",
-                "--bundle-root", FIXTURE,
-                "--descriptor", FIXTURE / "calibration-bundle.json",
+                "--bundle-root", authored_bundle,
+                "--descriptor", authored_bundle / "calibration-bundle.json",
                 "--construction-contract", construction_contract,
                 "--proposal", bundle_proposal,
+                "--authoring-receipt", authoring_receipt,
+                "--authoring-root", authoring,
                 "--output", staged_bundle,
             ),
         )
@@ -433,6 +458,8 @@ def main() -> int:
                 "--proposal", bundle_proposal,
                 "--review", bundle_review,
                 "--contract", bundle_contract,
+                "--authoring-receipt", authoring_receipt,
+                "--authoring-root", authoring,
             ),
         )
         calibration = args.output / "calibration"
@@ -446,6 +473,8 @@ def main() -> int:
                 "--review", bundle_review,
                 "--construction-contract", construction_contract,
                 "--baseline", source / "repositories",
+                "--authoring-receipt", authoring_receipt,
+                "--authoring-root", authoring,
                 "--output", calibration,
             ),
         )
@@ -629,6 +658,21 @@ def main() -> int:
             and replay.get("alternativeValidCount") == 1,
             "alternative-valid Oracle breadth qualification differs",
         )
+        authoring_receipt_value = load(authoring_receipt)
+        construction_authoring = load(construction_contract).get("calibrationAuthoring") or {}
+        calibration_authoring = load(bundle_contract).get("calibrationAuthoring") or {}
+        require(
+            construction_authoring.get("receiptSha256")
+            == calibration_authoring.get("receiptSha256")
+            == digest(authoring_receipt),
+            "construction and calibration authoring receipt lineage differs",
+        )
+        require(
+            construction_authoring.get("draftManifestSha256")
+            == calibration_authoring.get("draftManifestSha256")
+            == authoring_receipt_value.get("draftManifestSha256"),
+            "construction and calibration authoring draft lineage differs",
+        )
         supply = load(case_supply_report)
         require(
             supply["denominators"]["functionalQualifiedCaseCount"] == 1
@@ -650,6 +694,8 @@ def main() -> int:
             "candidateCount": len(candidates),
             "reviewedCohortSha256": digest(cohort),
             "selectedCandidateId": candidate_id,
+            "calibrationAuthoringReceiptSha256": digest(authoring_receipt),
+            "calibrationAuthoringDraftManifestSha256": authoring_receipt_value["draftManifestSha256"],
             "constructionContractSha256": digest(construction_contract),
             "calibrationBundleSha256": digest(bundle_contract),
             "calibrationRunSha256": digest(calibration / "calibration-run.json"),
@@ -675,6 +721,7 @@ def main() -> int:
             "phases": runner.phases,
             "qualificationBoundary": {
                 "protocolIntegrationQualified": True,
+                "independentEvaluatorAuthoringProtocolQualified": True,
                 "realModelQualified": False,
                 "filesystemIsolationQualified": False,
                 "authenticatedBlindReviewQualified": False,

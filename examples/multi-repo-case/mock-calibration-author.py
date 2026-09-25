@@ -26,9 +26,12 @@ def main() -> None:
         if len(repositories) < 2:
             raise ValueError("fixture requires multiple repositories")
         editable = next(row for row in sources if row["repositoryId"] == repositories[0])
-        context = next(row for row in sources if row["repositoryId"] == repositories[1])
         editable_rows = [{"repositoryId": editable["repositoryId"], "path": editable["path"]}]
-        context_rows = [{"repositoryId": context["repositoryId"], "path": context["path"]}]
+        context_rows = [
+            {"repositoryId": row["repositoryId"], "path": row["path"]}
+            for row in sources
+            if row["repositoryId"] != editable["repositoryId"]
+        ]
     else:
         editable_rows = [
             {"repositoryId": row["repositoryId"], "path": row["path"]}
