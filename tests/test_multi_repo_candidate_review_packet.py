@@ -147,6 +147,7 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             paths = self.fixture(Path(directory))
             packet = PACKET.build_packet(*paths[:4], paths[4]["id"], "3" * 40, 0)
+            self.assertEqual(packet["schema"], "agentlab.multi_repo_candidate_review_packet.v2")
             self.assertEqual(packet["status"], "independent-semantic-review-required")
             self.assertEqual(len(packet["callSiteEvidence"]), 2)
             self.assertEqual(

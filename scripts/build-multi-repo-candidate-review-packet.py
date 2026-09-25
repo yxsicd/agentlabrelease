@@ -479,7 +479,7 @@ def build_packet(
             "statement": "At least one owner is unresolved or represented by a bounded excerpt rather than its complete source span.",
         })
     return {
-        "schema": "agentlab.multi_repo_candidate_review_packet.v1",
+        "schema": "agentlab.multi_repo_candidate_review_packet.v2",
         "status": "independent-semantic-review-required",
         "candidateId": candidate_id,
         "candidateSha256": canonical_digest(candidate),

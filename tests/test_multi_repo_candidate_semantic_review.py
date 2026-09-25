@@ -26,7 +26,7 @@ REVIEW = load_module(
 
 
 class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
-    def packet(self, root: Path) -> Path:
+    def packet(self, root: Path, schema: str = REVIEW.PACKET_SCHEMA) -> Path:
         question_ids = [
             "shared-behavior",
             "observable-gap",
@@ -43,8 +43,8 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
             "oracle-unqualified",
         ]
         path = root / "packet.json"
-        path.write_text(json.dumps({
-            "schema": REVIEW.PACKET_SCHEMA,
+        value = {
+            "schema": schema,
             "status": "independent-semantic-review-required",
             "candidateId": "difficulty-test",
             "candidateSha256": "a" * 64,
@@ -66,8 +66,36 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
                 "reviewerMustBeIndependentOfPacketGenerator": True,
             },
             "automaticPromotion": False,
-        }, sort_keys=True) + "\n")
+        }
+        if schema == REVIEW.PACKET_SCHEMA_V2:
+            value["callResultHandleEvidence"] = [{
+                "selectedCallFactId": "fact-call", "status": "unbound-result",
+            }]
+            value["callResultHandleCoverage"] = {
+                "selectedCallCount": 1,
+                "bindingInitializerCount": 0,
+                "assignmentCount": 0,
+                "unboundResultCount": 1,
+                "ambiguousContainerCount": 0,
+                "directMemberNameCounts": {},
+            }
+        path.write_text(json.dumps(value, sort_keys=True) + "\n")
         return path
+
+    def test_v2_handle_aware_packet_uses_the_same_fail_closed_review_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            packet = self.packet(root, REVIEW.PACKET_SCHEMA_V2)
+            value = self.decide(
+                root,
+                "defer-for-more-evidence",
+                {"observable-gap": "unknown"},
+            )
+            decision = root / "decision.json"
+            decision.write_text(json.dumps(value, sort_keys=True) + "\n")
+            gate = REVIEW.compile_gate(packet, decision)
+            self.assertEqual(gate["status"], "deferred-for-more-evidence")
+            self.assertFalse(gate["allowsCaseContract"])
 
     def answers(self, root: Path, overrides: dict[str, str] | None = None) -> Path:
         overrides = overrides or {}

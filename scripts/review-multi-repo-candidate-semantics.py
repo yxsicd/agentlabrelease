@@ -15,6 +15,8 @@ SHA256 = re.compile(r"[0-9a-f]{64}")
 REVISION = re.compile(r"[0-9a-f]{40}")
 TOKEN = re.compile(r"[A-Za-z0-9_.:@/-]{1,200}")
 PACKET_SCHEMA = "agentlab.multi_repo_candidate_review_packet.v1"
+PACKET_SCHEMA_V2 = "agentlab.multi_repo_candidate_review_packet.v2"
+PACKET_SCHEMAS = {PACKET_SCHEMA, PACKET_SCHEMA_V2}
 ANSWERS_SCHEMA = "agentlab.multi_repo_candidate_semantic_answers.v1"
 DECISION_SCHEMA = "agentlab.multi_repo_candidate_semantic_review.v1"
 GATE_SCHEMA = "agentlab.multi_repo_candidate_semantic_gate.v1"
@@ -50,7 +52,16 @@ def digest(path: Path) -> str:
 
 
 def validate_packet(packet: dict[str, Any]) -> None:
-    require(packet.get("schema") == PACKET_SCHEMA, "unsupported candidate review packet")
+    require(packet.get("schema") in PACKET_SCHEMAS, "unsupported candidate review packet")
+    if packet.get("schema") == PACKET_SCHEMA_V2:
+        handle_evidence = packet.get("callResultHandleEvidence")
+        handle_coverage = packet.get("callResultHandleCoverage")
+        require(isinstance(handle_evidence, list), "v2 call-result handle evidence is absent")
+        require(isinstance(handle_coverage, dict), "v2 call-result handle coverage is absent")
+        require(
+            handle_coverage.get("selectedCallCount") == len(handle_evidence) > 0,
+            "v2 call-result handle evidence count differs",
+        )
     require(
         packet.get("status") == "independent-semantic-review-required",
         "candidate packet is not awaiting semantic review",
