@@ -702,6 +702,24 @@ the new difficulty stays non-ready, and every artifact keeps
 
 ## Real-source semantic review packets
 
+The review decision is executable rather than a free-form approval. Supply one
+answer and evidence rationale for every packet question to
+`review-multi-repo-candidate-semantics.py`. The state transition is fail-closed:
+
+- `advance-to-case-contract` requires every answer to be `yes`;
+- `reject-as-noncoherent` requires at least one `no`;
+- `defer-for-more-evidence` requires at least one `unknown`, and cannot hide a
+  `no` for shared behavior or genuine cross-repository necessity.
+
+The compiler binds the exact packet and decision digests into an immutable
+semantic gate. Only an approved gate carries `allowsCaseContract: true`; reject
+and defer gates remain useful denominator evidence but cannot authorize case
+construction. `multi-repo-candidate-semantic-review.yml` exposes this protocol
+as a secret-free trusted-`main` manual workflow, binds the GitHub actor identity
+and retains the packet, normalized answers, decision and gate together. This is
+role/provenance evidence, not proof that the reviewer judgment is correct or
+that the candidate is representative.
+
 The two two-file API candidates in the retained shortlist now have exact-source
 review packets under
 `release/qualifications/harmony-real-multi-repo-34661ff/review-packets/`.

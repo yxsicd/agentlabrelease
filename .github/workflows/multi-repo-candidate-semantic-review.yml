@@ -1,0 +1,110 @@
+name: Multi-repository candidate semantic review
+on:
+  workflow_dispatch:
+    inputs:
+      packet_path:
+        description: Candidate review packet below release/qualifications
+        required: true
+        type: string
+      expected_packet_sha256:
+        description: Exact packet digest inspected by the reviewer
+        required: true
+        type: string
+      answers_json:
+        description: Exact agentlab.multi_repo_candidate_semantic_answers.v1 JSON
+        required: true
+        type: string
+      acknowledged_risk_ids:
+        description: Comma-separated packet risk IDs, exactly as reviewed
+        required: true
+        type: string
+      verdict:
+        description: Semantic gate verdict
+        required: true
+        type: choice
+        options:
+          - advance-to-case-contract
+          - reject-as-noncoherent
+          - defer-for-more-evidence
+      rationale:
+        description: Evidence-based rationale for this exact verdict
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/candidate-semantic-review
+      PACKET_RELATIVE_PATH: ${{ inputs.packet_path }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Resolve exact retained packet without path escape
+        id: packet
+        run: |
+          mkdir -p "$AGENTLAB_ROOT"
+          python3 - <<'PY'
+          import os, pathlib, re
+          root = pathlib.Path.cwd().resolve()
+          relative = os.environ["PACKET_RELATIVE_PATH"]
+          assert re.fullmatch(r"release/qualifications/[A-Za-z0-9._/-]+\.json", relative), relative
+          packet = (root / relative).resolve()
+          packet.relative_to(root / "release" / "qualifications")
+          assert packet.is_file() and not packet.is_symlink(), packet
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("packet_path=" + str(packet) + "\n")
+          PY
+      - name: Normalize reviewer answers
+        env:
+          ANSWERS_JSON: ${{ inputs.answers_json }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib
+          value = json.loads(os.environ["ANSWERS_JSON"])
+          path = pathlib.Path(os.environ["AGENTLAB_ROOT"]) / "answers.json"
+          path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+          PY
+      - name: Bind actor, exact packet, answers, risks and verdict
+        env:
+          PACKET_PATH: ${{ steps.packet.outputs.packet_path }}
+          EXPECTED_PACKET_SHA256: ${{ inputs.expected_packet_sha256 }}
+          REVIEWER: github:${{ github.actor }}
+          ACKNOWLEDGED_RISK_IDS: ${{ inputs.acknowledged_risk_ids }}
+          VERDICT: ${{ inputs.verdict }}
+          REVIEW_RATIONALE: ${{ inputs.rationale }}
+        run: |
+          python3 scripts/review-multi-repo-candidate-semantics.py decide \
+            --packet "$PACKET_PATH" \
+            --expected-sha256 "$EXPECTED_PACKET_SHA256" \
+            --answers "$AGENTLAB_ROOT/answers.json" \
+            --reviewer "$REVIEWER" \
+            --acknowledged-risk-ids "$ACKNOWLEDGED_RISK_IDS" \
+            --verdict "$VERDICT" \
+            --rationale "$REVIEW_RATIONALE" \
+            --output "$AGENTLAB_ROOT/decision.json"
+          python3 scripts/review-multi-repo-candidate-semantics.py compile \
+            --packet "$PACKET_PATH" \
+            --decision "$AGENTLAB_ROOT/decision.json" \
+            --output "$AGENTLAB_ROOT/gate.json"
+          python3 scripts/review-multi-repo-candidate-semantics.py validate \
+            --packet "$PACKET_PATH" \
+            --decision "$AGENTLAB_ROOT/decision.json" \
+            --gate "$AGENTLAB_ROOT/gate.json"
+          cp "$PACKET_PATH" "$AGENTLAB_ROOT/packet.json"
+          sha256sum "$AGENTLAB_ROOT/packet.json" \
+            "$AGENTLAB_ROOT/answers.json" \
+            "$AGENTLAB_ROOT/decision.json" \
+            "$AGENTLAB_ROOT/gate.json" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve exact semantic decision lineage
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-candidate-semantic-review
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/

@@ -376,6 +376,15 @@ cross-repository necessity. They are review aids, not approved cases.
 
 ## Ordered implementation consequences
 
+The semantic review state machine is now executable. A candidate can advance
+only when every required semantic, prompt, Oracle, environment and cross-repo
+question is answered `yes`; a noncoherent shared behavior or unnecessary
+cross-repository composition must be rejected, while missing evidence is
+retained as an explicit defer. The compiled gate is digest-bound and only the
+advance verdict sets `allowsCaseContract: true`. This imports the conservative
+SWE-bench Verified curation principle before task construction instead of
+waiting for an invalid task to fail during Agent evaluation.
+
 1. Use the implemented blind-cut, least-mounted participant runtime and
    multi-reviewer adjudication on a new private or held-out case set; execute
    and independently verify the implemented authenticated reviewer/artifact
