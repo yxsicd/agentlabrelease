@@ -560,9 +560,15 @@ def build_packet(
             )
         analysis_facts = context_facts
         call_facts = sorted(
-            (context_by_id[fact_id] for fact_id in evidence_ids),
+            (
+                context_by_id[fact_id]
+                for fact_id in evidence_ids
+                if context_by_id[fact_id].get("kind") == "call"
+                and context_by_id[fact_id].get("targetExpression") == seed.get("callTarget")
+            ),
             key=lambda row: (row.get("repositoryId", ""), row.get("path", ""), row.get("id", "")),
         )
+        require(call_facts, "context facts have no exact call facts")
         context_facts_sha256 = file_digest(context_facts_path)
     source_rows = [
         source_evidence(repositories[row["repositoryId"]], row, context_lines)

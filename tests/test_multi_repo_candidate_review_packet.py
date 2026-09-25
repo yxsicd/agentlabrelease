@@ -116,7 +116,7 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
             ],
             "affectedRepositoryCount": 2,
             "maxDependencyDepth": 1,
-            "evidenceIds": ["fact-call-a", "fact-call-b"],
+            "evidenceIds": ["fact-call-a", "fact-call-b", "fact-owner-a", "fact-owner-b"],
             "verificationContract": {"caseReady": False, "required": ["semantic review"]},
             "automaticPromotion": False,
         }
@@ -325,9 +325,15 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
             ]
             paths[2].write_text(
                 "".join(
-                    json.dumps(row, sort_keys=True) + "\n"
+                    json.dumps(
+                        {
+                            **row,
+                            **({"qualifiedName": "DifferentOwner"}
+                               if row["id"] == "fact-owner-b" else {}),
+                        },
+                        sort_keys=True,
+                    ) + "\n"
                     for row in facts
-                    if row["id"] != "fact-owner-b"
                 )
             )
             proposal = json.loads(paths[3].read_text())
