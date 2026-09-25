@@ -318,6 +318,23 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
         report = SCORER.build_report(collected, 1, 0.6)
         self.assertTrue(report["ranking"][0]["eligible"])
         self.assertTrue(report["ranking"][0]["processAwareEligible"])
+        self.assertTrue(
+            report["ranking"][0]["processMeasurement"]["harmonyDevice"][
+                "endToEndEvidenceQualified"
+            ]
+        )
+        self.assertEqual(
+            report["ranking"][0]["processMeasurement"]["harmonyDevice"][
+                "executedAttemptCount"
+            ],
+            2,
+        )
+        self.assertEqual(
+            report["ranking"][0]["processMeasurement"]["harmonyDevice"][
+                "profiledSuccessfulAttemptCount"
+            ],
+            1,
+        )
         case = {
             "schema": "agentlab.multi_repo_evaluation_case.v1",
             "id": self.case_id,

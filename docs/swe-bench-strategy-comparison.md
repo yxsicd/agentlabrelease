@@ -355,6 +355,12 @@ underspecified or contaminated case.
    and add dependency-discovery plus subjective/objective consistency without
    replacing raw trajectories or independently executable verdict evidence.
 
+The suite scorer now fails closed on that first distinction: static-only
+discrimination evidence cannot qualify as a Harmony end-to-end result. It
+requires a retained terminal device stage for every successful attempt and
+workload-bound SmartPerf samples for every successful device execution. Real
+reviewed campaign imports and population-scale execution remain outstanding.
+
 This ordering copies SWE-bench's most valuable discipline—hidden executable
 repair and preservation evidence—while addressing the two failure modes that
 now dominate public coding benchmarks: case invalidity and contamination.

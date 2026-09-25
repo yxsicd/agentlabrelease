@@ -404,7 +404,11 @@ class CollectCaseAttemptsTests(unittest.TestCase):
             )
             self.write_json(
                 evidence / "decision-package.json",
-                {**common, "schema": "agentlab.harness_decision_package.v1"},
+                {
+                    **common,
+                    "schema": "agentlab.harness_decision_package.v1",
+                    "phaseVerdicts": stages,
+                },
             )
             attempt = {
                 "attemptId": "measured-1",

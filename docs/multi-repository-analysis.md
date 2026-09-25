@@ -386,6 +386,14 @@ turn a repeatable `harmony-device` failure into a non-ready difficulty candidate
 for the next maintainer-reviewed analysis cut. The composition receipt remains
 review-required and never mutates the frozen case or reusable knowledge.
 
+The collector does not infer this boundary from the workflow name. It preserves
+the exact stage IDs and validates the terminal `harmony-device` authority and
+device process measurement. Suite qualification then requires at least one
+device execution, device verdict coverage for every successful attempt, and
+SmartPerf coverage for every successful device attempt. The GitHub-hosted static
+campaign and its portable handoff are therefore insufficient by themselves;
+only the completed hwlinux compound evidence can satisfy the end-to-end gate.
+
 The trusted emulator wrapper also records an
 `agentlab.harmony_device_process_measurement.v1` binding over runner wall time,
 retained UI action/check rows, dynamic profile-workload action rows and

@@ -213,6 +213,59 @@ def validate_process_measurement(value: Any, case_id: str, attempt_id: str) -> d
     return value
 
 
+def validate_stage_coverage(
+    value: Any,
+    process: dict[str, Any] | None,
+    verdict: bool,
+    case_id: str,
+    attempt_id: str,
+) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if process is None:
+        fail(f"{case_id} {attempt_id} stage coverage lacks process evidence")
+    if (
+        not isinstance(value, dict)
+        or value.get("schema") != "agentlab.assessment_stage_coverage.v1"
+    ):
+        fail(f"{case_id} {attempt_id} stage coverage schema differs")
+    stage_ids = value.get("stageIds")
+    if (
+        not isinstance(stage_ids, list)
+        or len(stage_ids) != process["stageCount"]
+        or len(stage_ids) != len(set(stage_ids))
+        or not all(isinstance(stage_id, str) and stage_id for stage_id in stage_ids)
+    ):
+        fail(f"{case_id} {attempt_id} stage coverage differs from process evidence")
+    device = value.get("harmonyDevice")
+    if device is None:
+        if "harmony-device" in stage_ids:
+            fail(f"{case_id} {attempt_id} harmony-device coverage is absent")
+        return value
+    if (
+        not isinstance(device, dict)
+        or set(device)
+        != {"executed", "oraclePass", "profileCollected", "smartPerfSampleCount"}
+        or device.get("executed") is not True
+        or not isinstance(device.get("oraclePass"), bool)
+        or device["oraclePass"] is not verdict
+        or device.get("profileCollected") is not device["oraclePass"]
+        or not isinstance(device.get("smartPerfSampleCount"), int)
+        or device["smartPerfSampleCount"] < 0
+        or stage_ids[-1:] != ["harmony-device"]
+        or (
+            device["oraclePass"]
+            and device["smartPerfSampleCount"] < 1
+        )
+        or (
+            not device["oraclePass"]
+            and device["smartPerfSampleCount"] != 0
+        )
+    ):
+        fail(f"{case_id} {attempt_id} harmony-device coverage is invalid")
+    return value
+
+
 def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> dict[str, Any]:
     case_id = case.get("id")
     if not isinstance(case_id, str) or not case_id:
@@ -244,8 +297,15 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
         process = validate_process_measurement(
             attempt.get("processMeasurement"), case_id, attempt_id
         )
+        stage_coverage = validate_stage_coverage(
+            attempt.get("stageCoverage"), process, verdict, case_id, attempt_id
+        )
         profiles.setdefault(participant_id, []).append(
-            {"verdict": verdict, "process": process}
+            {
+                "verdict": verdict,
+                "process": process,
+                "stageCoverage": stage_coverage,
+            }
         )
 
     profile_rows = []
@@ -278,6 +338,18 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
         )
         dependency_covered = sum(
             row["coveredObligationCount"] for row in dependency_rows
+        )
+        device_rows = [
+            row["stageCoverage"]["harmonyDevice"]
+            for row in attempt_rows
+            if isinstance(row.get("stageCoverage"), dict)
+            and isinstance(row["stageCoverage"].get("harmonyDevice"), dict)
+        ]
+        successful_attempts = sum(row["verdict"] for row in attempt_rows)
+        successful_device_rows = sum(row["oraclePass"] for row in device_rows)
+        profiled_successful_device_rows = sum(
+            row["oraclePass"] and row["profileCollected"]
+            for row in device_rows
         )
         passed = sum(verdicts)
         count = len(attempt_rows)
@@ -374,6 +446,24 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
                         "precisionClaimed": False,
                         "authority": "hidden-revision-bound-program-fact-obligations-not-gold-path-imitation",
                     },
+                    "harmonyDevice": {
+                        "executedTrials": len(device_rows),
+                        "successfulTrials": successful_attempts,
+                        "successfulDeviceTrials": successful_device_rows,
+                        "profiledSuccessfulDeviceTrials": profiled_successful_device_rows,
+                        "successfulAttemptDeviceCoverageQualified": (
+                            successful_attempts > 0
+                            and successful_device_rows == successful_attempts
+                        ),
+                        "profiledSuccessCoverageQualified": (
+                            successful_attempts > 0
+                            and profiled_successful_device_rows == successful_attempts
+                        ),
+                        "smartPerfSampleCount": sum(
+                            row["smartPerfSampleCount"] for row in device_rows
+                        ),
+                        "authority": "operator-owned-harmony-ui-oracle-with-functional-pass-gated-smartperf",
+                    },
                 },
             }
         )
@@ -423,6 +513,30 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
     )
     dependency_covered = sum(
         row["coveredObligationCount"] for row in dependency_profiles
+    )
+    harmony_profiles = [
+        row["processMeasurement"]["harmonyDevice"] for row in profile_rows
+    ]
+    harmony_executed = sum(row["executedTrials"] for row in harmony_profiles)
+    successful_attempts = sum(row["successfulTrials"] for row in harmony_profiles)
+    successful_device_attempts = sum(
+        row["successfulDeviceTrials"] for row in harmony_profiles
+    )
+    profiled_successful_attempts = sum(
+        row["profiledSuccessfulDeviceTrials"] for row in harmony_profiles
+    )
+    successful_device_coverage_qualified = (
+        successful_attempts > 0
+        and successful_device_attempts == successful_attempts
+    )
+    profiled_success_coverage_qualified = (
+        successful_attempts > 0
+        and profiled_successful_attempts == successful_attempts
+    )
+    harmony_end_to_end_qualified = (
+        harmony_executed > 0
+        and successful_device_coverage_qualified
+        and profiled_success_coverage_qualified
     )
     process_coverage_qualified = total > 0 and process_measured == total
     if len(profile_rows) >= 2:
@@ -520,6 +634,19 @@ def score_case(case: dict[str, Any], required_trials: int, threshold: float) -> 
                 ),
                 "precisionClaimed": False,
                 "authority": "hidden-revision-bound-program-fact-obligations-not-gold-path-imitation",
+            },
+            "harmonyDevice": {
+                "executedAttemptCount": harmony_executed,
+                "successfulAttemptCount": successful_attempts,
+                "successfulDeviceAttemptCount": successful_device_attempts,
+                "profiledSuccessfulAttemptCount": profiled_successful_attempts,
+                "successfulAttemptDeviceCoverageQualified": successful_device_coverage_qualified,
+                "profiledSuccessCoverageQualified": profiled_success_coverage_qualified,
+                "endToEndEvidenceQualified": harmony_end_to_end_qualified,
+                "smartPerfSampleCount": sum(
+                    row["smartPerfSampleCount"] for row in harmony_profiles
+                ),
+                "authority": "operator-owned-harmony-ui-oracle-with-functional-pass-gated-smartperf",
             },
             "note": "Operator-owned stage timing, change, scope and Oracle transition evidence. Optional participant self-assessment is a claim compared with the independent Oracle, not a verdict.",
         },

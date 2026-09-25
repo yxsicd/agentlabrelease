@@ -386,6 +386,75 @@ def normalize_process_measurement(
     return process
 
 
+def normalize_stage_coverage(
+    summary: dict[str, Any],
+    decision: dict[str, Any],
+    attempt_id: str,
+    verdict: bool | None,
+    process: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if process is None:
+        return None
+    stages = summary["stages"]
+    if decision.get("phaseVerdicts") != stages:
+        fail(f"{attempt_id} stage evidence differs between summary and decision")
+    stage_ids = [stage["stageId"] for stage in stages]
+    device_rows = [stage for stage in stages if stage["stageId"] == "harmony-device"]
+    if len(device_rows) > 1:
+        fail(f"{attempt_id} has duplicate harmony-device stages")
+    device = None
+    if device_rows:
+        row = device_rows[0]
+        if stages[-1] is not row:
+            fail(f"{attempt_id} harmony-device must be the terminal stage")
+        if row.get("authority") != "operator-owned-harmony-ui-oracle":
+            fail(f"{attempt_id} harmony-device authority differs")
+        measurement = row.get("deviceProcessMeasurement")
+        integer_fields = (
+            "runnerDurationMs",
+            "uiActionCount",
+            "uiCheckCount",
+            "profileWorkloadActionCount",
+            "smartPerfSampleCount",
+        )
+        if (
+            not isinstance(measurement, dict)
+            or measurement.get("schema")
+            != "agentlab.harmony_device_process_measurement.v1"
+            or not all(
+                isinstance(measurement.get(field), int) and measurement[field] >= 0
+                for field in integer_fields
+            )
+            or measurement.get("functionalOraclePass") is not row.get("oraclePass")
+            or measurement.get("profileCollected") is not row.get("oraclePass")
+            or measurement["uiCheckCount"] < 1
+        ):
+            fail(f"{attempt_id} harmony-device process evidence is invalid")
+        if row.get("oraclePass") is True and (
+            measurement["profileWorkloadActionCount"] < 1
+            or measurement["smartPerfSampleCount"] < 1
+        ):
+            fail(f"{attempt_id} passing harmony-device lacks performance evidence")
+        if row.get("oraclePass") is False and (
+            measurement["profileWorkloadActionCount"] != 0
+            or measurement["smartPerfSampleCount"] != 0
+        ):
+            fail(f"{attempt_id} failing harmony-device overclaims performance evidence")
+        if verdict is not row.get("oraclePass"):
+            fail(f"{attempt_id} harmony-device verdict differs from final verdict")
+        device = {
+            "executed": True,
+            "oraclePass": row["oraclePass"],
+            "profileCollected": measurement["profileCollected"],
+            "smartPerfSampleCount": measurement["smartPerfSampleCount"],
+        }
+    return {
+        "schema": "agentlab.assessment_stage_coverage.v1",
+        "stageIds": stage_ids,
+        "harmonyDevice": device,
+    }
+
+
 def collect_harness_attempt(
     attempt: dict[str, Any],
     attempt_id: str,
@@ -394,7 +463,14 @@ def collect_harness_attempt(
     source_identity: str,
     evidence_dir: pathlib.Path,
     manifest_dir: pathlib.Path,
-) -> tuple[bool, bool | None, str, dict[str, Any], dict[str, Any] | None]:
+) -> tuple[
+    bool,
+    bool | None,
+    str,
+    dict[str, Any],
+    dict[str, Any] | None,
+    dict[str, Any] | None,
+]:
     summary_path = evidence_dir / "summary.json"
     decision_path = evidence_dir / "decision-package.json"
     summary = load_object(summary_path, f"{attempt_id} summary")
@@ -415,6 +491,9 @@ def collect_harness_attempt(
     if infrastructure_valid and not isinstance(verdict, bool):
         fail(f"{attempt_id} assessed run requires boolean subjectTaskSucceeded")
     process = normalize_process_measurement(summary, decision, attempt_id)
+    stage_coverage = normalize_stage_coverage(
+        summary, decision, attempt_id, verdict if infrastructure_valid else None, process
+    )
     return (
         infrastructure_valid,
         verdict if infrastructure_valid else None,
@@ -424,6 +503,7 @@ def collect_harness_attempt(
             "decisionPackage": evidence_ref(decision_path, manifest_dir),
         },
         process,
+        stage_coverage,
     )
 
 
@@ -617,7 +697,7 @@ def build_input(manifest: dict[str, Any], manifest_dir: pathlib.Path) -> dict[st
             )
             evidence_kind = attempt.get("evidenceKind", "harness-decision-package")
             if evidence_kind == "harness-decision-package":
-                infrastructure_valid, verdict, verdict_source, evidence, process = (
+                infrastructure_valid, verdict, verdict_source, evidence, process, stage_coverage = (
                     collect_harness_attempt(
                         attempt,
                         attempt_id,
@@ -642,6 +722,7 @@ def build_input(manifest: dict[str, Any], manifest_dir: pathlib.Path) -> dict[st
                     )
                 )
                 process = None
+                stage_coverage = None
             else:
                 fail(f"{attempt_id} unsupported evidenceKind: {evidence_kind}")
             output_attempts.append(
@@ -654,6 +735,7 @@ def build_input(manifest: dict[str, Any], manifest_dir: pathlib.Path) -> dict[st
                     "verdictSource": verdict_source,
                     "evidence": evidence,
                     "processMeasurement": process,
+                    "stageCoverage": stage_coverage,
                 }
             )
         output_cases.append(

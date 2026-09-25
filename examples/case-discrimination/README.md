@@ -37,6 +37,14 @@ SmartPerf sample count; the loop adds independent build and assessment wall
 time, and the compound composer rechecks those retained bytes before appending
 a measured `harmony-device` stage to the static process evidence.
 
+Collection also retains an independently reconstructed stage-coverage record.
+The scorer reports how many valid attempts actually reached `harmony-device`,
+whether every successful attempt carries that terminal device verdict, and
+whether every successful device attempt has workload-bound SmartPerf samples.
+Consequently, a static-only campaign can still be analyzed as static evidence,
+but it cannot qualify as an end-to-end Harmony suite merely because its static
+participants are well separated.
+
 Multi-repository participants may optionally report whether they expect the
 next independent Oracle to pass and their confidence in that prediction. The
 Harness records the claim before exposing the Oracle result; the collector
@@ -59,8 +67,9 @@ Oracle calibration.
 review population to exactly one discrimination report per reviewed case. The
 manifest freezes the expected participant capability order before inspecting
 the outcomes. A case-level scorecard qualifies only when review, outcome,
-process coverage, declared ordering and strongest-versus-weakest Wilson
-separation all pass. Aggregate micro pass rates retain their trial denominators.
+process coverage, Harmony device/performance coverage, declared ordering and
+strongest-versus-weakest Wilson separation all pass. Aggregate micro pass rates
+retain their trial denominators.
 The suite separately reports whether every valid attempt carried a comparable
 participant self-assessment; this metric is non-gating and retains the
 `participant-claim...not-a-verdict` authority marker.

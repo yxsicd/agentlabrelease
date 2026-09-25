@@ -227,6 +227,42 @@ def validate_discrimination(
         require(isinstance(passed, int) and 0 <= passed <= valid, f"{case_id} {participant_id} passed trials are invalid")
         require(profile.get("passRate") == passed / valid, f"{case_id} {participant_id} pass rate differs")
         require(profile.get("passRateWilson95") == scorer.wilson_interval(passed, valid), f"{case_id} {participant_id} Wilson interval differs")
+        profile_process = profile.get("processMeasurement")
+        profile_harmony = (
+            profile_process.get("harmonyDevice")
+            if isinstance(profile_process, dict)
+            else None
+        )
+        require(isinstance(profile_harmony, dict), f"{case_id} {participant_id} Harmony device measurement is absent")
+        require(
+            profile_harmony.get("successfulTrials") == passed
+            and isinstance(profile_harmony.get("executedTrials"), int)
+            and 0 <= profile_harmony["executedTrials"] <= valid
+            and isinstance(profile_harmony.get("successfulDeviceTrials"), int)
+            and 0 <= profile_harmony["successfulDeviceTrials"] <= passed
+            and isinstance(profile_harmony.get("profiledSuccessfulDeviceTrials"), int)
+            and 0
+            <= profile_harmony["profiledSuccessfulDeviceTrials"]
+            <= profile_harmony["successfulDeviceTrials"]
+            and isinstance(profile_harmony.get("smartPerfSampleCount"), int)
+            and profile_harmony["smartPerfSampleCount"] >= 0,
+            f"{case_id} {participant_id} Harmony device counts are invalid",
+        )
+        require(
+            profile_harmony.get("successfulAttemptDeviceCoverageQualified")
+            is (
+                passed > 0
+                and profile_harmony["successfulDeviceTrials"] == passed
+            )
+            and profile_harmony.get("profiledSuccessCoverageQualified")
+            is (
+                passed > 0
+                and profile_harmony["profiledSuccessfulDeviceTrials"] == passed
+            )
+            and profile_harmony.get("authority")
+            == "operator-owned-harmony-ui-oracle-with-functional-pass-gated-smartperf",
+            f"{case_id} {participant_id} Harmony device qualification differs",
+        )
     process = row.get("processMeasurement")
     require(isinstance(process, dict), f"{case_id} process measurement is absent")
     require(isinstance(process.get("validAttemptCount"), int) and process["validAttemptCount"] > 0, f"{case_id} process denominator is invalid")
@@ -259,6 +295,89 @@ def validate_discrimination(
     require(dependency.get("coverageQualified") is (bool(obligation_count) and covered_count == obligation_count), f"{case_id} dependency discovery qualification differs")
     require(dependency.get("precisionClaimed") is False, f"{case_id} dependency discovery cannot claim precision")
     require(dependency.get("authority") == "hidden-revision-bound-program-fact-obligations-not-gold-path-imitation", f"{case_id} dependency discovery authority differs")
+    harmony = process.get("harmonyDevice")
+    require(isinstance(harmony, dict), f"{case_id} Harmony device measurement is absent")
+    harmony_counts = (
+        "executedAttemptCount",
+        "successfulAttemptCount",
+        "successfulDeviceAttemptCount",
+        "profiledSuccessfulAttemptCount",
+        "smartPerfSampleCount",
+    )
+    require(
+        all(
+            isinstance(harmony.get(field), int) and harmony[field] >= 0
+            for field in harmony_counts
+        ),
+        f"{case_id} Harmony device denominators are invalid",
+    )
+    require(
+        harmony["executedAttemptCount"] <= process["validAttemptCount"]
+        and harmony["successfulDeviceAttemptCount"]
+        <= harmony["successfulAttemptCount"]
+        and harmony["profiledSuccessfulAttemptCount"]
+        <= harmony["successfulDeviceAttemptCount"],
+        f"{case_id} Harmony device counts are inconsistent",
+    )
+    require(
+        harmony["executedAttemptCount"]
+        == sum(
+            profile["processMeasurement"]["harmonyDevice"]["executedTrials"]
+            for profile in profiles
+        )
+        and harmony["successfulAttemptCount"]
+        == sum(profile["passedTrials"] for profile in profiles)
+        and harmony["successfulDeviceAttemptCount"]
+        == sum(
+            profile["processMeasurement"]["harmonyDevice"][
+                "successfulDeviceTrials"
+            ]
+            for profile in profiles
+        )
+        and harmony["profiledSuccessfulAttemptCount"]
+        == sum(
+            profile["processMeasurement"]["harmonyDevice"][
+                "profiledSuccessfulDeviceTrials"
+            ]
+            for profile in profiles
+        )
+        and harmony["smartPerfSampleCount"]
+        == sum(
+            profile["processMeasurement"]["harmonyDevice"][
+                "smartPerfSampleCount"
+            ]
+            for profile in profiles
+        ),
+        f"{case_id} Harmony device aggregate differs from participant profiles",
+    )
+    successful_device_qualified = (
+        harmony["successfulAttemptCount"] > 0
+        and harmony["successfulDeviceAttemptCount"]
+        == harmony["successfulAttemptCount"]
+    )
+    profiled_success_qualified = (
+        harmony["successfulAttemptCount"] > 0
+        and harmony["profiledSuccessfulAttemptCount"]
+        == harmony["successfulAttemptCount"]
+    )
+    require(
+        harmony.get("successfulAttemptDeviceCoverageQualified")
+        is successful_device_qualified
+        and harmony.get("profiledSuccessCoverageQualified")
+        is profiled_success_qualified
+        and harmony.get("endToEndEvidenceQualified")
+        is (
+            harmony["executedAttemptCount"] > 0
+            and successful_device_qualified
+            and profiled_success_qualified
+        ),
+        f"{case_id} Harmony device qualification differs",
+    )
+    require(
+        harmony.get("authority")
+        == "operator-owned-harmony-ui-oracle-with-functional-pass-gated-smartperf",
+        f"{case_id} Harmony device authority differs",
+    )
     return value, row
 
 
@@ -402,11 +521,14 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
         dependency_measurement_qualified = (
             dependency["measurementCoverageQualified"] is True
         )
+        harmony = row["processMeasurement"]["harmonyDevice"]
+        harmony_end_to_end_qualified = harmony["endToEndEvidenceQualified"] is True
         outcome_qualified = row.get("eligible") is True
         qualified = (
             review_qualified
             and outcome_qualified
             and process_qualified
+            and harmony_end_to_end_qualified
             and expected_order
             and interval_separated
         )
@@ -435,6 +557,11 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
                 "dependencyDiscoveryUnadjudicatedClaimCount": dependency["unadjudicatedClaimCount"],
                 "dependencyDiscoveryMissingStageCount": dependency["missingStageCount"],
                 "dependencyDiscoveryInvalidStageCount": dependency["invalidStageCount"],
+                "harmonyDeviceExecutedAttemptCount": harmony["executedAttemptCount"],
+                "harmonySuccessfulAttemptDeviceCoverageQualified": harmony["successfulAttemptDeviceCoverageQualified"],
+                "harmonyProfiledSuccessCoverageQualified": harmony["profiledSuccessCoverageQualified"],
+                "harmonyEndToEndEvidenceQualified": harmony_end_to_end_qualified,
+                "harmonySmartPerfSampleCount": harmony["smartPerfSampleCount"],
                 "expectedCapabilityOrderQualified": expected_order,
                 "strongestMinusWeakestPassRate": strongest["passRate"] - weakest["passRate"],
                 "strongestWeakestWilson95Separated": interval_separated,
@@ -480,6 +607,9 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
     )
     dependency_discovery_coverage_qualified = all(
         row["dependencyDiscoveryCoverageQualified"] for row in case_rows
+    )
+    harmony_end_to_end_qualified = all(
+        row["harmonyEndToEndEvidenceQualified"] for row in case_rows
     )
     return {
         "schema": (
@@ -533,6 +663,7 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
             "participantSelfAssessmentMeasurementQualified": self_assessment_measurement_qualified,
             "dependencyDiscoveryMeasurementQualified": dependency_discovery_measurement_qualified,
             "dependencyDiscoveryCoverageQualified": dependency_discovery_coverage_qualified,
+            "harmonyEndToEndEvidenceQualified": harmony_end_to_end_qualified,
             "qualifiedCaseRate": qualified_count / case_count,
             "qualifiedCaseRateWilson95": scorer.wilson_interval(qualified_count, case_count),
             "populationRepresentativenessQualified": False,

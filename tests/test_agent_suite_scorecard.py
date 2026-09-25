@@ -73,6 +73,19 @@ def process(*, self_assessment: bool = False, dependency_discovery: bool = False
     return value
 
 
+def harmony_stage_coverage(passed: bool) -> dict:
+    return {
+        "schema": "agentlab.assessment_stage_coverage.v1",
+        "stageIds": ["static", "harmony-device"],
+        "harmonyDevice": {
+            "executed": True,
+            "oraclePass": passed,
+            "profileCollected": passed,
+            "smartPerfSampleCount": 3 if passed else 0,
+        },
+    }
+
+
 class AgentSuiteScorecardTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
@@ -237,6 +250,7 @@ class AgentSuiteScorecardTests(unittest.TestCase):
                         self_assessment=self_assessment,
                         dependency_discovery=dependency_discovery,
                     )
+                    attempt["stageCoverage"] = harmony_stage_coverage(passed)
                 attempts.append(attempt)
         report = SCORER.build_report(
             {
@@ -303,6 +317,10 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         )
         self.assertFalse(
             value["qualification"]["participantSelfAssessmentMeasurementQualified"]
+        )
+        self.assertTrue(value["qualification"]["harmonyEndToEndEvidenceQualified"])
+        self.assertTrue(
+            all(row["harmonyEndToEndEvidenceQualified"] for row in value["cases"])
         )
         self.assertTrue(
             all(
@@ -416,6 +434,43 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         failed = next(row for row in value["cases"] if row["caseId"] == "case-b")
         self.assertFalse(failed["processMeasurementCoverageQualified"])
         self.assertFalse(failed["scorecardQualified"])
+
+    def test_static_only_report_cannot_qualify_as_end_to_end_suite(self) -> None:
+        report = json.loads(self.reports["case-b"].read_text())
+        for profile in report["ranking"][0]["participantProfiles"]:
+            profile["processMeasurement"]["harmonyDevice"] = {
+                "executedTrials": 0,
+                "successfulTrials": profile["passedTrials"],
+                "successfulDeviceTrials": 0,
+                "profiledSuccessfulDeviceTrials": 0,
+                "successfulAttemptDeviceCoverageQualified": False,
+                "profiledSuccessCoverageQualified": False,
+                "smartPerfSampleCount": 0,
+                "authority": "operator-owned-harmony-ui-oracle-with-functional-pass-gated-smartperf",
+            }
+        harmony = report["ranking"][0]["processMeasurement"]["harmonyDevice"]
+        harmony.update(
+            {
+                "executedAttemptCount": 0,
+                "successfulDeviceAttemptCount": 0,
+                "profiledSuccessfulAttemptCount": 0,
+                "successfulAttemptDeviceCoverageQualified": False,
+                "profiledSuccessCoverageQualified": False,
+                "endToEndEvidenceQualified": False,
+                "smartPerfSampleCount": 0,
+            }
+        )
+        self.reports["case-b"].write_text(json.dumps(report))
+        self.write_attestation(
+            self.report_attestations["case-b"], self.reports["case-b"], 2002
+        )
+        self.write_manifest()
+        value = SUITE.build_scorecard(self.manifest)
+        failed = next(row for row in value["cases"] if row["caseId"] == "case-b")
+        self.assertFalse(failed["harmonyEndToEndEvidenceQualified"])
+        self.assertFalse(failed["scorecardQualified"])
+        self.assertFalse(value["qualification"]["suiteMeasurementQualified"])
+        self.assertFalse(value["qualification"]["harmonyEndToEndEvidenceQualified"])
 
     def test_scorecard_membership_must_equal_reviewed_population(self) -> None:
         self.write_manifest(case_ids=["case-a"])
