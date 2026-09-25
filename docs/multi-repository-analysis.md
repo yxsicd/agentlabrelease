@@ -28,6 +28,13 @@ each successful fetch in the local object database. A transport interruption
 can therefore resume without redownloading a monolithic source pack or
 weakening the exact-revision fence.
 
+Committed blob queries use Git's widely supported `cat-file --batch -z`
+protocol: each revision/path query is NUL-terminated, while the response header
+and post-blob delimiter remain newline-terminated. This preserves unusual
+committed paths, including embedded newlines, without requiring the newer
+uppercase `-Z` response protocol. The same analyzer binary can therefore run
+against the older Git shipped on the hwlinux execution host.
+
 Before analysis, the workflow re-fetches two bounded Git blob-size tiers (8 KiB
 and 32 KiB). This coalesces the large population of small source files into a
 few resumable packs. Any larger source blobs remain explicit in the transport

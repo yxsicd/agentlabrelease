@@ -49,7 +49,11 @@ fn git_blobs(
     let mut child = Command::new("git")
         .arg("-C")
         .arg(&repository.root)
-        .args(["cat-file", "--batch", "-Z"])
+        // `-z` keeps arbitrary path queries NUL-delimited while retaining the
+        // newline-delimited batch response supported by older Git releases.
+        // Uppercase `-Z` makes responses NUL-delimited too, but is not
+        // available on every Linux Git version AgentLab supports.
+        .args(["cat-file", "--batch", "-z"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -75,8 +79,8 @@ fn git_blobs(
     let mut blobs = BTreeMap::new();
     for path in paths {
         let mut header = Vec::new();
-        stdout.read_until(0, &mut header)?;
-        if header.pop() != Some(0) {
+        stdout.read_until(b'\n', &mut header)?;
+        if header.pop() != Some(b'\n') {
             return Err(fail(format!("unterminated git cat-file header for {path}")));
         }
         let header = std::str::from_utf8(&header)?;
@@ -91,7 +95,7 @@ fn git_blobs(
         stdout.read_exact(&mut bytes)?;
         let mut delimiter = [0];
         stdout.read_exact(&mut delimiter)?;
-        if delimiter != [0] {
+        if delimiter != [b'\n'] {
             return Err(fail(format!("unterminated git blob for {path}")));
         }
         blobs.insert(path.clone(), bytes);
