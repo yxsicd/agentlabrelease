@@ -156,7 +156,10 @@ def validate_token(value: str, label: str, pattern: re.Pattern[str] = TOKEN) -> 
     return value
 
 
-def execute(args: argparse.Namespace) -> tuple[dict[str, Any], Path]:
+def execute(
+    args: argparse.Namespace,
+    contract_override: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], Path]:
     require(not args.output_dir.exists(), f"refusing to overwrite output directory: {args.output_dir}")
     validate_token(args.target, "HDC target")
     validate_token(args.bundle, "bundle")
@@ -171,10 +174,16 @@ def execute(args: argparse.Namespace) -> tuple[dict[str, Any], Path]:
         sha256(hap)
 
     contract_module = load_contract_module()
-    contract = contract_module.build_contract(
+    contract = contract_override or contract_module.build_contract(
         args.project_root,
         args.case_id,
         args.source_set_sha256,
+    )
+    require(
+        contract.get("schema") == contract_module.SCHEMA
+        and contract.get("caseId") == args.case_id
+        and contract.get("sourceSetSha256") == args.source_set_sha256,
+        "prevalidated Harmony standard test contract identity differs",
     )
     lane = next(
         (

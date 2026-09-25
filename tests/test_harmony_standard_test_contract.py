@@ -179,6 +179,20 @@ class HarmonyStandardTestContractTests(unittest.TestCase):
             self.assertEqual(lane["runnerAuthority"], "hvigor-GenerateOhosTestTemplate")
             self.assertEqual(lane["missing"], [])
 
+    def test_generated_build_outputs_do_not_change_source_contract_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.fixture(Path(directory), complete=True)
+            before = STANDARD.build_contract(root, "case-one", "a" * 64)
+            generated = root / "entry/build/default/outputs/ohosTest"
+            generated.mkdir(parents=True)
+            (generated / "entry-ohosTest-unsigned.hap").write_bytes(b"generated")
+            generated_runner = root / ".test/generated/OpenHarmonyTestRunner.ets"
+            generated_runner.parent.mkdir(parents=True)
+            generated_runner.write_text("generated\n")
+            after = STANDARD.build_contract(root, "case-one", "a" * 64)
+            self.assertEqual(after["projectTreeSha256"], before["projectTreeSha256"])
+            self.assertEqual(after["standardTestLanes"], before["standardTestLanes"])
+
     def test_public_schema_matches_contract(self) -> None:
         schema = json.loads(
             (ROOT / "schemas/harmony-standard-test-contract.schema.json").read_text()

@@ -15,6 +15,14 @@ SCHEMA = "agentlab.harmony_standard_test_contract.v1"
 RECEIPT_SCHEMA = "agentlab.harmony_standard_test_execution_receipt.v1"
 SHA256 = re.compile(r"[0-9a-f]{64}")
 TOKEN = re.compile(r"[A-Za-z0-9_.:@/+\-]{1,200}")
+GENERATED_DIRECTORIES = {
+    ".git",
+    ".hvigor",
+    ".test",
+    "build",
+    "node_modules",
+    "oh_modules",
+}
 
 
 class StandardTestError(ValueError):
@@ -47,8 +55,11 @@ def project_files(root: Path) -> list[Path]:
     require(root.is_dir(), "Harmony project root must be a directory")
     files = []
     for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root)
+        if any(part in GENERATED_DIRECTORIES for part in relative.parts):
+            continue
         if path.is_symlink():
-            raise StandardTestError(f"Harmony test source cannot contain symlinks: {path.relative_to(root)}")
+            raise StandardTestError(f"Harmony test source cannot contain symlinks: {relative}")
         if path.is_file():
             files.append(path)
     require(files, "Harmony project is empty")

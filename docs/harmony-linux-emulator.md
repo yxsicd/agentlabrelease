@@ -144,6 +144,38 @@ which distinguishes Instrument Test, Local Test and Hypium UI automation, and
 keeps compatibility, stability, performance, power, security and UX as
 separate quality dimensions.
 
+For the normal source-to-device path, use the combined executor so the two
+HAPs cannot be substituted between build and execution:
+
+```sh
+python3 scripts/run-harmony-source-standard-test.py \
+  --project-root /absolute/path/to/materialized-project \
+  --case-id case-42 \
+  --source-set-sha256 <frozen-source-set-sha256> \
+  --hvigorw /absolute/path/to/hvigorw \
+  --build-module entry \
+  --product default \
+  --build-mode debug \
+  --app-hap entry/build/default/outputs/default/entry-default-unsigned.hap \
+  --test-hap entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap \
+  --hdc /absolute/path/to/hdc \
+  --target <exact-hdc-target> \
+  --bundle com.example.app \
+  --test-module entry_test \
+  --output-dir /absolute/new/evidence-directory
+```
+
+It runs the fixed argument-vector Hvigor target
+`module=<module>@ohosTest ... assembleHap --no-daemon`, retains the build
+command and output, binds both generated packages, verifies that every
+pre-existing source/configuration file stayed byte-identical, and then invokes
+the device executor below. Generated dependency and build directories
+(`build`, `.test`, `.hvigor`, `node_modules`, `oh_modules` and `.git`) are
+excluded from the source-tree identity so repeated builds of the same source
+remain the same case. A build failure or source mutation stops before device
+installation and is retained in `build-receipt.json`; `receipt.json` binds the
+build receipt to the nested native execution receipt.
+
 For an `ohosTest` Instrument Test, run the app HAP and its test HAP against an
 already booted emulator target with the bounded executor:
 
@@ -204,6 +236,21 @@ SHA256 `8fc99273…4908`; reinspection of the receipt returned
 project, package pair and test run. It does not imply that unsigned packages
 are installable on production devices, nor does one passing test establish
 suite breadth or application-wide quality.
+
+The combined source executor was then exercised against the same retained
+project and emulator as a separate evidence cut at
+`/home/huawei/.agentlab/evidence/harmony-source-standard-real-20260925`.
+One invocation bound the pre-build source contract, ran
+`phone@ohosTest`, verified every pre-existing source/configuration byte,
+installed both generated HAPs and executed the native test module. The warmed
+Hvigor rebuild took 2.701 seconds; the app and test package digests remained
+`a55f0f06…9285` and `c513d81c…1b45`, while the source-only project identity
+remained `b0c7a6f3…3349`. The nested native report again recorded one pass,
+zero failures/errors and final code zero. The top-level source-to-test receipt
+is SHA256 `87e16027…61d9`. This closes the operational gap between the prior
+source build and prebuilt-package executor for this exact canary; campaign-wide
+standard-test enforcement still requires wiring the receipt into every
+assessed attempt.
 
 ## Relative performance feedback
 
