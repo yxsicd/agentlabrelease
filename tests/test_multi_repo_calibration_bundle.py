@@ -27,6 +27,7 @@ class MultiRepoCalibrationBundleTest(unittest.TestCase):
         for name in ("calibrate.py", "oracle.mjs", "calibration-bundle.json"):
             shutil.copyfile(source / name, bundle_source / name)
         shutil.copytree(source / "reference", bundle_source / "reference")
+        shutil.copytree(source / "alternatives", bundle_source / "alternatives")
         contract = root / "construction-contract.json"
         contract.write_text(json.dumps({
             "schema": "agentlab.multi_repo_construction_contract.v1",
@@ -76,7 +77,13 @@ class MultiRepoCalibrationBundleTest(unittest.TestCase):
             self.assertFalse(receipt["automaticPromotion"])
             self.assertEqual(receipt["oracleSha256"], sha256(staged / "oracle.mjs"))
             summary = json.loads((output / "summary.json").read_text())
-            self.assertEqual(set(summary["variants"]), {"baseline", "reference", "hardcoded-premium", "stale-consumer"})
+            self.assertEqual(set(summary["variants"]), {"baseline", "reference", "equivalent-policy-loop", "hardcoded-premium", "stale-consumer"})
+            self.assertEqual(summary["variantRoles"]["equivalent-policy-loop"], "alternative-valid")
+            self.assertTrue(all(
+                row["pass"]
+                for row in summary["variants"]["equivalent-policy-loop"]["stages"].values()
+            ))
+            self.assertEqual(receipt["alternativeTrees"][0]["id"], "equivalent-policy-loop")
             self.assertTrue(summary["variants"]["stale-consumer"]["stages"]["turn-1"]["pass"])
             self.assertFalse(summary["variants"]["stale-consumer"]["stages"]["turn-2"]["pass"])
 
@@ -92,6 +99,23 @@ class MultiRepoCalibrationBundleTest(unittest.TestCase):
             (bundle_source / "oracle.mjs").write_text("tampered\n")
             with self.assertRaisesRegex(BUNDLE.BundleError, "Oracle bytes differ"):
                 BUNDLE.propose(bundle_source, descriptor, construction)
+
+    def test_alternative_solution_tamper_and_role_drift_fail_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bundle_source, descriptor, construction, _proposal, _review, _contract = self.prepare(root)
+            value = json.loads(descriptor.read_text())
+            value["variantRoles"]["equivalent-policy-loop"] = "wrong"
+            descriptor.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+            with self.assertRaisesRegex(BUNDLE.BundleError, "alternative valid solution"):
+                BUNDLE.propose(bundle_source, descriptor, construction)
+
+            value["variantRoles"]["equivalent-policy-loop"] = "alternative-valid"
+            descriptor.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+            alternative = bundle_source / "alternatives/equivalent-policy-loop/app/src/checkout.ts"
+            alternative.write_text(alternative.read_text() + "\n// tampered after proposal\n")
+            with self.assertRaisesRegex(BUNDLE.BundleError, "proposal differs from exact inputs"):
+                BUNDLE.stage(bundle_source, descriptor, construction, _proposal, root / "staged")
 
     def test_workflows_keep_proposal_review_execution_and_freeze_separate(self):
         proposal = (ROOT / ".github/workflows/multi-repo-calibration-bundle-proposal.yml").read_text()

@@ -32,6 +32,7 @@ def main():
     parser.add_argument("--baseline", type=Path, required=True)
     parser.add_argument("--reference", type=Path, required=True)
     parser.add_argument("--oracle", type=Path, default=Path(__file__).with_name("oracle.mjs"))
+    parser.add_argument("--alternate", action="append", default=[])
     parser.add_argument("--source-set-sha256", required=True)
     parser.add_argument("--candidate-id", required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -44,6 +45,23 @@ def main():
         target = variants_root / name
         shutil.copytree(source, target)
         variants[name] = target
+    alternative_declarations = args.alternate or [
+        f"equivalent-policy-loop={Path(__file__).with_name('alternatives') / 'equivalent-policy-loop'}"
+    ]
+    alternative_ids = []
+    for declaration in alternative_declarations:
+        if "=" not in declaration:
+            raise RuntimeError("alternate declaration must be id=path")
+        name, raw_source = declaration.split("=", 1)
+        if not name or name in variants:
+            raise RuntimeError(f"invalid or duplicate alternate variant: {name}")
+        source = Path(raw_source)
+        if not source.is_dir() or source.is_symlink():
+            raise RuntimeError(f"alternate variant is not a non-symlink directory: {name}")
+        target = variants_root / name
+        shutil.copytree(source, target)
+        variants[name] = target
+        alternative_ids.append(name)
     hardcoded = variants_root / "hardcoded-premium"
     shutil.copytree(args.reference, hardcoded)
     replace(
@@ -95,6 +113,12 @@ def main():
         "oracleSha256": hashlib.sha256(oracle.read_bytes()).hexdigest(),
         "receiptSchema": "agentlab.multi_repo_oracle_receipt.v1",
         "infrastructureAvailable": True,
+        "variantRoles": {
+            **{"baseline": "baseline", "reference": "reference"},
+            **{name: "alternative-valid" for name in alternative_ids},
+            "hardcoded-premium": "wrong",
+            "stale-consumer": "wrong",
+        },
         "variants": results,
         "coverage": "Executable JavaScript-compatible TypeScript module bodies through a supervisor-owned VM module linker; no Harmony compiler, UI or emulator claim.",
     }

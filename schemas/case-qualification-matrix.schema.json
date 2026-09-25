@@ -59,12 +59,18 @@
     "referenceReplay": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "summarySha256", "infrastructureAvailable", "variants"],
+      "required": ["status", "summarySha256", "infrastructureAvailable", "alternativeValidCount", "alternativeValidQualified", "variants"],
       "properties": {
         "status": {"const": "qualified"},
         "summarySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "infrastructureAvailable": {"const": true},
-        "variants": {"type": "array", "minItems": 3}
+        "alternativeValidCount": {"type": "integer", "minimum": 0},
+        "alternativeValidQualified": {"type": "boolean"},
+        "variants": {
+          "type": "array",
+          "minItems": 3,
+          "items": {"$ref": "#/$defs/variant"}
+        }
       }
     },
     "freshness": {
@@ -109,6 +115,21 @@
       "properties": {
         "status": {"const": "separate-gate"},
         "checks": {"type": "array", "maxItems": 0}
+      }
+    },
+    "variant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "role", "sourceSha256", "stagePass"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "role": {"enum": ["baseline", "reference", "wrong", "alternative-valid"]},
+        "sourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "stagePass": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {"type": "boolean"}
+        }
       }
     }
   }

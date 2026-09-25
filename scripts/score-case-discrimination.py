@@ -44,7 +44,7 @@ def calibration_passed(calibration: Any) -> bool:
     if calibration.get("referenceObservedPass") is not True:
         return False
     variants = calibration.get("negativeVariants")
-    return (
+    negative_valid = (
         isinstance(variants, list)
         and bool(variants)
         and all(
@@ -55,6 +55,19 @@ def calibration_passed(calibration: Any) -> bool:
             for item in variants
         )
     )
+    alternatives = calibration.get("alternativeValidVariants")
+    alternative_valid = alternatives is None or (
+        isinstance(alternatives, list)
+        and bool(alternatives)
+        and all(
+            isinstance(item, dict)
+            and item.get("expectedPass") is True
+            and item.get("observedPass") is True
+            and item.get("infrastructureValid") is True
+            for item in alternatives
+        )
+    )
+    return negative_valid and alternative_valid
 
 
 def entropy(probability: float) -> float:

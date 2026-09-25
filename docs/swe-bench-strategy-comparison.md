@@ -284,8 +284,10 @@ assumptions:
   baseline, repetitions, workload, metric authority and variance policy.
 - `oracleAuthority` binds executable bytes, receipt schema and independence
   from the construction participant.
-- `referenceReplay` proves the reference passes and deliberately wrong variants
-  fail in fresh environments.
+- `referenceReplay` proves both that the reference and at least one structurally
+  different behaviorally valid implementation pass, while deliberately wrong
+  variants fail in fresh environments. This is the executable guard against an
+  implementation-specific Oracle, not a claim that every valid solution is covered.
 - `freshness` records source visibility, issue/fix dates, case construction
   mode, leakage review and the model/tool knowledge boundary.
 - `review` records specification fairness, Oracle breadth, coverage and
@@ -337,8 +339,11 @@ underspecified or contaminated case.
    provenance, while retaining model-training exclusion as unknown unless
    separately evidenced.
 2. Broaden `PASS_TO_PASS` coverage beyond the candidate's three qualified
-   routes, independently review Oracle breadth/fairness, and only then accept a
-   reference repair. The device campaign must extend, rather than
+   routes. The static calibration protocol now requires a digest-bound
+   alternative-valid implementation in addition to the reference and wrong
+   variants; exercise the same breadth rule on the real Harmony UI Oracle,
+   independently review fairness, and only then accept a reference repair.
+   The device campaign must extend, rather than
    overwrite, the static repair/preservation matrix with exact UI and
    performance receipts.
 3. Exercise the reviewed feedback-to-analysis bridge on a real source update

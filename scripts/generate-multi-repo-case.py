@@ -248,6 +248,19 @@ def main():
     require(isinstance(expectations, dict) and len(expectations) >= 3, "baseline, reference and wrong variants are required")
     require(isinstance(results, dict) and set(results) == set(expectations), "calibration variants do not match plan")
     require("baseline" in expectations and "reference" in expectations, "baseline and reference variants are required")
+    roles = calibration.get("variantRoles")
+    if roles is None:
+        roles = {
+            name: (name if name in {"baseline", "reference"} else "wrong")
+            for name in expectations
+        }
+    require(
+        isinstance(roles, dict)
+        and set(roles) == set(expectations)
+        and set(roles.values()) <= {"baseline", "reference", "wrong", "alternative-valid"},
+        "calibration variant roles are invalid",
+    )
+    require(roles.get("baseline") == "baseline" and roles.get("reference") == "reference", "baseline/reference calibration roles differ")
     cumulative_checks = {}
     seen_checks = []
     for stage in stages:
@@ -266,9 +279,13 @@ def main():
             require(actual[stage_id].get("checkCount") == len(actual_checks), "oracle check count mismatch")
     require(all(expectations["reference"].values()), "reference must pass every stage")
     require(not all(expectations["baseline"].values()), "baseline must fail at least one stage")
-    wrong_variants = [name for name in expectations if name not in {"baseline", "reference"}]
+    wrong_variants = [name for name, role in roles.items() if role == "wrong"]
+    alternative_variants = [name for name, role in roles.items() if role == "alternative-valid"]
     require(wrong_variants and all(not all(expectations[name].values()) for name in wrong_variants), "every wrong variant must fail at least one stage")
     require(any(any(expectations[name].values()) and not all(expectations[name].values()) for name in wrong_variants), "at least one wrong variant must cross an earlier stage and fail a later stage")
+    if calibration.get("variantRoles") is not None:
+        require(alternative_variants, "explicit calibration roles require an alternative valid solution")
+        require(all(all(expectations[name].values()) for name in alternative_variants), "every alternative valid solution must pass every stage")
 
     plan_sha256 = digest(args.plan)
     calibration_sha256 = digest(args.calibration)
@@ -282,8 +299,26 @@ def main():
         require(calibration_run.get("sourceSetSha256") == source_set, "calibration bundle run source set mismatch")
         require(calibration_run.get("oracleSha256") == oracle_digest, "calibration bundle run Oracle mismatch")
         require(calibration_run.get("summarySha256") == calibration_sha256, "calibration bundle run summary mismatch")
+        if calibration_run.get("variantRoles") is not None:
+            require(calibration_run["variantRoles"] == roles, "calibration bundle run variant roles differ")
         for field in ("calibrationBundleSha256", "constructionContractSha256", "descriptorSha256", "driverSha256", "referenceTreeSha256"):
             require(isinstance(calibration_run.get(field), str) and SHA256.fullmatch(calibration_run[field]), f"calibration bundle run requires exact {field}")
+        alternative_trees = calibration_run.get("alternativeTrees")
+        if calibration.get("variantRoles") is not None:
+            alternative_ids = sorted(name for name, role in roles.items() if role == "alternative-valid")
+            require(
+                isinstance(alternative_trees, list)
+                and sorted(row.get("id") for row in alternative_trees if isinstance(row, dict)) == alternative_ids
+                and all(
+                    isinstance(row, dict)
+                    and isinstance(row.get("root"), str)
+                    and row["root"]
+                    and isinstance(row.get("treeSha256"), str)
+                    and SHA256.fullmatch(row["treeSha256"])
+                    for row in alternative_trees
+                ),
+                "calibration bundle run alternative trees are invalid",
+            )
         calibration_run_binding = {
             "runSha256": digest(args.calibration_run),
             "bundleSha256": calibration_run["calibrationBundleSha256"],
@@ -291,6 +326,14 @@ def main():
             "descriptorSha256": calibration_run["descriptorSha256"],
             "driverSha256": calibration_run["driverSha256"],
             "referenceTreeSha256": calibration_run["referenceTreeSha256"],
+            **(
+                {
+                    "alternativeTrees": alternative_trees,
+                    "variantRoles": roles,
+                }
+                if calibration.get("variantRoles") is not None
+                else {}
+            ),
         }
     qualification_matrix = build_matrix(
         case_id=case_id,
@@ -326,6 +369,7 @@ def main():
             "variantSourceSha256": {
                 name: row.get("sourceSha256") for name, row in results.items()
             },
+            "variantRoles": roles,
             **({"executableBundle": calibration_run_binding} if calibration_run_binding else {}),
         },
         "construction": plan.get("construction"),

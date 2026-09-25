@@ -56,6 +56,21 @@ class CaseDiscriminationTests(unittest.TestCase):
         self.assertFalse(row["eligible"])
         self.assertEqual(row["decision"], "reject-oracle-calibration")
 
+    def test_failed_alternative_valid_solution_rejects_case(self) -> None:
+        case = self.value["cases"][0]
+        case["calibration"]["alternativeValidVariants"] = [
+            {
+                "id": "equivalent-implementation",
+                "expectedPass": True,
+                "observedPass": False,
+                "infrastructureValid": True,
+            }
+        ]
+        row = MODULE.score_case(case, 3, 0.6)
+        self.assertFalse(row["calibrationPassed"])
+        self.assertFalse(row["eligible"])
+        self.assertEqual(row["decision"], "reject-oracle-calibration")
+
     def test_duplicate_attempt_identity_is_rejected(self) -> None:
         case = self.value["cases"][0]
         case["attempts"][1]["attemptId"] = case["attempts"][0]["attemptId"]

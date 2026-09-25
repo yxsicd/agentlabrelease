@@ -55,6 +55,23 @@ def _check_results(calibration: dict, stages: list[dict]) -> dict[str, dict[str,
     return normalized
 
 
+def _variant_roles(calibration: dict, variants: set[str]) -> dict[str, str]:
+    roles = calibration.get("variantRoles")
+    if roles is None:
+        return {
+            name: (name if name in {"baseline", "reference"} else "wrong")
+            for name in variants
+        }
+    require(
+        isinstance(roles, dict)
+        and set(roles) == variants
+        and set(roles.values()) <= {"baseline", "reference", "wrong", "alternative-valid"},
+        "qualification variant roles are invalid",
+    )
+    require(roles.get("baseline") == "baseline" and roles.get("reference") == "reference", "qualification baseline/reference roles differ")
+    return roles
+
+
 def build_matrix(
     *,
     case_id: str,
@@ -71,6 +88,7 @@ def build_matrix(
     require(isinstance(calibration_sha256, str) and SHA256.fullmatch(calibration_sha256), "qualification calibration digest is invalid")
     results = _check_results(calibration, stages)
     require("baseline" in results and "reference" in results, "baseline and reference qualification evidence are required")
+    roles = _variant_roles(calibration, set(results))
     repair_checks = []
     preservation_checks = []
     stage_checks = []
@@ -101,9 +119,8 @@ def build_matrix(
                 repair_checks.append(row)
     require(repair_checks, "at least one repair check is required")
     require(preservation_checks, "at least one preservation check is required")
-    wrong_variants = [
-        name for name in results if name not in {"baseline", "reference"}
-    ]
+    wrong_variants = [name for name, role in roles.items() if role == "wrong"]
+    alternative_variants = [name for name, role in roles.items() if role == "alternative-valid"]
     require(wrong_variants, "at least one wrong qualification variant is required")
     wrong_stage_verdicts = {
         name: [calibration["variants"][name]["stages"][stage["id"]]["pass"] for stage in stages]
@@ -117,6 +134,15 @@ def build_matrix(
         any(any(verdicts) and not all(verdicts) for verdicts in wrong_stage_verdicts.values()),
         "at least one wrong qualification variant must cross an earlier stage",
     )
+    if calibration.get("variantRoles") is not None:
+        require(alternative_variants, "explicit qualification roles require an alternative valid solution")
+        require(
+            all(
+                all(calibration["variants"][name]["stages"][stage["id"]]["pass"] for stage in stages)
+                for name in alternative_variants
+            ),
+            "every alternative valid qualification variant must pass every stage",
+        )
 
     if review:
         review_gate = {
@@ -143,6 +169,7 @@ def build_matrix(
         variants.append(
             {
                 "id": name,
+                "role": roles[name],
                 "sourceSha256": source_sha256,
                 "stagePass": {stage["id"]: stage_verdicts[stage["id"]]["pass"] for stage in stages},
             }
@@ -174,6 +201,8 @@ def build_matrix(
             "status": "qualified",
             "summarySha256": calibration_sha256,
             "infrastructureAvailable": calibration.get("infrastructureAvailable"),
+            "alternativeValidCount": len(alternative_variants),
+            "alternativeValidQualified": bool(alternative_variants),
             "variants": variants,
         },
         "freshness": {

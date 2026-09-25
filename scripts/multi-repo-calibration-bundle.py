@@ -22,11 +22,13 @@ CONTRACT_SCHEMA = "agentlab.multi_repo_calibration_bundle.v1"
 RUN_SCHEMA = "agentlab.multi_repo_calibration_bundle_run.v1"
 CONSTRUCTION_SCHEMA = "agentlab.multi_repo_construction_contract.v1"
 RISK_IDS = {
+    "alternative-valid-solution-unverified",
     "driver-semantics-unverified",
     "oracle-independence-unverified",
     "reference-correctness-unverified",
     "wrong-variant-discrimination-unverified",
 }
+VARIANT_ROLES = {"baseline", "reference", "wrong", "alternative-valid"}
 
 
 class BundleError(ValueError):
@@ -135,17 +137,78 @@ def validate_source(bundle_root: Path, descriptor_path: Path, construction_path:
         and variant_ids
         and len(variant_ids) == len(set(variant_ids))
         and all(isinstance(value, str) and TOKEN.fullmatch(value) for value in variant_ids),
-        "wrong variant ids are invalid",
+        "calibration variant ids are invalid",
     )
-    require(set(variant_ids) == set(expectations) - {"baseline", "reference"}, "wrong variant ids differ from construction contract")
+    require(set(variant_ids) == set(expectations) - {"baseline", "reference"}, "calibration variant ids differ from construction contract")
+    variant_roles = descriptor.get("variantRoles")
+    require(
+        isinstance(variant_roles, dict)
+        and set(variant_roles) == set(expectations)
+        and all(isinstance(name, str) and role in VARIANT_ROLES for name, role in variant_roles.items()),
+        "calibration variant roles are invalid",
+    )
+    require(variant_roles.get("baseline") == "baseline", "baseline variant role differs")
+    require(variant_roles.get("reference") == "reference", "reference variant role differs")
+    require(
+        sum(role == "baseline" for role in variant_roles.values()) == 1
+        and sum(role == "reference" for role in variant_roles.values()) == 1,
+        "baseline and reference roles must be unique",
+    )
+    wrong_ids = sorted(name for name, role in variant_roles.items() if role == "wrong")
+    alternative_ids = sorted(name for name, role in variant_roles.items() if role == "alternative-valid")
+    require(wrong_ids, "bundle requires a wrong variant")
+    require(alternative_ids, "bundle requires an alternative valid solution")
+    alternative_roots = descriptor.get("alternativeVariantRoots")
+    require(
+        isinstance(alternative_roots, dict) and set(alternative_roots) == set(alternative_ids),
+        "alternative variant roots differ from alternative-valid roles",
+    )
     stages = oracle_contract.get("stageOrder")
     require(isinstance(stages, list) and len(stages) >= 2, "Oracle stage order is invalid")
+    require(not all(expectations["baseline"].get(stage) is True for stage in stages), "baseline must fail at least one stage")
+    require(all(expectations["reference"].get(stage) is True for stage in stages), "reference must pass every stage")
+    require(
+        all(not all(expectations[name].get(stage) is True for stage in stages) for name in wrong_ids),
+        "every wrong variant must fail at least one stage",
+    )
     crossing = any(
         any(expectations[name].get(stage) is True for stage in stages[:-1])
         and any(expectations[name].get(stage) is False for stage in stages[1:])
-        for name in variant_ids
+        for name in wrong_ids
     )
     require(crossing, "bundle requires a wrong variant that passes an earlier stage and fails later")
+    require(
+        all(all(expectations[name].get(stage) is True for stage in stages) for name in alternative_ids),
+        "every alternative valid solution must pass every stage",
+    )
+    alternatives = []
+    occupied_roots = [reference_relative]
+    for name in alternative_ids:
+        relative_root = safe_relative(alternative_roots[name], f"alternative root for {name}")
+        require(
+            all(
+                relative_root != occupied
+                and relative_root not in occupied.parents
+                and occupied not in relative_root.parents
+                for occupied in occupied_roots
+            ),
+            f"alternative root overlaps another solution tree: {name}",
+        )
+        require(
+            relative_root not in driver_relative.parents
+            and relative_root not in oracle_relative.parents
+            and driver_relative not in relative_root.parents
+            and oracle_relative not in relative_root.parents,
+            f"alternative root overlaps executable bytes: {name}",
+        )
+        files = file_manifest(bundle_root, relative_root)
+        alternatives.append({
+            "id": name,
+            "root": relative_root.as_posix(),
+            "treeSha256": manifest_digest(files),
+            "files": files,
+        })
+        occupied_roots.append(relative_root)
     reference_files = file_manifest(bundle_root, reference_relative)
     return {
         "descriptor": descriptor,
@@ -154,6 +217,8 @@ def validate_source(bundle_root: Path, descriptor_path: Path, construction_path:
         "oracle": oracle,
         "referenceFiles": reference_files,
         "referenceTreeSha256": manifest_digest(reference_files),
+        "alternatives": alternatives,
+        "variantRoles": variant_roles,
     }
 
 
@@ -178,9 +243,12 @@ def propose(bundle_root: Path, descriptor_path: Path, construction_path: Path) -
             "files": validated["referenceFiles"],
         },
         "variantIds": descriptor["variantIds"],
+        "variantRoles": validated["variantRoles"],
+        "alternatives": validated["alternatives"],
         "calibrationExpectations": construction["oracleContract"]["calibrationExpectations"],
         "risks": [
             {"id": "driver-semantics-unverified", "statement": "Reviewing exact driver bytes does not prove their execution semantics or runtime portability."},
+            {"id": "alternative-valid-solution-unverified", "statement": "A structurally different passing implementation requires explicit review before it can qualify Oracle breadth."},
             {"id": "oracle-independence-unverified", "statement": "The Oracle matches the construction contract but its independence still requires explicit review."},
             {"id": "reference-correctness-unverified", "statement": "The exact reference tree still requires human confirmation as a valid solution."},
             {"id": "wrong-variant-discrimination-unverified", "statement": "Declared wrong variants still require retained executable calibration evidence."},
@@ -274,6 +342,16 @@ def stage(bundle_root: Path, descriptor_path: Path, construction_path: Path, pro
         target = reference / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
+    for alternative in expected["alternatives"]:
+        alternative_root = output / safe_relative(alternative["root"], f"alternative root for {alternative['id']}")
+        alternative_root.mkdir(parents=True)
+        source_root = within(bundle_root, safe_relative(alternative["root"], "alternative root"), "alternative")
+        for row in alternative["files"]:
+            source = within(bundle_root, safe_relative(row["path"], "alternative file path"), "alternative file")
+            relative = source.relative_to(source_root)
+            target = alternative_root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
 
 
 def validate_summary(summary: dict[str, Any], contract: dict[str, Any]) -> None:
@@ -284,8 +362,10 @@ def validate_summary(summary: dict[str, Any], contract: dict[str, Any]) -> None:
     require(summary.get("receiptSchema") == contract["descriptor"]["receiptSchema"], "calibration receipt schema differs")
     require(summary.get("infrastructureAvailable") is True, "calibration infrastructure was unavailable")
     expectations = contract["calibrationExpectations"]
+    roles = contract["variantRoles"]
     variants = summary.get("variants")
     require(isinstance(variants, dict) and set(variants) == set(expectations), "calibration variants differ")
+    require(summary.get("variantRoles") == roles, "calibration variant roles differ")
     for variant, stage_expectations in expectations.items():
         actual = variants.get(variant, {}).get("stages")
         require(isinstance(actual, dict) and set(actual) == set(stage_expectations), f"calibration stages differ for {variant}")
@@ -313,6 +393,9 @@ def run_bundle(bundle_root: Path, contract_path: Path, proposal_path: Path, revi
         "--candidate-id", contract["candidateId"],
         "--output", str(output),
     ]
+    for alternative in contract["alternatives"]:
+        path = within(bundle_root, safe_relative(alternative["root"], "alternative root"), "alternative")
+        command.extend(["--alternate", f"{alternative['id']}={path}"])
     process = subprocess.run(command, text=True, capture_output=True, timeout=900)
     require(process.returncode == 0, f"calibration driver failed: {process.stderr[-2000:]}")
     summary_path = output / "summary.json"
@@ -329,8 +412,13 @@ def run_bundle(bundle_root: Path, contract_path: Path, proposal_path: Path, revi
         "driverSha256": digest(driver_path),
         "oracleSha256": digest(oracle_path),
         "referenceTreeSha256": contract["reference"]["treeSha256"],
+        "alternativeTrees": [
+            {"id": row["id"], "root": row["root"], "treeSha256": row["treeSha256"]}
+            for row in contract["alternatives"]
+        ],
         "summarySha256": digest(summary_path),
         "variantIds": sorted(summary["variants"]),
+        "variantRoles": summary["variantRoles"],
         "automaticPromotion": False,
     }
     write(output / "calibration-run.json", receipt)

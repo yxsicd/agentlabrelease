@@ -138,9 +138,17 @@ class CollectCaseAttemptsTests(unittest.TestCase):
                 "schema": "agentlab.multi_repo_calibration.v1",
                 "sourceSetSha256": self.source_set_sha256,
                 "infrastructureAvailable": True,
+                "variantRoles": {
+                    "baseline": "baseline",
+                    "reference": "reference",
+                    "equivalent": "alternative-valid",
+                    "wrong-boundary": "wrong",
+                    "stale-consumer": "wrong",
+                },
                 "variants": {
                     "baseline": variant(False, False),
                     "reference": variant(True, True),
+                    "equivalent": variant(True, True),
                     "wrong-boundary": variant(False, False),
                     "stale-consumer": variant(True, False),
                 },
@@ -289,6 +297,8 @@ class CollectCaseAttemptsTests(unittest.TestCase):
             self.assertFalse(calibration["baselineObservedPass"])
             self.assertTrue(calibration["referenceObservedPass"])
             self.assertEqual(len(calibration["negativeVariants"]), 2)
+            self.assertEqual(len(calibration["alternativeValidVariants"]), 1)
+            self.assertTrue(calibration["alternativeValidVariants"][0]["observedPass"])
             report = SCORER.build_report(collected, 3, 0.6)
             self.assertEqual(report["schema"], "agentlab.case_discrimination_report.v2")
             self.assertEqual(report["sourceSetSha256"], self.source_set_sha256)

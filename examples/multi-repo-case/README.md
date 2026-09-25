@@ -58,15 +58,19 @@ result contract without moving retry ownership out of the service. The Oracle
 executes the submitted JavaScript-compatible TypeScript module bodies through a
 supervisor-owned VM module linker.
 
-Calibration includes four variants:
+Calibration includes five explicitly classified variants:
 
 - `baseline` fails both turns;
 - `reference` passes both turns;
+- `equivalent-policy-loop` uses a lookup-table policy, a `while` loop and a
+  destructuring consumer instead of the reference structure, but must pass both
+  turns as an independently bound `alternative-valid` implementation;
 - `hardcoded-premium` violates the standard policy boundary and fails;
 - `stale-consumer` passes turn 1 but fails turn 2.
 
-That last variant proves the second demand measures retained cross-repository
-state rather than merely repeating the first check.
+The alternative-valid variant guards against an implementation-specific Oracle.
+The last wrong variant proves the second demand measures retained
+cross-repository state rather than merely repeating the first check.
 
 For real shared-external API candidates, do not pass a broad module cluster
 directly into intent construction. First select exact target and reference call

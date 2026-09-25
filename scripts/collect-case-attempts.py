@@ -103,8 +103,23 @@ def normalize_calibration(
 
     baseline_pass, baseline_stages = variant_pass("baseline")
     reference_pass, reference_stages = variant_pass("reference")
+    explicit_roles = calibration.get("variantRoles") is not None
+    roles = calibration.get("variantRoles")
+    if not explicit_roles:
+        roles = {
+            name: (name if name in {"baseline", "reference"} else "wrong")
+            for name in variants
+        }
+    if (
+        not isinstance(roles, dict)
+        or set(roles) != set(variants)
+        or not set(roles.values()) <= {"baseline", "reference", "wrong", "alternative-valid"}
+        or roles.get("baseline") != "baseline"
+        or roles.get("reference") != "reference"
+    ):
+        fail("multi-repository calibration variant roles are invalid")
     negative_variants = []
-    for name in sorted(set(variants) - {"baseline", "reference"}):
+    for name in sorted(name for name, role in roles.items() if role == "wrong"):
         observed, stages = variant_pass(name)
         negative_variants.append(
             {
@@ -117,7 +132,21 @@ def normalize_calibration(
         )
     if not negative_variants:
         fail("multi-repository calibration requires negative variants")
-    return {
+    alternative_variants = []
+    for name in sorted(name for name, role in roles.items() if role == "alternative-valid"):
+        observed, stages = variant_pass(name)
+        alternative_variants.append(
+            {
+                "id": name,
+                "expectedPass": True,
+                "observedPass": observed,
+                "infrastructureValid": True,
+                "stagePass": stages,
+            }
+        )
+    if explicit_roles and not alternative_variants:
+        fail("explicit multi-repository calibration roles require an alternative valid solution")
+    normalized = {
         "schema": "agentlab.case_calibration_summary.v1",
         "sourceSchema": "agentlab.multi_repo_calibration.v1",
         "sourceSetSha256": source_identity,
@@ -130,6 +159,9 @@ def normalize_calibration(
         "referenceStagePass": reference_stages,
         "negativeVariants": negative_variants,
     }
+    if explicit_roles:
+        normalized["alternativeValidVariants"] = alternative_variants
+    return normalized
 
 
 def normalize_process_measurement(

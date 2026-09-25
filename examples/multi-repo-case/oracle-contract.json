@@ -5,6 +5,10 @@
       "turn-1": false,
       "turn-2": false
     },
+    "equivalent-policy-loop": {
+      "turn-1": true,
+      "turn-2": true
+    },
     "hardcoded-premium": {
       "turn-1": false,
       "turn-2": false

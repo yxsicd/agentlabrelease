@@ -6,7 +6,18 @@
   "referenceRoot": "reference",
   "runtime": "python3",
   "schema": "agentlab.multi_repo_calibration_bundle_source.v1",
+  "alternativeVariantRoots": {
+    "equivalent-policy-loop": "alternatives/equivalent-policy-loop"
+  },
+  "variantRoles": {
+    "baseline": "baseline",
+    "equivalent-policy-loop": "alternative-valid",
+    "hardcoded-premium": "wrong",
+    "reference": "reference",
+    "stale-consumer": "wrong"
+  },
   "variantIds": [
+    "equivalent-policy-loop",
     "hardcoded-premium",
     "stale-consumer"
   ]

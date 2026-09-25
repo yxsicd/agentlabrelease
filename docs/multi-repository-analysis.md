@@ -178,13 +178,18 @@ surface to the construction participant.
 
 Arbitrary-source calibration now has its own boundary. `Multi-repository
 calibration bundle proposal` binds the reviewed construction contract to exact
-driver and Oracle digests, a complete reference-tree manifest, declared wrong
-variant IDs and the expected staged verdicts. A separate exact-digest review
+driver and Oracle digests, complete reference and alternative-solution tree
+manifests, explicit variant roles, and the expected staged verdicts. At least
+one structurally distinct `alternative-valid` implementation must pass every
+stage, while wrong variants must still include an early-pass/later-fail case.
+This rejects an Oracle that merely recognizes the reference implementation.
+A separate exact-digest review
 produces `agentlab.multi_repo_calibration_bundle.v1`; case review accepts only
 that trusted-main artifact, revalidates every byte, executes it against the
 materialized baseline and retains `agentlab.multi_repo_calibration_bundle_run.v1`.
-The frozen case records the bundle, driver, reference-tree, construction-contract
-and run digests. Oracle and reference bytes remain evaluator-only. This closes
+The frozen case records the bundle, driver, reference and alternative-tree,
+construction-contract and run digests. Oracle, reference and alternative-valid
+bytes remain evaluator-only. This closes
 the generic protocol. Release CI runs the entire deterministic protocol as one
 37-phase evidence chain and requires baseline failure, reference success, full
 hidden-dependency coverage and process-aware discrimination score `1.0`. That

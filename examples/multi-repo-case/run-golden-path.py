@@ -611,6 +611,12 @@ def main() -> int:
             == (case.get("lineage") or {}).get("calibrationBundleRun"),
             "frozen case calibration-bundle lineage differs",
         )
+        replay = (case.get("qualificationMatrix") or {}).get("referenceReplay") or {}
+        require(
+            replay.get("alternativeValidQualified") is True
+            and replay.get("alternativeValidCount") == 1,
+            "alternative-valid Oracle breadth qualification differs",
+        )
 
         summary = {
             "schema": "agentlab.multi_repo_golden_path.v1",
@@ -635,6 +641,11 @@ def main() -> int:
                 "score": ranking["metrics"]["discriminationScore"],
                 "processAwareEligible": ranking["processAwareEligible"],
                 "reportSha256": digest(discrimination_report),
+            },
+            "oracleBreadth": {
+                "alternativeValidQualified": True,
+                "alternativeValidCount": replay["alternativeValidCount"],
+                "variantRoles": (case.get("calibration") or {}).get("variantRoles"),
             },
             "phaseCount": len(runner.phases),
             "phases": runner.phases,

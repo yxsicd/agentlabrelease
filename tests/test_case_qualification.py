@@ -27,6 +27,12 @@ class CaseQualificationTest(unittest.TestCase):
             "oracleSha256": "2" * 64,
             "receiptSchema": "agentlab.multi_repo_oracle_receipt.v1",
             "infrastructureAvailable": True,
+            "variantRoles": {
+                "baseline": "baseline",
+                "reference": "reference",
+                "equivalent": "alternative-valid",
+                "wrong-later": "wrong",
+            },
             "variants": {
                 "baseline": {
                     "sourceSha256": "3" * 64,
@@ -50,6 +56,26 @@ class CaseQualificationTest(unittest.TestCase):
                 },
                 "reference": {
                     "sourceSha256": "4" * 64,
+                    "stages": {
+                        "turn-1": {
+                            "pass": True,
+                            "checks": [
+                                {"id": "repair", "pass": True},
+                                {"id": "preserve", "pass": True},
+                            ],
+                        },
+                        "turn-2": {
+                            "pass": True,
+                            "checks": [
+                                {"id": "repair", "pass": True},
+                                {"id": "preserve", "pass": True},
+                                {"id": "later", "pass": True},
+                            ],
+                        },
+                    },
+                },
+                "equivalent": {
+                    "sourceSha256": "6" * 64,
                     "stages": {
                         "turn-1": {
                             "pass": True,
@@ -144,6 +170,12 @@ class CaseQualificationTest(unittest.TestCase):
             case["qualificationMatrix"]["deviceChecks"]["status"], "separate-gate"
         )
         self.assertFalse(case["qualificationMatrix"]["freshness"]["qualified"])
+        self.assertTrue(
+            case["qualificationMatrix"]["referenceReplay"]["alternativeValidQualified"]
+        )
+        self.assertEqual(
+            case["qualificationMatrix"]["referenceReplay"]["alternativeValidCount"], 1
+        )
 
     def test_tampered_classification_is_rejected(self):
         case = self.make_case()
@@ -176,6 +208,21 @@ class CaseQualificationTest(unittest.TestCase):
             "pass"
         ] = True
         with self.assertRaisesRegex(ValueError, "must fail at least one stage"):
+            QUALIFICATION.build_matrix(
+                case_id="case-1",
+                source_set_sha256="1" * 64,
+                stages=self.stages,
+                oracle=self.oracle,
+                calibration=calibration,
+                calibration_sha256=self.calibration_sha256,
+                review=self.review,
+            )
+
+    def test_alternative_valid_variant_failure_is_rejected(self):
+        calibration = copy.deepcopy(self.calibration)
+        calibration["variants"]["equivalent"]["stages"]["turn-2"]["pass"] = False
+        calibration["variants"]["equivalent"]["stages"]["turn-2"]["checks"][2]["pass"] = False
+        with self.assertRaisesRegex(ValueError, "alternative valid qualification variant"):
             QUALIFICATION.build_matrix(
                 case_id="case-1",
                 source_set_sha256="1" * 64,
