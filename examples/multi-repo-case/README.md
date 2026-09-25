@@ -229,7 +229,7 @@ native model/Gateway, receipt and quality evidence. Credential-bearing
 construction is manual and is rejected unless its ref is exactly
 `refs/heads/main`; proposal and review have no Gateway credential.
 
-The trusted-main campaign is deliberately split into eight independently
+The trusted-main campaign is deliberately split into independently
 auditable phases, with analysis as the required predecessor:
 
 1. `Multi-repository exact analysis` freezes and verifies the arbitrary public
@@ -238,32 +238,37 @@ auditable phases, with analysis as the required predecessor:
    denominator, exclusions and strata.
 3. `Multi-repository candidate cohort review` predeclares at least two members
    for independent construction; it never declares the sample representative.
-4. `Multi-repository construction contract proposal` binds one selected member
-   to an operator-owned editable/context source surface and behavior/Oracle
-   contract. API-call candidates must include their reviewed localization.
-5. `Multi-repository construction contract review` binds an authenticated
+4. Optional `Multi-repository calibration authoring` runs a distinct evaluator
+   model over exact candidate sources and facts to draft the source surface,
+   Oracle contract, driver, Oracle, reference, alternative-valid and wrong
+   variants. Every byte remains review-required; it cannot qualify a case.
+5. `Multi-repository construction contract proposal` binds one selected member
+   either to that exact authored receipt or to a directly supplied editable/
+   context source surface and behavior/Oracle contract. API-call candidates
+   must include their reviewed localization.
+6. `Multi-repository construction contract review` binds an authenticated
    maintainer, exact proposal digest, all risks and a rationale before any model
    credential is used.
-6. One `Multi-repository model construction` run per selected member reproduces
+7. One `Multi-repository model construction` run per selected member reproduces
    its arbitrary exact repositories, exposes only the reviewed source surface,
    and produces a review-required case proposal with its exact SHA-256.
-7. For a bundle outside this release repository, `Multi-repository calibration
+8. As an alternative to authored or local bytes, `Multi-repository calibration
    bundle source` fetches one credential-free public GitHub repository at an
    exact commit and retains a manifest-bound portable source artifact. Local
    fixture bundles may skip this step.
-8. `Multi-repository calibration bundle proposal` accepts exactly one local
-   bundle directory or portable-source run, stages the exact driver, Oracle and
-   solution trees against the reviewed construction contract, and binds any
-   portable source identity into its proposal. A separate `Multi-repository
+9. `Multi-repository calibration bundle proposal` accepts exactly one local,
+   portable-source or evaluator-authored bundle, stages the exact driver,
+   Oracle and solution trees against the reviewed construction contract, and
+   binds that source identity into its proposal. A separate `Multi-repository
    calibration bundle review` binds every byte, all risks and the reviewer
    rationale.
-9. After inspecting each artifact, an operator dispatches
+10. After inspecting each artifact, an operator dispatches
    `Multi-repository case review and freeze` with the construction and reviewed
    calibration-bundle run IDs, their exact digests, every case-plan risk ID and
    a rationale. The workflow accepts only successful runs from `main`, executes
    the reviewed bundle against the exact baseline, retains its run receipt and
    freezes the reviewed case. It has no Gateway credential.
-10. `Multi-repository assessed-Agent campaign` accepts only a successful freeze
+11. `Multi-repository assessed-Agent campaign` accepts only a successful freeze
    run from `main`, reconstructs the reviewed sources, and executes two distinct
    model profiles for one or three fresh trials each. It retains every staged
    attempt and emits the v2 collection plus discrimination report.

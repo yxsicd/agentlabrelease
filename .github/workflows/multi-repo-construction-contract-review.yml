@@ -71,6 +71,13 @@ jobs:
               --semantic-gate "$AGENTLAB_ROOT/output/semantic-gate.json"
             )
           fi
+          authoring_args=()
+          if [[ -f "$AGENTLAB_ROOT/output/calibration-authoring-receipt.json" ]]; then
+            authoring_args=(
+              --authoring-receipt "$AGENTLAB_ROOT/output/calibration-authoring-receipt.json"
+              --authoring-proposal "$AGENTLAB_ROOT/output/authored-construction-contract-proposal.json"
+            )
+          fi
           python3 scripts/multi-repo-construction-contract.py decide \
             --proposal "$AGENTLAB_ROOT/output/construction-contract-proposal.json" \
             --expected-sha256 "$EXPECTED_PROPOSAL_SHA256" \
@@ -88,6 +95,7 @@ jobs:
             --surface "$AGENTLAB_ROOT/output/source-surface.json" \
             --oracle-contract "$AGENTLAB_ROOT/output/oracle-contract.json" \
             "${localization_args[@]}" \
+            "${authoring_args[@]}" \
             --proposal "$AGENTLAB_ROOT/output/construction-contract-proposal.json" \
             --review "$AGENTLAB_ROOT/output/construction-contract-review.json" \
             --contract "$AGENTLAB_ROOT/output/construction-contract.json"

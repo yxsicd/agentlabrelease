@@ -245,12 +245,17 @@ smaller than SWE-bench's:
    in the case-yield denominator. The mechanism has not yet been exercised over
    the 22 real-source clusters, so real selected-to-qualified yield remains
    unmeasured. Generic bounded construction is now mechanically closed: an exact
-   proposal/review pair freezes editable and context paths plus an operator-owned
-   behavior/Oracle contract before the model runs, and construction rematerializes
+   independent evaluator-author may now draft editable/context paths, the
+   behavior/Oracle contract, Oracle, driver, reference, alternative-valid and
+   wrong variants before construction. A separate exact proposal/review pair
+   freezes those bytes (or direct operator-owned inputs) before the task model
+   runs, and construction rematerializes
    the arbitrary pinned repositories instead of the deterministic fixture. The
    executable calibration boundary is now generic too: a separate proposal and
    exact-digest review bind the driver, Oracle, reference tree and declared
-   wrong variants before execution. Case freeze consumes only that reviewed
+   wrong variants before execution. Authored bytes stay bound to their model,
+   method revision, exact source evidence and full draft manifest through every
+   downstream review. Case freeze consumes only that reviewed
    bundle and records a run receipt binding all executable inputs. This closes
    the mechanism. Public CI now executes one 38-phase deterministic golden path
    across analysis, cohort, construction, calibration, blind dispatch and

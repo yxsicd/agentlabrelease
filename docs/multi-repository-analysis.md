@@ -378,8 +378,20 @@ only on this unmerged branch, this is not yet a trusted-main run or an
 independent cohort decision.
 
 After cohort review, construction input is now a second predeclared boundary.
+Inputs may be supplied directly by an operator or drafted by the credential-
+bearing `Multi-repository calibration authoring` workflow. The latter gives an
+independent evaluator model only the exact candidate files, reviewed API
+localization when applicable, and relevant program facts. It must produce a
+source surface, Oracle contract, exact Oracle/driver bytes, reference solution,
+structurally different alternative-valid solution and meaningful wrong
+variants. The resulting `agentlab.multi_repo_calibration_authoring_receipt.v1`
+binds every source and draft byte, participant identity, method revision and
+model capture, remains `review-required`, and explicitly records machine-
+authored executable, product-truth, reference and discrimination risks.
+
 `Multi-repository construction contract proposal` binds one exact cohort member
-to an operator-owned source surface and Oracle contract. A separate review run
+to either those exact authored bytes or a direct operator-owned source surface
+and Oracle contract. A separate review run
 requires the exact proposal digest, all risk acknowledgements and a rationale,
 then emits `agentlab.multi_repo_construction_contract.v1`. The source surface
 must retain at least two repositories, cannot exceed the candidate's affected
@@ -401,7 +413,11 @@ both, revalidates the complete manifest and carries the source receipt digest
 into the proposal and reviewed contract. The source stage cannot approve or
 promote a case.
 
-`Multi-repository calibration bundle proposal` binds the reviewed construction contract to exact
+The authored path cannot substitute new bytes after review: construction
+proposal, construction review, model construction, calibration proposal,
+calibration review and case freeze all revalidate its receipt and manifest.
+`Multi-repository calibration bundle proposal` accepts authored, portable-
+repository or local input exclusively and binds the reviewed construction contract to exact
 driver and Oracle digests, complete reference and alternative-solution tree
 manifests, explicit variant roles, and the expected staged verdicts. At least
 one structurally distinct `alternative-valid` implementation must pass every
@@ -418,8 +434,9 @@ mechanism while preserving independent calibration and review. Release CI runs
 the entire deterministic protocol as one
 38-phase evidence chain and requires baseline failure, reference success, full
 hidden-dependency coverage and process-aware discrimination score `1.0`. That
-proves cross-phase compatibility, not empirical qualification: the portable
-workflow still needs a trusted-main run against a real external bundle, and a
+proves cross-phase compatibility, not empirical qualification: the authoring
+and portable workflows still need trusted-main runs against real candidates,
+and a
 representative case population still needs human review, execution and
 adjudication. Private calibration repositories remain outside this
 credential-free source lane.

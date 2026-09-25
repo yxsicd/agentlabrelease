@@ -106,12 +106,20 @@ jobs:
               --semantic-gate "$AGENTLAB_ROOT/contract/semantic-gate.json"
             )
           fi
+          authoring_args=()
+          if [[ -f "$AGENTLAB_ROOT/contract/calibration-authoring-receipt.json" ]]; then
+            authoring_args=(
+              --authoring-receipt "$AGENTLAB_ROOT/contract/calibration-authoring-receipt.json"
+              --authoring-proposal "$AGENTLAB_ROOT/contract/authored-construction-contract-proposal.json"
+            )
+          fi
           python3 scripts/multi-repo-construction-contract.py validate \
             --selection "$AGENTLAB_ROOT/contract/candidate-selection.json" \
             --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
             --surface "$AGENTLAB_ROOT/contract/source-surface.json" \
             --oracle-contract "$AGENTLAB_ROOT/contract/oracle-contract.json" \
             "${localization_args[@]}" \
+            "${authoring_args[@]}" \
             --proposal "$AGENTLAB_ROOT/contract/construction-contract-proposal.json" \
             --review "$AGENTLAB_ROOT/contract/construction-contract-review.json" \
             --contract "$AGENTLAB_ROOT/contract/construction-contract.json"

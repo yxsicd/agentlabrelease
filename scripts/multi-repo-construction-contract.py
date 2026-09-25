@@ -164,6 +164,8 @@ def propose(
     surface_path: Path,
     oracle_path: Path,
     localization_paths: tuple[Path | None, Path | None, Path | None, Path | None, Path | None, Path | None],
+    authoring_receipt_path: Path | None = None,
+    authoring_proposal_path: Path | None = None,
 ) -> dict[str, Any]:
     selection, candidate = selected_candidate(selection_path, difficulty_path)
     surface = load(surface_path, "construction source surface")
@@ -197,7 +199,7 @@ def propose(
         "contextPaths": context,
         "automaticPromotion": False,
     }
-    return {
+    result = {
         "schema": PROPOSAL_SCHEMA,
         "status": "review-required",
         "candidateId": selection["candidateId"],
@@ -225,6 +227,38 @@ def propose(
         },
         "automaticPromotion": False,
     }
+    require(
+        (authoring_receipt_path is None) == (authoring_proposal_path is None),
+        "authoring receipt and proposal must be supplied together",
+    )
+    if authoring_receipt_path is not None:
+        receipt = load(authoring_receipt_path, "calibration authoring receipt")
+        authored_proposal = load(authoring_proposal_path, "authored construction proposal")
+        require(
+            receipt.get("schema") == "agentlab.multi_repo_calibration_authoring_receipt.v1"
+            and receipt.get("status") == "review-required"
+            and receipt.get("automaticPromotion") is False,
+            "calibration authoring receipt is not review-required",
+        )
+        require(authored_proposal == result, "authored construction proposal differs from exact inputs")
+        require(receipt.get("constructionProposalSha256") == digest(authoring_proposal_path), "calibration authoring proposal digest differs")
+        require(receipt.get("candidateId") == result["candidateId"], "calibration authoring candidate differs")
+        require(receipt.get("candidateSha256") == result["candidateSha256"], "calibration authoring candidate bytes differ")
+        require(receipt.get("sourceSetSha256") == result["sourceSetSha256"], "calibration authoring source set differs")
+        participant = receipt.get("participant") or {}
+        require(isinstance(participant.get("id"), str) and participant["id"], "calibration authoring participant is absent")
+        require(SHA256.fullmatch(participant.get("sha256", "")) is not None, "calibration authoring participant digest is invalid")
+        require(SHA256.fullmatch(receipt.get("draftManifestSha256", "")) is not None, "calibration authoring draft digest is invalid")
+        result["calibrationAuthoring"] = {
+            "receiptSha256": digest(authoring_receipt_path),
+            "constructionProposalSha256": digest(authoring_proposal_path),
+            "draftManifestSha256": receipt["draftManifestSha256"],
+            "participantId": participant["id"],
+            "participantSha256": participant["sha256"],
+            "methodRevision": participant.get("methodRevision"),
+            "status": receipt["status"],
+        }
+    return result
 
 
 def decide(
@@ -291,9 +325,14 @@ def validate(
     surface_path: Path,
     oracle_path: Path,
     localization_paths: tuple[Path | None, Path | None, Path | None, Path | None, Path | None, Path | None],
+    authoring_receipt_path: Path | None = None,
+    authoring_proposal_path: Path | None = None,
 ) -> dict[str, Any]:
     actual = load(contract_path, "reviewed construction contract")
-    expected_proposal = propose(selection_path, difficulty_path, surface_path, oracle_path, localization_paths)
+    expected_proposal = propose(
+        selection_path, difficulty_path, surface_path, oracle_path, localization_paths,
+        authoring_receipt_path, authoring_proposal_path,
+    )
     proposal = load(proposal_path, "construction contract proposal")
     require(proposal == expected_proposal, "construction proposal differs from exact inputs")
     expected_contract = compile_contract(proposal_path, review_path)
@@ -319,6 +358,8 @@ def add_exact_inputs(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--semantic-packet", type=Path)
     parser.add_argument("--semantic-decision", type=Path)
     parser.add_argument("--semantic-gate", type=Path)
+    parser.add_argument("--authoring-receipt", type=Path)
+    parser.add_argument("--authoring-proposal", type=Path)
 
 
 def localization_args(args: argparse.Namespace) -> tuple[Path | None, Path | None, Path | None, Path | None, Path | None, Path | None]:
@@ -357,7 +398,10 @@ def main() -> int:
     args = parser.parse_args()
     try:
         if args.command == "propose":
-            value = propose(args.selection, args.difficulty, args.surface, args.oracle_contract, localization_args(args))
+            value = propose(
+                args.selection, args.difficulty, args.surface, args.oracle_contract,
+                localization_args(args), args.authoring_receipt, args.authoring_proposal,
+            )
             write(args.output, value)
             result = {"ok": True, "proposalSha256": digest(args.output), "status": value["status"]}
         elif args.command == "decide":
@@ -372,6 +416,7 @@ def main() -> int:
             value = validate(
                 args.contract, args.proposal, args.review, args.selection,
                 args.difficulty, args.surface, args.oracle_contract, localization_args(args),
+                args.authoring_receipt, args.authoring_proposal,
             )
             result = {"ok": True, "contractSha256": digest(args.contract), "status": value["status"]}
         print(json.dumps(result, sort_keys=True))

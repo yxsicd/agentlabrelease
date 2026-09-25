@@ -186,16 +186,18 @@ def validate_portable_source_receipt(receipt_path: Path, bundle_root: Path, cons
     return receipt
 
 
-def validate_source(bundle_root: Path, descriptor_path: Path, construction_path: Path) -> dict[str, Any]:
+def validate_draft(
+    bundle_root: Path,
+    descriptor_path: Path,
+    oracle_contract: dict[str, Any],
+) -> dict[str, Any]:
     descriptor = load(descriptor_path, "calibration bundle descriptor")
-    construction = load(construction_path, "reviewed construction contract")
     require(descriptor.get("schema") == SOURCE_SCHEMA, "unsupported calibration bundle descriptor")
     require(descriptor.get("automaticPromotion") is False, "calibration bundle descriptor can auto-promote")
     require(
-        construction.get("schema") == CONSTRUCTION_SCHEMA
-        and construction.get("status") == "reviewed-for-model-construction"
-        and construction.get("automaticPromotion") is False,
-        "construction contract is not reviewed",
+        isinstance(oracle_contract, dict)
+        and oracle_contract.get("schema") == "agentlab.multi_repo_oracle_contract.v1",
+        "unsupported Oracle contract",
     )
     runtime = descriptor.get("runtime")
     require(runtime == "python3", "calibration driver runtime must be python3")
@@ -210,7 +212,6 @@ def validate_source(bundle_root: Path, descriptor_path: Path, construction_path:
     oracle = within(bundle_root, oracle_relative, "Oracle")
     require(driver.is_file() and not driver.is_symlink(), "driver must be a regular non-symlink file")
     require(oracle.is_file() and not oracle.is_symlink(), "Oracle must be a regular non-symlink file")
-    oracle_contract = construction.get("oracleContract") or {}
     require(digest(oracle) == oracle_contract.get("oracleSha256"), "Oracle bytes differ from construction contract")
     require(descriptor.get("receiptSchema") == oracle_contract.get("receiptSchema"), "receipt schema differs from construction contract")
     expectations = oracle_contract.get("calibrationExpectations")
@@ -296,7 +297,6 @@ def validate_source(bundle_root: Path, descriptor_path: Path, construction_path:
     reference_files = file_manifest(bundle_root, reference_relative)
     return {
         "descriptor": descriptor,
-        "construction": construction,
         "driver": driver,
         "oracle": oracle,
         "referenceFiles": reference_files,
@@ -306,15 +306,74 @@ def validate_source(bundle_root: Path, descriptor_path: Path, construction_path:
     }
 
 
+def validate_source(bundle_root: Path, descriptor_path: Path, construction_path: Path) -> dict[str, Any]:
+    construction = load(construction_path, "reviewed construction contract")
+    require(
+        construction.get("schema") == CONSTRUCTION_SCHEMA
+        and construction.get("status") == "reviewed-for-model-construction"
+        and construction.get("automaticPromotion") is False,
+        "construction contract is not reviewed",
+    )
+    validated = validate_draft(bundle_root, descriptor_path, construction.get("oracleContract") or {})
+    validated["construction"] = construction
+    return validated
+
+
+def validate_authoring_source(
+    receipt_path: Path,
+    authoring_root: Path,
+    construction: dict[str, Any],
+    current: dict[str, Any],
+) -> dict[str, Any]:
+    receipt = load(receipt_path, "calibration authoring receipt")
+    require(
+        receipt.get("schema") == "agentlab.multi_repo_calibration_authoring_receipt.v1"
+        and receipt.get("status") == "review-required"
+        and receipt.get("automaticPromotion") is False,
+        "calibration authoring receipt is not review-required",
+    )
+    require(authoring_root.is_dir() and not authoring_root.is_symlink(), "calibration authoring root is invalid")
+    draft = authoring_root / "draft"
+    draft_files = complete_file_manifest(draft)
+    require(receipt.get("draftFiles") == draft_files, "calibration authoring draft manifest differs")
+    require(receipt.get("draftManifestSha256") == manifest_digest(draft_files), "calibration authoring draft digest differs")
+    lineage = construction.get("calibrationAuthoring") or {}
+    require(lineage.get("receiptSha256") == digest(receipt_path), "construction contract authoring receipt differs")
+    require(lineage.get("draftManifestSha256") == receipt.get("draftManifestSha256"), "construction contract authoring draft differs")
+    require(receipt.get("candidateId") == construction.get("candidateId"), "calibration authoring candidate differs")
+    require(receipt.get("candidateSha256") == construction.get("candidateSha256"), "calibration authoring candidate bytes differ")
+    require(receipt.get("sourceSetSha256") == construction.get("sourceSetSha256"), "calibration authoring source set differs")
+    require(load(draft / "source-surface.json", "authored source surface") == construction.get("sourceSurface"), "authored source surface differs from construction contract")
+    oracle_contract = load(draft / "oracle-contract.json", "authored Oracle contract")
+    require(oracle_contract == construction.get("oracleContract"), "authored Oracle contract differs from construction contract")
+    authored = validate_draft(draft / "bundle", draft / "bundle/calibration-bundle.json", oracle_contract)
+    require(authored["descriptor"] == current["descriptor"], "authored calibration descriptor differs")
+    require(digest(authored["driver"]) == digest(current["driver"]), "authored calibration driver differs")
+    require(digest(authored["oracle"]) == digest(current["oracle"]), "authored calibration Oracle differs")
+    require(authored["referenceFiles"] == current["referenceFiles"], "authored reference tree differs")
+    require(authored["alternatives"] == current["alternatives"], "authored alternative trees differ")
+    return receipt
+
+
 def propose(
     bundle_root: Path,
     descriptor_path: Path,
     construction_path: Path,
     source_receipt_path: Path | None = None,
+    authoring_receipt_path: Path | None = None,
+    authoring_root: Path | None = None,
 ) -> dict[str, Any]:
     validated = validate_source(bundle_root, descriptor_path, construction_path)
     descriptor = validated["descriptor"]
     construction = validated["construction"]
+    require(
+        not (source_receipt_path is not None and authoring_receipt_path is not None),
+        "portable and authored calibration sources are mutually exclusive",
+    )
+    require(
+        (authoring_receipt_path is None) == (authoring_root is None),
+        "authoring receipt and root must be supplied together",
+    )
     result = {
         "schema": PROPOSAL_SCHEMA,
         "status": "review-required",
@@ -357,6 +416,18 @@ def propose(
             "revision": source["source"]["revision"],
             "bundlePath": source["source"]["bundlePath"],
             "fileManifestSha256": source["fileManifestSha256"],
+        }
+    if authoring_receipt_path is not None:
+        source = validate_authoring_source(
+            authoring_receipt_path, authoring_root, construction, validated
+        )
+        participant = source["participant"]
+        result["calibrationAuthoring"] = {
+            "receiptSha256": digest(authoring_receipt_path),
+            "draftManifestSha256": source["draftManifestSha256"],
+            "participantId": participant["id"],
+            "participantSha256": participant["sha256"],
+            "methodRevision": participant.get("methodRevision"),
         }
     return result
 
@@ -416,11 +487,16 @@ def validate(
     descriptor_path: Path,
     construction_path: Path,
     source_receipt_path: Path | None = None,
+    authoring_receipt_path: Path | None = None,
+    authoring_root: Path | None = None,
 ) -> dict[str, Any]:
     actual = load(contract_path, "reviewed calibration bundle")
     require(
         load(proposal_path, "calibration bundle proposal")
-        == propose(bundle_root, descriptor_path, construction_path, source_receipt_path),
+        == propose(
+            bundle_root, descriptor_path, construction_path, source_receipt_path,
+            authoring_receipt_path, authoring_root,
+        ),
         "calibration bundle proposal differs from exact inputs",
     )
     require(actual == compile_contract(proposal_path, review_path), "reviewed calibration bundle differs from exact review")
@@ -435,9 +511,14 @@ def stage(
     proposal_path: Path,
     output: Path,
     source_receipt_path: Path | None = None,
+    authoring_receipt_path: Path | None = None,
+    authoring_root: Path | None = None,
 ) -> None:
     require(not output.exists(), f"refusing to overwrite output: {output}")
-    expected = propose(bundle_root, descriptor_path, construction_path, source_receipt_path)
+    expected = propose(
+        bundle_root, descriptor_path, construction_path, source_receipt_path,
+        authoring_receipt_path, authoring_root,
+    )
     require(load(proposal_path, "calibration bundle proposal") == expected, "calibration bundle proposal differs from exact inputs")
     output.mkdir(parents=True)
     shutil.copyfile(descriptor_path, output / "descriptor.json")
@@ -501,6 +582,8 @@ def run_bundle(
     baseline: Path,
     output: Path,
     source_receipt_path: Path | None = None,
+    authoring_receipt_path: Path | None = None,
+    authoring_root: Path | None = None,
 ) -> dict[str, Any]:
     descriptor_path = bundle_root / "descriptor.json"
     contract = validate(
@@ -511,6 +594,8 @@ def run_bundle(
         descriptor_path,
         construction_path,
         source_receipt_path,
+        authoring_receipt_path,
+        authoring_root,
     )
     require(baseline.is_dir() and not baseline.is_symlink(), "baseline must be a non-symlink directory")
     require(not output.exists(), f"refusing to overwrite output: {output}")
@@ -577,6 +662,8 @@ def main() -> int:
         command.add_argument("--descriptor", type=Path, required=True)
         command.add_argument("--construction-contract", type=Path, required=True)
         command.add_argument("--source-receipt", type=Path)
+        command.add_argument("--authoring-receipt", type=Path)
+        command.add_argument("--authoring-root", type=Path)
     propose_command.add_argument("--output", type=Path, required=True)
     decide_command = commands.add_parser("decide")
     decide_command.add_argument("--proposal", type=Path, required=True)
@@ -597,6 +684,8 @@ def main() -> int:
     validate_command.add_argument("--review", type=Path, required=True)
     validate_command.add_argument("--contract", type=Path, required=True)
     validate_command.add_argument("--source-receipt", type=Path)
+    validate_command.add_argument("--authoring-receipt", type=Path)
+    validate_command.add_argument("--authoring-root", type=Path)
     stage_command = commands.add_parser("stage")
     stage_command.add_argument("--bundle-root", type=Path, required=True)
     stage_command.add_argument("--descriptor", type=Path, required=True)
@@ -604,6 +693,8 @@ def main() -> int:
     stage_command.add_argument("--proposal", type=Path, required=True)
     stage_command.add_argument("--output", type=Path, required=True)
     stage_command.add_argument("--source-receipt", type=Path)
+    stage_command.add_argument("--authoring-receipt", type=Path)
+    stage_command.add_argument("--authoring-root", type=Path)
     run_command = commands.add_parser("run")
     run_command.add_argument("--bundle-root", type=Path, required=True)
     run_command.add_argument("--contract", type=Path, required=True)
@@ -613,6 +704,8 @@ def main() -> int:
     run_command.add_argument("--baseline", type=Path, required=True)
     run_command.add_argument("--output", type=Path, required=True)
     run_command.add_argument("--source-receipt", type=Path)
+    run_command.add_argument("--authoring-receipt", type=Path)
+    run_command.add_argument("--authoring-root", type=Path)
     source_command = commands.add_parser("source-receipt")
     source_command.add_argument("--bundle-root", type=Path, required=True)
     source_command.add_argument("--construction-contract", type=Path, required=True)
@@ -627,7 +720,10 @@ def main() -> int:
     args = parser.parse_args()
     try:
         if args.command == "propose":
-            value = propose(args.bundle_root, args.descriptor, args.construction_contract, args.source_receipt)
+            value = propose(
+                args.bundle_root, args.descriptor, args.construction_contract,
+                args.source_receipt, args.authoring_receipt, args.authoring_root,
+            )
             write(args.output, value)
             result = {"ok": True, "proposalSha256": digest(args.output), "status": value["status"]}
         elif args.command == "decide":
@@ -647,6 +743,8 @@ def main() -> int:
                 args.descriptor,
                 args.construction_contract,
                 args.source_receipt,
+                args.authoring_receipt,
+                args.authoring_root,
             )
             result = {"ok": True, "contractSha256": digest(args.contract), "status": value["status"]}
         elif args.command == "stage":
@@ -657,6 +755,8 @@ def main() -> int:
                 args.proposal,
                 args.output,
                 args.source_receipt,
+                args.authoring_receipt,
+                args.authoring_root,
             )
             result = {"ok": True, "output": str(args.output)}
         elif args.command == "run":
@@ -669,6 +769,8 @@ def main() -> int:
                 args.baseline,
                 args.output,
                 args.source_receipt,
+                args.authoring_receipt,
+                args.authoring_root,
             )
             result = {"ok": True, "runSha256": digest(args.output / "calibration-run.json"), "status": value["status"]}
         elif args.command == "source-receipt":

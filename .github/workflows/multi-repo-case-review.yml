@@ -96,6 +96,11 @@ jobs:
           source_args=()
           if [[ -f "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-source.json" ]]; then
             source_args=(--source-receipt "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-source.json")
+          elif [[ -d "$AGENTLAB_ROOT/calibration-authority/calibration-authoring" ]]; then
+            source_args=(
+              --authoring-receipt "$AGENTLAB_ROOT/calibration-authority/calibration-authoring/authoring-receipt.json"
+              --authoring-root "$AGENTLAB_ROOT/calibration-authority/calibration-authoring"
+            )
           fi
           python3 scripts/multi-repo-calibration-bundle.py validate \
             --bundle-root "$AGENTLAB_ROOT/calibration-authority/bundle" \
@@ -147,6 +152,11 @@ jobs:
           source_args=()
           if [[ -f "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-source.json" ]]; then
             source_args=(--source-receipt "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-source.json")
+          elif [[ -d "$AGENTLAB_ROOT/calibration-authority/calibration-authoring" ]]; then
+            source_args=(
+              --authoring-receipt "$AGENTLAB_ROOT/calibration-authority/calibration-authoring/authoring-receipt.json"
+              --authoring-root "$AGENTLAB_ROOT/calibration-authority/calibration-authoring"
+            )
           fi
           python3 scripts/multi-repo-calibration-bundle.py run \
             --bundle-root "$AGENTLAB_ROOT/calibration-authority/bundle" \

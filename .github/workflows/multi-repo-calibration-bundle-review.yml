@@ -56,6 +56,9 @@ jobs:
           if [[ -f "$AGENTLAB_ROOT/source/calibration-bundle-source.json" ]]; then
             cp "$AGENTLAB_ROOT/source/calibration-bundle-source.json" "$AGENTLAB_ROOT/output/calibration-bundle-source.json"
           fi
+          if [[ -d "$AGENTLAB_ROOT/source/calibration-authoring" ]]; then
+            cp -R "$AGENTLAB_ROOT/source/calibration-authoring" "$AGENTLAB_ROOT/output/calibration-authoring"
+          fi
       - name: Bind explicit review and validate immutable bytes
         env:
           EXPECTED_PROPOSAL_SHA256: ${{ inputs.expected_proposal_sha256 }}
@@ -67,6 +70,11 @@ jobs:
           source_args=()
           if [[ -f "$AGENTLAB_ROOT/output/calibration-bundle-source.json" ]]; then
             source_args=(--source-receipt "$AGENTLAB_ROOT/output/calibration-bundle-source.json")
+          elif [[ -d "$AGENTLAB_ROOT/output/calibration-authoring" ]]; then
+            source_args=(
+              --authoring-receipt "$AGENTLAB_ROOT/output/calibration-authoring/authoring-receipt.json"
+              --authoring-root "$AGENTLAB_ROOT/output/calibration-authoring"
+            )
           fi
           python3 scripts/multi-repo-calibration-bundle.py decide \
             --proposal "$AGENTLAB_ROOT/output/calibration-bundle-proposal.json" \
