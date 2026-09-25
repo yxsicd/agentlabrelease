@@ -144,6 +144,15 @@ independent review, calibration, freeze and runtime qualification. The current
 proof is a mixed natural/derived fixture, so claims of natural-case yield or
 representativeness remain prohibited.
 
+The first automated supply step now collects public GitHub repairs on trusted
+main. Unlike permissive URL scraping, it requires each affected repository's
+merged PR to bind the declared base and fix commits, verifies declared affected
+and test paths against the retained patches, and independently reconstructs
+the normalized candidate before preserving the workflow artifact. This gives
+AgentLab a reproducible SWE-style mining boundary without treating public
+history as a valid benchmark by default. Artifact-to-mixed-cohort automation
+and a genuinely fresh independently qualified record are still outstanding.
+
 ## AgentLab advantage
 
 AgentLab is designed around a broader unit of work than a historical patch:

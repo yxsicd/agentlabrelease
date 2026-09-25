@@ -210,6 +210,23 @@ meaningful-wrong, freshness, device or performance gates. Current tests prove
 this fail-closed mechanism and a mixed-source cohort fixture; they do not prove
 that a real fresh natural case has been imported or qualified.
 
+Public GitHub history now also has a trusted-main collection boundary.
+`github-natural-repair-source.yml` accepts only an explicit
+`agentlab.github_natural_repair_spec.v1` record. The collector permits only
+credential-free `github.com` Issue and pull-request URLs and uses the GitHub API
+token only against `api.github.com`. Every repository must have one merged PR;
+its declared fix revision and PR base must equal the exact repair and source
+revisions. Declared affected and test paths must occur in the retained patch.
+The workflow keeps the selected public Issue fields, complete repair patches,
+test-only patch sections, normalized manifest, candidate source and a
+digest-bound collection receipt. A second validation pass reconstructs the
+candidate from the retained manifest and evidence before artifact upload.
+
+That artifact is still source evidence, not a reviewed cohort or qualified
+case. Trusted-main automation for joining a collected natural artifact to an
+exact analyzer artifact remains the next operational boundary; until that is
+implemented, mixed-lane cohort proof remains local fixture evidence.
+
 The first real two-repository source qualification is retained at
 `release/qualifications/harmony-real-multi-repo-34661ff/summary.json`. It binds
 12,711 analyzed files, 881,650 text lines, 404,308 facts, 22 shared-contract
