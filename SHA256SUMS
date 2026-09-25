@@ -108,7 +108,7 @@ bb08972f2a85c4a1e56938a7c5c027b974674c056eaabd1f663879961bca9bad  examples/multi
 6527f8f90a821d8e2cde79992a9c56e104e5541b321a04493b7fbd42fca0525f  examples/multi-repo-case/oracle.mjs
 0a8d32db451b26917d2f842f50a0456f60c5048e0583708592968e694d41f055  examples/multi-repo-case/pi-construction-agent.py
 b64e218dd2bd5077622521e88f573ab5034263fee36b4907285afdbede627069  examples/multi-repo-case/pi-assessed-agent.py
-38b5043d156ba36868f06e8951ff7c8a126b8855bc53afefcb2b57a1a2defadb  examples/multi-repo-case/run-golden-path.py
+a861045b99c86c1d8455ef89c922ca98d5c9ebaa853f3f66dc827f698b44cc1a  examples/multi-repo-case/run-golden-path.py
 75a544d8f7a70008a526c054d5cec31e7ba38861a381d32847d7fbf5c7aa514d  examples/multi-repo-case/reference/app/src/checkout.ts
 b13e8da2fedbd5fe52cc1a9f6681a4930c8d327dc110a6b347bfe5f7920afff3  examples/multi-repo-case/reference/contracts/src/policy.ts
 d3973535467426a9bf8abeb4c3c50ae0186d5e1cb31ebb884c0e0f3dcab58538  examples/multi-repo-case/reference/service/src/reservation.ts

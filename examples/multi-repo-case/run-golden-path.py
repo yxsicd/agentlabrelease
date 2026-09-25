@@ -178,6 +178,7 @@ def main() -> int:
                 "--difficulty", difficulty_path,
                 "--cohort-id", "deterministic-multi-repo-golden-path",
                 "--method-revision", args.method_revision,
+                "--proposal-method-revision", args.method_revision,
                 "--output", cohort_proposal,
             ),
         )
