@@ -2,7 +2,7 @@
 
 This comparison records the design decision for AgentLab's generated-case
 flywheel. It compares mechanisms, not leaderboard scores. The external
-SWE-bench status was reviewed on 2026-09-24; links below are evidence for that
+SWE-bench status was reviewed on 2026-09-25; links below are evidence for that
 snapshot and are not mutable release inputs.
 
 ## What SWE-bench gets right
@@ -77,6 +77,62 @@ of overly strict tests, underspecified prompts, low coverage or misleading
 prompts. The lesson is not to abandon executable tests; it is to make case
 qualification, freshness and independent review first-class, continuously
 rechecked artifacts.
+
+## The SWE family contains three different case-source strategies
+
+It is important not to treat every SWE-style dataset as one strategy. They
+solve different parts of the case-supply problem:
+
+| Strategy | Representative system | Case source | Main strength | Main limitation |
+| --- | --- | --- | --- | --- |
+| Historical repair mining | SWE-bench | Resolved issue, associated PR and changed tests | Natural developer intent and an existing human repair | Passive coverage, historical-test bias and public-data contamination |
+| Continuously refreshed repair mining | SWE-bench-Live and SWE-rebench | Newly merged issues and PRs, with automated environment construction and filtering | Freshness, repository breadth and a repeatable supply pipeline | Fresh is not automatically fair; noisy specifications and brittle environments remain, and model release date is only a contamination proxy |
+| Executable fault synthesis | SWE-smith | Procedural or model-written mutations, PR inversion and combined validated bugs | High-volume generation with an exact source revision and known inverse patch | A test-detectable mutation need not be a realistic maintenance task, and existing test coverage determines what can be generated |
+
+SWE-smith's most reusable mechanism is the validation cut, not any individual
+mutation recipe. It first records the original suite's passing tests, applies a
+candidate fault, and retains it only when at least one existing test becomes
+`FAIL_TO_PASS` while at least one remains `PASS_TO_PASS`. Its generation and
+validation phases can run incrementally and skip already processed repositories.
+This is a strong production pattern for AgentLab's seed factories.
+
+The limits matter just as much. A synthesized regression can have an exact
+executable Oracle yet lack a plausible user-visible scenario. Combining several
+single-entity mutations can increase patch size without producing a coherent
+dependency problem. Conversely, historical mining supplies realistic intent
+but only where humans already reported, fixed and tested a problem. Neither
+source strategy discovers by itself the cross-repository semantic obligations
+or capability-separating cases that AgentLab targets.
+
+SWE-bench Multimodal also confirms that screenshots and UI context can be part
+of the task statement. That is useful input coverage, but it is different from
+AgentLab's stronger target: install the produced HAP, drive the application and
+grade exact route, visible behavior and bounded performance evidence inside the
+runtime environment.
+
+### Adopted hybrid supply decision
+
+AgentLab should therefore keep two independent candidate lanes and one shared
+qualification gate:
+
+1. a **natural lane** mines fresh issue/PR history and operator-reported failures
+   to preserve realistic intent;
+2. a **derived lane** uses semantic/program-analysis obligations, controlled
+   mutations and prior participant failures to generate targeted difficulty;
+3. both lanes must pass the same baseline/reference/alternative-valid/wrong-
+   variant calibration, prompt-fairness review, freshness record and executable
+   repair/preservation matrix before becoming cases;
+4. lane origin remains a scorecard stratum. Natural and derived tasks are never
+   silently pooled, because they make different claims about real-world
+   representativeness;
+5. case selection is based on measured discrimination only after validity is
+   established. High separation never rescues an artificial or unfair case.
+
+This hybrid is the clearest strategic advantage over copying one SWE pipeline:
+natural tasks anchor realism, derived tasks supply scale and directed coverage,
+and runtime qualification supplies the end-to-end behavior boundary. It is
+also more expensive, so qualified-case yield and cost per qualified case must
+become first-class operating metrics.
 
 ## AgentLab advantage
 
@@ -456,6 +512,11 @@ now dominate public coding benchmarks: case invalidity and contamination.
 - [SWE-bench paper](https://arxiv.org/abs/2310.06770)
 - [Official evaluation guide](https://github.com/SWE-bench/SWE-bench/blob/main/docs/guides/evaluation.md)
 - [Official harness reference](https://github.com/SWE-bench/SWE-bench/blob/main/docs/reference/harness.md)
+- [SWE-smith instance creation](https://swesmith.com/guides/create_instances/)
+- [SWE-smith validation and evaluation](https://swesmith.com/guides/harnesses/)
+- [SWE-bench-Live](https://github.com/microsoft/SWE-bench-Live)
+- [SWE-rebench methodology](https://swe-rebench.com/about)
+- [SWE-bench Multimodal](https://www.swebench.com/multimodal)
 - [Introducing SWE-bench Verified](https://openai.com/index/introducing-swe-bench-verified/)
 - [Why SWE-bench Verified no longer measures frontier coding capabilities](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/)
 - [Separating signal from noise in coding evaluations](https://openai.com/index/separating-signal-from-noise-coding-evaluations/)
