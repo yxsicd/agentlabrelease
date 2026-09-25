@@ -113,6 +113,9 @@ jobs:
           cp "$AGENTLAB_ROOT/localization/localization.json" "$AGENTLAB_ROOT/output/localization.json"
           cp "$AGENTLAB_ROOT/localization/proposal.json" "$AGENTLAB_ROOT/output/localization-proposal.json"
           cp "$AGENTLAB_ROOT/localization/review.json" "$AGENTLAB_ROOT/output/localization-review.json"
+          cp "$AGENTLAB_ROOT/localization/semantic-packet.json" "$AGENTLAB_ROOT/output/semantic-packet.json"
+          cp "$AGENTLAB_ROOT/localization/semantic-decision.json" "$AGENTLAB_ROOT/output/semantic-decision.json"
+          cp "$AGENTLAB_ROOT/localization/semantic-gate.json" "$AGENTLAB_ROOT/output/semantic-gate.json"
       - name: Build the exact review-required construction contract proposal
         run: |
           set -euo pipefail
@@ -122,6 +125,9 @@ jobs:
               --localization "$AGENTLAB_ROOT/output/localization.json"
               --localization-proposal "$AGENTLAB_ROOT/output/localization-proposal.json"
               --localization-review "$AGENTLAB_ROOT/output/localization-review.json"
+              --semantic-packet "$AGENTLAB_ROOT/output/semantic-packet.json"
+              --semantic-decision "$AGENTLAB_ROOT/output/semantic-decision.json"
+              --semantic-gate "$AGENTLAB_ROOT/output/semantic-gate.json"
             )
           fi
           python3 scripts/multi-repo-construction-contract.py propose \

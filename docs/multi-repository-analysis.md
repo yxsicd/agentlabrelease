@@ -257,7 +257,9 @@ selection identifies two cross-repository target calls, four read-only
 reference calls, five proposed editable paths and three explicitly expanded
 paths. `proposal.json` binds every selected path to its Git blob OID and byte
 digest, but remains `review-required`: the syntactic evidence does not prove
-the lifecycle hypothesis or authorize intent construction.
+the lifecycle hypothesis or authorize intent construction. This retained
+artifact predates the semantic-gate requirement and is historical evidence; it
+cannot enter the current localization-review or construction chain.
 
 The same directory now retains a Linux-emulator Oracle calibration candidate.
 It rejects an initially misleading PASS whose screenshot-space coordinate
@@ -268,29 +270,34 @@ layout. This qualifies a candidate `FAIL_TO_PASS` observation, not the
 business Oracle itself: independent review, reference repair, preservation and
 performance calibration remain explicit later gates.
 
-Use `propose-api-call-case-localization.py` to compile an exact proposal, then
-have an independent maintainer create a decision that binds the proposal
-SHA-256 and acknowledges every risk. Only
+Use `propose-api-call-case-localization.py` to compile an exact proposal from an
+already approved semantic packet/decision/gate triple, then have an independent
+maintainer create a decision that binds the proposal SHA-256 and acknowledges
+every localization risk. The proposer revalidates the semantic state machine,
+candidate digest and source-set identity before writing output. Only
 `review-api-call-case-localization.py` can produce a
-`reviewed-for-intent-construction` localization. Even that reviewed artifact
+`reviewed-for-intent-construction` localization, and it independently
+revalidates the same three semantic artifacts. Even that reviewed artifact
 retains `automaticPromotion: false`; build, functional, device, performance and
 discrimination qualification are later gates.
 
 The intent-construction runner now enforces that boundary. A
 `shared-external-api-call-contract` cannot enter construction without the exact
-reviewed localization, proposal and review decision. It independently checks
-their digests and reviewed fields, verifies every materialized file against the
-pinned byte identity, exposes context paths as read-only, and carries the
+reviewed localization, proposal, localization review and approved semantic
+packet/decision/gate. It independently replays both review chains, checks their
+digests and reviewed fields, verifies every materialized file against the pinned
+byte identity, exposes context paths as read-only, and carries semantic plus
 localization lineage into the construction receipt and intent. The plan builder
 then derives `allowedEdits` from the reviewed editable paths, not from the broad
 candidate cluster. The case freezer rejects any later edit-surface drift.
 
 After this workflow reaches trusted `main`, a maintainer can dispatch
 `API-call localization independent review`. The job takes the retained
-qualification directory, exact proposal SHA-256, every risk ID and a rationale;
-it binds the authenticated GitHub actor as reviewer and uploads the proposal,
-decision and compiled reviewed localization together. It is intentionally
-secret-free and cannot run from a pull-request ref.
+qualification directory, exact proposal SHA-256, the trusted-main semantic
+review run and exact approved gate SHA-256, every risk ID and a rationale. It
+binds the authenticated GitHub actor as reviewer and uploads the semantic triple,
+proposal, decision and compiled reviewed localization together. It is
+intentionally secret-free and cannot run from a pull-request ref.
 
 ## From difficulty to a valid evaluation case
 
@@ -737,3 +744,11 @@ localization evidence, not semantic equivalence. Both packets remain
 `independent-semantic-review-required`, acknowledge the same four risks and
 state that only the exact base source set and source-localized call evidence
 satisfy the SWE-style task contract so far.
+
+The approved state is now a consumed authority rather than advisory metadata.
+API-call localization proposal, localization review, construction-contract
+proposal/validation and model construction all require the same exact packet,
+decision and gate. Each stage replays semantic validation and binds the three
+digests. A deferred/rejected gate, substituted reviewer, changed candidate,
+changed source set, missing artifact or byte-level gate tamper fails before a
+construction participant runs.

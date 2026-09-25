@@ -101,6 +101,9 @@ jobs:
               --localization "$AGENTLAB_ROOT/contract/localization.json"
               --localization-proposal "$AGENTLAB_ROOT/contract/localization-proposal.json"
               --localization-review "$AGENTLAB_ROOT/contract/localization-review.json"
+              --semantic-packet "$AGENTLAB_ROOT/contract/semantic-packet.json"
+              --semantic-decision "$AGENTLAB_ROOT/contract/semantic-decision.json"
+              --semantic-gate "$AGENTLAB_ROOT/contract/semantic-gate.json"
             )
           fi
           python3 scripts/multi-repo-construction-contract.py validate \
@@ -148,6 +151,9 @@ jobs:
               --localization "$AGENTLAB_ROOT/contract/localization.json"
               --localization-proposal "$AGENTLAB_ROOT/contract/localization-proposal.json"
               --localization-review "$AGENTLAB_ROOT/contract/localization-review.json"
+              --semantic-packet "$AGENTLAB_ROOT/contract/semantic-packet.json"
+              --semantic-decision "$AGENTLAB_ROOT/contract/semantic-decision.json"
+              --semantic-gate "$AGENTLAB_ROOT/contract/semantic-gate.json"
             )
           fi
           python3 scripts/run-multi-repo-intent-construction.py \

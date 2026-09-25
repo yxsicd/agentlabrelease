@@ -7,6 +7,8 @@ import hashlib
 import json
 from pathlib import Path
 
+from api_call_localization import validate_semantic_authorization
+
 
 def load(path: Path):
     return json.loads(path.read_text())
@@ -25,6 +27,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--proposal", type=Path, required=True)
     parser.add_argument("--review", type=Path, required=True)
+    parser.add_argument("--semantic-packet", type=Path, required=True)
+    parser.add_argument("--semantic-decision", type=Path, required=True)
+    parser.add_argument("--semantic-gate", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     require(not args.output.exists(), "refusing to overwrite reviewed localization")
@@ -33,6 +38,14 @@ def main():
     require(proposal.get("schema") == "agentlab.api_call_case_localization_proposal.v1", "unsupported proposal schema")
     require(proposal.get("status") == "review-required", "proposal is not review-required")
     require(proposal.get("automaticPromotion") is False, "proposal must not auto-promote")
+    semantic = validate_semantic_authorization(
+        args.semantic_packet,
+        args.semantic_decision,
+        args.semantic_gate,
+        candidate_id=proposal.get("candidateId"),
+        source_set_sha256=proposal.get("sourceSetSha256"),
+    )
+    require(proposal.get("semanticAuthorization") == semantic, "proposal semantic authorization differs")
     require(review.get("schema") == "agentlab.api_call_case_localization_review.v1", "unsupported review schema")
     require(review.get("proposalSha256") == digest(args.proposal), "review proposal digest mismatch")
     require(review.get("verdict") == "approve-for-intent-construction", "localization is not approved for intent construction")

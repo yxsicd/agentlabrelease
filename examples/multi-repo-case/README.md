@@ -83,6 +83,9 @@ python3 scripts/propose-api-call-case-localization.py \
   --facts /tmp/analysis/workspace_facts.jsonl \
   --candidate-id <shared-external-api-call-candidate-id> \
   --selection /tmp/api-call-selection.json \
+  --semantic-packet /tmp/semantic-review/packet.json \
+  --semantic-decision /tmp/semantic-review/decision.json \
+  --semantic-gate /tmp/semantic-review/gate.json \
   --method-revision <exact-agentlab-commit> \
   --output /tmp/api-call-localization-proposal.json
 ```
@@ -95,6 +98,9 @@ decision with:
 python3 scripts/review-api-call-case-localization.py \
   --proposal /tmp/api-call-localization-proposal.json \
   --review /tmp/api-call-localization-review.json \
+  --semantic-packet /tmp/semantic-review/packet.json \
+  --semantic-decision /tmp/semantic-review/decision.json \
+  --semantic-gate /tmp/semantic-review/gate.json \
   --output /tmp/api-call-localization.json
 ```
 
@@ -102,16 +108,19 @@ The resulting artifact
 only authorizes intent construction; it does not qualify a case or expose a
 reference implementation. The ArkWeb real-source example at
 `release/qualifications/harmony-arkweb-lifecycle-localization-6840590/` stops at
-this review boundary on purpose.
+this review boundary on purpose. It predates the mandatory semantic gate and is
+not accepted by the current localization-review or construction commands.
 
 On trusted `main`, the manual `API-call localization independent review`
 workflow performs the same exact-digest operation using the authenticated
-GitHub actor as reviewer and retains all three artifacts together. It requires
-the reviewer to enter the proposal digest, every risk ID and a rationale; it
-has no model or repository-write secret.
+GitHub actor as reviewer and retains the localization chain plus its exact
+semantic packet/decision/gate. It requires the trusted-main semantic review run,
+approved gate digest, proposal digest, every risk ID and a rationale; it has no
+model or repository-write secret.
 
 For a `shared-external-api-call-contract`, intent construction fails closed
-unless all three exact localization artifacts are supplied:
+unless all three exact localization artifacts and all three semantic artifacts
+are supplied:
 
 ```sh
 python3 scripts/run-multi-repo-intent-construction.py \
@@ -122,6 +131,9 @@ python3 scripts/run-multi-repo-intent-construction.py \
   --localization /tmp/api-call-localization.json \
   --localization-proposal /tmp/api-call-localization-proposal.json \
   --localization-review /tmp/api-call-localization-review.json \
+  --semantic-packet /tmp/semantic-review/packet.json \
+  --semantic-decision /tmp/semantic-review/decision.json \
+  --semantic-gate /tmp/semantic-review/gate.json \
   --oracle-contract /tmp/operator-owned-oracle-contract.json \
   --participant <construction-adapter.py> \
   --participant-id <construction-participant-id> \

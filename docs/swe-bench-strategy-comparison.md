@@ -256,6 +256,16 @@ smaller than SWE-bench's:
     `UserAgent_three` and `UserAgent_four`, so visible text alone produced a
     false pass. The target scenario now requires both exact
     `pages/UserAgent_four` route identity and the visible semantic text.
+
+    The real-candidate semantic review protocol is now mechanically upstream of
+    case localization: only an exact `approved-for-case-contract-proposal` gate
+    can produce a localization proposal. The packet, decision and gate are
+    revalidated again during localization review, construction-contract
+    validation and model construction. This matches SWE-bench Verified's
+    conservative curation principle while preserving rejected/deferred rows in
+    the denominator. It closes the bypass mechanism, not the empirical gap: no
+    real candidate has yet received that independent approval or completed
+    baseline/reference/alternative-valid/meaningful-wrong calibration.
     A separate DomStorage scenario passes before and after the variant, closing
     the first real `PASS_TO_PASS` device check. Its first form—requiring remote
     Web content within two seconds—was rejected after a route-success/content-

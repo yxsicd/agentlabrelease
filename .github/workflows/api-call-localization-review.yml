@@ -3,12 +3,19 @@ on:
   workflow_dispatch:
     inputs:
       qualification_path:
-        description: Qualification directory below release/qualifications
+        description: Gate-bound qualification directory below release/qualifications
         required: true
-        default: release/qualifications/harmony-arkweb-lifecycle-localization-6840590
         type: string
       expected_proposal_sha256:
         description: Exact localization proposal digest inspected by the reviewer
+        required: true
+        type: string
+      semantic_review_run_id:
+        description: Successful trusted-main semantic review workflow run
+        required: true
+        type: string
+      expected_semantic_gate_sha256:
+        description: Exact approved semantic gate digest inspected by the reviewer
         required: true
         type: string
       acknowledged_risk_ids:
@@ -22,6 +29,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   review:
@@ -31,6 +39,8 @@ jobs:
     env:
       AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/api-call-localization-review
       QUALIFICATION_PATH: ${{ inputs.qualification_path }}
+      SEMANTIC_REVIEW_RUN_ID: ${{ inputs.semantic_review_run_id }}
+      EXPECTED_SEMANTIC_GATE_SHA256: ${{ inputs.expected_semantic_gate_sha256 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Resolve the retained proposal without path escape
@@ -48,6 +58,28 @@ jobs:
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write("proposal_path=" + str(proposal) + "\n")
           PY
+      - name: Recover the exact approved semantic gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$SEMANTIC_REVIEW_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_SEMANTIC_GATE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SEMANTIC_REVIEW_RUN_ID" > "$AGENTLAB_ROOT/semantic-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/semantic-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-candidate-semantic-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$SEMANTIC_REVIEW_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-candidate-semantic-review --dir "$AGENTLAB_ROOT/semantic"
+          [[ "$(sha256sum "$AGENTLAB_ROOT/semantic/gate.json" | cut -d' ' -f1)" == "$EXPECTED_SEMANTIC_GATE_SHA256" ]]
+          cp "$AGENTLAB_ROOT/semantic/packet.json" "$AGENTLAB_ROOT/semantic-packet.json"
+          cp "$AGENTLAB_ROOT/semantic/decision.json" "$AGENTLAB_ROOT/semantic-decision.json"
+          cp "$AGENTLAB_ROOT/semantic/gate.json" "$AGENTLAB_ROOT/semantic-gate.json"
       - name: Bind reviewer identity, exact digest, risks and rationale
         env:
           PROPOSAL_PATH: ${{ steps.proposal.outputs.proposal_path }}
@@ -66,10 +98,16 @@ jobs:
           python3 scripts/review-api-call-case-localization.py \
             --proposal "$PROPOSAL_PATH" \
             --review "$AGENTLAB_ROOT/review.json" \
+            --semantic-packet "$AGENTLAB_ROOT/semantic-packet.json" \
+            --semantic-decision "$AGENTLAB_ROOT/semantic-decision.json" \
+            --semantic-gate "$AGENTLAB_ROOT/semantic-gate.json" \
             --output "$AGENTLAB_ROOT/localization.json"
           cp "$PROPOSAL_PATH" "$AGENTLAB_ROOT/proposal.json"
           sha256sum "$AGENTLAB_ROOT/proposal.json" \
             "$AGENTLAB_ROOT/review.json" \
+            "$AGENTLAB_ROOT/semantic-packet.json" \
+            "$AGENTLAB_ROOT/semantic-decision.json" \
+            "$AGENTLAB_ROOT/semantic-gate.json" \
             "$AGENTLAB_ROOT/localization.json" \
             >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve exact independent review lineage

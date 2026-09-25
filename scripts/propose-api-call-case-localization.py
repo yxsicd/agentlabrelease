@@ -9,6 +9,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from api_call_localization import validate_semantic_authorization
+
 
 SHA256 = re.compile(r"[0-9a-f]{64}")
 
@@ -23,6 +25,12 @@ def digest(path: Path):
 
 def digest_bytes(value: bytes):
     return hashlib.sha256(value).hexdigest()
+
+
+def canonical_digest(value):
+    return hashlib.sha256(
+        json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
 
 
 def require(condition, message):
@@ -70,6 +78,9 @@ def main():
     parser.add_argument("--facts", type=Path, required=True)
     parser.add_argument("--candidate-id", required=True)
     parser.add_argument("--selection", type=Path, required=True)
+    parser.add_argument("--semantic-packet", type=Path, required=True)
+    parser.add_argument("--semantic-decision", type=Path, required=True)
+    parser.add_argument("--semantic-gate", type=Path, required=True)
     parser.add_argument("--method-revision", required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
@@ -97,6 +108,14 @@ def main():
     require(candidate.get("affectedRepositoryCount", 0) >= 2, "candidate must span repositories")
     require((candidate.get("verificationContract") or {}).get("caseReady") is False, "candidate must remain non-ready")
     require(candidate.get("automaticPromotion") is False, "candidate must not auto-promote")
+    semantic = validate_semantic_authorization(
+        args.semantic_packet,
+        args.semantic_decision,
+        args.semantic_gate,
+        candidate_id=args.candidate_id,
+        source_set_sha256=difficulty.get("sourceSetSha256"),
+        candidate_sha256=canonical_digest(candidate),
+    )
 
     repositories = {}
     source_projection = []
@@ -229,6 +248,7 @@ def main():
         "title": title,
         "hypothesis": hypothesis,
         "apiContract": seed,
+        "semanticAuthorization": semantic,
         "targetCallSites": target_sites,
         "referenceCallSites": reference_sites,
         "editablePaths": editable,
@@ -241,6 +261,9 @@ def main():
             "difficultyEvidenceSha256": digest(args.difficulty),
             "workspaceFactsSha256": digest(args.facts),
             "selectionSha256": digest(args.selection),
+            "semanticPacketSha256": semantic["packetSha256"],
+            "semanticDecisionSha256": semantic["decisionSha256"],
+            "semanticGateSha256": semantic["gateSha256"],
         },
         "reviewPolicy": {
             "requiredDecisionSchema": "agentlab.api_call_case_localization_review.v1",

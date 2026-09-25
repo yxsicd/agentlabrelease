@@ -19,10 +19,17 @@ FREEZE = ROOT / "scripts/generate-multi-repo-case.py"
 CALIBRATE = ROOT / "examples/multi-repo-case/calibrate.py"
 MOCK = ROOT / "examples/multi-repo-case/mock-construction-agent.py"
 ORACLE = ROOT / "examples/multi-repo-case/oracle-contract.json"
+SEMANTIC_REVIEW = ROOT / "scripts/review-multi-repo-candidate-semantics.py"
 
 
 def file_digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def canonical_digest(value):
+    return hashlib.sha256(
+        json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
 
 
 class ApiCallCaseLocalizationTest(unittest.TestCase):
@@ -165,10 +172,106 @@ class ApiCallCaseLocalizationTest(unittest.TestCase):
         )
         return manifest, difficulty, facts_path, selection
 
+    def semantic_authorization(self, root, difficulty_path, *, approved=True):
+        difficulty = json.loads(difficulty_path.read_text())
+        candidate = difficulty["candidates"][0]
+        question_ids = [
+            "shared-behavior",
+            "observable-gap",
+            "prompt-completeness",
+            "repair-oracle",
+            "preservation-oracle",
+            "environment",
+            "cross-repo-necessity",
+        ]
+        risk_ids = [
+            "api-name-is-not-semantics",
+            "issue-contract-absent",
+            "build-boundary-unqualified",
+            "oracle-unqualified",
+        ]
+        packet = self.write(
+            root,
+            "semantic-packet.json",
+            {
+                "schema": "agentlab.multi_repo_candidate_review_packet.v1",
+                "status": "independent-semantic-review-required",
+                "candidateId": candidate["id"],
+                "candidateSha256": canonical_digest(candidate),
+                "sourceSetSha256": difficulty["sourceSetSha256"],
+                "packetMethodRevision": "1" * 40,
+                "reviewQuestions": [
+                    {"id": question_id, "question": f"Question for {question_id}?"}
+                    for question_id in question_ids
+                ],
+                "risks": [
+                    {"id": risk_id, "statement": f"Risk for {risk_id}."}
+                    for risk_id in risk_ids
+                ],
+                "reviewDecisionContract": {
+                    "schema": "agentlab.multi_repo_candidate_semantic_review.v1",
+                    "allowedVerdicts": [
+                        "advance-to-case-contract",
+                        "reject-as-noncoherent",
+                        "defer-for-more-evidence",
+                    ],
+                    "requiredQuestionIds": question_ids,
+                    "requiredRiskIds": risk_ids,
+                    "reviewerMustBeIndependentOfPacketGenerator": True,
+                },
+                "automaticPromotion": False,
+            },
+        )
+        verdict = "advance-to-case-contract" if approved else "defer-for-more-evidence"
+        responses = [
+            {
+                "id": question_id,
+                "answer": "unknown" if not approved and question_id == "environment" else "yes",
+                "rationale": f"Independent retained evidence supports this answer for {question_id}.",
+            }
+            for question_id in sorted(question_ids)
+        ]
+        decision = self.write(
+            root,
+            "semantic-decision.json",
+            {
+                "schema": "agentlab.multi_repo_candidate_semantic_review.v1",
+                "candidateId": candidate["id"],
+                "packetSha256": file_digest(packet),
+                "packetGenerator": f"git:{'1' * 40}",
+                "reviewer": "github:independent-test-reviewer",
+                "responses": responses,
+                "acknowledgedRiskIds": sorted(risk_ids),
+                "verdict": verdict,
+                "rationale": "The candidate semantic evidence was inspected independently for this test.",
+                "allowsCaseContract": approved,
+                "automaticPromotion": False,
+            },
+        )
+        gate = root / "semantic-gate.json"
+        compiled = subprocess.run(
+            [
+                sys.executable,
+                str(SEMANTIC_REVIEW),
+                "compile",
+                "--packet",
+                str(packet),
+                "--decision",
+                str(decision),
+                "--output",
+                str(gate),
+            ],
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(compiled.returncode, 0, compiled.stderr)
+        return packet, decision, gate
+
     def test_proposal_binds_exact_calls_paths_and_independent_review(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             manifest, difficulty, facts, selection = self.fixture(root)
+            semantic_packet, semantic_decision, semantic_gate = self.semantic_authorization(root, difficulty)
             proposal_path = root / "proposal.json"
             proposed = subprocess.run(
                 [
@@ -184,6 +287,12 @@ class ApiCallCaseLocalizationTest(unittest.TestCase):
                     "difficulty-api",
                     "--selection",
                     str(selection),
+                    "--semantic-packet",
+                    str(semantic_packet),
+                    "--semantic-decision",
+                    str(semantic_decision),
+                    "--semantic-gate",
+                    str(semantic_gate),
                     "--method-revision",
                     "b" * 40,
                     "--output",
@@ -200,6 +309,8 @@ class ApiCallCaseLocalizationTest(unittest.TestCase):
             self.assertEqual(len(proposal["editablePaths"]), 4)
             self.assertEqual(len(proposal["expandedPaths"]), 2)
             self.assertTrue(all(row["gitBlobOid"] for row in proposal["editablePaths"]))
+            self.assertTrue(proposal["semanticAuthorization"]["allowsCaseContract"])
+            self.assertEqual(proposal["semanticAuthorization"]["gateSha256"], file_digest(semantic_gate))
             self.assertFalse(proposal["automaticPromotion"])
 
             review = root / "review.json"
@@ -226,7 +337,22 @@ class ApiCallCaseLocalizationTest(unittest.TestCase):
             self.assertEqual(decision.returncode, 0, decision.stderr)
             reviewed_path = root / "reviewed.json"
             reviewed = subprocess.run(
-                [sys.executable, str(REVIEW), "--proposal", str(proposal_path), "--review", str(review), "--output", str(reviewed_path)],
+                [
+                    sys.executable,
+                    str(REVIEW),
+                    "--proposal",
+                    str(proposal_path),
+                    "--review",
+                    str(review),
+                    "--semantic-packet",
+                    str(semantic_packet),
+                    "--semantic-decision",
+                    str(semantic_decision),
+                    "--semantic-gate",
+                    str(semantic_gate),
+                    "--output",
+                    str(reviewed_path),
+                ],
                 text=True,
                 capture_output=True,
             )
@@ -261,6 +387,12 @@ class ApiCallCaseLocalizationTest(unittest.TestCase):
                     str(proposal_path),
                     "--localization-review",
                     str(review),
+                    "--semantic-packet",
+                    str(semantic_packet),
+                    "--semantic-decision",
+                    str(semantic_decision),
+                    "--semantic-gate",
+                    str(semantic_gate),
                     "--output",
                     str(construction),
                 ],
@@ -389,10 +521,54 @@ class ApiCallCaseLocalizationTest(unittest.TestCase):
                 file_digest(reviewed_path),
             )
 
+            tampered_gate = json.loads(semantic_gate.read_text())
+            tampered_gate["reviewer"] = "github:late-substitution"
+            semantic_gate.write_text(json.dumps(tampered_gate, sort_keys=True) + "\n")
+            rejected = subprocess.run(
+                [
+                    sys.executable,
+                    str(CONSTRUCT),
+                    "--manifest",
+                    str(manifest),
+                    "--difficulty",
+                    str(difficulty),
+                    "--facts",
+                    str(facts),
+                    "--candidate-id",
+                    "difficulty-api",
+                    "--oracle-contract",
+                    str(ORACLE),
+                    "--participant",
+                    str(MOCK),
+                    "--participant-id",
+                    "must-not-run-after-semantic-tamper",
+                    "--localization",
+                    str(reviewed_path),
+                    "--localization-proposal",
+                    str(proposal_path),
+                    "--localization-review",
+                    str(review),
+                    "--semantic-packet",
+                    str(semantic_packet),
+                    "--semantic-decision",
+                    str(semantic_decision),
+                    "--semantic-gate",
+                    str(semantic_gate),
+                    "--output",
+                    str(root / "tampered-construction"),
+                ],
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn("semantic gate validation failed", rejected.stderr)
+            self.assertFalse((root / "tampered-construction").exists())
+
     def test_proposal_rejects_call_outside_candidate(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             manifest, difficulty, facts, selection_path = self.fixture(root)
+            semantic_packet, semantic_decision, semantic_gate = self.semantic_authorization(root, difficulty)
             selection = json.loads(selection_path.read_text())
             selection["targetCallFactIds"][0] = "call-outside-candidate"
             selection_path.write_text(json.dumps(selection))
@@ -410,6 +586,12 @@ class ApiCallCaseLocalizationTest(unittest.TestCase):
                     "difficulty-api",
                     "--selection",
                     str(selection_path),
+                    "--semantic-packet",
+                    str(semantic_packet),
+                    "--semantic-decision",
+                    str(semantic_decision),
+                    "--semantic-gate",
+                    str(semantic_gate),
                     "--method-revision",
                     "b" * 40,
                     "--output",
@@ -420,6 +602,85 @@ class ApiCallCaseLocalizationTest(unittest.TestCase):
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("outside the candidate", result.stderr)
+
+    def test_proposal_rejects_deferred_semantic_gate_before_writing_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest, difficulty, facts, selection = self.fixture(root)
+            packet, decision, gate = self.semantic_authorization(root, difficulty, approved=False)
+            output = root / "proposal.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PROPOSE),
+                    "--manifest",
+                    str(manifest),
+                    "--difficulty",
+                    str(difficulty),
+                    "--facts",
+                    str(facts),
+                    "--candidate-id",
+                    "difficulty-api",
+                    "--selection",
+                    str(selection),
+                    "--semantic-packet",
+                    str(packet),
+                    "--semantic-decision",
+                    str(decision),
+                    "--semantic-gate",
+                    str(gate),
+                    "--method-revision",
+                    "b" * 40,
+                    "--output",
+                    str(output),
+                ],
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("not approved for case-contract proposal", result.stderr)
+            self.assertFalse(output.exists())
+
+    def test_proposal_rejects_tampered_semantic_gate_before_writing_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest, difficulty, facts, selection = self.fixture(root)
+            packet, decision, gate = self.semantic_authorization(root, difficulty)
+            tampered = json.loads(gate.read_text())
+            tampered["reviewer"] = "github:substituted-reviewer"
+            gate.write_text(json.dumps(tampered, sort_keys=True) + "\n")
+            output = root / "proposal.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PROPOSE),
+                    "--manifest",
+                    str(manifest),
+                    "--difficulty",
+                    str(difficulty),
+                    "--facts",
+                    str(facts),
+                    "--candidate-id",
+                    "difficulty-api",
+                    "--selection",
+                    str(selection),
+                    "--semantic-packet",
+                    str(packet),
+                    "--semantic-decision",
+                    str(decision),
+                    "--semantic-gate",
+                    str(gate),
+                    "--method-revision",
+                    "b" * 40,
+                    "--output",
+                    str(output),
+                ],
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("semantic gate validation failed", result.stderr)
+            self.assertFalse(output.exists())
 
     def test_api_call_construction_rejects_localization_bypass(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -461,6 +722,10 @@ class ApiCallCaseLocalizationTest(unittest.TestCase):
         self.assertIn("create-api-call-localization-review.py", workflow)
         self.assertIn("review-api-call-case-localization.py", workflow)
         self.assertIn("expected_proposal_sha256", workflow)
+        self.assertIn("semantic_review_run_id", workflow)
+        self.assertIn("expected_semantic_gate_sha256", workflow)
+        self.assertIn("multi-repo-candidate-semantic-review.yml", workflow)
+        self.assertIn("--semantic-gate", workflow)
         self.assertIn("acknowledged_risk_ids", workflow)
         self.assertNotIn("secrets.", workflow)
 

@@ -142,15 +142,16 @@ def validate_oracle(value: dict[str, Any]) -> dict[str, Any]:
 def localization_for_candidate(
     candidate: dict[str, Any],
     source_set_sha256: str,
-    paths: tuple[Path | None, Path | None, Path | None],
+    paths: tuple[Path | None, Path | None, Path | None, Path | None, Path | None, Path | None],
 ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     required = candidate.get("relationType") == "shared-external-api-call-contract"
     if required:
         require(all(paths), "API-call candidate requires reviewed localization evidence")
         localization = validate_reviewed_localization(
-            paths[0], paths[1], paths[2],
+            paths[0], paths[1], paths[2], paths[3], paths[4], paths[5],
             candidate_id=candidate["id"],
             source_set_sha256=source_set_sha256,
+            candidate_sha256=canonical_digest(candidate),
         )
         return localization, localization_summary(paths[0], paths[1], paths[2], localization)
     require(not any(paths), "localization evidence is valid only for an API-call candidate")
@@ -162,7 +163,7 @@ def propose(
     difficulty_path: Path,
     surface_path: Path,
     oracle_path: Path,
-    localization_paths: tuple[Path | None, Path | None, Path | None],
+    localization_paths: tuple[Path | None, Path | None, Path | None, Path | None, Path | None, Path | None],
 ) -> dict[str, Any]:
     selection, candidate = selected_candidate(selection_path, difficulty_path)
     surface = load(surface_path, "construction source surface")
@@ -289,7 +290,7 @@ def validate(
     difficulty_path: Path,
     surface_path: Path,
     oracle_path: Path,
-    localization_paths: tuple[Path | None, Path | None, Path | None],
+    localization_paths: tuple[Path | None, Path | None, Path | None, Path | None, Path | None, Path | None],
 ) -> dict[str, Any]:
     actual = load(contract_path, "reviewed construction contract")
     expected_proposal = propose(selection_path, difficulty_path, surface_path, oracle_path, localization_paths)
@@ -315,10 +316,20 @@ def add_exact_inputs(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--localization", type=Path)
     parser.add_argument("--localization-proposal", type=Path)
     parser.add_argument("--localization-review", type=Path)
+    parser.add_argument("--semantic-packet", type=Path)
+    parser.add_argument("--semantic-decision", type=Path)
+    parser.add_argument("--semantic-gate", type=Path)
 
 
-def localization_args(args: argparse.Namespace) -> tuple[Path | None, Path | None, Path | None]:
-    return args.localization, args.localization_proposal, args.localization_review
+def localization_args(args: argparse.Namespace) -> tuple[Path | None, Path | None, Path | None, Path | None, Path | None, Path | None]:
+    return (
+        args.localization,
+        args.localization_proposal,
+        args.localization_review,
+        args.semantic_packet,
+        args.semantic_decision,
+        args.semantic_gate,
+    )
 
 
 def main() -> int:

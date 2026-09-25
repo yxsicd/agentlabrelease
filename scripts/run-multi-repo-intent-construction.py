@@ -67,6 +67,9 @@ def main():
     parser.add_argument("--localization", type=Path)
     parser.add_argument("--localization-proposal", type=Path)
     parser.add_argument("--localization-review", type=Path)
+    parser.add_argument("--semantic-packet", type=Path)
+    parser.add_argument("--semantic-decision", type=Path)
+    parser.add_argument("--semantic-gate", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -111,6 +114,9 @@ def main():
         args.localization,
         args.localization_proposal,
         args.localization_review,
+        args.semantic_packet,
+        args.semantic_decision,
+        args.semantic_gate,
     )
     localization = None
     localization_lineage = None
@@ -120,8 +126,12 @@ def main():
             args.localization,
             args.localization_proposal,
             args.localization_review,
+            args.semantic_packet,
+            args.semantic_decision,
+            args.semantic_gate,
             candidate_id=args.candidate_id,
             source_set_sha256=source_set,
+            candidate_sha256=canonical_digest(candidate),
         )
         localization_lineage = localization_summary(
             args.localization,
