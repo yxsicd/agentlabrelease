@@ -250,6 +250,140 @@ def owner_contexts(
     return contexts, counts
 
 
+def call_result_handles(
+    call_facts: list[dict[str, Any]],
+    all_facts: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Relate selected calls to syntactic result handles without claiming dataflow."""
+    facts_by_owner: dict[tuple[Any, Any, Any], list[dict[str, Any]]] = {}
+    for row in all_facts:
+        key = (row.get("repositoryId"), row.get("path"), row.get("owner"))
+        facts_by_owner.setdefault(key, []).append(row)
+
+    counts = {
+        "binding-initializer": 0,
+        "assignment": 0,
+        "unbound-result": 0,
+        "ambiguous-container": 0,
+    }
+    member_counts: dict[str, int] = {}
+    evidence = []
+    for factory in call_facts:
+        factory_span = factory.get("span") or {}
+        factory_start = factory_span.get("startByte")
+        factory_end = factory_span.get("endByte")
+        require(
+            isinstance(factory_start, int) and isinstance(factory_end, int)
+            and 0 <= factory_start <= factory_end,
+            f"selected call span is invalid: {factory.get('id')}",
+        )
+        key = (factory.get("repositoryId"), factory.get("path"), factory.get("owner"))
+        owner_facts = facts_by_owner.get(key, [])
+        containers = []
+        for row in owner_facts:
+            if row.get("kind") not in {"binding", "assignment"}:
+                continue
+            row_span = row.get("span") or {}
+            start = row_span.get("startByte")
+            end = row_span.get("endByte")
+            if (
+                isinstance(start, int) and isinstance(end, int)
+                and start <= factory_start and factory_end <= end
+            ):
+                containers.append((end - start, row.get("id", ""), row))
+        containers.sort(key=lambda item: (item[0], item[1]))
+        smallest = []
+        if containers:
+            width = containers[0][0]
+            smallest = [row for candidate_width, _, row in containers if candidate_width == width]
+
+        defining = smallest[0] if len(smallest) == 1 else None
+        if defining is None:
+            status = "ambiguous-container" if containers else "unbound-result"
+            handle = None
+        elif defining.get("kind") == "binding":
+            status = "binding-initializer"
+            handle = defining.get("name")
+        else:
+            status = "assignment"
+            handle = defining.get("leftExpression")
+        if not isinstance(handle, str) or not handle:
+            if defining is not None:
+                status = "ambiguous-container"
+            handle = None
+        counts[status] += 1
+
+        direct_calls = []
+        reassignments = []
+        if handle is not None:
+            direct_member = re.compile(
+                rf"^{re.escape(handle)}(?:\.|\?\.)([A-Za-z_$][A-Za-z0-9_$]*)$"
+            )
+            for row in owner_facts:
+                row_span = row.get("span") or {}
+                start = row_span.get("startByte")
+                if row.get("kind") == "call":
+                    target = row.get("targetExpression")
+                    match = direct_member.fullmatch(target) if isinstance(target, str) else None
+                    if match:
+                        member = match.group(1)
+                        direct_calls.append({
+                            "factId": row.get("id"),
+                            "member": member,
+                            "targetExpression": target,
+                            "span": row.get("span"),
+                            "afterSelectedCall": isinstance(start, int) and start >= factory_end,
+                        })
+                        member_counts[member] = member_counts.get(member, 0) + 1
+                elif (
+                    row.get("kind") == "assignment"
+                    and row.get("id") != (defining or {}).get("id")
+                    and row.get("leftExpression") == handle
+                ):
+                    reassignments.append({
+                        "factId": row.get("id"),
+                        "span": row.get("span"),
+                        "afterSelectedCall": isinstance(start, int) and start >= factory_end,
+                    })
+        direct_calls.sort(key=lambda row: (
+            (row.get("span") or {}).get("startByte", -1), row.get("factId", "")
+        ))
+        reassignments.sort(key=lambda row: (
+            (row.get("span") or {}).get("startByte", -1), row.get("factId", "")
+        ))
+        evidence.append({
+            "selectedCallFactId": factory.get("id"),
+            "repositoryId": factory.get("repositoryId"),
+            "path": factory.get("path"),
+            "owner": factory.get("owner"),
+            "status": status,
+            "handleExpression": handle,
+            "definingFactId": defining.get("id") if defining else None,
+            "definingFactKind": defining.get("kind") if defining else None,
+            "directMemberCalls": direct_calls,
+            "sameHandleReassignments": reassignments,
+        })
+
+    evidence.sort(key=lambda row: (
+        row.get("repositoryId", ""), row.get("path", ""),
+        row.get("owner", ""), row.get("selectedCallFactId", ""),
+    ))
+    coverage = {
+        "selectedCallCount": len(call_facts),
+        "bindingInitializerCount": counts["binding-initializer"],
+        "assignmentCount": counts["assignment"],
+        "unboundResultCount": counts["unbound-result"],
+        "ambiguousContainerCount": counts["ambiguous-container"],
+        "directMemberNameCounts": dict(sorted(member_counts.items())),
+        "interpretation": (
+            "Containment can associate a selected call with one lexical binding or assignment and "
+            "enumerate exact direct-member call spellings on that handle. It does not prove aliases, "
+            "escapes, receiver types, control-flow coverage, exception safety or runtime release."
+        ),
+    }
+    return evidence, coverage
+
+
 def build_packet(
     manifest_path: Path,
     difficulty_path: Path,
@@ -328,6 +462,7 @@ def build_packet(
     owner_rows, owner_counts = owner_contexts(
         repositories, call_facts, all_facts, max_owner_lines
     )
+    handle_rows, handle_coverage = call_result_handles(call_facts, all_facts)
     project_boundary_status = (
         "review-required" if all(row["projectBoundaryCandidates"] for row in source_rows)
         else "incomplete"
@@ -363,6 +498,8 @@ def build_packet(
             "maxOwnerLines": max_owner_lines,
             "interpretation": "Owner spans and same-owner calls are syntactic evidence; they do not resolve receiver types, dataflow or behavioral intent.",
         },
+        "callResultHandleEvidence": handle_rows,
+        "callResultHandleCoverage": handle_coverage,
         "sourceProjectBoundary": {
             "status": project_boundary_status,
             "interpretation": "Marker-bearing ancestors are evidence candidates, not a qualified build root or module.",

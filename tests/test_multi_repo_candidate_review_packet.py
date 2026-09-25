@@ -178,7 +178,68 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
                     "owner-scoped call-neighborhood evidence",
                 ],
             )
+            self.assertEqual(packet["callResultHandleCoverage"]["selectedCallCount"], 2)
+            self.assertEqual(packet["callResultHandleCoverage"]["unboundResultCount"], 2)
             self.assertFalse(packet["automaticPromotion"])
+
+    def test_call_result_handles_distinguish_binding_assignment_and_exact_receiver(self):
+        calls = [
+            {
+                "id": "factory-binding", "kind": "call", "repositoryId": "repo-a",
+                "path": "a.ets", "owner": "A::run", "targetExpression": "api.create",
+                "span": {"startByte": 10, "endByte": 22},
+            },
+            {
+                "id": "factory-assignment", "kind": "call", "repositoryId": "repo-b",
+                "path": "b.ets", "owner": "B::run", "targetExpression": "api.create",
+                "span": {"startByte": 40, "endByte": 52},
+            },
+        ]
+        facts = [
+            *calls,
+            {
+                "id": "binding", "kind": "binding", "repositoryId": "repo-a",
+                "path": "a.ets", "owner": "A::run", "name": "handle",
+                "initializerExpression": "api.create()",
+                "span": {"startByte": 0, "endByte": 23},
+            },
+            {
+                "id": "binding-release", "kind": "call", "repositoryId": "repo-a",
+                "path": "a.ets", "owner": "A::run", "targetExpression": "handle.release",
+                "span": {"startByte": 30, "endByte": 46},
+            },
+            {
+                "id": "binding-lookalike", "kind": "call", "repositoryId": "repo-a",
+                "path": "a.ets", "owner": "A::run", "targetExpression": "handle2.release",
+                "span": {"startByte": 50, "endByte": 67},
+            },
+            {
+                "id": "assignment", "kind": "assignment", "repositoryId": "repo-b",
+                "path": "b.ets", "owner": "B::run", "leftExpression": "this.packer",
+                "span": {"startByte": 25, "endByte": 53},
+            },
+            {
+                "id": "assignment-use", "kind": "call", "repositoryId": "repo-b",
+                "path": "b.ets", "owner": "B::run", "targetExpression": "this.packer.packToFile",
+                "span": {"startByte": 60, "endByte": 82},
+            },
+        ]
+        evidence, coverage = PACKET.call_result_handles(calls, facts)
+        self.assertEqual(coverage["bindingInitializerCount"], 1)
+        self.assertEqual(coverage["assignmentCount"], 1)
+        self.assertEqual(coverage["unboundResultCount"], 0)
+        self.assertEqual(coverage["directMemberNameCounts"], {"packToFile": 1, "release": 1})
+        by_call = {row["selectedCallFactId"]: row for row in evidence}
+        self.assertEqual(by_call["factory-binding"]["handleExpression"], "handle")
+        self.assertEqual(
+            [row["factId"] for row in by_call["factory-binding"]["directMemberCalls"]],
+            ["binding-release"],
+        )
+        self.assertEqual(by_call["factory-assignment"]["handleExpression"], "this.packer")
+        self.assertEqual(
+            by_call["factory-assignment"]["directMemberCalls"][0]["member"],
+            "packToFile",
+        )
 
     def test_packet_rejects_candidate_drift_and_non_shortlisted_candidate(self):
         with tempfile.TemporaryDirectory() as directory:
