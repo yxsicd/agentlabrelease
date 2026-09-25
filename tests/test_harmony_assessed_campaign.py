@@ -144,6 +144,33 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
         self.tools = self.root / "tools"; self.tools.mkdir()
         self.image = self.root / "image"; self.image.mkdir()
         self.instance = self.root / "instance"; self.instance.mkdir()
+        self.execution_protocol = {
+            "schema": "agentlab.participant_execution_protocol.v1",
+            "agentImplementation": "pi",
+            "agentPackageVersion": "0.73.1",
+        }
+        self.experiment_profiles = [
+            {"ordinal": 0, "participantId": "weak", "model": "model-weak"},
+            {"ordinal": 1, "participantId": "strong", "model": "model-strong"},
+        ]
+        self.experiment_plan = self.root / "participant-experiment-plan.json"
+        self.experiment_plan.write_text(
+            json.dumps(
+                {
+                    "schema": "agentlab.participant_experiment_plan.v1",
+                    "status": "predeclared-before-attempts",
+                    "caseId": "campaign-case",
+                    "sourceSetSha256": self.source_set,
+                    "methodRevision": "d" * 40,
+                    "providerRoute": "provider-route",
+                    "trialsPerParticipant": 1,
+                    "participantProfileCount": 2,
+                    "participantProfiles": self.experiment_profiles,
+                    "executionProtocol": self.execution_protocol,
+                    "automaticPromotion": False,
+                }
+            )
+        )
         self.strong = self.assessment("strong")
         self.weak = self.assessment("weak")
         self.plan = self.root / "campaign-plan.json"
@@ -184,6 +211,22 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
             "infrastructureAvailable": True,
             "subjectTaskSucceeded": True,
         }
+        profile = next(
+            row for row in self.experiment_profiles if row["participantId"] == participant
+        )
+        experiment = {
+            "planSha256": digest(self.experiment_plan),
+            "participantOrdinal": profile["ordinal"],
+            "participantId": participant,
+            "model": profile["model"],
+            "providerRoute": "provider-route",
+            "executionProtocol": self.execution_protocol,
+            "nativeParticipantEvidence": {
+                "path": "participant.json",
+                "sha256": "9" * 64,
+                "identityQualified": True,
+            },
+        }
         phases = [
             {
                 "stageId": "static",
@@ -218,10 +261,10 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
             "processMeasurementQualified": True,
         }
         (root / "summary.json").write_text(
-            json.dumps({**common, "schema": "agentlab.multi_repo_assessment_summary.v1", "finalWorkspaceSha256": canonical(state), "stages": phases, "durationMs": 15, "processMeasurement": process})
+            json.dumps({**common, "schema": "agentlab.multi_repo_assessment_summary.v1", "finalWorkspaceSha256": canonical(state), "stages": phases, "durationMs": 15, "processMeasurement": process, "participantExperiment": experiment})
         )
         (root / "decision-package.json").write_text(
-            json.dumps({**common, "schema": "agentlab.harness_decision_package.v1", "phaseVerdicts": phases, "processMeasurement": process, "automaticPromotion": False})
+            json.dumps({**common, "schema": "agentlab.harness_decision_package.v1", "phaseVerdicts": phases, "processMeasurement": process, "participantExperiment": experiment, "automaticPromotion": False})
         )
         return root
 
@@ -241,11 +284,12 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
             "campaignId": "campaign-r1",
             "evaluationCase": self.bind(self.case),
             "calibration": self.bind(self.calibration),
+            "participantExperimentPlan": self.bind(self.experiment_plan),
             "calibrationAuthoring": self.authoring,
             "methodRevision": "d" * 40,
             "attempts": [
-                {"attemptId": "strong-1", "participantId": "strong", "assessment": self.assessment_binding(self.strong)},
-                {"attemptId": "weak-1", "participantId": "weak", "assessment": self.assessment_binding(self.weak)},
+                {"attemptId": "strong-1", "participantId": "strong", "producerRun": 424242, "assessment": self.assessment_binding(self.strong)},
+                {"attemptId": "weak-1", "participantId": "weak", "producerRun": 424242, "assessment": self.assessment_binding(self.weak)},
             ],
             "sourceMaterialization": [
                 {"sourceId": "app", "sourcePath": ".", "targetPath": "entry"},
@@ -301,6 +345,10 @@ class HarmonyAssessedCampaignTests(unittest.TestCase):
         state = json.loads((output / "campaign-state.json").read_text())
         self.assertEqual(summary["deviceAttemptCount"], 2)
         self.assertEqual(summary["calibrationAuthoring"], self.authoring)
+        self.assertEqual(
+            summary["participantExperimentPlanSha256"],
+            digest(self.experiment_plan),
+        )
         self.assertEqual(summary["eligibleCaseIds"], ["campaign-case"])
         self.assertEqual(report["ranking"][0]["metrics"]["discriminationScore"], 1.0)
         self.assertTrue(report["ranking"][0]["processAwareEligible"])

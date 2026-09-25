@@ -11,7 +11,8 @@ import stat
 from typing import Any
 
 
-HANDOFF_SCHEMA = "agentlab.harmony_assessed_campaign_handoff.v1"
+HANDOFF_SCHEMA_V1 = "agentlab.harmony_assessed_campaign_handoff.v1"
+HANDOFF_SCHEMA = "agentlab.harmony_assessed_campaign_handoff.v2"
 HOST_PROFILE_SCHEMA = "agentlab.harmony_assessed_host_profile.v1"
 PLAN_SCHEMA = "agentlab.harmony_assessed_campaign_plan.v1"
 SHA256 = re.compile(r"[0-9a-f]{64}")
@@ -94,6 +95,78 @@ def calibration_authoring_from_case(case: dict[str, Any]) -> dict[str, str] | No
     }
 
 
+def validate_experiment_plan(
+    plan: dict[str, Any],
+    plan_sha256: str,
+    case_id: str,
+    source_set: str,
+    method_revision: str,
+) -> dict[str, dict[str, Any]]:
+    require(
+        plan.get("schema") == "agentlab.participant_experiment_plan.v1"
+        and plan.get("status") == "predeclared-before-attempts",
+        "participant experiment plan is not predeclared",
+    )
+    require(plan.get("caseId") == case_id, "participant experiment plan case differs")
+    require(
+        plan.get("sourceSetSha256") == source_set,
+        "participant experiment plan source set differs",
+    )
+    require(
+        plan.get("methodRevision") == method_revision,
+        "participant experiment plan method revision differs",
+    )
+    require(plan.get("automaticPromotion") is False, "participant experiment plan cannot auto-promote")
+    trials = plan.get("trialsPerParticipant")
+    profiles = plan.get("participantProfiles")
+    require(isinstance(trials, int) and trials > 0, "participant experiment trial count is invalid")
+    require(isinstance(profiles, list) and len(profiles) >= 2, "participant experiment profiles are invalid")
+    require(plan.get("participantProfileCount") == len(profiles), "participant experiment profile count differs")
+    index: dict[str, dict[str, Any]] = {}
+    for ordinal, row in enumerate(profiles):
+        require(isinstance(row, dict), "participant experiment profile must be an object")
+        participant_id = require_token(row.get("participantId"), "experiment participantId")
+        model = require_token(row.get("model"), f"{participant_id} experiment model")
+        require(row.get("ordinal") == ordinal, "participant experiment profile order differs")
+        require(participant_id not in index, "participant experiment profile is duplicated")
+        index[participant_id] = {"ordinal": ordinal, "model": model}
+    require_digest(plan_sha256, "participant experiment plan sha256")
+    return index
+
+
+def validate_attempt_experiment(
+    summary: dict[str, Any],
+    decision: dict[str, Any],
+    participant_id: str,
+    profile: dict[str, Any],
+    plan: dict[str, Any],
+    plan_sha256: str,
+    attempt_id: str,
+) -> None:
+    experiment = summary.get("participantExperiment")
+    require(
+        isinstance(experiment, dict) and decision.get("participantExperiment") == experiment,
+        f"{attempt_id} participant experiment evidence differs",
+    )
+    require(experiment.get("planSha256") == plan_sha256, f"{attempt_id} participant experiment plan differs")
+    require(experiment.get("participantId") == participant_id, f"{attempt_id} experiment participant differs")
+    require(experiment.get("participantOrdinal") == profile["ordinal"], f"{attempt_id} experiment ordinal differs")
+    require(experiment.get("model") == profile["model"], f"{attempt_id} experiment model differs")
+    require(experiment.get("providerRoute") == plan.get("providerRoute"), f"{attempt_id} provider route differs")
+    require(
+        experiment.get("executionProtocol") == plan.get("executionProtocol"),
+        f"{attempt_id} execution protocol differs",
+    )
+    native = experiment.get("nativeParticipantEvidence")
+    require(
+        isinstance(native, dict)
+        and native.get("identityQualified") is True
+        and isinstance(native.get("sha256"), str)
+        and SHA256.fullmatch(native["sha256"]) is not None,
+        f"{attempt_id} native participant identity is not qualified",
+    )
+
+
 def safe_relative(value: Any, label: str) -> PurePosixPath:
     require(isinstance(value, str) and value, f"{label} path is required")
     path = PurePosixPath(value)
@@ -163,6 +236,9 @@ def validate_static_assessment(
     attempt: dict[str, Any],
     case_id: str,
     source_set: str,
+    experiment_plan: dict[str, Any],
+    experiment_plan_sha256: str,
+    experiment_profiles: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     attempt_id = require_token(attempt.get("attemptId"), "attemptId")
     participant_id = require_token(attempt.get("participantId"), f"{attempt_id} participantId")
@@ -180,6 +256,16 @@ def validate_static_assessment(
     require(decision.get("schema") == "agentlab.harness_decision_package.v1", f"{attempt_id} decision schema is unsupported")
     require(all(summary.get(key) == value and decision.get(key) == value for key, value in common.items()), f"{attempt_id} static identity differs")
     require(decision.get("automaticPromotion") is False, f"{attempt_id} decision must not auto-promote")
+    require(participant_id in experiment_profiles, f"{attempt_id} participant is absent from experiment plan")
+    validate_attempt_experiment(
+        summary,
+        decision,
+        participant_id,
+        experiment_profiles[participant_id],
+        experiment_plan,
+        experiment_plan_sha256,
+        attempt_id,
+    )
     actual_state = tree_state(workspace)
     require(actual_state == final_state, f"{attempt_id} workspace differs from final source state")
     tree_sha = canonical_sha256(actual_state)
@@ -210,9 +296,11 @@ def prepare(root: Path, output: Path, campaign_id: str | None = None) -> dict[st
     case_path = root / "multi-repo-evaluation-case.json"
     calibration_path = root / "multi-repo-calibration.json"
     collection_path = root / "attempts.json"
+    experiment_plan_path = root / "participant-experiment-plan.json"
     case = load(case_path, "evaluation case")
     calibration = load(calibration_path, "calibration")
     collection = load(collection_path, "attempt collection")
+    experiment_plan = load(experiment_plan_path, "participant experiment plan")
     require(case.get("schema") == "agentlab.multi_repo_evaluation_case.v1", "unsupported evaluation case schema")
     require(case.get("status") == "frozen-calibrated" and case.get("automaticPromotion") is False, "case is not frozen calibrated and non-promoted")
     require((case.get("calibration") or {}).get("qualified") is True, "case calibration is not qualified")
@@ -225,6 +313,14 @@ def prepare(root: Path, output: Path, campaign_id: str | None = None) -> dict[st
     require(collection.get("sourceSetSha256") == source_set, "attempt collection source set differs")
     method_revision = collection.get("methodRevision")
     require(isinstance(method_revision, str) and REVISION.fullmatch(method_revision) is not None, "methodRevision must be exact")
+    experiment_plan_sha256 = sha256(experiment_plan_path)
+    experiment_profiles = validate_experiment_plan(
+        experiment_plan,
+        experiment_plan_sha256,
+        case_id,
+        source_set,
+        method_revision,
+    )
     cases = collection.get("cases")
     require(isinstance(cases, list) and len(cases) == 1 and cases[0].get("id") == case_id, "attempt collection must contain exactly the handoff case")
     case_attempts = cases[0]
@@ -234,13 +330,45 @@ def prepare(root: Path, output: Path, campaign_id: str | None = None) -> dict[st
     attempts_raw = case_attempts.get("attempts")
     require(isinstance(attempts_raw, list) and len(attempts_raw) >= 2, "handoff requires at least two attempts")
     attempts = [
-        validate_static_assessment(root, row.get("evidence"), row, case_id, source_set)
+        validate_static_assessment(
+            root,
+            row.get("evidence"),
+            row,
+            case_id,
+            source_set,
+            experiment_plan,
+            experiment_plan_sha256,
+            experiment_profiles,
+        )
         for row in attempts_raw
         if isinstance(row, dict)
     ]
     require(len(attempts) == len(attempts_raw), "attempt entries must be objects")
     require(len({row["attemptId"] for row in attempts}) == len(attempts), "attemptId values must be unique")
     require(len({row["participantId"] for row in attempts}) >= 2, "handoff requires at least two participant profiles")
+    require(
+        len({row["assessment"]["path"] for row in attempts}) == len(attempts),
+        "predeclared attempts must bind distinct assessment roots",
+    )
+    expected_trials = experiment_plan["trialsPerParticipant"]
+    counts = {
+        participant_id: sum(row["participantId"] == participant_id for row in attempts)
+        for participant_id in experiment_profiles
+    }
+    require(
+        set(row["participantId"] for row in attempts) == set(experiment_profiles)
+        and all(count == expected_trials for count in counts.values()),
+        "attempt population differs from predeclared participant experiment plan",
+    )
+    require(
+        len({str(row.get("producerRun")) for row in attempts}) == 1
+        and all(
+            str(row.get("producerRun")).isdigit()
+            and int(str(row.get("producerRun"))) > 0
+            for row in attempts
+        ),
+        "predeclared handoff attempts require one positive producerRun",
+    )
     producer_runs = {str(row["producerRun"]) for row in attempts if row.get("producerRun") is not None}
     inferred = f"{case_id}-run-{next(iter(producer_runs))}" if len(producer_runs) == 1 else f"{case_id}-{method_revision[:12]}"
     selected_campaign_id = require_token(campaign_id or inferred, "campaignId")
@@ -253,6 +381,9 @@ def prepare(root: Path, output: Path, campaign_id: str | None = None) -> dict[st
         "evaluationCase": portable_file(root, case_path, "evaluation case"),
         "calibration": portable_file(root, calibration_path, "calibration"),
         "attemptCollection": portable_file(root, collection_path, "attempt collection"),
+        "participantExperimentPlan": portable_file(
+            root, experiment_plan_path, "participant experiment plan"
+        ),
         "attempts": attempts,
         **({"calibrationAuthoring": calibration_authoring} if calibration_authoring else {}),
         "automaticPromotion": False,
@@ -301,7 +432,11 @@ def normalize_execution_preflight(value: Any, *, required: bool) -> dict[str, An
 
 def verify_handoff(handoff_path: Path) -> tuple[dict[str, Any], Path, list[dict[str, Any]]]:
     handoff = load(handoff_path, "campaign handoff")
-    require(handoff.get("schema") == HANDOFF_SCHEMA, "unsupported campaign handoff schema")
+    handoff_schema = handoff.get("schema")
+    require(
+        handoff_schema in {HANDOFF_SCHEMA_V1, HANDOFF_SCHEMA},
+        "unsupported campaign handoff schema",
+    )
     require(handoff.get("automaticPromotion") is False, "handoff must not auto-promote")
     root = handoff_path.resolve().parent
     case_path = verify_portable_file(root, handoff.get("evaluationCase"), "evaluation case")
@@ -316,6 +451,24 @@ def verify_handoff(handoff_path: Path) -> tuple[dict[str, Any], Path, list[dict[
         "handoff calibration authoring lineage differs from evaluation case",
     )
     require(isinstance(handoff.get("methodRevision"), str) and REVISION.fullmatch(handoff["methodRevision"]) is not None, "handoff methodRevision is invalid")
+    experiment_plan = None
+    experiment_plan_sha256 = None
+    experiment_profiles = None
+    if handoff_schema == HANDOFF_SCHEMA:
+        experiment_plan_path = verify_portable_file(
+            root,
+            handoff.get("participantExperimentPlan"),
+            "participant experiment plan",
+        )
+        experiment_plan = load(experiment_plan_path, "participant experiment plan")
+        experiment_plan_sha256 = sha256(experiment_plan_path)
+        experiment_profiles = validate_experiment_plan(
+            experiment_plan,
+            experiment_plan_sha256,
+            case_id,
+            source_set,
+            handoff["methodRevision"],
+        )
     attempts_raw = handoff.get("attempts")
     require(isinstance(attempts_raw, list) and len(attempts_raw) >= 2, "handoff requires at least two attempts")
     attempts: list[dict[str, Any]] = []
@@ -345,6 +498,20 @@ def verify_handoff(handoff_path: Path) -> tuple[dict[str, Any], Path, list[dict[
         decision_value = load(decision, f"{attempt_id} decision")
         common = {"taskId": case_id, "sourceSetSha256": source_set, "participantId": participant_id}
         require(all(summary_value.get(key) == value and decision_value.get(key) == value for key, value in common.items()), f"{attempt_id} static identity differs from handoff")
+        if experiment_plan is not None:
+            require(
+                participant_id in experiment_profiles,
+                f"{attempt_id} participant is absent from experiment plan",
+            )
+            validate_attempt_experiment(
+                summary_value,
+                decision_value,
+                participant_id,
+                experiment_profiles[participant_id],
+                experiment_plan,
+                experiment_plan_sha256,
+                attempt_id,
+            )
         attempts.append({
             "attemptId": attempt_id,
             "participantId": participant_id,
@@ -358,6 +525,30 @@ def verify_handoff(handoff_path: Path) -> tuple[dict[str, Any], Path, list[dict[
         })
     require(len({row["attemptId"] for row in attempts}) == len(attempts), "handoff attemptId values must be unique")
     require(len({row["participantId"] for row in attempts}) >= 2, "handoff requires at least two participant profiles")
+    if experiment_plan is not None:
+        require(
+            len({row["assessment"]["path"] for row in attempts}) == len(attempts),
+            "predeclared attempts must bind distinct assessment roots",
+        )
+        expected_trials = experiment_plan["trialsPerParticipant"]
+        counts = {
+            participant_id: sum(row["participantId"] == participant_id for row in attempts)
+            for participant_id in experiment_profiles
+        }
+        require(
+            set(row["participantId"] for row in attempts) == set(experiment_profiles)
+            and all(count == expected_trials for count in counts.values()),
+            "handoff attempts differ from predeclared participant experiment plan",
+        )
+        require(
+            len({str(row.get("producerRun")) for row in attempts}) == 1
+            and all(
+                str(row.get("producerRun")).isdigit()
+                and int(str(row.get("producerRun"))) > 0
+                for row in attempts
+            ),
+            "predeclared handoff attempts require one positive producerRun",
+        )
     return handoff, calibration_path, attempts
 
 
@@ -435,11 +626,30 @@ def resolve(handoff_path: Path, profile_path: Path, host_root: Path, output: Pat
         and "kvm" in environment_identity.split(":"),
     )
     evaluation_case = verify_portable_file(handoff_path.resolve().parent, handoff.get("evaluationCase"), "evaluation case")
+    experiment_plan = (
+        verify_portable_file(
+            handoff_path.resolve().parent,
+            handoff.get("participantExperimentPlan"),
+            "participant experiment plan",
+        )
+        if handoff.get("schema") == HANDOFF_SCHEMA
+        else None
+    )
     value = {
         "schema": PLAN_SCHEMA,
         "campaignId": require_token(handoff.get("campaignId"), "campaignId"),
         "evaluationCase": {"path": str(evaluation_case), "sha256": sha256(evaluation_case)},
         "calibration": {"path": str(calibration_path), "sha256": sha256(calibration_path)},
+        **(
+            {
+                "participantExperimentPlan": {
+                    "path": str(experiment_plan),
+                    "sha256": sha256(experiment_plan),
+                }
+            }
+            if experiment_plan is not None
+            else {}
+        ),
         "methodRevision": handoff["methodRevision"],
         "attempts": attempts,
         **(

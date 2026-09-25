@@ -147,7 +147,7 @@ class HarmonyDeviceCampaignImportTests(unittest.TestCase):
         self.handoff.write_text(
             json.dumps(
                 {
-                    "schema": "agentlab.harmony_assessed_campaign_handoff.v1",
+                    "schema": "agentlab.harmony_assessed_campaign_handoff.v2",
                     "campaignId": "campaign-r1",
                     "caseId": "campaign-case",
                     "sourceSetSha256": self.fixture.source_set,
@@ -155,6 +155,9 @@ class HarmonyDeviceCampaignImportTests(unittest.TestCase):
                     "evaluationCase": file_binding(self.root, self.fixture.case),
                     "calibration": file_binding(self.root, self.fixture.calibration),
                     "attemptCollection": file_binding(self.root, collection_path),
+                    "participantExperimentPlan": file_binding(
+                        self.root, self.fixture.experiment_plan
+                    ),
                     "attempts": attempts,
                     "calibrationAuthoring": self.fixture.authoring,
                     "automaticPromotion": False,
@@ -260,6 +263,14 @@ class HarmonyDeviceCampaignImportTests(unittest.TestCase):
         self.assertEqual(result["verificationMethodRevision"], "e" * 40)
         self.assertEqual(manifest["calibrationAuthoring"], self.fixture.authoring)
         self.assertEqual(result["calibrationAuthoring"], self.fixture.authoring)
+        self.assertEqual(
+            manifest["participantExperimentPlanSha256"],
+            digest(self.fixture.experiment_plan),
+        )
+        self.assertEqual(
+            result["participantExperimentPlanSha256"],
+            digest(self.fixture.experiment_plan),
+        )
         self.assertTrue(result["harmonyEndToEndEvidenceQualified"])
         self.assertTrue(
             report["ranking"][0]["processMeasurement"]["harmonyDevice"][
@@ -349,6 +360,22 @@ class HarmonyDeviceCampaignImportTests(unittest.TestCase):
                 self.root,
                 self.source_run,
                 self.root / "drift-import",
+                "e" * 40,
+            )
+
+    def test_authoritative_participant_experiment_drift_is_rejected(self) -> None:
+        self.prepare()
+        value = json.loads(self.fixture.experiment_plan.read_text())
+        value["providerRoute"] = "substituted-route"
+        self.fixture.experiment_plan.write_text(json.dumps(value))
+        with self.assertRaisesRegex(
+            IMPORT.ImportError, "participant experiment plan differs"
+        ):
+            IMPORT.verify_bundle(
+                self.archive,
+                self.root,
+                self.source_run,
+                self.root / "experiment-drift-import",
                 "e" * 40,
             )
 

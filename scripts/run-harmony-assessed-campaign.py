@@ -285,6 +285,87 @@ def validate_plan(plan_path: pathlib.Path) -> dict[str, Any]:
         raise CampaignError("requiredTrials must be positive")
     if not isinstance(threshold, (int, float)) or not 0 <= threshold <= 1:
         raise CampaignError("eligibilityThreshold must be in 0..1")
+    experiment_plan_path = None
+    experiment_plan = None
+    experiment_binding = plan.get("participantExperimentPlan")
+    if experiment_binding is not None:
+        experiment_plan_path = bound_file(
+            experiment_binding, "participant experiment plan"
+        )
+        experiment_plan = load(experiment_plan_path, "participant experiment plan")
+        if (
+            experiment_plan.get("schema")
+            != "agentlab.participant_experiment_plan.v1"
+            or experiment_plan.get("status") != "predeclared-before-attempts"
+            or experiment_plan.get("automaticPromotion") is not False
+            or experiment_plan.get("caseId") != case_id
+            or experiment_plan.get("sourceSetSha256") != source_set
+            or experiment_plan.get("methodRevision") != method_revision
+        ):
+            raise CampaignError("participant experiment plan identity differs")
+        profiles = experiment_plan.get("participantProfiles")
+        if (
+            not isinstance(profiles, list)
+            or len(profiles) < 2
+            or experiment_plan.get("participantProfileCount") != len(profiles)
+            or experiment_plan.get("trialsPerParticipant") != required_trials
+        ):
+            raise CampaignError("participant experiment plan denominators differ")
+        profile_index = {
+            row.get("participantId"): row
+            for row in profiles
+            if isinstance(row, dict)
+        }
+        if len(profile_index) != len(profiles) or any(
+            row.get("ordinal") != ordinal
+            for ordinal, row in enumerate(profiles)
+        ):
+            raise CampaignError("participant experiment profile order differs")
+        attempt_counts = {
+            participant_id: sum(
+                attempt["participantId"] == participant_id for attempt in attempts
+            )
+            for participant_id in profile_index
+        }
+        if (
+            set(attempt["participantId"] for attempt in attempts) != set(profile_index)
+            or any(count != required_trials for count in attempt_counts.values())
+        ):
+            raise CampaignError("campaign attempts differ from participant experiment plan")
+        if len({str(attempt["root"]) for attempt in attempts}) != len(attempts):
+            raise CampaignError("predeclared attempts must bind distinct assessment roots")
+        if (
+            len({str(attempt.get("producerRun")) for attempt in attempts}) != 1
+            or any(
+                not str(attempt.get("producerRun")).isdigit()
+                or int(str(attempt.get("producerRun"))) < 1
+                for attempt in attempts
+            )
+        ):
+            raise CampaignError("predeclared attempts require one positive producerRun")
+        experiment_sha256 = sha256(experiment_plan_path)
+        for attempt in attempts:
+            summary = load(attempt["summaryPath"], f"{attempt['attemptId']} static summary")
+            decision = load(attempt["decisionPath"], f"{attempt['attemptId']} static decision")
+            evidence = summary.get("participantExperiment")
+            profile = profile_index[attempt["participantId"]]
+            if (
+                not isinstance(evidence, dict)
+                or decision.get("participantExperiment") != evidence
+                or evidence.get("planSha256") != experiment_sha256
+                or evidence.get("participantId") != attempt["participantId"]
+                or evidence.get("participantOrdinal") != profile.get("ordinal")
+                or evidence.get("model") != profile.get("model")
+                or evidence.get("providerRoute") != experiment_plan.get("providerRoute")
+                or evidence.get("executionProtocol")
+                != experiment_plan.get("executionProtocol")
+                or not isinstance(evidence.get("nativeParticipantEvidence"), dict)
+                or evidence["nativeParticipantEvidence"].get("identityQualified")
+                is not True
+            ):
+                raise CampaignError(
+                    f"{attempt['attemptId']} participant experiment evidence differs"
+                )
     programs_raw = plan.get("programs")
     if not isinstance(programs_raw, dict):
         raise CampaignError("program bindings are required")
@@ -353,6 +434,8 @@ def validate_plan(plan_path: pathlib.Path) -> dict[str, Any]:
         "attempts": attempts,
         "requiredTrials": required_trials,
         "threshold": float(threshold),
+        "experimentPlanPath": experiment_plan_path,
+        "experimentPlan": experiment_plan,
         "programs": programs,
         "device": device,
         "sourceStandardTestExecutor": source_executor,
@@ -637,6 +720,21 @@ def main() -> int:
             "caseId": validated["caseId"],
             "sourceSetSha256": validated["sourceSetSha256"],
             "methodRevision": validated["methodRevision"],
+            **(
+                {
+                    "participantExperimentPlanSha256": sha256(
+                        validated["experimentPlanPath"]
+                    ),
+                    "participantProfileCount": validated["experimentPlan"][
+                        "participantProfileCount"
+                    ],
+                    "trialsPerParticipant": validated["experimentPlan"][
+                        "trialsPerParticipant"
+                    ],
+                }
+                if validated["experimentPlan"] is not None
+                else {}
+            ),
             **(
                 {"calibrationAuthoring": validated["calibrationAuthoring"]}
                 if validated["calibrationAuthoring"] is not None

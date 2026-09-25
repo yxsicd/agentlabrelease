@@ -15,7 +15,8 @@ import zipfile
 
 BUNDLE_SCHEMA = "agentlab.harmony_device_campaign_bundle.v1"
 VERIFICATION_SCHEMA = "agentlab.harmony_device_campaign_import_verification.v1"
-HANDOFF_SCHEMA = "agentlab.harmony_assessed_campaign_handoff.v1"
+HANDOFF_SCHEMA_V1 = "agentlab.harmony_assessed_campaign_handoff.v1"
+HANDOFF_SCHEMA = "agentlab.harmony_assessed_campaign_handoff.v2"
 HOST_PROFILE_SCHEMA = "agentlab.harmony_assessed_host_profile.v1"
 PLAN_SCHEMA = "agentlab.harmony_assessed_campaign_plan.v1"
 SUMMARY_SCHEMA = "agentlab.harmony_assessed_campaign_summary.v1"
@@ -136,7 +137,10 @@ def binding(path: str, source: Path) -> dict[str, Any]:
 def verify_handoff_identity(
     handoff: dict[str, Any], plan: dict[str, Any], source_run: dict[str, Any]
 ) -> None:
-    require(handoff.get("schema") == HANDOFF_SCHEMA, "unsupported handoff schema")
+    require(
+        handoff.get("schema") in {HANDOFF_SCHEMA_V1, HANDOFF_SCHEMA},
+        "unsupported handoff schema",
+    )
     require(plan.get("schema") == PLAN_SCHEMA, "unsupported campaign plan schema")
     require(handoff.get("automaticPromotion") is False and plan.get("automaticPromotion") is False, "campaign inputs cannot auto-promote")
     for field in ("campaignId", "methodRevision"):
@@ -153,6 +157,12 @@ def verify_handoff_identity(
     calibration_binding = handoff.get("calibration") or {}
     require((plan.get("evaluationCase") or {}).get("sha256") == case_binding.get("sha256"), "plan evaluation case differs from handoff")
     require((plan.get("calibration") or {}).get("sha256") == calibration_binding.get("sha256"), "plan calibration differs from handoff")
+    if handoff.get("schema") == HANDOFF_SCHEMA:
+        require(
+            (plan.get("participantExperimentPlan") or {}).get("sha256")
+            == (handoff.get("participantExperimentPlan") or {}).get("sha256"),
+            "plan participant experiment differs from handoff",
+        )
     handoff_attempts = handoff.get("attempts")
     plan_attempts = plan.get("attempts")
     require(isinstance(handoff_attempts, list) and isinstance(plan_attempts, list), "campaign attempts are absent")
@@ -248,6 +258,27 @@ def validate_campaign(
         expected = handoff.get(field)
         require(summary.get(field) == state.get(field) == expected, f"campaign {field} differs")
     require(summary.get("methodRevision") == handoff.get("methodRevision"), "campaign method revision differs")
+    if handoff.get("schema") == HANDOFF_SCHEMA:
+        experiment_sha256 = (handoff.get("participantExperimentPlan") or {}).get("sha256")
+        require(
+            summary.get("participantExperimentPlanSha256") == experiment_sha256,
+            "campaign participant experiment plan differs",
+        )
+        experiment_plan = load(
+            static_root
+            / safe_relative(
+                (handoff.get("participantExperimentPlan") or {}).get("path"),
+                "participant experiment plan",
+            ),
+            "participant experiment plan",
+        )
+        require(
+            summary.get("participantProfileCount")
+            == experiment_plan.get("participantProfileCount")
+            and summary.get("trialsPerParticipant")
+            == experiment_plan.get("trialsPerParticipant"),
+            "campaign participant experiment denominators differ",
+        )
     require(attempt_manifest.get("schema") == "agentlab.case_attempt_collection.v2", "attempt manifest schema differs")
     require(attempt_manifest.get("sourceSetSha256") == handoff.get("sourceSetSha256"), "attempt manifest source set differs")
     require(attempt_manifest.get("methodRevision") == handoff.get("methodRevision"), "attempt manifest method revision differs")
@@ -373,6 +404,10 @@ def prepare_bundle(
     }
     if calibration_authoring is not None:
         manifest["calibrationAuthoring"] = calibration_authoring
+    if handoff.get("schema") == HANDOFF_SCHEMA:
+        manifest["participantExperimentPlanSha256"] = (
+            handoff["participantExperimentPlan"]["sha256"]
+        )
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, "x", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for path, name, mode in members:
@@ -457,6 +492,20 @@ def verify_bundle(
     handoff_path = static_root / "harmony-device-handoff.json"
     handoff = load(handoff_path, "authoritative campaign handoff")
     require(sha256(handoff_path) == manifest.get("sourceHandoffSha256"), "authoritative handoff differs from bundle")
+    if handoff.get("schema") == HANDOFF_SCHEMA:
+        experiment_binding = handoff.get("participantExperimentPlan") or {}
+        experiment_path = static_root / safe_relative(
+            experiment_binding.get("path"), "participant experiment plan"
+        )
+        require(
+            experiment_path.is_file() and not experiment_path.is_symlink(),
+            "authoritative participant experiment plan is absent or unsafe",
+        )
+        require(
+            sha256(experiment_path) == experiment_binding.get("sha256")
+            == manifest.get("participantExperimentPlanSha256"),
+            "authoritative participant experiment plan differs from bundle",
+        )
     handoff_module = trusted_module(
         "harmony_assessed_handoff.py", "agentlab_import_handoff"
     )
@@ -525,5 +574,9 @@ def verify_bundle(
     }
     if calibration_authoring is not None:
         verification["calibrationAuthoring"] = calibration_authoring
+    if handoff.get("schema") == HANDOFF_SCHEMA:
+        verification["participantExperimentPlanSha256"] = (
+            handoff["participantExperimentPlan"]["sha256"]
+        )
     (result_root / "import-verification.json").write_bytes(json_bytes(verification))
     return verification

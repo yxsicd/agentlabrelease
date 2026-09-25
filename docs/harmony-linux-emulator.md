@@ -645,14 +645,19 @@ separate resource-allocation layer and must preserve one exact runtime and HDC
 binding per attempt.
 
 The trusted static workflow emits a portable
-`agentlab.harmony_assessed_campaign_handoff.v1` beside its retained evidence.
+`agentlab.harmony_assessed_campaign_handoff.v2` beside its retained evidence.
 Use `scripts/resolve-harmony-assessed-handoff.py` on hwlinux with an
 `agentlab.harmony_assessed_host_profile.v1` and an explicit `--host-root` to
 create the absolute campaign plan. The portable side binds every static file
-and the complete workspace tree; the host side binds build, runner, Oracle,
-SmartPerf policy/workload and controller programs. Keeping these authorities
-separate lets the same immutable static artifact be replayed after relocation
-without recording one machine's paths in GitHub evidence.
+and the complete workspace tree. It also binds the pre-outcome participant
+experiment plan and rejects missing tiers, missing repeats, model/profile
+substitution, execution-protocol drift, or an unqualified native participant
+identity before emulator capacity is spent. The host side binds build, runner,
+Oracle, SmartPerf policy/workload and controller programs. Keeping these
+authorities separate lets the same immutable static artifact be replayed after
+relocation without recording one machine's paths in GitHub evidence. Legacy v1
+handoffs remain readable as historical evidence but do not gain this
+predeclared-experiment qualification.
 
 KVM profiles must also bind an execution preflight, for example:
 

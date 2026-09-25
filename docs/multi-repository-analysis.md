@@ -864,8 +864,11 @@ python3 scripts/run-harmony-assessed-campaign.py \
 
 Resolution fails before emulator use if transfer omitted a file, changed bytes
 or modes, introduced a symlink, escaped either root, changed static identity, or
-if the hwlinux profile no longer matches installed tools. The resolved plan is
-still review-required and does not auto-promote a case.
+if the hwlinux profile no longer matches installed tools. The v2 handoff also
+requires the signed pre-outcome participant experiment plan, exact planned
+profile membership and repeat cardinality, and the plan-bound model/runtime
+identity carried by every static assessment. The resolved plan is still
+review-required and does not auto-promote a case.
 
 For KVM-backed profiles, declare an `executionPreflight` with the required
 group and character device. The campaign controller checks the active process
@@ -912,7 +915,8 @@ private Agent homes, unrelated user data or production captures. Dispatch
 run ID, release tag, asset name and SHA256. The trusted-main workflow downloads
 the original static artifact independently, rejects archive traversal,
 symlinks, unindexed files, source-run or handoff substitution, plan/profile
-drift, campaign-state drift and evidence digest drift. It then reconstructs the
+drift, participant-experiment substitution, campaign-state drift and evidence
+digest drift. It then reconstructs the
 attempt collection, discrimination report and feedback with trusted repository
 code. The bundle and trusted import receipt also retain the independently
 authored calibration receipt, draft manifest, participant identity and exact
