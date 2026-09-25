@@ -113,11 +113,11 @@ smaller than SWE-bench's:
    exact-analysis workflow accepts arbitrary public HTTPS repositories at exact
    commits, retains a digest-bound native analysis run, and makes a separately
    verified run the only input to cohort proposal. A current-method local
-   reproduction now freezes a 97-member eligible denominator and a five-member
-   stratified proposal before case construction or participant outcomes.
+   reproduction now freezes a 97-member eligible denominator and a six-member
+   specificity-aware proposal before case construction or participant outcomes.
    Metadata-first cloning plus bounded 8/32-KiB Git refetch tiers reduced the
    GitCode transfer boundary to 25 promisor-fetched large blobs. The workflow
-   is tested but has not yet run on trusted `main`, and the proposed five still
+   is tested but has not yet run on trusted `main`, and the proposed six still
    require an independent cohort decision.
 2. One real Linux Harmony assessed campaign proves the static-to-device path
    and separates a strong and weak participant, but does not establish

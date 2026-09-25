@@ -221,6 +221,25 @@ class MultiRepoCandidateCohortTests(unittest.TestCase):
         self.assertNotIn('row["seed"]["repositoryId"] == "contracts"', construction)
         self.assertEqual(construction.count("secrets.AGENTLAB_LM_GATEWAY_KEY"), 1)
 
+    def test_retained_real_shortlist_is_specificity_aware_and_review_required(self):
+        path = (
+            ROOT
+            / "release/qualifications/harmony-real-multi-repo-34661ff/current-method-proposal.json"
+        )
+        value = json.loads(path.read_text())
+        self.assertEqual(value["status"], "analysis-reproduced-cohort-review-required")
+        self.assertNotEqual(value["methodRevision"], value["proposalMethodRevision"])
+        advisories = value["samplingFrame"]["selectionAdvisoryCounts"]
+        self.assertEqual(sum(advisories.values()), value["samplingFrame"]["eligibleCount"])
+        self.assertEqual(advisories["prefer-narrower-api-call"], 19)
+        candidates = value["proposedCandidates"]
+        self.assertEqual(len(candidates), 6)
+        self.assertEqual(len({row["id"] for row in candidates}), 6)
+        roles = {role for row in candidates for role in row["selectionRoles"]}
+        self.assertIn("equal-file-set-replacement-for-smallest-deferred-module", roles)
+        self.assertFalse(value["samplingFrame"]["declaredRepresentative"])
+        self.assertFalse(value["automaticPromotion"])
+
     def test_frozen_case_lineage_binds_exact_selection_and_difficulty(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

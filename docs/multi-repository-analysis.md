@@ -149,7 +149,10 @@ cohort workflow therefore freezes the sampling decision first:
    strata. It also reports when a broad module-contract candidate has one or
    more API-call candidates over an equal or smaller file set. These remain in
    the denominator, but the reviewer is told to prefer the narrower evidence
-   unless the proposed task genuinely requires module-wide semantics.
+   unless the proposed task genuinely requires module-wide semantics. The
+   artifact binds `methodRevision` for the source analysis and a separate
+   `proposalMethodRevision` for the sampling/advisory algorithm; both survive
+   review, cohort compilation and candidate selection.
 3. `review-multi-repo-candidate-cohort.py decide` requires the exact proposal
    digest, at least two eligible IDs, all risk acknowledgements and a reviewer
    rationale. `compile` creates an immutable, non-representative cohort.
@@ -179,11 +182,12 @@ status is `analysis-qualified-case-review-required`: the clusters are discovery
 evidence, not evaluation cases.
 
 The same source set has now been reproduced locally with the current analyzer
-at method revision `b1255e5b2451bcfa96a92d2bb741f81d7512881f`. The digest-bound
+at method revision `6adbbf6a7bc2d4016fe338396737a2ff4b9519d0`. The digest-bound
 run produced 404,308 facts and 19,374 candidates; 97 candidates met the
 cross-repository sampling-frame rules (22 module-contract and 75 API-call
-members). A five-member min/median/max stratum proposal was frozen before case
-construction or participant outcomes at
+members). Nineteen module rows point to more specific API-call evidence, while
+three have no narrower API candidate. A six-member specificity-aware proposal
+was frozen before case construction or participant outcomes at
 `release/qualifications/harmony-real-multi-repo-34661ff/current-method-proposal.json`.
 It remains non-representative and review-required. Because the workflow exists
 only on this unmerged branch, this is not yet a trusted-main run or an
