@@ -127,7 +127,7 @@ class ReleaseClosureMaterializationTests(unittest.TestCase):
     def test_public_ci_installs_alpha12_from_the_closure(self) -> None:
         workflow = (ROOT / ".github/workflows/release-validation.yml").read_text()
         smoke = (ROOT / "scripts/ci-public-install-deploy-smoke.sh").read_text()
-        self.assertIn("target: alpha12-closure", workflow)
+        self.assertIn("target: release-closure", workflow)
         self.assertIn("closure: release/closures/v0.1.0-alpha.12.json", workflow)
         self.assertIn("AGENTLAB_RELEASE_CLOSURE: ${{ matrix.closure }}", workflow)
         self.assertIn('release_closure="${AGENTLAB_RELEASE_CLOSURE:-}"', smoke)

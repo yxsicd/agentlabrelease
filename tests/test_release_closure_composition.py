@@ -63,6 +63,10 @@ class ReleaseClosureCompositionTests(unittest.TestCase):
         self.assertEqual(len(value["assets"]), 22)
         self.assertEqual(value["reuse"]["newBinaryBuildCount"], 0)
         self.assertEqual(value["reuse"]["newBinaryUploadCount"], 0)
+        self.assertIn(
+            "public-install-deploy-smoke-release-closure",
+            value["qualificationPlan"]["requiredChecks"],
+        )
         self.assertEqual(
             value["componentRegistry"]["sha256"],
             hashlib.sha256(self.registry_bytes).hexdigest(),

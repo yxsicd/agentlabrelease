@@ -40,6 +40,7 @@ DEVELOPER_PREVIEW_CHECKS = {
     "public-install-deploy-smoke-alprod-copy-tree",
     "public-install-deploy-smoke-candidate-copy",
     "public-install-deploy-smoke-candidate-btrfs",
+    "public-install-deploy-smoke-release-closure",
 }
 
 

@@ -117,7 +117,7 @@ jobs:
             composition: release/candidates/40ecdf4b-linux-x64
             closure: ''
             backend: btrfs-subvolume
-          - target: alpha12-closure
+          - target: release-closure
             channel: ''
             composition: ''
             closure: release/closures/v0.1.0-alpha.12.json
