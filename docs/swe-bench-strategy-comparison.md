@@ -388,14 +388,17 @@ smaller than SWE-bench's:
     the exact `hwlinux` host still has only the emulator/runtime substrate rather
     than a source-build SDK.
 11. The richer API-localizing full run now uses bounded deterministic parallel
-   AST extraction. On one fresh-process Apple M4 measurement with a warm Git
+   AST extraction and has a revision-aware, rebuildable file cache. On one
+   fresh-process Apple M4 measurement with a warm Git
    object database, the exact 12,711-file cut improved from 20.16 seconds with
    one worker to 14.12 seconds with eight workers (1.43x); all emitted evidence
    digests remained byte-identical. The 31,771,940 source bytes produced
    421,973,776 bytes of fact rows and 25,987,457 bytes of difficulty candidates.
    This is one machine-local trial per profile, not a population result. Graph
-   and candidate aggregation remain serial, and there is still no
-   revision-aware incremental cache or early candidate prefilter.
+   and candidate aggregation remain serial. Cold, warm, corrupt-entry and
+   one-file-change tests prove cache reuse and byte-identical authority output;
+   its real-source performance benefit is not yet measured, and there is still
+   no early candidate prefilter.
 
 Until these gaps close, AgentLab can claim a richer executable architecture and
 one real closed-path proof, not a large, statistically qualified benchmark.

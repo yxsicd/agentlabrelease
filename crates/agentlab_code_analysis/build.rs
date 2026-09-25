@@ -15,6 +15,16 @@ fn main() {
         "cargo:rustc-env=AGENTLAB_GRAMMAR_DIGEST={:x}",
         hash.finalize()
     );
+    let mut analyzer_hash = Sha256::new();
+    for path in ["src/lib.rs", "Cargo.toml"] {
+        analyzer_hash.update(path.as_bytes());
+        analyzer_hash.update(std::fs::read(path).expect("analyzer source"));
+        println!("cargo:rerun-if-changed={path}");
+    }
+    println!(
+        "cargo:rustc-env=AGENTLAB_ANALYZER_DIGEST={:x}",
+        analyzer_hash.finalize()
+    );
     let mut build = cc::Build::new();
     build
         .include("grammar/src")

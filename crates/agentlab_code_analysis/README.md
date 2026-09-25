@@ -42,6 +42,7 @@ workspace bytes do not enter the result.
 ```sh
 cargo run --locked -p agentlab_code_analysis \
   --bin agentlab-multi-repo-analysis -- \
+  --cache-dir /path/to/rebuildable-ast-cache \
   multi-repo-manifest.json /tmp/multi-repo-evidence
 ```
 
@@ -53,6 +54,20 @@ manager or compiler configuration. It emits a dependency graph, unresolved
 boundary evidence, and recursive reverse-impact difficulty candidates. Those
 candidates are not benchmark cases: each remains in candidate state until it
 has repository-specific build checks and an independent behavior oracle.
+
+The optional cache is a derivative, never source authority. By default an
+exact analyzer/grammar/source-set bundle hit bypasses both parsing and graph
+reconstruction and restores the previously digest-checked authority artifacts;
+the local manifest receipt is rematerialized so checkout roots never enter the
+portable cache identity. Add `--cache-files` when deliberately testing the
+finer-grained cache: each entry is addressed by analyzer and grammar digests,
+source path and the committed blob SHA-256, so unchanged files can survive a
+repository revision change while changed files are reparsed. That mode is not
+the workflow default because its current large-source wall-time benefit is not
+yet established. Missing or corrupt entries are rebuilt. Cached and uncached
+runs emit byte-identical authority artifacts; a separate
+`agentlab.analysis_cache_execution.v1` line on stderr reports only
+execution-local hit/miss/repair counts.
 
 ## Local iteration and public Action
 

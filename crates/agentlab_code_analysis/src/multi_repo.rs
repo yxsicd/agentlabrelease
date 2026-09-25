@@ -1,5 +1,6 @@
-use agentlab_code_analysis::{analyze, digest, GRAMMAR, GRAMMAR_DIGEST};
+use agentlab_code_analysis::{analyze, digest, ANALYZER_DIGEST, GRAMMAR, GRAMMAR_DIGEST};
 use serde_json::{json, Value};
+use sha2::{Digest as _, Sha256};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, BufWriter, Read, Write};
@@ -9,6 +10,14 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
 const MAX_ANALYSIS_JOBS: usize = 64;
+const ANALYZER_ID: &str = "agentlab-multi-repo-analysis@0.1.0";
+const CACHE_SCHEMA: &str = "agentlab.ast_file_cache.v1";
+const BUNDLE_CACHE_SCHEMA: &str = "agentlab.analysis_bundle_cache.v1";
+const AUTHORITY_ARTIFACTS: [&str; 3] = [
+    "workspace_facts.jsonl",
+    "difficulty_candidates.json",
+    "unsupported_sources.jsonl",
+];
 
 #[derive(Clone)]
 struct Repository {
@@ -23,6 +32,359 @@ struct Repository {
 struct Binding {
     repository_id: String,
     path: String,
+}
+
+struct AnalysisCache {
+    root: PathBuf,
+    hits: AtomicUsize,
+    misses: AtomicUsize,
+    invalid_entries: AtomicUsize,
+    writes: AtomicUsize,
+    bundle_hits: AtomicUsize,
+    bundle_misses: AtomicUsize,
+    bundle_writes: AtomicUsize,
+    file_cache_enabled: bool,
+}
+
+impl AnalysisCache {
+    fn new(root: PathBuf, file_cache_enabled: bool) -> Result<Self, Box<dyn std::error::Error>> {
+        fs::create_dir_all(&root)?;
+        Ok(Self {
+            root,
+            hits: AtomicUsize::new(0),
+            misses: AtomicUsize::new(0),
+            invalid_entries: AtomicUsize::new(0),
+            writes: AtomicUsize::new(0),
+            bundle_hits: AtomicUsize::new(0),
+            bundle_misses: AtomicUsize::new(0),
+            bundle_writes: AtomicUsize::new(0),
+            file_cache_enabled,
+        })
+    }
+
+    fn key(path: &str, source_sha256: &str) -> String {
+        digest(
+            format!(
+                "{CACHE_SCHEMA}\0{ANALYZER_ID}\0{ANALYZER_DIGEST}\0{GRAMMAR_DIGEST}\0{path}\0{source_sha256}"
+            )
+                .as_bytes(),
+        )
+    }
+
+    fn entry_path(&self, key: &str) -> PathBuf {
+        self.root.join(&key[..2]).join(format!("{key}.json"))
+    }
+
+    fn bundle_key(source_set_sha256: &str) -> String {
+        digest(
+            format!(
+                "{BUNDLE_CACHE_SCHEMA}\0{ANALYZER_ID}\0{ANALYZER_DIGEST}\0{GRAMMAR_DIGEST}\0{source_set_sha256}"
+            )
+            .as_bytes(),
+        )
+    }
+
+    fn bundle_root(&self, key: &str) -> PathBuf {
+        self.root.join("bundles").join(&key[..2]).join(key)
+    }
+
+    fn try_restore_bundle(
+        &self,
+        source_set_sha256: &str,
+        manifest_sha256: &str,
+        output: &Path,
+    ) -> Result<Option<Value>, Box<dyn std::error::Error>> {
+        let key = Self::bundle_key(source_set_sha256);
+        let bundle_root = self.bundle_root(&key);
+        let index_path = bundle_root.join("index.json");
+        if !index_path.exists() {
+            self.bundle_misses.fetch_add(1, Ordering::Relaxed);
+            return Ok(None);
+        }
+        let result = (|| -> Result<Value, Box<dyn std::error::Error>> {
+            let metadata = fs::symlink_metadata(&index_path)?;
+            if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
+                return Err(fail("bundle cache index is not a regular file"));
+            }
+            let index: Value = serde_json::from_slice(&fs::read(&index_path)?)?;
+            if index.get("schema").and_then(Value::as_str) != Some(BUNDLE_CACHE_SCHEMA)
+                || index.get("key").and_then(Value::as_str) != Some(&key)
+                || index.get("analyzer").and_then(Value::as_str) != Some(ANALYZER_ID)
+                || index.get("analyzerDigest").and_then(Value::as_str) != Some(ANALYZER_DIGEST)
+                || index.get("grammarDigest").and_then(Value::as_str) != Some(GRAMMAR_DIGEST)
+                || index.get("sourceSetSha256").and_then(Value::as_str) != Some(source_set_sha256)
+            {
+                return Err(fail("bundle cache index identity differs"));
+            }
+            let digests = index
+                .get("artifactSha256")
+                .and_then(Value::as_object)
+                .ok_or_else(|| fail("bundle cache artifact digests are absent"))?;
+            fs::create_dir_all(output)?;
+            let mut actual_digests = BTreeMap::new();
+            for name in AUTHORITY_ARTIFACTS {
+                let source = bundle_root.join(name);
+                let metadata = fs::symlink_metadata(&source)?;
+                if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
+                    return Err(fail(format!("bundle cache {name} is not a regular file")));
+                }
+                let actual_digest = file_digest(&source)?;
+                if digests.get(name).and_then(Value::as_str) != Some(&actual_digest) {
+                    return Err(fail(format!("bundle cache {name} digest differs")));
+                }
+                actual_digests.insert(name, actual_digest);
+                link_or_copy(&source, &output.join(name))?;
+            }
+            let receipt_path = bundle_root.join("multi_repo_analysis.json");
+            let metadata = fs::symlink_metadata(&receipt_path)?;
+            if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
+                return Err(fail("bundle cache receipt is not a regular file"));
+            }
+            let receipt_bytes = fs::read(&receipt_path)?;
+            if index.get("receiptSha256").and_then(Value::as_str) != Some(&digest(&receipt_bytes)) {
+                return Err(fail("bundle cache receipt digest differs"));
+            }
+            let mut receipt: Value = serde_json::from_slice(&receipt_bytes)?;
+            if receipt.get("schema").and_then(Value::as_str)
+                != Some("agentlab.multi_repo_analysis.v1")
+                || receipt.get("analyzerDigest").and_then(Value::as_str) != Some(ANALYZER_DIGEST)
+                || receipt.get("grammarDigest").and_then(Value::as_str) != Some(GRAMMAR_DIGEST)
+                || receipt.get("sourceSetSha256").and_then(Value::as_str) != Some(source_set_sha256)
+            {
+                return Err(fail("bundle cache receipt identity differs"));
+            }
+            for (name, field) in [
+                ("workspace_facts.jsonl", "workspaceFactsSha256"),
+                ("difficulty_candidates.json", "difficultyCandidatesSha256"),
+                ("unsupported_sources.jsonl", "unsupportedSourcesSha256"),
+            ] {
+                if receipt.get(field).and_then(Value::as_str)
+                    != actual_digests.get(name).map(String::as_str)
+                {
+                    return Err(fail(format!(
+                        "bundle cache receipt {field} differs from {name}"
+                    )));
+                }
+            }
+            let object = receipt
+                .as_object_mut()
+                .ok_or_else(|| fail("bundle cache receipt is not an object"))?;
+            object.insert("manifestSha256".into(), json!(manifest_sha256));
+            fs::write(
+                output.join("multi_repo_analysis.json"),
+                serde_json::to_vec_pretty(&receipt)?,
+            )?;
+            Ok(receipt)
+        })();
+        match result {
+            Ok(receipt) => {
+                self.bundle_hits.fetch_add(1, Ordering::Relaxed);
+                Ok(Some(receipt))
+            }
+            Err(_) => {
+                self.invalid_entries.fetch_add(1, Ordering::Relaxed);
+                self.bundle_misses.fetch_add(1, Ordering::Relaxed);
+                Ok(None)
+            }
+        }
+    }
+
+    fn store_bundle(
+        &self,
+        source_set_sha256: &str,
+        output: &Path,
+        receipt: &Value,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let key = Self::bundle_key(source_set_sha256);
+        let bundle_root = self.bundle_root(&key);
+        fs::create_dir_all(&bundle_root)?;
+        let mut artifact_sha256 = serde_json::Map::new();
+        for name in AUTHORITY_ARTIFACTS {
+            let source = output.join(name);
+            artifact_sha256.insert(name.into(), json!(file_digest(&source)?));
+            link_or_copy(&source, &bundle_root.join(name))?;
+        }
+        let receipt_bytes = serde_json::to_vec_pretty(receipt)?;
+        fs::write(bundle_root.join("multi_repo_analysis.json"), &receipt_bytes)?;
+        let index = json!({
+            "schema":BUNDLE_CACHE_SCHEMA,
+            "key":key,
+            "analyzer":ANALYZER_ID,
+            "analyzerDigest":ANALYZER_DIGEST,
+            "grammarDigest":GRAMMAR_DIGEST,
+            "sourceSetSha256":source_set_sha256,
+            "artifactSha256":artifact_sha256,
+            "receiptSha256":digest(&receipt_bytes)
+        });
+        fs::write(bundle_root.join("index.json"), serde_json::to_vec(&index)?)?;
+        self.bundle_writes.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    }
+
+    fn load(
+        &self,
+        path: &str,
+        source_sha256: &str,
+        revision: &str,
+    ) -> Option<agentlab_code_analysis::Analysis> {
+        let key = Self::key(path, source_sha256);
+        let entry_path = self.entry_path(&key);
+        let metadata = fs::symlink_metadata(&entry_path).ok()?;
+        if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
+            self.invalid_entries.fetch_add(1, Ordering::Relaxed);
+            return None;
+        }
+        let value: Value = match fs::read(&entry_path)
+            .ok()
+            .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+        {
+            Some(value) => value,
+            None => {
+                self.invalid_entries.fetch_add(1, Ordering::Relaxed);
+                return None;
+            }
+        };
+        let valid_header = value.get("schema").and_then(Value::as_str) == Some(CACHE_SCHEMA)
+            && value.get("key").and_then(Value::as_str) == Some(&key)
+            && value.get("analyzer").and_then(Value::as_str) == Some(ANALYZER_ID)
+            && value.get("analyzerDigest").and_then(Value::as_str) == Some(ANALYZER_DIGEST)
+            && value.get("grammarDigest").and_then(Value::as_str) == Some(GRAMMAR_DIGEST)
+            && value.get("path").and_then(Value::as_str) == Some(path)
+            && value.get("sourceSha256").and_then(Value::as_str) == Some(source_sha256);
+        let Some(has_errors) = value.get("hasErrors").and_then(Value::as_bool) else {
+            self.invalid_entries.fetch_add(1, Ordering::Relaxed);
+            return None;
+        };
+        let Some(cached_rows) = value.get("rows").and_then(Value::as_array) else {
+            self.invalid_entries.fetch_add(1, Ordering::Relaxed);
+            return None;
+        };
+        let valid_rows = valid_header
+            && !cached_rows.is_empty()
+            && value.get("rowsSha256").and_then(Value::as_str)
+                == serde_json::to_vec(cached_rows)
+                    .ok()
+                    .as_deref()
+                    .map(digest)
+                    .as_deref()
+            && cached_rows.iter().all(|row| {
+                row.as_object().is_some_and(|object| {
+                    object.get("id").and_then(Value::as_str).is_some()
+                        && object.get("kind").and_then(Value::as_str).is_some()
+                        && object.get("path").and_then(Value::as_str) == Some(path)
+                        && !object.contains_key("sourceRevision")
+                })
+            })
+            && cached_rows.iter().any(|row| {
+                row.get("kind").and_then(Value::as_str) == Some("parse-file")
+                    && row.get("sha256").and_then(Value::as_str) == Some(source_sha256)
+            });
+        if !valid_rows {
+            self.invalid_entries.fetch_add(1, Ordering::Relaxed);
+            return None;
+        }
+        let mut rows = cached_rows.clone();
+        for row in &mut rows {
+            row.as_object_mut()
+                .unwrap()
+                .insert("sourceRevision".into(), json!(revision));
+        }
+        self.hits.fetch_add(1, Ordering::Relaxed);
+        Some(agentlab_code_analysis::Analysis { rows, has_errors })
+    }
+
+    fn store(
+        &self,
+        path: &str,
+        source_sha256: &str,
+        analysis: &agentlab_code_analysis::Analysis,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let key = Self::key(path, source_sha256);
+        let entry_path = self.entry_path(&key);
+        let parent = entry_path
+            .parent()
+            .ok_or_else(|| fail("cache entry has no parent directory"))?;
+        fs::create_dir_all(parent)?;
+        let mut rows = analysis.rows.clone();
+        for row in &mut rows {
+            row.as_object_mut()
+                .ok_or_else(|| fail("analysis row is not an object"))?
+                .remove("sourceRevision");
+        }
+        let value = json!({
+            "schema":CACHE_SCHEMA,
+            "key":key,
+            "analyzer":ANALYZER_ID,
+            "analyzerDigest":ANALYZER_DIGEST,
+            "grammarDigest":GRAMMAR_DIGEST,
+            "path":path,
+            "sourceSha256":source_sha256,
+            "hasErrors":analysis.has_errors,
+            "rowsSha256":digest(&serde_json::to_vec(&rows)?),
+            "rows":rows
+        });
+        let temporary = parent.join(format!(
+            ".{key}.tmp-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        fs::write(&temporary, serde_json::to_vec(&value)?)?;
+        fs::rename(&temporary, &entry_path)?;
+        self.writes.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    }
+
+    fn report(&self) -> Value {
+        json!({
+            "schema":"agentlab.analysis_cache_execution.v1",
+            "cacheAuthority":false,
+            "bundleKeyContract":"analyzer implementation digest + grammar digest + portable source-set SHA-256",
+            "fileKeyContract":"analyzer implementation digest + grammar digest + source path + committed blob SHA-256",
+            "fileCacheEnabled":self.file_cache_enabled,
+            "hits":self.hits.load(Ordering::Relaxed),
+            "misses":self.misses.load(Ordering::Relaxed),
+            "invalidEntries":self.invalid_entries.load(Ordering::Relaxed),
+            "writes":self.writes.load(Ordering::Relaxed)
+            ,"bundleHits":self.bundle_hits.load(Ordering::Relaxed)
+            ,"bundleMisses":self.bundle_misses.load(Ordering::Relaxed)
+            ,"bundleWrites":self.bundle_writes.load(Ordering::Relaxed)
+        })
+    }
+}
+
+fn file_digest(path: &Path) -> Result<String, Box<dyn std::error::Error>> {
+    let mut file = File::open(path)?;
+    let mut hash = Sha256::new();
+    let mut buffer = [0u8; 64 * 1024];
+    loop {
+        let read = file.read(&mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        hash.update(&buffer[..read]);
+    }
+    Ok(format!("{:x}", hash.finalize()))
+}
+
+fn link_or_copy(source: &Path, target: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let parent = target
+        .parent()
+        .ok_or_else(|| fail("cache artifact target has no parent directory"))?;
+    fs::create_dir_all(parent)?;
+    let file_name = target
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| fail("cache artifact target has no UTF-8 file name"))?;
+    let temporary = parent.join(format!(
+        ".{file_name}.tmp-{}-{:?}",
+        std::process::id(),
+        std::thread::current().id()
+    ));
+    if fs::hard_link(source, &temporary).is_err() {
+        fs::copy(source, &temporary)?;
+    }
+    fs::rename(temporary, target)?;
+    Ok(())
 }
 
 fn fail(message: impl Into<String>) -> Box<dyn std::error::Error> {
@@ -245,6 +607,7 @@ fn analyze_sources(
     paths: &[String],
     blobs: &BTreeMap<String, Vec<u8>>,
     jobs: usize,
+    cache: Option<&AnalysisCache>,
 ) -> Result<Vec<agentlab_code_analysis::Analysis>, Box<dyn std::error::Error>> {
     if paths.is_empty() {
         return Ok(Vec::new());
@@ -264,7 +627,22 @@ fn analyze_sources(
                     break;
                 }
                 let path = &paths[index];
-                let result = analyze(path, &blobs[path], &repository.revision);
+                let source_sha256 = digest(&blobs[path]);
+                let result = if let Some(cache) = cache {
+                    if let Some(analysis) = cache.load(path, &source_sha256, &repository.revision) {
+                        Ok(analysis)
+                    } else {
+                        cache.misses.fetch_add(1, Ordering::Relaxed);
+                        analyze(path, &blobs[path], &repository.revision).and_then(|analysis| {
+                            cache
+                                .store(path, &source_sha256, &analysis)
+                                .map_err(|error| error.to_string())?;
+                            Ok(analysis)
+                        })
+                    }
+                } else {
+                    analyze(path, &blobs[path], &repository.revision)
+                };
                 results.lock().unwrap()[index] = Some(result);
             });
         }
@@ -284,37 +662,60 @@ fn analyze_sources(
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
-    let (jobs, manifest_arg, output_arg) = match args.as_slice() {
-        [manifest, output] => (
-            std::thread::available_parallelism()
-                .map(usize::from)
-                .unwrap_or(1)
-                .min(8),
-            manifest,
-            output,
-        ),
-        [flag, count, manifest, output] if flag == "--jobs" => {
-            let count = count
-                .to_str()
+    let mut jobs = std::thread::available_parallelism()
+        .map(usize::from)
+        .unwrap_or(1)
+        .min(8);
+    let mut cache_root = None;
+    let mut cache_files = false;
+    let mut positional = Vec::new();
+    let mut index = 0usize;
+    while index < args.len() {
+        if args[index] == "--jobs" {
+            index += 1;
+            let count = args
+                .get(index)
+                .and_then(|value| value.to_str())
                 .ok_or_else(|| fail("--jobs must be a positive integer"))?
                 .parse::<usize>()?;
             if count == 0 {
                 return Err(fail("--jobs must be a positive integer"));
             }
-            (count, manifest, output)
+            jobs = count;
+        } else if args[index] == "--cache-dir" {
+            index += 1;
+            let value = args
+                .get(index)
+                .ok_or_else(|| fail("--cache-dir requires a path"))?;
+            if value.is_empty() {
+                return Err(fail("--cache-dir requires a path"));
+            }
+            cache_root = Some(PathBuf::from(value));
+        } else if args[index] == "--cache-files" {
+            cache_files = true;
+        } else {
+            positional.push(args[index].clone());
         }
-        _ => {
-            return Err(fail(
-                "Usage: agentlab-multi-repo-analysis [--jobs N] <manifest.json> <output-directory>",
-            ));
-        }
-    };
+        index += 1;
+    }
+    if positional.len() != 2 {
+        return Err(fail(
+            "Usage: agentlab-multi-repo-analysis [--jobs N] [--cache-dir PATH [--cache-files]] <manifest.json> <output-directory>",
+        ));
+    }
     if jobs > MAX_ANALYSIS_JOBS {
         return Err(fail(format!("--jobs must not exceed {MAX_ANALYSIS_JOBS}")));
     }
-    let manifest_path = PathBuf::from(manifest_arg);
-    let output = PathBuf::from(output_arg);
+    let manifest_path = PathBuf::from(&positional[0]);
+    let output = PathBuf::from(&positional[1]);
+    if cache_files && cache_root.is_none() {
+        return Err(fail("--cache-files requires --cache-dir PATH"));
+    }
+    let cache = cache_root
+        .map(|root| AnalysisCache::new(root, cache_files))
+        .transpose()?;
     let manifest_bytes = fs::read(&manifest_path)?;
+    let manifest_sha256 = digest(&manifest_bytes);
     let manifest: Value = serde_json::from_slice(&manifest_bytes)?;
     if manifest.get("schema").and_then(Value::as_str) != Some("agentlab.multi_repo_manifest.v1") {
         return Err(fail("unsupported multi-repository manifest schema"));
@@ -386,6 +787,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    let canonical_bindings: BTreeMap<_, _> = bindings
+        .iter()
+        .map(|(specifier, binding)| {
+            (
+                specifier,
+                json!({"repositoryId":binding.repository_id,"path":binding.path}),
+            )
+        })
+        .collect();
+    let source_set = json!({
+        "schema":"agentlab.multi_repo_source_set.v1",
+        "repositories":repositories.values().map(|repository|json!({
+            "id":repository.id,"repository":repository.source,"revision":repository.revision
+        })).collect::<Vec<_>>(),
+        "moduleBindings":canonical_bindings
+    });
+    let source_set_sha256 = digest(&serde_json::to_vec(&source_set)?);
+    if let Some(cache) = &cache {
+        if let Some(receipt) =
+            cache.try_restore_bundle(&source_set_sha256, &manifest_sha256, &output)?
+        {
+            println!("{}", receipt);
+            eprintln!("{}", cache.report());
+            return Ok(());
+        }
+    }
+
     let mut facts = Vec::new();
     let mut module_facts = Vec::new();
     let mut repository_receipts = Vec::new();
@@ -420,7 +848,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             supported_paths.push(path.clone());
         }
-        let analyses = analyze_sources(repository, &supported_paths, &source_blobs, jobs)?;
+        let analyses = analyze_sources(
+            repository,
+            &supported_paths,
+            &source_blobs,
+            jobs,
+            cache.as_ref().filter(|cache| cache.file_cache_enabled),
+        )?;
         for analysis in analyses {
             file_count += 1;
             syntax_error_count += usize::from(analysis.has_errors);
@@ -847,23 +1281,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &output.join("unsupported_sources.jsonl"),
         &unsupported_sources,
     )?;
-    let canonical_bindings: BTreeMap<_, _> = bindings
-        .iter()
-        .map(|(specifier, binding)| {
-            (
-                specifier,
-                json!({"repositoryId":binding.repository_id,"path":binding.path}),
-            )
-        })
-        .collect();
-    let source_set = json!({
-        "schema":"agentlab.multi_repo_source_set.v1",
-        "repositories":repository_receipts.iter().map(|row|json!({
-            "id":row["id"],"repository":row["repository"],"revision":row["revision"]
-        })).collect::<Vec<_>>(),
-        "moduleBindings":canonical_bindings
-    });
-    let source_set_sha256 = digest(&serde_json::to_vec(&source_set)?);
     let difficulty = json!({
         "schema":"agentlab.difficulty_candidates.v2",
         "method":"revision-fenced multi-repository dependency graph, recursive reverse impact closure, shared external module clustering and imported-binding API-call localization",
@@ -884,9 +1301,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .count();
     let receipt = json!({
         "schema":"agentlab.multi_repo_analysis.v1",
-        "manifestSha256":digest(&manifest_bytes),
+        "manifestSha256":manifest_sha256,
         "sourceSetSha256":source_set_sha256,
-        "analyzer":"agentlab-multi-repo-analysis@0.1.0",
+        "analyzer":ANALYZER_ID,
+        "analyzerDigest":ANALYZER_DIGEST,
         "grammar":GRAMMAR,
         "grammarDigest":GRAMMAR_DIGEST,
         "repositories":repository_receipts,
@@ -908,6 +1326,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         output.join("multi_repo_analysis.json"),
         serde_json::to_vec_pretty(&receipt)?,
     )?;
+    if let Some(cache) = &cache {
+        cache.store_bundle(&source_set_sha256, &output, &receipt)?;
+    }
     println!("{}", receipt);
+    if let Some(cache) = &cache {
+        eprintln!("{}", cache.report());
+    }
     Ok(())
 }

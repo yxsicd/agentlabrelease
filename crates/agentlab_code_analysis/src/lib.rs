@@ -9,6 +9,7 @@ const LANGUAGE: tree_sitter_language::LanguageFn =
     unsafe { tree_sitter_language::LanguageFn::from_raw(tree_sitter_agentlab_arkts) };
 pub const GRAMMAR: &str = "agentlab-arkts@0.1.0 (tree-sitter-arkts@0.2.0 + stateStyles)";
 pub const GRAMMAR_DIGEST: &str = env!("AGENTLAB_GRAMMAR_DIGEST");
+pub const ANALYZER_DIGEST: &str = env!("AGENTLAB_ANALYZER_DIGEST");
 
 pub fn digest(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))

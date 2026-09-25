@@ -21,6 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Materialize exact public Git sources
+        id: sources
         run: |
           mkdir -p "$AGENTLAB_ROOT"
           python3 - <<'PY'
@@ -35,12 +36,23 @@ jobs:
           python3 scripts/prefetch-multi-repo-analysis-blobs.py \
             --manifest "$AGENTLAB_ROOT/source/manifest.json" \
             --output "$AGENTLAB_ROOT/source/source-prefetch.json"
+          echo "sha256=$(sha256sum "$AGENTLAB_ROOT/source/source-spec.json" | cut -d' ' -f1)" \
+            >> "$GITHUB_OUTPUT"
+      - name: Restore rebuildable AST cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ env.AGENTLAB_ROOT }}/ast-cache
+          key: agentlab-ast-${{ runner.os }}-${{ hashFiles('crates/agentlab_code_analysis/src/lib.rs', 'crates/agentlab_code_analysis/Cargo.toml', 'crates/agentlab_code_analysis/grammar/**') }}-${{ steps.sources.outputs.sha256 }}
+          restore-keys: |
+            agentlab-ast-${{ runner.os }}-${{ hashFiles('crates/agentlab_code_analysis/src/lib.rs', 'crates/agentlab_code_analysis/Cargo.toml', 'crates/agentlab_code_analysis/grammar/**') }}-
       - name: Analyze only committed bytes at exact revisions
         run: |
           cargo build --locked -p agentlab_code_analysis --bin agentlab-multi-repo-analysis
           target/debug/agentlab-multi-repo-analysis \
+            --cache-dir "$AGENTLAB_ROOT/ast-cache" \
             "$AGENTLAB_ROOT/source/manifest.json" \
-            "$AGENTLAB_ROOT/source/analysis"
+            "$AGENTLAB_ROOT/source/analysis" \
+            2> >(tee "$AGENTLAB_ROOT/source/analysis-cache-execution.json" >&2)
           python3 scripts/multi-repo-analysis-run.py create \
             --root "$AGENTLAB_ROOT/source" \
             --method-revision "$GITHUB_SHA" \
@@ -59,5 +71,6 @@ jobs:
             ${{ env.AGENTLAB_ROOT }}/source/source-spec.json
             ${{ env.AGENTLAB_ROOT }}/source/manifest.json
             ${{ env.AGENTLAB_ROOT }}/source/source-prefetch.json
+            ${{ env.AGENTLAB_ROOT }}/source/analysis-cache-execution.json
             ${{ env.AGENTLAB_ROOT }}/source/analysis-run.json
             ${{ env.AGENTLAB_ROOT }}/source/analysis/
