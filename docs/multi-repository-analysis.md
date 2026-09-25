@@ -176,8 +176,13 @@ scorecard preserves that denominator alongside model discrimination evidence.
 It now distinguishes extreme weak/strong separation from full capability
 resolution: the latter requires a predeclared weak/middle/strong-or-richer
 ordering and separately separated Wilson intervals for every adjacent tier.
-Two extreme profiles may still qualify the historical base measurement, but
-can no longer be reported as resolving the intermediate capability frontier.
+The assessed campaign now freezes three to eight unique participant/model
+profiles, route and trial count in a signed pre-outcome plan; the v3 suite
+derives its order from that evidence instead of accepting a post-hoc order.
+Harmony imports verify and re-attest the unchanged plan. Two extreme profiles
+may still qualify the historical base measurement, but v1/v2 evidence and any
+unsigned ordering can no longer be reported as resolving the intermediate
+capability frontier.
 
 Candidate adjudication yield is not case qualification yield. Every newly
 generated analyzer-backed case now carries an `agentlab.case_source.v1` record

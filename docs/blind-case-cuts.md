@@ -228,19 +228,23 @@ The trusted-main `agent-suite-scorecard.yml` workflow can join that exact
 population to one successful `multi-repo-assessed-campaign` run per case. It
 verifies each source run's repository, workflow path, manual event, main branch,
 revision, attempt and successful conclusion before accepting the artifact. The
-scorecard requires exact case/source-set membership, a participant capability
-order declared before composition, complete operator-owned process measurement,
+scorecard requires exact case/source-set membership, complete operator-owned process measurement,
 the existing discrimination gate and non-overlapping strongest/weakest 95%
 Wilson intervals. Strongest/weakest separation remains the backward-compatible
 base gate; it is not evidence that the suite resolves intermediate capability
 levels. The scorecard therefore also reports every adjacent pair in the
-predeclared weakest-to-strongest order, including pass-rate gap and Wilson
-separation. The separate capability-resolution qualification requires at least
-three participant tiers and every adjacent pair to be strictly ordered with
-non-overlapping intervals. It signs the exact output and retains the source-run
-metadata. Even a fully measured suite keeps benchmark-population qualification
-false until the sampling frame and model-exposure boundary receive independent
-evidence.
+weakest-to-strongest order, including pass-rate gap and Wilson separation. For
+new v3 evidence, that order is not a scorecard input: the assessed campaign
+freezes three to eight unique participant/model profiles and the trial count in
+an attested plan before the first attempt. Every case must carry the same plan,
+and a Harmony import verifies the source attestation before re-attesting the
+unchanged plan. The separate capability-resolution qualification requires that
+pre-outcome evidence and every adjacent pair to be strictly ordered with
+non-overlapping intervals. Historical v1/v2 scorecards remain readable but
+cannot claim capability resolution. The workflow signs the exact output and
+retains the source-run metadata. Even a fully measured suite keeps benchmark-
+population qualification false until the sampling frame and model-exposure
+boundary receive independent evidence.
 
 ## Evidence boundary
 

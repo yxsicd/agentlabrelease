@@ -66,6 +66,14 @@ jobs:
           PY
           gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
             --name multi-repo-assessed-campaign --dir "$AGENTLAB_ROOT/static"
+          source_head_sha=$(python3 -c 'import json,os; print(json.load(open(os.environ["AGENTLAB_ROOT"] + "/source-run.json"))["head_sha"])')
+          gh attestation verify "$AGENTLAB_ROOT/static/participant-experiment-plan.json" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/multi-repo-assessed-campaign.yml" \
+            --source-ref refs/heads/main \
+            --source-digest "$source_head_sha" \
+            --deny-self-hosted-runners \
+            --format json > "$AGENTLAB_ROOT/static-plan-attestation-verification.json"
           gh release download "$EVIDENCE_RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
             --pattern "$EVIDENCE_ASSET_NAME" --dir "$AGENTLAB_ROOT/download"
           printf '%s  %s\n' "$EVIDENCE_ASSET_SHA256" \
@@ -88,12 +96,16 @@ jobs:
             "$AGENTLAB_ROOT/output/assessment-feedback-candidates.json"
           cp "$AGENTLAB_ROOT/imported/verified/import-verification.json" \
             "$AGENTLAB_ROOT/output/import-verification.json"
+          cp "$AGENTLAB_ROOT/static/participant-experiment-plan.json" \
+            "$AGENTLAB_ROOT/output/participant-experiment-plan.json"
           cp "$AGENTLAB_ROOT/imported/bundle-manifest.json" \
             "$AGENTLAB_ROOT/output/source/bundle-manifest.json"
           cp "$AGENTLAB_ROOT/imported/campaign/summary.json" \
             "$AGENTLAB_ROOT/output/source/device-campaign-summary.json"
           cp "$AGENTLAB_ROOT/source-run.json" \
             "$AGENTLAB_ROOT/output/source/static-campaign-run.json"
+          cp "$AGENTLAB_ROOT/static-plan-attestation-verification.json" \
+            "$AGENTLAB_ROOT/output/source/static-plan-attestation-verification.json"
           cat "$AGENTLAB_ROOT/output/import-verification.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Sign the trusted reconstructed discrimination report
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
@@ -103,6 +115,10 @@ jobs:
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-path: ${{ env.AGENTLAB_ROOT }}/output/import-verification.json
+      - name: Re-attest the pre-outcome participant experiment plan
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: ${{ env.AGENTLAB_ROOT }}/output/participant-experiment-plan.json
       - name: Preserve imported device campaign qualification
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

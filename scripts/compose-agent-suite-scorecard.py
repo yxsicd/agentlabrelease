@@ -14,8 +14,10 @@ from typing import Any
 
 MANIFEST_SCHEMA = "agentlab.agent_suite_scorecard_manifest.v1"
 DEVICE_BOUND_MANIFEST_SCHEMA = "agentlab.agent_suite_scorecard_manifest.v2"
+PREDECLARED_MANIFEST_SCHEMA = "agentlab.agent_suite_scorecard_manifest.v3"
 SCORECARD_SCHEMA = "agentlab.agent_suite_scorecard.v1"
 COHORT_BOUND_SCORECARD_SCHEMA = "agentlab.agent_suite_scorecard.v2"
+PREDECLARED_SCORECARD_SCHEMA = "agentlab.agent_suite_scorecard.v3"
 REVISION = re.compile(r"[0-9a-f]{40}")
 SHA256 = re.compile(r"[0-9a-f]{64}")
 TOKEN = re.compile(r"[A-Za-z0-9_.:@/-]{1,200}")
@@ -102,6 +104,15 @@ def scorer_module():
     path = Path(__file__).with_name("score-case-discrimination.py")
     spec = importlib.util.spec_from_file_location("agentlab_suite_discrimination", path)
     require(spec is not None and spec.loader is not None, "discrimination scorer is unavailable")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def experiment_plan_module():
+    path = Path(__file__).with_name("participant-experiment-plan.py")
+    spec = importlib.util.spec_from_file_location("agentlab_suite_experiment_plan", path)
+    require(spec is not None and spec.loader is not None, "participant experiment plan validator is unavailable")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -443,7 +454,11 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
     manifest = load_object(manifest_path, "Agent suite scorecard manifest")
     manifest_schema = manifest.get("schema")
     require(
-        manifest_schema in {MANIFEST_SCHEMA, DEVICE_BOUND_MANIFEST_SCHEMA},
+        manifest_schema in {
+            MANIFEST_SCHEMA,
+            DEVICE_BOUND_MANIFEST_SCHEMA,
+            PREDECLARED_MANIFEST_SCHEMA,
+        },
         "unsupported Agent suite scorecard manifest schema",
     )
     suite_id = manifest.get("suiteId")
@@ -458,6 +473,23 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
         and all(isinstance(value, str) and TOKEN.fullmatch(value) for value in participant_order),
         "participantOrder must contain at least two unique identities from weakest to strongest",
     )
+    plan_validator = experiment_plan_module()
+    if manifest_schema == PREDECLARED_MANIFEST_SCHEMA:
+        participant_profiles = manifest.get("participantProfiles")
+        require(isinstance(participant_profiles, list), "participantProfiles must be a predeclared ordered list")
+        normalized_profiles = plan_validator.normalize_profiles([
+            {"participantId": row.get("participantId"), "model": row.get("model")}
+            if isinstance(row, dict) else row
+            for row in participant_profiles
+        ])
+        require(participant_profiles == normalized_profiles, "participantProfiles order or ordinals differ")
+        require(
+            participant_order == [row["participantId"] for row in participant_profiles],
+            "participantOrder differs from the predeclared experiment profiles",
+        )
+    else:
+        require(manifest.get("participantProfiles") is None, "legacy scorecard manifest cannot claim predeclared participant profiles")
+        participant_profiles = []
     population_source = manifest.get("reviewPopulation")
     require(
         isinstance(population_source, dict)
@@ -536,12 +568,20 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
             "deviceImportVerification",
             "deviceImportAttestationVerification",
         }
+        predeclared_fields = device_bound_fields | {
+            "participantExperimentPlan",
+            "participantExperimentPlanAttestationVerification",
+        }
         require(
             set(case)
             == (
-                device_bound_fields
-                if manifest_schema == DEVICE_BOUND_MANIFEST_SCHEMA
-                else legacy_fields
+                predeclared_fields
+                if manifest_schema == PREDECLARED_MANIFEST_SCHEMA
+                else (
+                    device_bound_fields
+                    if manifest_schema == DEVICE_BOUND_MANIFEST_SCHEMA
+                    else legacy_fields
+                )
             ),
             "scorecard case fields differ",
         )
@@ -552,7 +592,10 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
         require(isinstance(campaign_run_attempt, int) and campaign_run_attempt > 0, f"{case_id} assessed campaign run attempt is invalid")
         campaign_head_sha = case.get("assessedCampaignWorkflowHeadSha")
         require(isinstance(campaign_head_sha, str) and REVISION.fullmatch(campaign_head_sha), f"{case_id} assessed campaign revision is invalid")
-        if manifest_schema == DEVICE_BOUND_MANIFEST_SCHEMA:
+        if manifest_schema in {
+            DEVICE_BOUND_MANIFEST_SCHEMA,
+            PREDECLARED_MANIFEST_SCHEMA,
+        }:
             campaign_workflow = case.get("assessedCampaignWorkflowPath")
             require(
                 campaign_workflow
@@ -599,6 +642,55 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
             campaign_run_attempt,
             f"{case_id} discrimination attestation verification",
         )
+        plan_evidence = None
+        plan_qualified = False
+        if manifest_schema == PREDECLARED_MANIFEST_SCHEMA:
+            plan_path = portable_file(
+                root,
+                case.get("participantExperimentPlan"),
+                f"{case_id} participant experiment plan",
+            )
+            plan = plan_validator.validate_plan(plan_path)
+            require(
+                plan["caseId"] == case_id
+                and plan["sourceSetSha256"] == population_row["sourceSetSha256"]
+                and plan["methodRevision"] == campaign_method_revision
+                and plan["participantProfiles"] == participant_profiles,
+                f"{case_id} participant experiment plan identity differs",
+            )
+            require(
+                report["denominators"]["requiredTrialsPerParticipant"]
+                == plan["trialsPerParticipant"],
+                f"{case_id} planned trial denominator differs",
+            )
+            require(
+                all(
+                    profile["validTrials"] <= plan["trialsPerParticipant"]
+                    for profile in row["participantProfiles"]
+                ),
+                f"{case_id} valid trials exceed the predeclared plan",
+            )
+            plan_attestation_path = portable_file(
+                root,
+                case.get("participantExperimentPlanAttestationVerification"),
+                f"{case_id} participant experiment plan attestation verification",
+            )
+            plan_attestation = validate_attestation_verification(
+                plan_attestation_path,
+                plan_path,
+                campaign_run_id,
+                campaign_run_attempt,
+                f"{case_id} participant experiment plan attestation verification",
+            )
+            plan_evidence = {
+                "path": plan_path.relative_to(root).as_posix(),
+                "sha256": digest(plan_path),
+                "attestationVerificationPath": plan_attestation_path.relative_to(root).as_posix(),
+                "attestationVerificationSha256": plan_attestation["sha256"],
+                "status": plan["status"],
+                "trialsPerParticipant": plan["trialsPerParticipant"],
+            }
+            plan_qualified = True
         device_import_evidence = None
         if campaign_workflow == ".github/workflows/harmony-device-campaign-import.yml":
             import_path = portable_file(
@@ -738,7 +830,8 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
                 "strongestWeakestWilson95Separated": interval_separated,
                 "capabilityResolution": resolution,
                 "scorecardQualified": qualified,
-                "capabilityResolutionQualified": qualified and resolution["qualified"],
+                "participantExperimentPlanQualified": plan_qualified,
+                "capabilityResolutionQualified": qualified and plan_qualified and resolution["qualified"],
                 "participantProfiles": ordered_profiles,
                 "reviewEvidence": {
                     "populationReportSha256": digest(population_path),
@@ -751,6 +844,11 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
                     "attestationVerificationPath": discrimination_attestation_path.relative_to(root).as_posix(),
                     "attestationVerificationSha256": discrimination_attestation["sha256"],
                 },
+                **(
+                    {"participantExperimentPlanEvidence": plan_evidence}
+                    if plan_evidence is not None
+                    else {}
+                ),
                 **(
                     {"deviceImportEvidence": device_import_evidence}
                     if device_import_evidence is not None
@@ -787,6 +885,7 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
     )
     capability_resolution_measurement_qualified = (
         measurement_qualified
+        and all(row["participantExperimentPlanQualified"] for row in case_rows)
         and capability_resolution_qualified_count == case_count
         and aggregate_resolution["qualified"]
     )
@@ -804,9 +903,13 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
     )
     return {
         "schema": (
-            COHORT_BOUND_SCORECARD_SCHEMA
-            if population.get("schema") == "agentlab.blind_review_population_report.v2"
-            else SCORECARD_SCHEMA
+            PREDECLARED_SCORECARD_SCHEMA
+            if manifest_schema == PREDECLARED_MANIFEST_SCHEMA
+            else (
+                COHORT_BOUND_SCORECARD_SCHEMA
+                if population.get("schema") == "agentlab.blind_review_population_report.v2"
+                else SCORECARD_SCHEMA
+            )
         ),
         "suiteId": suite_id,
         "methodRevision": method_revision,
@@ -831,6 +934,7 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
             ),
         },
         "participantOrder": participant_order,
+        "participantProfiles": participant_profiles,
         "denominators": {
             "caseCount": case_count,
             "qualifiedCaseCount": qualified_count,
@@ -855,6 +959,9 @@ def build_scorecard(manifest_path: Path) -> dict[str, Any]:
         "cases": case_rows,
         "qualification": {
             "suiteMeasurementQualified": measurement_qualified,
+            "participantExperimentPlanQualified": all(
+                row["participantExperimentPlanQualified"] for row in case_rows
+            ),
             "capabilityResolutionMeasurementQualified": capability_resolution_measurement_qualified,
             "capabilityResolutionQualifiedCaseRate": capability_resolution_qualified_count / case_count,
             "capabilityResolutionQualifiedCaseRateWilson95": scorer.wilson_interval(

@@ -218,6 +218,7 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         self_assessment: bool = False,
         dependency_discovery: bool = False,
         tier_outcomes: dict[str, list[bool]] | None = None,
+        required_trials: int = 5,
     ) -> Path:
         calibration = {
             "infrastructureValid": True,
@@ -262,7 +263,7 @@ class AgentSuiteScorecardTests(unittest.TestCase):
                 "methodRevision": "d" * 40,
                 "cases": [{"id": case_id, "calibration": calibration, "attempts": attempts}],
             },
-            5,
+            required_trials,
             0.6,
         )
         path = self.root / f"report-{ordinal}.json"
@@ -297,6 +298,47 @@ class AgentSuiteScorecardTests(unittest.TestCase):
                 for index, case_id in enumerate(selected, 1)
             ],
         }
+        self.manifest.write_text(json.dumps(value, indent=2))
+
+    def write_predeclared_manifest(
+        self,
+        profiles: list[tuple[str, str]],
+        *,
+        trials: int,
+    ) -> None:
+        self.write_device_bound_manifest()
+        value = json.loads(self.manifest.read_text())
+        value["schema"] = "agentlab.agent_suite_scorecard_manifest.v3"
+        value["participantProfiles"] = [
+            {"ordinal": ordinal, "participantId": participant, "model": model}
+            for ordinal, (participant, model) in enumerate(profiles)
+        ]
+        value["participantOrder"] = [participant for participant, _ in profiles]
+        for index, row in enumerate(value["cases"], 1):
+            plan = self.root / f"plan-{index}.json"
+            plan.write_text(
+                json.dumps(
+                    {
+                        "schema": "agentlab.participant_experiment_plan.v1",
+                        "status": "predeclared-before-attempts",
+                        "caseId": row["caseId"],
+                        "sourceSetSha256": self.source_sets[row["caseId"]],
+                        "evaluationCaseSha256": f"{index:064x}",
+                        "caseReviewRunId": 1000 + index,
+                        "methodRevision": "d" * 40,
+                        "providerRoute": "openai-compatible-gateway",
+                        "trialsPerParticipant": trials,
+                        "participantProfileCount": len(profiles),
+                        "participantProfiles": value["participantProfiles"],
+                        "automaticPromotion": False,
+                    },
+                    indent=2,
+                )
+            )
+            verification = self.root / f"plan-{index}-attestation.json"
+            self.write_attestation(verification, plan, row["assessedCampaignRunId"])
+            row["participantExperimentPlan"] = plan.name
+            row["participantExperimentPlanAttestationVerification"] = verification.name
         self.manifest.write_text(json.dumps(value, indent=2))
 
     def test_review_outcome_and_process_form_one_scorecard(self) -> None:
@@ -355,14 +397,19 @@ class AgentSuiteScorecardTests(unittest.TestCase):
                 case_id,
                 index,
                 tier_outcomes=tiers,
+                required_trials=20,
             )
             self.write_attestation(
                 self.report_attestations[case_id], self.reports[case_id], 2000 + index
             )
-        self.write_manifest()
-        manifest = json.loads(self.manifest.read_text())
-        manifest["participantOrder"] = ["weak", "middle", "strong"]
-        self.manifest.write_text(json.dumps(manifest, indent=2))
+        self.write_predeclared_manifest(
+            [
+                ("weak", "model-small"),
+                ("middle", "model-medium"),
+                ("strong", "model-large"),
+            ],
+            trials=20,
+        )
         value = SUITE.build_scorecard(self.manifest)
         self.assertTrue(
             value["qualification"]["capabilityResolutionMeasurementQualified"]
@@ -391,14 +438,19 @@ class AgentSuiteScorecardTests(unittest.TestCase):
                 case_id,
                 index,
                 tier_outcomes=tiers,
+                required_trials=20,
             )
             self.write_attestation(
                 self.report_attestations[case_id], self.reports[case_id], 2000 + index
             )
-        self.write_manifest()
-        manifest = json.loads(self.manifest.read_text())
-        manifest["participantOrder"] = ["weak", "middle", "strong"]
-        self.manifest.write_text(json.dumps(manifest, indent=2))
+        self.write_predeclared_manifest(
+            [
+                ("weak", "model-small"),
+                ("middle", "model-medium"),
+                ("strong", "model-large"),
+            ],
+            trials=20,
+        )
         value = SUITE.build_scorecard(self.manifest)
         self.assertTrue(value["qualification"]["suiteMeasurementQualified"])
         self.assertFalse(
@@ -615,6 +667,39 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         self.assertIn("deviceImportEvidence", device)
         self.assertTrue(device["scorecardQualified"])
 
+    def test_posthoc_participant_order_cannot_override_predeclared_profiles(self) -> None:
+        tiers = {
+            "weak": [False] * 20,
+            "middle": [False] * 10 + [True] * 10,
+            "strong": [True] * 20,
+        }
+        for index, case_id in enumerate(self.source_sets, 1):
+            self.reports[case_id] = self.write_discrimination(
+                case_id,
+                index,
+                tier_outcomes=tiers,
+                required_trials=20,
+            )
+            self.write_attestation(
+                self.report_attestations[case_id], self.reports[case_id], 2000 + index
+            )
+        self.write_predeclared_manifest(
+            [
+                ("weak", "model-small"),
+                ("middle", "model-medium"),
+                ("strong", "model-large"),
+            ],
+            trials=20,
+        )
+        value = json.loads(self.manifest.read_text())
+        value["participantOrder"] = ["middle", "weak", "strong"]
+        self.manifest.write_text(json.dumps(value))
+        with self.assertRaisesRegex(
+            SUITE.ScorecardError,
+            "participantOrder differs from the predeclared experiment profiles",
+        ):
+            SUITE.build_scorecard(self.manifest)
+
     def test_device_import_receipt_must_bind_reconstructed_report(self) -> None:
         verification = self.write_device_bound_manifest()
         value = json.loads(verification.read_text())
@@ -672,6 +757,9 @@ class AgentSuiteScorecardTests(unittest.TestCase):
         self.assertIn('run["head_branch"] == "main"', workflow)
         self.assertIn('run["conclusion"] == "success"', workflow)
         self.assertIn("participantOrder", workflow)
+        self.assertNotIn("participant_order:", workflow)
+        self.assertIn("participant-experiment-plan.json", workflow)
+        self.assertIn("plan-attestation-verification.json", workflow)
         self.assertIn("compose-agent-suite-scorecard.py", workflow)
         self.assertIn("id-token: write", workflow)
         self.assertIn("attestations: write", workflow)

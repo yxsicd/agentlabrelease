@@ -14,10 +14,6 @@ on:
         description: JSON array of one static or Harmony-device-import campaign run per reviewed case
         required: true
         type: string
-      participant_order:
-        description: JSON array of participant IDs ordered weakest to strongest
-        required: true
-        type: string
 
 permissions:
   actions: read
@@ -36,7 +32,6 @@ jobs:
       SUITE_ID: ${{ inputs.suite_id }}
       POPULATION_RUN_ID: ${{ inputs.review_population_run_id }}
       CAMPAIGN_RUN_IDS_JSON: ${{ inputs.assessed_campaign_run_ids }}
-      PARTICIPANT_ORDER_JSON: ${{ inputs.participant_order }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Recover the exact reviewed population and assessed campaigns
@@ -62,14 +57,8 @@ jobs:
               assert text.isdigit() and int(text) > 0
               ids.append(int(text))
           assert len(ids) == len(set(ids))
-          order = json.loads(os.environ["PARTICIPANT_ORDER_JSON"])
-          assert isinstance(order, list) and len(order) >= 2
-          assert len(order) == len(set(order)) and all(isinstance(value, str) and value for value in order)
           root.joinpath("campaign-run-ids.txt").write_text(
               "".join(f"{value}\n" for value in ids), encoding="utf-8"
-          )
-          root.joinpath("participant-order.json").write_text(
-              json.dumps(order, indent=2) + "\n", encoding="utf-8"
           )
           PY
           while IFS= read -r run_id; do
@@ -117,6 +106,13 @@ jobs:
               --source-digest "$campaign_head_sha" \
               --deny-self-hosted-runners \
               --format json > "$AGENTLAB_ROOT/campaigns/$run_id/attestation-verification.json"
+            gh attestation verify "$AGENTLAB_ROOT/campaigns/$run_id/participant-experiment-plan.json" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/$campaign_workflow" \
+              --source-ref refs/heads/main \
+              --source-digest "$campaign_head_sha" \
+              --deny-self-hosted-runners \
+              --format json > "$AGENTLAB_ROOT/campaigns/$run_id/plan-attestation-verification.json"
             if [[ "$campaign_workflow" == ".github/workflows/harmony-device-campaign-import.yml" ]]; then
               gh attestation verify "$AGENTLAB_ROOT/campaigns/$run_id/import-verification.json" \
                 --repo "$GITHUB_REPOSITORY" \
@@ -138,6 +134,7 @@ jobs:
           assert population_run["status"] == "completed" and population_run["conclusion"] == "success"
           cases = []
           case_ids = set()
+          participant_profiles = None
           for text in root.joinpath("campaign-run-ids.txt").read_text().splitlines():
               run_id = int(text)
               run = json.loads((root / "campaigns" / text / "run.json").read_text())
@@ -157,6 +154,21 @@ jobs:
               case_id = ranking[0]["caseId"]
               assert isinstance(case_id, str) and case_id and case_id not in case_ids
               case_ids.add(case_id)
+              plan = json.loads((root / "campaigns" / text / "participant-experiment-plan.json").read_text())
+              assert plan["schema"] == "agentlab.participant_experiment_plan.v1"
+              assert plan["status"] == "predeclared-before-attempts"
+              assert plan["caseId"] == case_id
+              assert plan["sourceSetSha256"] == value["sourceSetSha256"]
+              assert plan["methodRevision"] == value["methodRevision"]
+              assert plan["automaticPromotion"] is False
+              assert value["denominators"]["requiredTrialsPerParticipant"] == plan["trialsPerParticipant"]
+              report_participants = {row["participantId"] for row in ranking[0]["participantProfiles"]}
+              plan_order = [row["participantId"] for row in plan["participantProfiles"]]
+              assert report_participants == set(plan_order)
+              if participant_profiles is None:
+                  participant_profiles = plan["participantProfiles"]
+              else:
+                  assert plan["participantProfiles"] == participant_profiles
               source_run_id = run_id
               import_verification = None
               import_attestation = None
@@ -185,11 +197,13 @@ jobs:
                   "sourceAssessedCampaignRunId": source_run_id,
                   "discriminationReport": f"campaigns/{run_id}/case-discrimination-report.json",
                   "discriminationAttestationVerification": f"campaigns/{run_id}/attestation-verification.json",
+                  "participantExperimentPlan": f"campaigns/{run_id}/participant-experiment-plan.json",
+                  "participantExperimentPlanAttestationVerification": f"campaigns/{run_id}/plan-attestation-verification.json",
                   "deviceImportVerification": import_verification,
                   "deviceImportAttestationVerification": import_attestation,
               })
           manifest = {
-              "schema": "agentlab.agent_suite_scorecard_manifest.v2",
+              "schema": "agentlab.agent_suite_scorecard_manifest.v3",
               "suiteId": os.environ["SUITE_ID"],
               "methodRevision": os.environ["GITHUB_SHA"],
               "reviewPopulation": {
@@ -199,7 +213,8 @@ jobs:
                   "report": "population/report.json",
                   "attestationVerification": "population-attestation-verification.json",
               },
-              "participantOrder": json.loads(root.joinpath("participant-order.json").read_text()),
+              "participantProfiles": participant_profiles,
+              "participantOrder": [row["participantId"] for row in participant_profiles],
               "cases": sorted(cases, key=lambda row: row["caseId"]),
           }
           root.joinpath("scorecard-manifest.json").write_text(
@@ -219,6 +234,8 @@ jobs:
               "$AGENTLAB_ROOT/output/source-runs/campaigns/$run_id.json"
             cp "$AGENTLAB_ROOT/campaigns/$run_id/attestation-verification.json" \
               "$AGENTLAB_ROOT/output/source-runs/campaigns/$run_id-attestation-verification.json"
+            cp "$AGENTLAB_ROOT/campaigns/$run_id/plan-attestation-verification.json" \
+              "$AGENTLAB_ROOT/output/source-runs/campaigns/$run_id-plan-attestation-verification.json"
             if [[ -f "$AGENTLAB_ROOT/campaigns/$run_id/import-verification.json" ]]; then
               cp "$AGENTLAB_ROOT/campaigns/$run_id/import-verification.json" \
                 "$AGENTLAB_ROOT/output/source-runs/campaigns/$run_id-import-verification.json"

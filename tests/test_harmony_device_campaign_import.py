@@ -350,11 +350,14 @@ class HarmonyDeviceCampaignImportTests(unittest.TestCase):
         self.assertIn("--verification-revision \"$GITHUB_SHA\"", workflow)
         self.assertIn("gh release download", workflow)
         self.assertIn("sha256sum -c -", workflow)
+        self.assertIn("participant-experiment-plan.json", workflow)
+        self.assertIn("static-plan-attestation-verification.json", workflow)
+        self.assertIn("Re-attest the pre-outcome participant experiment plan", workflow)
         self.assertEqual(
             workflow.count(
                 "actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6"
             ),
-            2,
+            3,
         )
 
 

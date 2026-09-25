@@ -176,6 +176,15 @@ AgentLab is designed around a broader unit of work than a historical patch:
 | Evolution | Static public dataset variants | Immutable case cuts plus review-required feedback into the next source/analysis cut |
 | Publication | Dataset and leaderboard artifacts | Independently versioned components plus lightweight qualified composition |
 
+One methodological advantage over a single aggregate pass rate is now
+executable rather than aspirational: AgentLab signs the ordered three-to-eight
+model experiment, route and trial count before attempts, then requires every
+adjacent capability tier to separate. This targets the frontier where cases are
+informative, while preventing a convenient weak/middle/strong order from being
+chosen after outcomes are visible. It complements rather than replaces
+SWE-bench's stronger assets: a large recognizable task population, mature
+container harnesses, broad model comparisons and extensive external use.
+
 The strongest advantages are therefore not “more tests.” They are multi-repo
 source authority, automatically discovered dependency-aware difficulty,
 device-visible behavior, non-functional feedback, and a recursive evidence
@@ -203,6 +212,9 @@ smaller than SWE-bench's:
 2. One real Linux Harmony assessed campaign proves the static-to-device path
    and separates a strong and weak participant, but does not establish
    population-level discrimination, variance or repeatability across devices.
+   The repository now implements a signed pre-outcome three-to-eight-profile
+   campaign and plan-bound v3 suite scorecard, but no real weak/middle/strong
+   trusted-main campaign has exercised it yet.
 3. The construction participant, deterministic intent checks and maintainer
    review exist. A new exact-digest review protocol now requires at least two
    constructor-distinct reviewer records, four explicit verdict dimensions and
@@ -520,9 +532,10 @@ waiting for an invalid task to fail during Agent evaluation.
    review before running repeated strong/weak/middle participant trials.
    Report confidence intervals, exclusions and infrastructure failures.
 7. Exercise the implemented suite scorecard on real reviewed static-plus-Harmony
-   campaigns using predeclared weak/middle/strong tiers. Require every adjacent
-   tier's Wilson intervals to separate before claiming capability resolution;
-   extreme-only separation remains a weaker base measurement. Extend the
+   campaigns using the signed pre-outcome weak/middle/strong-or-richer plan.
+   Require every adjacent tier's Wilson intervals to separate before claiming
+   capability resolution; extreme-only separation remains a weaker base
+   measurement. Extend the
    process contract beyond the assessed emulator adapter, and add dependency-
    discovery plus subjective/objective consistency without replacing raw
    trajectories or independently executable verdict evidence.

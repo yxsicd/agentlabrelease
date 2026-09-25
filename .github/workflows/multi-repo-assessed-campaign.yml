@@ -10,13 +10,8 @@ on:
         description: Optional successful attested blind-review adjudication run
         required: false
         type: string
-      model_a:
-        description: First exact LM Gateway model profile
-        required: true
-        default: glm-5.3-flash
-        type: string
-      model_b:
-        description: Second exact LM Gateway model profile
+      participant_profiles_json:
+        description: JSON array of 3-8 unique participantId/model objects ordered weakest to strongest before any outcomes exist
         required: true
         type: string
       provider_route:
@@ -27,8 +22,8 @@ on:
       trials:
         description: Independent fresh trials per model
         type: choice
-        options: ['1', '3']
-        default: '3'
+        options: ['3', '5', '10', '20']
+        default: '5'
 
 permissions:
   contents: read
@@ -50,6 +45,8 @@ jobs:
       AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/multi-repo-assessed-campaign
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
+      PARTICIPANT_PROFILES_JSON: ${{ inputs.participant_profiles_json }}
+      TRIALS: ${{ inputs.trials }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Verify and recover the trusted frozen case
@@ -74,6 +71,25 @@ jobs:
           python3 scripts/prepare-multi-repo-analysis-sources.py \
             --spec "$AGENTLAB_ROOT/case/source/cohort/source/analysis-source/source-spec.json" \
             --output "$AGENTLAB_ROOT/input"
+      - name: Freeze the ordered participant experiment before attempts
+        run: |
+          set -euo pipefail
+          python3 scripts/participant-experiment-plan.py create \
+            --case "$AGENTLAB_ROOT/case/evaluation-case.json" \
+            --profiles-json "$PARTICIPANT_PROFILES_JSON" \
+            --provider-route "$AGENTLAB_PROVIDER_ROUTE" \
+            --trials "$TRIALS" \
+            --method-revision "$GITHUB_SHA" \
+            --case-review-run-id "${{ inputs.case_run_id }}" \
+            --output "$AGENTLAB_ROOT/participant-experiment-plan.json"
+          python3 scripts/participant-experiment-plan.py validate \
+            --plan "$AGENTLAB_ROOT/participant-experiment-plan.json" \
+            --case "$AGENTLAB_ROOT/case/evaluation-case.json"
+          sha256sum "$AGENTLAB_ROOT/participant-experiment-plan.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Sign the pre-outcome participant experiment plan
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: ${{ env.AGENTLAB_ROOT }}/participant-experiment-plan.json
       - name: Stage only the participant-visible blind input
         run: |
           python3 scripts/build-blind-case-cut.py validate \
@@ -120,17 +136,26 @@ jobs:
             --forbid "$AGENTLAB_ROOT/case" \
             --forbid "$AGENTLAB_ROOT/blind-dispatch-receipt.json" \
             --output "$AGENTLAB_ROOT/participant-runtime.json"
-      - name: Run fresh staged attempts for both model profiles
+      - name: Run fresh staged attempts for every predeclared capability tier
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
           GH_TOKEN: ${{ github.token }}
           AGENTLAB_PI_BINARY: ${{ github.workspace }}/scripts/run-pi-in-docker.py
-          MODEL_A: ${{ inputs.model_a }}
-          MODEL_B: ${{ inputs.model_b }}
-          TRIALS: ${{ inputs.trials }}
         run: |
-          [[ "$MODEL_A" != "$MODEL_B" ]]
+          set -euo pipefail
           mkdir -p "$AGENTLAB_ROOT/runs"
+          python3 - <<'PY'
+          import json, os, pathlib
+          root = pathlib.Path(os.environ["AGENTLAB_ROOT"])
+          plan = json.loads((root / "participant-experiment-plan.json").read_text())
+          root.joinpath("participant-arms.tsv").write_text(
+              "".join(
+                  f"tier-{row['ordinal']:02d}\t{row['participantId']}\t{row['model']}\n"
+                  for row in plan["participantProfiles"]
+              ),
+              encoding="utf-8",
+          )
+          PY
           review_args=()
           dependency_args=()
           if python3 - <<'PY'
@@ -153,8 +178,7 @@ jobs:
               --authenticated-review-run-id "${{ inputs.authenticated_review_run_id }}"
             )
           fi
-          for arm in a b; do
-            if [[ "$arm" == a ]]; then model="$MODEL_A"; else model="$MODEL_B"; fi
+          while IFS=$'\t' read -r arm participant_id model; do
             for trial in $(seq 1 "$TRIALS"); do
               export AGENTLAB_MODEL="$model"
               output="$AGENTLAB_ROOT/runs/${arm}-${trial}"
@@ -169,28 +193,26 @@ jobs:
                 --participant-runtime-config "$AGENTLAB_ROOT/participant-runtime.json" \
                 "${dependency_args[@]}" \
                 "${review_args[@]}" \
-                --participant-id "pi-${model}" --output "$output"
+                --participant-id "$participant_id" --output "$output"
               status=$?
               set -e
               [[ -f "$output/summary.json" && -f "$output/decision-package.json" ]]
               printf '%s\n' "$status" > "$output/runner-exit-code.txt"
             done
-          done
+          done < "$AGENTLAB_ROOT/participant-arms.tsv"
       - name: Collect attempts and score repeatable model separation
-        env:
-          MODEL_A: ${{ inputs.model_a }}
-          MODEL_B: ${{ inputs.model_b }}
-          TRIALS: ${{ inputs.trials }}
-          REQUIRED_TRIALS: ${{ inputs.trials }}
         run: |
+          set -euo pipefail
           python3 - <<'PY'
           import json, os, pathlib
           root = pathlib.Path(os.environ["AGENTLAB_ROOT"])
           case = json.loads((root / "case/evaluation-case.json").read_text())
+          plan = json.loads((root / "participant-experiment-plan.json").read_text())
           attempts = []
-          for arm, model in (("a", os.environ["MODEL_A"]), ("b", os.environ["MODEL_B"])):
-              for trial in range(1, int(os.environ["TRIALS"]) + 1):
-                  attempts.append({"attemptId": f"{arm}-{trial}", "participantId": f"pi-{model}",
+          for profile in plan["participantProfiles"]:
+              arm = f"tier-{profile['ordinal']:02d}"
+              for trial in range(1, plan["trialsPerParticipant"] + 1):
+                  attempts.append({"attemptId": f"{arm}-{trial}", "participantId": profile["participantId"],
                                    "producerRun": os.environ["GITHUB_RUN_ID"],
                                    "evidence": f"runs/{arm}-{trial}"})
           manifest = {"schema": "agentlab.case_attempt_collection.v2",
@@ -206,7 +228,7 @@ jobs:
             --output "$AGENTLAB_ROOT/discrimination-input.json"
           python3 scripts/score-case-discrimination.py \
             --input "$AGENTLAB_ROOT/discrimination-input.json" \
-            --required-trials "$REQUIRED_TRIALS" \
+            --required-trials "$TRIALS" \
             --output "$AGENTLAB_ROOT/case-discrimination-report.json"
           cat "$AGENTLAB_ROOT/case-discrimination-report.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Sign the exact discrimination report with GitHub OIDC provenance
@@ -235,14 +257,19 @@ jobs:
             --report "$AGENTLAB_ROOT/case-discrimination-report.json" \
             --output "$AGENTLAB_ROOT/assessment-feedback-candidates.json"
           python3 - <<'PY'
-          import json, os, pathlib
+          import hashlib, json, os, pathlib
           root = pathlib.Path(os.environ["AGENTLAB_ROOT"])
           case = json.loads((root / "multi-repo-evaluation-case.json").read_text())
+          plan_path = root / "participant-experiment-plan.json"
+          plan = json.loads(plan_path.read_text())
           summary = {
               "schema": "agentlab.multi_repo_assessed_campaign_summary.v1",
               "taskId": case["id"],
               "sourceSetSha256": case["sourceSetSha256"],
               "methodRevision": os.environ["GITHUB_SHA"],
+              "participantExperimentPlanSha256": hashlib.sha256(plan_path.read_bytes()).hexdigest(),
+              "participantProfileCount": plan["participantProfileCount"],
+              "trialsPerParticipant": plan["trialsPerParticipant"],
               "automaticPromotion": False,
           }
           (root / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")

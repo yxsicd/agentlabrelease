@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/participant-experiment-plan.schema.json",
+  "title": "AgentLab predeclared participant capability experiment plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "caseId", "sourceSetSha256", "evaluationCaseSha256", "caseReviewRunId", "methodRevision", "providerRoute", "trialsPerParticipant", "participantProfileCount", "participantProfiles", "automaticPromotion"],
+  "properties": {
+    "schema": {"const": "agentlab.participant_experiment_plan.v1"},
+    "status": {"const": "predeclared-before-attempts"},
+    "caseId": {"$ref": "#/$defs/token"},
+    "sourceSetSha256": {"$ref": "#/$defs/sha256"},
+    "evaluationCaseSha256": {"$ref": "#/$defs/sha256"},
+    "caseReviewRunId": {"type": "integer", "minimum": 1},
+    "methodRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "providerRoute": {"$ref": "#/$defs/token"},
+    "trialsPerParticipant": {"enum": [3, 5, 10, 20]},
+    "participantProfileCount": {"type": "integer", "minimum": 3, "maximum": 8},
+    "participantProfiles": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ordinal", "participantId", "model"],
+        "properties": {
+          "ordinal": {"type": "integer", "minimum": 0, "maximum": 7},
+          "participantId": {"$ref": "#/$defs/token"},
+          "model": {"$ref": "#/$defs/token"}
+        }
+      }
+    },
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "token": {"type": "string", "pattern": "^[A-Za-z0-9_.:@/+\\-]{1,200}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
