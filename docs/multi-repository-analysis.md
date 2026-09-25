@@ -1003,6 +1003,22 @@ case lineage all preserve this performance evidence; substitution or removal at
 any boundary fails closed. Thus a recursive case can be traced back to the
 specific repeatable performance signal without reclassifying that signal as a
 functional Oracle verdict.
+
+That preserved reason is now an executable case-construction gate. The plan
+adds `agentlab.case_performance_requirement.v1`; the freezer will not accept the
+derived case until `compose-case-performance-calibration.py` has independently
+rebuilt at least two policy-bound SmartPerf comparisons for each baseline,
+reference and deliberately wrong artifact. All observations must share the
+feedback cut's environment, policy, workload, metric and statistic; functional
+Oracle results must pass before performance is considered. Baseline and wrong
+must repeatedly regress while the reference remains within the same relative
+guardrails. The resulting `agentlab.case_performance_calibration.v1` binds all
+raw summaries, Harmony results and comparisons by SHA-256 and byte length, and
+the freezer rechecks those files before retaining its digest. This closes the
+previous gap where a performance-derived case could preserve its reason in
+lineage but qualify only a functional Oracle. It remains review-only and does
+not claim absolute device power or thermal authority.
+
 It deliberately does not claim that the two mechanisms are semantically
 aligned. An independent maintainer must review that judgment, acknowledge all
 remaining semantic, Oracle, calibration and freshness risks, and bind the exact

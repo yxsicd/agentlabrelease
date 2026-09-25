@@ -111,6 +111,7 @@ def main():
     require(all(row["repositoryId"] and row["path"] for row in allowed), "affected file identity is incomplete")
 
     feedback_analysis_cut = None
+    performance_requirement = None
     if args.feedback_analysis_cut is not None:
         require(args.feedback_cut_proposal is not None and args.feedback_cut_review is not None, "reviewed feedback cut requires proposal and review evidence")
         reviewed_cut = load(args.feedback_analysis_cut)
@@ -207,6 +208,23 @@ def main():
             ),
             "review": review,
         }
+        if performance_evidence is not None:
+            performance_requirement = {
+                "schema": "agentlab.case_performance_requirement.v1",
+                "feedbackPerformanceEvidence": performance_evidence,
+                "variantExpectations": {
+                    "baseline": "performance-regression-candidate",
+                    "reference": "within-relative-guardrails",
+                    "wrong": "performance-regression-candidate",
+                },
+                "minimumObservationsPerVariant": 2,
+                "functionalOracleRequired": True,
+                "authority": {
+                    "relativePerformance": "smartperf-emulator-proxy",
+                    "absolutePowerThermal": "unavailable-on-emulator",
+                },
+                "automaticPromotion": False,
+            }
     else:
         require(args.feedback_cut_proposal is None and args.feedback_cut_review is None, "feedback cut evidence requires a reviewed feedback analysis cut")
 
@@ -251,6 +269,7 @@ def main():
         "construction": construction,
         "constructionQuality": construction_quality,
         "feedbackAnalysisCut": feedback_analysis_cut,
+        "performanceRequirement": performance_requirement,
         "constructionEvidence": {
             "mechanism": candidate.get("mechanism"),
             "seed": candidate.get("seed"),

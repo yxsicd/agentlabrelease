@@ -33,6 +33,79 @@ class FeedbackAnalysisCutTests(unittest.TestCase):
         path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
         return path
 
+    def performance_calibration(
+        self,
+        root: pathlib.Path,
+        *,
+        source_set: str,
+        functional_calibration_sha256: str,
+        performance_evidence: dict,
+    ) -> pathlib.Path:
+        decisions = {
+            "baseline": "performance-regression-candidate",
+            "reference": "within-relative-guardrails",
+            "wrong": "performance-regression-candidate",
+        }
+        variants = []
+        for role_index, role in enumerate(("baseline", "reference", "wrong"), 1):
+            observations = []
+            for ordinal in (1, 2):
+                evidence = {}
+                for name in (
+                    "baselineSummary",
+                    "candidateSummary",
+                    "baselineResult",
+                    "candidateResult",
+                    "comparison",
+                ):
+                    path = root / "performance-evidence" / role / str(ordinal) / f"{name}.json"
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text(
+                        json.dumps(
+                            {"role": role, "observation": ordinal, "kind": name},
+                            sort_keys=True,
+                        )
+                        + "\n"
+                    )
+                    evidence[name] = {
+                        "path": path.relative_to(root).as_posix(),
+                        "sha256": file_digest(path),
+                        "byteLength": path.stat().st_size,
+                    }
+                observations.append(evidence)
+            variants.append(
+                {
+                    "role": role,
+                    "expectedDecision": decisions[role],
+                    "candidateSourceIdentity": f"artifact-sha256:{str(role_index) * 64}",
+                    "observationCount": len(observations),
+                    "observations": observations,
+                }
+            )
+        return self.write(
+            root,
+            "case-performance-calibration.json",
+            {
+                "schema": "agentlab.case_performance_calibration.v1",
+                "status": "qualified-review-required",
+                "caseId": "next-case",
+                "sourceSetSha256": source_set,
+                "functionalCalibrationSha256": functional_calibration_sha256,
+                "feedbackPerformanceEvidence": performance_evidence,
+                "baselineSourceIdentity": f"artifact-sha256:{'a' * 64}",
+                "variants": variants,
+                "functionalOracleQualified": True,
+                "repeatabilityQualified": True,
+                "authority": {
+                    "functional": "independent-harmony-ui-oracle",
+                    "relativePerformance": "smartperf-emulator-proxy",
+                    "absolutePowerThermal": "unavailable-on-emulator",
+                },
+                "automaticPromotion": False,
+                "nextGate": "maintainer-review-and-case-freeze",
+            },
+        )
+
     def fixture(self, root: pathlib.Path, *, performance: bool = False):
         prior_source_set = "a" * 64
         prior_case = {
@@ -289,6 +362,10 @@ class FeedbackAnalysisCutTests(unittest.TestCase):
             self.assertEqual(planned.returncode, 0, planned.stderr)
             plan = json.loads(plan_path.read_text())
             self.assertEqual(plan["feedbackAnalysisCut"]["cutId"], cut["cutId"])
+            self.assertEqual(
+                plan["performanceRequirement"]["feedbackPerformanceEvidence"],
+                cut["feedback"]["performanceEvidence"],
+            )
 
             def stage(passed, checks):
                 return {
@@ -331,7 +408,32 @@ class FeedbackAnalysisCutTests(unittest.TestCase):
                 },
             }
             calibration_path = self.write(root, "calibration.json", calibration)
+            performance_calibration_path = self.performance_calibration(
+                root,
+                source_set=fixture["nextSourceSet"],
+                functional_calibration_sha256=file_digest(calibration_path),
+                performance_evidence=cut["feedback"]["performanceEvidence"],
+            )
             case_path = root / "next-case.json"
+            missing_performance = subprocess.run(
+                [
+                    sys.executable,
+                    str(CASE_GENERATE),
+                    "--difficulty", str(fixture["difficulty"]),
+                    "--plan", str(plan_path),
+                    "--proposal", str(case_proposal_path),
+                    "--review", str(case_review_path),
+                    "--calibration", str(calibration_path),
+                    "--output", str(case_path),
+                ],
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(missing_performance.returncode, 0)
+            self.assertIn(
+                "performance-derived case requires performance calibration evidence",
+                missing_performance.stderr,
+            )
             generated = subprocess.run(
                 [
                     sys.executable,
@@ -341,6 +443,7 @@ class FeedbackAnalysisCutTests(unittest.TestCase):
                     "--proposal", str(case_proposal_path),
                     "--review", str(case_review_path),
                     "--calibration", str(calibration_path),
+                    "--performance-calibration", str(performance_calibration_path),
                     "--output", str(case_path),
                 ],
                 text=True,
@@ -357,7 +460,47 @@ class FeedbackAnalysisCutTests(unittest.TestCase):
                 generated_case["lineage"]["feedbackAnalysisCut"]["performanceEvidence"],
                 cut["feedback"]["performanceEvidence"],
             )
+            self.assertEqual(
+                generated_case["performanceRequirement"],
+                plan["performanceRequirement"],
+            )
+            self.assertTrue(generated_case["performanceCalibration"]["qualified"])
+            self.assertEqual(
+                generated_case["performanceCalibration"]["sha256"],
+                file_digest(performance_calibration_path),
+            )
+            self.assertIn(
+                "repeatable policy-bound Harmony performance calibration",
+                generated_case["assessmentBoundary"],
+            )
             self.assertFalse(generated_case["automaticPromotion"])
+
+            retained = next(
+                (root / ref["path"])
+                for row in json.loads(performance_calibration_path.read_text())["variants"]
+                if row["role"] == "wrong"
+                for observation in row["observations"]
+                for name, ref in observation.items()
+                if name == "comparison"
+            )
+            retained.write_text('{"tampered":true}\n')
+            tampered = subprocess.run(
+                [
+                    sys.executable,
+                    str(CASE_GENERATE),
+                    "--difficulty", str(fixture["difficulty"]),
+                    "--plan", str(plan_path),
+                    "--proposal", str(case_proposal_path),
+                    "--review", str(case_review_path),
+                    "--calibration", str(calibration_path),
+                    "--performance-calibration", str(performance_calibration_path),
+                    "--output", str(root / "tampered-case.json"),
+                ],
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(tampered.returncode, 0)
+            self.assertIn("evidence digest differs", tampered.stderr)
 
     def test_rejects_reusing_same_source_and_method_cut(self):
         with tempfile.TemporaryDirectory() as raw:

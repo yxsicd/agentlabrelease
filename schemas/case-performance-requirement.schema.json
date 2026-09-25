@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-performance-requirement.schema.json",
+  "title": "Performance-derived case calibration requirement",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "feedbackPerformanceEvidence",
+    "variantExpectations",
+    "minimumObservationsPerVariant",
+    "functionalOracleRequired",
+    "authority",
+    "automaticPromotion"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.case_performance_requirement.v1"},
+    "feedbackPerformanceEvidence": {"$ref": "#/$defs/performanceEvidence"},
+    "variantExpectations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline", "reference", "wrong"],
+      "properties": {
+        "baseline": {"const": "performance-regression-candidate"},
+        "reference": {"const": "within-relative-guardrails"},
+        "wrong": {"const": "performance-regression-candidate"}
+      }
+    },
+    "minimumObservationsPerVariant": {"type": "integer", "minimum": 2},
+    "functionalOracleRequired": {"const": true},
+    "authority": {"$ref": "#/$defs/emulatorAuthority"},
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "emulatorAuthority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relativePerformance", "absolutePowerThermal"],
+      "properties": {
+        "relativePerformance": {"const": "smartperf-emulator-proxy"},
+        "absolutePowerThermal": {"const": "unavailable-on-emulator"}
+      }
+    },
+    "performanceEvidence": {
+      "type": "object",
+      "required": ["environmentIdentity", "performancePolicySha256", "profileWorkloadSha256", "metric", "statistic", "unit", "direction", "bestParticipantId", "worstParticipantId", "meanDifference", "rangesSeparated", "authority"],
+      "properties": {
+        "environmentIdentity": {"type": "string", "minLength": 1},
+        "performancePolicySha256": {"$ref": "#/$defs/sha256"},
+        "profileWorkloadSha256": {"$ref": "#/$defs/sha256"},
+        "metric": {"type": "string", "minLength": 1},
+        "statistic": {"enum": ["mean", "p50", "p95"]},
+        "unit": {"type": "string", "minLength": 1},
+        "direction": {"enum": ["lower", "higher"]},
+        "bestParticipantId": {"type": "string", "minLength": 1},
+        "worstParticipantId": {"type": "string", "minLength": 1},
+        "meanDifference": {"type": "number", "exclusiveMinimum": 0},
+        "rangesSeparated": {"const": true},
+        "authority": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["functional", "relativePerformance", "absolutePowerThermal"],
+          "properties": {
+            "functional": {"const": "none"},
+            "relativePerformance": {"const": "smartperf-emulator-proxy"},
+            "absolutePowerThermal": {"const": "unavailable-on-emulator"}
+          }
+        }
+      }
+    }
+  }
+}

@@ -41,6 +41,43 @@ def require(condition, message):
         raise ValueError(message)
 
 
+def validate_evidence_ref(value, root, label):
+    require(
+        isinstance(value, dict)
+        and set(value) == {"path", "sha256", "byteLength"},
+        f"{label} evidence reference fields differ",
+    )
+    require(
+        isinstance(value["path"], str)
+        and bool(value["path"]),
+        f"{label} evidence path is invalid",
+    )
+    relative = Path(value["path"])
+    require(not relative.is_absolute(), f"{label} evidence path is invalid")
+    candidate = root / relative
+    require(
+        candidate.is_file() and not candidate.is_symlink(),
+        f"{label} evidence file is unavailable",
+    )
+    path = candidate.resolve()
+    try:
+        path.relative_to(root)
+    except ValueError as error:
+        raise ValueError(f"{label} evidence path escapes calibration directory") from error
+    require(
+        isinstance(value["sha256"], str)
+        and SHA256.fullmatch(value["sha256"])
+        and digest(path) == value["sha256"],
+        f"{label} evidence digest differs",
+    )
+    require(
+        isinstance(value["byteLength"], int)
+        and value["byteLength"] >= 0
+        and path.stat().st_size == value["byteLength"],
+        f"{label} evidence byte length differs",
+    )
+
+
 def validate_calibration_authoring(value):
     require(isinstance(value, dict), "calibration authoring lineage must be an object")
     for field in ("receiptSha256", "draftManifestSha256", "participantSha256"):
@@ -170,6 +207,7 @@ def main():
     parser.add_argument("--candidate-selection", type=Path)
     parser.add_argument("--calibration", type=Path, required=True)
     parser.add_argument("--calibration-run", type=Path)
+    parser.add_argument("--performance-calibration", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -195,7 +233,7 @@ def main():
         require(decision.get("verdict") == review.get("verdict"), "review verdict mismatch")
         require(decision.get("reviewer") == review.get("reviewer"), "reviewer mismatch")
         require(sorted(decision.get("acknowledgedRiskIds", [])) == review.get("acknowledgedRiskIds"), "review risk acknowledgements mismatch")
-        reviewed_fields = ("caseId", "candidateId", "sourceSetSha256", "title", "allowedEdits", "stages", "oracle", "calibrationExpectations", "construction", "constructionQuality", "feedbackAnalysisCut")
+        reviewed_fields = ("caseId", "candidateId", "sourceSetSha256", "title", "allowedEdits", "stages", "oracle", "calibrationExpectations", "construction", "constructionQuality", "feedbackAnalysisCut", "performanceRequirement")
         require(all(plan.get(key) == proposal.get(key) for key in reviewed_fields), "v2 plan differs from reviewed proposal")
         if plan.get("construction") is not None:
             require(args.construction_quality is not None, "constructed v2 plan requires construction quality evidence")
@@ -354,6 +392,135 @@ def main():
 
     plan_sha256 = digest(args.plan)
     calibration_sha256 = digest(args.calibration)
+    performance_requirement = plan.get("performanceRequirement")
+    performance_calibration_binding = None
+    if performance_requirement is not None:
+        require(args.performance_calibration is not None, "performance-derived case requires performance calibration evidence")
+        require(
+            isinstance(performance_requirement, dict)
+            and performance_requirement.get("schema")
+            == "agentlab.case_performance_requirement.v1"
+            and performance_requirement.get("automaticPromotion") is False
+            and performance_requirement.get("variantExpectations")
+            == {
+                "baseline": "performance-regression-candidate",
+                "reference": "within-relative-guardrails",
+                "wrong": "performance-regression-candidate",
+            }
+            and performance_requirement.get("minimumObservationsPerVariant") == 2
+            and performance_requirement.get("functionalOracleRequired") is True
+            and performance_requirement.get("authority")
+            == {
+                "relativePerformance": "smartperf-emulator-proxy",
+                "absolutePowerThermal": "unavailable-on-emulator",
+            },
+            "case performance requirement is invalid",
+        )
+        performance_calibration = load(args.performance_calibration)
+        require(
+            performance_calibration.get("schema")
+            == "agentlab.case_performance_calibration.v1"
+            and performance_calibration.get("status") == "qualified-review-required"
+            and performance_calibration.get("caseId") == case_id
+            and performance_calibration.get("sourceSetSha256") == source_set
+            and performance_calibration.get("functionalCalibrationSha256")
+            == calibration_sha256
+            and performance_calibration.get("feedbackPerformanceEvidence")
+            == performance_requirement.get("feedbackPerformanceEvidence")
+            and performance_calibration.get("functionalOracleQualified") is True
+            and performance_calibration.get("repeatabilityQualified") is True
+            and performance_calibration.get("automaticPromotion") is False
+            and performance_calibration.get("nextGate")
+            == "maintainer-review-and-case-freeze"
+            and performance_calibration.get("authority")
+            == {
+                "functional": "independent-harmony-ui-oracle",
+                "relativePerformance": "smartperf-emulator-proxy",
+                "absolutePowerThermal": "unavailable-on-emulator",
+            },
+            "case performance calibration identity or authority differs",
+        )
+        performance_variants = performance_calibration.get("variants")
+        require(
+            isinstance(performance_variants, list)
+            and len(performance_variants) == 3
+            and all(isinstance(row, dict) for row in performance_variants)
+            and {
+                row.get("role"): row.get("expectedDecision")
+                for row in performance_variants
+            }
+            == performance_requirement["variantExpectations"]
+            and all(
+                isinstance(row.get("candidateSourceIdentity"), str)
+                and re.fullmatch(r"artifact-sha256:[0-9a-f]{64}", row["candidateSourceIdentity"])
+                and isinstance(row.get("observationCount"), int)
+                and row["observationCount"]
+                >= performance_requirement["minimumObservationsPerVariant"]
+                and isinstance(row.get("observations"), list)
+                and len(row["observations"]) == row["observationCount"]
+                for row in performance_variants
+            ),
+            "case performance calibration variants are incomplete",
+        )
+        require(
+            isinstance(performance_calibration.get("baselineSourceIdentity"), str)
+            and re.fullmatch(
+                r"artifact-sha256:[0-9a-f]{64}",
+                performance_calibration["baselineSourceIdentity"],
+            )
+            and len(
+                {row["candidateSourceIdentity"] for row in performance_variants}
+            )
+            == 3,
+            "case performance calibration artifact identities are invalid",
+        )
+        require(
+            all(
+                row["candidateSourceIdentity"]
+                != performance_calibration["baselineSourceIdentity"]
+                for row in performance_variants
+            ),
+            "case performance calibration compares an artifact with itself",
+        )
+        calibration_root = args.performance_calibration.resolve().parent
+        required_evidence = {
+            "baselineSummary",
+            "candidateSummary",
+            "baselineResult",
+            "candidateResult",
+            "comparison",
+        }
+        for row in performance_variants:
+            for ordinal, observation in enumerate(row["observations"], 1):
+                require(
+                    isinstance(observation, dict)
+                    and set(observation) == required_evidence,
+                    f"{row['role']} observation {ordinal} evidence is incomplete",
+                )
+                for name, evidence in observation.items():
+                    validate_evidence_ref(
+                        evidence,
+                        calibration_root,
+                        f"{row['role']} observation {ordinal} {name}",
+                    )
+        performance_calibration_binding = {
+            "schema": performance_calibration["schema"],
+            "sha256": digest(args.performance_calibration),
+            "status": performance_calibration["status"],
+            "qualified": True,
+            "functionalOracleQualified": True,
+            "repeatabilityQualified": True,
+            "variantExpectations": performance_requirement["variantExpectations"],
+            "minimumObservationsPerVariant": performance_requirement[
+                "minimumObservationsPerVariant"
+            ],
+            "feedbackPerformanceEvidence": performance_requirement[
+                "feedbackPerformanceEvidence"
+            ],
+            "authority": performance_calibration["authority"],
+        }
+    else:
+        require(args.performance_calibration is None, "performance calibration evidence requires a performance-derived case")
     calibration_run_binding = None
     if args.calibration_run is not None:
         calibration_run = load(args.calibration_run)
@@ -451,6 +618,8 @@ def main():
         },
         "construction": plan.get("construction"),
         "constructionQuality": plan.get("constructionQuality"),
+        "performanceRequirement": performance_requirement,
+        "performanceCalibration": performance_calibration_binding,
         "caseSource": case_source,
         "qualificationMatrix": qualification_matrix,
         "qualificationReceipt": qualification_receipt,
@@ -465,7 +634,11 @@ def main():
             **({"candidateCohort": cohort_lineage} if cohort_lineage is not None else {}),
         },
         "automaticPromotion": False,
-        "assessmentBoundary": "Exact pinned source set and executable fixture oracle; Harmony build, emulator rendering and device performance remain separate gates.",
+        "assessmentBoundary": (
+            "Exact pinned source set, executable fixture Oracle, and repeatable policy-bound Harmony performance calibration; emulator metrics remain relative and cannot qualify absolute power or thermal behavior."
+            if performance_calibration_binding is not None
+            else "Exact pinned source set and executable fixture oracle; Harmony build, emulator rendering and device performance remain separate gates."
+        ),
     }
     validate_matrix(output, calibration, calibration_sha256)
     validate_case_supply(output)

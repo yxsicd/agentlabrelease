@@ -448,6 +448,17 @@ separated-range claim and emulator-only authority. A later case therefore cannot
 silently drop or replace the performance reason that caused the recursive
 analysis, while independent performance calibration remains a mandatory gate.
 
+The mandatory gate is now implemented, rather than only recorded as a future
+requirement. A portable calibration manifest points to the raw SmartPerf v2
+summaries, Harmony result v3 files and comparisons for repeated baseline,
+reference and wrong variants. `compose-case-performance-calibration.py`
+reconstructs each comparison and rejects functional failure, identity drift,
+single observations, changed raw bytes, inconsistent artifacts or a role whose
+decision does not match its expected guardrail result. The case freezer binds
+the composed output and independently rechecks every referenced file. This
+qualifies only relative emulator performance under the exact policy and
+workload; absolute power and thermal behavior remain unavailable.
+
 The campaign summary SHA256 is
 `13e3fe304d29a7434a8d0af87e316ac45579e46f40975561f8643f2745cdcb8b`;
 the discrimination-report SHA256 is

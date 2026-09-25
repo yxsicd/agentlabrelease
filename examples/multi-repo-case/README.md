@@ -343,6 +343,31 @@ python3 examples/multi-repo-case/calibrate.py \
   --output /tmp/multi-repo-calibration
 ```
 
+If the reviewed plan was derived from an
+`assessed-agent-performance-separation` feedback cut, functional calibration is
+necessary but not sufficient. Create a portable
+`agentlab.case_performance_calibration_manifest.v1` that lists at least two
+same-environment observations for each of `baseline`, `reference` and `wrong`.
+Every observation names its baseline/candidate SmartPerf v2 summary, Harmony
+result v3 and retained comparison relative to the manifest. Compose it with:
+
+```sh
+python3 scripts/compose-case-performance-calibration.py \
+  --manifest /tmp/case-performance-calibration-manifest.json \
+  --output /tmp/case-performance-calibration.json
+```
+
+Keep the manifest, composed output and its referenced evidence tree under the
+same portable directory; the output must be beside the manifest. Symlinks and
+paths escaping that directory are rejected.
+
+The composer rebuilds every comparison from the raw summaries and functional
+results. Baseline and wrong must repeatedly produce
+`performance-regression-candidate`; reference must repeatedly remain within the
+same policy guardrails. Environment, policy, workload, selected metric and
+artifact identities must remain exact. The output binds all raw files by path,
+size and SHA-256 and retains emulator-only relative-performance authority.
+
 Freeze the case only after calibration succeeds:
 
 ```sh
@@ -353,8 +378,14 @@ python3 scripts/generate-multi-repo-case.py \
   --review /tmp/case-plan-review.json \
   --construction-quality /tmp/intent-construction/intent-quality.json \
   --calibration /tmp/multi-repo-calibration/summary.json \
+  --performance-calibration /tmp/case-performance-calibration.json \
   --output /tmp/multi-repo-evaluation-case.json
 ```
+
+Omit `--performance-calibration` for cases that were not performance-derived.
+The freezer rejects both missing evidence on a performance-derived plan and
+unexpected performance evidence on a functional-only plan. It also verifies
+every referenced file again before freezing the case.
 
 The freezer now derives an embedded
 `agentlab.case_qualification_matrix.v1` from the per-check calibration
@@ -372,9 +403,12 @@ python3 scripts/validate-case-qualification.py \
 ```
 
 The JSON shape is published at
-`schemas/case-qualification-matrix.schema.json`. Device checks, performance
-guardrails and freshness/contamination review remain explicit pending gates;
-static calibration cannot silently qualify them.
+`schemas/case-qualification-matrix.schema.json`. The performance requirement,
+portable manifest and composed calibration shapes are published under
+`schemas/case-performance-*.schema.json`. Device checks and
+freshness/contamination review remain explicit pending gates; static functional
+calibration cannot silently qualify them, and emulator observations cannot
+qualify absolute power or thermal behavior.
 
 Before operational assessment, project the frozen case into separate blind
 participant/evaluator roots, then stage only the participant root:
