@@ -112,7 +112,7 @@ def validate_scenario_descriptor(value: object, label: str, base_dir: Path | Non
 def validate(value: object, base_dir: Path | None = None) -> dict:
     require(isinstance(value, dict), "calibration must be a JSON object")
     data = value
-    require(data.get("schema") == "agentlab.harmony_ui_known_fix_calibration.v1", "unsupported schema")
+    require(data.get("schema") == "agentlab.harmony_ui_known_fix_calibration.v2", "unsupported schema")
     require(data.get("status") == "controlled-fail-to-pass-observed", "unsupported status")
     require(data.get("automaticPromotion") is False, "automaticPromotion must be false")
 
@@ -139,6 +139,57 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
     require(known_hap != baseline_hap, "known-fix and baseline HAPs must differ")
     require(known.get("sourceIdentity") == f"artifact-sha256:{known_hap}", "known-fix source identity differs")
     require(isinstance(known.get("hapBytes"), int) and known["hapBytes"] > 0, "known-fix HAP bytes are required")
+
+    alternative = data.get("alternativeValid")
+    require(isinstance(alternative, dict), "alternativeValid is required")
+    require(alternative.get("id") == "named-route", "alternative-valid id differs")
+    require(
+        alternative.get("classification") == "controlled-alternative-valid-not-gold",
+        "alternative-valid solution must not be gold",
+    )
+    require(
+        revision(alternative.get("sourceRevision"), "alternative-valid source revision") == baseline_revision,
+        "alternative-valid solution must start from baseline",
+    )
+    paths = alternative.get("paths")
+    require(isinstance(paths, list) and len(paths) == 2 and len(set(paths)) == 2, "alternative-valid solution must change exactly two distinct paths")
+    require(known.get("path") not in paths, "alternative-valid solution must not overlap the known-fix path")
+    require(alternative.get("referenceOverlapPaths") == [], "alternative-valid solution must declare zero reference path overlap")
+    require(
+        alternative.get("changedFiles") == 2
+        and alternative.get("insertions") == 5
+        and alternative.get("deletions") == 5,
+        "alternative-valid diff statistics differ",
+    )
+    alternative_patch_sha = digest(alternative.get("patchSha256"), "alternative-valid patch")
+    if base_dir is not None:
+        patch_path = base_dir / str(alternative.get("patchPath", ""))
+        require(patch_path.is_file(), "alternative-valid patch file is missing")
+        require(hashlib.sha256(patch_path.read_bytes()).hexdigest() == alternative_patch_sha, "alternative-valid patch digest differs")
+    require(alternative.get("routeMechanism") == "ArkUI named route", "alternative-valid route mechanism differs")
+    baseline_main_pages = digest(alternative.get("baselineMainPagesSha256"), "alternative-valid baseline main_pages")
+    alternative_main_pages = digest(alternative.get("alternativeMainPagesSha256"), "alternative-valid main_pages")
+    require(
+        baseline_main_pages == alternative_main_pages == known.get("beforeFileSha256"),
+        "alternative-valid main_pages must remain byte-identical to baseline",
+    )
+    after_files = alternative.get("afterFileSha256")
+    require(isinstance(after_files, dict) and set(after_files) == set(paths), "alternative-valid after-file identities differ")
+    for path, sha in after_files.items():
+        digest(sha, f"alternative-valid after file {path}")
+    alternative_hap = digest(alternative.get("hapSha256"), "alternative-valid HAP")
+    require(alternative_hap not in (baseline_hap, known_hap), "alternative-valid HAP must differ from baseline and known fix")
+    require(alternative.get("sourceIdentity") == f"artifact-sha256:{alternative_hap}", "alternative-valid source identity differs")
+    require(isinstance(alternative.get("hapBytes"), int) and alternative["hapBytes"] > 0, "alternative-valid HAP bytes are required")
+    build = alternative.get("build")
+    require(isinstance(build, dict) and build.get("status") == "successful", "alternative-valid build must be successful")
+    alternative_transfer = alternative.get("transfer")
+    require(isinstance(alternative_transfer, dict), "alternative-valid transfer is required")
+    require(alternative_transfer.get("transport") == "AWMCP RGW HTTP binary stream", "alternative-valid transfer transport differs")
+    require(str(alternative_transfer.get("fromPeerId", "")).startswith("lgw_"), "alternative-valid source peer is required")
+    require(str(alternative_transfer.get("toPeerId", "")).startswith("lgw_"), "alternative-valid target peer is required")
+    require(alternative_transfer.get("verifiedSha256") == alternative_hap, "alternative-valid transferred HAP digest differs")
+    require(alternative_transfer.get("verifiedBytes") == alternative.get("hapBytes"), "alternative-valid transferred HAP bytes differ")
 
     transfer = data.get("transfer")
     require(isinstance(transfer, dict), "transfer is required")
@@ -188,13 +239,18 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
 
     validate_result(data.get("baselineAttempt"), "baseline attempt", hap_sha=baseline_hap, scenario_sha=scenario_sha, passed=False)
     validate_result(data.get("knownFixAttempt"), "known-fix attempt", hap_sha=known_hap, scenario_sha=scenario_sha, passed=True)
+    validate_result(data.get("alternativeValidAttempt"), "alternative-valid attempt", hap_sha=alternative_hap, scenario_sha=scenario_sha, passed=True)
     require(data["baselineAttempt"].get("observedPagePathAfter") == "pages/Index", "baseline must remain on Index")
     require(data["knownFixAttempt"].get("observedPagePathAfter") == "pages/UserAgent_four", "known fix must reach target page")
     require(data["knownFixAttempt"].get("observedVisibleTextAfter") == "Example Domain", "known fix target semantics differ")
+    require(data["alternativeValidAttempt"].get("observedPagePathAfter") == "pages/UserAgent_four", "alternative-valid solution must reach target page")
+    require(data["alternativeValidAttempt"].get("observedVisibleTextAfter") == "Example Domain", "alternative-valid target semantics differ")
     validate_result(data.get("baselinePreservationAttempt"), "baseline preservation attempt", hap_sha=baseline_hap, scenario_sha=preservation_sha, passed=True, check_field="preservationCheckPassed")
     validate_result(data.get("knownFixPreservationAttempt"), "known-fix preservation attempt", hap_sha=known_hap, scenario_sha=preservation_sha, passed=True, check_field="preservationCheckPassed")
+    validate_result(data.get("alternativeValidPreservationAttempt"), "alternative-valid preservation attempt", hap_sha=alternative_hap, scenario_sha=preservation_sha, passed=True, check_field="preservationCheckPassed")
     require(data["baselinePreservationAttempt"].get("observedPagePathAfter") == "pages/DomStorage", "baseline preservation must reach DomStorage")
     require(data["knownFixPreservationAttempt"].get("observedPagePathAfter") == "pages/DomStorage", "known-fix preservation must reach DomStorage")
+    require(data["alternativeValidPreservationAttempt"].get("observedPagePathAfter") == "pages/DomStorage", "alternative-valid preservation must reach DomStorage")
 
     additional = data.get("additionalPreservationCases")
     require(isinstance(additional, list) and len(additional) == 2, "exactly two additional preservation cases are required")
@@ -208,16 +264,20 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
         preservation_ids.append(str(item.get("id")))
         baseline_attempt = item.get("baselineAttempt")
         fixed_attempt = item.get("knownFixAttempt")
+        alternative_attempt = item.get("alternativeValidAttempt")
         validate_result(baseline_attempt, f"{label} baseline", hap_sha=baseline_hap, scenario_sha=descriptor_sha, passed=True, check_field="preservationCheckPassed")
         validate_result(fixed_attempt, f"{label} known fix", hap_sha=known_hap, scenario_sha=descriptor_sha, passed=True, check_field="preservationCheckPassed")
+        validate_result(alternative_attempt, f"{label} alternative valid", hap_sha=alternative_hap, scenario_sha=descriptor_sha, passed=True, check_field="preservationCheckPassed")
         expected_page = descriptor.get("expectedPagePath")
         require(baseline_attempt.get("observedPagePathAfter") == expected_page, f"{label} baseline page differs")
         require(fixed_attempt.get("observedPagePathAfter") == expected_page, f"{label} known-fix page differs")
+        require(alternative_attempt.get("observedPagePathAfter") == expected_page, f"{label} alternative-valid page differs")
         if descriptor.get("assertionKind") == "assert-text":
             positive_visible_semantic_cases += 1
             expected_text = descriptor.get("assertionText")
             require(baseline_attempt.get("observedVisibleTextAfter") == expected_text, f"{label} baseline visible text differs")
             require(fixed_attempt.get("observedVisibleTextAfter") == expected_text, f"{label} known-fix visible text differs")
+            require(alternative_attempt.get("observedVisibleTextAfter") == expected_text, f"{label} alternative-valid visible text differs")
     require(len(set(preservation_ids)) == len(preservation_ids), "preservation case ids must be unique")
 
     freshness = data.get("freshness")
@@ -243,12 +303,25 @@ def validate(value: object, base_dir: Path | None = None) -> dict:
     require(preservation.get("caseCount") == 3, "preservation matrix case count differs")
     require(preservation.get("positiveVisibleSemanticCaseCount") == positive_visible_semantic_cases == 2, "preservation semantic case count differs")
     require(preservation.get("caseIds") == preservation_ids, "preservation matrix case ids differ")
+    breadth = matrix.get("oracleBreadth")
+    require(isinstance(breadth, dict), "oracle breadth qualification is required")
+    for field in (
+        "alternativeValidDefined",
+        "structurallyDistinctFromKnownFix",
+        "baselineMainPagesUnchanged",
+        "repairPassed",
+        "preservationPassed",
+        "allFourDeviceScenariosPassed",
+    ):
+        require(breadth.get(field) is True, f"oracle breadth {field} must be observed")
+    require(breadth.get("referenceOverlapPathCount") == 0, "oracle breadth reference overlap count differs")
+    require(breadth.get("preservationCaseCount") == 3, "oracle breadth preservation case count differs")
     review = matrix.get("review")
     require(isinstance(review, dict) and review.get("independent") is False and review.get("knownFixAcceptedAsReference") is False, "known fix must remain unreviewed and non-reference")
 
     scope = data.get("qualificationScope")
     require(isinstance(scope, dict), "qualificationScope is required")
-    for field in ("controlledKnownFix", "businessSemanticAssertionObserved", "candidateFailToPass", "preservationPassToPass", "freshnessDeclared"):
+    for field in ("controlledKnownFix", "businessSemanticAssertionObserved", "candidateFailToPass", "preservationPassToPass", "alternativeValidQualified", "freshnessDeclared"):
         require(scope.get(field) is True, f"{field} must be observed")
     for field in ("businessUiOracleQualified", "independentReview", "referenceRepair", "unseenAgentDiscrimination", "performanceComparison"):
         require(scope.get(field) is False, f"{field} must remain unqualified")

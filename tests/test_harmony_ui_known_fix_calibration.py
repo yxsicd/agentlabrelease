@@ -20,6 +20,9 @@ def fixture(root: pathlib.Path) -> dict:
     patch = root / "known-fix.patch"
     patch.write_text("one-line calibration patch\n", encoding="utf-8")
     patch_sha = hashlib.sha256(patch.read_bytes()).hexdigest()
+    alternative_patch = root / "alternative.patch"
+    alternative_patch.write_text("structurally distinct named-route patch\n", encoding="utf-8")
+    alternative_patch_sha = hashlib.sha256(alternative_patch.read_bytes()).hexdigest()
     scenario = root / "target.ui"
     scenario.write_text(
         "schema\tagentlab.harmony_ui_scenario.v1\n"
@@ -60,7 +63,7 @@ def fixture(root: pathlib.Path) -> dict:
         encoding="utf-8",
     )
     cache_two_sha = hashlib.sha256(cache_two.read_bytes()).hexdigest()
-    baseline_hap, fixed_hap = "a" * 64, "b" * 64
+    baseline_hap, fixed_hap, alternative_hap = "a" * 64, "b" * 64, "3" * 64
     authority = {"routeDecision": "peer_direct", "targetPeerId": "lgw_" + "1" * 32, "operationId": "exec-1", "traceIds": ["trace"]}
     def attempt(hap: str, scenario_digest: str, passed: bool, check_field: str = "repairCheckPassed") -> dict:
         status = "passed" if passed else "failed"
@@ -81,15 +84,22 @@ def fixture(root: pathlib.Path) -> dict:
     fixed = attempt(fixed_hap, scenario_sha, True)
     fixed["observedPagePathAfter"] = "pages/UserAgent_four"
     fixed["observedVisibleTextAfter"] = "Example Domain"
+    alternative = attempt(alternative_hap, scenario_sha, True)
+    alternative["observedPagePathAfter"] = "pages/UserAgent_four"
+    alternative["observedVisibleTextAfter"] = "Example Domain"
     baseline_preservation = attempt(baseline_hap, preservation_sha, True, "preservationCheckPassed")
     baseline_preservation["observedPagePathAfter"] = "pages/DomStorage"
     fixed_preservation = attempt(fixed_hap, preservation_sha, True, "preservationCheckPassed")
     fixed_preservation["observedPagePathAfter"] = "pages/DomStorage"
+    alternative_preservation = attempt(alternative_hap, preservation_sha, True, "preservationCheckPassed")
+    alternative_preservation["observedPagePathAfter"] = "pages/DomStorage"
     def preservation_case(case_id: str, path: str, scenario_digest: str, tap: list[int], text: str, page: str) -> dict:
         baseline_attempt = attempt(baseline_hap, scenario_digest, True, "preservationCheckPassed")
         baseline_attempt.update(observedPagePathAfter=page, observedVisibleTextAfter=text)
         fixed_attempt = attempt(fixed_hap, scenario_digest, True, "preservationCheckPassed")
         fixed_attempt.update(observedPagePathAfter=page, observedVisibleTextAfter=text)
+        alternative_attempt = attempt(alternative_hap, scenario_digest, True, "preservationCheckPassed")
+        alternative_attempt.update(observedPagePathAfter=page, observedVisibleTextAfter=text)
         return {
             "id": case_id,
             "scenario": {
@@ -98,9 +108,10 @@ def fixture(root: pathlib.Path) -> dict:
             },
             "baselineAttempt": baseline_attempt,
             "knownFixAttempt": fixed_attempt,
+            "alternativeValidAttempt": alternative_attempt,
         }
     return {
-        "schema": "agentlab.harmony_ui_known_fix_calibration.v1",
+        "schema": "agentlab.harmony_ui_known_fix_calibration.v2",
         "status": "controlled-fail-to-pass-observed",
         "automaticPromotion": False,
         "baselineSource": {"revision": "1" * 40, "hapSha256": baseline_hap, "sourceIdentity": f"artifact-sha256:{baseline_hap}"},
@@ -111,6 +122,25 @@ def fixture(root: pathlib.Path) -> dict:
             "patchPath": "known-fix.patch", "patchSha256": patch_sha,
             "beforeFileSha256": "4" * 64, "afterFileSha256": "5" * 64,
             "hapSha256": fixed_hap, "hapBytes": 123, "sourceIdentity": f"artifact-sha256:{fixed_hap}",
+        },
+        "alternativeValid": {
+            "id": "named-route", "classification": "controlled-alternative-valid-not-gold",
+            "sourceRevision": "1" * 40, "changedFiles": 2, "insertions": 5, "deletions": 5,
+            "paths": ["project/entry/src/main/ets/pages/Index.ets", "project/entry/src/main/ets/pages/UserAgent_four.ets"],
+            "referenceOverlapPaths": [], "patchPath": "alternative.patch", "patchSha256": alternative_patch_sha,
+            "routeMechanism": "ArkUI named route", "baselineMainPagesSha256": "4" * 64,
+            "alternativeMainPagesSha256": "4" * 64,
+            "afterFileSha256": {
+                "project/entry/src/main/ets/pages/Index.ets": "6" * 64,
+                "project/entry/src/main/ets/pages/UserAgent_four.ets": "7" * 64,
+            },
+            "hapSha256": alternative_hap, "hapBytes": 124,
+            "sourceIdentity": f"artifact-sha256:{alternative_hap}",
+            "build": {"status": "successful"},
+            "transfer": {
+                "transport": "AWMCP RGW HTTP binary stream", "fromPeerId": "lgw_" + "2" * 32,
+                "toPeerId": "lgw_" + "1" * 32, "verifiedSha256": alternative_hap, "verifiedBytes": 124,
+            },
         },
         "transfer": {"transport": "LAN HTTP", "verifiedSha256": fixed_hap, "verifiedBytes": 123},
         "scenario": {
@@ -146,8 +176,10 @@ def fixture(root: pathlib.Path) -> dict:
         },
         "baselineAttempt": baseline,
         "knownFixAttempt": fixed,
+        "alternativeValidAttempt": alternative,
         "baselinePreservationAttempt": baseline_preservation,
         "knownFixPreservationAttempt": fixed_preservation,
+        "alternativeValidPreservationAttempt": alternative_preservation,
         "qualificationMatrix": {
             "repairChecks": {"failToPassObserved": True, "sameScenario": True, "sameEnvironment": True},
             "preservationChecks": {
@@ -155,12 +187,19 @@ def fixture(root: pathlib.Path) -> dict:
                 "caseCount": 3, "positiveVisibleSemanticCaseCount": 2,
                 "caseIds": ["preservation", "user-agent-one", "cache-two"],
             },
+            "oracleBreadth": {
+                "alternativeValidDefined": True, "structurallyDistinctFromKnownFix": True,
+                "referenceOverlapPathCount": 0, "baselineMainPagesUnchanged": True,
+                "repairPassed": True, "preservationPassed": True, "preservationCaseCount": 3,
+                "allFourDeviceScenariosPassed": True,
+            },
             "review": {"independent": False, "knownFixAcceptedAsReference": False},
         },
         "qualificationScope": {
             "controlledKnownFix": True, "businessSemanticAssertionObserved": True, "candidateFailToPass": True,
             "businessUiOracleQualified": False, "independentReview": False, "referenceRepair": False,
             "preservationPassToPass": True, "freshnessDeclared": True,
+            "alternativeValidQualified": True,
             "unseenAgentDiscrimination": False, "performanceComparison": False,
         },
     }
@@ -219,6 +258,41 @@ class HarmonyUiKnownFixCalibrationTests(unittest.TestCase):
             value = fixture(root)
             value["freshness"]["eligibleForUnseenAgentDiscrimination"] = True
             with self.assertRaisesRegex(MODULE.CalibrationError, "unseen-Agent discrimination"):
+                MODULE.validate(value, root)
+
+    def test_alternative_valid_target_failure_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            value = fixture(root)
+            value["alternativeValidAttempt"]["result"]["status"] = "failed"
+            with self.assertRaisesRegex(MODULE.CalibrationError, "status must be passed"):
+                MODULE.validate(value, root)
+
+    def test_alternative_valid_cannot_overlap_known_fix_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            value = fixture(root)
+            known_path = value["knownFix"]["path"]
+            original = value["alternativeValid"]["paths"][0]
+            value["alternativeValid"]["paths"][0] = known_path
+            value["alternativeValid"]["afterFileSha256"][known_path] = value["alternativeValid"]["afterFileSha256"].pop(original)
+            with self.assertRaisesRegex(MODULE.CalibrationError, "must not overlap"):
+                MODULE.validate(value, root)
+
+    def test_alternative_valid_must_leave_main_pages_unchanged(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            value = fixture(root)
+            value["alternativeValid"]["alternativeMainPagesSha256"] = "8" * 64
+            with self.assertRaisesRegex(MODULE.CalibrationError, "byte-identical"):
+                MODULE.validate(value, root)
+
+    def test_alternative_valid_preservation_failure_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            value = fixture(root)
+            del value["additionalPreservationCases"][0]["alternativeValidAttempt"]
+            with self.assertRaisesRegex(MODULE.CalibrationError, "alternative valid is required"):
                 MODULE.validate(value, root)
 
     def test_scenario_assertion_must_match_file(self) -> None:

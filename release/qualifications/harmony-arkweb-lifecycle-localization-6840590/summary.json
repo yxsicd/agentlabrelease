@@ -43,6 +43,7 @@
     "UI coordinate calibration rejects a DomStorage decoy tap and the corrected UserAgent_four baseline produces an assessed Oracle failure",
     "one controlled one-line page-registration variant changes an identical target-page semantic Oracle from FAIL to PASS on the Linux emulator",
     "three independent preservation routes pass on both baseline and known-fix HAPs under the same Linux emulator environment; two bind positive visible semantics",
+    "one structurally distinct named-route implementation overlaps no known-fix path, leaves main_pages.json byte-identical to baseline, and passes the target plus all three preservation scenarios on the same Linux emulator",
     "the public synthetic calibration declares its freshness and contamination boundary and is explicitly ineligible for unseen-Agent discrimination"
   ],
   "notQualified": [
@@ -85,6 +86,9 @@
     "preservationPassToPassQualified": true,
     "preservationCaseCount": 3,
     "positiveVisibleSemanticCaseCount": 2,
+    "alternativeValidQualified": true,
+    "alternativeValidId": "named-route",
+    "oracleBreadthDeviceScenarioCount": 4,
     "freshnessDeclared": true,
     "unseenAgentDiscrimination": false,
     "businessUiOracleQualified": false,

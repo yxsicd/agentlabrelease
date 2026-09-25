@@ -197,6 +197,15 @@ proves cross-phase compatibility, not empirical qualification: a real
 arbitrary-source bundle and representative case population still need human
 review, execution and adjudication.
 
+The same alternative-valid rule is now exercised by the retained real Harmony
+UI calibration, not only by the deterministic protocol fixture. Besides the
+one-line page-registration variant, a named-route implementation changes two
+ArkTS files, overlaps none of the known-fix paths and leaves the failing
+baseline's `main_pages.json` byte-identical. Its exact HAP passes the target
+scenario and all three preservation scenarios on the same Linux emulator. This
+qualifies Oracle breadth for that controlled calibration; it does not supply
+independent fairness review, exhaustive route coverage or a gold repair.
+
 The first call-localization qualification is retained at
 `release/qualifications/harmony-arkweb-lifecycle-localization-6840590/`. On the
 same frozen source set, it reduces the broad `@kit.ArkWeb` module cluster from

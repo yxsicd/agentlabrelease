@@ -1449,6 +1449,15 @@ method/source lineage and independent layer/role fields.
 
 ## Harmony emulator function-bound SmartPerf checkpoint
 
+Long-lived remote automation daemons can retain stale supplementary groups
+after the host account is added to `kvm`, `render` or `video`. Before declaring
+the emulator unavailable, compare the daemon process groups with `/etc/group`
+and run the emulator under a fresh context carrying all three groups. KVM-only
+access is insufficient when EGL also needs `/dev/dri/renderD128` and the card
+device. Preserve each failed evidence directory and classify missing device
+permissions or a wrong image-root argument as infrastructure failure, never as
+an application or Oracle failure.
+
 The real `hwlinux` canary at `/home/huawei/agentlab-canary-3c97b38` closed the
 first exact functional-result-to-SmartPerf-v2 path. Two cold-boot runs used the
 same HAP, scenario, emulator instance and environment identity; both independent
