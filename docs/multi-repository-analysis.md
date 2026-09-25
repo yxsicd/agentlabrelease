@@ -18,9 +18,22 @@ For a trusted-main run, the portable input is
 HTTPS repositories, exact 40-character commits, optional module bindings and
 `automaticPromotion: false`. The `Multi-repository exact analysis` workflow
 materializes those commits with Git's non-file/non-SSH protocol restrictions,
-bounded retries and a one-MiB blob partial-clone filter. It does not accept a
+bounded retries and a metadata-first `blob:none` partial clone. It does not accept a
 branch, tag, local path, embedded credential, query string or private IP
 literal.
+
+The analyzer then asks Git for only the pinned ArkTS/TypeScript blobs it
+consumes. Git verifies them against the commit's tree object IDs and retains
+each successful fetch in the local object database. A transport interruption
+can therefore resume without redownloading a monolithic source pack or
+weakening the exact-revision fence.
+
+Before analysis, the workflow re-fetches two bounded Git blob-size tiers (8 KiB
+and 32 KiB). This coalesces the large population of small source files into a
+few resumable packs. Any larger source blobs remain explicit in the transport
+receipt and are fetched by Git's promisor path when the analyzer requests them.
+Git object IDs remain authority throughout; no provider-specific raw-file API
+is trusted.
 
 The workflow converts that portable specification into the analyzer manifest
 below. Local absolute roots are transport fields only. It retains the source
@@ -159,10 +172,16 @@ clusters, two audited non-UTF-8 exclusions and the exact evidence digests. Its
 status is `analysis-qualified-case-review-required`: the clusters are discovery
 evidence, not evaluation cases.
 
-That retained qualification predates the generic trusted-main analysis-run
-workflow. The workflow now makes an arbitrary exact source set admissible to
-cohort proposal, but it has not yet reproduced this historical GitCode source
-set on trusted `main`.
+The same source set has now been reproduced locally with the current analyzer
+at method revision `b1255e5b2451bcfa96a92d2bb741f81d7512881f`. The digest-bound
+run produced 404,308 facts and 19,374 candidates; 97 candidates met the
+cross-repository sampling-frame rules (22 module-contract and 75 API-call
+members). A five-member min/median/max stratum proposal was frozen before case
+construction or participant outcomes at
+`release/qualifications/harmony-real-multi-repo-34661ff/current-method-proposal.json`.
+It remains non-representative and review-required. Because the workflow exists
+only on this unmerged branch, this is not yet a trusted-main run or an
+independent cohort decision.
 
 After cohort review, construction input is now a second predeclared boundary.
 `Multi-repository construction contract proposal` binds one exact cohort member

@@ -146,7 +146,7 @@ def prepare(spec_path: Path, output: Path) -> dict[str, Any]:
         run_git("init", "--quiet", cwd=root)
         run_git("remote", "add", "origin", source["repository"], cwd=root)
         run_git(
-            "fetch", "--quiet", "--depth=1", "--filter=blob:limit=1048576",
+            "fetch", "--quiet", "--depth=1", "--filter=blob:none",
             "origin", source["revision"],
             cwd=root, attempts=3,
         )

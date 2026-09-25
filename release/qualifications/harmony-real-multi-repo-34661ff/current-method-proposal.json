@@ -1,0 +1,88 @@
+{
+  "schema": "agentlab.real_multi_repo_current_method_proposal.v1",
+  "status": "analysis-reproduced-cohort-review-required",
+  "methodRevision": "b1255e5b2451bcfa96a92d2bb741f81d7512881f",
+  "sourceSetSha256": "c4923e499fbb0ca2ed4fd205c66d6353bbe2aa58935413e3c897183a25493ca9",
+  "sourceSpecSha256": "0259cc69123dbc05d1fc29219c580d2da2434dab5a3f7aa4484353bc88641c63",
+  "analysisRunSha256": "448d7ff17073205acc0492b3e0c9ec9c83328107c8965a0aae031d2474c4b687",
+  "analysisReceiptSha256": "9cfda7f2d31e90dc380206924bf8da9eabb0144a4a72945a1bcec8dc766ce0da",
+  "difficultyEvidenceSha256": "4d7d562a231c70f691edc24191223e88775c8e9197a86160a88dcfecdb118918",
+  "programFactsSha256": "a164c323ca7847117aa08b0f30b5b3895bce0787fb0539684ef7286cfbf35d79",
+  "transportReceiptSha256": "f397d9fd9dd6f8bbd9b11ee7b06c20d2278f26ac6fa43116a0b940d9c197cdb3",
+  "analysis": {
+    "repositories": 2,
+    "sourceFileCandidates": 12713,
+    "analyzedFiles": 12711,
+    "facts": 404308,
+    "difficultyCandidates": 19374,
+    "sharedExternalModuleContracts": 22,
+    "sharedExternalApiCallContracts": 75,
+    "unsupportedSources": 2
+  },
+  "samplingFrame": {
+    "proposalSha256": "86918f24e86ad422637d176760aba215ecc9e7daf10703d4449924665842a52b",
+    "eligibleCount": 97,
+    "excludedCount": 19277,
+    "strata": {
+      "shared-external-module-contract": 22,
+      "shared-external-api-call-contract": 75,
+      "affectedRepositoryCount": {
+        "2": 97
+      },
+      "maxDependencyDepth": {
+        "1": 97
+      }
+    },
+    "selectionPolicy": "Before case construction or outcome measurement, propose the minimum and maximum affected-file members of the module-contract stratum plus the minimum, median and maximum affected-file members of the API-call stratum; break ties by candidate ID.",
+    "declaredRepresentative": false
+  },
+  "proposedCandidates": [
+    {
+      "id": "difficulty-d53d0c8f5f5c979d99ec5233",
+      "candidateSha256": "11a6572d5f979687a1c156d1d8d7d5da845857fa87c761d8d1558d93e0b65eba",
+      "relationType": "shared-external-module-contract",
+      "affectedFileCount": 2
+    },
+    {
+      "id": "difficulty-2a4dfa03fea784ddd323e372",
+      "candidateSha256": "14fa3b52e26a643f9bf570c15e0431ac2991f962c875ae1323b8a74d7f8e59fd",
+      "relationType": "shared-external-module-contract",
+      "affectedFileCount": 3018
+    },
+    {
+      "id": "difficulty-029b14f310abe9975bbfdfa1",
+      "candidateSha256": "0ea3edcb78877701f61d3eb9f89e0c0781e861e99707535891c43bf4d517b67a",
+      "relationType": "shared-external-api-call-contract",
+      "affectedFileCount": 2
+    },
+    {
+      "id": "difficulty-edcc0a335e8d61a4150431a0",
+      "candidateSha256": "ed720dcc8022d2d2e206964dd04ac8471f9707610c8f809060fe165fb56c6918",
+      "relationType": "shared-external-api-call-contract",
+      "affectedFileCount": 7
+    },
+    {
+      "id": "difficulty-090fb55cb02f8f984e91766f",
+      "candidateSha256": "eb32d105627c768b866a6062229f3c251b5cb48d3c10f5e68382c53dc6ddcb68",
+      "relationType": "shared-external-api-call-contract",
+      "affectedFileCount": 2871
+    }
+  ],
+  "qualificationBoundary": {
+    "qualified": [
+      "exact current-method reproduction over the retained two-repository source set",
+      "complete analyzer receipt and native evidence digests",
+      "eligible denominator and relation strata",
+      "five-member proposal frozen before construction or participant outcomes"
+    ],
+    "notQualified": [
+      "independent cohort review",
+      "candidate semantics and issue-level task specification",
+      "repair and preservation checks",
+      "reference and alternative-valid calibration",
+      "unseen participant discrimination",
+      "trusted-main workflow execution"
+    ]
+  },
+  "automaticPromotion": false
+}

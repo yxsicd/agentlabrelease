@@ -32,6 +32,9 @@ jobs:
           python3 scripts/prepare-multi-repo-analysis-sources.py \
             --spec "$AGENTLAB_ROOT/source-spec-input.json" \
             --output "$AGENTLAB_ROOT/source"
+          python3 scripts/prefetch-multi-repo-analysis-blobs.py \
+            --manifest "$AGENTLAB_ROOT/source/manifest.json" \
+            --output "$AGENTLAB_ROOT/source/source-prefetch.json"
       - name: Analyze only committed bytes at exact revisions
         run: |
           cargo build --locked -p agentlab_code_analysis --bin agentlab-multi-repo-analysis
@@ -55,5 +58,6 @@ jobs:
           path: |
             ${{ env.AGENTLAB_ROOT }}/source/source-spec.json
             ${{ env.AGENTLAB_ROOT }}/source/manifest.json
+            ${{ env.AGENTLAB_ROOT }}/source/source-prefetch.json
             ${{ env.AGENTLAB_ROOT }}/source/analysis-run.json
             ${{ env.AGENTLAB_ROOT }}/source/analysis/

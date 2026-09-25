@@ -29,6 +29,10 @@ RUN = load_module(
     "multi_repo_analysis_run",
     ROOT / "scripts/multi-repo-analysis-run.py",
 )
+PREFETCH = load_module(
+    "multi_repo_source_prefetch",
+    ROOT / "scripts/prefetch-multi-repo-analysis-blobs.py",
+)
 
 
 class MultiRepoAnalysisRunTests(unittest.TestCase):
@@ -145,17 +149,27 @@ class MultiRepoAnalysisRunTests(unittest.TestCase):
         self.assertEqual([call.args[0] for call in sleep.call_args_list], [1, 2])
         self.assertIn("http.version=HTTP/1.1", run.call_args.args[0])
 
-    def test_materialization_uses_bounded_blob_filter_without_checkout(self):
+    def test_materialization_fetches_metadata_before_resumable_lazy_blobs(self):
         source = (ROOT / "scripts/prepare-multi-repo-analysis-sources.py").read_text()
-        self.assertIn('"--filter=blob:limit=1048576"', source)
+        self.assertIn('"--filter=blob:none"', source)
+        self.assertNotIn('"--filter=blob:limit=1048576"', source)
         self.assertIn('run_git("update-ref", "HEAD"', source)
         self.assertNotIn('run_git("checkout"', source)
+
+    def test_prefetch_uses_bounded_git_filter_tiers_and_promisor_inventory(self):
+        source = (ROOT / "scripts/prefetch-multi-repo-analysis-blobs.py").read_text()
+        self.assertIn("(8192, 32768)", source)
+        self.assertIn('"GIT_NO_LAZY_FETCH": "1"', source)
+        self.assertIn('"git-filtered-promisor"', source)
+        self.assertNotIn("raw.gitcode.com", source)
 
     def test_workflows_use_run_addressed_analysis_not_fixture(self):
         analysis = (ROOT / ".github/workflows/multi-repo-analysis.yml").read_text()
         cohort = (ROOT / ".github/workflows/multi-repo-candidate-cohort.yml").read_text()
         self.assertIn("github.ref == 'refs/heads/main'", analysis)
         self.assertIn("scripts/prepare-multi-repo-analysis-sources.py", analysis)
+        self.assertIn("scripts/prefetch-multi-repo-analysis-blobs.py", analysis)
+        self.assertIn("source-prefetch.json", analysis)
         self.assertIn("scripts/multi-repo-analysis-run.py create", analysis)
         self.assertIn("name: multi-repo-analysis", analysis)
         self.assertIn("analysis_run_id", cohort)

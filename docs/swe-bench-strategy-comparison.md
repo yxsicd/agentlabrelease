@@ -112,9 +112,13 @@ smaller than SWE-bench's:
    clusters is yet an independently qualified scenario. A new trusted-main
    exact-analysis workflow accepts arbitrary public HTTPS repositories at exact
    commits, retains a digest-bound native analysis run, and makes a separately
-   verified run the only input to cohort proposal. The mechanism is tested but
-   has not yet run on trusted `main`; the historical GitCode requalification is
-   also subject to upstream transfer reliability.
+   verified run the only input to cohort proposal. A current-method local
+   reproduction now freezes a 97-member eligible denominator and a five-member
+   stratified proposal before case construction or participant outcomes.
+   Metadata-first cloning plus bounded 8/32-KiB Git refetch tiers reduced the
+   GitCode transfer boundary to 25 promisor-fetched large blobs. The workflow
+   is tested but has not yet run on trusted `main`, and the proposed five still
+   require an independent cohort decision.
 2. One real Linux Harmony assessed campaign proves the static-to-device path
    and separates a strong and weak participant, but does not establish
    population-level discrimination, variance or repeatability across devices.
