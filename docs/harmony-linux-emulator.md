@@ -432,6 +432,15 @@ observation rather than repeatability evidence. Functional Oracle authority is
 unchanged; emulator measurements remain relative CPU/PSS feedback and do not
 claim absolute power or thermal qualification.
 
+When two or more functionally successful participant profiles have repeatable,
+identity-matched observations whose metric ranges do not overlap, assessed
+feedback can now emit a review-only `assessed-agent-performance-separation`
+difficulty candidate. This connects performance evidence to the recursive
+analysis-cut loop while still requiring maintainer adjudication, a fresh source
+or analysis cut, independent functional calibration and independent performance
+calibration. It never converts performance separation into an automatic Agent
+failure or case promotion.
+
 The campaign summary SHA256 is
 `13e3fe304d29a7434a8d0af87e316ac45579e46f40975561f8643f2745cdcb8b`;
 the discrimination-report SHA256 is

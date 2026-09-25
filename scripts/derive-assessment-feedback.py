@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import pathlib
 import re
 from collections import defaultdict
@@ -78,6 +79,205 @@ def failure_mode(stage: dict[str, Any]) -> str | None:
     if not scope_valid:
         return "scope-drift"
     return "oracle-failure"
+
+
+def performance_separation_candidates(
+    rank: dict[str, Any], case_id: str, source_set: str
+) -> list[dict[str, Any]]:
+    harmony = (rank.get("processMeasurement") or {}).get("harmonyDevice")
+    if not isinstance(harmony, dict) or harmony.get("performanceFeedbackQualified") is not True:
+        return []
+    profiles = rank.get("participantProfiles")
+    if not isinstance(profiles, list):
+        fail("discrimination report participant profiles are invalid")
+    grouped: dict[tuple[str, str, str, str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
+    for profile in profiles:
+        if not isinstance(profile, dict):
+            fail("discrimination report participant profile is invalid")
+        participant_id = profile.get("participantId")
+        valid_trials = profile.get("validTrials")
+        passed_trials = profile.get("passedTrials")
+        feedback = ((profile.get("processMeasurement") or {}).get("harmonyDevice") or {}).get(
+            "performanceFeedback"
+        )
+        if (
+            not isinstance(participant_id, str)
+            or not participant_id
+            or not isinstance(valid_trials, int)
+            or isinstance(valid_trials, bool)
+            or valid_trials < 1
+            or not isinstance(passed_trials, int)
+            or isinstance(passed_trials, bool)
+            or not 0 <= passed_trials <= valid_trials
+        ):
+            fail("discrimination report participant trial counts are invalid")
+        if passed_trials == 0:
+            continue
+        if not isinstance(feedback, dict) or feedback.get("repeatabilityQualified") is not True:
+            fail("qualified performance aggregate contains an unqualified successful profile")
+        observed_trials = feedback.get("observedTrials")
+        identity = feedback.get("identity")
+        metrics = feedback.get("metrics")
+        authority = feedback.get("authority")
+        if (
+            not isinstance(observed_trials, int)
+            or observed_trials != passed_trials
+            or observed_trials < 2
+            or feedback.get("successfulTrialCoverageQualified") is not True
+            or feedback.get("identityConsistent") is not True
+            or not isinstance(identity, dict)
+            or set(identity)
+            != {"environmentIdentity", "performancePolicySha256", "profileWorkloadSha256"}
+            or not all(isinstance(identity.get(field), str) and identity[field] for field in identity)
+            or not SHA256.fullmatch(identity["performancePolicySha256"])
+            or not SHA256.fullmatch(identity["profileWorkloadSha256"])
+            or not isinstance(metrics, dict)
+            or not metrics
+            or authority
+            != {
+                "functional": "none",
+                "relativePerformance": "smartperf-emulator-proxy",
+                "absolutePowerThermal": "unavailable-on-emulator",
+            }
+        ):
+            fail("qualified participant performance feedback is invalid")
+        for metric_name, metric in metrics.items():
+            if not isinstance(metric_name, str) or not metric_name or not isinstance(metric, dict):
+                fail("participant performance metric is invalid")
+            statistic = metric.get("statistic")
+            unit = metric.get("unit")
+            direction = metric.get("direction")
+            values = (metric.get("min"), metric.get("max"), metric.get("mean"))
+            if (
+                statistic not in {"mean", "p50", "p95"}
+                or not isinstance(unit, str)
+                or not unit
+                or direction not in {"lower", "higher"}
+                or metric.get("observedTrials") != observed_trials
+                or not all(
+                    isinstance(value, (int, float))
+                    and not isinstance(value, bool)
+                    and math.isfinite(value)
+                    for value in values
+                )
+                or not values[0] <= values[2] <= values[1]
+            ):
+                fail("participant performance metric summary is invalid")
+            key = (
+                identity["environmentIdentity"],
+                identity["performancePolicySha256"],
+                identity["profileWorkloadSha256"],
+                metric_name,
+                statistic,
+                unit,
+                direction,
+            )
+            grouped[key].append(
+                {
+                    "participantId": participant_id,
+                    "validAttemptCount": valid_trials,
+                    "successfulAttemptCount": passed_trials,
+                    "observedTrialCount": observed_trials,
+                    "min": values[0],
+                    "max": values[1],
+                    "mean": values[2],
+                    "sampleStandardDeviation": metric.get("sampleStandardDeviation"),
+                    "coefficientOfVariation": metric.get("coefficientOfVariation"),
+                }
+            )
+
+    candidates = []
+    for key, observations in sorted(grouped.items()):
+        if len(observations) < 2:
+            continue
+        environment, policy, workload, metric_name, statistic, unit, direction = key
+        ordered = sorted(
+            observations,
+            key=lambda row: (row["mean"], row["participantId"]),
+            reverse=direction == "higher",
+        )
+        best = ordered[0]
+        worst = ordered[-1]
+        ranges_separated = (
+            best["max"] < worst["min"]
+            if direction == "lower"
+            else best["min"] > worst["max"]
+        )
+        if not ranges_separated:
+            continue
+        difference = (
+            worst["mean"] - best["mean"]
+            if direction == "lower"
+            else best["mean"] - worst["mean"]
+        )
+        identity = canonical_sha256(
+            {
+                "caseId": case_id,
+                "sourceSetSha256": source_set,
+                "environmentIdentity": environment,
+                "performancePolicySha256": policy,
+                "profileWorkloadSha256": workload,
+                "metric": metric_name,
+                "statistic": statistic,
+                "direction": direction,
+                "participants": [row["participantId"] for row in ordered],
+            }
+        )[:20]
+        candidates.append(
+            {
+                "id": f"assessment-feedback-{identity}",
+                "dimensionId": "assessed-agent-performance-separation",
+                "primaryDimension": "performance-feedback",
+                "mechanism": (
+                    f"repeatable non-overlapping {metric_name} {statistic} ranges "
+                    f"under one frozen Harmony performance identity"
+                ),
+                "status": "candidate",
+                "maturityState": "candidate",
+                "caseId": case_id,
+                "stageId": "harmony-device",
+                "failureMode": "repeatable-performance-separation",
+                "validAttemptCount": sum(row["validAttemptCount"] for row in observations),
+                "participantProfiles": ordered,
+                "observations": ordered,
+                "performanceEvidence": {
+                    "environmentIdentity": environment,
+                    "performancePolicySha256": policy,
+                    "profileWorkloadSha256": workload,
+                    "metric": metric_name,
+                    "statistic": statistic,
+                    "unit": unit,
+                    "direction": direction,
+                    "bestParticipantId": best["participantId"],
+                    "worstParticipantId": worst["participantId"],
+                    "meanDifference": difference,
+                    "rangesSeparated": True,
+                    "authority": {
+                        "functional": "none",
+                        "relativePerformance": "smartperf-emulator-proxy",
+                        "absolutePowerThermal": "unavailable-on-emulator",
+                    },
+                },
+                "caseSelection": {
+                    "decision": rank.get("decision"),
+                    "eligible": bool(rank.get("eligible")),
+                    "discriminationScore": (rank.get("metrics") or {}).get(
+                        "discriminationScore"
+                    ),
+                },
+                "verificationContract": {
+                    "caseReady": False,
+                    "required": [
+                        "maintainer-adjudication",
+                        "new-source-and-analysis-cut",
+                        "independent-oracle-calibration",
+                        "independent-performance-calibration",
+                    ],
+                },
+                "automaticPromotion": False,
+            }
+        )
+    return candidates
 
 
 def build_feedback(
@@ -227,6 +427,9 @@ def build_feedback(
                 "automaticPromotion": False,
             }
         )
+
+    candidates.extend(performance_separation_candidates(rank, case_id, source_set))
+    candidates.sort(key=lambda row: row["id"])
 
     return {
         "schema": "agentlab.assessment_feedback_candidates.v1",

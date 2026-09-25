@@ -532,6 +532,37 @@ def main():
             observations = candidate.get("observations")
             if not isinstance(observations, list) or not observations:
                 raise SystemExit("assessment feedback candidate has no observations")
+            performance_evidence = candidate.get("performanceEvidence")
+            if candidate["dimensionId"] == "assessed-agent-performance-separation":
+                authority = (
+                    performance_evidence.get("authority")
+                    if isinstance(performance_evidence, dict)
+                    else None
+                )
+                if (
+                    not isinstance(performance_evidence, dict)
+                    or performance_evidence.get("rangesSeparated") is not True
+                    or not isinstance(performance_evidence.get("metric"), str)
+                    or not performance_evidence["metric"]
+                    or performance_evidence.get("statistic") not in {"mean", "p50", "p95"}
+                    or performance_evidence.get("direction") not in {"lower", "higher"}
+                    or not all(
+                        isinstance(performance_evidence.get(field), str)
+                        and SHA256.fullmatch(performance_evidence[field])
+                        for field in ("performancePolicySha256", "profileWorkloadSha256")
+                    )
+                    or authority
+                    != {
+                        "functional": "none",
+                        "relativePerformance": "smartperf-emulator-proxy",
+                        "absolutePowerThermal": "unavailable-on-emulator",
+                    }
+                    or "independent-performance-calibration"
+                    not in verification.get("required", [])
+                ):
+                    raise SystemExit("invalid assessed performance feedback candidate")
+            elif performance_evidence is not None:
+                raise SystemExit("non-performance feedback candidate overclaims performance evidence")
             suffix = hashlib.sha256(
                 f"{case_id}|{candidate['id']}|{feedback_source_set}".encode()
             ).hexdigest()[:16]
@@ -562,6 +593,8 @@ def main():
             }
             if sources:
                 row["sources"] = sources
+            if performance_evidence is not None:
+                row["performanceEvidence"] = performance_evidence
             insert("difficulty_points", row)
 
     performance = load(evidence / "smartperf-comparison.json") or {}

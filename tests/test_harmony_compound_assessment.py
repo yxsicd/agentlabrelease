@@ -448,6 +448,8 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
         attempts = [
             ("strong-1", "strong", True, 10.0),
             ("strong-2", "strong", True, 14.0),
+            ("medium-1", "medium", True, 30.0),
+            ("medium-2", "medium", True, 34.0),
             ("weak-1", "weak", False, 0.0),
             ("weak-2", "weak", False, 0.0),
         ]
@@ -492,6 +494,34 @@ class HarmonyCompoundAssessmentTests(unittest.TestCase):
         self.assertAlmostEqual(cpu["sampleStandardDeviation"], 2.8284271247461903)
         self.assertTrue(
             row["processMeasurement"]["harmonyDevice"]["performanceFeedbackQualified"]
+        )
+        case = {
+            "schema": "agentlab.multi_repo_evaluation_case.v1",
+            "id": self.case_id,
+            "status": "frozen-calibrated",
+            "sourceSetSha256": self.source_set,
+            "difficultyId": "difficulty-compound",
+            "calibration": {"qualified": True},
+            "automaticPromotion": False,
+        }
+        derived = FEEDBACK.build_feedback(case, collected, report, self.root)
+        performance = [
+            candidate
+            for candidate in derived["candidates"]
+            if candidate["dimensionId"] == "assessed-agent-performance-separation"
+        ]
+        self.assertEqual(len(performance), 1)
+        candidate = performance[0]
+        self.assertEqual(candidate["failureMode"], "repeatable-performance-separation")
+        self.assertEqual(candidate["performanceEvidence"]["metric"], "appCpuUsagePercent")
+        self.assertEqual(candidate["performanceEvidence"]["bestParticipantId"], "strong")
+        self.assertEqual(candidate["performanceEvidence"]["worstParticipantId"], "medium")
+        self.assertEqual(candidate["performanceEvidence"]["meanDifference"], 20.0)
+        self.assertTrue(candidate["performanceEvidence"]["rangesSeparated"])
+        self.assertFalse(candidate["verificationContract"]["caseReady"])
+        self.assertIn(
+            "independent-performance-calibration",
+            candidate["verificationContract"]["required"],
         )
 
     def test_static_decision_digest_drift_is_rejected(self) -> None:

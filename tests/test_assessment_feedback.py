@@ -182,6 +182,63 @@ class AssessmentFeedbackTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "exact collected input"):
                 FEEDBACK.build_feedback(case, collected, report, root)
 
+    def test_overlapping_performance_ranges_do_not_create_difficulty(self):
+        def profile(participant: str, minimum: float, maximum: float, mean: float) -> dict:
+            return {
+                "participantId": participant,
+                "validTrials": 3,
+                "passedTrials": 3,
+                "processMeasurement": {
+                    "harmonyDevice": {
+                        "performanceFeedback": {
+                            "observedTrials": 3,
+                            "successfulTrialCoverageQualified": True,
+                            "identityConsistent": True,
+                            "repeatabilityQualified": True,
+                            "identity": {
+                                "environmentIdentity": "hwlinux:phone-x86",
+                                "performancePolicySha256": "7" * 64,
+                                "profileWorkloadSha256": "8" * 64,
+                            },
+                            "metrics": {
+                                "appCpuUsagePercent": {
+                                    "statistic": "mean",
+                                    "unit": "reported-percent",
+                                    "direction": "lower",
+                                    "observedTrials": 3,
+                                    "min": minimum,
+                                    "max": maximum,
+                                    "mean": mean,
+                                    "sampleStandardDeviation": 1.0,
+                                    "coefficientOfVariation": 0.1,
+                                }
+                            },
+                            "authority": {
+                                "functional": "none",
+                                "relativePerformance": "smartperf-emulator-proxy",
+                                "absolutePowerThermal": "unavailable-on-emulator",
+                            },
+                        }
+                    }
+                },
+            }
+
+        rank = {
+            "processMeasurement": {
+                "harmonyDevice": {"performanceFeedbackQualified": True}
+            },
+            "participantProfiles": [
+                profile("strong", 9.0, 13.0, 11.0),
+                profile("medium", 12.0, 16.0, 14.0),
+            ],
+        }
+        self.assertEqual(
+            FEEDBACK.performance_separation_candidates(
+                rank, self.case_id, self.source_set
+            ),
+            [],
+        )
+
     def test_flywheel_persists_feedback_as_non_ready_difficulty(self):
         with tempfile.TemporaryDirectory() as raw:
             root = pathlib.Path(raw)
@@ -196,6 +253,57 @@ class AssessmentFeedbackTests(unittest.TestCase):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(source.read_bytes())
             feedback = FEEDBACK.build_feedback(case, collected, report, evidence)
+            feedback["candidates"].append(
+                {
+                    "id": "assessment-feedback-performance",
+                    "dimensionId": "assessed-agent-performance-separation",
+                    "primaryDimension": "performance-feedback",
+                    "mechanism": "repeatable non-overlapping CPU ranges",
+                    "status": "candidate",
+                    "maturityState": "candidate",
+                    "caseId": self.case_id,
+                    "stageId": "harmony-device",
+                    "failureMode": "repeatable-performance-separation",
+                    "participantProfiles": [
+                        {"participantId": "strong", "mean": 10.0},
+                        {"participantId": "medium", "mean": 30.0},
+                    ],
+                    "observations": [
+                        {"participantId": "strong", "min": 9.0, "max": 11.0},
+                        {"participantId": "medium", "min": 29.0, "max": 31.0},
+                    ],
+                    "performanceEvidence": {
+                        "environmentIdentity": "hwlinux:phone-x86",
+                        "performancePolicySha256": "7" * 64,
+                        "profileWorkloadSha256": "8" * 64,
+                        "metric": "appCpuUsagePercent",
+                        "statistic": "mean",
+                        "unit": "reported-percent",
+                        "direction": "lower",
+                        "bestParticipantId": "strong",
+                        "worstParticipantId": "medium",
+                        "meanDifference": 20.0,
+                        "rangesSeparated": True,
+                        "authority": {
+                            "functional": "none",
+                            "relativePerformance": "smartperf-emulator-proxy",
+                            "absolutePowerThermal": "unavailable-on-emulator",
+                        },
+                    },
+                    "caseSelection": {},
+                    "verificationContract": {
+                        "caseReady": False,
+                        "required": [
+                            "maintainer-adjudication",
+                            "new-source-and-analysis-cut",
+                            "independent-oracle-calibration",
+                            "independent-performance-calibration",
+                        ],
+                    },
+                    "automaticPromotion": False,
+                }
+            )
+            feedback["candidateCount"] = len(feedback["candidates"])
             (evidence / "summary.json").write_text(
                 json.dumps({"taskId": self.case_id, "sourceSetSha256": self.source_set})
             )
@@ -227,10 +335,19 @@ class AssessmentFeedbackTests(unittest.TestCase):
                 if table["path"] == "difficulty_points"
                 for operation in table["operations"]
             ]
-            self.assertEqual(len(rows), 1)
-            self.assertEqual(rows[0]["failureMode"], "oracle-failure")
-            self.assertFalse(rows[0]["verificationContract"]["caseReady"])
-            self.assertFalse(rows[0]["automaticPromotion"])
+            self.assertEqual(len(rows), 2)
+            functional = next(row for row in rows if row["failureMode"] == "oracle-failure")
+            performance = next(
+                row
+                for row in rows
+                if row["failureMode"] == "repeatable-performance-separation"
+            )
+            self.assertFalse(functional["verificationContract"]["caseReady"])
+            self.assertEqual(
+                performance["performanceEvidence"]["metric"], "appCpuUsagePercent"
+            )
+            self.assertTrue(performance["performanceEvidence"]["rangesSeparated"])
+            self.assertFalse(performance["automaticPromotion"])
 
 
 if __name__ == "__main__":

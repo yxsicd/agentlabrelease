@@ -964,6 +964,17 @@ maintainer-adjudicated source/analysis cut plus independent calibration. The
 flywheel transaction can persist the candidates into `difficulty_points` while
 leaving the active `evaluation_cases` and reusable Skills untouched.
 
+The same feedback pass now closes repeatable Harmony performance separation
+into this recursive path without treating performance as a functional failure.
+It emits a performance candidate only when at least two functionally successful
+participant profiles each have two or more complete observations, share the
+exact environment/policy/workload identity, and have non-overlapping observed
+ranges for the same policy-selected metric and statistic. Overlapping ranges,
+single runs, partial coverage and identity drift produce no candidate. The row
+retains the best/worst profile, range summaries and emulator-only authority,
+remains `caseReady=false`, and additionally requires independent performance
+calibration before it can become a benchmark case.
+
 The next-cut bridge is executable and fail-closed. Rerun multi-repository
 analysis over a new exact source set, a new method revision, or both, then bind
 one assessed feedback candidate to one new recursive impact candidate:
