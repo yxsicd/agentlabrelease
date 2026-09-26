@@ -1271,6 +1271,27 @@ Project-boundary discovery recognizes Harmony (`build-profile.json5`,
 `tsconfig.json`) and Cordova (`plugin.xml`, `config.xml`) markers. These are
 still candidate roots rather than proof that a build succeeds.
 
+The retained payment successor also demonstrates the next deliberately bounded
+step. `build-bounded-expression-flow-proposal.py` consumes an explicit plan,
+the v5 review packet, exact analysis receipts, complete fact streams and exact
+Git checkouts. It fails if revisions or fact digests move. Local calls are
+accepted only when an exact `this.<callable>` target maps a selected argument
+position to a declared parameter position. Bindings and assignments contribute
+only literal expression dependencies. Cross-file framework edges are never
+guessed: the Cordova `product.purchaseData` path requires the precise HTML event
+binding, its Git Blob OID, content SHA-256 and occurrence count.
+
+The resulting proposal contains a seven-edge Harmony path from
+`result.purchaseData` to `iap.finishPurchase` and a four-edge Cordova path from
+`message.inAppPurchaseDataList[ind]` to
+`this.iap.consumeOwnedPurchase`. This is stronger localization for independent
+review, not resolved program semantics. The receipt explicitly excludes type,
+alias, call-target, reachability, dominance, general dataflow, behavior and
+semantic resolution; it keeps `semanticAlignmentVerified`,
+`behaviorOracleVerified`, `allowsCaseContract` and `automaticPromotion` false.
+Removing the exact template bridge makes the Cordova path discontinuous and
+fails construction.
+
 This gate matters in the real evidence. The two `AlertDialog` sites implement
 different product behavior (account logout confirmation versus Web alert result
 handling), while the two `call.makeCall` sites pass different inputs and live

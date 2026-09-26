@@ -123,6 +123,22 @@
     "allowsCaseContract": false,
     "automaticPromotion": false
   },
+  "boundedExpressionFlowProposal": {
+    "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/bounded-expression-flow-proposal.json",
+    "planPath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/bounded-expression-flow-plan.json",
+    "schema": "agentlab.bounded_expression_flow_proposal.v1",
+    "sha256": "481f8b283f0cfbc6f45cff17da52114b9d535f9b92221c82b22109030c2a3ce5",
+    "planSha256": "20474b8e485abfafdceb5d904ae49ef3432c3e27901cc10240991a9b424a048b",
+    "repositoryCount": 2,
+    "flowCount": 2,
+    "edgeCount": 11,
+    "sourceBridgeCount": 1,
+    "status": "bounded-syntactic-flow-proposal-review-required",
+    "semanticAlignmentVerified": false,
+    "behaviorOracleVerified": false,
+    "allowsCaseContract": false,
+    "automaticPromotion": false
+  },
   "retention": {
     "authority": "compact-qualification-only",
     "fullReplayEvidence": "local-or-workflow-artifact",

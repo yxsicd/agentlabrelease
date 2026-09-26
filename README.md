@@ -39,7 +39,12 @@ gaps. This is now a partially build-qualified review packet, not yet a case,
 and it has not been automatically promoted. A newer expression-fact replay
 retains parameters, call arguments, assignment right-hand sides, object values
 and returns across both exact revisions; it deliberately stops before claiming
-resolved dataflow or a qualified behavior Oracle.
+resolved dataflow or a qualified behavior Oracle. A bounded follow-up now
+retains two explicit syntactic paths: Harmony purchase data reaches
+`iap.finishPurchase`, while the Cordova owned-purchase value reaches
+`consumeOwnedPurchase` through an exact Git-blob-qualified HTML event binding.
+These paths are review proposals only: type/alias resolution, semantic
+alignment, defect evidence and a behavioral Oracle remain unverified.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.
