@@ -218,6 +218,8 @@ def owner_contexts(
         end_line = span.get("endLine")
         start_byte = span.get("startByte")
         end_byte = span.get("endByte")
+        if end_line == len(lines) and end_byte == len(raw) and lines:
+            end_line -= 1
         require(
             isinstance(start_line, int) and isinstance(end_line, int)
             and 0 <= start_line <= end_line < len(lines),

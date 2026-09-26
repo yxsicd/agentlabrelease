@@ -272,7 +272,7 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             body_a = "export interface Receipt {\n  purchaseData: string;\n}\n"
-            body_b = "export function finish(order: Receipt) {\n  return order.purchaseData;\n}\n"
+            body_b = "export function finish(order: Receipt) {\n  return order.purchaseData;\n}"
             repo_a, rev_a = self.git_repository(root, "repo-a", body_a)
             repo_b, rev_b = self.git_repository(root, "repo-b", body_b)
             sources = [
@@ -311,7 +311,7 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
                     "id": "fact-owner-b", "kind": "symbol", "repositoryId": "repo-b",
                     "path": "project/src/page.ets", "qualifiedName": "finish", "symbol": "finish",
                     "sourceIdentity": f"git:https://example.invalid/b.git@{rev_b}",
-                    "span": {"startLine": 0, "endLine": 2, "startByte": 0, "endByte": len(body_b.encode())},
+                    "span": {"startLine": 0, "endLine": 3, "startByte": 0, "endByte": len(body_b.encode())},
                 },
             ]
             facts_path = root / "domain-facts.jsonl"
