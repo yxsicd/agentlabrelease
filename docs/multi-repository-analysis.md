@@ -1241,6 +1241,10 @@ proposal and triage digests. It deliberately omits API-call handle and cleanup
 claims. An identifier match is localization evidence only; role/type
 compatibility, an observable issue, coordinated cross-repository necessity and
 the repair/preservation Oracle remain explicit reviewer questions.
+Project-boundary discovery recognizes Harmony (`build-profile.json5`,
+`hvigorfile.ts`, `oh-package.json5`), npm/TypeScript (`package.json`,
+`tsconfig.json`) and Cordova (`plugin.xml`, `config.xml`) markers. These are
+still candidate roots rather than proof that a build succeeds.
 
 This gate matters in the real evidence. The two `AlertDialog` sites implement
 different product behavior (account logout confirmation versus Web alert result

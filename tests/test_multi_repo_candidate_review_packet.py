@@ -146,6 +146,38 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
         }, sort_keys=True) + "\n")
         return manifest, difficulty, facts_path, proposal, candidate
 
+    def test_project_boundaries_recognize_cordova_and_npm_markers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "cordova"
+            (root / "plugin/example/src").mkdir(parents=True)
+            (root / "plugin/package.json").write_text("{}\n")
+            (root / "plugin/plugin.xml").write_text("<plugin/>\n")
+            (root / "plugin/example/package.json").write_text("{}\n")
+            (root / "plugin/example/tsconfig.json").write_text("{}\n")
+            (root / "plugin/example/src/page.ts").write_text("export const value = 1;\n")
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=Test",
+                    "-c", "user.email=test@example.invalid", "commit", "-qm", "fixture",
+                ],
+                check=True,
+            )
+            revision = subprocess.check_output(
+                ["git", "-C", str(root), "rev-parse", "HEAD"], text=True
+            ).strip()
+            self.assertEqual(
+                PACKET.project_boundaries(
+                    {"root": root, "revision": revision},
+                    "plugin/example/src/page.ts",
+                ),
+                [
+                    {"path": "plugin", "markers": ["package.json", "plugin.xml"]},
+                    {"path": "plugin/example", "markers": ["package.json", "tsconfig.json"]},
+                ],
+            )
+
     def live_lineage(self, root: Path, paths):
         manifest, difficulty, facts, _, candidate = paths
         fact_rows = [json.loads(line) for line in facts.read_text().splitlines() if line]

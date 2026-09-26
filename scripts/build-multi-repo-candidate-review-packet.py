@@ -82,7 +82,15 @@ def repository_map(manifest: dict[str, Any], difficulty: dict[str, Any]) -> dict
 
 
 def project_boundaries(repository: dict[str, Any], path: str) -> list[dict[str, Any]]:
-    markers = ("build-profile.json5", "hvigorfile.ts", "oh-package.json5")
+    markers = (
+        "build-profile.json5",
+        "hvigorfile.ts",
+        "oh-package.json5",
+        "package.json",
+        "plugin.xml",
+        "config.xml",
+        "tsconfig.json",
+    )
     parent = PurePosixPath(path).parent
     ancestors = [parent, *parent.parents]
     boundaries = []
@@ -1004,7 +1012,7 @@ def build_packet(
         "callResultHandleCoverage": handle_coverage,
         "sourceProjectBoundary": {
             "status": project_boundary_status,
-            "interpretation": "Marker-bearing ancestors are evidence candidates, not a qualified build root or module.",
+            "interpretation": "Harmony, npm and Cordova marker-bearing ancestors are evidence candidates, not a qualified build root or module.",
         },
         "reviewQuestions": [
             {"id": "shared-behavior", "question": (
