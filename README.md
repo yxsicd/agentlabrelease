@@ -15,7 +15,10 @@ has revalidated all 22 remote immutable assets and passed its release-bound
 Linux-emulator acceptance. It remains a developer-preview candidate until the
 tagged clean install succeeds. Its accepted pass/fail evidence is retained as
 a review-only recursive-feedback handoff for the next multi-repository analysis
-cut. The acceptance plan and receipt workflow is documented in
+cut. That successor cut has been replayed over two exact public Harmony
+repositories, producing 404,308 facts, 19,374 difficulty candidates, 97
+eligible cross-repository candidates and a bounded ten-proposal review queue.
+The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.
 

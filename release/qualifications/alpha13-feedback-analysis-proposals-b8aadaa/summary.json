@@ -1,0 +1,90 @@
+{
+  "schema": "agentlab.feedback_analysis_proposal_qualification.v1",
+  "qualificationId": "alpha13-feedback-analysis-proposals-b8aadaa",
+  "status": "passed-with-review-boundary",
+  "source": {
+    "sourceSetSha256": "c4923e499fbb0ca2ed4fd205c66d6353bbe2aa58935413e3c897183a25493ca9",
+    "methodRevision": "b8aadaadc0739c0ffac9a57717c42c7bf0e2a9b0",
+    "repositories": [
+      {
+        "id": "code-workshop",
+        "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+        "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+      },
+      {
+        "id": "guide-snippets",
+        "repository": "https://gitcode.com/HarmonyOS_Samples/guide-snippets.git",
+        "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525"
+      }
+    ]
+  },
+  "inputs": {
+    "requestSha256": "372e437a9b69c284a67f5f654de985e973d0ff20f5d95d4c6f10ea7c55b56600",
+    "feedbackHandoffSha256": "5cafff6790b5796038db51210027cf0cf245aab9c4647fb3780cbffec80ce58d",
+    "priorCaseSha256": "747c33e7f4f04fa4fbcbff44456e934e8804aad8c4f21b2b8fc2ca0486b7a6dd",
+    "feedbackEvidenceSha256": "49293ffbf13094a92b38831aa59abe88f367ae8252bac1f4057972dca6e17e21"
+  },
+  "transport": {
+    "authority": "git-object-id",
+    "sourceSpecSha256": "0259cc69123dbc05d1fc29219c580d2da2434dab5a3f7aa4484353bc88641c63",
+    "prefetchReceiptSha256": "ac30c540704572e0bedc78d3c4cfce408d293c92c96d0dd0c2a49a17d8fcd180",
+    "prefetchedBlobCount": 12686,
+    "remainingPromisorBlobCount": 27,
+    "remainingBlobsResolvedByAnalyzer": true
+  },
+  "analysis": {
+    "analysisRunSha256": "23e318b33670abd05774675aeeedc6c0cee4708c7c150919079fc232d90a7a22",
+    "analysisReceiptSha256": "f4c27b3f63e8e2c517c81d2c90cdd0e9ebcfdf912f37994895523ae5b6fdbf62",
+    "difficultyEvidenceSha256": "d6b010bb0cf8dd71702dc6b88ac9f303dee64e9c25de3b117966efddcb9db72e",
+    "programFactsSha256": "b8745ea924235dc8c24390b06042668c502a1981fea70c52c8d6e8cdde1493e2",
+    "unsupportedSourcesSha256": "4ff136ee04e7db790405ef22546125326bda534b7f5e075ffa4b4126bb59f5d1",
+    "cacheExecutionSha256": "f0a7c2402efdde6ed54de21a7e6350072880f1708e6768b5ead3942f082db36e",
+    "counts": {
+      "repositories": 2,
+      "facts": 404308,
+      "difficultyCandidates": 19374,
+      "sharedExternalModuleContracts": 22,
+      "sharedExternalApiCallContracts": 75,
+      "unsupportedSources": 2
+    }
+  },
+  "proposalQueue": {
+    "indexSha256": "8dac232077d41485cf7f503732b19238ac8cbdd3b7ebdd73c8d4b97a200c42f5",
+    "eligibleCandidateCount": 97,
+    "proposalCount": 10,
+    "topProposals": [
+      {
+        "rank": 1,
+        "difficultyCandidateId": "difficulty-2a4dfa03fea784ddd323e372",
+        "cutId": "feedback-analysis-cut-c717812e7a9fa7a2c6df",
+        "affectedRepositoryCount": 2,
+        "affectedFileCount": 3014,
+        "proposalSha256": "3dcf2f0d334a9c269fd1d5f6a6e8f52f5ca09470109017b90c08d269349ea75b"
+      },
+      {
+        "rank": 2,
+        "difficultyCandidateId": "difficulty-090fb55cb02f8f984e91766f",
+        "cutId": "feedback-analysis-cut-b0b39dff46f9d3460802",
+        "affectedRepositoryCount": 2,
+        "affectedFileCount": 2871,
+        "proposalSha256": "67e6282f5a0929553d02862a9040b524727d085b3bf99473deabba1a1721c219"
+      },
+      {
+        "rank": 3,
+        "difficultyCandidateId": "difficulty-588b80f4b5e26045aa6a2e06",
+        "cutId": "feedback-analysis-cut-0683fb9e807804cea8b1",
+        "affectedRepositoryCount": 2,
+        "affectedFileCount": 2111,
+        "proposalSha256": "aebd63d7b8bebfc83d37af12bf565ab2773f4c222953e45d80f3d5c9182d9497"
+      }
+    ]
+  },
+  "reviewBoundary": {
+    "status": "maintainer-review-required",
+    "semanticAlignmentVerified": false,
+    "automaticPromotion": false,
+    "nextGate": "independent-maintainer-review-of-one-proposal",
+    "retainedEvidence": "compact-qualification-only",
+    "workflowArtifactRequiredForFullReplay": true
+  }
+}

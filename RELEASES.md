@@ -18,7 +18,11 @@ source-bound ohosTest/Hypium execution, functional Oracle separation and
 functional-pass-gated SmartPerf proxy collection. The result is also retained
 as an exact, portable, review-only recursive-feedback handoff; one performance
 observation remains below the repeatability gate and cannot create a
-performance difficulty candidate. It still requires tagged clean-install
+performance difficulty candidate. A successor exact analysis at method commit
+`b8aadaadc0739c0ffac9a57717c42c7bf0e2a9b0` produced 404,308 facts, 19,374
+difficulty candidates, 97 eligible cross-repository candidates and ten
+deterministically ranked review proposals. Semantic alignment remains an
+independent maintainer gate. The release still requires tagged clean-install
 qualification before publication.
 
 ## v0.1.0-alpha.12 candidate (withdrawn before publication)

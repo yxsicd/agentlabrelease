@@ -1017,6 +1017,17 @@ retains the best/worst profile, range summaries and emulator-only authority,
 remains `caseReady=false`, and additionally requires independent performance
 calibration before it can become a benchmark case.
 
+The Alpha.13 functional-feedback successor was replayed locally with the same
+workflow programs over exact `code-workshop` and `guide-snippets` commits. Its
+compact qualification is retained at
+`release/qualifications/alpha13-feedback-analysis-proposals-b8aadaa/summary.json`.
+The source set and method revision both changed relative to the device case;
+404,308 facts yielded 19,374 difficulty candidates, 97 eligible cross-repository
+impact candidates and a bounded queue of ten review proposals. The retained
+summary binds the request, handoff, Git-object prefetch receipt, analysis run,
+native evidence and queue index. Full replay evidence remains a workflow/local
+artifact rather than being committed into the lightweight release repository.
+
 The next-cut bridge is executable and fail-closed. Rerun multi-repository
 analysis over a new exact source set, a new method revision, or both, then bind
 one assessed feedback candidate to one new recursive impact candidate:

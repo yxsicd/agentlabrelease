@@ -241,6 +241,46 @@ class FeedbackAnalysisProposalQueueTests(unittest.TestCase):
         )
         self.assertFalse(schema["properties"]["automaticPromotion"]["const"])
 
+    def test_alpha13_retained_qualification_binds_successor_analysis_queue(self) -> None:
+        qualification = json.loads(
+            (
+                ROOT
+                / "release/qualifications/alpha13-feedback-analysis-proposals-b8aadaa/summary.json"
+            ).read_text()
+        )
+        handoff = (
+            ROOT
+            / "release/qualifications/alpha13-recursive-feedback-4f24f9a/summary.json"
+        )
+        prior_case = handoff.parent / "prior-case.json"
+        feedback = handoff.parent / "assessment-feedback-candidates.json"
+
+        self.assertEqual(
+            qualification["schema"],
+            "agentlab.feedback_analysis_proposal_qualification.v1",
+        )
+        self.assertEqual(
+            qualification["source"]["methodRevision"],
+            "b8aadaadc0739c0ffac9a57717c42c7bf0e2a9b0",
+        )
+        self.assertEqual(qualification["inputs"]["feedbackHandoffSha256"], digest(handoff))
+        self.assertEqual(qualification["inputs"]["priorCaseSha256"], digest(prior_case))
+        self.assertEqual(qualification["inputs"]["feedbackEvidenceSha256"], digest(feedback))
+        self.assertEqual(qualification["analysis"]["counts"]["facts"], 404308)
+        self.assertEqual(
+            qualification["analysis"]["counts"]["difficultyCandidates"], 19374
+        )
+        self.assertEqual(qualification["proposalQueue"]["eligibleCandidateCount"], 97)
+        self.assertEqual(qualification["proposalQueue"]["proposalCount"], 10)
+        self.assertEqual(
+            [row["rank"] for row in qualification["proposalQueue"]["topProposals"]],
+            [1, 2, 3],
+        )
+        self.assertEqual(qualification["transport"]["authority"], "git-object-id")
+        self.assertTrue(qualification["transport"]["remainingBlobsResolvedByAnalyzer"])
+        self.assertFalse(qualification["reviewBoundary"]["semanticAlignmentVerified"])
+        self.assertFalse(qualification["reviewBoundary"]["automaticPromotion"])
+
     def test_exact_analysis_workflow_generates_bounded_review_queue(self) -> None:
         workflow = (ROOT / ".github/workflows/multi-repo-analysis.yml").read_text()
         self.assertIn("scripts/prepare-feedback-analysis-proposals.py", workflow)
