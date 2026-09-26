@@ -23,6 +23,7 @@ PACKET_SCHEMA_V6 = "agentlab.multi_repo_candidate_review_packet.v6"
 PACKET_SCHEMA_V7 = "agentlab.multi_repo_candidate_review_packet.v7"
 PACKET_SCHEMA_V8 = "agentlab.multi_repo_candidate_review_packet.v8"
 PACKET_SCHEMA_V9 = "agentlab.multi_repo_candidate_review_packet.v9"
+PACKET_SCHEMA_V10 = "agentlab.multi_repo_candidate_review_packet.v10"
 PACKET_SCHEMAS = {
     PACKET_SCHEMA,
     PACKET_SCHEMA_V2,
@@ -33,6 +34,7 @@ PACKET_SCHEMAS = {
     PACKET_SCHEMA_V7,
     PACKET_SCHEMA_V8,
     PACKET_SCHEMA_V9,
+    PACKET_SCHEMA_V10,
 }
 ANSWERS_SCHEMA = "agentlab.multi_repo_candidate_semantic_answers.v1"
 DECISION_SCHEMA = "agentlab.multi_repo_candidate_semantic_review.v1"
@@ -124,7 +126,7 @@ def validate_packet(packet: dict[str, Any]) -> None:
         require(packet.get("callSiteEvidence") is None, "v5 packet carries call-site evidence")
         require(packet.get("callResultHandleEvidence") is None, "v5 packet carries call-result evidence")
         require(packet.get("callResultHandleCoverage") is None, "v5 packet carries call-result coverage")
-    if packet.get("schema") in {PACKET_SCHEMA_V6, PACKET_SCHEMA_V7, PACKET_SCHEMA_V8, PACKET_SCHEMA_V9}:
+    if packet.get("schema") in {PACKET_SCHEMA_V6, PACKET_SCHEMA_V7, PACKET_SCHEMA_V8, PACKET_SCHEMA_V9, PACKET_SCHEMA_V10}:
         version = packet["schema"].rsplit(".", 1)[-1]
         base = packet.get("basePacket")
         require(
@@ -153,10 +155,12 @@ def validate_packet(packet: dict[str, Any]) -> None:
             "expression-fact-qualification",
             "bounded-expression-flow-proposal",
         }
-        if packet.get("schema") in {PACKET_SCHEMA_V7, PACKET_SCHEMA_V8, PACKET_SCHEMA_V9}:
+        if packet.get("schema") in {PACKET_SCHEMA_V7, PACKET_SCHEMA_V8, PACKET_SCHEMA_V9, PACKET_SCHEMA_V10}:
             required_attachment_ids.add("bounded-expression-flow-program-analysis")
-        if packet.get("schema") in {PACKET_SCHEMA_V8, PACKET_SCHEMA_V9}:
+        if packet.get("schema") in {PACKET_SCHEMA_V8, PACKET_SCHEMA_V9, PACKET_SCHEMA_V10}:
             required_attachment_ids.add("external-sink-contract-qualification")
+        if packet.get("schema") == PACKET_SCHEMA_V10:
+            required_attachment_ids.add("cordova-object-flow-qualification")
         require(isinstance(attachments, dict) and set(attachments) == required_attachment_ids, f"{version} evidence attachments differ")
         require(
             all(
@@ -195,7 +199,7 @@ def validate_packet(packet: dict[str, Any]) -> None:
             f"{version} bounded flow summary differs",
         )
         require(valid_relative_path(flow.get("planRelativePath")), f"{version} bounded flow plan path is unsafe")
-        if packet.get("schema") in {PACKET_SCHEMA_V7, PACKET_SCHEMA_V8, PACKET_SCHEMA_V9}:
+        if packet.get("schema") in {PACKET_SCHEMA_V7, PACKET_SCHEMA_V8, PACKET_SCHEMA_V9, PACKET_SCHEMA_V10}:
             program = attachments["bounded-expression-flow-program-analysis"]
             require(
                 program.get("schema") == "agentlab.bounded_expression_flow_program_analysis.v1"
@@ -208,9 +212,9 @@ def validate_packet(packet: dict[str, Any]) -> None:
                 and SHA256.fullmatch(program.get("flowProposalSha256", "")) is not None,
                 "v7 bounded program-flow summary differs",
             )
-        if packet.get("schema") in {PACKET_SCHEMA_V8, PACKET_SCHEMA_V9}:
+        if packet.get("schema") in {PACKET_SCHEMA_V8, PACKET_SCHEMA_V9, PACKET_SCHEMA_V10}:
             external = attachments["external-sink-contract-qualification"]
-            external_v2 = packet.get("schema") == PACKET_SCHEMA_V9
+            external_v2 = packet.get("schema") in {PACKET_SCHEMA_V9, PACKET_SCHEMA_V10}
             require(
                 external.get("schema")
                 == (
@@ -233,6 +237,22 @@ def validate_packet(packet: dict[str, Any]) -> None:
                 f"{'v9' if external_v2 else 'v8'} external sink qualification summary differs",
             )
             require(valid_relative_path(external.get("planRelativePath")), "external sink plan path is unsafe")
+        if packet.get("schema") == PACKET_SCHEMA_V10:
+            object_flow = attachments["cordova-object-flow-qualification"]
+            require(
+                object_flow.get("schema") == "agentlab.cordova_object_flow_qualification.v1"
+                and object_flow.get("status") == "object-flow-qualified-control-flow-review-required"
+                and object_flow.get("resolvedBoundaryCount") == 3
+                and object_flow.get("remainingUnresolvedCount") == 1
+                and object_flow.get("selectedFlowParameterTypeResolved") is True
+                and object_flow.get("memberObjectIdentityResolved") is True
+                and object_flow.get("templateObjectIdentityResolved") is True
+                and SHA256.fullmatch(object_flow.get("programAnalysisSha256", "")) is not None
+                and SHA256.fullmatch(object_flow.get("externalSinkQualificationSha256", "")) is not None
+                and SHA256.fullmatch(object_flow.get("planSha256", "")) is not None,
+                "v10 Cordova object-flow qualification summary differs",
+            )
+            require(valid_relative_path(object_flow.get("planRelativePath")), "v10 object-flow plan path is unsafe")
         require(packet.get("semanticAlignmentVerified") is False, f"{version} packet claims semantic alignment")
         require(packet.get("behaviorOracleVerified") is False, f"{version} packet claims a behavior Oracle")
     if packet.get("schema") in {PACKET_SCHEMA_V2, PACKET_SCHEMA_V3, PACKET_SCHEMA_V4}:
@@ -302,7 +322,7 @@ def validate_packet(packet: dict[str, Any]) -> None:
         "packet risk ids are invalid",
     )
     require(contract.get("requiredRiskIds") == risk_ids, "packet required risks differ")
-    if packet.get("schema") in {PACKET_SCHEMA_V6, PACKET_SCHEMA_V7, PACKET_SCHEMA_V8, PACKET_SCHEMA_V9}:
+    if packet.get("schema") in {PACKET_SCHEMA_V6, PACKET_SCHEMA_V7, PACKET_SCHEMA_V8, PACKET_SCHEMA_V9, PACKET_SCHEMA_V10}:
         require(
             contract.get("requiredEvidenceAttachmentIds") == sorted(packet["evidenceAttachments"]),
             "v6/v7 required evidence attachments differ",
@@ -316,7 +336,7 @@ def validate_packet(packet: dict[str, Any]) -> None:
 def verify_evidence(packet_path: Path, repository_root: Path) -> dict[str, Any]:
     packet = load(packet_path, "candidate review packet")
     validate_packet(packet)
-    if packet.get("schema") not in {PACKET_SCHEMA_V6, PACKET_SCHEMA_V7, PACKET_SCHEMA_V8, PACKET_SCHEMA_V9}:
+    if packet.get("schema") not in {PACKET_SCHEMA_V6, PACKET_SCHEMA_V7, PACKET_SCHEMA_V8, PACKET_SCHEMA_V9, PACKET_SCHEMA_V10}:
         return {
             "schema": EVIDENCE_VERIFICATION_SCHEMA,
             "status": "legacy-packet-contained-evidence",
@@ -379,7 +399,7 @@ def verify_evidence(packet_path: Path, repository_root: Path) -> dict[str, Any]:
     require(flow.get("allBoundedPathsEstablished") is flow_reference.get("allBoundedPathsEstablished") is True, "bounded paths are incomplete")
     evidence_values = [build, expression, flow]
     program = None
-    if packet.get("schema") in {PACKET_SCHEMA_V7, PACKET_SCHEMA_V8, PACKET_SCHEMA_V9}:
+    if packet.get("schema") in {PACKET_SCHEMA_V7, PACKET_SCHEMA_V8, PACKET_SCHEMA_V9, PACKET_SCHEMA_V10}:
         program_reference = attachments["bounded-expression-flow-program-analysis"]
         _, program = checked(program_reference, "bounded-expression-flow-program-analysis")
         require(program.get("reviewPacketSha256") == digest(base_path), "program analysis base packet differs")
@@ -404,7 +424,7 @@ def verify_evidence(packet_path: Path, repository_root: Path) -> dict[str, Any]:
             "program analysis hides unresolved boundaries",
         )
         evidence_values.append(program)
-    if packet.get("schema") in {PACKET_SCHEMA_V8, PACKET_SCHEMA_V9}:
+    if packet.get("schema") in {PACKET_SCHEMA_V8, PACKET_SCHEMA_V9, PACKET_SCHEMA_V10}:
         external_reference = attachments["external-sink-contract-qualification"]
         _, external = checked(external_reference, "external-sink-contract-qualification")
         require(program is not None, "external contract packet program analysis is absent")
@@ -424,15 +444,41 @@ def verify_evidence(packet_path: Path, repository_root: Path) -> dict[str, Any]:
             require(external.get(key) == external_reference.get(key), f"external sink {key} differs")
         require(
             external.get("externalCallContractsResolved")
-            is (packet.get("schema") == PACKET_SCHEMA_V9),
+            is (packet.get("schema") in {PACKET_SCHEMA_V9, PACKET_SCHEMA_V10}),
             "external sink completeness differs",
         )
         evidence_values.append(external)
+    if packet.get("schema") == PACKET_SCHEMA_V10:
+        object_reference = attachments["cordova-object-flow-qualification"]
+        _, object_flow = checked(object_reference, "cordova-object-flow-qualification")
+        require(program is not None, "v10 program analysis is absent")
+        require(object_flow.get("reviewPacketSha256") == digest(base_path), "object-flow base packet differs")
+        require(object_flow.get("programAnalysisSha256") == object_reference.get("programAnalysisSha256") == attachments["bounded-expression-flow-program-analysis"]["sha256"], "object-flow program analysis differs")
+        require(object_flow.get("externalSinkQualificationSha256") == object_reference.get("externalSinkQualificationSha256") == attachments["external-sink-contract-qualification"]["sha256"], "object-flow external qualification differs")
+        object_plan_path = resolve_reference(repository_root, object_reference.get("planRelativePath"), "cordova-object-flow-plan")
+        require(digest(object_plan_path) == object_reference.get("planSha256") == object_flow.get("planSha256"), "object-flow plan digest differs")
+        object_plan = load(object_plan_path, "Cordova object-flow plan")
+        require(object_plan.get("candidateId") == candidate_id and object_plan.get("sourceSetSha256") == source_set_sha256, "object-flow plan lineage differs")
+        verified_files.append({"id": "cordova-object-flow-plan", "relativePath": object_reference["planRelativePath"], "sha256": object_reference["planSha256"]})
+        require(len(object_flow.get("resolvedUnresolvedIds") or []) == object_reference.get("resolvedBoundaryCount") == 3, "object-flow resolved boundary count differs")
+        require(object_flow.get("remainingUnresolvedCount") == object_reference.get("remainingUnresolvedCount") == 1, "object-flow remaining unresolved count differs")
+        for key in ("selectedFlowParameterTypeResolved", "memberObjectIdentityResolved", "templateObjectIdentityResolved"):
+            require(object_flow.get(key) is object_reference.get(key) is True, f"object-flow {key} differs")
+        require(
+            object_flow.get("typeResolutionComplete") is True
+            and object_flow.get("aliasResolutionComplete") is True
+            and object_flow.get("externalCallContractsResolved") is True
+            and object_flow.get("reachabilityAndDominanceResolved") is False,
+            "object-flow qualification hides its remaining control-flow boundary",
+        )
+        evidence_values.append(object_flow)
     require(all(value.get("allowsCaseContract") is False and value.get("automaticPromotion") is False for value in evidence_values), "attached evidence can promote")
     return {
         "schema": EVIDENCE_VERIFICATION_SCHEMA,
         "status": (
-            "verified-exact-v9-evidence"
+            "verified-exact-v10-evidence"
+            if packet.get("schema") == PACKET_SCHEMA_V10
+            else "verified-exact-v9-evidence"
             if packet.get("schema") == PACKET_SCHEMA_V9
             else "verified-exact-v8-evidence"
             if packet.get("schema") == PACKET_SCHEMA_V8

@@ -14,6 +14,7 @@ SCHEMA = "agentlab.multi_repo_candidate_review_packet.v6"
 SCHEMA_V7 = "agentlab.multi_repo_candidate_review_packet.v7"
 SCHEMA_V8 = "agentlab.multi_repo_candidate_review_packet.v8"
 SCHEMA_V9 = "agentlab.multi_repo_candidate_review_packet.v9"
+SCHEMA_V10 = "agentlab.multi_repo_candidate_review_packet.v10"
 BASE_SCHEMA = "agentlab.multi_repo_candidate_review_packet.v5"
 BUILD_SCHEMA = "agentlab.multi_repo_source_build_qualification.v1"
 EXPRESSION_SCHEMA = "agentlab.multi_repo_expression_fact_qualification.v1"
@@ -21,6 +22,7 @@ FLOW_SCHEMA = "agentlab.bounded_expression_flow_proposal.v1"
 PROGRAM_ANALYSIS_SCHEMA = "agentlab.bounded_expression_flow_program_analysis.v1"
 EXTERNAL_SINK_SCHEMA = "agentlab.external_sink_contract_qualification.v1"
 EXTERNAL_SINK_SCHEMA_V2 = "agentlab.external_sink_contract_qualification.v2"
+OBJECT_FLOW_SCHEMA = "agentlab.cordova_object_flow_qualification.v1"
 DECISION_SCHEMA = "agentlab.multi_repo_candidate_semantic_review.v1"
 REVISION = re.compile(r"[0-9a-f]{40}")
 SHA256 = re.compile(r"[0-9a-f]{64}")
@@ -83,6 +85,8 @@ def enrich(
     program_analysis_path: Path | None = None,
     external_sink_plan_path: Path | None = None,
     external_sink_qualification_path: Path | None = None,
+    object_flow_plan_path: Path | None = None,
+    object_flow_qualification_path: Path | None = None,
 ) -> dict[str, Any]:
     base = load(base_path, "base review packet")
     build = load(build_path, "build qualification")
@@ -104,6 +108,16 @@ def enrich(
         else None
     )
     require(external_sink is None or program_analysis is not None, "external sink qualification requires program analysis")
+    require(
+        (object_flow_plan_path is None) == (object_flow_qualification_path is None),
+        "object-flow plan and qualification must be supplied together",
+    )
+    object_flow = (
+        load(object_flow_qualification_path, "Cordova object-flow qualification")
+        if object_flow_qualification_path is not None
+        else None
+    )
+    require(object_flow is None or external_sink is not None, "object-flow qualification requires external sink qualification")
     require(base.get("schema") == BASE_SCHEMA, "base packet is not v5")
     require(base.get("status") == "independent-semantic-review-required", "base packet is not review-required")
     require(base.get("allowsCaseContract") is not True and base.get("automaticPromotion") is False, "base packet can promote")
@@ -132,6 +146,13 @@ def enrich(
             external_sink_qualification_path,
             evidence_root,
             "external sink qualification",
+        )
+    if object_flow_plan_path is not None and object_flow_qualification_path is not None:
+        references["objectFlowPlan"] = relative_reference(
+            object_flow_plan_path, evidence_root, "Cordova object-flow plan"
+        )
+        references["objectFlowQualification"] = relative_reference(
+            object_flow_qualification_path, evidence_root, "Cordova object-flow qualification"
         )
     base_sha256 = digest(base_path)
     common_lineage(build, BUILD_SCHEMA, base, base_sha256, "build qualification")
@@ -223,11 +244,29 @@ def enrich(
         require(external_sink.get("remainingUnresolvedCount") == (4 if external_v2 else 5), "remaining unresolved count differs")
         require(external_sink.get("externalCallContractsResolved") is external_v2, "external sink completeness differs")
 
+    if object_flow is not None and object_flow_plan_path is not None and external_sink_qualification_path is not None and program_analysis_path is not None:
+        common_lineage(object_flow, OBJECT_FLOW_SCHEMA, base, base_sha256, "Cordova object-flow qualification")
+        require(object_flow.get("status") == "object-flow-qualified-control-flow-review-required", "object-flow qualification status differs")
+        require(object_flow.get("programAnalysisSha256") == digest(program_analysis_path), "object-flow program analysis differs")
+        require(object_flow.get("externalSinkQualificationSha256") == digest(external_sink_qualification_path), "object-flow external qualification differs")
+        require(object_flow.get("planSha256") == digest(object_flow_plan_path), "object-flow plan differs")
+        require(object_flow.get("originalUnresolvedCount") == 4, "object-flow original unresolved count differs")
+        require(object_flow.get("remainingUnresolvedCount") == 1, "object-flow remaining unresolved count differs")
+        require(len(object_flow.get("resolvedUnresolvedIds") or []) == 3, "object-flow resolved boundary count differs")
+        require(object_flow.get("selectedFlowParameterTypeResolved") is True, "object-flow parameter type is unresolved")
+        require(object_flow.get("memberObjectIdentityResolved") is True, "object-flow member identity is unresolved")
+        require(object_flow.get("templateObjectIdentityResolved") is True, "object-flow template identity is unresolved")
+        require(object_flow.get("typeResolutionComplete") is True, "object-flow type resolution is incomplete")
+        require(object_flow.get("aliasResolutionComplete") is True, "object-flow alias resolution is incomplete")
+        require(object_flow.get("reachabilityAndDominanceResolved") is False, "object-flow qualification claims control flow")
+
     domain_evidence = base.get("domainFactEvidence") or []
     require(isinstance(domain_evidence, list) and domain_evidence, "base domain evidence is absent")
     packet = {
         "schema": (
-            SCHEMA_V9
+            SCHEMA_V10
+            if object_flow is not None
+            else SCHEMA_V9
             if external_sink is not None and external_sink.get("schema") == EXTERNAL_SINK_SCHEMA_V2
             else SCHEMA_V8
             if external_sink is not None
@@ -318,6 +357,22 @@ def enrich(
             "remainingExternalSinkCount": external_sink["remainingExternalSinkCount"],
             "remainingUnresolvedCount": external_sink["remainingUnresolvedCount"],
         }
+    if object_flow is not None and object_flow_qualification_path is not None:
+        packet["evidenceAttachments"]["cordova-object-flow-qualification"] = {
+            "schema": OBJECT_FLOW_SCHEMA,
+            "sha256": digest(object_flow_qualification_path),
+            "relativePath": references["objectFlowQualification"],
+            "planSha256": object_flow["planSha256"],
+            "planRelativePath": references["objectFlowPlan"],
+            "status": object_flow["status"],
+            "programAnalysisSha256": object_flow["programAnalysisSha256"],
+            "externalSinkQualificationSha256": object_flow["externalSinkQualificationSha256"],
+            "resolvedBoundaryCount": len(object_flow["resolvedUnresolvedIds"]),
+            "remainingUnresolvedCount": object_flow["remainingUnresolvedCount"],
+            "selectedFlowParameterTypeResolved": object_flow["selectedFlowParameterTypeResolved"],
+            "memberObjectIdentityResolved": object_flow["memberObjectIdentityResolved"],
+            "templateObjectIdentityResolved": object_flow["templateObjectIdentityResolved"],
+        }
     packet["reviewQuestions"] = [
         {"id": "shared-behavior", "question": "Do the exact source facts and bounded paths express one coherent cross-repository purchase-data behavior rather than merely sharing an identifier?"},
         {"id": "observable-gap", "question": "Is there an issue-level defect or extension whose pre-change failure is observable in every required repository?"},
@@ -349,6 +404,11 @@ def enrich(
                 "id": "partial-external-contract-resolution-is-not-semantics",
                 "statement": "The Cordova sink contract and endpoint type compatibility are exact, but the Harmony SDK contract, Cordova local parameter/object identity and global control flow remain unresolved.",
             }
+    if object_flow is not None:
+        packet["risks"][0] = {
+            "id": "qualified-object-flow-is-not-global-control-flow",
+            "statement": "The selected value type and object identity path are exact, but global reachability, dominance, exception flow and callback scheduling remain unresolved.",
+        }
     question_ids = [row["id"] for row in packet["reviewQuestions"]]
     risk_ids = [row["id"] for row in packet["risks"]]
     packet["reviewDecisionContract"] = {
@@ -376,6 +436,8 @@ def main() -> None:
     parser.add_argument("--program-analysis", type=Path)
     parser.add_argument("--external-sink-plan", type=Path)
     parser.add_argument("--external-sink-qualification", type=Path)
+    parser.add_argument("--object-flow-plan", type=Path)
+    parser.add_argument("--object-flow-qualification", type=Path)
     parser.add_argument("--method-revision", required=True)
     parser.add_argument("--evidence-root", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
@@ -391,6 +453,8 @@ def main() -> None:
         args.program_analysis,
         args.external_sink_plan,
         args.external_sink_qualification,
+        args.object_flow_plan,
+        args.object_flow_qualification,
     )
     require(not args.output.exists(), "refusing to overwrite enriched review packet")
     args.output.parent.mkdir(parents=True, exist_ok=True)

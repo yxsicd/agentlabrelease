@@ -333,6 +333,63 @@ class MultiRepoCandidateReviewPacketEnrichmentTests(unittest.TestCase):
             self.assertEqual(receipt_v9["status"], "verified-exact-v9-evidence")
             self.assertEqual(len(receipt_v9["verifiedFiles"]), 8)
 
+            object_plan = root / "object-plan.json"
+            object_plan.write_text(json.dumps({
+                "schema": "agentlab.cordova_object_flow_plan.v1",
+                "candidateId": "difficulty-test",
+                "sourceSetSha256": "a" * 64,
+            }) + "\n")
+            object_flow = root / "object-flow.json"
+            object_flow.write_text(json.dumps({
+                "schema": ENRICH.OBJECT_FLOW_SCHEMA,
+                "status": "object-flow-qualified-control-flow-review-required",
+                "candidateId": "difficulty-test",
+                "sourceSetSha256": "a" * 64,
+                "reviewPacketSha256": base_sha,
+                "programAnalysisSha256": hashlib.sha256(program.read_bytes()).hexdigest(),
+                "externalSinkQualificationSha256": hashlib.sha256(external.read_bytes()).hexdigest(),
+                "planSha256": hashlib.sha256(object_plan.read_bytes()).hexdigest(),
+                "originalUnresolvedCount": 4,
+                "remainingUnresolvedCount": 1,
+                "resolvedUnresolvedIds": ["parameter", "member", "template"],
+                "selectedFlowParameterTypeResolved": True,
+                "memberObjectIdentityResolved": True,
+                "templateObjectIdentityResolved": True,
+                "typeResolutionComplete": True,
+                "aliasResolutionComplete": True,
+                "externalCallContractsResolved": True,
+                "reachabilityAndDominanceResolved": False,
+                "allowsCaseContract": False,
+                "automaticPromotion": False,
+            }) + "\n")
+            packet_v10 = root / "packet-v10.json"
+            packet_v10.write_text(
+                json.dumps(
+                    ENRICH.enrich(
+                        *paths,
+                        "4" * 40,
+                        root,
+                        program,
+                        external_plan,
+                        external,
+                        object_plan,
+                        object_flow,
+                    ),
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            value_v10 = json.loads(packet_v10.read_text())
+            self.assertEqual(value_v10["schema"], ENRICH.SCHEMA_V10)
+            self.assertEqual(len(value_v10["evidenceAttachments"]), 6)
+            self.assertEqual(
+                value_v10["risks"][0]["id"],
+                "qualified-object-flow-is-not-global-control-flow",
+            )
+            receipt_v10 = REVIEW.verify_evidence(packet_v10, root)
+            self.assertEqual(receipt_v10["status"], "verified-exact-v10-evidence")
+            self.assertEqual(len(receipt_v10["verifiedFiles"]), 10)
+
 
 if __name__ == "__main__":
     unittest.main()
