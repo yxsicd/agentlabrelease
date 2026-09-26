@@ -159,9 +159,48 @@
     "allowsCaseContract": false,
     "automaticPromotion": false
   },
+  "boundedExpressionFlowProgramAnalysis": {
+    "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/bounded-expression-flow-program-analysis.json",
+    "schema": "agentlab.bounded_expression_flow_program_analysis.v1",
+    "sha256": "78ee3b01d0594975877daefd171a07f7a317b02b6673c22f6b3307fb47e661a3",
+    "methodRevision": "5205af63f9424a85a5a4c1b383ddd935d95dd8a7",
+    "flowReplayExact": true,
+    "repositoryCount": 2,
+    "flowCount": 2,
+    "localCallTargetCount": 3,
+    "typedParameterMappingCount": 2,
+    "untypedParameterMappingCount": 1,
+    "exactDependencyCount": 7,
+    "unresolvedCount": 6,
+    "status": "bounded-program-flow-partially-resolved-review-required",
+    "semanticAlignmentVerified": false,
+    "behaviorOracleVerified": false,
+    "allowsCaseContract": false,
+    "automaticPromotion": false
+  },
+  "programAnalyzedSemanticReviewPacket": {
+    "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/review-packets/purchase-data-program-analysis-v7.json",
+    "schema": "agentlab.multi_repo_candidate_review_packet.v7",
+    "sha256": "9466fff9084cbf16e4fecb1ebe576147d02718845e922ada72e12d986f018267",
+    "packetMethodRevision": "5205af63f9424a85a5a4c1b383ddd935d95dd8a7",
+    "basePacketSha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
+    "evidenceAttachmentCount": 4,
+    "evidenceVerification": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/review-packets/purchase-data-program-analysis-v7-verification.json",
+      "schema": "agentlab.multi_repo_candidate_semantic_evidence_verification.v1",
+      "sha256": "8e99233bac758f9bdbfdb69b31912e4aea8fa0b87c550be03ca9291494843adf",
+      "verifiedFileCount": 6,
+      "status": "verified-exact-v7-evidence"
+    },
+    "status": "independent-semantic-review-required",
+    "semanticAlignmentVerified": false,
+    "behaviorOracleVerified": false,
+    "allowsCaseContract": false,
+    "automaticPromotion": false
+  },
   "retention": {
     "authority": "compact-qualification-only",
     "fullReplayEvidence": "local-or-workflow-artifact",
-    "nextGate": "independent-semantic-review-and-cross-repository-behavior-oracle"
+    "nextGate": "resolve-or-explicitly-review-six-program-boundaries-then-independent-semantic-review-and-cross-repository-behavior-oracle"
   }
 }

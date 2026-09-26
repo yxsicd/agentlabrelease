@@ -303,7 +303,7 @@ def main() -> None:
     require(not args.output.exists(), "refusing to overwrite enriched review packet")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(json.dumps({"schema": SCHEMA, "status": result["status"], "attachmentCount": len(result["evidenceAttachments"])}, sort_keys=True))
+    print(json.dumps({"schema": result["schema"], "status": result["status"], "attachmentCount": len(result["evidenceAttachments"])}, sort_keys=True))
 
 
 if __name__ == "__main__":

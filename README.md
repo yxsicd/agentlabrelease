@@ -50,6 +50,15 @@ qualification, expression facts and both bounded paths without duplicating the
 large v5 source-context payload; it still requires an independent reviewer.
 Before reviewer answers are accepted, the trusted-main workflow replays all five
 referenced files and retains a digest-bound evidence-verification receipt.
+A program-analyzed v7 successor now replays that flow against both exact fact
+sets, uniquely resolves three same-file owner call targets and verifies seven
+dependencies as complete identifier-token sequences. Two parameter mappings
+carry source type annotations and one Cordova mapping remains untyped. It binds
+six explicit unresolved boundaries—two external SDK contracts, the Cordova
+member/object and template identity chain, the untyped parameter and global
+reachability/dominance/exception flow—and reopens all six referenced evidence
+files before review. It remains non-promoting and does not claim semantic
+alignment or a behavior Oracle.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.

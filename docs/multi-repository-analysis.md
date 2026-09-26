@@ -1142,6 +1142,31 @@ facts rather than resolved dataflow; the next gate must construct and calibrate
 a bounded flow Oracle instead of treating identifier proximity as behavioral
 proof.
 
+The bounded flow now has a separate program-analysis qualification rather than
+silently upgrading its syntactic proposal. `qualify-bounded-expression-flow.py`
+first regenerates the complete proposal from the exact plan, packet, analysis
+receipts, fact streams and pinned checkouts, then requires the retained proposal
+to match that replay. For each planned edge it resolves same-file owner calls
+only when exactly one callable definition matches, parses positional parameter
+types, matches dependency expressions as complete identifier-token sequences,
+and preserves the exact assignment, object-entry, template-blob and sink facts.
+On the retained payment cut this establishes three unique local call targets,
+seven exact dependencies, two typed parameter mappings and one untyped Cordova
+mapping. It also emits six machine-readable unresolved boundaries: both
+external SDK sink contracts, Cordova member/object identity, template-rendered
+object identity, the untyped Cordova parameter and global reachability,
+dominance, exception and callback behavior. Therefore its status is
+`bounded-program-flow-partially-resolved-review-required`, not resolved
+dataflow.
+
+Supplying that qualification to
+`enrich-multi-repo-candidate-review-packet.py --program-analysis` produces a
+compact v7 packet. The semantic-review preflight reopens the v5 base packet,
+build qualification, expression qualification, bounded flow proposal and plan,
+and program-analysis qualification, verifies all six digests and their shared
+candidate/source-set lineage, and rejects any hidden promotion or resolved flag.
+The retained v6 packet stays immutable; v7 is its evidence-enriched successor.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \
