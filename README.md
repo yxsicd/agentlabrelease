@@ -59,6 +59,14 @@ member/object and template identity chain, the untyped parameter and global
 reachability/dominance/exception flow—and reopens all six referenced evidence
 files before review. It remains non-promoting and does not claim semantic
 alignment or a behavior Oracle.
+The v8 successor additionally binds four exact Cordova Git Blobs: the Ionic
+receiver injection, public declaration, source implementation and Ionic Native
+wrapper. They prove that the selected owned-purchase array element and the
+`ConsumeOwnedPurchaseReq.inAppPurchaseData` field are both `string`, and that
+`consumeOwnedPurchase` returns the declared result promise. This resolves one
+of two external sink contracts and reduces the explicit unresolved set from six
+to five. The Harmony SDK declaration, Cordova local parameter/object identity
+and global control flow remain review-required; v8 still cannot promote a case.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.

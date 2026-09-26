@@ -198,9 +198,48 @@
     "allowsCaseContract": false,
     "automaticPromotion": false
   },
+  "externalSinkContractQualification": {
+    "planPath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/external-sink-contract-plan.json",
+    "planSha256": "d1b99bee7c06fadffece6f4dc7589dc4ae01ada365da4be91ee8ef9b38748325",
+    "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/external-sink-contract-qualification.json",
+    "schema": "agentlab.external_sink_contract_qualification.v1",
+    "sha256": "2574459c76c5f626e40223a23a2befff3bb7464d094cc241ff40a32d61b1f6e1",
+    "methodRevision": "00c021c9c8eb783e141aad899b61da355902a770",
+    "externalSinkCount": 2,
+    "resolvedExternalSinkCount": 1,
+    "remainingExternalSinkCount": 1,
+    "originalUnresolvedCount": 6,
+    "remainingUnresolvedCount": 5,
+    "status": "external-sink-contracts-partially-qualified-review-required",
+    "externalCallContractsResolved": false,
+    "semanticAlignmentVerified": false,
+    "behaviorOracleVerified": false,
+    "allowsCaseContract": false,
+    "automaticPromotion": false
+  },
+  "externalContractSemanticReviewPacket": {
+    "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/review-packets/purchase-data-external-contract-v8.json",
+    "schema": "agentlab.multi_repo_candidate_review_packet.v8",
+    "sha256": "8e30b7cd9ff2d308a758124514118c4ec8b990c4bf044063e55b5044bec311f9",
+    "packetMethodRevision": "00c021c9c8eb783e141aad899b61da355902a770",
+    "basePacketSha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
+    "evidenceAttachmentCount": 5,
+    "evidenceVerification": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/review-packets/purchase-data-external-contract-v8-verification.json",
+      "schema": "agentlab.multi_repo_candidate_semantic_evidence_verification.v1",
+      "sha256": "64d10b63bfda03c269daf2d72e9bb778f4de2da44dc482fcf205d5553f8383a6",
+      "verifiedFileCount": 8,
+      "status": "verified-exact-v8-evidence"
+    },
+    "status": "independent-semantic-review-required",
+    "semanticAlignmentVerified": false,
+    "behaviorOracleVerified": false,
+    "allowsCaseContract": false,
+    "automaticPromotion": false
+  },
   "retention": {
     "authority": "compact-qualification-only",
     "fullReplayEvidence": "local-or-workflow-artifact",
-    "nextGate": "resolve-or-explicitly-review-six-program-boundaries-then-independent-semantic-review-and-cross-repository-behavior-oracle"
+    "nextGate": "resolve-harmony-sdk-contract-and-four-other-program-boundaries-then-independent-semantic-review-and-cross-repository-behavior-oracle"
   }
 }

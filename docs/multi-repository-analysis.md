@@ -1167,6 +1167,26 @@ and program-analysis qualification, verifies all six digests and their shared
 candidate/source-set lineage, and rejects any hidden promotion or resolved flag.
 The retained v6 packet stays immutable; v7 is its evidence-enriched successor.
 
+External sink declarations are qualified separately by
+`qualify-external-sink-contracts.py`. Its v1 authority is an exact Git-blob set:
+every file path, repository revision, Blob OID, content SHA-256 and uniquely
+occurring declaration excerpt must match before a sink is removed from the
+unresolved set. The first real qualification binds the Cordova Ionic receiver
+injection, public `.d.ts`, TypeScript implementation and Ionic Native wrapper.
+It verifies `OwnedPurchasesResult.inAppPurchaseDataList: string[]`,
+`ConsumeOwnedPurchaseReq.inAppPurchaseData: string` and the exact
+`consumeOwnedPurchase(...): Promise<ConsumeOwnedPurchaseResult>` contract. One
+of two external sinks is therefore resolved and the bounded program-analysis
+unresolved count falls from six to five. The Harmony `finishPurchase` SDK
+declaration remains unresolved because the fixed application source imports it
+from the separately published SDK archive rather than defining it in Git.
+
+The compact v8 review packet binds this partial qualification and its plan in
+addition to all v7 evidence. Pre-review replay now opens eight files and checks
+their shared lineage and counts. It fails closed when the one remaining sink or
+any of the other four program boundaries is hidden, and continues to require an
+independent semantic decision and later behavior-Oracle calibration.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \
