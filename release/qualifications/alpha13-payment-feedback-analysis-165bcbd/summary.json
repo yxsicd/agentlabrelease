@@ -458,6 +458,64 @@
       "automaticPromotion": false,
       "status": "independent-source-review-required"
     },
+    "ohosTestMutationPlan": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-ohostest-mutation-plan.json",
+      "schema": "agentlab.purchase_data_ohostest_mutation_plan.v1",
+      "sha256": "fdeb40dd7f45f1c35fe669d3099d7119d4355488d3d4abb735f94cc10ee5f97c",
+      "implementation": "crates/agentlab_code_analysis/src/purchase_data_ohostest_mutation_plan.rs",
+      "binary": "agentlab-purchase-data-ohostest-mutation-plan",
+      "language": "rust",
+      "variantCount": 6,
+      "meaningfulWrongVariantCount": 6,
+      "testCount": 7,
+      "everyTestTargeted": true,
+      "sourceVariantsBuilt": false,
+      "ohosTestHapsBuilt": false,
+      "linuxX86EmulatorExecuted": false,
+      "expectedMatrixVerified": false,
+      "mutationScore": null,
+      "allowsCaseContract": false,
+      "automaticPromotion": false,
+      "status": "mutation-calibration-planned-not-executed"
+    },
+    "ohosTestMutationCalibration": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-ohostest-mutation-calibration.json",
+      "schema": "agentlab.purchase_data_ohostest_mutation_calibration.v1",
+      "sha256": "3ba81a3d911948894d6f1d2196e8abf13a7bea17aabeae248f16367bd3c84ab6",
+      "executionHost": "hwlinux",
+      "framework": "instrument-test-ohosTest-hypium",
+      "variantCount": 6,
+      "builtVariantCount": 6,
+      "emulatorExecutedVariantCount": 6,
+      "killedVariantCount": 6,
+      "exactExpectedMatrixMatchCount": 6,
+      "mutationScore": 1.0,
+      "sourceRestored": true,
+      "worktreeCleanAfterExecution": true,
+      "targetDetachedAfterExecution": true,
+      "allowsCaseContract": false,
+      "automaticPromotion": false,
+      "status": "passed"
+    },
+    "ohosTestMutationQualification": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-ohostest-mutation-qualification.json",
+      "schema": "agentlab.purchase_data_ohostest_mutation_qualification.v1",
+      "sha256": "1721064f5e350227fd3dffdab1aac625f2cab774959d2fddd5722f36b98d7934",
+      "implementation": "crates/agentlab_code_analysis/src/purchase_data_ohostest_mutation_qualification.rs",
+      "binary": "agentlab-purchase-data-ohostest-mutation-qualification",
+      "language": "rust",
+      "variantCount": 6,
+      "testCount": 7,
+      "killedVariantCount": 6,
+      "mutationScore": 1.0,
+      "expectedMatrixVerified": true,
+      "independentReviewVerified": false,
+      "behaviorOracleVerified": false,
+      "performanceCalibrated": false,
+      "allowsCaseContract": false,
+      "automaticPromotion": false,
+      "status": "mutation-discrimination-qualified-source-review-still-required"
+    },
     "semanticAlignmentVerified": false,
     "behaviorOracleVerified": false,
     "allowsCaseContract": false,
@@ -467,6 +525,6 @@
   "retention": {
     "authority": "compact-qualification-and-exact-source-patch",
     "fullReplayEvidence": "retained-source-review-packet-plus-run-addressed-workflow-artifact",
-    "nextGate": "authenticated-independent-candidate-source-review-then-upstream-publication-and-reexecution"
+    "nextGate": "authenticated-independent-candidate-source-review-and-live-behavior-oracle"
   }
 }

@@ -1,0 +1,213 @@
+{
+  "allowsCaseContract": false,
+  "automaticPromotion": false,
+  "baseRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+  "behaviorOracleVerified": false,
+  "boundary": "This is a source-bound mutation calibration plan. Expected killed tests are hypotheses until every variant is built and executed through the standard OHOS Test lane on the Linux emulator. Planning alone is not discrimination evidence and cannot approve source publication or case promotion.",
+  "candidateId": "purchase-data-finalization-ee2bc87594f1",
+  "candidatePatchSha256": "cbc01c94755f2d8da5449902ad1a309488d0a9defa9fede23318ad360dd4c2c2",
+  "candidateRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+  "coverage": {
+    "everyTestTargeted": true,
+    "meaningfulWrongVariantCount": 6,
+    "testCount": 7,
+    "testToExpectedKillingVariants": {
+      "alreadyFinishedPurchaseDoesNotFinishAgain": [
+        "unsafe-default-finish",
+        "drop-already-finished-guard"
+      ],
+      "decodeFailureDoesNotFinish": [
+        "unsafe-default-finish",
+        "finish-on-parse-or-decode-error"
+      ],
+      "finishRejectionRemainsObservable": [
+        "swallow-finish-rejection"
+      ],
+      "malformedDataDoesNotFinish": [
+        "unsafe-default-finish",
+        "finish-on-parse-or-decode-error"
+      ],
+      "missingJwsDoesNotFinish": [
+        "unsafe-default-finish"
+      ],
+      "missingProductTypeBlocksFinish": [
+        "unsafe-default-finish",
+        "drop-product-type-guard"
+      ],
+      "pendingPurchaseForwardsExactFinishFields": [
+        "erase-purchase-token"
+      ]
+    },
+    "variantCount": 6
+  },
+  "execution": {
+    "expectedMatrixVerified": false,
+    "linuxX86EmulatorExecuted": false,
+    "mutationScore": null,
+    "observedKilledVariantCount": 0,
+    "ohosTestHapsBuilt": false,
+    "sourceVariantsBuilt": false
+  },
+  "independentReviewVerified": false,
+  "nextGate": "build-and-execute-all-meaningful-wrong-variants-on-linux-emulator",
+  "performanceCalibrated": false,
+  "reviewPacketSha256": "6e734c807d67ffcca4a6403a46321dca8acc91b70c55f1443550504e3597b53e",
+  "schema": "agentlab.purchase_data_ohostest_mutation_plan.v1",
+  "source": {
+    "byteLength": 1872,
+    "lineCount": 68,
+    "path": "entry/src/main/ets/common/PurchaseFinalizationPolicy.ets",
+    "sha256": "cd53dcfe1c5e364d67b57e59e27f4336c32d6058ef5abf45bd75385817d24bb0"
+  },
+  "sourceRepository": "https://gitcode.com/HarmonyOS_Samples/iapkit-sample-clientdemo-arkts.git",
+  "status": "mutation-calibration-planned-not-executed",
+  "testNames": [
+    "missingJwsDoesNotFinish",
+    "malformedDataDoesNotFinish",
+    "decodeFailureDoesNotFinish",
+    "alreadyFinishedPurchaseDoesNotFinishAgain",
+    "pendingPurchaseForwardsExactFinishFields",
+    "missingProductTypeBlocksFinish",
+    "finishRejectionRemainsObservable"
+  ],
+  "variants": [
+    {
+      "edit": {
+        "expectedOccurrenceCount": 1,
+        "find": "shouldFinish: boolean = false;",
+        "path": "entry/src/main/ets/common/PurchaseFinalizationPolicy.ets",
+        "replace": "shouldFinish: boolean = true;"
+      },
+      "expectedKilledTests": [
+        "missingJwsDoesNotFinish",
+        "malformedDataDoesNotFinish",
+        "decodeFailureDoesNotFinish",
+        "alreadyFinishedPurchaseDoesNotFinishAgain",
+        "missingProductTypeBlocksFinish"
+      ],
+      "expectedSurvivingTests": [
+        "pendingPurchaseForwardsExactFinishFields",
+        "finishRejectionRemainsObservable"
+      ],
+      "id": "unsafe-default-finish",
+      "mutationKind": "unsafe-default",
+      "role": "meaningful-wrong",
+      "semanticFault": "A newly created plan starts authorized to finish, so early-return and exception paths fail open."
+    },
+    {
+      "edit": {
+        "expectedOccurrenceCount": 1,
+        "find": "if (purchaseOrderPayload.finishStatus === FinishStatus.FINISHED) {",
+        "path": "entry/src/main/ets/common/PurchaseFinalizationPolicy.ets",
+        "replace": "if (false) {"
+      },
+      "expectedKilledTests": [
+        "alreadyFinishedPurchaseDoesNotFinishAgain"
+      ],
+      "expectedSurvivingTests": [
+        "missingJwsDoesNotFinish",
+        "malformedDataDoesNotFinish",
+        "decodeFailureDoesNotFinish",
+        "pendingPurchaseForwardsExactFinishFields",
+        "missingProductTypeBlocksFinish",
+        "finishRejectionRemainsObservable"
+      ],
+      "id": "drop-already-finished-guard",
+      "mutationKind": "guard-removal",
+      "role": "meaningful-wrong",
+      "semanticFault": "An already finished purchase is scheduled for finish a second time."
+    },
+    {
+      "edit": {
+        "expectedOccurrenceCount": 1,
+        "find": "if (!purchaseOrderPayload.productType) {",
+        "path": "entry/src/main/ets/common/PurchaseFinalizationPolicy.ets",
+        "replace": "if (false) {"
+      },
+      "expectedKilledTests": [
+        "missingProductTypeBlocksFinish"
+      ],
+      "expectedSurvivingTests": [
+        "missingJwsDoesNotFinish",
+        "malformedDataDoesNotFinish",
+        "decodeFailureDoesNotFinish",
+        "alreadyFinishedPurchaseDoesNotFinishAgain",
+        "pendingPurchaseForwardsExactFinishFields",
+        "finishRejectionRemainsObservable"
+      ],
+      "id": "drop-product-type-guard",
+      "mutationKind": "guard-removal",
+      "role": "meaningful-wrong",
+      "semanticFault": "A purchase without a product type is sent to the finish API."
+    },
+    {
+      "edit": {
+        "expectedOccurrenceCount": 1,
+        "find": "purchaseToken: purchaseOrderPayload.purchaseToken,",
+        "path": "entry/src/main/ets/common/PurchaseFinalizationPolicy.ets",
+        "replace": "purchaseToken: '',"
+      },
+      "expectedKilledTests": [
+        "pendingPurchaseForwardsExactFinishFields"
+      ],
+      "expectedSurvivingTests": [
+        "missingJwsDoesNotFinish",
+        "malformedDataDoesNotFinish",
+        "decodeFailureDoesNotFinish",
+        "alreadyFinishedPurchaseDoesNotFinishAgain",
+        "missingProductTypeBlocksFinish",
+        "finishRejectionRemainsObservable"
+      ],
+      "id": "erase-purchase-token",
+      "mutationKind": "request-data-corruption",
+      "role": "meaningful-wrong",
+      "semanticFault": "The finish request loses the exact purchase token selected from the decoded order."
+    },
+    {
+      "edit": {
+        "expectedOccurrenceCount": 1,
+        "find": "return finishPurchase(plan.request);",
+        "path": "entry/src/main/ets/common/PurchaseFinalizationPolicy.ets",
+        "replace": "return finishPurchase(plan.request).catch((): Promise<void> => Promise.resolve());"
+      },
+      "expectedKilledTests": [
+        "finishRejectionRemainsObservable"
+      ],
+      "expectedSurvivingTests": [
+        "missingJwsDoesNotFinish",
+        "malformedDataDoesNotFinish",
+        "decodeFailureDoesNotFinish",
+        "alreadyFinishedPurchaseDoesNotFinishAgain",
+        "pendingPurchaseForwardsExactFinishFields",
+        "missingProductTypeBlocksFinish"
+      ],
+      "id": "swallow-finish-rejection",
+      "mutationKind": "error-swallowing",
+      "role": "meaningful-wrong",
+      "semanticFault": "A rejected finish API call is converted into a resolved promise and becomes unobservable."
+    },
+    {
+      "edit": {
+        "expectedOccurrenceCount": 1,
+        "find": "plan.reason = 'invalid-purchase-data';\n    return plan;",
+        "path": "entry/src/main/ets/common/PurchaseFinalizationPolicy.ets",
+        "replace": "plan.shouldFinish = true;\n    plan.reason = 'finish-required';\n    return plan;"
+      },
+      "expectedKilledTests": [
+        "malformedDataDoesNotFinish",
+        "decodeFailureDoesNotFinish"
+      ],
+      "expectedSurvivingTests": [
+        "missingJwsDoesNotFinish",
+        "alreadyFinishedPurchaseDoesNotFinishAgain",
+        "pendingPurchaseForwardsExactFinishFields",
+        "missingProductTypeBlocksFinish",
+        "finishRejectionRemainsObservable"
+      ],
+      "id": "finish-on-parse-or-decode-error",
+      "mutationKind": "exception-fail-open",
+      "role": "meaningful-wrong",
+      "semanticFault": "Malformed purchase data or a decode failure schedules a finish request instead of failing closed."
+    }
+  ]
+}

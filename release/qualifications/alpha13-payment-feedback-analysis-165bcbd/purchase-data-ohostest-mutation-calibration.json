@@ -1,0 +1,318 @@
+{
+  "allowsCaseContract": false,
+  "automaticPromotion": false,
+  "boundary": "This calibration measures six source-bound meaningful-wrong variants against seven OHOS Tests on one Linux x86 emulator. It does not prove live vendor-IAP behavior, real-device behavior, performance, power, thermal, whole-application semantics or independent source approval.",
+  "buildTool": {
+    "byteLength": 737,
+    "path": "/home/huawei/.local/share/asrelease-node/toolchains/harmony/6.1.1.300/bin/hvigorw",
+    "sha256": "31fc01ad4b0bace37a97f25e1b242bb6d2179b777fb0c3a5ea9d1e5081dafb78"
+  },
+  "builtVariantCount": 6,
+  "candidateRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+  "candidateSourceSha256": "cd53dcfe1c5e364d67b57e59e27f4336c32d6058ef5abf45bd75385817d24bb0",
+  "contract": {
+    "byteLength": 16341,
+    "path": "/home/huawei/code/.worktrees/agentlabrelease/purchase-ohostest-feasibility/scripts/harmony-standard-test-contract.py",
+    "sha256": "950e553d7a4d0d71cb3f803cce8dc37658aee4d5ea49a15b364f7a319275a00b"
+  },
+  "emulatorExecutedVariantCount": 6,
+  "exactExpectedMatrixMatchCount": 6,
+  "executionHost": "hwlinux",
+  "expectedMatrixVerified": true,
+  "framework": "instrument-test-ohosTest-hypium",
+  "hdc": {
+    "byteLength": 6430848,
+    "path": "/home/huawei/commandline-tools-26.0.0.821/sdk/default/openharmony/toolchains/hdc",
+    "sha256": "90c2554a44855a3c541c24bad5cffd46badb7eb7323c5464f6c0fb7160bdf5d0"
+  },
+  "killedVariantCount": 6,
+  "mutationScore": 1,
+  "results": [
+    {
+      "appHap": {
+        "byteLength": 447093,
+        "path": "/home/huawei/.agentlab/evidence/purchase-data-ohostest-mutation-ee2bc87-v3/unsafe-default-finish/entry-default-unsigned.hap",
+        "sha256": "ea7205bb8a49001a40c0556f850ba0a492580243d2eee6853072ccde3c73b194"
+      },
+      "built": true,
+      "emulatorExecutionAttempted": true,
+      "expectedKilledTests": [
+        "alreadyFinishedPurchaseDoesNotFinishAgain",
+        "decodeFailureDoesNotFinish",
+        "malformedDataDoesNotFinish",
+        "missingJwsDoesNotFinish",
+        "missingProductTypeBlocksFinish"
+      ],
+      "expectedMatrixMatched": true,
+      "id": "unsafe-default-finish",
+      "observedKilledTests": [
+        "alreadyFinishedPurchaseDoesNotFinishAgain",
+        "decodeFailureDoesNotFinish",
+        "malformedDataDoesNotFinish",
+        "missingJwsDoesNotFinish",
+        "missingProductTypeBlocksFinish"
+      ],
+      "observedSurvivingTests": [
+        "finishRejectionRemainsObservable",
+        "pendingPurchaseForwardsExactFinishFields"
+      ],
+      "observedTestCodes": {
+        "alreadyFinishedPurchaseDoesNotFinishAgain": -2,
+        "decodeFailureDoesNotFinish": -2,
+        "finishRejectionRemainsObservable": 0,
+        "malformedDataDoesNotFinish": -2,
+        "missingJwsDoesNotFinish": -2,
+        "missingProductTypeBlocksFinish": -2,
+        "pendingPurchaseForwardsExactFinishFields": 0
+      },
+      "observedTestCount": 7,
+      "runnerExitCode": 1,
+      "sourceSha256": "af632a14e22c5794b2bf66f4066f282ef26363f524abad761471f25273fba221",
+      "testHap": {
+        "byteLength": 1191534,
+        "path": "/home/huawei/.agentlab/evidence/purchase-data-ohostest-mutation-ee2bc87-v3/unsafe-default-finish/entry-ohosTest-unsigned.hap",
+        "sha256": "826a00a825848195cebaa23b19f37e374e233b6260e0eb2b8cd0732c8178df5a"
+      },
+      "variantKilled": true
+    },
+    {
+      "appHap": {
+        "byteLength": 446987,
+        "path": "/home/huawei/.agentlab/evidence/purchase-data-ohostest-mutation-ee2bc87-v3/drop-already-finished-guard/entry-default-unsigned.hap",
+        "sha256": "581ebcd1757ca163e78a7e4b2492c285779aeb59921f4352ffcba75c49a1024f"
+      },
+      "built": true,
+      "emulatorExecutionAttempted": true,
+      "expectedKilledTests": [
+        "alreadyFinishedPurchaseDoesNotFinishAgain"
+      ],
+      "expectedMatrixMatched": true,
+      "id": "drop-already-finished-guard",
+      "observedKilledTests": [
+        "alreadyFinishedPurchaseDoesNotFinishAgain"
+      ],
+      "observedSurvivingTests": [
+        "decodeFailureDoesNotFinish",
+        "finishRejectionRemainsObservable",
+        "malformedDataDoesNotFinish",
+        "missingJwsDoesNotFinish",
+        "missingProductTypeBlocksFinish",
+        "pendingPurchaseForwardsExactFinishFields"
+      ],
+      "observedTestCodes": {
+        "alreadyFinishedPurchaseDoesNotFinishAgain": -2,
+        "decodeFailureDoesNotFinish": 0,
+        "finishRejectionRemainsObservable": 0,
+        "malformedDataDoesNotFinish": 0,
+        "missingJwsDoesNotFinish": 0,
+        "missingProductTypeBlocksFinish": 0,
+        "pendingPurchaseForwardsExactFinishFields": 0
+      },
+      "observedTestCount": 7,
+      "runnerExitCode": 1,
+      "sourceSha256": "5f8b9caa0a3cb1431bd96541640dd664017167cd2399fb274e3c375be450263d",
+      "testHap": {
+        "byteLength": 1189005,
+        "path": "/home/huawei/.agentlab/evidence/purchase-data-ohostest-mutation-ee2bc87-v3/drop-already-finished-guard/entry-ohosTest-unsigned.hap",
+        "sha256": "f537ed55e81b4e542668e607a218eff145c9f9d2de3f3103c68579aa51eaaa39"
+      },
+      "variantKilled": true
+    },
+    {
+      "appHap": {
+        "byteLength": 447051,
+        "path": "/home/huawei/.agentlab/evidence/purchase-data-ohostest-mutation-ee2bc87-v3/drop-product-type-guard/entry-default-unsigned.hap",
+        "sha256": "3271b1ccf0702f20f7c136779b91e3338ade6c09c5ea076ff77862d7cb523575"
+      },
+      "built": true,
+      "emulatorExecutionAttempted": true,
+      "expectedKilledTests": [
+        "missingProductTypeBlocksFinish"
+      ],
+      "expectedMatrixMatched": true,
+      "id": "drop-product-type-guard",
+      "observedKilledTests": [
+        "missingProductTypeBlocksFinish"
+      ],
+      "observedSurvivingTests": [
+        "alreadyFinishedPurchaseDoesNotFinishAgain",
+        "decodeFailureDoesNotFinish",
+        "finishRejectionRemainsObservable",
+        "malformedDataDoesNotFinish",
+        "missingJwsDoesNotFinish",
+        "pendingPurchaseForwardsExactFinishFields"
+      ],
+      "observedTestCodes": {
+        "alreadyFinishedPurchaseDoesNotFinishAgain": 0,
+        "decodeFailureDoesNotFinish": 0,
+        "finishRejectionRemainsObservable": 0,
+        "malformedDataDoesNotFinish": 0,
+        "missingJwsDoesNotFinish": 0,
+        "missingProductTypeBlocksFinish": -2,
+        "pendingPurchaseForwardsExactFinishFields": 0
+      },
+      "observedTestCount": 7,
+      "runnerExitCode": 1,
+      "sourceSha256": "24f5443060b18d886d4c88dfcf80d3e920e4b33a38eecfa8e5f2cfa4be0eb42c",
+      "testHap": {
+        "byteLength": 1191492,
+        "path": "/home/huawei/.agentlab/evidence/purchase-data-ohostest-mutation-ee2bc87-v3/drop-product-type-guard/entry-ohosTest-unsigned.hap",
+        "sha256": "3677e9eac39c316b7ab1e4e766ec17ef8bcd7b19821c957dc9bbf681f84f27cc"
+      },
+      "variantKilled": true
+    },
+    {
+      "appHap": {
+        "byteLength": 447057,
+        "path": "/home/huawei/.agentlab/evidence/purchase-data-ohostest-mutation-ee2bc87-v3/erase-purchase-token/entry-default-unsigned.hap",
+        "sha256": "e5187757f4cd762f95cc39d036ae4716c717ba9428970dd929fbec2bcebf19bf"
+      },
+      "built": true,
+      "emulatorExecutionAttempted": true,
+      "expectedKilledTests": [
+        "pendingPurchaseForwardsExactFinishFields"
+      ],
+      "expectedMatrixMatched": true,
+      "id": "erase-purchase-token",
+      "observedKilledTests": [
+        "pendingPurchaseForwardsExactFinishFields"
+      ],
+      "observedSurvivingTests": [
+        "alreadyFinishedPurchaseDoesNotFinishAgain",
+        "decodeFailureDoesNotFinish",
+        "finishRejectionRemainsObservable",
+        "malformedDataDoesNotFinish",
+        "missingJwsDoesNotFinish",
+        "missingProductTypeBlocksFinish"
+      ],
+      "observedTestCodes": {
+        "alreadyFinishedPurchaseDoesNotFinishAgain": 0,
+        "decodeFailureDoesNotFinish": 0,
+        "finishRejectionRemainsObservable": 0,
+        "malformedDataDoesNotFinish": 0,
+        "missingJwsDoesNotFinish": 0,
+        "missingProductTypeBlocksFinish": 0,
+        "pendingPurchaseForwardsExactFinishFields": -2
+      },
+      "observedTestCount": 7,
+      "runnerExitCode": 1,
+      "sourceSha256": "304a68e8782b1fc7c57d4346826f9aadbbd9c010c1d74ed6b5bed94741b55a13",
+      "testHap": {
+        "byteLength": 1191502,
+        "path": "/home/huawei/.agentlab/evidence/purchase-data-ohostest-mutation-ee2bc87-v3/erase-purchase-token/entry-ohosTest-unsigned.hap",
+        "sha256": "fe346ef109a9b8a2b660c68ea51fe3549f3b1124e17829ed3ce9a42b4da46af8"
+      },
+      "variantKilled": true
+    },
+    {
+      "appHap": {
+        "byteLength": 447369,
+        "path": "/home/huawei/.agentlab/evidence/purchase-data-ohostest-mutation-ee2bc87-v3/swallow-finish-rejection/entry-default-unsigned.hap",
+        "sha256": "eb0ccf5f87cb19d45513c21a68c30c6c31817da0575f5c370d777d6b2131f159"
+      },
+      "built": true,
+      "emulatorExecutionAttempted": true,
+      "expectedKilledTests": [
+        "finishRejectionRemainsObservable"
+      ],
+      "expectedMatrixMatched": true,
+      "id": "swallow-finish-rejection",
+      "observedKilledTests": [
+        "finishRejectionRemainsObservable"
+      ],
+      "observedSurvivingTests": [
+        "alreadyFinishedPurchaseDoesNotFinishAgain",
+        "decodeFailureDoesNotFinish",
+        "malformedDataDoesNotFinish",
+        "missingJwsDoesNotFinish",
+        "missingProductTypeBlocksFinish",
+        "pendingPurchaseForwardsExactFinishFields"
+      ],
+      "observedTestCodes": {
+        "alreadyFinishedPurchaseDoesNotFinishAgain": 0,
+        "decodeFailureDoesNotFinish": 0,
+        "finishRejectionRemainsObservable": -2,
+        "malformedDataDoesNotFinish": 0,
+        "missingJwsDoesNotFinish": 0,
+        "missingProductTypeBlocksFinish": 0,
+        "pendingPurchaseForwardsExactFinishFields": 0
+      },
+      "observedTestCount": 7,
+      "runnerExitCode": 1,
+      "sourceSha256": "7421e05a2cf3750b97920d2bf958c5973c63542388165a624d24e583421452d6",
+      "testHap": {
+        "byteLength": 1191814,
+        "path": "/home/huawei/.agentlab/evidence/purchase-data-ohostest-mutation-ee2bc87-v3/swallow-finish-rejection/entry-ohosTest-unsigned.hap",
+        "sha256": "27cfc82c5b96fb830c57bbf8c2e7f3bbdde752e586f5dde5c272825da8a53f57"
+      },
+      "variantKilled": true
+    },
+    {
+      "appHap": {
+        "byteLength": 447121,
+        "path": "/home/huawei/.agentlab/evidence/purchase-data-ohostest-mutation-ee2bc87-v3/finish-on-parse-or-decode-error/entry-default-unsigned.hap",
+        "sha256": "e48f9668abbd10414e3dab35f7dbb0d519f0653688c65d41eb0a40c0bd4de738"
+      },
+      "built": true,
+      "emulatorExecutionAttempted": true,
+      "expectedKilledTests": [
+        "decodeFailureDoesNotFinish",
+        "malformedDataDoesNotFinish"
+      ],
+      "expectedMatrixMatched": true,
+      "id": "finish-on-parse-or-decode-error",
+      "observedKilledTests": [
+        "decodeFailureDoesNotFinish",
+        "malformedDataDoesNotFinish"
+      ],
+      "observedSurvivingTests": [
+        "alreadyFinishedPurchaseDoesNotFinishAgain",
+        "finishRejectionRemainsObservable",
+        "missingJwsDoesNotFinish",
+        "missingProductTypeBlocksFinish",
+        "pendingPurchaseForwardsExactFinishFields"
+      ],
+      "observedTestCodes": {
+        "alreadyFinishedPurchaseDoesNotFinishAgain": 0,
+        "decodeFailureDoesNotFinish": -2,
+        "finishRejectionRemainsObservable": 0,
+        "malformedDataDoesNotFinish": -2,
+        "missingJwsDoesNotFinish": 0,
+        "missingProductTypeBlocksFinish": 0,
+        "pendingPurchaseForwardsExactFinishFields": 0
+      },
+      "observedTestCount": 7,
+      "runnerExitCode": 1,
+      "sourceSha256": "0cc92821ff904a0be5bfa27e6fafbc0d2dc1606e89e236655c69d4471edab91a",
+      "testHap": {
+        "byteLength": 1191590,
+        "path": "/home/huawei/.agentlab/evidence/purchase-data-ohostest-mutation-ee2bc87-v3/finish-on-parse-or-decode-error/entry-ohosTest-unsigned.hap",
+        "sha256": "3bcea39862b9eda887939935425374417676f625d19f0ce4bf812ca101bc701a"
+      },
+      "variantKilled": true
+    }
+  ],
+  "runner": {
+    "byteLength": 12970,
+    "path": "/home/huawei/code/.worktrees/agentlabrelease/purchase-ohostest-feasibility/scripts/run-harmony-instrument-test.py",
+    "sha256": "ab8fbabb38ef2fecdccdffc83c5733caa030e485e5f12a32e02892652b906c84"
+  },
+  "schema": "agentlab.purchase_data_ohostest_mutation_calibration.v1",
+  "sourceRestored": true,
+  "status": "passed",
+  "target": "127.0.0.1:10100",
+  "variantCount": 6,
+  "worktreeCleanAfterExecution": true,
+  "execution": {
+    "emulatorStartOperationId": "exec-000000000000048a",
+    "mutationCalibrationOperationId": "exec-00000000000004a0",
+    "emulatorStopRequestOperationId": "exec-00000000000004a2",
+    "hdcEmptyVerificationOperationId": "exec-00000000000004a3",
+    "emulatorProcessAbsentVerificationOperationId": "exec-00000000000004a4",
+    "emulatorName": "codex_phone_7",
+    "startIdentity": "huawei:kvm",
+    "targetDetachedAfterExecution": true,
+    "emulatorProcessAbsentAfterExecution": true,
+    "stopRequestFinding": "emulator-already-absent"
+  }
+}

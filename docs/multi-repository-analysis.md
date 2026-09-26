@@ -1318,6 +1318,45 @@ packet, patch, decision and gate as one run-addressed artifact. Publication and
 upstream-revision reexecution must consume that successful run rather than a
 free-form approval.
 
+Passing all seven tests proves that the candidate satisfies the current test
+suite; it does not prove that the suite distinguishes meaningful wrong
+implementations. The Rust-native
+`agentlab-purchase-data-ohostest-mutation-plan` therefore reopens the exact
+source-review packet and Git format-patch, reconstructs the 68-line policy
+source and requires every mutation anchor exactly once. It retains six
+source-bound wrong variants covering unsafe defaults, removed guards, request
+field corruption, swallowed rejection and fail-open exception handling. Every
+one of the seven Hypium tests is mapped to at least one variant expected to
+kill it.
+
+This matrix is deliberately a plan, not a score. Its retained status is
+`mutation-calibration-planned-not-executed`; build, OHOS Test HAP and Linux x86
+emulator flags remain false and `mutationScore` remains null. Only building and
+executing all six variants through the standard OHOS Test lane may replace the
+expected matrix with observed discrimination evidence. The generator rejects
+patch drift, review-packet overreach, test-inventory drift and changed source
+anchors even when the supplied patch digest is updated. Planning cannot grant
+a case contract, approve publication or promote automatically.
+
+The matching hwlinux calibration then built all six variants and executed each
+captured app/test HAP pair against the seven OHOS Tests on the Linux x86
+emulator. All six variants were killed and all six observed kill sets matched
+the planned matrix, for a mutation score of `1.0`. The retained calibration
+also records the exact remote execution operation, emulator identity and the
+post-run empty-HDC/process-absent checks; the candidate source was restored and
+the source worktree was clean after execution.
+
+The Rust-native
+`agentlab-purchase-data-ohostest-mutation-qualification` independently binds
+that calibration to the plan, candidate revision and source digest. It rejects
+missing builds, missing emulator executions, duplicated or omitted variants,
+test partition drift, kill-matrix drift and score overstatement. The resulting
+status is
+`mutation-discrimination-qualified-source-review-still-required`: this is
+strong discrimination evidence, but it still cannot establish a live vendor
+IAP oracle, real-device behavior, performance, power, thermal or independent
+source approval, and it cannot grant a case contract or automatic promotion.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \

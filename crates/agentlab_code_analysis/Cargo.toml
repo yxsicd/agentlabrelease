@@ -45,6 +45,14 @@ path = "src/purchase_data_ohostest_review_packet.rs"
 name = "agentlab-purchase-data-ohostest-review"
 path = "src/purchase_data_ohostest_review.rs"
 
+[[bin]]
+name = "agentlab-purchase-data-ohostest-mutation-plan"
+path = "src/purchase_data_ohostest_mutation_plan.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-ohostest-mutation-qualification"
+path = "src/purchase_data_ohostest_mutation_qualification.rs"
+
 [dependencies]
 tree-sitter = "=0.27.0"
 tree-sitter-language = "=0.1.8"
