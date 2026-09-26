@@ -294,6 +294,45 @@ class MultiRepoCandidateReviewPacketEnrichmentTests(unittest.TestCase):
             self.assertEqual(receipt["status"], "verified-exact-v8-evidence")
             self.assertEqual(len(receipt["verifiedFiles"]), 8)
 
+            plan_value = json.loads(external_plan.read_text())
+            plan_value["schema"] = "agentlab.external_sink_contract_plan.v2"
+            external_plan.write_text(json.dumps(plan_value) + "\n")
+            external_value = json.loads(external.read_text())
+            external_value.update({
+                "schema": ENRICH.EXTERNAL_SINK_SCHEMA_V2,
+                "status": "external-sink-contracts-qualified-review-required",
+                "planSha256": hashlib.sha256(external_plan.read_bytes()).hexdigest(),
+                "resolvedExternalSinkCount": 2,
+                "remainingExternalSinkCount": 0,
+                "remainingUnresolvedCount": 4,
+                "externalCallContractsResolved": True,
+            })
+            external.write_text(json.dumps(external_value) + "\n")
+            packet_v9 = root / "packet-v9.json"
+            packet_v9.write_text(
+                json.dumps(
+                    ENRICH.enrich(
+                        *paths,
+                        "3" * 40,
+                        root,
+                        program,
+                        external_plan,
+                        external,
+                    ),
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            value_v9 = json.loads(packet_v9.read_text())
+            self.assertEqual(value_v9["schema"], ENRICH.SCHEMA_V9)
+            self.assertEqual(
+                value_v9["risks"][0]["id"],
+                "external-contract-resolution-is-not-semantics",
+            )
+            receipt_v9 = REVIEW.verify_evidence(packet_v9, root)
+            self.assertEqual(receipt_v9["status"], "verified-exact-v9-evidence")
+            self.assertEqual(len(receipt_v9["verifiedFiles"]), 8)
+
 
 if __name__ == "__main__":
     unittest.main()

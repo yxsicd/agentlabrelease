@@ -13,12 +13,14 @@ from typing import Any
 SCHEMA = "agentlab.multi_repo_candidate_review_packet.v6"
 SCHEMA_V7 = "agentlab.multi_repo_candidate_review_packet.v7"
 SCHEMA_V8 = "agentlab.multi_repo_candidate_review_packet.v8"
+SCHEMA_V9 = "agentlab.multi_repo_candidate_review_packet.v9"
 BASE_SCHEMA = "agentlab.multi_repo_candidate_review_packet.v5"
 BUILD_SCHEMA = "agentlab.multi_repo_source_build_qualification.v1"
 EXPRESSION_SCHEMA = "agentlab.multi_repo_expression_fact_qualification.v1"
 FLOW_SCHEMA = "agentlab.bounded_expression_flow_proposal.v1"
 PROGRAM_ANALYSIS_SCHEMA = "agentlab.bounded_expression_flow_program_analysis.v1"
 EXTERNAL_SINK_SCHEMA = "agentlab.external_sink_contract_qualification.v1"
+EXTERNAL_SINK_SCHEMA_V2 = "agentlab.external_sink_contract_qualification.v2"
 DECISION_SCHEMA = "agentlab.multi_repo_candidate_semantic_review.v1"
 REVISION = re.compile(r"[0-9a-f]{40}")
 SHA256 = re.compile(r"[0-9a-f]{64}")
@@ -60,8 +62,9 @@ def relative_reference(path: Path, evidence_root: Path, label: str) -> str:
     return relative.as_posix()
 
 
-def common_lineage(value: dict[str, Any], schema: str, base: dict[str, Any], base_sha256: str, label: str) -> None:
-    require(value.get("schema") == schema, f"unsupported {label} schema")
+def common_lineage(value: dict[str, Any], schema: str | set[str], base: dict[str, Any], base_sha256: str, label: str) -> None:
+    schemas = {schema} if isinstance(schema, str) else schema
+    require(value.get("schema") in schemas, f"unsupported {label} schema")
     require(value.get("candidateId") == base.get("candidateId"), f"{label} candidate differs")
     require(value.get("sourceSetSha256") == base.get("sourceSetSha256"), f"{label} source set differs")
     require(value.get("reviewPacketSha256") == base_sha256, f"{label} base packet digest differs")
@@ -196,30 +199,37 @@ def enrich(
     if external_sink is not None and external_sink_plan_path is not None and program_analysis_path is not None:
         common_lineage(
             external_sink,
-            EXTERNAL_SINK_SCHEMA,
+            {EXTERNAL_SINK_SCHEMA, EXTERNAL_SINK_SCHEMA_V2},
             base,
             base_sha256,
             "external sink qualification",
         )
+        external_v2 = external_sink.get("schema") == EXTERNAL_SINK_SCHEMA_V2
         require(
             external_sink.get("status")
-            == "external-sink-contracts-partially-qualified-review-required",
+            == (
+                "external-sink-contracts-qualified-review-required"
+                if external_v2
+                else "external-sink-contracts-partially-qualified-review-required"
+            ),
             "external sink qualification status differs",
         )
         require(external_sink.get("programAnalysisSha256") == digest(program_analysis_path), "external sink program analysis differs")
         require(external_sink.get("planSha256") == digest(external_sink_plan_path), "external sink plan differs")
         require(external_sink.get("externalSinkCount") == 2, "external sink count differs")
-        require(external_sink.get("resolvedExternalSinkCount") == 1, "resolved external sink count differs")
-        require(external_sink.get("remainingExternalSinkCount") == 1, "remaining external sink count differs")
+        require(external_sink.get("resolvedExternalSinkCount") == (2 if external_v2 else 1), "resolved external sink count differs")
+        require(external_sink.get("remainingExternalSinkCount") == (0 if external_v2 else 1), "remaining external sink count differs")
         require(external_sink.get("originalUnresolvedCount") == 6, "original unresolved count differs")
-        require(external_sink.get("remainingUnresolvedCount") == 5, "remaining unresolved count differs")
-        require(external_sink.get("externalCallContractsResolved") is False, "external sink qualification claims completeness")
+        require(external_sink.get("remainingUnresolvedCount") == (4 if external_v2 else 5), "remaining unresolved count differs")
+        require(external_sink.get("externalCallContractsResolved") is external_v2, "external sink completeness differs")
 
     domain_evidence = base.get("domainFactEvidence") or []
     require(isinstance(domain_evidence, list) and domain_evidence, "base domain evidence is absent")
     packet = {
         "schema": (
-            SCHEMA_V8
+            SCHEMA_V9
+            if external_sink is not None and external_sink.get("schema") == EXTERNAL_SINK_SCHEMA_V2
+            else SCHEMA_V8
             if external_sink is not None
             else SCHEMA_V7
             if program_analysis is not None
@@ -296,7 +306,7 @@ def enrich(
         }
     if external_sink is not None and external_sink_qualification_path is not None:
         packet["evidenceAttachments"]["external-sink-contract-qualification"] = {
-            "schema": EXTERNAL_SINK_SCHEMA,
+            "schema": external_sink["schema"],
             "sha256": digest(external_sink_qualification_path),
             "relativePath": references["externalSinkQualification"],
             "planSha256": external_sink["planSha256"],
@@ -329,10 +339,16 @@ def enrich(
             "statement": "Unique local targets and exact token dependencies are verified, but unresolved types, object identity, external SDK contracts and control flow still prevent a semantic or behavioral claim.",
         }
     if external_sink is not None:
-        packet["risks"][0] = {
-            "id": "partial-external-contract-resolution-is-not-semantics",
-            "statement": "The Cordova sink contract and endpoint type compatibility are exact, but the Harmony SDK contract, Cordova local parameter/object identity and global control flow remain unresolved.",
-        }
+        if external_sink.get("schema") == EXTERNAL_SINK_SCHEMA_V2:
+            packet["risks"][0] = {
+                "id": "external-contract-resolution-is-not-semantics",
+                "statement": "Both external sink signatures and request declarations are exact, but Cordova local parameter/object identity and global control flow remain unresolved.",
+            }
+        else:
+            packet["risks"][0] = {
+                "id": "partial-external-contract-resolution-is-not-semantics",
+                "statement": "The Cordova sink contract and endpoint type compatibility are exact, but the Harmony SDK contract, Cordova local parameter/object identity and global control flow remain unresolved.",
+            }
     question_ids = [row["id"] for row in packet["reviewQuestions"]]
     risk_ids = [row["id"] for row in packet["risks"]]
     packet["reviewDecisionContract"] = {

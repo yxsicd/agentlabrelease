@@ -111,6 +111,7 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
             REVIEW.PACKET_SCHEMA_V6,
             REVIEW.PACKET_SCHEMA_V7,
             REVIEW.PACKET_SCHEMA_V8,
+            REVIEW.PACKET_SCHEMA_V9,
         }:
             value["domainIdentifierContract"] = {
                 "normalizedIdentifier": "purchase-data",
@@ -128,6 +129,7 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
             REVIEW.PACKET_SCHEMA_V6,
             REVIEW.PACKET_SCHEMA_V7,
             REVIEW.PACKET_SCHEMA_V8,
+            REVIEW.PACKET_SCHEMA_V9,
         }:
             value["basePacket"] = {
                 "schema": REVIEW.PACKET_SCHEMA_V5,
@@ -176,7 +178,7 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
             }
             value["semanticAlignmentVerified"] = False
             value["behaviorOracleVerified"] = False
-            if schema in {REVIEW.PACKET_SCHEMA_V7, REVIEW.PACKET_SCHEMA_V8}:
+            if schema in {REVIEW.PACKET_SCHEMA_V7, REVIEW.PACKET_SCHEMA_V8, REVIEW.PACKET_SCHEMA_V9}:
                 value["evidenceAttachments"]["bounded-expression-flow-program-analysis"] = {
                     "schema": "agentlab.bounded_expression_flow_program_analysis.v1",
                     "sha256": "1" * 64,
@@ -192,19 +194,28 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
                     "exactDependencyCount": 7,
                     "unresolvedCount": 6,
                 }
-            if schema == REVIEW.PACKET_SCHEMA_V8:
+            if schema in {REVIEW.PACKET_SCHEMA_V8, REVIEW.PACKET_SCHEMA_V9}:
+                external_v2 = schema == REVIEW.PACKET_SCHEMA_V9
                 value["evidenceAttachments"]["external-sink-contract-qualification"] = {
-                    "schema": "agentlab.external_sink_contract_qualification.v1",
+                    "schema": (
+                        "agentlab.external_sink_contract_qualification.v2"
+                        if external_v2
+                        else "agentlab.external_sink_contract_qualification.v1"
+                    ),
                     "sha256": "2" * 64,
                     "relativePath": "release/external-sink.json",
                     "planSha256": "3" * 64,
                     "planRelativePath": "release/external-sink-plan.json",
-                    "status": "external-sink-contracts-partially-qualified-review-required",
+                    "status": (
+                        "external-sink-contracts-qualified-review-required"
+                        if external_v2
+                        else "external-sink-contracts-partially-qualified-review-required"
+                    ),
                     "programAnalysisSha256": "1" * 64,
                     "externalSinkCount": 2,
-                    "resolvedExternalSinkCount": 1,
-                    "remainingExternalSinkCount": 1,
-                    "remainingUnresolvedCount": 5,
+                    "resolvedExternalSinkCount": 2 if external_v2 else 1,
+                    "remainingExternalSinkCount": 0 if external_v2 else 1,
+                    "remainingUnresolvedCount": 4 if external_v2 else 5,
                 }
             value["reviewDecisionContract"]["requiredEvidenceAttachmentIds"] = sorted(value["evidenceAttachments"])
         path.write_text(json.dumps(value, sort_keys=True) + "\n")
@@ -304,6 +315,21 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             packet = self.packet(root, REVIEW.PACKET_SCHEMA_V8)
+            value = self.decide(
+                root,
+                "defer-for-more-evidence",
+                {"observable-gap": "unknown"},
+            )
+            decision = root / "decision.json"
+            decision.write_text(json.dumps(value, sort_keys=True) + "\n")
+            gate = REVIEW.compile_gate(packet, decision)
+            self.assertEqual(gate["status"], "deferred-for-more-evidence")
+            self.assertFalse(gate["allowsCaseContract"])
+
+    def test_v9_complete_external_contract_packet_uses_the_same_fail_closed_review_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            packet = self.packet(root, REVIEW.PACKET_SCHEMA_V9)
             value = self.decide(
                 root,
                 "defer-for-more-evidence",
