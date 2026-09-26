@@ -516,6 +516,32 @@
       "automaticPromotion": false,
       "status": "mutation-discrimination-qualified-source-review-still-required"
     },
+    "runtimeOracleBridge": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-runtime-oracle-bridge.json",
+      "schema": "agentlab.purchase_data_runtime_oracle_bridge.v1",
+      "sha256": "4d24e409678502fd3b0fade142e36f86e898b09d2bb38811bc769431afbe0bef",
+      "implementation": "crates/agentlab_code_analysis/src/purchase_data_runtime_oracle_bridge.rs",
+      "binary": "agentlab-purchase-data-runtime-oracle-bridge",
+      "language": "rust",
+      "crossRepositoryBehaviorCheckCount": 10,
+      "harmonyBehaviorCheckCount": 5,
+      "harmonyRuntimeBoundCheckCount": 5,
+      "cordovaBehaviorCheckCount": 5,
+      "cordovaRuntimeBoundCheckCount": 0,
+      "ohosTestCount": 7,
+      "runtimeMutationVariantCount": 6,
+      "runtimeKilledMutationVariantCount": 6,
+      "runtimeMutationScore": 1.0,
+      "exactRuntimeTestMapping": true,
+      "semanticAlignmentVerified": false,
+      "independentOracleReviewCompleted": false,
+      "behaviorOracleVerified": false,
+      "liveVendorIapExecuted": false,
+      "performanceCalibrated": false,
+      "allowsCaseContract": false,
+      "automaticPromotion": false,
+      "status": "harmony-runtime-oracle-bridge-qualified-independent-review-required"
+    },
     "semanticAlignmentVerified": false,
     "behaviorOracleVerified": false,
     "allowsCaseContract": false,
@@ -525,6 +551,6 @@
   "retention": {
     "authority": "compact-qualification-and-exact-source-patch",
     "fullReplayEvidence": "retained-source-review-packet-plus-run-addressed-workflow-artifact",
-    "nextGate": "authenticated-independent-candidate-source-review-and-live-behavior-oracle"
+    "nextGate": "independent-semantic-and-oracle-review-then-candidate-upstream-publication-and-exact-revision-reexecution"
   }
 }

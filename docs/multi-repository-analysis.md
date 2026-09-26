@@ -1357,6 +1357,23 @@ strong discrimination evidence, but it still cannot establish a live vendor
 IAP oracle, real-device behavior, performance, power, thermal or independent
 source approval, and it cannot grant a case contract or automatic promotion.
 
+`agentlab-purchase-data-runtime-oracle-bridge` now closes the evidence-lineage
+gap between the earlier two-repository source seam and this emulator lane. The
+Rust verifier reopens the exact behavior plan, source-seam calibration and
+executable digest; binds the original Harmony revision to the candidate's exact
+base and clean revision; and binds the mutation plan, calibration and
+qualification digests. It maps all five Harmony behavior checks exactly onto
+the seven OHOS Tests and requires all six observed meaningful-wrong variants
+to have been killed with the expected matrix.
+
+The retained status is
+`harmony-runtime-oracle-bridge-qualified-independent-review-required`. Five
+Harmony checks are runtime-bound, while all five Cordova checks remain
+source-seam-only. Live vendor IAP, a real device, independent semantic/Oracle
+review and performance/power/thermal calibration remain false. The bridge
+therefore strengthens the candidate's review evidence but deliberately keeps
+`behaviorOracleVerified`, `allowsCaseContract` and `automaticPromotion` false.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \
