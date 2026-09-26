@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/feedback-analysis-cut.schema.json",
+  "title": "Reviewed assessment-feedback to analysis-cut transition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "cutId",
+    "priorCase",
+    "feedback",
+    "nextAnalysis",
+    "change",
+    "review",
+    "automaticPromotion",
+    "nextGate"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.feedback_analysis_cut.v1"},
+    "status": {"const": "reviewed-for-case-construction"},
+    "cutId": {"type": "string", "pattern": "^feedback-analysis-cut-[0-9a-f]{20}$"},
+    "priorCase": {
+      "type": "object",
+      "required": ["caseId", "caseSha256", "sourceSetSha256", "methodRevision", "immutability"],
+      "properties": {
+        "caseId": {"type": "string", "minLength": 1},
+        "caseSha256": {"$ref": "#/$defs/sha256"},
+        "sourceSetSha256": {"$ref": "#/$defs/sha256"},
+        "methodRevision": {"$ref": "#/$defs/revision"},
+        "immutability": {"const": "retained-unchanged"}
+      }
+    },
+    "feedback": {
+      "type": "object",
+      "required": ["evidenceSha256", "candidateId", "dimensionId", "primaryDimension", "stageId", "failureMode", "mechanism", "verificationContract"],
+      "properties": {
+        "evidenceSha256": {"$ref": "#/$defs/sha256"},
+        "candidateId": {"type": "string", "minLength": 1},
+        "dimensionId": {"type": "string", "minLength": 1},
+        "primaryDimension": {"type": "string", "minLength": 1},
+        "stageId": {"type": "string", "minLength": 1},
+        "failureMode": {"type": "string", "minLength": 1},
+        "mechanism": {"type": "string", "minLength": 1},
+        "verificationContract": {"type": "object"},
+        "performanceEvidence": {"$ref": "#/$defs/performanceEvidence"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"dimensionId": {"const": "assessed-agent-performance-separation"}}},
+          "then": {
+            "required": ["performanceEvidence"],
+            "properties": {
+              "primaryDimension": {"const": "performance-feedback"},
+              "failureMode": {"const": "repeatable-performance-separation"}
+            }
+          }
+        }
+      ]
+    },
+    "nextAnalysis": {
+      "type": "object",
+      "required": ["sourceSetSha256", "methodRevision", "sources", "analysisReceiptSha256", "difficultyEvidenceSha256", "candidateId", "dimensionId", "mechanism", "evidenceIds", "verificationContract"],
+      "properties": {
+        "sourceSetSha256": {"$ref": "#/$defs/sha256"},
+        "methodRevision": {"$ref": "#/$defs/revision"},
+        "sources": {"type": "array", "minItems": 2},
+        "analysisReceiptSha256": {"$ref": "#/$defs/sha256"},
+        "difficultyEvidenceSha256": {"$ref": "#/$defs/sha256"},
+        "candidateId": {"type": "string", "minLength": 1},
+        "dimensionId": {"const": "multi-repository-change-impact"},
+        "mechanism": {"type": "string", "minLength": 1},
+        "evidenceIds": {"type": "array", "minItems": 1},
+        "verificationContract": {"type": "object"}
+      }
+    },
+    "change": {
+      "type": "object",
+      "required": ["sourceSetChanged", "methodRevisionChanged"],
+      "properties": {
+        "sourceSetChanged": {"type": "boolean"},
+        "methodRevisionChanged": {"type": "boolean"}
+      },
+      "anyOf": [
+        {"properties": {"sourceSetChanged": {"const": true}}},
+        {"properties": {"methodRevisionChanged": {"const": true}}}
+      ]
+    },
+    "review": {
+      "type": "object",
+      "required": ["authority", "reviewer", "rationale", "proposalSha256", "decisionSha256", "acknowledgedRiskIds", "verdict"],
+      "properties": {
+        "authority": {"const": "independent-maintainer-review"},
+        "reviewer": {"type": "string", "minLength": 1},
+        "rationale": {"type": "string", "minLength": 1},
+        "proposalSha256": {"$ref": "#/$defs/sha256"},
+        "decisionSha256": {"$ref": "#/$defs/sha256"},
+        "acknowledgedRiskIds": {"type": "array", "minItems": 1},
+        "verdict": {"const": "approve-for-case-construction"}
+      }
+    },
+    "automaticPromotion": {"const": false},
+    "nextGate": {"const": "case-intent-construction-and-independent-calibration"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "performanceEvidence": {
+      "type": "object",
+      "required": ["environmentIdentity", "performancePolicySha256", "profileWorkloadSha256", "metric", "statistic", "unit", "direction", "bestParticipantId", "worstParticipantId", "meanDifference", "rangesSeparated", "authority"],
+      "properties": {
+        "environmentIdentity": {"type": "string", "minLength": 1},
+        "performancePolicySha256": {"$ref": "#/$defs/sha256"},
+        "profileWorkloadSha256": {"$ref": "#/$defs/sha256"},
+        "metric": {"type": "string", "minLength": 1},
+        "statistic": {"enum": ["mean", "p50", "p95"]},
+        "unit": {"type": "string", "minLength": 1},
+        "direction": {"enum": ["lower", "higher"]},
+        "bestParticipantId": {"type": "string", "minLength": 1},
+        "worstParticipantId": {"type": "string", "minLength": 1},
+        "meanDifference": {"type": "number", "exclusiveMinimum": 0},
+        "rangesSeparated": {"const": true},
+        "authority": {
+          "type": "object",
+          "required": ["functional", "relativePerformance", "absolutePowerThermal"],
+          "properties": {
+            "functional": {"const": "none"},
+            "relativePerformance": {"const": "smartperf-emulator-proxy"},
+            "absolutePowerThermal": {"const": "unavailable-on-emulator"}
+          }
+        }
+      }
+    }
+  }
+}

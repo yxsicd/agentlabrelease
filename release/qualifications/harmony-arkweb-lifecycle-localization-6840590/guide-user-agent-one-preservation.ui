@@ -1,0 +1,6 @@
+schema	agentlab.harmony_ui_scenario.v1
+case	guide-user-agent-one-preservation
+wait-text	user-agent-one-visible	30	UserAgent_one
+tap	628	206
+sleep	1000
+assert-text	get-user-agent-visible	getUserAgent

@@ -1,0 +1,101 @@
+{
+  "schema": "agentlab.real_multi_repo_analysis_qualification.v1",
+  "status": "analysis-qualified-case-review-required",
+  "analyzerRevision": "34661ffa88901b79049af73bc71e2a9ec760ae03",
+  "sourceSetSha256": "c4923e499fbb0ca2ed4fd205c66d6353bbe2aa58935413e3c897183a25493ca9",
+  "sources": [
+    {
+      "id": "code-workshop",
+      "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+      "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+      "sourceFileCandidates": 556,
+      "analyzedFiles": 556,
+      "textLines": 45080
+    },
+    {
+      "id": "guide-snippets",
+      "repository": "https://gitcode.com/HarmonyOS_Samples/guide-snippets.git",
+      "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "sourceFileCandidates": 12157,
+      "analyzedFiles": 12155,
+      "textLines": 836570
+    }
+  ],
+  "analysis": {
+    "wallSeconds": 181.14,
+    "userCpuSeconds": 78.23,
+    "systemCpuSeconds": 1.85,
+    "facts": 404308,
+    "moduleDependencyEdges": 3896,
+    "crossRepositoryEdges": 0,
+    "unresolvedModuleReferences": 19277,
+    "sharedExternalModuleContracts": 22,
+    "difficultyCandidates": 19299,
+    "filesWithSyntaxErrors": 27,
+    "unsupportedSources": 2,
+    "workspaceFactsSha256": "3c3f87390986f8a8c44d600655407edb6cfc3ee306363cbcbdd235d8e3efb8b6",
+    "difficultyCandidatesSha256": "5abd45c75e3db382b444268ebbb7125aedf2a92eff3314e91eca9137766b9ec9",
+    "unsupportedSourcesSha256": "4ff136ee04e7db790405ef22546125326bda534b7f5e075ffa4b4126bb59f5d1",
+    "analysisReceiptSha256": "d73df3cf67fa9879e98717572575b76a65529ddb81e5aca54b50205b1430fc94"
+  },
+  "largestSharedContractCandidates": [
+    {
+      "id": "difficulty-2a4dfa03fea784ddd323e372",
+      "specifier": "@kit.PerformanceAnalysisKit",
+      "affectedRepositories": 2,
+      "affectedFiles": 3018,
+      "evidenceFacts": 3018,
+      "caseReady": false
+    },
+    {
+      "id": "difficulty-588b80f4b5e26045aa6a2e06",
+      "specifier": "@kit.ArkUI",
+      "affectedRepositories": 2,
+      "affectedFiles": 2145,
+      "evidenceFacts": 2145,
+      "caseReady": false
+    },
+    {
+      "id": "difficulty-19a7a518d2b8f896ae8cb263",
+      "specifier": "@kit.AbilityKit",
+      "affectedRepositories": 2,
+      "affectedFiles": 2071,
+      "evidenceFacts": 2071,
+      "caseReady": false
+    },
+    {
+      "id": "difficulty-ac913a9c7336fb1fd5dae692",
+      "specifier": "@ohos/hypium",
+      "affectedRepositories": 2,
+      "affectedFiles": 1984,
+      "evidenceFacts": 1984,
+      "caseReady": false
+    },
+    {
+      "id": "difficulty-c14e209c59d62b4ad7994b2e",
+      "specifier": "@ohos/hvigor-ohos-plugin",
+      "affectedRepositories": 2,
+      "affectedFiles": 1567,
+      "evidenceFacts": 1567,
+      "caseReady": false
+    }
+  ],
+  "qualificationBoundary": {
+    "qualified": [
+      "exact multi-repository source identity",
+      "repeatable syntax and module-fact extraction",
+      "audited non-UTF-8 exclusions",
+      "shared external-contract candidate discovery"
+    ],
+    "notQualified": [
+      "source-to-source dependency between the repositories",
+      "external module contract semantics or version",
+      "narrow issue-level task specification",
+      "repair and preservation checks",
+      "reference replay",
+      "participant discrimination",
+      "independent reviewer approval"
+    ]
+  },
+  "automaticPromotion": false
+}

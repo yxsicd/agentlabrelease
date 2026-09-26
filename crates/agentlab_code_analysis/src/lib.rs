@@ -9,6 +9,7 @@ const LANGUAGE: tree_sitter_language::LanguageFn =
     unsafe { tree_sitter_language::LanguageFn::from_raw(tree_sitter_agentlab_arkts) };
 pub const GRAMMAR: &str = "agentlab-arkts@0.1.0 (tree-sitter-arkts@0.2.0 + stateStyles)";
 pub const GRAMMAR_DIGEST: &str = env!("AGENTLAB_GRAMMAR_DIGEST");
+pub const ANALYZER_DIGEST: &str = env!("AGENTLAB_ANALYZER_DIGEST");
 
 pub fn digest(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
@@ -21,10 +22,110 @@ fn field(node: Node, name: &str, source: &[u8]) -> String {
         .map(|n| text(n, source).to_owned())
         .unwrap_or_default()
 }
+fn named_child_expressions(node: Node, field_name: &str, source: &[u8]) -> Vec<String> {
+    let Some(container) = node.child_by_field_name(field_name) else {
+        return Vec::new();
+    };
+    let mut cursor = container.walk();
+    container
+        .named_children(&mut cursor)
+        .map(|child| text(child, source).to_owned())
+        .collect()
+}
+fn initializer_parameter_expressions(node: Node, source: &[u8]) -> Vec<String> {
+    node.child_by_field_name("value")
+        .map(|value| named_child_expressions(value, "parameters", source))
+        .unwrap_or_default()
+}
 fn span(node: Node) -> Value {
     json!({"startByte":node.start_byte(),"endByte":node.end_byte(),
         "startLine":node.start_position().row+1,"endLine":node.end_position().row+1,
         "startColumnByte":node.start_position().column,"endColumnByte":node.end_position().column})
+}
+fn call_control_context(node: Node, source: &[u8]) -> Value {
+    let mut control_regions = Vec::new();
+    let mut enclosing_calls = Vec::new();
+    let mut await_ancestor_count = 0usize;
+    let mut callback_depth = 0usize;
+    let mut current = node.parent();
+    while let Some(parent) = current {
+        match parent.kind() {
+            "method_definition"
+            | "function_declaration"
+            | "class_declaration"
+            | "abstract_class_declaration"
+            | "struct_declaration" => break,
+            "await_expression" => await_ancestor_count += 1,
+            "arrow_function" | "function_expression" => {
+                callback_depth += 1;
+                control_regions.push(json!({"syntaxKind":parent.kind(),"span":span(parent)}));
+            }
+            "try_statement" | "catch_clause" | "finally_clause" | "if_statement"
+            | "switch_case" | "for_statement" | "for_in_statement" | "while_statement"
+            | "do_statement" | "ternary_expression" => {
+                control_regions.push(json!({"syntaxKind":parent.kind(),"span":span(parent)}));
+            }
+            "call_expression" => {
+                let target = field(parent, "function", source);
+                if !target.is_empty() {
+                    enclosing_calls.push(json!({"targetExpression":target,"span":span(parent)}));
+                }
+            }
+            _ => {}
+        }
+        current = parent.parent();
+    }
+    json!({
+        "awaitAncestorCount":await_ancestor_count,
+        "callbackDepth":callback_depth,
+        "controlRegions":control_regions,
+        "enclosingCalls":enclosing_calls,
+        "resolution":"syntactic-ancestor-context"
+    })
+}
+fn import_bindings(node: Node, source: &[u8]) -> Vec<Value> {
+    fn collect(node: Node, source: &[u8], rows: &mut Vec<Value>) {
+        match node.kind() {
+            "import_specifier" => {
+                let exported = field(node, "name", source);
+                let local = node
+                    .child_by_field_name("alias")
+                    .map(|alias| text(alias, source).to_owned())
+                    .unwrap_or_else(|| exported.clone());
+                rows.push(json!({"kind":"named","exported":exported,"local":local}));
+                return;
+            }
+            "namespace_import" => {
+                let mut cursor = node.walk();
+                if let Some(local) = node
+                    .named_children(&mut cursor)
+                    .find(|child| child.kind() == "identifier")
+                {
+                    rows.push(
+                        json!({"kind":"namespace","exported":"*","local":text(local,source)}),
+                    );
+                }
+                return;
+            }
+            _ => {}
+        }
+        let mut cursor = node.walk();
+        for child in node.named_children(&mut cursor) {
+            collect(child, source, rows);
+        }
+    }
+
+    let mut rows = Vec::new();
+    collect(node, source, &mut rows);
+    rows.sort_by_key(|row| {
+        (
+            row["kind"].as_str().unwrap().to_owned(),
+            row["exported"].as_str().unwrap().to_owned(),
+            row["local"].as_str().unwrap().to_owned(),
+        )
+    });
+    rows.dedup();
+    rows
 }
 pub struct Analysis {
     pub rows: Vec<Value>,
@@ -73,6 +174,7 @@ impl Collector<'_> {
                         .get(1..literal.len().saturating_sub(1))
                         .unwrap_or("");
                     self.emit(node,"module-reference",specifier,json!({"specifier":specifier,
+                        "importedBindings":if node.kind()=="import_statement" {import_bindings(node,self.source)} else {Vec::new()},
                         "statement":text(node,self.source),"resolution":"unresolved",
                         "referenceType":if node.kind()=="import_statement" {"import"} else {"export"}}));
                 }
@@ -95,14 +197,15 @@ impl Collector<'_> {
                     node,
                     "symbol",
                     &scope,
-                    json!({"symbol":name,"qualifiedName":scope,"owner":owner}),
+                    json!({"symbol":name,"qualifiedName":scope,"owner":owner,
+                        "parameterExpressions":named_child_expressions(node,"parameters",self.source)}),
                 );
             }
             "variable_declarator" => {
                 let name = field(node, "name", self.source);
                 self.emit(node,"binding",&format!("{owner}::{name}"),json!({"name":name,"owner":owner,"typeExpression":field(node,"type",self.source).trim_start_matches(':').trim(),"initializerExpression":field(node,"value",self.source),"bindingKind":node.parent().and_then(|p|p.child(0)).map(|n|text(n,self.source)).unwrap_or("const")}));
             }
-            "public_field_definition" => {
+            "public_field_definition" | "property_signature" => {
                 let name = field(node, "name", self.source);
                 let mut cursor = node.walk();
                 let decorators: Vec<_> = node
@@ -113,11 +216,28 @@ impl Collector<'_> {
                 let type_expression = field(node, "type", self.source);
                 self.emit(node, "property", &format!("{owner}::{name}"), json!({
                     "name":name,"owner":owner,"typeExpression":type_expression.trim_start_matches(':').trim(),
-                    "initializerExpression":field(node,"value",self.source),"decorators":decorators}));
+                    "initializerExpression":field(node,"value",self.source),
+                    "parameterExpressions":initializer_parameter_expressions(node,self.source),
+                    "decorators":decorators}));
+            }
+            "member_expression" => {
+                let property = field(node, "property", self.source);
+                self.emit(
+                    node,
+                    "member-access",
+                    &format!("{owner}::{property}"),
+                    json!({
+                        "property":property,
+                        "objectExpression":field(node,"object",self.source),
+                        "owner":owner
+                    }),
+                );
             }
             "call_expression" => {
                 let target = field(node, "function", self.source);
-                self.emit(node,"call",&format!("{owner}::{target}"),json!({"targetExpression":target,"owner":owner,"resolution":"syntactic-unresolved"}));
+                self.emit(node,"call",&format!("{owner}::{target}"),json!({"targetExpression":target,
+                    "argumentExpressions":named_child_expressions(node,"arguments",self.source),
+                    "owner":owner,"resolution":"syntactic-unresolved","controlContext":call_control_context(node,self.source)}));
             }
             "decorator" => {
                 let expression = text(node, self.source);
@@ -130,7 +250,40 @@ impl Collector<'_> {
             }
             "assignment_expression" | "augmented_assignment_expression" => {
                 let left = field(node, "left", self.source);
-                self.emit(node,"assignment",&format!("{owner}::{left}"),json!({"leftExpression":left,"owner":owner,"resolution":"syntactic-unresolved"}));
+                self.emit(
+                    node,
+                    "assignment",
+                    &format!("{owner}::{left}"),
+                    json!({"leftExpression":left,
+                    "rightExpression":field(node,"right",self.source),"owner":owner,
+                    "resolution":"syntactic-unresolved"}),
+                );
+            }
+            "pair" => {
+                let key = field(node, "key", self.source);
+                self.emit(
+                    node,
+                    "object-entry",
+                    &format!("{owner}::{key}"),
+                    json!({"keyExpression":key,
+                    "valueExpression":field(node,"value",self.source),"owner":owner,
+                    "resolution":"syntactic-unresolved"}),
+                );
+            }
+            "return_statement" => {
+                let mut cursor = node.walk();
+                let expression = node
+                    .named_children(&mut cursor)
+                    .next()
+                    .map(|child| text(child, self.source).to_owned())
+                    .unwrap_or_default();
+                self.emit(
+                    node,
+                    "return",
+                    owner,
+                    json!({"expression":expression,"owner":owner,
+                    "resolution":"syntactic-unresolved"}),
+                );
             }
             "arkui_component_expression" => {
                 self.emit(node, "arkui-component", owner, json!({"owner":owner}));
@@ -197,6 +350,53 @@ mod tests {
             .find(|row| row["kind"] == "property" && row["name"] == "other")
             .unwrap();
         assert_eq!(other["decorators"], json!([]));
+        assert_eq!(other["parameterExpressions"], json!([]));
+    }
+
+    #[test]
+    fn module_references_retain_named_and_aliased_import_bindings() {
+        let source = b"import { webview, router as nav } from '@kit.ArkWeb'; webview.WebviewController.initializeWebEngine(); nav.pushUrl({url:'x'});";
+        let result = analyze("Index.ets", source, "workspace-cut").unwrap();
+        let module = result
+            .rows
+            .iter()
+            .find(|row| row["kind"] == "module-reference")
+            .unwrap();
+        assert_eq!(
+            module["importedBindings"],
+            json!([
+                {"kind":"named","exported":"router","local":"nav"},
+                {"kind":"named","exported":"webview","local":"webview"}
+            ])
+        );
+    }
+    #[test]
+    fn interface_properties_and_member_accesses_are_explicit_facts() {
+        let source = b"interface Receipt { purchaseToken: string } function finish(receipt: Receipt) { return receipt.purchaseToken; }";
+        let result = analyze("Receipt.ts", source, "workspace-cut").unwrap();
+        assert!(result.rows.iter().any(|row| {
+            row["kind"] == "property"
+                && row["name"] == "purchaseToken"
+                && row["owner"] == "Receipt"
+                && row["typeExpression"] == "string"
+        }));
+        assert!(result.rows.iter().any(|row| {
+            row["kind"] == "member-access"
+                && row["property"] == "purchaseToken"
+                && row["objectExpression"] == "receipt"
+                && row["owner"] == "finish"
+        }));
+        let finish = result
+            .rows
+            .iter()
+            .find(|row| row["kind"] == "symbol" && row["symbol"] == "finish")
+            .unwrap();
+        assert_eq!(finish["parameterExpressions"], json!(["receipt: Receipt"]));
+        assert!(result.rows.iter().any(|row| {
+            row["kind"] == "return"
+                && row["owner"] == "finish"
+                && row["expression"] == "receipt.purchaseToken"
+        }));
     }
     #[test]
     fn state_styles_gap_is_fixed_without_breaking_normal_objects() {
@@ -254,10 +454,76 @@ mod tests {
         assert_eq!(calls.len(), 1);
         assert_eq!(calls[0]["targetExpression"], "real");
         assert_eq!(calls[0]["owner"], "A::run");
-        assert!(result
+        assert!(result.rows.iter().any(|r| r["kind"] == "assignment"
+            && r["leftExpression"] == "this.value"
+            && r["rightExpression"] == "1"));
+    }
+    #[test]
+    fn calls_and_object_entries_retain_argument_and_value_expressions() {
+        let result = analyze(
+            "Purchase.ts",
+            b"function finish(order: Order) { api.finish({ token: order.purchaseToken, id: order.id }); }",
+            "cut",
+        )
+        .unwrap();
+        let call = result
             .rows
             .iter()
-            .any(|r| r["kind"] == "assignment" && r["leftExpression"] == "this.value"));
+            .find(|row| row["kind"] == "call" && row["targetExpression"] == "api.finish")
+            .unwrap();
+        assert_eq!(
+            call["argumentExpressions"],
+            json!(["{ token: order.purchaseToken, id: order.id }"])
+        );
+        assert!(result.rows.iter().any(|row| {
+            row["kind"] == "object-entry"
+                && row["keyExpression"] == "token"
+                && row["valueExpression"] == "order.purchaseToken"
+                && row["owner"] == "finish"
+        }));
+        let arrow = analyze(
+            "Arrow.ts",
+            b"class Page { consume = async (purchaseData: string, kind) => { await api.consume({ data: purchaseData }); } }",
+            "cut",
+        )
+        .unwrap();
+        let property = arrow
+            .rows
+            .iter()
+            .find(|row| row["kind"] == "property" && row["name"] == "consume")
+            .unwrap();
+        assert_eq!(
+            property["parameterExpressions"],
+            json!(["purchaseData: string", "kind"])
+        );
+    }
+    #[test]
+    fn calls_retain_syntactic_async_and_cleanup_context() {
+        let result = analyze(
+            "A.ets",
+            b"async function run() { const x = await api.make(); try { await x.use(); } finally { x.release(); } }",
+            "cut",
+        )
+        .unwrap();
+        let call = |target: &str| {
+            result
+                .rows
+                .iter()
+                .find(|row| row["kind"] == "call" && row["targetExpression"] == target)
+                .unwrap()
+        };
+        assert_eq!(call("api.make")["controlContext"]["awaitAncestorCount"], 1);
+        assert_eq!(call("x.use")["controlContext"]["awaitAncestorCount"], 1);
+        assert!(call("x.use")["controlContext"]["controlRegions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["syntaxKind"] == "try_statement"));
+        assert!(call("x.release")["controlContext"]["controlRegions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["syntaxKind"] == "finally_clause"));
     }
     #[test]
     fn whitespace_keeps_ids_and_invalid_syntax_is_evidence() {

@@ -1,0 +1,34 @@
+{
+  "schema": "agentlab.purchase_data_ohostest_reference_observation.v1",
+  "baseRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+  "sourceSetSha256": "39348d2379f90584b29805179740efde203d59958f3c7a3cb29d213c2a5b448c",
+  "referencePatchOnly": true,
+  "upstreamRevisionModified": false,
+  "automaticPromotion": false,
+  "remotePeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+  "remoteWorkspace": "/home/huawei/agentlab-source-builds/payment-feedback-165bcbd-ohostest-ref-v1",
+  "durableEvidenceRoot": "/home/huawei/.agentlab/evidence/purchase-data-ohostest-runtime-59260e2-v1",
+  "awmcpOperations": {
+    "ohosTestBuild": "exec-000000000000041a",
+    "mainBuild": "exec-000000000000041b",
+    "emulatorBootstrap": "exec-0000000000000422",
+    "nativeTest": "exec-0000000000000423",
+    "standardReceipt": "exec-0000000000000427",
+    "emulatorStop": "exec-000000000000042a"
+  },
+  "referencePatchSha256": "48a4acfc3e5809c9fea74986b40ece4eb671a396502b03daec655c04e4f5c444",
+  "mainBuildLogSha256": "87c5f0ee42206a1183a71112f1379db32a2b81927f4cae6d85e7a6f48aa6c31e",
+  "ohosTestBuildLogSha256": "ce708b604fe1b8701675e22a0896272905daad0458bc90c8bcfc0aa5fbc6c730",
+  "aaTestLogSha256": "7712bfb8e80c4afa7a01a30bb595411cf5c518e160d0f67e9afc8901b03c1b4e",
+  "packages": {
+    "app": {"byteLength": 447093, "sha256": "dfd61c2e5a33249aed059192798c449f7ab3a3a44d69b900fdd508978cdda073"},
+    "test": {"byteLength": 1189685, "sha256": "54f89a24825e191a4452264959148e8573c4236f29b15da63acbab6b5b6d58cc"}
+  },
+  "testNames": [
+    "malformedDataDoesNotFinish",
+    "alreadyFinishedPurchaseDoesNotFinishAgain",
+    "pendingPurchaseForwardsExactFinishFields",
+    "missingProductTypeBlocksFinish",
+    "finishRejectionRemainsObservable"
+  ]
+}

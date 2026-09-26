@@ -1,0 +1,6 @@
+schema	agentlab.harmony_ui_scenario.v1
+case	guide-use-motion-dir-sensor-preservation
+wait-text	use-motion-dir-sensor-visible	30	UseMotionDirSensor
+tap	628	1431
+sleep	1000
+assert-no-text	index-cache-two-absent	Cache_two

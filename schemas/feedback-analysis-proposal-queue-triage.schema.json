@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/feedback-analysis-proposal-queue-triage.schema.json",
+  "title": "AgentLab feedback analysis proposal queue triage",
+  "type": "object",
+  "required": [
+    "schema",
+    "status",
+    "queue",
+    "review",
+    "decisions",
+    "denominators",
+    "selectedProposal",
+    "semanticAlignmentVerified",
+    "automaticPromotion",
+    "nextGate"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.feedback_analysis_proposal_queue_triage.v1"},
+    "status": {
+      "enum": ["one-proposal-shortlisted-review-required", "no-semantic-alignment"]
+    },
+    "queue": {
+      "type": "object",
+      "required": ["sha256", "eligibleCandidateCount", "proposalCount"],
+      "properties": {
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "eligibleCandidateCount": {"type": "integer", "minimum": 1},
+        "proposalCount": {"type": "integer", "minimum": 1, "maximum": 10}
+      },
+      "additionalProperties": false
+    },
+    "review": {
+      "type": "object",
+      "required": ["sha256", "reviewer", "authority"],
+      "properties": {
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "reviewer": {"type": "string", "minLength": 1},
+        "authority": {"const": "maintainer-triage-not-case-approval"}
+      },
+      "additionalProperties": false
+    },
+    "decisions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {"$ref": "#/$defs/decision"}
+    },
+    "denominators": {
+      "type": "object",
+      "required": [
+        "reviewedProposalCount",
+        "shortlistedProposalCount",
+        "rejectedProposalCount"
+      ],
+      "properties": {
+        "reviewedProposalCount": {"type": "integer", "minimum": 1},
+        "shortlistedProposalCount": {"type": "integer", "minimum": 0, "maximum": 1},
+        "rejectedProposalCount": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "selectedProposal": {
+      "anyOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/decision"}
+      ]
+    },
+    "semanticAlignmentVerified": {"const": false},
+    "automaticPromotion": {"const": false},
+    "nextGate": {
+      "enum": [
+        "independent-maintainer-review-of-shortlisted-proposal",
+        "select-semantically-related-source-set-or-enrich-feedback-mechanism"
+      ]
+    }
+  },
+  "$defs": {
+    "decision": {
+        "type": "object",
+        "required": [
+          "rank",
+          "proposalSha256",
+          "cutId",
+          "difficultyCandidateId",
+          "mechanism",
+          "verdict",
+          "rationale",
+          "evidence"
+        ],
+        "properties": {
+          "rank": {"type": "integer", "minimum": 1, "maximum": 10},
+          "proposalSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "cutId": {"type": "string", "minLength": 1},
+          "difficultyCandidateId": {"type": "string", "minLength": 1},
+          "mechanism": {"type": "string", "minLength": 1},
+          "verdict": {
+            "enum": [
+              "shortlist-for-independent-review",
+              "reject-semantic-misalignment"
+            ]
+          },
+          "rationale": {"type": "string", "minLength": 20},
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string", "minLength": 1}
+          }
+        },
+        "additionalProperties": false
+      }
+  },
+  "additionalProperties": false
+}

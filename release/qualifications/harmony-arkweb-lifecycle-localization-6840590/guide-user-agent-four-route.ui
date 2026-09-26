@@ -1,0 +1,6 @@
+schema	agentlab.harmony_ui_scenario.v1
+case	guide-user-agent-four-route
+wait-text	user-agent-four-visible	30	UserAgent_four
+tap	628	1606
+sleep	2000
+assert-no-text	index-left-after-route	UserAgent_four

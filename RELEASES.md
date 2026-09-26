@@ -1,5 +1,51 @@
 # Releases
 
+## v0.1.0-alpha.13 candidate
+
+Supersedes the unpublished Alpha.12 cut with a release source identity that is
+resolved as a real Git commit and proven to be an ancestor of the metadata
+checkout. It includes the portable assessment-feedback evidence and bounded
+feedback-to-analysis proposal queue added after Alpha.12: a real two-repository
+run produced 404,308 program facts, 19,374 difficulty candidates, 97 eligible
+cross-repository impact candidates and a deterministic ten-proposal review
+queue. Semantic alignment and automatic promotion remain disabled.
+
+The closure binds release-method source commit
+`4f24f9a7eb1de98cbb0b695f02cf01da03ae26fb`, reuses all 14 selected immutable
+components across 22 assets, and has independently re-observed all 22 assets on
+their immutable GitHub Releases. Its exact-cut Linux Harmony campaign passed
+source-bound ohosTest/Hypium execution, functional Oracle separation and
+functional-pass-gated SmartPerf proxy collection. The result is also retained
+as an exact, portable, review-only recursive-feedback handoff; one performance
+observation remains below the repeatability gate and cannot create a
+performance difficulty candidate. A successor exact analysis at method commit
+`b8aadaadc0739c0ffac9a57717c42c7bf0e2a9b0` produced 404,308 facts, 19,374
+difficulty candidates, 97 eligible cross-repository candidates and ten
+deterministically ranked review proposals. Semantic alignment remains an
+independent maintainer gate. Exact triage rejected all ten proposals: they were
+generic PerformanceAnalysisKit, ArkUI, AbilityKit, Hypium or hvigor contracts,
+while both attempts passed ohosTest/Hypium and only the weak attempt failed the
+payment-authority UI Oracle. No case was promoted; the next loop must use a
+semantically related source set or richer feedback anchors. The release still
+requires tagged clean-install qualification before publication.
+
+## v0.1.0-alpha.12 candidate (withdrawn before publication)
+
+First source-bound lightweight aggregate candidate for the complete public
+AgentLab evaluation method. It includes multi-repository semantic and program
+analysis, recursive difficulty feedback, reviewed and calibrated case
+generation, experimental Linux Harmony emulator execution and experimental
+relative SmartPerf feedback. Absolute power and thermal qualification remain a
+physical-device responsibility, and automatic case or channel promotion stays
+disabled.
+
+The closure reused all 14 selected
+immutable components across 22 registered payload and descriptor assets. New
+binary builds: 0. New binary uploads: 0. This candidate is not yet a published
+tag and must not be published: its later acceptance rebind recorded an
+unresolvable full release Git SHA. Alpha.13 replaces it without rebuilding or
+uploading unchanged components.
+
 ## v0.1.0-alpha.9
 
 Makes install latency observable and the destructive ALD rehearsal reproducible.

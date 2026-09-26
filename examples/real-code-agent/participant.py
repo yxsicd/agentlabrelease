@@ -1,16 +1,21 @@
 """Operator-owned gateway capture and a replaceable Pi participant launcher."""
 import http.server
 import base64
+import hashlib
 import json
 import os
 from pathlib import Path
 import shutil
+import secrets
 import subprocess
 import threading
 import time
 from datetime import datetime, timezone
 import urllib.request
 import urllib.error
+
+
+CONTAINER_GATEWAY_PORT = 18765
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -44,6 +49,12 @@ class Participant:
         self.reasoning_effort = reasoning_effort if reasoning_effort not in (None, '', 'default') else None
         self.active_reasoning_effort = self.reasoning_effort
         self.key = os.environ['AGENTLAB_LM_GATEWAY_KEY']
+        self.runtime_isolated = bool(os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'))
+        self.local_proxy_token = (
+            secrets.token_urlsafe(32)
+            if self.runtime_isolated
+            else 'agentlab-local-test-credential'
+        )
         self.requests = 0
         self.lock = threading.Lock()
         state.mkdir()
@@ -55,7 +66,30 @@ class Participant:
             def log_message(self, *args):
                 pass
 
+            def locally_authorized(self):
+                return (
+                    not owner.runtime_isolated
+                    or self.headers.get('Authorization')
+                    == 'Bearer ' + owner.local_proxy_token
+                )
+
+            def do_GET(self):
+                if self.path != '/__agentlab_runtime_probe':
+                    self.send_error(404)
+                    return
+                if not self.locally_authorized():
+                    self.send_error(401, 'Invalid participant proxy credential')
+                    return
+                self.send_response(204)
+                self.end_headers()
+
             def do_POST(self):
+                if not self.locally_authorized():
+                    self.send_error(401, 'Invalid participant proxy credential')
+                    return
+                if owner.runtime_isolated and self.path != '/v1/chat/completions':
+                    self.send_error(404, 'Participant proxy path is not allowed')
+                    return
                 with owner.lock:
                     owner.requests += 1
                     number = owner.requests
@@ -86,6 +120,7 @@ class Participant:
                 stem.with_suffix('.request.json').write_bytes(raw)
                 wire = json.loads(raw)
                 wire['providerId'] = owner.route
+                wire['model'] = owner.model
                 if owner.active_reasoning_effort:
                     wire['reasoning_effort'] = owner.active_reasoning_effort
                 upstream = json.dumps(wire).encode()
@@ -135,12 +170,18 @@ class Participant:
                                     # Keep observing upstream after participant cancellation.
                                     receipt['clientDisconnected'] = True
 
-        self.server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        bind_host = '0.0.0.0' if self.runtime_isolated else '127.0.0.1'
+        self.server = http.server.ThreadingHTTPServer((bind_host, 0), Handler)
+        self.server.daemon_threads = False
+        self.server.block_on_close = True
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
+        model_base_url = f'http://127.0.0.1:{self.server.server_port}/v1'
+        if self.runtime_isolated:
+            model_base_url = f'http://agentlab-gateway:{CONTAINER_GATEWAY_PORT}/v1'
         models = {'providers': {'agentlab-ci': {
-            'baseUrl': f'http://127.0.0.1:{self.server.server_port}/v1',
-            'api': 'openai-completions', 'apiKey': 'agentlab-local-test-credential',
+            'baseUrl': model_base_url,
+            'api': 'openai-completions', 'apiKey': self.local_proxy_token,
             'compat': {'supportsDeveloperRole': False, 'supportsReasoningEffort': False},
             'models': [{'id': model, 'reasoning': False, 'input': ['text'],
                         'contextWindow': 128000, 'maxTokens': 8192}]}}}
@@ -169,10 +210,12 @@ class Participant:
                   'Briefly describe your change when done.')
         if requirement: prompt += '\nAdditional requirement: '+requirement
         (self.evidence / f'{label}-prompt.txt').write_text(prompt)
+        runtime_config = os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG')
+        session_path = self.state / 'pi-session.jsonl' if runtime_config else self.evidence / 'pi-session.jsonl'
         command = [self.binary, '--print', '--mode', 'json', '--provider', 'agentlab-ci',
                    '--model', self.model, '--thinking', 'off', '--no-extensions',
                    '--no-skills', '--no-context-files',
-                   '--session', str(self.evidence / 'pi-session.jsonl'), prompt]
+                   '--session', str(session_path), prompt]
         if self.implementation == 'mini-swe-agent':
             command = [self.binary, str(Path(__file__).with_name('mini_runner.py')),
                        '--base-url', f'http://127.0.0.1:{self.server.server_port}/v1',
@@ -182,14 +225,28 @@ class Participant:
         # Only the operator-side proxy has the external credential.
         env = {k: os.environ[k] for k in ('PATH', 'LANG', 'LC_ALL', 'TMPDIR') if k in os.environ}
         env.update(HOME=str(self.state.parent), PI_CODING_AGENT_DIR=str(self.state))
+        if runtime_config:
+            env.update(
+                AGENTLAB_PARTICIPANT_RUNTIME_CONFIG=runtime_config,
+                AGENTLAB_PARTICIPANT_RUNTIME_LABEL=label,
+                AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT=os.environ[
+                    'AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'
+                ],
+                AGENTLAB_OPERATOR_GATEWAY_PORT=str(self.server.server_port),
+                DOCKER_CONFIG=os.environ['DOCKER_CONFIG'],
+            )
+            for key in ('DOCKER_HOST', 'DOCKER_CONTEXT'):
+                if key in os.environ:
+                    env[key] = os.environ[key]
         (self.evidence / f'{label}-command.json').write_text(json.dumps(command, indent=2) + '\n')
         lifecycle = {'label': label, 'startedAt': datetime.now(timezone.utc).isoformat(),
                      'captureAuthority': 'operator', 'exitCode': None, 'timedOut': False,
                      'providerReasoningEffort': self.active_reasoning_effort}
         started = time.monotonic()
         turn_error = None
+        turn_result = None
         try:
-            self._run_turn(command, project, env, label, lifecycle)
+            turn_result = self._run_turn(command, project, env, label, lifecycle)
         except RuntimeError as error:
             turn_error = error
         finally:
@@ -236,6 +293,7 @@ class Participant:
         if marker is not None and marker not in source.read_text():
             raise RuntimeError(f'{label}: Agent did not change actual source')
         print(f'{label}: real {self.implementation} turn completed', flush=True)
+        return turn_result
 
     def _run_turn(self, command, project, env, label, lifecycle):
         with (self.evidence / f'{label}-events.jsonl').open('wb') as out, \
@@ -275,6 +333,33 @@ class Participant:
             raise RuntimeError(f'{label}: ' + '; '.join(errors))
         if not any(e.get('type') == 'tool_execution_end' for e in events):
             raise RuntimeError(f'{label}: no completed native tool call')
+        final_messages = [
+            e['message'] for e in events
+            if e.get('type') == 'message_end'
+            and isinstance(e.get('message'), dict)
+            and e['message'].get('role') == 'assistant'
+            and e['message'].get('stopReason') != 'error'
+        ]
+        final_message = final_messages[-1] if final_messages else None
+        final_content = final_message.get('content') if final_message else None
+        if isinstance(final_content, list):
+            final_content = ''.join(
+                row.get('text', '')
+                for row in final_content
+                if isinstance(row, dict) and row.get('type') == 'text'
+            )
+        if final_content is not None and not isinstance(final_content, str):
+            final_content = None
+        lifecycle['finalAssistantMessagePresent'] = final_message is not None
+        lifecycle['finalAssistantTextPresent'] = final_content is not None
+        if final_message is not None:
+            final_bytes = (json.dumps(final_message, ensure_ascii=False, sort_keys=True) + '\n').encode()
+            final_path = self.evidence / f'{label}-final-assistant-message.json'
+            final_path.write_bytes(final_bytes)
+            lifecycle['finalAssistantMessageSha256'] = hashlib.sha256(final_bytes).hexdigest()
+        else:
+            lifecycle['finalAssistantMessageSha256'] = None
+        return {'message': final_message, 'content': final_content}
 
     def close(self):
         self.server.shutdown()

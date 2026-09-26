@@ -1,0 +1,62 @@
+{
+  "schema": "agentlab.performance_calibration.v1",
+  "id": "tutu-retained-memory-64m-v1",
+  "taskId": "tutu-controlled-regression-v1",
+  "harnessRevision": "730a598598e2b611feca0a10d7d6781dfc2d4600",
+  "applicationSource": {
+    "repository": "https://github.com/yxsorg/asrelease.git",
+    "revision": "71fa3710a9e31af33ffb90d031270c11a1dbaab3",
+    "path": "web2atomic/projects/tutu-calibration/webui-as/entry/src/main/ets/pages/Template.ets"
+  },
+  "baseline": {
+    "sourceIdentity": "artifact-sha256:cb28263c81b0e45cb909c6576f377e4ba704b2401c17a8c542ec2df7e9d74164"
+  },
+  "candidate": {
+    "sourceIdentity": "artifact-sha256:e1ff7ee955a3ad2cfe239c721e1c65b7e4087030f26537e79c928d13da34e8a1",
+    "baseSourceIdentity": "artifact-sha256:cb28263c81b0e45cb909c6576f377e4ba704b2401c17a8c542ec2df7e9d74164",
+    "controlledMutation": {
+      "id": "retain-and-touch-64m-v1",
+      "kind": "retained-memory",
+      "bytes": 67108864,
+      "sourcePath": "entry/src/main/ets/pages/Template.ets",
+      "baseSourceFileSha256": "18cec00f2164852403eeef65f96cd0ebfeab08187b83915bc6bb6e2364d48505",
+      "candidateSourceFileSha256": "0126fcdb5d8262ef693dfd994695350bb8f402767fbf256d0defea88f3ac5f80"
+    }
+  },
+  "functionalOracle": {
+    "scenarioId": "tutu-cookie-dismiss",
+    "scenarioSha256": "f5b7d6859e72df78fdcc2cf517bfdff8bdcd3e52093c40943f81a07ec5090afb",
+    "expected": "passed-both"
+  },
+  "environmentIdentity": "hwlinux:emulator-26.0.0.821:harmonyos-7.0.0-phone-x86:codex-phone-7",
+  "performancePolicy": {
+    "id": "emulator-cpu-memory-relative-v1",
+    "sha256": "667c57040484c308bab6c7942bc2638283aa1dd93c3a0c19d11aabe3aae77ef9"
+  },
+  "profileWorkload": {
+    "id": "tutu-scroll-v1",
+    "sha256": "86a52cb852875c4e80a637d3a2921ddd9f14b47f2c8d128b7475f482af72e4c5"
+  },
+  "comparisonSha256": "eb875ee462cfc3ce6cac1dcf73a35cbf1e509f8c14d3e3579c02819e056cee10",
+  "expectedDecision": "performance-regression-candidate",
+  "repeatability": {
+    "status": "reproduced",
+    "minimumCandidateRuns": 2,
+    "candidateRunIds": [
+      "tutu-controlled-regression-candidate-v1",
+      "tutu-controlled-regression-candidate-v2"
+    ],
+    "comparisonSha256s": [
+      "eb875ee462cfc3ce6cac1dcf73a35cbf1e509f8c14d3e3579c02819e056cee10",
+      "707432cefa5db06b5642bb52ace25f68c5e5edeb4c0e33e8025154da27188097"
+    ],
+    "consistentRegressedMetrics": [
+      "appPssKiB"
+    ]
+  },
+  "authority": {
+    "relativePerformance": "smartperf-emulator-proxy",
+    "absolutePowerThermal": "unavailable-on-emulator"
+  },
+  "automaticPromotion": false
+}

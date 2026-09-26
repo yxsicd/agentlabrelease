@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/harmony-assessed-campaign-handoff-v2.schema.json",
+  "title": "AgentLab portable Harmony assessed campaign handoff with predeclared participant experiment",
+  "type": "object",
+  "required": ["schema", "campaignId", "caseId", "sourceSetSha256", "methodRevision", "evaluationCase", "calibration", "attemptCollection", "participantExperimentPlan", "attempts", "automaticPromotion", "nextGate"],
+  "properties": {
+    "schema": {"const": "agentlab.harmony_assessed_campaign_handoff.v2"},
+    "campaignId": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"},
+    "caseId": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"},
+    "sourceSetSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "methodRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "evaluationCase": {"$ref": "#/$defs/file"},
+    "calibration": {"$ref": "#/$defs/file"},
+    "attemptCollection": {"$ref": "#/$defs/file"},
+    "participantExperimentPlan": {"$ref": "#/$defs/file"},
+    "calibrationAuthoring": {
+      "type": "object",
+      "required": ["receiptSha256", "draftManifestSha256", "participantId", "participantSha256", "methodRevision"],
+      "properties": {
+        "receiptSha256": {"$ref": "#/$defs/sha256"},
+        "draftManifestSha256": {"$ref": "#/$defs/sha256"},
+        "participantId": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"},
+        "participantSha256": {"$ref": "#/$defs/sha256"},
+        "methodRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      },
+      "additionalProperties": false
+    },
+    "attempts": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["attemptId", "participantId", "producerRun", "assessment"],
+        "properties": {
+          "attemptId": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"},
+          "participantId": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"},
+          "producerRun": {
+            "oneOf": [
+              {"type": "integer", "minimum": 1},
+              {"type": "string", "pattern": "^[1-9][0-9]*$"}
+            ]
+          },
+          "assessment": {
+            "type": "object",
+            "required": ["path", "summary", "decisionPackage", "finalSourceState", "workspace"],
+            "properties": {
+              "path": {"$ref": "#/$defs/relativePath"},
+              "summary": {"$ref": "#/$defs/file"},
+              "decisionPackage": {"$ref": "#/$defs/file"},
+              "finalSourceState": {"$ref": "#/$defs/file"},
+              "workspace": {
+                "type": "object",
+                "required": ["path", "treeSha256", "fileCount"],
+                "properties": {
+                  "path": {"$ref": "#/$defs/relativePath"},
+                  "treeSha256": {"$ref": "#/$defs/sha256"},
+                  "fileCount": {"type": "integer", "minimum": 1}
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "automaticPromotion": {"const": false},
+    "nextGate": {"const": "resolve-on-qualified-harmony-host"}
+  },
+  "$defs": {
+    "relativePath": {"type": "string", "minLength": 1, "not": {"pattern": "(^/|(^|/)\\.\\.(/|$))"}},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "file": {
+      "type": "object",
+      "required": ["path", "sha256", "byteLength"],
+      "properties": {
+        "path": {"$ref": "#/$defs/relativePath"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "byteLength": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

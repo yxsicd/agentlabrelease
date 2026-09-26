@@ -1,0 +1,249 @@
+{
+  "aliasResolutionComplete": false,
+  "allowsCaseContract": false,
+  "automaticPromotion": false,
+  "behaviorOracleVerified": false,
+  "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "contracts": [
+    {
+      "authority": "exact-git-blob-set",
+      "contractId": "cordova-consume-owned-purchase",
+      "externalSinkContractResolved": true,
+      "files": [
+        {
+          "contentSha256": "1a98dd1c587b4d9fba5720a17a34e30703ee15f3294430e9c14e75ff65741757",
+          "exactSnippets": [
+            {
+              "occurrences": 1,
+              "sha256": "04f6ff398a7d93f47f89cfd9e3981aa10ba454ba251db98494e580f17bffb0ec"
+            },
+            {
+              "occurrences": 1,
+              "sha256": "f8c203f5826f9bc1fabf4093f98e48f7159cfa7eeb25a59776accf98d0ef60c0"
+            }
+          ],
+          "gitBlobOid": "0d551406043aad6e854acc389acea199c5533eaa",
+          "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+          "repositoryId": "hms-cordova-iap",
+          "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+        },
+        {
+          "contentSha256": "bc24c190a52a742f20db61ddbd2e184fff3ccdf8d96c81af1d77c4d56033b2dd",
+          "exactSnippets": [
+            {
+              "occurrences": 1,
+              "sha256": "aca2b7092a422901ab7d7a8b74f51c6d3c07daa4482cabd14903b32387fd0f2f"
+            },
+            {
+              "occurrences": 1,
+              "sha256": "1a35d70d89360b3eaa9ef4c13826d9a1d378f83525c95b88787e694fa2da383b"
+            },
+            {
+              "occurrences": 1,
+              "sha256": "a761248f54984bc3beb81de5d22a6ad2382cb0fe69882573352a4fe6a5ebd315"
+            }
+          ],
+          "gitBlobOid": "fc07fb9c10b276d63a157f1631fb99d4ab8a47b2",
+          "path": "cordova-plugin-hms-iap/types/HMSInAppPurchases.d.ts",
+          "repositoryId": "hms-cordova-iap",
+          "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+        },
+        {
+          "contentSha256": "2f61917bffa5d48d8a6e3521b788e50bb73a49217ffb0fd4f3b0d07553207893",
+          "exactSnippets": [
+            {
+              "occurrences": 1,
+              "sha256": "56cd486abd1351879aed281c876802212dcdc5d9ecd75c58eddc2d971bbb2086"
+            },
+            {
+              "occurrences": 1,
+              "sha256": "3cbd7f6a90016064b90546c74aad438abb312b43b47d3be5a1566cb49547392b"
+            }
+          ],
+          "gitBlobOid": "ca404faf2023271881c79ff7b53b668cc71f17ea",
+          "path": "cordova-plugin-hms-iap/src/www/HMSInAppPurchases.ts",
+          "repositoryId": "hms-cordova-iap",
+          "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+        },
+        {
+          "contentSha256": "7cf5a8a8116f23c6b1030c7e22b337b1086143c4408302a82f3f159d36868e69",
+          "exactSnippets": [
+            {
+              "occurrences": 1,
+              "sha256": "97878d3bb1740a446d2dfc2e421d7a73a5c68783b72d4e49671805619eaef33f"
+            }
+          ],
+          "gitBlobOid": "c77c37762b8a70e8168b9bcf79a6f02c577916a1",
+          "path": "cordova-plugin-hms-iap/ionic-native/index.ts",
+          "repositoryId": "hms-cordova-iap",
+          "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+        }
+      ],
+      "receiverBinding": {
+        "property": "iap",
+        "typeExpression": "HMSInAppPurchases"
+      },
+      "repositoryId": "hms-cordova-iap",
+      "requestField": {
+        "field": "inAppPurchaseData",
+        "interface": "ConsumeOwnedPurchaseReq",
+        "typeExpression": "string"
+      },
+      "selectedSourceElementType": "string",
+      "signature": {
+        "callable": "consumeOwnedPurchase",
+        "parameterName": "consumeOwnedPurchaseReq",
+        "parameterType": "ConsumeOwnedPurchaseReq",
+        "returnType": "Promise<ConsumeOwnedPurchaseResult>"
+      },
+      "sinkCallFactId": "ast-57808ee67f2e567c08f227d5",
+      "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9",
+      "sourceToRequestTypeCompatible": true,
+      "sourceType": {
+        "field": "inAppPurchaseDataList",
+        "interface": "OwnedPurchasesResult",
+        "typeExpression": "string[]"
+      },
+      "targetExpression": "this.iap.consumeOwnedPurchase"
+    },
+    {
+      "asset": {
+        "archiveFormat": "tar-zstd-long31",
+        "archiveSha256": "8fc2199afaea5055c6a3ff762b7b58a9475c5ff7b6c30285336014dc647927c2",
+        "assetId": "harmony-linux-x64-6.1.1.300",
+        "releaseTag": "harmony-linux-x64-6.1.1.300",
+        "releaseUrl": "https://github.com/yxsicd/agentlabrelease/releases/tag/harmony-linux-x64-6.1.1.300"
+      },
+      "authority": "exact-sdk-archive-member-set",
+      "contractId": "harmony-finish-purchase",
+      "externalSinkContractResolved": true,
+      "members": [
+        {
+          "contentSha256": "180980ea572ce1e451d56b79e6fd74940c2ea5ca50de66914b56be323213328e",
+          "exactSnippets": [
+            {
+              "occurrences": 1,
+              "sha256": "4cf652e91c118e8181ea169e31e601319603aec7dbdb9529175657b9109dc93d"
+            },
+            {
+              "occurrences": 1,
+              "sha256": "365c247443267233bfbe1a32f23a4ee1ef53cf008e7f31219416b8db97aaeae3"
+            }
+          ],
+          "path": "./sdk/default/hms/ets/kits/@kit.IAPKit.d.ts"
+        },
+        {
+          "contentSha256": "7ec65708eef67218489fece0013307f84693e73487d368ba95398d93a1e42687",
+          "exactSnippets": [
+            {
+              "occurrences": 1,
+              "sha256": "009225f08e8c79f6dd99e7d5880d103cd0a15ba652ade97e9cd98547c71b15c6"
+            }
+          ],
+          "path": "./sdk/default/hms/ets/build-tools/ets-loader/kit_configs/@kit.IAPKit.json"
+        },
+        {
+          "contentSha256": "f92bb3d7dc8ac9ae62e29db19aa078c249e6d84ac789aa1bdec8dfda5abffd24",
+          "exactSnippets": [
+            {
+              "occurrences": 1,
+              "sha256": "3fa2695e84158580f8669916c61586f54aaea2ad3fa06ad7680dadb5729e2374"
+            },
+            {
+              "occurrences": 1,
+              "sha256": "5a1066d4ed6a3ca9a02801fc7d38a341b59e38a309f09f47007c36aeed2de9ef"
+            },
+            {
+              "occurrences": 1,
+              "sha256": "a158427672d9d877649f387b2e0e0330895cdd140d4bf9c7c18389abd26a5a91"
+            }
+          ],
+          "path": "./sdk/default/hms/ets/api/@hms.core.iap.d.ts"
+        }
+      ],
+      "moduleBinding": {
+        "kitConfigMember": "./sdk/default/hms/ets/build-tools/ets-loader/kit_configs/@kit.IAPKit.json",
+        "kitDeclarationMember": "./sdk/default/hms/ets/kits/@kit.IAPKit.d.ts",
+        "sourceDeclaration": "@hms.core.iap.d.ts",
+        "sourceDeclarationMember": "./sdk/default/hms/ets/api/@hms.core.iap.d.ts",
+        "sourceModule": "@hms.core.iap",
+        "symbol": "iap"
+      },
+      "repositoryId": "harmony-iap-client",
+      "requestType": {
+        "fields": [
+          {
+            "field": "productType",
+            "typeExpression": "ProductType"
+          },
+          {
+            "field": "purchaseToken",
+            "typeExpression": "string"
+          },
+          {
+            "field": "purchaseOrderId",
+            "typeExpression": "string"
+          }
+        ],
+        "interface": "FinishPurchaseParameter"
+      },
+      "signature": {
+        "callable": "finishPurchase",
+        "contextType": "common.UIAbilityContext",
+        "parameterIndex": 1,
+        "parameterName": "parameter",
+        "parameterType": "FinishPurchaseParameter",
+        "returnType": "Promise<void>"
+      },
+      "sinkCallFactId": "ast-a284ab0b32730a73790fa6bc",
+      "targetExpression": "iap.finishPurchase"
+    }
+  ],
+  "externalCallContractsResolved": true,
+  "externalSinkCount": 2,
+  "originalUnresolvedCount": 6,
+  "planSha256": "23b41ad2d226bdad5b6dc9e5e049309f461ca8aa26dd94280873e863e1d49e45",
+  "programAnalysisSha256": "78ee3b01d0594975877daefd171a07f7a317b02b6673c22f6b3307fb47e661a3",
+  "reachabilityAndDominanceResolved": false,
+  "remainingExternalSinkCount": 0,
+  "remainingUnresolved": [
+    {
+      "class": "parameter-type",
+      "factId": "ast-377c564300cbf4a32df9a8a2",
+      "id": "untyped-parameter:hms-cordova-iap:ast-377c564300cbf4a32df9a8a2:1",
+      "reason": "The exact local parameter has no source type annotation.",
+      "repositoryId": "hms-cordova-iap"
+    },
+    {
+      "class": "alias-and-object-identity",
+      "factId": "ast-6f8ae557023209f612519f6b",
+      "id": "member-alias:hms-cordova-iap:ast-6f8ae557023209f612519f6b",
+      "reason": "A member assignment is exact, but object identity and later aliases are not resolved.",
+      "repositoryId": "hms-cordova-iap"
+    },
+    {
+      "class": "alias-and-object-identity",
+      "factId": "ast-67a6cdf22ef18b8f786be961",
+      "id": "template-object-identity:hms-cordova-iap:ast-67a6cdf22ef18b8f786be961",
+      "reason": "The template call is exact, but the rendered object identity is not proven to be the earlier assigned object.",
+      "repositoryId": "hms-cordova-iap"
+    },
+    {
+      "class": "control-flow",
+      "id": "global:reachability-dominance-exception-flow",
+      "reason": "The bounded facts do not establish runtime reachability, dominance, exception flow, or callback scheduling."
+    }
+  ],
+  "remainingUnresolvedCount": 4,
+  "resolvedExternalSinkCount": 2,
+  "resolvedUnresolvedIds": [
+    "external-sink-signature:harmony-iap-client:ast-a284ab0b32730a73790fa6bc",
+    "external-sink-signature:hms-cordova-iap:ast-57808ee67f2e567c08f227d5"
+  ],
+  "reviewPacketSha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
+  "schema": "agentlab.external_sink_contract_qualification.v2",
+  "semanticAlignmentVerified": false,
+  "sourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
+  "status": "external-sink-contracts-qualified-review-required",
+  "typeResolutionComplete": false
+}

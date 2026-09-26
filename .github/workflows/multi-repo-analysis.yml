@@ -1,0 +1,156 @@
+name: Multi-repository exact analysis
+on:
+  workflow_dispatch:
+    inputs:
+      source_spec_json:
+        description: Exact agentlab.multi_repo_source_spec.v1 JSON with public HTTPS repositories and 40-character commits
+        required: true
+        type: string
+      feedback_handoff_path:
+        description: Optional committed release/qualifications feedback handoff path
+        required: false
+        default: ""
+        type: string
+      feedback_candidate_id:
+        description: Required candidate id when feedback_handoff_path is supplied
+        required: false
+        default: ""
+        type: string
+      feedback_semantic_selection_json:
+        description: Required exact agentlab.feedback_semantic_source_selection_claim.v1 JSON when feedback_handoff_path is supplied
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/multi-repo-analysis
+      SOURCE_SPEC_JSON: ${{ inputs.source_spec_json }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Materialize exact public Git sources
+        id: sources
+        run: |
+          mkdir -p "$AGENTLAB_ROOT"
+          python3 - <<'PY'
+          import os, pathlib
+          pathlib.Path(os.environ["AGENTLAB_ROOT"], "source-spec-input.json").write_text(
+              os.environ["SOURCE_SPEC_JSON"] + "\n", encoding="utf-8"
+          )
+          PY
+          python3 scripts/prepare-multi-repo-analysis-sources.py \
+            --spec "$AGENTLAB_ROOT/source-spec-input.json" \
+            --output "$AGENTLAB_ROOT/source"
+          python3 scripts/prefetch-multi-repo-analysis-blobs.py \
+            --manifest "$AGENTLAB_ROOT/source/manifest.json" \
+            --output "$AGENTLAB_ROOT/source/source-prefetch.json"
+          echo "sha256=$(sha256sum "$AGENTLAB_ROOT/source/source-spec.json" | cut -d' ' -f1)" \
+            >> "$GITHUB_OUTPUT"
+      - name: Bind optional feedback to this exact analysis request
+        env:
+          FEEDBACK_HANDOFF_PATH: ${{ inputs.feedback_handoff_path }}
+          FEEDBACK_CANDIDATE_ID: ${{ inputs.feedback_candidate_id }}
+          FEEDBACK_SEMANTIC_SELECTION_JSON: ${{ inputs.feedback_semantic_selection_json }}
+        run: |
+          if [[ -z "$FEEDBACK_HANDOFF_PATH" && -z "$FEEDBACK_CANDIDATE_ID" && -z "$FEEDBACK_SEMANTIC_SELECTION_JSON" ]]; then
+            exit 0
+          fi
+          if [[ -z "$FEEDBACK_HANDOFF_PATH" || -z "$FEEDBACK_CANDIDATE_ID" || -z "$FEEDBACK_SEMANTIC_SELECTION_JSON" ]]; then
+            echo "feedback_handoff_path, feedback_candidate_id and feedback_semantic_selection_json must be supplied together" >&2
+            exit 1
+          fi
+          case "$FEEDBACK_HANDOFF_PATH" in
+            release/qualifications/*/summary.json) ;;
+            *) echo "feedback handoff must be a committed qualification summary" >&2; exit 1 ;;
+          esac
+          qualification_root="$(dirname "$GITHUB_WORKSPACE/$FEEDBACK_HANDOFF_PATH")"
+          python3 - <<'PY'
+          import os, pathlib
+          pathlib.Path(os.environ["AGENTLAB_ROOT"], "feedback-semantic-source-selection-claim.json").write_text(
+              os.environ["FEEDBACK_SEMANTIC_SELECTION_JSON"] + "\n", encoding="utf-8"
+          )
+          PY
+          python3 scripts/prepare-feedback-semantic-source-selection.py \
+            --handoff "$GITHUB_WORKSPACE/$FEEDBACK_HANDOFF_PATH" \
+            --prior-case "$qualification_root/prior-case.json" \
+            --feedback "$qualification_root/assessment-feedback-candidates.json" \
+            --manifest "$AGENTLAB_ROOT/source/manifest.json" \
+            --claim "$AGENTLAB_ROOT/feedback-semantic-source-selection-claim.json" \
+            --output "$AGENTLAB_ROOT/feedback-semantic-source-selection.json"
+          python3 scripts/prepare-feedback-analysis-request.py \
+            --handoff "$GITHUB_WORKSPACE/$FEEDBACK_HANDOFF_PATH" \
+            --prior-case "$qualification_root/prior-case.json" \
+            --feedback "$qualification_root/assessment-feedback-candidates.json" \
+            --source-spec "$AGENTLAB_ROOT/source/source-spec.json" \
+            --semantic-selection "$AGENTLAB_ROOT/feedback-semantic-source-selection.json" \
+            --feedback-candidate-id "$FEEDBACK_CANDIDATE_ID" \
+            --next-method-revision "$GITHUB_SHA" \
+            --output "$AGENTLAB_ROOT/feedback-analysis-request.json"
+          sha256sum "$AGENTLAB_ROOT/feedback-analysis-request.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Restore rebuildable AST cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ env.AGENTLAB_ROOT }}/ast-cache
+          key: agentlab-ast-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'crates/agentlab_code_analysis/build.rs', 'crates/agentlab_code_analysis/src/lib.rs', 'crates/agentlab_code_analysis/src/multi_repo.rs', 'crates/agentlab_code_analysis/Cargo.toml', 'crates/agentlab_code_analysis/grammar/**') }}-${{ steps.sources.outputs.sha256 }}
+          restore-keys: |
+            agentlab-ast-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'crates/agentlab_code_analysis/build.rs', 'crates/agentlab_code_analysis/src/lib.rs', 'crates/agentlab_code_analysis/src/multi_repo.rs', 'crates/agentlab_code_analysis/Cargo.toml', 'crates/agentlab_code_analysis/grammar/**') }}-
+      - name: Analyze only committed bytes at exact revisions
+        run: |
+          cargo build --locked -p agentlab_code_analysis --bin agentlab-multi-repo-analysis
+          target/debug/agentlab-multi-repo-analysis \
+            --cache-dir "$AGENTLAB_ROOT/ast-cache" \
+            --cache-components \
+            "$AGENTLAB_ROOT/source/manifest.json" \
+            "$AGENTLAB_ROOT/source/analysis" \
+            2> >(tee "$AGENTLAB_ROOT/source/analysis-cache-execution.json" >&2)
+          python3 scripts/multi-repo-analysis-run.py create \
+            --root "$AGENTLAB_ROOT/source" \
+            --method-revision "$GITHUB_SHA" \
+            --output "$AGENTLAB_ROOT/source/analysis-run.json"
+          python3 scripts/multi-repo-analysis-run.py validate \
+            --root "$AGENTLAB_ROOT/source" \
+            --run "$AGENTLAB_ROOT/source/analysis-run.json"
+          sha256sum "$AGENTLAB_ROOT/source/analysis-run.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Prepare bounded feedback analysis-cut review queue
+        if: inputs.feedback_handoff_path != ''
+        env:
+          FEEDBACK_HANDOFF_PATH: ${{ inputs.feedback_handoff_path }}
+        run: |
+          qualification_root="$(dirname "$GITHUB_WORKSPACE/$FEEDBACK_HANDOFF_PATH")"
+          python3 scripts/prepare-feedback-analysis-proposals.py \
+            --request "$AGENTLAB_ROOT/feedback-analysis-request.json" \
+            --handoff "$GITHUB_WORKSPACE/$FEEDBACK_HANDOFF_PATH" \
+            --prior-case "$qualification_root/prior-case.json" \
+            --feedback "$qualification_root/assessment-feedback-candidates.json" \
+            --analysis-receipt "$AGENTLAB_ROOT/source/analysis/multi_repo_analysis.json" \
+            --analysis-run "$AGENTLAB_ROOT/source/analysis-run.json" \
+            --difficulty "$AGENTLAB_ROOT/source/analysis/difficulty_candidates.json" \
+            --semantic-selection "$AGENTLAB_ROOT/feedback-semantic-source-selection.json" \
+            --max-candidates 10 \
+            --output "$AGENTLAB_ROOT/feedback-analysis-proposals"
+          sha256sum "$AGENTLAB_ROOT/feedback-analysis-proposals/index.json" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve portable specification and complete analysis evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-analysis
+          if-no-files-found: error
+          include-hidden-files: true
+          path: |
+            ${{ env.AGENTLAB_ROOT }}/source/source-spec.json
+            ${{ env.AGENTLAB_ROOT }}/source/manifest.json
+            ${{ env.AGENTLAB_ROOT }}/source/source-prefetch.json
+            ${{ env.AGENTLAB_ROOT }}/source/analysis-cache-execution.json
+            ${{ env.AGENTLAB_ROOT }}/source/analysis-run.json
+            ${{ env.AGENTLAB_ROOT }}/source/analysis/
+            ${{ env.AGENTLAB_ROOT }}/feedback-analysis-request.json
+            ${{ env.AGENTLAB_ROOT }}/feedback-semantic-source-selection-claim.json
+            ${{ env.AGENTLAB_ROOT }}/feedback-semantic-source-selection.json
+            ${{ env.AGENTLAB_ROOT }}/feedback-analysis-proposals/

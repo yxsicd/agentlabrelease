@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/feedback-semantic-source-selection-claim.schema.json",
+  "title": "Feedback semantic source selection claim",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "sourceSetSha256",
+    "priorCaseSha256",
+    "feedbackEvidenceSha256",
+    "feedbackCandidateId",
+    "reviewer",
+    "claims",
+    "automaticPromotion"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.feedback_semantic_source_selection_claim.v1"},
+    "sourceSetSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "priorCaseSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "feedbackEvidenceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "feedbackCandidateId": {"type": "string", "minLength": 1},
+    "reviewer": {"type": "string", "minLength": 1},
+    "claims": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 32,
+      "items": {"$ref": "#/$defs/claim"}
+    },
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caseAnchor", "repositoryId", "path", "sourceSymbol", "rationale"],
+      "properties": {
+        "caseAnchor": {"type": "string", "minLength": 1},
+        "repositoryId": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "sourceSymbol": {"type": "string", "minLength": 3, "maxLength": 256},
+        "rationale": {"type": "string", "minLength": 30}
+      }
+    }
+  }
+}

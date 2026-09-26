@@ -1,0 +1,159 @@
+{
+  "allowsCaseContract": false,
+  "automaticPromotion": false,
+  "basePacket": {
+    "coveredRepositoryCount": 2,
+    "domainFactCount": 5,
+    "domainIdentifierContract": {
+      "normalizedIdentifier": "purchase-data",
+      "tokens": [
+        "purchase",
+        "data"
+      ]
+    },
+    "packetMethodRevision": "17d00b365b9b88ed3faa518ae6bf0f69ea31a0e7",
+    "relativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/review-packets/purchase-data.json",
+    "schema": "agentlab.multi_repo_candidate_review_packet.v5",
+    "sha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
+    "status": "independent-semantic-review-required"
+  },
+  "behaviorOracleVerified": false,
+  "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "candidateSha256": "39d7f18d16acd47f8595c69a1a09877e460edd95926bb2b612f87fbf6cfc7b42",
+  "evidenceAttachments": {
+    "bounded-expression-flow-program-analysis": {
+      "exactDependencyCount": 7,
+      "flowCount": 2,
+      "flowProposalSha256": "481f8b283f0cfbc6f45cff17da52114b9d535f9b92221c82b22109030c2a3ce5",
+      "flowReplayExact": true,
+      "localCallTargetCount": 3,
+      "relativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/bounded-expression-flow-program-analysis.json",
+      "repositoryCount": 2,
+      "schema": "agentlab.bounded_expression_flow_program_analysis.v1",
+      "sha256": "78ee3b01d0594975877daefd171a07f7a317b02b6673c22f6b3307fb47e661a3",
+      "status": "bounded-program-flow-partially-resolved-review-required",
+      "typedParameterMappingCount": 2,
+      "unresolvedCount": 6,
+      "untypedParameterMappingCount": 1
+    },
+    "bounded-expression-flow-proposal": {
+      "allBoundedPathsEstablished": true,
+      "edgeCount": 11,
+      "flowCount": 2,
+      "planRelativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/bounded-expression-flow-plan.json",
+      "planSha256": "20474b8e485abfafdceb5d904ae49ef3432c3e27901cc10240991a9b424a048b",
+      "relativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/bounded-expression-flow-proposal.json",
+      "repositoryCount": 2,
+      "schema": "agentlab.bounded_expression_flow_proposal.v1",
+      "sha256": "481f8b283f0cfbc6f45cff17da52114b9d535f9b92221c82b22109030c2a3ce5",
+      "sourceBridgeCount": 1,
+      "status": "bounded-syntactic-flow-proposal-review-required"
+    },
+    "build-qualification": {
+      "environmentIdentity": "hwlinux:Linux-6.8.0-138-generic:x86_64",
+      "failedRootCount": 2,
+      "qualifiedRootCount": 1,
+      "relativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/build-qualification.json",
+      "schema": "agentlab.multi_repo_source_build_qualification.v1",
+      "sha256": "fa23945f7aae9027286e97409d67821959361397e0721602dd55639ee68c28d7",
+      "sourceProjectBoundaryStatus": "partially-build-qualified",
+      "status": "partial-build-qualified-review-required"
+    },
+    "expression-fact-qualification": {
+      "analyzerDigest": "b390b1f92c1a8e0ea944a808b72d2eab984d2ad70f704736240cb08d8fe25010",
+      "grammarDigest": "1225ddf76255933de3a9beb660185d270e901491a706e6cd0697146eade2b2b1",
+      "relativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/expression-fact-qualification.json",
+      "repositoryCount": 2,
+      "schema": "agentlab.multi_repo_expression_fact_qualification.v1",
+      "selectedExpressionFactCount": 70,
+      "sha256": "2fae8c5e3d0ce1fdf9a3bc3c7103845eded51a25414401bebb549739c1a7bb11",
+      "status": "expression-facts-qualified-dataflow-unresolved"
+    }
+  },
+  "packetMethodRevision": "5205af63f9424a85a5a4c1b383ddd935d95dd8a7",
+  "reviewDecisionContract": {
+    "allowedVerdicts": [
+      "advance-to-case-contract",
+      "defer-for-more-evidence",
+      "reject-as-noncoherent"
+    ],
+    "requiredEvidenceAttachmentIds": [
+      "bounded-expression-flow-program-analysis",
+      "bounded-expression-flow-proposal",
+      "build-qualification",
+      "expression-fact-qualification"
+    ],
+    "requiredQuestionIds": [
+      "shared-behavior",
+      "observable-gap",
+      "prompt-completeness",
+      "repair-oracle",
+      "preservation-oracle",
+      "environment",
+      "cross-repo-necessity"
+    ],
+    "requiredRiskIds": [
+      "partial-program-flow-is-not-semantics",
+      "issue-contract-absent",
+      "build-boundary-partially-qualified",
+      "oracle-unqualified"
+    ],
+    "reviewerMustBeIndependentOfPacketGenerator": true,
+    "schema": "agentlab.multi_repo_candidate_semantic_review.v1"
+  },
+  "reviewQuestions": [
+    {
+      "id": "shared-behavior",
+      "question": "Do the exact source facts and bounded paths express one coherent cross-repository purchase-data behavior rather than merely sharing an identifier?"
+    },
+    {
+      "id": "observable-gap",
+      "question": "Is there an issue-level defect or extension whose pre-change failure is observable in every required repository?"
+    },
+    {
+      "id": "prompt-completeness",
+      "question": "Can the participant-facing prompt state every required behavior without revealing the repair?"
+    },
+    {
+      "id": "repair-oracle",
+      "question": "Can independent FAIL_TO_PASS checks accept structurally distinct valid repairs?"
+    },
+    {
+      "id": "preservation-oracle",
+      "question": "Can independent PASS_TO_PASS checks cover existing repository-specific behavior?"
+    },
+    {
+      "id": "environment",
+      "question": "Do the passed Harmony build and the two explicit Cordova build-contract failures define a reproducible environment boundary for the proposed task?"
+    },
+    {
+      "id": "cross-repo-necessity",
+      "question": "Does the proposed behavior require coordinated multi-repository reasoning rather than two unrelated single-repository tasks?"
+    }
+  ],
+  "risks": [
+    {
+      "id": "partial-program-flow-is-not-semantics",
+      "statement": "Unique local targets and exact token dependencies are verified, but unresolved types, object identity, external SDK contracts and control flow still prevent a semantic or behavioral claim."
+    },
+    {
+      "id": "issue-contract-absent",
+      "statement": "No participant-visible issue, repair behavior or preservation behavior has been approved."
+    },
+    {
+      "id": "build-boundary-partially-qualified",
+      "statement": "The Harmony root builds, but the Cordova package and Ionic example retain two exact upstream build-contract failures."
+    },
+    {
+      "id": "oracle-unqualified",
+      "statement": "No baseline, reference, alternative or meaningful-wrong calibration has executed for this candidate."
+    }
+  ],
+  "schema": "agentlab.multi_repo_candidate_review_packet.v7",
+  "selectionRoles": [
+    "feedback-analysis-queue-shortlist"
+  ],
+  "semanticAlignmentVerified": false,
+  "sourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
+  "status": "independent-semantic-review-required"
+}

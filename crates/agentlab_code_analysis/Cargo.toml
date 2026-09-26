@@ -17,6 +17,22 @@ path = "src/harmony_materialize.rs"
 name = "agentlab-source-probe"
 path = "src/source_probe.rs"
 
+[[bin]]
+name = "agentlab-multi-repo-analysis"
+path = "src/multi_repo.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-runtime-plan"
+path = "src/purchase_data_runtime_plan.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-ohostest-proposal"
+path = "src/purchase_data_ohostest_proposal.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-ohostest-reference-qualification"
+path = "src/purchase_data_ohostest_reference_qualification.rs"
+
 [dependencies]
 tree-sitter = "=0.27.0"
 tree-sitter-language = "=0.1.8"

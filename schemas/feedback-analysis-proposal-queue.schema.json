@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/feedback-analysis-proposal-queue.schema.json",
+  "title": "Bounded review queue for feedback-derived analysis-cut proposals",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "requestSha256", "feedbackHandoffSha256", "analysisRunSha256", "analysisReceiptSha256", "difficultyEvidenceSha256", "feedbackCandidateId", "eligibleCandidateCount", "proposalCount", "selectionPolicy", "proposals", "automaticPromotion", "nextGate"],
+  "properties": {
+    "schema": {"const": "agentlab.feedback_analysis_proposal_queue.v1"},
+    "status": {"const": "maintainer-review-required"},
+    "requestSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "feedbackHandoffSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "analysisRunSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "analysisReceiptSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "difficultyEvidenceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "semanticSourceSelectionSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "feedbackCandidateId": {"type": "string", "minLength": 1},
+    "eligibleCandidateCount": {"type": "integer", "minimum": 1},
+    "proposalCount": {"type": "integer", "minimum": 1, "maximum": 20},
+    "selectionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["order", "limit", "semanticAlignmentVerified"],
+      "properties": {
+        "order": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "string"}},
+        "limit": {"type": "integer", "minimum": 1, "maximum": 20},
+        "semanticAlignmentVerified": {"const": false}
+      }
+    },
+    "proposals": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rank", "difficultyCandidateId", "cutId", "proposalFile", "proposalSha256", "affectedRepositoryCount", "affectedFileCount", "selectionAuthority"],
+        "properties": {
+          "rank": {"type": "integer", "minimum": 1, "maximum": 20},
+          "difficultyCandidateId": {"type": "string", "minLength": 1},
+          "cutId": {"type": "string", "pattern": "^feedback-analysis-cut-[0-9a-f]{20}$"},
+          "proposalFile": {"type": "string", "pattern": "^proposal-[0-9]{2}\\.json$"},
+          "proposalSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "affectedRepositoryCount": {"type": "integer", "minimum": 2},
+          "affectedFileCount": {"type": "integer", "minimum": 1},
+          "selectionAuthority": {"const": "deterministic-review-queue-not-semantic-approval"}
+        }
+      }
+    },
+    "automaticPromotion": {"const": false},
+    "nextGate": {"const": "independent-maintainer-review-of-one-proposal"}
+  }
+}

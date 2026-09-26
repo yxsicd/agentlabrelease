@@ -59,21 +59,32 @@ download() {
 release_url="https://github.com/${repo}/releases/download"
 lock="${downloads}/environment-lock.json"
 publication="${downloads}/publication.json"
-if [[ -n "${AGENTLAB_COMPOSITION_DIR:-}" ]]; then
-  cp "${AGENTLAB_COMPOSITION_DIR}/environment-lock.json" "${lock}"
-  cp "${AGENTLAB_COMPOSITION_DIR}/publication.json" "${publication}"
+release_closure="${AGENTLAB_RELEASE_CLOSURE:-}"
+if [[ -n "${release_closure}" ]]; then
+  materialized="${root}/closure-materialized"
+  python3 scripts/materialize-release-closure.py \
+    --closure "${release_closure}" \
+    --registry release/components/registry.json \
+    --output "${materialized}"
+  lock="${materialized}/environment-lock.json"
+  agentlabctl="${materialized}/agentlabctl"
+  source_revision="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["sourceRevision"])' "${lock}")"
 else
-  download "${release_url}/${channel}/agentlab-${channel}-publication.json" "${publication}"
-  lock_url="$(python3 - "$publication" "${release_url}/${channel}/agentlab-${channel}-publication.json" <<'PYURL'
+  if [[ -n "${AGENTLAB_COMPOSITION_DIR:-}" ]]; then
+    cp "${AGENTLAB_COMPOSITION_DIR}/environment-lock.json" "${lock}"
+    cp "${AGENTLAB_COMPOSITION_DIR}/publication.json" "${publication}"
+  else
+    download "${release_url}/${channel}/agentlab-${channel}-publication.json" "${publication}"
+    lock_url="$(python3 - "$publication" "${release_url}/${channel}/agentlab-${channel}-publication.json" <<'PYURL'
 import json, sys, urllib.parse
 p=json.load(open(sys.argv[1]))
 print(urllib.parse.urljoin(sys.argv[2], p['environmentLockUrl']) if p.get('environmentLockUrl') else sys.argv[2].replace('-publication.json', '-environment-lock.json'))
 PYURL
-  )"
-  download "$lock_url" "${lock}"
-fi
+    )"
+    download "$lock_url" "${lock}"
+  fi
 
-python3 - "${repo}" "${channel}" "${lock}" "${publication}" <<'PY'
+  python3 - "${repo}" "${channel}" "${lock}" "${publication}" <<'PY'
 import hashlib, json, pathlib, sys, urllib.parse
 
 repo, channel = sys.argv[1:3]
@@ -117,24 +128,24 @@ print(json.dumps({
 }, sort_keys=True))
 PY
 
-source_revision="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["sourceRevision"])' "${lock}")"
-# Runtime and controller are independent in every acquisition mode.
-source_short="$(python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); print(p.get("controllerSourceShort",p["sourceRevision"][:8]))' "${publication}")"
-control_release="${downloads}/matching-control-release.json"
-control_api="https://api.github.com/repos/${repo}/releases/tags/control-${source_short}-linux-x64"
-if [[ -n "${GITHUB_TOKEN:-}" ]]; then
-  curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 \
-    -H 'Accept: application/vnd.github+json' \
-    -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-    -H 'X-GitHub-Api-Version: 2022-11-28' \
-    "${control_api}" -o "${control_release}"
-else
-  curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 \
-    -H 'Accept: application/vnd.github+json' \
-    -H 'X-GitHub-Api-Version: 2022-11-28' \
-    "${control_api}" -o "${control_release}"
-fi
-readarray -t control < <(python3 - "${control_release}" "${source_short}" <<'PY'
+  source_revision="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["sourceRevision"])' "${lock}")"
+  # Runtime and controller are independent in channel and checked-in composition modes.
+  source_short="$(python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); print(p.get("controllerSourceShort",p["sourceRevision"][:8]))' "${publication}")"
+  control_release="${downloads}/matching-control-release.json"
+  control_api="https://api.github.com/repos/${repo}/releases/tags/control-${source_short}-linux-x64"
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 \
+      -H 'Accept: application/vnd.github+json' \
+      -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+      -H 'X-GitHub-Api-Version: 2022-11-28' \
+      "${control_api}" -o "${control_release}"
+  else
+    curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 \
+      -H 'Accept: application/vnd.github+json' \
+      -H 'X-GitHub-Api-Version: 2022-11-28' \
+      "${control_api}" -o "${control_release}"
+  fi
+  readarray -t control < <(python3 - "${control_release}" "${source_short}" <<'PY'
 import json, sys
 release = json.load(open(sys.argv[1]))
 short = sys.argv[2]
@@ -145,12 +156,13 @@ print(asset["browser_download_url"])
 print(asset["digest"].removeprefix("sha256:"))
 print(asset["size"])
 PY
-)
-agentlabctl="${install_bin}/agentlabctl"
-download "${control[0]}" "${agentlabctl}"
-[[ "$(wc -c < "${agentlabctl}")" == "${control[2]}" ]]
-printf '%s  %s\n' "${control[1]}" "${agentlabctl}" | sha256sum -c -
-chmod +x "${agentlabctl}"
+  )
+  agentlabctl="${install_bin}/agentlabctl"
+  download "${control[0]}" "${agentlabctl}"
+  [[ "$(wc -c < "${agentlabctl}")" == "${control[2]}" ]]
+  printf '%s  %s\n' "${control[1]}" "${agentlabctl}" | sha256sum -c -
+  chmod +x "${agentlabctl}"
+fi
 
 phase_started_ms=$(date +%s%3N)
 "${agentlabctl}" fetch composition \
@@ -159,6 +171,29 @@ phase_started_ms=$(date +%s%3N)
   --out-dir "${composition}" \
   --cache-dir "${cas}"
 record_phase_ms composition_fetch "${phase_started_ms}"
+python3 - "${lock}" "${root}/image-locks.tsv" <<'PY'
+import json, pathlib, re, sys, urllib.parse
+lock = json.load(open(sys.argv[1]))
+rows = []
+for image in lock['images']:
+    if not image.get('enabled', True): continue
+    slot = image['slot']
+    assert re.fullmatch(r'[A-Za-z0-9_.-]+', slot)
+    artifact = pathlib.PurePosixPath(urllib.parse.urlsplit(image['artifact']).path).name
+    descriptor = pathlib.PurePosixPath(urllib.parse.urlsplit(image['descriptor']).path).name
+    rows.append('\t'.join((slot, artifact, descriptor, image['archiveSha256'], image['imageId'], image['reference'])))
+assert rows
+pathlib.Path(sys.argv[2]).write_text('\n'.join(rows) + '\n')
+PY
+while IFS=$'\t' read -r slot archive descriptor archive_sha image_id reference; do
+  python3 scripts/verify-docker-image-archive.py \
+    --archive "${composition}/${archive}" \
+    --descriptor "${composition}/${descriptor}" \
+    --expected-archive-sha256 "${archive_sha}" \
+    --expected-image-id "${image_id}" \
+    --expected-reference "${reference}" \
+    --receipt "${root}/runtime-image-${slot}-verification.json" >/dev/null
+done < "${root}/image-locks.tsv"
 if [[ "${AGENTLAB_FETCH_ONLY:-false}" == "true" ]]; then
   printf '{"schema":"agentlab.public_cache_prewarm.v1","ok":true,"sourceRevision":"%s"}\n' "${source_revision}" > "${root}/prewarm-summary.json"
   exit 0
@@ -178,7 +213,18 @@ out.mkdir(exist_ok=True)
 (out / "images").write_text("\n".join(row["reference"] for row in lock["images"] if row.get("enabled", True)) + "\n")
 (out / "volumes").write_text("\n".join(row["volume"] for row in lock["components"] if row.get("enabled", True)) + "\n")
 PY
-while IFS= read -r image; do [[ -z "${image}" ]] || docker image inspect "${image}" >/dev/null; done < "${root}/docker-identities/images"
+while IFS=$'\t' read -r slot _archive _descriptor _archive_sha _image_id reference; do
+  actual="$(docker image inspect "${reference}" --format '{{.Id}}')"
+  python3 - "${root}/runtime-image-${slot}-verification.json" "${actual}" <<'PY'
+import json, sys
+receipt = json.load(open(sys.argv[1]))
+actual = sys.argv[2]
+admitted = {receipt['image']['imageId']}
+if receipt['image'].get('ociManifestDigest'):
+    admitted.add(receipt['image']['ociManifestDigest'])
+assert actual in admitted, f"loaded image identity {actual} is not archive config/manifest identity"
+PY
+done < "${root}/image-locks.tsv"
 while IFS= read -r volume; do [[ -z "${volume}" ]] || docker volume inspect "${volume}" >/dev/null; done < "${root}/docker-identities/volumes"
 
 if [[ "${AGENTLAB_INSTALL_ONLY:-false}" == "true" ]]; then
@@ -287,10 +333,11 @@ op harmony.project.patch "${root}/05-patch-child.json" \
 op harmony.project.verify "${root}/06-verify-child.json" \
   "taskId=${child_task}" "projectRoot=${child_project}"
 
-python3 - "${root}" "${summary}" "${parent_project}" "${child_project}" <<'PY'
+python3 - "${root}" "${summary}" "${parent_project}" "${child_project}" "${lock}" <<'PY'
 import json, pathlib, sys
 root, summary_path = map(pathlib.Path, sys.argv[1:3])
 parent_project, child_project = map(pathlib.Path, sys.argv[3:5])
+lock_path = pathlib.Path(sys.argv[5])
 files = [root / f"{index:02d}-{name}.json" for index, name in [
     (1, "prepare"), (2, "create"), (3, "verify-parent"),
     (4, "fork"), (5, "patch-child"), (6, "verify-child"),
@@ -301,7 +348,7 @@ parent = parent_project / "entry/src/main/ets/pages/Index.ets"
 child = child_project / "entry/src/main/ets/pages/Index.ets"
 assert "AgentLab CI Iterated" not in parent.read_text()
 assert "AgentLab CI Iterated" in child.read_text()
-lock = json.loads((root / "downloads/environment-lock.json").read_text())
+lock = json.loads(lock_path.read_text())
 summary = {
     "schema": "agentlab.public_install_deploy_smoke.v1",
     "ok": True,

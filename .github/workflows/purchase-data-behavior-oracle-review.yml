@@ -1,0 +1,181 @@
+name: Purchase-data behavior Oracle review
+on:
+  workflow_dispatch:
+    inputs:
+      plan_path:
+        description: Retained purchase-data behavior Oracle plan below release/qualifications
+        required: true
+        default: release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-behavior-oracle-plan.json
+        type: string
+      calibration_path:
+        description: Retained purchase-data behavior Oracle calibration below release/qualifications
+        required: true
+        default: release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-behavior-oracle-calibration.json
+        type: string
+      semantic_review_run_id:
+        description: Successful trusted-main multi-repository semantic-review run
+        required: true
+        type: string
+      expected_plan_sha256:
+        description: Exact plan digest inspected by the Oracle reviewer
+        required: true
+        type: string
+      expected_calibration_sha256:
+        description: Exact calibration digest inspected by the Oracle reviewer
+        required: true
+        type: string
+      answers_json:
+        description: Exact agentlab.purchase_data_behavior_oracle_review_answers.v1 JSON
+        required: true
+        type: string
+      acknowledged_risk_ids:
+        description: Comma-separated Oracle risk IDs, exactly as reviewed
+        required: true
+        type: string
+      verdict:
+        description: Oracle-candidate verdict
+        required: true
+        type: choice
+        options:
+          - approve-for-runtime-calibration
+          - reject-oracle-candidate
+          - defer-for-more-evidence
+      rationale:
+        description: Evidence-based rationale for this exact verdict
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  review:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/purchase-data-oracle-review
+      PLAN_RELATIVE_PATH: ${{ inputs.plan_path }}
+      CALIBRATION_RELATIVE_PATH: ${{ inputs.calibration_path }}
+      SEMANTIC_REVIEW_RUN_ID: ${{ inputs.semantic_review_run_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - name: Resolve exact retained plan and calibration
+        id: evidence
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT"
+          python3 - <<'PY'
+          import os, pathlib, re
+          root = pathlib.Path.cwd().resolve()
+          output = pathlib.Path(os.environ["GITHUB_OUTPUT"])
+          values = {
+              "plan_path": os.environ["PLAN_RELATIVE_PATH"],
+              "calibration_path": os.environ["CALIBRATION_RELATIVE_PATH"],
+          }
+          resolved = {}
+          for name, relative in values.items():
+              assert re.fullmatch(r"release/qualifications/[A-Za-z0-9._/-]+\.json", relative), relative
+              path = (root / relative).resolve()
+              path.relative_to(root / "release" / "qualifications")
+              assert path.is_file() and not path.is_symlink(), path
+              resolved[name] = path
+          with output.open("a") as stream:
+              for name, path in resolved.items():
+                  stream.write(f"{name}={path}\n")
+          PY
+      - name: Load independently approved semantic gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$SEMANTIC_REVIEW_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SEMANTIC_REVIEW_RUN_ID" \
+            > "$AGENTLAB_ROOT/semantic-review-source-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/semantic-review-source-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-candidate-semantic-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          with open(os.environ["AGENTLAB_ROOT"] + "/semantic-review-head-sha", "w") as output:
+              output.write(value["head_sha"] + "\n")
+          PY
+          read -r SEMANTIC_REVIEW_HEAD_SHA < "$AGENTLAB_ROOT/semantic-review-head-sha"
+          git merge-base --is-ancestor "$SEMANTIC_REVIEW_HEAD_SHA" HEAD
+          mkdir -p "$AGENTLAB_ROOT/semantic"
+          gh run download "$SEMANTIC_REVIEW_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-candidate-semantic-review \
+            --dir "$AGENTLAB_ROOT/semantic"
+          test -f "$AGENTLAB_ROOT/semantic/gate.json"
+          test ! -L "$AGENTLAB_ROOT/semantic/gate.json"
+      - name: Normalize Oracle reviewer answers
+        env:
+          ANSWERS_JSON: ${{ inputs.answers_json }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib
+          value = json.loads(os.environ["ANSWERS_JSON"])
+          path = pathlib.Path(os.environ["AGENTLAB_ROOT"]) / "answers.json"
+          path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+          PY
+      - name: Bind distinct reviewer and compile runtime-calibration gate
+        env:
+          PLAN_PATH: ${{ steps.evidence.outputs.plan_path }}
+          CALIBRATION_PATH: ${{ steps.evidence.outputs.calibration_path }}
+          EXPECTED_PLAN_SHA256: ${{ inputs.expected_plan_sha256 }}
+          EXPECTED_CALIBRATION_SHA256: ${{ inputs.expected_calibration_sha256 }}
+          ORACLE_REVIEWER: github:${{ github.actor }}
+          ACKNOWLEDGED_RISK_IDS: ${{ inputs.acknowledged_risk_ids }}
+          VERDICT: ${{ inputs.verdict }}
+          REVIEW_RATIONALE: ${{ inputs.rationale }}
+        run: |
+          set -euo pipefail
+          python3 scripts/review-purchase-data-behavior-oracle.py decide \
+            --plan "$PLAN_PATH" \
+            --calibration "$CALIBRATION_PATH" \
+            --semantic-gate "$AGENTLAB_ROOT/semantic/gate.json" \
+            --repository-root "$GITHUB_WORKSPACE" \
+            --expected-plan-sha256 "$EXPECTED_PLAN_SHA256" \
+            --expected-calibration-sha256 "$EXPECTED_CALIBRATION_SHA256" \
+            --answers "$AGENTLAB_ROOT/answers.json" \
+            --reviewer "$ORACLE_REVIEWER" \
+            --acknowledged-risk-ids "$ACKNOWLEDGED_RISK_IDS" \
+            --verdict "$VERDICT" \
+            --rationale "$REVIEW_RATIONALE" \
+            --output "$AGENTLAB_ROOT/decision.json"
+          python3 scripts/review-purchase-data-behavior-oracle.py compile \
+            --plan "$PLAN_PATH" \
+            --calibration "$CALIBRATION_PATH" \
+            --semantic-gate "$AGENTLAB_ROOT/semantic/gate.json" \
+            --repository-root "$GITHUB_WORKSPACE" \
+            --decision "$AGENTLAB_ROOT/decision.json" \
+            --output "$AGENTLAB_ROOT/gate.json"
+          python3 scripts/review-purchase-data-behavior-oracle.py validate \
+            --plan "$PLAN_PATH" \
+            --calibration "$CALIBRATION_PATH" \
+            --semantic-gate "$AGENTLAB_ROOT/semantic/gate.json" \
+            --repository-root "$GITHUB_WORKSPACE" \
+            --decision "$AGENTLAB_ROOT/decision.json" \
+            --gate "$AGENTLAB_ROOT/gate.json"
+          cp "$PLAN_PATH" "$AGENTLAB_ROOT/plan.json"
+          cp "$CALIBRATION_PATH" "$AGENTLAB_ROOT/calibration.json"
+          sha256sum \
+            "$AGENTLAB_ROOT/plan.json" \
+            "$AGENTLAB_ROOT/calibration.json" \
+            "$AGENTLAB_ROOT/semantic/gate.json" \
+            "$AGENTLAB_ROOT/answers.json" \
+            "$AGENTLAB_ROOT/decision.json" \
+            "$AGENTLAB_ROOT/gate.json" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve exact independent Oracle-review lineage
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: purchase-data-behavior-oracle-review
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/

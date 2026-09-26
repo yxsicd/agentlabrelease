@@ -13,9 +13,14 @@ cargo build --locked -p agentlab_code_analysis
 Output is sorted `program_facts.jsonl` plus `analysis.json` with source cut,
 parser/grammar versions, counts and exact data digest. It captures multiline
 module references, declarations/methods, syntactic call/assignment locations,
-decorators, ArkUI nodes and complete parse-error text/spans. IDs use source path,
-syntax role, scope/name and occurrence rather than byte offsets; spans still
-reflect the exact source cut. Calls are unresolved syntax observations.
+decorators, ArkUI nodes and complete parse-error text/spans. Expression-bearing
+facts also retain method/function parameter expressions, call argument
+expressions, assignment right-hand expressions, object-entry values and return
+expressions. These are lossless inputs for a later bounded dataflow stage; they
+do not themselves claim call-target, type or dataflow resolution. IDs use
+source path, syntax role, scope/name and occurrence rather than byte offsets;
+spans still reflect the exact source cut. Calls remain unresolved syntax
+observations.
 
 The initial fixed code-workshop run parsed556 files:555 without syntax errors and one
 with five recovery/error nodes at `products/tv/src/main/ets/component/BarItem.ets`.
@@ -31,6 +36,96 @@ Full source syntax facts remain in the captured AST evidence. Type resolution,
 resolved calls, control/dataflow and whole-corpus TableGit ingestion are further
 capabilities, not claims of this version.
 
+## Revision-fenced multi-repository graph
+
+`agentlab-multi-repo-analysis` accepts two or more repositories in an explicit
+manifest. Every repository has a stable source identifier, a local checkout
+used only as an object database, and an exact 40-character commit. The analyzer
+reads each file with `git show <revision>:<path>`, so dirty and untracked
+workspace bytes do not enter the result.
+
+```sh
+cargo run --locked -p agentlab_code_analysis \
+  --bin agentlab-multi-repo-analysis -- \
+  --cache-dir /path/to/rebuildable-ast-cache \
+  --cache-components \
+  multi-repo-manifest.json /tmp/multi-repo-evidence
+```
+
+See [`docs/multi-repository-analysis.md`](../../docs/multi-repository-analysis.md)
+for the manifest and evidence contract. Relative ArkTS/TypeScript imports are
+resolved within a repository. Non-relative cross-repository imports resolve
+only through explicit manifest bindings; the tool does not guess package
+manager or compiler configuration. It emits a dependency graph, unresolved
+boundary evidence, and recursive reverse-impact difficulty candidates. Those
+candidates are not benchmark cases: each remains in candidate state until it
+has repository-specific build checks and an independent behavior oracle.
+
+## Purchase-data runtime calibration planning
+
+`agentlab-purchase-data-runtime-plan` keeps the next runtime transition in
+Rust. It accepts only an independently approved behavior-Oracle gate, verifies
+the exact behavior plan and calibration digests, checks the generic Linux
+x86/KVM target, and resolves the three immutable emulator assets through the
+release closure and component registry.
+
+```sh
+cargo run --locked -p agentlab_code_analysis \
+  --bin agentlab-purchase-data-runtime-plan -- \
+  --oracle-gate /path/to/approved-gate.json \
+  --behavior-plan release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-behavior-oracle-plan.json \
+  --behavior-calibration release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-behavior-oracle-calibration.json \
+  --release-closure release/closures/v0.1.0-alpha.13.json \
+  --target release/targets/generic-linux-agentlab.json \
+  --component-registry release/components/registry.json \
+  --output /tmp/purchase-data-runtime-plan.json
+```
+
+The output only authorizes a future calibration run. It does not claim that
+the source was built, OHOS Test ran, the emulator was launched, the functional
+Oracle passed, or SmartPerf evidence exists. Those flags remain false until
+independently validated runtime receipts are attached.
+
+Before the runtime plan can advance,
+`agentlab-purchase-data-ohostest-proposal` reads the selected source directly
+from its exact Git revision and combines content-addressed identity with Rust
+Tree-sitter facts. It verifies the platform lane (`ohosTest` target and Hypium
+dependency), inventories existing test sources and decides whether the five
+Harmony behavior checks have a deterministic testability seam. The current
+exact source is intentionally rejected for authoring: it has no test source,
+keeps `ConsumablesPage` non-exported and directly binds the decoder and IAP
+finish sink. Its retained output specifies the bounded refactor required
+before source-bound OHOS Test can be generated.
+
+```sh
+cargo run --locked -p agentlab_code_analysis \
+  --bin agentlab-purchase-data-ohostest-proposal -- \
+  --behavior-plan /path/to/purchase-data-behavior-oracle-plan.json \
+  --build-qualification /path/to/build-qualification.json \
+  --repository harmony-iap-client=/path/to/exact/git-checkout-or-bare-repository \
+  --output /tmp/purchase-data-ohostest-proposal.json
+```
+
+The optional cache is a derivative, never source authority. By default an
+exact analyzer/grammar/source-set bundle hit bypasses both parsing and graph
+reconstruction and restores the previously digest-checked authority artifacts;
+the local manifest receipt is rematerialized so checkout roots never enter the
+portable cache identity. Add `--cache-files` when deliberately testing the
+finer-grained cache: each entry is addressed by analyzer and grammar digests,
+source path and the committed blob SHA-256, so unchanged files can survive a
+repository revision change while changed files are reparsed. That mode is not
+the workflow default because its current large-source wall-time benefit is not
+yet established. `--cache-components` instead retains one revision-fenced
+repository projection: sorted base facts plus the compact module, call and
+file-index data needed to rebuild cross-repository edges and candidates. A
+source-set change can therefore reanalyze only changed repositories without
+trusting stale cross-repository resolution. This mode is enabled in the
+trusted-main workflow after a positive real-source changed-revision benchmark.
+Missing or corrupt entries are rebuilt. Cached and uncached runs emit
+byte-identical authority artifacts; a separate
+`agentlab.analysis_cache_execution.v1` line on stderr reports only
+execution-local hit/miss/repair counts.
+
 ## Local iteration and public Action
 
 Run the same checks used by `rust-code-analysis.yml`:
@@ -41,10 +136,14 @@ cargo test --locked -p agentlab_code_analysis
 cargo run --locked -p agentlab_code_analysis -- /path/to/source-repo /tmp/ast-evidence
 ```
 
-Five tests cover syntax extraction plus real Git/CLI execution: multiline
+Tests cover syntax extraction plus real Git/CLI execution: multiline
 imports/ArkUI, comment exclusion and method ownership, whitespace-stable IDs,
 fixed committed source independent from dirty/untracked Workspace files,
-byte-identical repeated exports and retained invalid-syntax evidence.
+byte-identical repeated exports and retained invalid-syntax evidence. The
+multi-repository integration tests additionally construct three real Git
+repositories, prove direct and transitive cross-repository impact, retain an
+unresolved import as a difficulty candidate, and reject symbolic revisions and
+missing bound targets.
 
 The independent Rust Action runs on main pushes, relevant pull requests and
 manual dispatch. After Rust tests it fetches the fixed public Harmony source,

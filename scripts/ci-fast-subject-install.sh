@@ -38,6 +38,12 @@ fetch() {
 
 runtime_archive="$assets/runtime.docker.tar.zst"
 fetch "${values[0]}" "${values[1]}" "$runtime_archive"
+python3 scripts/verify-docker-image-archive.py \
+  --archive "$runtime_archive" \
+  --expected-archive-sha256 "${values[1]}" \
+  --expected-image-id "${values[2]}" \
+  --expected-reference "${values[3]}" \
+  --receipt "$root/runtime-image-verification.json" >/dev/null
 
 cli_marker="$cli_root/.agentlab-fast-sha256"
 if [[ ! -f "$cli_marker" || "$(cat "$cli_marker")" != "${values[5]}" ]]; then
@@ -63,7 +69,21 @@ fi
 
 zstd -dc "$runtime_archive" | docker load >/dev/null
 actual=$(docker image inspect "${values[3]}" --format '{{.Id}}')
-test "$actual" = "${values[2]}"
+readarray -t admitted_ids < <(python3 - "$root/runtime-image-verification.json" <<'PY'
+import json,sys
+value=json.load(open(sys.argv[1]))['image']
+print(value['imageId'])
+if value.get('ociManifestDigest'): print(value['ociManifestDigest'])
+PY
+)
+identity_matches=false
+for admitted in "${admitted_ids[@]}"; do
+  if [[ "$actual" == "$admitted" ]]; then identity_matches=true; break; fi
+done
+[[ "$identity_matches" == true ]] || {
+  printf 'loaded image identity %s is not archive config/manifest identity\n' "$actual" >&2
+  exit 1
+}
 
 python3 - "$root/fast-subject-install.json" "${values[1]}" "${values[5]}" "${values[7]}" "$actual" <<'PY'
 import json,sys

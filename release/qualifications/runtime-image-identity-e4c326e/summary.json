@@ -1,0 +1,33 @@
+{
+  "schema": "agentlab.runtime_image_identity_qualification.v1",
+  "status": "passed",
+  "sourceRevision": "e4c326e099cf08d19807e5d76ea5c959aa81d41b",
+  "target": "hwlinux",
+  "archiveSha256": "f5dddac4b52b81abd2e88f4f8e8eac246b4bfd71ae3eb904141d073a4ee4a477",
+  "publicDescriptorSha256": "adc6bc42a323284a4edc4ebadc814475d3a0d8c7bca42da47fdcb0f9ce7b4559",
+  "compositionDescriptorSemanticIdentity": {
+    "sha256": "251d732704044b61d3acadfe11340b9d05d48f103495e39cc86fbbd22e160d21",
+    "note": "The acquired descriptor is semantically identical JSON with normalized formatting."
+  },
+  "dockerConfigImageId": "sha256:2128b0fdba2e7e3297533869ce0533944f348ea7f5b0fa1dc9832ba825a0bd74",
+  "ociManifestDigest": "sha256:4dd8c79b198315349f0ccebdb47aae535d593bb199346428a70e61b27017bdbc",
+  "dockerStoreObservation": {
+    "containerdImageStoreId": "sha256:4dd8c79b198315349f0ccebdb47aae535d593bb199346428a70e61b27017bdbc",
+    "classicStoreExpectedId": "sha256:2128b0fdba2e7e3297533869ce0533944f348ea7f5b0fa1dc9832ba825a0bd74"
+  },
+  "conclusion": "The published descriptor is correct. The defect was treating Docker config and OCI manifest digests as the same runtime-inspection identity.",
+  "evidence": {
+    "archiveVerification": {
+      "path": "archive-verification.json",
+      "sha256": "bdd32d31d24b0eebb61b69c752be5879a6d0cd5a396606654e3ee04945572049"
+    },
+    "loadedIdentityVerification": {
+      "path": "loaded-identity-verification.json",
+      "sha256": "6d9e9b5c62a2ccc295b0f97d91dffdc054d5d2ac1c4641a28358ef57cb32a9d3"
+    }
+  },
+  "nonClaims": [
+    "This does not qualify a fixed AgentLab channel.",
+    "This does not change or republish the unchanged 305740544-byte image archive."
+  ]
+}

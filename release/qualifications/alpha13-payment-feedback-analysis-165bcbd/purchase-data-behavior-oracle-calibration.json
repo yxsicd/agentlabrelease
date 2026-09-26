@@ -1,0 +1,292 @@
+{
+  "allowsCaseContract": false,
+  "automaticPromotion": false,
+  "behaviorOracleVerified": false,
+  "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "checks": [
+    {
+      "behavior": "Malformed purchase data must not reach finishPurchase and must remain observable as an error.",
+      "id": "harmony-invalid-data-is-not-finished",
+      "stage": "harmony-finalization"
+    },
+    {
+      "behavior": "An already-finished order must not be submitted to finishPurchase again.",
+      "id": "harmony-finished-order-is-not-finished-again",
+      "stage": "harmony-finalization"
+    },
+    {
+      "behavior": "A pending order must forward its exact type, token and order id to finishPurchase.",
+      "id": "harmony-pending-order-forwards-exact-identity",
+      "stage": "harmony-finalization"
+    },
+    {
+      "behavior": "A decoded order without product type must not reach the external finish sink.",
+      "id": "harmony-missing-product-type-blocks-finish",
+      "stage": "harmony-finalization"
+    },
+    {
+      "behavior": "A rejected finishPurchase promise must be observed through the selected error path.",
+      "id": "harmony-finish-rejection-is-observable",
+      "stage": "harmony-finalization"
+    },
+    {
+      "behavior": "Each owned item must retain the purchase-data value at the same response index.",
+      "id": "cordova-owned-items-preserve-indexed-purchase-data",
+      "stage": "cordova-consumption"
+    },
+    {
+      "behavior": "The selected purchase-data string must be forwarded unchanged as inAppPurchaseData.",
+      "id": "cordova-consume-forwards-exact-purchase-data",
+      "stage": "cordova-consumption"
+    },
+    {
+      "behavior": "A successful consume result must clear stale collections and request a reload.",
+      "id": "cordova-success-resets-and-reloads",
+      "stage": "cordova-consumption"
+    },
+    {
+      "behavior": "A nonzero consume result must retain current state and expose the business failure.",
+      "id": "cordova-business-failure-retains-state-and-alerts",
+      "stage": "cordova-consumption"
+    },
+    {
+      "behavior": "A rejected consume promise must retain current state and expose the rejection.",
+      "id": "cordova-rejection-retains-state-and-logs",
+      "stage": "cordova-consumption"
+    }
+  ],
+  "controlFlowQualificationSha256": "8d655220687df76020a0ae83499c5e6d6587a3a6a33425248369351f0381b542",
+  "coverage": {
+    "allNegativeControlsDetected": true,
+    "checkCount": 10,
+    "exactSourceAllChecksPassed": true,
+    "methodCount": 5,
+    "negativeControlCount": 5,
+    "repositoryCount": 2,
+    "undetectedNegativeControlCount": 0
+  },
+  "methodEvidence": [
+    {
+      "bodySha256": "35cb8f2aa047c1a665de1e4b99ca93f5b6675df47f63034a29e991fb5f422dea",
+      "id": "dealPurchaseData",
+      "methodSha256": "91009fa617069fb7e68346fa31d16dd71263b447adfcb5dff7c4948c21899c6b",
+      "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+      "repositoryId": "harmony-iap-client",
+      "revision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+      "runtime": "harmony",
+      "transpiledBodySha256": "00b43bc3c852333bb4a24d235a2dee5c95cf455e683a5fa85286884f5610f17d"
+    },
+    {
+      "bodySha256": "d55964da08577233418d139b3b48d8600131ea07fd72784eb178ba10d046c8dd",
+      "id": "finishPurchase",
+      "methodSha256": "2d5ffb69f28cf2fa85c0bd9a73e24d294b07366caa92dce8d8e94a13036bf6d1",
+      "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+      "repositoryId": "harmony-iap-client",
+      "revision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+      "runtime": "harmony",
+      "transpiledBodySha256": "5ef70ef1b71e713194c7f6c08226352e81fa3792089192a240980ed9dd1046a7"
+    },
+    {
+      "bodySha256": "84e1802e204ffc8b5400bc59cc7e8810da4b2dff5660f9ae1b3132bdc1d05657",
+      "id": "obtainOwnedPurchasesFromType",
+      "methodSha256": "ba6fff896d2902bd8fa63ebd1581f94d42fe6ab09935b4fe8d19eb070cc68b11",
+      "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+      "repositoryId": "hms-cordova-iap",
+      "revision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9",
+      "runtime": "cordova",
+      "transpiledBodySha256": "84e1802e204ffc8b5400bc59cc7e8810da4b2dff5660f9ae1b3132bdc1d05657"
+    },
+    {
+      "bodySha256": "0e2d0c92b54e6420dd144296af17143ef20b9e6086ad6d8cc462b38229f202d5",
+      "id": "createPurchasedProductOnList",
+      "methodSha256": "0da391f558759bf2bed4f91680fb67410e4c1ff474fb6a387e233158f44d5d5a",
+      "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+      "repositoryId": "hms-cordova-iap",
+      "revision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9",
+      "runtime": "cordova",
+      "transpiledBodySha256": "0e2d0c92b54e6420dd144296af17143ef20b9e6086ad6d8cc462b38229f202d5"
+    },
+    {
+      "bodySha256": "89552cc8ff6365d5242e015390e39663176309284e8566ddf4ea7e559c5aaf17",
+      "id": "consumeOwnedPurchase",
+      "methodSha256": "f13c829363f5bde6a88e18ea5238d077adf26ea2fbfc3b450e6c58ea7a171696",
+      "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+      "repositoryId": "hms-cordova-iap",
+      "revision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9",
+      "runtime": "cordova",
+      "transpiledBodySha256": "89552cc8ff6365d5242e015390e39663176309284e8566ddf4ea7e559c5aaf17"
+    }
+  ],
+  "methodRevision": "a94102cba9e5ad87e0336431843c4cd7f1208915",
+  "nextGate": "independent-semantic-review-then-independent-oracle-review-and-runtime-calibration",
+  "planSha256": "a436bcb578b95738521fd7c23b3ff0cbf195b3d809bfa465e0b7b0a741e7f60f",
+  "qualificationBoundary": {
+    "emulatorExecuted": false,
+    "externalIapApisStubbed": true,
+    "frameworkLifecycleExecuted": false,
+    "harmonyCompilerExecuted": false,
+    "independentOracleReviewCompleted": false,
+    "realSourceMethodsExecuted": true,
+    "selectedMethodBodiesOnly": true,
+    "semanticAlignmentApproved": false,
+    "statement": "The seam executes five exact, digest-qualified source method bodies with controlled IAP outcomes. It can calibrate purchase-data identity, finalization guards and terminal state handling, but it does not execute framework lifecycle, vendor services, a full application or an emulator and cannot approve the cross-repository semantic claim.",
+    "wholeApplicationExecuted": false
+  },
+  "reviewPacketSha256": "36c35c021a26a9e7a15da786ab4e138780bd47553eb05f82ba73e386e1342455",
+  "runtime": {
+    "command": "node",
+    "version": "v26.5.1"
+  },
+  "schema": "agentlab.purchase_data_behavior_oracle_calibration.v1",
+  "seamExecutableSha256": "9e53fbbe13eb9e0ac3fdc1cf70922847d0da6d66f28e1451fbdb270528b88104",
+  "semanticAlignmentVerified": false,
+  "sourceSeamCalibrated": true,
+  "sourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
+  "status": "source-seam-calibrated-independent-review-required",
+  "variants": [
+    {
+      "checks": {
+        "cordova-business-failure-retains-state-and-alerts": true,
+        "cordova-consume-forwards-exact-purchase-data": true,
+        "cordova-owned-items-preserve-indexed-purchase-data": true,
+        "cordova-rejection-retains-state-and-logs": true,
+        "cordova-success-resets-and-reloads": true,
+        "harmony-finish-rejection-is-observable": true,
+        "harmony-finished-order-is-not-finished-again": true,
+        "harmony-invalid-data-is-not-finished": true,
+        "harmony-missing-product-type-blocks-finish": true,
+        "harmony-pending-order-forwards-exact-identity": true
+      },
+      "expectationMatched": true,
+      "expectedFailedChecks": [],
+      "id": "exact-source",
+      "observedFailedChecks": [],
+      "role": "exact-source",
+      "seamOutputSha256": "d9f0305db81e82fe6ef41fff2a3bda8e3c55d7012d9dd8b3157efc7639a4e242"
+    },
+    {
+      "checks": {
+        "cordova-business-failure-retains-state-and-alerts": true,
+        "cordova-consume-forwards-exact-purchase-data": true,
+        "cordova-owned-items-preserve-indexed-purchase-data": true,
+        "cordova-rejection-retains-state-and-logs": true,
+        "cordova-success-resets-and-reloads": true,
+        "harmony-finish-rejection-is-observable": true,
+        "harmony-finished-order-is-not-finished-again": false,
+        "harmony-invalid-data-is-not-finished": true,
+        "harmony-missing-product-type-blocks-finish": true,
+        "harmony-pending-order-forwards-exact-identity": false
+      },
+      "expectationMatched": true,
+      "expectedFailedChecks": [
+        "harmony-finished-order-is-not-finished-again",
+        "harmony-pending-order-forwards-exact-identity"
+      ],
+      "id": "wrong-finish-status-polarity",
+      "observedFailedChecks": [
+        "harmony-finished-order-is-not-finished-again",
+        "harmony-pending-order-forwards-exact-identity"
+      ],
+      "role": "meaningful-wrong",
+      "seamOutputSha256": "0c79fddf6a9ccbef2f413f93afe1945a97cf703d9c9e0e16d8c918458e96ed70"
+    },
+    {
+      "checks": {
+        "cordova-business-failure-retains-state-and-alerts": true,
+        "cordova-consume-forwards-exact-purchase-data": true,
+        "cordova-owned-items-preserve-indexed-purchase-data": true,
+        "cordova-rejection-retains-state-and-logs": true,
+        "cordova-success-resets-and-reloads": true,
+        "harmony-finish-rejection-is-observable": true,
+        "harmony-finished-order-is-not-finished-again": true,
+        "harmony-invalid-data-is-not-finished": true,
+        "harmony-missing-product-type-blocks-finish": true,
+        "harmony-pending-order-forwards-exact-identity": false
+      },
+      "expectationMatched": true,
+      "expectedFailedChecks": [
+        "harmony-pending-order-forwards-exact-identity"
+      ],
+      "id": "wrong-finish-token-source",
+      "observedFailedChecks": [
+        "harmony-pending-order-forwards-exact-identity"
+      ],
+      "role": "meaningful-wrong",
+      "seamOutputSha256": "b85fa5ab73cda8c18bd21ecda43ab70c50997048a3ff46c06d13a10532ac4089"
+    },
+    {
+      "checks": {
+        "cordova-business-failure-retains-state-and-alerts": true,
+        "cordova-consume-forwards-exact-purchase-data": true,
+        "cordova-owned-items-preserve-indexed-purchase-data": false,
+        "cordova-rejection-retains-state-and-logs": true,
+        "cordova-success-resets-and-reloads": true,
+        "harmony-finish-rejection-is-observable": true,
+        "harmony-finished-order-is-not-finished-again": true,
+        "harmony-invalid-data-is-not-finished": true,
+        "harmony-missing-product-type-blocks-finish": true,
+        "harmony-pending-order-forwards-exact-identity": true
+      },
+      "expectationMatched": true,
+      "expectedFailedChecks": [
+        "cordova-owned-items-preserve-indexed-purchase-data"
+      ],
+      "id": "wrong-owned-data-index",
+      "observedFailedChecks": [
+        "cordova-owned-items-preserve-indexed-purchase-data"
+      ],
+      "role": "meaningful-wrong",
+      "seamOutputSha256": "b381a5ae37edabc2ca54e5c8aeaa9755a4a3eaee1dbedc4cbd0118daca1553af"
+    },
+    {
+      "checks": {
+        "cordova-business-failure-retains-state-and-alerts": true,
+        "cordova-consume-forwards-exact-purchase-data": false,
+        "cordova-owned-items-preserve-indexed-purchase-data": true,
+        "cordova-rejection-retains-state-and-logs": true,
+        "cordova-success-resets-and-reloads": true,
+        "harmony-finish-rejection-is-observable": true,
+        "harmony-finished-order-is-not-finished-again": true,
+        "harmony-invalid-data-is-not-finished": true,
+        "harmony-missing-product-type-blocks-finish": true,
+        "harmony-pending-order-forwards-exact-identity": true
+      },
+      "expectationMatched": true,
+      "expectedFailedChecks": [
+        "cordova-consume-forwards-exact-purchase-data"
+      ],
+      "id": "wrong-consume-data-source",
+      "observedFailedChecks": [
+        "cordova-consume-forwards-exact-purchase-data"
+      ],
+      "role": "meaningful-wrong",
+      "seamOutputSha256": "75606b1cfb39a409dfe9d5ca8f364d4ea686143b94a93496ad11fb86b3b99afc"
+    },
+    {
+      "checks": {
+        "cordova-business-failure-retains-state-and-alerts": false,
+        "cordova-consume-forwards-exact-purchase-data": true,
+        "cordova-owned-items-preserve-indexed-purchase-data": true,
+        "cordova-rejection-retains-state-and-logs": true,
+        "cordova-success-resets-and-reloads": false,
+        "harmony-finish-rejection-is-observable": true,
+        "harmony-finished-order-is-not-finished-again": true,
+        "harmony-invalid-data-is-not-finished": true,
+        "harmony-missing-product-type-blocks-finish": true,
+        "harmony-pending-order-forwards-exact-identity": true
+      },
+      "expectationMatched": true,
+      "expectedFailedChecks": [
+        "cordova-business-failure-retains-state-and-alerts",
+        "cordova-success-resets-and-reloads"
+      ],
+      "id": "wrong-consume-success-polarity",
+      "observedFailedChecks": [
+        "cordova-business-failure-retains-state-and-alerts",
+        "cordova-success-resets-and-reloads"
+      ],
+      "role": "meaningful-wrong",
+      "seamOutputSha256": "3ab544c0e943911064b4aa5471b9c455e8854401d6fa45a423d306a3ce7b3175"
+    }
+  ]
+}

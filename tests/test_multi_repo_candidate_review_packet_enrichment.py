@@ -1,0 +1,466 @@
+from __future__ import annotations
+
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import tempfile
+import unittest
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(module)
+    return module
+
+
+ENRICH = load_module(
+    "multi_repo_candidate_review_packet_enrichment",
+    ROOT / "scripts/enrich-multi-repo-candidate-review-packet.py",
+)
+REVIEW = load_module(
+    "multi_repo_candidate_semantic_review_for_enrichment",
+    ROOT / "scripts/review-multi-repo-candidate-semantics.py",
+)
+
+
+class MultiRepoCandidateReviewPacketEnrichmentTests(unittest.TestCase):
+    def fixture(self, root: Path):
+        candidate_id = "difficulty-test"
+        source_set = "a" * 64
+        base = root / "base.json"
+        base.write_text(json.dumps({
+            "schema": ENRICH.BASE_SCHEMA,
+            "status": "independent-semantic-review-required",
+            "candidateId": candidate_id,
+            "candidateSha256": "f" * 64,
+            "sourceSetSha256": source_set,
+            "packetMethodRevision": "1" * 40,
+            "domainIdentifierContract": {"normalizedIdentifier": "purchase-data", "tokens": ["purchase", "data"]},
+            "domainFactEvidence": [{"repositoryId": "a"}, {"repositoryId": "b"}],
+            "allowsCaseContract": False,
+            "automaticPromotion": False,
+        }) + "\n")
+        base_sha = hashlib.sha256(base.read_bytes()).hexdigest()
+        build = root / "build.json"
+        build.write_text(json.dumps({
+            "schema": ENRICH.BUILD_SCHEMA,
+            "status": "partial-build-qualified-review-required",
+            "candidateId": candidate_id,
+            "sourceSetSha256": source_set,
+            "reviewPacketSha256": base_sha,
+            "environment": {"environmentIdentity": "fixture:x86_64"},
+            "roots": [{"status": "passed"}, {"status": "failed"}, {"status": "failed"}],
+            "interpretation": {"qualifiedRootCount": 1, "failedRootCount": 2, "sourceProjectBoundaryStatus": "partially-build-qualified"},
+            "allowsCaseContract": False,
+            "automaticPromotion": False,
+        }) + "\n")
+        expression = root / "expression.json"
+        expression.write_text(json.dumps({
+            "schema": ENRICH.EXPRESSION_SCHEMA,
+            "status": "expression-facts-qualified-dataflow-unresolved",
+            "candidateId": candidate_id,
+            "sourceSetSha256": source_set,
+            "reviewPacketSha256": base_sha,
+            "analyzerDigest": "b" * 64,
+            "grammarDigest": "c" * 64,
+            "repositoryCount": 2,
+            "selectedExpressionFactCount": 3,
+            "semanticAlignmentVerified": False,
+            "allowsCaseContract": False,
+            "automaticPromotion": False,
+        }) + "\n")
+        plan = root / "plan.json"
+        plan.write_text(json.dumps({
+            "schema": "agentlab.bounded_expression_flow_plan.v1",
+            "candidateId": candidate_id,
+            "sourceSetSha256": source_set,
+        }) + "\n")
+        flow = root / "flow.json"
+        flow.write_text(json.dumps({
+            "schema": ENRICH.FLOW_SCHEMA,
+            "status": "bounded-syntactic-flow-proposal-review-required",
+            "candidateId": candidate_id,
+            "sourceSetSha256": source_set,
+            "reviewPacketSha256": base_sha,
+            "planSha256": hashlib.sha256(plan.read_bytes()).hexdigest(),
+            "repositoryCount": 2,
+            "flowCount": 2,
+            "allBoundedPathsEstablished": True,
+            "sourceBridges": [{"path": "fixture.html"}],
+            "flows": [{"edgeCount": 2}, {"edgeCount": 3}],
+            "semanticAlignmentVerified": False,
+            "behaviorOracleVerified": False,
+            "allowsCaseContract": False,
+            "automaticPromotion": False,
+        }) + "\n")
+        return base, build, expression, plan, flow
+
+    def test_later_exact_evidence_is_bound_without_promotion(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths = self.fixture(Path(directory))
+            value = ENRICH.enrich(*paths, "2" * 40, Path(directory))
+            self.assertEqual(value["schema"], ENRICH.SCHEMA)
+            self.assertEqual(len(value["evidenceAttachments"]), 3)
+            self.assertEqual(value["basePacket"]["domainFactCount"], 2)
+            self.assertEqual(value["evidenceAttachments"]["bounded-expression-flow-proposal"]["edgeCount"], 5)
+            self.assertEqual(value["risks"][0]["id"], "syntactic-flow-is-not-semantics")
+            self.assertFalse(value["semanticAlignmentVerified"])
+            self.assertFalse(value["behaviorOracleVerified"])
+            self.assertFalse(value["allowsCaseContract"])
+            self.assertFalse(value["automaticPromotion"])
+
+    def test_changed_flow_plan_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths = self.fixture(Path(directory))
+            paths[3].write_text(paths[3].read_text() + "\n")
+            with self.assertRaisesRegex(ENRICH.PacketEnrichmentError, "flow plan digest differs"):
+                ENRICH.enrich(*paths, "2" * 40, Path(directory))
+
+    def test_changed_base_packet_is_rejected_by_every_attachment(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths = self.fixture(Path(directory))
+            base = json.loads(paths[0].read_text())
+            base["candidateId"] = "difficulty-changed"
+            paths[0].write_text(json.dumps(base) + "\n")
+            with self.assertRaisesRegex(ENRICH.PacketEnrichmentError, "candidate differs"):
+                ENRICH.enrich(*paths, "2" * 40, Path(directory))
+
+    def test_review_replays_every_referenced_file_before_decision(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = self.fixture(root)
+            packet = root / "packet-v6.json"
+            packet.write_text(json.dumps(ENRICH.enrich(*paths, "2" * 40, root), sort_keys=True) + "\n")
+            receipt = REVIEW.verify_evidence(packet, root)
+            self.assertEqual(receipt["status"], "verified-exact-v6-evidence")
+            self.assertEqual(len(receipt["verifiedFiles"]), 5)
+            paths[1].write_text(paths[1].read_text() + "\n")
+            with self.assertRaisesRegex(REVIEW.SemanticReviewError, "build-qualification digest differs"):
+                REVIEW.verify_evidence(packet, root)
+
+    def test_program_analysis_produces_v7_and_is_replayed_before_review(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = self.fixture(root)
+            base_sha = hashlib.sha256(paths[0].read_bytes()).hexdigest()
+            flow_sha = hashlib.sha256(paths[4].read_bytes()).hexdigest()
+            program = root / "program-analysis.json"
+            program.write_text(json.dumps({
+                "schema": ENRICH.PROGRAM_ANALYSIS_SCHEMA,
+                "status": "bounded-program-flow-partially-resolved-review-required",
+                "candidateId": "difficulty-test",
+                "sourceSetSha256": "a" * 64,
+                "reviewPacketSha256": base_sha,
+                "flowPlanSha256": hashlib.sha256(paths[3].read_bytes()).hexdigest(),
+                "flowProposalSha256": flow_sha,
+                "flowReplayExact": True,
+                "repositoryCount": 2,
+                "flowCount": 2,
+                "coverage": {
+                    "localCallTargetCount": 3,
+                    "localCallTargetsUniquelyResolved": True,
+                    "typedParameterMappingCount": 2,
+                    "untypedParameterMappingCount": 1,
+                    "exactDependencyCount": 7,
+                    "exactDependencyReferencesVerified": True,
+                },
+                "unresolvedCount": 6,
+                "typeResolutionComplete": False,
+                "aliasResolutionComplete": False,
+                "externalCallContractsResolved": False,
+                "reachabilityAndDominanceResolved": False,
+                "semanticAlignmentVerified": False,
+                "behaviorOracleVerified": False,
+                "allowsCaseContract": False,
+                "automaticPromotion": False,
+            }) + "\n")
+            packet = root / "packet-v7.json"
+            packet.write_text(
+                json.dumps(
+                    ENRICH.enrich(*paths, "2" * 40, root, program),
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            value = json.loads(packet.read_text())
+            self.assertEqual(value["schema"], ENRICH.SCHEMA_V7)
+            self.assertEqual(len(value["evidenceAttachments"]), 4)
+            self.assertEqual(
+                value["risks"][0]["id"],
+                "partial-program-flow-is-not-semantics",
+            )
+            receipt = REVIEW.verify_evidence(packet, root)
+            self.assertEqual(receipt["status"], "verified-exact-v7-evidence")
+            self.assertEqual(len(receipt["verifiedFiles"]), 6)
+            program_value = json.loads(program.read_text())
+            program_value["unresolvedCount"] = 0
+            program.write_text(json.dumps(program_value) + "\n")
+            with self.assertRaisesRegex(
+                REVIEW.SemanticReviewError,
+                "bounded-expression-flow-program-analysis digest differs",
+            ):
+                REVIEW.verify_evidence(packet, root)
+
+    def test_external_sink_qualification_produces_v8_and_replays_seven_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = self.fixture(root)
+            base_sha = hashlib.sha256(paths[0].read_bytes()).hexdigest()
+            flow_sha = hashlib.sha256(paths[4].read_bytes()).hexdigest()
+            program = root / "program-analysis.json"
+            program.write_text(json.dumps({
+                "schema": ENRICH.PROGRAM_ANALYSIS_SCHEMA,
+                "status": "bounded-program-flow-partially-resolved-review-required",
+                "candidateId": "difficulty-test",
+                "sourceSetSha256": "a" * 64,
+                "reviewPacketSha256": base_sha,
+                "flowPlanSha256": hashlib.sha256(paths[3].read_bytes()).hexdigest(),
+                "flowProposalSha256": flow_sha,
+                "flowReplayExact": True,
+                "repositoryCount": 2,
+                "flowCount": 2,
+                "coverage": {
+                    "localCallTargetCount": 3,
+                    "localCallTargetsUniquelyResolved": True,
+                    "typedParameterMappingCount": 2,
+                    "untypedParameterMappingCount": 1,
+                    "exactDependencyCount": 7,
+                    "exactDependencyReferencesVerified": True,
+                },
+                "unresolvedCount": 6,
+                "typeResolutionComplete": False,
+                "aliasResolutionComplete": False,
+                "externalCallContractsResolved": False,
+                "reachabilityAndDominanceResolved": False,
+                "semanticAlignmentVerified": False,
+                "behaviorOracleVerified": False,
+                "allowsCaseContract": False,
+                "automaticPromotion": False,
+            }) + "\n")
+            external_plan = root / "external-plan.json"
+            external_plan.write_text(json.dumps({
+                "schema": "agentlab.external_sink_contract_plan.v1",
+                "candidateId": "difficulty-test",
+                "sourceSetSha256": "a" * 64,
+                "contracts": [{"contractId": "fixture"}],
+            }) + "\n")
+            external = root / "external.json"
+            external.write_text(json.dumps({
+                "schema": ENRICH.EXTERNAL_SINK_SCHEMA,
+                "status": "external-sink-contracts-partially-qualified-review-required",
+                "candidateId": "difficulty-test",
+                "sourceSetSha256": "a" * 64,
+                "reviewPacketSha256": base_sha,
+                "programAnalysisSha256": hashlib.sha256(program.read_bytes()).hexdigest(),
+                "planSha256": hashlib.sha256(external_plan.read_bytes()).hexdigest(),
+                "externalSinkCount": 2,
+                "resolvedExternalSinkCount": 1,
+                "remainingExternalSinkCount": 1,
+                "originalUnresolvedCount": 6,
+                "remainingUnresolvedCount": 5,
+                "externalCallContractsResolved": False,
+                "allowsCaseContract": False,
+                "automaticPromotion": False,
+            }) + "\n")
+            packet = root / "packet-v8.json"
+            packet.write_text(
+                json.dumps(
+                    ENRICH.enrich(
+                        *paths,
+                        "2" * 40,
+                        root,
+                        program,
+                        external_plan,
+                        external,
+                    ),
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            value = json.loads(packet.read_text())
+            self.assertEqual(value["schema"], ENRICH.SCHEMA_V8)
+            self.assertEqual(len(value["evidenceAttachments"]), 5)
+            self.assertEqual(
+                value["risks"][0]["id"],
+                "partial-external-contract-resolution-is-not-semantics",
+            )
+            receipt = REVIEW.verify_evidence(packet, root)
+            self.assertEqual(receipt["status"], "verified-exact-v8-evidence")
+            self.assertEqual(len(receipt["verifiedFiles"]), 8)
+
+            plan_value = json.loads(external_plan.read_text())
+            plan_value["schema"] = "agentlab.external_sink_contract_plan.v2"
+            external_plan.write_text(json.dumps(plan_value) + "\n")
+            external_value = json.loads(external.read_text())
+            external_value.update({
+                "schema": ENRICH.EXTERNAL_SINK_SCHEMA_V2,
+                "status": "external-sink-contracts-qualified-review-required",
+                "planSha256": hashlib.sha256(external_plan.read_bytes()).hexdigest(),
+                "resolvedExternalSinkCount": 2,
+                "remainingExternalSinkCount": 0,
+                "remainingUnresolvedCount": 4,
+                "externalCallContractsResolved": True,
+            })
+            external.write_text(json.dumps(external_value) + "\n")
+            packet_v9 = root / "packet-v9.json"
+            packet_v9.write_text(
+                json.dumps(
+                    ENRICH.enrich(
+                        *paths,
+                        "3" * 40,
+                        root,
+                        program,
+                        external_plan,
+                        external,
+                    ),
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            value_v9 = json.loads(packet_v9.read_text())
+            self.assertEqual(value_v9["schema"], ENRICH.SCHEMA_V9)
+            self.assertEqual(
+                value_v9["risks"][0]["id"],
+                "external-contract-resolution-is-not-semantics",
+            )
+            receipt_v9 = REVIEW.verify_evidence(packet_v9, root)
+            self.assertEqual(receipt_v9["status"], "verified-exact-v9-evidence")
+            self.assertEqual(len(receipt_v9["verifiedFiles"]), 8)
+
+            object_plan = root / "object-plan.json"
+            object_plan.write_text(json.dumps({
+                "schema": "agentlab.cordova_object_flow_plan.v1",
+                "candidateId": "difficulty-test",
+                "sourceSetSha256": "a" * 64,
+            }) + "\n")
+            object_flow = root / "object-flow.json"
+            object_flow.write_text(json.dumps({
+                "schema": ENRICH.OBJECT_FLOW_SCHEMA,
+                "status": "object-flow-qualified-control-flow-review-required",
+                "candidateId": "difficulty-test",
+                "sourceSetSha256": "a" * 64,
+                "reviewPacketSha256": base_sha,
+                "programAnalysisSha256": hashlib.sha256(program.read_bytes()).hexdigest(),
+                "externalSinkQualificationSha256": hashlib.sha256(external.read_bytes()).hexdigest(),
+                "planSha256": hashlib.sha256(object_plan.read_bytes()).hexdigest(),
+                "originalUnresolvedCount": 4,
+                "remainingUnresolvedCount": 1,
+                "resolvedUnresolvedIds": ["parameter", "member", "template"],
+                "selectedFlowParameterTypeResolved": True,
+                "memberObjectIdentityResolved": True,
+                "templateObjectIdentityResolved": True,
+                "typeResolutionComplete": True,
+                "aliasResolutionComplete": True,
+                "externalCallContractsResolved": True,
+                "reachabilityAndDominanceResolved": False,
+                "allowsCaseContract": False,
+                "automaticPromotion": False,
+            }) + "\n")
+            packet_v10 = root / "packet-v10.json"
+            packet_v10.write_text(
+                json.dumps(
+                    ENRICH.enrich(
+                        *paths,
+                        "4" * 40,
+                        root,
+                        program,
+                        external_plan,
+                        external,
+                        object_plan,
+                        object_flow,
+                    ),
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            value_v10 = json.loads(packet_v10.read_text())
+            self.assertEqual(value_v10["schema"], ENRICH.SCHEMA_V10)
+            self.assertEqual(len(value_v10["evidenceAttachments"]), 6)
+            self.assertEqual(
+                value_v10["risks"][0]["id"],
+                "qualified-object-flow-is-not-global-control-flow",
+            )
+            receipt_v10 = REVIEW.verify_evidence(packet_v10, root)
+            self.assertEqual(receipt_v10["status"], "verified-exact-v10-evidence")
+            self.assertEqual(len(receipt_v10["verifiedFiles"]), 10)
+
+            selected_plan = root / "selected-control-flow-plan.json"
+            selected_plan.write_text(json.dumps({
+                "schema": "agentlab.selected_control_flow_plan.v1",
+                "candidateId": "difficulty-test",
+                "sourceSetSha256": "a" * 64,
+            }) + "\n")
+            selected = root / "selected-control-flow.json"
+            selected.write_text(json.dumps({
+                "schema": ENRICH.SELECTED_CONTROL_FLOW_SCHEMA,
+                "status": "selected-control-flow-qualified-semantic-review-required",
+                "candidateId": "difficulty-test",
+                "sourceSetSha256": "a" * 64,
+                "reviewPacketSha256": base_sha,
+                "programAnalysisSha256": hashlib.sha256(program.read_bytes()).hexdigest(),
+                "objectFlowQualificationSha256": hashlib.sha256(object_flow.read_bytes()).hexdigest(),
+                "planSha256": hashlib.sha256(selected_plan.read_bytes()).hexdigest(),
+                "originalUnresolvedCount": 1,
+                "remainingUnresolvedCount": 0,
+                "resolvedUnresolvedIds": ["global:reachability-dominance-exception-flow"],
+                "repositoryCount": 2,
+                "flowCount": 2,
+                "selectedControlFlowResolved": True,
+                "conditionalReachabilityEstablished": True,
+                "sinkDominanceEstablished": True,
+                "exceptionExitsEnumerated": True,
+                "callbackSchedulingResolved": True,
+                "typeResolutionComplete": True,
+                "aliasResolutionComplete": True,
+                "externalCallContractsResolved": True,
+                "reachabilityAndDominanceResolved": True,
+                "qualificationScope": {
+                    "selectedSourcePathsOnly": True,
+                    "wholeApplicationReachability": False,
+                    "externalApiSuccess": False,
+                    "frameworkRuntimeCorrectness": False,
+                },
+                "semanticAlignmentVerified": False,
+                "behaviorOracleVerified": False,
+                "allowsCaseContract": False,
+                "automaticPromotion": False,
+            }) + "\n")
+            packet_v11 = root / "packet-v11.json"
+            packet_v11.write_text(
+                json.dumps(
+                    ENRICH.enrich(
+                        *paths,
+                        "5" * 40,
+                        root,
+                        program,
+                        external_plan,
+                        external,
+                        object_plan,
+                        object_flow,
+                        selected_plan,
+                        selected,
+                    ),
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            value_v11 = json.loads(packet_v11.read_text())
+            self.assertEqual(value_v11["schema"], ENRICH.SCHEMA_V11)
+            self.assertEqual(len(value_v11["evidenceAttachments"]), 7)
+            self.assertEqual(
+                value_v11["risks"][0]["id"],
+                "selected-control-flow-is-not-semantic-or-runtime-proof",
+            )
+            receipt_v11 = REVIEW.verify_evidence(packet_v11, root)
+            self.assertEqual(receipt_v11["status"], "verified-exact-v11-evidence")
+            self.assertEqual(len(receipt_v11["verifiedFiles"]), 12)
+
+
+if __name__ == "__main__":
+    unittest.main()

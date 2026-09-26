@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import datetime
+import hashlib
 import json
+import os
 import pathlib
 import re
+import subprocess
+import urllib.parse
+import urllib.request
 from typing import Any
 
 CLOSURE_SCHEMA = "agentlab.release_closure.v1"
@@ -21,6 +27,22 @@ MUTABLE_URL_FRAGMENTS = (
 )
 REQUIRED_ASSET_KINDS = {"control", "composition", "runtime", "harmony", "mcpgit", "tools"}
 SUPPORTED_TARGET_STATUS = {"qualified", "experimental", "unsupported"}
+SUPPORTED_CLOSURE_STATUS = {
+    "assembly-candidate-unqualified",
+    "developer-preview-candidate",
+    "qualified-developer-preview",
+}
+DEVELOPER_PREVIEW_CHECKS = {
+    "validate",
+    "service-protocol-demo",
+    "participant-runtime-isolation",
+    "rust-local-contract",
+    "pinned-harmony-syntax-coverage",
+    "public-install-deploy-smoke-alprod-copy-tree",
+    "public-install-deploy-smoke-candidate-copy",
+    "public-install-deploy-smoke-candidate-btrfs",
+    "public-install-deploy-smoke-release-closure",
+}
 
 
 def fail(message: str) -> None:
@@ -36,6 +58,36 @@ def load(path: pathlib.Path) -> dict[str, Any]:
 
 def hex_value(value: Any, length: int) -> bool:
     return isinstance(value, str) and len(value) == length and re.fullmatch(r"[0-9a-fA-F]+", value) is not None
+
+
+def validate_release_source_git(value: dict[str, Any], git_root: pathlib.Path) -> str:
+    source = (value.get("sources") or {}).get("releaseGitSha")
+    if not hex_value(source, 40):
+        fail("release source revision is invalid")
+    resolved = subprocess.run(
+        ["git", "-C", str(git_root), "rev-parse", f"{source}^{{commit}}"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if resolved.returncode != 0 or resolved.stdout.strip() != source:
+        fail("release source revision is not a commit in the checkout")
+    head = subprocess.run(
+        ["git", "-C", str(git_root), "rev-parse", "HEAD"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if head.returncode != 0 or not hex_value(head.stdout.strip(), 40):
+        fail("cannot resolve checkout HEAD")
+    ancestor = subprocess.run(
+        ["git", "-C", str(git_root), "merge-base", "--is-ancestor", source, head.stdout.strip()],
+        capture_output=True,
+        check=False,
+    )
+    if ancestor.returncode != 0:
+        fail("release source revision is not an ancestor of the checkout")
+    return head.stdout.strip()
 
 
 def validate_asset(asset: Any) -> None:
@@ -64,20 +116,165 @@ def validate_asset(asset: Any) -> None:
             fail("image identity requires distinct manifest/config SHA-256 digests")
 
 
-def validate_closure(value: dict[str, Any]) -> None:
+def github_asset_location(url: str) -> tuple[str, str, str]:
+    parsed = urllib.parse.urlsplit(url)
+    parts = parsed.path.strip("/").split("/")
+    if (
+        parsed.scheme != "https"
+        or parsed.netloc != "github.com"
+        or parsed.query
+        or parsed.fragment
+        or len(parts) != 6
+        or parts[2:4] != ["releases", "download"]
+        or not all(parts)
+    ):
+        fail("asset must use a canonical GitHub release URL")
+    return f"{parts[0]}/{parts[1]}", parts[4], parts[5]
+
+
+def validate_remote_assets(assets: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    releases: dict[tuple[str, str], dict[str, Any]] = {}
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "agentlab-release-graph-validation",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    observations = []
+    for asset in assets:
+        repository, tag, name = github_asset_location(asset["url"])
+        key = (repository, tag)
+        if key not in releases:
+            request = urllib.request.Request(
+                f"https://api.github.com/repos/{repository}/releases/tags/{tag}",
+                headers=headers,
+            )
+            with urllib.request.urlopen(request, timeout=30) as response:
+                release = json.load(response)
+            if release.get("draft") is True:
+                fail(f"component release is a draft: {repository}@{tag}")
+            releases[key] = {
+                row.get("name"): row
+                for row in release.get("assets", [])
+                if isinstance(row, dict)
+            }
+        observed = releases[key].get(name)
+        if observed is None:
+            fail(f"missing public release asset: {repository}@{tag}/{name}")
+        if (
+            observed.get("browser_download_url") != asset["url"]
+            or observed.get("size") != asset["bytes"]
+            or observed.get("digest") != f"sha256:{asset['sha256']}"
+        ):
+            fail(f"public release asset identity differs: {repository}@{tag}/{name}")
+        observations.append(
+            {
+                "repository": repository,
+                "tag": tag,
+                "name": name,
+                "assetId": observed.get("id"),
+                "url": asset["url"],
+                "bytes": asset["bytes"],
+                "sha256": asset["sha256"],
+            }
+        )
+    return observations
+
+
+def validate_registry_binding(
+    value: dict[str, Any], registry: dict[str, Any], registry_bytes: bytes
+) -> None:
+    binding = value.get("componentRegistry")
+    if not isinstance(binding, dict):
+        fail("componentRegistry binding required")
+    if binding.get("schema") != "agentlab.component_registry.v1":
+        fail("componentRegistry schema mismatch")
+    if binding.get("path") != "release/components/registry.json":
+        fail("componentRegistry path mismatch")
+    if hashlib.sha256(registry_bytes).hexdigest() != binding.get("sha256"):
+        fail("componentRegistry digest mismatch")
+    if registry.get("schema") != binding["schema"]:
+        fail("loaded component registry schema mismatch")
+
+    components = registry.get("components")
+    if not isinstance(components, list):
+        fail("component registry entries required")
+    by_id = {item.get("id"): item for item in components if isinstance(item, dict)}
+    selected = {item_id for item_id, item in by_id.items() if item.get("status", "").startswith("selected")}
+    referenced: set[str] = set()
+    for asset in value["assets"]:
+        component_id = asset.get("registryComponent")
+        if not isinstance(component_id, str) or component_id not in by_id:
+            fail("release asset must reference a registered component")
+        referenced.add(component_id)
+        candidates = by_id[component_id].get("assets") or []
+        if not any(
+            item.get("url") == asset["url"]
+            and item.get("bytes") == asset["bytes"]
+            and item.get("sha256") == asset["sha256"]
+            for item in candidates
+        ):
+            fail(f"release asset differs from registry component {component_id}")
+    if referenced != selected:
+        fail("closure selection differs from selected component registry entries")
+
+    if value.get("status") == "developer-preview-candidate":
+        registered_assets = {
+            item["url"]: (component_id, item)
+            for component_id, component in by_id.items()
+            if component_id in selected
+            for item in component.get("assets", [])
+            if isinstance(item, dict) and isinstance(item.get("url"), str)
+        }
+        closure_assets = {item["url"]: item for item in value["assets"]}
+        if set(closure_assets) != set(registered_assets):
+            fail("developer preview closure does not contain every selected component asset")
+        for url, (component_id, registered) in registered_assets.items():
+            retained = closure_assets[url]
+            if (
+                retained.get("registryComponent") != component_id
+                or retained.get("sha256") != registered.get("sha256")
+                or retained.get("bytes") != registered.get("bytes")
+            ):
+                fail("developer preview component asset identity differs")
+
+    reuse = value.get("reuse")
+    if not isinstance(reuse, dict) or reuse.get("selectedComponentCount") != len(selected):
+        fail("reuse summary selected component count mismatch")
+    if reuse.get("newBinaryBuildCount") != 0 or reuse.get("newBinaryUploadCount") != 0:
+        fail("reference-only aggregate may not claim new binary builds or uploads")
+    if (
+        value.get("status") == "developer-preview-candidate"
+        and reuse.get("reusedAssetCount") != len(value["assets"])
+    ):
+        fail("developer preview reused asset count mismatch")
+
+
+def validate_closure(
+    value: dict[str, Any], registry: dict[str, Any] | None = None, registry_bytes: bytes = b""
+) -> None:
     if value.get("schema") != CLOSURE_SCHEMA:
         fail("unsupported release closure schema")
     if not isinstance(value.get("releaseVersion"), str) or not value["releaseVersion"]:
         fail("releaseVersion required")
     if not isinstance(value.get("releaseTag"), str) or not value["releaseTag"]:
         fail("releaseTag required")
+    if value["releaseTag"] != f"v{value['releaseVersion']}":
+        fail("releaseTag must exactly match releaseVersion")
     if value["releaseTag"].lower() in MUTABLE_REFS:
         fail("releaseTag must be immutable")
+    status = value.get("status")
+    if status is not None and status not in SUPPORTED_CLOSURE_STATUS:
+        fail("unsupported release closure status")
     sources = value.get("sources")
     if not isinstance(sources, dict):
         fail("sources required")
     if not hex_value(sources.get("agentlabGitSha"), 40) or not hex_value(sources.get("llmrsGitSha"), 40):
         fail("source revisions must be exact 40-hex")
+    if status is not None and not hex_value(sources.get("releaseGitSha"), 40):
+        fail("current release closure requires exact releaseGitSha")
 
     schemas = value.get("requiredSchemas")
     required_schema_fields = {"controlApi", "lockSchema", "receiptSchema", "componentGraphSchema"}
@@ -116,6 +313,35 @@ def validate_closure(value: dict[str, Any]) -> None:
             fail("invalid target compatibility status")
         if not isinstance(target.get("platform"), str) or not target["platform"]:
             fail("target compatibility platform required")
+    if registry is not None:
+        validate_registry_binding(value, registry, registry_bytes)
+    if status == "developer-preview-candidate":
+        scope = value.get("developerPreviewScope")
+        expected_scope = {
+            "multiRepositorySemanticAndProgramAnalysis": "included",
+            "recursiveDifficultyFeedback": "included",
+            "reviewedCalibratedCaseGeneration": "included",
+            "linuxHarmonyEmulatorExecution": "experimental",
+            "relativePerformanceFeedback": "experimental",
+            "absolutePowerThermal": "not-qualified",
+            "automaticPromotion": False,
+        }
+        if scope != expected_scope:
+            fail("developer preview scope differs")
+        plan = value.get("qualificationPlan")
+        if not isinstance(plan, dict):
+            fail("developer preview qualification plan required")
+        checks = plan.get("requiredChecks")
+        if (
+            plan.get("sourceGitSha") != sources.get("releaseGitSha")
+            or not isinstance(checks, list)
+            or len(checks) != len(set(checks))
+            or set(checks) != DEVELOPER_PREVIEW_CHECKS
+            or plan.get("taggedCleanInstallRequired") is not True
+            or plan.get("linuxEmulatorAcceptanceRequired") is not True
+            or plan.get("automaticPromotion") is not False
+        ):
+            fail("developer preview qualification plan differs")
 
 
 def validate_target(value: dict[str, Any]) -> None:
@@ -150,13 +376,87 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--closure", action="append", default=[])
     parser.add_argument("--target", action="append", default=[])
+    parser.add_argument("--registry")
+    parser.add_argument("--git-root", type=pathlib.Path)
+    parser.add_argument("--remote", action="store_true")
+    parser.add_argument("--receipt", type=pathlib.Path)
     args = parser.parse_args()
+    registry_bytes = b""
+    registry = None
+    if args.registry:
+        registry_path = pathlib.Path(args.registry)
+        registry_bytes = registry_path.read_bytes()
+        registry = json.loads(registry_bytes)
+    if args.receipt is not None:
+        if not args.remote or registry is None:
+            fail("retained receipt requires --remote and --registry")
+        if args.receipt.exists():
+            fail(f"refusing to overwrite receipt: {args.receipt}")
+    closure_reports = []
     for raw in args.closure:
-        validate_closure(load(pathlib.Path(raw)))
+        closure_path = pathlib.Path(raw)
+        closure = load(closure_path)
+        validate_closure(closure, registry, registry_bytes)
+        checkout_sha = None
+        if args.git_root is not None:
+            checkout_sha = validate_release_source_git(closure, args.git_root.resolve())
+        observations = []
+        if args.remote:
+            observations = validate_remote_assets(closure["assets"])
+        closure_reports.append(
+            {
+                "path": closure_path.as_posix(),
+                "sha256": hashlib.sha256(closure_path.read_bytes()).hexdigest(),
+                "releaseTag": closure["releaseTag"],
+                "releaseGitSha": (closure.get("sources") or {}).get("releaseGitSha"),
+                "assetCount": len(closure["assets"]),
+                **(
+                    {"checkoutGitSha": checkout_sha, "releaseSourceResolved": True}
+                    if checkout_sha is not None
+                    else {}
+                ),
+                **({"remoteAssets": observations} if args.remote else {}),
+            }
+        )
     for raw in args.target:
         validate_target(load(pathlib.Path(raw)))
     if not args.closure and not args.target:
         parser.error("at least one --closure or --target is required")
+    receipt = {
+        "schema": "agentlab.release_graph_validation.v1",
+        "observedAt": datetime.datetime.now(datetime.timezone.utc)
+        .replace(microsecond=0)
+        .isoformat(),
+        "registrySha256": (
+            hashlib.sha256(registry_bytes).hexdigest() if registry is not None else None
+        ),
+        "closures": closure_reports,
+        "targetCount": len(args.target),
+        "remote": args.remote,
+        "automaticPromotion": False,
+    }
+    if args.receipt is not None:
+        args.receipt.parent.mkdir(parents=True, exist_ok=True)
+        args.receipt.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "closureCount": len(closure_reports),
+                "targetCount": len(args.target),
+                "remote": args.remote,
+                "remoteAssetCount": sum(
+                    len(row.get("remoteAssets", [])) for row in closure_reports
+                ),
+                **(
+                    {"receipt": args.receipt.as_posix()}
+                    if args.receipt is not None
+                    else {}
+                ),
+            },
+            sort_keys=True,
+        )
+    )
     return 0
 
 

@@ -1,0 +1,163 @@
+name: Multi-repository calibration authoring
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Independent evaluator-author model exposed by the LM Gateway
+        required: true
+        default: glm-5.3-flash
+        type: string
+      provider_route:
+        description: Explicit LM Gateway provider route
+        required: true
+        default: glm
+        type: string
+      cohort_review_run_id:
+        description: Successful trusted-main reviewed candidate-cohort run
+        required: true
+        type: string
+      expected_cohort_sha256:
+        description: Exact reviewed cohort digest
+        required: true
+        type: string
+      candidate_id:
+        description: One exact reviewed cohort member to author
+        required: true
+        type: string
+      localization_review_run_id:
+        description: Required reviewed API-call localization run; empty for other relations
+        required: false
+        default: ''
+        type: string
+      expected_localization_sha256:
+        description: Exact reviewed localization digest; empty for other relations
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: multi-repo-calibration-authoring
+  cancel-in-progress: false
+
+jobs:
+  author:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/multi-repo-calibration-authoring
+      AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
+      AGENTLAB_MODEL: ${{ inputs.model }}
+      AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
+      COHORT_RUN_ID: ${{ inputs.cohort_review_run_id }}
+      EXPECTED_COHORT_SHA256: ${{ inputs.expected_cohort_sha256 }}
+      CANDIDATE_ID: ${{ inputs.candidate_id }}
+      LOCALIZATION_RUN_ID: ${{ inputs.localization_review_run_id }}
+      EXPECTED_LOCALIZATION_SHA256: ${{ inputs.expected_localization_sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Recover exact reviewed cohort and candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/cohort" "$AGENTLAB_ROOT/selection"
+          [[ "$COHORT_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_COHORT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$COHORT_RUN_ID" > "$AGENTLAB_ROOT/cohort-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/cohort-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-candidate-cohort-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$COHORT_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-candidate-cohort-review --dir "$AGENTLAB_ROOT/cohort"
+          python3 scripts/select-multi-repo-cohort-candidate.py \
+            --cohort "$AGENTLAB_ROOT/cohort/candidate-cohort.json" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
+            --expected-cohort-sha256 "$EXPECTED_COHORT_SHA256" \
+            --candidate-id "$CANDIDATE_ID" \
+            --output "$AGENTLAB_ROOT/selection/candidate-selection.json"
+      - name: Recover optional reviewed API-call localization
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$LOCALIZATION_RUN_ID" ]]; then
+            [[ -z "$EXPECTED_LOCALIZATION_SHA256" ]]
+            exit 0
+          fi
+          [[ "$LOCALIZATION_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_LOCALIZATION_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          mkdir -p "$AGENTLAB_ROOT/localization"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$LOCALIZATION_RUN_ID" > "$AGENTLAB_ROOT/localization-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/localization-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/api-call-localization-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$LOCALIZATION_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name api-call-localization-review --dir "$AGENTLAB_ROOT/localization"
+          [[ "$(sha256sum "$AGENTLAB_ROOT/localization/localization.json" | cut -d' ' -f1)" == "$EXPECTED_LOCALIZATION_SHA256" ]]
+      - name: Materialize exact source revisions
+        run: |
+          python3 scripts/prepare-multi-repo-analysis-sources.py \
+            --spec "$AGENTLAB_ROOT/cohort/source/analysis-source/source-spec.json" \
+            --output "$AGENTLAB_ROOT/input"
+      - name: Install a separately contained Pi runtime
+        run: |
+          mkdir -p "$RUNNER_TEMP/pi-runtime"
+          cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
+          npm ci --prefix "$RUNNER_TEMP/pi-runtime"
+          "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" --version
+      - name: Ask an independent evaluator to author a review-required draft
+        env:
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+          AGENTLAB_PI_BINARY: ${{ runner.temp }}/pi-runtime/node_modules/.bin/pi
+        run: |
+          set -euo pipefail
+          localization_args=()
+          if [[ -n "$LOCALIZATION_RUN_ID" ]]; then
+            localization_args=(
+              --localization "$AGENTLAB_ROOT/localization/localization.json"
+              --localization-proposal "$AGENTLAB_ROOT/localization/proposal.json"
+              --localization-review "$AGENTLAB_ROOT/localization/review.json"
+              --semantic-packet "$AGENTLAB_ROOT/localization/semantic-packet.json"
+              --semantic-decision "$AGENTLAB_ROOT/localization/semantic-decision.json"
+              --semantic-gate "$AGENTLAB_ROOT/localization/semantic-gate.json"
+            )
+          fi
+          python3 scripts/run-multi-repo-calibration-authoring.py run \
+            --selection "$AGENTLAB_ROOT/selection/candidate-selection.json" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
+            --manifest "$AGENTLAB_ROOT/input/manifest.json" \
+            --facts "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/workspace_facts.jsonl" \
+            "${localization_args[@]}" \
+            --participant examples/multi-repo-case/pi-calibration-author.py \
+            --participant-id "pi-evaluator-${AGENTLAB_MODEL}" \
+            --method-revision "$GITHUB_SHA" \
+            --output "$AGENTLAB_ROOT/output"
+      - name: Revalidate authored bytes without the model credential
+        run: |
+          python3 scripts/run-multi-repo-calibration-authoring.py validate \
+            --root "$AGENTLAB_ROOT/output"
+          sha256sum "$AGENTLAB_ROOT/output/authoring-receipt.json" >> "$GITHUB_STEP_SUMMARY"
+          sha256sum "$AGENTLAB_ROOT/output/construction-contract-proposal.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve draft, exact source evidence and model capture
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-calibration-authoring
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/

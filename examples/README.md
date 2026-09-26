@@ -16,6 +16,7 @@ stateful examples. Pin this repository to the full commit you intend to test.
 | [Mock Agent campaign](mock-agent/README.md) | Create a Harmony seed, Fork, edit, make a mistake, restart, correct and replay | A separate evaluator detects actual service outcomes and parent isolation, despite an optimistic participant |
 | [Harmony native compilation](harmony-build/README.md) | Initialize an ArkTS project, compile, edit twice, reject invalid source and recover | Real offline unsigned HAP files match compiler receipts and contain each iteration's bytecode marker |
 | [Real Code Agent acceptance](real-code-agent/README.md) | Pi calls a real LM Gateway, edits twice and repairs invalid ArkTS | Independent builds verify the actual Agent changes; full inference and native tool evidence are retained |
+| [Multi-repository case generation](multi-repo-case/README.md) | Analyze three pinned repositories, capture a replaceable construction participant, review its proposal, calibrate two stages and freeze a task | Exact source/fact construction evidence can become an explicitly reviewed, Oracle-backed case that rejects stale review, hardcoded and stale-consumer variants |
 
 The test operator controls the Harness. The Mock Agent is a replaceable
 participant. A participant's success claim is retained as evidence and never
@@ -57,8 +58,13 @@ requests, responses, exact revisions and failures.
 
 ## Coverage boundary
 
-These examples exercise different parts of the product. They do not yet form
-one public end-to-end campaign through Chat Harness, a participant, LLM/MCP
+The multi-repository example now includes one credential-free integrated golden
+path across analysis, construction, calibration, blind dispatch, two participant
+profiles and discrimination scoring. It is a deterministic protocol proof, not
+a real-model or Harmony runtime campaign.
+
+The examples still do not form one public end-to-end campaign through Chat
+Harness, a real participant, LLM/MCP
 Gateway capture, TableGit and the mature SessionFS companion. The TableGit demo
 uses the released provisioning SDK tool; the Mock campaign uses the standalone
 storage service. Their passing results cannot be combined into a claim that

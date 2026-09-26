@@ -1446,3 +1446,84 @@ Produce target-instance guidance for this stage as TableGit Skill rows,
 separate from the structured facts/tasks/results. Follow
 [the two-layer methodology](../agentlab-skill-methodology/SKILL.md) for
 method/source lineage and independent layer/role fields.
+
+## Harmony emulator function-bound SmartPerf checkpoint
+
+Long-lived remote automation daemons can retain stale supplementary groups
+after the host account is added to `kvm`, `render` or `video`. Before declaring
+the emulator unavailable, compare the daemon process groups with `/etc/group`
+and run the emulator under a fresh context carrying all three groups. KVM-only
+access is insufficient when EGL also needs `/dev/dri/renderD128` and the card
+device. Preserve each failed evidence directory and classify missing device
+permissions or a wrong image-root argument as infrastructure failure, never as
+an application or Oracle failure.
+
+The real `hwlinux` canary at `/home/huawei/agentlab-canary-3c97b38` closed the
+first exact functional-result-to-SmartPerf-v2 path. Two cold-boot runs used the
+same HAP, scenario, emulator instance and environment identity; both independent
+UI Oracles passed and both five-sample device streams normalized. Real
+`SP_daemon` output on this image is a bare `order:n key=value` stream whose
+sample boundary is the next `order:0`; it does not emit the `Print START/END`
+markers used by earlier fixtures. The normalizer must accept both forms and
+must treat an empty `fpsJitters` field as unavailable evidence.
+
+The retained comparison SHA256 is
+`96d304d64f658d9358e9a75a1724b2cd31162121b8cde93dfba9a3ec035d7305`.
+Its functional gate passed, while the overall decision remained
+`insufficient-comparable-evidence`: the static page yielded zero baseline FPS
+and no frame-interval samples. Keep zero ratio baselines explicitly unusable,
+never label them as regressions. Before claiming emulator performance
+qualification, add a bounded repeatable dynamic workload inside the SmartPerf
+window and prove the same workload identity across baseline and candidate.
+
+## Harmony dynamic-profile capability checkpoint
+
+The next `hwlinux` probe ran twelve real `SP_daemon` samples while ten
+deterministic alternating swipes executed against the same Tutu HAP. The app CPU
+signal reacted (mean about 5.83%), but all FPS values were still zero and all
+`fpsJitters` fields were empty. Do not infer that interaction alone makes frame
+telemetry available, and do not globally drop missing metrics. Bind an exact
+`agentlab.harmony_performance_policy.v1` plus an exact
+`agentlab.harmony_profile_workload.v1` to baseline, candidate, functional result
+and comparison. Gate only the policy-declared required metrics; preserve
+unsupported FPS/frame/GPU metrics as observed-only, keep absolute power/thermal
+unavailable on emulator, and reject policy or workload identity drift. A
+functionally passing policy-bound regression is still only a non-ready,
+non-promoted difficulty candidate.
+
+The first complete paired v3 canary then passed twice with the exact same
+policy/workload identities, 12 samples and 21 retained action rows per run.
+CPU mean was 6.4297% then 6.2624%; PSS mean was 172674 then 172003 KiB, so the
+v3 decision was `within-relative-guardrails` and comparable. Retain comparison
+SHA256 `bb3ad5cd3e6a84405dee9119c97af8d74a6968181c941b600cc58ea3ed21c7e5`
+as the real checkpoint. FPS remained zero and frame intervals absent, so this
+qualifies only the declared CPU/PSS policy lane.
+
+## Harmony emulator stop-readiness checkpoint
+
+Sequential cold-boot campaigns must treat emulator shutdown as incomplete until
+the HDC endpoint port is no longer listening. The vendor stop command can return
+while port 10100 is still bound; immediately starting the next instance then
+produces an infrastructure failure that can be mistaken for application flake.
+The runner must stop the emulator, wait with a bounded timeout for port release,
+and fail as infrastructure if the endpoint remains occupied. Preserve the
+failed batch: the old runner completed 8 of 15 cases and produced 7 port-conflict
+infrastructure failures. After adding the readiness wait, the same 15 cases
+passed consecutively. Do not erase the first batch or reclassify its failures as
+participant or Oracle failures.
+
+## Harmony UI route-specific Oracle checkpoint
+
+Do not treat generic visible text as route identity. Two different ArkUI pages
+may intentionally render the same Web content, so an `assert-text` check can
+accept a meaningful wrong implementation that navigates to the wrong page.
+When the task semantics require a specific route, use scenario v2 and place an
+explicit `assert-page-path` before the visible-semantic assertion. Match the
+dedicated `pagePath` field exactly in the retained layout; do not grep the full
+serialized layout for a generic substring.
+
+Calibrate the Oracle with at least a failing baseline, a known repair, a
+structurally distinct alternative-valid implementation and a meaningful wrong
+implementation. Retain both the superseded false-pass evidence and the
+route-aware replay. Controlled variants are Oracle-calibration evidence only:
+never label them as Agent runs, unseen cases or accepted gold repairs.

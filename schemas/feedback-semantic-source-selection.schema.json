@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/feedback-semantic-source-selection.schema.json",
+  "title": "Feedback semantic source selection receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "feedbackCandidateId",
+    "sourceSetSha256",
+    "priorCaseSha256",
+    "feedbackEvidenceSha256",
+    "claimSha256",
+    "reviewer",
+    "claims",
+    "denominators",
+    "sourceRelevanceEvidenceBound",
+    "semanticAlignmentVerified",
+    "automaticPromotion",
+    "nextGate"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.feedback_semantic_source_selection.v1"},
+    "status": {"const": "source-relevance-evidence-bound-review-required"},
+    "feedbackCandidateId": {"type": "string", "minLength": 1},
+    "sourceSetSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "priorCaseSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "feedbackEvidenceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "claimSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "reviewer": {"type": "string", "minLength": 1},
+    "claims": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 32,
+      "items": {"$ref": "#/$defs/claim"}
+    },
+    "denominators": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claimCount", "coveredRepositoryCount", "coveredCaseAnchorCount"],
+      "properties": {
+        "claimCount": {"type": "integer", "minimum": 2, "maximum": 32},
+        "coveredRepositoryCount": {"type": "integer", "minimum": 2, "maximum": 16},
+        "coveredCaseAnchorCount": {"type": "integer", "minimum": 2}
+      }
+    },
+    "sourceRelevanceEvidenceBound": {"const": true},
+    "semanticAlignmentVerified": {"const": false},
+    "automaticPromotion": {"const": false},
+    "nextGate": {"const": "exact-analysis-then-candidate-semantic-triage"}
+  },
+  "$defs": {
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseAnchor",
+        "repositoryId",
+        "path",
+        "sourceSymbol",
+        "sourceLine",
+        "sourceBlobOid",
+        "sourceFileSha256",
+        "rationale"
+      ],
+      "properties": {
+        "caseAnchor": {"type": "string", "minLength": 1},
+        "repositoryId": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "sourceSymbol": {"type": "string", "minLength": 3, "maxLength": 256},
+        "sourceLine": {"type": "integer", "minimum": 1},
+        "sourceBlobOid": {"type": "string", "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"},
+        "sourceFileSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "rationale": {"type": "string", "minLength": 30}
+      }
+    }
+  }
+}
