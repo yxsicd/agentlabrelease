@@ -139,6 +139,19 @@
     "allowsCaseContract": false,
     "automaticPromotion": false
   },
+  "evidenceEnrichedSemanticReviewPacket": {
+    "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/review-packets/purchase-data-evidence-v6.json",
+    "schema": "agentlab.multi_repo_candidate_review_packet.v6",
+    "sha256": "3a3beb09994a17410a5b0acf9ccdf0625a434cd6ca9a29f932e1b152f7a41e7f",
+    "packetMethodRevision": "e4123bae6ff9f911214d169b69784f2a118d1513",
+    "basePacketSha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
+    "evidenceAttachmentCount": 3,
+    "status": "independent-semantic-review-required",
+    "semanticAlignmentVerified": false,
+    "behaviorOracleVerified": false,
+    "allowsCaseContract": false,
+    "automaticPromotion": false
+  },
   "retention": {
     "authority": "compact-qualification-only",
     "fullReplayEvidence": "local-or-workflow-artifact",

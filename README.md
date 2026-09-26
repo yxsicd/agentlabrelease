@@ -44,7 +44,10 @@ retains two explicit syntactic paths: Harmony purchase data reaches
 `iap.finishPurchase`, while the Cordova owned-purchase value reaches
 `consumeOwnedPurchase` through an exact Git-blob-qualified HTML event binding.
 These paths are review proposals only: type/alias resolution, semantic
-alignment, defect evidence and a behavioral Oracle remain unverified.
+alignment, defect evidence and a behavioral Oracle remain unverified. A compact
+v6 semantic-review envelope now binds the original packet, partial build
+qualification, expression facts and both bounded paths without duplicating the
+large v5 source-context payload; it still requires an independent reviewer.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.
