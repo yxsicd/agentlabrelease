@@ -123,6 +123,7 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
             value["basePacket"] = {
                 "schema": REVIEW.PACKET_SCHEMA_V5,
                 "sha256": "c" * 64,
+                "relativePath": "release/base.json",
                 "packetMethodRevision": "1" * 40,
                 "status": "independent-semantic-review-required",
                 "domainIdentifierContract": {
@@ -136,6 +137,7 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
                 "build-qualification": {
                     "schema": "agentlab.multi_repo_source_build_qualification.v1",
                     "sha256": "d" * 64,
+                    "relativePath": "release/build.json",
                     "status": "partial-build-qualified-review-required",
                     "qualifiedRootCount": 1,
                     "failedRootCount": 2,
@@ -144,6 +146,7 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
                 "expression-fact-qualification": {
                     "schema": "agentlab.multi_repo_expression_fact_qualification.v1",
                     "sha256": "e" * 64,
+                    "relativePath": "release/expression.json",
                     "status": "expression-facts-qualified-dataflow-unresolved",
                     "repositoryCount": 2,
                     "selectedExpressionFactCount": 4,
@@ -151,7 +154,9 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
                 "bounded-expression-flow-proposal": {
                     "schema": "agentlab.bounded_expression_flow_proposal.v1",
                     "sha256": "f" * 64,
+                    "relativePath": "release/flow.json",
                     "planSha256": "a" * 64,
+                    "planRelativePath": "release/plan.json",
                     "status": "bounded-syntactic-flow-proposal-review-required",
                     "repositoryCount": 2,
                     "flowCount": 2,
@@ -364,6 +369,8 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
         ).read_text()
         self.assertIn("github.ref == 'refs/heads/main'", workflow)
         self.assertIn("REVIEWER: github:${{ github.actor }}", workflow)
+        self.assertIn("review-multi-repo-candidate-semantics.py verify-evidence", workflow)
+        self.assertIn("evidence-verification.json", workflow)
         self.assertIn("review-multi-repo-candidate-semantics.py decide", workflow)
         self.assertIn("review-multi-repo-candidate-semantics.py compile", workflow)
         self.assertIn("review-multi-repo-candidate-semantics.py validate", workflow)

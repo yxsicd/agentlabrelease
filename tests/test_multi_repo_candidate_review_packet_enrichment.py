@@ -23,6 +23,10 @@ ENRICH = load_module(
     "multi_repo_candidate_review_packet_enrichment",
     ROOT / "scripts/enrich-multi-repo-candidate-review-packet.py",
 )
+REVIEW = load_module(
+    "multi_repo_candidate_semantic_review_for_enrichment",
+    ROOT / "scripts/review-multi-repo-candidate-semantics.py",
+)
 
 
 class MultiRepoCandidateReviewPacketEnrichmentTests(unittest.TestCase):
@@ -34,6 +38,7 @@ class MultiRepoCandidateReviewPacketEnrichmentTests(unittest.TestCase):
             "schema": ENRICH.BASE_SCHEMA,
             "status": "independent-semantic-review-required",
             "candidateId": candidate_id,
+            "candidateSha256": "f" * 64,
             "sourceSetSha256": source_set,
             "packetMethodRevision": "1" * 40,
             "domainIdentifierContract": {"normalizedIdentifier": "purchase-data", "tokens": ["purchase", "data"]},
@@ -99,7 +104,7 @@ class MultiRepoCandidateReviewPacketEnrichmentTests(unittest.TestCase):
     def test_later_exact_evidence_is_bound_without_promotion(self):
         with tempfile.TemporaryDirectory() as directory:
             paths = self.fixture(Path(directory))
-            value = ENRICH.enrich(*paths, "2" * 40)
+            value = ENRICH.enrich(*paths, "2" * 40, Path(directory))
             self.assertEqual(value["schema"], ENRICH.SCHEMA)
             self.assertEqual(len(value["evidenceAttachments"]), 3)
             self.assertEqual(value["basePacket"]["domainFactCount"], 2)
@@ -115,7 +120,7 @@ class MultiRepoCandidateReviewPacketEnrichmentTests(unittest.TestCase):
             paths = self.fixture(Path(directory))
             paths[3].write_text(paths[3].read_text() + "\n")
             with self.assertRaisesRegex(ENRICH.PacketEnrichmentError, "flow plan digest differs"):
-                ENRICH.enrich(*paths, "2" * 40)
+                ENRICH.enrich(*paths, "2" * 40, Path(directory))
 
     def test_changed_base_packet_is_rejected_by_every_attachment(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -124,7 +129,20 @@ class MultiRepoCandidateReviewPacketEnrichmentTests(unittest.TestCase):
             base["candidateId"] = "difficulty-changed"
             paths[0].write_text(json.dumps(base) + "\n")
             with self.assertRaisesRegex(ENRICH.PacketEnrichmentError, "candidate differs"):
-                ENRICH.enrich(*paths, "2" * 40)
+                ENRICH.enrich(*paths, "2" * 40, Path(directory))
+
+    def test_review_replays_every_referenced_file_before_decision(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = self.fixture(root)
+            packet = root / "packet-v6.json"
+            packet.write_text(json.dumps(ENRICH.enrich(*paths, "2" * 40, root), sort_keys=True) + "\n")
+            receipt = REVIEW.verify_evidence(packet, root)
+            self.assertEqual(receipt["status"], "verified-exact-v6-evidence")
+            self.assertEqual(len(receipt["verifiedFiles"]), 5)
+            paths[1].write_text(paths[1].read_text() + "\n")
+            with self.assertRaisesRegex(REVIEW.SemanticReviewError, "build-qualification digest differs"):
+                REVIEW.verify_evidence(packet, root)
 
 
 if __name__ == "__main__":

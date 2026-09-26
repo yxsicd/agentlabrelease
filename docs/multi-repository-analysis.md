@@ -1306,6 +1306,14 @@ GitHub actor to answer every semantic question and acknowledge every revised
 risk. Evidence enrichment therefore improves the review basis without granting
 `allowsCaseContract` or manufacturing reviewer approval.
 
+The v6 envelope stores repository-relative paths as well as digests. Before a
+review decision, the trusted-main workflow now reopens the v5 packet, build
+qualification, expression qualification, bounded-flow proposal and flow plan;
+it checks path safety, exact bytes, schemas, candidate/source-set lineage,
+counts and non-promoting flags, then retains an evidence-verification receipt.
+A well-formed but invented hash string can no longer stand in for a present,
+matching evidence file.
+
 This gate matters in the real evidence. The two `AlertDialog` sites implement
 different product behavior (account logout confirmation versus Web alert result
 handling), while the two `call.makeCall` sites pass different inputs and live

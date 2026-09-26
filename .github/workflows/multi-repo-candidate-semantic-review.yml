@@ -111,6 +111,10 @@ jobs:
           VERDICT: ${{ inputs.verdict }}
           REVIEW_RATIONALE: ${{ inputs.rationale }}
         run: |
+          python3 scripts/review-multi-repo-candidate-semantics.py verify-evidence \
+            --packet "$PACKET_PATH" \
+            --repository-root "$GITHUB_WORKSPACE" \
+            --output "$AGENTLAB_ROOT/evidence-verification.json"
           python3 scripts/review-multi-repo-candidate-semantics.py decide \
             --packet "$PACKET_PATH" \
             --expected-sha256 "$EXPECTED_PACKET_SHA256" \
@@ -131,6 +135,7 @@ jobs:
           cp "$PACKET_PATH" "$AGENTLAB_ROOT/packet.json"
           sha256sum "$AGENTLAB_ROOT/packet.json" \
             "$AGENTLAB_ROOT/answers.json" \
+            "$AGENTLAB_ROOT/evidence-verification.json" \
             "$AGENTLAB_ROOT/decision.json" \
             "$AGENTLAB_ROOT/gate.json" \
             >> "$GITHUB_STEP_SUMMARY"

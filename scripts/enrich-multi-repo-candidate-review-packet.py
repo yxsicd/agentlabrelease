@@ -17,6 +17,7 @@ EXPRESSION_SCHEMA = "agentlab.multi_repo_expression_fact_qualification.v1"
 FLOW_SCHEMA = "agentlab.bounded_expression_flow_proposal.v1"
 DECISION_SCHEMA = "agentlab.multi_repo_candidate_semantic_review.v1"
 REVISION = re.compile(r"[0-9a-f]{40}")
+SHA256 = re.compile(r"[0-9a-f]{64}")
 
 
 class PacketEnrichmentError(ValueError):
@@ -42,6 +43,19 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def relative_reference(path: Path, evidence_root: Path, label: str) -> str:
+    root = evidence_root.resolve()
+    require(root.is_dir(), "evidence root must be a directory")
+    resolved = path.resolve()
+    try:
+        relative = resolved.relative_to(root)
+    except ValueError as error:
+        raise PacketEnrichmentError(f"{label} is outside evidence root") from error
+    require(path.is_file() and not path.is_symlink(), f"{label} must be a regular file")
+    require(all(part not in ("", ".", "..") for part in relative.parts), f"{label} path is unsafe")
+    return relative.as_posix()
+
+
 def common_lineage(value: dict[str, Any], schema: str, base: dict[str, Any], base_sha256: str, label: str) -> None:
     require(value.get("schema") == schema, f"unsupported {label} schema")
     require(value.get("candidateId") == base.get("candidateId"), f"{label} candidate differs")
@@ -58,6 +72,7 @@ def enrich(
     flow_plan_path: Path,
     flow_path: Path,
     method_revision: str,
+    evidence_root: Path,
 ) -> dict[str, Any]:
     base = load(base_path, "base review packet")
     build = load(build_path, "build qualification")
@@ -68,6 +83,14 @@ def enrich(
     require(base.get("status") == "independent-semantic-review-required", "base packet is not review-required")
     require(base.get("allowsCaseContract") is not True and base.get("automaticPromotion") is False, "base packet can promote")
     require(REVISION.fullmatch(method_revision) is not None, "packet method revision is invalid")
+    require(SHA256.fullmatch(base.get("candidateSha256", "")) is not None, "base candidate digest is invalid")
+    references = {
+        "base": relative_reference(base_path, evidence_root, "base review packet"),
+        "build": relative_reference(build_path, evidence_root, "build qualification"),
+        "expression": relative_reference(expression_path, evidence_root, "expression qualification"),
+        "flowPlan": relative_reference(flow_plan_path, evidence_root, "bounded flow plan"),
+        "flow": relative_reference(flow_path, evidence_root, "bounded flow proposal"),
+    }
     base_sha256 = digest(base_path)
     common_lineage(build, BUILD_SCHEMA, base, base_sha256, "build qualification")
     common_lineage(expression, EXPRESSION_SCHEMA, base, base_sha256, "expression qualification")
@@ -107,11 +130,13 @@ def enrich(
         "schema": SCHEMA,
         "status": "independent-semantic-review-required",
         "candidateId": base.get("candidateId"),
+        "candidateSha256": base.get("candidateSha256"),
         "sourceSetSha256": base.get("sourceSetSha256"),
         "packetMethodRevision": method_revision,
         "basePacket": {
             "schema": BASE_SCHEMA,
             "sha256": base_sha256,
+            "relativePath": references["base"],
             "packetMethodRevision": base.get("packetMethodRevision"),
             "status": base.get("status"),
             "domainIdentifierContract": base.get("domainIdentifierContract"),
@@ -124,6 +149,7 @@ def enrich(
         "build-qualification": {
             "schema": BUILD_SCHEMA,
             "sha256": digest(build_path),
+            "relativePath": references["build"],
             "status": build["status"],
             "environmentIdentity": (build.get("environment") or {}).get("environmentIdentity"),
             "qualifiedRootCount": qualified_root_count,
@@ -133,6 +159,7 @@ def enrich(
         "expression-fact-qualification": {
             "schema": EXPRESSION_SCHEMA,
             "sha256": digest(expression_path),
+            "relativePath": references["expression"],
             "status": expression["status"],
             "analyzerDigest": expression.get("analyzerDigest"),
             "grammarDigest": expression.get("grammarDigest"),
@@ -142,7 +169,9 @@ def enrich(
         "bounded-expression-flow-proposal": {
             "schema": FLOW_SCHEMA,
             "sha256": digest(flow_path),
+            "relativePath": references["flow"],
             "planSha256": flow["planSha256"],
+            "planRelativePath": references["flowPlan"],
             "status": flow["status"],
             "repositoryCount": flow["repositoryCount"],
             "flowCount": flow["flowCount"],
@@ -191,6 +220,7 @@ def main() -> None:
     parser.add_argument("--flow-plan", required=True, type=Path)
     parser.add_argument("--flow-proposal", required=True, type=Path)
     parser.add_argument("--method-revision", required=True)
+    parser.add_argument("--evidence-root", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     result = enrich(
@@ -200,6 +230,7 @@ def main() -> None:
         args.flow_plan,
         args.flow_proposal,
         args.method_revision,
+        args.evidence_root,
     )
     require(not args.output.exists(), "refusing to overwrite enriched review packet")
     args.output.parent.mkdir(parents=True, exist_ok=True)

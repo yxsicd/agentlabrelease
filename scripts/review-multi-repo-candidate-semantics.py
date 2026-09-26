@@ -31,6 +31,7 @@ PACKET_SCHEMAS = {
 ANSWERS_SCHEMA = "agentlab.multi_repo_candidate_semantic_answers.v1"
 DECISION_SCHEMA = "agentlab.multi_repo_candidate_semantic_review.v1"
 GATE_SCHEMA = "agentlab.multi_repo_candidate_semantic_gate.v1"
+EVIDENCE_VERIFICATION_SCHEMA = "agentlab.multi_repo_candidate_semantic_evidence_verification.v1"
 ANSWERS = {"yes", "no", "unknown"}
 VERDICTS = {
     "advance-to-case-contract",
@@ -60,6 +61,29 @@ def load(path: Path, label: str) -> dict[str, Any]:
 
 def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def valid_relative_path(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and bool(value)
+        and "\\" not in value
+        and not value.startswith("/")
+        and all(part not in ("", ".", "..") for part in value.split("/"))
+    )
+
+
+def resolve_reference(repository_root: Path, value: Any, label: str) -> Path:
+    require(valid_relative_path(value), f"{label} path is unsafe")
+    root = repository_root.resolve()
+    require(root.is_dir(), "repository root must be a directory")
+    path = (root / value).resolve()
+    try:
+        path.relative_to(root)
+    except ValueError as error:
+        raise SemanticReviewError(f"{label} escapes repository root") from error
+    require(path.is_file() and not path.is_symlink(), f"{label} must be a regular file")
+    return path
 
 
 def validate_packet(packet: dict[str, Any]) -> None:
@@ -104,6 +128,7 @@ def validate_packet(packet: dict[str, Any]) -> None:
             and base.get("status") == "independent-semantic-review-required",
             "v6 base packet reference is invalid",
         )
+        require(valid_relative_path(base.get("relativePath")), "v6 base packet path is unsafe")
         contract = base.get("domainIdentifierContract")
         require(
             isinstance(contract, dict)
@@ -128,6 +153,7 @@ def validate_packet(packet: dict[str, Any]) -> None:
                 and SHA256.fullmatch(row.get("sha256", "")) is not None
                 and isinstance(row.get("schema"), str)
                 and isinstance(row.get("status"), str)
+                and valid_relative_path(row.get("relativePath"))
                 for row in attachments.values()
             ),
             "v6 evidence attachment is invalid",
@@ -157,6 +183,7 @@ def validate_packet(packet: dict[str, Any]) -> None:
             and SHA256.fullmatch(flow.get("planSha256", "")) is not None,
             "v6 bounded flow summary differs",
         )
+        require(valid_relative_path(flow.get("planRelativePath")), "v6 bounded flow plan path is unsafe")
         require(packet.get("semanticAlignmentVerified") is False, "v6 packet claims semantic alignment")
         require(packet.get("behaviorOracleVerified") is False, "v6 packet claims a behavior Oracle")
     if packet.get("schema") in {PACKET_SCHEMA_V2, PACKET_SCHEMA_V3, PACKET_SCHEMA_V4}:
@@ -198,6 +225,7 @@ def validate_packet(packet: dict[str, Any]) -> None:
     require(packet.get("automaticPromotion") is False, "candidate packet can auto-promote")
     candidate_id = packet.get("candidateId")
     require(isinstance(candidate_id, str) and TOKEN.fullmatch(candidate_id), "candidate id is invalid")
+    require(SHA256.fullmatch(packet.get("candidateSha256", "")) is not None, "candidate digest is invalid")
     method_revision = packet.get("packetMethodRevision")
     require(
         isinstance(method_revision, str) and REVISION.fullmatch(method_revision),
@@ -234,6 +262,81 @@ def validate_packet(packet: dict[str, Any]) -> None:
         contract.get("reviewerMustBeIndependentOfPacketGenerator") is True,
         "packet does not require reviewer independence",
     )
+
+
+def verify_evidence(packet_path: Path, repository_root: Path) -> dict[str, Any]:
+    packet = load(packet_path, "candidate review packet")
+    validate_packet(packet)
+    if packet.get("schema") != PACKET_SCHEMA_V6:
+        return {
+            "schema": EVIDENCE_VERIFICATION_SCHEMA,
+            "status": "legacy-packet-contained-evidence",
+            "packetSha256": digest(packet_path),
+            "candidateId": packet["candidateId"],
+            "sourceSetSha256": packet["sourceSetSha256"],
+            "verifiedFiles": [],
+        }
+    candidate_id = packet["candidateId"]
+    source_set_sha256 = packet["sourceSetSha256"]
+    verified_files: list[dict[str, str]] = []
+
+    def checked(reference: dict[str, Any], label: str) -> tuple[Path, dict[str, Any]]:
+        path = resolve_reference(repository_root, reference.get("relativePath"), label)
+        require(digest(path) == reference.get("sha256"), f"{label} digest differs")
+        value = load(path, label)
+        require(value.get("schema") == reference.get("schema"), f"{label} schema differs")
+        require(value.get("candidateId") == candidate_id, f"{label} candidate differs")
+        require(value.get("sourceSetSha256") == source_set_sha256, f"{label} source set differs")
+        verified_files.append({"id": label, "relativePath": reference["relativePath"], "sha256": reference["sha256"]})
+        return path, value
+
+    base_reference = packet["basePacket"]
+    base_path, base = checked(base_reference, "base-packet")
+    require(base.get("packetMethodRevision") == base_reference.get("packetMethodRevision"), "base packet method revision differs")
+    require(base.get("status") == base_reference.get("status"), "base packet status differs")
+    require(base.get("candidateSha256") == packet.get("candidateSha256"), "base packet candidate digest differs")
+    facts = base.get("domainFactEvidence") or []
+    require(
+        len(facts) == base_reference.get("domainFactCount")
+        and len({row.get("repositoryId") for row in facts if isinstance(row, dict)})
+        == base_reference.get("coveredRepositoryCount"),
+        "base packet domain evidence count differs",
+    )
+
+    attachments = packet["evidenceAttachments"]
+    _, build = checked(attachments["build-qualification"], "build-qualification")
+    require(build.get("reviewPacketSha256") == digest(base_path), "build qualification base packet differs")
+    roots = build.get("roots") or []
+    require(sum(row.get("status") == "passed" for row in roots if isinstance(row, dict)) == attachments["build-qualification"]["qualifiedRootCount"], "qualified build-root count differs")
+    require(sum(row.get("status") == "failed" for row in roots if isinstance(row, dict)) == attachments["build-qualification"]["failedRootCount"], "failed build-root count differs")
+
+    _, expression = checked(attachments["expression-fact-qualification"], "expression-fact-qualification")
+    require(expression.get("reviewPacketSha256") == digest(base_path), "expression qualification base packet differs")
+    require(expression.get("repositoryCount") == attachments["expression-fact-qualification"]["repositoryCount"], "expression repository count differs")
+    require(expression.get("selectedExpressionFactCount") == attachments["expression-fact-qualification"]["selectedExpressionFactCount"], "expression fact count differs")
+
+    _, flow = checked(attachments["bounded-expression-flow-proposal"], "bounded-expression-flow-proposal")
+    require(flow.get("reviewPacketSha256") == digest(base_path), "bounded flow base packet differs")
+    flow_reference = attachments["bounded-expression-flow-proposal"]
+    plan_path = resolve_reference(repository_root, flow_reference.get("planRelativePath"), "bounded-flow-plan")
+    require(digest(plan_path) == flow_reference.get("planSha256") == flow.get("planSha256"), "bounded flow plan digest differs")
+    plan = load(plan_path, "bounded flow plan")
+    require(plan.get("candidateId") == candidate_id and plan.get("sourceSetSha256") == source_set_sha256, "bounded flow plan lineage differs")
+    verified_files.append({"id": "bounded-flow-plan", "relativePath": flow_reference["planRelativePath"], "sha256": flow_reference["planSha256"]})
+    require(flow.get("repositoryCount") == flow_reference.get("repositoryCount"), "bounded flow repository count differs")
+    require(flow.get("flowCount") == flow_reference.get("flowCount"), "bounded flow count differs")
+    require(sum(row.get("edgeCount", 0) for row in flow.get("flows") or [] if isinstance(row, dict)) == flow_reference.get("edgeCount"), "bounded flow edge count differs")
+    require(len(flow.get("sourceBridges") or []) == flow_reference.get("sourceBridgeCount"), "bounded flow bridge count differs")
+    require(flow.get("allBoundedPathsEstablished") is flow_reference.get("allBoundedPathsEstablished") is True, "bounded paths are incomplete")
+    require(all(value.get("allowsCaseContract") is False and value.get("automaticPromotion") is False for value in (build, expression, flow)), "attached evidence can promote")
+    return {
+        "schema": EVIDENCE_VERIFICATION_SCHEMA,
+        "status": "verified-exact-v6-evidence",
+        "packetSha256": digest(packet_path),
+        "candidateId": candidate_id,
+        "sourceSetSha256": source_set_sha256,
+        "verifiedFiles": verified_files,
+    }
 
 
 def normalize_answers(answers: dict[str, Any], required_ids: list[str]) -> list[dict[str, str]]:
@@ -405,6 +508,10 @@ def main() -> int:
     validate_command.add_argument("--packet", type=Path, required=True)
     validate_command.add_argument("--decision", type=Path, required=True)
     validate_command.add_argument("--gate", type=Path, required=True)
+    verify_command = commands.add_parser("verify-evidence")
+    verify_command.add_argument("--packet", type=Path, required=True)
+    verify_command.add_argument("--repository-root", type=Path, required=True)
+    verify_command.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
         if args.command == "decide":
@@ -418,9 +525,13 @@ def main() -> int:
             value = compile_gate(args.packet, args.decision)
             write(args.output, value)
             result = {"ok": True, "gateSha256": digest(args.output), "status": value["status"]}
-        else:
+        elif args.command == "validate":
             value = validate_gate(args.packet, args.decision, args.gate)
             result = {"ok": True, "gateSha256": digest(args.gate), "status": value["status"]}
+        else:
+            value = verify_evidence(args.packet, args.repository_root)
+            write(args.output, value)
+            result = {"ok": True, "evidenceVerificationSha256": digest(args.output), "status": value["status"]}
         print(json.dumps(result, sort_keys=True))
     except (SemanticReviewError, OSError, json.JSONDecodeError) as error:
         print(f"candidate semantic review invalid: {error}", file=sys.stderr)
