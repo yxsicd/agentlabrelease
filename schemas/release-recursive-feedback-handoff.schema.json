@@ -13,6 +13,7 @@
     "harmonyAcceptance",
     "campaign",
     "evidence",
+    "portableEvidence",
     "discrimination",
     "candidates",
     "performanceBoundary",
@@ -46,6 +47,15 @@
       "properties": {
         "assessmentFeedback": {"$ref": "#/$defs/binding"},
         "discriminationReport": {"$ref": "#/$defs/binding"}
+      }
+    },
+    "portableEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["priorCase", "assessmentFeedback"],
+      "properties": {
+        "priorCase": {"$ref": "#/$defs/portableBinding"},
+        "assessmentFeedback": {"$ref": "#/$defs/portableBinding"}
       }
     },
     "discrimination": {
@@ -120,6 +130,16 @@
       "additionalProperties": false,
       "required": ["sha256", "byteLength"],
       "properties": {
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "byteLength": {"type": "integer", "minimum": 1}
+      }
+    },
+    "portableBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fileName", "sha256", "byteLength"],
+      "properties": {
+        "fileName": {"enum": ["prior-case.json", "assessment-feedback-candidates.json"]},
         "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "byteLength": {"type": "integer", "minimum": 1}
       }

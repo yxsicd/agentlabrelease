@@ -79,6 +79,24 @@ def prepare(
     next_gate = handoff.get("nextAnalysis") or {}
     require(next_gate.get("proposer") == "scripts/propose-feedback-analysis-cut.py", "handoff proposer differs")
     require(next_gate.get("requiredChange") == "new-source-set-or-method-revision", "handoff change policy differs")
+    portable = handoff.get("portableEvidence")
+    require(isinstance(portable, dict), "handoff portable evidence is absent")
+    prior_case_binding = portable.get("priorCase")
+    feedback_binding = portable.get("assessmentFeedback")
+    require(
+        isinstance(prior_case_binding, dict)
+        and prior_case_binding.get("fileName") == "prior-case.json"
+        and isinstance(prior_case_binding.get("sha256"), str)
+        and SHA256.fullmatch(prior_case_binding["sha256"]),
+        "portable prior case binding is invalid",
+    )
+    require(
+        isinstance(feedback_binding, dict)
+        and feedback_binding.get("fileName") == "assessment-feedback-candidates.json"
+        and isinstance(feedback_binding.get("sha256"), str)
+        and SHA256.fullmatch(feedback_binding["sha256"]),
+        "portable feedback binding is invalid",
+    )
 
     candidates = handoff.get("candidates")
     require(isinstance(candidates, list) and candidates, "handoff has no feedback candidates")
@@ -111,6 +129,8 @@ def prepare(
             "candidateId": feedback_candidate_id,
             "caseId": campaign.get("caseId"),
             "mechanism": candidate.get("mechanism"),
+            "priorCaseSha256": prior_case_binding["sha256"],
+            "feedbackEvidenceSha256": feedback_binding["sha256"],
         },
         "priorAnalysis": {
             "sourceSetSha256": prior_source_set,

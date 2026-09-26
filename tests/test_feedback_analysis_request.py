@@ -73,6 +73,18 @@ class FeedbackAnalysisRequestTests(unittest.TestCase):
                 "sourceSetSha256": "a" * 64,
                 "methodRevision": self.prior_revision,
             },
+            "portableEvidence": {
+                "priorCase": {
+                    "fileName": "prior-case.json",
+                    "sha256": "b" * 64,
+                    "byteLength": 100,
+                },
+                "assessmentFeedback": {
+                    "fileName": "assessment-feedback-candidates.json",
+                    "sha256": "c" * 64,
+                    "byteLength": 200,
+                },
+            },
             "candidates": [
                 {
                     "id": "assessment-feedback-prior",
@@ -119,6 +131,7 @@ class FeedbackAnalysisRequestTests(unittest.TestCase):
         self.assertEqual(value["nextAnalysis"]["sourceSetSha256"], self.next_source_set)
         self.assertTrue(value["nextAnalysis"]["sourceChanged"])
         self.assertTrue(value["nextAnalysis"]["methodChanged"])
+        self.assertEqual(value["feedbackHandoff"]["priorCaseSha256"], "b" * 64)
         self.assertEqual(
             value["nextAnalysis"]["nextGate"],
             "exact-analysis-then-feedback-analysis-cut-proposal",

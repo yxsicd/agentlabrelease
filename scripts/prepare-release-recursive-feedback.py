@@ -94,12 +94,14 @@ def prepare(
     closure_path: pathlib.Path,
     acceptance_path: pathlib.Path,
     campaign_summary_path: pathlib.Path,
+    prior_case_path: pathlib.Path,
     feedback_path: pathlib.Path,
     discrimination_path: pathlib.Path,
 ) -> dict[str, Any]:
     closure = load(closure_path, "release closure")
     acceptance = load(acceptance_path, "release Harmony acceptance")
     summary = load(campaign_summary_path, "campaign summary")
+    prior_case = load(prior_case_path, "prior evaluation case")
     feedback = load(feedback_path, "assessment feedback")
     discrimination = load(discrimination_path, "discrimination report")
 
@@ -131,9 +133,15 @@ def prepare(
     require(isinstance(case_id, str) and case_id, "campaign case id is invalid")
     require(isinstance(source_set, str) and SHA256.fullmatch(source_set), "campaign source set is invalid")
     require(feedback.get("schema") == "agentlab.assessment_feedback_candidates.v1", "unsupported feedback schema")
+    require(prior_case.get("schema") == "agentlab.multi_repo_evaluation_case.v1", "unsupported prior case schema")
+    require(prior_case.get("status") == "frozen-calibrated", "prior case is not frozen and calibrated")
+    require(prior_case.get("automaticPromotion") is False, "prior case may not auto-promote")
+    require(prior_case.get("id") == case_id, "prior case identity differs")
+    require(prior_case.get("sourceSetSha256") == source_set, "prior case source set differs")
     require(feedback.get("caseId") == case_id, "feedback case differs")
     require(feedback.get("sourceSetSha256") == source_set, "feedback source set differs")
     require(feedback.get("methodRevision") == release_revision, "feedback method revision differs")
+    require(feedback.get("caseSha256") == canonical_sha256(prior_case), "feedback does not bind exact prior case")
     require((feedback.get("policy") or {}).get("automaticPromotion") is False, "feedback may not auto-promote")
     require(discrimination.get("schema") == "agentlab.case_discrimination_report.v2", "unsupported discrimination schema")
     require(discrimination.get("sourceSetSha256") == source_set, "discrimination source set differs")
@@ -177,6 +185,16 @@ def prepare(
         "evidence": {
             "assessmentFeedback": binding(feedback_path),
             "discriminationReport": binding(discrimination_path),
+        },
+        "portableEvidence": {
+            "priorCase": {
+                "fileName": "prior-case.json",
+                **binding(prior_case_path),
+            },
+            "assessmentFeedback": {
+                "fileName": "assessment-feedback-candidates.json",
+                **binding(feedback_path),
+            },
         },
         "discrimination": {
             "decision": rank["decision"],
@@ -225,6 +243,7 @@ def main() -> int:
     parser.add_argument("--closure", type=pathlib.Path, required=True)
     parser.add_argument("--acceptance", type=pathlib.Path, required=True)
     parser.add_argument("--campaign-summary", type=pathlib.Path, required=True)
+    parser.add_argument("--prior-case", type=pathlib.Path, required=True)
     parser.add_argument("--feedback", type=pathlib.Path, required=True)
     parser.add_argument("--discrimination-report", type=pathlib.Path, required=True)
     parser.add_argument("--output", type=pathlib.Path, required=True)
@@ -236,6 +255,7 @@ def main() -> int:
             args.closure.resolve(),
             args.acceptance.resolve(),
             args.campaign_summary.resolve(),
+            args.prior_case.resolve(),
             args.feedback.resolve(),
             args.discrimination_report.resolve(),
         )

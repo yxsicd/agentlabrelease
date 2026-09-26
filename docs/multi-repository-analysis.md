@@ -988,6 +988,17 @@ the normalized source specification and exact analysis receipt. It schedules
 analysis only: case readiness, semantic alignment, Oracle calibration and
 promotion remain separate review gates.
 
+The release handoff directory carries the exact prior frozen case and assessment
+feedback bytes, both bound in the handoff and request. Once exact analysis
+finishes, `prepare-feedback-analysis-proposals.py` rechecks those bytes, the
+method-revision-bound analysis run, analysis receipt and difficulty evidence, filters for non-ready impact
+candidates that actually span at least two repositories, and creates a bounded
+queue of at most ten ordinary feedback-cut proposals. Ordering is deterministic
+by affected repository count, affected file count, evidence count and candidate
+id. The queue records `semanticAlignmentVerified=false`; every proposal still
+requires an independent maintainer to decide whether its program-analysis
+mechanism explains the observed assessment failure.
+
 ```sh
 gh workflow run multi-repo-analysis.yml --ref main \
   -f source_spec_json="$(jq -c . /next/source-spec.json)" \

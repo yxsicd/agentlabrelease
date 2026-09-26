@@ -119,6 +119,19 @@ class ReleaseRecursiveFeedbackHandoffTests(unittest.TestCase):
             ],
             "policy": {"automaticPromotion": False},
         }
+        self.prior_case = self.write(
+            "prior-case.json",
+            {
+                "schema": "agentlab.multi_repo_evaluation_case.v1",
+                "status": "frozen-calibrated",
+                "id": self.case_id,
+                "sourceSetSha256": self.source_set,
+                "automaticPromotion": False,
+            },
+        )
+        self.feedback_value["caseSha256"] = canonical_digest(
+            json.loads(self.prior_case.read_text())
+        )
         self.feedback = self.write("feedback.json", self.feedback_value)
         self.summary = self.write(
             "summary.json",
@@ -166,6 +179,7 @@ class ReleaseRecursiveFeedbackHandoffTests(unittest.TestCase):
             self.closure,
             self.acceptance,
             self.summary,
+            self.prior_case,
             self.feedback,
             self.discrimination,
         )
@@ -179,6 +193,11 @@ class ReleaseRecursiveFeedbackHandoffTests(unittest.TestCase):
         self.assertEqual(value["performanceBoundary"]["observationCount"], 1)
         self.assertFalse(value["performanceBoundary"]["qualifiedForRecursivePerformanceFeedback"])
         self.assertEqual(value["evidence"]["assessmentFeedback"]["sha256"], digest(self.feedback))
+        self.assertEqual(value["portableEvidence"]["priorCase"]["sha256"], digest(self.prior_case))
+        self.assertEqual(
+            value["portableEvidence"]["assessmentFeedback"]["fileName"],
+            "assessment-feedback-candidates.json",
+        )
         self.assertEqual(value["nextAnalysis"]["proposer"], "scripts/propose-feedback-analysis-cut.py")
         self.assertFalse(value["automaticPromotion"])
 

@@ -14,12 +14,14 @@
     "feedbackHandoff": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["sha256", "candidateId", "caseId", "mechanism"],
+      "required": ["sha256", "candidateId", "caseId", "mechanism", "priorCaseSha256", "feedbackEvidenceSha256"],
       "properties": {
         "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "candidateId": {"type": "string", "minLength": 1},
         "caseId": {"type": "string", "minLength": 1},
-        "mechanism": {"type": "string", "minLength": 1}
+        "mechanism": {"type": "string", "minLength": 1},
+        "priorCaseSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "feedbackEvidenceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
       }
     },
     "priorAnalysis": {"$ref": "#/$defs/analysisIdentity"},

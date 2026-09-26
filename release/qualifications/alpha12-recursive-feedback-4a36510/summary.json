@@ -82,6 +82,18 @@
     "qualifiedForRecursivePerformanceFeedback": false,
     "repeatableProfileCount": 0
   },
+  "portableEvidence": {
+    "assessmentFeedback": {
+      "byteLength": 2285,
+      "fileName": "assessment-feedback-candidates.json",
+      "sha256": "668e0bfcac5142f8dcc5235f3ce7aeed1bc62bd10321cea7c609a716706d47f2"
+    },
+    "priorCase": {
+      "byteLength": 1599,
+      "fileName": "prior-case.json",
+      "sha256": "747c33e7f4f04fa4fbcbff44456e934e8804aad8c4f21b2b8fc2ca0486b7a6dd"
+    }
+  },
   "qualificationBoundary": {
     "notQualified": [
       "population-level discrimination confidence",
