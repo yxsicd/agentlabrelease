@@ -103,6 +103,14 @@ It requires a different GitHub actor for Oracle review, exact answers and all
 five risk acknowledgements. Even an approval grants only runtime-calibration
 authority; it explicitly leaves behavior-Oracle verification and case-contract
 authority false until emulator/runtime evidence is independently validated.
+The Rust-native `agentlab-purchase-data-runtime-plan` command consumes that
+approved gate and digest-binds it to the alpha.13 release closure, generic
+Linux target and all three immutable emulator assets. It emits three explicit
+stages for exact-source build plus OHOS Test authoring, emulator functional
+calibration and repeated SmartPerf comparison. The result is deliberately
+`runtime-calibration-planned-not-executed`: every execution flag, behavior
+Oracle verification, case-contract authority and automatic promotion remain
+false until independent runtime receipts exist.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.

@@ -384,6 +384,15 @@
       "requiresDistinctSemanticAndOracleReviewers": true,
       "approvalScope": "runtime-calibration-only"
     },
+    "availableRuntimeCalibrationPlanner": {
+      "implementation": "crates/agentlab_code_analysis/src/purchase_data_runtime_plan.rs",
+      "binary": "agentlab-purchase-data-runtime-plan",
+      "language": "rust",
+      "requiresApprovedOracleGate": true,
+      "bindsImmutableEmulatorAssetCount": 3,
+      "stageCount": 3,
+      "status": "runtime-calibration-planned-not-executed"
+    },
     "semanticAlignmentVerified": false,
     "behaviorOracleVerified": false,
     "allowsCaseContract": false,

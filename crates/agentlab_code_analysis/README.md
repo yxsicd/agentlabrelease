@@ -61,6 +61,31 @@ boundary evidence, and recursive reverse-impact difficulty candidates. Those
 candidates are not benchmark cases: each remains in candidate state until it
 has repository-specific build checks and an independent behavior oracle.
 
+## Purchase-data runtime calibration planning
+
+`agentlab-purchase-data-runtime-plan` keeps the next runtime transition in
+Rust. It accepts only an independently approved behavior-Oracle gate, verifies
+the exact behavior plan and calibration digests, checks the generic Linux
+x86/KVM target, and resolves the three immutable emulator assets through the
+release closure and component registry.
+
+```sh
+cargo run --locked -p agentlab_code_analysis \
+  --bin agentlab-purchase-data-runtime-plan -- \
+  --oracle-gate /path/to/approved-gate.json \
+  --behavior-plan release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-behavior-oracle-plan.json \
+  --behavior-calibration release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-behavior-oracle-calibration.json \
+  --release-closure release/closures/v0.1.0-alpha.13.json \
+  --target release/targets/generic-linux-agentlab.json \
+  --component-registry release/components/registry.json \
+  --output /tmp/purchase-data-runtime-plan.json
+```
+
+The output only authorizes a future calibration run. It does not claim that
+the source was built, OHOS Test ran, the emulator was launched, the functional
+Oracle passed, or SmartPerf evidence exists. Those flags remain false until
+independently validated runtime receipts are attached.
+
 The optional cache is a derivative, never source authority. By default an
 exact analyzer/grammar/source-set bundle hit bypasses both parsing and graph
 reconstruction and restores the previously digest-checked authority artifacts;

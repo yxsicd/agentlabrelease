@@ -1259,6 +1259,25 @@ decision produces only `approved-for-runtime-calibration`; it retains
 case before Harmony compiler, framework, full-application and emulator evidence
 exists.
 
+`agentlab-purchase-data-runtime-plan` is the Rust-native bridge from an
+approved review gate to executable runtime work. It reopens the exact plan and
+calibration digests, validates the lightweight release closure and component
+registry, requires the generic Linux x86/KVM target, and binds the manifest,
+command-line tools and system image as three immutable assets. Its output is a
+portable, digest-fenced plan with three ordered stages: exact-source build and
+OHOS Test authoring/execution, Linux-emulator functional calibration against
+all ten checks, and repeated SmartPerf comparison for CPU, PSS and FPS.
+Absolute power and thermal remain unavailable on the emulator and therefore
+require separate physical-device authority.
+
+Planning does not manufacture execution evidence. The emitted status is
+`runtime-calibration-planned-not-executed`; all build, OHOS Test, emulator,
+functional-Oracle and performance flags remain false. The command also keeps
+`behaviorOracleVerified=false`, `allowsCaseContract=false` and
+`automaticPromotion=false`. Rust integration tests cover the accepted path,
+reviewer independence, gate status, digest drift, release-registry drift and
+overwrite refusal.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \
