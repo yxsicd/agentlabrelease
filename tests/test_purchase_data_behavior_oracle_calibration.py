@@ -255,6 +255,15 @@ class PurchaseDataBehaviorOracleCalibrationTests(unittest.TestCase):
             self.assertEqual(result["coverage"]["negativeControlCount"], 5)
             self.assertFalse(result["behaviorOracleVerified"])
             self.assertFalse(result["allowsCaseContract"])
+            retained_root = ROOT / "release/qualifications/alpha13-payment-feedback-analysis-165bcbd"
+            retained_plan = json.loads((retained_root / "purchase-data-behavior-oracle-plan.json").read_text())
+            retained = json.loads((retained_root / "purchase-data-behavior-oracle-calibration.json").read_text())
+            self.assertEqual(retained["planSha256"], sha(retained_root / "purchase-data-behavior-oracle-plan.json"))
+            self.assertEqual(retained["methodRevision"], retained_plan["methodRevision"])
+            self.assertEqual(retained["coverage"]["checkCount"], 10)
+            self.assertEqual(retained["coverage"]["negativeControlCount"], 5)
+            self.assertTrue(retained["coverage"]["allNegativeControlsDetected"])
+            self.assertFalse(retained["behaviorOracleVerified"])
 
     def test_changed_checkout_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:

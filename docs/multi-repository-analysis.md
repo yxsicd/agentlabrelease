@@ -1229,6 +1229,23 @@ every possible sink invocation, the two repositories express one product
 behavior, or that a behavior Oracle exists. Those semantic and calibration
 gates remain independent and non-promoting.
 
+`calibrate-purchase-data-behavior-oracle.py` adds an executable, bounded seam
+over the five selected method bodies from the same exact Git revisions. It
+checks malformed and already-finished Harmony orders, exact finish identity,
+missing-type and rejection paths, Cordova owned-item pairing, exact consume
+input, success reset/reload, business failure and rejected Promise behavior.
+The exact source passes all ten checks. Five meaningful wrong variants—status
+polarity, token source, owned-data index, consume-data source and success
+polarity—are all rejected, so the seam has demonstrated discriminating power
+within this selected boundary.
+
+The retained result is an Oracle candidate, not an approved behavior Oracle.
+Only digest-qualified method bodies execute; IAP services are controlled stubs,
+and ArkUI/Angular lifecycle, compilation, whole applications, devices and
+emulators are outside this calibration. Independent semantic adjudication,
+independent Oracle review and runtime calibration must still succeed before a
+case contract can be constructed or promoted.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \

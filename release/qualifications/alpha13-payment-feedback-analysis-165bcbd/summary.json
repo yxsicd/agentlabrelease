@@ -365,9 +365,28 @@
     "allowsCaseContract": false,
     "automaticPromotion": false
   },
+  "purchaseDataBehaviorOracleCalibration": {
+    "planPath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-behavior-oracle-plan.json",
+    "planSha256": "a436bcb578b95738521fd7c23b3ff0cbf195b3d809bfa465e0b7b0a741e7f60f",
+    "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-behavior-oracle-calibration.json",
+    "schema": "agentlab.purchase_data_behavior_oracle_calibration.v1",
+    "sha256": "1c5177f3d97af8f4904ca67f7494eafb30e9249b656624f04d594e3c30aecaac",
+    "methodRevision": "a94102cba9e5ad87e0336431843c4cd7f1208915",
+    "repositoryCount": 2,
+    "methodCount": 5,
+    "checkCount": 10,
+    "negativeControlCount": 5,
+    "undetectedNegativeControlCount": 0,
+    "sourceSeamCalibrated": true,
+    "semanticAlignmentVerified": false,
+    "behaviorOracleVerified": false,
+    "allowsCaseContract": false,
+    "automaticPromotion": false,
+    "status": "source-seam-calibrated-independent-review-required"
+  },
   "retention": {
     "authority": "compact-qualification-only",
     "fullReplayEvidence": "local-or-workflow-artifact",
-    "nextGate": "independent-semantic-review-and-cross-repository-behavior-oracle"
+    "nextGate": "independent-semantic-review-then-independent-oracle-review-and-runtime-calibration"
   }
 }

@@ -89,6 +89,14 @@ bounded program-analysis set to zero. This is conditional source-level evidence
 only: whole-application reachability, framework correctness, external API
 success, semantic alignment and a behavior Oracle remain unverified, so the
 packet still cannot construct or promote a case automatically.
+A bounded behavior-seam calibration now executes five digest-qualified method
+bodies from those same two source revisions. All ten declared purchase-data
+checks pass for the exact source, while five deliberately wrong variants are
+all detected. This is stronger executable Oracle-candidate evidence, but the
+external IAP calls remain stubbed and framework lifecycle, whole-application
+execution, independent semantic adjudication, independent Oracle review and
+emulator/runtime calibration remain open. Accordingly it still cannot create
+or promote a case.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.
