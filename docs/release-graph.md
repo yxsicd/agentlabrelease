@@ -118,6 +118,10 @@ performance-derived difficulty candidate. The handoff never invents a new
 source set, never changes the frozen case and never authorizes promotion.
 The Alpha.12 result is retained at
 `release/qualifications/alpha12-recursive-feedback-4a36510/summary.json`.
+That committed handoff can be supplied directly to the optional feedback inputs
+of `multi-repo-analysis.yml`; the workflow emits an exact
+`feedback-analysis-request.json` before analyzing the caller-selected new source
+revisions. The request is planning evidence, not a case approval.
 
 After an authorized merge and immutable tag are present, dispatch **Qualify
 tagged developer preview** with the workflow ref set to that exact tag. The

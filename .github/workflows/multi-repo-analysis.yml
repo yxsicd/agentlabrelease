@@ -6,6 +6,16 @@ on:
         description: Exact agentlab.multi_repo_source_spec.v1 JSON with public HTTPS repositories and 40-character commits
         required: true
         type: string
+      feedback_handoff_path:
+        description: Optional committed release/qualifications feedback handoff path
+        required: false
+        default: ""
+        type: string
+      feedback_candidate_id:
+        description: Required candidate id when feedback_handoff_path is supplied
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -38,6 +48,29 @@ jobs:
             --output "$AGENTLAB_ROOT/source/source-prefetch.json"
           echo "sha256=$(sha256sum "$AGENTLAB_ROOT/source/source-spec.json" | cut -d' ' -f1)" \
             >> "$GITHUB_OUTPUT"
+      - name: Bind optional feedback to this exact analysis request
+        env:
+          FEEDBACK_HANDOFF_PATH: ${{ inputs.feedback_handoff_path }}
+          FEEDBACK_CANDIDATE_ID: ${{ inputs.feedback_candidate_id }}
+        run: |
+          if [[ -z "$FEEDBACK_HANDOFF_PATH" && -z "$FEEDBACK_CANDIDATE_ID" ]]; then
+            exit 0
+          fi
+          if [[ -z "$FEEDBACK_HANDOFF_PATH" || -z "$FEEDBACK_CANDIDATE_ID" ]]; then
+            echo "feedback_handoff_path and feedback_candidate_id must be supplied together" >&2
+            exit 1
+          fi
+          case "$FEEDBACK_HANDOFF_PATH" in
+            release/qualifications/*/summary.json) ;;
+            *) echo "feedback handoff must be a committed qualification summary" >&2; exit 1 ;;
+          esac
+          python3 scripts/prepare-feedback-analysis-request.py \
+            --handoff "$GITHUB_WORKSPACE/$FEEDBACK_HANDOFF_PATH" \
+            --source-spec "$AGENTLAB_ROOT/source/source-spec.json" \
+            --feedback-candidate-id "$FEEDBACK_CANDIDATE_ID" \
+            --next-method-revision "$GITHUB_SHA" \
+            --output "$AGENTLAB_ROOT/feedback-analysis-request.json"
+          sha256sum "$AGENTLAB_ROOT/feedback-analysis-request.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Restore rebuildable AST cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -75,3 +108,4 @@ jobs:
             ${{ env.AGENTLAB_ROOT }}/source/analysis-cache-execution.json
             ${{ env.AGENTLAB_ROOT }}/source/analysis-run.json
             ${{ env.AGENTLAB_ROOT }}/source/analysis/
+            ${{ env.AGENTLAB_ROOT }}/feedback-analysis-request.json

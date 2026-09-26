@@ -976,6 +976,25 @@ explicitly `next-analysis-review-required`; it does not fabricate the new
 source set or substitute for `propose-feedback-analysis-cut.py` and its
 maintainer review.
 
+The existing **Multi-repository exact analysis** workflow accepts that handoff
+as an optional trigger context. Supply the committed qualification summary path
+and one candidate id together with any valid two-to-sixteen-repository source
+specification. Before analysis, `prepare-feedback-analysis-request.py` validates
+the public HTTPS repository identities and exact 40-character revisions,
+reproduces the next source-set digest and rejects a request where neither the
+source set nor method revision changed. The resulting
+`agentlab.feedback_analysis_request.v1` travels in the analysis artifact beside
+the normalized source specification and exact analysis receipt. It schedules
+analysis only: case readiness, semantic alignment, Oracle calibration and
+promotion remain separate review gates.
+
+```sh
+gh workflow run multi-repo-analysis.yml --ref main \
+  -f source_spec_json="$(jq -c . /next/source-spec.json)" \
+  -f feedback_handoff_path=release/qualifications/alpha12-recursive-feedback-4a36510/summary.json \
+  -f feedback_candidate_id=assessment-feedback-a6a1b3d8a4ce4835db0c
+```
+
 The same feedback pass now closes repeatable Harmony performance separation
 into this recursive path without treating performance as a functional failure.
 It emits a performance candidate only when at least two functionally successful

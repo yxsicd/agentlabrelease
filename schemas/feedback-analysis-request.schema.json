@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/feedback-analysis-request.schema.json",
+  "title": "Feedback-triggered exact multi-repository analysis request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "requestId", "releaseTag", "releaseGitSha", "feedbackHandoff", "priorAnalysis", "nextAnalysis", "policy", "automaticPromotion"],
+  "properties": {
+    "schema": {"const": "agentlab.feedback_analysis_request.v1"},
+    "status": {"const": "prepared-review-required"},
+    "requestId": {"type": "string", "pattern": "^feedback-analysis-request-[0-9a-f]{20}$"},
+    "releaseTag": {"type": "string", "minLength": 1},
+    "releaseGitSha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "feedbackHandoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "candidateId", "caseId", "mechanism"],
+      "properties": {
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "candidateId": {"type": "string", "minLength": 1},
+        "caseId": {"type": "string", "minLength": 1},
+        "mechanism": {"type": "string", "minLength": 1}
+      }
+    },
+    "priorAnalysis": {"$ref": "#/$defs/analysisIdentity"},
+    "nextAnalysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceSpecSha256", "sourceSetSha256", "methodRevision", "sourceChanged", "methodChanged", "repositories", "moduleBindings", "workflow", "nextGate"],
+      "properties": {
+        "sourceSpecSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "sourceSetSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "methodRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "sourceChanged": {"type": "boolean"},
+        "methodChanged": {"type": "boolean"},
+        "repositories": {"type": "array", "minItems": 2, "maxItems": 16, "items": {"type": "object"}},
+        "moduleBindings": {"type": "object"},
+        "workflow": {"const": ".github/workflows/multi-repo-analysis.yml"},
+        "nextGate": {"const": "exact-analysis-then-feedback-analysis-cut-proposal"}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caseReady", "requiresMaintainerAdjudication", "requiresIndependentOracleCalibration", "automaticPromotion"],
+      "properties": {
+        "caseReady": {"const": false},
+        "requiresMaintainerAdjudication": {"const": true},
+        "requiresIndependentOracleCalibration": {"const": true},
+        "automaticPromotion": {"const": false}
+      }
+    },
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "analysisIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceSetSha256", "methodRevision"],
+      "properties": {
+        "sourceSetSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "methodRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    }
+  }
+}
