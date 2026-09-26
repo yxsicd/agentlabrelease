@@ -1209,6 +1209,26 @@ resolves the parameter and two object-identity boundaries, and leaves exactly
 one explicit control-flow boundary. It still cannot claim semantic alignment,
 construct a case contract or promote automatically.
 
+`qualify-selected-control-flow.py` closes that last bounded program-analysis
+boundary for two explicitly selected source paths. It reopens exact Git Blobs
+from both pinned repositories, verifies uniquely anchored route, lifecycle,
+event, direct-call, Promise, `await`, guard, exception and render edges, and
+computes graph reachability plus sink dominators rather than accepting declared
+dominance. Promise/await success and rejection branches and guard true/false
+branches must occur in complete pairs; terminal exits and the Harmony
+`queryPurchases` recovery handoff are retained explicitly. The Harmony path has
+37 nodes and 38 edges; the Cordova path has 28 nodes and 28 edges. The compact
+v11 packet reopens twelve files and records zero remaining bounded
+program-analysis boundaries.
+
+This qualification is intentionally narrower than whole-application or runtime
+proof. It establishes conditional source-level reachability and dominance only
+for the selected paths. It does not prove that a user triggers an event, an
+external API succeeds, Angular or ArkUI executes correctly, the nodes dominate
+every possible sink invocation, the two repositories express one product
+behavior, or that a behavior Oracle exists. Those semantic and calibration
+gates remain independent and non-promoting.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \

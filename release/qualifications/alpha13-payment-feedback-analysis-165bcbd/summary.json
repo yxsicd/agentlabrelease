@@ -322,9 +322,52 @@
     "allowsCaseContract": false,
     "automaticPromotion": false
   },
+  "selectedControlFlowQualification": {
+    "planPath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/selected-control-flow-plan.json",
+    "planSha256": "ba9e81b4f70ec49137b7394950b3a69e486e82da3bca8887c1a1e97424482917",
+    "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/selected-control-flow-qualification.json",
+    "schema": "agentlab.selected_control_flow_qualification.v1",
+    "sha256": "8d655220687df76020a0ae83499c5e6d6587a3a6a33425248369351f0381b542",
+    "methodRevision": "a0ff24a95e385745620ac262041f37b133e6931b",
+    "repositoryCount": 2,
+    "flowCount": 2,
+    "resolvedBoundaryCount": 1,
+    "remainingUnresolvedCount": 0,
+    "conditionalReachabilityEstablished": true,
+    "sinkDominanceEstablished": true,
+    "exceptionExitsEnumerated": true,
+    "callbackSchedulingResolved": true,
+    "selectedSourcePathsOnly": true,
+    "wholeApplicationReachability": false,
+    "status": "selected-control-flow-qualified-semantic-review-required",
+    "semanticAlignmentVerified": false,
+    "behaviorOracleVerified": false,
+    "allowsCaseContract": false,
+    "automaticPromotion": false
+  },
+  "controlFlowSemanticReviewPacket": {
+    "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/review-packets/purchase-data-control-flow-v11.json",
+    "schema": "agentlab.multi_repo_candidate_review_packet.v11",
+    "sha256": "36c35c021a26a9e7a15da786ab4e138780bd47553eb05f82ba73e386e1342455",
+    "packetMethodRevision": "a0ff24a95e385745620ac262041f37b133e6931b",
+    "basePacketSha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
+    "evidenceAttachmentCount": 7,
+    "evidenceVerification": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/review-packets/purchase-data-control-flow-v11-verification.json",
+      "schema": "agentlab.multi_repo_candidate_semantic_evidence_verification.v1",
+      "sha256": "ce7e3b709a1845d8eb2dcd51f753a371906c9522ea4d3be3e34066cb4d724159",
+      "verifiedFileCount": 12,
+      "status": "verified-exact-v11-evidence"
+    },
+    "status": "independent-semantic-review-required",
+    "semanticAlignmentVerified": false,
+    "behaviorOracleVerified": false,
+    "allowsCaseContract": false,
+    "automaticPromotion": false
+  },
   "retention": {
     "authority": "compact-qualification-only",
     "fullReplayEvidence": "local-or-workflow-artifact",
-    "nextGate": "resolve-global-reachability-dominance-exception-flow-and-callback-scheduling-then-independent-semantic-review-and-cross-repository-behavior-oracle"
+    "nextGate": "independent-semantic-review-and-cross-repository-behavior-oracle"
   }
 }

@@ -80,6 +80,15 @@ pushed into each purchased collection, and verifies that each retained template
 loop passes its own lexical `product.purchaseData` to the consumer. Three more
 boundaries are resolved; global reachability, dominance, exception flow and
 callback scheduling are now the only explicit program-analysis boundary.
+The v11 successor reopens both exact source cuts and models the selected UI,
+route, lifecycle, Promise/`await`, guard, exception, render and sink paths as
+checked graphs. It computes selected-path reachability and sink dominators,
+requires complete success/rejection and true/false branch pairs, retains all
+terminal exits plus the Harmony recovery handoff, and reduces the explicit
+bounded program-analysis set to zero. This is conditional source-level evidence
+only: whole-application reachability, framework correctness, external API
+success, semantic alignment and a behavior Oracle remain unverified, so the
+packet still cannot construct or promote a case automatically.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.
