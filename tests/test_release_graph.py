@@ -176,6 +176,42 @@ class ReleaseGraphTests(unittest.TestCase):
         self.assertEqual(receipt["remoteInspection"]["routeDecision"], "peer_direct")
         self.assertFalse(receipt["automaticPromotion"])
 
+    def test_alpha13_harmony_acceptance_is_bound_to_exact_source_and_closure(self) -> None:
+        closure_path = ROOT / "release/closures/v0.1.0-alpha.13.json"
+        closure_value = json.loads(closure_path.read_text())
+        receipt = json.loads(
+            (
+                ROOT
+                / "release/qualifications/alpha13-harmony-acceptance/summary.json"
+            ).read_text()
+        )
+        self.assertEqual(receipt["schema"], "agentlab.release_harmony_acceptance.v1")
+        self.assertEqual(
+            receipt["closure"]["sha256"],
+            hashlib.sha256(closure_path.read_bytes()).hexdigest(),
+        )
+        self.assertEqual(receipt["releaseTag"], closure_value["releaseTag"])
+        self.assertEqual(
+            receipt["releaseGitSha"], closure_value["sources"]["releaseGitSha"]
+        )
+        positive = next(
+            row for row in receipt["attempts"] if row["device"]["oracleStatus"] == "passed"
+        )
+        negative = next(
+            row for row in receipt["attempts"] if row["device"]["oracleStatus"] == "failed"
+        )
+        self.assertEqual(
+            {row["standardTest"]["framework"] for row in receipt["attempts"]},
+            {"instrument-test-ohosTest-hypium"},
+        )
+        self.assertTrue(positive["performance"]["profileValid"])
+        self.assertGreaterEqual(positive["performance"]["sampleCount"], 3)
+        self.assertEqual(negative["performance"]["status"], "not-run")
+        self.assertEqual(negative["performance"]["reason"], "functional-oracle-failed")
+        self.assertEqual(receipt["remoteInspection"]["routeDecision"], "peer_direct")
+        self.assertGreaterEqual(len(receipt["remoteInspection"]["operationIds"]), 2)
+        self.assertFalse(receipt["automaticPromotion"])
+
     def test_alpha12_registry_asset_drift_is_rejected(self) -> None:
         closure_value = json.loads(
             (ROOT / "release/closures/v0.1.0-alpha.12.json").read_text()

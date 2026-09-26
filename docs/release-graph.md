@@ -56,8 +56,9 @@ complete selected registry URL set and fails if either a payload or descriptor
 is omitted. `selectedComponentCount` and `reusedAssetCount` remain separate so
 component reuse is not confused with file coverage.
 
-The candidate still requires its declared CI checks, a tagged clean install and
-Linux emulator acceptance before it can become a qualified developer preview.
+The candidate has passed its declared CI checks and exact-cut Linux emulator
+acceptance. It still requires a tagged clean install before it can become a
+qualified developer preview.
 Generating a closure does not create a tag, GitHub Release or channel promotion.
 
 Linux emulator acceptance must be regenerated for the exact closure source cut;
@@ -94,13 +95,15 @@ closure/campaign digests, a direct-peer inspection trail, and zero remaining
 emulator processes or HDC targets. It preserves the physical-device and
 absolute-power/thermal boundary and never authorizes automatic promotion.
 
-The Alpha.12 run against source cut `4a36510` is retained at
-`release/qualifications/alpha12-harmony-acceptance-4a36510/summary.json`. This
-historical receipt is not transferable to Alpha.13. It
-records two source-bound ohosTest/Hypium passes, a positive UI Oracle with three
-valid SmartPerf samples, a negative Oracle whose performance stage was skipped,
-direct `hwlinux` peer identity, and post-run emulator/HDC cleanup. This closes
-the candidate's Linux-emulator gate but not its tagged clean-install gate.
+The Alpha.13 run is retained at
+`release/qualifications/alpha13-harmony-acceptance/summary.json`. It records two
+source-bound ohosTest/Hypium passes, a positive UI Oracle with three valid
+SmartPerf samples, a negative Oracle whose performance stage was skipped,
+direct `hwlinux` peer identity, and post-run emulator/HDC cleanup. Its receipt
+SHA-256 is
+`98823b2a20100c5b21ade5ed875a1fb5d9e49921817138898ca067fd6f66521c`.
+This closes Alpha.13's Linux-emulator gate but not its tagged clean-install
+gate. The earlier Alpha.12 receipt remains historical and is not transferable.
 
 The acceptance verdict is also an input to the recursive analysis loop. Retain
 that transition separately from release qualification with:
@@ -108,7 +111,7 @@ that transition separately from release qualification with:
 ```sh
 python3 scripts/prepare-release-recursive-feedback.py \
   --closure release/closures/v0.1.0-alpha.13.json \
-  --acceptance release/qualifications/alpha12-harmony-acceptance-4a36510/summary.json \
+  --acceptance release/qualifications/alpha13-harmony-acceptance/summary.json \
   --campaign-summary /retained/campaign-output/summary.json \
   --prior-case /retained/campaign/case.json \
   --feedback /retained/campaign-output/assessment-feedback-candidates.json \

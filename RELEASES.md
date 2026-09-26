@@ -13,8 +13,10 @@ queue. Semantic alignment and automatic promotion remain disabled.
 The closure binds release-method source commit
 `4f24f9a7eb1de98cbb0b695f02cf01da03ae26fb`, reuses all 14 selected immutable
 components across 22 assets, and has independently re-observed all 22 assets on
-their immutable GitHub Releases. It still requires exact-cut Linux Harmony
-acceptance and tagged clean-install qualification before publication.
+their immutable GitHub Releases. Its exact-cut Linux Harmony campaign passed
+source-bound ohosTest/Hypium execution, functional Oracle separation and
+functional-pass-gated SmartPerf proxy collection. It still requires tagged
+clean-install qualification before publication.
 
 ## v0.1.0-alpha.12 candidate (withdrawn before publication)
 
