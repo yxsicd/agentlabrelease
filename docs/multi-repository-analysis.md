@@ -1290,6 +1290,34 @@ Harmony behavior checks and requires an exported bounded policy plus injected
 decoder/sink seams before Hypium tests are authored. It does not generate a
 vacuous test or claim runtime authority.
 
+The next retained increment makes the resulting source candidate independently
+reviewable rather than treating an execution digest as a substitute for source
+inspection. `agentlab-purchase-data-ohostest-review-packet` reopens the exact
+candidate qualification, observation, standard-test receipt and native report,
+then validates the retained Git format-patch byte for byte. The packet binds the
+base and candidate revisions, six changed paths, 206 insertions, 20 deletions,
+all seven Hypium test names, the clean project-tree digest and the 7/7 Linux x86
+emulator result. Patch drift, a changed file inventory, a missing test, a
+self-approved qualification or any lineage digest mismatch fails generation.
+
+The packet remains `independent-source-review-required`. It gives the reviewer
+six explicit questions and requires acknowledgement of six remaining risks,
+including absent live vendor-IAP execution, real-device authority and
+performance/power/thermal calibration. The Rust-native
+`agentlab-purchase-data-ohostest-review` command implements `decide`, `compile`
+and `validate`. Approval requires every answer to be `yes`; rejection requires
+at least one `no`; deferral requires an `unknown` and cannot hide a rejection.
+Even an approved gate allows only publication of the exact reviewed patch and
+requires reexecution from the resulting upstream revision. It never grants a
+case contract or automatic promotion.
+
+`purchase-data-ohostest-source-review.yml` exposes that protocol only on
+trusted `main`. It binds `github.actor`, the exact packet digest, normalized
+answers, risks and verdict, rechecks the retained patch bytes, and uploads the
+packet, patch, decision and gate as one run-addressed artifact. Publication and
+upstream-revision reexecution must consume that successful run rather than a
+free-form approval.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \

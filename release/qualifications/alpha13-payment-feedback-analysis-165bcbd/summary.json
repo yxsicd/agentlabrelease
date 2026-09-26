@@ -441,15 +441,32 @@
       "independentReviewVerified": false,
       "status": "candidate-revision-emulator-qualified-independent-review-pending"
     },
+    "ohosTestSourceReviewPacket": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-ohostest-review-packet.json",
+      "schema": "agentlab.purchase_data_ohostest_review_packet.v1",
+      "sha256": "6e734c807d67ffcca4a6403a46321dca8acc91b70c55f1443550504e3597b53e",
+      "patchPath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-ohostest-candidate.patch",
+      "patchSha256": "cbc01c94755f2d8da5449902ad1a309488d0a9defa9fede23318ad360dd4c2c2",
+      "implementation": "crates/agentlab_code_analysis/src/purchase_data_ohostest_review_packet.rs",
+      "reviewImplementation": "crates/agentlab_code_analysis/src/purchase_data_ohostest_review.rs",
+      "language": "rust",
+      "questionCount": 6,
+      "riskCount": 6,
+      "publishedToUpstream": false,
+      "independentReviewVerified": false,
+      "allowsCaseContract": false,
+      "automaticPromotion": false,
+      "status": "independent-source-review-required"
+    },
     "semanticAlignmentVerified": false,
     "behaviorOracleVerified": false,
     "allowsCaseContract": false,
     "automaticPromotion": false,
-    "status": "candidate-revision-calibrated-independent-review-required"
+    "status": "candidate-source-review-packet-ready-independent-review-required"
   },
   "retention": {
-    "authority": "compact-qualification-only",
-    "fullReplayEvidence": "local-or-workflow-artifact",
-    "nextGate": "independent-candidate-and-semantic-review-then-upstream-revision-reexecution-and-runtime-calibration"
+    "authority": "compact-qualification-and-exact-source-patch",
+    "fullReplayEvidence": "retained-source-review-packet-plus-run-addressed-workflow-artifact",
+    "nextGate": "authenticated-independent-candidate-source-review-then-upstream-publication-and-reexecution"
   }
 }
