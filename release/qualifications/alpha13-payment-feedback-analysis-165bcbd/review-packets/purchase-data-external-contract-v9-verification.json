@@ -1,0 +1,49 @@
+{
+  "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "packetSha256": "c448b5f13708e68406a5413ca151393a8cebdb938dbe143974d5d04c557acd3c",
+  "schema": "agentlab.multi_repo_candidate_semantic_evidence_verification.v1",
+  "sourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
+  "status": "verified-exact-v9-evidence",
+  "verifiedFiles": [
+    {
+      "id": "base-packet",
+      "relativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/review-packets/purchase-data.json",
+      "sha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008"
+    },
+    {
+      "id": "build-qualification",
+      "relativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/build-qualification.json",
+      "sha256": "fa23945f7aae9027286e97409d67821959361397e0721602dd55639ee68c28d7"
+    },
+    {
+      "id": "expression-fact-qualification",
+      "relativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/expression-fact-qualification.json",
+      "sha256": "2fae8c5e3d0ce1fdf9a3bc3c7103845eded51a25414401bebb549739c1a7bb11"
+    },
+    {
+      "id": "bounded-expression-flow-proposal",
+      "relativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/bounded-expression-flow-proposal.json",
+      "sha256": "481f8b283f0cfbc6f45cff17da52114b9d535f9b92221c82b22109030c2a3ce5"
+    },
+    {
+      "id": "bounded-flow-plan",
+      "relativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/bounded-expression-flow-plan.json",
+      "sha256": "20474b8e485abfafdceb5d904ae49ef3432c3e27901cc10240991a9b424a048b"
+    },
+    {
+      "id": "bounded-expression-flow-program-analysis",
+      "relativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/bounded-expression-flow-program-analysis.json",
+      "sha256": "78ee3b01d0594975877daefd171a07f7a317b02b6673c22f6b3307fb47e661a3"
+    },
+    {
+      "id": "external-sink-contract-qualification",
+      "relativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/external-sink-contract-qualification-v2.json",
+      "sha256": "6a0a8a4e38f06b36d03ca033bed89fcd530c3892ff6ba754426723ed9d758c1e"
+    },
+    {
+      "id": "external-sink-contract-plan",
+      "relativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/external-sink-contract-plan-v2.json",
+      "sha256": "23b41ad2d226bdad5b6dc9e5e049309f461ca8aa26dd94280873e863e1d49e45"
+    }
+  ]
+}

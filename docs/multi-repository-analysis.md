@@ -1187,6 +1187,18 @@ their shared lineage and counts. It fails closed when the one remaining sink or
 any of the other four program boundaries is hidden, and continues to require an
 independent semantic decision and later behavior-Oracle calibration.
 
+The v2 qualifier adds an immutable SDK-archive authority. It verifies the
+published archive digest before extracting only declared safe member paths,
+then checks each member digest and every unique declaration anchor. For Harmony
+IAP it follows `@kit.IAPKit.d.ts` through the loader symbol map to
+`@hms.core.iap.d.ts`, verifies the three `FinishPurchaseParameter` fields and
+the exact promise overload used by the application. The retained v9 packet
+therefore records both external sinks as resolved and reduces the explicit
+unresolved set from six to four, while keeping semantic alignment, case
+promotion and behavior-Oracle flags false. Its pre-review receipt still opens
+eight repository files; the 944 MiB SDK archive is independently referenced by
+release tag and digest rather than duplicated in Git.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \

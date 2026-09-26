@@ -67,6 +67,13 @@ wrapper. They prove that the selected owned-purchase array element and the
 of two external sink contracts and reduces the explicit unresolved set from six
 to five. The Harmony SDK declaration, Cordova local parameter/object identity
 and global control flow remain review-required; v8 still cannot promote a case.
+The v9 successor verifies the second sink directly from the immutable
+`harmony-linux-x64-6.1.1.300` archive (SHA-256 `8fc2199a...`): the kit export,
+loader symbol map, `FinishPurchaseParameter` fields and promise signature are
+all bound to exact archive members. Both external sink contracts are now
+resolved and four explicit program boundaries remain. Local parameter/object
+identity, global control flow, semantic review and the behavior Oracle are
+still required before a generated case can promote.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.
