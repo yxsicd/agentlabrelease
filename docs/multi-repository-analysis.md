@@ -1246,6 +1246,19 @@ emulators are outside this calibration. Independent semantic adjudication,
 independent Oracle review and runtime calibration must still succeed before a
 case contract can be constructed or promoted.
 
+`review-purchase-data-behavior-oracle.py` and the trusted-main
+`purchase-data-behavior-oracle-review` workflow form the next fail-closed gate.
+They require an already approved semantic gate, reopen the exact plan,
+calibration and executable-seam digests, recompute the method/check/variant
+inventories, and reject an undetected negative control. The Oracle reviewer
+must be a different GitHub actor from the semantic reviewer and must answer six
+coverage questions plus acknowledge all five declared risks. An affirmative
+decision produces only `approved-for-runtime-calibration`; it retains
+`behaviorOracleVerified=false`, `allowsCaseContract=false` and
+`automaticPromotion=false`. This prevents a source-only seam from becoming a
+case before Harmony compiler, framework, full-application and emulator evidence
+exists.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \

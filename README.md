@@ -97,6 +97,12 @@ external IAP calls remain stubbed and framework lifecycle, whole-application
 execution, independent semantic adjudication, independent Oracle review and
 emulator/runtime calibration remain open. Accordingly it still cannot create
 or promote a case.
+The trusted-main `purchase-data-behavior-oracle-review` workflow now consumes
+an independently approved semantic gate plus the exact plan and calibration.
+It requires a different GitHub actor for Oracle review, exact answers and all
+five risk acknowledgements. Even an approval grants only runtime-calibration
+authority; it explicitly leaves behavior-Oracle verification and case-contract
+authority false until emulator/runtime evidence is independently validated.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.

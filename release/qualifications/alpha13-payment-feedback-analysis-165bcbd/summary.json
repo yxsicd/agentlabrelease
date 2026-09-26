@@ -378,6 +378,12 @@
     "negativeControlCount": 5,
     "undetectedNegativeControlCount": 0,
     "sourceSeamCalibrated": true,
+    "availableReviewGate": {
+      "scriptPath": "scripts/review-purchase-data-behavior-oracle.py",
+      "workflowPath": ".github/workflows/purchase-data-behavior-oracle-review.yml",
+      "requiresDistinctSemanticAndOracleReviewers": true,
+      "approvalScope": "runtime-calibration-only"
+    },
     "semanticAlignmentVerified": false,
     "behaviorOracleVerified": false,
     "allowsCaseContract": false,
