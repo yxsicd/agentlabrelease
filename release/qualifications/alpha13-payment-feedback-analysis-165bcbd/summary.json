@@ -389,9 +389,20 @@
       "binary": "agentlab-purchase-data-runtime-plan",
       "language": "rust",
       "requiresApprovedOracleGate": true,
+      "requiresOhosTestFeasibilityProposal": true,
       "bindsImmutableEmulatorAssetCount": 3,
       "stageCount": 3,
-      "status": "runtime-calibration-planned-not-executed"
+      "status": "runtime-calibration-blocked-testability-refactor-required"
+    },
+    "ohosTestFeasibility": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-ohostest-proposal.json",
+      "schema": "agentlab.purchase_data_ohostest_proposal.v1",
+      "implementation": "crates/agentlab_code_analysis/src/purchase_data_ohostest_proposal.rs",
+      "binary": "agentlab-purchase-data-ohostest-proposal",
+      "language": "rust",
+      "blockedBehaviorCheckCount": 5,
+      "sourceTestCount": 0,
+      "status": "testability-refactor-required-before-standard-test-authoring"
     },
     "semanticAlignmentVerified": false,
     "behaviorOracleVerified": false,

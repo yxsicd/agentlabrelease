@@ -107,10 +107,15 @@ The Rust-native `agentlab-purchase-data-runtime-plan` command consumes that
 approved gate and digest-binds it to the alpha.13 release closure, generic
 Linux target and all three immutable emulator assets. It emits three explicit
 stages for exact-source build plus OHOS Test authoring, emulator functional
-calibration and repeated SmartPerf comparison. The result is deliberately
-`runtime-calibration-planned-not-executed`: every execution flag, behavior
-Oracle verification, case-contract authority and automatic promotion remain
-false until independent runtime receipts exist.
+calibration and repeated SmartPerf comparison. A new Rust-native feasibility
+gate inspected the exact Harmony Git object and found that the repository has
+an `ohosTest` target and Hypium dependency but no test source, while the
+component is not exported and directly binds both its JWS decoder and IAP
+finish sink. The runtime plan is therefore now explicitly
+`runtime-calibration-blocked-testability-refactor-required`; every execution
+flag, behavior-Oracle verification, case-contract authority and automatic
+promotion remain false until the testability refactor, source-bound OHOS Test
+and independent runtime receipts exist.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.

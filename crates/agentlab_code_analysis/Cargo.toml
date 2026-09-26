@@ -25,6 +25,10 @@ path = "src/multi_repo.rs"
 name = "agentlab-purchase-data-runtime-plan"
 path = "src/purchase_data_runtime_plan.rs"
 
+[[bin]]
+name = "agentlab-purchase-data-ohostest-proposal"
+path = "src/purchase_data_ohostest_proposal.rs"
+
 [dependencies]
 tree-sitter = "=0.27.0"
 tree-sitter-language = "=0.1.8"

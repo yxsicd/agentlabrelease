@@ -1278,6 +1278,18 @@ functional-Oracle and performance flags remain false. The command also keeps
 reviewer independence, gate status, digest drift, release-registry drift and
 overwrite refusal.
 
+The Rust-native `agentlab-purchase-data-ohostest-proposal` now closes the
+standard-test feasibility gap before that runtime plan can advance. Against
+the exact Harmony revision and Blob it confirms an `ohosTest` target and the
+`@ohos/hypium` dependency, but finds zero source-bound tests. Rust Tree-sitter
+evidence also shows both selected methods remain owned by the non-exported
+`ConsumablesPage` component and directly call `JWSUtil.decodeJwsObj` and
+`iap.finishPurchase`. A UI-only test would additionally depend on an external
+account and vendor service. The retained proposal therefore blocks all five
+Harmony behavior checks and requires an exported bounded policy plus injected
+decoder/sink seams before Hypium tests are authored. It does not generate a
+vacuous test or claim runtime authority.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \

@@ -8,6 +8,7 @@ use std::path::PathBuf;
 const GATE_SCHEMA: &str = "agentlab.purchase_data_behavior_oracle_gate.v1";
 const BEHAVIOR_PLAN_SCHEMA: &str = "agentlab.purchase_data_behavior_oracle_plan.v1";
 const CALIBRATION_SCHEMA: &str = "agentlab.purchase_data_behavior_oracle_calibration.v1";
+const OHOSTEST_PROPOSAL_SCHEMA: &str = "agentlab.purchase_data_ohostest_proposal.v1";
 const CLOSURE_SCHEMA: &str = "agentlab.release_closure.v1";
 const TARGET_SCHEMA: &str = "agentlab.target_descriptor.v1";
 const REGISTRY_SCHEMA: &str = "agentlab.component_registry.v1";
@@ -210,6 +211,90 @@ fn validate_behavior_lineage(
     Ok(())
 }
 
+fn validate_ohostest_proposal(
+    gate: &Input,
+    behavior_plan: &Input,
+    proposal: &Input,
+) -> Result<bool, String> {
+    ensure_same(
+        string(&proposal.value, "schema", "OHOS Test proposal")?,
+        OHOSTEST_PROPOSAL_SCHEMA,
+        "OHOS Test proposal schema",
+    )?;
+    let status = string(&proposal.value, "status", "OHOS Test proposal")?;
+    let testability_blocked = match status {
+        "testability-refactor-required-before-standard-test-authoring" => true,
+        "source-bound-ohostest-ready-for-execution" => false,
+        _ => return Err("OHOS Test proposal status differs".into()),
+    };
+    for key in ["candidateId", "sourceSetSha256"] {
+        ensure_same(
+            string(&proposal.value, key, "OHOS Test proposal")?,
+            string(&gate.value, key, "Oracle gate")?,
+            &format!("OHOS Test proposal {key}"),
+        )?;
+    }
+    ensure_same(
+        string(
+            &proposal.value["lineage"],
+            "behaviorPlanSha256",
+            "OHOS Test proposal lineage",
+        )?,
+        &behavior_plan.sha256(),
+        "OHOS Test proposal behavior plan digest",
+    )?;
+    let lane = &proposal.value["observedStandardLane"];
+    ensure_same(
+        string(lane, "framework", "OHOS Test proposal lane")?,
+        "instrument-test-ohosTest-hypium",
+        "OHOS Test proposal framework",
+    )?;
+    exact_bool(lane, "buildTargetDeclared", true, "OHOS Test proposal lane")?;
+    exact_bool(
+        lane,
+        "hypiumDependencyDeclared",
+        true,
+        "OHOS Test proposal lane",
+    )?;
+    let source_test_count = lane["sourceTestCount"]
+        .as_u64()
+        .ok_or_else(|| "OHOS Test proposal source test count is absent".to_string())?;
+    let source_test_paths =
+        array_strings(lane, "existingTestSourcePaths", "OHOS Test proposal lane")?;
+    if (testability_blocked && (source_test_count != 0 || !source_test_paths.is_empty()))
+        || (!testability_blocked
+            && (source_test_count == 0 || source_test_count as usize != source_test_paths.len()))
+    {
+        return Err("OHOS Test proposal source test inventory differs".into());
+    }
+    let checks = array_strings(
+        &proposal.value,
+        "blockedBehaviorCheckIds",
+        "OHOS Test proposal",
+    )?;
+    if checks.len() != 5 {
+        return Err("OHOS Test proposal blocked check inventory differs".into());
+    }
+    let boundary = &proposal.value["qualificationBoundary"];
+    exact_bool(
+        boundary,
+        "ohosTestSourceAuthored",
+        !testability_blocked,
+        "OHOS Test proposal boundary",
+    )?;
+    for key in [
+        "ohosTestExecuted",
+        "emulatorExecuted",
+        "behaviorOracleVerified",
+        "allowsRuntimeCalibration",
+        "allowsCaseContract",
+        "automaticPromotion",
+    ] {
+        exact_bool(boundary, key, false, "OHOS Test proposal boundary")?;
+    }
+    Ok(testability_blocked)
+}
+
 fn validate_target(target: &Input) -> Result<(), String> {
     ensure_same(
         string(&target.value, "schema", "target")?,
@@ -389,12 +474,14 @@ fn build_plan(
     gate: &Input,
     behavior_plan: &Input,
     calibration: &Input,
+    ohostest_proposal: &Input,
     closure: &Input,
     target: &Input,
     registry: &Input,
 ) -> Result<Value, String> {
     validate_gate(&gate.value)?;
     validate_behavior_lineage(gate, behavior_plan, calibration)?;
+    let testability_blocked = validate_ohostest_proposal(gate, behavior_plan, ohostest_proposal)?;
     validate_target(target)?;
     let assets = validate_release_assets(closure, registry)?;
     let checks = behavior_plan.value["checks"]
@@ -407,23 +494,43 @@ fn build_plan(
     if check_ids.len() != 10 || check_ids.iter().collect::<BTreeSet<_>>().len() != 10 {
         return Err("runtime behavior check inventory differs".into());
     }
+    let first_stage_status = if testability_blocked {
+        "blocked-testability-refactor-required"
+    } else {
+        "planned-not-executed"
+    };
+    let downstream_status = if testability_blocked {
+        "blocked-upstream-stage"
+    } else {
+        "planned-not-executed"
+    };
+    let status = if testability_blocked {
+        "runtime-calibration-blocked-testability-refactor-required"
+    } else {
+        "runtime-calibration-planned-not-executed"
+    };
+    let next_gate = if testability_blocked {
+        "implement-reviewed-testability-refactor-author-ohostest-then-regenerate-runtime-plan"
+    } else {
+        "execute-all-stages-and-independently-validate-runtime-receipts"
+    };
     let stages = vec![
         json!({
             "id":"source-build-and-standard-test-authoring",
-            "status":"planned-not-executed",
+            "status":first_stage_status,
             "requiredEvidence":["exact-source-build-receipt","ohostest-source-contract","native-test-execution-receipt"],
             "authority":"exact-git-revisions-and-ohostest"
         }),
         json!({
             "id":"linux-emulator-functional-calibration",
-            "status":"planned-not-executed",
+            "status":downstream_status,
             "requiredEvidence":["kvm-preflight","hap-install","process-launch","bounded-runtime-oracle-receipt"],
             "checkIds":check_ids,
             "authority":"x86-kvm-harmony-emulator"
         }),
         json!({
             "id":"repeat-performance-profile",
-            "status":"planned-not-executed",
+            "status":downstream_status,
             "requiredEvidence":["functional-pass","smartperf-baseline","smartperf-candidate","repeat-comparison"],
             "observedMetrics":["cpu","pss","fps"],
             "absolutePowerThermal":"unavailable-on-emulator"
@@ -431,7 +538,7 @@ fn build_plan(
     ];
     Ok(json!({
         "schema":OUTPUT_SCHEMA,
-        "status":"runtime-calibration-planned-not-executed",
+        "status":status,
         "candidateId":gate.value["candidateId"],
         "sourceSetSha256":gate.value["sourceSetSha256"],
         "methodRevision":gate.value["methodRevision"],
@@ -439,6 +546,7 @@ fn build_plan(
             "oracleGateSha256":gate.sha256(),
             "behaviorPlanSha256":behavior_plan.sha256(),
             "behaviorCalibrationSha256":calibration.sha256(),
+            "ohosTestProposalSha256":ohostest_proposal.sha256(),
             "releaseClosureSha256":closure.sha256(),
             "targetDescriptorSha256":target.sha256(),
             "componentRegistrySha256":registry.sha256()
@@ -469,7 +577,7 @@ fn build_plan(
         "behaviorOracleVerified":false,
         "allowsCaseContract":false,
         "automaticPromotion":false,
-        "nextGate":"execute-all-stages-and-independently-validate-runtime-receipts"
+        "nextGate":next_gate
     }))
 }
 
@@ -491,6 +599,7 @@ fn arguments() -> Result<BTreeMap<String, PathBuf>, String> {
         "--oracle-gate",
         "--behavior-plan",
         "--behavior-calibration",
+        "--ohostest-proposal",
         "--release-closure",
         "--target",
         "--component-registry",
@@ -500,7 +609,7 @@ fn arguments() -> Result<BTreeMap<String, PathBuf>, String> {
             return Err(format!("missing required argument: {required}"));
         }
     }
-    if values.len() != 7 {
+    if values.len() != 8 {
         return Err("unknown runtime-plan argument".into());
     }
     Ok(values)
@@ -521,6 +630,7 @@ fn run() -> Result<(), String> {
         args["--behavior-calibration"].clone(),
         "behavior calibration",
     )?;
+    let ohostest_proposal = Input::load(args["--ohostest-proposal"].clone(), "OHOS Test proposal")?;
     let closure = Input::load(args["--release-closure"].clone(), "release closure")?;
     let target = Input::load(args["--target"].clone(), "target descriptor")?;
     let registry = Input::load(args["--component-registry"].clone(), "component registry")?;
@@ -528,6 +638,7 @@ fn run() -> Result<(), String> {
         &gate,
         &behavior_plan,
         &calibration,
+        &ohostest_proposal,
         &closure,
         &target,
         &registry,

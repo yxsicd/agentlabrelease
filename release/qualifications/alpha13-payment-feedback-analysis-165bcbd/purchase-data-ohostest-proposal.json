@@ -1,0 +1,67 @@
+{
+  "blockedBehaviorCheckIds": [
+    "harmony-invalid-data-is-not-finished",
+    "harmony-finished-order-is-not-finished-again",
+    "harmony-pending-order-forwards-exact-identity",
+    "harmony-missing-product-type-blocks-finish",
+    "harmony-finish-rejection-is-observable"
+  ],
+  "blockers": [
+    "no-source-bound-ohostest",
+    "component-not-exported-for-direct-test",
+    "decoder-is-static-direct-dependency",
+    "finish-sink-is-static-direct-dependency",
+    "ui-only-path-requires-external-account-and-vendor-service"
+  ],
+  "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "lineage": {
+    "behaviorPlanReviewPacketSha256": "36c35c021a26a9e7a15da786ab4e138780bd47553eb05f82ba73e386e1342455",
+    "behaviorPlanSha256": "a436bcb578b95738521fd7c23b3ff0cbf195b3d809bfa465e0b7b0a741e7f60f",
+    "buildQualificationReviewPacketSha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
+    "buildQualificationSha256": "fa23945f7aae9027286e97409d67821959361397e0721602dd55639ee68c28d7",
+    "repositoryId": "harmony-iap-client",
+    "sourceBlobOid": "88627d0b01928c16d85520af57573cf2be0b0048",
+    "sourcePath": "entry/src/main/ets/pages/ConsumablesPage.ets",
+    "sourceRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+    "sourceSha256": "5946fed46045e67828ed63a10e1ba111590d263ab9f6a7196d5f0fca8a1310bf"
+  },
+  "nextGate": "review-and-implement-testability-refactor-then-author-source-bound-ohostest",
+  "observedStandardLane": {
+    "buildTargetDeclared": true,
+    "existingTestSourcePaths": [],
+    "framework": "instrument-test-ohosTest-hypium",
+    "hypiumDependencyDeclared": true,
+    "sourceTestCount": 0
+  },
+  "programAnalysis": {
+    "analyzerMethod": "agentlab-arkts@0.1.0 (tree-sitter-arkts@0.2.0 + stateStyles)",
+    "componentExported": false,
+    "directDecoderCall": "JWSUtil.decodeJwsObj",
+    "directFinishSinkCall": "iap.finishPurchase",
+    "methodIds": [
+      "dealPurchaseData",
+      "finishPurchase"
+    ],
+    "methodOwner": "ConsumablesPage",
+    "syntaxHasErrors": false
+  },
+  "qualificationBoundary": {
+    "allowsCaseContract": false,
+    "allowsRuntimeCalibration": false,
+    "automaticPromotion": false,
+    "behaviorOracleVerified": false,
+    "emulatorExecuted": false,
+    "exactSourceInspected": true,
+    "ohosTestExecuted": false,
+    "ohosTestSourceAuthored": false
+  },
+  "requiredTestabilityRefactor": [
+    "extract-an-exported-purchase-finalization-policy-from-the-arkui-component",
+    "inject-the-jws-decoder-and-finish-purchase-sink-behind-bounded-interfaces",
+    "keep-the-component-as-an-adapter-without-changing-user-visible-purchase-semantics",
+    "author-hypium-positive-and-negative-tests-for-all-five-harmony-checks"
+  ],
+  "schema": "agentlab.purchase_data_ohostest_proposal.v1",
+  "sourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
+  "status": "testability-refactor-required-before-standard-test-authoring"
+}

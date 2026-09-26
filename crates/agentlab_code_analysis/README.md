@@ -86,6 +86,26 @@ the source was built, OHOS Test ran, the emulator was launched, the functional
 Oracle passed, or SmartPerf evidence exists. Those flags remain false until
 independently validated runtime receipts are attached.
 
+Before the runtime plan can advance,
+`agentlab-purchase-data-ohostest-proposal` reads the selected source directly
+from its exact Git revision and combines content-addressed identity with Rust
+Tree-sitter facts. It verifies the platform lane (`ohosTest` target and Hypium
+dependency), inventories existing test sources and decides whether the five
+Harmony behavior checks have a deterministic testability seam. The current
+exact source is intentionally rejected for authoring: it has no test source,
+keeps `ConsumablesPage` non-exported and directly binds the decoder and IAP
+finish sink. Its retained output specifies the bounded refactor required
+before source-bound OHOS Test can be generated.
+
+```sh
+cargo run --locked -p agentlab_code_analysis \
+  --bin agentlab-purchase-data-ohostest-proposal -- \
+  --behavior-plan /path/to/purchase-data-behavior-oracle-plan.json \
+  --build-qualification /path/to/build-qualification.json \
+  --repository harmony-iap-client=/path/to/exact/git-checkout-or-bare-repository \
+  --output /tmp/purchase-data-ohostest-proposal.json
+```
+
 The optional cache is a derivative, never source authority. By default an
 exact analyzer/grammar/source-set bundle hit bypasses both parsing and graph
 reconstruction and restores the previously digest-checked authority artifacts;

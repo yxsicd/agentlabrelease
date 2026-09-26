@@ -15,6 +15,7 @@ struct Fixture {
     repository: PathBuf,
     plan: PathBuf,
     calibration: PathBuf,
+    ohostest_proposal: PathBuf,
     closure: PathBuf,
     target: PathBuf,
     registry: PathBuf,
@@ -72,6 +73,7 @@ impl Fixture {
             repository: repository.clone(),
             plan,
             calibration,
+            ohostest_proposal: evidence.join("purchase-data-ohostest-proposal.json"),
             closure: repository.join("release/closures/v0.1.0-alpha.13.json"),
             target: repository.join("release/targets/generic-linux-agentlab.json"),
             registry: repository.join("release/components/registry.json"),
@@ -89,6 +91,8 @@ impl Fixture {
                 self.plan.to_str().unwrap(),
                 "--behavior-calibration",
                 self.calibration.to_str().unwrap(),
+                "--ohostest-proposal",
+                self.ohostest_proposal.to_str().unwrap(),
                 "--release-closure",
                 self.closure.to_str().unwrap(),
                 "--target",
@@ -136,7 +140,7 @@ fn stderr(output: &Output) -> String {
 }
 
 #[test]
-fn plans_exact_runtime_calibration_without_claiming_execution() {
+fn binds_exact_runtime_inputs_and_preserves_testability_blocker() {
     let fixture = Fixture::new();
     let result = fixture.run();
     assert!(result.status.success(), "{}", stderr(&result));
@@ -145,8 +149,16 @@ fn plans_exact_runtime_calibration_without_claiming_execution() {
         plan["schema"],
         "agentlab.purchase_data_runtime_calibration_plan.v1"
     );
-    assert_eq!(plan["status"], "runtime-calibration-planned-not-executed");
+    assert_eq!(
+        plan["status"],
+        "runtime-calibration-blocked-testability-refactor-required"
+    );
     assert_eq!(plan["stages"].as_array().unwrap().len(), 3);
+    assert_eq!(
+        plan["stages"][0]["status"],
+        "blocked-testability-refactor-required"
+    );
+    assert_eq!(plan["stages"][1]["status"], "blocked-upstream-stage");
     assert_eq!(plan["immutableAssets"].as_array().unwrap().len(), 3);
     assert_eq!(plan["stages"][1]["checkIds"].as_array().unwrap().len(), 10);
     assert_eq!(plan["execution"]["sourceBuildExecuted"], false);
@@ -162,6 +174,10 @@ fn plans_exact_runtime_calibration_without_claiming_execution() {
     assert_eq!(
         plan["lineage"]["componentRegistrySha256"],
         file_digest(&fixture.registry)
+    );
+    assert_eq!(
+        plan["lineage"]["ohosTestProposalSha256"],
+        file_digest(&fixture.ohostest_proposal)
     );
     assert_eq!(plan["release"]["version"], "0.1.0-alpha.13");
     assert_eq!(plan["environment"]["acceleration"], "kvm");
@@ -187,6 +203,30 @@ fn rejects_non_independent_or_unapproved_gate() {
     let deferred = fixture.run();
     assert!(!deferred.status.success());
     assert!(stderr(&deferred).contains("Oracle gate status differs"));
+}
+
+#[test]
+fn advances_to_planned_only_with_source_bound_ohostest_inventory() {
+    let mut fixture = Fixture::new();
+    fixture.ohostest_proposal =
+        fixture.copy_to_root(&fixture.ohostest_proposal, "ohostest-ready.json");
+    let mut proposal = read_json(&fixture.ohostest_proposal);
+    proposal["status"] = json!("source-bound-ohostest-ready-for-execution");
+    proposal["observedStandardLane"]["existingTestSourcePaths"] =
+        json!(["entry/src/ohosTest/ets/test/PurchaseFinalization.test.ets"]);
+    proposal["observedStandardLane"]["sourceTestCount"] = json!(1);
+    proposal["qualificationBoundary"]["ohosTestSourceAuthored"] = json!(true);
+    write_json(&fixture.ohostest_proposal, &proposal);
+    let result = fixture.run();
+    assert!(result.status.success(), "{}", stderr(&result));
+    let plan = read_json(&fixture.output);
+    assert_eq!(plan["status"], "runtime-calibration-planned-not-executed");
+    assert_eq!(plan["stages"][0]["status"], "planned-not-executed");
+    assert_eq!(plan["stages"][1]["status"], "planned-not-executed");
+    assert_eq!(
+        plan["nextGate"],
+        "execute-all-stages-and-independently-validate-runtime-receipts"
+    );
 }
 
 #[test]
