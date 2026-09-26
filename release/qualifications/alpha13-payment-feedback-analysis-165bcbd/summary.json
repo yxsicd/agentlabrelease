@@ -83,9 +83,23 @@
     "semanticAlignmentVerified": false,
     "automaticPromotion": false
   },
+  "semanticReviewPacket": {
+    "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/review-packets/purchase-data.json",
+    "schema": "agentlab.multi_repo_candidate_review_packet.v5",
+    "sha256": "85895c55d72889b6c1670d107cfe7b97cf00231b69941947c23a10e0cc6ad094",
+    "packetMethodRevision": "fbf2b2182ece4094ad9de294d01d3801e284f9ea",
+    "domainFactCount": 5,
+    "coveredRepositoryCount": 2,
+    "completeOwnerCount": 5,
+    "boundedExcerptOwnerCount": 0,
+    "unresolvedOwnerCount": 0,
+    "status": "independent-semantic-review-required",
+    "allowsCaseContract": false,
+    "automaticPromotion": false
+  },
   "retention": {
     "authority": "compact-qualification-only",
     "fullReplayEvidence": "local-or-workflow-artifact",
-    "nextGate": "independent-maintainer-review-of-shortlisted-proposal"
+    "nextGate": "independent-semantic-review-of-purchase-data-packet"
   }
 }
