@@ -11,10 +11,11 @@ The current lightweight aggregate candidate is `v0.1.0-alpha.12`. It binds
 release-method source commit `4a365104cfd74af4c648f83ecb21d87ea3a9e787`
 to 14 already-published immutable components and all 22 registered payload and
 descriptor assets without rebuilding or uploading any unchanged binary. It
-remains a developer-preview candidate until tagged clean-install and
-release-bound Linux-emulator acceptance are retained. The acceptance plan and
-receipt workflow is documented in [the immutable Release Graph](docs/release-graph.md);
-older emulator evidence cannot qualify a newer closure.
+has retained release-bound Linux-emulator acceptance and remains a
+developer-preview candidate until tagged clean-install succeeds. The acceptance
+plan and receipt workflow is documented in
+[the immutable Release Graph](docs/release-graph.md); older emulator evidence
+cannot qualify a newer closure.
 
 Component-based publication now uses [reference-only environment releases](docs/component-publication.md).
 Tagged releases additionally use an [immutable Release Graph](docs/release-graph.md)

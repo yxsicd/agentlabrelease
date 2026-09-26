@@ -89,6 +89,13 @@ closure/campaign digests, a direct-peer inspection trail, and zero remaining
 emulator processes or HDC targets. It preserves the physical-device and
 absolute-power/thermal boundary and never authorizes automatic promotion.
 
+The Alpha.12 run against source cut `4a36510` is retained at
+`release/qualifications/alpha12-harmony-acceptance-4a36510/summary.json`. It
+records two source-bound ohosTest/Hypium passes, a positive UI Oracle with three
+valid SmartPerf samples, a negative Oracle whose performance stage was skipped,
+direct `hwlinux` peer identity, and post-run emulator/HDC cleanup. This closes
+the candidate's Linux-emulator gate but not its tagged clean-install gate.
+
 Before proposing a tag, independently verify that every referenced GitHub
 Release asset still exists with the closure's exact server-reported size and
 SHA-256, including assets hosted by another repository:

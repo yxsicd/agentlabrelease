@@ -113,6 +113,40 @@ class ReleaseGraphTests(unittest.TestCase):
             self.assertIsInstance(row["assetId"], int)
             self.assertGreater(row["assetId"], 0)
 
+    def test_alpha12_harmony_acceptance_is_bound_to_exact_closure(self) -> None:
+        closure_path = ROOT / "release/closures/v0.1.0-alpha.12.json"
+        closure_value = json.loads(closure_path.read_text())
+        receipt = json.loads(
+            (
+                ROOT
+                / "release/qualifications/alpha12-harmony-acceptance-4a36510/summary.json"
+            ).read_text()
+        )
+        self.assertEqual(receipt["schema"], "agentlab.release_harmony_acceptance.v1")
+        self.assertEqual(
+            receipt["closure"]["sha256"],
+            hashlib.sha256(closure_path.read_bytes()).hexdigest(),
+        )
+        self.assertEqual(receipt["releaseTag"], closure_value["releaseTag"])
+        self.assertEqual(
+            receipt["releaseGitSha"], closure_value["sources"]["releaseGitSha"]
+        )
+        self.assertEqual(
+            {row["device"]["oracleStatus"] for row in receipt["attempts"]},
+            {"passed", "failed"},
+        )
+        positive = next(
+            row for row in receipt["attempts"] if row["device"]["oracleStatus"] == "passed"
+        )
+        negative = next(
+            row for row in receipt["attempts"] if row["device"]["oracleStatus"] == "failed"
+        )
+        self.assertTrue(positive["performance"]["profileValid"])
+        self.assertGreaterEqual(positive["performance"]["sampleCount"], 3)
+        self.assertEqual(negative["performance"]["status"], "not-run")
+        self.assertEqual(receipt["remoteInspection"]["routeDecision"], "peer_direct")
+        self.assertFalse(receipt["automaticPromotion"])
+
     def test_alpha12_registry_asset_drift_is_rejected(self) -> None:
         closure_value = json.loads(
             (ROOT / "release/closures/v0.1.0-alpha.12.json").read_text()
