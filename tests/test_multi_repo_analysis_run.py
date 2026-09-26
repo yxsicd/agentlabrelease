@@ -95,6 +95,7 @@ class MultiRepoAnalysisRunTests(unittest.TestCase):
             "unsupportedSources": 0,
             "sharedExternalModuleContracts": 0,
             "sharedExternalApiCallContracts": 0,
+            "sharedDomainIdentifierContracts": 0,
             "workspaceFactsSha256": hashlib.sha256(facts.read_bytes()).hexdigest(),
             "difficultyCandidatesSha256": hashlib.sha256(difficulty.read_bytes()).hexdigest(),
             "unsupportedSourcesSha256": hashlib.sha256(unsupported.read_bytes()).hexdigest(),

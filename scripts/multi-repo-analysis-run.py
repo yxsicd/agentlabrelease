@@ -93,6 +93,7 @@ def derive(root: Path, method_revision: str) -> dict[str, Any]:
             "unsupportedSources": receipt["unsupportedSources"],
             "sharedExternalModuleContracts": receipt.get("sharedExternalModuleContracts", 0),
             "sharedExternalApiCallContracts": receipt.get("sharedExternalApiCallContracts", 0),
+            "sharedDomainIdentifierContracts": receipt.get("sharedDomainIdentifierContracts", 0),
         },
         "automaticPromotion": False,
     }
