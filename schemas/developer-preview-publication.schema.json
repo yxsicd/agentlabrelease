@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/developer-preview-publication.schema.json",
+  "title": "AgentLab metadata-only developer preview publication",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "releaseTag", "releaseVersion", "tagGitSha", "releaseGitSha", "closureSha256", "qualificationSha256", "selectedComponentCount", "referencedAssetCount", "componentPayloadsUploaded", "newBinaryBuildCount", "newBinaryUploadCount", "aggregateAssets", "automaticPromotion"],
+  "properties": {
+    "schema": {"const": "agentlab.developer_preview_publication.v1"},
+    "status": {"const": "prepared-review-required"},
+    "releaseTag": {"type": "string", "minLength": 1},
+    "releaseVersion": {"type": "string", "minLength": 1},
+    "tagGitSha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "releaseGitSha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "closureSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "qualificationSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "selectedComponentCount": {"type": "integer", "minimum": 1},
+    "referencedAssetCount": {"type": "integer", "minimum": 1},
+    "componentPayloadsUploaded": {"const": false},
+    "newBinaryBuildCount": {"const": 0},
+    "newBinaryUploadCount": {"const": 0},
+    "aggregateAssets": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "object"}},
+    "automaticPromotion": {"const": false}
+  }
+}

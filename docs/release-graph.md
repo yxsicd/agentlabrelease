@@ -117,6 +117,12 @@ python3 scripts/qualify-tagged-developer-preview.py \
 
 The resulting Actions artifact is the final input to release publication. It is
 review-required and cannot move a channel or create a GitHub Release by itself.
+The same workflow feeds that receipt into
+`prepare-developer-preview-publication.py`, producing exactly five small files:
+`release-closure.json`, `qualification.json`, `publication.json`,
+`release-notes.md` and `SHA256SUMS`. The GitHub Release uploads only the three
+JSON files plus the checksum and uses the Markdown file as its notes; it never recopies
+the 22 component assets or the multi-gigabyte emulator archives.
 
 Before proposing a tag, independently verify that every referenced GitHub
 Release asset still exists with the closure's exact server-reported size and

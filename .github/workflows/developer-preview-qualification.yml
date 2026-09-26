@@ -63,6 +63,12 @@ jobs:
             --git-root "$GITHUB_WORKSPACE" \
             --output "$AGENTLAB_CI_ROOT/developer-preview-qualification.json"
           cat "$AGENTLAB_CI_ROOT/developer-preview-qualification.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Prepare metadata-only publication bundle
+        run: |
+          python3 scripts/prepare-developer-preview-publication.py \
+            --closure "$AGENTLAB_RELEASE_CLOSURE" \
+            --qualification "$AGENTLAB_CI_ROOT/developer-preview-qualification.json" \
+            --output "$AGENTLAB_CI_ROOT/release-bundle"
       - name: Retain tagged clean-install evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -74,4 +80,5 @@ jobs:
             ${{ env.AGENTLAB_CI_ROOT }}/developer-preview-qualification.json
             ${{ env.AGENTLAB_CI_ROOT }}/summary.json
             ${{ env.AGENTLAB_CI_ROOT }}/closure-materialized/
+            ${{ env.AGENTLAB_CI_ROOT }}/release-bundle/
             ${{ env.AGENTLAB_CI_ROOT }}/runs/
