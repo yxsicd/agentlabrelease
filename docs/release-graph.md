@@ -116,6 +116,8 @@ discrimination result and the measured performance boundary, then points to
 SmartPerf observation remains useful retained evidence but cannot produce a
 performance-derived difficulty candidate. The handoff never invents a new
 source set, never changes the frozen case and never authorizes promotion.
+The Alpha.12 result is retained at
+`release/qualifications/alpha12-recursive-feedback-4a36510/summary.json`.
 
 After an authorized merge and immutable tag are present, dispatch **Qualify
 tagged developer preview** with the workflow ref set to that exact tag. The
