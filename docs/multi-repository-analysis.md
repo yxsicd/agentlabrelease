@@ -1115,8 +1115,19 @@ The corresponding v5 packet is retained at
 It binds five exact facts and five complete owners across the two repositories
 without unresolved or bounded owner context. It discovers the Harmony `entry`
 module and both the Cordova plugin and Ionic example boundary candidates. Those
-roots remain review-required rather than build-qualified, so the packet stays
-`independent-semantic-review-required` and does not authorize a case contract.
+roots were then exercised at their exact revisions on the peer-direct `hwlinux`
+host. The Harmony application root installed `@ohos/hypium`, built an unsigned
+HAP with command-line tools 6.1.1.300 and retained artifact SHA-256
+`b26d5e92bf6d91fc484922ab3525b101f763555c38e04b770885b273cda2a88f`.
+The tracked source stayed clean, but 23 warning lines remain relevant to later
+quality gates. The Cordova plugin install succeeded but its declared build
+invoked TypeScript without source arguments or a root `tsconfig`; the Ionic
+example reached Angular bundle generation but could not resolve the repository-
+local `@hmscore/ionic-native-hms-iap/ngx` wrapper. The exact partial result is
+retained in `build-qualification.json` beside the packet and validated by
+`validate-multi-repo-source-build-qualification.py`. It upgrades the boundary
+status to `partially-build-qualified`, not case-ready: independent semantic
+review and a cross-repository behavior Oracle are still required.
 
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \

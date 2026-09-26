@@ -98,9 +98,21 @@
     "allowsCaseContract": false,
     "automaticPromotion": false
   },
+  "projectBuildQualification": {
+    "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/build-qualification.json",
+    "schema": "agentlab.multi_repo_source_build_qualification.v1",
+    "sha256": "fa23945f7aae9027286e97409d67821959361397e0721602dd55639ee68c28d7",
+    "environmentIdentity": "hwlinux:Linux-6.8.0-138-generic:x86_64",
+    "sourceProjectBoundaryStatus": "partially-build-qualified",
+    "qualifiedRootCount": 1,
+    "failedRootCount": 2,
+    "harmonyUnsignedHapSha256": "b26d5e92bf6d91fc484922ab3525b101f763555c38e04b770885b273cda2a88f",
+    "allowsCaseContract": false,
+    "automaticPromotion": false
+  },
   "retention": {
     "authority": "compact-qualification-only",
     "fullReplayEvidence": "local-or-workflow-artifact",
-    "nextGate": "independent-semantic-review-of-purchase-data-packet"
+    "nextGate": "independent-semantic-review-and-cross-repository-behavior-oracle"
   }
 }

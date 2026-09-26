@@ -32,8 +32,11 @@ retaining semantic adjudication and behavior-Oracle gates.
 The first payment-related successor run over exact Harmony IAP and HMS Cordova
 commits produced 60,247 facts and four cross-repository domain contracts. Queue
 triage rejected three unrelated or adjacent contracts and shortlisted the
-`purchase-data` contract for independent review; it is not yet a case and has
-not been automatically promoted.
+`purchase-data` contract for independent review. Exact-root qualification on
+`hwlinux` built the Harmony source into an unsigned HAP; the Cordova package
+build and Ionic example build exposed two distinct upstream build-contract
+gaps. This is now a partially build-qualified review packet, not yet a case,
+and it has not been automatically promoted.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.

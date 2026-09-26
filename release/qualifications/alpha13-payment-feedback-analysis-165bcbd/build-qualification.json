@@ -1,0 +1,131 @@
+{
+  "schema": "agentlab.multi_repo_source_build_qualification.v1",
+  "qualificationId": "alpha13-payment-project-builds-hwlinux-v1",
+  "status": "partial-build-qualified-review-required",
+  "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "sourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
+  "reviewPacketSha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
+  "observedDate": "2026-09-26",
+  "environment": {
+    "environmentIdentity": "hwlinux:Linux-6.8.0-138-generic:x86_64",
+    "hostName": "huawei-ThinkCentre-M920t",
+    "intendedPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+    "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+    "routeDecision": "peer_direct",
+    "evidenceRoot": "/home/huawei/agentlab-source-builds/payment-feedback-165bcbd-v1/evidence"
+  },
+  "toolchains": {
+    "harmony": {
+      "version": "6.1.1.300",
+      "apiVersion": 24,
+      "versionFileSha256": "8bb8df7333a17e9d81c077bb52965b396d5a104c9181a92ef5281e64ea9a28c2",
+      "hvigorVersion": "6.24.4",
+      "hvigorwSha256": "31fc01ad4b0bace37a97f25e1b242bb6d2179b777fb0c3a5ea9d1e5081dafb78",
+      "ohpmVersion": "6.1.2.285",
+      "ohpmSha256": "06d3192310619e12ba6ed36c39f6d0354e0761884df6f42ea76e50cd352d47fe"
+    },
+    "node": {
+      "nodeVersion": "v24.19.0",
+      "npmVersion": "11.17.0"
+    }
+  },
+  "roots": [
+    {
+      "id": "harmony-entry",
+      "repositoryId": "harmony-iap-client",
+      "sourceRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+      "candidatePath": "entry",
+      "executionRoot": ".",
+      "trackedSourceStatus": "clean",
+      "status": "passed",
+      "install": {
+        "command": ["ohpm", "install"],
+        "exitCode": 0,
+        "durationMs": 4489,
+        "logSha256": "367eb85ece7ed7abaf1fd4872996273f86903295c652b32f591ace3f7a5a978f"
+      },
+      "build": {
+        "command": ["hvigorw", "--no-daemon", "--no-parallel", "--no-type-check", "--analyze=false", "--mode", "module", "-p", "product=default", "assembleHap"],
+        "exitCode": 0,
+        "durationMs": 9012,
+        "logSha256": "17856ad38e17398c7d85da17a165461300eb9d2c80615200647e8cde67dd672f"
+      },
+      "artifacts": [
+        {
+          "kind": "unsigned-hap",
+          "path": "entry/build/default/outputs/default/entry-default-unsigned.hap",
+          "sha256": "b26d5e92bf6d91fc484922ab3525b101f763555c38e04b770885b273cda2a88f",
+          "size": 441980
+        }
+      ],
+      "diagnostics": {
+        "warningLineCount": 23,
+        "summary": "Build succeeded but retained API-level, exception-handling, component-constructor and unsigned-signing warnings."
+      }
+    },
+    {
+      "id": "cordova-plugin-hms-iap",
+      "repositoryId": "hms-cordova-iap",
+      "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9",
+      "candidatePath": "cordova-plugin-hms-iap",
+      "executionRoot": "cordova-plugin-hms-iap",
+      "trackedSourceStatus": "clean",
+      "status": "failed",
+      "install": {
+        "command": ["npm", "install", "--no-audit", "--no-fund"],
+        "exitCode": 0,
+        "durationMs": 1511,
+        "logSha256": "4aaef3acc3c4b16766abf61c4f4aa2d3bd413e2fe822d3edd6cfa9d7e7334efa"
+      },
+      "build": {
+        "command": ["npm", "run", "build"],
+        "exitCode": 1,
+        "durationMs": 308,
+        "logSha256": "c90d63d72ea81e6763ba478631c7da1dea3ba12624a807db765e4b4637277fc6"
+      },
+      "artifacts": [],
+      "failureClassification": "upstream-build-contract-incomplete",
+      "diagnostics": {
+        "rootTsconfigCount": 0,
+        "summary": "The declared build script invokes TypeScript 3.9.5 without source arguments or a root tsconfig, so tsc prints usage and exits 1."
+      }
+    },
+    {
+      "id": "ionic-iap-example",
+      "repositoryId": "hms-cordova-iap",
+      "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9",
+      "candidatePath": "cordova-plugin-hms-iap/example/ionic",
+      "executionRoot": "cordova-plugin-hms-iap/example/ionic",
+      "trackedSourceStatus": "clean",
+      "status": "failed",
+      "install": {
+        "command": ["npm", "install", "--no-audit", "--no-fund"],
+        "exitCode": 0,
+        "durationMs": 43237,
+        "logSha256": "e8e15fd303d5ee8639981ce441ee577c511754b1306c0b3f0aa8449d6e075786"
+      },
+      "build": {
+        "command": ["npm", "run", "build"],
+        "exitCode": 1,
+        "durationMs": 14251,
+        "logSha256": "111a1fb9192163705480f8c9c117dc39a16be07848ed85244b5283bfde51b25f"
+      },
+      "artifacts": [],
+      "failureClassification": "missing-declared-local-wrapper-package",
+      "diagnostics": {
+        "missingImport": "@hmscore/ionic-native-hms-iap/ngx",
+        "matchingDiagnosticLineCount": 5,
+        "summary": "Angular bundle setup completes, then the exact source cannot resolve the repository-local Ionic Native wrapper package required by the example."
+      }
+    }
+  ],
+  "interpretation": {
+    "qualifiedRootCount": 1,
+    "failedRootCount": 2,
+    "sourceProjectBoundaryStatus": "partially-build-qualified",
+    "semanticAlignmentVerified": false,
+    "behaviorOracleQualified": false
+  },
+  "allowsCaseContract": false,
+  "automaticPromotion": false
+}
