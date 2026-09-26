@@ -207,6 +207,93 @@ class MultiRepoCandidateReviewPacketEnrichmentTests(unittest.TestCase):
             ):
                 REVIEW.verify_evidence(packet, root)
 
+    def test_external_sink_qualification_produces_v8_and_replays_seven_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = self.fixture(root)
+            base_sha = hashlib.sha256(paths[0].read_bytes()).hexdigest()
+            flow_sha = hashlib.sha256(paths[4].read_bytes()).hexdigest()
+            program = root / "program-analysis.json"
+            program.write_text(json.dumps({
+                "schema": ENRICH.PROGRAM_ANALYSIS_SCHEMA,
+                "status": "bounded-program-flow-partially-resolved-review-required",
+                "candidateId": "difficulty-test",
+                "sourceSetSha256": "a" * 64,
+                "reviewPacketSha256": base_sha,
+                "flowPlanSha256": hashlib.sha256(paths[3].read_bytes()).hexdigest(),
+                "flowProposalSha256": flow_sha,
+                "flowReplayExact": True,
+                "repositoryCount": 2,
+                "flowCount": 2,
+                "coverage": {
+                    "localCallTargetCount": 3,
+                    "localCallTargetsUniquelyResolved": True,
+                    "typedParameterMappingCount": 2,
+                    "untypedParameterMappingCount": 1,
+                    "exactDependencyCount": 7,
+                    "exactDependencyReferencesVerified": True,
+                },
+                "unresolvedCount": 6,
+                "typeResolutionComplete": False,
+                "aliasResolutionComplete": False,
+                "externalCallContractsResolved": False,
+                "reachabilityAndDominanceResolved": False,
+                "semanticAlignmentVerified": False,
+                "behaviorOracleVerified": False,
+                "allowsCaseContract": False,
+                "automaticPromotion": False,
+            }) + "\n")
+            external_plan = root / "external-plan.json"
+            external_plan.write_text(json.dumps({
+                "schema": "agentlab.external_sink_contract_plan.v1",
+                "candidateId": "difficulty-test",
+                "sourceSetSha256": "a" * 64,
+                "contracts": [{"contractId": "fixture"}],
+            }) + "\n")
+            external = root / "external.json"
+            external.write_text(json.dumps({
+                "schema": ENRICH.EXTERNAL_SINK_SCHEMA,
+                "status": "external-sink-contracts-partially-qualified-review-required",
+                "candidateId": "difficulty-test",
+                "sourceSetSha256": "a" * 64,
+                "reviewPacketSha256": base_sha,
+                "programAnalysisSha256": hashlib.sha256(program.read_bytes()).hexdigest(),
+                "planSha256": hashlib.sha256(external_plan.read_bytes()).hexdigest(),
+                "externalSinkCount": 2,
+                "resolvedExternalSinkCount": 1,
+                "remainingExternalSinkCount": 1,
+                "originalUnresolvedCount": 6,
+                "remainingUnresolvedCount": 5,
+                "externalCallContractsResolved": False,
+                "allowsCaseContract": False,
+                "automaticPromotion": False,
+            }) + "\n")
+            packet = root / "packet-v8.json"
+            packet.write_text(
+                json.dumps(
+                    ENRICH.enrich(
+                        *paths,
+                        "2" * 40,
+                        root,
+                        program,
+                        external_plan,
+                        external,
+                    ),
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            value = json.loads(packet.read_text())
+            self.assertEqual(value["schema"], ENRICH.SCHEMA_V8)
+            self.assertEqual(len(value["evidenceAttachments"]), 5)
+            self.assertEqual(
+                value["risks"][0]["id"],
+                "partial-external-contract-resolution-is-not-semantics",
+            )
+            receipt = REVIEW.verify_evidence(packet, root)
+            self.assertEqual(receipt["status"], "verified-exact-v8-evidence")
+            self.assertEqual(len(receipt["verifiedFiles"]), 8)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,11 +12,13 @@ from typing import Any
 
 SCHEMA = "agentlab.multi_repo_candidate_review_packet.v6"
 SCHEMA_V7 = "agentlab.multi_repo_candidate_review_packet.v7"
+SCHEMA_V8 = "agentlab.multi_repo_candidate_review_packet.v8"
 BASE_SCHEMA = "agentlab.multi_repo_candidate_review_packet.v5"
 BUILD_SCHEMA = "agentlab.multi_repo_source_build_qualification.v1"
 EXPRESSION_SCHEMA = "agentlab.multi_repo_expression_fact_qualification.v1"
 FLOW_SCHEMA = "agentlab.bounded_expression_flow_proposal.v1"
 PROGRAM_ANALYSIS_SCHEMA = "agentlab.bounded_expression_flow_program_analysis.v1"
+EXTERNAL_SINK_SCHEMA = "agentlab.external_sink_contract_qualification.v1"
 DECISION_SCHEMA = "agentlab.multi_repo_candidate_semantic_review.v1"
 REVISION = re.compile(r"[0-9a-f]{40}")
 SHA256 = re.compile(r"[0-9a-f]{64}")
@@ -76,6 +78,8 @@ def enrich(
     method_revision: str,
     evidence_root: Path,
     program_analysis_path: Path | None = None,
+    external_sink_plan_path: Path | None = None,
+    external_sink_qualification_path: Path | None = None,
 ) -> dict[str, Any]:
     base = load(base_path, "base review packet")
     build = load(build_path, "build qualification")
@@ -87,6 +91,16 @@ def enrich(
         if program_analysis_path is not None
         else None
     )
+    require(
+        (external_sink_plan_path is None) == (external_sink_qualification_path is None),
+        "external sink plan and qualification must be supplied together",
+    )
+    external_sink = (
+        load(external_sink_qualification_path, "external sink qualification")
+        if external_sink_qualification_path is not None
+        else None
+    )
+    require(external_sink is None or program_analysis is not None, "external sink qualification requires program analysis")
     require(base.get("schema") == BASE_SCHEMA, "base packet is not v5")
     require(base.get("status") == "independent-semantic-review-required", "base packet is not review-required")
     require(base.get("allowsCaseContract") is not True and base.get("automaticPromotion") is False, "base packet can promote")
@@ -104,6 +118,17 @@ def enrich(
             program_analysis_path,
             evidence_root,
             "bounded flow program analysis",
+        )
+    if external_sink_plan_path is not None and external_sink_qualification_path is not None:
+        references["externalSinkPlan"] = relative_reference(
+            external_sink_plan_path,
+            evidence_root,
+            "external sink contract plan",
+        )
+        references["externalSinkQualification"] = relative_reference(
+            external_sink_qualification_path,
+            evidence_root,
+            "external sink qualification",
         )
     base_sha256 = digest(base_path)
     common_lineage(build, BUILD_SCHEMA, base, base_sha256, "build qualification")
@@ -168,10 +193,38 @@ def enrich(
         require(program_analysis.get("externalCallContractsResolved") is False, "program analysis claims external contracts")
         require(program_analysis.get("reachabilityAndDominanceResolved") is False, "program analysis claims control flow")
 
+    if external_sink is not None and external_sink_plan_path is not None and program_analysis_path is not None:
+        common_lineage(
+            external_sink,
+            EXTERNAL_SINK_SCHEMA,
+            base,
+            base_sha256,
+            "external sink qualification",
+        )
+        require(
+            external_sink.get("status")
+            == "external-sink-contracts-partially-qualified-review-required",
+            "external sink qualification status differs",
+        )
+        require(external_sink.get("programAnalysisSha256") == digest(program_analysis_path), "external sink program analysis differs")
+        require(external_sink.get("planSha256") == digest(external_sink_plan_path), "external sink plan differs")
+        require(external_sink.get("externalSinkCount") == 2, "external sink count differs")
+        require(external_sink.get("resolvedExternalSinkCount") == 1, "resolved external sink count differs")
+        require(external_sink.get("remainingExternalSinkCount") == 1, "remaining external sink count differs")
+        require(external_sink.get("originalUnresolvedCount") == 6, "original unresolved count differs")
+        require(external_sink.get("remainingUnresolvedCount") == 5, "remaining unresolved count differs")
+        require(external_sink.get("externalCallContractsResolved") is False, "external sink qualification claims completeness")
+
     domain_evidence = base.get("domainFactEvidence") or []
     require(isinstance(domain_evidence, list) and domain_evidence, "base domain evidence is absent")
     packet = {
-        "schema": SCHEMA_V7 if program_analysis is not None else SCHEMA,
+        "schema": (
+            SCHEMA_V8
+            if external_sink is not None
+            else SCHEMA_V7
+            if program_analysis is not None
+            else SCHEMA
+        ),
         "status": "independent-semantic-review-required",
         "candidateId": base.get("candidateId"),
         "candidateSha256": base.get("candidateSha256"),
@@ -241,6 +294,20 @@ def enrich(
             "exactDependencyCount": coverage["exactDependencyCount"],
             "unresolvedCount": program_analysis["unresolvedCount"],
         }
+    if external_sink is not None and external_sink_qualification_path is not None:
+        packet["evidenceAttachments"]["external-sink-contract-qualification"] = {
+            "schema": EXTERNAL_SINK_SCHEMA,
+            "sha256": digest(external_sink_qualification_path),
+            "relativePath": references["externalSinkQualification"],
+            "planSha256": external_sink["planSha256"],
+            "planRelativePath": references["externalSinkPlan"],
+            "status": external_sink["status"],
+            "programAnalysisSha256": external_sink["programAnalysisSha256"],
+            "externalSinkCount": external_sink["externalSinkCount"],
+            "resolvedExternalSinkCount": external_sink["resolvedExternalSinkCount"],
+            "remainingExternalSinkCount": external_sink["remainingExternalSinkCount"],
+            "remainingUnresolvedCount": external_sink["remainingUnresolvedCount"],
+        }
     packet["reviewQuestions"] = [
         {"id": "shared-behavior", "question": "Do the exact source facts and bounded paths express one coherent cross-repository purchase-data behavior rather than merely sharing an identifier?"},
         {"id": "observable-gap", "question": "Is there an issue-level defect or extension whose pre-change failure is observable in every required repository?"},
@@ -260,6 +327,11 @@ def enrich(
         packet["risks"][0] = {
             "id": "partial-program-flow-is-not-semantics",
             "statement": "Unique local targets and exact token dependencies are verified, but unresolved types, object identity, external SDK contracts and control flow still prevent a semantic or behavioral claim.",
+        }
+    if external_sink is not None:
+        packet["risks"][0] = {
+            "id": "partial-external-contract-resolution-is-not-semantics",
+            "statement": "The Cordova sink contract and endpoint type compatibility are exact, but the Harmony SDK contract, Cordova local parameter/object identity and global control flow remain unresolved.",
         }
     question_ids = [row["id"] for row in packet["reviewQuestions"]]
     risk_ids = [row["id"] for row in packet["risks"]]
@@ -286,6 +358,8 @@ def main() -> None:
     parser.add_argument("--flow-plan", required=True, type=Path)
     parser.add_argument("--flow-proposal", required=True, type=Path)
     parser.add_argument("--program-analysis", type=Path)
+    parser.add_argument("--external-sink-plan", type=Path)
+    parser.add_argument("--external-sink-qualification", type=Path)
     parser.add_argument("--method-revision", required=True)
     parser.add_argument("--evidence-root", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
@@ -299,6 +373,8 @@ def main() -> None:
         args.method_revision,
         args.evidence_root,
         args.program_analysis,
+        args.external_sink_plan,
+        args.external_sink_qualification,
     )
     require(not args.output.exists(), "refusing to overwrite enriched review packet")
     args.output.parent.mkdir(parents=True, exist_ok=True)

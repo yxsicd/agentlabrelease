@@ -21,6 +21,7 @@ PACKET_SCHEMA_V4 = "agentlab.multi_repo_candidate_review_packet.v4"
 PACKET_SCHEMA_V5 = "agentlab.multi_repo_candidate_review_packet.v5"
 PACKET_SCHEMA_V6 = "agentlab.multi_repo_candidate_review_packet.v6"
 PACKET_SCHEMA_V7 = "agentlab.multi_repo_candidate_review_packet.v7"
+PACKET_SCHEMA_V8 = "agentlab.multi_repo_candidate_review_packet.v8"
 PACKET_SCHEMAS = {
     PACKET_SCHEMA,
     PACKET_SCHEMA_V2,
@@ -29,6 +30,7 @@ PACKET_SCHEMAS = {
     PACKET_SCHEMA_V5,
     PACKET_SCHEMA_V6,
     PACKET_SCHEMA_V7,
+    PACKET_SCHEMA_V8,
 }
 ANSWERS_SCHEMA = "agentlab.multi_repo_candidate_semantic_answers.v1"
 DECISION_SCHEMA = "agentlab.multi_repo_candidate_semantic_review.v1"
@@ -120,8 +122,8 @@ def validate_packet(packet: dict[str, Any]) -> None:
         require(packet.get("callSiteEvidence") is None, "v5 packet carries call-site evidence")
         require(packet.get("callResultHandleEvidence") is None, "v5 packet carries call-result evidence")
         require(packet.get("callResultHandleCoverage") is None, "v5 packet carries call-result coverage")
-    if packet.get("schema") in {PACKET_SCHEMA_V6, PACKET_SCHEMA_V7}:
-        version = "v7" if packet.get("schema") == PACKET_SCHEMA_V7 else "v6"
+    if packet.get("schema") in {PACKET_SCHEMA_V6, PACKET_SCHEMA_V7, PACKET_SCHEMA_V8}:
+        version = packet["schema"].rsplit(".", 1)[-1]
         base = packet.get("basePacket")
         require(
             isinstance(base, dict)
@@ -149,8 +151,10 @@ def validate_packet(packet: dict[str, Any]) -> None:
             "expression-fact-qualification",
             "bounded-expression-flow-proposal",
         }
-        if packet.get("schema") == PACKET_SCHEMA_V7:
+        if packet.get("schema") in {PACKET_SCHEMA_V7, PACKET_SCHEMA_V8}:
             required_attachment_ids.add("bounded-expression-flow-program-analysis")
+        if packet.get("schema") == PACKET_SCHEMA_V8:
+            required_attachment_ids.add("external-sink-contract-qualification")
         require(isinstance(attachments, dict) and set(attachments) == required_attachment_ids, f"{version} evidence attachments differ")
         require(
             all(
@@ -189,7 +193,7 @@ def validate_packet(packet: dict[str, Any]) -> None:
             f"{version} bounded flow summary differs",
         )
         require(valid_relative_path(flow.get("planRelativePath")), f"{version} bounded flow plan path is unsafe")
-        if packet.get("schema") == PACKET_SCHEMA_V7:
+        if packet.get("schema") in {PACKET_SCHEMA_V7, PACKET_SCHEMA_V8}:
             program = attachments["bounded-expression-flow-program-analysis"]
             require(
                 program.get("schema") == "agentlab.bounded_expression_flow_program_analysis.v1"
@@ -202,6 +206,20 @@ def validate_packet(packet: dict[str, Any]) -> None:
                 and SHA256.fullmatch(program.get("flowProposalSha256", "")) is not None,
                 "v7 bounded program-flow summary differs",
             )
+        if packet.get("schema") == PACKET_SCHEMA_V8:
+            external = attachments["external-sink-contract-qualification"]
+            require(
+                external.get("schema") == "agentlab.external_sink_contract_qualification.v1"
+                and external.get("status") == "external-sink-contracts-partially-qualified-review-required"
+                and external.get("externalSinkCount") == 2
+                and external.get("resolvedExternalSinkCount") == 1
+                and external.get("remainingExternalSinkCount") == 1
+                and external.get("remainingUnresolvedCount") == 5
+                and SHA256.fullmatch(external.get("programAnalysisSha256", "")) is not None
+                and SHA256.fullmatch(external.get("planSha256", "")) is not None,
+                "v8 external sink qualification summary differs",
+            )
+            require(valid_relative_path(external.get("planRelativePath")), "v8 external sink plan path is unsafe")
         require(packet.get("semanticAlignmentVerified") is False, f"{version} packet claims semantic alignment")
         require(packet.get("behaviorOracleVerified") is False, f"{version} packet claims a behavior Oracle")
     if packet.get("schema") in {PACKET_SCHEMA_V2, PACKET_SCHEMA_V3, PACKET_SCHEMA_V4}:
@@ -271,7 +289,7 @@ def validate_packet(packet: dict[str, Any]) -> None:
         "packet risk ids are invalid",
     )
     require(contract.get("requiredRiskIds") == risk_ids, "packet required risks differ")
-    if packet.get("schema") in {PACKET_SCHEMA_V6, PACKET_SCHEMA_V7}:
+    if packet.get("schema") in {PACKET_SCHEMA_V6, PACKET_SCHEMA_V7, PACKET_SCHEMA_V8}:
         require(
             contract.get("requiredEvidenceAttachmentIds") == sorted(packet["evidenceAttachments"]),
             "v6/v7 required evidence attachments differ",
@@ -285,7 +303,7 @@ def validate_packet(packet: dict[str, Any]) -> None:
 def verify_evidence(packet_path: Path, repository_root: Path) -> dict[str, Any]:
     packet = load(packet_path, "candidate review packet")
     validate_packet(packet)
-    if packet.get("schema") not in {PACKET_SCHEMA_V6, PACKET_SCHEMA_V7}:
+    if packet.get("schema") not in {PACKET_SCHEMA_V6, PACKET_SCHEMA_V7, PACKET_SCHEMA_V8}:
         return {
             "schema": EVIDENCE_VERIFICATION_SCHEMA,
             "status": "legacy-packet-contained-evidence",
@@ -347,7 +365,8 @@ def verify_evidence(packet_path: Path, repository_root: Path) -> dict[str, Any]:
     require(len(flow.get("sourceBridges") or []) == flow_reference.get("sourceBridgeCount"), "bounded flow bridge count differs")
     require(flow.get("allBoundedPathsEstablished") is flow_reference.get("allBoundedPathsEstablished") is True, "bounded paths are incomplete")
     evidence_values = [build, expression, flow]
-    if packet.get("schema") == PACKET_SCHEMA_V7:
+    program = None
+    if packet.get("schema") in {PACKET_SCHEMA_V7, PACKET_SCHEMA_V8}:
         program_reference = attachments["bounded-expression-flow-program-analysis"]
         _, program = checked(program_reference, "bounded-expression-flow-program-analysis")
         require(program.get("reviewPacketSha256") == digest(base_path), "program analysis base packet differs")
@@ -372,10 +391,36 @@ def verify_evidence(packet_path: Path, repository_root: Path) -> dict[str, Any]:
             "program analysis hides unresolved boundaries",
         )
         evidence_values.append(program)
+    if packet.get("schema") == PACKET_SCHEMA_V8:
+        external_reference = attachments["external-sink-contract-qualification"]
+        _, external = checked(external_reference, "external-sink-contract-qualification")
+        require(program is not None, "v8 program analysis is absent")
+        require(external.get("reviewPacketSha256") == digest(base_path), "external sink qualification base packet differs")
+        require(external.get("programAnalysisSha256") == external_reference.get("programAnalysisSha256") == attachments["bounded-expression-flow-program-analysis"]["sha256"], "external sink program analysis differs")
+        plan_path = resolve_reference(repository_root, external_reference.get("planRelativePath"), "external-sink-contract-plan")
+        require(digest(plan_path) == external_reference.get("planSha256") == external.get("planSha256"), "external sink plan digest differs")
+        plan = load(plan_path, "external sink contract plan")
+        require(plan.get("candidateId") == candidate_id and plan.get("sourceSetSha256") == source_set_sha256, "external sink plan lineage differs")
+        verified_files.append({"id": "external-sink-contract-plan", "relativePath": external_reference["planRelativePath"], "sha256": external_reference["planSha256"]})
+        for key in (
+            "externalSinkCount",
+            "resolvedExternalSinkCount",
+            "remainingExternalSinkCount",
+            "remainingUnresolvedCount",
+        ):
+            require(external.get(key) == external_reference.get(key), f"external sink {key} differs")
+        require(external.get("externalCallContractsResolved") is False, "external sink qualification claims completeness")
+        evidence_values.append(external)
     require(all(value.get("allowsCaseContract") is False and value.get("automaticPromotion") is False for value in evidence_values), "attached evidence can promote")
     return {
         "schema": EVIDENCE_VERIFICATION_SCHEMA,
-        "status": "verified-exact-v7-evidence" if packet.get("schema") == PACKET_SCHEMA_V7 else "verified-exact-v6-evidence",
+        "status": (
+            "verified-exact-v8-evidence"
+            if packet.get("schema") == PACKET_SCHEMA_V8
+            else "verified-exact-v7-evidence"
+            if packet.get("schema") == PACKET_SCHEMA_V7
+            else "verified-exact-v6-evidence"
+        ),
         "packetSha256": digest(packet_path),
         "candidateId": candidate_id,
         "sourceSetSha256": source_set_sha256,
