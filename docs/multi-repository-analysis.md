@@ -1199,6 +1199,16 @@ promotion and behavior-Oracle flags false. Its pre-review receipt still opens
 eight repository files; the 944 MiB SDK archive is independently referenced by
 release tag and digest rather than duplicated in Git.
 
+`qualify-cordova-object-flow.py` then consumes the exact v2 sink qualification
+and replays the selected Cordova path across its TypeScript and Angular template
+Git Blobs. It distinguishes an effective flow value type from a missing source
+annotation, rejects local object reassignment, verifies each branch pushes the
+same mutated object reference, and checks each `*ngFor` lexical binding encloses
+the corresponding click expression. The compact v10 packet reopens ten files,
+resolves the parameter and two object-identity boundaries, and leaves exactly
+one explicit control-flow boundary. It still cannot claim semantic alignment,
+construct a case contract or promote automatically.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \

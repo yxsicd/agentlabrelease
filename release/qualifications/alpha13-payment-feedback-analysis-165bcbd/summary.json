@@ -278,9 +278,53 @@
     "allowsCaseContract": false,
     "automaticPromotion": false
   },
+  "cordovaObjectFlowQualification": {
+    "planPath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/cordova-object-flow-plan.json",
+    "planSha256": "c7e7fc25703728617d31c2e357b61d6909a88b8a0441dcbaa207bf6ae5686bba",
+    "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/cordova-object-flow-qualification.json",
+    "schema": "agentlab.cordova_object_flow_qualification.v1",
+    "sha256": "b9fff647ad1fe49dd3efc22371cb0ecdcb36e359f53fc7f709bb60d113d9093d",
+    "methodRevision": "e93d383009cc6f377dc382f7262d645c21596537",
+    "effectiveParameterType": "string",
+    "selectedFlowParameterTypeResolved": true,
+    "memberObjectIdentityResolved": true,
+    "templateObjectIdentityResolved": true,
+    "originalUnresolvedCount": 4,
+    "resolvedBoundaryCount": 3,
+    "remainingUnresolvedCount": 1,
+    "status": "object-flow-qualified-control-flow-review-required",
+    "externalCallContractsResolved": true,
+    "typeResolutionComplete": true,
+    "aliasResolutionComplete": true,
+    "reachabilityAndDominanceResolved": false,
+    "semanticAlignmentVerified": false,
+    "behaviorOracleVerified": false,
+    "allowsCaseContract": false,
+    "automaticPromotion": false
+  },
+  "objectFlowSemanticReviewPacket": {
+    "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/review-packets/purchase-data-object-flow-v10.json",
+    "schema": "agentlab.multi_repo_candidate_review_packet.v10",
+    "sha256": "2286fc70afdb229bac873516b0b15b2612cd64552db1c3937ecc66b3d51ca256",
+    "packetMethodRevision": "e93d383009cc6f377dc382f7262d645c21596537",
+    "basePacketSha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
+    "evidenceAttachmentCount": 6,
+    "evidenceVerification": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/review-packets/purchase-data-object-flow-v10-verification.json",
+      "schema": "agentlab.multi_repo_candidate_semantic_evidence_verification.v1",
+      "sha256": "38b6e79ce61482eb6288cba76854089566c39e2df514f7af7ed035e986572c63",
+      "verifiedFileCount": 10,
+      "status": "verified-exact-v10-evidence"
+    },
+    "status": "independent-semantic-review-required",
+    "semanticAlignmentVerified": false,
+    "behaviorOracleVerified": false,
+    "allowsCaseContract": false,
+    "automaticPromotion": false
+  },
   "retention": {
     "authority": "compact-qualification-only",
     "fullReplayEvidence": "local-or-workflow-artifact",
-    "nextGate": "resolve-cordova-untyped-parameter-member-and-template-object-identity-plus-global-control-flow-then-independent-semantic-review-and-cross-repository-behavior-oracle"
+    "nextGate": "resolve-global-reachability-dominance-exception-flow-and-callback-scheduling-then-independent-semantic-review-and-cross-repository-behavior-oracle"
   }
 }

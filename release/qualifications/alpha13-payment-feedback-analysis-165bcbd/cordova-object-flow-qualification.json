@@ -1,0 +1,98 @@
+{
+  "aliasResolutionComplete": true,
+  "allowsCaseContract": false,
+  "automaticPromotion": false,
+  "behaviorOracleVerified": false,
+  "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "effectiveParameterType": "string",
+  "externalCallContractsResolved": true,
+  "externalSinkQualificationSha256": "6a0a8a4e38f06b36d03ca033bed89fcd530c3892ff6ba754426723ed9d758c1e",
+  "files": [
+    {
+      "contentSha256": "1a98dd1c587b4d9fba5720a17a34e30703ee15f3294430e9c14e75ff65741757",
+      "exactSnippets": [
+        {
+          "occurrences": 1,
+          "sha256": "db61363fb740d8782f2ee7d9b93d1ac2a030ee67c85fd1375004829bb1ac9285"
+        },
+        {
+          "occurrences": 1,
+          "sha256": "307ad914218727aa63d696bd68af2c717476b87d82791ac01a8d49cacce7a5d7"
+        },
+        {
+          "occurrences": 1,
+          "sha256": "4f0c11f738a14cd16231f3a95509074c55c78364e0401554250bc9e9826dc823"
+        },
+        {
+          "occurrences": 1,
+          "sha256": "3082f350c0be279e9a52ab749c1c1281541e5464ea1795aff3e64f56c5c39a56"
+        },
+        {
+          "occurrences": 1,
+          "sha256": "5aebe01075679c49ba1a42d37aeb8710b2b42868aa590b42504587c5d18bfcb2"
+        },
+        {
+          "occurrences": 1,
+          "sha256": "f1bc59e7eeade8c32c5ea56b2d51784f85d3669436379b89636eb46456c094da"
+        },
+        {
+          "occurrences": 1,
+          "sha256": "a62f4e45a9ad23a95e59c600893a35abae81e08de53bbed997000eb43eb1285d"
+        },
+        {
+          "occurrences": 1,
+          "sha256": "e940385ab634b38b2a1ce680eb184fc65ea7f90cbd3bb8bf3d99170972363805"
+        }
+      ],
+      "gitBlobOid": "0d551406043aad6e854acc389acea199c5533eaa",
+      "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+      "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+    },
+    {
+      "contentSha256": "3f12439f5538b9ded3ffcfb7f0ee34e9b0e6cd37e508f031bbab6fb4140040c8",
+      "exactSnippets": [
+        {
+          "occurrences": 1,
+          "sha256": "68489949e76a98b18e2373bf338d620e4925170ab6b180fbb14c20b7273e073d"
+        },
+        {
+          "occurrences": 1,
+          "sha256": "5c525fe69c3486de166b04f2a2cbe3594326ed26b279e99684345bd7174cd348"
+        }
+      ],
+      "gitBlobOid": "e154947d259c1114717572d66f2d56289b36b3f9",
+      "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.html",
+      "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+    }
+  ],
+  "memberObjectIdentityResolved": true,
+  "originalUnresolvedCount": 4,
+  "planSha256": "c7e7fc25703728617d31c2e357b61d6909a88b8a0441dcbaa207bf6ae5686bba",
+  "programAnalysisSha256": "78ee3b01d0594975877daefd171a07f7a317b02b6673c22f6b3307fb47e661a3",
+  "reachabilityAndDominanceResolved": false,
+  "remainingUnresolved": [
+    {
+      "class": "control-flow",
+      "id": "global:reachability-dominance-exception-flow",
+      "reason": "The bounded facts do not establish runtime reachability, dominance, exception flow, or callback scheduling."
+    }
+  ],
+  "remainingUnresolvedCount": 1,
+  "repositoryId": "hms-cordova-iap",
+  "resolvedUnresolvedIds": [
+    "member-alias:hms-cordova-iap:ast-6f8ae557023209f612519f6b",
+    "template-object-identity:hms-cordova-iap:ast-67a6cdf22ef18b8f786be961",
+    "untyped-parameter:hms-cordova-iap:ast-377c564300cbf4a32df9a8a2:1"
+  ],
+  "reviewPacketSha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
+  "schema": "agentlab.cordova_object_flow_qualification.v1",
+  "selectedFlowId": "cordova-owned-purchase-data-to-consume",
+  "selectedFlowParameterTypeResolved": true,
+  "semanticAlignmentVerified": false,
+  "sourceParameterAnnotated": false,
+  "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9",
+  "sourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
+  "status": "object-flow-qualified-control-flow-review-required",
+  "templateObjectIdentityResolved": true,
+  "typeResolutionComplete": true
+}

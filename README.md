@@ -74,6 +74,12 @@ all bound to exact archive members. Both external sink contracts are now
 resolved and four explicit program boundaries remain. Local parameter/object
 identity, global control flow, semantic review and the behavior Oracle are
 still required before a generated case can promote.
+The v10 successor binds the selected Cordova value to its effective `string`
+source contract, proves the same local `product` reference is mutated and
+pushed into each purchased collection, and verifies that each retained template
+loop passes its own lexical `product.purchaseData` to the consumer. Three more
+boundaries are resolved; global reachability, dominance, exception flow and
+callback scheduling are now the only explicit program-analysis boundary.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.
