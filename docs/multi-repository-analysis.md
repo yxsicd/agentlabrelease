@@ -1294,9 +1294,10 @@ fails construction.
 
 Later evidence is attached to semantic review by
 `enrich-multi-repo-candidate-review-packet.py`, not by mutating the original
-packet in place. Packet v6 retains the v5 packet digest and independently binds
-the build qualification, expression qualification, bounded-flow proposal and
-flow plan. It replaces stale risk wording with the observed boundary: one
+packet in place. Packet v6 is a compact reference envelope: it retains the v5
+packet digest and independently binds the build qualification, expression
+qualification, bounded-flow proposal and flow plan without copying the v5
+source excerpts. It replaces stale risk wording with the observed boundary: one
 Harmony build root passed, two Cordova roots exposed exact upstream contract
 failures, and the two bounded paths remain syntactic rather than semantic.
 The existing independent-review compiler accepts v6 only when all three

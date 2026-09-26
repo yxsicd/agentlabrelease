@@ -120,7 +120,18 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
             value["callResultHandleEvidence"] = None
             value["callResultHandleCoverage"] = None
         if schema == REVIEW.PACKET_SCHEMA_V6:
-            value["basePacketSha256"] = "c" * 64
+            value["basePacket"] = {
+                "schema": REVIEW.PACKET_SCHEMA_V5,
+                "sha256": "c" * 64,
+                "packetMethodRevision": "1" * 40,
+                "status": "independent-semantic-review-required",
+                "domainIdentifierContract": {
+                    "normalizedIdentifier": "purchase-data",
+                    "tokens": ["purchase", "data"],
+                },
+                "domainFactCount": 2,
+                "coveredRepositoryCount": 2,
+            }
             value["evidenceAttachments"] = {
                 "build-qualification": {
                     "schema": "agentlab.multi_repo_source_build_qualification.v1",

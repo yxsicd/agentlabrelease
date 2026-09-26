@@ -64,7 +64,7 @@ def digest(path: Path) -> str:
 
 def validate_packet(packet: dict[str, Any]) -> None:
     require(packet.get("schema") in PACKET_SCHEMAS, "unsupported candidate review packet")
-    if packet.get("schema") in {PACKET_SCHEMA_V5, PACKET_SCHEMA_V6}:
+    if packet.get("schema") == PACKET_SCHEMA_V5:
         contract = packet.get("domainIdentifierContract")
         evidence = packet.get("domainFactEvidence")
         require(isinstance(contract, dict), "v5 domain identifier contract is absent")
@@ -95,7 +95,26 @@ def validate_packet(packet: dict[str, Any]) -> None:
         require(packet.get("callResultHandleEvidence") is None, "v5 packet carries call-result evidence")
         require(packet.get("callResultHandleCoverage") is None, "v5 packet carries call-result coverage")
     if packet.get("schema") == PACKET_SCHEMA_V6:
-        require(SHA256.fullmatch(packet.get("basePacketSha256", "")) is not None, "v6 base packet digest is invalid")
+        base = packet.get("basePacket")
+        require(
+            isinstance(base, dict)
+            and base.get("schema") == PACKET_SCHEMA_V5
+            and SHA256.fullmatch(base.get("sha256", "")) is not None
+            and REVISION.fullmatch(base.get("packetMethodRevision", "")) is not None
+            and base.get("status") == "independent-semantic-review-required",
+            "v6 base packet reference is invalid",
+        )
+        contract = base.get("domainIdentifierContract")
+        require(
+            isinstance(contract, dict)
+            and isinstance(contract.get("normalizedIdentifier"), str)
+            and bool(contract["normalizedIdentifier"])
+            and isinstance(contract.get("tokens"), list)
+            and len(contract["tokens"]) >= 2
+            and base.get("domainFactCount", 0) > 0
+            and base.get("coveredRepositoryCount", 0) >= 2,
+            "v6 base domain evidence summary is invalid",
+        )
         attachments = packet.get("evidenceAttachments")
         required_attachment_ids = {
             "build-qualification",

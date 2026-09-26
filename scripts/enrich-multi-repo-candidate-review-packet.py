@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import copy
 import hashlib
 import json
 from pathlib import Path
@@ -102,10 +101,25 @@ def enrich(
     edge_count = sum(row.get("edgeCount", 0) for row in flow.get("flows") or [] if isinstance(row, dict))
     require(edge_count > 0, "bounded flow edges are absent")
 
-    packet = copy.deepcopy(base)
-    packet["schema"] = SCHEMA
-    packet["packetMethodRevision"] = method_revision
-    packet["basePacketSha256"] = base_sha256
+    domain_evidence = base.get("domainFactEvidence") or []
+    require(isinstance(domain_evidence, list) and domain_evidence, "base domain evidence is absent")
+    packet = {
+        "schema": SCHEMA,
+        "status": "independent-semantic-review-required",
+        "candidateId": base.get("candidateId"),
+        "sourceSetSha256": base.get("sourceSetSha256"),
+        "packetMethodRevision": method_revision,
+        "basePacket": {
+            "schema": BASE_SCHEMA,
+            "sha256": base_sha256,
+            "packetMethodRevision": base.get("packetMethodRevision"),
+            "status": base.get("status"),
+            "domainIdentifierContract": base.get("domainIdentifierContract"),
+            "domainFactCount": len(domain_evidence),
+            "coveredRepositoryCount": len({row.get("repositoryId") for row in domain_evidence if isinstance(row, dict)}),
+        },
+        "selectionRoles": base.get("selectionRoles"),
+    }
     packet["evidenceAttachments"] = {
         "build-qualification": {
             "schema": BUILD_SCHEMA,
@@ -162,7 +176,6 @@ def enrich(
         "requiredEvidenceAttachmentIds": sorted(packet["evidenceAttachments"]),
         "reviewerMustBeIndependentOfPacketGenerator": True,
     }
-    packet["status"] = "independent-semantic-review-required"
     packet["semanticAlignmentVerified"] = False
     packet["behaviorOracleVerified"] = False
     packet["allowsCaseContract"] = False

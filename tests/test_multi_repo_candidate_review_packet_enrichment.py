@@ -36,6 +36,8 @@ class MultiRepoCandidateReviewPacketEnrichmentTests(unittest.TestCase):
             "candidateId": candidate_id,
             "sourceSetSha256": source_set,
             "packetMethodRevision": "1" * 40,
+            "domainIdentifierContract": {"normalizedIdentifier": "purchase-data", "tokens": ["purchase", "data"]},
+            "domainFactEvidence": [{"repositoryId": "a"}, {"repositoryId": "b"}],
             "allowsCaseContract": False,
             "automaticPromotion": False,
         }) + "\n")
@@ -100,6 +102,7 @@ class MultiRepoCandidateReviewPacketEnrichmentTests(unittest.TestCase):
             value = ENRICH.enrich(*paths, "2" * 40)
             self.assertEqual(value["schema"], ENRICH.SCHEMA)
             self.assertEqual(len(value["evidenceAttachments"]), 3)
+            self.assertEqual(value["basePacket"]["domainFactCount"], 2)
             self.assertEqual(value["evidenceAttachments"]["bounded-expression-flow-proposal"]["edgeCount"], 5)
             self.assertEqual(value["risks"][0]["id"], "syntactic-flow-is-not-semantics")
             self.assertFalse(value["semanticAlignmentVerified"])
