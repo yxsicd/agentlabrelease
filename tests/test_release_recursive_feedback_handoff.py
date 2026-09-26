@@ -241,6 +241,45 @@ class ReleaseRecursiveFeedbackHandoffTests(unittest.TestCase):
             "new-source-set-or-method-revision",
         )
 
+    def test_alpha13_retained_handoff_binds_current_release_and_portable_evidence(self) -> None:
+        qualification = (
+            ROOT / "release/qualifications/alpha13-recursive-feedback-4f24f9a"
+        )
+        handoff = json.loads((qualification / "summary.json").read_text())
+        closure = ROOT / "release/closures/v0.1.0-alpha.13.json"
+        acceptance = (
+            ROOT
+            / "release/qualifications/alpha13-harmony-acceptance/summary.json"
+        )
+        prior_case = qualification / "prior-case.json"
+        feedback = qualification / "assessment-feedback-candidates.json"
+
+        self.assertEqual(
+            handoff["schema"], "agentlab.release_recursive_feedback_handoff.v1"
+        )
+        self.assertEqual(handoff["releaseTag"], "v0.1.0-alpha.13")
+        self.assertEqual(
+            handoff["releaseGitSha"],
+            "4f24f9a7eb1de98cbb0b695f02cf01da03ae26fb",
+        )
+        self.assertEqual(handoff["closure"]["sha256"], digest(closure))
+        self.assertEqual(handoff["harmonyAcceptance"]["sha256"], digest(acceptance))
+        self.assertEqual(
+            handoff["portableEvidence"]["priorCase"]["sha256"], digest(prior_case)
+        )
+        self.assertEqual(
+            handoff["portableEvidence"]["assessmentFeedback"]["sha256"],
+            digest(feedback),
+        )
+        self.assertEqual(handoff["discrimination"]["score"], 1.0)
+        self.assertFalse(handoff["discrimination"]["wilson95Separated"])
+        self.assertEqual(handoff["performanceBoundary"]["observationCount"], 1)
+        self.assertEqual(handoff["performanceBoundary"]["repeatableProfileCount"], 0)
+        self.assertFalse(
+            handoff["performanceBoundary"]["qualifiedForRecursivePerformanceFeedback"]
+        )
+        self.assertFalse(handoff["automaticPromotion"])
+
 
 if __name__ == "__main__":
     unittest.main()

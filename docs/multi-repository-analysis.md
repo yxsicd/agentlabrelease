@@ -1002,7 +1002,7 @@ mechanism explains the observed assessment failure.
 ```sh
 gh workflow run multi-repo-analysis.yml --ref main \
   -f source_spec_json="$(jq -c . /next/source-spec.json)" \
-  -f feedback_handoff_path=release/qualifications/alpha12-recursive-feedback-4a36510/summary.json \
+  -f feedback_handoff_path=release/qualifications/alpha13-recursive-feedback-4f24f9a/summary.json \
   -f feedback_candidate_id=assessment-feedback-a6a1b3d8a4ce4835db0c
 ```
 

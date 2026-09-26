@@ -116,7 +116,7 @@ python3 scripts/prepare-release-recursive-feedback.py \
   --prior-case /retained/campaign/case.json \
   --feedback /retained/campaign-output/assessment-feedback-candidates.json \
   --discrimination-report /retained/campaign-output/case-discrimination-report.json \
-  --output /retained/alpha12-recursive-feedback.json
+  --output /retained/alpha13-recursive-feedback.json
 ```
 
 The handoff verifies the exact release source, closure, acceptance receipt,
@@ -126,8 +126,8 @@ discrimination result and the measured performance boundary, then points to
 SmartPerf observation remains useful retained evidence but cannot produce a
 performance-derived difficulty candidate. The handoff never invents a new
 source set, never changes the frozen case and never authorizes promotion.
-The Alpha.12 result is retained at
-`release/qualifications/alpha12-recursive-feedback-4a36510/summary.json`.
+The Alpha.13 result is retained at
+`release/qualifications/alpha13-recursive-feedback-4f24f9a/summary.json`.
 Its directory also retains the exact `prior-case.json` and
 `assessment-feedback-candidates.json` bytes required to reproduce a successor
 proposal without access to the original execution host.

@@ -15,8 +15,11 @@ The closure binds release-method source commit
 components across 22 assets, and has independently re-observed all 22 assets on
 their immutable GitHub Releases. Its exact-cut Linux Harmony campaign passed
 source-bound ohosTest/Hypium execution, functional Oracle separation and
-functional-pass-gated SmartPerf proxy collection. It still requires tagged
-clean-install qualification before publication.
+functional-pass-gated SmartPerf proxy collection. The result is also retained
+as an exact, portable, review-only recursive-feedback handoff; one performance
+observation remains below the repeatability gate and cannot create a
+performance difficulty candidate. It still requires tagged clean-install
+qualification before publication.
 
 ## v0.1.0-alpha.12 candidate (withdrawn before publication)
 

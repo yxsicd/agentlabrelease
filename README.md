@@ -13,7 +13,9 @@ to 14 already-published immutable components and all 22 registered payload and
 descriptor assets without rebuilding or uploading any unchanged binary. It
 has revalidated all 22 remote immutable assets and passed its release-bound
 Linux-emulator acceptance. It remains a developer-preview candidate until the
-tagged clean install succeeds. The acceptance plan and receipt workflow is documented in
+tagged clean install succeeds. Its accepted pass/fail evidence is retained as
+a review-only recursive-feedback handoff for the next multi-repository analysis
+cut. The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.
 
