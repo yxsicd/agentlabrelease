@@ -60,6 +60,7 @@
         "path",
         "sourceSymbol",
         "sourceLine",
+        "sourceBlobOid",
         "sourceFileSha256",
         "rationale"
       ],
@@ -69,6 +70,7 @@
         "path": {"type": "string", "minLength": 1},
         "sourceSymbol": {"type": "string", "minLength": 3, "maxLength": 256},
         "sourceLine": {"type": "integer", "minimum": 1},
+        "sourceBlobOid": {"type": "string", "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"},
         "sourceFileSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "rationale": {"type": "string", "minLength": 30}
       }

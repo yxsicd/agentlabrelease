@@ -189,7 +189,7 @@ impl Collector<'_> {
                 let name = field(node, "name", self.source);
                 self.emit(node,"binding",&format!("{owner}::{name}"),json!({"name":name,"owner":owner,"typeExpression":field(node,"type",self.source).trim_start_matches(':').trim(),"initializerExpression":field(node,"value",self.source),"bindingKind":node.parent().and_then(|p|p.child(0)).map(|n|text(n,self.source)).unwrap_or("const")}));
             }
-            "public_field_definition" => {
+            "public_field_definition" | "property_signature" => {
                 let name = field(node, "name", self.source);
                 let mut cursor = node.walk();
                 let decorators: Vec<_> = node
@@ -201,6 +201,19 @@ impl Collector<'_> {
                 self.emit(node, "property", &format!("{owner}::{name}"), json!({
                     "name":name,"owner":owner,"typeExpression":type_expression.trim_start_matches(':').trim(),
                     "initializerExpression":field(node,"value",self.source),"decorators":decorators}));
+            }
+            "member_expression" => {
+                let property = field(node, "property", self.source);
+                self.emit(
+                    node,
+                    "member-access",
+                    &format!("{owner}::{property}"),
+                    json!({
+                        "property":property,
+                        "objectExpression":field(node,"object",self.source),
+                        "owner":owner
+                    }),
+                );
             }
             "call_expression" => {
                 let target = field(node, "function", self.source);
@@ -302,6 +315,23 @@ mod tests {
                 {"kind":"named","exported":"webview","local":"webview"}
             ])
         );
+    }
+    #[test]
+    fn interface_properties_and_member_accesses_are_explicit_facts() {
+        let source = b"interface Receipt { purchaseToken: string } function finish(receipt: Receipt) { return receipt.purchaseToken; }";
+        let result = analyze("Receipt.ts", source, "workspace-cut").unwrap();
+        assert!(result.rows.iter().any(|row| {
+            row["kind"] == "property"
+                && row["name"] == "purchaseToken"
+                && row["owner"] == "Receipt"
+                && row["typeExpression"] == "string"
+        }));
+        assert!(result.rows.iter().any(|row| {
+            row["kind"] == "member-access"
+                && row["property"] == "purchaseToken"
+                && row["objectExpression"] == "receipt"
+                && row["owner"] == "finish"
+        }));
     }
     #[test]
     fn state_styles_gap_is_fixed_without_breaking_normal_objects() {

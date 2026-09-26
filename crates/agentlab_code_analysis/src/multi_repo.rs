@@ -41,8 +41,45 @@ struct RepositoryProjection {
     module_facts: Vec<Value>,
     calls: Vec<Value>,
     file_index: Vec<Value>,
+    domain_identifiers: Vec<Value>,
     receipt: Value,
     unsupported_sources: Vec<Value>,
+}
+
+fn normalized_compound_identifier(identifier: &str) -> Option<(String, Vec<String>)> {
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+    let characters = identifier.chars().collect::<Vec<_>>();
+    for (index, character) in characters.iter().copied().enumerate() {
+        if !character.is_ascii_alphanumeric() {
+            if !current.is_empty() {
+                tokens.push(current.to_ascii_lowercase());
+                current.clear();
+            }
+            continue;
+        }
+        let previous = index
+            .checked_sub(1)
+            .and_then(|offset| characters.get(offset));
+        let next = characters.get(index + 1);
+        let boundary = character.is_ascii_uppercase()
+            && !current.is_empty()
+            && (previous.is_some_and(|value| value.is_ascii_lowercase() || value.is_ascii_digit())
+                || next.is_some_and(|value| value.is_ascii_lowercase()));
+        if boundary {
+            tokens.push(current.to_ascii_lowercase());
+            current.clear();
+        }
+        current.push(character);
+    }
+    if !current.is_empty() {
+        tokens.push(current.to_ascii_lowercase());
+    }
+    tokens.retain(|token| token.len() >= 2 && !matches!(token.as_str(), "id" | "get" | "set"));
+    if tokens.len() < 2 {
+        return None;
+    }
+    Some((tokens.join("-"), tokens))
 }
 
 struct AnalysisCache {
@@ -450,6 +487,7 @@ impl AnalysisCache {
                 module_facts: array("moduleFacts")?,
                 calls: array("calls")?,
                 file_index: array("fileIndex")?,
+                domain_identifiers: array("domainIdentifiers")?,
                 receipt,
                 unsupported_sources: array("unsupportedSources")?,
             })
@@ -501,6 +539,7 @@ impl AnalysisCache {
             "moduleFacts":projection.module_facts,
             "calls":projection.calls,
             "fileIndex":projection.file_index,
+            "domainIdentifiers":projection.domain_identifiers,
             "receipt":projection.receipt,
             "unsupportedSources":projection.unsupported_sources
         });
@@ -1204,6 +1243,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut module_facts = Vec::new();
         let mut calls = Vec::new();
         let mut file_index = Vec::new();
+        let mut domain_identifiers = Vec::new();
         for analysis in analyses {
             file_count += 1;
             syntax_error_count += usize::from(analysis.has_errors);
@@ -1235,6 +1275,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 "id":object["id"]
                             }));
                         }
+                        let identifier = match kind {
+                            Some("property") => object.get("name").and_then(Value::as_str),
+                            Some("member-access") => object.get("property").and_then(Value::as_str),
+                            _ => None,
+                        };
+                        if let Some((normalized, tokens)) =
+                            identifier.and_then(normalized_compound_identifier)
+                        {
+                            domain_identifiers.push(json!({
+                                "repositoryId":repository.id,
+                                "path":object["path"],
+                                "factId":object["id"],
+                                "identifier":identifier.unwrap(),
+                                "normalizedIdentifier":normalized,
+                                "tokens":tokens,
+                                "factKind":kind.unwrap()
+                            }));
+                        }
                         base_facts.push(row);
                     }
                 }
@@ -1258,6 +1316,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             module_facts,
             calls,
             file_index,
+            domain_identifiers,
             receipt,
             unsupported_sources,
         };
@@ -1645,6 +1704,88 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "automaticPromotion":false
         }));
     }
+    let mut shared_domain_identifiers: BTreeMap<String, Vec<Value>> = BTreeMap::new();
+    for observation in projections
+        .iter()
+        .flat_map(|projection| projection.domain_identifiers.iter().cloned())
+    {
+        shared_domain_identifiers
+            .entry(
+                observation["normalizedIdentifier"]
+                    .as_str()
+                    .unwrap()
+                    .to_owned(),
+            )
+            .or_default()
+            .push(observation);
+    }
+    let mut shared_domain_identifier_count = 0usize;
+    for (normalized_identifier, mut observations) in shared_domain_identifiers {
+        observations.sort_by_key(|row| {
+            (
+                row["repositoryId"].as_str().unwrap().to_owned(),
+                row["path"].as_str().unwrap().to_owned(),
+                row["factId"].as_str().unwrap().to_owned(),
+            )
+        });
+        observations.dedup_by(|left, right| left["factId"] == right["factId"]);
+        let affected_repositories = observations
+            .iter()
+            .map(|row| row["repositoryId"].as_str().unwrap())
+            .collect::<BTreeSet<_>>();
+        if affected_repositories.len() < 2 {
+            continue;
+        }
+        shared_domain_identifier_count += 1;
+        let affected = observations
+            .iter()
+            .map(|row| {
+                (
+                    row["repositoryId"].as_str().unwrap(),
+                    row["path"].as_str().unwrap(),
+                )
+            })
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .map(|(repository_id, path)| {
+                json!({"repositoryId":repository_id,"path":path,"dependencyDepth":1})
+            })
+            .collect::<Vec<_>>();
+        let evidence = observations
+            .iter()
+            .map(|row| row["factId"].as_str().unwrap())
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        candidates.push(json!({
+            "id":stable_id("difficulty", &["shared-domain-identifier-contract",&normalized_identifier]),
+            "schema":"agentlab.difficulty_point.v1",
+            "dimensionId":"multi-repository-change-impact",
+            "primaryDimension":"semantic-program-analysis",
+            "relationType":"shared-domain-identifier-contract",
+            "mechanism":"same compound property identifier is observed in exact AST facts across repository boundaries",
+            "status":"candidate",
+            "maturityState":"candidate",
+            "seed":{
+                "normalizedIdentifier":normalized_identifier,
+                "tokens":observations[0]["tokens"]
+            },
+            "observations":observations,
+            "affectedFiles":affected,
+            "affectedRepositoryCount":affected_repositories.len(),
+            "maxDependencyDepth":1,
+            "evidenceIds":evidence,
+            "verificationContract":{
+                "caseReady":false,
+                "required":[
+                    "semantic adjudication of identifier role and type compatibility",
+                    "repository-specific build checks",
+                    "cross-repository behavior oracle"
+                ]
+            },
+            "automaticPromotion":false
+        }));
+    }
     for row in module_facts.iter().filter(|row| {
         row.get("kind").and_then(Value::as_str) == Some("module-reference")
             && row.get("resolution").and_then(Value::as_str) == Some("unresolved")
@@ -1677,7 +1818,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
     let difficulty = json!({
         "schema":"agentlab.difficulty_candidates.v2",
-        "method":"revision-fenced multi-repository dependency graph, recursive reverse impact closure, shared external module clustering and imported-binding API-call localization",
+        "method":"revision-fenced multi-repository dependency graph, recursive reverse impact closure, shared external module clustering, imported-binding API-call localization and exact compound property contracts",
         "sourceSetSha256":source_set_sha256,
         "sources":source_set["repositories"],
         "moduleBindings":source_set["moduleBindings"],
@@ -1709,11 +1850,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "crossRepositoryEdges":edges.iter().filter(|edge|edge["sourceRepositoryId"]!=edge["targetRepositoryId"]).count(),
         "sharedExternalModuleContracts":shared_external_module_count,
         "sharedExternalApiCallContracts":shared_external_api_call_count,
+        "sharedDomainIdentifierContracts":shared_domain_identifier_count,
         "unresolvedModuleReferences":unresolved,
         "difficultyCandidates":difficulty["candidates"].as_array().unwrap().len(),
         "workspaceFactsSha256":workspace_facts_sha256,
         "difficultyCandidatesSha256":digest(&difficulty_bytes),
-        "coverage":"committed UTF-8 ArkTS/TypeScript syntax facts plus relative-file and explicit-manifest module bindings; exact non-UTF-8 exclusions are recorded in unsupported_sources.jsonl; no compiler type resolution, dynamic import resolution, call-target resolution or dataflow",
+        "coverage":"committed UTF-8 ArkTS/TypeScript syntax facts, exact compound property/member identifiers, and relative-file plus explicit-manifest module bindings; exact non-UTF-8 exclusions are recorded in unsupported_sources.jsonl; compound identifiers require exact normalized equality and semantic adjudication; no compiler type resolution, dynamic import resolution, call-target resolution or dataflow",
         "automaticPromotion":false
     });
     fs::write(

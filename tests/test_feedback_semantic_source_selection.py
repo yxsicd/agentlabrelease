@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import json
 import pathlib
+import subprocess
 import tempfile
 import unittest
 
@@ -47,6 +48,8 @@ class FeedbackSemanticSourceSelectionTests(unittest.TestCase):
         (self.contracts / "src/PaymentAuthority.ts").write_text(
             "export interface PaymentAuthority { policy: string }\n"
         )
+        app_revision = self.commit(self.app)
+        contracts_revision = self.commit(self.contracts)
         self.prior_case = self.write(
             "prior-case.json",
             {
@@ -96,13 +99,13 @@ class FeedbackSemanticSourceSelectionTests(unittest.TestCase):
             {
                 "id": "app",
                 "repository": "https://example.invalid/app.git",
-                "revision": "1" * 40,
+                "revision": app_revision,
                 "root": str(self.app),
             },
             {
                 "id": "contracts",
                 "repository": "https://example.invalid/contracts.git",
-                "revision": "2" * 40,
+                "revision": contracts_revision,
                 "root": str(self.contracts),
             },
         ]
@@ -164,6 +167,26 @@ class FeedbackSemanticSourceSelectionTests(unittest.TestCase):
         path.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
         return path
 
+    def commit(self, root: pathlib.Path) -> str:
+        subprocess.run(["git", "init", "--quiet", str(root)], check=True)
+        subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+        subprocess.run(
+            [
+                "git",
+                "-C", str(root),
+                "-c", "user.name=AgentLab Test",
+                "-c", "user.email=agentlab@example.invalid",
+                "commit", "--quiet", "-m", "fixture",
+            ],
+            check=True,
+        )
+        return subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+
     def prepare(self):
         return PREPARE.prepare(
             self.handoff,
@@ -183,10 +206,19 @@ class FeedbackSemanticSourceSelectionTests(unittest.TestCase):
         self.assertFalse(value["semanticAlignmentVerified"])
         self.assertFalse(value["automaticPromotion"])
         self.assertEqual({row["sourceLine"] for row in value["claims"]}, {1})
+        self.assertTrue(all(len(row["sourceBlobOid"]) == 40 for row in value["claims"]))
 
     def test_missing_exact_source_symbol_is_rejected(self) -> None:
         self.claim_value["claims"][0]["sourceSymbol"] = "MissingAuthority"
         self.claim = self.write("missing-symbol.json", self.claim_value)
+        with self.assertRaisesRegex(ValueError, "source symbol is absent"):
+            self.prepare()
+
+    def test_uncommitted_worktree_text_is_not_accepted_as_evidence(self) -> None:
+        target = self.contracts / "src/PaymentAuthority.ts"
+        target.write_text(target.read_text() + "const UncommittedAuthority = true;\n")
+        self.claim_value["claims"][0]["sourceSymbol"] = "UncommittedAuthority"
+        self.claim = self.write("uncommitted-symbol.json", self.claim_value)
         with self.assertRaisesRegex(ValueError, "source symbol is absent"):
             self.prepare()
 

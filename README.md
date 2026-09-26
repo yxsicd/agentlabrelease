@@ -24,7 +24,11 @@ next loop must select a semantically related source set or enrich the feedback
 mechanism before analysis.
 The current method head now enforces that correction: every feedback-triggered
 analysis must bind exact prior-case language to symbols observed in at least two
-pinned repositories before the analysis request can be created.
+pinned repositories before the analysis request can be created. The analyzer
+also exposes interface properties and member accesses as exact AST facts and
+can form non-ready cross-repository candidates from identical compound domain
+identifiers. This closes the earlier explicit-import-only blind spot while
+retaining semantic adjudication and behavior-Oracle gates.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.

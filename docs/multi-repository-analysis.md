@@ -214,6 +214,14 @@ The output directory contains:
   module/export/call tuple in at least two repositories. Module-reference and
   call facts are both retained as evidence. This is call-site localization,
   not type resolution or proof that the calls have identical lifecycle needs.
+- A `shared-domain-identifier-contract` candidate covers repositories that do
+  not share an import graph. Interface/class properties and member accesses
+  become explicit AST facts; a candidate requires exact equality after
+  deterministic CamelCase/separator tokenization, at least two meaningful
+  tokens, and observations in at least two pinned repositories. Every
+  observation retains its fact ID, original spelling, repository and path.
+  This is conservative lexical localization for semantic review, not proof
+  that the types, roles or behaviors are equivalent.
 - `multi_repo_analysis.json`: analyzer/grammar identity, exact repository cuts,
   counts and SHA-256 digests for both evidence files.
 
@@ -239,6 +247,13 @@ preservation checks, and a cross-repository Oracle. Alias normalization avoids
 splitting the same API merely because repositories use different local names;
 namespace/default imports and dynamic property access retain their explicit
 coverage limitations.
+
+Shared domain-identifier candidates are also non-ready. A maintainer must
+adjudicate role and type compatibility before repository-specific builds and a
+cross-repository behavior Oracle can qualify the candidate. Single-token
+matches never create this relation, and exact matching deliberately misses
+synonyms; later semantic stages may enrich that boundary without weakening the
+revision-fenced evidence.
 
 ## Predeclare a candidate cohort before construction
 
@@ -982,10 +997,11 @@ path, one candidate id, a two-to-sixteen-repository source specification and an
 `agentlab.feedback_semantic_source_selection_claim.v1`. Each claim must quote an
 exact prior-case title, stage demand or observed failure mechanism and map it to
 an exact file and source symbol in the pinned source set, with a rationale.
-`prepare-feedback-semantic-source-selection.py` reads the materialized revisions
-and rejects missing symbols, free-form case anchors, path escapes, oversized or
-non-UTF-8 evidence files, duplicate claims, or evidence that covers fewer than
-two repositories and two case anchors. This proves that source selection has
+`prepare-feedback-semantic-source-selection.py` reads each exact
+`revision:path` Git Blob directly from the materialized object database, records
+its Blob OID and content SHA-256, and rejects missing symbols, free-form case
+anchors, path escapes, oversized or non-UTF-8 evidence blobs, duplicate claims,
+or evidence that covers fewer than two repositories and two case anchors. This proves that source selection has
 inspectable relevance evidence; it deliberately does not prove that a later
 difficulty candidate explains the failure.
 

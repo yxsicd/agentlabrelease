@@ -7,6 +7,7 @@ import hashlib
 import json
 from pathlib import Path, PurePosixPath
 import re
+import subprocess
 from typing import Any
 
 
@@ -55,6 +56,24 @@ def safe_relative_path(value: Any) -> str:
         "claim path is unsafe",
     )
     return value
+
+
+def git_bytes(root: Path, *arguments: str) -> bytes:
+    completed = subprocess.run(
+        [
+            "git",
+            "-c", "protocol.file.allow=never",
+            "-c", "protocol.ext.allow=never",
+            "-c", "protocol.ssh.allow=never",
+            "-C", str(root),
+            *arguments,
+        ],
+        check=False,
+        capture_output=True,
+        timeout=30,
+    )
+    require(completed.returncode == 0, "cannot read semantic claim from exact Git object")
+    return completed.stdout
 
 
 def source_set_identity(manifest: dict[str, Any]) -> tuple[str, dict[str, dict[str, Any]]]:
@@ -165,15 +184,21 @@ def prepare(
         require(identity not in seen, "semantic claim is duplicated")
         seen.add(identity)
 
-        root = Path(sources[repository_id]["root"]).resolve()
-        require(root.is_dir(), "semantic claim repository root is absent")
-        target = root / relative_path
-        require(target.is_file() and not target.is_symlink(), "semantic claim source file is absent or symbolic")
-        resolved = target.resolve()
-        require(resolved.is_relative_to(root), "semantic claim source path escapes repository")
-        require(resolved.stat().st_size <= MAX_SOURCE_BYTES, "semantic claim source file exceeds bounded size")
+        source = sources[repository_id]
+        root = Path(source["root"]).resolve()
+        require(root.is_dir() and (root / ".git").is_dir(), "semantic claim repository object database is absent")
+        revision = source["revision"]
+        head = git_bytes(root, "rev-parse", "HEAD^{commit}").decode().strip()
+        require(head == revision, "semantic claim repository HEAD differs from exact revision")
+        object_spec = f"{revision}:{relative_path}"
+        blob_oid = git_bytes(root, "rev-parse", object_spec).decode().strip()
+        require(re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", blob_oid), "semantic claim blob object id is invalid")
+        size_raw = git_bytes(root, "cat-file", "-s", blob_oid).decode().strip()
+        require(size_raw.isdigit() and int(size_raw) <= MAX_SOURCE_BYTES, "semantic claim source file exceeds bounded size")
+        raw = git_bytes(root, "cat-file", "blob", blob_oid)
+        require(len(raw) == int(size_raw), "semantic claim source blob size differs")
         try:
-            text = resolved.read_text(encoding="utf-8")
+            text = raw.decode("utf-8")
         except UnicodeDecodeError as error:
             raise SemanticSourceSelectionError("semantic claim source file is not UTF-8 text") from error
         require(symbol in text, "semantic claim source symbol is absent from exact source bytes")
@@ -185,7 +210,8 @@ def prepare(
                 "path": relative_path,
                 "sourceSymbol": symbol,
                 "sourceLine": line,
-                "sourceFileSha256": digest(resolved),
+                "sourceBlobOid": blob_oid,
+                "sourceFileSha256": hashlib.sha256(raw).hexdigest(),
                 "rationale": rationale.strip(),
             }
         )

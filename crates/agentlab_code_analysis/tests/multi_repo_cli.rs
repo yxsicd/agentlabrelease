@@ -372,6 +372,61 @@ fn shared_external_module_contract_becomes_non_ready_multi_repo_candidate() {
 }
 
 #[test]
+fn exact_compound_property_contract_becomes_non_ready_multi_repo_candidate() {
+    let mut fixture = Fixture::new();
+    let (one, revision_one) = fixture.repository(
+        "one",
+        &[(
+            "src/receipt.ts",
+            "export interface Receipt { purchaseToken: string }",
+        )],
+    );
+    let (two, revision_two) = fixture.repository(
+        "two",
+        &[(
+            "src/finish.ets",
+            "export function finish(order: Object) { return order.purchaseToken; }",
+        )],
+    );
+    let manifest = json!({
+        "schema":"agentlab.multi_repo_manifest.v1",
+        "repositories":[
+            {"id":"one","repository":"fixture://one","root":one,"revision":revision_one},
+            {"id":"two","repository":"fixture://two","root":two,"revision":revision_two}
+        ]
+    });
+    let result = fixture.run(&manifest, "shared-domain-identifier");
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let receipt: Value = serde_json::from_slice(&result.stdout).unwrap();
+    assert_eq!(receipt["sharedDomainIdentifierContracts"], 1);
+    let difficulty: Value = serde_json::from_slice(
+        &fs::read(
+            fixture
+                .root
+                .join("shared-domain-identifier-output/difficulty_candidates.json"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    let candidate = difficulty["candidates"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["relationType"] == "shared-domain-identifier-contract")
+        .unwrap();
+    assert_eq!(candidate["seed"]["normalizedIdentifier"], "purchase-token");
+    assert_eq!(candidate["seed"]["tokens"], json!(["purchase", "token"]));
+    assert_eq!(candidate["affectedRepositoryCount"], 2);
+    assert_eq!(candidate["evidenceIds"].as_array().unwrap().len(), 2);
+    assert_eq!(candidate["verificationContract"]["caseReady"], false);
+    assert_eq!(candidate["automaticPromotion"], false);
+}
+
+#[test]
 fn non_utf8_source_is_audited_without_aborting_the_source_set() {
     let mut fixture = Fixture::new();
     let (one, _) = fixture.repository(
