@@ -22,8 +22,12 @@ performance difficulty candidate. A successor exact analysis at method commit
 `b8aadaadc0739c0ffac9a57717c42c7bf0e2a9b0` produced 404,308 facts, 19,374
 difficulty candidates, 97 eligible cross-repository candidates and ten
 deterministically ranked review proposals. Semantic alignment remains an
-independent maintainer gate. The release still requires tagged clean-install
-qualification before publication.
+independent maintainer gate. Exact triage rejected all ten proposals: they were
+generic PerformanceAnalysisKit, ArkUI, AbilityKit, Hypium or hvigor contracts,
+while both attempts passed ohosTest/Hypium and only the weak attempt failed the
+payment-authority UI Oracle. No case was promoted; the next loop must use a
+semantically related source set or richer feedback anchors. The release still
+requires tagged clean-install qualification before publication.
 
 ## v0.1.0-alpha.12 candidate (withdrawn before publication)
 

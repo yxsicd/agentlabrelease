@@ -80,10 +80,15 @@
     ]
   },
   "reviewBoundary": {
-    "status": "maintainer-review-required",
+    "status": "triaged-no-semantic-alignment",
     "semanticAlignmentVerified": false,
     "automaticPromotion": false,
-    "nextGate": "independent-maintainer-review-of-one-proposal",
+    "triageQualification": "release/qualifications/alpha13-feedback-analysis-triage-b8aadaa/summary.json",
+    "triageResultSha256": "c66c0ac56b8dd557ed2fa32e29897b566fe8f6aca2bfd2280a3eb7febc4bf30d",
+    "reviewedProposalCount": 10,
+    "shortlistedProposalCount": 0,
+    "rejectedProposalCount": 10,
+    "nextGate": "select-semantically-related-source-set-or-enrich-feedback-mechanism",
     "retainedEvidence": "compact-qualification-only",
     "workflowArtifactRequiredForFullReplay": true
   }

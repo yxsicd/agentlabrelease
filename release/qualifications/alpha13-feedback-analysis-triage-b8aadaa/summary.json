@@ -1,0 +1,93 @@
+{
+  "schema": "agentlab.feedback_analysis_proposal_triage_qualification.v1",
+  "qualificationId": "alpha13-feedback-analysis-triage-b8aadaa",
+  "status": "no-semantic-alignment",
+  "inputs": {
+    "proposalQualification": "release/qualifications/alpha13-feedback-analysis-proposals-b8aadaa/summary.json",
+    "proposalQueueSha256": "8dac232077d41485cf7f503732b19238ac8cbdd3b7ebdd73c8d4b97a200c42f5",
+    "triageReviewSha256": "b41bc443c86056a46349bd36723dd6207b7b9d467aac63ce8d3e0729851bf4de",
+    "triageResultSha256": "c66c0ac56b8dd557ed2fa32e29897b566fe8f6aca2bfd2280a3eb7febc4bf30d"
+  },
+  "observedFailure": {
+    "mechanism": "oracle-failure at frozen stage harmony-device",
+    "caseBehavior": "payment authority binding",
+    "standardTest": "strong and weak attempts both passed instrument-test-ohosTest-hypium",
+    "separatingEvidence": "only the weak attempt failed the device UI Oracle"
+  },
+  "decision": {
+    "reviewer": "agentlab-maintainer-semantic-triage",
+    "authority": "maintainer-triage-not-case-approval",
+    "reviewedProposalCount": 10,
+    "shortlistedProposalCount": 0,
+    "rejectedProposalCount": 10,
+    "semanticAlignmentVerified": false,
+    "automaticPromotion": false
+  },
+  "rejectedCandidates": [
+    {
+      "rank": 1,
+      "difficultyCandidateId": "difficulty-2a4dfa03fea784ddd323e372",
+      "seed": "@kit.PerformanceAnalysisKit",
+      "reason": "broad performance module contract does not explain payment-authority UI state"
+    },
+    {
+      "rank": 2,
+      "difficultyCandidateId": "difficulty-090fb55cb02f8f984e91766f",
+      "seed": "@kit.PerformanceAnalysisKit::hilog.info",
+      "reason": "general instrumentation call has no behavior link to the failed UI Oracle"
+    },
+    {
+      "rank": 3,
+      "difficultyCandidateId": "difficulty-588b80f4b5e26045aa6a2e06",
+      "seed": "@kit.ArkUI",
+      "reason": "framework breadth is not evidence of payment-authority behavior"
+    },
+    {
+      "rank": 4,
+      "difficultyCandidateId": "difficulty-19a7a518d2b8f896ae8cb263",
+      "seed": "@kit.AbilityKit",
+      "reason": "lifecycle framework has no demonstrated relation to payment authority"
+    },
+    {
+      "rank": 5,
+      "difficultyCandidateId": "difficulty-ac913a9c7336fb1fd5dae692",
+      "seed": "@ohos/hypium",
+      "reason": "both attempts passed the Hypium stage"
+    },
+    {
+      "rank": 6,
+      "difficultyCandidateId": "difficulty-dbdc140d2fc734f6808bcaeb",
+      "seed": "@ohos/hypium::describe",
+      "reason": "both attempts passed the Hypium stage"
+    },
+    {
+      "rank": 7,
+      "difficultyCandidateId": "difficulty-1c97189190f549cf4099ab1b",
+      "seed": "@ohos/hypium::it",
+      "reason": "both attempts passed the Hypium stage"
+    },
+    {
+      "rank": 8,
+      "difficultyCandidateId": "difficulty-6f3411ab4db0afbafd97b870",
+      "seed": "@ohos/hypium::expect",
+      "reason": "both attempts passed the Hypium stage"
+    },
+    {
+      "rank": 9,
+      "difficultyCandidateId": "difficulty-7aefb22c72503e3d2b679194",
+      "seed": "@ohos/hypium::beforeAll",
+      "reason": "both attempts passed the Hypium stage"
+    },
+    {
+      "rank": 10,
+      "difficultyCandidateId": "difficulty-c14e209c59d62b4ad7994b2e",
+      "seed": "@ohos/hvigor-ohos-plugin",
+      "reason": "both variants built, installed and passed standard tests"
+    }
+  ],
+  "retention": {
+    "authority": "compact-qualification-only",
+    "fullReplayEvidence": "local-or-workflow-artifact",
+    "nextGate": "select-semantically-related-source-set-or-enrich-feedback-mechanism"
+  }
+}

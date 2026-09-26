@@ -278,6 +278,13 @@ class FeedbackAnalysisProposalQueueTests(unittest.TestCase):
         )
         self.assertEqual(qualification["transport"]["authority"], "git-object-id")
         self.assertTrue(qualification["transport"]["remainingBlobsResolvedByAnalyzer"])
+        self.assertEqual(
+            qualification["reviewBoundary"]["status"],
+            "triaged-no-semantic-alignment",
+        )
+        self.assertEqual(qualification["reviewBoundary"]["reviewedProposalCount"], 10)
+        self.assertEqual(qualification["reviewBoundary"]["shortlistedProposalCount"], 0)
+        self.assertEqual(qualification["reviewBoundary"]["rejectedProposalCount"], 10)
         self.assertFalse(qualification["reviewBoundary"]["semanticAlignmentVerified"])
         self.assertFalse(qualification["reviewBoundary"]["automaticPromotion"])
 

@@ -18,6 +18,10 @@ a review-only recursive-feedback handoff for the next multi-repository analysis
 cut. That successor cut has been replayed over two exact public Harmony
 repositories, producing 404,308 facts, 19,374 difficulty candidates, 97
 eligible cross-repository candidates and a bounded ten-proposal review queue.
+Maintainer triage rejected all ten generic framework candidates because none
+explained the payment-authority UI Oracle failure; no case was promoted. The
+next loop must select a semantically related source set or enrich the feedback
+mechanism before analysis.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.

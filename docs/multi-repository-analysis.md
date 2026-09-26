@@ -1028,6 +1028,26 @@ summary binds the request, handoff, Git-object prefetch receipt, analysis run,
 native evidence and queue index. Full replay evidence remains a workflow/local
 artifact rather than being committed into the lightweight release repository.
 
+The bounded queue must be triaged as a whole before any proposal proceeds.
+`triage-feedback-analysis-proposal-queue.py` binds the exact queue and every
+proposal digest, requires one evidence-backed decision per proposal, permits at
+most one shortlist, and never verifies semantic alignment or promotes a case.
+An all-rejected queue returns the loop to source selection or feedback-mechanism
+enrichment instead of forcing a false match. Alpha.13 exercised that path: all
+ten proposals were broad PerformanceAnalysisKit, ArkUI, AbilityKit, Hypium or
+hvigor contracts. Both device attempts had already passed ohosTest/Hypium and
+only the weak attempt failed the payment-authority UI Oracle, so all ten were
+rejected as semantically unaligned. The compact result is retained at
+`release/qualifications/alpha13-feedback-analysis-triage-b8aadaa/summary.json`.
+
+```sh
+python3 scripts/triage-feedback-analysis-proposal-queue.py \
+  --queue /next-analysis/feedback-analysis-proposals/index.json \
+  --proposal-root /next-analysis/feedback-analysis-proposals \
+  --review /next-analysis/feedback-analysis-proposals/triage-review.json \
+  --output /next-analysis/feedback-analysis-proposals/triage.json
+```
+
 The next-cut bridge is executable and fail-closed. Rerun multi-repository
 analysis over a new exact source set, a new method revision, or both, then bind
 one assessed feedback candidate to one new recursive impact candidate:
