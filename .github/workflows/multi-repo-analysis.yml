@@ -16,6 +16,11 @@ on:
         required: false
         default: ""
         type: string
+      feedback_semantic_selection_json:
+        description: Required exact agentlab.feedback_semantic_source_selection_claim.v1 JSON when feedback_handoff_path is supplied
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -52,21 +57,39 @@ jobs:
         env:
           FEEDBACK_HANDOFF_PATH: ${{ inputs.feedback_handoff_path }}
           FEEDBACK_CANDIDATE_ID: ${{ inputs.feedback_candidate_id }}
+          FEEDBACK_SEMANTIC_SELECTION_JSON: ${{ inputs.feedback_semantic_selection_json }}
         run: |
-          if [[ -z "$FEEDBACK_HANDOFF_PATH" && -z "$FEEDBACK_CANDIDATE_ID" ]]; then
+          if [[ -z "$FEEDBACK_HANDOFF_PATH" && -z "$FEEDBACK_CANDIDATE_ID" && -z "$FEEDBACK_SEMANTIC_SELECTION_JSON" ]]; then
             exit 0
           fi
-          if [[ -z "$FEEDBACK_HANDOFF_PATH" || -z "$FEEDBACK_CANDIDATE_ID" ]]; then
-            echo "feedback_handoff_path and feedback_candidate_id must be supplied together" >&2
+          if [[ -z "$FEEDBACK_HANDOFF_PATH" || -z "$FEEDBACK_CANDIDATE_ID" || -z "$FEEDBACK_SEMANTIC_SELECTION_JSON" ]]; then
+            echo "feedback_handoff_path, feedback_candidate_id and feedback_semantic_selection_json must be supplied together" >&2
             exit 1
           fi
           case "$FEEDBACK_HANDOFF_PATH" in
             release/qualifications/*/summary.json) ;;
             *) echo "feedback handoff must be a committed qualification summary" >&2; exit 1 ;;
           esac
+          qualification_root="$(dirname "$GITHUB_WORKSPACE/$FEEDBACK_HANDOFF_PATH")"
+          python3 - <<'PY'
+          import os, pathlib
+          pathlib.Path(os.environ["AGENTLAB_ROOT"], "feedback-semantic-source-selection-claim.json").write_text(
+              os.environ["FEEDBACK_SEMANTIC_SELECTION_JSON"] + "\n", encoding="utf-8"
+          )
+          PY
+          python3 scripts/prepare-feedback-semantic-source-selection.py \
+            --handoff "$GITHUB_WORKSPACE/$FEEDBACK_HANDOFF_PATH" \
+            --prior-case "$qualification_root/prior-case.json" \
+            --feedback "$qualification_root/assessment-feedback-candidates.json" \
+            --manifest "$AGENTLAB_ROOT/source/manifest.json" \
+            --claim "$AGENTLAB_ROOT/feedback-semantic-source-selection-claim.json" \
+            --output "$AGENTLAB_ROOT/feedback-semantic-source-selection.json"
           python3 scripts/prepare-feedback-analysis-request.py \
             --handoff "$GITHUB_WORKSPACE/$FEEDBACK_HANDOFF_PATH" \
+            --prior-case "$qualification_root/prior-case.json" \
+            --feedback "$qualification_root/assessment-feedback-candidates.json" \
             --source-spec "$AGENTLAB_ROOT/source/source-spec.json" \
+            --semantic-selection "$AGENTLAB_ROOT/feedback-semantic-source-selection.json" \
             --feedback-candidate-id "$FEEDBACK_CANDIDATE_ID" \
             --next-method-revision "$GITHUB_SHA" \
             --output "$AGENTLAB_ROOT/feedback-analysis-request.json"
@@ -109,6 +132,7 @@ jobs:
             --analysis-receipt "$AGENTLAB_ROOT/source/analysis/multi_repo_analysis.json" \
             --analysis-run "$AGENTLAB_ROOT/source/analysis-run.json" \
             --difficulty "$AGENTLAB_ROOT/source/analysis/difficulty_candidates.json" \
+            --semantic-selection "$AGENTLAB_ROOT/feedback-semantic-source-selection.json" \
             --max-candidates 10 \
             --output "$AGENTLAB_ROOT/feedback-analysis-proposals"
           sha256sum "$AGENTLAB_ROOT/feedback-analysis-proposals/index.json" \
@@ -127,4 +151,6 @@ jobs:
             ${{ env.AGENTLAB_ROOT }}/source/analysis-run.json
             ${{ env.AGENTLAB_ROOT }}/source/analysis/
             ${{ env.AGENTLAB_ROOT }}/feedback-analysis-request.json
+            ${{ env.AGENTLAB_ROOT }}/feedback-semantic-source-selection-claim.json
+            ${{ env.AGENTLAB_ROOT }}/feedback-semantic-source-selection.json
             ${{ env.AGENTLAB_ROOT }}/feedback-analysis-proposals/

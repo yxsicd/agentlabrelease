@@ -53,14 +53,23 @@ def source_validator() -> Any:
 
 def prepare(
     handoff_path: pathlib.Path,
+    prior_case_path: pathlib.Path,
+    feedback_path: pathlib.Path,
     source_spec_path: pathlib.Path,
+    semantic_selection_path: pathlib.Path,
     feedback_candidate_id: str,
     next_method_revision: str,
 ) -> dict[str, Any]:
     require(handoff_path.is_file() and not handoff_path.is_symlink(), "handoff must be a regular file")
+    require(prior_case_path.is_file() and not prior_case_path.is_symlink(), "prior case must be a regular file")
+    require(feedback_path.is_file() and not feedback_path.is_symlink(), "feedback evidence must be a regular file")
     require(source_spec_path.is_file() and not source_spec_path.is_symlink(), "source specification must be a regular file")
+    require(semantic_selection_path.is_file() and not semantic_selection_path.is_symlink(), "semantic source selection must be a regular file")
     handoff = load(handoff_path, "recursive feedback handoff")
+    prior_case = load(prior_case_path, "prior case")
+    feedback = load(feedback_path, "assessment feedback")
     raw_spec = load(source_spec_path, "source specification")
+    semantic_selection = load(semantic_selection_path, "semantic source selection")
     try:
         normalized_spec = source_validator()(raw_spec)
     except (ValueError, OSError) as error:
@@ -97,6 +106,9 @@ def prepare(
         and SHA256.fullmatch(feedback_binding["sha256"]),
         "portable feedback binding is invalid",
     )
+    require(prior_case_binding["sha256"] == sha256(prior_case_path), "portable prior case digest differs")
+    require(feedback_binding["sha256"] == sha256(feedback_path), "portable feedback digest differs")
+    require(prior_case.get("id") == campaign.get("caseId") == feedback.get("caseId"), "portable evidence case identity differs")
 
     candidates = handoff.get("candidates")
     require(isinstance(candidates, list) and candidates, "handoff has no feedback candidates")
@@ -118,10 +130,45 @@ def prepare(
     method_changed = next_method_revision != prior_method_revision
     require(source_changed or method_changed, "next analysis changes neither source set nor method revision")
 
+    require(
+        semantic_selection.get("schema") == "agentlab.feedback_semantic_source_selection.v1",
+        "unsupported semantic source selection schema",
+    )
+    require(
+        semantic_selection.get("status") == "source-relevance-evidence-bound-review-required",
+        "semantic source selection status differs",
+    )
+    require(semantic_selection.get("feedbackCandidateId") == feedback_candidate_id, "semantic source selection candidate differs")
+    require(semantic_selection.get("sourceSetSha256") == next_source_set, "semantic source selection source set differs")
+    require(semantic_selection.get("priorCaseSha256") == sha256(prior_case_path), "semantic source selection prior case differs")
+    require(semantic_selection.get("feedbackEvidenceSha256") == sha256(feedback_path), "semantic source selection feedback differs")
+    require(semantic_selection.get("sourceRelevanceEvidenceBound") is True, "semantic source relevance evidence is absent")
+    require(semantic_selection.get("semanticAlignmentVerified") is False, "semantic source selection overclaims alignment")
+    require(semantic_selection.get("automaticPromotion") is False, "semantic source selection may auto-promote")
+    claim_sha256 = semantic_selection.get("claimSha256")
+    require(isinstance(claim_sha256, str) and SHA256.fullmatch(claim_sha256), "semantic source selection claim digest is invalid")
+    selection_reviewer = semantic_selection.get("reviewer")
+    require(isinstance(selection_reviewer, str) and selection_reviewer.strip(), "semantic source selection reviewer is invalid")
+    denominators = semantic_selection.get("denominators") or {}
+    require(isinstance(denominators.get("claimCount"), int) and denominators["claimCount"] >= 2, "semantic source selection claim count is invalid")
+    require(
+        isinstance(denominators.get("coveredRepositoryCount"), int)
+        and denominators["coveredRepositoryCount"] >= 2,
+        "semantic source selection repository coverage is invalid",
+    )
+    selection_claims = semantic_selection.get("claims")
+    require(isinstance(selection_claims, list) and len(selection_claims) == denominators["claimCount"], "semantic source selection claims differ")
+    covered_repositories = {
+        row.get("repositoryId")
+        for row in selection_claims
+        if isinstance(row, dict) and isinstance(row.get("repositoryId"), str)
+    }
+    require(len(covered_repositories) == denominators["coveredRepositoryCount"], "semantic source selection repository denominator differs")
+
     return {
-        "schema": "agentlab.feedback_analysis_request.v1",
+        "schema": "agentlab.feedback_analysis_request.v2",
         "status": "prepared-review-required",
-        "requestId": f"feedback-analysis-request-{canonical_sha256({'handoff': sha256(handoff_path), 'candidate': feedback_candidate_id, 'sourceSet': next_source_set, 'methodRevision': next_method_revision})[:20]}",
+        "requestId": f"feedback-analysis-request-{canonical_sha256({'handoff': sha256(handoff_path), 'candidate': feedback_candidate_id, 'sourceSet': next_source_set, 'methodRevision': next_method_revision, 'semanticSelection': sha256(semantic_selection_path)})[:20]}",
         "releaseTag": handoff.get("releaseTag"),
         "releaseGitSha": handoff.get("releaseGitSha"),
         "feedbackHandoff": {
@@ -135,6 +182,15 @@ def prepare(
         "priorAnalysis": {
             "sourceSetSha256": prior_source_set,
             "methodRevision": prior_method_revision,
+        },
+        "semanticSourceSelection": {
+            "sha256": sha256(semantic_selection_path),
+            "claimSha256": claim_sha256,
+            "reviewer": selection_reviewer.strip(),
+            "claimCount": denominators["claimCount"],
+            "coveredRepositoryCount": denominators["coveredRepositoryCount"],
+            "sourceRelevanceEvidenceBound": True,
+            "semanticAlignmentVerified": False,
         },
         "nextAnalysis": {
             "sourceSpecSha256": sha256(source_spec_path),
@@ -160,7 +216,10 @@ def prepare(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--handoff", type=pathlib.Path, required=True)
+    parser.add_argument("--prior-case", type=pathlib.Path, required=True)
+    parser.add_argument("--feedback", type=pathlib.Path, required=True)
     parser.add_argument("--source-spec", type=pathlib.Path, required=True)
+    parser.add_argument("--semantic-selection", type=pathlib.Path, required=True)
     parser.add_argument("--feedback-candidate-id", required=True)
     parser.add_argument("--next-method-revision", required=True)
     parser.add_argument("--output", type=pathlib.Path, required=True)
@@ -170,7 +229,10 @@ def main() -> int:
     try:
         request = prepare(
             args.handoff.resolve(),
+            args.prior_case.resolve(),
+            args.feedback.resolve(),
             args.source_spec.resolve(),
+            args.semantic_selection.resolve(),
             args.feedback_candidate_id,
             args.next_method_revision,
         )

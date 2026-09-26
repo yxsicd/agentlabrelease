@@ -13,6 +13,7 @@
     "analysisRunSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "analysisReceiptSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "difficultyEvidenceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "semanticSourceSelectionSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "feedbackCandidateId": {"type": "string", "minLength": 1},
     "eligibleCandidateCount": {"type": "integer", "minimum": 1},
     "proposalCount": {"type": "integer", "minimum": 1, "maximum": 20},

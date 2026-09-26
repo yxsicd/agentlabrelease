@@ -977,16 +977,57 @@ source set or substitute for `propose-feedback-analysis-cut.py` and its
 maintainer review.
 
 The existing **Multi-repository exact analysis** workflow accepts that handoff
-as an optional trigger context. Supply the committed qualification summary path
-and one candidate id together with any valid two-to-sixteen-repository source
-specification. Before analysis, `prepare-feedback-analysis-request.py` validates
-the public HTTPS repository identities and exact 40-character revisions,
-reproduces the next source-set digest and rejects a request where neither the
-source set nor method revision changed. The resulting
-`agentlab.feedback_analysis_request.v1` travels in the analysis artifact beside
-the normalized source specification and exact analysis receipt. It schedules
-analysis only: case readiness, semantic alignment, Oracle calibration and
-promotion remain separate review gates.
+as an optional trigger context. Supply the committed qualification summary
+path, one candidate id, a two-to-sixteen-repository source specification and an
+`agentlab.feedback_semantic_source_selection_claim.v1`. Each claim must quote an
+exact prior-case title, stage demand or observed failure mechanism and map it to
+an exact file and source symbol in the pinned source set, with a rationale.
+`prepare-feedback-semantic-source-selection.py` reads the materialized revisions
+and rejects missing symbols, free-form case anchors, path escapes, oversized or
+non-UTF-8 evidence files, duplicate claims, or evidence that covers fewer than
+two repositories and two case anchors. This proves that source selection has
+inspectable relevance evidence; it deliberately does not prove that a later
+difficulty candidate explains the failure.
+
+Before analysis, `prepare-feedback-analysis-request.py` validates the portable
+prior case and feedback bytes, the source-selection receipt, public HTTPS
+repository identities and exact 40-character revisions. It reproduces the next
+source-set digest and rejects a request where neither the source set nor method
+revision changed. The resulting `agentlab.feedback_analysis_request.v2` travels
+in the analysis artifact beside the source-selection claim and receipt,
+normalized source specification and exact analysis receipt. It schedules
+analysis only: case readiness, candidate semantic alignment, Oracle calibration
+and promotion remain separate review gates.
+
+The claim is explicit and reviewable rather than a keyword list:
+
+```json
+{
+  "schema": "agentlab.feedback_semantic_source_selection_claim.v1",
+  "sourceSetSha256": "<canonical source-set SHA-256>",
+  "priorCaseSha256": "<exact retained prior-case SHA-256>",
+  "feedbackEvidenceSha256": "<exact retained feedback SHA-256>",
+  "feedbackCandidateId": "assessment-feedback-a6a1b3d8a4ce4835db0c",
+  "reviewer": "maintainer identity",
+  "claims": [
+    {
+      "caseAnchor": "Understand and preserve the cross-repository payment authority binding.",
+      "repositoryId": "application",
+      "path": "src/payment/PaymentPage.ets",
+      "sourceSymbol": "bindPaymentAuthority",
+      "rationale": "This exact application symbol binds the authority contract into the device-visible payment state."
+    },
+    {
+      "caseAnchor": "Keep the composed application ready for the device-visible workflow and its Harmony ohosTest gate.",
+      "repositoryId": "contracts",
+      "path": "src/payment/PaymentAuthority.ts",
+      "sourceSymbol": "PaymentAuthority",
+      "rationale": "This exact contract symbol defines the authority boundary consumed by the application repository."
+    }
+  ],
+  "automaticPromotion": false
+}
+```
 
 The release handoff directory carries the exact prior frozen case and assessment
 feedback bytes, both bound in the handoff and request. Once exact analysis
@@ -1003,7 +1044,8 @@ mechanism explains the observed assessment failure.
 gh workflow run multi-repo-analysis.yml --ref main \
   -f source_spec_json="$(jq -c . /next/source-spec.json)" \
   -f feedback_handoff_path=release/qualifications/alpha13-recursive-feedback-4f24f9a/summary.json \
-  -f feedback_candidate_id=assessment-feedback-a6a1b3d8a4ce4835db0c
+  -f feedback_candidate_id=assessment-feedback-a6a1b3d8a4ce4835db0c \
+  -f feedback_semantic_selection_json="$(jq -c . /next/semantic-source-selection-claim.json)"
 ```
 
 The same feedback pass now closes repeatable Harmony performance separation

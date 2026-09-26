@@ -133,8 +133,12 @@ Its directory also retains the exact `prior-case.json` and
 proposal without access to the original execution host.
 That committed handoff can be supplied directly to the optional feedback inputs
 of `multi-repo-analysis.yml`; the workflow emits an exact
-`feedback-analysis-request.json` before analyzing the caller-selected new source
-revisions. After analysis it deterministically ranks only non-ready impact
+`feedback-semantic-source-selection.json` and `feedback-analysis-request.json`
+before analyzing the caller-selected new source revisions. The source-selection
+receipt binds exact prior-case language to source symbols observed in at least
+two pinned repositories. The request binds that receipt without claiming that a
+later difficulty candidate is semantically aligned. After analysis it
+deterministically ranks only non-ready impact
 candidates spanning at least two repositories and emits at most ten independent
 feedback-cut proposal files plus a queue index. Ranking creates a bounded review
 queue; it explicitly does not establish semantic alignment or approve a case.

@@ -213,6 +213,34 @@ class FeedbackAnalysisProposalQueueTests(unittest.TestCase):
         self.assertEqual(value["eligibleCandidateCount"], 2)
         self.assertEqual(value["proposalCount"], 1)
 
+    def test_v2_request_carries_exact_semantic_source_selection_into_queue(self) -> None:
+        selection = self.write(
+            "semantic-selection.json",
+            {
+                "schema": "agentlab.feedback_semantic_source_selection.v1",
+                "sourceRelevanceEvidenceBound": True,
+                "semanticAlignmentVerified": False,
+                "automaticPromotion": False,
+            },
+        )
+        request = json.loads(self.request.read_text())
+        request["schema"] = "agentlab.feedback_analysis_request.v2"
+        request["semanticSourceSelection"] = {"sha256": digest(selection)}
+        self.request = self.write("request-v2.json", request)
+        value = PREPARE.prepare(
+            self.request,
+            self.handoff,
+            self.prior_case,
+            self.feedback,
+            self.analysis,
+            self.analysis_run,
+            self.difficulty,
+            self.root / "queue-v2",
+            10,
+            selection,
+        )
+        self.assertEqual(value["semanticSourceSelectionSha256"], digest(selection))
+
     def test_tampered_prior_case_is_rejected(self) -> None:
         self.prior_case.write_text(self.prior_case.read_text() + " ")
         with self.assertRaisesRegex(ValueError, "request prior case digest differs"):

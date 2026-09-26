@@ -91,6 +91,7 @@ def prepare(
     difficulty_path: pathlib.Path,
     output: pathlib.Path,
     max_candidates: int,
+    semantic_selection_path: pathlib.Path | None = None,
 ) -> dict[str, Any]:
     require(not output.exists(), f"refusing to overwrite proposal queue: {output}")
     require(1 <= max_candidates <= 20, "max candidates must be between one and twenty")
@@ -102,11 +103,26 @@ def prepare(
     analysis_run = load(analysis_run_path, "analysis run")
     difficulty = load(difficulty_path, "difficulty evidence")
 
-    require(request.get("schema") == "agentlab.feedback_analysis_request.v1", "unsupported analysis request schema")
+    request_schema = request.get("schema")
+    require(
+        request_schema in {"agentlab.feedback_analysis_request.v1", "agentlab.feedback_analysis_request.v2"},
+        "unsupported analysis request schema",
+    )
     require(request.get("status") == "prepared-review-required", "analysis request is not review-required")
     require(request.get("automaticPromotion") is False, "analysis request may not auto-promote")
     request_feedback = request.get("feedbackHandoff") or {}
     request_analysis = request.get("nextAnalysis") or {}
+    if request_schema == "agentlab.feedback_analysis_request.v2":
+        require(semantic_selection_path is not None, "v2 request requires semantic source selection evidence")
+        semantic_selection = load(semantic_selection_path, "semantic source selection")
+        request_selection = request.get("semanticSourceSelection") or {}
+        require(request_selection.get("sha256") == sha256(semantic_selection_path), "request semantic source selection digest differs")
+        require(semantic_selection.get("schema") == "agentlab.feedback_semantic_source_selection.v1", "unsupported semantic source selection schema")
+        require(semantic_selection.get("sourceRelevanceEvidenceBound") is True, "semantic source relevance evidence is absent")
+        require(semantic_selection.get("semanticAlignmentVerified") is False, "semantic source selection overclaims alignment")
+        require(semantic_selection.get("automaticPromotion") is False, "semantic source selection may auto-promote")
+    else:
+        require(semantic_selection_path is None, "v1 request may not substitute semantic source selection evidence")
     require(request_feedback.get("sha256") == sha256(handoff_path), "request handoff digest differs")
     require(request_feedback.get("priorCaseSha256") == sha256(prior_case_path), "request prior case digest differs")
     require(request_feedback.get("feedbackEvidenceSha256") == sha256(feedback_path), "request feedback digest differs")
@@ -188,6 +204,8 @@ def prepare(
         "automaticPromotion": False,
         "nextGate": "independent-maintainer-review-of-one-proposal",
     }
+    if semantic_selection_path is not None:
+        index["semanticSourceSelectionSha256"] = sha256(semantic_selection_path)
     (output / "index.json").write_text(
         json.dumps(index, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
@@ -204,6 +222,7 @@ def main() -> int:
     parser.add_argument("--analysis-receipt", type=pathlib.Path, required=True)
     parser.add_argument("--analysis-run", type=pathlib.Path, required=True)
     parser.add_argument("--difficulty", type=pathlib.Path, required=True)
+    parser.add_argument("--semantic-selection", type=pathlib.Path)
     parser.add_argument("--output", type=pathlib.Path, required=True)
     parser.add_argument("--max-candidates", type=int, default=10)
     args = parser.parse_args()
@@ -218,6 +237,7 @@ def main() -> int:
             args.difficulty.resolve(),
             args.output.resolve(),
             args.max_candidates,
+            args.semantic_selection.resolve() if args.semantic_selection else None,
         )
     except (ProposalQueueError, ValueError, OSError) as error:
         raise SystemExit(f"feedback analysis proposal queue invalid: {error}") from error

@@ -22,6 +22,9 @@ Maintainer triage rejected all ten generic framework candidates because none
 explained the payment-authority UI Oracle failure; no case was promoted. The
 next loop must select a semantically related source set or enrich the feedback
 mechanism before analysis.
+The current method head now enforces that correction: every feedback-triggered
+analysis must bind exact prior-case language to symbols observed in at least two
+pinned repositories before the analysis request can be created.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.
