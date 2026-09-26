@@ -109,6 +109,12 @@ class ReleaseGraphTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not a commit"):
             MODULE.validate_release_source_git(value, ROOT)
 
+    def test_release_validation_fetches_history_for_source_ancestry(self) -> None:
+        workflow = (ROOT / ".github/workflows/release-validation.yml").read_text()
+        validate_job = workflow.split("\n  validate:\n", 1)[1].split("\n  participant-runtime-isolation:\n", 1)[0]
+        self.assertIn("fetch-depth: 0", validate_job)
+        self.assertIn('--git-root "$GITHUB_WORKSPACE"', validate_job)
+
     def test_alpha12_remote_asset_receipt_matches_closure(self) -> None:
         closure_path = ROOT / "release/closures/v0.1.0-alpha.12.json"
         closure_value = json.loads(closure_path.read_text())
