@@ -421,15 +421,35 @@
       "upstreamRevisionModified": false,
       "status": "reference-testability-refactor-emulator-qualified-upstream-change-required"
     },
+    "ohosTestCandidateQualification": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-ohostest-candidate-qualification.json",
+      "schema": "agentlab.purchase_data_ohostest_candidate_qualification.v1",
+      "sha256": "3e9f533c8784630c8e220d6b2a315b3da0fe9833d5bc2d5834ec0510c6ecbfc6",
+      "implementation": "crates/agentlab_code_analysis/src/purchase_data_ohostest_candidate_qualification.rs",
+      "binary": "agentlab-purchase-data-ohostest-candidate-qualification",
+      "language": "rust",
+      "baseRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+      "candidateRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+      "projectTreeSha256": "85d851734450a611e2bed1c5f15ddf9da150309ca97c3b914b0d3d19eb443144",
+      "testCount": 7,
+      "passedTestCount": 7,
+      "mainHapBuilt": true,
+      "ohosTestHapBuilt": true,
+      "linuxX86EmulatorExecuted": true,
+      "linuxX86EmulatorStopped": true,
+      "publishedToUpstream": false,
+      "independentReviewVerified": false,
+      "status": "candidate-revision-emulator-qualified-independent-review-pending"
+    },
     "semanticAlignmentVerified": false,
     "behaviorOracleVerified": false,
     "allowsCaseContract": false,
     "automaticPromotion": false,
-    "status": "source-seam-calibrated-independent-review-required"
+    "status": "candidate-revision-calibrated-independent-review-required"
   },
   "retention": {
     "authority": "compact-qualification-only",
     "fullReplayEvidence": "local-or-workflow-artifact",
-    "nextGate": "independent-semantic-review-then-independent-oracle-review-and-runtime-calibration"
+    "nextGate": "independent-candidate-and-semantic-review-then-upstream-revision-reexecution-and-runtime-calibration"
   }
 }
