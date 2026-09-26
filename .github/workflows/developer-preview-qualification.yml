@@ -5,7 +5,22 @@ on:
       release_tag:
         description: Exact immutable developer preview tag selected as the workflow ref
         required: true
-        default: v0.1.0-alpha.12
+        default: v0.1.0-alpha.13
+        type: string
+      closure_path:
+        description: Committed closure bound to the selected release tag
+        required: true
+        default: release/closures/v0.1.0-alpha.13.json
+        type: string
+      asset_receipt_path:
+        description: Committed remote immutable-asset receipt for the closure
+        required: true
+        default: release/qualifications/alpha13-immutable-assets/summary.json
+        type: string
+      harmony_receipt_path:
+        description: Committed release-bound Harmony acceptance receipt
+        required: true
+        default: release/qualifications/alpha13-harmony-acceptance/summary.json
         type: string
 
 permissions:
@@ -18,7 +33,9 @@ jobs:
     timeout-minutes: 45
     env:
       AGENTLAB_CI_ROOT: /tmp/agentlab-tagged-preview
-      AGENTLAB_RELEASE_CLOSURE: release/closures/v0.1.0-alpha.12.json
+      AGENTLAB_RELEASE_CLOSURE: ${{ inputs.closure_path }}
+      AGENTLAB_ASSET_RECEIPT: ${{ inputs.asset_receipt_path }}
+      AGENTLAB_HARMONY_RECEIPT: ${{ inputs.harmony_receipt_path }}
       AGENTLAB_RELEASE_REPO: yxsicd/agentlabrelease
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -32,10 +49,14 @@ jobs:
           test "$GITHUB_REF" = "refs/tags/$RELEASE_TAG"
           test "$(git rev-parse HEAD)" = "$TAG_SHA"
           test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$TAG_SHA"
+          case "$AGENTLAB_RELEASE_CLOSURE" in release/closures/*.json) ;; *) exit 1 ;; esac
+          case "$AGENTLAB_ASSET_RECEIPT" in release/qualifications/*/summary.json) ;; *) exit 1 ;; esac
+          case "$AGENTLAB_HARMONY_RECEIPT" in release/qualifications/*/summary.json) ;; *) exit 1 ;; esac
           python3 scripts/validate-release.py
           python3 scripts/validate-release-graph.py \
             --closure "$AGENTLAB_RELEASE_CLOSURE" \
-            --registry release/components/registry.json
+            --registry release/components/registry.json \
+            --git-root "$GITHUB_WORKSPACE"
       - name: Install clean-runner dependencies
         run: |
           sudo apt-get update
@@ -51,8 +72,8 @@ jobs:
         run: |
           python3 scripts/qualify-tagged-developer-preview.py \
             --closure "$AGENTLAB_RELEASE_CLOSURE" \
-            --asset-receipt release/qualifications/alpha12-immutable-assets/summary.json \
-            --harmony-receipt release/qualifications/alpha12-harmony-acceptance-4a36510/summary.json \
+            --asset-receipt "$AGENTLAB_ASSET_RECEIPT" \
+            --harmony-receipt "$AGENTLAB_HARMONY_RECEIPT" \
             --install-summary "$AGENTLAB_CI_ROOT/summary.json" \
             --environment-lock "$AGENTLAB_CI_ROOT/closure-materialized/environment-lock.json" \
             --tag "$RELEASE_TAG" \

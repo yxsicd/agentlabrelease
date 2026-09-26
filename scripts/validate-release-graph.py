@@ -9,6 +9,7 @@ import json
 import os
 import pathlib
 import re
+import subprocess
 import urllib.parse
 import urllib.request
 from typing import Any
@@ -57,6 +58,36 @@ def load(path: pathlib.Path) -> dict[str, Any]:
 
 def hex_value(value: Any, length: int) -> bool:
     return isinstance(value, str) and len(value) == length and re.fullmatch(r"[0-9a-fA-F]+", value) is not None
+
+
+def validate_release_source_git(value: dict[str, Any], git_root: pathlib.Path) -> str:
+    source = (value.get("sources") or {}).get("releaseGitSha")
+    if not hex_value(source, 40):
+        fail("release source revision is invalid")
+    resolved = subprocess.run(
+        ["git", "-C", str(git_root), "rev-parse", f"{source}^{{commit}}"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if resolved.returncode != 0 or resolved.stdout.strip() != source:
+        fail("release source revision is not a commit in the checkout")
+    head = subprocess.run(
+        ["git", "-C", str(git_root), "rev-parse", "HEAD"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if head.returncode != 0 or not hex_value(head.stdout.strip(), 40):
+        fail("cannot resolve checkout HEAD")
+    ancestor = subprocess.run(
+        ["git", "-C", str(git_root), "merge-base", "--is-ancestor", source, head.stdout.strip()],
+        capture_output=True,
+        check=False,
+    )
+    if ancestor.returncode != 0:
+        fail("release source revision is not an ancestor of the checkout")
+    return head.stdout.strip()
 
 
 def validate_asset(asset: Any) -> None:
@@ -346,6 +377,7 @@ def main() -> int:
     parser.add_argument("--closure", action="append", default=[])
     parser.add_argument("--target", action="append", default=[])
     parser.add_argument("--registry")
+    parser.add_argument("--git-root", type=pathlib.Path)
     parser.add_argument("--remote", action="store_true")
     parser.add_argument("--receipt", type=pathlib.Path)
     args = parser.parse_args()
@@ -365,6 +397,9 @@ def main() -> int:
         closure_path = pathlib.Path(raw)
         closure = load(closure_path)
         validate_closure(closure, registry, registry_bytes)
+        checkout_sha = None
+        if args.git_root is not None:
+            checkout_sha = validate_release_source_git(closure, args.git_root.resolve())
         observations = []
         if args.remote:
             observations = validate_remote_assets(closure["assets"])
@@ -375,6 +410,11 @@ def main() -> int:
                 "releaseTag": closure["releaseTag"],
                 "releaseGitSha": (closure.get("sources") or {}).get("releaseGitSha"),
                 "assetCount": len(closure["assets"]),
+                **(
+                    {"checkoutGitSha": checkout_sha, "releaseSourceResolved": True}
+                    if checkout_sha is not None
+                    else {}
+                ),
                 **({"remoteAssets": observations} if args.remote else {}),
             }
         )

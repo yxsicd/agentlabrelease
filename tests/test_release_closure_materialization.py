@@ -124,11 +124,12 @@ class ReleaseClosureMaterializationTests(unittest.TestCase):
                     pathlib.Path(raw) / "materialized",
                 )
 
-    def test_public_ci_installs_alpha12_from_the_closure(self) -> None:
+    def test_public_ci_installs_current_alpha13_from_the_closure(self) -> None:
         workflow = (ROOT / ".github/workflows/release-validation.yml").read_text()
         smoke = (ROOT / "scripts/ci-public-install-deploy-smoke.sh").read_text()
         self.assertIn("target: release-closure", workflow)
-        self.assertIn("closure: release/closures/v0.1.0-alpha.12.json", workflow)
+        self.assertIn("closure: release/closures/v0.1.0-alpha.13.json", workflow)
+        self.assertIn('--git-root "$GITHUB_WORKSPACE"', workflow)
         self.assertIn("AGENTLAB_RELEASE_CLOSURE: ${{ matrix.closure }}", workflow)
         self.assertIn('release_closure="${AGENTLAB_RELEASE_CLOSURE:-}"', smoke)
         self.assertIn("scripts/materialize-release-closure.py", smoke)

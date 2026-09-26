@@ -86,6 +86,29 @@ class ReleaseGraphTests(unittest.TestCase):
         self.assertEqual(alpha12["status"], "developer-preview-candidate")
         self.assertFalse(alpha12["developerPreviewScope"]["automaticPromotion"])
 
+    def test_alpha13_source_cut_resolves_and_is_ancestor_of_checkout(self) -> None:
+        alpha13 = json.loads(
+            (ROOT / "release/closures/v0.1.0-alpha.13.json").read_text()
+        )
+        registry_path = ROOT / "release/components/registry.json"
+        registry_bytes = registry_path.read_bytes()
+        MODULE.validate_closure(alpha13, json.loads(registry_bytes), registry_bytes)
+        head = MODULE.validate_release_source_git(alpha13, ROOT)
+        self.assertEqual(len(head), 40)
+        self.assertEqual(
+            alpha13["sources"]["releaseGitSha"],
+            "4f24f9a7eb1de98cbb0b695f02cf01da03ae26fb",
+        )
+
+    def test_unresolvable_release_source_is_rejected_by_git_validation(self) -> None:
+        value = json.loads(
+            (ROOT / "release/closures/v0.1.0-alpha.13.json").read_text()
+        )
+        value["sources"]["releaseGitSha"] = "f" * 40
+        value["qualificationPlan"]["sourceGitSha"] = "f" * 40
+        with self.assertRaisesRegex(ValueError, "not a commit"):
+            MODULE.validate_release_source_git(value, ROOT)
+
     def test_alpha12_remote_asset_receipt_matches_closure(self) -> None:
         closure_path = ROOT / "release/closures/v0.1.0-alpha.12.json"
         closure_value = json.loads(closure_path.read_text())

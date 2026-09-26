@@ -7,12 +7,12 @@ Agents.
 Current runtime candidate: `candidate-20260912-c22b7bfd-linux-x64`.
 The historical environment-kit preview remains `v0.1.0-alpha.9`.
 
-The current lightweight aggregate candidate is `v0.1.0-alpha.12`. It binds
-release-method source commit `4a365104cfd74af4c648f83ecb21d87ea3a9e787`
+The current lightweight aggregate candidate is `v0.1.0-alpha.13`. It binds
+release-method source commit `4f24f9a7eb1de98cbb0b695f02cf01da03ae26fb`
 to 14 already-published immutable components and all 22 registered payload and
 descriptor assets without rebuilding or uploading any unchanged binary. It
-has retained release-bound Linux-emulator acceptance and remains a
-developer-preview candidate until tagged clean-install succeeds. The acceptance
+has revalidated all 22 remote immutable assets and remains a developer-preview
+candidate until release-bound Linux-emulator acceptance and tagged clean-install succeed. The acceptance
 plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.

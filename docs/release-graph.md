@@ -26,11 +26,11 @@ component registry with:
 
 ```sh
 python3 scripts/compose-release-closure.py \
-  --base release/closures/v0.1.0-alpha.11.json \
+  --base release/closures/v0.1.0-alpha.12.json \
   --registry release/components/registry.json \
-  --version 0.1.0-alpha.12 \
+  --version 0.1.0-alpha.13 \
   --release-source-revision <exact-40-character-commit> \
-  --output release/closures/v0.1.0-alpha.12.json
+  --output release/closures/v0.1.0-alpha.13.json
 ```
 
 The source revision must resolve to a local commit and the version must advance
@@ -42,6 +42,11 @@ and leaves automatic promotion disabled. The resulting metadata commit may
 follow the source cut it describes; `sources.releaseGitSha` is the exact
 implementation cut under qualification, not a self-referential digest of the
 JSON commit.
+
+Every current-candidate CI validation supplies `--git-root`. The validator
+requires that full source SHA to resolve to an exact commit in the checkout and
+to be an ancestor of the metadata/tag checkout. A syntactically valid but
+invented 40-hex value therefore cannot pass release validation again.
 
 “Entire asset list” means every asset of every selected component, not one
 representative archive per component. Runtime, Harmony CLI, build kit, tools,
@@ -62,11 +67,11 @@ assets to the candidate:
 
 ```sh
 python3 scripts/prepare-release-harmony-acceptance.py \
-  --closure release/closures/v0.1.0-alpha.12.json \
+  --closure release/closures/v0.1.0-alpha.13.json \
   --template-plan /retained/evidence/campaign-plan.json \
   --repository-root "$PWD" \
-  --campaign-id alpha12-release-acceptance \
-  --output /retained/evidence/alpha12-release-acceptance-plan.json
+  --campaign-id alpha13-release-acceptance \
+  --output /retained/evidence/alpha13-release-acceptance-plan.json
 ```
 
 Run that plan with `run-harmony-assessed-campaign.py` under the target host's
@@ -75,11 +80,11 @@ stopped, retain cleanup evidence and validate the output:
 
 ```sh
 python3 scripts/validate-release-harmony-acceptance.py \
-  --closure release/closures/v0.1.0-alpha.12.json \
-  --plan /retained/evidence/alpha12-release-acceptance-plan.json \
-  --campaign-output /retained/evidence/alpha12-release-acceptance/campaign-output \
-  --cleanup-evidence /retained/evidence/alpha12-release-acceptance/cleanup.json \
-  --output /retained/evidence/alpha12-release-acceptance/acceptance.json
+  --closure release/closures/v0.1.0-alpha.13.json \
+  --plan /retained/evidence/alpha13-release-acceptance-plan.json \
+  --campaign-output /retained/evidence/alpha13-release-acceptance/campaign-output \
+  --cleanup-evidence /retained/evidence/alpha13-release-acceptance/cleanup.json \
+  --output /retained/evidence/alpha13-release-acceptance/acceptance.json
 ```
 
 The validator requires real ohosTest/Hypium success for both variants, at least
@@ -90,7 +95,8 @@ emulator processes or HDC targets. It preserves the physical-device and
 absolute-power/thermal boundary and never authorizes automatic promotion.
 
 The Alpha.12 run against source cut `4a36510` is retained at
-`release/qualifications/alpha12-harmony-acceptance-4a36510/summary.json`. It
+`release/qualifications/alpha12-harmony-acceptance-4a36510/summary.json`. This
+historical receipt is not transferable to Alpha.13. It
 records two source-bound ohosTest/Hypium passes, a positive UI Oracle with three
 valid SmartPerf samples, a negative Oracle whose performance stage was skipped,
 direct `hwlinux` peer identity, and post-run emulator/HDC cleanup. This closes
@@ -101,7 +107,7 @@ that transition separately from release qualification with:
 
 ```sh
 python3 scripts/prepare-release-recursive-feedback.py \
-  --closure release/closures/v0.1.0-alpha.12.json \
+  --closure release/closures/v0.1.0-alpha.13.json \
   --acceptance release/qualifications/alpha12-harmony-acceptance-4a36510/summary.json \
   --campaign-summary /retained/campaign-output/summary.json \
   --prior-case /retained/campaign/case.json \
@@ -138,12 +144,12 @@ the remote-asset, Harmony and clean-install evidence with:
 
 ```sh
 python3 scripts/qualify-tagged-developer-preview.py \
-  --closure release/closures/v0.1.0-alpha.12.json \
-  --asset-receipt release/qualifications/alpha12-immutable-assets/summary.json \
-  --harmony-receipt release/qualifications/alpha12-harmony-acceptance-4a36510/summary.json \
+  --closure release/closures/v0.1.0-alpha.13.json \
+  --asset-receipt release/qualifications/alpha13-immutable-assets/summary.json \
+  --harmony-receipt release/qualifications/alpha13-harmony-acceptance/summary.json \
   --install-summary /fresh-runner/summary.json \
   --environment-lock /fresh-runner/closure-materialized/environment-lock.json \
-  --tag v0.1.0-alpha.12 --tag-sha <exact-tag-commit> \
+  --tag v0.1.0-alpha.13 --tag-sha <exact-tag-commit> \
   --repository yxsicd/agentlabrelease --run-id <github-run-id> \
   --event workflow_dispatch --git-root "$PWD" \
   --output /fresh-runner/developer-preview-qualification.json
@@ -164,10 +170,11 @@ SHA-256, including assets hosted by another repository:
 
 ```sh
 python3 scripts/validate-release-graph.py \
-  --closure release/closures/v0.1.0-alpha.12.json \
+  --closure release/closures/v0.1.0-alpha.13.json \
   --registry release/components/registry.json \
   --remote \
-  --receipt release/qualifications/alpha12-immutable-assets/summary.json
+  --git-root "$PWD" \
+  --receipt release/qualifications/alpha13-immutable-assets/summary.json
 ```
 
 Remote verification reads Release metadata and never downloads the multi-GB
@@ -180,9 +187,9 @@ materialize its small bootstrap pair:
 
 ```sh
 python3 scripts/materialize-release-closure.py \
-  --closure release/closures/v0.1.0-alpha.12.json \
+  --closure release/closures/v0.1.0-alpha.13.json \
   --registry release/components/registry.json \
-  --output /tmp/agentlab-alpha12-bootstrap
+  --output /tmp/agentlab-alpha13-bootstrap
 ```
 
 The materializer validates the closure and registry, downloads and verifies the
