@@ -1,0 +1,50 @@
+{
+  "allowsCaseContract": false,
+  "automaticPromotion": false,
+  "baseRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+  "behaviorOracleVerified": false,
+  "boundary": "This qualifies one isolated reference refactor and its five source-bound OHOS Test cases on the Linux x86 emulator. It does not modify or approve the upstream revision, validate live IAP service behavior, approve the cross-repository semantic claim, or authorize case promotion.",
+  "coverage": {
+    "emulatorExecuted": true,
+    "error": 0,
+    "failure": 0,
+    "ignore": 0,
+    "mainHapBuilt": true,
+    "ohosTestHapBuilt": true,
+    "passed": 5,
+    "testCount": 5
+  },
+  "framework": "instrument-test-ohosTest-hypium",
+  "lineage": {
+    "executionReceiptSha256": "0672efa46b11693ce36ce496ad42e96fc27357fb17f3f4b2b362174ec9598058",
+    "nativeReportSha256": "acf93da454f5b13afaef7d2e429dfe0d37c2cd8ac657dac4b27a8d2f33409751",
+    "observationSha256": "1fae2ded1962015fbf9a8e287a6a40b0c6e79f1a75b4e41589994efdd8de2e9c",
+    "proposalSha256": "c10a24ce7e526c45f49a00fc62edcc675f7b400710e45b56ad8861d933d9d3dc",
+    "referencePatchSha256": "48a4acfc3e5809c9fea74986b40ece4eb671a396502b03daec655c04e4f5c444"
+  },
+  "nextGate": "independent-review-of-reference-patch-then-upstream-revision-bound-reexecution",
+  "packages": {
+    "app": {
+      "byteLength": 447093,
+      "path": "entry-default-unsigned.hap",
+      "sha256": "dfd61c2e5a33249aed059192798c449f7ab3a3a44d69b900fdd508978cdda073"
+    },
+    "test": {
+      "byteLength": 1189685,
+      "path": "entry-ohosTest-unsigned.hap",
+      "sha256": "54f89a24825e191a4452264959148e8573c4236f29b15da63acbab6b5b6d58cc"
+    }
+  },
+  "referencePatchOnly": true,
+  "schema": "agentlab.purchase_data_ohostest_reference_qualification.v1",
+  "sourceSetSha256": "39348d2379f90584b29805179740efde203d59958f3c7a3cb29d213c2a5b448c",
+  "status": "reference-testability-refactor-emulator-qualified-upstream-change-required",
+  "testNames": [
+    "malformedDataDoesNotFinish",
+    "alreadyFinishedPurchaseDoesNotFinishAgain",
+    "pendingPurchaseForwardsExactFinishFields",
+    "missingProductTypeBlocksFinish",
+    "finishRejectionRemainsObservable"
+  ],
+  "upstreamRevisionModified": false
+}

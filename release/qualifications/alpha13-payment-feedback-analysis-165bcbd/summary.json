@@ -404,6 +404,23 @@
       "sourceTestCount": 0,
       "status": "testability-refactor-required-before-standard-test-authoring"
     },
+    "ohosTestReferenceQualification": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-ohostest-reference-qualification.json",
+      "schema": "agentlab.purchase_data_ohostest_reference_qualification.v1",
+      "sha256": "8652ffab7ef3d358b8057f8dd561eab8e882f3de4e944e22fe9ee42dbd67d1f1",
+      "implementation": "crates/agentlab_code_analysis/src/purchase_data_ohostest_reference_qualification.rs",
+      "binary": "agentlab-purchase-data-ohostest-reference-qualification",
+      "language": "rust",
+      "baseRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+      "testCount": 5,
+      "passedTestCount": 5,
+      "mainHapBuilt": true,
+      "ohosTestHapBuilt": true,
+      "linuxX86EmulatorExecuted": true,
+      "referencePatchOnly": true,
+      "upstreamRevisionModified": false,
+      "status": "reference-testability-refactor-emulator-qualified-upstream-change-required"
+    },
     "semanticAlignmentVerified": false,
     "behaviorOracleVerified": false,
     "allowsCaseContract": false,
