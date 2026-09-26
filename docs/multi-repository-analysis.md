@@ -1292,6 +1292,19 @@ semantic resolution; it keeps `semanticAlignmentVerified`,
 Removing the exact template bridge makes the Cordova path discontinuous and
 fails construction.
 
+Later evidence is attached to semantic review by
+`enrich-multi-repo-candidate-review-packet.py`, not by mutating the original
+packet in place. Packet v6 retains the v5 packet digest and independently binds
+the build qualification, expression qualification, bounded-flow proposal and
+flow plan. It replaces stale risk wording with the observed boundary: one
+Harmony build root passed, two Cordova roots exposed exact upstream contract
+failures, and the two bounded paths remain syntactic rather than semantic.
+The existing independent-review compiler accepts v6 only when all three
+attachment summaries are present and fail-closed, while still requiring a
+GitHub actor to answer every semantic question and acknowledge every revised
+risk. Evidence enrichment therefore improves the review basis without granting
+`allowsCaseContract` or manufacturing reviewer approval.
+
 This gate matters in the real evidence. The two `AlertDialog` sites implement
 different product behavior (account logout confirmation versus Web alert result
 handling), while the two `call.makeCall` sites pass different inputs and live

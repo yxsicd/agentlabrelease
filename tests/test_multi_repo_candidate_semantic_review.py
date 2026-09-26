@@ -106,7 +106,7 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
                 "handleStatusCounts": {"no-direct-release": 1},
                 "releaseRelationCounts": {},
             }
-        if schema == REVIEW.PACKET_SCHEMA_V5:
+        if schema in {REVIEW.PACKET_SCHEMA_V5, REVIEW.PACKET_SCHEMA_V6}:
             value["domainIdentifierContract"] = {
                 "normalizedIdentifier": "purchase-data",
                 "tokens": ["purchase", "data"],
@@ -119,6 +119,39 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
             value["callSiteEvidence"] = None
             value["callResultHandleEvidence"] = None
             value["callResultHandleCoverage"] = None
+        if schema == REVIEW.PACKET_SCHEMA_V6:
+            value["basePacketSha256"] = "c" * 64
+            value["evidenceAttachments"] = {
+                "build-qualification": {
+                    "schema": "agentlab.multi_repo_source_build_qualification.v1",
+                    "sha256": "d" * 64,
+                    "status": "partial-build-qualified-review-required",
+                    "qualifiedRootCount": 1,
+                    "failedRootCount": 2,
+                    "sourceProjectBoundaryStatus": "partially-build-qualified",
+                },
+                "expression-fact-qualification": {
+                    "schema": "agentlab.multi_repo_expression_fact_qualification.v1",
+                    "sha256": "e" * 64,
+                    "status": "expression-facts-qualified-dataflow-unresolved",
+                    "repositoryCount": 2,
+                    "selectedExpressionFactCount": 4,
+                },
+                "bounded-expression-flow-proposal": {
+                    "schema": "agentlab.bounded_expression_flow_proposal.v1",
+                    "sha256": "f" * 64,
+                    "planSha256": "a" * 64,
+                    "status": "bounded-syntactic-flow-proposal-review-required",
+                    "repositoryCount": 2,
+                    "flowCount": 2,
+                    "edgeCount": 5,
+                    "sourceBridgeCount": 1,
+                    "allBoundedPathsEstablished": True,
+                },
+            }
+            value["semanticAlignmentVerified"] = False
+            value["behaviorOracleVerified"] = False
+            value["reviewDecisionContract"]["requiredEvidenceAttachmentIds"] = sorted(value["evidenceAttachments"])
         path.write_text(json.dumps(value, sort_keys=True) + "\n")
         return path
 
@@ -171,6 +204,21 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             packet = self.packet(root, REVIEW.PACKET_SCHEMA_V5)
+            value = self.decide(
+                root,
+                "defer-for-more-evidence",
+                {"observable-gap": "unknown"},
+            )
+            decision = root / "decision.json"
+            decision.write_text(json.dumps(value, sort_keys=True) + "\n")
+            gate = REVIEW.compile_gate(packet, decision)
+            self.assertEqual(gate["status"], "deferred-for-more-evidence")
+            self.assertFalse(gate["allowsCaseContract"])
+
+    def test_v6_evidence_enriched_packet_uses_the_same_fail_closed_review_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            packet = self.packet(root, REVIEW.PACKET_SCHEMA_V6)
             value = self.decide(
                 root,
                 "defer-for-more-evidence",

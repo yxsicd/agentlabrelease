@@ -19,12 +19,14 @@ PACKET_SCHEMA_V2 = "agentlab.multi_repo_candidate_review_packet.v2"
 PACKET_SCHEMA_V3 = "agentlab.multi_repo_candidate_review_packet.v3"
 PACKET_SCHEMA_V4 = "agentlab.multi_repo_candidate_review_packet.v4"
 PACKET_SCHEMA_V5 = "agentlab.multi_repo_candidate_review_packet.v5"
+PACKET_SCHEMA_V6 = "agentlab.multi_repo_candidate_review_packet.v6"
 PACKET_SCHEMAS = {
     PACKET_SCHEMA,
     PACKET_SCHEMA_V2,
     PACKET_SCHEMA_V3,
     PACKET_SCHEMA_V4,
     PACKET_SCHEMA_V5,
+    PACKET_SCHEMA_V6,
 }
 ANSWERS_SCHEMA = "agentlab.multi_repo_candidate_semantic_answers.v1"
 DECISION_SCHEMA = "agentlab.multi_repo_candidate_semantic_review.v1"
@@ -62,7 +64,7 @@ def digest(path: Path) -> str:
 
 def validate_packet(packet: dict[str, Any]) -> None:
     require(packet.get("schema") in PACKET_SCHEMAS, "unsupported candidate review packet")
-    if packet.get("schema") == PACKET_SCHEMA_V5:
+    if packet.get("schema") in {PACKET_SCHEMA_V5, PACKET_SCHEMA_V6}:
         contract = packet.get("domainIdentifierContract")
         evidence = packet.get("domainFactEvidence")
         require(isinstance(contract, dict), "v5 domain identifier contract is absent")
@@ -92,6 +94,52 @@ def validate_packet(packet: dict[str, Any]) -> None:
         require(packet.get("callSiteEvidence") is None, "v5 packet carries call-site evidence")
         require(packet.get("callResultHandleEvidence") is None, "v5 packet carries call-result evidence")
         require(packet.get("callResultHandleCoverage") is None, "v5 packet carries call-result coverage")
+    if packet.get("schema") == PACKET_SCHEMA_V6:
+        require(SHA256.fullmatch(packet.get("basePacketSha256", "")) is not None, "v6 base packet digest is invalid")
+        attachments = packet.get("evidenceAttachments")
+        required_attachment_ids = {
+            "build-qualification",
+            "expression-fact-qualification",
+            "bounded-expression-flow-proposal",
+        }
+        require(isinstance(attachments, dict) and set(attachments) == required_attachment_ids, "v6 evidence attachments differ")
+        require(
+            all(
+                isinstance(row, dict)
+                and SHA256.fullmatch(row.get("sha256", "")) is not None
+                and isinstance(row.get("schema"), str)
+                and isinstance(row.get("status"), str)
+                for row in attachments.values()
+            ),
+            "v6 evidence attachment is invalid",
+        )
+        build = attachments["build-qualification"]
+        require(
+            build.get("status") == "partial-build-qualified-review-required"
+            and build.get("qualifiedRootCount") == 1
+            and build.get("failedRootCount") == 2
+            and build.get("sourceProjectBoundaryStatus") == "partially-build-qualified",
+            "v6 build qualification summary differs",
+        )
+        expression = attachments["expression-fact-qualification"]
+        require(
+            expression.get("status") == "expression-facts-qualified-dataflow-unresolved"
+            and expression.get("repositoryCount") == 2
+            and expression.get("selectedExpressionFactCount", 0) > 0,
+            "v6 expression qualification summary differs",
+        )
+        flow = attachments["bounded-expression-flow-proposal"]
+        require(
+            flow.get("status") == "bounded-syntactic-flow-proposal-review-required"
+            and flow.get("repositoryCount") == flow.get("flowCount") == 2
+            and flow.get("edgeCount", 0) > 0
+            and flow.get("sourceBridgeCount", 0) > 0
+            and flow.get("allBoundedPathsEstablished") is True
+            and SHA256.fullmatch(flow.get("planSha256", "")) is not None,
+            "v6 bounded flow summary differs",
+        )
+        require(packet.get("semanticAlignmentVerified") is False, "v6 packet claims semantic alignment")
+        require(packet.get("behaviorOracleVerified") is False, "v6 packet claims a behavior Oracle")
     if packet.get("schema") in {PACKET_SCHEMA_V2, PACKET_SCHEMA_V3, PACKET_SCHEMA_V4}:
         handle_evidence = packet.get("callResultHandleEvidence")
         handle_coverage = packet.get("callResultHandleCoverage")
@@ -158,6 +206,11 @@ def validate_packet(packet: dict[str, Any]) -> None:
         "packet risk ids are invalid",
     )
     require(contract.get("requiredRiskIds") == risk_ids, "packet required risks differ")
+    if packet.get("schema") == PACKET_SCHEMA_V6:
+        require(
+            contract.get("requiredEvidenceAttachmentIds") == sorted(packet["evidenceAttachments"]),
+            "v6 required evidence attachments differ",
+        )
     require(
         contract.get("reviewerMustBeIndependentOfPacketGenerator") is True,
         "packet does not require reviewer independence",
