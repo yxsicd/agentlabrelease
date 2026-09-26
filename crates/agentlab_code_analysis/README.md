@@ -13,9 +13,14 @@ cargo build --locked -p agentlab_code_analysis
 Output is sorted `program_facts.jsonl` plus `analysis.json` with source cut,
 parser/grammar versions, counts and exact data digest. It captures multiline
 module references, declarations/methods, syntactic call/assignment locations,
-decorators, ArkUI nodes and complete parse-error text/spans. IDs use source path,
-syntax role, scope/name and occurrence rather than byte offsets; spans still
-reflect the exact source cut. Calls are unresolved syntax observations.
+decorators, ArkUI nodes and complete parse-error text/spans. Expression-bearing
+facts also retain method/function parameter expressions, call argument
+expressions, assignment right-hand expressions, object-entry values and return
+expressions. These are lossless inputs for a later bounded dataflow stage; they
+do not themselves claim call-target, type or dataflow resolution. IDs use
+source path, syntax role, scope/name and occurrence rather than byte offsets;
+spans still reflect the exact source cut. Calls remain unresolved syntax
+observations.
 
 The initial fixed code-workshop run parsed556 files:555 without syntax errors and one
 with five recovery/error nodes at `products/tv/src/main/ets/component/BarItem.ets`.

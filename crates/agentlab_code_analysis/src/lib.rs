@@ -22,6 +22,21 @@ fn field(node: Node, name: &str, source: &[u8]) -> String {
         .map(|n| text(n, source).to_owned())
         .unwrap_or_default()
 }
+fn named_child_expressions(node: Node, field_name: &str, source: &[u8]) -> Vec<String> {
+    let Some(container) = node.child_by_field_name(field_name) else {
+        return Vec::new();
+    };
+    let mut cursor = container.walk();
+    container
+        .named_children(&mut cursor)
+        .map(|child| text(child, source).to_owned())
+        .collect()
+}
+fn initializer_parameter_expressions(node: Node, source: &[u8]) -> Vec<String> {
+    node.child_by_field_name("value")
+        .map(|value| named_child_expressions(value, "parameters", source))
+        .unwrap_or_default()
+}
 fn span(node: Node) -> Value {
     json!({"startByte":node.start_byte(),"endByte":node.end_byte(),
         "startLine":node.start_position().row+1,"endLine":node.end_position().row+1,
@@ -182,7 +197,8 @@ impl Collector<'_> {
                     node,
                     "symbol",
                     &scope,
-                    json!({"symbol":name,"qualifiedName":scope,"owner":owner}),
+                    json!({"symbol":name,"qualifiedName":scope,"owner":owner,
+                        "parameterExpressions":named_child_expressions(node,"parameters",self.source)}),
                 );
             }
             "variable_declarator" => {
@@ -200,7 +216,9 @@ impl Collector<'_> {
                 let type_expression = field(node, "type", self.source);
                 self.emit(node, "property", &format!("{owner}::{name}"), json!({
                     "name":name,"owner":owner,"typeExpression":type_expression.trim_start_matches(':').trim(),
-                    "initializerExpression":field(node,"value",self.source),"decorators":decorators}));
+                    "initializerExpression":field(node,"value",self.source),
+                    "parameterExpressions":initializer_parameter_expressions(node,self.source),
+                    "decorators":decorators}));
             }
             "member_expression" => {
                 let property = field(node, "property", self.source);
@@ -217,7 +235,9 @@ impl Collector<'_> {
             }
             "call_expression" => {
                 let target = field(node, "function", self.source);
-                self.emit(node,"call",&format!("{owner}::{target}"),json!({"targetExpression":target,"owner":owner,"resolution":"syntactic-unresolved","controlContext":call_control_context(node,self.source)}));
+                self.emit(node,"call",&format!("{owner}::{target}"),json!({"targetExpression":target,
+                    "argumentExpressions":named_child_expressions(node,"arguments",self.source),
+                    "owner":owner,"resolution":"syntactic-unresolved","controlContext":call_control_context(node,self.source)}));
             }
             "decorator" => {
                 let expression = text(node, self.source);
@@ -230,7 +250,40 @@ impl Collector<'_> {
             }
             "assignment_expression" | "augmented_assignment_expression" => {
                 let left = field(node, "left", self.source);
-                self.emit(node,"assignment",&format!("{owner}::{left}"),json!({"leftExpression":left,"owner":owner,"resolution":"syntactic-unresolved"}));
+                self.emit(
+                    node,
+                    "assignment",
+                    &format!("{owner}::{left}"),
+                    json!({"leftExpression":left,
+                    "rightExpression":field(node,"right",self.source),"owner":owner,
+                    "resolution":"syntactic-unresolved"}),
+                );
+            }
+            "pair" => {
+                let key = field(node, "key", self.source);
+                self.emit(
+                    node,
+                    "object-entry",
+                    &format!("{owner}::{key}"),
+                    json!({"keyExpression":key,
+                    "valueExpression":field(node,"value",self.source),"owner":owner,
+                    "resolution":"syntactic-unresolved"}),
+                );
+            }
+            "return_statement" => {
+                let mut cursor = node.walk();
+                let expression = node
+                    .named_children(&mut cursor)
+                    .next()
+                    .map(|child| text(child, self.source).to_owned())
+                    .unwrap_or_default();
+                self.emit(
+                    node,
+                    "return",
+                    owner,
+                    json!({"expression":expression,"owner":owner,
+                    "resolution":"syntactic-unresolved"}),
+                );
             }
             "arkui_component_expression" => {
                 self.emit(node, "arkui-component", owner, json!({"owner":owner}));
@@ -297,6 +350,7 @@ mod tests {
             .find(|row| row["kind"] == "property" && row["name"] == "other")
             .unwrap();
         assert_eq!(other["decorators"], json!([]));
+        assert_eq!(other["parameterExpressions"], json!([]));
     }
 
     #[test]
@@ -331,6 +385,17 @@ mod tests {
                 && row["property"] == "purchaseToken"
                 && row["objectExpression"] == "receipt"
                 && row["owner"] == "finish"
+        }));
+        let finish = result
+            .rows
+            .iter()
+            .find(|row| row["kind"] == "symbol" && row["symbol"] == "finish")
+            .unwrap();
+        assert_eq!(finish["parameterExpressions"], json!(["receipt: Receipt"]));
+        assert!(result.rows.iter().any(|row| {
+            row["kind"] == "return"
+                && row["owner"] == "finish"
+                && row["expression"] == "receipt.purchaseToken"
         }));
     }
     #[test]
@@ -389,10 +454,48 @@ mod tests {
         assert_eq!(calls.len(), 1);
         assert_eq!(calls[0]["targetExpression"], "real");
         assert_eq!(calls[0]["owner"], "A::run");
-        assert!(result
+        assert!(result.rows.iter().any(|r| r["kind"] == "assignment"
+            && r["leftExpression"] == "this.value"
+            && r["rightExpression"] == "1"));
+    }
+    #[test]
+    fn calls_and_object_entries_retain_argument_and_value_expressions() {
+        let result = analyze(
+            "Purchase.ts",
+            b"function finish(order: Order) { api.finish({ token: order.purchaseToken, id: order.id }); }",
+            "cut",
+        )
+        .unwrap();
+        let call = result
             .rows
             .iter()
-            .any(|r| r["kind"] == "assignment" && r["leftExpression"] == "this.value"));
+            .find(|row| row["kind"] == "call" && row["targetExpression"] == "api.finish")
+            .unwrap();
+        assert_eq!(
+            call["argumentExpressions"],
+            json!(["{ token: order.purchaseToken, id: order.id }"])
+        );
+        assert!(result.rows.iter().any(|row| {
+            row["kind"] == "object-entry"
+                && row["keyExpression"] == "token"
+                && row["valueExpression"] == "order.purchaseToken"
+                && row["owner"] == "finish"
+        }));
+        let arrow = analyze(
+            "Arrow.ts",
+            b"class Page { consume = async (purchaseData: string, kind) => { await api.consume({ data: purchaseData }); } }",
+            "cut",
+        )
+        .unwrap();
+        let property = arrow
+            .rows
+            .iter()
+            .find(|row| row["kind"] == "property" && row["name"] == "consume")
+            .unwrap();
+        assert_eq!(
+            property["parameterExpressions"],
+            json!(["purchaseData: string", "kind"])
+        );
     }
     #[test]
     fn calls_retain_syntactic_async_and_cleanup_context() {

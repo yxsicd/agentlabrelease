@@ -36,7 +36,10 @@ triage rejected three unrelated or adjacent contracts and shortlisted the
 `hwlinux` built the Harmony source into an unsigned HAP; the Cordova package
 build and Ionic example build exposed two distinct upstream build-contract
 gaps. This is now a partially build-qualified review packet, not yet a case,
-and it has not been automatically promoted.
+and it has not been automatically promoted. A newer expression-fact replay
+retains parameters, call arguments, assignment right-hand sides, object values
+and returns across both exact revisions; it deliberately stops before claiming
+resolved dataflow or a qualified behavior Oracle.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.

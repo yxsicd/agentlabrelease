@@ -1129,6 +1129,19 @@ retained in `build-qualification.json` beside the packet and validated by
 status to `partially-build-qualified`, not case-ready: independent semantic
 review and a cross-repository behavior Oracle are still required.
 
+The next program-analysis revision closes a prerequisite for that Oracle
+without overclaiming resolution. In addition to bindings and left-hand
+assignment locations, its exact AST facts retain method/function parameter
+expressions, call argument lists, assignment right-hand expressions, object
+entry values and return expressions. A replay over the same two pinned commits
+produced 1,642 Harmony facts and 67,576 Cordova facts, including the syntactic
+ingredients needed to trace `result.purchaseData` through Harmony parsing and
+`finishPurchase`, and `inAppPurchaseDataList[ind]` through stored
+`product.purchaseData` to the Cordova consume request. These remain expression
+facts rather than resolved dataflow; the next gate must construct and calibrate
+a bounded flow Oracle instead of treating identifier proximity as behavioral
+proof.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \

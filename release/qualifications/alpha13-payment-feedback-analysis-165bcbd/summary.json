@@ -110,6 +110,19 @@
     "allowsCaseContract": false,
     "automaticPromotion": false
   },
+  "expressionFactQualification": {
+    "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/expression-fact-qualification.json",
+    "schema": "agentlab.multi_repo_expression_fact_qualification.v1",
+    "sha256": "2fae8c5e3d0ce1fdf9a3bc3c7103845eded51a25414401bebb549739c1a7bb11",
+    "analyzerDigest": "b390b1f92c1a8e0ea944a808b72d2eab984d2ad70f704736240cb08d8fe25010",
+    "repositoryCount": 2,
+    "programFactCount": 69218,
+    "selectedExpressionFactCount": 70,
+    "status": "expression-facts-qualified-dataflow-unresolved",
+    "semanticAlignmentVerified": false,
+    "allowsCaseContract": false,
+    "automaticPromotion": false
+  },
   "retention": {
     "authority": "compact-qualification-only",
     "fullReplayEvidence": "local-or-workflow-artifact",
