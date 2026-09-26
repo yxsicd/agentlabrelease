@@ -106,6 +106,19 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
                 "handleStatusCounts": {"no-direct-release": 1},
                 "releaseRelationCounts": {},
             }
+        if schema == REVIEW.PACKET_SCHEMA_V5:
+            value["domainIdentifierContract"] = {
+                "normalizedIdentifier": "purchase-data",
+                "tokens": ["purchase", "data"],
+            }
+            value["domainFactEvidence"] = [
+                {"factId": "fact-a", "kind": "property", "repositoryId": "repo-a"},
+                {"factId": "fact-b", "kind": "member-access", "repositoryId": "repo-b"},
+            ]
+            value["apiContract"] = None
+            value["callSiteEvidence"] = None
+            value["callResultHandleEvidence"] = None
+            value["callResultHandleCoverage"] = None
         path.write_text(json.dumps(value, sort_keys=True) + "\n")
         return path
 
@@ -143,6 +156,21 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             packet = self.packet(root, REVIEW.PACKET_SCHEMA_V4)
+            value = self.decide(
+                root,
+                "defer-for-more-evidence",
+                {"observable-gap": "unknown"},
+            )
+            decision = root / "decision.json"
+            decision.write_text(json.dumps(value, sort_keys=True) + "\n")
+            gate = REVIEW.compile_gate(packet, decision)
+            self.assertEqual(gate["status"], "deferred-for-more-evidence")
+            self.assertFalse(gate["allowsCaseContract"])
+
+    def test_v5_domain_identifier_packet_uses_the_same_fail_closed_review_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            packet = self.packet(root, REVIEW.PACKET_SCHEMA_V5)
             value = self.decide(
                 root,
                 "defer-for-more-evidence",

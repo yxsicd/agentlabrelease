@@ -268,6 +268,131 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
             self.assertEqual(packet["callResultHandleCoverage"]["unboundResultCount"], 2)
             self.assertFalse(packet["automaticPromotion"])
 
+    def test_v5_packet_binds_shortlisted_domain_identifier_facts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            body_a = "export interface Receipt {\n  purchaseData: string;\n}\n"
+            body_b = "export function finish(order: Receipt) {\n  return order.purchaseData;\n}\n"
+            repo_a, rev_a = self.git_repository(root, "repo-a", body_a)
+            repo_b, rev_b = self.git_repository(root, "repo-b", body_b)
+            sources = [
+                {"id": "repo-a", "repository": "https://example.invalid/a.git", "revision": rev_a},
+                {"id": "repo-b", "repository": "https://example.invalid/b.git", "revision": rev_b},
+            ]
+            manifest = root / "manifest-domain.json"
+            manifest.write_text(json.dumps({
+                "schema": "agentlab.multi_repo_manifest.v1",
+                "moduleBindings": {},
+                "repositories": [
+                    {**sources[0], "root": str(repo_a)},
+                    {**sources[1], "root": str(repo_b)},
+                ],
+            }, sort_keys=True) + "\n")
+            facts = [
+                {
+                    "id": "fact-property-a", "kind": "property", "repositoryId": "repo-a",
+                    "path": "project/src/page.ets", "owner": "Receipt", "name": "purchaseData",
+                    "typeExpression": "string", "sourceIdentity": f"git:https://example.invalid/a.git@{rev_a}",
+                    "span": {"startLine": 1, "endLine": 1, "startByte": body_a.index("purchaseData"), "endByte": body_a.index("purchaseData") + len("purchaseData: string")},
+                },
+                {
+                    "id": "fact-member-b", "kind": "member-access", "repositoryId": "repo-b",
+                    "path": "project/src/page.ets", "owner": "finish", "property": "purchaseData",
+                    "objectExpression": "order", "sourceIdentity": f"git:https://example.invalid/b.git@{rev_b}",
+                    "span": {"startLine": 1, "endLine": 1, "startByte": body_b.index("order.purchaseData"), "endByte": body_b.index("order.purchaseData") + len("order.purchaseData")},
+                },
+                {
+                    "id": "fact-owner-a", "kind": "symbol", "repositoryId": "repo-a",
+                    "path": "project/src/page.ets", "qualifiedName": "Receipt", "symbol": "Receipt",
+                    "sourceIdentity": f"git:https://example.invalid/a.git@{rev_a}",
+                    "span": {"startLine": 0, "endLine": 2, "startByte": 0, "endByte": len(body_a.encode())},
+                },
+                {
+                    "id": "fact-owner-b", "kind": "symbol", "repositoryId": "repo-b",
+                    "path": "project/src/page.ets", "qualifiedName": "finish", "symbol": "finish",
+                    "sourceIdentity": f"git:https://example.invalid/b.git@{rev_b}",
+                    "span": {"startLine": 0, "endLine": 2, "startByte": 0, "endByte": len(body_b.encode())},
+                },
+            ]
+            facts_path = root / "domain-facts.jsonl"
+            facts_path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in facts))
+            observations = [
+                {
+                    "factId": "fact-property-a", "factKind": "property", "identifier": "purchaseData",
+                    "normalizedIdentifier": "purchase-data", "tokens": ["purchase", "data"],
+                    "repositoryId": "repo-a", "path": "project/src/page.ets",
+                },
+                {
+                    "factId": "fact-member-b", "factKind": "member-access", "identifier": "purchaseData",
+                    "normalizedIdentifier": "purchase-data", "tokens": ["purchase", "data"],
+                    "repositoryId": "repo-b", "path": "project/src/page.ets",
+                },
+            ]
+            candidate = {
+                "id": "difficulty-domain", "schema": "agentlab.difficulty_point.v1",
+                "dimensionId": "multi-repository-change-impact",
+                "relationType": "shared-domain-identifier-contract",
+                "status": "candidate", "maturityState": "candidate",
+                "mechanism": "same compound property identifier is observed in exact AST facts across repository boundaries",
+                "seed": {"normalizedIdentifier": "purchase-data", "tokens": ["purchase", "data"]},
+                "observations": observations,
+                "affectedFiles": [
+                    {"repositoryId": "repo-a", "path": "project/src/page.ets", "dependencyDepth": 1},
+                    {"repositoryId": "repo-b", "path": "project/src/page.ets", "dependencyDepth": 1},
+                ],
+                "affectedRepositoryCount": 2, "maxDependencyDepth": 1,
+                "evidenceIds": ["fact-property-a", "fact-member-b"],
+                "verificationContract": {"caseReady": False, "required": ["semantic review"]},
+                "automaticPromotion": False,
+            }
+            difficulty = root / "domain-difficulty.json"
+            difficulty.write_text(json.dumps({
+                "schema": "agentlab.difficulty_candidates.v2", "sourceSetSha256": "a" * 64,
+                "sources": sources, "moduleBindings": {}, "candidates": [candidate],
+                "automaticPromotion": False,
+            }, sort_keys=True) + "\n")
+            proposal = root / "feedback-proposal.json"
+            proposal.write_text(json.dumps({
+                "schema": "agentlab.feedback_analysis_cut_proposal.v1", "status": "review-required",
+                "cutId": "feedback-cut-domain", "automaticPromotion": False,
+                "nextAnalysis": {
+                    "candidateId": candidate["id"], "sourceSetSha256": "a" * 64,
+                    "difficultyEvidenceSha256": hashlib.sha256(difficulty.read_bytes()).hexdigest(),
+                    "analysisReceiptSha256": "b" * 64, "methodRevision": "2" * 40,
+                    "evidenceIds": candidate["evidenceIds"],
+                    "verificationContract": candidate["verificationContract"],
+                },
+            }, sort_keys=True) + "\n")
+            triage = root / "feedback-triage.json"
+            triage.write_text(json.dumps({
+                "schema": "agentlab.feedback_analysis_proposal_queue_triage.v1",
+                "status": "one-proposal-shortlisted-review-required",
+                "semanticAlignmentVerified": False, "automaticPromotion": False,
+                "selectedProposal": {
+                    "proposalSha256": hashlib.sha256(proposal.read_bytes()).hexdigest(),
+                    "difficultyCandidateId": candidate["id"], "cutId": "feedback-cut-domain",
+                },
+            }, sort_keys=True) + "\n")
+            packet = PACKET.build_packet(
+                manifest, difficulty, facts_path, proposal, candidate["id"], "3" * 40,
+                context_lines=0, feedback_triage_path=triage,
+            )
+            self.assertEqual(packet["schema"], "agentlab.multi_repo_candidate_review_packet.v5")
+            self.assertEqual(packet["domainIdentifierContract"]["normalizedIdentifier"], "purchase-data")
+            self.assertEqual(len(packet["domainFactEvidence"]), 2)
+            self.assertEqual(
+                {row["kind"] for row in packet["domainFactEvidence"]},
+                {"property", "member-access"},
+            )
+            self.assertEqual(packet["ownerEvidenceCoverage"]["completeOwnerCount"], 2)
+            self.assertIsNone(packet["callResultHandleEvidence"])
+            self.assertEqual(packet["selectionRoles"], ["feedback-analysis-queue-shortlist"])
+            self.assertEqual(
+                packet["lineage"]["feedbackAnalysisTriageSha256"],
+                hashlib.sha256(triage.read_bytes()).hexdigest(),
+            )
+            self.assertFalse(packet["automaticPromotion"])
+
     def test_call_result_handles_distinguish_binding_assignment_and_exact_receiver(self):
         calls = [
             {

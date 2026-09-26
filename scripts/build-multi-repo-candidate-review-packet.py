@@ -131,6 +131,10 @@ def source_evidence(
         "path": path,
         "owner": fact.get("owner"),
         "targetExpression": fact.get("targetExpression"),
+        "name": fact.get("name"),
+        "property": fact.get("property"),
+        "typeExpression": fact.get("typeExpression"),
+        "objectExpression": fact.get("objectExpression"),
         "span": span,
         "sourceIdentity": fact.get("sourceIdentity"),
         "gitBlobOid": blob,
@@ -600,6 +604,7 @@ def build_packet(
     cohort_path: Path | None = None,
     selection_path: Path | None = None,
     analysis_manifest_path: Path | None = None,
+    feedback_triage_path: Path | None = None,
 ) -> dict[str, Any]:
     require(REVISION.fullmatch(packet_method_revision) is not None, "packet method revision is invalid")
     require(0 <= context_lines <= 20, "context lines must be between zero and twenty")
@@ -629,36 +634,83 @@ def build_packet(
 
     if proposal_path is not None:
         proposal = load(proposal_path, "current-method proposal")
-        require(
-            proposal.get("schema") == "agentlab.real_multi_repo_current_method_proposal.v1",
-            "unsupported current-method proposal",
-        )
         require(proposal.get("automaticPromotion") is False, "current-method proposal can auto-promote")
-        require(
-            file_digest(difficulty_path) == proposal.get("difficultyEvidenceSha256"),
-            "difficulty evidence differs from current-method proposal",
-        )
-        require(
-            file_digest(facts_path) == proposal.get("programFactsSha256"),
-            "workspace facts differ from current-method proposal",
-        )
-        require(proposal.get("sourceSetSha256") == difficulty.get("sourceSetSha256"), "source set differs")
-        shortlist = {
-            row.get("id"): row
-            for row in proposal.get("proposedCandidates") or []
-            if isinstance(row, dict)
-        }
-        require(candidate_id in shortlist, "candidate is not in the frozen review shortlist")
-        require(candidate_sha256 == shortlist[candidate_id].get("candidateSha256"), "candidate digest differs from shortlist")
-        selection_roles = shortlist[candidate_id].get("selectionRoles")
-        lineage = {
-            "manifestSha256": file_digest(manifest_path),
-            "difficultyEvidenceSha256": file_digest(difficulty_path),
-            "workspaceFactsSha256": file_digest(facts_path),
-            "currentMethodProposalSha256": file_digest(proposal_path),
-            "analysisRunSha256": proposal.get("analysisRunSha256"),
-            "proposalMethodRevision": proposal.get("proposalMethodRevision"),
-        }
+        if proposal.get("schema") == "agentlab.real_multi_repo_current_method_proposal.v1":
+            require(feedback_triage_path is None, "current-method proposal may not carry feedback triage")
+            require(
+                file_digest(difficulty_path) == proposal.get("difficultyEvidenceSha256"),
+                "difficulty evidence differs from current-method proposal",
+            )
+            require(
+                file_digest(facts_path) == proposal.get("programFactsSha256"),
+                "workspace facts differ from current-method proposal",
+            )
+            require(proposal.get("sourceSetSha256") == difficulty.get("sourceSetSha256"), "source set differs")
+            shortlist = {
+                row.get("id"): row
+                for row in proposal.get("proposedCandidates") or []
+                if isinstance(row, dict)
+            }
+            require(candidate_id in shortlist, "candidate is not in the frozen review shortlist")
+            require(candidate_sha256 == shortlist[candidate_id].get("candidateSha256"), "candidate digest differs from shortlist")
+            selection_roles = shortlist[candidate_id].get("selectionRoles")
+            lineage = {
+                "manifestSha256": file_digest(manifest_path),
+                "difficultyEvidenceSha256": file_digest(difficulty_path),
+                "workspaceFactsSha256": file_digest(facts_path),
+                "currentMethodProposalSha256": file_digest(proposal_path),
+                "analysisRunSha256": proposal.get("analysisRunSha256"),
+                "proposalMethodRevision": proposal.get("proposalMethodRevision"),
+            }
+        else:
+            require(
+                proposal.get("schema") == "agentlab.feedback_analysis_cut_proposal.v1",
+                "unsupported current-method proposal",
+            )
+            require(feedback_triage_path is not None, "feedback proposal requires exact queue triage")
+            next_analysis = proposal.get("nextAnalysis") or {}
+            require(next_analysis.get("candidateId") == candidate_id, "feedback proposal candidate differs")
+            require(
+                next_analysis.get("difficultyEvidenceSha256") == file_digest(difficulty_path),
+                "difficulty evidence differs from feedback proposal",
+            )
+            require(
+                next_analysis.get("sourceSetSha256") == difficulty.get("sourceSetSha256"),
+                "feedback proposal source set differs",
+            )
+            require(
+                next_analysis.get("evidenceIds") == candidate.get("evidenceIds"),
+                "feedback proposal evidence ids differ",
+            )
+            require(
+                next_analysis.get("verificationContract") == candidate.get("verificationContract"),
+                "feedback proposal verification contract differs",
+            )
+            triage = load(feedback_triage_path, "feedback proposal queue triage")
+            require(
+                triage.get("schema") == "agentlab.feedback_analysis_proposal_queue_triage.v1"
+                and triage.get("status") == "one-proposal-shortlisted-review-required",
+                "feedback triage did not shortlist one proposal",
+            )
+            require(
+                triage.get("semanticAlignmentVerified") is False
+                and triage.get("automaticPromotion") is False,
+                "feedback triage overclaims authority",
+            )
+            selected = triage.get("selectedProposal") or {}
+            require(selected.get("proposalSha256") == file_digest(proposal_path), "triage proposal digest differs")
+            require(selected.get("difficultyCandidateId") == candidate_id, "triage candidate differs")
+            require(selected.get("cutId") == proposal.get("cutId"), "triage cut identity differs")
+            selection_roles = ["feedback-analysis-queue-shortlist"]
+            lineage = {
+                "manifestSha256": file_digest(manifest_path),
+                "difficultyEvidenceSha256": file_digest(difficulty_path),
+                "workspaceFactsSha256": file_digest(facts_path),
+                "feedbackAnalysisCutProposalSha256": file_digest(proposal_path),
+                "feedbackAnalysisTriageSha256": file_digest(feedback_triage_path),
+                "analysisReceiptSha256": next_analysis.get("analysisReceiptSha256"),
+                "analysisMethodRevision": next_analysis.get("methodRevision"),
+            }
     else:
         analysis_run = load(analysis_run_path, "analysis run")
         analysis_manifest = load(analysis_manifest_path, "analysis manifest")
@@ -757,7 +809,14 @@ def build_packet(
             "analysisMethodRevision": analysis_run.get("methodRevision"),
             "proposalMethodRevision": cohort.get("proposalMethodRevision"),
         }
-    require(candidate.get("relationType") == "shared-external-api-call-contract", "candidate is not API-call-specific")
+    relation_type = candidate.get("relationType")
+    require(
+        relation_type in {
+            "shared-external-api-call-contract",
+            "shared-domain-identifier-contract",
+        },
+        "candidate relation is not supported by semantic packets",
+    )
     require(candidate.get("automaticPromotion") is False, "candidate can auto-promote")
     require((candidate.get("verificationContract") or {}).get("caseReady") is False, "candidate unexpectedly claims case readiness")
     repositories = repository_map(manifest, difficulty)
@@ -776,19 +835,47 @@ def build_packet(
             selected_facts[row["id"]] = row
     require(set(selected_facts) == set(evidence_ids), "candidate facts are incomplete")
     seed = candidate.get("seed") or {}
-    call_facts = sorted(
-        (
-            row for row in selected_facts.values()
-            if row.get("kind") == "call" and row.get("targetExpression") == seed.get("callTarget")
-        ),
-        key=lambda row: (row.get("repositoryId", ""), row.get("path", ""), row.get("id", "")),
-    )
-    require(call_facts, "candidate has no exact call facts")
+    if relation_type == "shared-external-api-call-contract":
+        semantic_facts = sorted(
+            (
+                row for row in selected_facts.values()
+                if row.get("kind") == "call" and row.get("targetExpression") == seed.get("callTarget")
+            ),
+            key=lambda row: (row.get("repositoryId", ""), row.get("path", ""), row.get("id", "")),
+        )
+        require(semantic_facts, "candidate has no exact call facts")
+    else:
+        semantic_facts = sorted(
+            (
+                row for row in selected_facts.values()
+                if row.get("kind") in {"property", "member-access"}
+            ),
+            key=lambda row: (row.get("repositoryId", ""), row.get("path", ""), row.get("id", "")),
+        )
+        observations = {
+            row.get("factId"): row
+            for row in candidate.get("observations") or []
+            if isinstance(row, dict)
+        }
+        require(set(observations) == set(evidence_ids), "domain observations differ from evidence ids")
+        require(len(semantic_facts) == len(evidence_ids), "candidate has non-domain evidence facts")
+        for fact in semantic_facts:
+            observation = observations[fact["id"]]
+            identifier = fact.get("name") if fact.get("kind") == "property" else fact.get("property")
+            require(
+                observation.get("repositoryId") == fact.get("repositoryId")
+                and observation.get("path") == fact.get("path")
+                and observation.get("factKind") == fact.get("kind")
+                and observation.get("identifier") == identifier
+                and observation.get("normalizedIdentifier") == seed.get("normalizedIdentifier")
+                and observation.get("tokens") == seed.get("tokens"),
+                f"domain observation differs from exact fact: {fact['id']}",
+            )
     require(
-        {row.get("repositoryId") for row in call_facts} == {
+        {row.get("repositoryId") for row in semantic_facts} == {
             row.get("repositoryId") for row in candidate.get("affectedFiles") or []
         },
-        "call facts do not cover every affected repository",
+        "semantic facts do not cover every affected repository",
     )
     using_context_facts = context_facts_path is not None or context_method_revision is not None
     require(
@@ -819,8 +906,8 @@ def build_packet(
         }
         require(set(context_by_id) == set(evidence_ids), "context facts omit candidate calls")
         stable_fields = (
-            "id", "kind", "repositoryId", "path", "owner",
-            "targetExpression", "sourceIdentity", "span",
+            "id", "kind", "repositoryId", "path", "owner", "name", "property",
+            "typeExpression", "objectExpression", "targetExpression", "sourceIdentity", "span",
         )
         for fact_id in evidence_ids:
             require(
@@ -829,38 +916,51 @@ def build_packet(
                 f"context fact stable projection differs: {fact_id}",
             )
         analysis_facts = context_facts
-        call_facts = sorted(
-            (
-                context_by_id[fact_id]
-                for fact_id in evidence_ids
-                if context_by_id[fact_id].get("kind") == "call"
-                and context_by_id[fact_id].get("targetExpression") == seed.get("callTarget")
-            ),
-            key=lambda row: (row.get("repositoryId", ""), row.get("path", ""), row.get("id", "")),
-        )
-        require(call_facts, "context facts have no exact call facts")
+        if relation_type == "shared-external-api-call-contract":
+            semantic_facts = sorted(
+                (
+                    context_by_id[fact_id]
+                    for fact_id in evidence_ids
+                    if context_by_id[fact_id].get("kind") == "call"
+                    and context_by_id[fact_id].get("targetExpression") == seed.get("callTarget")
+                ),
+                key=lambda row: (row.get("repositoryId", ""), row.get("path", ""), row.get("id", "")),
+            )
+            require(semantic_facts, "context facts have no exact call facts")
+        else:
+            semantic_facts = sorted(
+                (context_by_id[fact_id] for fact_id in evidence_ids),
+                key=lambda row: (row.get("repositoryId", ""), row.get("path", ""), row.get("id", "")),
+            )
         context_facts_sha256 = file_digest(context_facts_path)
     source_rows = [
         source_evidence(repositories[row["repositoryId"]], row, context_lines)
-        for row in call_facts
+        for row in semantic_facts
     ]
     owner_rows, owner_counts = owner_contexts(
-        repositories, call_facts, analysis_facts, max_owner_lines
+        repositories, semantic_facts, analysis_facts, max_owner_lines
     )
-    handle_rows, handle_coverage = call_result_handles(call_facts, analysis_facts)
+    handle_rows, handle_coverage = (None, None)
+    if relation_type == "shared-external-api-call-contract":
+        handle_rows, handle_coverage = call_result_handles(semantic_facts, analysis_facts)
     control_rows = None
     control_coverage = None
     cleanup_rows = None
     cleanup_coverage = None
-    if using_context_facts:
-        control_rows, control_coverage = call_control_contexts(call_facts)
-        cleanup_rows, cleanup_coverage = call_cleanup_pairings(call_facts, handle_rows)
+    if using_context_facts and relation_type == "shared-external-api-call-contract":
+        control_rows, control_coverage = call_control_contexts(semantic_facts)
+        cleanup_rows, cleanup_coverage = call_cleanup_pairings(semantic_facts, handle_rows)
     project_boundary_status = (
         "review-required" if all(row["projectBoundaryCandidates"] for row in source_rows)
         else "incomplete"
     )
+    naming_risk = (
+        {"id": "api-name-is-not-semantics", "statement": "A shared call target does not establish a shared behavioral obligation."}
+        if relation_type == "shared-external-api-call-contract"
+        else {"id": "identifier-name-is-not-semantics", "statement": "An exact compound identifier match does not establish compatible roles, types or behavior."}
+    )
     risks = [
-        {"id": "api-name-is-not-semantics", "statement": "A shared call target does not establish a shared behavioral obligation."},
+        naming_risk,
         {"id": "issue-contract-absent", "statement": "No participant-visible issue, repair behavior or preservation behavior has been approved."},
         {"id": "build-boundary-unqualified", "statement": "Marker-bearing ancestors have not been compiled or accepted as exact project/module roots."},
         {"id": "oracle-unqualified", "statement": "No baseline/reference/alternative/wrong calibration has executed for this candidate."},
@@ -872,8 +972,11 @@ def build_packet(
         })
     packet = {
         "schema": (
-            "agentlab.multi_repo_candidate_review_packet.v4"
-            if using_context_facts else "agentlab.multi_repo_candidate_review_packet.v2"
+            "agentlab.multi_repo_candidate_review_packet.v5"
+            if relation_type == "shared-domain-identifier-contract"
+            else "agentlab.multi_repo_candidate_review_packet.v4"
+            if using_context_facts
+            else "agentlab.multi_repo_candidate_review_packet.v2"
         ),
         "status": "independent-semantic-review-required",
         "candidateId": candidate_id,
@@ -881,9 +984,11 @@ def build_packet(
         "selectionRoles": selection_roles,
         "packetMethodRevision": packet_method_revision,
         "sourceSetSha256": difficulty.get("sourceSetSha256"),
-        "apiContract": seed,
+        "apiContract": seed if relation_type == "shared-external-api-call-contract" else None,
+        "domainIdentifierContract": seed if relation_type == "shared-domain-identifier-contract" else None,
         "mechanism": candidate.get("mechanism"),
-        "callSiteEvidence": source_rows,
+        "callSiteEvidence": source_rows if relation_type == "shared-external-api-call-contract" else None,
+        "domainFactEvidence": source_rows if relation_type == "shared-domain-identifier-contract" else None,
         "ownerContextEvidence": owner_rows,
         "ownerEvidenceCoverage": {
             "ownerCount": len(owner_rows),
@@ -900,7 +1005,11 @@ def build_packet(
             "interpretation": "Marker-bearing ancestors are evidence candidates, not a qualified build root or module.",
         },
         "reviewQuestions": [
-            {"id": "shared-behavior", "question": "Do the call sites exercise one coherent cross-repository behavior rather than merely sharing an API name?"},
+            {"id": "shared-behavior", "question": (
+                "Do the call sites exercise one coherent cross-repository behavior rather than merely sharing an API name?"
+                if relation_type == "shared-external-api-call-contract"
+                else "Do the exact property/member facts express one coherent cross-repository behavior rather than merely sharing an identifier?"
+            )},
             {"id": "observable-gap", "question": "Is there an issue-level defect or extension whose pre-change failure is observable in every required repository?"},
             {"id": "prompt-completeness", "question": "Can the participant-facing prompt state every required behavior without revealing the repair?"},
             {"id": "repair-oracle", "question": "Can independent FAIL_TO_PASS checks accept structurally distinct valid repairs?"},
@@ -927,7 +1036,11 @@ def build_packet(
             ],
             "satisfiedByThisPacket": [
                 "exact base source set",
-                "source-localized call evidence",
+                (
+                    "source-localized call evidence"
+                    if relation_type == "shared-external-api-call-contract"
+                    else "source-localized domain identifier evidence"
+                ),
                 "owner-scoped call-neighborhood evidence",
             ],
         },
@@ -949,7 +1062,7 @@ def build_packet(
         },
         "automaticPromotion": False,
     }
-    if using_context_facts:
+    if using_context_facts and relation_type == "shared-external-api-call-contract":
         packet["callControlContextEvidence"] = control_rows
         packet["callControlContextCoverage"] = control_coverage
         packet["callCleanupPairingEvidence"] = cleanup_rows
@@ -969,6 +1082,7 @@ def main() -> int:
     parser.add_argument("--difficulty", type=Path, required=True)
     parser.add_argument("--facts", type=Path, required=True)
     parser.add_argument("--proposal", type=Path)
+    parser.add_argument("--feedback-triage", type=Path)
     parser.add_argument("--analysis-run", type=Path)
     parser.add_argument("--analysis-manifest", type=Path)
     parser.add_argument("--cohort", type=Path)
@@ -993,6 +1107,7 @@ def main() -> int:
             args.cohort,
             args.selection,
             args.analysis_manifest,
+            args.feedback_triage,
         )
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(value, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")

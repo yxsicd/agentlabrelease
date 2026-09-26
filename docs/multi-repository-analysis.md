@@ -1225,6 +1225,17 @@ behavioral neighborhoods rather than isolated API spellings while preserving
 the boundary: owner spans and neighboring calls are syntactic evidence, not
 receiver-type, dataflow or intent proof.
 
+Packet v5 applies the same independent-review state machine to a shortlisted
+`shared-domain-identifier-contract`. It accepts only an exact feedback-cut
+proposal that the digest-bound whole-queue triage selected, then rechecks every
+candidate observation against its property or member-access AST fact. The
+packet retains the original and normalized identifier, exact Git Blob and
+line-numbered excerpt, owner context, project-boundary candidates, feedback
+proposal and triage digests. It deliberately omits API-call handle and cleanup
+claims. An identifier match is localization evidence only; role/type
+compatibility, an observable issue, coordinated cross-repository necessity and
+the repair/preservation Oracle remain explicit reviewer questions.
+
 This gate matters in the real evidence. The two `AlertDialog` sites implement
 different product behavior (account logout confirmation versus Web alert result
 handling), while the two `call.makeCall` sites pass different inputs and live

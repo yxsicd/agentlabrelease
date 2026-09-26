@@ -18,7 +18,14 @@ PACKET_SCHEMA = "agentlab.multi_repo_candidate_review_packet.v1"
 PACKET_SCHEMA_V2 = "agentlab.multi_repo_candidate_review_packet.v2"
 PACKET_SCHEMA_V3 = "agentlab.multi_repo_candidate_review_packet.v3"
 PACKET_SCHEMA_V4 = "agentlab.multi_repo_candidate_review_packet.v4"
-PACKET_SCHEMAS = {PACKET_SCHEMA, PACKET_SCHEMA_V2, PACKET_SCHEMA_V3, PACKET_SCHEMA_V4}
+PACKET_SCHEMA_V5 = "agentlab.multi_repo_candidate_review_packet.v5"
+PACKET_SCHEMAS = {
+    PACKET_SCHEMA,
+    PACKET_SCHEMA_V2,
+    PACKET_SCHEMA_V3,
+    PACKET_SCHEMA_V4,
+    PACKET_SCHEMA_V5,
+}
 ANSWERS_SCHEMA = "agentlab.multi_repo_candidate_semantic_answers.v1"
 DECISION_SCHEMA = "agentlab.multi_repo_candidate_semantic_review.v1"
 GATE_SCHEMA = "agentlab.multi_repo_candidate_semantic_gate.v1"
@@ -55,6 +62,36 @@ def digest(path: Path) -> str:
 
 def validate_packet(packet: dict[str, Any]) -> None:
     require(packet.get("schema") in PACKET_SCHEMAS, "unsupported candidate review packet")
+    if packet.get("schema") == PACKET_SCHEMA_V5:
+        contract = packet.get("domainIdentifierContract")
+        evidence = packet.get("domainFactEvidence")
+        require(isinstance(contract, dict), "v5 domain identifier contract is absent")
+        require(
+            isinstance(contract.get("normalizedIdentifier"), str)
+            and bool(contract["normalizedIdentifier"])
+            and isinstance(contract.get("tokens"), list)
+            and len(contract["tokens"]) >= 2,
+            "v5 domain identifier contract is invalid",
+        )
+        require(isinstance(evidence, list) and evidence, "v5 domain fact evidence is absent")
+        require(
+            all(
+                isinstance(row, dict)
+                and row.get("kind") in {"property", "member-access"}
+                and isinstance(row.get("factId"), str)
+                and isinstance(row.get("repositoryId"), str)
+                for row in evidence
+            ),
+            "v5 domain fact evidence is invalid",
+        )
+        require(
+            len({row["repositoryId"] for row in evidence}) >= 2,
+            "v5 domain evidence does not span repositories",
+        )
+        require(packet.get("apiContract") is None, "v5 packet carries an API contract")
+        require(packet.get("callSiteEvidence") is None, "v5 packet carries call-site evidence")
+        require(packet.get("callResultHandleEvidence") is None, "v5 packet carries call-result evidence")
+        require(packet.get("callResultHandleCoverage") is None, "v5 packet carries call-result coverage")
     if packet.get("schema") in {PACKET_SCHEMA_V2, PACKET_SCHEMA_V3, PACKET_SCHEMA_V4}:
         handle_evidence = packet.get("callResultHandleEvidence")
         handle_coverage = packet.get("callResultHandleCoverage")
