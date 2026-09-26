@@ -144,6 +144,69 @@ class MultiRepoCandidateReviewPacketEnrichmentTests(unittest.TestCase):
             with self.assertRaisesRegex(REVIEW.SemanticReviewError, "build-qualification digest differs"):
                 REVIEW.verify_evidence(packet, root)
 
+    def test_program_analysis_produces_v7_and_is_replayed_before_review(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = self.fixture(root)
+            base_sha = hashlib.sha256(paths[0].read_bytes()).hexdigest()
+            flow_sha = hashlib.sha256(paths[4].read_bytes()).hexdigest()
+            program = root / "program-analysis.json"
+            program.write_text(json.dumps({
+                "schema": ENRICH.PROGRAM_ANALYSIS_SCHEMA,
+                "status": "bounded-program-flow-partially-resolved-review-required",
+                "candidateId": "difficulty-test",
+                "sourceSetSha256": "a" * 64,
+                "reviewPacketSha256": base_sha,
+                "flowPlanSha256": hashlib.sha256(paths[3].read_bytes()).hexdigest(),
+                "flowProposalSha256": flow_sha,
+                "flowReplayExact": True,
+                "repositoryCount": 2,
+                "flowCount": 2,
+                "coverage": {
+                    "localCallTargetCount": 3,
+                    "localCallTargetsUniquelyResolved": True,
+                    "typedParameterMappingCount": 2,
+                    "untypedParameterMappingCount": 1,
+                    "exactDependencyCount": 7,
+                    "exactDependencyReferencesVerified": True,
+                },
+                "unresolvedCount": 6,
+                "typeResolutionComplete": False,
+                "aliasResolutionComplete": False,
+                "externalCallContractsResolved": False,
+                "reachabilityAndDominanceResolved": False,
+                "semanticAlignmentVerified": False,
+                "behaviorOracleVerified": False,
+                "allowsCaseContract": False,
+                "automaticPromotion": False,
+            }) + "\n")
+            packet = root / "packet-v7.json"
+            packet.write_text(
+                json.dumps(
+                    ENRICH.enrich(*paths, "2" * 40, root, program),
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            value = json.loads(packet.read_text())
+            self.assertEqual(value["schema"], ENRICH.SCHEMA_V7)
+            self.assertEqual(len(value["evidenceAttachments"]), 4)
+            self.assertEqual(
+                value["risks"][0]["id"],
+                "partial-program-flow-is-not-semantics",
+            )
+            receipt = REVIEW.verify_evidence(packet, root)
+            self.assertEqual(receipt["status"], "verified-exact-v7-evidence")
+            self.assertEqual(len(receipt["verifiedFiles"]), 6)
+            program_value = json.loads(program.read_text())
+            program_value["unresolvedCount"] = 0
+            program.write_text(json.dumps(program_value) + "\n")
+            with self.assertRaisesRegex(
+                REVIEW.SemanticReviewError,
+                "bounded-expression-flow-program-analysis digest differs",
+            ):
+                REVIEW.verify_evidence(packet, root)
+
 
 if __name__ == "__main__":
     unittest.main()

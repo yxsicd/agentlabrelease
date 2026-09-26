@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bind later exact evidence into a v6 independent semantic-review packet."""
+"""Bind later exact evidence into a compact independent semantic-review packet."""
 from __future__ import annotations
 
 import argparse
@@ -11,10 +11,12 @@ from typing import Any
 
 
 SCHEMA = "agentlab.multi_repo_candidate_review_packet.v6"
+SCHEMA_V7 = "agentlab.multi_repo_candidate_review_packet.v7"
 BASE_SCHEMA = "agentlab.multi_repo_candidate_review_packet.v5"
 BUILD_SCHEMA = "agentlab.multi_repo_source_build_qualification.v1"
 EXPRESSION_SCHEMA = "agentlab.multi_repo_expression_fact_qualification.v1"
 FLOW_SCHEMA = "agentlab.bounded_expression_flow_proposal.v1"
+PROGRAM_ANALYSIS_SCHEMA = "agentlab.bounded_expression_flow_program_analysis.v1"
 DECISION_SCHEMA = "agentlab.multi_repo_candidate_semantic_review.v1"
 REVISION = re.compile(r"[0-9a-f]{40}")
 SHA256 = re.compile(r"[0-9a-f]{64}")
@@ -73,12 +75,18 @@ def enrich(
     flow_path: Path,
     method_revision: str,
     evidence_root: Path,
+    program_analysis_path: Path | None = None,
 ) -> dict[str, Any]:
     base = load(base_path, "base review packet")
     build = load(build_path, "build qualification")
     expression = load(expression_path, "expression qualification")
     flow_plan = load(flow_plan_path, "bounded flow plan")
     flow = load(flow_path, "bounded flow proposal")
+    program_analysis = (
+        load(program_analysis_path, "bounded flow program analysis")
+        if program_analysis_path is not None
+        else None
+    )
     require(base.get("schema") == BASE_SCHEMA, "base packet is not v5")
     require(base.get("status") == "independent-semantic-review-required", "base packet is not review-required")
     require(base.get("allowsCaseContract") is not True and base.get("automaticPromotion") is False, "base packet can promote")
@@ -91,6 +99,12 @@ def enrich(
         "flowPlan": relative_reference(flow_plan_path, evidence_root, "bounded flow plan"),
         "flow": relative_reference(flow_path, evidence_root, "bounded flow proposal"),
     }
+    if program_analysis_path is not None:
+        references["programAnalysis"] = relative_reference(
+            program_analysis_path,
+            evidence_root,
+            "bounded flow program analysis",
+        )
     base_sha256 = digest(base_path)
     common_lineage(build, BUILD_SCHEMA, base, base_sha256, "build qualification")
     common_lineage(expression, EXPRESSION_SCHEMA, base, base_sha256, "expression qualification")
@@ -124,10 +138,40 @@ def enrich(
     edge_count = sum(row.get("edgeCount", 0) for row in flow.get("flows") or [] if isinstance(row, dict))
     require(edge_count > 0, "bounded flow edges are absent")
 
+    if program_analysis is not None:
+        common_lineage(
+            program_analysis,
+            PROGRAM_ANALYSIS_SCHEMA,
+            base,
+            base_sha256,
+            "bounded flow program analysis",
+        )
+        require(
+            program_analysis.get("status")
+            == "bounded-program-flow-partially-resolved-review-required",
+            "program analysis status differs",
+        )
+        require(program_analysis.get("flowReplayExact") is True, "program analysis did not replay the flow")
+        require(program_analysis.get("flowPlanSha256") == digest(flow_plan_path), "program analysis plan differs")
+        require(program_analysis.get("flowProposalSha256") == digest(flow_path), "program analysis flow differs")
+        require(program_analysis.get("repositoryCount") == 2, "program analysis repository count differs")
+        require(program_analysis.get("flowCount") == 2, "program analysis flow count differs")
+        coverage = program_analysis.get("coverage")
+        require(isinstance(coverage, dict), "program analysis coverage is absent")
+        require(coverage.get("localCallTargetsUniquelyResolved") is True, "local call targets are unresolved")
+        require(coverage.get("localCallTargetCount", 0) > 0, "local call targets are absent")
+        require(coverage.get("exactDependencyReferencesVerified") is True, "exact dependencies are unresolved")
+        require(coverage.get("exactDependencyCount", 0) > 0, "exact dependencies are absent")
+        require(program_analysis.get("unresolvedCount", 0) > 0, "program analysis hides unresolved boundaries")
+        require(program_analysis.get("typeResolutionComplete") is False, "program analysis claims complete types")
+        require(program_analysis.get("aliasResolutionComplete") is False, "program analysis claims complete aliases")
+        require(program_analysis.get("externalCallContractsResolved") is False, "program analysis claims external contracts")
+        require(program_analysis.get("reachabilityAndDominanceResolved") is False, "program analysis claims control flow")
+
     domain_evidence = base.get("domainFactEvidence") or []
     require(isinstance(domain_evidence, list) and domain_evidence, "base domain evidence is absent")
     packet = {
-        "schema": SCHEMA,
+        "schema": SCHEMA_V7 if program_analysis is not None else SCHEMA,
         "status": "independent-semantic-review-required",
         "candidateId": base.get("candidateId"),
         "candidateSha256": base.get("candidateSha256"),
@@ -180,6 +224,23 @@ def enrich(
             "allBoundedPathsEstablished": True,
         },
     }
+    if program_analysis is not None and program_analysis_path is not None:
+        coverage = program_analysis["coverage"]
+        packet["evidenceAttachments"]["bounded-expression-flow-program-analysis"] = {
+            "schema": PROGRAM_ANALYSIS_SCHEMA,
+            "sha256": digest(program_analysis_path),
+            "relativePath": references["programAnalysis"],
+            "status": program_analysis["status"],
+            "flowProposalSha256": program_analysis["flowProposalSha256"],
+            "flowReplayExact": True,
+            "repositoryCount": program_analysis["repositoryCount"],
+            "flowCount": program_analysis["flowCount"],
+            "localCallTargetCount": coverage["localCallTargetCount"],
+            "typedParameterMappingCount": coverage["typedParameterMappingCount"],
+            "untypedParameterMappingCount": coverage["untypedParameterMappingCount"],
+            "exactDependencyCount": coverage["exactDependencyCount"],
+            "unresolvedCount": program_analysis["unresolvedCount"],
+        }
     packet["reviewQuestions"] = [
         {"id": "shared-behavior", "question": "Do the exact source facts and bounded paths express one coherent cross-repository purchase-data behavior rather than merely sharing an identifier?"},
         {"id": "observable-gap", "question": "Is there an issue-level defect or extension whose pre-change failure is observable in every required repository?"},
@@ -195,6 +256,11 @@ def enrich(
         {"id": "build-boundary-partially-qualified", "statement": "The Harmony root builds, but the Cordova package and Ionic example retain two exact upstream build-contract failures."},
         {"id": "oracle-unqualified", "statement": "No baseline, reference, alternative or meaningful-wrong calibration has executed for this candidate."},
     ]
+    if program_analysis is not None:
+        packet["risks"][0] = {
+            "id": "partial-program-flow-is-not-semantics",
+            "statement": "Unique local targets and exact token dependencies are verified, but unresolved types, object identity, external SDK contracts and control flow still prevent a semantic or behavioral claim.",
+        }
     question_ids = [row["id"] for row in packet["reviewQuestions"]]
     risk_ids = [row["id"] for row in packet["risks"]]
     packet["reviewDecisionContract"] = {
@@ -219,6 +285,7 @@ def main() -> None:
     parser.add_argument("--expression-qualification", required=True, type=Path)
     parser.add_argument("--flow-plan", required=True, type=Path)
     parser.add_argument("--flow-proposal", required=True, type=Path)
+    parser.add_argument("--program-analysis", type=Path)
     parser.add_argument("--method-revision", required=True)
     parser.add_argument("--evidence-root", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
@@ -231,6 +298,7 @@ def main() -> None:
         args.flow_proposal,
         args.method_revision,
         args.evidence_root,
+        args.program_analysis,
     )
     require(not args.output.exists(), "refusing to overwrite enriched review packet")
     args.output.parent.mkdir(parents=True, exist_ok=True)

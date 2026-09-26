@@ -20,6 +20,7 @@ PACKET_SCHEMA_V3 = "agentlab.multi_repo_candidate_review_packet.v3"
 PACKET_SCHEMA_V4 = "agentlab.multi_repo_candidate_review_packet.v4"
 PACKET_SCHEMA_V5 = "agentlab.multi_repo_candidate_review_packet.v5"
 PACKET_SCHEMA_V6 = "agentlab.multi_repo_candidate_review_packet.v6"
+PACKET_SCHEMA_V7 = "agentlab.multi_repo_candidate_review_packet.v7"
 PACKET_SCHEMAS = {
     PACKET_SCHEMA,
     PACKET_SCHEMA_V2,
@@ -27,6 +28,7 @@ PACKET_SCHEMAS = {
     PACKET_SCHEMA_V4,
     PACKET_SCHEMA_V5,
     PACKET_SCHEMA_V6,
+    PACKET_SCHEMA_V7,
 }
 ANSWERS_SCHEMA = "agentlab.multi_repo_candidate_semantic_answers.v1"
 DECISION_SCHEMA = "agentlab.multi_repo_candidate_semantic_review.v1"
@@ -118,7 +120,8 @@ def validate_packet(packet: dict[str, Any]) -> None:
         require(packet.get("callSiteEvidence") is None, "v5 packet carries call-site evidence")
         require(packet.get("callResultHandleEvidence") is None, "v5 packet carries call-result evidence")
         require(packet.get("callResultHandleCoverage") is None, "v5 packet carries call-result coverage")
-    if packet.get("schema") == PACKET_SCHEMA_V6:
+    if packet.get("schema") in {PACKET_SCHEMA_V6, PACKET_SCHEMA_V7}:
+        version = "v7" if packet.get("schema") == PACKET_SCHEMA_V7 else "v6"
         base = packet.get("basePacket")
         require(
             isinstance(base, dict)
@@ -126,9 +129,9 @@ def validate_packet(packet: dict[str, Any]) -> None:
             and SHA256.fullmatch(base.get("sha256", "")) is not None
             and REVISION.fullmatch(base.get("packetMethodRevision", "")) is not None
             and base.get("status") == "independent-semantic-review-required",
-            "v6 base packet reference is invalid",
+            f"{version} base packet reference is invalid",
         )
-        require(valid_relative_path(base.get("relativePath")), "v6 base packet path is unsafe")
+        require(valid_relative_path(base.get("relativePath")), f"{version} base packet path is unsafe")
         contract = base.get("domainIdentifierContract")
         require(
             isinstance(contract, dict)
@@ -138,7 +141,7 @@ def validate_packet(packet: dict[str, Any]) -> None:
             and len(contract["tokens"]) >= 2
             and base.get("domainFactCount", 0) > 0
             and base.get("coveredRepositoryCount", 0) >= 2,
-            "v6 base domain evidence summary is invalid",
+            f"{version} base domain evidence summary is invalid",
         )
         attachments = packet.get("evidenceAttachments")
         required_attachment_ids = {
@@ -146,7 +149,9 @@ def validate_packet(packet: dict[str, Any]) -> None:
             "expression-fact-qualification",
             "bounded-expression-flow-proposal",
         }
-        require(isinstance(attachments, dict) and set(attachments) == required_attachment_ids, "v6 evidence attachments differ")
+        if packet.get("schema") == PACKET_SCHEMA_V7:
+            required_attachment_ids.add("bounded-expression-flow-program-analysis")
+        require(isinstance(attachments, dict) and set(attachments) == required_attachment_ids, f"{version} evidence attachments differ")
         require(
             all(
                 isinstance(row, dict)
@@ -156,7 +161,7 @@ def validate_packet(packet: dict[str, Any]) -> None:
                 and valid_relative_path(row.get("relativePath"))
                 for row in attachments.values()
             ),
-            "v6 evidence attachment is invalid",
+            f"{version} evidence attachment is invalid",
         )
         build = attachments["build-qualification"]
         require(
@@ -164,14 +169,14 @@ def validate_packet(packet: dict[str, Any]) -> None:
             and build.get("qualifiedRootCount") == 1
             and build.get("failedRootCount") == 2
             and build.get("sourceProjectBoundaryStatus") == "partially-build-qualified",
-            "v6 build qualification summary differs",
+            f"{version} build qualification summary differs",
         )
         expression = attachments["expression-fact-qualification"]
         require(
             expression.get("status") == "expression-facts-qualified-dataflow-unresolved"
             and expression.get("repositoryCount") == 2
             and expression.get("selectedExpressionFactCount", 0) > 0,
-            "v6 expression qualification summary differs",
+            f"{version} expression qualification summary differs",
         )
         flow = attachments["bounded-expression-flow-proposal"]
         require(
@@ -181,11 +186,24 @@ def validate_packet(packet: dict[str, Any]) -> None:
             and flow.get("sourceBridgeCount", 0) > 0
             and flow.get("allBoundedPathsEstablished") is True
             and SHA256.fullmatch(flow.get("planSha256", "")) is not None,
-            "v6 bounded flow summary differs",
+            f"{version} bounded flow summary differs",
         )
-        require(valid_relative_path(flow.get("planRelativePath")), "v6 bounded flow plan path is unsafe")
-        require(packet.get("semanticAlignmentVerified") is False, "v6 packet claims semantic alignment")
-        require(packet.get("behaviorOracleVerified") is False, "v6 packet claims a behavior Oracle")
+        require(valid_relative_path(flow.get("planRelativePath")), f"{version} bounded flow plan path is unsafe")
+        if packet.get("schema") == PACKET_SCHEMA_V7:
+            program = attachments["bounded-expression-flow-program-analysis"]
+            require(
+                program.get("schema") == "agentlab.bounded_expression_flow_program_analysis.v1"
+                and program.get("status") == "bounded-program-flow-partially-resolved-review-required"
+                and program.get("flowReplayExact") is True
+                and program.get("repositoryCount") == program.get("flowCount") == 2
+                and program.get("localCallTargetCount", 0) > 0
+                and program.get("exactDependencyCount", 0) > 0
+                and program.get("unresolvedCount", 0) > 0
+                and SHA256.fullmatch(program.get("flowProposalSha256", "")) is not None,
+                "v7 bounded program-flow summary differs",
+            )
+        require(packet.get("semanticAlignmentVerified") is False, f"{version} packet claims semantic alignment")
+        require(packet.get("behaviorOracleVerified") is False, f"{version} packet claims a behavior Oracle")
     if packet.get("schema") in {PACKET_SCHEMA_V2, PACKET_SCHEMA_V3, PACKET_SCHEMA_V4}:
         handle_evidence = packet.get("callResultHandleEvidence")
         handle_coverage = packet.get("callResultHandleCoverage")
@@ -253,10 +271,10 @@ def validate_packet(packet: dict[str, Any]) -> None:
         "packet risk ids are invalid",
     )
     require(contract.get("requiredRiskIds") == risk_ids, "packet required risks differ")
-    if packet.get("schema") == PACKET_SCHEMA_V6:
+    if packet.get("schema") in {PACKET_SCHEMA_V6, PACKET_SCHEMA_V7}:
         require(
             contract.get("requiredEvidenceAttachmentIds") == sorted(packet["evidenceAttachments"]),
-            "v6 required evidence attachments differ",
+            "v6/v7 required evidence attachments differ",
         )
     require(
         contract.get("reviewerMustBeIndependentOfPacketGenerator") is True,
@@ -267,7 +285,7 @@ def validate_packet(packet: dict[str, Any]) -> None:
 def verify_evidence(packet_path: Path, repository_root: Path) -> dict[str, Any]:
     packet = load(packet_path, "candidate review packet")
     validate_packet(packet)
-    if packet.get("schema") != PACKET_SCHEMA_V6:
+    if packet.get("schema") not in {PACKET_SCHEMA_V6, PACKET_SCHEMA_V7}:
         return {
             "schema": EVIDENCE_VERIFICATION_SCHEMA,
             "status": "legacy-packet-contained-evidence",
@@ -328,10 +346,36 @@ def verify_evidence(packet_path: Path, repository_root: Path) -> dict[str, Any]:
     require(sum(row.get("edgeCount", 0) for row in flow.get("flows") or [] if isinstance(row, dict)) == flow_reference.get("edgeCount"), "bounded flow edge count differs")
     require(len(flow.get("sourceBridges") or []) == flow_reference.get("sourceBridgeCount"), "bounded flow bridge count differs")
     require(flow.get("allBoundedPathsEstablished") is flow_reference.get("allBoundedPathsEstablished") is True, "bounded paths are incomplete")
-    require(all(value.get("allowsCaseContract") is False and value.get("automaticPromotion") is False for value in (build, expression, flow)), "attached evidence can promote")
+    evidence_values = [build, expression, flow]
+    if packet.get("schema") == PACKET_SCHEMA_V7:
+        program_reference = attachments["bounded-expression-flow-program-analysis"]
+        _, program = checked(program_reference, "bounded-expression-flow-program-analysis")
+        require(program.get("reviewPacketSha256") == digest(base_path), "program analysis base packet differs")
+        require(program.get("flowProposalSha256") == flow_reference.get("sha256"), "program analysis flow proposal differs")
+        require(program.get("flowReplayExact") is program_reference.get("flowReplayExact") is True, "program analysis replay differs")
+        require(program.get("repositoryCount") == program_reference.get("repositoryCount"), "program analysis repository count differs")
+        require(program.get("flowCount") == program_reference.get("flowCount"), "program analysis flow count differs")
+        coverage = program.get("coverage") or {}
+        for key in (
+            "localCallTargetCount",
+            "typedParameterMappingCount",
+            "untypedParameterMappingCount",
+            "exactDependencyCount",
+        ):
+            require(coverage.get(key) == program_reference.get(key), f"program analysis {key} differs")
+        require(program.get("unresolvedCount") == program_reference.get("unresolvedCount") > 0, "program analysis unresolved count differs")
+        require(
+            program.get("typeResolutionComplete") is False
+            and program.get("aliasResolutionComplete") is False
+            and program.get("externalCallContractsResolved") is False
+            and program.get("reachabilityAndDominanceResolved") is False,
+            "program analysis hides unresolved boundaries",
+        )
+        evidence_values.append(program)
+    require(all(value.get("allowsCaseContract") is False and value.get("automaticPromotion") is False for value in evidence_values), "attached evidence can promote")
     return {
         "schema": EVIDENCE_VERIFICATION_SCHEMA,
-        "status": "verified-exact-v6-evidence",
+        "status": "verified-exact-v7-evidence" if packet.get("schema") == PACKET_SCHEMA_V7 else "verified-exact-v6-evidence",
         "packetSha256": digest(packet_path),
         "candidateId": candidate_id,
         "sourceSetSha256": source_set_sha256,

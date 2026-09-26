@@ -106,7 +106,11 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
                 "handleStatusCounts": {"no-direct-release": 1},
                 "releaseRelationCounts": {},
             }
-        if schema in {REVIEW.PACKET_SCHEMA_V5, REVIEW.PACKET_SCHEMA_V6}:
+        if schema in {
+            REVIEW.PACKET_SCHEMA_V5,
+            REVIEW.PACKET_SCHEMA_V6,
+            REVIEW.PACKET_SCHEMA_V7,
+        }:
             value["domainIdentifierContract"] = {
                 "normalizedIdentifier": "purchase-data",
                 "tokens": ["purchase", "data"],
@@ -119,7 +123,7 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
             value["callSiteEvidence"] = None
             value["callResultHandleEvidence"] = None
             value["callResultHandleCoverage"] = None
-        if schema == REVIEW.PACKET_SCHEMA_V6:
+        if schema in {REVIEW.PACKET_SCHEMA_V6, REVIEW.PACKET_SCHEMA_V7}:
             value["basePacket"] = {
                 "schema": REVIEW.PACKET_SCHEMA_V5,
                 "sha256": "c" * 64,
@@ -167,6 +171,22 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
             }
             value["semanticAlignmentVerified"] = False
             value["behaviorOracleVerified"] = False
+            if schema == REVIEW.PACKET_SCHEMA_V7:
+                value["evidenceAttachments"]["bounded-expression-flow-program-analysis"] = {
+                    "schema": "agentlab.bounded_expression_flow_program_analysis.v1",
+                    "sha256": "1" * 64,
+                    "relativePath": "release/program-analysis.json",
+                    "status": "bounded-program-flow-partially-resolved-review-required",
+                    "flowProposalSha256": "f" * 64,
+                    "flowReplayExact": True,
+                    "repositoryCount": 2,
+                    "flowCount": 2,
+                    "localCallTargetCount": 3,
+                    "typedParameterMappingCount": 2,
+                    "untypedParameterMappingCount": 1,
+                    "exactDependencyCount": 7,
+                    "unresolvedCount": 6,
+                }
             value["reviewDecisionContract"]["requiredEvidenceAttachmentIds"] = sorted(value["evidenceAttachments"])
         path.write_text(json.dumps(value, sort_keys=True) + "\n")
         return path
@@ -235,6 +255,21 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             packet = self.packet(root, REVIEW.PACKET_SCHEMA_V6)
+            value = self.decide(
+                root,
+                "defer-for-more-evidence",
+                {"observable-gap": "unknown"},
+            )
+            decision = root / "decision.json"
+            decision.write_text(json.dumps(value, sort_keys=True) + "\n")
+            gate = REVIEW.compile_gate(packet, decision)
+            self.assertEqual(gate["status"], "deferred-for-more-evidence")
+            self.assertFalse(gate["allowsCaseContract"])
+
+    def test_v7_program_analyzed_packet_uses_the_same_fail_closed_review_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            packet = self.packet(root, REVIEW.PACKET_SCHEMA_V7)
             value = self.decide(
                 root,
                 "defer-for-more-evidence",
