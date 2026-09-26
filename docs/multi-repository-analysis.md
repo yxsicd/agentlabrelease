@@ -964,6 +964,18 @@ maintainer-adjudicated source/analysis cut plus independent calibration. The
 flywheel transaction can persist the candidates into `difficulty_points` while
 leaving the active `evaluation_cases` and reusable Skills untouched.
 
+For a release-bound Harmony campaign,
+`prepare-release-recursive-feedback.py` adds the missing portable boundary
+between the runtime result and that next-cut bridge. It verifies the immutable
+release closure, retained Harmony acceptance, campaign summary, raw feedback
+and discrimination report together, then emits
+`agentlab.release_recursive_feedback_handoff.v1`. The output preserves the
+candidate mechanism, discrimination score, Wilson-confidence boundary,
+SmartPerf observation/repeatability boundary and exact evidence hashes. It is
+explicitly `next-analysis-review-required`; it does not fabricate the new
+source set or substitute for `propose-feedback-analysis-cut.py` and its
+maintainer review.
+
 The same feedback pass now closes repeatable Harmony performance separation
 into this recursive path without treating performance as a functional failure.
 It emits a performance candidate only when at least two functionally successful

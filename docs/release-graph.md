@@ -96,6 +96,27 @@ valid SmartPerf samples, a negative Oracle whose performance stage was skipped,
 direct `hwlinux` peer identity, and post-run emulator/HDC cleanup. This closes
 the candidate's Linux-emulator gate but not its tagged clean-install gate.
 
+The acceptance verdict is also an input to the recursive analysis loop. Retain
+that transition separately from release qualification with:
+
+```sh
+python3 scripts/prepare-release-recursive-feedback.py \
+  --closure release/closures/v0.1.0-alpha.12.json \
+  --acceptance release/qualifications/alpha12-harmony-acceptance-4a36510/summary.json \
+  --campaign-summary /retained/campaign-output/summary.json \
+  --feedback /retained/campaign-output/assessment-feedback-candidates.json \
+  --discrimination-report /retained/campaign-output/case-discrimination-report.json \
+  --output /retained/alpha12-recursive-feedback.json
+```
+
+The handoff verifies the exact release source, closure, acceptance receipt,
+campaign summary and raw feedback/report bytes. It records the functional
+discrimination result and the measured performance boundary, then points to
+`propose-feedback-analysis-cut.py` as the next executable gate. A single
+SmartPerf observation remains useful retained evidence but cannot produce a
+performance-derived difficulty candidate. The handoff never invents a new
+source set, never changes the frozen case and never authorizes promotion.
+
 After an authorized merge and immutable tag are present, dispatch **Qualify
 tagged developer preview** with the workflow ref set to that exact tag. The
 workflow refuses branch refs and tag/closure mismatches, checks out full history,

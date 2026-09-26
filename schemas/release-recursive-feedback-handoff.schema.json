@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/release-recursive-feedback-handoff.schema.json",
+  "title": "Release-bound recursive assessment-feedback handoff",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "releaseTag",
+    "releaseGitSha",
+    "closure",
+    "harmonyAcceptance",
+    "campaign",
+    "evidence",
+    "discrimination",
+    "candidates",
+    "performanceBoundary",
+    "nextAnalysis",
+    "qualificationBoundary",
+    "automaticPromotion"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.release_recursive_feedback_handoff.v1"},
+    "status": {"const": "next-analysis-review-required"},
+    "releaseTag": {"type": "string", "minLength": 1},
+    "releaseGitSha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "closure": {"$ref": "#/$defs/binding"},
+    "harmonyAcceptance": {"$ref": "#/$defs/binding"},
+    "campaign": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["campaignId", "caseId", "sourceSetSha256", "methodRevision", "summary"],
+      "properties": {
+        "campaignId": {"type": "string", "minLength": 1},
+        "caseId": {"type": "string", "minLength": 1},
+        "sourceSetSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "methodRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "summary": {"$ref": "#/$defs/binding"}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assessmentFeedback", "discriminationReport"],
+      "properties": {
+        "assessmentFeedback": {"$ref": "#/$defs/binding"},
+        "discriminationReport": {"$ref": "#/$defs/binding"}
+      }
+    },
+    "discrimination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "eligible", "score", "validAttemptCount", "wilson95Separated"],
+      "properties": {
+        "decision": {"const": "high-discrimination-candidate"},
+        "eligible": {"const": true},
+        "score": {"type": "number", "minimum": 0, "maximum": 1},
+        "validAttemptCount": {"type": "integer", "minimum": 2},
+        "wilson95Separated": {"type": "boolean"}
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "dimensionId", "primaryDimension", "stageId", "failureMode", "mechanism", "validAttemptCount", "caseSelection", "verificationContract", "automaticPromotion"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "dimensionId": {"type": "string", "minLength": 1},
+          "primaryDimension": {"enum": ["evaluation-feedback", "performance-feedback"]},
+          "stageId": {"type": "string", "minLength": 1},
+          "failureMode": {"type": "string", "minLength": 1},
+          "mechanism": {"type": "string", "minLength": 1},
+          "validAttemptCount": {"type": "integer", "minimum": 1},
+          "failingAttemptCount": {"type": ["integer", "null"], "minimum": 1},
+          "caseSelection": {"type": "object"},
+          "verificationContract": {
+            "type": "object",
+            "required": ["caseReady", "required"],
+            "properties": {
+              "caseReady": {"const": false},
+              "required": {"type": "array", "minItems": 3, "items": {"type": "string"}}
+            }
+          },
+          "automaticPromotion": {"const": false}
+        }
+      }
+    },
+    "performanceBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observationCount", "repeatableProfileCount", "qualifiedForRecursivePerformanceFeedback", "authority"],
+      "properties": {
+        "observationCount": {"type": "integer", "minimum": 0},
+        "repeatableProfileCount": {"type": "integer", "minimum": 0},
+        "qualifiedForRecursivePerformanceFeedback": {"type": "boolean"},
+        "authority": {"type": "object"}
+      }
+    },
+    "nextAnalysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proposer", "requiredChange", "requiredArtifacts", "nextGate"],
+      "properties": {
+        "proposer": {"const": "scripts/propose-feedback-analysis-cut.py"},
+        "requiredChange": {"const": "new-source-set-or-method-revision"},
+        "requiredArtifacts": {"type": "array", "minItems": 4, "items": {"type": "string"}},
+        "nextGate": {"const": "maintainer-adjudication-and-new-analysis-cut"}
+      }
+    },
+    "qualificationBoundary": {"type": "object"},
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "byteLength"],
+      "properties": {
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "byteLength": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}
