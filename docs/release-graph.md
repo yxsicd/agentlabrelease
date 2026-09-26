@@ -96,6 +96,28 @@ valid SmartPerf samples, a negative Oracle whose performance stage was skipped,
 direct `hwlinux` peer identity, and post-run emulator/HDC cleanup. This closes
 the candidate's Linux-emulator gate but not its tagged clean-install gate.
 
+After an authorized merge and immutable tag are present, dispatch **Qualify
+tagged developer preview** with the workflow ref set to that exact tag. The
+workflow refuses branch refs and tag/closure mismatches, checks out full history,
+validates the release graph, installs the closure on a fresh runner, and combines
+the remote-asset, Harmony and clean-install evidence with:
+
+```sh
+python3 scripts/qualify-tagged-developer-preview.py \
+  --closure release/closures/v0.1.0-alpha.12.json \
+  --asset-receipt release/qualifications/alpha12-immutable-assets/summary.json \
+  --harmony-receipt release/qualifications/alpha12-harmony-acceptance-4a36510/summary.json \
+  --install-summary /fresh-runner/summary.json \
+  --environment-lock /fresh-runner/closure-materialized/environment-lock.json \
+  --tag v0.1.0-alpha.12 --tag-sha <exact-tag-commit> \
+  --repository yxsicd/agentlabrelease --run-id <github-run-id> \
+  --event workflow_dispatch --git-root "$PWD" \
+  --output /fresh-runner/developer-preview-qualification.json
+```
+
+The resulting Actions artifact is the final input to release publication. It is
+review-required and cannot move a channel or create a GitHub Release by itself.
+
 Before proposing a tag, independently verify that every referenced GitHub
 Release asset still exists with the closure's exact server-reported size and
 SHA-256, including assets hosted by another repository:
