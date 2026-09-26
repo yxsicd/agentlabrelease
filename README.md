@@ -29,6 +29,11 @@ also exposes interface properties and member accesses as exact AST facts and
 can form non-ready cross-repository candidates from identical compound domain
 identifiers. This closes the earlier explicit-import-only blind spot while
 retaining semantic adjudication and behavior-Oracle gates.
+The first payment-related successor run over exact Harmony IAP and HMS Cordova
+commits produced 60,247 facts and four cross-repository domain contracts. Queue
+triage rejected three unrelated or adjacent contracts and shortlisted the
+`purchase-data` contract for independent review; it is not yet a case and has
+not been automatically promoted.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.

@@ -1098,6 +1098,19 @@ only the weak attempt failed the payment-authority UI Oracle, so all ten were
 rejected as semantically unaligned. The compact result is retained at
 `release/qualifications/alpha13-feedback-analysis-triage-b8aadaa/summary.json`.
 
+A subsequent payment-focused run used exact Harmony IAP client commit
+`59260e2b0f9663be2d35288f4f339b8ce60ae5a3` and HMS Cordova plugin commit
+`8c51815f27f2cb2dea925a6a25db7f522a6e79b9`. Exact Git Blob evidence bound
+two prior-case demands to `dealPurchaseData` and `PurchaseResultInfo`. The
+enhanced analyzer emitted 60,247 facts, 2,411 candidates and four exact compound
+domain contracts. Whole-queue triage rejected `package-name`, `sub-group` and
+`font-size`, then shortlisted `purchase-data` for independent review. The
+compact qualification is retained at
+`release/qualifications/alpha13-payment-feedback-analysis-165bcbd/summary.json`.
+The shortlist still records `semanticAlignmentVerified=false`, `caseReady=false`
+and `automaticPromotion=false`; type/role review and a cross-repository behavior
+Oracle remain required.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \

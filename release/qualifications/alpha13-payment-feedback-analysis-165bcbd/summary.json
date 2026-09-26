@@ -1,0 +1,91 @@
+{
+  "schema": "agentlab.feedback_analysis_semantic_successor_qualification.v1",
+  "qualificationId": "alpha13-payment-feedback-analysis-165bcbd",
+  "status": "one-proposal-shortlisted-review-required",
+  "methodRevision": "165bcbd1d36ec8ba855d97d22707caf888921a13",
+  "sourceSet": {
+    "sha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
+    "sourceSpecSha256": "79614715aae8d5049574563113206d3381263905cbe15707689c3f4097a3788e",
+    "repositories": [
+      {
+        "id": "harmony-iap-client",
+        "repository": "https://gitcode.com/HarmonyOS_Samples/iapkit-sample-clientdemo-arkts.git",
+        "revision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3"
+      },
+      {
+        "id": "hms-cordova-iap",
+        "repository": "https://github.com/HMS-Core/hms-cordova-plugin.git",
+        "revision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+      }
+    ]
+  },
+  "semanticSourceSelection": {
+    "claimSha256": "6b86ae7601a6395dcb1ecc6842cae7b412bec182c8a6294186ffa9e7c3bc4a0c",
+    "receiptSha256": "6204ae80ebd350d066b5cec1a2e229826f878939727dc73154a9ff1203961d6e",
+    "claimCount": 2,
+    "coveredRepositoryCount": 2,
+    "authority": "exact-git-blob-oid-and-content-digest",
+    "semanticAlignmentVerified": false
+  },
+  "analysis": {
+    "requestSha256": "1c2c42b44b4a9564619ae947af980a943513ea542762264499c99ec7b03e3a0f",
+    "analysisRunSha256": "b3000be8e817370d91b747a0cfe61dbc3f2828f8ec5cdb2db02fe89f72ce7461",
+    "analysisReceiptSha256": "2fa49dfb4b8d99414cde41099c519413d9ec3e27e46f4b9b057b92a6d7c0690a",
+    "difficultyEvidenceSha256": "7ce3127d3b401059b5680706486f7e38f156aa6c68c125781302130cb44b9a3f",
+    "facts": 60247,
+    "difficultyCandidates": 2411,
+    "unresolvedModuleReferences": 2407,
+    "crossRepositoryEdges": 0,
+    "sharedExternalModuleContracts": 0,
+    "sharedExternalApiCallContracts": 0,
+    "sharedDomainIdentifierContracts": 4,
+    "unsupportedSources": 0
+  },
+  "domainContracts": [
+    {
+      "candidateId": "difficulty-b9c0886828a5fb157b04fb0f",
+      "normalizedIdentifier": "package-name",
+      "verdict": "reject-semantic-misalignment",
+      "reason": "generic identity field whose Cordova evidence is in the Health plugin"
+    },
+    {
+      "candidateId": "difficulty-57d6c8140d167c843960f66c",
+      "normalizedIdentifier": "sub-group",
+      "verdict": "reject-semantic-misalignment",
+      "reason": "subscription-group relation is adjacent to but does not explain the consumable failure"
+    },
+    {
+      "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+      "normalizedIdentifier": "purchase-data",
+      "verdict": "shortlist-for-independent-review",
+      "affectedRepositoryCount": 2,
+      "affectedFileCount": 5,
+      "evidenceCount": 5,
+      "reason": "directly links Harmony purchase-data handling to the Cordova IAP purchase result path"
+    },
+    {
+      "candidateId": "difficulty-6a2a07d29698a61b0d885708",
+      "normalizedIdentifier": "font-size",
+      "verdict": "reject-semantic-misalignment",
+      "reason": "presentation property in the Cordova Account plugin does not explain payment readiness"
+    }
+  ],
+  "triage": {
+    "proposalQueueSha256": "e36f029fe1c3772d593b0b6c52c3ec0bea620238e4968362f06fae6436ce7f22",
+    "triageReviewSha256": "80f1d6d4bec6b8a5120baa6efd15505b4e3ca91094796d7accf0c062db2307a0",
+    "triageResultSha256": "d46a2c706f73db51060b492aee22e31e72af366671fa4c8f2e4604412cb88239",
+    "reviewedProposalCount": 4,
+    "shortlistedProposalCount": 1,
+    "rejectedProposalCount": 3,
+    "selectedProposalSha256": "d1af5689197a234190319f3009d25ae1e470ba614623f2fce2065211240f63f2",
+    "selectedCutId": "feedback-analysis-cut-db1becf452961cd88679",
+    "caseReady": false,
+    "semanticAlignmentVerified": false,
+    "automaticPromotion": false
+  },
+  "retention": {
+    "authority": "compact-qualification-only",
+    "fullReplayEvidence": "local-or-workflow-artifact",
+    "nextGate": "independent-maintainer-review-of-shortlisted-proposal"
+  }
+}
