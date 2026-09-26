@@ -346,7 +346,22 @@
       "objectExpression": "product",
       "owner": "HomePage",
       "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
-      "projectBoundaryCandidates": [],
+      "projectBoundaryCandidates": [
+        {
+          "markers": [
+            "package.json",
+            "plugin.xml"
+          ],
+          "path": "cordova-plugin-hms-iap"
+        },
+        {
+          "markers": [
+            "package.json",
+            "tsconfig.json"
+          ],
+          "path": "cordova-plugin-hms-iap/example/ionic"
+        }
+      ],
       "property": "purchaseData",
       "repositoryId": "hms-cordova-iap",
       "sourceByteLength": 7731,
@@ -6939,7 +6954,7 @@
     "ownerCount": 5,
     "unresolvedOwnerCount": 0
   },
-  "packetMethodRevision": "fbf2b2182ece4094ad9de294d01d3801e284f9ea",
+  "packetMethodRevision": "17d00b365b9b88ed3faa518ae6bf0f69ea31a0e7",
   "requiredCalibration": {
     "alternativeValid": "constructor-distinct repair passes the same checks",
     "baseline": "expected issue behavior fails while infrastructure remains available",
@@ -7024,8 +7039,8 @@
     "feedback-analysis-queue-shortlist"
   ],
   "sourceProjectBoundary": {
-    "interpretation": "Marker-bearing ancestors are evidence candidates, not a qualified build root or module.",
-    "status": "incomplete"
+    "interpretation": "Harmony, npm and Cordova marker-bearing ancestors are evidence candidates, not a qualified build root or module.",
+    "status": "review-required"
   },
   "sourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
   "status": "independent-semantic-review-required",

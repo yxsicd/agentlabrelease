@@ -86,13 +86,14 @@
   "semanticReviewPacket": {
     "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/review-packets/purchase-data.json",
     "schema": "agentlab.multi_repo_candidate_review_packet.v5",
-    "sha256": "85895c55d72889b6c1670d107cfe7b97cf00231b69941947c23a10e0cc6ad094",
-    "packetMethodRevision": "fbf2b2182ece4094ad9de294d01d3801e284f9ea",
+    "sha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
+    "packetMethodRevision": "17d00b365b9b88ed3faa518ae6bf0f69ea31a0e7",
     "domainFactCount": 5,
     "coveredRepositoryCount": 2,
     "completeOwnerCount": 5,
     "boundedExcerptOwnerCount": 0,
     "unresolvedOwnerCount": 0,
+    "sourceProjectBoundaryStatus": "review-required",
     "status": "independent-semantic-review-required",
     "allowsCaseContract": false,
     "automaticPromotion": false

@@ -1113,9 +1113,10 @@ Oracle remain required.
 The corresponding v5 packet is retained at
 `release/qualifications/alpha13-payment-feedback-analysis-165bcbd/review-packets/purchase-data.json`.
 It binds five exact facts and five complete owners across the two repositories
-without unresolved or bounded owner context. Its Cordova source-project boundary
-remains incomplete, so the packet stays `independent-semantic-review-required`
-and does not authorize a case contract.
+without unresolved or bounded owner context. It discovers the Harmony `entry`
+module and both the Cordova plugin and Ionic example boundary candidates. Those
+roots remain review-required rather than build-qualified, so the packet stays
+`independent-semantic-review-required` and does not authorize a case contract.
 
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
