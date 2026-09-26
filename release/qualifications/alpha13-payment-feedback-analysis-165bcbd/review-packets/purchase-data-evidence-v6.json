@@ -12,18 +12,22 @@
       ]
     },
     "packetMethodRevision": "17d00b365b9b88ed3faa518ae6bf0f69ea31a0e7",
+    "relativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/review-packets/purchase-data.json",
     "schema": "agentlab.multi_repo_candidate_review_packet.v5",
     "sha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
     "status": "independent-semantic-review-required"
   },
   "behaviorOracleVerified": false,
   "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "candidateSha256": "39d7f18d16acd47f8595c69a1a09877e460edd95926bb2b612f87fbf6cfc7b42",
   "evidenceAttachments": {
     "bounded-expression-flow-proposal": {
       "allBoundedPathsEstablished": true,
       "edgeCount": 11,
       "flowCount": 2,
+      "planRelativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/bounded-expression-flow-plan.json",
       "planSha256": "20474b8e485abfafdceb5d904ae49ef3432c3e27901cc10240991a9b424a048b",
+      "relativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/bounded-expression-flow-proposal.json",
       "repositoryCount": 2,
       "schema": "agentlab.bounded_expression_flow_proposal.v1",
       "sha256": "481f8b283f0cfbc6f45cff17da52114b9d535f9b92221c82b22109030c2a3ce5",
@@ -34,6 +38,7 @@
       "environmentIdentity": "hwlinux:Linux-6.8.0-138-generic:x86_64",
       "failedRootCount": 2,
       "qualifiedRootCount": 1,
+      "relativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/build-qualification.json",
       "schema": "agentlab.multi_repo_source_build_qualification.v1",
       "sha256": "fa23945f7aae9027286e97409d67821959361397e0721602dd55639ee68c28d7",
       "sourceProjectBoundaryStatus": "partially-build-qualified",
@@ -42,6 +47,7 @@
     "expression-fact-qualification": {
       "analyzerDigest": "b390b1f92c1a8e0ea944a808b72d2eab984d2ad70f704736240cb08d8fe25010",
       "grammarDigest": "1225ddf76255933de3a9beb660185d270e901491a706e6cd0697146eade2b2b1",
+      "relativePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/expression-fact-qualification.json",
       "repositoryCount": 2,
       "schema": "agentlab.multi_repo_expression_fact_qualification.v1",
       "selectedExpressionFactCount": 70,
@@ -49,7 +55,7 @@
       "status": "expression-facts-qualified-dataflow-unresolved"
     }
   },
-  "packetMethodRevision": "e4123bae6ff9f911214d169b69784f2a118d1513",
+  "packetMethodRevision": "ab40bcc2e1914773243f1b93a68984d9c1f15d62",
   "reviewDecisionContract": {
     "allowedVerdicts": [
       "advance-to-case-contract",

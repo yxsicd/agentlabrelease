@@ -48,6 +48,8 @@ alignment, defect evidence and a behavioral Oracle remain unverified. A compact
 v6 semantic-review envelope now binds the original packet, partial build
 qualification, expression facts and both bounded paths without duplicating the
 large v5 source-context payload; it still requires an independent reviewer.
+Before reviewer answers are accepted, the trusted-main workflow replays all five
+referenced files and retains a digest-bound evidence-verification receipt.
 The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.

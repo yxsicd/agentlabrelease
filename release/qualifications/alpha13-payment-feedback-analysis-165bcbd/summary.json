@@ -142,10 +142,17 @@
   "evidenceEnrichedSemanticReviewPacket": {
     "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/review-packets/purchase-data-evidence-v6.json",
     "schema": "agentlab.multi_repo_candidate_review_packet.v6",
-    "sha256": "3a3beb09994a17410a5b0acf9ccdf0625a434cd6ca9a29f932e1b152f7a41e7f",
-    "packetMethodRevision": "e4123bae6ff9f911214d169b69784f2a118d1513",
+    "sha256": "9a2f6f354c107639851320cc2ac4655a1f40252fd39c3e695f918ca3641d20c4",
+    "packetMethodRevision": "ab40bcc2e1914773243f1b93a68984d9c1f15d62",
     "basePacketSha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
     "evidenceAttachmentCount": 3,
+    "evidenceVerification": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/review-packets/purchase-data-evidence-v6-verification.json",
+      "schema": "agentlab.multi_repo_candidate_semantic_evidence_verification.v1",
+      "sha256": "62a07f66e79ecaca0cae56e9e9306c7368b4fa2e7900f17ba01cd62f14f4949b",
+      "verifiedFileCount": 5,
+      "status": "verified-exact-v6-evidence"
+    },
     "status": "independent-semantic-review-required",
     "semanticAlignmentVerified": false,
     "behaviorOracleVerified": false,
