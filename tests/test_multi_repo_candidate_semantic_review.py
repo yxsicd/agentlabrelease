@@ -113,6 +113,7 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
             REVIEW.PACKET_SCHEMA_V8,
             REVIEW.PACKET_SCHEMA_V9,
             REVIEW.PACKET_SCHEMA_V10,
+            REVIEW.PACKET_SCHEMA_V11,
         }:
             value["domainIdentifierContract"] = {
                 "normalizedIdentifier": "purchase-data",
@@ -132,6 +133,7 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
             REVIEW.PACKET_SCHEMA_V8,
             REVIEW.PACKET_SCHEMA_V9,
             REVIEW.PACKET_SCHEMA_V10,
+            REVIEW.PACKET_SCHEMA_V11,
         }:
             value["basePacket"] = {
                 "schema": REVIEW.PACKET_SCHEMA_V5,
@@ -180,7 +182,7 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
             }
             value["semanticAlignmentVerified"] = False
             value["behaviorOracleVerified"] = False
-            if schema in {REVIEW.PACKET_SCHEMA_V7, REVIEW.PACKET_SCHEMA_V8, REVIEW.PACKET_SCHEMA_V9, REVIEW.PACKET_SCHEMA_V10}:
+            if schema in {REVIEW.PACKET_SCHEMA_V7, REVIEW.PACKET_SCHEMA_V8, REVIEW.PACKET_SCHEMA_V9, REVIEW.PACKET_SCHEMA_V10, REVIEW.PACKET_SCHEMA_V11}:
                 value["evidenceAttachments"]["bounded-expression-flow-program-analysis"] = {
                     "schema": "agentlab.bounded_expression_flow_program_analysis.v1",
                     "sha256": "1" * 64,
@@ -196,8 +198,8 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
                     "exactDependencyCount": 7,
                     "unresolvedCount": 6,
                 }
-            if schema in {REVIEW.PACKET_SCHEMA_V8, REVIEW.PACKET_SCHEMA_V9, REVIEW.PACKET_SCHEMA_V10}:
-                external_v2 = schema in {REVIEW.PACKET_SCHEMA_V9, REVIEW.PACKET_SCHEMA_V10}
+            if schema in {REVIEW.PACKET_SCHEMA_V8, REVIEW.PACKET_SCHEMA_V9, REVIEW.PACKET_SCHEMA_V10, REVIEW.PACKET_SCHEMA_V11}:
+                external_v2 = schema in {REVIEW.PACKET_SCHEMA_V9, REVIEW.PACKET_SCHEMA_V10, REVIEW.PACKET_SCHEMA_V11}
                 value["evidenceAttachments"]["external-sink-contract-qualification"] = {
                     "schema": (
                         "agentlab.external_sink_contract_qualification.v2"
@@ -219,7 +221,7 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
                     "remainingExternalSinkCount": 0 if external_v2 else 1,
                     "remainingUnresolvedCount": 4 if external_v2 else 5,
                 }
-            if schema == REVIEW.PACKET_SCHEMA_V10:
+            if schema in {REVIEW.PACKET_SCHEMA_V10, REVIEW.PACKET_SCHEMA_V11}:
                 value["evidenceAttachments"]["cordova-object-flow-qualification"] = {
                     "schema": "agentlab.cordova_object_flow_qualification.v1",
                     "sha256": "4" * 64,
@@ -234,6 +236,27 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
                     "selectedFlowParameterTypeResolved": True,
                     "memberObjectIdentityResolved": True,
                     "templateObjectIdentityResolved": True,
+                }
+            if schema == REVIEW.PACKET_SCHEMA_V11:
+                value["evidenceAttachments"]["selected-control-flow-qualification"] = {
+                    "schema": "agentlab.selected_control_flow_qualification.v1",
+                    "sha256": "6" * 64,
+                    "relativePath": "release/selected-control-flow.json",
+                    "planSha256": "7" * 64,
+                    "planRelativePath": "release/selected-control-flow-plan.json",
+                    "status": "selected-control-flow-qualified-semantic-review-required",
+                    "programAnalysisSha256": "1" * 64,
+                    "objectFlowQualificationSha256": "4" * 64,
+                    "repositoryCount": 2,
+                    "flowCount": 2,
+                    "resolvedBoundaryCount": 1,
+                    "remainingUnresolvedCount": 0,
+                    "conditionalReachabilityEstablished": True,
+                    "sinkDominanceEstablished": True,
+                    "exceptionExitsEnumerated": True,
+                    "callbackSchedulingResolved": True,
+                    "selectedSourcePathsOnly": True,
+                    "wholeApplicationReachability": False,
                 }
             value["reviewDecisionContract"]["requiredEvidenceAttachmentIds"] = sorted(value["evidenceAttachments"])
         path.write_text(json.dumps(value, sort_keys=True) + "\n")
@@ -363,6 +386,21 @@ class MultiRepoCandidateSemanticReviewTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             packet = self.packet(root, REVIEW.PACKET_SCHEMA_V10)
+            value = self.decide(
+                root,
+                "defer-for-more-evidence",
+                {"observable-gap": "unknown"},
+            )
+            decision = root / "decision.json"
+            decision.write_text(json.dumps(value, sort_keys=True) + "\n")
+            gate = REVIEW.compile_gate(packet, decision)
+            self.assertEqual(gate["status"], "deferred-for-more-evidence")
+            self.assertFalse(gate["allowsCaseContract"])
+
+    def test_v11_selected_control_flow_packet_uses_the_same_fail_closed_review_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            packet = self.packet(root, REVIEW.PACKET_SCHEMA_V11)
             value = self.decide(
                 root,
                 "defer-for-more-evidence",

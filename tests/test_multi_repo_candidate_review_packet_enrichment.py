@@ -390,6 +390,77 @@ class MultiRepoCandidateReviewPacketEnrichmentTests(unittest.TestCase):
             self.assertEqual(receipt_v10["status"], "verified-exact-v10-evidence")
             self.assertEqual(len(receipt_v10["verifiedFiles"]), 10)
 
+            selected_plan = root / "selected-control-flow-plan.json"
+            selected_plan.write_text(json.dumps({
+                "schema": "agentlab.selected_control_flow_plan.v1",
+                "candidateId": "difficulty-test",
+                "sourceSetSha256": "a" * 64,
+            }) + "\n")
+            selected = root / "selected-control-flow.json"
+            selected.write_text(json.dumps({
+                "schema": ENRICH.SELECTED_CONTROL_FLOW_SCHEMA,
+                "status": "selected-control-flow-qualified-semantic-review-required",
+                "candidateId": "difficulty-test",
+                "sourceSetSha256": "a" * 64,
+                "reviewPacketSha256": base_sha,
+                "programAnalysisSha256": hashlib.sha256(program.read_bytes()).hexdigest(),
+                "objectFlowQualificationSha256": hashlib.sha256(object_flow.read_bytes()).hexdigest(),
+                "planSha256": hashlib.sha256(selected_plan.read_bytes()).hexdigest(),
+                "originalUnresolvedCount": 1,
+                "remainingUnresolvedCount": 0,
+                "resolvedUnresolvedIds": ["global:reachability-dominance-exception-flow"],
+                "repositoryCount": 2,
+                "flowCount": 2,
+                "selectedControlFlowResolved": True,
+                "conditionalReachabilityEstablished": True,
+                "sinkDominanceEstablished": True,
+                "exceptionExitsEnumerated": True,
+                "callbackSchedulingResolved": True,
+                "typeResolutionComplete": True,
+                "aliasResolutionComplete": True,
+                "externalCallContractsResolved": True,
+                "reachabilityAndDominanceResolved": True,
+                "qualificationScope": {
+                    "selectedSourcePathsOnly": True,
+                    "wholeApplicationReachability": False,
+                    "externalApiSuccess": False,
+                    "frameworkRuntimeCorrectness": False,
+                },
+                "semanticAlignmentVerified": False,
+                "behaviorOracleVerified": False,
+                "allowsCaseContract": False,
+                "automaticPromotion": False,
+            }) + "\n")
+            packet_v11 = root / "packet-v11.json"
+            packet_v11.write_text(
+                json.dumps(
+                    ENRICH.enrich(
+                        *paths,
+                        "5" * 40,
+                        root,
+                        program,
+                        external_plan,
+                        external,
+                        object_plan,
+                        object_flow,
+                        selected_plan,
+                        selected,
+                    ),
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            value_v11 = json.loads(packet_v11.read_text())
+            self.assertEqual(value_v11["schema"], ENRICH.SCHEMA_V11)
+            self.assertEqual(len(value_v11["evidenceAttachments"]), 7)
+            self.assertEqual(
+                value_v11["risks"][0]["id"],
+                "selected-control-flow-is-not-semantic-or-runtime-proof",
+            )
+            receipt_v11 = REVIEW.verify_evidence(packet_v11, root)
+            self.assertEqual(receipt_v11["status"], "verified-exact-v11-evidence")
+            self.assertEqual(len(receipt_v11["verifiedFiles"]), 12)
+
 
 if __name__ == "__main__":
     unittest.main()

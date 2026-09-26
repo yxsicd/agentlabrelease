@@ -15,6 +15,7 @@ SCHEMA_V7 = "agentlab.multi_repo_candidate_review_packet.v7"
 SCHEMA_V8 = "agentlab.multi_repo_candidate_review_packet.v8"
 SCHEMA_V9 = "agentlab.multi_repo_candidate_review_packet.v9"
 SCHEMA_V10 = "agentlab.multi_repo_candidate_review_packet.v10"
+SCHEMA_V11 = "agentlab.multi_repo_candidate_review_packet.v11"
 BASE_SCHEMA = "agentlab.multi_repo_candidate_review_packet.v5"
 BUILD_SCHEMA = "agentlab.multi_repo_source_build_qualification.v1"
 EXPRESSION_SCHEMA = "agentlab.multi_repo_expression_fact_qualification.v1"
@@ -23,6 +24,7 @@ PROGRAM_ANALYSIS_SCHEMA = "agentlab.bounded_expression_flow_program_analysis.v1"
 EXTERNAL_SINK_SCHEMA = "agentlab.external_sink_contract_qualification.v1"
 EXTERNAL_SINK_SCHEMA_V2 = "agentlab.external_sink_contract_qualification.v2"
 OBJECT_FLOW_SCHEMA = "agentlab.cordova_object_flow_qualification.v1"
+SELECTED_CONTROL_FLOW_SCHEMA = "agentlab.selected_control_flow_qualification.v1"
 DECISION_SCHEMA = "agentlab.multi_repo_candidate_semantic_review.v1"
 REVISION = re.compile(r"[0-9a-f]{40}")
 SHA256 = re.compile(r"[0-9a-f]{64}")
@@ -87,6 +89,8 @@ def enrich(
     external_sink_qualification_path: Path | None = None,
     object_flow_plan_path: Path | None = None,
     object_flow_qualification_path: Path | None = None,
+    selected_control_flow_plan_path: Path | None = None,
+    selected_control_flow_qualification_path: Path | None = None,
 ) -> dict[str, Any]:
     base = load(base_path, "base review packet")
     build = load(build_path, "build qualification")
@@ -118,6 +122,16 @@ def enrich(
         else None
     )
     require(object_flow is None or external_sink is not None, "object-flow qualification requires external sink qualification")
+    require(
+        (selected_control_flow_plan_path is None) == (selected_control_flow_qualification_path is None),
+        "selected control-flow plan and qualification must be supplied together",
+    )
+    selected_control_flow = (
+        load(selected_control_flow_qualification_path, "selected control-flow qualification")
+        if selected_control_flow_qualification_path is not None
+        else None
+    )
+    require(selected_control_flow is None or object_flow is not None, "selected control-flow qualification requires object-flow qualification")
     require(base.get("schema") == BASE_SCHEMA, "base packet is not v5")
     require(base.get("status") == "independent-semantic-review-required", "base packet is not review-required")
     require(base.get("allowsCaseContract") is not True and base.get("automaticPromotion") is False, "base packet can promote")
@@ -153,6 +167,13 @@ def enrich(
         )
         references["objectFlowQualification"] = relative_reference(
             object_flow_qualification_path, evidence_root, "Cordova object-flow qualification"
+        )
+    if selected_control_flow_plan_path is not None and selected_control_flow_qualification_path is not None:
+        references["selectedControlFlowPlan"] = relative_reference(
+            selected_control_flow_plan_path, evidence_root, "selected control-flow plan"
+        )
+        references["selectedControlFlowQualification"] = relative_reference(
+            selected_control_flow_qualification_path, evidence_root, "selected control-flow qualification"
         )
     base_sha256 = digest(base_path)
     common_lineage(build, BUILD_SCHEMA, base, base_sha256, "build qualification")
@@ -260,11 +281,40 @@ def enrich(
         require(object_flow.get("aliasResolutionComplete") is True, "object-flow alias resolution is incomplete")
         require(object_flow.get("reachabilityAndDominanceResolved") is False, "object-flow qualification claims control flow")
 
+    if selected_control_flow is not None and selected_control_flow_plan_path is not None and object_flow_qualification_path is not None and program_analysis_path is not None:
+        common_lineage(selected_control_flow, SELECTED_CONTROL_FLOW_SCHEMA, base, base_sha256, "selected control-flow qualification")
+        require(selected_control_flow.get("status") == "selected-control-flow-qualified-semantic-review-required", "selected control-flow qualification status differs")
+        require(selected_control_flow.get("programAnalysisSha256") == digest(program_analysis_path), "selected control-flow program analysis differs")
+        require(selected_control_flow.get("objectFlowQualificationSha256") == digest(object_flow_qualification_path), "selected control-flow object qualification differs")
+        require(selected_control_flow.get("planSha256") == digest(selected_control_flow_plan_path), "selected control-flow plan differs")
+        require(selected_control_flow.get("originalUnresolvedCount") == 1, "selected control-flow original unresolved count differs")
+        require(selected_control_flow.get("remainingUnresolvedCount") == 0, "selected control-flow retains unresolved program boundaries")
+        require(selected_control_flow.get("repositoryCount") == selected_control_flow.get("flowCount") == 2, "selected control-flow coverage differs")
+        for key in (
+            "selectedControlFlowResolved",
+            "conditionalReachabilityEstablished",
+            "sinkDominanceEstablished",
+            "exceptionExitsEnumerated",
+            "callbackSchedulingResolved",
+            "reachabilityAndDominanceResolved",
+        ):
+            require(selected_control_flow.get(key) is True, f"selected control-flow {key} differs")
+        scope = selected_control_flow.get("qualificationScope") or {}
+        require(
+            scope.get("selectedSourcePathsOnly") is True
+            and scope.get("wholeApplicationReachability") is False
+            and scope.get("externalApiSuccess") is False
+            and scope.get("frameworkRuntimeCorrectness") is False,
+            "selected control-flow scope differs",
+        )
+
     domain_evidence = base.get("domainFactEvidence") or []
     require(isinstance(domain_evidence, list) and domain_evidence, "base domain evidence is absent")
     packet = {
         "schema": (
-            SCHEMA_V10
+            SCHEMA_V11
+            if selected_control_flow is not None
+            else SCHEMA_V10
             if object_flow is not None
             else SCHEMA_V9
             if external_sink is not None and external_sink.get("schema") == EXTERNAL_SINK_SCHEMA_V2
@@ -373,6 +423,27 @@ def enrich(
             "memberObjectIdentityResolved": object_flow["memberObjectIdentityResolved"],
             "templateObjectIdentityResolved": object_flow["templateObjectIdentityResolved"],
         }
+    if selected_control_flow is not None and selected_control_flow_qualification_path is not None:
+        packet["evidenceAttachments"]["selected-control-flow-qualification"] = {
+            "schema": SELECTED_CONTROL_FLOW_SCHEMA,
+            "sha256": digest(selected_control_flow_qualification_path),
+            "relativePath": references["selectedControlFlowQualification"],
+            "planSha256": selected_control_flow["planSha256"],
+            "planRelativePath": references["selectedControlFlowPlan"],
+            "status": selected_control_flow["status"],
+            "programAnalysisSha256": selected_control_flow["programAnalysisSha256"],
+            "objectFlowQualificationSha256": selected_control_flow["objectFlowQualificationSha256"],
+            "repositoryCount": selected_control_flow["repositoryCount"],
+            "flowCount": selected_control_flow["flowCount"],
+            "resolvedBoundaryCount": len(selected_control_flow["resolvedUnresolvedIds"]),
+            "remainingUnresolvedCount": selected_control_flow["remainingUnresolvedCount"],
+            "conditionalReachabilityEstablished": selected_control_flow["conditionalReachabilityEstablished"],
+            "sinkDominanceEstablished": selected_control_flow["sinkDominanceEstablished"],
+            "exceptionExitsEnumerated": selected_control_flow["exceptionExitsEnumerated"],
+            "callbackSchedulingResolved": selected_control_flow["callbackSchedulingResolved"],
+            "selectedSourcePathsOnly": selected_control_flow["qualificationScope"]["selectedSourcePathsOnly"],
+            "wholeApplicationReachability": selected_control_flow["qualificationScope"]["wholeApplicationReachability"],
+        }
     packet["reviewQuestions"] = [
         {"id": "shared-behavior", "question": "Do the exact source facts and bounded paths express one coherent cross-repository purchase-data behavior rather than merely sharing an identifier?"},
         {"id": "observable-gap", "question": "Is there an issue-level defect or extension whose pre-change failure is observable in every required repository?"},
@@ -409,6 +480,11 @@ def enrich(
             "id": "qualified-object-flow-is-not-global-control-flow",
             "statement": "The selected value type and object identity path are exact, but global reachability, dominance, exception flow and callback scheduling remain unresolved.",
         }
+    if selected_control_flow is not None:
+        packet["risks"][0] = {
+            "id": "selected-control-flow-is-not-semantic-or-runtime-proof",
+            "statement": "Conditional source-level reachability, selected-path dominance, async branches and terminal exits are exact for two pinned paths, but they do not prove whole-application reachability, framework correctness, external API success, product intent or a behavior Oracle.",
+        }
     question_ids = [row["id"] for row in packet["reviewQuestions"]]
     risk_ids = [row["id"] for row in packet["risks"]]
     packet["reviewDecisionContract"] = {
@@ -438,6 +514,8 @@ def main() -> None:
     parser.add_argument("--external-sink-qualification", type=Path)
     parser.add_argument("--object-flow-plan", type=Path)
     parser.add_argument("--object-flow-qualification", type=Path)
+    parser.add_argument("--selected-control-flow-plan", type=Path)
+    parser.add_argument("--selected-control-flow-qualification", type=Path)
     parser.add_argument("--method-revision", required=True)
     parser.add_argument("--evidence-root", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
@@ -455,6 +533,8 @@ def main() -> None:
         args.external_sink_qualification,
         args.object_flow_plan,
         args.object_flow_qualification,
+        args.selected_control_flow_plan,
+        args.selected_control_flow_qualification,
     )
     require(not args.output.exists(), "refusing to overwrite enriched review packet")
     args.output.parent.mkdir(parents=True, exist_ok=True)
