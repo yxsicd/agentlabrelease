@@ -5,6 +5,7 @@ metadata:
   agentlab-layer: method
   agentlab-role: maintenance
   agentlab-stage: repository-analysis
+  agentlab-ownership-plane: repository-native
 ---
 
 # Codebase analysis maintenance

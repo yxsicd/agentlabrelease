@@ -11,7 +11,7 @@ on:
         required: true
         type: string
       knowledge_directory:
-        description: Repository-relative committed directory containing maintainer-knowledge-cut.json, candidate-knowledge-binding.json and the four JSONL tables including scope-level Maintainer Skills
+        description: Repository-relative committed directory containing maintainer-knowledge-cut.json, candidate-knowledge-binding.json and the five JSONL tables including scope-level Maintainer Skills and refresh rounds
         required: true
         type: string
       stage:
@@ -81,7 +81,7 @@ jobs:
             relative=$(jq -r --arg table "$table" '.tables[$table].path' "$knowledge_root/maintainer-knowledge-cut.json")
             mkdir -p -- "$AGENTLAB_ROOT/bundle/$(dirname "$relative")"
             cp -- "$knowledge_root/$relative" "$AGENTLAB_ROOT/bundle/$relative"
-          done < <(printf '%s\n' maintainerSkills maintainerScopeSkills programFacts evaluationCases)
+          done < <(printf '%s\n' maintainerSkills maintainerScopeSkills maintainerSkillRefreshRounds programFacts evaluationCases)
           find "$AGENTLAB_ROOT/bundle" -type f -print0 | sort -z | xargs -0 sha256sum >> "$GITHUB_STEP_SUMMARY"
       - name: Publish exact qualified knowledge bundle
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

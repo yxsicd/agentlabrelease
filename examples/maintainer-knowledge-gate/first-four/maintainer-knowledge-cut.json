@@ -26,11 +26,15 @@
   "tables": {
     "maintainerSkills": {
       "path": "maintainer_skills.jsonl",
-      "sha256": "fe4f99028efe5f752eb58319c83ee2b4dbfdf0e91f9d832ac73f83eeeb5c5a6e"
+      "sha256": "49e98ba5d4b7845d98669fc1bd5f0085ad4622f60001f06444f1e7934e75f57a"
     },
     "maintainerScopeSkills": {
       "path": "maintainer_scope_skills.jsonl",
-      "sha256": "df5e32d245d2c8e0deb3eee201283d755aba884f35a88bb1c3d9bce910211107"
+      "sha256": "65532f79e008a0e9a2589f966808fc8225e19ab78f96981a3c3eef273e941a28"
+    },
+    "maintainerSkillRefreshRounds": {
+      "path": "maintainer_skill_refresh_rounds.jsonl",
+      "sha256": "e45406fb7de25b42f6bc3810f418d4c4158af53190756284266865871aeb82fa"
     },
     "programFacts": {
       "path": "program_facts.jsonl",

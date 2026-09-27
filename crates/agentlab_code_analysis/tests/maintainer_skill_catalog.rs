@@ -57,6 +57,7 @@ fn first_four_catalog_partitions_every_tracked_file_into_maintainer_scope_skills
         assert_eq!(row["schema"], "agentlab.maintainer_scope_skill.v1");
         assert_eq!(row["skillLayer"], "instance");
         assert_eq!(row["stage"], "repository-scope");
+        assert_eq!(row["ownershipPlane"], "target-operations");
         let id = row["id"].as_str().unwrap();
         assert!(ids.insert(id.to_owned()), "duplicate scope Skill {id}");
         assert!(!id.ends_with('-'));

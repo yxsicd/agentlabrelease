@@ -281,15 +281,61 @@ pub fn validate_gate(
 
     let skills_path = table_path(knowledge_cut_path, &cut, "maintainerSkills")?;
     let scope_skills_path = table_path(knowledge_cut_path, &cut, "maintainerScopeSkills")?;
+    let refresh_rounds_path = table_path(knowledge_cut_path, &cut, "maintainerSkillRefreshRounds")?;
     let facts_path = table_path(knowledge_cut_path, &cut, "programFacts")?;
     let cases_path = table_path(knowledge_cut_path, &cut, "evaluationCases")?;
     let skills = load_jsonl(&skills_path, "maintainer skills", true)?;
     let scope_skills = load_jsonl(&scope_skills_path, "maintainer scope Skills", true)?;
+    let refresh_rounds = load_jsonl(
+        &refresh_rounds_path,
+        "Maintainer Skill refresh rounds",
+        true,
+    )?;
     let facts = load_jsonl(&facts_path, "program facts", true)?;
     let cases = load_jsonl(
         &cases_path,
         "evaluation cases",
         matches!(stage, GateStage::Calibration | GateStage::Freeze),
+    )?;
+    for (id, row) in &skills {
+        require(
+            row["ownershipPlane"].as_str() == Some("target-operations"),
+            format!("maintainer Skill {id} is not target-operations knowledge"),
+        )?;
+    }
+    let mut ordered_rounds: Vec<_> = refresh_rounds.values().collect();
+    ordered_rounds.sort_by_key(|row| row["roundIndex"].as_u64().unwrap_or(0));
+    let mut previous_round_digest: Option<String> = None;
+    for (offset, row) in ordered_rounds.iter().enumerate() {
+        let expected_index = (offset + 1) as u64;
+        require(
+            row["roundIndex"].as_u64() == Some(expected_index),
+            "Maintainer Skill refresh rounds are not contiguous",
+        )?;
+        require(
+            row["ownershipPlane"].as_str() == Some("target-operations")
+                && row["automaticPromotion"].as_bool() == Some(false),
+            "Maintainer Skill refresh round crosses its ownership boundary",
+        )?;
+        require(
+            row["parentRoundSha256"].as_str() == previous_round_digest.as_deref(),
+            "Maintainer Skill refresh-round parent differs",
+        )?;
+        previous_round_digest = Some(digest(
+            &serde_json::to_vec(row).map_err(|error| error.to_string())?,
+        ));
+    }
+    let latest_round = ordered_rounds
+        .last()
+        .ok_or_else(|| "Maintainer Skill refresh history is empty".to_owned())?;
+    require(
+        latest_round["tables"]["processSkillsSha256"].as_str()
+            == Some(file_digest(&skills_path)?.as_str())
+            && latest_round["tables"]["scopeSkillsSha256"].as_str()
+                == Some(file_digest(&scope_skills_path)?.as_str())
+            && latest_round["tables"]["programFactsSha256"].as_str()
+                == Some(file_digest(&facts_path)?.as_str()),
+        "latest Maintainer Skill refresh round does not bind the current tables",
     )?;
     let mut scope_skill_repositories = BTreeSet::new();
     for (id, row) in &scope_skills {
@@ -305,7 +351,8 @@ pub fn validate_gate(
         )?;
         require(
             row["skillLayer"].as_str() == Some("instance")
-                && row["stage"].as_str() == Some("repository-scope"),
+                && row["stage"].as_str() == Some("repository-scope")
+                && row["ownershipPlane"].as_str() == Some("target-operations"),
             format!("maintainer scope Skill {id} is not an instance repository-scope Skill"),
         )?;
         require(
@@ -375,6 +422,10 @@ pub fn validate_gate(
             require(
                 row["skillLayer"].as_str() == Some("instance"),
                 format!("maintainer Skill {id} is not an instance Skill"),
+            )?;
+            require(
+                row["ownershipPlane"].as_str() == Some("target-operations"),
+                format!("maintainer Skill {id} is not target-operations knowledge"),
             )?;
             if let Some(stage) = row["stage"].as_str() {
                 stages.insert(stage.to_owned());
@@ -544,6 +595,8 @@ pub fn validate_gate(
         "repositoryCount":source_repositories.len(),
         "maintainerSkillCount":all_skill_ids.len(),
         "maintainerScopeSkillCount":all_scope_skill_ids.len(),
+        "maintainerSkillRefreshRoundCount":ordered_rounds.len(),
+        "latestMaintainerSkillRefreshRound":latest_round["id"],
         "programFactCount":all_fact_ids.len(),
         "analysisRecordCount":all_analysis_ids.len(),
         "caseBound":matches!(stage, GateStage::Calibration | GateStage::Freeze),

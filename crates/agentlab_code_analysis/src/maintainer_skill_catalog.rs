@@ -407,6 +407,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "id":format!("skill-scope-{}-{}", slug(id), slug(&path)),
                 "skillLayer":"instance",
                 "stage":"repository-scope",
+                "ownershipPlane":"target-operations",
                 "assetClass":"reusable-knowledge",
                 "status":"source-supported",
                 "repositoryId":id,

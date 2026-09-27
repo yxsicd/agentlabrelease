@@ -6,6 +6,10 @@ three process Skills per repository (`repository-analysis`, `program-analysis`,
 and `seed-extraction`) plus scope-level Skills for every maintainable source
 boundary.
 
+These are all `target-operations` Skills: they maintain knowledge of test-object
+repositories. The repository-native method Skills under `skills/` maintain
+AgentLab itself and are a separate ownership plane.
+
 | Repository | Actual boundary | Current hard fact | Mining implication |
 | --- | --- | --- | --- |
 | `code-workshop` | One multi-product Harmony application | 1,512 tracked files; 556 analyzed source candidates | Expand beyond the six already selected scenario families |
@@ -35,6 +39,13 @@ composition, source and test inventory, build/test entrypoints, external
 dependency surface, and Git Blob evidence. This is the complete structural
 maintainer map; deeper behavior facts and executable Oracles remain separate,
 revision-bound tables rather than being guessed from paths.
+
+[`maintainer_skill_refresh_rounds.jsonl`](maintainer_skill_refresh_rounds.jsonl)
+records the iterative lineage. Round 1 established the structural baseline;
+round 2 separated repository-native and target-operations ownership and bound
+the refreshed tables. Its decision remains `continue`: later rounds must deepen
+behavior contracts, program relations, and executable Oracle coverage rather
+than treating the first code read as final.
 
 The empty `evaluation_cases.jsonl` is deliberate. These rows are repository
 knowledge and candidate-mining policy, not approved cases. A future candidate

@@ -16,10 +16,11 @@
     "tables": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["maintainerSkills", "maintainerScopeSkills", "programFacts", "evaluationCases"],
+      "required": ["maintainerSkills", "maintainerScopeSkills", "maintainerSkillRefreshRounds", "programFacts", "evaluationCases"],
       "properties": {
         "maintainerSkills": { "$ref": "#/$defs/table" },
         "maintainerScopeSkills": { "$ref": "#/$defs/table" },
+        "maintainerSkillRefreshRounds": { "$ref": "#/$defs/table" },
         "programFacts": { "$ref": "#/$defs/table" },
         "evaluationCases": { "$ref": "#/$defs/table" }
       }

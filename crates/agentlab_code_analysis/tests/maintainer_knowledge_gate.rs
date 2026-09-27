@@ -69,9 +69,9 @@ fn fixture() -> Fixture {
     );
     let skills = root.join("maintainer_skills.jsonl");
     let skill_rows = [
-        json!({"id":"skill-repository","skillLayer":"instance","stage":"repository-analysis","sourceRevision":revision}),
-        json!({"id":"skill-program","skillLayer":"instance","stage":"program-analysis","sourceRevision":revision}),
-        json!({"id":"skill-seed","skillLayer":"instance","stage":"seed-extraction","sourceRevision":revision}),
+        json!({"id":"skill-repository","skillLayer":"instance","ownershipPlane":"target-operations","stage":"repository-analysis","sourceRevision":revision}),
+        json!({"id":"skill-program","skillLayer":"instance","ownershipPlane":"target-operations","stage":"program-analysis","sourceRevision":revision}),
+        json!({"id":"skill-seed","skillLayer":"instance","ownershipPlane":"target-operations","stage":"seed-extraction","sourceRevision":revision}),
     ];
     fs::write(
         &skills,
@@ -100,10 +100,31 @@ fn fixture() -> Fixture {
                 "id":"skill-scope-a",
                 "skillLayer":"instance",
                 "stage":"repository-scope",
+                "ownershipPlane":"target-operations",
                 "repositoryId":"repo-a",
                 "sourceRevision":revision,
                 "trackedFileCount":1,
                 "automaticPromotion":false
+            })
+        ),
+    )
+    .unwrap();
+    let rounds = root.join("maintainer_skill_refresh_rounds.jsonl");
+    fs::write(
+        &rounds,
+        format!(
+            "{}\n",
+            json!({
+                "id":"round-1",
+                "roundIndex":1,
+                "parentRoundSha256":null,
+                "ownershipPlane":"target-operations",
+                "automaticPromotion":false,
+                "tables":{
+                    "processSkillsSha256":digest(&fs::read(&skills).unwrap()),
+                    "scopeSkillsSha256":digest(&fs::read(&scope_skills).unwrap()),
+                    "programFactsSha256":digest(&fs::read(&facts).unwrap())
+                }
             })
         ),
     )
@@ -120,6 +141,7 @@ fn fixture() -> Fixture {
             "tables":{
                 "maintainerSkills":{"path":"maintainer_skills.jsonl","sha256":digest(&fs::read(&skills).unwrap())},
                 "maintainerScopeSkills":{"path":"maintainer_scope_skills.jsonl","sha256":digest(&fs::read(&scope_skills).unwrap())},
+                "maintainerSkillRefreshRounds":{"path":"maintainer_skill_refresh_rounds.jsonl","sha256":digest(&fs::read(&rounds).unwrap())},
                 "programFacts":{"path":"program_facts.jsonl","sha256":digest(&fs::read(&facts).unwrap())},
                 "evaluationCases":{"path":"evaluation_cases.jsonl","sha256":digest(&fs::read(&cases).unwrap())}
             },
@@ -193,6 +215,8 @@ fn candidate_gate_accepts_exact_revision_bound_knowledge() {
     assert_eq!(receipt["repositoryCount"], 1);
     assert_eq!(receipt["maintainerSkillCount"], 3);
     assert_eq!(receipt["maintainerScopeSkillCount"], 1);
+    assert_eq!(receipt["maintainerSkillRefreshRoundCount"], 1);
+    assert_eq!(receipt["latestMaintainerSkillRefreshRound"], "round-1");
     assert_eq!(receipt["programFactCount"], 1);
     assert_eq!(receipt["analysisRecordCount"], 1);
 }
@@ -231,6 +255,40 @@ fn candidate_gate_rejects_unknown_maintainer_scope_skill() {
     )
     .unwrap_err();
     assert!(error.contains("unknown maintainer scope Skill"), "{error}");
+}
+
+#[test]
+fn candidate_gate_rejects_refresh_round_not_bound_to_current_skills() {
+    let fixture = fixture();
+    let rounds_path = fixture.root.join("maintainer_skill_refresh_rounds.jsonl");
+    let mut round: Value =
+        serde_json::from_str(fs::read_to_string(&rounds_path).unwrap().trim()).unwrap();
+    round["tables"]["processSkillsSha256"] = json!("0".repeat(64));
+    fs::write(
+        &rounds_path,
+        format!("{}\n", serde_json::to_string(&round).unwrap()),
+    )
+    .unwrap();
+    let mut cut: Value = serde_json::from_slice(&fs::read(&fixture.cut).unwrap()).unwrap();
+    cut["tables"]["maintainerSkillRefreshRounds"]["sha256"] =
+        json!(digest(&fs::read(&rounds_path).unwrap()));
+    write_json(&fixture.cut, &cut);
+    let mut binding: Value = serde_json::from_slice(&fs::read(&fixture.binding).unwrap()).unwrap();
+    binding["knowledgeCutSha256"] = json!(digest(&fs::read(&fixture.cut).unwrap()));
+    write_json(&fixture.binding, &binding);
+    let error = validate_gate(
+        GateStage::Candidate,
+        &fixture.source,
+        &fixture.difficulty,
+        &fixture.cut,
+        &fixture.binding,
+        "difficulty-a",
+    )
+    .unwrap_err();
+    assert!(
+        error.contains("latest Maintainer Skill refresh round"),
+        "{error}"
+    );
 }
 
 #[test]

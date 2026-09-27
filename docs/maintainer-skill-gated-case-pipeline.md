@@ -24,6 +24,23 @@ The order is normative. A feedback signal may choose the next source set or
 rank already grounded candidates, but it MUST NOT replace repository knowledge,
 program analysis, independent calibration, or cohort review.
 
+## Ownership planes and refresh rounds
+
+Repository-native Maintainer Skills live under `skills/` and maintain AgentLab
+itself. They are reviewed and released with this repository. Target-operations
+Maintainer Skills describe repositories used as test objects. They live in a
+revision-bound knowledge cut and must not be mistaken for instructions that
+govern AgentLab source maintenance.
+
+Target-operations knowledge is iterative. A first read establishes a structural
+baseline; later rounds revisit weak behavior contracts, cross-file or
+cross-language relations, state transitions, build/test evidence, and Oracles.
+Each row in `maintainer_skill_refresh_rounds.jsonl` binds the exact output table
+hashes, its parent round, coverage, changes, residual gaps, and a
+`continue | converged | blocked` decision. New rounds append to the lineage;
+they do not silently rewrite the prior round. The hard gate accepts only a
+contiguous lineage whose latest round binds the current Skill and fact tables.
+
 ## Hard requirements
 
 1. Every repository is pinned by URL and 40-hex Git revision.
@@ -80,7 +97,8 @@ independent approval.
 
 The authoritative schemas are
 [`maintainer-knowledge-cut.schema.json`](../schemas/maintainer-knowledge-cut.schema.json),
-[`maintainer-scope-skill.schema.json`](../schemas/maintainer-scope-skill.schema.json), and
+[`maintainer-scope-skill.schema.json`](../schemas/maintainer-scope-skill.schema.json),
+[`maintainer-skill-refresh-round.schema.json`](../schemas/maintainer-skill-refresh-round.schema.json), and
 [`candidate-knowledge-binding.schema.json`](../schemas/candidate-knowledge-binding.schema.json).
 
 ## Migration rule for existing evidence

@@ -54,6 +54,7 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     for table in [
         "maintainerSkills",
         "maintainerScopeSkills",
+        "maintainerSkillRefreshRounds",
         "programFacts",
         "evaluationCases",
     ] {
@@ -81,8 +82,10 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
 
     let skills = rows(&baseline.join("maintainer_skills.jsonl"));
     let facts = rows(&baseline.join("program_facts.jsonl"));
+    let refresh_rounds = rows(&baseline.join("maintainer_skill_refresh_rounds.jsonl"));
     assert_eq!(skills.len(), 12);
     assert_eq!(facts.len(), 20);
+    assert_eq!(refresh_rounds.len(), 2);
     assert!(
         fs::read_to_string(baseline.join("evaluation_cases.jsonl"))
             .unwrap()
@@ -93,6 +96,7 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     let mut stages_by_repository: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     for (skill_id, skill) in &skills {
         assert_eq!(skill["skillLayer"], "instance", "{skill_id}");
+        assert_eq!(skill["ownershipPlane"], "target-operations", "{skill_id}");
         let repository_id = skill["repositoryId"].as_str().unwrap();
         let revision = repositories.get(repository_id).unwrap();
         assert_eq!(skill["sourceRevision"].as_str().unwrap(), revision);
@@ -158,4 +162,23 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
             }
         }
     }
+
+    let first = &refresh_rounds["first-four-round-1-structural-baseline"];
+    let second = &refresh_rounds["first-four-round-2-ownership-and-lineage"];
+    assert_eq!(first["roundIndex"], 1);
+    assert_eq!(first["parentRoundSha256"], Value::Null);
+    assert_eq!(
+        second["parentRoundSha256"],
+        digest(&serde_json::to_vec(first).unwrap())
+    );
+    assert_eq!(second["roundIndex"], 2);
+    assert_eq!(second["decision"], "continue");
+    assert_eq!(
+        second["tables"]["processSkillsSha256"],
+        digest(&fs::read(baseline.join("maintainer_skills.jsonl")).unwrap())
+    );
+    assert_eq!(
+        second["tables"]["scopeSkillsSha256"],
+        digest(&fs::read(baseline.join("maintainer_scope_skills.jsonl")).unwrap())
+    );
 }

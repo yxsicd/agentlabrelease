@@ -5,6 +5,7 @@ metadata:
   agentlab-layer: method
   agentlab-role: maintenance
   agentlab-stage: seed-extraction
+  agentlab-ownership-plane: repository-native
 ---
 
 # Seed extraction maintenance
