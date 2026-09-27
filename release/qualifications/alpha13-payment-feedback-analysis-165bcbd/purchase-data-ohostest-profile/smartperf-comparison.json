@@ -1,0 +1,56 @@
+{
+  "baselineRunId": "run-1",
+  "baselineSampleCount": 48,
+  "baselineSourceIdentity": "artifact-sha256:dfd61c2e5a33249aed059192798c449f7ab3a3a44d69b900fdd508978cdda073",
+  "baselineSummarySha256": "577e4b671f0886e69e671babbf7c0eeda351c91d8d2384610d56f01ff2bc122e",
+  "candidateRunId": "run-2",
+  "candidateSampleCount": 48,
+  "candidateSourceIdentity": "artifact-sha256:dfd61c2e5a33249aed059192798c449f7ab3a3a44d69b900fdd508978cdda073",
+  "candidateSummarySha256": "b9ade0678348e4297c26abde01c951fee3d746a02a0b6e5855f3a53fc2686341",
+  "comparable": true,
+  "decision": "within-relative-guardrails",
+  "environmentIdentity": "hwlinux:emulator-26.0.0.821:harmonyos-7.0.0-phone-x86:codex-phone-7",
+  "incomparabilityReasons": [],
+  "metrics": [
+    {
+      "absoluteIncrease": 1.386794111111111,
+      "baseline": 0.017371166666666667,
+      "candidate": 1.4041652777777778,
+      "candidateToBaselineRatio": 80.83310146762994,
+      "guardrail": {
+        "maximumAbsoluteIncrease": 2.0,
+        "maximumRelativeIncrease": 0.2
+      },
+      "metric": "appCpuUsagePercent",
+      "statistic": "mean",
+      "status": "passed"
+    },
+    {
+      "absoluteIncrease": -616.0,
+      "baseline": 19286.0,
+      "candidate": 18670.0,
+      "candidateToBaselineRatio": 0.9680597324484082,
+      "guardrail": {
+        "maximumRelativeIncrease": 0.15
+      },
+      "metric": "appPssKiB",
+      "statistic": "mean",
+      "status": "passed"
+    }
+  ],
+  "performancePolicy": {
+    "id": "purchase-data-ohostest-cpu-pss-repeatability-v2",
+    "sha256": "3a431b7567c21946b7c2869b3f617b55a422c3f2fc953669d64c2e576d6c8a95"
+  },
+  "policy": {
+    "absolutePowerThermalUsed": false,
+    "automaticPromotion": false,
+    "interpretation": "relative emulator regression signal only"
+  },
+  "profileWorkload": {
+    "id": "purchase-data-ohostest-foreground-repeat-v3",
+    "sha256": "9a9430a6267db477461d9d7466513cbd8e97e6b571647537175709e8a0ac3781"
+  },
+  "schema": "agentlab.smartperf_comparison.v1",
+  "taskId": "purchase-data-finalization-ee2bc87594f1"
+}

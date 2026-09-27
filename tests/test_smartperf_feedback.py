@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import pathlib
+import tempfile
 import unittest
 
 
@@ -157,6 +159,37 @@ order:3 pss=174553
         self.assertEqual(value["canonicalMetrics"]["appCpuUsagePercent"]["mean"], 2.0)
         self.assertNotIn("frameIntervalMs", value["canonicalMetrics"])
 
+    def test_markerless_device_na_jitters_are_unavailable_not_zero(self) -> None:
+        raw = b"""\
+order:0 ProcCpuUsage=1.0
+order:1 fps=0
+order:2 fpsJitters=NA
+order:3 pss=174551
+order:0 ProcCpuUsage=2.0
+order:1 fps=0
+order:2 fpsJitters=
+order:3 pss=174552
+order:0 ProcCpuUsage=3.0
+order:1 fps=0
+order:2 fpsJitters=NA
+order:3 pss=174553
+"""
+        value = summary(raw, "artifact:device-na", "device-na")
+        self.assertTrue(value["profileValid"])
+        self.assertEqual(value["sampleCount"], 3)
+        self.assertEqual(value["canonicalMetrics"]["appCpuUsagePercent"]["mean"], 2.0)
+        self.assertNotIn("frameIntervalMs", value["canonicalMetrics"])
+
+    def test_unknown_jitter_sentinel_stays_fail_closed(self) -> None:
+        raw = b"""\
+order:0 ProcCpuUsage=1.0
+order:1 fps=0
+order:2 fpsJitters=unknown
+order:3 pss=174551
+"""
+        with self.assertRaisesRegex(ValueError, "fpsJitters"):
+            summary(raw, "artifact:unknown-jitter", "unknown-jitter")
+
     def test_policy_bound_profile_accepts_cpu_pss_without_frame_telemetry(self) -> None:
         raw = b"""\
 order:0 ProcCpuUsage=5.0
@@ -243,6 +276,63 @@ order:3 pss=172000
         self.assertFalse(report["policy"]["automaticPromotion"])
         self.assertEqual(len(report["baselineSummarySha256"]), 64)
         self.assertEqual(len(report["candidateSummarySha256"]), 64)
+
+    def test_policy_absolute_noise_floor_accepts_near_zero_cpu_baseline(self) -> None:
+        baseline = policy_summary(
+            raw_profile(60, 0.01, 100000, 16), "artifact:base", "base"
+        )
+        candidate = policy_summary(
+            raw_profile(60, 1.39, 102000, 16), "artifact:candidate", "candidate"
+        )
+        for summary_value in (baseline, candidate):
+            cpu = next(
+                row
+                for row in summary_value["performancePolicy"]["requiredMetrics"]
+                if row["metric"] == "appCpuUsagePercent"
+            )
+            cpu["maximumAbsoluteIncrease"] = 2.0
+        report = COMPARE.build_comparison(
+            baseline, candidate, 0.90, 0.20, 0.15, 0.20
+        )
+        cpu = next(
+            row for row in report["metrics"] if row["metric"] == "appCpuUsagePercent"
+        )
+        self.assertEqual(report["decision"], "within-relative-guardrails")
+        self.assertEqual(cpu["status"], "passed")
+        self.assertAlmostEqual(cpu["absoluteIncrease"], 1.38)
+        self.assertEqual(cpu["guardrail"]["maximumAbsoluteIncrease"], 2.0)
+
+    def test_policy_absolute_noise_floor_still_rejects_large_cpu_delta(self) -> None:
+        baseline = policy_summary(
+            raw_profile(60, 0.01, 100000, 16), "artifact:base", "base"
+        )
+        candidate = policy_summary(
+            raw_profile(60, 2.5, 102000, 16), "artifact:candidate", "candidate"
+        )
+        for summary_value in (baseline, candidate):
+            cpu = next(
+                row
+                for row in summary_value["performancePolicy"]["requiredMetrics"]
+                if row["metric"] == "appCpuUsagePercent"
+            )
+            cpu["maximumAbsoluteIncrease"] = 2.0
+        report = COMPARE.build_comparison(
+            baseline, candidate, 0.90, 0.20, 0.15, 0.20
+        )
+        cpu = next(
+            row for row in report["metrics"] if row["metric"] == "appCpuUsagePercent"
+        )
+        self.assertEqual(report["decision"], "performance-regression-candidate")
+        self.assertEqual(cpu["status"], "regressed")
+
+    def test_policy_rejects_negative_absolute_noise_floor(self) -> None:
+        policy = json.loads(POLICY_PATH.read_text())
+        policy["requiredMetrics"][0]["maximumAbsoluteIncrease"] = -0.1
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "policy.json"
+            path.write_text(json.dumps(policy))
+            with self.assertRaisesRegex(ValueError, "maximumRelativeIncrease"):
+                SUMMARY.load_policy(path)
 
     def test_regression_is_evidence_candidate_not_automatic_rejection(self) -> None:
         baseline = summary(raw_profile(60, 10, 100000, 16.0), "artifact:base", "base")

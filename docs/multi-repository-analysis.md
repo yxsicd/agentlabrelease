@@ -601,6 +601,14 @@ count, inconsistent totals, target/install failure, or later report tampering
 is rejected. Local Test and DevEco Testing Hypium UI still need separate native
 execution adapters.
 
+The adapter's explicit `--skip-install` mode supports same-boot performance
+repetitions after an operator has already installed and verified the exact HAP
+pair. It preserves the application PID that SmartPerf bound, records
+`packagesInstalled: false`, and still binds the package bytes. This is only a
+profiling orchestration boundary; the enclosing evidence must retain the
+one-time install result and may not reinterpret a skipped install as a fresh
+deployment qualification.
+
 The corresponding build-side producer is
 [`build-harmony-evaluation-artifact.py`](../scripts/build-harmony-evaluation-artifact.py).
 It never copies a checkout's current working tree. For every source in the
@@ -1373,6 +1381,26 @@ source-seam-only. Live vendor IAP, a real device, independent semantic/Oracle
 review and performance/power/thermal calibration remain false. The bridge
 therefore strengthens the candidate's review evidence but deliberately keeps
 `behaviorOracleVerified`, `allowsCaseContract` and `automaticPromotion` false.
+
+The next retained layer binds that functional evidence to a bounded emulator
+performance run. Two fresh cold boots each collected 48 SmartPerf samples while
+six exact `ohosTest` suites ran within the measurement window; all 12 suites
+passed 7/7. The profile runner installed the exact HAP pair once per boot and
+then used explicit `--skip-install`, preventing `install -r` from replacing the
+PID SmartPerf had bound. CPU and PSS passed the predeclared same-environment
+policy; FPS, frame interval and GPU remain observed-only, and absolute power and
+thermal remain unavailable.
+
+The Rust binary
+`agentlab-purchase-data-ohostest-profile-qualification` revalidates the runtime
+bridge, candidate receipt/report, policy/workload identities, 12 receipt/report
+pairs, temporal containment, 96 samples, comparison verdict, tool digests and
+the empty final HDC/process state. The retained status is
+`linux-emulator-functional-and-relative-performance-repeatability-qualified-independent-review-required`.
+This closes repeatable Linux-emulator function-plus-relative-profile execution,
+not the case contract: independent semantic/Oracle review, a controlled
+baseline/reference/wrong performance calibration, upstream publication and
+exact-revision reexecution remain the next gates.
 
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \

@@ -1,1 +1,2 @@
 *.patch whitespace=-trailing-space
+release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-ohostest-profile/** whitespace=-trailing-space

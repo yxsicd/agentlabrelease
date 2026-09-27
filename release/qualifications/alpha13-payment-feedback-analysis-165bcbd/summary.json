@@ -542,6 +542,29 @@
       "automaticPromotion": false,
       "status": "harmony-runtime-oracle-bridge-qualified-independent-review-required"
     },
+    "ohosTestProfileQualification": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-ohostest-profile-qualification.json",
+      "evidencePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-ohostest-profile",
+      "schema": "agentlab.purchase_data_ohostest_profile_qualification.v1",
+      "sha256": "f844673c115b0be92ad8cfab26f5617bd15b9aa0ea634f31b7eac47679ec341e",
+      "implementation": "crates/agentlab_code_analysis/src/purchase_data_ohostest_profile_qualification.rs",
+      "binary": "agentlab-purchase-data-ohostest-profile-qualification",
+      "language": "rust",
+      "profileRunCount": 2,
+      "profileSampleCount": 96,
+      "functionalRepeatCount": 12,
+      "functionalAssertionCount": 84,
+      "emulatorRelativePerformanceRepeatabilityQualified": true,
+      "performanceCalibrated": false,
+      "liveVendorIapExecuted": false,
+      "realDeviceExecuted": false,
+      "absolutePowerThermalQualified": false,
+      "independentReviewVerified": false,
+      "behaviorOracleVerified": false,
+      "allowsCaseContract": false,
+      "automaticPromotion": false,
+      "status": "linux-emulator-functional-and-relative-performance-repeatability-qualified-independent-review-required"
+    },
     "semanticAlignmentVerified": false,
     "behaviorOracleVerified": false,
     "allowsCaseContract": false,
@@ -551,6 +574,6 @@
   "retention": {
     "authority": "compact-qualification-and-exact-source-patch",
     "fullReplayEvidence": "retained-source-review-packet-plus-run-addressed-workflow-artifact",
-    "nextGate": "independent-semantic-and-oracle-review-then-candidate-upstream-publication-and-exact-revision-reexecution"
+    "nextGate": "independent-semantic-and-oracle-review-then-controlled-baseline-reference-wrong-performance-calibration-and-upstream-reexecution"
   }
 }

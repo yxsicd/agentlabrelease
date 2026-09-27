@@ -29,6 +29,7 @@
         "test": {"$ref": "#/$defs/fileBinding"}
       }
     },
+    "packagesInstalled": {"type": "boolean"},
     "report": {"$ref": "#/$defs/fileBinding"},
     "logs": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/fileBinding"}},
     "startedAt": {"type": "string", "minLength": 1},

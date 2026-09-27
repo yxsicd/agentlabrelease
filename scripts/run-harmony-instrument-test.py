@@ -214,7 +214,8 @@ def execute(
     preflight_ok = not preflight["timedOut"] and preflight["exitCode"] == 0 and args.target in listed_targets
 
     install_ok = preflight_ok
-    if preflight_ok:
+    skip_install = getattr(args, "skip_install", False)
+    if preflight_ok and not skip_install:
         for hap in (args.app_hap, args.test_hap):
             result = run(
                 [str(hdc), "-t", args.target, "install", "-r", str(hap.resolve(strict=True))],
@@ -296,6 +297,7 @@ def execute(
             "app": binding(args.app_hap.resolve(strict=True), args.app_hap.name),
             "test": binding(args.test_hap.resolve(strict=True), args.test_hap.name),
         },
+        "packagesInstalled": not skip_install,
         "report": binding(report_path, "native-report.json"),
         "logs": [binding(path, f"logs/{path.name}") for path in sorted(logs_dir.iterdir())],
         "startedAt": commands[0]["startedAt"],
@@ -320,6 +322,11 @@ def main() -> int:
     parser.add_argument("--module", required=True)
     parser.add_argument("--runner", default="OpenHarmonyTestRunner")
     parser.add_argument("--test-class")
+    parser.add_argument(
+        "--skip-install",
+        action="store_true",
+        help="run the bound test against packages installed and verified by the caller",
+    )
     parser.add_argument("--timeout-seconds", type=int, default=300)
     parser.add_argument("--case-timeout-ms", type=int, default=15000)
     parser.add_argument("--output-dir", type=Path, required=True)

@@ -1,0 +1,5 @@
+KVM is supported and accessible
+QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/tmp/runtime-huawei'
+QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/tmp/runtime-huawei'
+audio: Could not init `pa' audio driver
+audio: warning: Using timer based audio emulation

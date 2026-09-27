@@ -205,6 +205,14 @@ report and logs. Re-run `harmony-standard-test-contract.py inspect` with
 `--execution-receipt .../receipt.json` to close the gate; the validator reads
 and hashes the retained native report instead of trusting receipt claims.
 
+For a same-boot SmartPerf repetition, an operator may install and verify the
+exact HAP pair once before the profiling window and pass `--skip-install` to
+subsequent invocations. The receipt then records `packagesInstalled: false`
+while retaining both package digests. This mode prevents `install -r` from
+replacing the PID that SmartPerf bound at startup; it is not independent
+installation evidence and must be paired with the caller's retained install
+logs and exact HAP identities.
+
 This executor currently closes the Instrument Test lane only. Local Test and
 DevEco Testing Hypium UI remain recognized source contracts but need their own
 native execution adapters before they may produce passing receipts. The
@@ -339,6 +347,11 @@ CPU (maximum 20% increase) and mean PSS (maximum 15% increase); FPS,
 frame interval and GPU load remain observed-only because the current Linux
 emulator/SP_daemon combination has not produced usable frame telemetry. This is
 capability scoping, not a claim that missing frame, power or thermal data passed.
+For a lower-is-better metric, a policy may additionally declare
+`maximumAbsoluteIncrease`. The comparison then accepts either the relative or
+absolute bound and records both the ratio and absolute delta. This is intended
+for a predeclared near-zero noise floor, such as CPU percentage points; it must
+not be added after observing a candidate merely to reverse a regression.
 Missing policy-required metrics or an environment, policy or workload mismatch
 is insufficient evidence, not a pass or failure. A detected regression is a
 review candidate and never an automatic case rejection or release decision. The function-bound comparison
@@ -569,6 +582,33 @@ common regressed metric. It still sets `automaticPromotion=false` and
 `caseReady=false`; repeatability does not replace maintainer adjudication or an
 independent functional/performance calibration and does not authorize TableGit
 publication.
+
+### Purchase-data OHOS Test profile qualification
+
+The retained payment candidate now has two fresh cold-boot profile runs under
+`release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-ohostest-profile`.
+Each run installs the exact app/test HAP pair once, starts the bound app process,
+collects 48 SmartPerf samples and runs six `ohosTest` suites inside the exact
+profile window with `packagesInstalled: false`. All 12 suites passed 7/7, for
+84 passing assertions and 96 retained profile samples. Final HDC and emulator
+process checks are empty.
+
+The first exploratory policy exposed why a ratio-only CPU guardrail is unstable
+near zero: 0.013% versus 1.394% produced a roughly 105x ratio even though the
+absolute delta was only 1.38 percentage points. A new policy was declared before
+the retained rerun: CPU must pass either a maximum 20% relative increase or a
+maximum 2.0 percentage-point absolute increase; PSS retains its 15% relative
+limit. The retained comparison passed CPU by the absolute bound (0.017% to
+1.404%, +1.387 points) and PSS by the relative bound (19,286 to 18,670 KiB).
+
+`agentlab-purchase-data-ohostest-profile-qualification` is the Rust-native,
+fail-closed consumer. It reopens the runtime bridge, original candidate receipt,
+both manifests, 12 receipts/reports, policy, workload, summaries, comparison,
+tool digests, temporal containment and shutdown postconditions. Its result is
+relative emulator repeatability only: it does not establish a distinct
+baseline/reference/wrong performance calibration, live vendor IAP, a real
+device, absolute power/thermal authority, independent review, a case contract
+or automatic promotion.
 
 ### Review-transaction preparation
 

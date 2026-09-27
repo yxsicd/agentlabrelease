@@ -92,6 +92,7 @@ class HarmonyInstrumentTestRunnerTests(unittest.TestCase):
             module="entry_test",
             runner="OpenHarmonyTestRunner",
             test_class=None,
+            skip_install=False,
             timeout_seconds=5,
             case_timeout_ms=15000,
             output_dir=root / "result",
@@ -161,6 +162,20 @@ class HarmonyInstrumentTestRunnerTests(unittest.TestCase):
             (ROOT / "schemas/harmony-standard-test-execution-receipt.schema.json").read_text()
         )
         self.assertEqual(schema["properties"]["schema"]["const"], RUNNER.RECEIPT_SCHEMA)
+
+    def test_skip_install_preserves_package_bindings_without_replacing_process(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        args = self.args(root)
+        args.skip_install = True
+        with mock.patch.dict(os.environ, {"FAKE_HDC_MODE": "pass"}):
+            receipt, path = RUNNER.execute(args)
+        self.assertTrue(receipt["passed"])
+        self.assertFalse(receipt["packagesInstalled"])
+        logs = sorted((path.parent / "logs").iterdir())
+        self.assertEqual(len(logs), 2)
+        self.assertFalse(any("install" in item for item in receipt["command"]))
 
 
 if __name__ == "__main__":

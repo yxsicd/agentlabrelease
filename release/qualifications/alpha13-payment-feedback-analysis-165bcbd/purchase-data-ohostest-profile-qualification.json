@@ -1,0 +1,37 @@
+{
+  "absolutePowerThermalQualified": false,
+  "allowsCaseContract": false,
+  "appHapSha256": "dfd61c2e5a33249aed059192798c449f7ab3a3a44d69b900fdd508978cdda073",
+  "artifactSha256": {
+    "candidateExecutionReceipt": "0cf41095b6624644406962432a7fc927efc086fe5c192a6f783e5c90bd97ec4d",
+    "candidateNativeReport": "123fbf9bcff0dbf9c946b60e7f407b4695582072c45f15ebc249cb33aa93ba65",
+    "comparison": "6590795d1f7d6602b098a9f66023f2f4eb551cb84ed26c51953077b2e5f46ce4",
+    "performancePolicy": "3a431b7567c21946b7c2869b3f617b55a422c3f2fc953669d64c2e576d6c8a95",
+    "profileWorkload": "9a9430a6267db477461d9d7466513cbd8e97e6b571647537175709e8a0ac3781",
+    "run1Manifest": "4347bcf7b9a1ae3ebc45f0e6c0713a391239ffb50e692291b12c0b9884f81f38",
+    "run2Manifest": "02c54db1bf59a6eed4cb216e0915a0479c0bf3956bde21992f5f04a0f7ef0d88",
+    "runtimeOracleBridge": "4d24e409678502fd3b0fade142e36f86e898b09d2bb38811bc769431afbe0bef"
+  },
+  "automaticPromotion": false,
+  "behaviorOracleVerified": false,
+  "boundary": "Two Linux x86 emulator cold runs each retained 48 SmartPerf samples while six exact OHOS Test suites passed 7/7 without reinstalling the bound HAPs inside the profile window. CPU and PSS passed the predeclared same-environment repeatability policy. This is not distinct baseline/reference/wrong performance calibration, live vendor IAP, real-device, absolute power/thermal, independent Oracle review or case promotion evidence.",
+  "candidateRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+  "candidateSourceSha256": "cd53dcfe1c5e364d67b57e59e27f4336c32d6058ef5abf45bd75385817d24bb0",
+  "coverage": {
+    "functionalAssertionCount": 84,
+    "functionalRepeatCount": 12,
+    "profileRunCount": 2,
+    "profileSampleCount": 96
+  },
+  "emulatorRelativePerformanceRepeatabilityQualified": true,
+  "environmentIdentity": "hwlinux:emulator-26.0.0.821:harmonyos-7.0.0-phone-x86:codex-phone-7",
+  "independentOracleReviewCompleted": false,
+  "liveVendorIapExecuted": false,
+  "nextGate": "independent-semantic-and-oracle-review-then-controlled-baseline-reference-wrong-performance-calibration-and-upstream-reexecution",
+  "performanceCalibrated": false,
+  "realDeviceExecuted": false,
+  "schema": "agentlab.purchase_data_ohostest_profile_qualification.v1",
+  "sourceSetSha256": "cbc01c94755f2d8da5449902ad1a309488d0a9defa9fede23318ad360dd4c2c2",
+  "status": "linux-emulator-functional-and-relative-performance-repeatability-qualified-independent-review-required",
+  "testHapSha256": "5a2015114fd435daba3e25331df6a7ac48445827230079870cc2571c710934fe"
+}

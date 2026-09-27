@@ -57,6 +57,10 @@ path = "src/purchase_data_ohostest_mutation_qualification.rs"
 name = "agentlab-purchase-data-runtime-oracle-bridge"
 path = "src/purchase_data_runtime_oracle_bridge.rs"
 
+[[bin]]
+name = "agentlab-purchase-data-ohostest-profile-qualification"
+path = "src/purchase_data_ohostest_profile_qualification.rs"
+
 [dependencies]
 tree-sitter = "=0.27.0"
 tree-sitter-language = "=0.1.8"
