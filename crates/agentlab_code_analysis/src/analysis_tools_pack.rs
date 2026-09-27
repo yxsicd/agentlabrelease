@@ -245,8 +245,13 @@ fn self_check(root: &Path) -> Result<Value, String> {
         .map_err(|error| format!("cannot read installed manifest: {error}"))?;
     let manifest: Value = serde_json::from_slice(&manifest_bytes)
         .map_err(|error| format!("installed manifest is not valid JSON: {error}"))?;
-    if required_text(&manifest, "schema")? != "agentlab.analysis_tools_pack_manifest.v1" {
+    if required_text(&manifest, "schema")? != "agentlab.capability_pack.v1" {
         return Err("installed manifest schema is unsupported".into());
+    }
+    if required_text(&manifest, "analysisToolsSchema")?
+        != "agentlab.analysis_tools_pack_manifest.v1"
+    {
+        return Err("installed analysis-tools manifest schema is unsupported".into());
     }
     let source_revision = required_text(&manifest, "sourceRevision")?;
     if !valid_revision(source_revision) {
@@ -515,10 +520,40 @@ fn package(values: &BTreeMap<String, String>) -> Result<Value, String> {
                 })
             })
             .collect();
+        let payload_bytes: u64 = binaries
+            .iter()
+            .map(|binary| binary.bytes.len() as u64)
+            .sum();
+        let mut files = vec![json!({
+            "mode": 0o755,
+            "path": "bin",
+            "size": 0,
+            "type": "directory"
+        })];
+        files.extend(binaries.iter().map(|binary| {
+            json!({
+                "mode": 0o755,
+                "path": format!("bin/{}", binary.name),
+                "sha256": binary.sha256,
+                "size": binary.bytes.len(),
+                "type": "file"
+            })
+        }));
         let manifest = json!({
-            "schema": "agentlab.analysis_tools_pack_manifest.v1",
+            "schema": "agentlab.capability_pack.v1",
+            "analysisToolsSchema": "agentlab.analysis_tools_pack_manifest.v1",
+            "packId": "analysis-tools",
+            "version": version,
             "sourceRevision": revision,
+            "sourceGitSha": revision,
             "platform": "linux-x64",
+            "mountTarget": "/agentlab-analysis-tools",
+            "optional": true,
+            "payloadPrefix": "payload/",
+            "sourceDateEpoch": 0,
+            "entryCount": files.len(),
+            "logicalBytes": payload_bytes,
+            "files": files,
             "buildProfile": "release-static-musl-v1",
             "binaryCount": binaries.len(),
             "binaries": inventory
@@ -527,7 +562,7 @@ fn package(values: &BTreeMap<String, String>) -> Result<Value, String> {
         let archive_name = format!("agentlab-pack-analysis-tools-{version}-linux-x64.tar.zst");
         let archive_path = output.join(&archive_name);
         let tar_path = output.join(format!(".{archive_name}.tar"));
-        let logical_bytes = write_tar(&tar_path, &manifest_bytes, &binaries)?;
+        write_tar(&tar_path, &manifest_bytes, &binaries)?;
         run_zstd(&tar_path, &archive_path)?;
         fs::remove_file(&tar_path)
             .map_err(|error| format!("cannot remove temporary tar: {error}"))?;
@@ -540,7 +575,7 @@ fn package(values: &BTreeMap<String, String>) -> Result<Value, String> {
             "archive": {
                 "filename": archive_name,
                 "bytes": archive_bytes.len(),
-                "logicalBytes": logical_bytes,
+                "logicalBytes": payload_bytes,
                 "sha256": archive_sha256,
                 "compression": {"format": "zstd", "level": 19, "threads": 1}
             },

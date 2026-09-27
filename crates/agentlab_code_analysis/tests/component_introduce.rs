@@ -348,6 +348,9 @@ fn publication_workflow_keeps_component_candidate_and_activation_as_separate_aut
     assert!(component_publish < remote_verification && remote_verification < candidate_publish);
     assert!(component_upgrade.contains("pack:analysis-tools"));
     assert!(workflow.contains("--execute agentlab-analysis-tools-pack"));
+    assert!(workflow.contains("Verify compatibility with the current public controller"));
+    assert!(workflow.contains("pack inspect \"$archive\""));
+    assert!(workflow.contains("pack verify \"$archive\""));
     assert!(workflow.contains("runtime-self-check.json"));
     assert!(workflow.contains("runtime-execution-receipt.json"));
     assert!(public_smoke.contains("agentlab.analysis_tools_installed_execution.v1"));

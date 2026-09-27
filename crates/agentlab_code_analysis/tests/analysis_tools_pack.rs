@@ -149,10 +149,40 @@ fn executable_install(tool_body: &str) -> PathBuf {
             "sha256": digest(&bytes)
         }));
     }
+    let payload_bytes: u64 = inventory
+        .iter()
+        .map(|row| row["bytes"].as_u64().unwrap())
+        .sum();
+    let mut files = vec![json!({
+        "mode": 0o755,
+        "path": "bin",
+        "size": 0,
+        "type": "directory"
+    })];
+    files.extend(inventory.iter().map(|row| {
+        json!({
+            "mode": 0o755,
+            "path": format!("bin/{}", row["name"].as_str().unwrap()),
+            "sha256": row["sha256"],
+            "size": row["bytes"],
+            "type": "file"
+        })
+    }));
     let manifest = json!({
-        "schema": "agentlab.analysis_tools_pack_manifest.v1",
+        "schema": "agentlab.capability_pack.v1",
+        "analysisToolsSchema": "agentlab.analysis_tools_pack_manifest.v1",
+        "packId": "analysis-tools",
+        "version": "aaaaaaaa",
         "sourceRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "sourceGitSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "platform": "linux-x64",
+        "mountTarget": "/agentlab-analysis-tools",
+        "optional": true,
+        "payloadPrefix": "payload/",
+        "sourceDateEpoch": 0,
+        "entryCount": files.len(),
+        "logicalBytes": payload_bytes,
+        "files": files,
         "buildProfile": "release-static-musl-v1",
         "binaryCount": inventory.len(),
         "binaries": inventory
@@ -198,6 +228,17 @@ fn builds_byte_identical_independent_candidate_component() {
         );
     }
     let manifest = read(&first.join("manifest.json"));
+    assert_eq!(manifest["schema"], "agentlab.capability_pack.v1");
+    assert_eq!(
+        manifest["analysisToolsSchema"],
+        "agentlab.analysis_tools_pack_manifest.v1"
+    );
+    assert_eq!(manifest["packId"], "analysis-tools");
+    assert_eq!(manifest["entryCount"], binary_names().len() + 1);
+    assert_eq!(
+        manifest["files"].as_array().unwrap().len(),
+        binary_names().len() + 1
+    );
     assert_eq!(manifest["binaryCount"], binary_names().len());
     assert_eq!(manifest["buildProfile"], "release-static-musl-v1");
     let tar = root.join("archive.tar");
