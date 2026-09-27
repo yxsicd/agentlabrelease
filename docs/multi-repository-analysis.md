@@ -1422,6 +1422,20 @@ run, unseen case or gold repair, and distinct case-level
 baseline/reference/wrong calibration, independent semantic/Oracle review and
 upstream exact-revision reexecution remain required.
 
+The Rust-native `agentlab-purchase-data-integrated-review-packet` now closes a
+review-freshness gap. The previous v11 semantic packet correctly froze program
+analysis but predated the later OHOS Test mutation, runtime bridge and
+performance evidence. The integrated packet reopens and digest-binds that
+semantic packet together with the behavior-Oracle plan/calibration, exact source
+review packet, 6/6 killed functional variants, five Harmony runtime mappings,
+two clean profile runs and two controlled performance-wrong runs.
+
+The packet is deliberately incapable of self-approval. It declares six review
+questions, eight residual risks and a minimum of two distinct authenticated
+semantic and Oracle reviewers. It leaves all promotion flags false and does not
+convert controlled variants into Agent runs or claim Cordova runtime, vendor
+IAP, real-device, absolute power/thermal or case-level performance authority.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \

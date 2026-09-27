@@ -635,6 +635,21 @@ The mutation is not an Agent run, unseen case or gold repair; distinct
 baseline/reference/wrong case calibration, independent review, live vendor IAP,
 real-device execution and absolute power/thermal authority remain open gates.
 
+The current evidence is now assembled by
+`agentlab-purchase-data-integrated-review-packet`. This Rust producer reopens
+the exact v11 semantic packet, behavior-Oracle plan and source-seam calibration,
+OHOS Test source-review packet, six-variant mutation qualification, runtime
+Oracle bridge, repeatable clean profile and performance-detector qualification.
+The resulting packet binds eight inputs by path, SHA-256 and byte length and
+replaces the earlier stale review view that still described the Oracle as wholly
+uncalibrated.
+
+This is a review-input improvement, not a review result. It requires at least
+two distinct authenticated reviewers for semantic and Oracle decisions, and it
+keeps Cordova runtime, live vendor IAP, real-device behavior, absolute
+power/thermal authority, upstream publication and distinct case-level
+baseline/reference/wrong performance calibration explicitly unqualified.
+
 ### Review-transaction preparation
 
 After a calibration succeeds, use

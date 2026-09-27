@@ -592,6 +592,28 @@
       "automaticPromotion": false,
       "status": "controlled-performance-detector-qualified-independent-review-required"
     },
+    "integratedReviewPacket": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-integrated-review-packet.json",
+      "schema": "agentlab.purchase_data_integrated_review_packet.v1",
+      "sha256": "eaaffcf8590bd7d1468cc679d259c2106286d83a6f75c4de26ad236e7bf9f17e",
+      "implementation": "crates/agentlab_code_analysis/src/purchase_data_integrated_review_packet.rs",
+      "binary": "agentlab-purchase-data-integrated-review-packet",
+      "language": "rust",
+      "evidenceAttachmentCount": 8,
+      "reviewQuestionCount": 6,
+      "riskCount": 8,
+      "minimumDistinctReviewerCount": 2,
+      "semanticAndOracleReviewerMustDiffer": true,
+      "currentRuntimeEvidenceBound": true,
+      "semanticAlignmentVerified": false,
+      "independentSourceReviewCompleted": false,
+      "independentOracleReviewCompleted": false,
+      "behaviorOracleVerified": false,
+      "performanceCalibrated": false,
+      "allowsCaseContract": false,
+      "automaticPromotion": false,
+      "status": "current-evidence-bound-independent-dual-review-required"
+    },
     "semanticAlignmentVerified": false,
     "behaviorOracleVerified": false,
     "allowsCaseContract": false,
@@ -601,6 +623,6 @@
   "retention": {
     "authority": "compact-qualification-and-exact-source-patch",
     "fullReplayEvidence": "retained-source-review-packet-plus-run-addressed-workflow-artifact",
-    "nextGate": "independent-semantic-and-oracle-review-then-distinct-case-variant-performance-calibration-and-upstream-reexecution"
+    "nextGate": "authenticated-distinct-semantic-and-oracle-reviewers-then-upstream-publication-and-distinct-case-performance-calibration"
   }
 }
