@@ -302,3 +302,33 @@ fn rejects_duplicate_contract_provider_without_partial_candidate() {
     assert!(!output.exists());
     fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn publication_workflow_keeps_component_candidate_and_activation_as_separate_authorities() {
+    let workflow =
+        fs::read_to_string(repository().join(".github/workflows/analysis-tools-component.yml"))
+            .unwrap();
+    let component_upgrade =
+        fs::read_to_string(repository().join(".github/workflows/component-upgrade.yml")).unwrap();
+    assert!(workflow.contains("publish_composition_candidate:"));
+    assert!(workflow.contains("[[ \"$EXPECTED_REVISION\" == \"$GITHUB_SHA\" ]]"));
+    assert!(workflow.contains("validator.remote_assets(assets)"));
+    assert!(workflow.contains("assert set(published) == {path.name for path in local_files}"));
+    assert!(workflow.contains("exact immutable component already exists"));
+    assert!(workflow.contains("cmp \"$file\" \"$RUNNER_TEMP/coordinated-readback/"));
+    assert!(workflow.contains("\"automaticPromotion\": False"));
+    assert!(workflow.contains("receipt[\"candidateMetadataPublished\"] = True"));
+    assert!(workflow
+        .contains("gh release create \"$tag\" \"$RUNNER_TEMP/coordinated-candidate/\"*.json"));
+    let component_publish = workflow
+        .find("Publish once under a source-derived immutable tag")
+        .unwrap();
+    let remote_verification = workflow
+        .find("Verify the published component and complete the reference-only candidate")
+        .unwrap();
+    let candidate_publish = workflow
+        .find("Publish reference-only coordinated candidate metadata")
+        .unwrap();
+    assert!(component_publish < remote_verification && remote_verification < candidate_publish);
+    assert!(component_upgrade.contains("pack:analysis-tools"));
+}

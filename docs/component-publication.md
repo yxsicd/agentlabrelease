@@ -148,3 +148,14 @@ and its graph node, retain the aggregate source revision, and reset all gates.
 `agentlab-component-introduce` enforces those invariants and emits a digest-bound
 `agentlab.component_introduction.v1` receipt with `rebuildComponents=false` and
 `automaticPromotion=false`.
+
+On `main`, the analysis-tools workflow requires the exact 40-character source
+revision before it can publish the component. It then verifies every referenced
+asset through the GitHub Release API, including the newly uploaded archive and
+descriptor. A second explicit `publish_composition_candidate=true` input may
+publish only the coordinated candidate JSON files. That reference-only release
+is accepted by `channel-plan.yml`; qualification and activation remain separate
+workflows and are never implied by component publication.
+Exact reruns are idempotent: an existing component or candidate tag is accepted
+only after every regenerated file matches its downloaded counterpart; tag reuse
+with any byte difference fails closed.

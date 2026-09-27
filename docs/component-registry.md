@@ -73,6 +73,13 @@ reproduces that candidate twice from the current `aldev` base and retains it as
 an explicitly non-published preview; the component Release and any later
 channel activation remain separate manual decisions.
 
+When explicitly requested on `main`, publication closes by reading every asset
+identity back from GitHub before the coordinated candidate is eligible to be
+published. Candidate publication has its own boolean input and uploads only
+the environment lock, publication metadata and introduction receipt. This
+creates the bridge into the existing frozen channel qualification workflow
+without copying any component payload or mutating a fixed channel.
+
 Every file required to consume a selected component belongs to that component
 identity. This includes small descriptors and inventories as well as archives
 and executables. A developer-preview closure must contain the full selected
