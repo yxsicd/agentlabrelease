@@ -15,6 +15,7 @@ const BINARIES: &[&str] = &[
     "agentlab-analysis-tools-pack",
     "agentlab-asset-model",
     "agentlab-cache-seed",
+    "agentlab-case-state",
     "agentlab-code-analysis",
     "agentlab-component-introduce",
     "agentlab-experience",

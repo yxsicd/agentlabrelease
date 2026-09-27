@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-path-execution-plan.schema.json",
+  "title": "Frozen sequential execution plan for one qualified long-horizon path",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "planId", "graph", "pathInputs", "terminalNodeId", "executionMode", "difficultyDepth", "stages", "boundary", "qualification", "automaticPromotion", "nextGate"],
+  "properties": {
+    "schema": {"const": "agentlab.case_path_execution_plan.v1"},
+    "status": {"const": "frozen-awaiting-dispatch-qualification"},
+    "planId": {"type": "string", "pattern": "^case-path-plan-[0-9a-f]{20}$"},
+    "graph": {"$ref": "#/$defs/fileBinding"},
+    "pathInputs": {"$ref": "#/$defs/fileBinding"},
+    "terminalNodeId": {"type": "string", "pattern": "^case-node-[0-9a-f]{20}$"},
+    "executionMode": {"const": "sequential-qualified-path"},
+    "difficultyDepth": {"type": "integer", "minimum": 2},
+    "stages": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ordinal", "nodeId", "caseId", "sourceSetSha256", "evaluationCase", "blindCutReceipt", "participantManifest", "evaluatorManifest", "incomingTransition"],
+        "properties": {
+          "ordinal": {"type": "integer", "minimum": 0},
+          "nodeId": {"type": "string", "pattern": "^case-node-[0-9a-f]{20}$"},
+          "caseId": {"$ref": "#/$defs/token"},
+          "sourceSetSha256": {"$ref": "#/$defs/sha256"},
+          "evaluationCase": {"$ref": "#/$defs/fileBinding"},
+          "blindCutReceipt": {"$ref": "#/$defs/fileBinding"},
+          "participantManifest": {"$ref": "#/$defs/fileBinding"},
+          "evaluatorManifest": {"$ref": "#/$defs/fileBinding"},
+          "incomingTransition": {
+            "anyOf": [
+              {"type": "null"},
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["edgeId", "fromNodeId", "forkPolicy", "qualification"],
+                "properties": {
+                  "edgeId": {"type": "string", "pattern": "^case-edge-[0-9a-f]{20}$"},
+                  "fromNodeId": {"type": "string", "pattern": "^case-node-[0-9a-f]{20}$"},
+                  "forkPolicy": {"$ref": "#/$defs/forkPolicy"},
+                  "qualification": {"$ref": "#/$defs/fileBinding"}
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["participantReceivesOnlyCurrentStageBundle", "evaluatorReceivesCurrentStageEvaluatorBundle", "edgeQualificationOutsideParticipant", "operatorEvidenceOutsideParticipant", "stageBundleIsolationRequiresRuntimeProof"],
+      "properties": {
+        "participantReceivesOnlyCurrentStageBundle": {"const": true},
+        "evaluatorReceivesCurrentStageEvaluatorBundle": {"const": true},
+        "edgeQualificationOutsideParticipant": {"const": true},
+        "operatorEvidenceOutsideParticipant": {"const": true},
+        "stageBundleIsolationRequiresRuntimeProof": {"const": true}
+      }
+    },
+    "qualification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["graphLongHorizonReady", "allPathNodesExecutable", "allTransitionsRestoreQualified", "blindCutsStructurallyValidated", "runtimeIsolationQualified", "authenticatedBlindReviewQualified", "readyForExecution"],
+      "properties": {
+        "graphLongHorizonReady": {"const": true},
+        "allPathNodesExecutable": {"const": true},
+        "allTransitionsRestoreQualified": {"const": true},
+        "blindCutsStructurallyValidated": {"const": true},
+        "runtimeIsolationQualified": {"const": false},
+        "authenticatedBlindReviewQualified": {"const": false},
+        "readyForExecution": {"const": false}
+      }
+    },
+    "automaticPromotion": {"const": false},
+    "nextGate": {"const": "predeclare-agent-environment-and-qualify-blind-dispatch"}
+  },
+  "$defs": {
+    "token": {"type": "string", "pattern": "^[A-Za-z0-9_.:@/+\\-]{1,200}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "fileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "byteLength", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "byteLength": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "forkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent", "workspace", "requiresNativeSessionQualification"],
+      "properties": {
+        "agent": {"enum": ["fresh-agent", "preserve-native", "replace-agent", "semantic-transfer"]},
+        "workspace": {"enum": ["restore-captured-tree", "restore-sessionfs-snapshot", "minimize-from-captured-tree"]},
+        "requiresNativeSessionQualification": {"type": "boolean"}
+      }
+    }
+  }
+}

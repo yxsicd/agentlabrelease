@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-path-participant-matrix.schema.json",
+  "title": "Predeclared orthogonal Agent, model, and environment matrix for one frozen case path",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "pathPlan", "methodRevision", "trialsPerCell", "agentConfigurations", "modelConfigurations", "environmentConfigurations", "cells", "comparisonPairs", "automaticPromotion"],
+  "properties": {
+    "schema": {"const": "agentlab.case_path_participant_matrix.v1"},
+    "status": {"const": "predeclared-before-attempts"},
+    "pathPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["planId", "sha256"],
+      "properties": {
+        "planId": {"type": "string", "pattern": "^case-path-plan-[0-9a-f]{20}$"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "methodRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "trialsPerCell": {"enum": [3, 5, 10, 20]},
+    "agentConfigurations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {"$ref": "#/$defs/agentConfiguration"}
+    },
+    "modelConfigurations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {"$ref": "#/$defs/modelConfiguration"}
+    },
+    "environmentConfigurations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {"$ref": "#/$defs/environmentConfiguration"}
+    },
+    "cells": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 8,
+      "items": {"$ref": "#/$defs/cell"}
+    },
+    "comparisonPairs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 28,
+      "items": {"$ref": "#/$defs/comparisonPair"}
+    },
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "token": {"type": "string", "pattern": "^[A-Za-z0-9_.:@/+\\-]{1,200}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "fileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "byteLength", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "byteLength": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "agentConfiguration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agentConfigId", "implementation", "package", "packageVersion", "adapter", "driver", "sessionPolicy"],
+      "properties": {
+        "agentConfigId": {"$ref": "#/$defs/token"},
+        "implementation": {"$ref": "#/$defs/token"},
+        "package": {"$ref": "#/$defs/token"},
+        "packageVersion": {"$ref": "#/$defs/token"},
+        "adapter": {"$ref": "#/$defs/fileBinding"},
+        "driver": {"$ref": "#/$defs/fileBinding"},
+        "sessionPolicy": {"$ref": "#/$defs/token"}
+      }
+    },
+    "modelConfiguration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelConfigId", "providerRoute", "model", "thinkingMode", "reasoningEffort", "samplingPolicy"],
+      "properties": {
+        "modelConfigId": {"$ref": "#/$defs/token"},
+        "providerRoute": {"$ref": "#/$defs/token"},
+        "model": {"$ref": "#/$defs/token"},
+        "thinkingMode": {"$ref": "#/$defs/token"},
+        "reasoningEffort": {"anyOf": [{"type": "null"}, {"$ref": "#/$defs/token"}]},
+        "samplingPolicy": {"$ref": "#/$defs/token"}
+      }
+    },
+    "environmentConfiguration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environmentConfigId", "runtimeImageId", "architecture", "environmentLock"],
+      "properties": {
+        "environmentConfigId": {"$ref": "#/$defs/token"},
+        "runtimeImageId": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "architecture": {"enum": ["x86_64", "aarch64"]},
+        "environmentLock": {"$ref": "#/$defs/fileBinding"}
+      }
+    },
+    "cell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ordinal", "participantId", "agentConfigId", "modelConfigId", "environmentConfigId"],
+      "properties": {
+        "ordinal": {"type": "integer", "minimum": 0, "maximum": 7},
+        "participantId": {"$ref": "#/$defs/token"},
+        "agentConfigId": {"$ref": "#/$defs/token"},
+        "modelConfigId": {"$ref": "#/$defs/token"},
+        "environmentConfigId": {"$ref": "#/$defs/token"}
+      }
+    },
+    "comparisonPair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["leftParticipantId", "rightParticipantId", "changedDimension"],
+      "properties": {
+        "leftParticipantId": {"$ref": "#/$defs/token"},
+        "rightParticipantId": {"$ref": "#/$defs/token"},
+        "changedDimension": {"enum": ["agent", "model", "environment"]}
+      }
+    }
+  }
+}

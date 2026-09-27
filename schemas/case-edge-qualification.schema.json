@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-edge-qualification.schema.json",
+  "title": "Independent qualification of one case-derivation restore edge",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "qualificationId", "graph", "edge", "qualifiedCase", "forkPolicy", "verification", "automaticPromotion"],
+  "properties": {
+    "schema": {"const": "agentlab.case_edge_qualification.v1"},
+    "status": {"const": "qualified"},
+    "qualificationId": {"type": "string", "pattern": "^case-edge-qualification-[0-9a-f]{20}$"},
+    "graph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["graphId", "sha256"],
+      "properties": {
+        "graphId": {"type": "string", "pattern": "^case-model-graph-[0-9a-f]{20}$"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["edgeId", "fromNodeId", "toNodeId", "derivationSha256"],
+      "properties": {
+        "edgeId": {"type": "string", "pattern": "^case-edge-[0-9a-f]{20}$"},
+        "fromNodeId": {"$ref": "#/$defs/token"},
+        "toNodeId": {"$ref": "#/$defs/token"},
+        "derivationSha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "qualifiedCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caseId", "sourceSetSha256", "evaluationCaseSha256"],
+      "properties": {
+        "caseId": {"$ref": "#/$defs/token"},
+        "sourceSetSha256": {"$ref": "#/$defs/sha256"},
+        "evaluationCaseSha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "forkPolicy": {"$ref": "#/$defs/forkPolicy"},
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "parentCutStateExposed", "parentPostCutChangesExcluded", "childContinuesIndependently", "workspacePolicySatisfied", "agentContextMode", "nativeSessionRestoreQualified", "evidence"],
+      "properties": {
+        "authority": {"const": "independent-harness-restore-verification"},
+        "parentCutStateExposed": {"const": true},
+        "parentPostCutChangesExcluded": {"const": true},
+        "childContinuesIndependently": {"const": true},
+        "workspacePolicySatisfied": {"const": true},
+        "agentContextMode": {"enum": ["fresh", "native-preserved", "replaced", "semantic-transfer"]},
+        "nativeSessionRestoreQualified": {"type": "boolean"},
+        "evidence": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/fileBinding"}}
+      }
+    },
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "token": {"type": "string", "pattern": "^[A-Za-z0-9_.:@/+\\-]{1,200}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "fileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "byteLength", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "byteLength": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "forkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent", "workspace", "requiresNativeSessionQualification"],
+      "properties": {
+        "agent": {"enum": ["fresh-agent", "preserve-native", "replace-agent", "semantic-transfer"]},
+        "workspace": {"enum": ["restore-captured-tree", "restore-sessionfs-snapshot", "minimize-from-captured-tree"]},
+        "requiresNativeSessionQualification": {"type": "boolean"}
+      }
+    }
+  }
+}

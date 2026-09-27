@@ -113,6 +113,10 @@ path = "src/analysis_tools_pack.rs"
 name = "agentlab-component-introduce"
 path = "src/component_introduce.rs"
 
+[[bin]]
+name = "agentlab-case-state"
+path = "src/case_state.rs"
+
 [dependencies]
 tree-sitter = "=0.27.0"
 tree-sitter-language = "=0.1.8"

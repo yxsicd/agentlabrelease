@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-derivation.schema.json",
+  "title": "Review-required execution-state to case derivation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "derivationId", "sourceState", "parentCase", "feedback", "difficulty", "derivationMode", "forkPolicy", "childCase", "visibility", "qualification", "automaticPromotion", "nextGate"],
+  "properties": {
+    "schema": {"const": "agentlab.case_derivation.v1"},
+    "status": {"const": "review-required"},
+    "derivationId": {"type": "string", "pattern": "^case-derivation-[0-9a-f]{20}$"},
+    "sourceState": {"$ref": "#/$defs/fileBinding"},
+    "parentCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caseId", "sourceSetSha256", "evaluationCaseSha256"],
+      "properties": {
+        "caseId": {"$ref": "#/$defs/token"},
+        "sourceSetSha256": {"$ref": "#/$defs/sha256"},
+        "evaluationCaseSha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "feedback": {"$ref": "#/$defs/fileBinding"},
+    "difficulty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidateId", "dimensionId", "stageId", "failureMode", "mechanism", "evidenceAttemptId"],
+      "properties": {
+        "candidateId": {"$ref": "#/$defs/token"},
+        "dimensionId": {"$ref": "#/$defs/token"},
+        "stageId": {"$ref": "#/$defs/token"},
+        "failureMode": {"$ref": "#/$defs/token"},
+        "mechanism": {"type": "string", "minLength": 1},
+        "evidenceAttemptId": {"$ref": "#/$defs/token"}
+      }
+    },
+    "derivationMode": {"enum": ["fresh-agent-continuation", "same-agent-continuation", "replace-agent", "semantic-transfer", "minimal-reproduction", "compound-extension"]},
+    "forkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent", "workspace", "requiresNativeSessionQualification"],
+      "properties": {
+        "agent": {"enum": ["fresh-agent", "preserve-native", "replace-agent", "semantic-transfer"]},
+        "workspace": {"enum": ["restore-captured-tree", "restore-sessionfs-snapshot", "minimize-from-captured-tree"]},
+        "requiresNativeSessionQualification": {"type": "boolean"}
+      }
+    },
+    "childCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidateCaseId", "status", "requestedRestoreProfile", "caseReady"],
+      "properties": {
+        "candidateCaseId": {"type": "string", "pattern": "^case-candidate-[0-9a-f]{20}$"},
+        "status": {"const": "candidate"},
+        "requestedRestoreProfile": {"enum": ["semantic-only", "source-continuation", "agent-replay", "native-continuation", "exact-workspace-fork"]},
+        "caseReady": {"const": false}
+      }
+    },
+    "visibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["participantBundleRequired", "evaluatorBundleRequired", "operatorBundleMustRemainPrivate"],
+      "properties": {
+        "participantBundleRequired": {"const": true},
+        "evaluatorBundleRequired": {"const": true},
+        "operatorBundleMustRemainPrivate": {"const": true}
+      }
+    },
+    "qualification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceStateCaptured", "sourceStateRequalified", "agentContextCaptured", "agentContextRequalified", "required"],
+      "properties": {
+        "sourceStateCaptured": {"type": "boolean"},
+        "sourceStateRequalified": {"type": "boolean"},
+        "agentContextCaptured": {"type": "boolean"},
+        "agentContextRequalified": {"type": "boolean"},
+        "required": {"type": "array", "minItems": 3, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "automaticPromotion": {"const": false},
+    "nextGate": {"const": "maintainer-adjudication-and-independent-oracle-calibration"}
+  },
+  "$defs": {
+    "token": {"type": "string", "pattern": "^[A-Za-z0-9_.:@/+\\-]{1,200}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "fileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "byteLength", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "byteLength": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

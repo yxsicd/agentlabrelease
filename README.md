@@ -149,6 +149,15 @@ these separate checks do not qualify the complete whitebox evaluation chain.
   review, and turn the approved plan into a frozen task with an executable Oracle.
 - Use [blind case cuts](docs/blind-case-cuts.md) to create physically separate
   participant and evaluator bundles without publishing private task content.
+- Use the additive [case execution-state and derived-case bridge](docs/case-execution-state.md)
+  to bind Agent context, captured Workspace state and reviewed recursive case
+  proposals, then independently qualify each restore edge and expose only fully
+  calibrated root-to-node paths as long-horizon-ready. Ready paths can be frozen
+  into sequential, blind-cut-bound execution plans, then bound to a predeclared
+  orthogonal Agent/model/environment matrix with single-variable comparison
+  pairs. Independent per-cell runtime and blind-boundary receipts are required
+  before dispatch becomes executable, without changing the existing v1 case or
+  runner contracts.
 - Use the [Linux emulator integration](docs/harmony-linux-emulator.md) for the operator-supplied HarmonyOS x86 emulator path.
 - Verify downloaded files with `manifest.json`, `provenance.json`, and
   `SHA256SUMS`.
