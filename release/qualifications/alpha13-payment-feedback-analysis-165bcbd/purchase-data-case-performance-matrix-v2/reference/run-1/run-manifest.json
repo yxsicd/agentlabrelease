@@ -1,0 +1,104 @@
+{
+  "appHapSha256": "043a96090d8565e4c8216363075946040ab0c35eae95db3f99850b4a81eb2822",
+  "automaticPromotion": false,
+  "candidateRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+  "caseBoundFunction": "planPurchaseFinalization",
+  "caseBoundIterationCountPerRepeat": 5000,
+  "caseBoundTest": "purchaseFinalizationPerformanceWorkload",
+  "controlledVariantNotAgentRun": false,
+  "environmentIdentity": "hwlinux:emulator-26.0.0.821:harmonyos-7.0.0-phone-x86:codex-phone-7",
+  "functionalRepeatCount": 6,
+  "functionalRepeats": [
+    {
+      "counts": {
+        "error": 0,
+        "failure": 0,
+        "ignore": 0,
+        "pass": 8,
+        "total": 8
+      },
+      "nativeReportSha256": "851f11fbbe4a71a2d741535aba9b47aea84bea1d960838b06293cecc13495b0d",
+      "ordinal": 1,
+      "receiptSha256": "5809e512eb81ef96c6375358d1112ee7546840b302c72c41d16e24ec723b3998"
+    },
+    {
+      "counts": {
+        "error": 0,
+        "failure": 0,
+        "ignore": 0,
+        "pass": 8,
+        "total": 8
+      },
+      "nativeReportSha256": "851f11fbbe4a71a2d741535aba9b47aea84bea1d960838b06293cecc13495b0d",
+      "ordinal": 2,
+      "receiptSha256": "180709bcc3973f932b7c76606512d81fa947bc15f27b377688a76d8e8a3e3a9d"
+    },
+    {
+      "counts": {
+        "error": 0,
+        "failure": 0,
+        "ignore": 0,
+        "pass": 8,
+        "total": 8
+      },
+      "nativeReportSha256": "851f11fbbe4a71a2d741535aba9b47aea84bea1d960838b06293cecc13495b0d",
+      "ordinal": 3,
+      "receiptSha256": "39dd7569190deee8b8f4f99ccfd03bea96e9ad9d2bb435a7879b976a54963654"
+    },
+    {
+      "counts": {
+        "error": 0,
+        "failure": 0,
+        "ignore": 0,
+        "pass": 8,
+        "total": 8
+      },
+      "nativeReportSha256": "851f11fbbe4a71a2d741535aba9b47aea84bea1d960838b06293cecc13495b0d",
+      "ordinal": 4,
+      "receiptSha256": "f253f3b0a7d507a35a80650dbc6928179104fd03db60dd9c670cce4fcb9adbe9"
+    },
+    {
+      "counts": {
+        "error": 0,
+        "failure": 0,
+        "ignore": 0,
+        "pass": 8,
+        "total": 8
+      },
+      "nativeReportSha256": "851f11fbbe4a71a2d741535aba9b47aea84bea1d960838b06293cecc13495b0d",
+      "ordinal": 5,
+      "receiptSha256": "44274fd7314e882a05a4481f5476203e0ee52217f147b59b049856c3f8a894f4"
+    },
+    {
+      "counts": {
+        "error": 0,
+        "failure": 0,
+        "ignore": 0,
+        "pass": 8,
+        "total": 8
+      },
+      "nativeReportSha256": "851f11fbbe4a71a2d741535aba9b47aea84bea1d960838b06293cecc13495b0d",
+      "ordinal": 6,
+      "receiptSha256": "d69d343962d9eabadb11482f9bcfeb1141ac636e32e6eced7b1e75c16c912656"
+    }
+  ],
+  "functionalRepeatsWithinProfileWindow": true,
+  "functionalTestCountPerRepeat": 8,
+  "functionalVerdictCount": 48,
+  "packagesInstalledInsideProfileWindow": false,
+  "performancePolicySha256": "ae914ba0c30dd8aec098531497021d75a3fa1311e7c371290d43a0a4eccffb3e",
+  "profileSampleCount": 48,
+  "profileWindowFinishedAt": "2026-09-27T01:54:25.622290+00:00",
+  "profileWindowStartedAt": "2026-09-27T01:53:36.913636+00:00",
+  "profileWorkloadActionsSha256": "9992ef75ad5928ce44957575fd4630e1604d493128b4db78f47f4d79c9d8dedd",
+  "profileWorkloadSha256": "7812fa159f8c7ec8ea69f48987cca39b0f373280eb7af847c16ea4dfaf7d563f",
+  "role": "reference",
+  "runId": "run-1",
+  "schema": "agentlab.purchase_data_case_performance_run.v1",
+  "smartPerfSummarySha256": "8f0ba415ccdec177c65695a81da372d2394846c119e6788af5d377522bc63f08",
+  "sourceSetSha256": "cbc01c94755f2d8da5449902ad1a309488d0a9defa9fede23318ad360dd4c2c2",
+  "sourceSha256": "cd53dcfe1c5e364d67b57e59e27f4336c32d6058ef5abf45bd75385817d24bb0",
+  "status": "functionally-passed-profile-captured",
+  "testHapSha256": "8122aa26777479ac6b3bc4128043c522def738e281c05cd1cd8daf899a6dd6d3",
+  "testSourceSha256": "760e0c7fbecc693e6eb7e6d3afcab8f532f1b2432bf7c6204586a37042ebdc87"
+}

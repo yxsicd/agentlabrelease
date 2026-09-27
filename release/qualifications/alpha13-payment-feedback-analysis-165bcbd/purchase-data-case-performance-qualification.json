@@ -1,0 +1,113 @@
+{
+  "absolutePowerThermalQualified": false,
+  "allowsCaseContract": false,
+  "automaticPromotion": false,
+  "boundary": "Six Linux x86 emulator cold runs retain 288 passing OHOS Test verdicts and 288 SmartPerf samples. Reference repeatability passed, while both case-bound controlled variants were rejected on appCpuUsagePercent in both runs. This completes relative case-bound performance calibration only; controlled variants are not Agent runs, unseen cases or gold repairs, and independent review, live vendor IAP, real-device and absolute power/thermal qualification remain open.",
+  "candidateRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+  "caseBoundWorkloadObserved": true,
+  "comparisons": [
+    {
+      "decision": "within-relative-guardrails",
+      "path": "reference-repeatability.json",
+      "sha256": "7dd275a7f828ef957bedeb48c1cde14d573a3b955ca881228c49f4f68571c6b9"
+    },
+    {
+      "decision": "performance-regression-candidate",
+      "path": "baseline-task-start-comparison-1.json",
+      "sha256": "c573e4466b64d7325557a7bfee5999faa809312d83cab295449798a6617a67c1"
+    },
+    {
+      "decision": "performance-regression-candidate",
+      "path": "baseline-task-start-comparison-2.json",
+      "sha256": "3f113f39b0fac0fc66b44e21b6e5f8c25336ba2574e86c270cd2bcb0e69adb81"
+    },
+    {
+      "decision": "performance-regression-candidate",
+      "path": "meaningful-wrong-comparison-1.json",
+      "sha256": "c978f058de8cb57d65c06193201ddc0bc85337cf432b65a619b217a0fc3e80a2"
+    },
+    {
+      "decision": "performance-regression-candidate",
+      "path": "meaningful-wrong-comparison-2.json",
+      "sha256": "1458ef68d2b51beed6f58d42adf7bde2a3be4eecf7f8783fdd70a7db05bd232f"
+    }
+  ],
+  "controlledVariantsAreNotAgentRunsUnseenCasesOrGoldRepairs": true,
+  "coverage": {
+    "coldRunCount": 6,
+    "functionalVerdictCount": 288,
+    "profileSampleCount": 288,
+    "roleCount": 3
+  },
+  "distinctBaselineReferenceWrongCaseCalibrationComplete": true,
+  "environmentIdentity": "hwlinux:emulator-26.0.0.821:harmonyos-7.0.0-phone-x86:codex-phone-7",
+  "functionalMatrixVerified": true,
+  "independentOracleReviewCompleted": false,
+  "liveVendorIapExecuted": false,
+  "performanceCalibrated": true,
+  "performanceMatrixVerified": true,
+  "planSha256": "0414726c7687ed9cd697ae0c108f4ada0d63af41cf6d49e32654ea006baf3723",
+  "realDeviceExecuted": false,
+  "requiredCommonRegressedMetric": "appCpuUsagePercent",
+  "roles": [
+    {
+      "appHapSha256": "043a96090d8565e4c8216363075946040ab0c35eae95db3f99850b4a81eb2822",
+      "metadataSha256": "074287c160c3c2b2ba66ec31a65ff16d62fcd8ce364f0216760d8fe086b4d854",
+      "role": "reference",
+      "runs": [
+        {
+          "manifestSha256": "7de18ae4c518d554ed6a18450b8145dbd8359b6743df7b2acdf3822b1c3a0e19",
+          "run": 1,
+          "summarySha256": "8f0ba415ccdec177c65695a81da372d2394846c119e6788af5d377522bc63f08"
+        },
+        {
+          "manifestSha256": "17a9c8c7344b8733622453b42c1ea3330fde6fec549c995a9348a70f7d26b895",
+          "run": 2,
+          "summarySha256": "d7c226a6e01084fff3518c8397ad650e1f2bca2cff23006977ca1e50705b70ea"
+        }
+      ],
+      "sourceSha256": "cd53dcfe1c5e364d67b57e59e27f4336c32d6058ef5abf45bd75385817d24bb0",
+      "testHapSha256": "8122aa26777479ac6b3bc4128043c522def738e281c05cd1cd8daf899a6dd6d3"
+    },
+    {
+      "appHapSha256": "d5da1fba7bcb19005c649726f34755b75dbfa3c2e1003cb11e4c277b821697d6",
+      "metadataSha256": "603b82b26d937c7cb6dcc1b7362debca4a1f3ea3c1b6deafcae1962fbda2acd1",
+      "role": "baseline-task-start",
+      "runs": [
+        {
+          "manifestSha256": "6ec3047c6b48f7c73e47dac543b3ecedea9b5ce54dd86254a578de9e3529461b",
+          "run": 1,
+          "summarySha256": "c9e14d7ea7e97a6571f0126d36d5a4eadb542c78620906cda8dde8a48adb71e0"
+        },
+        {
+          "manifestSha256": "b1b09727d5db094d9c29f6d57eb205c582b475abac0a37aeb9dedfac1d0c4b3e",
+          "run": 2,
+          "summarySha256": "953aa09cbbaba929db3487a8fac8965e49a14313cdd636c5c113de7ce87df1e9"
+        }
+      ],
+      "sourceSha256": "ae6dd4e8ba9002d5901d88f1b972bf0b4314c7e9337f06e8622276aab55d6bf8",
+      "testHapSha256": "61a4030234bd4bae64c2ae97afae5b5cbc97a46b025055fec63c0e1973894be9"
+    },
+    {
+      "appHapSha256": "a2ca9b782c6f4411ee3d6b07bf680cf0f224402019808e64699a12c60d35e70b",
+      "metadataSha256": "038ac4b0afb0621a741a07a71cfc4c09b4e1de6cd5f8cc82bb19f3d4295c9a1e",
+      "role": "meaningful-wrong",
+      "runs": [
+        {
+          "manifestSha256": "9beaac3f774932aa713748005c4464681d7b930c2b8c5367f8c851068a15753f",
+          "run": 1,
+          "summarySha256": "895d73f7af22f92d767bb7a6515ac115b45fa811fc80e9410f2344f901760d07"
+        },
+        {
+          "manifestSha256": "8f019f58325cf8f904a3aff621f9701a30365a4136a664e22137986e194a790d",
+          "run": 2,
+          "summarySha256": "848576a2ecc3259986ca5a7246aa3c89589e4b9b11e2ac2326896e4f9a4c14c7"
+        }
+      ],
+      "sourceSha256": "0f4b42ab881a0dbcec69e6dd7fe7c5fd0d6e223e4067e1222acc5a4fda43fda5",
+      "testHapSha256": "ece1ce1906ce37c5a6d26f7f8f07b5b0f63806443723bf1f7e7d16c41168c6ea"
+    }
+  ],
+  "schema": "agentlab.purchase_data_case_performance_qualification.v1",
+  "status": "case-bound-reference-baseline-meaningful-wrong-performance-calibrated"
+}

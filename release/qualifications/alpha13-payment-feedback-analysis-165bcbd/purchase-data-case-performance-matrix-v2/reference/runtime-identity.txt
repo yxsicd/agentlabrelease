@@ -1,0 +1,1 @@
+uid=1000(huawei) gid=109(kvm) groups=109(kvm),4(adm),24(cdrom),27(sudo),30(dip),44(video),46(plugdev),110(render),122(lpadmin),135(lxd),136(sambashare),999(docker),1000(huawei)

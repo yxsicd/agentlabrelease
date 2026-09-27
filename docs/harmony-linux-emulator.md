@@ -645,13 +645,15 @@ qualification, a new policy and an exact eight-test workload. The eighth
 evaluator-owned OHOS Test calls `planPurchaseFinalization` 5,000 times.
 
 The plan predeclares clean reference, redundant purchase-data reparse and
-redundant purchase-order decode roles. Each role must pass 8/8 functional tests
-across two cold runs and six repeats per run, while 48 SmartPerf samples are
-captured per run. The two slower roles must share a rejected
-`appCpuUsagePercent` decision against the reference. All execution fields remain
-false until hwlinux evidence exists; a missing case-bound signal is an
-observability failure, not a performance pass. These controlled variants remain
-calibration inputs rather than Agent runs, unseen cases or gold repairs.
+redundant purchase-order decode roles. The retained hwlinux matrix now contains
+six cold runs: each role passed six 8/8 OHOS Test repeats per run while retaining
+48 SmartPerf samples. Reference repeatability passed, and both degraded roles
+were rejected on `appCpuUsagePercent` in both runs. The Rust-native
+`agentlab-purchase-data-case-performance-qualification` reopens the manifests,
+receipts, native reports, raw profiles, summaries, comparisons and shutdown
+postconditions before setting case-bound relative `performanceCalibrated=true`.
+This is 288 functional verdicts and 288 profile samples, not authority for an
+Agent run, unseen case, gold repair, real device or absolute power/thermal claim.
 
 The current evidence is now assembled by
 `agentlab-purchase-data-integrated-review-packet`. This Rust producer reopens

@@ -1432,13 +1432,17 @@ functionally equivalent roles: the clean reference, a task-start implementation
 that redundantly reparses purchase data, and a meaningful-wrong implementation
 that redundantly decodes the purchase-order payload.
 
-The retained matrix requires two cold runs per role, six 8/8 OHOS Test repeats
-and 48 SmartPerf samples per run. Both degraded roles must be rejected versus
-the reference on the same CPU metric. The plan contains no build or emulator
-result, leaves every execution and promotion flag false, and treats absent
-case-bound observability as failure. This gives the next hwlinux run an
-immutable, auditable calibration contract rather than tuning thresholds after
-seeing measurements.
+The retained hwlinux matrix now supplies two cold runs per role, six 8/8 OHOS
+Test repeats and 48 SmartPerf samples per run. Reference repeatability passed;
+both degraded roles were rejected versus the reference on
+`appCpuUsagePercent` in both runs. A first 200-decode meaningful-wrong attempt
+was retained as failed calibration evidence rather than accepted; the plan was
+strengthened to 1,000 redundant decodes before the successful rerun. The
+Rust-native qualification then reopened 288 functional verdicts, 288 samples,
+all comparisons and shutdown state. It completes relative case-bound
+performance calibration while leaving independent review, live vendor IAP,
+real-device, absolute power/thermal, case-contract and promotion authority
+false.
 
 The Rust-native `agentlab-purchase-data-integrated-review-packet` now closes a
 review-freshness gap. The previous v11 semantic packet correctly froze program
