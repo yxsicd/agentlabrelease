@@ -84,6 +84,27 @@ jobs:
           sha256sum "$first"/* >> "$GITHUB_STEP_SUMMARY"
           cat "$RUNNER_TEMP/pack-receipt.json" >> "$GITHUB_STEP_SUMMARY"
           cat "$RUNNER_TEMP/runtime-self-check.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify compatibility with the current public controller
+        run: |
+          set -euo pipefail
+          version="${GITHUB_SHA:0:12}"
+          archive="$RUNNER_TEMP/analysis-tools-component/agentlab-pack-analysis-tools-$version-linux-x64.tar.zst"
+          readarray -t control < <(jq -r '
+            [.assets[]
+              | select(.url | split("/")[-1] | startswith("agentlabctl-"))
+              | .url, .sha256, (.bytes | tostring)][]
+          ' release/channels/aldev/publication.json)
+          test "${#control[@]}" -eq 3
+          controller="$RUNNER_TEMP/agentlabctl"
+          curl -fL --retry 3 --retry-all-errors --retry-delay 2 \
+            --connect-timeout 20 -o "$controller" "${control[0]}"
+          test "$(wc -c < "$controller")" = "${control[2]}"
+          printf '%s  %s\n' "${control[1]}" "$controller" | sha256sum -c -
+          chmod +x "$controller"
+          "$controller" pack inspect "$archive" \
+            | tee "$RUNNER_TEMP/public-controller-pack-inspect.json"
+          "$controller" pack verify "$archive" \
+            | tee "$RUNNER_TEMP/public-controller-pack-verify.json"
       - name: Reproduce the first coordinated optional-slot composition
         run: |
           set -euo pipefail
@@ -139,6 +160,8 @@ jobs:
             ${{ runner.temp }}/archive-members.txt
             ${{ runner.temp }}/runtime-self-check.json
             ${{ runner.temp }}/runtime-execution-receipt.json
+            ${{ runner.temp }}/public-controller-pack-inspect.json
+            ${{ runner.temp }}/public-controller-pack-verify.json
             ${{ runner.temp }}/component-introduction-receipt.json
             ${{ runner.temp }}/component-introduction-repeat-receipt.json
       - name: Preserve coordinated candidate preview without publishing or promotion
