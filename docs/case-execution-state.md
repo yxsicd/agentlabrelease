@@ -4,7 +4,7 @@ AgentLab keeps reusable case knowledge separate from concrete execution
 instances. An Attempt result never mutates `evaluation_cases` and a captured
 checkpoint never becomes a runnable case merely because its bytes exist.
 
-The additive bridge has ten explicit artifacts:
+The additive bridge has twelve explicit artifacts:
 
 - `agentlab.case_execution_state.v1` binds an existing frozen case, participant
   experiment plan, assessed Attempt, Agent context evidence, captured source
@@ -34,7 +34,13 @@ The additive bridge has ten explicit artifacts:
 - `agentlab.case_path_dispatch_qualification.v1` records independent, exact
   per-cell runtime and blind-boundary evidence;
 - `agentlab.case_path_qualified_dispatch.v1` binds that evidence to the frozen
-  dispatch and is the first artifact allowed to state `readyForDispatch=true`.
+  dispatch and is the first artifact allowed to state `readyForDispatch=true`;
+- `agentlab.case_path_attempt_input.v1` records one completed, qualified
+  participant/trial path prefix with exact pre/post state, check, transition and
+  optional performance/power/thermal evidence per stage;
+- `agentlab.case_path_attempt_record.v1` independently derives the overall
+  verdict and, at the first failed stage, emits a review-only next-difficulty
+  candidate bound to that stage's post-state.
 
 The schemas are
 [`case-execution-state.schema.json`](../schemas/case-execution-state.schema.json),
@@ -46,7 +52,9 @@ The schemas are
 [`case-path-participant-matrix.schema.json`](../schemas/case-path-participant-matrix.schema.json),
 [`case-path-dispatch-plan.schema.json`](../schemas/case-path-dispatch-plan.schema.json),
 [`case-path-dispatch-qualification.schema.json`](../schemas/case-path-dispatch-qualification.schema.json),
-and [`case-path-qualified-dispatch.schema.json`](../schemas/case-path-qualified-dispatch.schema.json).
+[`case-path-qualified-dispatch.schema.json`](../schemas/case-path-qualified-dispatch.schema.json),
+[`case-path-attempt-input.schema.json`](../schemas/case-path-attempt-input.schema.json),
+and [`case-path-attempt-record.schema.json`](../schemas/case-path-attempt-record.schema.json).
 
 ## Existing authority remains unchanged
 
@@ -247,6 +255,29 @@ network policy and fresh-trial boundary postconditions. Missing, duplicate,
 drifted or mismatched cells fail closed. The qualified dispatch authorizes only
 the predeclared attempts; it still has `automaticPromotion=false`, and observed
 stage verdicts remain execution-instance state rather than reusable case truth.
+
+Record one completed attempt only under the exact qualified dispatch:
+
+```sh
+target/release/agentlab-case-state record-attempt \
+  --root /evidence \
+  --qualified-dispatch /evidence/case-path-qualified-dispatch.json \
+  --attempt-input /evidence/attempts/participant-a-trial-1.json \
+  --output /evidence/attempt-records/participant-a-trial-1.json
+```
+
+The executed stages must be a contiguous prefix of the frozen path. Each stage
+binds its pre/post state, independent checks and transition evidence. Functional
+verdicts are recalculated from checks rather than trusted as labels. Resource
+observations are orthogonal: performance, power and thermal can be absent,
+within-envelope or violations, but measured outcomes require exact evidence.
+Execution stops at the first functional, execution or resource failure; a
+passing Attempt must reach the terminal stage.
+
+A failure creates only `case-difficulty-candidate-*`, bound to the failing
+stage and its post-state with `caseReady=false`. It can feed the existing review
+and derivation loop, but cannot become a reusable case without the normal
+semantic review, Oracle calibration, freeze and restore qualification gates.
 
 The multi-repository assessed campaign currently runs all three operations in
 shadow mode. It emits each immutable graph revision plus a final convenience

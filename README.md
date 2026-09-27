@@ -157,7 +157,9 @@ these separate checks do not qualify the complete whitebox evaluation chain.
   orthogonal Agent/model/environment matrix with single-variable comparison
   pairs. Independent per-cell runtime and blind-boundary receipts are required
   before dispatch becomes executable, without changing the existing v1 case or
-  runner contracts.
+  runner contracts. Executed path prefixes retain stage-level checks, pre/post
+  state and optional performance/power/thermal evidence; the first failure can
+  seed only a review-required next difficulty, never an automatic case.
 - Use the [Linux emulator integration](docs/harmony-linux-emulator.md) for the operator-supplied HarmonyOS x86 emulator path.
 - Verify downloaded files with `manifest.json`, `provenance.json`, and
   `SHA256SUMS`.

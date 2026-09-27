@@ -531,6 +531,23 @@ impl Fixture {
             .output()
             .unwrap()
     }
+
+    fn record_attempt(&self, qualified: &Path, input: &Path, output: &Path) -> Output {
+        Command::new(env!("CARGO_BIN_EXE_agentlab-case-state"))
+            .args([
+                "record-attempt",
+                "--root",
+                self.root.to_str().unwrap(),
+                "--qualified-dispatch",
+                qualified.to_str().unwrap(),
+                "--attempt-input",
+                input.to_str().unwrap(),
+                "--output",
+                output.to_str().unwrap(),
+            ])
+            .output()
+            .unwrap()
+    }
 }
 
 #[test]
@@ -1051,6 +1068,98 @@ fn models_a_qualified_intermediate_case_before_extending_the_difficulty_chain() 
     assert_eq!(qualified_value["qualification"]["readyForDispatch"], true);
     assert_eq!(qualified_value["automaticPromotion"], false);
 
+    let attempt_root = fixture.root.join("attempts/attempt-1");
+    fs::create_dir_all(&attempt_root).unwrap();
+    let mut attempt_stages = Vec::new();
+    for ordinal in 0..2 {
+        let pre = attempt_root.join(format!("stage-{ordinal}-pre.json"));
+        let post = attempt_root.join(format!("stage-{ordinal}-post.json"));
+        let check = attempt_root.join(format!("stage-{ordinal}-check.json"));
+        fs::write(
+            &pre,
+            format!("{{\"stage\":{ordinal},\"moment\":\"pre\"}}\n"),
+        )
+        .unwrap();
+        fs::write(
+            &post,
+            format!("{{\"stage\":{ordinal},\"moment\":\"post\"}}\n"),
+        )
+        .unwrap();
+        fs::write(
+            &check,
+            format!("{{\"stage\":{ordinal},\"oracle\":\"pass\"}}\n"),
+        )
+        .unwrap();
+        let transition = if ordinal == 0 {
+            Value::Null
+        } else {
+            let path = attempt_root.join("stage-1-transition.json");
+            fs::write(&path, b"{\"restore\":\"passed\"}\n").unwrap();
+            file_binding(&fixture.root, &path)
+        };
+        let resource = if ordinal == 0 {
+            json!({"status": "not-measured", "dimensions": [], "metricsEvidence": null})
+        } else {
+            let metrics = attempt_root.join("stage-1-metrics.json");
+            fs::write(&metrics, b"{\"performance\":\"regressed\"}\n").unwrap();
+            json!({
+                "status": "violation",
+                "dimensions": ["performance"],
+                "metricsEvidence": file_binding(&fixture.root, &metrics)
+            })
+        };
+        attempt_stages.push(json!({
+            "ordinal": ordinal,
+            "nodeId": plan["stages"][ordinal]["nodeId"],
+            "caseId": plan["stages"][ordinal]["caseId"],
+            "preState": file_binding(&fixture.root, &pre),
+            "postState": file_binding(&fixture.root, &post),
+            "transitionEvidence": transition,
+            "functionalVerdict": "pass",
+            "checks": [{
+                "checkId": format!("oracle-stage-{ordinal}"),
+                "verdict": "pass",
+                "evidence": file_binding(&fixture.root, &check)
+            }],
+            "resourceObservation": resource
+        }));
+    }
+    let attempt_input = fixture.root.join("case-path-attempt-input.json");
+    write(
+        &attempt_input,
+        &json!({
+            "schema": "agentlab.case_path_attempt_input.v1",
+            "status": "completed",
+            "qualifiedDispatch": {
+                "qualifiedDispatchId": qualified_value["qualifiedDispatchId"],
+                "sha256": digest(&fs::read(&qualified_dispatch).unwrap())
+            },
+            "attemptId": "participant-pi-model-a-trial-1",
+            "participantId": "participant-pi-model-a",
+            "trialOrdinal": 1,
+            "stages": attempt_stages,
+            "automaticPromotion": false
+        }),
+    );
+    let attempt_record = fixture.root.join("case-path-attempt-record.json");
+    let recorded = fixture.record_attempt(&qualified_dispatch, &attempt_input, &attempt_record);
+    assert!(
+        recorded.status.success(),
+        "{}",
+        String::from_utf8_lossy(&recorded.stderr)
+    );
+    let record = read(&attempt_record);
+    assert_eq!(record["schema"], "agentlab.case_path_attempt_record.v1");
+    assert_eq!(record["status"], "assessed-failure");
+    assert_eq!(record["overallVerdict"], "fail");
+    assert_eq!(record["executedStageCount"], 2);
+    assert_eq!(
+        record["nextDifficultyCandidate"]["failureClass"],
+        "resource"
+    );
+    assert_eq!(record["nextDifficultyCandidate"]["caseReady"], false);
+    assert_eq!(record["automaticPromotion"], false);
+
     let invalid_matrix = fixture.root.join("invalid-participant-matrix.json");
     let mut invalid = read(&matrix);
     invalid["comparisonPairs"][0]["changedDimension"] = json!("agent");
@@ -1148,6 +1257,14 @@ fn schemas_are_strict_and_match_tool_outputs() {
         (
             "schemas/case-path-qualified-dispatch.schema.json",
             "agentlab.case_path_qualified_dispatch.v1",
+        ),
+        (
+            "schemas/case-path-attempt-input.schema.json",
+            "agentlab.case_path_attempt_input.v1",
+        ),
+        (
+            "schemas/case-path-attempt-record.schema.json",
+            "agentlab.case_path_attempt_record.v1",
         ),
     ] {
         let schema = read(&root.join(path));

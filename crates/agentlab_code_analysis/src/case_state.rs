@@ -16,6 +16,8 @@ const PATH_MATRIX_SCHEMA: &str = "agentlab.case_path_participant_matrix.v1";
 const PATH_DISPATCH_SCHEMA: &str = "agentlab.case_path_dispatch_plan.v1";
 const PATH_DISPATCH_QUALIFICATION_SCHEMA: &str = "agentlab.case_path_dispatch_qualification.v1";
 const PATH_QUALIFIED_DISPATCH_SCHEMA: &str = "agentlab.case_path_qualified_dispatch.v1";
+const PATH_ATTEMPT_INPUT_SCHEMA: &str = "agentlab.case_path_attempt_input.v1";
+const PATH_ATTEMPT_RECORD_SCHEMA: &str = "agentlab.case_path_attempt_record.v1";
 
 struct Input {
     relative: String,
@@ -2140,6 +2142,229 @@ fn qualify_dispatch(values: &BTreeMap<String, String>) -> Result<Value, String> 
     }))
 }
 
+fn record_attempt(values: &BTreeMap<String, String>) -> Result<Value, String> {
+    let root = required_path(values, "--root")?
+        .canonicalize()
+        .map_err(|error| format!("cannot resolve --root: {error}"))?;
+    require(root.is_dir(), "--root must be a directory")?;
+    let qualified = Input::load(
+        &root,
+        required_path(values, "--qualified-dispatch")?,
+        "qualified path dispatch",
+    )?;
+    let attempt = Input::load(
+        &root,
+        required_path(values, "--attempt-input")?,
+        "case path attempt input",
+    )?;
+    require(
+        qualified.value["schema"] == PATH_QUALIFIED_DISPATCH_SCHEMA
+            && qualified.value["status"] == "qualified-ready-for-dispatch"
+            && qualified.value["qualification"]["readyForDispatch"] == true
+            && qualified.value["automaticPromotion"] == false,
+        "qualified dispatch is not ready and non-promoting",
+    )?;
+    let dispatch = load_declared_input(
+        &root,
+        &qualified.value["dispatchPlan"],
+        "qualified dispatch plan",
+    )?;
+    verify_declared_binding(
+        &root,
+        &qualified.value["dispatchQualification"],
+        "qualified dispatch receipt",
+    )?;
+    let path_plan = load_declared_input(&root, &dispatch.value["pathPlan"], "attempt path plan")?;
+    let planned_stages = path_plan.value["stages"]
+        .as_array()
+        .ok_or_else(|| "attempt path plan stages are absent".to_owned())?;
+    require(
+        attempt.value["schema"] == PATH_ATTEMPT_INPUT_SCHEMA
+            && attempt.value["status"] == "completed"
+            && attempt.value["automaticPromotion"] == false,
+        "attempt input is not completed and non-promoting",
+    )?;
+    require(
+        attempt.value["qualifiedDispatch"]["qualifiedDispatchId"]
+            == qualified.value["qualifiedDispatchId"]
+            && attempt.value["qualifiedDispatch"]["sha256"] == qualified.sha256(),
+        "attempt input does not bind the exact qualified dispatch",
+    )?;
+    let attempt_id = text(&attempt.value, "attemptId", "attempt input")?;
+    let participant = text(&attempt.value, "participantId", "attempt input")?;
+    require(valid_token(attempt_id), "attempt identity is invalid")?;
+    require(
+        qualified.value["cells"].as_array().is_some_and(|cells| {
+            cells
+                .iter()
+                .any(|cell| cell["participantId"].as_str() == Some(participant))
+        }),
+        "attempt participant is absent from the qualified dispatch",
+    )?;
+    let trial = attempt.value["trialOrdinal"]
+        .as_u64()
+        .filter(|trial| {
+            *trial >= 1 && *trial <= qualified.value["trialsPerCell"].as_u64().unwrap_or(0)
+        })
+        .ok_or_else(|| "attempt trial ordinal is outside the predeclared matrix".to_owned())?;
+    let stages = attempt.value["stages"]
+        .as_array()
+        .filter(|rows| !rows.is_empty() && rows.len() <= planned_stages.len())
+        .ok_or_else(|| "attempt stages are not a non-empty path prefix".to_owned())?;
+    let mut failure: Option<(usize, &Value, &str)> = None;
+    for (ordinal, stage) in stages.iter().enumerate() {
+        let planned = &planned_stages[ordinal];
+        require(
+            stage["ordinal"].as_u64() == Some(ordinal as u64)
+                && stage["nodeId"] == planned["nodeId"]
+                && stage["caseId"] == planned["caseId"],
+            "attempt stage identity differs from the frozen path prefix",
+        )?;
+        verify_declared_binding(
+            &root,
+            &stage["preState"],
+            &format!("stage {ordinal} pre-state"),
+        )?;
+        verify_declared_binding(
+            &root,
+            &stage["postState"],
+            &format!("stage {ordinal} post-state"),
+        )?;
+        if ordinal == 0 {
+            require(
+                stage["transitionEvidence"].is_null(),
+                "root attempt stage has transition evidence",
+            )?;
+        } else {
+            verify_declared_binding(
+                &root,
+                &stage["transitionEvidence"],
+                &format!("stage {ordinal} transition evidence"),
+            )?;
+        }
+        let checks = stage["checks"]
+            .as_array()
+            .filter(|rows| !rows.is_empty())
+            .ok_or_else(|| format!("stage {ordinal} has no independent checks"))?;
+        let mut derived_functional = "pass";
+        let mut check_ids = BTreeSet::new();
+        for check in checks {
+            require(
+                check_ids.insert(text(check, "checkId", "stage check")?),
+                format!("stage {ordinal} duplicates a check identity"),
+            )?;
+            let verdict = text(check, "verdict", "stage check")?;
+            require(
+                matches!(verdict, "pass" | "fail" | "error"),
+                "stage check verdict is invalid",
+            )?;
+            if verdict == "error" {
+                derived_functional = "error";
+            } else if verdict == "fail" && derived_functional == "pass" {
+                derived_functional = "fail";
+            }
+            verify_declared_binding(
+                &root,
+                &check["evidence"],
+                &format!("stage {ordinal} check evidence"),
+            )?;
+        }
+        require(
+            stage["functionalVerdict"].as_str() == Some(derived_functional),
+            "stage functional verdict differs from its checks",
+        )?;
+        let resource = &stage["resourceObservation"];
+        let resource_status = text(resource, "status", "resource observation")?;
+        let dimensions = resource["dimensions"]
+            .as_array()
+            .ok_or_else(|| "resource observation dimensions are absent".to_owned())?;
+        if resource_status == "not-measured" {
+            require(
+                dimensions.is_empty() && resource["metricsEvidence"].is_null(),
+                "unmeasured resource observation carries evidence",
+            )?;
+        } else {
+            require(
+                matches!(resource_status, "within-envelope" | "violation")
+                    && !dimensions.is_empty(),
+                "resource observation status or dimensions are invalid",
+            )?;
+            let mut seen = BTreeSet::new();
+            require(
+                dimensions.iter().all(|dimension| {
+                    dimension.as_str().is_some_and(|value| {
+                        matches!(value, "performance" | "power" | "thermal") && seen.insert(value)
+                    })
+                }),
+                "resource observation dimensions are invalid or duplicated",
+            )?;
+            verify_declared_binding(
+                &root,
+                &resource["metricsEvidence"],
+                &format!("stage {ordinal} resource evidence"),
+            )?;
+        }
+        let failure_class = if derived_functional != "pass" {
+            Some(if derived_functional == "error" {
+                "execution"
+            } else {
+                "functional"
+            })
+        } else if resource_status == "violation" {
+            Some("resource")
+        } else {
+            None
+        };
+        if let Some(class) = failure_class {
+            require(
+                ordinal + 1 == stages.len(),
+                "attempt continued after its first failed stage",
+            )?;
+            failure = Some((ordinal, stage, class));
+        } else {
+            require(failure.is_none(), "attempt continued after failure")?;
+        }
+    }
+    require(
+        failure.is_some() || stages.len() == planned_stages.len(),
+        "passing attempt stops before the frozen path terminal",
+    )?;
+    let candidate = if let Some((ordinal, stage, class)) = failure {
+        let id =
+            digest(format!("{}\0{}\0{}", qualified.sha256(), attempt.sha256(), ordinal).as_bytes());
+        json!({
+            "candidateId": format!("case-difficulty-candidate-{}", &id[..20]),
+            "status": "review-required",
+            "stageOrdinal": ordinal,
+            "nodeId": stage["nodeId"],
+            "caseId": stage["caseId"],
+            "failureClass": class,
+            "postState": stage["postState"],
+            "caseReady": false
+        })
+    } else {
+        Value::Null
+    };
+    let record_id = digest(format!("{}\0{}", qualified.sha256(), attempt.sha256()).as_bytes());
+    Ok(json!({
+        "schema": PATH_ATTEMPT_RECORD_SCHEMA,
+        "status": if failure.is_some() { "assessed-failure" } else { "assessed-pass" },
+        "attemptRecordId": format!("case-path-attempt-{}", &record_id[..20]),
+        "qualifiedDispatch": qualified.binding(),
+        "attemptInput": attempt.binding(),
+        "attemptId": attempt_id,
+        "participantId": participant,
+        "trialOrdinal": trial,
+        "plannedStageCount": planned_stages.len(),
+        "executedStageCount": stages.len(),
+        "overallVerdict": if failure.is_some() { "fail" } else { "pass" },
+        "stages": stages,
+        "nextDifficultyCandidate": candidate,
+        "automaticPromotion": false,
+        "nextGate": if failure.is_some() { "review-difficulty-candidate" } else { "aggregate-predeclared-comparison-results" }
+    }))
+}
+
 fn required<'a>(values: &'a BTreeMap<String, String>, flag: &str) -> Result<&'a str, String> {
     values
         .get(flag)
@@ -2173,7 +2398,7 @@ fn write_output(path: PathBuf, value: &Value) -> Result<(), String> {
 fn run() -> Result<(), String> {
     let mut args = env::args().skip(1);
     let command = args.next().ok_or_else(|| {
-        "expected compose, derive, graph, qualify, freeze-path, predeclare-path or qualify-dispatch".to_owned()
+        "expected compose, derive, graph, qualify, freeze-path, predeclare-path, qualify-dispatch or record-attempt".to_owned()
     })?;
     let mut values = BTreeMap::new();
     while let Some(flag) = args.next() {
@@ -2198,9 +2423,10 @@ fn run() -> Result<(), String> {
         "freeze-path" => freeze_path(&values)?,
         "predeclare-path" => predeclare_path(&values)?,
         "qualify-dispatch" => qualify_dispatch(&values)?,
+        "record-attempt" => record_attempt(&values)?,
         _ => {
             return Err(
-                "expected compose, derive, graph, qualify, freeze-path, predeclare-path or qualify-dispatch".into(),
+                "expected compose, derive, graph, qualify, freeze-path, predeclare-path, qualify-dispatch or record-attempt".into(),
             )
         }
     };
