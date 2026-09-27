@@ -42,6 +42,28 @@ component assets by URL, byte count, SHA-256 and immutable tag. Promotion and
 new aggregate versions may reuse those references indefinitely. A no-op
 component change must not create a new component Release.
 
+## Independent Rust analysis-tools component
+
+The repository's semantic analysis, qualification and review compilers are a
+separate optional `analysis-tools` pack. They do not belong to the generic
+`developer-tools` pack (Bun/jq/ripgrep) or the service runtime pack. The
+Rust-native `agentlab-analysis-tools-pack` producer requires the complete
+24-binary `x86_64` Linux ELF inventory, rejects missing/non-ELF/symlinked
+inputs, writes a deterministic USTAR stream, compresses it with single-threaded
+zstd, and emits both the capability-pack descriptor and a relative-URL
+`agentlab.component_update.v1` descriptor.
+
+`analysis-tools-component.yml` builds static musl binaries and reproduces the
+candidate bytes twice. Pull requests and the default manual run only retain CI
+artifacts. Publishing is a distinct manual `main` action requiring
+`publish=true` and the exact 40-character `expected_revision`; it creates a new
+source-derived prerelease tag once and never changes an aggregate channel.
+Because the current channel graph predates this optional slot, its first
+selection requires a separately reviewed coordinated composition. Subsequent
+versions can use the ordinary single-component upgrade path while every
+unchanged runtime, developer-tool and Harmony asset remains referenced by its
+existing immutable URL.
+
 Every file required to consume a selected component belongs to that component
 identity. This includes small descriptors and inventories as well as archives
 and executables. A developer-preview closure must contain the full selected

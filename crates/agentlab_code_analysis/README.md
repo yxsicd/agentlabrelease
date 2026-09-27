@@ -105,6 +105,25 @@ The command verifies and digest-binds those existing execution surfaces. It
 does not bypass independent review, upstream revision rebinding, blind-case
 freeze or the pre-outcome cohort plan, and it never grants automatic promotion.
 
+## Independent component packaging
+
+`agentlab-analysis-tools-pack` packages the complete Linux x64 Rust binary
+inventory as an optional immutable component. A producer supplies the static
+musl release directory, exact source revision and its source-derived version:
+
+```sh
+target/x86_64-unknown-linux-musl/release/agentlab-analysis-tools-pack \
+  --binary-dir target/x86_64-unknown-linux-musl/release \
+  --source-revision <exact-40-hex-revision> \
+  --version <8-to-40-character-revision-prefix> \
+  --output /tmp/analysis-tools-component
+```
+
+The output contains the deterministic `.tar.zst`, capability-pack descriptor,
+binary manifest and relative-URL component-update descriptor. Creation alone is
+not publication or aggregate promotion; the dedicated workflow keeps those as
+separate explicit operations.
+
 Before the runtime plan can advance,
 `agentlab-purchase-data-ohostest-proposal` reads the selected source directly
 from its exact Git revision and combines content-addressed identity with Rust

@@ -1,0 +1,106 @@
+name: Build independent analysis-tools component
+on:
+  pull_request:
+    paths:
+      - 'crates/agentlab_code_analysis/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/analysis-tools-component.yml'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish this exact candidate as a new immutable prerelease
+        required: true
+        type: boolean
+        default: false
+      expected_revision:
+        description: Exact 40-hex main revision required when publish is true
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-analysis-tools-component:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install deterministic Linux packaging prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes jq musl-tools zstd
+          rustup target add x86_64-unknown-linux-musl
+      - name: Build the complete static analysis-tool inventory
+        run: |
+          cargo build --locked --release -p agentlab_code_analysis \
+            --target x86_64-unknown-linux-musl
+      - name: Build and reproduce the candidate component without publishing
+        run: |
+          set -euo pipefail
+          packer="target/x86_64-unknown-linux-musl/release/agentlab-analysis-tools-pack"
+          binaries="target/x86_64-unknown-linux-musl/release"
+          version="${GITHUB_SHA:0:12}"
+          first="$RUNNER_TEMP/analysis-tools-component"
+          second="$RUNNER_TEMP/analysis-tools-component-repeat"
+          "$packer" --binary-dir "$binaries" --source-revision "$GITHUB_SHA" \
+            --version "$version" --output "$first" | tee "$RUNNER_TEMP/pack-receipt.json"
+          "$packer" --binary-dir "$binaries" --source-revision "$GITHUB_SHA" \
+            --version "$version" --output "$second" > "$RUNNER_TEMP/repeat-receipt.json"
+          diff -qr "$first" "$second"
+          archive="$first/agentlab-pack-analysis-tools-$version-linux-x64.tar.zst"
+          zstd -t "$archive"
+          zstd -dc "$archive" | tar -tf - > "$RUNNER_TEMP/archive-members.txt"
+          test "$(grep -c '^payload/bin/agentlab-' "$RUNNER_TEMP/archive-members.txt")" \
+            -eq "$(jq -r .binaryCount "$RUNNER_TEMP/pack-receipt.json")"
+          sha256sum "$first"/* >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/pack-receipt.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve candidate component and reproducibility evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: analysis-tools-component-candidate
+          if-no-files-found: error
+          path: ${{ runner.temp }}/analysis-tools-component/
+      - name: Preserve build-only evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: analysis-tools-component-evidence
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/pack-receipt.json
+            ${{ runner.temp }}/repeat-receipt.json
+            ${{ runner.temp }}/archive-members.txt
+
+  publish-immutable-analysis-tools:
+    needs: build-analysis-tools-component
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Require explicit exact revision authority
+        env:
+          EXPECTED_REVISION: ${{ inputs.expected_revision }}
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$EXPECTED_REVISION" == "$GITHUB_SHA" ]]
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: analysis-tools-component-candidate
+          path: ${{ runner.temp }}/candidate
+      - name: Publish once under a source-derived immutable tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="analysis-tools-${GITHUB_SHA:0:12}-linux-x64"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "immutable release already exists: $tag" >&2
+            exit 1
+          fi
+          gh release create "$tag" "$RUNNER_TEMP/candidate/"* \
+            --repo "$GITHUB_REPOSITORY" --prerelease \
+            --title "AgentLab analysis tools ${GITHUB_SHA:0:12} (linux-x64)" \
+            --notes "Independent immutable Rust analysis-tools component. Aggregate channels remain unchanged until separately composed and qualified."

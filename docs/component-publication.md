@@ -132,3 +132,12 @@ relative metadata references. The workflow supplies this automatically. Relative
 metadata follows the descriptor URL, and the receipt preserves its exact source
 digest. Auxiliary template inventory is metadata, not a duplicated component
 archive.
+
+Component-update assets may also use relative URLs. The composer resolves both
+the selected value's artifact/descriptor fields and every asset URL against the
+original update-descriptor URL. This allows an independently published
+`analysis-tools-<revision>-linux-x64` release to keep its archive, pack
+descriptor and update descriptor together without embedding a mutable channel.
+Introducing its new optional graph slot is a coordinated composition; later
+analysis-tool revisions are ordinary `pack:analysis-tools` replacements and do
+not rebuild unchanged large components.
