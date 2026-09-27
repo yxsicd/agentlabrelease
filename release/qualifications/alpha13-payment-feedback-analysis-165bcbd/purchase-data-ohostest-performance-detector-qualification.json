@@ -1,0 +1,72 @@
+{
+  "absolutePowerThermalQualified": false,
+  "allowsCaseContract": false,
+  "artifactSha256": {
+    "baselineSummary": "30b00dbd1334516c3b0b9a601441b17c379cb6d6e47512df907b7260cc0e302b",
+    "calibration": "f294420cd76d2feba282d6497c6be94fd51372025430fe7b458de4d0d256c124",
+    "exploratoryRetainedMemoryFailure": "455d62f3d1aaf2171cef03ae46a3515993f1a33ae1b6ddf76c1bc8fc59fb14f3",
+    "policy": "3a431b7567c21946b7c2869b3f617b55a422c3f2fc953669d64c2e576d6c8a95",
+    "profileQualification": "f844673c115b0be92ad8cfab26f5617bd15b9aa0ea634f31b7eac47679ec341e",
+    "runner": "094883ee81762c3acde40c4e8a3a723f5f0e5a223fb18f9434ebc7e8e01199ff",
+    "workload": "9a9430a6267db477461d9d7466513cbd8e97e6b571647537175709e8a0ac3781",
+    "wrongComparison1": "5b2ce9c3faeb960402a99eba555cedddb0aeb768ef942e58d0dc1220355a6ce3",
+    "wrongComparison2": "9dd06bfb06eb7bde91e86672f70a6812d063193ec6780cdf50d25bdfa085a3bd",
+    "wrongRun1Manifest": "8e7b749a44ab07a19d70696a20f81819cc75be7839ef56d1b36acc9a60225581",
+    "wrongRun1Summary": "45ffc57bd8c7a0dfe281b6878aa22a0ea54d1eb2d42103b293663832da74870d",
+    "wrongRun2Manifest": "bbd2cd286bf7de27bcf719db2589cb9bdb06eefd503e1ba22dceeb3e80be5d74",
+    "wrongRun2Summary": "ad21be335a219788c05caa940095cc99603b25ab6601205e09aa9b98324dc611"
+  },
+  "automaticPromotion": false,
+  "baselineAppHapSha256": "dfd61c2e5a33249aed059192798c449f7ab3a3a44d69b900fdd508978cdda073",
+  "boundary": "The exact clean candidate remains functionally passing while a controlled combined 64 MiB retained-memory and 400/500 ms bounded-CPU variant passes 84/84 OHOS Test assertions and is rejected in two cold runs by the predeclared emulator CPU guardrail. This Rust qualification calibrates the relative performance detector only; the controlled variant is not an Agent run, unseen case or gold repair, and it does not complete distinct baseline/reference/wrong case calibration, independent review, live vendor IAP, real-device or absolute power/thermal qualification.",
+  "candidateRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+  "controlledMeaningfulWrongFunctionallyQualified": true,
+  "controlledMutation": {
+    "baseSourceFileSha256": "daf0f32975c9c9d05174995b165669d3b19388df03f2d6b8284131cab9c1aea0",
+    "busyWindowMs": 400,
+    "bytes": 67108864,
+    "candidateSourceFileSha256": "99c0dd5acdf45973401cd8fefd7bc9daa055af4a12342ae8d0c3656c34f3924f",
+    "id": "retain-64m-and-bounded-cpu-entry-page-v2",
+    "intervalMs": 500,
+    "kind": "combined-cpu-memory",
+    "sourcePath": "entry/src/main/ets/pages/EntryPage.ets"
+  },
+  "controlledWrongAppHapSha256": "7bf92151da1a85ba3291c4997d5f4e291cc38833f5e5dbef72a4b2e42ec2a7b3",
+  "controlledWrongTestHapSha256": "2a9ee43900d7f4813b896909bc40b192319f7db79df117f4e4243b56278d53b5",
+  "coverage": {
+    "baselineProfileRunCount": 1,
+    "controlledWrongFunctionalAssertionCount": 84,
+    "controlledWrongFunctionalRepeatCount": 12,
+    "controlledWrongProfileRunCount": 2,
+    "controlledWrongProfileSampleCount": 96
+  },
+  "distinctBaselineReferenceWrongCaseCalibrationComplete": false,
+  "emulatorRelativePerformanceRepeatabilityQualified": true,
+  "environmentIdentity": "hwlinux:emulator-26.0.0.821:harmonyos-7.0.0-phone-x86:codex-phone-7",
+  "independentOracleReviewCompleted": false,
+  "liveVendorIapExecuted": false,
+  "metrics": {
+    "baseline": {
+      "appCpuUsagePercentMean": 0.017371166666666667,
+      "appPssKiBMean": 19286.0
+    },
+    "consistentRegressedMetrics": [
+      "appCpuUsagePercent"
+    ],
+    "wrongRun1": {
+      "appCpuUsagePercentMean": 11.10624888888889,
+      "appPssKiBMean": 16574.0
+    },
+    "wrongRun2": {
+      "appCpuUsagePercentMean": 11.080555555555556,
+      "appPssKiBMean": 5684.0
+    }
+  },
+  "nextGate": "independent-semantic-and-oracle-review-then-distinct-case-variant-performance-calibration-and-upstream-reexecution",
+  "performanceCalibrated": false,
+  "realDeviceExecuted": false,
+  "relativePerformanceDetectorCalibrated": true,
+  "schema": "agentlab.purchase_data_ohostest_performance_detector_qualification.v1",
+  "sourceSetSha256": "cbc01c94755f2d8da5449902ad1a309488d0a9defa9fede23318ad360dd4c2c2",
+  "status": "controlled-performance-detector-qualified-independent-review-required"
+}

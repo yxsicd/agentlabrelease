@@ -4,8 +4,11 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::{Command, Output},
+    sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
+
+static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 const RISKS: &str = "self-authored-candidate,signature-verification-outside-test-seam,live-vendor-iap-service-unexecuted,x86-emulator-not-real-device,performance-power-thermal-uncalibrated,semantic-and-behavior-oracle-review-pending";
 
@@ -25,12 +28,13 @@ fn packet() -> PathBuf {
 
 fn root() -> PathBuf {
     let path = std::env::temp_dir().join(format!(
-        "agentlab-ohostest-source-review-{}-{}",
+        "agentlab-ohostest-source-review-{}-{}-{}",
         std::process::id(),
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
-            .as_nanos()
+            .as_nanos(),
+        TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed)
     ));
     fs::create_dir_all(&path).unwrap();
     path

@@ -610,6 +610,31 @@ baseline/reference/wrong performance calibration, live vendor IAP, a real
 device, absolute power/thermal authority, independent review, a case contract
 or automatic promotion.
 
+### Purchase-data performance-detector calibration
+
+The retained profile was then used as the clean baseline for a controlled,
+functionally passing performance wrong case. The first declared mutation only
+retained and touched 64 MiB; it did not regress the same metric in both cold
+runs, so the attempt was retained as negative evidence and the policy was not
+relaxed. A second, separately declared mutation retained the same allocation and
+added a bounded 400 ms CPU workload every 500 ms on the entry page. It did not
+change purchase finalization or the `ohosTest` sources.
+
+Both controlled-wrong cold runs again passed all six suites and seven assertions
+per suite, for 84/84 assertions and 96 SmartPerf samples. Against the clean CPU
+mean of 0.017371%, the two wrong runs measured 11.106249% and 11.080556%; both
+were rejected by the predeclared CPU guardrail. PSS did not consistently regress
+and is not claimed. Final HDC and emulator-process checks were empty.
+
+`agentlab-purchase-data-ohostest-performance-detector-qualification` is the
+Rust-native, fail-closed verifier for this evidence. It reopens the source
+transformation, HAPs, manifests, OHOS Test reports, raw SmartPerf samples,
+temporal containment, comparisons and shutdown postconditions, and recomputes
+the metric decisions. This calibrates only the relative performance detector.
+The mutation is not an Agent run, unseen case or gold repair; distinct
+baseline/reference/wrong case calibration, independent review, live vendor IAP,
+real-device execution and absolute power/thermal authority remain open gates.
+
 ### Review-transaction preparation
 
 After a calibration succeeds, use

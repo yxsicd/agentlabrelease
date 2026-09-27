@@ -1,0 +1,59 @@
+{
+  "authority": {
+    "absolutePowerThermal": "unavailable-on-emulator",
+    "functional": "ohosTest-hypium-source-bound",
+    "relativePerformance": "smartperf-emulator-proxy"
+  },
+  "automaticPromotion": false,
+  "baseRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+  "baseline": {
+    "appHapSha256": "dfd61c2e5a33249aed059192798c449f7ab3a3a44d69b900fdd508978cdda073",
+    "manifestSha256": "4347bcf7b9a1ae3ebc45f0e6c0713a391239ffb50e692291b12c0b9884f81f38",
+    "runId": "run-1",
+    "summarySha256": "30b00dbd1334516c3b0b9a601441b17c379cb6d6e47512df907b7260cc0e302b"
+  },
+  "boundary": "The exact clean candidate remains functionally passing while a controlled combined 64 MiB retained-memory and 400/500 ms bounded-CPU variant is rejected twice by the predeclared emulator guardrails. This calibrates the relative performance detector only; it is not an Agent run, unseen case, gold repair, distinct baseline/reference/wrong case calibration, live vendor-IAP, real-device or absolute power/thermal evidence.",
+  "caseId": "purchase-data-finalization-candidate-clean-v1",
+  "comparisonSha256s": [
+    "5b2ce9c3faeb960402a99eba555cedddb0aeb768ef942e58d0dc1220355a6ce3",
+    "9dd06bfb06eb7bde91e86672f70a6812d063193ec6780cdf50d25bdfa085a3bd"
+  ],
+  "consistentRegressedMetrics": [
+    "appCpuUsagePercent"
+  ],
+  "controlledWrong": {
+    "appHapSha256": "7bf92151da1a85ba3291c4997d5f4e291cc38833f5e5dbef72a4b2e42ec2a7b3",
+    "manifestSha256s": [
+      "8e7b749a44ab07a19d70696a20f81819cc75be7839ef56d1b36acc9a60225581",
+      "bbd2cd286bf7de27bcf719db2589cb9bdb06eefd503e1ba22dceeb3e80be5d74"
+    ],
+    "mutation": {
+      "baseSourceFileSha256": "daf0f32975c9c9d05174995b165669d3b19388df03f2d6b8284131cab9c1aea0",
+      "busyWindowMs": 400,
+      "bytes": 67108864,
+      "candidateSourceFileSha256": "99c0dd5acdf45973401cd8fefd7bc9daa055af4a12342ae8d0c3656c34f3924f",
+      "id": "retain-64m-and-bounded-cpu-entry-page-v2",
+      "intervalMs": 500,
+      "kind": "combined-cpu-memory",
+      "sourcePath": "entry/src/main/ets/pages/EntryPage.ets"
+    },
+    "runIds": [
+      "wrong-run-1",
+      "wrong-run-2"
+    ],
+    "summarySha256s": [
+      "45ffc57bd8c7a0dfe281b6878aa22a0ea54d1eb2d42103b293663832da74870d",
+      "ad21be335a219788c05caa940095cc99603b25ab6601205e09aa9b98324dc611"
+    ],
+    "testHapSha256": "2a9ee43900d7f4813b896909bc40b192319f7db79df117f4e4243b56278d53b5"
+  },
+  "distinctBaselineReferenceWrongCaseCalibrationComplete": false,
+  "functionalAssertionCount": 84,
+  "nextGate": "rust-qualification-then-independent-review-and-distinct-case-variant-calibration",
+  "performanceCalibrated": false,
+  "profileSampleCount": 96,
+  "relativePerformanceDetectorCalibrated": true,
+  "schema": "agentlab.purchase_data_ohostest_performance_detector_calibration.v1",
+  "sourceSetSha256": "cbc01c94755f2d8da5449902ad1a309488d0a9defa9fede23318ad360dd4c2c2",
+  "status": "qualified-review-required"
+}

@@ -1,0 +1,13 @@
+0	start-app	EntryAbility,xxx.xxx.xxx
+1	repeat-ohostest	7,OpenHarmonyTestRunner
+1	start-app	EntryAbility,xxx.xxx.xxx
+2	repeat-ohostest	7,OpenHarmonyTestRunner
+2	start-app	EntryAbility,xxx.xxx.xxx
+3	repeat-ohostest	7,OpenHarmonyTestRunner
+3	start-app	EntryAbility,xxx.xxx.xxx
+4	repeat-ohostest	7,OpenHarmonyTestRunner
+4	start-app	EntryAbility,xxx.xxx.xxx
+5	repeat-ohostest	7,OpenHarmonyTestRunner
+5	start-app	EntryAbility,xxx.xxx.xxx
+6	repeat-ohostest	7,OpenHarmonyTestRunner
+6	start-app	EntryAbility,xxx.xxx.xxx

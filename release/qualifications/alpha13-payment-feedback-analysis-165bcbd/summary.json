@@ -565,6 +565,33 @@
       "automaticPromotion": false,
       "status": "linux-emulator-functional-and-relative-performance-repeatability-qualified-independent-review-required"
     },
+    "ohosTestPerformanceDetectorQualification": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-ohostest-performance-detector-qualification.json",
+      "evidencePath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-ohostest-performance-detector",
+      "schema": "agentlab.purchase_data_ohostest_performance_detector_qualification.v1",
+      "sha256": "57658baa93d4a2b78e81e3d9478639c9ab755bb45d92e4dc6a98c32e9da81f1c",
+      "implementation": "crates/agentlab_code_analysis/src/purchase_data_ohostest_performance_detector_qualification.rs",
+      "binary": "agentlab-purchase-data-ohostest-performance-detector-qualification",
+      "language": "rust",
+      "baselineProfileRunCount": 1,
+      "controlledWrongProfileRunCount": 2,
+      "controlledWrongFunctionalRepeatCount": 12,
+      "controlledWrongFunctionalAssertionCount": 84,
+      "controlledWrongProfileSampleCount": 96,
+      "consistentRegressedMetrics": [
+        "appCpuUsagePercent"
+      ],
+      "relativePerformanceDetectorCalibrated": true,
+      "performanceCalibrated": false,
+      "distinctBaselineReferenceWrongCaseCalibrationComplete": false,
+      "independentReviewVerified": false,
+      "liveVendorIapExecuted": false,
+      "realDeviceExecuted": false,
+      "absolutePowerThermalQualified": false,
+      "allowsCaseContract": false,
+      "automaticPromotion": false,
+      "status": "controlled-performance-detector-qualified-independent-review-required"
+    },
     "semanticAlignmentVerified": false,
     "behaviorOracleVerified": false,
     "allowsCaseContract": false,
@@ -574,6 +601,6 @@
   "retention": {
     "authority": "compact-qualification-and-exact-source-patch",
     "fullReplayEvidence": "retained-source-review-packet-plus-run-addressed-workflow-artifact",
-    "nextGate": "independent-semantic-and-oracle-review-then-controlled-baseline-reference-wrong-performance-calibration-and-upstream-reexecution"
+    "nextGate": "independent-semantic-and-oracle-review-then-distinct-case-variant-performance-calibration-and-upstream-reexecution"
   }
 }

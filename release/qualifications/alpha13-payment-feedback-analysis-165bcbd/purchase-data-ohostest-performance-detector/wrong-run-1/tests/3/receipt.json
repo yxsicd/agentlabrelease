@@ -1,0 +1,70 @@
+{
+  "automaticPromotion": false,
+  "bundle": "xxx.xxx.xxx",
+  "caseId": "purchase-data-finalization-candidate-clean-v1",
+  "command": [
+    "/home/huawei/commandline-tools-26.0.0.821/sdk/default/openharmony/toolchains/hdc",
+    "-t",
+    "127.0.0.1:10100",
+    "shell",
+    "aa",
+    "test",
+    "-b",
+    "xxx.xxx.xxx",
+    "-m",
+    "entry_test",
+    "-s",
+    "unittest",
+    "OpenHarmonyTestRunner",
+    "-s",
+    "timeout",
+    "60000"
+  ],
+  "finishedAt": "2026-09-27T00:27:22.286773+00:00",
+  "framework": "instrument-test-ohosTest-hypium",
+  "hdc": {
+    "byteLength": 6430848,
+    "path": "/home/huawei/commandline-tools-26.0.0.821/sdk/default/openharmony/toolchains/hdc",
+    "sha256": "90c2554a44855a3c541c24bad5cffd46badb7eb7323c5464f6c0fb7160bdf5d0"
+  },
+  "logs": [
+    {
+      "byteLength": 327,
+      "path": "logs/01.json",
+      "sha256": "f0cf116e38b12dc3152130095fcca57ba5a2d5394bbd615da601ee0a50a11174"
+    },
+    {
+      "byteLength": 4924,
+      "path": "logs/02.json",
+      "sha256": "962404da2f7bc62bc23c794370806c372b1ba53c13b948ffe2393fe1c7707abf"
+    }
+  ],
+  "module": "entry_test",
+  "packages": {
+    "app": {
+      "byteLength": 449275,
+      "path": "entry-default-unsigned.hap",
+      "sha256": "7bf92151da1a85ba3291c4997d5f4e291cc38833f5e5dbef72a4b2e42ec2a7b3"
+    },
+    "test": {
+      "byteLength": 1191534,
+      "path": "entry-ohosTest-unsigned.hap",
+      "sha256": "2a9ee43900d7f4813b896909bc40b192319f7db79df117f4e4243b56278d53b5"
+    }
+  },
+  "packagesInstalled": false,
+  "passed": true,
+  "projectTreeSha256": "794b0c49311ed66bff666c33b747e6116b5ec6bcc456b8995332ad6cd9fd32ac",
+  "report": {
+    "byteLength": 568,
+    "path": "native-report.json",
+    "sha256": "123fbf9bcff0dbf9c946b60e7f407b4695582072c45f15ebc249cb33aa93ba65"
+  },
+  "runner": "OpenHarmonyTestRunner",
+  "schema": "agentlab.harmony_standard_test_execution_receipt.v1",
+  "sourceSetSha256": "cbc01c94755f2d8da5449902ad1a309488d0a9defa9fede23318ad360dd4c2c2",
+  "startedAt": "2026-09-27T00:27:21.197213+00:00",
+  "status": "passed",
+  "target": "127.0.0.1:10100",
+  "testClass": null
+}

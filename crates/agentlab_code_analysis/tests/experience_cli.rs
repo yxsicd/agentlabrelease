@@ -3,8 +3,23 @@ use std::{
     fs,
     path::Path,
     process::Command,
+    sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
+
+static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+fn temp_root(prefix: &str) -> std::path::PathBuf {
+    std::env::temp_dir().join(format!(
+        "{prefix}-{}-{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos(),
+        TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed)
+    ))
+}
 fn rows(p: &Path) -> Vec<Value> {
     fs::read_to_string(p)
         .unwrap()
@@ -14,13 +29,7 @@ fn rows(p: &Path) -> Vec<Value> {
 }
 #[test]
 fn validates_negative_variant_and_promotes_only_explicit_verified_lesson() {
-    let root = std::env::temp_dir().join(format!(
-        "al-experience-{}",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
+    let root = temp_root("al-experience");
     fs::create_dir(&root).unwrap();
     let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let fixture = repo.join("examples/knowledge-seed/experience/fixture");
@@ -126,13 +135,7 @@ fn validates_negative_variant_and_promotes_only_explicit_verified_lesson() {
 
 #[test]
 fn utility_lessons_promote_their_own_identity_and_scope() {
-    let root = std::env::temp_dir().join(format!(
-        "al-utility-experience-{}",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
+    let root = temp_root("al-utility-experience");
     fs::create_dir(&root).unwrap();
     let binary = env!("CARGO_BIN_EXE_agentlab-experience");
     let instance = root.join("instance");

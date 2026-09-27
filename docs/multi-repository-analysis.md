@@ -1402,6 +1402,26 @@ not the case contract: independent semantic/Oracle review, a controlled
 baseline/reference/wrong performance calibration, upstream publication and
 exact-revision reexecution remain the next gates.
 
+The next calibration step proves that this retained performance lane can reject
+a bounded, functionally passing wrong variant without weakening its policy. A
+memory-only 64 MiB attempt failed the two-run repeatability requirement and was
+kept as negative evidence. The successor variant retained that allocation and
+added a declared 400/500 ms bounded CPU workload. It still passed 84/84 OHOS
+Test assertions across two cold runs, while CPU rose from the clean 0.017371%
+mean to 11.106249% and 11.080556%; both runs were rejected by the predeclared CPU
+guardrail. PSS did not consistently regress and is not claimed.
+
+The Rust-native
+`agentlab-purchase-data-ohostest-performance-detector-qualification` reopens the
+exact source transformation, HAP and tool identities, functional reports, 96
+raw samples, temporal containment, comparison math and empty shutdown state.
+Its status is
+`controlled-performance-detector-qualified-independent-review-required`. This
+calibrates the relative detector only; the controlled variant is not an Agent
+run, unseen case or gold repair, and distinct case-level
+baseline/reference/wrong calibration, independent semantic/Oracle review and
+upstream exact-revision reexecution remain required.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \

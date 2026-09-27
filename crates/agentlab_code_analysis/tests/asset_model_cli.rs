@@ -4,8 +4,23 @@ use std::{
     fs,
     path::Path,
     process::Command,
+    sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
+
+static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+fn temp_root(prefix: &str) -> std::path::PathBuf {
+    std::env::temp_dir().join(format!(
+        "{prefix}-{}-{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos(),
+        TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed)
+    ))
+}
 fn write(path: &Path, value: Value) {
     fs::create_dir_all(path.parent().unwrap()).unwrap();
     fs::write(path, serde_json::to_vec(&value).unwrap()).unwrap();
@@ -23,13 +38,7 @@ fn hash(raw: &[u8]) -> String {
 }
 #[test]
 fn separates_assets_restores_context_and_keeps_raw_evidence() {
-    let root = std::env::temp_dir().join(format!(
-        "al-asset-model-{}",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
+    let root = temp_root("al-asset-model");
     let seed = root.join("seed");
     fs::create_dir_all(&seed).unwrap();
     for (table, row) in [
@@ -210,13 +219,7 @@ fn separates_assets_restores_context_and_keeps_raw_evidence() {
 
 #[test]
 fn preserves_multiple_observed_sources_and_empty_agent_capture() {
-    let root = std::env::temp_dir().join(format!(
-        "al-multiple-source-{}",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
+    let root = temp_root("al-multiple-source");
     let seed = root.join("seed");
     fs::create_dir_all(&seed).unwrap();
     for table in ["maintainer_skills", "program_facts", "evaluation_cases"] {
@@ -275,13 +278,7 @@ fn preserves_multiple_observed_sources_and_empty_agent_capture() {
 
 #[test]
 fn exports_harmony_device_checks_and_raw_evidence() {
-    let root = std::env::temp_dir().join(format!(
-        "al-harmony-instance-{}",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
+    let root = temp_root("al-harmony-instance");
     let seed = root.join("seed");
     fs::create_dir_all(&seed).unwrap();
     for table in ["maintainer_skills", "program_facts", "evaluation_cases"] {
