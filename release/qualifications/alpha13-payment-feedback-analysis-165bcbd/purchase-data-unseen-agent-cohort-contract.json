@@ -45,7 +45,7 @@
     },
     "exactPatchPublicationWorkflow": {
       "path": ".github/workflows/purchase-data-exact-patch-publication.yml",
-      "sha256": "d01dbbfdf002fac22c46acdddd07a328e693361a2159a6224012669dc21b3f3b"
+      "sha256": "566a2efa797bfd0ad4fa9fb8288636d35742ea11557fc1a5b8343a84e3278d27"
     },
     "participantExperimentDispatch": {
       "path": "crates/agentlab_code_analysis/src/participant_experiment_dispatch.rs",
@@ -65,7 +65,7 @@
     },
     "publishedRevisionReexecutionWorkflow": {
       "path": ".github/workflows/purchase-data-published-revision-reexecution.yml",
-      "sha256": "46579a13b6d3752fc3dc065d6e819f3b70a92056adb0d00e4b43957b0a64d944"
+      "sha256": "81a273b2b7873ae1c219b32a870654bdc5471283a54560d266c4ee80fbb21af3"
     },
     "publishedRevisionRuntimeBundleSchema": {
       "path": "schemas/purchase-data-published-revision-runtime-bundle.schema.json",
@@ -81,7 +81,7 @@
     },
     "trustedCaseFreezeWorkflow": {
       "path": ".github/workflows/purchase-data-trusted-case-freeze.yml",
-      "sha256": "159b9528219f0e26880d01cde97f8908701b568f8d477eaa96ec85d8e007232f"
+      "sha256": "9b7c73726e0a054ba6dd1a7a3e47f07228df8c9d4bec274a117670d807a088cb"
     },
     "trustedCaseReview": {
       "path": ".github/workflows/multi-repo-case-review.yml",

@@ -355,7 +355,7 @@ fn publication_workflow_keeps_component_candidate_and_activation_as_separate_aut
     assert!(workflow.contains("runtime-execution-receipt.json"));
     assert!(public_smoke.contains("agentlab.analysis_tools_installed_execution.v1"));
     assert!(public_smoke
-        .contains("--entrypoint \"${analysis_mount}/payload/bin/agentlab-analysis-tools-pack\""));
+        .contains("--entrypoint \"${analysis_mount}/bin/agentlab-analysis-tools-pack\""));
     assert!(
         public_smoke.contains("\"${runtime_reference}\" --execute agentlab-analysis-tools-pack")
     );

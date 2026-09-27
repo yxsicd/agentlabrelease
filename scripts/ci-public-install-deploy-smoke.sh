@@ -267,7 +267,7 @@ if [[ -s "${root}/analysis-tools-runtime-probe.tsv" ]]; then
   docker run --rm --network none \
     --mount "type=volume,src=${analysis_volume},dst=${analysis_mount},readonly" \
     --mount "type=bind,src=${analysis_execution_dir},dst=/agentlab-execution" \
-    --entrypoint "${analysis_mount}/payload/bin/agentlab-analysis-tools-pack" \
+    --entrypoint "${analysis_mount}/bin/agentlab-analysis-tools-pack" \
     "${runtime_reference}" --execute agentlab-analysis-tools-pack \
       --receipt /agentlab-execution/receipt.json -- --self-check > "${analysis_raw}"
   cp "${analysis_execution_dir}/receipt.json" "${root}/analysis-tools-execution-receipt.json"

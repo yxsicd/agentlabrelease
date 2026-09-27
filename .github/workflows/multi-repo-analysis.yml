@@ -149,7 +149,7 @@ jobs:
             --mount "type=bind,src=$AGENTLAB_ROOT/ast-cache,dst=$AGENTLAB_ROOT/ast-cache" \
             --mount "type=bind,src=$AGENTLAB_ROOT/analysis-execution,dst=/agentlab-execution" \
             --workdir "$AGENTLAB_ROOT/source" \
-            --entrypoint "${runtime[2]}/payload/bin/agentlab-analysis-tools-pack" \
+            --entrypoint "${runtime[2]}/bin/agentlab-analysis-tools-pack" \
             "${runtime[0]}" --execute agentlab-multi-repo-analysis \
               --receipt /agentlab-execution/receipt.json -- \
               --cache-dir "$AGENTLAB_ROOT/ast-cache" \

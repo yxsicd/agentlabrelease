@@ -119,10 +119,19 @@ fn extract(archive: &Path, output: &Path) {
 
 #[cfg(unix)]
 fn executable_install(tool_body: &str) -> PathBuf {
+    executable_install_with_layout(tool_body, false)
+}
+
+#[cfg(unix)]
+fn executable_install_with_layout(tool_body: &str, volume_layout: bool) -> PathBuf {
     use std::os::unix::fs::PermissionsExt;
 
     let root = temp_root();
-    let bin = root.join("payload/bin");
+    let bin = if volume_layout {
+        root.join("bin")
+    } else {
+        root.join("payload/bin")
+    };
     fs::create_dir_all(&bin).unwrap();
     let controller = env!("CARGO_BIN_EXE_agentlab-analysis-tools-pack");
     let mut inventory = Vec::new();
@@ -144,7 +153,7 @@ fn executable_install(tool_body: &str) -> PathBuf {
         let bytes = fs::read(&path).unwrap();
         inventory.push(json!({
             "name": name,
-            "path": format!("payload/bin/{name}"),
+            "path": format!("bin/{name}"),
             "bytes": bytes.len(),
             "sha256": digest(&bytes)
         }));
@@ -387,6 +396,42 @@ fn installed_controller_dispatches_allowlisted_tool_and_writes_bound_receipt() {
         value["argumentsSha256"],
         digest(&serde_json::to_vec(&["alpha", "beta"]).unwrap())
     );
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn installed_controller_supports_volume_layout_after_payload_prefix_is_removed() {
+    let root = executable_install_with_layout("#!/bin/sh\nexit 0\n", true);
+    let controller = root.join("bin/agentlab-analysis-tools-pack");
+    let checked = Command::new(&controller)
+        .arg("--self-check")
+        .output()
+        .unwrap();
+    assert!(
+        checked.status.success(),
+        "{}",
+        String::from_utf8_lossy(&checked.stderr)
+    );
+    let checked: Value = serde_json::from_slice(&checked.stdout).unwrap();
+    assert_eq!(
+        checked["probeExecutable"],
+        "bin/agentlab-analysis-tools-pack"
+    );
+
+    let receipt = root.join("execution-receipt.json");
+    let executed = Command::new(&controller)
+        .args([
+            "--execute",
+            "agentlab-source-probe",
+            "--receipt",
+            receipt.to_str().unwrap(),
+            "--",
+        ])
+        .output()
+        .unwrap();
+    assert!(executed.status.success());
+    assert_eq!(read(&receipt)["status"], "passed");
     fs::remove_dir_all(root).unwrap();
 }
 
