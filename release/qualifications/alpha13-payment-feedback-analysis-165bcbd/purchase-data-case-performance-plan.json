@@ -30,13 +30,13 @@
       "edit": {
         "expectedOccurrenceCount": 1,
         "find": "    const purchaseOrderPayload =\n      JSON.parse(decodeJws(jwsPurchaseOrder)) as PurchaseOrderPayload;",
-        "replace": "    let purchaseOrderPayload =\n      JSON.parse(decodeJws(jwsPurchaseOrder)) as PurchaseOrderPayload;\n    for (let pass: number = 0; pass < 200; pass++) {\n      purchaseOrderPayload =\n        JSON.parse(decodeJws(jwsPurchaseOrder)) as PurchaseOrderPayload;\n    }"
+        "replace": "    let purchaseOrderPayload =\n      JSON.parse(decodeJws(jwsPurchaseOrder)) as PurchaseOrderPayload;\n    for (let pass: number = 0; pass < 1000; pass++) {\n      purchaseOrderPayload =\n        JSON.parse(decodeJws(jwsPurchaseOrder)) as PurchaseOrderPayload;\n    }"
       },
       "expectedFunctionalResult": "8-of-8-pass",
       "expectedPerformanceResult": "rejected-versus-reference-on-appCpuUsagePercent",
-      "id": "redundant-purchase-order-decode-200x-v1",
+      "id": "redundant-purchase-order-decode-1000x-v2",
       "role": "meaningful-wrong",
-      "semanticFault": "The implementation repeats the same JWS decode and payload parse 200 additional times before using an equivalent final payload.",
+      "semanticFault": "The implementation repeats the same JWS decode and payload parse 1000 additional times before using an equivalent final payload.",
       "sourcePath": "entry/src/main/ets/common/PurchaseFinalizationPolicy.ets"
     }
   ],

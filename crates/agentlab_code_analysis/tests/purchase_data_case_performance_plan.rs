@@ -107,6 +107,14 @@ fn plans_exact_case_bound_three_role_matrix_without_claiming_execution() {
     );
     assert_eq!(plan["evaluatorWorkloadEdit"]["iterationCount"], 5000);
     assert_eq!(plan["calibrationRoles"].as_array().unwrap().len(), 3);
+    assert_eq!(
+        plan["calibrationRoles"][2]["id"],
+        "redundant-purchase-order-decode-1000x-v2"
+    );
+    assert!(plan["calibrationRoles"][2]["edit"]["replace"]
+        .as_str()
+        .unwrap()
+        .contains("pass < 1000"));
     assert_eq!(plan["executionMatrix"]["totalColdRunCount"], 6);
     assert_eq!(
         plan["executionMatrix"]["expectedFunctionalVerdictCountPerRole"],

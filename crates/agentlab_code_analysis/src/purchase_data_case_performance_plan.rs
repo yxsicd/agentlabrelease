@@ -500,15 +500,15 @@ fn build(root: PathBuf) -> Result<Value, String> {
             },
             {
                 "role": "meaningful-wrong",
-                "id": "redundant-purchase-order-decode-200x-v1",
+                "id": "redundant-purchase-order-decode-1000x-v2",
                 "sourcePath": source_path,
-                "semanticFault": "The implementation repeats the same JWS decode and payload parse 200 additional times before using an equivalent final payload.",
+                "semanticFault": "The implementation repeats the same JWS decode and payload parse 1000 additional times before using an equivalent final payload.",
                 "edit": {
                     "find": "    const purchaseOrderPayload =\n      JSON.parse(decodeJws(jwsPurchaseOrder)) as PurchaseOrderPayload;",
                     "replace": concat!(
                         "    let purchaseOrderPayload =\n",
                         "      JSON.parse(decodeJws(jwsPurchaseOrder)) as PurchaseOrderPayload;\n",
-                        "    for (let pass: number = 0; pass < 200; pass++) {\n",
+                        "    for (let pass: number = 0; pass < 1000; pass++) {\n",
                         "      purchaseOrderPayload =\n",
                         "        JSON.parse(decodeJws(jwsPurchaseOrder)) as PurchaseOrderPayload;\n",
                         "    }"
