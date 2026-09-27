@@ -40,6 +40,80 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def analysis_tools_execution(root: Path) -> dict[str, Any] | None:
+    execution_path = root / "analysis-tools-execution.json"
+    runtime_path = root / "analysis-component-runtime.json"
+    lock_path = root / "analysis-composition-environment-lock.json"
+    present = [path.exists() for path in (execution_path, runtime_path, lock_path)]
+    require(all(present) or not any(present), "analysis component evidence is incomplete")
+    if not any(present):
+        return None
+    execution = load(execution_path, "analysis tools execution receipt")
+    runtime = load(runtime_path, "analysis component runtime")
+    lock_bytes = lock_path.read_bytes()
+    lock = load(lock_path, "analysis composition environment lock")
+    require(
+        execution.get("schema") == "agentlab.analysis_tools_execution.v1",
+        "analysis tools execution schema differs",
+    )
+    require(execution.get("status") == "passed", "analysis tools execution did not pass")
+    require(execution.get("tool") == "agentlab-multi-repo-analysis", "analysis tool identity differs")
+    require(execution.get("exitCode") == 0, "analysis tool exit code differs")
+    require(execution.get("automaticPromotion") is False, "analysis tools execution can auto-promote")
+    for field in (
+        "toolSha256",
+        "componentManifestSha256",
+        "componentInventorySha256",
+        "argumentsSha256",
+    ):
+        require(SHA256.fullmatch(str(execution.get(field, ""))) is not None, f"analysis execution {field} is invalid")
+    require(
+        isinstance(execution.get("argumentCount"), int) and execution["argumentCount"] >= 2,
+        "analysis tool argument count is invalid",
+    )
+    require(
+        runtime.get("schema") == "agentlab.analysis_tools_component_runtime.v1",
+        "analysis component runtime schema differs",
+    )
+    require(runtime.get("automaticPromotion") is False, "analysis component runtime can auto-promote")
+    component_revision = runtime.get("expectedComponentSourceRevision")
+    require(REVISION.fullmatch(str(component_revision or "")) is not None, "analysis component revision is invalid")
+    require(
+        execution.get("componentSourceRevision") == component_revision,
+        "analysis execution component revision differs",
+    )
+    lock_sha256 = hashlib.sha256(lock_bytes).hexdigest()
+    require(runtime.get("environmentLockSha256") == lock_sha256, "analysis composition lock digest differs")
+    require(lock.get("schema") == "agentlab.environment_lock.v3", "analysis composition lock schema differs")
+    components = [
+        row for row in lock.get("components") or []
+        if isinstance(row, dict) and row.get("enabled", True) and row.get("slot") == "analysis-tools"
+    ]
+    images = [row for row in lock.get("images") or [] if isinstance(row, dict) and row.get("enabled", True)]
+    require(len(components) == 1 and images, "analysis composition runtime selection is invalid")
+    component = components[0]
+    image = images[0]
+    require(component.get("version") == runtime.get("componentVersion"), "analysis component version differs")
+    require(component_revision.startswith(str(component.get("version", ""))), "analysis component version is not source-derived")
+    require(component.get("archiveSha256") == runtime.get("componentArchiveSha256"), "analysis component archive differs")
+    require(component.get("mountTarget") == runtime.get("componentMountTarget"), "analysis component mount differs")
+    require(component.get("volume") == runtime.get("componentVolume"), "analysis component volume differs")
+    require(image.get("reference") == runtime.get("runtimeImageReference"), "analysis runtime image reference differs")
+    require(image.get("imageId") == runtime.get("runtimeImageId"), "analysis runtime image identity differs")
+    return {
+        "componentSourceRevision": component_revision,
+        "componentVersion": runtime["componentVersion"],
+        "componentArchiveSha256": runtime["componentArchiveSha256"],
+        "runtimeImageId": runtime["runtimeImageId"],
+        "compositionTag": runtime["compositionTag"],
+        "environmentLockSha256": lock_sha256,
+        "executionReceiptSha256": digest(execution_path),
+        "runtimeReceiptSha256": digest(runtime_path),
+        "toolSha256": execution["toolSha256"],
+        "argumentsSha256": execution["argumentsSha256"],
+    }
+
+
 def derive(root: Path, method_revision: str) -> dict[str, Any]:
     require(REVISION.fullmatch(method_revision) is not None, "method revision is invalid")
     spec_path = root / "source-spec.json"
@@ -76,7 +150,7 @@ def derive(root: Path, method_revision: str) -> dict[str, Any]:
     require(difficulty.get("moduleBindings") == spec.get("moduleBindings"), "difficulty bindings differ from source specification")
     for field in ("facts", "difficultyCandidates", "unsupportedSources"):
         require(isinstance(receipt.get(field), int) and receipt[field] >= 0, f"analysis {field} count is invalid")
-    return {
+    result = {
         "schema": SCHEMA,
         "methodRevision": method_revision,
         "sourceSetSha256": receipt["sourceSetSha256"],
@@ -97,6 +171,10 @@ def derive(root: Path, method_revision: str) -> dict[str, Any]:
         },
         "automaticPromotion": False,
     }
+    execution = analysis_tools_execution(root)
+    if execution is not None:
+        result["analysisToolsExecution"] = execution
+    return result
 
 
 def main() -> int:

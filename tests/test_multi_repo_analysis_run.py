@@ -136,6 +136,71 @@ class MultiRepoAnalysisRunTests(unittest.TestCase):
             with self.assertRaisesRegex(RUN.AnalysisRunError, "program facts digest differs"):
                 RUN.derive(root, "f" * 40)
 
+    def test_analysis_run_binds_installed_component_execution(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.evidence(root)
+            component_revision = "b" * 40
+            version = component_revision[:12]
+            component = {
+                "slot": "analysis-tools",
+                "enabled": True,
+                "version": version,
+                "archiveSha256": "c" * 64,
+                "mountTarget": "/agentlab-analysis-tools",
+                "volume": f"analysis-{version}",
+            }
+            image = {
+                "enabled": True,
+                "reference": "agentlab:test",
+                "imageId": "sha256:" + "d" * 64,
+            }
+            lock_path = root / "analysis-composition-environment-lock.json"
+            lock_path.write_text(json.dumps({
+                "schema": "agentlab.environment_lock.v3",
+                "components": [component],
+                "images": [image],
+            }, sort_keys=True) + "\n")
+            lock_sha = hashlib.sha256(lock_path.read_bytes()).hexdigest()
+            runtime_path = root / "analysis-component-runtime.json"
+            runtime_path.write_text(json.dumps({
+                "schema": "agentlab.analysis_tools_component_runtime.v1",
+                "compositionTag": f"candidate-analysis-tools-{version}-linux-x64",
+                "environmentLockSha256": lock_sha,
+                "expectedComponentSourceRevision": component_revision,
+                "componentVersion": version,
+                "componentArchiveSha256": component["archiveSha256"],
+                "componentMountTarget": component["mountTarget"],
+                "componentVolume": component["volume"],
+                "runtimeImageReference": image["reference"],
+                "runtimeImageId": image["imageId"],
+                "automaticPromotion": False,
+            }, sort_keys=True) + "\n")
+            execution_path = root / "analysis-tools-execution.json"
+            execution_path.write_text(json.dumps({
+                "schema": "agentlab.analysis_tools_execution.v1",
+                "status": "passed",
+                "tool": "agentlab-multi-repo-analysis",
+                "toolSha256": "1" * 64,
+                "componentSourceRevision": component_revision,
+                "componentManifestSha256": "2" * 64,
+                "componentInventorySha256": "3" * 64,
+                "argumentCount": 5,
+                "argumentsSha256": "4" * 64,
+                "exitCode": 0,
+                "automaticPromotion": False,
+            }, sort_keys=True) + "\n")
+            run = RUN.derive(root, "f" * 40)
+            binding = run["analysisToolsExecution"]
+            self.assertEqual(binding["componentSourceRevision"], component_revision)
+            self.assertEqual(binding["environmentLockSha256"], lock_sha)
+            self.assertEqual(binding["toolSha256"], "1" * 64)
+            execution = json.loads(execution_path.read_text())
+            execution["componentSourceRevision"] = "e" * 40
+            execution_path.write_text(json.dumps(execution, sort_keys=True) + "\n")
+            with self.assertRaisesRegex(RUN.AnalysisRunError, "component revision differs"):
+                RUN.derive(root, "f" * 40)
+
     def test_exact_git_fetch_retries_transient_transport_failures(self):
         results = [
             SimpleNamespace(returncode=1, stderr="early EOF", stdout=""),
@@ -174,6 +239,14 @@ class MultiRepoAnalysisRunTests(unittest.TestCase):
         self.assertIn("actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830", analysis)
         self.assertIn('--cache-dir "$AGENTLAB_ROOT/ast-cache"', analysis)
         self.assertIn("analysis-cache-execution.json", analysis)
+        self.assertIn("analysis_component_revision:", analysis)
+        self.assertIn("analysis_composition_lock_sha256:", analysis)
+        self.assertIn("--execute agentlab-multi-repo-analysis", analysis)
+        self.assertIn("analysis-tools-execution.json", analysis)
+        self.assertNotIn(
+            "cargo build --locked -p agentlab_code_analysis --bin agentlab-multi-repo-analysis",
+            analysis,
+        )
         self.assertIn("scripts/multi-repo-analysis-run.py create", analysis)
         self.assertIn("name: multi-repo-analysis", analysis)
         self.assertIn("analysis_run_id", cohort)

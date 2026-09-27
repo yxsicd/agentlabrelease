@@ -312,6 +312,8 @@ fn publication_workflow_keeps_component_candidate_and_activation_as_separate_aut
         fs::read_to_string(repository().join(".github/workflows/component-upgrade.yml")).unwrap();
     let public_smoke =
         fs::read_to_string(repository().join("scripts/ci-public-install-deploy-smoke.sh")).unwrap();
+    let analysis_workflow =
+        fs::read_to_string(repository().join(".github/workflows/multi-repo-analysis.yml")).unwrap();
     assert!(workflow.contains("publish_composition_candidate:"));
     assert!(workflow.contains("[[ \"$EXPECTED_REVISION\" == \"$GITHUB_SHA\" ]]"));
     assert!(workflow.contains("validator.remote_assets(assets)"));
@@ -344,4 +346,12 @@ fn publication_workflow_keeps_component_candidate_and_activation_as_separate_aut
     );
     assert!(public_smoke.contains("analysis-tools-execution-receipt.json"));
     assert!(public_smoke.contains("\"status\":\"not-selected\""));
+    assert!(analysis_workflow.contains("analysis_component_revision:"));
+    assert!(analysis_workflow.contains("analysis_composition_lock_sha256:"));
+    assert!(analysis_workflow.contains("AGENTLAB_INSTALL_ONLY=true"));
+    assert!(analysis_workflow.contains("--execute agentlab-multi-repo-analysis"));
+    assert!(analysis_workflow.contains("analysis-tools-execution.json"));
+    assert!(!analysis_workflow.contains(
+        "cargo build --locked -p agentlab_code_analysis --bin agentlab-multi-repo-analysis"
+    ));
 }
