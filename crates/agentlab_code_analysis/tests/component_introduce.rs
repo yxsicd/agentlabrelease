@@ -314,6 +314,18 @@ fn publication_workflow_keeps_component_candidate_and_activation_as_separate_aut
         fs::read_to_string(repository().join("scripts/ci-public-install-deploy-smoke.sh")).unwrap();
     let analysis_workflow =
         fs::read_to_string(repository().join(".github/workflows/multi-repo-analysis.yml")).unwrap();
+    let component_install_action = fs::read_to_string(
+        repository().join(".github/actions/install-analysis-tools-component/action.yml"),
+    )
+    .unwrap();
+    let semantic_review = fs::read_to_string(
+        repository().join(".github/workflows/purchase-data-integrated-semantic-review.yml"),
+    )
+    .unwrap();
+    let oracle_review = fs::read_to_string(
+        repository().join(".github/workflows/purchase-data-integrated-oracle-review.yml"),
+    )
+    .unwrap();
     assert!(workflow.contains("publish_composition_candidate:"));
     assert!(workflow.contains("[[ \"$EXPECTED_REVISION\" == \"$GITHUB_SHA\" ]]"));
     assert!(workflow.contains("validator.remote_assets(assets)"));
@@ -348,10 +360,29 @@ fn publication_workflow_keeps_component_candidate_and_activation_as_separate_aut
     assert!(public_smoke.contains("\"status\":\"not-selected\""));
     assert!(analysis_workflow.contains("analysis_component_revision:"));
     assert!(analysis_workflow.contains("analysis_composition_lock_sha256:"));
-    assert!(analysis_workflow.contains("AGENTLAB_INSTALL_ONLY=true"));
+    assert!(analysis_workflow.contains("uses: ./.github/actions/install-analysis-tools-component"));
     assert!(analysis_workflow.contains("--execute agentlab-multi-repo-analysis"));
     assert!(analysis_workflow.contains("analysis-tools-execution.json"));
     assert!(!analysis_workflow.contains(
         "cargo build --locked -p agentlab_code_analysis --bin agentlab-multi-repo-analysis"
     ));
+    assert!(component_install_action.contains("AGENTLAB_INSTALL_ONLY=true"));
+    assert!(component_install_action.contains("componentPayloadsUploaded\"] is False"));
+    assert!(component_install_action.contains("automaticPromotion\": False"));
+    assert!(component_install_action.contains("docker\", \"image\", \"inspect"));
+    assert!(component_install_action.contains("installed[\"componentSourceRevision\"] == revision"));
+    assert!(analysis_workflow.contains("analysis-component-install-probe.json"));
+    for review in [&semantic_review, &oracle_review] {
+        assert!(review.contains("analysis_component_revision:"));
+        assert!(review.contains("analysis_composition_lock_sha256:"));
+        assert!(review.contains("uses: ./.github/actions/install-analysis-tools-component"));
+        assert!(review.contains("--execute agentlab-purchase-data-integrated-review"));
+        assert!(!review.contains(
+            "cargo build --locked --release -p agentlab_code_analysis --bin agentlab-purchase-data-integrated-review"
+        ));
+    }
+    assert!(semantic_review.contains("analysis-execution/semantic-decision.json"));
+    assert!(semantic_review.contains("analysis-component-install-probe.json"));
+    assert!(oracle_review.contains("analysis-execution/gate-validate.json"));
+    assert!(oracle_review.contains("analysis-component-install-probe.json"));
 }

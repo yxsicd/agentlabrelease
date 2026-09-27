@@ -675,11 +675,15 @@ unqualified.
 The two-stage trusted-main execution surface is
 `purchase-data-integrated-semantic-review.yml` followed by
 `purchase-data-integrated-oracle-review.yml`. Both call the Rust-native
-`agentlab-purchase-data-integrated-review` compiler. The second stage rejects a
-reused GitHub actor, a non-successful or non-main semantic workflow run, packet
-or attachment drift, incomplete answers/risks, and any forged case-contract or
-automatic-promotion authority. Until those workflows are run by two real
-reviewers, every independent-review flag remains false.
+`agentlab-purchase-data-integrated-review` compiler from one explicitly pinned
+immutable analysis-tools composition. Each decide/compile/validate invocation
+runs through the installed component controller and retains an execution
+receipt; neither workflow recompiles the reviewer from mutable checkout source.
+This binds executable provenance without granting review authority. The second
+stage rejects a reused GitHub actor, a non-successful or non-main semantic
+workflow run, packet or attachment drift, incomplete answers/risks, and any
+forged case-contract or automatic-promotion authority. Until those workflows
+are run by two real reviewers, every independent-review flag remains false.
 
 `agentlab-purchase-data-unseen-agent-cohort-contract` binds the approved-review
 successor to the existing trusted multi-repository case freeze, blind assessed

@@ -11,6 +11,14 @@ on:
         description: Exact integrated-packet digest inspected by the reviewer
         required: true
         type: string
+      analysis_component_revision:
+        description: Exact 40-character source revision of the published immutable analysis-tools component
+        required: true
+        type: string
+      analysis_composition_lock_sha256:
+        description: Exact SHA-256 of the reference-only analysis-tools composition environment lock
+        required: true
+        type: string
       answers_json:
         description: Exact agentlab.purchase_data_integrated_review_answers.v1 JSON
         required: true
@@ -45,6 +53,14 @@ jobs:
       PACKET_RELATIVE_PATH: ${{ inputs.packet_path }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install exact immutable analysis-tools component
+        uses: ./.github/actions/install-analysis-tools-component
+        with:
+          component_revision: ${{ inputs.analysis_component_revision }}
+          composition_lock_sha256: ${{ inputs.analysis_composition_lock_sha256 }}
+          github_token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          root: ${{ runner.temp }}/agentlab-analysis-runtime
       - name: Resolve exact retained packet
         id: packet
         run: |
@@ -67,9 +83,7 @@ jobs:
         env:
           ANSWERS_JSON: ${{ inputs.answers_json }}
         run: jq -S . <<<"$ANSWERS_JSON" > "$AGENTLAB_ROOT/answers.json"
-      - name: Build Rust integrated-review gate
-        run: cargo build --locked --release -p agentlab_code_analysis --bin agentlab-purchase-data-integrated-review
-      - name: Bind authenticated semantic reviewer
+      - name: Bind authenticated semantic reviewer through the installed component
         env:
           PACKET_PATH: ${{ steps.packet.outputs.packet_path }}
           QUALIFICATION_ROOT: ${{ steps.packet.outputs.qualification_root }}
@@ -80,23 +94,50 @@ jobs:
           REVIEW_RATIONALE: ${{ inputs.rationale }}
         run: |
           set -euo pipefail
-          REVIEW_BIN="$GITHUB_WORKSPACE/target/release/agentlab-purchase-data-integrated-review"
-          "$REVIEW_BIN" decide \
-            --packet "$PACKET_PATH" \
-            --qualification-root "$QUALIFICATION_ROOT" \
-            --expected-packet-sha256 "$EXPECTED_PACKET_SHA256" \
-            --role semantic \
-            --reviewer "$REVIEWER" \
-            --answers "$AGENTLAB_ROOT/answers.json" \
-            --acknowledged-risk-ids "$ACKNOWLEDGED_RISK_IDS" \
-            --verdict "$VERDICT" \
-            --rationale "$REVIEW_RATIONALE" \
-            --output "$AGENTLAB_ROOT/semantic-decision.json"
+          runtime_path="$RUNNER_TEMP/agentlab-analysis-runtime/analysis-component-runtime.json"
+          readarray -t runtime < <(python3 - "$runtime_path" <<'PY'
+          import json, sys
+          value = json.load(open(sys.argv[1]))
+          for field in ("runtimeImageReference", "componentVolume", "componentMountTarget"):
+              print(value[field])
+          PY
+          )
+          mkdir -p "$AGENTLAB_ROOT/analysis-execution"
+          cp "$runtime_path" "$AGENTLAB_ROOT/analysis-component-runtime.json"
+          cp "$RUNNER_TEMP/agentlab-analysis-runtime/analysis-composition/environment-lock.json" \
+            "$AGENTLAB_ROOT/analysis-composition-environment-lock.json"
+          cp "$RUNNER_TEMP/agentlab-analysis-runtime/component-install/composition-install-receipt.json" \
+            "$AGENTLAB_ROOT/analysis-component-install-receipt.json"
+          cp "$RUNNER_TEMP/agentlab-analysis-runtime/component-install/analysis-tools-runtime-probe.json" \
+            "$AGENTLAB_ROOT/analysis-component-install-probe.json"
+          docker run --rm --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges --pids-limit 128 \
+            --user "$(id -u):$(id -g)" \
+            --tmpfs /tmp:rw,nosuid,nodev,noexec,size=67108864 \
+            --mount "type=volume,src=${runtime[1]},dst=${runtime[2]},readonly" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=$GITHUB_WORKSPACE,readonly" \
+            --mount "type=bind,src=$AGENTLAB_ROOT,dst=$AGENTLAB_ROOT" \
+            --mount "type=bind,src=$AGENTLAB_ROOT/analysis-execution,dst=/agentlab-execution" \
+            --workdir "$GITHUB_WORKSPACE" \
+            --entrypoint "${runtime[2]}/payload/bin/agentlab-analysis-tools-pack" \
+            "${runtime[0]}" --execute agentlab-purchase-data-integrated-review \
+              --receipt /agentlab-execution/semantic-decision.json -- decide \
+              --packet "$PACKET_PATH" \
+              --qualification-root "$QUALIFICATION_ROOT" \
+              --expected-packet-sha256 "$EXPECTED_PACKET_SHA256" \
+              --role semantic \
+              --reviewer "$REVIEWER" \
+              --answers "$AGENTLAB_ROOT/answers.json" \
+              --acknowledged-risk-ids "$ACKNOWLEDGED_RISK_IDS" \
+              --verdict "$VERDICT" \
+              --rationale "$REVIEW_RATIONALE" \
+              --output "$AGENTLAB_ROOT/semantic-decision.json"
           cp "$PACKET_PATH" "$AGENTLAB_ROOT/packet.json"
           sha256sum \
             "$AGENTLAB_ROOT/packet.json" \
             "$AGENTLAB_ROOT/answers.json" \
             "$AGENTLAB_ROOT/semantic-decision.json" \
+            "$AGENTLAB_ROOT/analysis-execution/semantic-decision.json" \
             >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve authenticated semantic-review lineage
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

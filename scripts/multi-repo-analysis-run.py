@@ -44,7 +44,11 @@ def analysis_tools_execution(root: Path) -> dict[str, Any] | None:
     execution_path = root / "analysis-tools-execution.json"
     runtime_path = root / "analysis-component-runtime.json"
     lock_path = root / "analysis-composition-environment-lock.json"
-    present = [path.exists() for path in (execution_path, runtime_path, lock_path)]
+    install_probe_path = root / "analysis-component-install-probe.json"
+    present = [
+        path.exists()
+        for path in (execution_path, runtime_path, lock_path, install_probe_path)
+    ]
     require(all(present) or not any(present), "analysis component evidence is incomplete")
     if not any(present):
         return None
@@ -52,6 +56,7 @@ def analysis_tools_execution(root: Path) -> dict[str, Any] | None:
     runtime = load(runtime_path, "analysis component runtime")
     lock_bytes = lock_path.read_bytes()
     lock = load(lock_path, "analysis composition environment lock")
+    install_probe = load(install_probe_path, "analysis component install probe")
     require(
         execution.get("schema") == "agentlab.analysis_tools_execution.v1",
         "analysis tools execution schema differs",
@@ -82,6 +87,24 @@ def analysis_tools_execution(root: Path) -> dict[str, Any] | None:
         execution.get("componentSourceRevision") == component_revision,
         "analysis execution component revision differs",
     )
+    require(
+        install_probe.get("schema") == "agentlab.analysis_tools_installed_execution.v1",
+        "analysis component install probe schema differs",
+    )
+    require(install_probe.get("status") == "passed", "analysis component install probe did not pass")
+    require(
+        install_probe.get("componentSourceRevision") == component_revision,
+        "analysis component install probe revision differs",
+    )
+    require(
+        install_probe.get("automaticPromotion") is False,
+        "analysis component install probe can auto-promote",
+    )
+    install_probe_sha256 = digest(install_probe_path)
+    require(
+        runtime.get("installedRuntimeProbeSha256") == install_probe_sha256,
+        "analysis component install probe digest differs",
+    )
     lock_sha256 = hashlib.sha256(lock_bytes).hexdigest()
     require(runtime.get("environmentLockSha256") == lock_sha256, "analysis composition lock digest differs")
     require(lock.get("schema") == "agentlab.environment_lock.v3", "analysis composition lock schema differs")
@@ -100,6 +123,11 @@ def analysis_tools_execution(root: Path) -> dict[str, Any] | None:
     require(component.get("volume") == runtime.get("componentVolume"), "analysis component volume differs")
     require(image.get("reference") == runtime.get("runtimeImageReference"), "analysis runtime image reference differs")
     require(image.get("imageId") == runtime.get("runtimeImageId"), "analysis runtime image identity differs")
+    require(install_probe.get("componentVersion") == component.get("version"), "installed analysis component version differs")
+    require(install_probe.get("componentArchiveSha256") == component.get("archiveSha256"), "installed analysis component archive differs")
+    require(install_probe.get("volume") == component.get("volume"), "installed analysis component volume differs")
+    require(install_probe.get("mountTarget") == component.get("mountTarget"), "installed analysis component mount differs")
+    require(install_probe.get("runtimeImageReference") == image.get("reference"), "installed analysis runtime image differs")
     return {
         "componentSourceRevision": component_revision,
         "componentVersion": runtime["componentVersion"],
@@ -109,6 +137,7 @@ def analysis_tools_execution(root: Path) -> dict[str, Any] | None:
         "environmentLockSha256": lock_sha256,
         "executionReceiptSha256": digest(execution_path),
         "runtimeReceiptSha256": digest(runtime_path),
+        "installProbeSha256": install_probe_sha256,
         "toolSha256": execution["toolSha256"],
         "argumentsSha256": execution["argumentsSha256"],
     }

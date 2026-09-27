@@ -43,111 +43,14 @@ jobs:
       SOURCE_SPEC_JSON: ${{ inputs.source_spec_json }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Install composition archive support
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes zstd
-      - name: Acquire and validate the exact reference-only analysis composition
-        env:
-          GH_TOKEN: ${{ github.token }}
-          EXPECTED_COMPONENT_REVISION: ${{ inputs.analysis_component_revision }}
-          EXPECTED_LOCK_SHA256: ${{ inputs.analysis_composition_lock_sha256 }}
-        run: |
-          set -euo pipefail
-          [[ "$EXPECTED_COMPONENT_REVISION" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$EXPECTED_LOCK_SHA256" =~ ^[0-9a-f]{64}$ ]]
-          tag="candidate-analysis-tools-${EXPECTED_COMPONENT_REVISION:0:12}-linux-x64"
-          composition="$AGENTLAB_ROOT/analysis-composition"
-          mkdir -p "$composition"
-          gh release download "$tag" --repo "$GITHUB_REPOSITORY" \
-            --pattern environment-lock.json --pattern publication.json \
-            --dir "$composition"
-          python3 - "$composition" "$tag" "$EXPECTED_COMPONENT_REVISION" "$EXPECTED_LOCK_SHA256" <<'PY'
-          import hashlib, importlib.util, json, pathlib, sys
-          root = pathlib.Path(sys.argv[1])
-          tag, revision, expected_lock_sha = sys.argv[2:]
-          lock_bytes = (root / "environment-lock.json").read_bytes()
-          publication = json.loads((root / "publication.json").read_bytes())
-          lock = json.loads(lock_bytes)
-          assert hashlib.sha256(lock_bytes).hexdigest() == expected_lock_sha
-          assert publication["tag"] == tag
-          assert publication["status"] == "candidate"
-          assert publication["activated"] is False
-          assert publication["componentPayloadsUploaded"] is False
-          spec = importlib.util.spec_from_file_location(
-              "validator", pathlib.Path("scripts/validate-composition-release.py"))
-          validator = importlib.util.module_from_spec(spec)
-          spec.loader.exec_module(validator)
-          validator.validate(publication, lock, lock_bytes)
-          components = [row for row in lock["components"]
-                        if row.get("enabled", True) and row["slot"] == "analysis-tools"]
-          assert len(components) == 1
-          component = components[0]
-          assert component["version"] == revision[:12]
-          assert component["mountTarget"] == "/agentlab-analysis-tools"
-          assert lock["componentGraph"]["resolvedContracts"]["linux-x64"]["agentlab.analysis-tools"] == 1
-          (root / "admission.json").write_text(json.dumps({
-              "schema": "agentlab.analysis_tools_composition_admission.v1",
-              "compositionTag": tag,
-              "environmentLockSha256": expected_lock_sha,
-              "expectedComponentSourceRevision": revision,
-              "automaticPromotion": False,
-          }, indent=2, sort_keys=True) + "\n")
-          PY
-      - name: Restore content-addressed component cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      - name: Install exact immutable analysis-tools component
+        uses: ./.github/actions/install-analysis-tools-component
         with:
-          path: ${{ env.AGENTLAB_ROOT }}/component-cas
-          key: agentlab-analysis-component-${{ runner.os }}-${{ inputs.analysis_composition_lock_sha256 }}
-      - name: Install the exact composition and freeze controller runtime identity
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          EXPECTED_COMPONENT_REVISION: ${{ inputs.analysis_component_revision }}
-          EXPECTED_LOCK_SHA256: ${{ inputs.analysis_composition_lock_sha256 }}
-        run: |
-          set -euo pipefail
-          tag="candidate-analysis-tools-${EXPECTED_COMPONENT_REVISION:0:12}-linux-x64"
-          AGENTLAB_CI_ROOT="$AGENTLAB_ROOT/component-install" \
-          AGENTLAB_CAS_DIR="$AGENTLAB_ROOT/component-cas" \
-          AGENTLAB_COMPOSITION_DIR="$AGENTLAB_ROOT/analysis-composition" \
-          AGENTLAB_RELEASE_CHANNEL="$tag" \
-          AGENTLAB_RELEASE_REPO="$GITHUB_REPOSITORY" \
-          AGENTLAB_INSTALL_ONLY=true \
-            scripts/ci-public-install-deploy-smoke.sh
-          python3 - "$AGENTLAB_ROOT/analysis-composition/environment-lock.json" \
-            "$AGENTLAB_ROOT/analysis-component-runtime.json" "$tag" \
-            "$EXPECTED_COMPONENT_REVISION" "$EXPECTED_LOCK_SHA256" <<'PY'
-          import json, pathlib, subprocess, sys
-          lock_path, output_path = map(pathlib.Path, sys.argv[1:3])
-          tag, revision, lock_sha = sys.argv[3:]
-          lock = json.loads(lock_path.read_bytes())
-          components = [row for row in lock["components"]
-                        if row.get("enabled", True) and row["slot"] == "analysis-tools"]
-          images = [row for row in lock["images"] if row.get("enabled", True)]
-          assert len(components) == 1 and images
-          component, image = components[0], images[0]
-          assert revision.startswith(component["version"])
-          inspected = json.loads(subprocess.run(
-              ["docker", "image", "inspect", image["reference"]],
-              check=True, capture_output=True, text=True).stdout)
-          assert len(inspected) == 1 and inspected[0]["Id"] == image["imageId"]
-          subprocess.run(["docker", "volume", "inspect", component["volume"]], check=True,
-                         capture_output=True, text=True)
-          output_path.write_text(json.dumps({
-              "schema": "agentlab.analysis_tools_component_runtime.v1",
-              "compositionTag": tag,
-              "environmentLockSha256": lock_sha,
-              "aggregateSourceRevision": lock["sourceRevision"],
-              "expectedComponentSourceRevision": revision,
-              "componentVersion": component["version"],
-              "componentArchiveSha256": component["archiveSha256"],
-              "componentMountTarget": component["mountTarget"],
-              "componentVolume": component["volume"],
-              "runtimeImageReference": image["reference"],
-              "runtimeImageId": image["imageId"],
-              "automaticPromotion": False,
-          }, indent=2, sort_keys=True) + "\n")
-          PY
+          component_revision: ${{ inputs.analysis_component_revision }}
+          composition_lock_sha256: ${{ inputs.analysis_composition_lock_sha256 }}
+          github_token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          root: ${{ env.AGENTLAB_ROOT }}
       - name: Materialize exact public Git sources
         id: sources
         run: |
@@ -227,6 +130,8 @@ jobs:
             "$AGENTLAB_ROOT/source/analysis-composition-publication.json"
           cp "$AGENTLAB_ROOT/component-install/composition-install-receipt.json" \
             "$AGENTLAB_ROOT/source/analysis-component-install-receipt.json"
+          cp "$AGENTLAB_ROOT/component-install/analysis-tools-runtime-probe.json" \
+            "$AGENTLAB_ROOT/source/analysis-component-install-probe.json"
           readarray -t runtime < <(python3 - "$AGENTLAB_ROOT/analysis-component-runtime.json" <<'PY'
           import json, sys
           value = json.load(open(sys.argv[1]))
@@ -316,6 +221,7 @@ jobs:
             ${{ env.AGENTLAB_ROOT }}/source/analysis-tools-execution.json
             ${{ env.AGENTLAB_ROOT }}/source/analysis-component-runtime.json
             ${{ env.AGENTLAB_ROOT }}/source/analysis-component-install-receipt.json
+            ${{ env.AGENTLAB_ROOT }}/source/analysis-component-install-probe.json
             ${{ env.AGENTLAB_ROOT }}/source/analysis-composition-environment-lock.json
             ${{ env.AGENTLAB_ROOT }}/source/analysis-composition-publication.json
             ${{ env.AGENTLAB_ROOT }}/source/analysis-run.json

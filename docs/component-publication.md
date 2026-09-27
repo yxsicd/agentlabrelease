@@ -159,3 +159,17 @@ workflows and are never implied by component publication.
 Exact reruns are idempotent: an existing component or candidate tag is accepted
 only after every regenerated file matches its downloaded counterpart; tag reuse
 with any byte difference fails closed.
+
+`install-analysis-tools-component` is the shared consumer boundary for trusted
+workflows. It requires the full component source revision and exact coordinated
+environment-lock digest, admits only a reference-only non-activated candidate,
+installs through the content-addressed cache, verifies the loaded runtime image
+and component volume, and freezes an
+`agentlab.analysis_tools_component_runtime.v1` receipt. Multi-repository
+analysis and both purchase-data integrated-review stages execute their Rust
+tools through the installed pack controller with a read-only component mount,
+no network, a read-only root filesystem and a distinct
+`agentlab.analysis_tools_execution.v1` receipt per invocation. They do not
+rebuild those tools from the workflow checkout. Review decisions remain human
+authority: the reusable component proves exact execution identity, never an
+approval, publication or promotion.

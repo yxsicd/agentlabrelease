@@ -162,6 +162,19 @@ class MultiRepoAnalysisRunTests(unittest.TestCase):
                 "images": [image],
             }, sort_keys=True) + "\n")
             lock_sha = hashlib.sha256(lock_path.read_bytes()).hexdigest()
+            install_probe_path = root / "analysis-component-install-probe.json"
+            install_probe_path.write_text(json.dumps({
+                "schema": "agentlab.analysis_tools_installed_execution.v1",
+                "status": "passed",
+                "componentSourceRevision": component_revision,
+                "componentVersion": version,
+                "componentArchiveSha256": component["archiveSha256"],
+                "volume": component["volume"],
+                "mountTarget": component["mountTarget"],
+                "runtimeImageReference": image["reference"],
+                "automaticPromotion": False,
+            }, sort_keys=True) + "\n")
+            install_probe_sha = hashlib.sha256(install_probe_path.read_bytes()).hexdigest()
             runtime_path = root / "analysis-component-runtime.json"
             runtime_path.write_text(json.dumps({
                 "schema": "agentlab.analysis_tools_component_runtime.v1",
@@ -174,6 +187,7 @@ class MultiRepoAnalysisRunTests(unittest.TestCase):
                 "componentVolume": component["volume"],
                 "runtimeImageReference": image["reference"],
                 "runtimeImageId": image["imageId"],
+                "installedRuntimeProbeSha256": install_probe_sha,
                 "automaticPromotion": False,
             }, sort_keys=True) + "\n")
             execution_path = root / "analysis-tools-execution.json"
@@ -195,6 +209,7 @@ class MultiRepoAnalysisRunTests(unittest.TestCase):
             self.assertEqual(binding["componentSourceRevision"], component_revision)
             self.assertEqual(binding["environmentLockSha256"], lock_sha)
             self.assertEqual(binding["toolSha256"], "1" * 64)
+            self.assertEqual(binding["installProbeSha256"], install_probe_sha)
             execution = json.loads(execution_path.read_text())
             execution["componentSourceRevision"] = "e" * 40
             execution_path.write_text(json.dumps(execution, sort_keys=True) + "\n")
