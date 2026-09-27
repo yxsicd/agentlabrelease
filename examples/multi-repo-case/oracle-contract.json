@@ -1,0 +1,64 @@
+{
+  "assessmentBoundary": "JavaScript-compatible TypeScript module behavior only; no Harmony compiler, UI, emulator or device-performance claim.",
+  "calibrationExpectations": {
+    "baseline": {
+      "turn-1": false,
+      "turn-2": false
+    },
+    "equivalent-policy-loop": {
+      "turn-1": true,
+      "turn-2": true
+    },
+    "hardcoded-premium": {
+      "turn-1": false,
+      "turn-2": false
+    },
+    "reference": {
+      "turn-1": true,
+      "turn-2": true
+    },
+    "stale-consumer": {
+      "turn-1": true,
+      "turn-2": false
+    }
+  },
+  "checks": [
+    {
+      "behavior": "Add a premium policy with three attempts while preserving the standard one-attempt boundary.",
+      "id": "standard-one-attempt",
+      "stage": "turn-1"
+    },
+    {
+      "behavior": "Make a premium request succeed on its third backend attempt and report the actual attempt count.",
+      "id": "premium-third-attempt",
+      "stage": "turn-1"
+    },
+    {
+      "behavior": "Report premium exhaustion after exactly three failed backend attempts.",
+      "id": "premium-exhaustion",
+      "stage": "turn-1"
+    },
+    {
+      "behavior": "Map an accepted premium result to an application result containing tier and actual attempts.",
+      "id": "accepted-consumer-output",
+      "stage": "turn-2"
+    },
+    {
+      "behavior": "Map exhausted premium requests to a fallback result containing tier and actual attempts without moving retry ownership.",
+      "id": "fallback-consumer-output",
+      "stage": "turn-2"
+    },
+    {
+      "behavior": "Preserve the standard accepted application result with its one actual attempt.",
+      "id": "standard-consumer-output",
+      "stage": "turn-2"
+    }
+  ],
+  "oracleSha256": "6527f8f90a821d8e2cde79992a9c56e104e5541b321a04493b7fbd42fca0525f",
+  "receiptSchema": "agentlab.multi_repo_oracle_receipt.v1",
+  "schema": "agentlab.multi_repo_oracle_contract.v1",
+  "stageOrder": [
+    "turn-1",
+    "turn-2"
+  ]
+}

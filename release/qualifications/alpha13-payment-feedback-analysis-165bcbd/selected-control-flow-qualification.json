@@ -1,0 +1,329 @@
+{
+  "aliasResolutionComplete": true,
+  "allowsCaseContract": false,
+  "automaticPromotion": false,
+  "behaviorOracleVerified": false,
+  "callbackSchedulingResolved": true,
+  "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "conditionalReachabilityEstablished": true,
+  "exceptionExitsEnumerated": true,
+  "externalCallContractsResolved": true,
+  "files": [
+    {
+      "contentSha256": "daf0f32975c9c9d05174995b165669d3b19388df03f2d6b8284131cab9c1aea0",
+      "exactSnippets": [
+        {
+          "occurrences": 1,
+          "sha256": "1ff95b5c5db482a3cbafd00914098949b9fc9a66c940bfc65a85ab0f1102c25c"
+        },
+        {
+          "occurrences": 1,
+          "sha256": "9ed970bf5f1b4b395f2807c8a25874c9c2bedfa48e91ebaeb47a3f44d57857c0"
+        }
+      ],
+      "gitBlobOid": "926fa6e4c7ed2be446856c282805d86b1a5db3a5",
+      "path": "entry/src/main/ets/pages/EntryPage.ets",
+      "repositoryId": "harmony-iap-client",
+      "sourceRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3"
+    },
+    {
+      "contentSha256": "e93db5bd0c08a30f5cb2e808cad25ddb022ee8a98af89e3439b9418cc131c5c8",
+      "exactSnippets": [
+        {
+          "occurrences": 1,
+          "sha256": "28deb6b7d7d07841b7e292cde1f93fa9a2b2f787de5e35aa4cc3d8ddb78a8c2d"
+        }
+      ],
+      "gitBlobOid": "55918ac888f80e7722475d1fa74ff3899ca696ee",
+      "path": "entry/src/main/resources/base/profile/route_map.json",
+      "repositoryId": "harmony-iap-client",
+      "sourceRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3"
+    },
+    {
+      "contentSha256": "5946fed46045e67828ed63a10e1ba111590d263ab9f6a7196d5f0fca8a1310bf",
+      "exactSnippets": [
+        {
+          "occurrences": 1,
+          "sha256": "3418ba0d0e9ade463324aaf6a7c8ee388df3fdcd4834d40c94d171a910c8e83d"
+        },
+        {
+          "occurrences": 1,
+          "sha256": "d7fdfd15b02da2285be0266d406cddc8124446c236a1c6bc9d7c7293a691d31d"
+        },
+        {
+          "occurrences": 1,
+          "sha256": "dd2360d36fb3cb845292608207efd7e38a962975f81182c48eb59c41cd287be8"
+        }
+      ],
+      "gitBlobOid": "88627d0b01928c16d85520af57573cf2be0b0048",
+      "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+      "repositoryId": "harmony-iap-client",
+      "sourceRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3"
+    },
+    {
+      "contentSha256": "43f5453f37042cd1f5f5127e63ccb834c6b4cbd581e893315273653b1b6ad108",
+      "exactSnippets": [
+        {
+          "occurrences": 1,
+          "sha256": "6b1b4cc4604bae0f11ba1b4c0b49ab32ebdf787d0b1591261ad44a8f0a984c8d"
+        }
+      ],
+      "gitBlobOid": "a84398d06b62b7505d72452c475fa8eedc498df7",
+      "path": "cordova-plugin-hms-iap/example/ionic/src/app/app-routing.module.ts",
+      "repositoryId": "hms-cordova-iap",
+      "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+    },
+    {
+      "contentSha256": "3c8915dc597bb362ddaa16e2944511062f2765ad234559b8a4a6236cf45eddc7",
+      "exactSnippets": [
+        {
+          "occurrences": 1,
+          "sha256": "cbbea396f885b1ea7b613452a3eeb82ca9a33303ce3b01fe5a3bf13396b26295"
+        }
+      ],
+      "gitBlobOid": "750db9e96098cf437445a8207caeda868def51ab",
+      "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home-routing.module.ts",
+      "repositoryId": "hms-cordova-iap",
+      "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+    },
+    {
+      "contentSha256": "1a98dd1c587b4d9fba5720a17a34e30703ee15f3294430e9c14e75ff65741757",
+      "exactSnippets": [
+        {
+          "occurrences": 1,
+          "sha256": "618ef85537bee68b3d40c611e37446d2df61a5fba9efeed8a0e086bd8e1da33f"
+        },
+        {
+          "occurrences": 1,
+          "sha256": "412fb075d07fd97c8478a17e67a8bbd03392c4fdf0588670ff8d0fa7fab08194"
+        },
+        {
+          "occurrences": 1,
+          "sha256": "dfd30ac4a66ab1bbecb491f18d16f6e3257b6ff7eeb27a05e27108c1ae5116fb"
+        }
+      ],
+      "gitBlobOid": "0d551406043aad6e854acc389acea199c5533eaa",
+      "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+      "repositoryId": "hms-cordova-iap",
+      "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+    },
+    {
+      "contentSha256": "3f12439f5538b9ded3ffcfb7f0ee34e9b0e6cd37e508f031bbab6fb4140040c8",
+      "exactSnippets": [
+        {
+          "occurrences": 1,
+          "sha256": "42c5aa4da8b9c75e7688ed25a088115ce4fa145fc1ea8e2f0cd454a569645633"
+        }
+      ],
+      "gitBlobOid": "e154947d259c1114717572d66f2d56289b36b3f9",
+      "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.html",
+      "repositoryId": "hms-cordova-iap",
+      "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+    }
+  ],
+  "flowCount": 2,
+  "flows": [
+    {
+      "asyncBranchPairCount": 5,
+      "branchPairCount": 10,
+      "conditionalSinkReachable": true,
+      "edgeCount": 38,
+      "edgeKinds": [
+        "await-fulfillment",
+        "await-rejection",
+        "direct-call",
+        "exception",
+        "guard-false",
+        "guard-true",
+        "lifecycle-callback",
+        "promise-fulfillment",
+        "promise-rejection",
+        "render-binding",
+        "route",
+        "ui-event"
+      ],
+      "entryNode": "h-entry-button",
+      "exceptionalBranchCount": 8,
+      "flowId": "harmony-selected-ui-purchase-to-finish",
+      "nodeCount": 37,
+      "programFlowId": "harmony-consumable-purchase-data-to-finish",
+      "recoveryHandoffNodes": [
+        "h-recovery-handoff"
+      ],
+      "repositoryId": "harmony-iap-client",
+      "requiredSinkDominators": [
+        "h-entry-button",
+        "h-route-push",
+        "h-route-map",
+        "h-builder",
+        "h-about",
+        "h-oncase",
+        "h-query-env",
+        "h-env-guard",
+        "h-query-purchases",
+        "h-query-products",
+        "h-products-ready",
+        "h-render-button",
+        "h-buy-click",
+        "h-buy-entry",
+        "h-create-purchase",
+        "h-create-success",
+        "h-deal-entry",
+        "h-jws-guard",
+        "h-finish-status",
+        "h-finish-call",
+        "h-finish-entry",
+        "h-product-type-guard",
+        "h-finish-param"
+      ],
+      "selectedSinkDominanceEstablished": true,
+      "sinkDominators": [
+        "h-about",
+        "h-builder",
+        "h-buy-click",
+        "h-buy-entry",
+        "h-create-purchase",
+        "h-create-success",
+        "h-deal-entry",
+        "h-entry-button",
+        "h-env-guard",
+        "h-finish-call",
+        "h-finish-entry",
+        "h-finish-param",
+        "h-finish-status",
+        "h-jws-guard",
+        "h-oncase",
+        "h-product-type-guard",
+        "h-products-ready",
+        "h-query-env",
+        "h-query-products",
+        "h-query-purchases",
+        "h-render-button",
+        "h-route-map",
+        "h-route-push",
+        "h-sink"
+      ],
+      "sinkNode": "h-sink",
+      "terminalExitNodes": [
+        "h-oncase-rejection",
+        "h-env-failed",
+        "h-products-failed",
+        "h-buy-throw",
+        "h-create-reject-exit",
+        "h-deal-catch",
+        "h-jws-missing",
+        "h-already-finished",
+        "h-product-type-missing",
+        "h-sink-rejection",
+        "h-sink-success"
+      ]
+    },
+    {
+      "asyncBranchPairCount": 5,
+      "branchPairCount": 7,
+      "conditionalSinkReachable": true,
+      "edgeCount": 28,
+      "edgeKinds": [
+        "array-callback",
+        "await-fulfillment",
+        "await-rejection",
+        "direct-call",
+        "exception",
+        "guard-false",
+        "guard-true",
+        "lifecycle-callback",
+        "promise-fulfillment",
+        "promise-rejection",
+        "render-binding",
+        "route",
+        "ui-event"
+      ],
+      "entryNode": "c-root-redirect",
+      "exceptionalBranchCount": 6,
+      "flowId": "cordova-selected-route-owned-purchase-to-consume",
+      "nodeCount": 28,
+      "programFlowId": "cordova-owned-purchase-data-to-consume",
+      "recoveryHandoffNodes": [],
+      "repositoryId": "hms-cordova-iap",
+      "requiredSinkDominators": [
+        "c-root-redirect",
+        "c-lazy-route",
+        "c-home-component",
+        "c-constructor",
+        "c-platform-ready",
+        "c-check-environment",
+        "c-sandbox-call",
+        "c-get-products",
+        "c-product-loop",
+        "c-owned-entry",
+        "c-owned-call",
+        "c-owned-map",
+        "c-creator",
+        "c-product-case",
+        "c-product-push",
+        "c-template-render",
+        "c-template-click",
+        "c-consumer-entry"
+      ],
+      "selectedSinkDominanceEstablished": true,
+      "sinkDominators": [
+        "c-check-environment",
+        "c-constructor",
+        "c-consumer-entry",
+        "c-creator",
+        "c-get-products",
+        "c-home-component",
+        "c-lazy-route",
+        "c-owned-call",
+        "c-owned-entry",
+        "c-owned-map",
+        "c-platform-ready",
+        "c-product-case",
+        "c-product-loop",
+        "c-product-push",
+        "c-root-redirect",
+        "c-sandbox-call",
+        "c-sink",
+        "c-template-click",
+        "c-template-render"
+      ],
+      "sinkNode": "c-sink",
+      "terminalExitNodes": [
+        "c-platform-rejection",
+        "c-sandbox-rejection",
+        "c-loop-rejection",
+        "c-owned-catch",
+        "c-other-product-exit",
+        "c-consume-catch",
+        "c-consume-success",
+        "c-consume-failed-result"
+      ]
+    }
+  ],
+  "objectFlowQualificationSha256": "b9fff647ad1fe49dd3efc22371cb0ecdcb36e359f53fc7f709bb60d113d9093d",
+  "originalUnresolvedCount": 1,
+  "planSha256": "ba9e81b4f70ec49137b7394950b3a69e486e82da3bca8887c1a1e97424482917",
+  "programAnalysisSha256": "78ee3b01d0594975877daefd171a07f7a317b02b6673c22f6b3307fb47e661a3",
+  "qualificationScope": {
+    "externalApiSuccess": false,
+    "frameworkRuntimeCorrectness": false,
+    "selectedSourcePathsOnly": true,
+    "statement": "The exact source cuts establish conditional reachability, source-level scheduling branches, selected-path sink dominators, exceptional exits, and one alternate recovery handoff. They do not prove that a user performs an event, an external API succeeds, a framework runtime is correct, or these nodes dominate every sink invocation in the whole application.",
+    "wholeApplicationReachability": false
+  },
+  "reachabilityAndDominanceResolved": true,
+  "remainingUnresolved": [],
+  "remainingUnresolvedCount": 0,
+  "repositoryCount": 2,
+  "resolvedUnresolvedIds": [
+    "global:reachability-dominance-exception-flow"
+  ],
+  "reviewPacketSha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
+  "schema": "agentlab.selected_control_flow_qualification.v1",
+  "selectedControlFlowResolved": true,
+  "semanticAlignmentVerified": false,
+  "sinkDominanceEstablished": true,
+  "sourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
+  "status": "selected-control-flow-qualified-semantic-review-required",
+  "typeResolutionComplete": true
+}

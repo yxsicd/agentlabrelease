@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-performance-calibration.schema.json",
+  "title": "Repeatable policy-bound case performance calibration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "caseId", "sourceSetSha256", "functionalCalibrationSha256", "feedbackPerformanceEvidence", "baselineSourceIdentity", "variants", "functionalOracleQualified", "repeatabilityQualified", "authority", "automaticPromotion", "nextGate"],
+  "properties": {
+    "schema": {"const": "agentlab.case_performance_calibration.v1"},
+    "status": {"const": "qualified-review-required"},
+    "caseId": {"type": "string", "minLength": 1},
+    "sourceSetSha256": {"$ref": "#/$defs/sha256"},
+    "functionalCalibrationSha256": {"$ref": "#/$defs/sha256"},
+    "feedbackPerformanceEvidence": {"$ref": "case-performance-requirement.schema.json#/$defs/performanceEvidence"},
+    "baselineSourceIdentity": {"$ref": "#/$defs/artifactIdentity"},
+    "variants": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/variant"}
+    },
+    "functionalOracleQualified": {"const": true},
+    "repeatabilityQualified": {"const": true},
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["functional", "relativePerformance", "absolutePowerThermal"],
+      "properties": {
+        "functional": {"const": "independent-harmony-ui-oracle"},
+        "relativePerformance": {"const": "smartperf-emulator-proxy"},
+        "absolutePowerThermal": {"const": "unavailable-on-emulator"}
+      }
+    },
+    "automaticPromotion": {"const": false},
+    "nextGate": {"const": "maintainer-review-and-case-freeze"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "artifactIdentity": {"type": "string", "pattern": "^artifact-sha256:[0-9a-f]{64}$"},
+    "evidenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "byteLength"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "byteLength": {"type": "integer", "minimum": 0}
+      }
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baselineSummary", "candidateSummary", "baselineResult", "candidateResult", "comparison"],
+      "properties": {
+        "baselineSummary": {"$ref": "#/$defs/evidenceRef"},
+        "candidateSummary": {"$ref": "#/$defs/evidenceRef"},
+        "baselineResult": {"$ref": "#/$defs/evidenceRef"},
+        "candidateResult": {"$ref": "#/$defs/evidenceRef"},
+        "comparison": {"$ref": "#/$defs/evidenceRef"}
+      }
+    },
+    "variant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "expectedDecision", "candidateSourceIdentity", "observationCount", "observations"],
+      "properties": {
+        "role": {"enum": ["baseline", "reference", "wrong"]},
+        "expectedDecision": {"enum": ["performance-regression-candidate", "within-relative-guardrails"]},
+        "candidateSourceIdentity": {"$ref": "#/$defs/artifactIdentity"},
+        "observationCount": {"type": "integer", "minimum": 2},
+        "observations": {
+          "type": "array",
+          "minItems": 2,
+          "items": {"$ref": "#/$defs/observation"}
+        }
+      }
+    }
+  }
+}

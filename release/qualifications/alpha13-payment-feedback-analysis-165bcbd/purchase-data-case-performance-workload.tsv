@@ -1,0 +1,7 @@
+schema	agentlab.harmony_profile_workload.v1
+workload	purchase-data-case-bound-ohostest-repeat-v1
+profile-samples	48
+start-app	7	EntryAbility	xxx.xxx.xxx
+repeat-ohostest	6	8	OpenHarmonyTestRunner
+case-bound-function	planPurchaseFinalization
+case-bound-test	purchaseFinalizationPerformanceWorkload	5000

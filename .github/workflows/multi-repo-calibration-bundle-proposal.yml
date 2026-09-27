@@ -1,0 +1,191 @@
+name: Multi-repository calibration bundle proposal
+on:
+  workflow_dispatch:
+    inputs:
+      construction_contract_review_run_id:
+        description: Successful trusted-main reviewed construction-contract run
+        required: true
+        type: string
+      expected_construction_contract_sha256:
+        description: Exact reviewed construction-contract digest
+        required: true
+        type: string
+      bundle_root:
+        description: Repository-relative bundle directory; mutually exclusive with bundle_source_run_id
+        required: false
+        type: string
+      bundle_source_run_id:
+        description: Successful trusted-main portable calibration-bundle source run
+        required: false
+        type: string
+      expected_bundle_source_sha256:
+        description: Exact portable source receipt digest; required with bundle_source_run_id
+        required: false
+        type: string
+      calibration_authoring_run_id:
+        description: Successful trusted-main evaluator-authoring run; mutually exclusive with other bundle sources
+        required: false
+        type: string
+      expected_authoring_receipt_sha256:
+        description: Exact evaluator-authoring receipt digest
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  propose:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/multi-repo-calibration-bundle-proposal
+      CONTRACT_RUN_ID: ${{ inputs.construction_contract_review_run_id }}
+      EXPECTED_CONSTRUCTION_CONTRACT_SHA256: ${{ inputs.expected_construction_contract_sha256 }}
+      BUNDLE_ROOT_INPUT: ${{ inputs.bundle_root }}
+      BUNDLE_SOURCE_RUN_ID: ${{ inputs.bundle_source_run_id }}
+      EXPECTED_BUNDLE_SOURCE_SHA256: ${{ inputs.expected_bundle_source_sha256 }}
+      AUTHORING_RUN_ID: ${{ inputs.calibration_authoring_run_id }}
+      EXPECTED_AUTHORING_RECEIPT_SHA256: ${{ inputs.expected_authoring_receipt_sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Recover the exact reviewed construction contract
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/contract"
+          [[ "$CONTRACT_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_CONSTRUCTION_CONTRACT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          mode_count=0
+          [[ -n "$BUNDLE_ROOT_INPUT" ]] && mode_count=$((mode_count + 1))
+          [[ -n "$BUNDLE_SOURCE_RUN_ID" ]] && mode_count=$((mode_count + 1))
+          [[ -n "$AUTHORING_RUN_ID" ]] && mode_count=$((mode_count + 1))
+          [[ "$mode_count" == 1 ]]
+          if [[ -n "$BUNDLE_SOURCE_RUN_ID" ]]; then
+            [[ "$BUNDLE_SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+            [[ "$EXPECTED_BUNDLE_SOURCE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          else
+            [[ -z "$EXPECTED_BUNDLE_SOURCE_SHA256" ]]
+          fi
+          if [[ -n "$AUTHORING_RUN_ID" ]]; then
+            [[ "$AUTHORING_RUN_ID" =~ ^[0-9]+$ ]]
+            [[ "$EXPECTED_AUTHORING_RECEIPT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          else
+            [[ -z "$EXPECTED_AUTHORING_RECEIPT_SHA256" ]]
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CONTRACT_RUN_ID" > "$AGENTLAB_ROOT/contract-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/contract-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-construction-contract-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$CONTRACT_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-construction-contract-review --dir "$AGENTLAB_ROOT/contract"
+          [[ "$(sha256sum "$AGENTLAB_ROOT/contract/construction-contract.json" | cut -d' ' -f1)" == "$EXPECTED_CONSTRUCTION_CONTRACT_SHA256" ]]
+      - name: Recover and verify the portable calibration source
+        if: inputs.bundle_source_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/source"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BUNDLE_SOURCE_RUN_ID" > "$AGENTLAB_ROOT/source-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/source-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-calibration-bundle-source.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$BUNDLE_SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-calibration-bundle-source --dir "$AGENTLAB_ROOT/source"
+          [[ "$(sha256sum "$AGENTLAB_ROOT/source/calibration-bundle-source.json" | cut -d' ' -f1)" == "$EXPECTED_BUNDLE_SOURCE_SHA256" ]]
+          python3 scripts/multi-repo-calibration-bundle.py validate-source-receipt \
+            --receipt "$AGENTLAB_ROOT/source/calibration-bundle-source.json" \
+            --bundle-root "$AGENTLAB_ROOT/source/bundle" \
+            --construction-contract "$AGENTLAB_ROOT/contract/construction-contract.json"
+      - name: Recover and verify the independent calibration authoring draft
+        if: inputs.calibration_authoring_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/authoring"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$AUTHORING_RUN_ID" > "$AGENTLAB_ROOT/authoring-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/authoring-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-calibration-authoring.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$AUTHORING_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-calibration-authoring --dir "$AGENTLAB_ROOT/authoring"
+          [[ "$(sha256sum "$AGENTLAB_ROOT/authoring/output/authoring-receipt.json" | cut -d' ' -f1)" == "$EXPECTED_AUTHORING_RECEIPT_SHA256" ]]
+          python3 scripts/run-multi-repo-calibration-authoring.py validate \
+            --root "$AGENTLAB_ROOT/authoring/output"
+      - name: Propose and stage the exact executable bundle
+        run: |
+          set -euo pipefail
+          if [[ -n "$BUNDLE_SOURCE_RUN_ID" ]]; then
+            BUNDLE_ROOT="$AGENTLAB_ROOT/source/bundle"
+            DESCRIPTOR="$BUNDLE_ROOT/descriptor.json"
+            cp "$AGENTLAB_ROOT/source/calibration-bundle-source.json" "$AGENTLAB_ROOT/calibration-bundle-source.json"
+            SOURCE_ARGS=(--source-receipt "$AGENTLAB_ROOT/calibration-bundle-source.json")
+          elif [[ -n "$AUTHORING_RUN_ID" ]]; then
+            BUNDLE_ROOT="$AGENTLAB_ROOT/authoring/output/draft/bundle"
+            DESCRIPTOR="$BUNDLE_ROOT/calibration-bundle.json"
+            cp -R "$AGENTLAB_ROOT/authoring/output" "$AGENTLAB_ROOT/calibration-authoring"
+            SOURCE_ARGS=(
+              --authoring-receipt "$AGENTLAB_ROOT/calibration-authoring/authoring-receipt.json"
+              --authoring-root "$AGENTLAB_ROOT/calibration-authoring"
+            )
+          else
+            BUNDLE_ROOT="$(python3 - <<'PY'
+          import os, pathlib
+          workspace = pathlib.Path(os.environ["GITHUB_WORKSPACE"]).resolve()
+          value = os.environ["BUNDLE_ROOT_INPUT"]
+          assert value and "\\" not in value
+          relative = pathlib.Path(value)
+          assert not relative.is_absolute() and all(part not in ("", ".", "..") for part in relative.parts)
+          target = (workspace / relative).resolve()
+          assert target.is_relative_to(workspace) and target.is_dir() and not target.is_symlink()
+          print(target)
+          PY
+            )"
+            DESCRIPTOR="$BUNDLE_ROOT/calibration-bundle.json"
+            SOURCE_ARGS=()
+          fi
+          python3 scripts/multi-repo-calibration-bundle.py propose \
+            --bundle-root "$BUNDLE_ROOT" \
+            --descriptor "$DESCRIPTOR" \
+            --construction-contract "$AGENTLAB_ROOT/contract/construction-contract.json" \
+            "${SOURCE_ARGS[@]}" \
+            --output "$AGENTLAB_ROOT/calibration-bundle-proposal.json"
+          if [[ -n "$BUNDLE_SOURCE_RUN_ID" ]]; then
+            cp -R "$BUNDLE_ROOT" "$AGENTLAB_ROOT/bundle"
+          else
+            python3 scripts/multi-repo-calibration-bundle.py stage \
+              --bundle-root "$BUNDLE_ROOT" \
+              --descriptor "$DESCRIPTOR" \
+              --construction-contract "$AGENTLAB_ROOT/contract/construction-contract.json" \
+              --proposal "$AGENTLAB_ROOT/calibration-bundle-proposal.json" \
+              "${SOURCE_ARGS[@]}" \
+              --output "$AGENTLAB_ROOT/bundle"
+          fi
+          sha256sum "$AGENTLAB_ROOT/calibration-bundle-proposal.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve proposal and exact executable bytes
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-calibration-bundle-proposal
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/

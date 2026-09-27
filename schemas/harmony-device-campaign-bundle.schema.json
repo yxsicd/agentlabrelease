@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/harmony-device-campaign-bundle.schema.json",
+  "title": "AgentLab completed Harmony device campaign bundle",
+  "type": "object",
+  "required": [
+    "schema",
+    "campaignId",
+    "caseId",
+    "sourceSetSha256",
+    "sourceMethodRevision",
+    "sourceAssessedCampaign",
+    "sourceHandoffSha256",
+    "hostProfile",
+    "campaignPlan",
+    "campaignSummary",
+    "files",
+    "fileCount",
+    "byteLength",
+    "automaticPromotion",
+    "nextGate"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.harmony_device_campaign_bundle.v1"},
+    "campaignId": {"$ref": "#/$defs/token"},
+    "caseId": {"$ref": "#/$defs/token"},
+    "sourceSetSha256": {"$ref": "#/$defs/sha256"},
+    "sourceMethodRevision": {"$ref": "#/$defs/revision"},
+    "sourceAssessedCampaign": {"$ref": "#/$defs/sourceRun"},
+    "sourceHandoffSha256": {"$ref": "#/$defs/sha256"},
+    "hostProfile": {"$ref": "#/$defs/fileBinding"},
+    "campaignPlan": {"$ref": "#/$defs/fileBinding"},
+    "campaignSummary": {"$ref": "#/$defs/fileBinding"},
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100000,
+      "items": {"$ref": "#/$defs/indexedFile"}
+    },
+    "fileCount": {"type": "integer", "minimum": 1, "maximum": 100000},
+    "byteLength": {"type": "integer", "minimum": 1, "maximum": 2147483648},
+    "automaticPromotion": {"const": false},
+    "nextGate": {"const": "trusted-main-import-and-attestation"}
+  },
+  "$defs": {
+    "token": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]+$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "not": {"pattern": "(^/|(^|/)\\.\\.(/|$))"}
+    },
+    "fileBinding": {
+      "type": "object",
+      "required": ["path", "sha256", "byteLength"],
+      "properties": {
+        "path": {"$ref": "#/$defs/relativePath"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "byteLength": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "indexedFile": {
+      "type": "object",
+      "required": ["path", "sha256", "byteLength", "unixMode"],
+      "properties": {
+        "path": {"$ref": "#/$defs/relativePath"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "byteLength": {"type": "integer", "minimum": 0},
+        "unixMode": {"type": "integer", "minimum": 0, "maximum": 4095}
+      },
+      "additionalProperties": false
+    },
+    "sourceRun": {
+      "type": "object",
+      "required": [
+        "runId",
+        "runAttempt",
+        "workflowHeadSha",
+        "workflowPath",
+        "repository"
+      ],
+      "properties": {
+        "runId": {"type": "integer", "minimum": 1},
+        "runAttempt": {"type": "integer", "minimum": 1},
+        "workflowHeadSha": {"$ref": "#/$defs/revision"},
+        "workflowPath": {"const": ".github/workflows/multi-repo-assessed-campaign.yml"},
+        "repository": {"type": "string", "minLength": 3}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

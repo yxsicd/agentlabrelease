@@ -1,0 +1,163 @@
+{
+  "aliasResolutionComplete": false,
+  "allowsCaseContract": false,
+  "automaticPromotion": false,
+  "behaviorOracleVerified": false,
+  "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "contracts": [
+    {
+      "authority": "exact-git-blob-set",
+      "contractId": "cordova-consume-owned-purchase",
+      "externalSinkContractResolved": true,
+      "files": [
+        {
+          "contentSha256": "1a98dd1c587b4d9fba5720a17a34e30703ee15f3294430e9c14e75ff65741757",
+          "exactSnippets": [
+            {
+              "occurrences": 1,
+              "sha256": "04f6ff398a7d93f47f89cfd9e3981aa10ba454ba251db98494e580f17bffb0ec"
+            },
+            {
+              "occurrences": 1,
+              "sha256": "f8c203f5826f9bc1fabf4093f98e48f7159cfa7eeb25a59776accf98d0ef60c0"
+            }
+          ],
+          "gitBlobOid": "0d551406043aad6e854acc389acea199c5533eaa",
+          "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+          "repositoryId": "hms-cordova-iap",
+          "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+        },
+        {
+          "contentSha256": "bc24c190a52a742f20db61ddbd2e184fff3ccdf8d96c81af1d77c4d56033b2dd",
+          "exactSnippets": [
+            {
+              "occurrences": 1,
+              "sha256": "aca2b7092a422901ab7d7a8b74f51c6d3c07daa4482cabd14903b32387fd0f2f"
+            },
+            {
+              "occurrences": 1,
+              "sha256": "1a35d70d89360b3eaa9ef4c13826d9a1d378f83525c95b88787e694fa2da383b"
+            },
+            {
+              "occurrences": 1,
+              "sha256": "a761248f54984bc3beb81de5d22a6ad2382cb0fe69882573352a4fe6a5ebd315"
+            }
+          ],
+          "gitBlobOid": "fc07fb9c10b276d63a157f1631fb99d4ab8a47b2",
+          "path": "cordova-plugin-hms-iap/types/HMSInAppPurchases.d.ts",
+          "repositoryId": "hms-cordova-iap",
+          "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+        },
+        {
+          "contentSha256": "2f61917bffa5d48d8a6e3521b788e50bb73a49217ffb0fd4f3b0d07553207893",
+          "exactSnippets": [
+            {
+              "occurrences": 1,
+              "sha256": "56cd486abd1351879aed281c876802212dcdc5d9ecd75c58eddc2d971bbb2086"
+            },
+            {
+              "occurrences": 1,
+              "sha256": "3cbd7f6a90016064b90546c74aad438abb312b43b47d3be5a1566cb49547392b"
+            }
+          ],
+          "gitBlobOid": "ca404faf2023271881c79ff7b53b668cc71f17ea",
+          "path": "cordova-plugin-hms-iap/src/www/HMSInAppPurchases.ts",
+          "repositoryId": "hms-cordova-iap",
+          "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+        },
+        {
+          "contentSha256": "7cf5a8a8116f23c6b1030c7e22b337b1086143c4408302a82f3f159d36868e69",
+          "exactSnippets": [
+            {
+              "occurrences": 1,
+              "sha256": "97878d3bb1740a446d2dfc2e421d7a73a5c68783b72d4e49671805619eaef33f"
+            }
+          ],
+          "gitBlobOid": "c77c37762b8a70e8168b9bcf79a6f02c577916a1",
+          "path": "cordova-plugin-hms-iap/ionic-native/index.ts",
+          "repositoryId": "hms-cordova-iap",
+          "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+        }
+      ],
+      "receiverBinding": {
+        "property": "iap",
+        "typeExpression": "HMSInAppPurchases"
+      },
+      "repositoryId": "hms-cordova-iap",
+      "requestField": {
+        "field": "inAppPurchaseData",
+        "interface": "ConsumeOwnedPurchaseReq",
+        "typeExpression": "string"
+      },
+      "selectedSourceElementType": "string",
+      "signature": {
+        "callable": "consumeOwnedPurchase",
+        "parameterName": "consumeOwnedPurchaseReq",
+        "parameterType": "ConsumeOwnedPurchaseReq",
+        "returnType": "Promise<ConsumeOwnedPurchaseResult>"
+      },
+      "sinkCallFactId": "ast-57808ee67f2e567c08f227d5",
+      "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9",
+      "sourceToRequestTypeCompatible": true,
+      "sourceType": {
+        "field": "inAppPurchaseDataList",
+        "interface": "OwnedPurchasesResult",
+        "typeExpression": "string[]"
+      },
+      "targetExpression": "this.iap.consumeOwnedPurchase"
+    }
+  ],
+  "externalCallContractsResolved": false,
+  "externalSinkCount": 2,
+  "originalUnresolvedCount": 6,
+  "planSha256": "d1b99bee7c06fadffece6f4dc7589dc4ae01ada365da4be91ee8ef9b38748325",
+  "programAnalysisSha256": "78ee3b01d0594975877daefd171a07f7a317b02b6673c22f6b3307fb47e661a3",
+  "reachabilityAndDominanceResolved": false,
+  "remainingExternalSinkCount": 1,
+  "remainingUnresolved": [
+    {
+      "class": "external-call-contract",
+      "factId": "ast-a284ab0b32730a73790fa6bc",
+      "id": "external-sink-signature:harmony-iap-client:ast-a284ab0b32730a73790fa6bc",
+      "reason": "The sink argument is exact, but the external SDK signature and behavior are not resolved from this source cut.",
+      "repositoryId": "harmony-iap-client"
+    },
+    {
+      "class": "parameter-type",
+      "factId": "ast-377c564300cbf4a32df9a8a2",
+      "id": "untyped-parameter:hms-cordova-iap:ast-377c564300cbf4a32df9a8a2:1",
+      "reason": "The exact local parameter has no source type annotation.",
+      "repositoryId": "hms-cordova-iap"
+    },
+    {
+      "class": "alias-and-object-identity",
+      "factId": "ast-6f8ae557023209f612519f6b",
+      "id": "member-alias:hms-cordova-iap:ast-6f8ae557023209f612519f6b",
+      "reason": "A member assignment is exact, but object identity and later aliases are not resolved.",
+      "repositoryId": "hms-cordova-iap"
+    },
+    {
+      "class": "alias-and-object-identity",
+      "factId": "ast-67a6cdf22ef18b8f786be961",
+      "id": "template-object-identity:hms-cordova-iap:ast-67a6cdf22ef18b8f786be961",
+      "reason": "The template call is exact, but the rendered object identity is not proven to be the earlier assigned object.",
+      "repositoryId": "hms-cordova-iap"
+    },
+    {
+      "class": "control-flow",
+      "id": "global:reachability-dominance-exception-flow",
+      "reason": "The bounded facts do not establish runtime reachability, dominance, exception flow, or callback scheduling."
+    }
+  ],
+  "remainingUnresolvedCount": 5,
+  "resolvedExternalSinkCount": 1,
+  "resolvedUnresolvedIds": [
+    "external-sink-signature:hms-cordova-iap:ast-57808ee67f2e567c08f227d5"
+  ],
+  "reviewPacketSha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
+  "schema": "agentlab.external_sink_contract_qualification.v1",
+  "semanticAlignmentVerified": false,
+  "sourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
+  "status": "external-sink-contracts-partially-qualified-review-required",
+  "typeResolutionComplete": false
+}

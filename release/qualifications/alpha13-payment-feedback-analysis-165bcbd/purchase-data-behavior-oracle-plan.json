@@ -1,0 +1,165 @@
+{
+  "schema": "agentlab.purchase_data_behavior_oracle_plan.v1",
+  "methodRevision": "a94102cba9e5ad87e0336431843c4cd7f1208915",
+  "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "sourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
+  "reviewPacketSha256": "36c35c021a26a9e7a15da786ab4e138780bd47553eb05f82ba73e386e1342455",
+  "controlFlowQualificationSha256": "8d655220687df76020a0ae83499c5e6d6587a3a6a33425248369351f0381b542",
+  "seamExecutableSha256": "9e53fbbe13eb9e0ac3fdc1cf70922847d0da6d66f28e1451fbdb270528b88104",
+  "repositories": [
+    {
+      "id": "harmony-iap-client",
+      "repository": "https://gitcode.com/HarmonyOS_Samples/iapkit-sample-clientdemo-arkts.git",
+      "revision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+      "files": [
+        {
+          "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+          "gitBlobOid": "88627d0b01928c16d85520af57573cf2be0b0048",
+          "contentSha256": "5946fed46045e67828ed63a10e1ba111590d263ab9f6a7196d5f0fca8a1310bf"
+        }
+      ]
+    },
+    {
+      "id": "hms-cordova-iap",
+      "repository": "https://github.com/HMS-Core/hms-cordova-plugin.git",
+      "revision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9",
+      "files": [
+        {
+          "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+          "gitBlobOid": "0d551406043aad6e854acc389acea199c5533eaa",
+          "contentSha256": "1a98dd1c587b4d9fba5720a17a34e30703ee15f3294430e9c14e75ff65741757"
+        }
+      ]
+    }
+  ],
+  "methods": [
+    {
+      "id": "dealPurchaseData",
+      "runtime": "harmony",
+      "repositoryId": "harmony-iap-client",
+      "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+      "startSnippet": "dealPurchaseData(purchaseData: string) {",
+      "methodSha256": "91009fa617069fb7e68346fa31d16dd71263b447adfcb5dff7c4948c21899c6b",
+      "bodySha256": "35cb8f2aa047c1a665de1e4b99ca93f5b6675df47f63034a29e991fb5f422dea",
+      "transpileReplacements": [
+        {"find": " as PurchaseData", "replace": "", "occurrences": 1},
+        {"find": " as PurchaseOrderPayload", "replace": "", "occurrences": 1}
+      ]
+    },
+    {
+      "id": "finishPurchase",
+      "runtime": "harmony",
+      "repositoryId": "harmony-iap-client",
+      "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+      "startSnippet": "finishPurchase(purchaseOrder: PurchaseOrderPayload) {",
+      "methodSha256": "2d5ffb69f28cf2fa85c0bd9a73e24d294b07366caa92dce8d8e94a13036bf6d1",
+      "bodySha256": "d55964da08577233418d139b3b48d8600131ea07fd72784eb178ba10d046c8dd",
+      "transpileReplacements": [
+        {"find": ": iap.FinishPurchaseParameter", "replace": "", "occurrences": 1},
+        {"find": "(err: BusinessError)", "replace": "(err)", "occurrences": 1}
+      ]
+    },
+    {
+      "id": "obtainOwnedPurchasesFromType",
+      "runtime": "cordova",
+      "repositoryId": "hms-cordova-iap",
+      "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+      "startSnippet": "obtainOwnedPurchasesFromType = async (pType) => {",
+      "methodSha256": "ba6fff896d2902bd8fa63ebd1581f94d42fe6ab09935b4fe8d19eb070cc68b11",
+      "bodySha256": "84e1802e204ffc8b5400bc59cc7e8810da4b2dff5660f9ae1b3132bdc1d05657",
+      "transpileReplacements": []
+    },
+    {
+      "id": "createPurchasedProductOnList",
+      "runtime": "cordova",
+      "repositoryId": "hms-cordova-iap",
+      "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+      "startSnippet": "createPurchasedProductOnList = (productId, purchaseData, productType) => {",
+      "methodSha256": "0da391f558759bf2bed4f91680fb67410e4c1ff474fb6a387e233158f44d5d5a",
+      "bodySha256": "0e2d0c92b54e6420dd144296af17143ef20b9e6086ad6d8cc462b38229f202d5",
+      "transpileReplacements": []
+    },
+    {
+      "id": "consumeOwnedPurchase",
+      "runtime": "cordova",
+      "repositoryId": "hms-cordova-iap",
+      "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+      "startSnippet": "consumeOwnedPurchase = async (productId, purchaseData, productType) => {",
+      "methodSha256": "f13c829363f5bde6a88e18ea5238d077adf26ea2fbfc3b450e6c58ea7a171696",
+      "bodySha256": "89552cc8ff6365d5242e015390e39663176309284e8566ddf4ea7e559c5aaf17",
+      "transpileReplacements": []
+    }
+  ],
+  "checks": [
+    {"id": "harmony-invalid-data-is-not-finished", "stage": "harmony-finalization", "behavior": "Malformed purchase data must not reach finishPurchase and must remain observable as an error."},
+    {"id": "harmony-finished-order-is-not-finished-again", "stage": "harmony-finalization", "behavior": "An already-finished order must not be submitted to finishPurchase again."},
+    {"id": "harmony-pending-order-forwards-exact-identity", "stage": "harmony-finalization", "behavior": "A pending order must forward its exact type, token and order id to finishPurchase."},
+    {"id": "harmony-missing-product-type-blocks-finish", "stage": "harmony-finalization", "behavior": "A decoded order without product type must not reach the external finish sink."},
+    {"id": "harmony-finish-rejection-is-observable", "stage": "harmony-finalization", "behavior": "A rejected finishPurchase promise must be observed through the selected error path."},
+    {"id": "cordova-owned-items-preserve-indexed-purchase-data", "stage": "cordova-consumption", "behavior": "Each owned item must retain the purchase-data value at the same response index."},
+    {"id": "cordova-consume-forwards-exact-purchase-data", "stage": "cordova-consumption", "behavior": "The selected purchase-data string must be forwarded unchanged as inAppPurchaseData."},
+    {"id": "cordova-success-resets-and-reloads", "stage": "cordova-consumption", "behavior": "A successful consume result must clear stale collections and request a reload."},
+    {"id": "cordova-business-failure-retains-state-and-alerts", "stage": "cordova-consumption", "behavior": "A nonzero consume result must retain current state and expose the business failure."},
+    {"id": "cordova-rejection-retains-state-and-logs", "stage": "cordova-consumption", "behavior": "A rejected consume promise must retain current state and expose the rejection."}
+  ],
+  "variants": [
+    {
+      "id": "exact-source",
+      "role": "exact-source",
+      "mutations": [],
+      "expectedFailedChecks": []
+    },
+    {
+      "id": "wrong-finish-status-polarity",
+      "role": "meaningful-wrong",
+      "mutations": [
+        {"runtime": "harmony", "methodId": "dealPurchaseData", "find": "finishStatus !== FinishStatus.FINISHED", "replace": "finishStatus === FinishStatus.FINISHED", "occurrences": 1}
+      ],
+      "expectedFailedChecks": ["harmony-finished-order-is-not-finished-again", "harmony-pending-order-forwards-exact-identity"]
+    },
+    {
+      "id": "wrong-finish-token-source",
+      "role": "meaningful-wrong",
+      "mutations": [
+        {"runtime": "harmony", "methodId": "finishPurchase", "find": "purchaseToken: purchaseOrder.purchaseToken", "replace": "purchaseToken: purchaseOrder.purchaseOrderId", "occurrences": 1}
+      ],
+      "expectedFailedChecks": ["harmony-pending-order-forwards-exact-identity"]
+    },
+    {
+      "id": "wrong-owned-data-index",
+      "role": "meaningful-wrong",
+      "mutations": [
+        {"runtime": "cordova", "methodId": "obtainOwnedPurchasesFromType", "find": "message.inAppPurchaseDataList[ind]", "replace": "message.inAppPurchaseDataList[0]", "occurrences": 1}
+      ],
+      "expectedFailedChecks": ["cordova-owned-items-preserve-indexed-purchase-data"]
+    },
+    {
+      "id": "wrong-consume-data-source",
+      "role": "meaningful-wrong",
+      "mutations": [
+        {"runtime": "cordova", "methodId": "consumeOwnedPurchase", "find": "inAppPurchaseData: purchaseData", "replace": "inAppPurchaseData: productId", "occurrences": 1}
+      ],
+      "expectedFailedChecks": ["cordova-consume-forwards-exact-purchase-data"]
+    },
+    {
+      "id": "wrong-consume-success-polarity",
+      "role": "meaningful-wrong",
+      "mutations": [
+        {"runtime": "cordova", "methodId": "consumeOwnedPurchase", "find": "message.returnCode === 0", "replace": "message.returnCode !== 0", "occurrences": 1}
+      ],
+      "expectedFailedChecks": ["cordova-success-resets-and-reloads", "cordova-business-failure-retains-state-and-alerts"]
+    }
+  ],
+  "qualificationBoundary": {
+    "selectedMethodBodiesOnly": true,
+    "realSourceMethodsExecuted": true,
+    "externalIapApisStubbed": true,
+    "frameworkLifecycleExecuted": false,
+    "wholeApplicationExecuted": false,
+    "harmonyCompilerExecuted": false,
+    "emulatorExecuted": false,
+    "semanticAlignmentApproved": false,
+    "independentOracleReviewCompleted": false,
+    "statement": "The seam executes five exact, digest-qualified source method bodies with controlled IAP outcomes. It can calibrate purchase-data identity, finalization guards and terminal state handling, but it does not execute framework lifecycle, vendor services, a full application or an emulator and cannot approve the cross-repository semantic claim."
+  }
+}

@@ -1,0 +1,235 @@
+name: Verify purchase-data published revision re-execution
+on:
+  workflow_dispatch:
+    inputs:
+      contract_path:
+        description: Frozen unseen-agent cohort contract below release/qualifications
+        required: true
+        default: release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-unseen-agent-cohort-contract.json
+        type: string
+      publication_run_id:
+        description: Successful trusted-main exact-patch publication run
+        required: true
+        type: string
+      semantic_analysis_run_id:
+        description: Successful trusted-main multi-repository analysis run over the published revision
+        required: true
+        type: string
+      runtime_evidence_release_tag:
+        description: Release tag containing the hwlinux published-revision runtime ZIP
+        required: true
+        type: string
+      runtime_evidence_asset_name:
+        description: Exact ZIP asset containing bundle-manifest.json and bound OHOS Test/performance receipts
+        required: true
+        type: string
+      runtime_evidence_asset_sha256:
+        description: Exact lowercase SHA-256 of the runtime evidence ZIP
+        required: true
+        type: string
+      analysis_component_revision:
+        description: Exact source revision of the published immutable analysis-tools component
+        required: true
+        type: string
+      analysis_composition_lock_sha256:
+        description: Exact SHA-256 of the reference-only analysis-tools composition environment lock
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  attestations: write
+  contents: read
+  id-token: write
+
+concurrency:
+  group: purchase-data-published-revision-reexecution
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/purchase-data-published-revision-reexecution
+      CONTRACT_RELATIVE_PATH: ${{ inputs.contract_path }}
+      PUBLICATION_RUN_ID: ${{ inputs.publication_run_id }}
+      SEMANTIC_RUN_ID: ${{ inputs.semantic_analysis_run_id }}
+      RUNTIME_RELEASE_TAG: ${{ inputs.runtime_evidence_release_tag }}
+      RUNTIME_ASSET_NAME: ${{ inputs.runtime_evidence_asset_name }}
+      RUNTIME_ASSET_SHA256: ${{ inputs.runtime_evidence_asset_sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - name: Install exact immutable analysis-tools component
+        uses: ./.github/actions/install-analysis-tools-component
+        with:
+          component_revision: ${{ inputs.analysis_component_revision }}
+          composition_lock_sha256: ${{ inputs.analysis_composition_lock_sha256 }}
+          github_token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          root: ${{ runner.temp }}/agentlab-analysis-runtime
+      - name: Resolve frozen contract
+        id: contract
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT"
+          python3 - <<'PY'
+          import os, pathlib, re
+          root = pathlib.Path.cwd().resolve()
+          qualifications = (root / "release" / "qualifications").resolve()
+          relative = os.environ["CONTRACT_RELATIVE_PATH"]
+          assert re.fullmatch(r"release/qualifications/[A-Za-z0-9._/-]+\.json", relative), relative
+          path = (root / relative).resolve()
+          path.relative_to(qualifications)
+          assert path.is_file() and not path.is_symlink(), path
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"path={path}\n")
+          PY
+      - name: Recover and authenticate exact publication evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$PUBLICATION_RUN_ID" =~ ^[0-9]+$ ]]
+          mkdir -p "$AGENTLAB_ROOT/publication"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PUBLICATION_RUN_ID" \
+            > "$AGENTLAB_ROOT/publication-source-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/publication-source-run.json"))
+          assert value["repository"]["full_name"] == os.environ["GITHUB_REPOSITORY"]
+          assert value["path"] == ".github/workflows/purchase-data-exact-patch-publication.yml"
+          assert value["event"] == "workflow_dispatch" and value["head_branch"] == "main"
+          assert value["status"] == "completed" and value["conclusion"] == "success"
+          with open(os.environ["AGENTLAB_ROOT"] + "/publication-head-sha", "w") as output:
+              output.write(value["head_sha"] + "\n")
+          PY
+          read -r publication_head_sha < "$AGENTLAB_ROOT/publication-head-sha"
+          git merge-base --is-ancestor "$publication_head_sha" HEAD
+          gh run download "$PUBLICATION_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name purchase-data-exact-patch-publication \
+            --dir "$AGENTLAB_ROOT/publication"
+          test -f "$AGENTLAB_ROOT/publication/publication.json"
+          test ! -L "$AGENTLAB_ROOT/publication/publication.json"
+          gh attestation verify "$AGENTLAB_ROOT/publication/publication.json" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/purchase-data-exact-patch-publication.yml" \
+            --source-ref refs/heads/main \
+            --source-digest "$publication_head_sha" \
+            --deny-self-hosted-runners \
+            --format json > "$AGENTLAB_ROOT/publication-attestation-verification.json"
+      - name: Recover authenticated exact-revision semantic analysis
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$SEMANTIC_RUN_ID" =~ ^[0-9]+$ ]]
+          mkdir -p "$AGENTLAB_ROOT/semantic"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SEMANTIC_RUN_ID" \
+            > "$AGENTLAB_ROOT/semantic-source-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/semantic-source-run.json"))
+          assert value["repository"]["full_name"] == os.environ["GITHUB_REPOSITORY"]
+          assert value["path"] == ".github/workflows/multi-repo-analysis.yml"
+          assert value["event"] == "workflow_dispatch" and value["head_branch"] == "main"
+          assert value["status"] == "completed" and value["conclusion"] == "success"
+          with open(os.environ["AGENTLAB_ROOT"] + "/semantic-head-sha", "w") as output:
+              output.write(value["head_sha"] + "\n")
+          PY
+          read -r semantic_head_sha < "$AGENTLAB_ROOT/semantic-head-sha"
+          git merge-base --is-ancestor "$semantic_head_sha" HEAD
+          gh run download "$SEMANTIC_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-analysis --dir "$AGENTLAB_ROOT/semantic"
+          test -f "$AGENTLAB_ROOT/semantic/source-spec.json"
+          test -f "$AGENTLAB_ROOT/semantic/analysis-run.json"
+          test -f "$AGENTLAB_ROOT/semantic/analysis/multi_repo_analysis.json"
+      - name: Download and safely extract exact hwlinux runtime evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$RUNTIME_RELEASE_TAG" =~ ^[A-Za-z0-9._-]{1,100}$ ]]
+          [[ "$RUNTIME_ASSET_NAME" =~ ^[A-Za-z0-9._-]{1,200}\.zip$ ]]
+          [[ "$RUNTIME_ASSET_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          mkdir -p "$AGENTLAB_ROOT/download" "$AGENTLAB_ROOT/runtime"
+          gh release download "$RUNTIME_RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern "$RUNTIME_ASSET_NAME" --dir "$AGENTLAB_ROOT/download"
+          archive="$AGENTLAB_ROOT/download/$RUNTIME_ASSET_NAME"
+          printf '%s  %s\n' "$RUNTIME_ASSET_SHA256" "$archive" | sha256sum -c -
+          python3 - "$archive" "$AGENTLAB_ROOT/runtime" <<'PY'
+          import pathlib, stat, sys, zipfile
+          archive = pathlib.Path(sys.argv[1]).resolve(strict=True)
+          output = pathlib.Path(sys.argv[2]).resolve(strict=True)
+          with zipfile.ZipFile(archive) as bundle:
+              infos = bundle.infolist()
+              assert infos and len(infos) <= 20000
+              for info in infos:
+                  path = pathlib.PurePosixPath(info.filename)
+                  assert not path.is_absolute() and ".." not in path.parts and "" not in path.parts
+                  mode = info.external_attr >> 16
+                  assert not stat.S_ISLNK(mode)
+                  target = (output / pathlib.Path(*path.parts)).resolve()
+                  target.relative_to(output)
+              bundle.extractall(output)
+          assert (output / "bundle-manifest.json").is_file()
+          assert not (output / "bundle-manifest.json").is_symlink()
+          PY
+      - name: Compile verified re-execution receipt through the installed Rust component
+        env:
+          CONTRACT_PATH: ${{ steps.contract.outputs.path }}
+        run: |
+          set -euo pipefail
+          runtime_path="$RUNNER_TEMP/agentlab-analysis-runtime/analysis-component-runtime.json"
+          readarray -t runtime < <(python3 - "$runtime_path" <<'PY'
+          import json, sys
+          value = json.load(open(sys.argv[1]))
+          for field in ("runtimeImageReference", "componentVolume", "componentMountTarget"):
+              print(value[field])
+          PY
+          )
+          mkdir -p "$AGENTLAB_ROOT/analysis-execution"
+          docker run --rm --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges --pids-limit 128 \
+            --user "$(id -u):$(id -g)" \
+            --tmpfs /tmp:rw,nosuid,nodev,noexec,size=67108864 \
+            --mount "type=volume,src=${runtime[1]},dst=${runtime[2]},readonly" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=$GITHUB_WORKSPACE,readonly" \
+            --mount "type=bind,src=$AGENTLAB_ROOT,dst=$AGENTLAB_ROOT,readonly" \
+            --mount "type=bind,src=$AGENTLAB_ROOT/analysis-execution,dst=/agentlab-execution" \
+            --workdir "$GITHUB_WORKSPACE" \
+            --entrypoint "${runtime[2]}/payload/bin/agentlab-analysis-tools-pack" \
+            "${runtime[0]}" \
+              --execute agentlab-purchase-data-published-revision-reexecution \
+              --receipt /agentlab-execution/reexecution-tool.json -- \
+              --contract "$CONTRACT_PATH" \
+              --publication "$AGENTLAB_ROOT/publication/publication.json" \
+              --publication-source-run "$AGENTLAB_ROOT/publication-source-run.json" \
+              --publication-attestation-verification "$AGENTLAB_ROOT/publication-attestation-verification.json" \
+              --semantic-source-run "$AGENTLAB_ROOT/semantic-source-run.json" \
+              --semantic-root "$AGENTLAB_ROOT/semantic" \
+              --runtime-root "$AGENTLAB_ROOT/runtime" \
+              --runtime-archive-sha256 "$RUNTIME_ASSET_SHA256" \
+              --workflow-repository "$GITHUB_REPOSITORY" \
+              --workflow-source-revision "$GITHUB_SHA" \
+              --workflow-run-id "$GITHUB_RUN_ID" \
+              --workflow-run-attempt "$GITHUB_RUN_ATTEMPT" \
+              --output /agentlab-execution/reexecution.json
+          cp "$AGENTLAB_ROOT/analysis-execution/reexecution.json" "$AGENTLAB_ROOT/reexecution.json"
+          sha256sum "$AGENTLAB_ROOT/reexecution.json" \
+            "$AGENTLAB_ROOT/analysis-execution/reexecution-tool.json" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Attest the exact published-revision re-execution receipt
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: ${{ env.AGENTLAB_ROOT }}/reexecution.json
+      - name: Preserve published-revision re-execution evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: purchase-data-published-revision-reexecution
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/

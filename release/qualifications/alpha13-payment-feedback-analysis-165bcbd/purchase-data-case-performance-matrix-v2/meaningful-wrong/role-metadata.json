@@ -1,0 +1,13 @@
+{
+  "appHapSha256": "a2ca9b782c6f4411ee3d6b07bf680cf0f224402019808e64699a12c60d35e70b",
+  "automaticPromotion": false,
+  "candidateRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+  "performancePolicySha256": "ae914ba0c30dd8aec098531497021d75a3fa1311e7c371290d43a0a4eccffb3e",
+  "profileWorkloadSha256": "7812fa159f8c7ec8ea69f48987cca39b0f373280eb7af847c16ea4dfaf7d563f",
+  "project": "/home/huawei/agentlab-source-builds/payment-feedback-165bcbd-caseperf-wrong-v1",
+  "role": "meaningful-wrong",
+  "schema": "agentlab.purchase_data_case_performance_role.v1",
+  "sourceSha256": "0f4b42ab881a0dbcec69e6dd7fe7c5fd0d6e223e4067e1222acc5a4fda43fda5",
+  "testHapSha256": "ece1ce1906ce37c5a6d26f7f8f07b5b0f63806443723bf1f7e7d16c41168c6ea",
+  "testSourceSha256": "760e0c7fbecc693e6eb7e6d3afcab8f532f1b2432bf7c6204586a37042ebdc87"
+}

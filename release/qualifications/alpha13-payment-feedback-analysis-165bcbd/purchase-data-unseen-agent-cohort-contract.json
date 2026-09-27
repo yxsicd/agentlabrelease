@@ -1,0 +1,159 @@
+{
+  "allowsCaseContract": false,
+  "authoritySeparation": {
+    "evaluatorRetains": [
+      "OHOS Test functional Oracle",
+      "dependency obligations",
+      "case-performance policy",
+      "SmartPerf comparison authority"
+    ],
+    "participantMustNotReceive": [
+      "gold repair",
+      "evaluator Oracle",
+      "reference workspace",
+      "calibration outcomes",
+      "controlled baseline or meaningful-wrong variants"
+    ],
+    "participantReceives": [
+      "blind task contract",
+      "held-out source repositories",
+      "participant-visible build and test instructions"
+    ]
+  },
+  "automaticPromotion": false,
+  "currentReadiness": {
+    "exactPatchPublishedUpstream": false,
+    "harmonyAttemptFeedbackExecuted": false,
+    "independentDualReviewApproved": false,
+    "publishedRevisionRebound": false,
+    "readyToDispatch": false,
+    "trustedFrozenCaseAvailable": false,
+    "unseenAgentCohortExecuted": false
+  },
+  "implementationBindings": {
+    "assessedCampaign": {
+      "path": ".github/workflows/multi-repo-assessed-campaign.yml",
+      "sha256": "c45c97efff2464085235cbdc612a83f045fb872314b6befe0616e2001466834b"
+    },
+    "exactPatchPublication": {
+      "path": "crates/agentlab_code_analysis/src/purchase_data_exact_patch_publication.rs",
+      "sha256": "82b396147657a2c43f6665885b801218c64a62a16082bccca16b62a49fba0d31"
+    },
+    "exactPatchPublicationSchema": {
+      "path": "schemas/purchase-data-exact-patch-publication.schema.json",
+      "sha256": "ce39b6ec17c948ace5f3b89d4aa077b28a88085c8052e200ae0f74f1b48a3791"
+    },
+    "exactPatchPublicationWorkflow": {
+      "path": ".github/workflows/purchase-data-exact-patch-publication.yml",
+      "sha256": "d01dbbfdf002fac22c46acdddd07a328e693361a2159a6224012669dc21b3f3b"
+    },
+    "participantExperimentDispatch": {
+      "path": "crates/agentlab_code_analysis/src/participant_experiment_dispatch.rs",
+      "sha256": "b932fc4986649fe3949cb578f9d36b0c1c1b292b7af4401c0985aa062787b52a"
+    },
+    "participantExperimentDispatchSchema": {
+      "path": "schemas/participant-experiment-dispatch.schema.json",
+      "sha256": "8411d2565f4e78231d457e70b7184f57299cbb24ddbc4801750df74db025275c"
+    },
+    "publishedRevisionReexecution": {
+      "path": "crates/agentlab_code_analysis/src/purchase_data_published_revision_reexecution.rs",
+      "sha256": "ab7602287226dff1ad2ca177407c5ba71419c393f99111a3b78157e2846d5450"
+    },
+    "publishedRevisionReexecutionSchema": {
+      "path": "schemas/purchase-data-published-revision-reexecution.schema.json",
+      "sha256": "104a16e6d6d6d6bba5380786344b093727efff303815078b7adcccaa60f4bc8e"
+    },
+    "publishedRevisionReexecutionWorkflow": {
+      "path": ".github/workflows/purchase-data-published-revision-reexecution.yml",
+      "sha256": "46579a13b6d3752fc3dc065d6e819f3b70a92056adb0d00e4b43957b0a64d944"
+    },
+    "publishedRevisionRuntimeBundleSchema": {
+      "path": "schemas/purchase-data-published-revision-runtime-bundle.schema.json",
+      "sha256": "7c69fae020bf156643138682b85a19a604e319cb64f1139579c933c901a70837"
+    },
+    "trustedCaseFreeze": {
+      "path": "crates/agentlab_code_analysis/src/purchase_data_trusted_case_freeze.rs",
+      "sha256": "4d32d619fec1ed3be9f9ee13b8a3f1e6885453d5ef9d59f5e55e56d41cb43c15"
+    },
+    "trustedCaseFreezeSchema": {
+      "path": "schemas/purchase-data-trusted-case-freeze.schema.json",
+      "sha256": "0d45e645164fe36aa4d8072d1a2d275b8a546931f99d81e6108fb57db7401d35"
+    },
+    "trustedCaseFreezeWorkflow": {
+      "path": ".github/workflows/purchase-data-trusted-case-freeze.yml",
+      "sha256": "159b9528219f0e26880d01cde97f8908701b568f8d477eaa96ec85d8e007232f"
+    },
+    "trustedCaseReview": {
+      "path": ".github/workflows/multi-repo-case-review.yml",
+      "sha256": "74af43c901294758cb766416eb0dbf3ca63242a3951201b2c79adea6e2ad3efc"
+    }
+  },
+  "nextGate": "two-distinct-authenticated-reviewers-approve-exact-packet",
+  "packetSha256": "3c8bce352c03b7dde565e3cc1dbe602d817b8e57f13abe5292daee1743248efd",
+  "participantCohort": {
+    "allowedTrialsPerProfile": [
+      3,
+      5,
+      10,
+      20
+    ],
+    "freshRuntimePerAttempt": true,
+    "materializedPlanCompatibilitySchema": "agentlab.participant_experiment_plan.v1",
+    "maximumProfiles": 8,
+    "minimumProfiles": 3,
+    "participantAndModelIdentitiesMustBeUnique": true,
+    "portableDispatchSchema": "agentlab.participant_experiment_dispatch.v1",
+    "profileOrder": "weakest-to-strongest-declared-before-outcomes"
+  },
+  "performanceQualification": {
+    "coldRunCount": 6,
+    "controlledVariantsAreAgentRuns": false,
+    "functionalVerdictCount": 288,
+    "path": "purchase-data-case-performance-qualification.json",
+    "profileSampleCount": 288,
+    "relativeMetricAuthority": "appCpuUsagePercent",
+    "sha256": "3dc1dd230e79a2d2dc2b84c6813fe303b7c9cdc943188ccc857da87f3578b00d"
+  },
+  "requiredSequence": [
+    {
+      "gate": "independent-dual-integrated-review",
+      "ordinal": 1,
+      "requiredEvidence": "approved agentlab.purchase_data_integrated_review_gate.v1 bound to this packet"
+    },
+    {
+      "gate": "exact-patch-upstream-publication",
+      "ordinal": 2,
+      "requiredEvidence": "published upstream revision containing the exact reviewed patch"
+    },
+    {
+      "gate": "published-revision-reexecution",
+      "ordinal": 3,
+      "requiredEvidence": "semantic, OHOS Test and performance evidence rebound to the published source revision"
+    },
+    {
+      "gate": "trusted-case-freeze",
+      "ordinal": 4,
+      "requiredEvidence": "attested Rust-compiled case-freeze receipt over a successful trusted-main multi-repo-case-review run and the exact published source set"
+    },
+    {
+      "gate": "unseen-agent-cohort",
+      "ordinal": 5,
+      "requiredEvidence": "pre-outcome attested portable dispatch and repeated blind attempts for every declared profile"
+    },
+    {
+      "gate": "harmony-functional-performance-feedback",
+      "ordinal": 6,
+      "requiredEvidence": "Harmony handoff plus OHOS Test and relative SmartPerf results linked to each assessed attempt"
+    }
+  ],
+  "runtimeCandidateId": "purchase-data-finalization-ee2bc87594f1",
+  "schema": "agentlab.purchase_data_unseen_agent_cohort_contract.v1",
+  "semanticCandidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "sourceLineage": {
+    "analysisSourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
+    "baseRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+    "candidateRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+    "runtimeSourceSetSha256": "cbc01c94755f2d8da5449902ad1a309488d0a9defa9fede23318ad360dd4c2c2"
+  },
+  "status": "execution-contract-frozen-prerequisites-pending"
+}

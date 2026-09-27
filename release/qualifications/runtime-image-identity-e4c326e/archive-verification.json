@@ -1,0 +1,16 @@
+{
+  "archive": {
+    "bytes": 305740544,
+    "path": "/home/huawei/agentlab-demo/install-loop-be9723b/composition/chatproxy-agentlab-git-fa05788f-linux-x64.docker.tar.zst",
+    "sha256": "f5dddac4b52b81abd2e88f4f8e8eac246b4bfd71ae3eb904141d073a4ee4a477"
+  },
+  "descriptorSha256": "251d732704044b61d3acadfe11340b9d05d48f103495e39cc86fbbd22e160d21",
+  "image": {
+    "configMember": "blobs/sha256/2128b0fdba2e7e3297533869ce0533944f348ea7f5b0fa1dc9832ba825a0bd74",
+    "imageId": "sha256:2128b0fdba2e7e3297533869ce0533944f348ea7f5b0fa1dc9832ba825a0bd74",
+    "ociManifestDigest": "sha256:4dd8c79b198315349f0ccebdb47aae535d593bb199346428a70e61b27017bdbc",
+    "reference": "chatproxy-agentlab:git-fa05788f-linux-x64"
+  },
+  "schema": "agentlab.docker_image_archive_verification.v1",
+  "status": "passed"
+}

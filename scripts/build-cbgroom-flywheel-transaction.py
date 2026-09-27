@@ -5,8 +5,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import uuid
 from pathlib import Path
+
+
+REVISION = re.compile(r"[0-9a-f]{40}")
+SHA256 = re.compile(r"[0-9a-f]{64}")
 
 
 def load(path: Path):
@@ -19,6 +24,11 @@ def sha256(path: Path):
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def canonical_json_sha256(value):
+    raw = json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
+    return hashlib.sha256(raw).hexdigest()
 
 
 def stable_uuid(*parts: str):
@@ -57,9 +67,45 @@ def main():
     summary = load(evidence / "summary.json") or {}
     decision = load(evidence / "decision-package.json") or {}
     difficulty = load(evidence / "difficulty-candidates.json") or {}
+    multi_repo_case = load(evidence / "multi-repo-evaluation-case.json") or {}
+    multi_repo_calibration = load(evidence / "multi-repo-calibration.json") or {}
+    multi_repo_construction = load(evidence / "multi-repo-construction-receipt.json") or {}
+    multi_repo_construction_quality = load(evidence / "multi-repo-construction-quality.json") or {}
+    assessment_feedback = load(evidence / "assessment-feedback-candidates.json") or {}
+    performance_calibration = load(evidence / "performance-calibration.json") or {}
+    performance_calibration_run = load(evidence / "calibration-run.json") or {}
+    multi_repo_difficulty = difficulty.get("schema") == "agentlab.difficulty_candidates.v2"
+    if multi_repo_difficulty:
+        source_set_sha256 = difficulty.get("sourceSetSha256")
+        sources = difficulty.get("sources")
+        if not isinstance(source_set_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", source_set_sha256):
+            raise SystemExit("multi-repository difficulty evidence requires sourceSetSha256")
+        if difficulty.get("automaticPromotion") is not False:
+            raise SystemExit("multi-repository difficulty evidence must not auto-promote")
+        if not isinstance(sources, list) or len(sources) < 2:
+            raise SystemExit("multi-repository difficulty evidence requires at least two sources")
+        if not all(
+            isinstance(source, dict)
+            and isinstance(source.get("id"), str) and source["id"]
+            and isinstance(source.get("repository"), str) and source["repository"]
+            and isinstance(source.get("revision"), str) and REVISION.fullmatch(source["revision"])
+            for source in sources
+        ):
+            raise SystemExit("invalid multi-repository difficulty source identity")
+        source_set = {
+            "schema": "agentlab.multi_repo_source_set.v1",
+            "repositories": sources,
+            "moduleBindings": difficulty.get("moduleBindings") or {},
+        }
+        calculated_source_set = hashlib.sha256(
+            json.dumps(source_set, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        if calculated_source_set != source_set_sha256:
+            raise SystemExit("multi-repository difficulty sourceSetSha256 mismatch")
     groups = {name: [] for name in (
         "difficulty_points", "checkpoints", "interventions", "crossings",
         "decisions", "capability_profiles", "evidence_refs", "execution_environments",
+        "evaluation_cases",
     )}
 
     def insert(path, row):
@@ -75,12 +121,31 @@ def main():
         ("summary.json", "subject-summary"),
         ("decision-package.json", "harness-decision-package"),
         ("difficulty-candidates.json", "difficulty-candidates"),
+        ("multi-repo-evaluation-case.json", "multi-repo-evaluation-case"),
+        ("multi-repo-calibration.json", "multi-repo-calibration"),
+        ("multi-repo-construction-receipt.json", "multi-repo-construction-receipt"),
+        ("multi-repo-construction-quality.json", "multi-repo-construction-quality"),
+        ("case-discrimination-report.json", "case-discrimination-report"),
+        ("case-discrimination-input.json", "case-discrimination-input"),
+        ("assessment-feedback-candidates.json", "assessment-feedback-candidates"),
+        ("smartperf-baseline-summary.json", "smartperf-baseline-summary"),
+        ("smartperf-candidate-summary.json", "smartperf-candidate-summary"),
+        ("smartperf-candidate-repeat-summary.json", "smartperf-candidate-repeat-summary"),
+        ("harmony-baseline-result.json", "harmony-functional-result"),
+        ("harmony-candidate-result.json", "harmony-functional-result"),
+        ("harmony-candidate-repeat-result.json", "harmony-functional-repeat-result"),
+        ("smartperf-comparison.json", "smartperf-comparison"),
+        ("smartperf-repeat-comparison.json", "smartperf-repeat-comparison"),
+        ("performance-policy.json", "harmony-performance-policy"),
+        ("profile-workload.tsv", "harmony-profile-workload"),
+        ("performance-calibration.json", "harmony-performance-calibration"),
+        ("calibration-run.json", "harmony-performance-calibration-run"),
         ("environment-fingerprint.json", "environment-fingerprint"),
     ):
         path = evidence / filename
         if path.is_file():
-            insert("evidence_refs", {
-                "id": f"evidence-{args.run_id}-{filename[:-5]}",
+            evidence_row = {
+                "id": f"evidence-{args.run_id}-{Path(filename).stem}",
                 "schema": "agentlab.evidence_ref.v1",
                 "kind": kind,
                 "uri": action_uri + "#" + filename,
@@ -90,7 +155,106 @@ def main():
                 "producerRun": args.run_id,
                 "public": True,
                 "metadata": {"scenario": decision.get("scenario"), "taskId": summary.get("taskId")},
-            })
+            }
+            if filename == "difficulty-candidates.json" and multi_repo_difficulty:
+                evidence_row["sourceSetSha256"] = difficulty["sourceSetSha256"]
+                evidence_row["sources"] = difficulty["sources"]
+                evidence_row.pop("sourceRevision", None)
+            if filename == "multi-repo-evaluation-case.json" and multi_repo_case:
+                evidence_row["sourceSetSha256"] = multi_repo_case.get("sourceSetSha256")
+                evidence_row["sources"] = multi_repo_case.get("sources")
+                evidence_row.pop("sourceRevision", None)
+            if filename == "multi-repo-calibration.json" and multi_repo_calibration:
+                evidence_row["sourceSetSha256"] = multi_repo_calibration.get("sourceSetSha256")
+                evidence_row["sources"] = multi_repo_case.get("sources") or difficulty.get("sources")
+                evidence_row.pop("sourceRevision", None)
+            if filename == "multi-repo-construction-receipt.json" and multi_repo_construction:
+                evidence_row["sourceSetSha256"] = multi_repo_construction.get("sourceSetSha256")
+                evidence_row["sources"] = multi_repo_case.get("sources") or difficulty.get("sources")
+                evidence_row.pop("sourceRevision", None)
+            if filename == "multi-repo-construction-quality.json" and multi_repo_construction_quality:
+                evidence_row["sourceSetSha256"] = multi_repo_construction_quality.get("sourceSetSha256")
+                evidence_row["sources"] = multi_repo_case.get("sources") or difficulty.get("sources")
+                evidence_row.pop("sourceRevision", None)
+            insert("evidence_refs", evidence_row)
+
+    if multi_repo_case:
+        if multi_repo_case.get("schema") != "agentlab.multi_repo_evaluation_case.v1":
+            raise SystemExit("unsupported multi-repository evaluation case schema")
+        case_id = multi_repo_case.get("id")
+        case_source_set = multi_repo_case.get("sourceSetSha256")
+        oracle = multi_repo_case.get("oracle") or {}
+        calibration = multi_repo_case.get("calibration") or {}
+        if not isinstance(case_id, str) or not case_id:
+            raise SystemExit("multi-repository evaluation case requires id")
+        if multi_repo_case.get("status") != "frozen-calibrated":
+            raise SystemExit("multi-repository evaluation case is not frozen and calibrated")
+        if multi_repo_case.get("automaticPromotion") is not False:
+            raise SystemExit("multi-repository evaluation case must not claim automatic promotion")
+        if not isinstance(case_source_set, str) or not re.fullmatch(r"[0-9a-f]{64}", case_source_set):
+            raise SystemExit("multi-repository evaluation case requires sourceSetSha256")
+        if multi_repo_difficulty and case_source_set != difficulty["sourceSetSha256"]:
+            raise SystemExit("multi-repository evaluation case source set differs from difficulty evidence")
+        if oracle.get("authority") != "independent-executable-oracle" or not re.fullmatch(r"[0-9a-f]{64}", str(oracle.get("sha256", ""))):
+            raise SystemExit("multi-repository evaluation case requires an independent oracle")
+        if calibration.get("qualified") is not True or not re.fullmatch(r"[0-9a-f]{64}", str(calibration.get("summarySha256", ""))):
+            raise SystemExit("multi-repository evaluation case requires qualified calibration")
+        calibration_path = evidence / "multi-repo-calibration.json"
+        if multi_repo_calibration.get("schema") != "agentlab.multi_repo_calibration.v1":
+            raise SystemExit("multi-repository evaluation case requires retained calibration evidence")
+        if sha256(calibration_path) != calibration["summarySha256"]:
+            raise SystemExit("multi-repository calibration evidence digest mismatch")
+        if multi_repo_calibration.get("candidateId") != multi_repo_case.get("difficultyId"):
+            raise SystemExit("multi-repository calibration candidate differs from frozen case")
+        if multi_repo_calibration.get("sourceSetSha256") != case_source_set:
+            raise SystemExit("multi-repository calibration source set differs from frozen case")
+        if multi_repo_calibration.get("oracleSha256") != oracle["sha256"]:
+            raise SystemExit("multi-repository calibration oracle differs from frozen case")
+        construction = multi_repo_case.get("construction")
+        construction_evidence_id = None
+        if construction is not None:
+            construction_path = evidence / "multi-repo-construction-receipt.json"
+            if multi_repo_construction.get("schema") != "agentlab.multi_repo_intent_construction_receipt.v1":
+                raise SystemExit("constructed multi-repository case requires retained construction evidence")
+            if sha256(construction_path) != construction.get("receiptSha256"):
+                raise SystemExit("multi-repository construction evidence digest mismatch")
+            if multi_repo_construction.get("status") != construction.get("status") or construction.get("status") != "candidate-unverified":
+                raise SystemExit("multi-repository construction status mismatch")
+            if multi_repo_construction.get("participantId") != construction.get("participantId"):
+                raise SystemExit("multi-repository construction participant differs from frozen case")
+            if multi_repo_construction.get("candidateId") != multi_repo_case.get("difficultyId"):
+                raise SystemExit("multi-repository construction candidate differs from frozen case")
+            if multi_repo_construction.get("sourceSetSha256") != case_source_set:
+                raise SystemExit("multi-repository construction source set differs from frozen case")
+            if multi_repo_construction.get("semanticKnowledgeVerified") is not False or multi_repo_construction.get("automaticPromotion") is not False:
+                raise SystemExit("multi-repository construction evidence overclaims qualification")
+            construction_evidence_id = f"evidence-{args.run_id}-multi-repo-construction-receipt"
+            construction_quality = multi_repo_case.get("constructionQuality") or {}
+            quality_path = evidence / "multi-repo-construction-quality.json"
+            if multi_repo_construction_quality.get("schema") != "agentlab.multi_repo_intent_quality.v1":
+                raise SystemExit("constructed multi-repository case requires retained construction quality")
+            if sha256(quality_path) != construction_quality.get("reportSha256"):
+                raise SystemExit("multi-repository construction quality digest mismatch")
+            if multi_repo_construction_quality.get("qualifiedForReview") is not True or construction_quality.get("qualifiedForReview") is not True:
+                raise SystemExit("multi-repository construction did not qualify for review")
+            if multi_repo_construction_quality.get("candidateId") != multi_repo_case.get("difficultyId") or multi_repo_construction_quality.get("sourceSetSha256") != case_source_set:
+                raise SystemExit("multi-repository construction quality lineage mismatch")
+            if multi_repo_construction_quality.get("constructionReceiptSha256") != construction.get("receiptSha256"):
+                raise SystemExit("multi-repository construction quality receipt mismatch")
+            if (multi_repo_construction_quality.get("policy") or {}).get("automaticPromotion") is not False:
+                raise SystemExit("multi-repository construction quality must not auto-promote")
+            construction_quality_evidence_id = f"evidence-{args.run_id}-multi-repo-construction-quality"
+        else:
+            construction_quality_evidence_id = None
+        case_row = dict(multi_repo_case)
+        case_row["evidenceIds"] = [
+            f"evidence-{args.run_id}-multi-repo-evaluation-case",
+            f"evidence-{args.run_id}-multi-repo-calibration",
+        ]
+        if construction_evidence_id:
+            case_row["evidenceIds"].append(construction_evidence_id)
+            case_row["evidenceIds"].append(construction_quality_evidence_id)
+        insert("evaluation_cases", case_row)
 
     environment = load(evidence / "environment-fingerprint.json") or {}
     if environment:
@@ -218,8 +382,16 @@ def main():
         mechanism = candidate.get("mechanism") or candidate.get("signature")
         if not all(isinstance(value, str) and value for value in (dimension, primary, mechanism)):
             continue
+        if multi_repo_difficulty:
+            verification = candidate.get("verificationContract") or {}
+            if not isinstance(candidate.get("id"), str) or not candidate["id"]:
+                raise SystemExit("multi-repository difficulty candidate requires a stable id")
+            if candidate.get("automaticPromotion") is not False:
+                raise SystemExit("multi-repository difficulty candidate must not auto-promote")
+            if candidate.get("maturityState") != "candidate" or verification.get("caseReady") is not False:
+                raise SystemExit("multi-repository difficulty must remain a non-ready candidate")
         candidate_id = f"difficulty-{args.run_id}-{hashlib.sha256(json.dumps(candidate, sort_keys=True).encode()).hexdigest()[:16]}"
-        insert("difficulty_points", {
+        difficulty_row = {
             "id": candidate_id,
             "schema": "agentlab.difficulty_point.v1",
             "taskId": summary.get("taskId"),
@@ -233,7 +405,815 @@ def main():
             "checkpointIds": checkpoint_ids,
             "evidenceIds": [f"evidence-{args.run_id}-difficulty-candidates"],
             "observation": {"producerRun": args.run_id, "reproducible": candidate.get("reproducible")},
+        }
+        if multi_repo_difficulty:
+            difficulty_row.pop("sourceRevision", None)
+            difficulty_row.update({
+                "analysisCandidateId": candidate.get("id"),
+                "sourceSetSha256": difficulty["sourceSetSha256"],
+                "sources": difficulty["sources"],
+                "seed": candidate.get("seed"),
+                "affectedFiles": candidate.get("affectedFiles", []),
+                "verificationContract": candidate.get("verificationContract"),
+                "automaticPromotion": False,
+            })
+        insert("difficulty_points", difficulty_row)
+
+    discrimination = load(evidence / "case-discrimination-report.json") or {}
+    if discrimination:
+        discrimination_schema = discrimination.get("schema")
+        if discrimination_schema not in {
+            "agentlab.case_discrimination_report.v1",
+            "agentlab.case_discrimination_report.v2",
+        }:
+            raise SystemExit("unsupported case discrimination report schema")
+        multi_repo_discrimination = (
+            discrimination_schema == "agentlab.case_discrimination_report.v2"
+        )
+        source_identity_field = (
+            "sourceSetSha256" if multi_repo_discrimination else "sourceRevision"
+        )
+        discrimination_source = discrimination.get(source_identity_field)
+        method_revision = discrimination.get("methodRevision")
+        source_pattern = SHA256 if multi_repo_discrimination else REVISION
+        if not isinstance(discrimination_source, str) or not source_pattern.fullmatch(discrimination_source):
+            raise SystemExit(f"case discrimination {source_identity_field} has invalid exact identity")
+        if not isinstance(method_revision, str) or not REVISION.fullmatch(method_revision):
+            raise SystemExit("case discrimination methodRevision must be an exact Git revision")
+        summary_source = summary.get(source_identity_field)
+        if summary_source and discrimination_source != summary_source:
+            raise SystemExit(
+                f"case discrimination {source_identity_field} does not match run summary"
+            )
+        policy = discrimination.get("policy") or {}
+        if policy.get("automaticPromotion") is not False:
+            raise SystemExit("case discrimination report must not auto-promote")
+        for row in discrimination.get("ranking") or []:
+            case_id = row.get("caseId")
+            decision = row.get("decision")
+            if not isinstance(case_id, str) or not case_id or not isinstance(decision, str):
+                raise SystemExit("invalid case discrimination ranking row")
+            suffix = hashlib.sha256(case_id.encode()).hexdigest()[:16]
+            decision_row = {
+                "id": f"decision-{args.run_id}-case-{suffix}",
+                "schema": "agentlab.case_selection_decision.v1",
+                "caseId": case_id,
+                "taskId": case_id,
+                "methodRevision": method_revision,
+                "decision": decision,
+                "eligible": bool(row.get("eligible")),
+                "calibrationPassed": bool(row.get("calibrationPassed")),
+                "evidenceComplete": bool(row.get("evidenceComplete")),
+                "metrics": row.get("metrics") or {},
+                "denominators": discrimination.get("denominators") or {},
+                "evidenceIds": [f"evidence-{args.run_id}-case-discrimination-report"],
+                "automaticPromotion": False,
+                "nextAction": policy.get("nextAction"),
+            }
+            decision_row[source_identity_field] = discrimination_source
+            insert("decisions", decision_row)
+
+    if assessment_feedback:
+        if assessment_feedback.get("schema") != "agentlab.assessment_feedback_candidates.v1":
+            raise SystemExit("unsupported assessment feedback schema")
+        if (assessment_feedback.get("policy") or {}).get("automaticPromotion") is not False:
+            raise SystemExit("assessment feedback must not auto-promote")
+        feedback_source_set = assessment_feedback.get("sourceSetSha256")
+        feedback_method_revision = assessment_feedback.get("methodRevision")
+        if not isinstance(feedback_source_set, str) or not SHA256.fullmatch(feedback_source_set):
+            raise SystemExit("assessment feedback requires exact sourceSetSha256")
+        if not isinstance(feedback_method_revision, str) or not REVISION.fullmatch(feedback_method_revision):
+            raise SystemExit("assessment feedback requires exact methodRevision")
+        if discrimination:
+            if discrimination.get("sourceSetSha256") != feedback_source_set:
+                raise SystemExit("assessment feedback source set differs from discrimination report")
+            if discrimination.get("methodRevision") != feedback_method_revision:
+                raise SystemExit("assessment feedback method revision differs from discrimination report")
+        if not multi_repo_case:
+            raise SystemExit("assessment feedback requires retained frozen case")
+        if multi_repo_case.get("sourceSetSha256") != feedback_source_set:
+            raise SystemExit("assessment feedback source set differs from frozen case")
+        if canonical_json_sha256(multi_repo_case) != assessment_feedback.get("caseSha256"):
+            raise SystemExit("assessment feedback frozen case digest mismatch")
+        input_path = evidence / "case-discrimination-input.json"
+        if not input_path.is_file():
+            raise SystemExit("assessment feedback requires retained discrimination input")
+        discrimination_input = load(input_path)
+        discrimination_input_sha256 = canonical_json_sha256(discrimination_input)
+        if discrimination_input_sha256 != assessment_feedback.get("discriminationInputSha256"):
+            raise SystemExit("assessment feedback discrimination input digest mismatch")
+        if discrimination.get("inputSha256") != discrimination_input_sha256:
+            raise SystemExit("case discrimination report does not bind retained input")
+        if canonical_json_sha256(discrimination) != assessment_feedback.get("discriminationReportSha256"):
+            raise SystemExit("assessment feedback discrimination report digest mismatch")
+        candidates = assessment_feedback.get("candidates")
+        if not isinstance(candidates, list) or assessment_feedback.get("candidateCount") != len(candidates):
+            raise SystemExit("assessment feedback candidate count mismatch")
+        case_id = assessment_feedback.get("caseId")
+        if not isinstance(case_id, str) or not case_id:
+            raise SystemExit("assessment feedback requires caseId")
+        sources = multi_repo_case.get("sources") if multi_repo_case else None
+        for candidate in candidates:
+            verification = candidate.get("verificationContract") if isinstance(candidate, dict) else None
+            if not isinstance(candidate, dict) or not all(
+                isinstance(candidate.get(field), str) and candidate.get(field)
+                for field in ("id", "dimensionId", "primaryDimension", "mechanism", "stageId", "failureMode")
+            ):
+                raise SystemExit("invalid assessment feedback candidate")
+            if (
+                candidate.get("caseId") != case_id
+                or candidate.get("status") != "candidate"
+                or candidate.get("maturityState") != "candidate"
+                or candidate.get("automaticPromotion") is not False
+                or not isinstance(verification, dict)
+                or verification.get("caseReady") is not False
+            ):
+                raise SystemExit("assessment feedback candidate overclaims readiness")
+            observations = candidate.get("observations")
+            if not isinstance(observations, list) or not observations:
+                raise SystemExit("assessment feedback candidate has no observations")
+            performance_evidence = candidate.get("performanceEvidence")
+            if candidate["dimensionId"] == "assessed-agent-performance-separation":
+                authority = (
+                    performance_evidence.get("authority")
+                    if isinstance(performance_evidence, dict)
+                    else None
+                )
+                if (
+                    not isinstance(performance_evidence, dict)
+                    or performance_evidence.get("rangesSeparated") is not True
+                    or not isinstance(performance_evidence.get("metric"), str)
+                    or not performance_evidence["metric"]
+                    or performance_evidence.get("statistic") not in {"mean", "p50", "p95"}
+                    or performance_evidence.get("direction") not in {"lower", "higher"}
+                    or not all(
+                        isinstance(performance_evidence.get(field), str)
+                        and SHA256.fullmatch(performance_evidence[field])
+                        for field in ("performancePolicySha256", "profileWorkloadSha256")
+                    )
+                    or authority
+                    != {
+                        "functional": "none",
+                        "relativePerformance": "smartperf-emulator-proxy",
+                        "absolutePowerThermal": "unavailable-on-emulator",
+                    }
+                    or "independent-performance-calibration"
+                    not in verification.get("required", [])
+                ):
+                    raise SystemExit("invalid assessed performance feedback candidate")
+            elif performance_evidence is not None:
+                raise SystemExit("non-performance feedback candidate overclaims performance evidence")
+            suffix = hashlib.sha256(
+                f"{case_id}|{candidate['id']}|{feedback_source_set}".encode()
+            ).hexdigest()[:16]
+            row = {
+                "id": f"difficulty-{args.run_id}-feedback-{suffix}",
+                "schema": "agentlab.difficulty_point.v1",
+                "taskId": case_id,
+                "dimensionId": candidate["dimensionId"],
+                "primaryDimension": candidate["primaryDimension"],
+                "mechanism": candidate["mechanism"],
+                "status": "candidate",
+                "maturityState": "candidate",
+                "sourceSetSha256": feedback_source_set,
+                "analysisCandidateId": candidate["id"],
+                "stageId": candidate["stageId"],
+                "failureMode": candidate["failureMode"],
+                "participantProfiles": candidate.get("participantProfiles") or [],
+                "observations": observations,
+                "caseSelection": candidate.get("caseSelection") or {},
+                "verificationContract": verification,
+                "methodRevision": feedback_method_revision,
+                "evidenceIds": [
+                    f"evidence-{args.run_id}-case-discrimination-input",
+                    f"evidence-{args.run_id}-case-discrimination-report",
+                    f"evidence-{args.run_id}-assessment-feedback-candidates",
+                ],
+                "automaticPromotion": False,
+            }
+            if sources:
+                row["sources"] = sources
+            if performance_evidence is not None:
+                row["performanceEvidence"] = performance_evidence
+            insert("difficulty_points", row)
+
+    performance = load(evidence / "smartperf-comparison.json") or {}
+    if performance:
+        performance_schema = performance.get("schema")
+        if performance_schema not in {
+            "agentlab.smartperf_comparison.v1",
+            "agentlab.smartperf_comparison.v2",
+            "agentlab.smartperf_comparison.v3",
+        }:
+            raise SystemExit("unsupported SmartPerf comparison schema")
+        policy = performance.get("policy") or {}
+        if policy.get("automaticPromotion") is not False:
+            raise SystemExit("SmartPerf comparison must not auto-promote")
+        if policy.get("absolutePowerThermalUsed") is not False:
+            raise SystemExit("emulator SmartPerf comparison must not claim absolute power or thermal")
+        task_id = performance.get("taskId")
+        decision = performance.get("decision")
+        metrics = performance.get("metrics")
+        comparable = performance.get("comparable")
+        if not isinstance(task_id, str) or not task_id or not isinstance(metrics, list):
+            raise SystemExit("invalid SmartPerf comparison identity or metrics")
+        baseline_summary = load(evidence / "smartperf-baseline-summary.json")
+        candidate_summary = load(evidence / "smartperf-candidate-summary.json")
+        if not isinstance(baseline_summary, dict) or not isinstance(candidate_summary, dict):
+            raise SystemExit("SmartPerf comparison requires retained baseline and candidate summaries")
+        for label, profile in (
+            ("baseline", baseline_summary),
+            ("candidate", candidate_summary),
+        ):
+            if profile.get("schema") not in {
+                "agentlab.smartperf_summary.v1",
+                "agentlab.smartperf_summary.v2",
+            }:
+                raise SystemExit(f"unsupported {label} SmartPerf summary schema")
+            source_identity = profile.get("sourceIdentity")
+            if not isinstance(source_identity, str) or not re.fullmatch(
+                r"artifact-sha256:[0-9a-f]{64}", source_identity
+            ):
+                raise SystemExit(f"{label} SmartPerf summary requires exact HAP identity")
+            if profile.get("taskId") != task_id:
+                raise SystemExit(f"{label} SmartPerf summary task differs from comparison")
+            if profile.get("environmentIdentity") != performance.get("environmentIdentity"):
+                raise SystemExit(f"{label} SmartPerf summary environment differs from comparison")
+            if (profile.get("authority") or {}).get("absolutePowerThermal") != "unavailable-on-emulator":
+                raise SystemExit(f"{label} SmartPerf summary overclaims power or thermal authority")
+        for label, profile in (
+            ("baseline", baseline_summary),
+            ("candidate", candidate_summary),
+        ):
+            if profile.get("runId") != performance.get(f"{label}RunId"):
+                raise SystemExit(f"{label} SmartPerf summary run differs from comparison")
+            if profile.get("sourceIdentity") != performance.get(f"{label}SourceIdentity"):
+                raise SystemExit(f"{label} SmartPerf summary source differs from comparison")
+            if canonical_json_sha256(profile) != performance.get(f"{label}SummarySha256"):
+                raise SystemExit(f"{label} SmartPerf summary digest differs from comparison")
+        functional_evidence_ids = []
+        policy_evidence_ids = []
+        if performance_schema == "agentlab.smartperf_comparison.v3":
+            policy_path = evidence / "performance-policy.json"
+            workload_path = evidence / "profile-workload.tsv"
+            if not policy_path.is_file() or not workload_path.is_file():
+                raise SystemExit("SmartPerf v3 comparison requires retained policy and workload")
+            retained_policy = load(policy_path)
+            retained_workload_sha = sha256(workload_path)
+            comparison_policy = performance.get("performancePolicy") or {}
+            comparison_workload = performance.get("profileWorkload") or {}
+            if (
+                not isinstance(retained_policy, dict)
+                or retained_policy.get("schema") != "agentlab.harmony_performance_policy.v1"
+                or retained_policy.get("id") != comparison_policy.get("id")
+                or sha256(policy_path) != comparison_policy.get("sha256")
+            ):
+                raise SystemExit("retained performance policy differs from comparison")
+            expected_policy_binding = {
+                "id": retained_policy.get("id"),
+                "sha256": sha256(policy_path),
+                "requiredMetrics": retained_policy.get("requiredMetrics"),
+                "observedOnlyMetrics": retained_policy.get("observedOnlyMetrics"),
+            }
+            workload_lines = workload_path.read_text().splitlines()
+            workload_ids = [line.split("\t", 1)[1] for line in workload_lines if line.startswith("workload\t")]
+            if (
+                len(workload_ids) != 1
+                or workload_ids[0] != comparison_workload.get("id")
+                or retained_workload_sha != comparison_workload.get("sha256")
+            ):
+                raise SystemExit("retained profile workload differs from comparison")
+            for label, profile in (("baseline", baseline_summary), ("candidate", candidate_summary)):
+                if profile.get("schema") != "agentlab.smartperf_summary.v2":
+                    raise SystemExit(f"SmartPerf v3 requires policy-bound {label} summary")
+                if profile.get("performancePolicy") != expected_policy_binding:
+                    raise SystemExit(f"{label} SmartPerf summary policy differs from retained policy")
+                if (profile.get("profileWorkload") or {}).get("id") != workload_ids[0] or (profile.get("profileWorkload") or {}).get("sha256") != retained_workload_sha:
+                    raise SystemExit(f"{label} SmartPerf summary workload differs from retained workload")
+            policy_evidence_ids = [
+                f"evidence-{args.run_id}-performance-policy",
+                f"evidence-{args.run_id}-profile-workload",
+            ]
+            expected_rows = []
+            for specification in retained_policy.get("requiredMetrics") or []:
+                if not isinstance(specification, dict):
+                    raise SystemExit("invalid retained performance policy metric")
+                name = specification.get("metric")
+                statistic = specification.get("statistic")
+                direction = specification.get("direction")
+                baseline_metric = (baseline_summary.get("canonicalMetrics") or {}).get(name) or {}
+                candidate_metric = (candidate_summary.get("canonicalMetrics") or {}).get(name) or {}
+                before = baseline_metric.get(statistic)
+                after = candidate_metric.get(statistic)
+                if not isinstance(before, (int, float)) or not isinstance(after, (int, float)):
+                    expected_rows.append((name, statistic, "missing", before, after, None, None))
+                    continue
+                if before <= 0:
+                    expected_rows.append((name, statistic, "unusable-baseline", before, after, None, None))
+                    continue
+                ratio = after / before
+                if direction == "lower":
+                    threshold = specification.get("maximumRelativeIncrease")
+                    status = "passed" if isinstance(threshold, (int, float)) and ratio <= 1.0 + threshold else "regressed"
+                    guardrail = {"maximumRelativeIncrease": threshold}
+                elif direction == "higher":
+                    threshold = specification.get("minimumCandidateToBaselineRatio")
+                    status = "passed" if isinstance(threshold, (int, float)) and ratio >= threshold else "regressed"
+                    guardrail = {"minimumCandidateToBaselineRatio": threshold}
+                else:
+                    raise SystemExit("invalid retained performance policy direction")
+                expected_rows.append((name, statistic, status, before, after, ratio, guardrail))
+            if len(metrics) != len(expected_rows):
+                raise SystemExit("SmartPerf v3 metrics differ from retained performance policy")
+            for actual, expected in zip(metrics, expected_rows):
+                name, statistic, status, before, after, ratio, guardrail = expected
+                if (
+                    actual.get("metric") != name
+                    or actual.get("statistic") != statistic
+                    or actual.get("status") != status
+                    or actual.get("baseline") != before
+                    or actual.get("candidate") != after
+                    or actual.get("candidateToBaselineRatio") != ratio
+                    or (guardrail is not None and actual.get("guardrail") != guardrail)
+                ):
+                    raise SystemExit("SmartPerf v3 metric contradicts retained summaries or policy")
+        if performance_schema in {
+            "agentlab.smartperf_comparison.v2",
+            "agentlab.smartperf_comparison.v3",
+        }:
+            functional_gate = performance.get("functionalGate")
+            if not isinstance(functional_gate, dict):
+                raise SystemExit("SmartPerf v2 comparison requires functionalGate")
+            gate_passes = []
+            gate_failure_reasons = []
+            scenario_identities = []
+            for label, profile in (
+                ("baseline", baseline_summary),
+                ("candidate", candidate_summary),
+            ):
+                result_path = evidence / f"harmony-{label}-result.json"
+                result = load(result_path)
+                gate = functional_gate.get(label)
+                expected_result_schema = (
+                    "agentlab.harmony_emulator_case_result.v3"
+                    if performance_schema == "agentlab.smartperf_comparison.v3"
+                    else "agentlab.harmony_emulator_case_result.v2"
+                )
+                if not isinstance(result, dict) or result.get("schema") != expected_result_schema:
+                    raise SystemExit(f"SmartPerf comparison requires retained {label} functional result")
+                if not isinstance(gate, dict) or gate.get("resultSha256") != canonical_json_sha256(result):
+                    raise SystemExit(f"{label} functional result digest differs from comparison")
+                if result.get("taskId") != task_id or gate.get("sourceIdentity") != profile.get("sourceIdentity"):
+                    raise SystemExit(f"{label} functional result identity differs from SmartPerf summary")
+                hap_digest = str(profile.get("sourceIdentity", "")).removeprefix("artifact-sha256:")
+                if result.get("sourceIdentity") != profile.get("sourceIdentity") or result.get("hapSha256") != hap_digest:
+                    raise SystemExit(f"{label} functional result HAP differs from SmartPerf summary")
+                if result.get("powerThermalAuthority") != "unavailable_on_emulator":
+                    raise SystemExit(f"{label} functional result overclaims power or thermal authority")
+                scenario_id = result.get("scenarioId")
+                scenario_sha256 = result.get("scenarioSha256")
+                if not isinstance(scenario_id, str) or not scenario_id or not isinstance(scenario_sha256, str) or not SHA256.fullmatch(scenario_sha256):
+                    raise SystemExit(f"{label} functional result requires exact scenario identity")
+                if result.get("profileRunId") != profile.get("runId") or result.get("environmentIdentity") != profile.get("environmentIdentity"):
+                    raise SystemExit(f"{label} functional result profile identity differs from SmartPerf summary")
+                if result.get("profileStatus") != "collected" or result.get("profileSummaryStatus") != "normalized":
+                    raise SystemExit(f"{label} functional result does not bind a normalized SmartPerf profile")
+                if performance_schema == "agentlab.smartperf_comparison.v3":
+                    profile_policy = profile.get("performancePolicy") or {}
+                    profile_workload = profile.get("profileWorkload") or {}
+                    if result.get("performancePolicyId") != profile_policy.get("id") or result.get("performancePolicySha256") != profile_policy.get("sha256"):
+                        raise SystemExit(f"{label} functional result policy differs from SmartPerf summary")
+                    if result.get("profileWorkloadId") != profile_workload.get("id") or result.get("profileWorkloadSha256") != profile_workload.get("sha256"):
+                        raise SystemExit(f"{label} functional result workload differs from SmartPerf summary")
+                assessed = (
+                    result.get("assessmentStatus") == "assessed"
+                    and result.get("infrastructureAvailable") is True
+                    and isinstance(result.get("subjectTaskSucceeded"), bool)
+                )
+                passed = (
+                    assessed
+                    and result.get("subjectTaskSucceeded") is True
+                    and result.get("status") == "passed"
+                    and result.get("oracleStatus") == "passed"
+                    and result.get("failureClass") == "none"
+                )
+                if (
+                    gate.get("assessmentStatus") != result.get("assessmentStatus")
+                    or gate.get("infrastructureAvailable") is not result.get("infrastructureAvailable")
+                    or gate.get("subjectTaskSucceeded") is not result.get("subjectTaskSucceeded")
+                    or gate.get("oracleStatus") != result.get("oracleStatus")
+                    or gate.get("scenarioId") != scenario_id
+                    or gate.get("scenarioSha256") != scenario_sha256
+                    or gate.get("profileRunId") != result.get("profileRunId")
+                    or gate.get("environmentIdentity") != result.get("environmentIdentity")
+                    or gate.get("passed") is not passed
+                ):
+                    raise SystemExit(f"{label} functional gate contradicts retained result")
+                gate_passes.append(passed)
+                scenario_identities.append((scenario_id, scenario_sha256))
+                if not assessed:
+                    gate_failure_reasons.append(f"{label}-functional-evidence-unassessed")
+                elif not passed:
+                    gate_failure_reasons.append(f"{label}-functional-gate-failed")
+                functional_evidence_ids.append(f"evidence-{args.run_id}-harmony-{label}-result")
+            if functional_gate.get("passed") is not all(gate_passes):
+                raise SystemExit("SmartPerf aggregate functional gate is inconsistent")
+            if scenario_identities[0] != scenario_identities[1]:
+                if comparable is not False or "functional-scenario-mismatch" not in (performance.get("incomparabilityReasons") or []):
+                    raise SystemExit("SmartPerf comparison does not reject functional scenario mismatch")
+            if not all(gate_passes):
+                if comparable is not False:
+                    raise SystemExit("SmartPerf comparison cannot be comparable when a functional gate failed")
+                if not set(gate_failure_reasons).issubset(set(performance.get("incomparabilityReasons") or [])):
+                    raise SystemExit("SmartPerf comparison omits functional gate failure reason")
+        source_revision = summary.get("sourceRevision")
+        if not isinstance(source_revision, str) or not REVISION.fullmatch(source_revision):
+            raise SystemExit("SmartPerf feedback requires exact run sourceRevision")
+        for field in ("baselineSummarySha256", "candidateSummarySha256"):
+            digest = performance.get(field)
+            if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+                raise SystemExit(f"SmartPerf comparison requires exact {field}")
+        if not metrics or not all(
+            isinstance(row, dict)
+            and isinstance(row.get("metric"), str)
+            and row.get("status") in {"passed", "regressed", "missing", "unusable-baseline"}
+            for row in metrics
+        ):
+            raise SystemExit("invalid SmartPerf comparison metric row")
+        if comparable is True:
+            if any(row["status"] == "missing" for row in metrics):
+                raise SystemExit("comparable SmartPerf report contains missing metric")
+            expected = (
+                "performance-regression-candidate"
+                if any(row["status"] == "regressed" for row in metrics)
+                else "within-relative-guardrails"
+            )
+        elif comparable is False:
+            expected = "insufficient-comparable-evidence"
+        else:
+            raise SystemExit("SmartPerf comparable must be boolean")
+        if decision != expected:
+            raise SystemExit("SmartPerf decision contradicts comparison metrics")
+        calibration_binding = None
+        calibration_evidence_ids = []
+        repeatability_verified = False
+        if performance_calibration:
+            if performance_calibration.get("schema") != "agentlab.performance_calibration.v1":
+                raise SystemExit("unsupported performance calibration schema")
+            if performance_calibration.get("automaticPromotion") is not False:
+                raise SystemExit("performance calibration must not auto-promote")
+            if performance_calibration.get("taskId") != task_id:
+                raise SystemExit("performance calibration task differs from comparison")
+            if performance_calibration.get("harnessRevision") != source_revision:
+                raise SystemExit("performance calibration harness revision differs from run")
+            if performance_calibration.get("environmentIdentity") != performance.get("environmentIdentity"):
+                raise SystemExit("performance calibration environment differs from comparison")
+            if performance_calibration.get("expectedDecision") != decision:
+                raise SystemExit("performance calibration expected decision differs from comparison")
+            baseline_calibration = performance_calibration.get("baseline") or {}
+            candidate_calibration = performance_calibration.get("candidate") or {}
+            mutation = candidate_calibration.get("controlledMutation") or {}
+            application_source = performance_calibration.get("applicationSource") or {}
+            functional_oracle = performance_calibration.get("functionalOracle") or {}
+            authority = performance_calibration.get("authority") or {}
+            if baseline_calibration.get("sourceIdentity") != performance.get("baselineSourceIdentity"):
+                raise SystemExit("performance calibration baseline HAP differs from comparison")
+            if candidate_calibration.get("sourceIdentity") != performance.get("candidateSourceIdentity"):
+                raise SystemExit("performance calibration candidate HAP differs from comparison")
+            if candidate_calibration.get("baseSourceIdentity") != baseline_calibration.get("sourceIdentity"):
+                raise SystemExit("performance calibration candidate does not bind the baseline HAP")
+            if not isinstance(application_source.get("repository"), str) or not application_source["repository"]:
+                raise SystemExit("performance calibration requires application repository")
+            if not isinstance(application_source.get("revision"), str) or not REVISION.fullmatch(application_source["revision"]):
+                raise SystemExit("performance calibration requires exact application revision")
+            if not isinstance(mutation.get("id"), str) or not mutation["id"]:
+                raise SystemExit("performance calibration requires controlled mutation identity")
+            if mutation.get("kind") not in {"retained-memory", "bounded-cpu", "combined-cpu-memory"}:
+                raise SystemExit("unsupported performance calibration mutation kind")
+            if not isinstance(mutation.get("bytes"), int) or mutation["bytes"] <= 0:
+                raise SystemExit("performance calibration mutation requires positive byte count")
+            if not isinstance(mutation.get("sourcePath"), str) or not mutation["sourcePath"]:
+                raise SystemExit("performance calibration mutation requires source path")
+            for field in ("baseSourceFileSha256", "candidateSourceFileSha256"):
+                if not isinstance(mutation.get(field), str) or not SHA256.fullmatch(mutation[field]):
+                    raise SystemExit(f"performance calibration mutation requires exact {field}")
+            if mutation["baseSourceFileSha256"] == mutation["candidateSourceFileSha256"]:
+                raise SystemExit("performance calibration mutation did not change the source file")
+            functional_gate = performance.get("functionalGate") or {}
+            baseline_gate = functional_gate.get("baseline") or {}
+            candidate_gate = functional_gate.get("candidate") or {}
+            if (
+                functional_oracle.get("scenarioId") != baseline_gate.get("scenarioId")
+                or functional_oracle.get("scenarioId") != candidate_gate.get("scenarioId")
+                or functional_oracle.get("scenarioSha256") != baseline_gate.get("scenarioSha256")
+                or functional_oracle.get("scenarioSha256") != candidate_gate.get("scenarioSha256")
+                or functional_oracle.get("expected") != "passed-both"
+                or functional_gate.get("passed") is not True
+            ):
+                raise SystemExit("performance calibration functional Oracle differs from comparison")
+            if performance_calibration.get("performancePolicy") != performance.get("performancePolicy"):
+                raise SystemExit("performance calibration policy differs from comparison")
+            if performance_calibration.get("profileWorkload") != performance.get("profileWorkload"):
+                raise SystemExit("performance calibration workload differs from comparison")
+            comparison_path = evidence / "smartperf-comparison.json"
+            if performance_calibration.get("comparisonSha256") != sha256(comparison_path):
+                raise SystemExit("performance calibration comparison digest mismatch")
+            if authority.get("relativePerformance") != "smartperf-emulator-proxy" or authority.get("absolutePowerThermal") != "unavailable-on-emulator":
+                raise SystemExit("performance calibration overclaims measurement authority")
+            repeatability = performance_calibration.get("repeatability")
+            repeatability_binding = None
+            if repeatability:
+                repeat_summary_path = evidence / "smartperf-candidate-repeat-summary.json"
+                repeat_result_path = evidence / "harmony-candidate-repeat-result.json"
+                repeat_comparison_path = evidence / "smartperf-repeat-comparison.json"
+                repeat_summary = load(repeat_summary_path)
+                repeat_result = load(repeat_result_path)
+                repeat_comparison = load(repeat_comparison_path)
+                if not all(isinstance(value, dict) for value in (repeat_summary, repeat_result, repeat_comparison)):
+                    raise SystemExit("performance calibration repeatability requires retained repeat evidence")
+                if repeatability.get("status") != "reproduced" or repeatability.get("minimumCandidateRuns") != 2:
+                    raise SystemExit("performance calibration repeatability contract is invalid")
+                if repeat_summary.get("schema") != "agentlab.smartperf_summary.v2" or repeat_result.get("schema") != "agentlab.harmony_emulator_case_result.v3":
+                    raise SystemExit("performance calibration repeat evidence schema is invalid")
+                if repeat_comparison.get("schema") != "agentlab.smartperf_comparison.v3":
+                    raise SystemExit("performance calibration repeat comparison schema is invalid")
+                if repeatability.get("candidateRunIds") != [performance.get("candidateRunId"), repeat_summary.get("runId")]:
+                    raise SystemExit("performance calibration repeat run identities differ")
+                if repeatability.get("comparisonSha256s") != [sha256(comparison_path), sha256(repeat_comparison_path)]:
+                    raise SystemExit("performance calibration repeat comparison digest mismatch")
+                if (
+                    repeat_comparison.get("taskId") != task_id
+                    or repeat_comparison.get("baselineRunId") != performance.get("baselineRunId")
+                    or repeat_comparison.get("baselineSourceIdentity") != performance.get("baselineSourceIdentity")
+                    or repeat_comparison.get("candidateRunId") != repeat_summary.get("runId")
+                    or repeat_comparison.get("candidateSourceIdentity") != performance.get("candidateSourceIdentity")
+                    or repeat_comparison.get("environmentIdentity") != performance.get("environmentIdentity")
+                    or repeat_comparison.get("performancePolicy") != performance.get("performancePolicy")
+                    or repeat_comparison.get("profileWorkload") != performance.get("profileWorkload")
+                    or repeat_comparison.get("baselineSummarySha256") != canonical_json_sha256(baseline_summary)
+                    or repeat_comparison.get("comparable") is not True
+                    or repeat_comparison.get("decision") != decision
+                ):
+                    raise SystemExit("performance calibration repeat comparison differs from primary contract")
+                if repeat_comparison.get("candidateSummarySha256") != canonical_json_sha256(repeat_summary):
+                    raise SystemExit("performance calibration repeat summary digest differs")
+                if (
+                    repeat_summary.get("taskId") != task_id
+                    or repeat_summary.get("sourceIdentity") != performance.get("candidateSourceIdentity")
+                    or repeat_summary.get("environmentIdentity") != performance.get("environmentIdentity")
+                    or repeat_summary.get("performancePolicy") != candidate_summary.get("performancePolicy")
+                    or repeat_summary.get("profileWorkload") != candidate_summary.get("profileWorkload")
+                    or repeat_summary.get("profileValid") is not True
+                ):
+                    raise SystemExit("performance calibration repeat summary differs from primary contract")
+                repeat_gate = repeat_comparison.get("functionalGate") or {}
+                repeat_candidate_gate = repeat_gate.get("candidate") or {}
+                if (
+                    repeat_gate.get("passed") is not True
+                    or repeat_gate.get("baseline") != baseline_gate
+                    or repeat_candidate_gate.get("resultSha256") != canonical_json_sha256(repeat_result)
+                    or repeat_candidate_gate.get("passed") is not True
+                    or repeat_candidate_gate.get("profileRunId") != repeat_summary.get("runId")
+                    or repeat_candidate_gate.get("assessmentStatus") != repeat_result.get("assessmentStatus")
+                    or repeat_candidate_gate.get("infrastructureAvailable") is not repeat_result.get("infrastructureAvailable")
+                    or repeat_candidate_gate.get("subjectTaskSucceeded") is not repeat_result.get("subjectTaskSucceeded")
+                    or repeat_candidate_gate.get("oracleStatus") != repeat_result.get("oracleStatus")
+                    or repeat_candidate_gate.get("scenarioId") != repeat_result.get("scenarioId")
+                    or repeat_candidate_gate.get("scenarioSha256") != repeat_result.get("scenarioSha256")
+                    or repeat_candidate_gate.get("environmentIdentity") != repeat_result.get("environmentIdentity")
+                    or repeat_candidate_gate.get("sourceIdentity") != repeat_result.get("sourceIdentity")
+                    or repeat_result.get("profileRunId") != repeat_summary.get("runId")
+                    or repeat_result.get("sourceIdentity") != performance.get("candidateSourceIdentity")
+                    or repeat_result.get("hapSha256") != str(performance.get("candidateSourceIdentity", "")).removeprefix("artifact-sha256:")
+                    or repeat_result.get("scenarioId") != functional_oracle.get("scenarioId")
+                    or repeat_result.get("scenarioSha256") != functional_oracle.get("scenarioSha256")
+                    or repeat_result.get("oracleStatus") != "passed"
+                    or repeat_result.get("assessmentStatus") != "assessed"
+                    or repeat_result.get("infrastructureAvailable") is not True
+                    or repeat_result.get("subjectTaskSucceeded") is not True
+                    or repeat_result.get("status") != "passed"
+                    or repeat_result.get("failureClass") != "none"
+                    or repeat_result.get("environmentIdentity") != performance.get("environmentIdentity")
+                    or repeat_result.get("performancePolicyId") != performance["performancePolicy"]["id"]
+                    or repeat_result.get("performancePolicySha256") != performance["performancePolicy"]["sha256"]
+                    or repeat_result.get("profileWorkloadId") != performance["profileWorkload"]["id"]
+                    or repeat_result.get("profileWorkloadSha256") != performance["profileWorkload"]["sha256"]
+                ):
+                    raise SystemExit("performance calibration repeat functional evidence differs")
+                repeat_metrics = repeat_comparison.get("metrics") or []
+                required_metrics = retained_policy.get("requiredMetrics") or []
+                if len(repeat_metrics) != len(required_metrics):
+                    raise SystemExit("performance calibration repeat metrics differ from policy")
+                for actual, specification in zip(repeat_metrics, required_metrics):
+                    name = specification.get("metric")
+                    statistic = specification.get("statistic")
+                    before = ((baseline_summary.get("canonicalMetrics") or {}).get(name) or {}).get(statistic)
+                    after = ((repeat_summary.get("canonicalMetrics") or {}).get(name) or {}).get(statistic)
+                    if not isinstance(before, (int, float)) or before <= 0 or not isinstance(after, (int, float)):
+                        raise SystemExit("performance calibration repeat metric is unusable")
+                    ratio = after / before
+                    if specification.get("direction") == "lower":
+                        threshold = specification.get("maximumRelativeIncrease")
+                        status = "passed" if isinstance(threshold, (int, float)) and ratio <= 1.0 + threshold else "regressed"
+                        guardrail = {"maximumRelativeIncrease": threshold}
+                    elif specification.get("direction") == "higher":
+                        threshold = specification.get("minimumCandidateToBaselineRatio")
+                        status = "passed" if isinstance(threshold, (int, float)) and ratio >= threshold else "regressed"
+                        guardrail = {"minimumCandidateToBaselineRatio": threshold}
+                    else:
+                        raise SystemExit("performance calibration repeat policy direction is invalid")
+                    if actual != {
+                        "metric": name,
+                        "statistic": statistic,
+                        "baseline": before,
+                        "candidate": after,
+                        "candidateToBaselineRatio": ratio,
+                        "guardrail": guardrail,
+                        "status": status,
+                    }:
+                        raise SystemExit("performance calibration repeat metric contradicts retained evidence")
+                primary_regressions = sorted(row["metric"] for row in metrics if row.get("status") == "regressed")
+                repeat_regressions = sorted(row["metric"] for row in repeat_metrics if row.get("status") == "regressed")
+                consistent_regressions = sorted(set(primary_regressions) & set(repeat_regressions))
+                if not consistent_regressions or repeatability.get("consistentRegressedMetrics") != consistent_regressions:
+                    raise SystemExit("performance calibration repeat regression is not consistent")
+                repeatability_binding = {
+                    "status": "reproduced",
+                    "candidateRunIds": repeatability["candidateRunIds"],
+                    "comparisonSha256s": repeatability["comparisonSha256s"],
+                    "consistentRegressedMetrics": consistent_regressions,
+                }
+                repeatability_verified = True
+            automation_binding = None
+            if performance_calibration_run:
+                if performance_calibration_run.get("schema") != "agentlab.harmony_performance_calibration_run.v1":
+                    raise SystemExit("unsupported performance calibration run schema")
+                if performance_calibration_run.get("status") != "passed":
+                    raise SystemExit("performance calibration run did not pass")
+                if performance_calibration_run.get("automaticPromotion") is not False:
+                    raise SystemExit("performance calibration run must not auto-promote")
+                for field in ("planSha256", "runnerSha256", "comparatorSha256"):
+                    if not isinstance(performance_calibration_run.get(field), str) or not SHA256.fullmatch(performance_calibration_run[field]):
+                        raise SystemExit(f"performance calibration run requires exact {field}")
+                if (
+                    performance_calibration_run.get("baselineSourceIdentity")
+                    != performance.get("baselineSourceIdentity")
+                    or performance_calibration_run.get("candidateSourceIdentity")
+                    != performance.get("candidateSourceIdentity")
+                ):
+                    raise SystemExit("performance calibration run source identities differ")
+                if not repeatability_verified:
+                    raise SystemExit("performance calibration run requires verified repeatability")
+                if (
+                    performance_calibration_run.get("candidateRunIds")
+                    != repeatability_binding["candidateRunIds"]
+                    or performance_calibration_run.get("consistentRegressedMetrics")
+                    != repeatability_binding["consistentRegressedMetrics"]
+                ):
+                    raise SystemExit("performance calibration run repeatability differs")
+                phases = performance_calibration_run.get("phases")
+                expected_phases = [
+                    "baseline",
+                    "port-release-after-baseline",
+                    "candidate-1",
+                    "port-release-after-candidate-1",
+                    "candidate-2",
+                    "compare-1",
+                    "compare-2",
+                ]
+                if (
+                    not isinstance(phases, list)
+                    or [phase.get("phase") for phase in phases if isinstance(phase, dict)]
+                    != expected_phases
+                    or not all(isinstance(phase, dict) and phase.get("exitCode") == 0 for phase in phases)
+                ):
+                    raise SystemExit("performance calibration run phases are incomplete or failed")
+                release_phases = [phase for phase in phases if "port-release" in phase["phase"]]
+                if not all(
+                    isinstance(phase.get("attempts"), int)
+                    and phase["attempts"] >= 1
+                    and isinstance(phase.get("elapsedSeconds"), (int, float))
+                    and phase["elapsedSeconds"] >= 0
+                    for phase in release_phases
+                ):
+                    raise SystemExit("performance calibration run port release evidence is invalid")
+                automation_binding = {
+                    "sha256": sha256(evidence / "calibration-run.json"),
+                    "planSha256": performance_calibration_run["planSha256"],
+                    "runnerSha256": performance_calibration_run["runnerSha256"],
+                    "comparatorSha256": performance_calibration_run["comparatorSha256"],
+                    "phases": [
+                        {
+                            "phase": phase["phase"],
+                            "exitCode": phase["exitCode"],
+                            **({"attempts": phase["attempts"], "elapsedSeconds": phase["elapsedSeconds"]} if "attempts" in phase else {}),
+                        }
+                        for phase in phases
+                    ],
+                }
+            calibration_sha256 = sha256(evidence / "performance-calibration.json")
+            calibration_binding = {
+                "id": performance_calibration.get("id"),
+                "sha256": calibration_sha256,
+                "applicationSource": application_source,
+                "controlledMutation": mutation,
+                **({"repeatability": repeatability_binding} if repeatability_binding else {}),
+                **({"automationRun": automation_binding} if automation_binding else {}),
+            }
+            if not isinstance(calibration_binding["id"], str) or not calibration_binding["id"]:
+                raise SystemExit("performance calibration requires id")
+            calibration_evidence_ids = [f"evidence-{args.run_id}-performance-calibration"]
+            if repeatability_verified:
+                calibration_evidence_ids.extend([
+                    f"evidence-{args.run_id}-smartperf-candidate-repeat-summary",
+                    f"evidence-{args.run_id}-harmony-candidate-repeat-result",
+                    f"evidence-{args.run_id}-smartperf-repeat-comparison",
+                ])
+            if automation_binding:
+                calibration_evidence_ids.append(
+                    f"evidence-{args.run_id}-calibration-run"
+                )
+        suffix = hashlib.sha256(
+            f"{task_id}|{performance.get('candidateRunId')}|{performance.get('environmentIdentity')}".encode()
+        ).hexdigest()[:16]
+        insert("decisions", {
+            "id": f"decision-{args.run_id}-performance-{suffix}",
+            "schema": "agentlab.performance_feedback_decision.v1",
+            "taskId": task_id,
+            "sourceRevision": source_revision,
+            "baselineRunId": performance.get("baselineRunId"),
+            "baselineSourceIdentity": performance.get("baselineSourceIdentity"),
+            "candidateRunId": performance.get("candidateRunId"),
+            "candidateSourceIdentity": performance.get("candidateSourceIdentity"),
+            "baselineSummarySha256": performance.get("baselineSummarySha256"),
+            "candidateSummarySha256": performance.get("candidateSummarySha256"),
+            "environmentIdentity": performance.get("environmentIdentity"),
+            "comparable": comparable,
+            "decision": decision,
+            "metrics": metrics,
+            "evidenceIds": [
+                f"evidence-{args.run_id}-smartperf-baseline-summary",
+                f"evidence-{args.run_id}-smartperf-candidate-summary",
+                *functional_evidence_ids,
+                *policy_evidence_ids,
+                *calibration_evidence_ids,
+                f"evidence-{args.run_id}-smartperf-comparison",
+            ],
+            "automaticPromotion": False,
+            "absolutePowerThermalUsed": False,
+            "nextAction": "maintainer-review-performance-feedback",
+            **({
+                "performancePolicy": performance.get("performancePolicy"),
+                "profileWorkload": performance.get("profileWorkload"),
+            } if performance_schema == "agentlab.smartperf_comparison.v3" else {}),
+            **({"performanceCalibration": calibration_binding} if calibration_binding else {}),
         })
+        if (
+            performance_schema in {
+                "agentlab.smartperf_comparison.v2",
+                "agentlab.smartperf_comparison.v3",
+            }
+            and decision == "performance-regression-candidate"
+            and (performance.get("functionalGate") or {}).get("passed") is True
+        ):
+            insert("difficulty_points", {
+                "id": f"difficulty-{args.run_id}-performance-{suffix}",
+                "schema": "agentlab.difficulty_point.v1",
+                "taskId": task_id,
+                "dimensionId": "functionally-correct-performance-regression",
+                "primaryDimension": "performance-feedback",
+                "mechanism": "functionally passing Harmony HAP regressed one or more relative emulator guardrails",
+                "status": "candidate",
+                "maturityState": "candidate",
+                "sourceRevision": source_revision,
+                "baselineSourceIdentity": performance.get("baselineSourceIdentity"),
+                "candidateSourceIdentity": performance.get("candidateSourceIdentity"),
+                "environmentIdentity": performance.get("environmentIdentity"),
+                "metrics": metrics,
+                "verificationContract": {
+                    "caseReady": False,
+                    "required": [
+                        "maintainer-adjudication",
+                        "independent-functional-and-performance-calibration",
+                    ] + ([] if repeatability_verified else ["repeatable-emulator-regression"]),
+                    "verified": (["repeatable-emulator-regression"] if repeatability_verified else []),
+                },
+                "evidenceIds": [
+                    f"evidence-{args.run_id}-smartperf-baseline-summary",
+                    f"evidence-{args.run_id}-smartperf-candidate-summary",
+                    *functional_evidence_ids,
+                    *policy_evidence_ids,
+                    *calibration_evidence_ids,
+                    f"evidence-{args.run_id}-smartperf-comparison",
+                ],
+                "automaticPromotion": False,
+                "absolutePowerThermalUsed": False,
+                **({
+                    "performancePolicy": performance.get("performancePolicy"),
+                    "profileWorkload": performance.get("profileWorkload"),
+                } if performance_schema == "agentlab.smartperf_comparison.v3" else {}),
+                **({"performanceCalibration": calibration_binding} if calibration_binding else {}),
+            })
 
     tables = [{"path": path, "operations": operations} for path, operations in groups.items() if operations]
     if not tables:

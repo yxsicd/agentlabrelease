@@ -1,0 +1,55 @@
+{
+  "schema": "agentlab.purchase_data_ohostest_candidate_observation.v1",
+  "sourceRepository": "https://gitcode.com/HarmonyOS_Samples/iapkit-sample-clientdemo-arkts.git",
+  "baseRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+  "parentRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+  "candidateRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+  "candidateBranch": "agentlab/purchase-data-ohostest-candidate-v1",
+  "candidatePatchSha256": "cbc01c94755f2d8da5449902ad1a309488d0a9defa9fede23318ad360dd4c2c2",
+  "sourceSetSha256": "cbc01c94755f2d8da5449902ad1a309488d0a9defa9fede23318ad360dd4c2c2",
+  "remotePeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+  "remoteWorkspace": "/home/huawei/agentlab-source-builds/payment-feedback-165bcbd-ohostest-ref-v1",
+  "durableEvidenceRoot": "/home/huawei/.agentlab/evidence/purchase-data-ohostest-candidate-ee2bc87-v1",
+  "awmcpOperations": {
+    "initialOhosTestBuild": "exec-000000000000043a",
+    "candidateCommit": "exec-0000000000000444",
+    "candidateParent": "exec-0000000000000450",
+    "sourceCleanBeforeBuild": "exec-0000000000000453",
+    "ohosTestBuild": "exec-0000000000000454",
+    "emulatorBootstrap": "exec-0000000000000455",
+    "targetConnected": "exec-0000000000000458",
+    "standardReceipt": "exec-0000000000000459",
+    "emulatorStop": "exec-000000000000045a",
+    "targetAbsentAfterStop": "exec-000000000000045b",
+    "sourceCleanAfterExecution": "exec-000000000000045c",
+    "artifactHashes": "exec-000000000000045d"
+  },
+  "executionBinding": {
+    "status": "exact-clean-git-candidate-revision",
+    "sourceRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+    "projectTreeSha256": "85d851734450a611e2bed1c5f15ddf9da150309ca97c3b914b0d3d19eb443144",
+    "worktreeCleanBeforeBuild": true,
+    "worktreeCleanAfterExecution": true
+  },
+  "review": {
+    "status": "self-reviewed-candidate-independent-review-pending",
+    "addedBoundaryTests": [
+      "missingJwsDoesNotFinish",
+      "decodeFailureDoesNotFinish"
+    ],
+    "independentReviewVerified": false
+  },
+  "testNames": [
+    "missingJwsDoesNotFinish",
+    "malformedDataDoesNotFinish",
+    "decodeFailureDoesNotFinish",
+    "alreadyFinishedPurchaseDoesNotFinishAgain",
+    "pendingPurchaseForwardsExactFinishFields",
+    "missingProductTypeBlocksFinish",
+    "finishRejectionRemainsObservable"
+  ],
+  "publishedToUpstream": false,
+  "behaviorOracleVerified": false,
+  "allowsCaseContract": false,
+  "automaticPromotion": false
+}

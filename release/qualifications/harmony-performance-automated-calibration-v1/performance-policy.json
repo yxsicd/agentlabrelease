@@ -1,0 +1,29 @@
+{
+  "schema": "agentlab.harmony_performance_policy.v1",
+  "id": "emulator-cpu-memory-relative-v1",
+  "requiresWorkload": true,
+  "requiredMetrics": [
+    {
+      "metric": "appCpuUsagePercent",
+      "statistic": "mean",
+      "direction": "lower",
+      "maximumRelativeIncrease": 0.2
+    },
+    {
+      "metric": "appPssKiB",
+      "statistic": "mean",
+      "direction": "lower",
+      "maximumRelativeIncrease": 0.15
+    }
+  ],
+  "observedOnlyMetrics": [
+    "fps",
+    "frameIntervalMs",
+    "gpuLoadPercent"
+  ],
+  "authority": {
+    "relativePerformance": "same-environment-emulator-proxy",
+    "absolutePowerThermal": "unavailable-on-emulator"
+  },
+  "interpretation": "CPU and PSS are relative regression signals under the exact bound workload; frame, GPU, power, and thermal observations are not pass criteria."
+}

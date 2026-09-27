@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -eu
 
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
 TOOLS_BYTES=932070897
 TOOLS_SHA256=ad1eb9a255b6fc6f022a646bd536ef230d66e47aea1f9177a793924b83ebb649
 IMAGE_BYTES=1568108769
@@ -145,6 +147,13 @@ validate_integer() {
     die "$label must be in $minimum..$maximum"
 }
 
+validate_sha256() {
+  label=$1
+  value=$2
+  [ "${#value}" -eq 64 ] || die "$label must be a lowercase SHA-256 digest"
+  case "$value" in *[!0-9a-f]*) die "$label must be a lowercase SHA-256 digest" ;; esac
+}
+
 run_case() {
   root=
   tools_root=
@@ -159,6 +168,11 @@ run_case() {
   ui_scenario=
   task_id=
   source_id=
+  source_set_sha256=
+  profile_run_id=
+  environment_id=
+  performance_policy=
+  profile_workload=
   boot_mode=coldboot
   profile_samples=3
   keep_running=false
@@ -178,6 +192,11 @@ run_case() {
       --ui-scenario) [ "$#" -ge 2 ] || die "--ui-scenario requires a path"; ui_scenario=$2; shift 2 ;;
       --task-id) [ "$#" -ge 2 ] || die "--task-id requires an id"; task_id=$2; shift 2 ;;
       --source-id) [ "$#" -ge 2 ] || die "--source-id requires an id"; source_id=$2; shift 2 ;;
+      --source-set-sha256) [ "$#" -ge 2 ] || die "--source-set-sha256 requires a digest"; source_set_sha256=$2; shift 2 ;;
+      --profile-run-id) [ "$#" -ge 2 ] || die "--profile-run-id requires an id"; profile_run_id=$2; shift 2 ;;
+      --environment-id) [ "$#" -ge 2 ] || die "--environment-id requires an id"; environment_id=$2; shift 2 ;;
+      --performance-policy) [ "$#" -ge 2 ] || die "--performance-policy requires a path"; performance_policy=$2; shift 2 ;;
+      --profile-workload) [ "$#" -ge 2 ] || die "--profile-workload requires a path"; profile_workload=$2; shift 2 ;;
       --boot-mode) [ "$#" -ge 2 ] || die "--boot-mode requires a value"; boot_mode=$2; shift 2 ;;
       --profile-samples) [ "$#" -ge 2 ] || die "--profile-samples requires a count"; profile_samples=$2; shift 2 ;;
       --keep-running) keep_running=true; shift ;;
@@ -205,14 +224,28 @@ run_case() {
   hdc="$tools_root/sdk/default/openharmony/toolchains/hdc"
   [ -x "$emulator" ] || die "emulator entrypoint missing or not executable: $emulator"
   [ -x "$hdc" ] || die "hdc entrypoint missing or not executable: $hdc"
+  command -v timeout >/dev/null 2>&1 || die "GNU timeout is required for bounded HDC operations"
+  hdc_bounded() {
+    timeout --signal=TERM --kill-after=2s 15s "$hdc" "$@"
+  }
+  target_connected() {
+    hdc_bounded list targets 2>/dev/null | awk -v target="$target" \
+      '$1 == target { found = 1 } END { exit(found ? 0 : 1) }'
+  }
   [ -f "$hap" ] || die "HAP not found: $hap"
   [ -f "$instance_path/$instance.ini" ] || die "emulator instance is not prepared: $instance"
   scenario_id=
+  scenario_schema=
   scenario_sha=
   if [ -n "$ui_scenario" ]; then
     [ -f "$ui_scenario" ] || die "UI scenario not found: $ui_scenario"
-    grep -q $'^schema\tagentlab.harmony_ui_scenario.v1$' "$ui_scenario" ||
-      die "UI scenario schema is missing or unsupported"
+    scenario_schema=$(awk -F '\t' '$1 == "schema" && NF == 2 { print $2 }' "$ui_scenario")
+    [ "$(grep -c $'^schema\t' "$ui_scenario")" -eq 1 ] ||
+      die "UI scenario must declare exactly one schema"
+    case "$scenario_schema" in
+      agentlab.harmony_ui_scenario.v1|agentlab.harmony_ui_scenario.v2) ;;
+      *) die "UI scenario schema is missing or unsupported" ;;
+    esac
     [ "$(grep -c $'^case\t' "$ui_scenario")" -eq 1 ] ||
       die "UI scenario must declare exactly one case"
     scenario_id=$(awk -F '\t' '$1 == "case" { print $2 }' "$ui_scenario")
@@ -221,23 +254,93 @@ run_case() {
       die "--ui-scenario requires --task-id and --source-id"
     validate_token "task id" "$task_id"
     validate_token "source id" "$source_id"
+    if [ -n "$source_set_sha256" ]; then
+      validate_sha256 "source set SHA-256" "$source_set_sha256"
+    fi
     scenario_sha=$(file_sha256 "$ui_scenario")
   else
-    [ -z "$task_id" ] && [ -z "$source_id" ] ||
-      die "--task-id and --source-id require --ui-scenario"
+    [ -z "$task_id" ] && [ -z "$source_id" ] && [ -z "$source_set_sha256" ] ||
+      die "--task-id, --source-id and --source-set-sha256 require --ui-scenario"
+  fi
+  if [ -n "$profile_run_id$environment_id" ]; then
+    [ -n "$ui_scenario" ] || die "profile identity requires --ui-scenario"
+    [ -n "$profile_run_id" ] && [ -n "$environment_id" ] ||
+      die "--profile-run-id and --environment-id must be supplied together"
+    validate_token "profile run id" "$profile_run_id"
+    validate_token "environment id" "$environment_id"
+    need python3
+    [ -f "$SCRIPT_DIR/summarize-smartperf.py" ] ||
+      die "SmartPerf normalizer not found beside runner"
+  fi
+  if [ -n "$performance_policy$profile_workload" ]; then
+    [ -n "$profile_run_id" ] || die "performance policy and workload require profile identity"
+    [ -n "$performance_policy" ] && [ -n "$profile_workload" ] ||
+      die "--performance-policy and --profile-workload must be supplied together"
+    [ -f "$performance_policy" ] || die "performance policy not found: $performance_policy"
+    [ -f "$profile_workload" ] || die "profile workload not found: $profile_workload"
   fi
   [ ! -e "$output" ] || die "refusing to overwrite existing output: $output"
   preflight
   mkdir -p "$output"
   hap_sha=$(file_sha256 "$hap")
+  if [ -n "$ui_scenario" ]; then
+    [ "$source_id" = "artifact-sha256:$hap_sha" ] ||
+      die "--source-id must equal artifact-sha256:<exact HAP SHA-256>"
+  fi
   printf '%s\n' "$hap_sha" >"$output/hap.sha256"
   if [ -n "$ui_scenario" ]; then
     printf '%s\n' "$scenario_sha" >"$output/ui-scenario.sha256"
   fi
+  performance_policy_id=
+  performance_policy_sha=
+  profile_workload_id=
+  profile_workload_sha=
+  if [ -n "$performance_policy" ]; then
+    performance_policy_id=$(python3 -c 'import json,sys; v=json.load(open(sys.argv[1])); assert v.get("schema")=="agentlab.harmony_performance_policy.v1" and isinstance(v.get("id"),str) and v["id"] and v.get("requiresWorkload") is True; print(v["id"])' "$performance_policy") ||
+      die "performance policy validation failed"
+    profile_workload_id=$(awk -F '\t' '$1 == "workload" && NF == 2 { print $2 }' "$profile_workload")
+    [ "$(grep -c $'^schema\tagentlab.harmony_profile_workload.v1$' "$profile_workload")" -eq 1 ] ||
+      die "profile workload schema is missing or unsupported"
+    [ "$(grep -c $'^workload\t' "$profile_workload")" -eq 1 ] ||
+      die "profile workload must declare exactly one workload"
+    validate_token "performance policy id" "$performance_policy_id"
+    validate_token "profile workload id" "$profile_workload_id"
+    performance_policy_sha=$(file_sha256 "$performance_policy")
+    profile_workload_sha=$(file_sha256 "$profile_workload")
+    cp -- "$performance_policy" "$output/performance-policy.json"
+    cp -- "$profile_workload" "$output/profile-workload.tsv"
+    printf '%s\n' "$performance_policy_sha" >"$output/performance-policy.sha256"
+    printf '%s\n' "$profile_workload_sha" >"$output/profile-workload.sha256"
+  fi
   target="127.0.0.1:$hdc_port"
   started=false
+  port_listening() {
+    (exec 3<>"/dev/tcp/127.0.0.1/$hdc_port") >/dev/null 2>&1
+  }
+  stop_emulator() {
+    stop_log=$1
+    "$emulator" -stop "$instance" -instancePath "$instance_path" \
+      >>"$stop_log" 2>&1 || return 1
+    stop_deadline=$((SECONDS + 30))
+    while [ "$SECONDS" -lt "$stop_deadline" ]; do
+      if ! port_listening; then
+        started=false
+        return 0
+      fi
+      sleep 1
+    done
+    printf 'emulator HDC port remained bound after stop: %s\n' "$hdc_port" \
+      >>"$stop_log"
+    return 1
+  }
   terminal_status=failed
   oracle_status=not-run
+  assessment_status=infrastructure-unavailable
+  infrastructure_available=false
+  subject_task_succeeded=null
+  failure_class=infrastructure
+  profile_status=not-run
+  profile_summary_status=not-run
   layout_ordinal=0
   action_ordinal=0
   last_layout=
@@ -252,29 +355,68 @@ run_case() {
     layout_ordinal=$((layout_ordinal + 1))
     layout_name=$(printf 'ui-layout-%03d.json' "$layout_ordinal")
     remote_layout="/data/local/tmp/agentlab-$scenario_id-$layout_ordinal.json"
-    "$hdc" -t "$target" shell uitest dumpLayout -p "$remote_layout" \
-      >"$output/$layout_name.dump.log" 2>&1
-    "$hdc" -t "$target" file recv "$remote_layout" "$output/$layout_name" \
-      >"$output/$layout_name.recv.log" 2>&1
+    hdc_bounded -t "$target" shell uitest dumpLayout -p "$remote_layout" \
+      >"$output/$layout_name.dump.log" 2>&1 ||
+      infrastructure_failure "UI layout dump failed"
+    hdc_bounded -t "$target" file recv "$remote_layout" "$output/$layout_name" \
+      >"$output/$layout_name.recv.log" 2>&1 ||
+      infrastructure_failure "UI layout receive failed"
     last_layout="$output/$layout_name"
+  }
+  infrastructure_failure() {
+    assessment_status=infrastructure-unavailable
+    infrastructure_available=false
+    subject_task_succeeded=null
+    failure_class=infrastructure
+    die "$*"
+  }
+  oracle_failure() {
+    assessment_status=assessed
+    infrastructure_available=true
+    subject_task_succeeded=false
+    failure_class=oracle
+    die "$*"
+  }
+  ui_validate_token() {
+    label=$1
+    value=$2
+    case "$value" in
+      ''|*[!A-Za-z0-9_.:-]*) infrastructure_failure "$label contains unsupported characters: $value" ;;
+    esac
+  }
+  ui_validate_integer() {
+    label=$1
+    value=$2
+    minimum=$3
+    maximum=$4
+    case "$value" in
+      ''|*[!0-9]*) infrastructure_failure "$label must be numeric" ;;
+    esac
+    [ "$value" -ge "$minimum" ] && [ "$value" -le "$maximum" ] ||
+      infrastructure_failure "$label must be in $minimum..$maximum"
   }
   run_ui_scenario() {
     oracle_status=failed
+    assessment_status=assessed
+    infrastructure_available=true
+    subject_task_succeeded=false
+    failure_class=oracle
     while IFS=$'\t' read -r operation a b c d e || [ -n "$operation$a$b$c$d$e" ]; do
       case "$operation" in
         ''|'#'*) continue ;;
         schema)
-          [ "$a" = "agentlab.harmony_ui_scenario.v1" ] && [ -z "$b$c$d$e" ] ||
-            die "invalid UI scenario schema line"
+          [ "$a" = "$scenario_schema" ] && [ -z "$b$c$d$e" ] ||
+            infrastructure_failure "invalid UI scenario schema line"
           ;;
         case)
           [ "$a" = "$scenario_id" ] && [ -z "$b$c$d$e" ] ||
-            die "invalid UI scenario case line"
+            infrastructure_failure "invalid UI scenario case line"
           ;;
         wait-text)
-          validate_token "UI check label" "$a"
-          validate_integer "wait-text timeout" "$b" 1 120
-          [ -n "$c" ] && [ -z "$d$e" ] || die "wait-text requires LABEL TIMEOUT TEXT"
+          ui_validate_token "UI check label" "$a"
+          ui_validate_integer "wait-text timeout" "$b" 1 120
+          [ -n "$c" ] && [ -z "$d$e" ] ||
+            infrastructure_failure "wait-text requires LABEL TIMEOUT TEXT"
           wait_attempt=1
           wait_passed=false
           while [ "$wait_attempt" -le "$b" ]; do
@@ -286,43 +428,47 @@ run_case() {
             sleep 1
             wait_attempt=$((wait_attempt + 1))
           done
-          record_ui_check "$a" "$wait_passed" wait-text "$c"
-          [ "$wait_passed" = true ] || die "UI wait-text check failed: $a"
+          record_ui_check "$a" "$wait_passed" wait-text "$c" ||
+            infrastructure_failure "UI check evidence write failed"
+          [ "$wait_passed" = true ] || oracle_failure "UI wait-text check failed: $a"
           ;;
         tap)
-          validate_integer "tap x" "$a" 0 10000
-          validate_integer "tap y" "$b" 0 10000
-          [ -z "$c$d$e" ] || die "tap requires X Y"
-          "$hdc" -t "$target" shell uitest uiInput click "$a" "$b" \
-            >>"$output/ui-input.log" 2>&1
-          record_ui_action tap "$a,$b"
+          ui_validate_integer "tap x" "$a" 0 10000
+          ui_validate_integer "tap y" "$b" 0 10000
+          [ -z "$c$d$e" ] || infrastructure_failure "tap requires X Y"
+          hdc_bounded -t "$target" shell uitest uiInput click "$a" "$b" \
+            >>"$output/ui-input.log" 2>&1 || infrastructure_failure "UI tap failed"
+          record_ui_action tap "$a,$b" || infrastructure_failure "UI action evidence write failed"
           ;;
         swipe)
-          validate_integer "swipe x1" "$a" 0 10000
-          validate_integer "swipe y1" "$b" 0 10000
-          validate_integer "swipe x2" "$c" 0 10000
-          validate_integer "swipe y2" "$d" 0 10000
-          validate_integer "swipe duration" "$e" 1 60000
-          "$hdc" -t "$target" shell uitest uiInput swipe "$a" "$b" "$c" "$d" "$e" \
-            >>"$output/ui-input.log" 2>&1
-          record_ui_action swipe "$a,$b,$c,$d,$e"
+          ui_validate_integer "swipe x1" "$a" 0 10000
+          ui_validate_integer "swipe y1" "$b" 0 10000
+          ui_validate_integer "swipe x2" "$c" 0 10000
+          ui_validate_integer "swipe y2" "$d" 0 10000
+          ui_validate_integer "swipe duration" "$e" 1 60000
+          hdc_bounded -t "$target" shell uitest uiInput swipe "$a" "$b" "$c" "$d" "$e" \
+            >>"$output/ui-input.log" 2>&1 || infrastructure_failure "UI swipe failed"
+          record_ui_action swipe "$a,$b,$c,$d,$e" ||
+            infrastructure_failure "UI action evidence write failed"
           ;;
         key)
-          validate_integer "key code" "$a" 0 1000
-          [ -z "$b$c$d$e" ] || die "key requires KEYCODE"
-          "$hdc" -t "$target" shell uitest uiInput keyEvent "$a" \
-            >>"$output/ui-input.log" 2>&1
-          record_ui_action key "$a"
+          ui_validate_integer "key code" "$a" 0 1000
+          [ -z "$b$c$d$e" ] || infrastructure_failure "key requires KEYCODE"
+          hdc_bounded -t "$target" shell uitest uiInput keyEvent "$a" \
+            >>"$output/ui-input.log" 2>&1 || infrastructure_failure "UI key event failed"
+          record_ui_action key "$a" || infrastructure_failure "UI action evidence write failed"
           ;;
         sleep)
-          validate_integer "sleep milliseconds" "$a" 0 60000
-          [ -z "$b$c$d$e" ] || die "sleep requires MILLISECONDS"
+          ui_validate_integer "sleep milliseconds" "$a" 0 60000
+          [ -z "$b$c$d$e" ] ||
+            infrastructure_failure "sleep requires MILLISECONDS"
           sleep "$(awk -v ms="$a" 'BEGIN { printf "%.3f", ms / 1000 }')"
-          record_ui_action sleep "$a"
+          record_ui_action sleep "$a" || infrastructure_failure "UI action evidence write failed"
           ;;
         assert-text|assert-no-text)
-          validate_token "UI check label" "$a"
-          [ -n "$b" ] && [ -z "$c$d$e" ] || die "$operation requires LABEL TEXT"
+          ui_validate_token "UI check label" "$a"
+          [ -n "$b" ] && [ -z "$c$d$e" ] ||
+            infrastructure_failure "$operation requires LABEL TEXT"
           dump_ui_layout
           check_passed=false
           if LC_ALL=C grep -F -- "$b" "$last_layout" >/dev/null; then
@@ -330,25 +476,98 @@ run_case() {
           else
             [ "$operation" = assert-no-text ] && check_passed=true
           fi
-          record_ui_check "$a" "$check_passed" "$operation" "$b"
-          [ "$check_passed" = true ] || die "UI oracle check failed: $a"
+          record_ui_check "$a" "$check_passed" "$operation" "$b" ||
+            infrastructure_failure "UI check evidence write failed"
+          [ "$check_passed" = true ] || oracle_failure "UI oracle check failed: $a"
           ;;
-        *) die "unsupported UI scenario operation: $operation" ;;
+        assert-page-path)
+          [ "$scenario_schema" = "agentlab.harmony_ui_scenario.v2" ] ||
+            infrastructure_failure "assert-page-path requires UI scenario v2"
+          ui_validate_token "UI check label" "$a"
+          case "$b" in
+            pages/*) ;;
+            *) infrastructure_failure "assert-page-path requires LABEL pages/PATH" ;;
+          esac
+          [ -z "$c$d$e" ] ||
+            infrastructure_failure "assert-page-path requires LABEL pages/PATH"
+          dump_ui_layout
+          check_passed=false
+          if LC_ALL=C grep -F -- "\"pagePath\":\"$b\"" "$last_layout" >/dev/null ||
+              LC_ALL=C grep -F -- "pagePath\\\":\\\"$b\\\"" "$last_layout" >/dev/null; then
+            check_passed=true
+          fi
+          record_ui_check "$a" "$check_passed" assert-page-path "$b" ||
+            infrastructure_failure "UI check evidence write failed"
+          [ "$check_passed" = true ] || oracle_failure "UI page-path check failed: $a"
+          ;;
+        *) infrastructure_failure "unsupported UI scenario operation: $operation" ;;
       esac
     done <"$ui_scenario"
     oracle_status=passed
+    subject_task_succeeded=true
+    failure_class=none
+  }
+  run_profile_workload() {
+    workload_action=0
+    while IFS=$'\t' read -r operation a b c d e || [ -n "$operation$a$b$c$d$e" ]; do
+      case "$operation" in
+        ''|'#'*) continue ;;
+        schema)
+          [ "$a" = "agentlab.harmony_profile_workload.v1" ] && [ -z "$b$c$d$e" ] ||
+            infrastructure_failure "invalid profile workload schema line"
+          ;;
+        workload)
+          [ "$a" = "$profile_workload_id" ] && [ -z "$b$c$d$e" ] ||
+            infrastructure_failure "invalid profile workload identity line"
+          ;;
+        sleep)
+          ui_validate_integer "profile workload sleep milliseconds" "$a" 0 60000
+          [ -z "$b$c$d$e" ] || infrastructure_failure "profile workload sleep requires MILLISECONDS"
+          sleep "$(awk -v ms="$a" 'BEGIN { printf "%.3f", ms / 1000 }')"
+          workload_action=$((workload_action + 1))
+          printf '%s\tsleep\t%s\n' "$workload_action" "$a" >>"$output/profile-workload-actions.tsv"
+          ;;
+        swipe)
+          ui_validate_integer "profile workload swipe x1" "$a" 0 10000
+          ui_validate_integer "profile workload swipe y1" "$b" 0 10000
+          ui_validate_integer "profile workload swipe x2" "$c" 0 10000
+          ui_validate_integer "profile workload swipe y2" "$d" 0 10000
+          ui_validate_integer "profile workload swipe duration" "$e" 1 60000
+          hdc_bounded -t "$target" shell uitest uiInput swipe "$a" "$b" "$c" "$d" "$e" \
+            >>"$output/profile-workload-input.log" 2>&1 || infrastructure_failure "profile workload swipe failed"
+          workload_action=$((workload_action + 1))
+          printf '%s\tswipe\t%s,%s,%s,%s,%s\n' "$workload_action" "$a" "$b" "$c" "$d" "$e" >>"$output/profile-workload-actions.tsv"
+          ;;
+        *) infrastructure_failure "unsupported profile workload operation: $operation" ;;
+      esac
+    done <"$profile_workload"
+    [ "$workload_action" -gt 0 ] || infrastructure_failure "profile workload has no actions"
   }
   cleanup_case() {
     rc=$?
     if [ "$started" = true ] && [ "$keep_running" != true ]; then
-      "$emulator" -stop "$instance" -instancePath "$instance_path" \
-        >>"$output/emulator-stop.log" 2>&1 || true
+      stop_emulator "$output/emulator-stop.log" || true
     fi
     if [ "$terminal_status" != passed ]; then
       if [ -n "$ui_scenario" ]; then
-        printf '{"schema":"agentlab.harmony_emulator_case_result.v2","status":"failed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","powerThermalAuthority":"unavailable_on_emulator"}\n' \
+        case_result_schema=agentlab.harmony_emulator_case_result.v2
+        policy_fields=
+        lineage_fields=
+        if [ -n "$source_set_sha256" ]; then
+          lineage_fields=$(printf ',"sourceSetSha256":"%s"' "$source_set_sha256")
+        fi
+        if [ -n "$performance_policy" ]; then
+          case_result_schema=agentlab.harmony_emulator_case_result.v3
+          policy_fields=$(printf ',"performancePolicyId":"%s","performancePolicySha256":"%s","profileWorkloadId":"%s","profileWorkloadSha256":"%s"' \
+            "$performance_policy_id" "$performance_policy_sha" "$profile_workload_id" "$profile_workload_sha")
+        fi
+        printf '{"schema":"%s","status":"failed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","profileRunId":"%s","environmentIdentity":"%s","profileStatus":"%s","profileSummaryStatus":"%s","powerThermalAuthority":"unavailable_on_emulator"%s%s}\n' \
+          "$case_result_schema" \
           "$task_id" "$source_id" "$instance" "$target" "$bundle" "$ability" "$hap_sha" \
-          "$scenario_id" "$scenario_sha" "$oracle_status" >"$output/result.json"
+          "$scenario_id" "$scenario_sha" "$oracle_status" "$assessment_status" \
+          "$infrastructure_available" "$subject_task_succeeded" "$failure_class" \
+          "$profile_run_id" "$environment_id" "$profile_status" "$profile_summary_status" "$policy_fields" "$lineage_fields" \
+          >"$output/result.json"
       else
         printf '{"schema":"agentlab.harmony_emulator_case_result.v1","status":"failed","instance":"%s","target":"%s","bundle":"%s","ability":"%s"}\n' \
           "$instance" "$target" "$bundle" "$ability" >"$output/result.json"
@@ -362,55 +581,63 @@ run_case() {
     >"$output/emulator-start.log" 2>&1 &
   started=true
   connected=false
-  attempt=1
-  while [ "$attempt" -le 180 ]; do
-    "$hdc" tconn "$target" >>"$output/hdc-connect.log" 2>&1 || true
-    if "$hdc" list targets 2>/dev/null | awk -v target="$target" \
-        '$1 == target { found = 1 } END { exit(found ? 0 : 1) }' \
-        >"$output/hdc-target.txt"; then
-      "$hdc" list targets >"$output/hdc-target.txt"
+  connect_deadline=$((SECONDS + 180))
+  while [ "$SECONDS" -lt "$connect_deadline" ]; do
+    hdc_bounded tconn "$target" >>"$output/hdc-connect.log" 2>&1 || true
+    if target_connected >"$output/hdc-target.txt"; then
+      hdc_bounded list targets >"$output/hdc-target.txt"
       connected=true
       break
     fi
     sleep 1
-    attempt=$((attempt + 1))
   done
   [ "$connected" = true ] || die "emulator did not expose a connected HDC target within 180 seconds"
-  "$hdc" -t "$target" shell param get const.product.name >"$output/device-product.txt"
-  "$hdc" -t "$target" shell param get const.ohos.fullname >"$output/device-version.txt"
+  hdc_bounded -t "$target" shell param get const.product.name >"$output/device-product.txt"
+  hdc_bounded -t "$target" shell param get const.ohos.fullname >"$output/device-version.txt"
   ui_ready=false
-  attempt=1
-  while [ "$attempt" -le 60 ]; do
-    if "$hdc" -t "$target" shell uitest dumpLayout \
+  ui_ready_deadline=$((SECONDS + 120))
+  while [ "$SECONDS" -lt "$ui_ready_deadline" ]; do
+    if hdc_bounded -t "$target" shell uitest dumpLayout \
         -p /data/local/tmp/agentlab-ready.json >"$output/ui-ready.log" 2>&1 &&
-        ! grep -iF "failed" "$output/ui-ready.log" >/dev/null; then
+        ! grep -iF "failed" "$output/ui-ready.log" >/dev/null &&
+        target_connected; then
       ui_ready=true
       break
     fi
     sleep 1
-    attempt=$((attempt + 1))
   done
-  [ "$ui_ready" = true ] || die "emulator UI did not become ready within 60 seconds"
+  [ "$ui_ready" = true ] || die "emulator UI did not become ready within 120 seconds"
   if [ "$reset_app_data" = true ]; then
-    "$hdc" -t "$target" uninstall "$bundle" >"$output/uninstall.log" 2>&1 || true
+    hdc_bounded -t "$target" uninstall "$bundle" >"$output/uninstall.log" 2>&1 || true
   else
     printf 'reset-app-data not requested\n' >"$output/uninstall.log"
   fi
-  "$hdc" -t "$target" install -r "$hap" >"$output/install.log" 2>&1
-  "$hdc" -t "$target" shell bm dump -n "$bundle" >"$output/bundle-dump.txt" 2>&1
-  "$hdc" -t "$target" shell uitest uiInput swipe 630 2400 630 600 1000 \
+  hdc_bounded -t "$target" install -r "$hap" >"$output/install.log" 2>&1
+  grep -F "install bundle successfully" "$output/install.log" >/dev/null ||
+    infrastructure_failure "HAP install did not report success"
+  hdc_bounded -t "$target" shell bm dump -n "$bundle" >"$output/bundle-dump.txt" 2>&1
+  ! grep -F "[Fail]" "$output/bundle-dump.txt" >/dev/null ||
+    infrastructure_failure "bundle query reported failure"
+  hdc_bounded -t "$target" shell uitest uiInput swipe 630 2400 630 600 1000 \
     >"$output/unlock.log" 2>&1
+  ! grep -F "[Fail]" "$output/unlock.log" >/dev/null ||
+    infrastructure_failure "unlock input reported failure"
   sleep 3
-  "$hdc" -t "$target" shell aa start -a "$ability" -b "$bundle" >"$output/launch.log" 2>&1
+  hdc_bounded -t "$target" shell aa start -a "$ability" -b "$bundle" >"$output/launch.log" 2>&1
   grep -F "start ability successfully" "$output/launch.log" >/dev/null ||
     die "ability launch did not report success; inspect launch.log"
-  process_hint=${bundle#com.}
+  process_hint=$bundle
   printf '%s\n' "$process_hint" >"$output/process-hint.txt"
   process_attempt=1
   process_found=false
   while [ "$process_attempt" -le 15 ]; do
-    "$hdc" -t "$target" shell ps -A >"$output/process-all.txt" 2>&1
-    if LC_ALL=C grep -F -- "$process_hint" "$output/process-all.txt" >"$output/process.txt"; then
+    # The default HarmonyOS `ps -A` display truncates long process names from
+    # the left (for example com.agentlab.multirepo becomes ntlab.multirepo).
+    # Request NAME explicitly and require an exact field match so a live app is
+    # neither missed nor confused with a similarly named process.
+    hdc_bounded -t "$target" shell ps -A -o PID,NAME >"$output/process-all.txt" 2>&1
+    if LC_ALL=C awk -v bundle="$process_hint" '$2 == bundle { found = 1; print } END { exit(found ? 0 : 1) }' \
+        "$output/process-all.txt" >"$output/process.txt"; then
       process_found=true
       break
     fi
@@ -433,18 +660,86 @@ run_case() {
   done
   [ -n "$screenshot" ] || die "emulator screenshot was not produced"
   file_sha256 "$screenshot" >"$output/screenshot.sha256"
-  if "$hdc" -t "$target" shell SP_daemon -N "$profile_samples" -PKG "$bundle" \
+  if [ -n "$profile_workload" ]; then
+    hdc_bounded -t "$target" shell SP_daemon -N "$profile_samples" -PKG "$bundle" \
+      -c -g -t -p -f -r -net -snapshot -d >"$output/smartperf.txt" 2>&1 &
+    smartperf_pid=$!
+    run_profile_workload
+    if wait "$smartperf_pid"; then
+      profile_status=collected
+    else
+      profile_status=unavailable
+    fi
+  elif hdc_bounded -t "$target" shell SP_daemon -N "$profile_samples" -PKG "$bundle" \
       -c -g -t -p -f -r -net -snapshot -d >"$output/smartperf.txt" 2>&1; then
     profile_status=collected
   else
     profile_status=unavailable
   fi
+  profile_summary_status=not-requested
+  profile_summary_artifact=
+  if [ -n "$profile_run_id" ] && [ "$profile_status" = collected ]; then
+    if [ -n "$performance_policy" ]; then
+      if python3 "$SCRIPT_DIR/summarize-smartperf.py" \
+        --input "$output/smartperf.txt" \
+        --task-id "$task_id" \
+        --source-identity "$source_id" \
+        --run-id "$profile_run_id" \
+        --environment-identity "$environment_id" \
+        --minimum-samples "$profile_samples" \
+        --performance-policy "$performance_policy" \
+        --profile-workload "$profile_workload" \
+        --output "$output/smartperf-summary.json" \
+        >"$output/smartperf-summary.log" 2>&1; then
+        profile_summary_status=normalized
+        profile_summary_artifact=smartperf-summary.json
+      else
+        profile_summary_status=normalization-failed
+      fi
+    else
+      if python3 "$SCRIPT_DIR/summarize-smartperf.py" \
+        --input "$output/smartperf.txt" \
+        --task-id "$task_id" \
+        --source-identity "$source_id" \
+        --run-id "$profile_run_id" \
+        --environment-identity "$environment_id" \
+        --minimum-samples "$profile_samples" \
+        --output "$output/smartperf-summary.json" \
+        >"$output/smartperf-summary.log" 2>&1; then
+        profile_summary_status=normalized
+        profile_summary_artifact=smartperf-summary.json
+      else
+        profile_summary_status=normalization-failed
+      fi
+    fi
+  fi
+  if [ "$keep_running" != true ]; then
+    stop_emulator "$output/emulator-stop.log" ||
+      infrastructure_failure "emulator did not release HDC port after stop"
+  fi
   terminal_status=passed
   if [ -n "$ui_scenario" ]; then
-    printf '{"schema":"agentlab.harmony_emulator_case_result.v2","status":"passed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","profileStatus":"%s","resetAppData":%s,"powerThermalAuthority":"unavailable_on_emulator","artifacts":{"uninstall":"uninstall.log","install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","uiActions":"ui-actions.tsv","uiChecks":"ui-checks.tsv","screenshot":"%s","smartperf":"smartperf.txt"}}\n' \
+    case_result_schema=agentlab.harmony_emulator_case_result.v2
+    policy_fields=
+    lineage_fields=
+    if [ -n "$source_set_sha256" ]; then
+      lineage_fields=$(printf ',"sourceSetSha256":"%s"' "$source_set_sha256")
+    fi
+    profile_workload_artifact=
+    if [ -n "$performance_policy" ]; then
+      case_result_schema=agentlab.harmony_emulator_case_result.v3
+      policy_fields=$(printf ',"performancePolicyId":"%s","performancePolicySha256":"%s","profileWorkloadId":"%s","profileWorkloadSha256":"%s"' \
+        "$performance_policy_id" "$performance_policy_sha" "$profile_workload_id" "$profile_workload_sha")
+      profile_workload_artifact=',"performancePolicy":"performance-policy.json","profileWorkload":"profile-workload.tsv","profileWorkloadActions":"profile-workload-actions.tsv"'
+    fi
+    printf '{"schema":"%s","status":"passed","taskId":"%s","sourceIdentity":"%s","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","scenarioId":"%s","scenarioSha256":"%s","oracleStatus":"%s","assessmentStatus":"%s","infrastructureAvailable":%s,"subjectTaskSucceeded":%s,"failureClass":"%s","profileRunId":"%s","environmentIdentity":"%s","profileStatus":"%s","profileSummaryStatus":"%s","resetAppData":%s,"powerThermalAuthority":"unavailable_on_emulator"%s%s,"artifacts":{"uninstall":"uninstall.log","install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","uiActions":"ui-actions.tsv","uiChecks":"ui-checks.tsv","screenshot":"%s","smartperf":"smartperf.txt","smartperfSummary":"%s"%s}}\n' \
+      "$case_result_schema" \
       "$task_id" "$source_id" "$instance" "$target" "$bundle" "$ability" "$hap_sha" \
       "$(cat "$output/screenshot.sha256")" "$scenario_id" "$scenario_sha" "$oracle_status" \
-      "$profile_status" "$reset_app_data" "$(basename "$screenshot")" >"$output/result.json"
+      "$assessment_status" "$infrastructure_available" "$subject_task_succeeded" "$failure_class" \
+      "$profile_run_id" "$environment_id" "$profile_status" "$profile_summary_status" \
+      "$reset_app_data" "$policy_fields" "$lineage_fields" "$(basename "$screenshot")" \
+      "$profile_summary_artifact" "$profile_workload_artifact" >"$output/result.json"
   else
     printf '{"schema":"agentlab.harmony_emulator_case_result.v1","status":"passed","instance":"%s","target":"%s","bundle":"%s","ability":"%s","hapSha256":"%s","screenshotSha256":"%s","profileStatus":"%s","powerThermalAuthority":"unavailable_on_emulator","artifacts":{"install":"install.log","bundle":"bundle-dump.txt","launch":"launch.log","process":"process.txt","screenshot":"%s","smartperf":"smartperf.txt"}}\n' \
       "$instance" "$target" "$bundle" "$ability" "$hap_sha" \
@@ -453,10 +748,6 @@ run_case() {
   fi
   printf 'case passed: result=%s/result.json\n' "$output"
   trap - EXIT INT TERM
-  if [ "$keep_running" != true ]; then
-    "$emulator" -stop "$instance" -instancePath "$instance_path" \
-      >"$output/emulator-stop.log" 2>&1
-  fi
 }
 
 usage() {
@@ -466,7 +757,7 @@ usage() {
     '  agentlab-harmony-emulator.sh verify-assets TOOLS_ARCHIVE IMAGE_ARCHIVE' \
     '  agentlab-harmony-emulator.sh verify-install INSTALL_ROOT' \
     '  agentlab-harmony-emulator.sh install --tools PATH --image PATH --root PATH --acknowledge-vendor-agreements' \
-    '  agentlab-harmony-emulator.sh run-case --root INSTALL_ROOT --image-root PATH --instance-path PATH --instance NAME --hdc-port PORT --hap PATH --bundle ID --ability NAME --output PATH [--ui-scenario PATH --task-id ID --source-id ID] [--reset-app-data] [--boot-mode coldboot|reset|snapshot] [--profile-samples N] [--keep-running]' \
+    '  agentlab-harmony-emulator.sh run-case --root INSTALL_ROOT --image-root PATH --instance-path PATH --instance NAME --hdc-port PORT --hap PATH --bundle ID --ability NAME --output PATH [--ui-scenario PATH --task-id ID --source-id ID --source-set-sha256 SHA256] [--profile-run-id ID --environment-id ID [--performance-policy PATH --profile-workload PATH]] [--reset-app-data] [--boot-mode coldboot|reset|snapshot] [--profile-samples N] [--keep-running]' \
     '  For an existing vendor layout, replace --root with --tools-root PATH.'
 }
 

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/harmony-source-standard-test-receipt.schema.json",
+  "title": "AgentLab Harmony source-to-standard-test receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "caseId", "sourceSetSha256", "projectTreeSha256", "framework", "status", "passed", "buildReceipt", "executionReceipt", "packages", "startedAt", "finishedAt", "automaticPromotion"],
+  "properties": {
+    "schema": {"const": "agentlab.harmony_source_standard_test_receipt.v1"},
+    "caseId": {"type": "string", "minLength": 1},
+    "sourceSetSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "projectTreeSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "framework": {"const": "instrument-test-ohosTest-hypium"},
+    "status": {"enum": ["passed", "failed", "infrastructure-error", "build-failed"]},
+    "passed": {"type": "boolean"},
+    "buildReceipt": {"$ref": "#/$defs/fileBinding"},
+    "executionReceipt": {"oneOf": [{"$ref": "#/$defs/fileBinding"}, {"type": "null"}]},
+    "packages": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["app", "test"],
+          "properties": {
+            "app": {"$ref": "#/$defs/fileBinding"},
+            "test": {"$ref": "#/$defs/fileBinding"}
+          }
+        },
+        {"type": "null"}
+      ]
+    },
+    "startedAt": {"type": "string", "minLength": 1},
+    "finishedAt": {"type": "string", "minLength": 1},
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "fileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "byteLength"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "byteLength": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

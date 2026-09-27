@@ -1,0 +1,1720 @@
+{
+  "allowsCaseContract": false,
+  "analyzerDigest": "b390b1f92c1a8e0ea944a808b72d2eab984d2ad70f704736240cb08d8fe25010",
+  "automaticPromotion": false,
+  "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "domainIdentifierContract": {
+    "normalizedIdentifier": "purchase-data",
+    "tokens": [
+      "purchase",
+      "data"
+    ]
+  },
+  "grammarDigest": "1225ddf76255933de3a9beb660185d270e901491a706e6cd0697146eade2b2b1",
+  "interpretation": "Exact expression-bearing CST facts are qualified; call targets, types, interprocedural dataflow and behavior remain unresolved.",
+  "repositories": [
+    {
+      "analysisSha256": "89e4871911462718fcf32900a25bf7218eeaff4da9860c3ace8bd7b36dd363c7",
+      "programFactsSha256": "dfc4e42173aff29b6aa0769734ffb3a8739325adedfef20fabc0fa7d85489164",
+      "repositoryId": "harmony-iap-client",
+      "rowCount": 1642,
+      "selectedExpressionFactCount": 61,
+      "selectedExpressionFacts": [
+        {
+          "expressions": {
+            "expression": {
+              "length": 928,
+              "preview": "new Promise<void>((resolve) => {\n      const param: iap.QueryPurchasesParameter = {\n        productType: iap.ProductType.CONSUMABLE,\n        queryType: iap.PurchaseQueryType.UNFINISHED\n      };\n      ",
+              "sha256": "ac0165cd68fbc210dc47be253dceab999c03d5f645fdde3e0830c771ddf2e7c1"
+            }
+          },
+          "factId": "ast-f24e8c55a5c727d07d95c02b",
+          "kind": "return",
+          "matchedFields": [
+            "expression"
+          ],
+          "owner": "ConsumablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+          "span": {
+            "endByte": 2937,
+            "endColumnByte": 7,
+            "endLine": 84,
+            "startByte": 2001,
+            "startColumnByte": 4,
+            "startLine": 63
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              {
+                "length": 510,
+                "preview": "(res: iap.QueryPurchaseResult) => {\n        Logger.info(TAG, 'Succeeded in querying purchases.');\n        const purchaseDataList: string[] = res.purchaseDataList;\n        if (purchaseDataList === unde",
+                "sha256": "5644fe10671f34d8686d103b0309af2f3c9087192b9c238423d1335be5f29157"
+              }
+            ],
+            "targetExpression": "iap.queryPurchases(this.context, param).then"
+          },
+          "factId": "ast-0ec8999e172168cbff8e46d3",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "ConsumablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+          "span": {
+            "endByte": 2764,
+            "endColumnByte": 8,
+            "endLine": 80,
+            "startByte": 2208,
+            "startColumnByte": 6,
+            "startLine": 68
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "(err: BusinessError) => {\n        Logger.error(TAG, `Failed to query purchases. Code is ${err.code}, message is ${err.message}`);\n        resolve();\n      }"
+            ],
+            "targetExpression": {
+              "length": 562,
+              "preview": "iap.queryPurchases(this.context, param).then((res: iap.QueryPurchaseResult) => {\n        Logger.info(TAG, 'Succeeded in querying purchases.');\n        const purchaseDataList: string[] = res.purchaseDa",
+              "sha256": "e3f1f190f64bc8e8e9ca0294c6bf2392d054581be4c8356c707c51ef66927ba8"
+            }
+          },
+          "factId": "ast-2910b55dacab7d05e3f97693",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression"
+          ],
+          "owner": "ConsumablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+          "span": {
+            "endByte": 2928,
+            "endColumnByte": 8,
+            "endLine": 83,
+            "startByte": 2208,
+            "startColumnByte": 6,
+            "startLine": 68
+          }
+        },
+        {
+          "expressions": {
+            "initializerExpression": "res.purchaseDataList"
+          },
+          "factId": "ast-5e3805f6e7d01225a2903645",
+          "kind": "binding",
+          "matchedFields": [
+            "initializerExpression"
+          ],
+          "owner": "ConsumablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+          "span": {
+            "endByte": 2414,
+            "endColumnByte": 63,
+            "endLine": 70,
+            "startByte": 2365,
+            "startColumnByte": 14,
+            "startLine": 70
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "TAG",
+              "'queryPurchases, purchaseDataList empty'"
+            ],
+            "targetExpression": "Logger.info"
+          },
+          "factId": "ast-e5c9eeb272a50c7fc64ba813",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "ConsumablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+          "span": {
+            "endByte": 2562,
+            "endColumnByte": 68,
+            "endLine": 72,
+            "startByte": 2504,
+            "startColumnByte": 10,
+            "startLine": 72
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "purchaseDataList[i]"
+            ],
+            "targetExpression": "this.dealPurchaseData"
+          },
+          "factId": "ast-4bf59a27cc2231a7a9ec28c6",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression",
+            "argumentExpressions"
+          ],
+          "owner": "ConsumablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+          "span": {
+            "endByte": 2725,
+            "endColumnByte": 52,
+            "endLine": 77,
+            "startByte": 2683,
+            "startColumnByte": 10,
+            "startLine": 77
+          }
+        },
+        {
+          "expressions": {
+            "parameterExpressions": [
+              "purchaseData: string"
+            ]
+          },
+          "factId": "ast-3ca52252c9decdb5bdfa3fd4",
+          "kind": "symbol",
+          "matchedFields": [
+            "parameterExpressions"
+          ],
+          "owner": "ConsumablesPage",
+          "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+          "span": {
+            "endByte": 4002,
+            "endColumnByte": 3,
+            "endLine": 108,
+            "startByte": 2945,
+            "startColumnByte": 2,
+            "startLine": 87
+          }
+        },
+        {
+          "expressions": {
+            "initializerExpression": "(JSON.parse(purchaseData) as PurchaseData).jwsPurchaseOrder"
+          },
+          "factId": "ast-93d43d7e7b6e33061757cb2e",
+          "kind": "binding",
+          "matchedFields": [
+            "initializerExpression"
+          ],
+          "owner": "ConsumablesPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+          "span": {
+            "endByte": 3178,
+            "endColumnByte": 90,
+            "endLine": 90,
+            "startByte": 3100,
+            "startColumnByte": 12,
+            "startLine": 90
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "purchaseData"
+            ],
+            "targetExpression": "JSON.parse"
+          },
+          "factId": "ast-97921bf5a95f788ec8125dab",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "ConsumablesPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+          "span": {
+            "endByte": 3144,
+            "endColumnByte": 56,
+            "endLine": 90,
+            "startByte": 3120,
+            "startColumnByte": 32,
+            "startLine": 90
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "TAG",
+              "'dealPurchaseData, jwsPurchaseOrder invalid'"
+            ],
+            "targetExpression": "Logger.error"
+          },
+          "factId": "ast-fe8f90a1e6aaf30d953b98c5",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "ConsumablesPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+          "span": {
+            "endByte": 3282,
+            "endColumnByte": 71,
+            "endLine": 92,
+            "startByte": 3219,
+            "startColumnByte": 8,
+            "startLine": 92
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "TAG",
+              "'dealPurchaseData json error'"
+            ],
+            "targetExpression": "Logger.error"
+          },
+          "factId": "ast-f7b24b22a597aed5cd9a2042",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "ConsumablesPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+          "span": {
+            "endByte": 3991,
+            "endColumnByte": 54,
+            "endLine": 106,
+            "startByte": 3943,
+            "startColumnByte": 6,
+            "startLine": 106
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              {
+                "length": 414,
+                "preview": "(err: BusinessError) => {\n        const msg: string = `Failed to create purchase. Code is ${err.code}, message is ${err.message}`;\n        Logger.error(TAG, msg);\n        promptAction.openToast({\n    ",
+                "sha256": "263908d7fbae06cef5d517cf0ad59da100fa06626b7f3d6523015df5c78e947b"
+              }
+            ],
+            "targetExpression": "iap.createPurchase(this.context, createPurchaseParam).then((result) => {\n        const msg: string = 'Succeeded in creating purchase.';\n        Logger.info(TAG, msg);\n        promptAction.openToast({\n          message:  msg,\n          duration: 2000,\n        });\n        this.dealPurchaseData(result.purchaseData);\n      }).catch"
+          },
+          "factId": "ast-12ecf0e65661d5ef3a1c6850",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression"
+          ],
+          "owner": "ConsumablesPage::buy",
+          "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+          "span": {
+            "endByte": 6233,
+            "endColumnByte": 8,
+            "endLine": 168,
+            "startByte": 5488,
+            "startColumnByte": 6,
+            "startLine": 150
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "(result) => {\n        const msg: string = 'Succeeded in creating purchase.';\n        Logger.info(TAG, msg);\n        promptAction.openToast({\n          message:  msg,\n          duration: 2000,\n        });\n        this.dealPurchaseData(result.purchaseData);\n      }"
+            ],
+            "targetExpression": "iap.createPurchase(this.context, createPurchaseParam).then"
+          },
+          "factId": "ast-a6c6d6d97a500edbe822e015",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "ConsumablesPage::buy",
+          "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+          "span": {
+            "endByte": 5811,
+            "endColumnByte": 8,
+            "endLine": 158,
+            "startByte": 5488,
+            "startColumnByte": 6,
+            "startLine": 150
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "result.purchaseData"
+            ],
+            "targetExpression": "this.dealPurchaseData"
+          },
+          "factId": "ast-2f348f73ecb3ba11e227f1c8",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression",
+            "argumentExpressions"
+          ],
+          "owner": "ConsumablesPage::buy",
+          "path": "entry/src/main/ets/pages/ConsumablesPage.ets",
+          "span": {
+            "endByte": 5801,
+            "endColumnByte": 50,
+            "endLine": 157,
+            "startByte": 5759,
+            "startColumnByte": 8,
+            "startLine": 157
+          }
+        },
+        {
+          "expressions": {
+            "expression": {
+              "length": 996,
+              "preview": "new Promise<void>((resolve) => {\n      const param: iap.QueryPurchasesParameter = {\n        productType: iap.ProductType.NONCONSUMABLE,\n        queryType: iap.PurchaseQueryType.CURRENT_ENTITLEMENT\n   ",
+              "sha256": "e59e9f44f63c96b66ac4a16ebf76e6a7548a3598442b92fb206187bc64745cb2"
+            }
+          },
+          "factId": "ast-be36bbda2ea353d4826c7089",
+          "kind": "return",
+          "matchedFields": [
+            "expression"
+          ],
+          "owner": "NonConsumablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/NonConsumablesPage.ets",
+          "span": {
+            "endByte": 3064,
+            "endColumnByte": 7,
+            "endLine": 86,
+            "startByte": 2060,
+            "startColumnByte": 4,
+            "startLine": 63
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "(err: BusinessError) => {\n        Logger.error(TAG, `Failed to query purchases. Code is ${err.code}, message is ${err.message}`);\n        resolve();\n      }"
+            ],
+            "targetExpression": {
+              "length": 562,
+              "preview": "iap.queryPurchases(this.context, param).then((res: iap.QueryPurchaseResult) => {\n        Logger.info(TAG, 'Succeeded in querying purchases.');\n        const purchaseDataList: string[] = res.purchaseDa",
+              "sha256": "e3f1f190f64bc8e8e9ca0294c6bf2392d054581be4c8356c707c51ef66927ba8"
+            }
+          },
+          "factId": "ast-5ecaff4ded03d2356a485bef",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression"
+          ],
+          "owner": "NonConsumablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/NonConsumablesPage.ets",
+          "span": {
+            "endByte": 2999,
+            "endColumnByte": 8,
+            "endLine": 83,
+            "startByte": 2279,
+            "startColumnByte": 6,
+            "startLine": 68
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "() => {\n        this.showNormalPage();\n      }"
+            ],
+            "targetExpression": {
+              "length": 728,
+              "preview": "iap.queryPurchases(this.context, param).then((res: iap.QueryPurchaseResult) => {\n        Logger.info(TAG, 'Succeeded in querying purchases.');\n        const purchaseDataList: string[] = res.purchaseDa",
+              "sha256": "e20823f27f3cc169221ef94dc4dfc7905b4db4a5d7f4d21182182e9ef1bd4c32"
+            }
+          },
+          "factId": "ast-6cec7abab0e1daa4cc79a436",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression"
+          ],
+          "owner": "NonConsumablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/NonConsumablesPage.ets",
+          "span": {
+            "endByte": 3055,
+            "endColumnByte": 8,
+            "endLine": 85,
+            "startByte": 2279,
+            "startColumnByte": 6,
+            "startLine": 68
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              {
+                "length": 510,
+                "preview": "(res: iap.QueryPurchaseResult) => {\n        Logger.info(TAG, 'Succeeded in querying purchases.');\n        const purchaseDataList: string[] = res.purchaseDataList;\n        if (purchaseDataList === unde",
+                "sha256": "5644fe10671f34d8686d103b0309af2f3c9087192b9c238423d1335be5f29157"
+              }
+            ],
+            "targetExpression": "iap.queryPurchases(this.context, param).then"
+          },
+          "factId": "ast-e80e6b4b0736a25a65b9bb8b",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "NonConsumablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/NonConsumablesPage.ets",
+          "span": {
+            "endByte": 2835,
+            "endColumnByte": 8,
+            "endLine": 80,
+            "startByte": 2279,
+            "startColumnByte": 6,
+            "startLine": 68
+          }
+        },
+        {
+          "expressions": {
+            "initializerExpression": "res.purchaseDataList"
+          },
+          "factId": "ast-830fbf4dc4913d7c88526694",
+          "kind": "binding",
+          "matchedFields": [
+            "initializerExpression"
+          ],
+          "owner": "NonConsumablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/NonConsumablesPage.ets",
+          "span": {
+            "endByte": 2485,
+            "endColumnByte": 63,
+            "endLine": 70,
+            "startByte": 2436,
+            "startColumnByte": 14,
+            "startLine": 70
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "TAG",
+              "'queryPurchases, purchaseDataList empty'"
+            ],
+            "targetExpression": "Logger.info"
+          },
+          "factId": "ast-dfd853a6025c0b8c5ede2d5f",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "NonConsumablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/NonConsumablesPage.ets",
+          "span": {
+            "endByte": 2633,
+            "endColumnByte": 68,
+            "endLine": 72,
+            "startByte": 2575,
+            "startColumnByte": 10,
+            "startLine": 72
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "purchaseDataList[i]"
+            ],
+            "targetExpression": "this.dealPurchaseData"
+          },
+          "factId": "ast-663abbb43c75e007cdc4b6c1",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression",
+            "argumentExpressions"
+          ],
+          "owner": "NonConsumablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/NonConsumablesPage.ets",
+          "span": {
+            "endByte": 2796,
+            "endColumnByte": 52,
+            "endLine": 77,
+            "startByte": 2754,
+            "startColumnByte": 10,
+            "startLine": 77
+          }
+        },
+        {
+          "expressions": {
+            "parameterExpressions": [
+              "purchaseData: string"
+            ]
+          },
+          "factId": "ast-8eea4d31ea7ad261fd3088ca",
+          "kind": "symbol",
+          "matchedFields": [
+            "parameterExpressions"
+          ],
+          "owner": "NonConsumablesPage",
+          "path": "entry/src/main/ets/pages/NonConsumablesPage.ets",
+          "span": {
+            "endByte": 4324,
+            "endColumnByte": 3,
+            "endLine": 114,
+            "startByte": 3072,
+            "startColumnByte": 2,
+            "startLine": 89
+          }
+        },
+        {
+          "expressions": {
+            "initializerExpression": "(JSON.parse(purchaseData) as PurchaseData).jwsPurchaseOrder"
+          },
+          "factId": "ast-7e641dfccc1fed90b0160473",
+          "kind": "binding",
+          "matchedFields": [
+            "initializerExpression"
+          ],
+          "owner": "NonConsumablesPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/NonConsumablesPage.ets",
+          "span": {
+            "endByte": 3305,
+            "endColumnByte": 90,
+            "endLine": 92,
+            "startByte": 3227,
+            "startColumnByte": 12,
+            "startLine": 92
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "purchaseData"
+            ],
+            "targetExpression": "JSON.parse"
+          },
+          "factId": "ast-1bac5c032ccfc070fc55c826",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "NonConsumablesPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/NonConsumablesPage.ets",
+          "span": {
+            "endByte": 3271,
+            "endColumnByte": 56,
+            "endLine": 92,
+            "startByte": 3247,
+            "startColumnByte": 32,
+            "startLine": 92
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "TAG",
+              "'dealPurchaseData, jwsPurchaseOrder invalid'"
+            ],
+            "targetExpression": "Logger.error"
+          },
+          "factId": "ast-aa4f1a69c41d30c997bcf53a",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "NonConsumablesPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/NonConsumablesPage.ets",
+          "span": {
+            "endByte": 3409,
+            "endColumnByte": 71,
+            "endLine": 94,
+            "startByte": 3346,
+            "startColumnByte": 8,
+            "startLine": 94
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "TAG",
+              "'dealPurchaseData, purchaseOrderPayload invalid'"
+            ],
+            "targetExpression": "Logger.error"
+          },
+          "factId": "ast-a6a2f887ee7fa6727642706d",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "NonConsumablesPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/NonConsumablesPage.ets",
+          "span": {
+            "endByte": 3774,
+            "endColumnByte": 75,
+            "endLine": 101,
+            "startByte": 3707,
+            "startColumnByte": 8,
+            "startLine": 101
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "TAG",
+              "'dealPurchaseData json error'"
+            ],
+            "targetExpression": "Logger.error"
+          },
+          "factId": "ast-a6779f43e0ba7492d09f9b1b",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "NonConsumablesPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/NonConsumablesPage.ets",
+          "span": {
+            "endByte": 4313,
+            "endColumnByte": 54,
+            "endLine": 112,
+            "startByte": 4265,
+            "startColumnByte": 6,
+            "startLine": 112
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              {
+                "length": 414,
+                "preview": "(err: BusinessError) => {\n        const msg: string = `Failed to create purchase. Code is ${err.code}, message is ${err.message}`;\n        Logger.error(TAG, msg);\n        promptAction.openToast({\n    ",
+                "sha256": "263908d7fbae06cef5d517cf0ad59da100fa06626b7f3d6523015df5c78e947b"
+              }
+            ],
+            "targetExpression": "iap.createPurchase(this.context, createPurchaseParam).then((result) => {\n        const msg: string = 'Succeeded in creating purchase.';\n        Logger.info(TAG, msg);\n        promptAction.openToast({\n          message:  msg,\n          duration: 2000,\n        });\n        this.dealPurchaseData(result.purchaseData);\n      }).catch"
+          },
+          "factId": "ast-10829608372eeeb6e4dab771",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression"
+          ],
+          "owner": "NonConsumablesPage::buy",
+          "path": "entry/src/main/ets/pages/NonConsumablesPage.ets",
+          "span": {
+            "endByte": 7418,
+            "endColumnByte": 8,
+            "endLine": 198,
+            "startByte": 6673,
+            "startColumnByte": 6,
+            "startLine": 180
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "(result) => {\n        const msg: string = 'Succeeded in creating purchase.';\n        Logger.info(TAG, msg);\n        promptAction.openToast({\n          message:  msg,\n          duration: 2000,\n        });\n        this.dealPurchaseData(result.purchaseData);\n      }"
+            ],
+            "targetExpression": "iap.createPurchase(this.context, createPurchaseParam).then"
+          },
+          "factId": "ast-2c6e21e1b05a61c23db0407e",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "NonConsumablesPage::buy",
+          "path": "entry/src/main/ets/pages/NonConsumablesPage.ets",
+          "span": {
+            "endByte": 6996,
+            "endColumnByte": 8,
+            "endLine": 188,
+            "startByte": 6673,
+            "startColumnByte": 6,
+            "startLine": 180
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "result.purchaseData"
+            ],
+            "targetExpression": "this.dealPurchaseData"
+          },
+          "factId": "ast-0ec2d1dd1068a86c6830e271",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression",
+            "argumentExpressions"
+          ],
+          "owner": "NonConsumablesPage::buy",
+          "path": "entry/src/main/ets/pages/NonConsumablesPage.ets",
+          "span": {
+            "endByte": 6986,
+            "endColumnByte": 50,
+            "endLine": 187,
+            "startByte": 6944,
+            "startColumnByte": 8,
+            "startLine": 187
+          }
+        },
+        {
+          "expressions": {
+            "expression": {
+              "length": 930,
+              "preview": "new Promise<void>((resolve) => {\n      const param: iap.QueryPurchasesParameter = {\n        productType: iap.ProductType.NONRENEWABLE,\n        queryType: iap.PurchaseQueryType.UNFINISHED\n      };\n    ",
+              "sha256": "8df3489975c22e6cd4b620b991a8bf7bfadec415b56fde6c2f1e3d63182fb548"
+            }
+          },
+          "factId": "ast-d06c50beda5c3fb520624f93",
+          "kind": "return",
+          "matchedFields": [
+            "expression"
+          ],
+          "owner": "NonRenewablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/NonRenewablesPage.ets",
+          "span": {
+            "endByte": 2947,
+            "endColumnByte": 7,
+            "endLine": 84,
+            "startByte": 2009,
+            "startColumnByte": 4,
+            "startLine": 63
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              {
+                "length": 510,
+                "preview": "(res: iap.QueryPurchaseResult) => {\n        Logger.info(TAG, 'Succeeded in querying purchases.');\n        const purchaseDataList: string[] = res.purchaseDataList;\n        if (purchaseDataList === unde",
+                "sha256": "5644fe10671f34d8686d103b0309af2f3c9087192b9c238423d1335be5f29157"
+              }
+            ],
+            "targetExpression": "iap.queryPurchases(this.context, param).then"
+          },
+          "factId": "ast-94ae92ab4e81aa1fcf87f6fa",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "NonRenewablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/NonRenewablesPage.ets",
+          "span": {
+            "endByte": 2774,
+            "endColumnByte": 8,
+            "endLine": 80,
+            "startByte": 2218,
+            "startColumnByte": 6,
+            "startLine": 68
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "(err: BusinessError) => {\n        Logger.error(TAG, `Failed to query purchases. Code is ${err.code}, message is ${err.message}`);\n        resolve();\n      }"
+            ],
+            "targetExpression": {
+              "length": 562,
+              "preview": "iap.queryPurchases(this.context, param).then((res: iap.QueryPurchaseResult) => {\n        Logger.info(TAG, 'Succeeded in querying purchases.');\n        const purchaseDataList: string[] = res.purchaseDa",
+              "sha256": "e3f1f190f64bc8e8e9ca0294c6bf2392d054581be4c8356c707c51ef66927ba8"
+            }
+          },
+          "factId": "ast-9e4422e99ba50183d2066d5d",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression"
+          ],
+          "owner": "NonRenewablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/NonRenewablesPage.ets",
+          "span": {
+            "endByte": 2938,
+            "endColumnByte": 8,
+            "endLine": 83,
+            "startByte": 2218,
+            "startColumnByte": 6,
+            "startLine": 68
+          }
+        },
+        {
+          "expressions": {
+            "initializerExpression": "res.purchaseDataList"
+          },
+          "factId": "ast-616e8360fa75e47475908e75",
+          "kind": "binding",
+          "matchedFields": [
+            "initializerExpression"
+          ],
+          "owner": "NonRenewablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/NonRenewablesPage.ets",
+          "span": {
+            "endByte": 2424,
+            "endColumnByte": 63,
+            "endLine": 70,
+            "startByte": 2375,
+            "startColumnByte": 14,
+            "startLine": 70
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "TAG",
+              "'queryPurchases, purchaseDataList empty'"
+            ],
+            "targetExpression": "Logger.info"
+          },
+          "factId": "ast-f441d5b0ae5c89009ef308d1",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "NonRenewablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/NonRenewablesPage.ets",
+          "span": {
+            "endByte": 2572,
+            "endColumnByte": 68,
+            "endLine": 72,
+            "startByte": 2514,
+            "startColumnByte": 10,
+            "startLine": 72
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "purchaseDataList[i]"
+            ],
+            "targetExpression": "this.dealPurchaseData"
+          },
+          "factId": "ast-dcc260c0957171d8e8353b84",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression",
+            "argumentExpressions"
+          ],
+          "owner": "NonRenewablesPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/NonRenewablesPage.ets",
+          "span": {
+            "endByte": 2735,
+            "endColumnByte": 52,
+            "endLine": 77,
+            "startByte": 2693,
+            "startColumnByte": 10,
+            "startLine": 77
+          }
+        },
+        {
+          "expressions": {
+            "parameterExpressions": [
+              "purchaseData: string"
+            ]
+          },
+          "factId": "ast-86b66d1b81efa3869c169700",
+          "kind": "symbol",
+          "matchedFields": [
+            "parameterExpressions"
+          ],
+          "owner": "NonRenewablesPage",
+          "path": "entry/src/main/ets/pages/NonRenewablesPage.ets",
+          "span": {
+            "endByte": 4012,
+            "endColumnByte": 3,
+            "endLine": 108,
+            "startByte": 2955,
+            "startColumnByte": 2,
+            "startLine": 87
+          }
+        },
+        {
+          "expressions": {
+            "initializerExpression": "(JSON.parse(purchaseData) as PurchaseData).jwsPurchaseOrder"
+          },
+          "factId": "ast-f68f1904e212c60a7bf6e86d",
+          "kind": "binding",
+          "matchedFields": [
+            "initializerExpression"
+          ],
+          "owner": "NonRenewablesPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/NonRenewablesPage.ets",
+          "span": {
+            "endByte": 3188,
+            "endColumnByte": 90,
+            "endLine": 90,
+            "startByte": 3110,
+            "startColumnByte": 12,
+            "startLine": 90
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "purchaseData"
+            ],
+            "targetExpression": "JSON.parse"
+          },
+          "factId": "ast-e95551ca4986b6aed21a39af",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "NonRenewablesPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/NonRenewablesPage.ets",
+          "span": {
+            "endByte": 3154,
+            "endColumnByte": 56,
+            "endLine": 90,
+            "startByte": 3130,
+            "startColumnByte": 32,
+            "startLine": 90
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "TAG",
+              "'dealPurchaseData, jwsPurchaseOrder invalid'"
+            ],
+            "targetExpression": "Logger.error"
+          },
+          "factId": "ast-6cc27b53727e58f77eb63e20",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "NonRenewablesPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/NonRenewablesPage.ets",
+          "span": {
+            "endByte": 3292,
+            "endColumnByte": 71,
+            "endLine": 92,
+            "startByte": 3229,
+            "startColumnByte": 8,
+            "startLine": 92
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "TAG",
+              "'dealPurchaseData json error'"
+            ],
+            "targetExpression": "Logger.error"
+          },
+          "factId": "ast-28506008f84de56ede754aa8",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "NonRenewablesPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/NonRenewablesPage.ets",
+          "span": {
+            "endByte": 4001,
+            "endColumnByte": 54,
+            "endLine": 106,
+            "startByte": 3953,
+            "startColumnByte": 6,
+            "startLine": 106
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              {
+                "length": 414,
+                "preview": "(err: BusinessError) => {\n        const msg: string = `Failed to create purchase. Code is ${err.code}, message is ${err.message}`;\n        Logger.error(TAG, msg);\n        promptAction.openToast({\n    ",
+                "sha256": "263908d7fbae06cef5d517cf0ad59da100fa06626b7f3d6523015df5c78e947b"
+              }
+            ],
+            "targetExpression": "iap.createPurchase(this.context, createPurchaseParam).then((result) => {\n        const msg: string = 'Succeeded in creating purchase.';\n        Logger.info(TAG, msg);\n        promptAction.openToast({\n          message:  msg,\n          duration: 2000,\n        });\n        this.dealPurchaseData(result.purchaseData);\n      }).catch"
+          },
+          "factId": "ast-2eb820620942ac5937f4b8df",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression"
+          ],
+          "owner": "NonRenewablesPage::buy",
+          "path": "entry/src/main/ets/pages/NonRenewablesPage.ets",
+          "span": {
+            "endByte": 6235,
+            "endColumnByte": 8,
+            "endLine": 168,
+            "startByte": 5490,
+            "startColumnByte": 6,
+            "startLine": 150
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "(result) => {\n        const msg: string = 'Succeeded in creating purchase.';\n        Logger.info(TAG, msg);\n        promptAction.openToast({\n          message:  msg,\n          duration: 2000,\n        });\n        this.dealPurchaseData(result.purchaseData);\n      }"
+            ],
+            "targetExpression": "iap.createPurchase(this.context, createPurchaseParam).then"
+          },
+          "factId": "ast-9bacb83d2eb1401214d9ad26",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "NonRenewablesPage::buy",
+          "path": "entry/src/main/ets/pages/NonRenewablesPage.ets",
+          "span": {
+            "endByte": 5813,
+            "endColumnByte": 8,
+            "endLine": 158,
+            "startByte": 5490,
+            "startColumnByte": 6,
+            "startLine": 150
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "result.purchaseData"
+            ],
+            "targetExpression": "this.dealPurchaseData"
+          },
+          "factId": "ast-5832de5aedcf78b112bce2f0",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression",
+            "argumentExpressions"
+          ],
+          "owner": "NonRenewablesPage::buy",
+          "path": "entry/src/main/ets/pages/NonRenewablesPage.ets",
+          "span": {
+            "endByte": 5803,
+            "endColumnByte": 50,
+            "endLine": 157,
+            "startByte": 5761,
+            "startColumnByte": 8,
+            "startLine": 157
+          }
+        },
+        {
+          "expressions": {
+            "expression": {
+              "length": 964,
+              "preview": "new Promise<void>((resolve) => {\n      const param: iap.QueryPurchasesParameter = {\n        productType: iap.ProductType.AUTORENEWABLE,\n        queryType: queryType\n      };\n      iap.queryPurchases(t",
+              "sha256": "7638aee0f62c82a6d92656e9e455fab8d6417be7480200cfa2d6e274481bb02a"
+            }
+          },
+          "factId": "ast-180cac6a2dfbbf466be79bd9",
+          "kind": "return",
+          "matchedFields": [
+            "expression"
+          ],
+          "owner": "SubscriptionsPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/SubscriptionsPage.ets",
+          "span": {
+            "endByte": 3145,
+            "endColumnByte": 7,
+            "endLine": 92,
+            "startByte": 2173,
+            "startColumnByte": 4,
+            "startLine": 69
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "() => {\n        this.showNormalPage();\n      }"
+            ],
+            "targetExpression": {
+              "length": 728,
+              "preview": "iap.queryPurchases(this.context, param).then((res: iap.QueryPurchaseResult) => {\n        Logger.info(TAG, 'Succeeded in querying purchases.');\n        const purchaseDataList: string[] = res.purchaseDa",
+              "sha256": "e20823f27f3cc169221ef94dc4dfc7905b4db4a5d7f4d21182182e9ef1bd4c32"
+            }
+          },
+          "factId": "ast-864d80121a8b1f70d3354152",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression"
+          ],
+          "owner": "SubscriptionsPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/SubscriptionsPage.ets",
+          "span": {
+            "endByte": 3136,
+            "endColumnByte": 8,
+            "endLine": 91,
+            "startByte": 2360,
+            "startColumnByte": 6,
+            "startLine": 74
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "(err: BusinessError) => {\n        Logger.error(TAG, `Failed to query purchases. Code is ${err.code}, message is ${err.message}`);\n        resolve();\n      }"
+            ],
+            "targetExpression": {
+              "length": 562,
+              "preview": "iap.queryPurchases(this.context, param).then((res: iap.QueryPurchaseResult) => {\n        Logger.info(TAG, 'Succeeded in querying purchases.');\n        const purchaseDataList: string[] = res.purchaseDa",
+              "sha256": "e3f1f190f64bc8e8e9ca0294c6bf2392d054581be4c8356c707c51ef66927ba8"
+            }
+          },
+          "factId": "ast-adec3c17e31a250cb4084872",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression"
+          ],
+          "owner": "SubscriptionsPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/SubscriptionsPage.ets",
+          "span": {
+            "endByte": 3080,
+            "endColumnByte": 8,
+            "endLine": 89,
+            "startByte": 2360,
+            "startColumnByte": 6,
+            "startLine": 74
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              {
+                "length": 510,
+                "preview": "(res: iap.QueryPurchaseResult) => {\n        Logger.info(TAG, 'Succeeded in querying purchases.');\n        const purchaseDataList: string[] = res.purchaseDataList;\n        if (purchaseDataList === unde",
+                "sha256": "5644fe10671f34d8686d103b0309af2f3c9087192b9c238423d1335be5f29157"
+              }
+            ],
+            "targetExpression": "iap.queryPurchases(this.context, param).then"
+          },
+          "factId": "ast-b1f416a441fb972c9cfa6439",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "SubscriptionsPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/SubscriptionsPage.ets",
+          "span": {
+            "endByte": 2916,
+            "endColumnByte": 8,
+            "endLine": 86,
+            "startByte": 2360,
+            "startColumnByte": 6,
+            "startLine": 74
+          }
+        },
+        {
+          "expressions": {
+            "initializerExpression": "res.purchaseDataList"
+          },
+          "factId": "ast-158b5e6b9fdbcf29e3437cf3",
+          "kind": "binding",
+          "matchedFields": [
+            "initializerExpression"
+          ],
+          "owner": "SubscriptionsPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/SubscriptionsPage.ets",
+          "span": {
+            "endByte": 2566,
+            "endColumnByte": 63,
+            "endLine": 76,
+            "startByte": 2517,
+            "startColumnByte": 14,
+            "startLine": 76
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "TAG",
+              "'queryPurchases, purchaseDataList empty'"
+            ],
+            "targetExpression": "Logger.info"
+          },
+          "factId": "ast-9ce089f851318da7eb6cdea3",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "SubscriptionsPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/SubscriptionsPage.ets",
+          "span": {
+            "endByte": 2714,
+            "endColumnByte": 68,
+            "endLine": 78,
+            "startByte": 2656,
+            "startColumnByte": 10,
+            "startLine": 78
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "purchaseDataList[i]"
+            ],
+            "targetExpression": "this.dealPurchaseData"
+          },
+          "factId": "ast-f4358e254f23410c8afbd766",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression",
+            "argumentExpressions"
+          ],
+          "owner": "SubscriptionsPage::queryPurchases",
+          "path": "entry/src/main/ets/pages/SubscriptionsPage.ets",
+          "span": {
+            "endByte": 2877,
+            "endColumnByte": 52,
+            "endLine": 83,
+            "startByte": 2835,
+            "startColumnByte": 10,
+            "startLine": 83
+          }
+        },
+        {
+          "expressions": {
+            "parameterExpressions": [
+              "purchaseData: string"
+            ]
+          },
+          "factId": "ast-37de98e4cc4cec39634f110f",
+          "kind": "symbol",
+          "matchedFields": [
+            "parameterExpressions"
+          ],
+          "owner": "SubscriptionsPage",
+          "path": "entry/src/main/ets/pages/SubscriptionsPage.ets",
+          "span": {
+            "endByte": 5023,
+            "endColumnByte": 3,
+            "endLine": 131,
+            "startByte": 3153,
+            "startColumnByte": 2,
+            "startLine": 95
+          }
+        },
+        {
+          "expressions": {
+            "initializerExpression": "(JSON.parse(purchaseData) as PurchaseData).jwsSubscriptionStatus"
+          },
+          "factId": "ast-e764304c66e6f53a7f069458",
+          "kind": "binding",
+          "matchedFields": [
+            "initializerExpression"
+          ],
+          "owner": "SubscriptionsPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/SubscriptionsPage.ets",
+          "span": {
+            "endByte": 3396,
+            "endColumnByte": 100,
+            "endLine": 98,
+            "startByte": 3308,
+            "startColumnByte": 12,
+            "startLine": 98
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "purchaseData"
+            ],
+            "targetExpression": "JSON.parse"
+          },
+          "factId": "ast-19f76099c528b3237fde46bd",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "SubscriptionsPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/SubscriptionsPage.ets",
+          "span": {
+            "endByte": 3357,
+            "endColumnByte": 61,
+            "endLine": 98,
+            "startByte": 3333,
+            "startColumnByte": 37,
+            "startLine": 98
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "TAG",
+              "'dealPurchaseData, jwsSubscriptionStatus invalid'"
+            ],
+            "targetExpression": "Logger.error"
+          },
+          "factId": "ast-5887fe48ab4030ffcbabc8d6",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "SubscriptionsPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/SubscriptionsPage.ets",
+          "span": {
+            "endByte": 3510,
+            "endColumnByte": 76,
+            "endLine": 100,
+            "startByte": 3442,
+            "startColumnByte": 8,
+            "startLine": 100
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "TAG",
+              "'dealPurchaseData, subscriptionStatus invalid'"
+            ],
+            "targetExpression": "Logger.error"
+          },
+          "factId": "ast-f3869b860eb64dea830d587d",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "SubscriptionsPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/SubscriptionsPage.ets",
+          "span": {
+            "endByte": 3794,
+            "endColumnByte": 73,
+            "endLine": 106,
+            "startByte": 3729,
+            "startColumnByte": 8,
+            "startLine": 106
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "TAG",
+              "'dealPurchaseData, lastSubscriptionStatus is invalid'"
+            ],
+            "targetExpression": "Logger.error"
+          },
+          "factId": "ast-e4053ad2611a330813eb7708",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "SubscriptionsPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/SubscriptionsPage.ets",
+          "span": {
+            "endByte": 4113,
+            "endColumnByte": 80,
+            "endLine": 112,
+            "startByte": 4041,
+            "startColumnByte": 8,
+            "startLine": 112
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "TAG",
+              "'dealPurchaseData json error'"
+            ],
+            "targetExpression": "Logger.error"
+          },
+          "factId": "ast-9e2d3031be2b21a31d0dd1d6",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "SubscriptionsPage::dealPurchaseData",
+          "path": "entry/src/main/ets/pages/SubscriptionsPage.ets",
+          "span": {
+            "endByte": 5012,
+            "endColumnByte": 54,
+            "endLine": 129,
+            "startByte": 4964,
+            "startColumnByte": 6,
+            "startLine": 129
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "(result) => {\n        const msg: string = 'Succeeded in creating purchase.';\n        Logger.info(TAG, msg);\n        promptAction.openToast({\n          message:  msg,\n          duration: 2000,\n        });\n        this.dealPurchaseData(result.purchaseData);\n      }"
+            ],
+            "targetExpression": "iap.createPurchase(this.context, createPurchaseParam).then"
+          },
+          "factId": "ast-a5b6db13bc3bdac4aa31174b",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "SubscriptionsPage::subscribe",
+          "path": "entry/src/main/ets/pages/SubscriptionsPage.ets",
+          "span": {
+            "endByte": 7518,
+            "endColumnByte": 8,
+            "endLine": 199,
+            "startByte": 7195,
+            "startColumnByte": 6,
+            "startLine": 191
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              {
+                "length": 446,
+                "preview": "(err: BusinessError) => {\n        const msg: string = `Failed to create purchase. Code is ${err.code}, message is ${err.message}`;\n        Logger.error(TAG, msg);\n        promptAction.openToast({\n    ",
+                "sha256": "e8de5e929512fae87b2b0e4b2a08cdcef8d367895ab71651506d6165d356a896"
+              }
+            ],
+            "targetExpression": "iap.createPurchase(this.context, createPurchaseParam).then((result) => {\n        const msg: string = 'Succeeded in creating purchase.';\n        Logger.info(TAG, msg);\n        promptAction.openToast({\n          message:  msg,\n          duration: 2000,\n        });\n        this.dealPurchaseData(result.purchaseData);\n      }).catch"
+          },
+          "factId": "ast-c5b32d9d52505436781ef3b0",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression"
+          ],
+          "owner": "SubscriptionsPage::subscribe",
+          "path": "entry/src/main/ets/pages/SubscriptionsPage.ets",
+          "span": {
+            "endByte": 7972,
+            "endColumnByte": 8,
+            "endLine": 209,
+            "startByte": 7195,
+            "startColumnByte": 6,
+            "startLine": 191
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "result.purchaseData"
+            ],
+            "targetExpression": "this.dealPurchaseData"
+          },
+          "factId": "ast-5c6fc483aa8ddea630d7db22",
+          "kind": "call",
+          "matchedFields": [
+            "targetExpression",
+            "argumentExpressions"
+          ],
+          "owner": "SubscriptionsPage::subscribe",
+          "path": "entry/src/main/ets/pages/SubscriptionsPage.ets",
+          "span": {
+            "endByte": 7508,
+            "endColumnByte": 50,
+            "endLine": 198,
+            "startByte": 7466,
+            "startColumnByte": 8,
+            "startLine": 198
+          }
+        }
+      ],
+      "sourceRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3"
+    },
+    {
+      "analysisSha256": "6d0af40ebf521fe8e9f80f375bba78920f318861e344e68402dc2471ec02f820",
+      "programFactsSha256": "2ce76f800fcf691eac955af63f114af2db4250bb9dfe2e20b1e18ea4ed29307a",
+      "repositoryId": "hms-cordova-iap",
+      "rowCount": 67576,
+      "selectedExpressionFactCount": 9,
+      "selectedExpressionFacts": [
+        {
+          "expressions": {
+            "initializerExpression": "async (pType) => {\n    try {\n      let message = await this.iap.obtainOwnedPurchases({\n        priceType: PRODUCTS[pType].type,\n      });\n      console.log(message);\n      message.itemList.map((pId, ind) =>\n        this.createPurchasedProductOnList(\n          pId,\n          message.inAppPurchaseDataList[ind],\n          pType\n        )\n      );\n    } catch (err) {\n      console.log(err);\n    }\n  }",
+            "parameterExpressions": [
+              "pType"
+            ]
+          },
+          "factId": "ast-2c8085bf291134f9f3613e9b",
+          "kind": "property",
+          "matchedFields": [
+            "initializerExpression"
+          ],
+          "owner": "HomePage",
+          "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+          "span": {
+            "endByte": 4923,
+            "endColumnByte": 3,
+            "endLine": 190,
+            "startByte": 4493,
+            "startColumnByte": 2,
+            "startLine": 174
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "(pId, ind) =>\n        this.createPurchasedProductOnList(\n          pId,\n          message.inAppPurchaseDataList[ind],\n          pType\n        )"
+            ],
+            "targetExpression": "message.itemList.map"
+          },
+          "factId": "ast-d9c9b614b56295228bd5db4e",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "HomePage",
+          "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+          "span": {
+            "endByte": 4868,
+            "endColumnByte": 7,
+            "endLine": 186,
+            "startByte": 4696,
+            "startColumnByte": 6,
+            "startLine": 180
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "pId",
+              "message.inAppPurchaseDataList[ind]",
+              "pType"
+            ],
+            "targetExpression": "this.createPurchasedProductOnList"
+          },
+          "factId": "ast-f364faa14fe09a67a1d551ab",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "HomePage",
+          "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+          "span": {
+            "endByte": 4860,
+            "endColumnByte": 9,
+            "endLine": 185,
+            "startByte": 4739,
+            "startColumnByte": 8,
+            "startLine": 181
+          }
+        },
+        {
+          "expressions": {
+            "initializerExpression": {
+              "length": 514,
+              "preview": "(productId, purchaseData, productType) => {\n    let product = this.getProduct(productId, productType);\n    product.purchaseData = purchaseData;\n    switch (productType) {\n      case \"consumable\":\n    ",
+              "sha256": "4b7132fcda88441c0b537043477a06f7b5e56cbb571c57459ec8fa888d764233"
+            },
+            "parameterExpressions": [
+              "productId",
+              "purchaseData",
+              "productType"
+            ]
+          },
+          "factId": "ast-377c564300cbf4a32df9a8a2",
+          "kind": "property",
+          "matchedFields": [
+            "parameterExpressions",
+            "initializerExpression"
+          ],
+          "owner": "HomePage",
+          "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+          "span": {
+            "endByte": 5473,
+            "endColumnByte": 3,
+            "endLine": 208,
+            "startByte": 4928,
+            "startColumnByte": 2,
+            "startLine": 192
+          }
+        },
+        {
+          "expressions": {
+            "leftExpression": "product.purchaseData",
+            "rightExpression": "purchaseData"
+          },
+          "factId": "ast-6f8ae557023209f612519f6b",
+          "kind": "assignment",
+          "matchedFields": [
+            "leftExpression",
+            "rightExpression"
+          ],
+          "owner": "HomePage",
+          "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+          "span": {
+            "endByte": 5101,
+            "endColumnByte": 39,
+            "endLine": 194,
+            "startByte": 5066,
+            "startColumnByte": 4,
+            "startLine": 194
+          }
+        },
+        {
+          "expressions": {
+            "initializerExpression": {
+              "length": 812,
+              "preview": "async (productId, purchaseData, productType) => {\n    try {\n      let message = await this.iap.consumeOwnedPurchase({\n        inAppPurchaseData: purchaseData,\n        developerChallenge: DEVELOPERCHAL",
+              "sha256": "3fe696a5307ad8954c3dc0052efb8156fdf2e129ec95f261f83edffa157ab948"
+            },
+            "parameterExpressions": [
+              "productId",
+              "purchaseData",
+              "productType"
+            ]
+          },
+          "factId": "ast-67a6cdf22ef18b8f786be961",
+          "kind": "property",
+          "matchedFields": [
+            "parameterExpressions",
+            "initializerExpression"
+          ],
+          "owner": "HomePage",
+          "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+          "span": {
+            "endByte": 6313,
+            "endColumnByte": 3,
+            "endLine": 236,
+            "startByte": 5478,
+            "startColumnByte": 2,
+            "startLine": 210
+          }
+        },
+        {
+          "expressions": {
+            "initializerExpression": "await this.iap.consumeOwnedPurchase({\n        inAppPurchaseData: purchaseData,\n        developerChallenge: DEVELOPERCHALLENGE,\n      })"
+          },
+          "factId": "ast-4f932cb7ca35429b058f2b8d",
+          "kind": "binding",
+          "matchedFields": [
+            "initializerExpression"
+          ],
+          "owner": "HomePage",
+          "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+          "span": {
+            "endByte": 5716,
+            "endColumnByte": 8,
+            "endLine": 215,
+            "startByte": 5571,
+            "startColumnByte": 10,
+            "startLine": 212
+          }
+        },
+        {
+          "expressions": {
+            "argumentExpressions": [
+              "{\n        inAppPurchaseData: purchaseData,\n        developerChallenge: DEVELOPERCHALLENGE,\n      }"
+            ],
+            "targetExpression": "this.iap.consumeOwnedPurchase"
+          },
+          "factId": "ast-57808ee67f2e567c08f227d5",
+          "kind": "call",
+          "matchedFields": [
+            "argumentExpressions"
+          ],
+          "owner": "HomePage",
+          "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+          "span": {
+            "endByte": 5716,
+            "endColumnByte": 8,
+            "endLine": 215,
+            "startByte": 5587,
+            "startColumnByte": 26,
+            "startLine": 212
+          }
+        },
+        {
+          "expressions": {
+            "keyExpression": "inAppPurchaseData",
+            "valueExpression": "purchaseData"
+          },
+          "factId": "ast-97f3905c745594f40fbeaadc",
+          "kind": "object-entry",
+          "matchedFields": [
+            "keyExpression",
+            "valueExpression"
+          ],
+          "owner": "HomePage",
+          "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts",
+          "span": {
+            "endByte": 5658,
+            "endColumnByte": 39,
+            "endLine": 213,
+            "startByte": 5627,
+            "startColumnByte": 8,
+            "startLine": 213
+          }
+        }
+      ],
+      "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+    }
+  ],
+  "repositoryCount": 2,
+  "reviewPacketSha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
+  "schema": "agentlab.multi_repo_expression_fact_qualification.v1",
+  "selectedExpressionFactCount": 70,
+  "semanticAlignmentVerified": false,
+  "sourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
+  "status": "expression-facts-qualified-dataflow-unresolved"
+}

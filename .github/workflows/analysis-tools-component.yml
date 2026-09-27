@@ -1,0 +1,302 @@
+name: Build independent analysis-tools component
+on:
+  pull_request:
+    paths:
+      - 'crates/agentlab_code_analysis/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/analysis-tools-component.yml'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish this exact component as a new immutable prerelease
+        required: true
+        type: boolean
+        default: false
+      publish_composition_candidate:
+        description: After remote verification, also publish the reference-only coordinated candidate metadata
+        required: true
+        type: boolean
+        default: false
+      expected_revision:
+        description: Exact 40-hex main revision required when publish is true
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-analysis-tools-component:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install deterministic Linux packaging prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes jq musl-tools zstd
+          rustup target add x86_64-unknown-linux-musl
+      - name: Build the complete static analysis-tool inventory
+        run: |
+          cargo build --locked --release -p agentlab_code_analysis \
+            --target x86_64-unknown-linux-musl
+      - name: Build and reproduce the candidate component without publishing
+        run: |
+          set -euo pipefail
+          packer="target/x86_64-unknown-linux-musl/release/agentlab-analysis-tools-pack"
+          binaries="target/x86_64-unknown-linux-musl/release"
+          version="${GITHUB_SHA:0:12}"
+          first="$RUNNER_TEMP/analysis-tools-component"
+          second="$RUNNER_TEMP/analysis-tools-component-repeat"
+          "$packer" --binary-dir "$binaries" --source-revision "$GITHUB_SHA" \
+            --version "$version" --output "$first" | tee "$RUNNER_TEMP/pack-receipt.json"
+          "$packer" --binary-dir "$binaries" --source-revision "$GITHUB_SHA" \
+            --version "$version" --output "$second" > "$RUNNER_TEMP/repeat-receipt.json"
+          diff -qr "$first" "$second"
+          archive="$first/agentlab-pack-analysis-tools-$version-linux-x64.tar.zst"
+          zstd -t "$archive"
+          zstd -dc "$archive" | tar -tf - > "$RUNNER_TEMP/archive-members.txt"
+          test "$(grep -c '^payload/bin/agentlab-' "$RUNNER_TEMP/archive-members.txt")" \
+            -eq "$(jq -r .binaryCount "$RUNNER_TEMP/pack-receipt.json")"
+          installed="$RUNNER_TEMP/analysis-tools-installed"
+          mkdir "$installed"
+          zstd -dc "$archive" | tar -xf - -C "$installed"
+          "$installed/payload/bin/agentlab-analysis-tools-pack" \
+            --execute agentlab-analysis-tools-pack \
+            --receipt "$RUNNER_TEMP/runtime-execution-receipt.json" -- --self-check \
+            | tee "$RUNNER_TEMP/runtime-self-check.json"
+          jq -e '
+            .schema == "agentlab.analysis_tools_runtime_probe.v1" and
+            .status == "passed" and
+            .platform == "linux-x64" and
+            .binaryCount == (.binaries | length) and
+            .automaticPromotion == false
+          ' "$RUNNER_TEMP/runtime-self-check.json" >/dev/null
+          jq -e '
+            .schema == "agentlab.analysis_tools_execution.v1" and
+            .status == "passed" and
+            .tool == "agentlab-analysis-tools-pack" and
+            .argumentCount == 1 and
+            .exitCode == 0 and
+            .automaticPromotion == false
+          ' "$RUNNER_TEMP/runtime-execution-receipt.json" >/dev/null
+          sha256sum "$first"/* >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/pack-receipt.json" >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/runtime-self-check.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Reproduce the first coordinated optional-slot composition
+        run: |
+          set -euo pipefail
+          version="${GITHUB_SHA:0:12}"
+          component="$RUNNER_TEMP/analysis-tools-component"
+          update="analysis-tools-$version-linux-x64.json"
+          update_url="https://github.com/$GITHUB_REPOSITORY/releases/download/analysis-tools-$version-linux-x64/$update"
+          composer="target/x86_64-unknown-linux-musl/release/agentlab-component-introduce"
+          first="$RUNNER_TEMP/analysis-tools-coordinated-candidate"
+          second="$RUNNER_TEMP/analysis-tools-coordinated-candidate-repeat"
+          "$composer" \
+            --base-publication release/channels/aldev/publication.json \
+            --base-lock release/channels/aldev/environment-lock.json \
+            --component-update "$component/$update" \
+            --component-update-url "$update_url" \
+            --tag "candidate-analysis-tools-$version-linux-x64" \
+            --output "$first" | tee "$RUNNER_TEMP/component-introduction-receipt.json"
+          "$composer" \
+            --base-publication release/channels/aldev/publication.json \
+            --base-lock release/channels/aldev/environment-lock.json \
+            --component-update "$component/$update" \
+            --component-update-url "$update_url" \
+            --tag "candidate-analysis-tools-$version-linux-x64" \
+            --output "$second" > "$RUNNER_TEMP/component-introduction-repeat-receipt.json"
+          diff -qr "$first" "$second"
+          python3 - "$first" <<'PY'
+          import importlib.util, json, pathlib, sys
+          candidate = pathlib.Path(sys.argv[1])
+          spec = importlib.util.spec_from_file_location(
+              "validator", pathlib.Path("scripts/validate-composition-release.py"))
+          validator = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(validator)
+          raw = (candidate / "environment-lock.json").read_bytes()
+          validator.validate(
+              json.loads((candidate / "publication.json").read_bytes()),
+              json.loads(raw), raw)
+          PY
+          cat "$RUNNER_TEMP/component-introduction-receipt.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve candidate component and reproducibility evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: analysis-tools-component-candidate
+          if-no-files-found: error
+          path: ${{ runner.temp }}/analysis-tools-component/
+      - name: Preserve build-only evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: analysis-tools-component-evidence
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/pack-receipt.json
+            ${{ runner.temp }}/repeat-receipt.json
+            ${{ runner.temp }}/archive-members.txt
+            ${{ runner.temp }}/runtime-self-check.json
+            ${{ runner.temp }}/runtime-execution-receipt.json
+            ${{ runner.temp }}/component-introduction-receipt.json
+            ${{ runner.temp }}/component-introduction-repeat-receipt.json
+      - name: Preserve coordinated candidate preview without publishing or promotion
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: analysis-tools-coordinated-candidate-preview
+          if-no-files-found: error
+          path: ${{ runner.temp }}/analysis-tools-coordinated-candidate/
+
+  publish-immutable-analysis-tools:
+    needs: build-analysis-tools-component
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Require explicit exact revision authority
+        env:
+          EXPECTED_REVISION: ${{ inputs.expected_revision }}
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$EXPECTED_REVISION" == "$GITHUB_SHA" ]]
+          if [[ "${{ inputs.publish_composition_candidate }}" == "true" ]]; then
+            [[ "${{ inputs.publish }}" == "true" ]]
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: analysis-tools-component-candidate
+          path: ${{ runner.temp }}/candidate
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: analysis-tools-coordinated-candidate-preview
+          path: ${{ runner.temp }}/coordinated-candidate
+      - name: Publish once under a source-derived immutable tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="analysis-tools-${GITHUB_SHA:0:12}-linux-x64"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" \
+              --dir "$RUNNER_TEMP/component-readback"
+            for file in "$RUNNER_TEMP/candidate/"*; do
+              cmp "$file" "$RUNNER_TEMP/component-readback/$(basename "$file")"
+            done
+            echo "exact immutable component already exists; continuing remote verification"
+          else
+            gh release create "$tag" "$RUNNER_TEMP/candidate/"* \
+              --repo "$GITHUB_REPOSITORY" --prerelease \
+              --title "AgentLab analysis tools ${GITHUB_SHA:0:12} (linux-x64)" \
+              --notes "Independent immutable Rust analysis-tools component. Aggregate channels remain unchanged until separately composed and qualified."
+          fi
+      - name: Verify the published component and complete the reference-only candidate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PUBLISH_COMPOSITION_CANDIDATE: ${{ inputs.publish_composition_candidate }}
+        run: |
+          python3 - "$RUNNER_TEMP/coordinated-candidate" <<'PY'
+          import hashlib, importlib.util, json, os, pathlib, sys, time, urllib.request
+          candidate = pathlib.Path(sys.argv[1])
+          component = pathlib.Path(os.environ["RUNNER_TEMP"]) / "candidate"
+          component_tag = f"analysis-tools-{os.environ['GITHUB_SHA'][:12]}-linux-x64"
+          request = urllib.request.Request(
+              f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/releases/tags/{component_tag}",
+              headers={
+                  "Accept": "application/vnd.github+json",
+                  "Authorization": "Bearer " + os.environ["GITHUB_TOKEN"],
+                  "User-Agent": "agentlab-analysis-tools-publication",
+              })
+          with urllib.request.urlopen(request, timeout=30) as response:
+              release = json.load(response)
+          assert not release["draft"]
+          published = {asset["name"]: asset for asset in release["assets"]}
+          local_files = sorted(path for path in component.iterdir() if path.is_file())
+          assert set(published) == {path.name for path in local_files}
+          for path in local_files:
+              data = path.read_bytes()
+              observed = published[path.name]
+              assert observed["size"] == len(data)
+              assert observed["digest"] == "sha256:" + hashlib.sha256(data).hexdigest()
+              assert observed["browser_download_url"] == (
+                  f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/"
+                  f"{component_tag}/{path.name}")
+          spec = importlib.util.spec_from_file_location(
+              "validator", pathlib.Path("scripts/validate-composition-release.py"))
+          validator = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(validator)
+          raw = (candidate / "environment-lock.json").read_bytes()
+          publication = json.loads((candidate / "publication.json").read_bytes())
+          assets = validator.validate(publication, json.loads(raw), raw)
+          for attempt in range(6):
+              try:
+                  validator.remote_assets(assets)
+                  break
+              except Exception:
+                  if attempt == 5:
+                      raise
+                  time.sleep(5)
+          receipt = {
+              "schema": "agentlab.analysis_tools_publication_closure.v1",
+              "status": "published-component-remote-verified-candidate-not-promoted",
+              "componentReleaseTag": component_tag,
+              "componentSourceRevision": os.environ["GITHUB_SHA"],
+              "uploadedAssetCount": len(local_files),
+              "candidateTag": publication["tag"],
+              "candidateEnvironmentLockSha256": publication["environmentLockSha256"],
+              "referencedAssetCount": len(assets),
+              "candidateMetadataPublicationRequested": os.environ["PUBLISH_COMPOSITION_CANDIDATE"] == "true",
+              "candidateMetadataPublished": False,
+              "automaticPromotion": False,
+          }
+          path = pathlib.Path(os.environ["RUNNER_TEMP"]) / "analysis-tools-publication-closure.json"
+          path.write_text(json.dumps(receipt, indent=2) + "\n")
+          print(json.dumps(receipt))
+          PY
+      - name: Publish reference-only coordinated candidate metadata
+        if: inputs.publish_composition_candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="candidate-analysis-tools-${GITHUB_SHA:0:12}-linux-x64"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" \
+              --dir "$RUNNER_TEMP/coordinated-readback"
+            echo "exact reference-only candidate must match the regenerated metadata"
+          else
+            gh release create "$tag" "$RUNNER_TEMP/coordinated-candidate/"*.json \
+              --repo "$GITHUB_REPOSITORY" --prerelease \
+              --title "AgentLab coordinated analysis-tools candidate ${GITHUB_SHA:0:12}" \
+              --notes "Reference-only inactive composition; component bytes are reused from their immutable releases. Qualification and channel activation remain separate explicit workflows."
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" \
+              --dir "$RUNNER_TEMP/coordinated-readback"
+          fi
+          for file in "$RUNNER_TEMP/coordinated-candidate/"*.json; do
+            cmp "$file" "$RUNNER_TEMP/coordinated-readback/$(basename "$file")"
+          done
+          test "$(find "$RUNNER_TEMP/coordinated-candidate" -maxdepth 1 -type f | wc -l)" \
+            -eq "$(find "$RUNNER_TEMP/coordinated-readback" -maxdepth 1 -type f | wc -l)"
+          python3 - <<'PY'
+          import json, os, pathlib
+          path = pathlib.Path(os.environ["RUNNER_TEMP"]) / "analysis-tools-publication-closure.json"
+          receipt = json.loads(path.read_text())
+          receipt["status"] = "published-component-remote-verified-candidate-metadata-published-not-qualified"
+          receipt["candidateMetadataPublished"] = True
+          path.write_text(json.dumps(receipt, indent=2) + "\n")
+          print(json.dumps(receipt))
+          PY
+      - name: Preserve remote publication closure and unpromoted candidate
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: analysis-tools-publication-closure
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/analysis-tools-publication-closure.json
+            ${{ runner.temp }}/component-readback/
+            ${{ runner.temp }}/coordinated-candidate/
+            ${{ runner.temp }}/coordinated-readback/

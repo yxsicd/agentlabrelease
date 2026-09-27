@@ -1,10 +1,26 @@
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use std::{
     fs,
     path::Path,
     process::Command,
+    sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
+
+static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+fn temp_root(prefix: &str) -> std::path::PathBuf {
+    std::env::temp_dir().join(format!(
+        "{prefix}-{}-{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos(),
+        TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed)
+    ))
+}
 fn write(path: &Path, value: Value) {
     fs::create_dir_all(path.parent().unwrap()).unwrap();
     fs::write(path, serde_json::to_vec(&value).unwrap()).unwrap();
@@ -17,15 +33,12 @@ fn rows(path: &Path) -> Vec<Value> {
         .map(|s| serde_json::from_slice(s).unwrap())
         .collect()
 }
+fn hash(raw: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(raw))
+}
 #[test]
 fn separates_assets_restores_context_and_keeps_raw_evidence() {
-    let root = std::env::temp_dir().join(format!(
-        "al-asset-model-{}",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
+    let root = temp_root("al-asset-model");
     let seed = root.join("seed");
     fs::create_dir_all(&seed).unwrap();
     for (table, row) in [
@@ -206,13 +219,7 @@ fn separates_assets_restores_context_and_keeps_raw_evidence() {
 
 #[test]
 fn preserves_multiple_observed_sources_and_empty_agent_capture() {
-    let root = std::env::temp_dir().join(format!(
-        "al-multiple-source-{}",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
+    let root = temp_root("al-multiple-source");
     let seed = root.join("seed");
     fs::create_dir_all(&seed).unwrap();
     for table in ["maintainer_skills", "program_facts", "evaluation_cases"] {
@@ -271,31 +278,52 @@ fn preserves_multiple_observed_sources_and_empty_agent_capture() {
 
 #[test]
 fn exports_harmony_device_checks_and_raw_evidence() {
-    let root = std::env::temp_dir().join(format!(
-        "al-harmony-instance-{}",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
+    let root = temp_root("al-harmony-instance");
     let seed = root.join("seed");
     fs::create_dir_all(&seed).unwrap();
     for table in ["maintainer_skills", "program_facts", "evaluation_cases"] {
         fs::write(seed.join(format!("{table}.jsonl")), "").unwrap();
     }
     let evidence = root.join("evidence");
+    let hap_sha256 = "a".repeat(64);
+    let policy = json!({
+        "schema":"agentlab.harmony_performance_policy.v1",
+        "id":"cpu-memory-v1",
+        "requiresWorkload":true,
+        "requiredMetrics":[],
+        "observedOnlyMetrics":["fps"],
+        "authority":{"absolutePowerThermal":"unavailable-on-emulator"}
+    });
+    let policy_raw = serde_json::to_vec_pretty(&policy).unwrap();
+    let workload_raw = b"schema\tagentlab.harmony_profile_workload.v1\nworkload\tscroll-v1\nswipe\t1\t2\t3\t4\t5\n";
+    let policy_sha256 = hash(&policy_raw);
+    let workload_sha256 = hash(workload_raw);
+    fs::create_dir_all(&evidence).unwrap();
+    fs::write(evidence.join("performance-policy.json"), &policy_raw).unwrap();
+    fs::write(evidence.join("profile-workload.tsv"), workload_raw).unwrap();
     write(
         &evidence.join("result.json"),
         json!({
-            "schema":"agentlab.harmony_emulator_case_result.v2",
+            "schema":"agentlab.harmony_emulator_case_result.v3",
             "status":"passed",
             "taskId":"harmony-case",
-            "sourceIdentity":"artifact-sha256:hap",
-            "hapSha256":"hap",
+            "sourceIdentity":format!("artifact-sha256:{hap_sha256}"),
+            "hapSha256":hap_sha256,
             "scenarioId":"dismiss",
-            "scenarioSha256":"scenario",
+            "scenarioSha256":"c".repeat(64),
             "oracleStatus":"passed",
+            "assessmentStatus":"assessed",
+            "infrastructureAvailable":true,
+            "subjectTaskSucceeded":true,
+            "failureClass":"none",
             "profileStatus":"collected",
+            "profileSummaryStatus":"normalized",
+            "profileRunId":"harmony",
+            "environmentIdentity":"hwlinux:emulator-26.0.0.400:class-a",
+            "performancePolicyId":"cpu-memory-v1",
+            "performancePolicySha256":policy_sha256,
+            "profileWorkloadId":"scroll-v1",
+            "profileWorkloadSha256":workload_sha256,
             "powerThermalAuthority":"unavailable_on_emulator"
         }),
     );
@@ -305,6 +333,23 @@ fn exports_harmony_device_checks_and_raw_evidence() {
     )
     .unwrap();
     fs::write(evidence.join("smartperf.txt"), "fps=60\n").unwrap();
+    write(
+        &evidence.join("smartperf-summary.json"),
+        json!({
+            "schema":"agentlab.smartperf_summary.v2",
+            "taskId":"harmony-case",
+            "sourceIdentity":format!("artifact-sha256:{}", "a".repeat(64)),
+            "runId":"harmony",
+            "environmentIdentity":"hwlinux:emulator-26.0.0.400:class-a",
+            "sampleCount":3,
+            "profileValid":true,
+            "canonicalMetrics":{"fps":{"count":3,"p50":60.0,"unit":"frames-per-second"}},
+            "performancePolicy":{"id":"cpu-memory-v1","sha256":policy_sha256,"requiredMetrics":[],"observedOnlyMetrics":["fps"]},
+            "profileWorkload":{"id":"scroll-v1","sha256":workload_sha256},
+            "metricAvailability":{"fps":true},
+            "authority":{"absolutePowerThermal":"unavailable-on-emulator"}
+        }),
+    );
     let out = root.join("out");
     assert!(Command::new(env!("CARGO_BIN_EXE_agentlab-asset-model"))
         .args([
@@ -319,7 +364,7 @@ fn exports_harmony_device_checks_and_raw_evidence() {
         .success());
     let instance = out.join("instances/harmony");
     let checks = rows(&instance.join("checks.jsonl"));
-    assert_eq!(checks.len(), 5);
+    assert_eq!(checks.len(), 6);
     assert!(checks.iter().all(|row| row["passed"] == true));
     assert_eq!(
         checks
@@ -332,15 +377,54 @@ fn exports_harmony_device_checks_and_raw_evidence() {
     assert_eq!(assessments.len(), 1);
     assert_eq!(assessments[0]["functionalPassed"], true);
     assert_eq!(assessments[0]["oraclePassed"], true);
+    assert_eq!(assessments[0]["assessmentStatus"], "assessed");
+    assert_eq!(assessments[0]["infrastructureAvailable"], true);
+    assert_eq!(assessments[0]["subjectTaskSucceeded"], true);
+    assert_eq!(assessments[0]["failureClass"], "none");
     assert_eq!(assessments[0]["profileCollected"], true);
+    assert_eq!(assessments[0]["profileRunId"], "harmony");
+    assert_eq!(assessments[0]["performancePolicyId"], "cpu-memory-v1");
+    assert_eq!(assessments[0]["profileWorkloadId"], "scroll-v1");
+    assert_eq!(
+        assessments[0]["environmentIdentity"],
+        "hwlinux:emulator-26.0.0.400:class-a"
+    );
     assert_eq!(
         assessments[0]["powerThermalAuthority"],
         "unavailable_on_emulator"
     );
+    let performance = rows(&instance.join("performance_assessments.jsonl"));
+    assert_eq!(performance.len(), 1);
+    assert_eq!(
+        performance[0]["environmentIdentity"],
+        "hwlinux:emulator-26.0.0.400:class-a"
+    );
+    assert_eq!(performance[0]["profileValid"], true);
+    assert_eq!(performance[0]["performancePolicy"]["id"], "cpu-memory-v1");
+    assert_eq!(
+        performance[0]["authority"]["absolutePowerThermal"],
+        "unavailable-on-emulator"
+    );
     let files = rows(&instance.join("evidence_files.jsonl"));
-    assert_eq!(files.len(), 3);
+    assert_eq!(files.len(), 6);
     assert!(files
         .iter()
         .all(|row| row["archiveUri"] == "file:///evidence"));
+    let mut tampered: Value =
+        serde_json::from_slice(&fs::read(evidence.join("result.json")).unwrap()).unwrap();
+    tampered["sourceIdentity"] = json!(format!("artifact-sha256:{}", "b".repeat(64)));
+    write(&evidence.join("result.json"), tampered);
+    let rejected = Command::new(env!("CARGO_BIN_EXE_agentlab-asset-model"))
+        .args([
+            seed.as_os_str(),
+            root.join("tampered").as_os_str(),
+            std::ffi::OsStr::new("file:///evidence"),
+            std::ffi::OsStr::new(&format!("harmony={}", evidence.display())),
+        ])
+        .output()
+        .unwrap();
+    assert!(!rejected.status.success());
+    assert!(String::from_utf8_lossy(&rejected.stderr)
+        .contains("Harmony emulator sourceIdentity must bind the exact HAP"));
     fs::remove_dir_all(root).unwrap();
 }

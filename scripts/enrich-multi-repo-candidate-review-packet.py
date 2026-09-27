@@ -1,0 +1,546 @@
+#!/usr/bin/env python3
+"""Bind later exact evidence into a compact independent semantic-review packet."""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import re
+from typing import Any
+
+
+SCHEMA = "agentlab.multi_repo_candidate_review_packet.v6"
+SCHEMA_V7 = "agentlab.multi_repo_candidate_review_packet.v7"
+SCHEMA_V8 = "agentlab.multi_repo_candidate_review_packet.v8"
+SCHEMA_V9 = "agentlab.multi_repo_candidate_review_packet.v9"
+SCHEMA_V10 = "agentlab.multi_repo_candidate_review_packet.v10"
+SCHEMA_V11 = "agentlab.multi_repo_candidate_review_packet.v11"
+BASE_SCHEMA = "agentlab.multi_repo_candidate_review_packet.v5"
+BUILD_SCHEMA = "agentlab.multi_repo_source_build_qualification.v1"
+EXPRESSION_SCHEMA = "agentlab.multi_repo_expression_fact_qualification.v1"
+FLOW_SCHEMA = "agentlab.bounded_expression_flow_proposal.v1"
+PROGRAM_ANALYSIS_SCHEMA = "agentlab.bounded_expression_flow_program_analysis.v1"
+EXTERNAL_SINK_SCHEMA = "agentlab.external_sink_contract_qualification.v1"
+EXTERNAL_SINK_SCHEMA_V2 = "agentlab.external_sink_contract_qualification.v2"
+OBJECT_FLOW_SCHEMA = "agentlab.cordova_object_flow_qualification.v1"
+SELECTED_CONTROL_FLOW_SCHEMA = "agentlab.selected_control_flow_qualification.v1"
+DECISION_SCHEMA = "agentlab.multi_repo_candidate_semantic_review.v1"
+REVISION = re.compile(r"[0-9a-f]{40}")
+SHA256 = re.compile(r"[0-9a-f]{64}")
+
+
+class PacketEnrichmentError(ValueError):
+    pass
+
+
+def require(condition: Any, message: str) -> None:
+    if not condition:
+        raise PacketEnrichmentError(message)
+
+
+def load(path: Path, label: str) -> dict[str, Any]:
+    require(path.is_file() and not path.is_symlink(), f"{label} must be a regular file")
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise PacketEnrichmentError(f"cannot read {label}: {error}") from error
+    require(isinstance(value, dict), f"{label} must be an object")
+    return value
+
+
+def digest(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def relative_reference(path: Path, evidence_root: Path, label: str) -> str:
+    root = evidence_root.resolve()
+    require(root.is_dir(), "evidence root must be a directory")
+    resolved = path.resolve()
+    try:
+        relative = resolved.relative_to(root)
+    except ValueError as error:
+        raise PacketEnrichmentError(f"{label} is outside evidence root") from error
+    require(path.is_file() and not path.is_symlink(), f"{label} must be a regular file")
+    require(all(part not in ("", ".", "..") for part in relative.parts), f"{label} path is unsafe")
+    return relative.as_posix()
+
+
+def common_lineage(value: dict[str, Any], schema: str | set[str], base: dict[str, Any], base_sha256: str, label: str) -> None:
+    schemas = {schema} if isinstance(schema, str) else schema
+    require(value.get("schema") in schemas, f"unsupported {label} schema")
+    require(value.get("candidateId") == base.get("candidateId"), f"{label} candidate differs")
+    require(value.get("sourceSetSha256") == base.get("sourceSetSha256"), f"{label} source set differs")
+    require(value.get("reviewPacketSha256") == base_sha256, f"{label} base packet digest differs")
+    require(value.get("allowsCaseContract") is False, f"{label} allows a case contract")
+    require(value.get("automaticPromotion") is False, f"{label} can auto-promote")
+
+
+def enrich(
+    base_path: Path,
+    build_path: Path,
+    expression_path: Path,
+    flow_plan_path: Path,
+    flow_path: Path,
+    method_revision: str,
+    evidence_root: Path,
+    program_analysis_path: Path | None = None,
+    external_sink_plan_path: Path | None = None,
+    external_sink_qualification_path: Path | None = None,
+    object_flow_plan_path: Path | None = None,
+    object_flow_qualification_path: Path | None = None,
+    selected_control_flow_plan_path: Path | None = None,
+    selected_control_flow_qualification_path: Path | None = None,
+) -> dict[str, Any]:
+    base = load(base_path, "base review packet")
+    build = load(build_path, "build qualification")
+    expression = load(expression_path, "expression qualification")
+    flow_plan = load(flow_plan_path, "bounded flow plan")
+    flow = load(flow_path, "bounded flow proposal")
+    program_analysis = (
+        load(program_analysis_path, "bounded flow program analysis")
+        if program_analysis_path is not None
+        else None
+    )
+    require(
+        (external_sink_plan_path is None) == (external_sink_qualification_path is None),
+        "external sink plan and qualification must be supplied together",
+    )
+    external_sink = (
+        load(external_sink_qualification_path, "external sink qualification")
+        if external_sink_qualification_path is not None
+        else None
+    )
+    require(external_sink is None or program_analysis is not None, "external sink qualification requires program analysis")
+    require(
+        (object_flow_plan_path is None) == (object_flow_qualification_path is None),
+        "object-flow plan and qualification must be supplied together",
+    )
+    object_flow = (
+        load(object_flow_qualification_path, "Cordova object-flow qualification")
+        if object_flow_qualification_path is not None
+        else None
+    )
+    require(object_flow is None or external_sink is not None, "object-flow qualification requires external sink qualification")
+    require(
+        (selected_control_flow_plan_path is None) == (selected_control_flow_qualification_path is None),
+        "selected control-flow plan and qualification must be supplied together",
+    )
+    selected_control_flow = (
+        load(selected_control_flow_qualification_path, "selected control-flow qualification")
+        if selected_control_flow_qualification_path is not None
+        else None
+    )
+    require(selected_control_flow is None or object_flow is not None, "selected control-flow qualification requires object-flow qualification")
+    require(base.get("schema") == BASE_SCHEMA, "base packet is not v5")
+    require(base.get("status") == "independent-semantic-review-required", "base packet is not review-required")
+    require(base.get("allowsCaseContract") is not True and base.get("automaticPromotion") is False, "base packet can promote")
+    require(REVISION.fullmatch(method_revision) is not None, "packet method revision is invalid")
+    require(SHA256.fullmatch(base.get("candidateSha256", "")) is not None, "base candidate digest is invalid")
+    references = {
+        "base": relative_reference(base_path, evidence_root, "base review packet"),
+        "build": relative_reference(build_path, evidence_root, "build qualification"),
+        "expression": relative_reference(expression_path, evidence_root, "expression qualification"),
+        "flowPlan": relative_reference(flow_plan_path, evidence_root, "bounded flow plan"),
+        "flow": relative_reference(flow_path, evidence_root, "bounded flow proposal"),
+    }
+    if program_analysis_path is not None:
+        references["programAnalysis"] = relative_reference(
+            program_analysis_path,
+            evidence_root,
+            "bounded flow program analysis",
+        )
+    if external_sink_plan_path is not None and external_sink_qualification_path is not None:
+        references["externalSinkPlan"] = relative_reference(
+            external_sink_plan_path,
+            evidence_root,
+            "external sink contract plan",
+        )
+        references["externalSinkQualification"] = relative_reference(
+            external_sink_qualification_path,
+            evidence_root,
+            "external sink qualification",
+        )
+    if object_flow_plan_path is not None and object_flow_qualification_path is not None:
+        references["objectFlowPlan"] = relative_reference(
+            object_flow_plan_path, evidence_root, "Cordova object-flow plan"
+        )
+        references["objectFlowQualification"] = relative_reference(
+            object_flow_qualification_path, evidence_root, "Cordova object-flow qualification"
+        )
+    if selected_control_flow_plan_path is not None and selected_control_flow_qualification_path is not None:
+        references["selectedControlFlowPlan"] = relative_reference(
+            selected_control_flow_plan_path, evidence_root, "selected control-flow plan"
+        )
+        references["selectedControlFlowQualification"] = relative_reference(
+            selected_control_flow_qualification_path, evidence_root, "selected control-flow qualification"
+        )
+    base_sha256 = digest(base_path)
+    common_lineage(build, BUILD_SCHEMA, base, base_sha256, "build qualification")
+    common_lineage(expression, EXPRESSION_SCHEMA, base, base_sha256, "expression qualification")
+    common_lineage(flow, FLOW_SCHEMA, base, base_sha256, "bounded flow proposal")
+
+    roots = build.get("roots")
+    require(isinstance(roots, list) and roots, "build roots are absent")
+    qualified_root_count = sum(row.get("status") == "passed" for row in roots if isinstance(row, dict))
+    failed_root_count = sum(row.get("status") == "failed" for row in roots if isinstance(row, dict))
+    interpretation = build.get("interpretation") or {}
+    require(build.get("status") == "partial-build-qualified-review-required", "build status differs")
+    require(interpretation.get("qualifiedRootCount") == qualified_root_count == 1, "qualified build-root count differs")
+    require(interpretation.get("failedRootCount") == failed_root_count == 2, "failed build-root count differs")
+    require(interpretation.get("sourceProjectBoundaryStatus") == "partially-build-qualified", "build boundary status differs")
+
+    require(expression.get("status") == "expression-facts-qualified-dataflow-unresolved", "expression status differs")
+    require(expression.get("repositoryCount") == 2, "expression repository count differs")
+    require(expression.get("selectedExpressionFactCount", 0) > 0, "expression facts are absent")
+    require(expression.get("semanticAlignmentVerified") is False, "expression qualification claims semantics")
+
+    require(flow_plan.get("schema") == "agentlab.bounded_expression_flow_plan.v1", "unsupported bounded flow plan")
+    require(flow_plan.get("candidateId") == base.get("candidateId"), "flow plan candidate differs")
+    require(flow_plan.get("sourceSetSha256") == base.get("sourceSetSha256"), "flow plan source set differs")
+    require(flow.get("planSha256") == digest(flow_plan_path), "flow plan digest differs")
+    require(flow.get("status") == "bounded-syntactic-flow-proposal-review-required", "flow status differs")
+    require(flow.get("repositoryCount") == flow.get("flowCount") == 2, "bounded flow coverage differs")
+    require(flow.get("allBoundedPathsEstablished") is True, "bounded paths are incomplete")
+    require(flow.get("sourceBridges") and isinstance(flow["sourceBridges"], list), "bounded flow bridge is absent")
+    require(flow.get("semanticAlignmentVerified") is False, "flow proposal claims semantics")
+    require(flow.get("behaviorOracleVerified") is False, "flow proposal claims an Oracle")
+    edge_count = sum(row.get("edgeCount", 0) for row in flow.get("flows") or [] if isinstance(row, dict))
+    require(edge_count > 0, "bounded flow edges are absent")
+
+    if program_analysis is not None:
+        common_lineage(
+            program_analysis,
+            PROGRAM_ANALYSIS_SCHEMA,
+            base,
+            base_sha256,
+            "bounded flow program analysis",
+        )
+        require(
+            program_analysis.get("status")
+            == "bounded-program-flow-partially-resolved-review-required",
+            "program analysis status differs",
+        )
+        require(program_analysis.get("flowReplayExact") is True, "program analysis did not replay the flow")
+        require(program_analysis.get("flowPlanSha256") == digest(flow_plan_path), "program analysis plan differs")
+        require(program_analysis.get("flowProposalSha256") == digest(flow_path), "program analysis flow differs")
+        require(program_analysis.get("repositoryCount") == 2, "program analysis repository count differs")
+        require(program_analysis.get("flowCount") == 2, "program analysis flow count differs")
+        coverage = program_analysis.get("coverage")
+        require(isinstance(coverage, dict), "program analysis coverage is absent")
+        require(coverage.get("localCallTargetsUniquelyResolved") is True, "local call targets are unresolved")
+        require(coverage.get("localCallTargetCount", 0) > 0, "local call targets are absent")
+        require(coverage.get("exactDependencyReferencesVerified") is True, "exact dependencies are unresolved")
+        require(coverage.get("exactDependencyCount", 0) > 0, "exact dependencies are absent")
+        require(program_analysis.get("unresolvedCount", 0) > 0, "program analysis hides unresolved boundaries")
+        require(program_analysis.get("typeResolutionComplete") is False, "program analysis claims complete types")
+        require(program_analysis.get("aliasResolutionComplete") is False, "program analysis claims complete aliases")
+        require(program_analysis.get("externalCallContractsResolved") is False, "program analysis claims external contracts")
+        require(program_analysis.get("reachabilityAndDominanceResolved") is False, "program analysis claims control flow")
+
+    if external_sink is not None and external_sink_plan_path is not None and program_analysis_path is not None:
+        common_lineage(
+            external_sink,
+            {EXTERNAL_SINK_SCHEMA, EXTERNAL_SINK_SCHEMA_V2},
+            base,
+            base_sha256,
+            "external sink qualification",
+        )
+        external_v2 = external_sink.get("schema") == EXTERNAL_SINK_SCHEMA_V2
+        require(
+            external_sink.get("status")
+            == (
+                "external-sink-contracts-qualified-review-required"
+                if external_v2
+                else "external-sink-contracts-partially-qualified-review-required"
+            ),
+            "external sink qualification status differs",
+        )
+        require(external_sink.get("programAnalysisSha256") == digest(program_analysis_path), "external sink program analysis differs")
+        require(external_sink.get("planSha256") == digest(external_sink_plan_path), "external sink plan differs")
+        require(external_sink.get("externalSinkCount") == 2, "external sink count differs")
+        require(external_sink.get("resolvedExternalSinkCount") == (2 if external_v2 else 1), "resolved external sink count differs")
+        require(external_sink.get("remainingExternalSinkCount") == (0 if external_v2 else 1), "remaining external sink count differs")
+        require(external_sink.get("originalUnresolvedCount") == 6, "original unresolved count differs")
+        require(external_sink.get("remainingUnresolvedCount") == (4 if external_v2 else 5), "remaining unresolved count differs")
+        require(external_sink.get("externalCallContractsResolved") is external_v2, "external sink completeness differs")
+
+    if object_flow is not None and object_flow_plan_path is not None and external_sink_qualification_path is not None and program_analysis_path is not None:
+        common_lineage(object_flow, OBJECT_FLOW_SCHEMA, base, base_sha256, "Cordova object-flow qualification")
+        require(object_flow.get("status") == "object-flow-qualified-control-flow-review-required", "object-flow qualification status differs")
+        require(object_flow.get("programAnalysisSha256") == digest(program_analysis_path), "object-flow program analysis differs")
+        require(object_flow.get("externalSinkQualificationSha256") == digest(external_sink_qualification_path), "object-flow external qualification differs")
+        require(object_flow.get("planSha256") == digest(object_flow_plan_path), "object-flow plan differs")
+        require(object_flow.get("originalUnresolvedCount") == 4, "object-flow original unresolved count differs")
+        require(object_flow.get("remainingUnresolvedCount") == 1, "object-flow remaining unresolved count differs")
+        require(len(object_flow.get("resolvedUnresolvedIds") or []) == 3, "object-flow resolved boundary count differs")
+        require(object_flow.get("selectedFlowParameterTypeResolved") is True, "object-flow parameter type is unresolved")
+        require(object_flow.get("memberObjectIdentityResolved") is True, "object-flow member identity is unresolved")
+        require(object_flow.get("templateObjectIdentityResolved") is True, "object-flow template identity is unresolved")
+        require(object_flow.get("typeResolutionComplete") is True, "object-flow type resolution is incomplete")
+        require(object_flow.get("aliasResolutionComplete") is True, "object-flow alias resolution is incomplete")
+        require(object_flow.get("reachabilityAndDominanceResolved") is False, "object-flow qualification claims control flow")
+
+    if selected_control_flow is not None and selected_control_flow_plan_path is not None and object_flow_qualification_path is not None and program_analysis_path is not None:
+        common_lineage(selected_control_flow, SELECTED_CONTROL_FLOW_SCHEMA, base, base_sha256, "selected control-flow qualification")
+        require(selected_control_flow.get("status") == "selected-control-flow-qualified-semantic-review-required", "selected control-flow qualification status differs")
+        require(selected_control_flow.get("programAnalysisSha256") == digest(program_analysis_path), "selected control-flow program analysis differs")
+        require(selected_control_flow.get("objectFlowQualificationSha256") == digest(object_flow_qualification_path), "selected control-flow object qualification differs")
+        require(selected_control_flow.get("planSha256") == digest(selected_control_flow_plan_path), "selected control-flow plan differs")
+        require(selected_control_flow.get("originalUnresolvedCount") == 1, "selected control-flow original unresolved count differs")
+        require(selected_control_flow.get("remainingUnresolvedCount") == 0, "selected control-flow retains unresolved program boundaries")
+        require(selected_control_flow.get("repositoryCount") == selected_control_flow.get("flowCount") == 2, "selected control-flow coverage differs")
+        for key in (
+            "selectedControlFlowResolved",
+            "conditionalReachabilityEstablished",
+            "sinkDominanceEstablished",
+            "exceptionExitsEnumerated",
+            "callbackSchedulingResolved",
+            "reachabilityAndDominanceResolved",
+        ):
+            require(selected_control_flow.get(key) is True, f"selected control-flow {key} differs")
+        scope = selected_control_flow.get("qualificationScope") or {}
+        require(
+            scope.get("selectedSourcePathsOnly") is True
+            and scope.get("wholeApplicationReachability") is False
+            and scope.get("externalApiSuccess") is False
+            and scope.get("frameworkRuntimeCorrectness") is False,
+            "selected control-flow scope differs",
+        )
+
+    domain_evidence = base.get("domainFactEvidence") or []
+    require(isinstance(domain_evidence, list) and domain_evidence, "base domain evidence is absent")
+    packet = {
+        "schema": (
+            SCHEMA_V11
+            if selected_control_flow is not None
+            else SCHEMA_V10
+            if object_flow is not None
+            else SCHEMA_V9
+            if external_sink is not None and external_sink.get("schema") == EXTERNAL_SINK_SCHEMA_V2
+            else SCHEMA_V8
+            if external_sink is not None
+            else SCHEMA_V7
+            if program_analysis is not None
+            else SCHEMA
+        ),
+        "status": "independent-semantic-review-required",
+        "candidateId": base.get("candidateId"),
+        "candidateSha256": base.get("candidateSha256"),
+        "sourceSetSha256": base.get("sourceSetSha256"),
+        "packetMethodRevision": method_revision,
+        "basePacket": {
+            "schema": BASE_SCHEMA,
+            "sha256": base_sha256,
+            "relativePath": references["base"],
+            "packetMethodRevision": base.get("packetMethodRevision"),
+            "status": base.get("status"),
+            "domainIdentifierContract": base.get("domainIdentifierContract"),
+            "domainFactCount": len(domain_evidence),
+            "coveredRepositoryCount": len({row.get("repositoryId") for row in domain_evidence if isinstance(row, dict)}),
+        },
+        "selectionRoles": base.get("selectionRoles"),
+    }
+    packet["evidenceAttachments"] = {
+        "build-qualification": {
+            "schema": BUILD_SCHEMA,
+            "sha256": digest(build_path),
+            "relativePath": references["build"],
+            "status": build["status"],
+            "environmentIdentity": (build.get("environment") or {}).get("environmentIdentity"),
+            "qualifiedRootCount": qualified_root_count,
+            "failedRootCount": failed_root_count,
+            "sourceProjectBoundaryStatus": interpretation["sourceProjectBoundaryStatus"],
+        },
+        "expression-fact-qualification": {
+            "schema": EXPRESSION_SCHEMA,
+            "sha256": digest(expression_path),
+            "relativePath": references["expression"],
+            "status": expression["status"],
+            "analyzerDigest": expression.get("analyzerDigest"),
+            "grammarDigest": expression.get("grammarDigest"),
+            "repositoryCount": expression["repositoryCount"],
+            "selectedExpressionFactCount": expression["selectedExpressionFactCount"],
+        },
+        "bounded-expression-flow-proposal": {
+            "schema": FLOW_SCHEMA,
+            "sha256": digest(flow_path),
+            "relativePath": references["flow"],
+            "planSha256": flow["planSha256"],
+            "planRelativePath": references["flowPlan"],
+            "status": flow["status"],
+            "repositoryCount": flow["repositoryCount"],
+            "flowCount": flow["flowCount"],
+            "edgeCount": edge_count,
+            "sourceBridgeCount": len(flow["sourceBridges"]),
+            "allBoundedPathsEstablished": True,
+        },
+    }
+    if program_analysis is not None and program_analysis_path is not None:
+        coverage = program_analysis["coverage"]
+        packet["evidenceAttachments"]["bounded-expression-flow-program-analysis"] = {
+            "schema": PROGRAM_ANALYSIS_SCHEMA,
+            "sha256": digest(program_analysis_path),
+            "relativePath": references["programAnalysis"],
+            "status": program_analysis["status"],
+            "flowProposalSha256": program_analysis["flowProposalSha256"],
+            "flowReplayExact": True,
+            "repositoryCount": program_analysis["repositoryCount"],
+            "flowCount": program_analysis["flowCount"],
+            "localCallTargetCount": coverage["localCallTargetCount"],
+            "typedParameterMappingCount": coverage["typedParameterMappingCount"],
+            "untypedParameterMappingCount": coverage["untypedParameterMappingCount"],
+            "exactDependencyCount": coverage["exactDependencyCount"],
+            "unresolvedCount": program_analysis["unresolvedCount"],
+        }
+    if external_sink is not None and external_sink_qualification_path is not None:
+        packet["evidenceAttachments"]["external-sink-contract-qualification"] = {
+            "schema": external_sink["schema"],
+            "sha256": digest(external_sink_qualification_path),
+            "relativePath": references["externalSinkQualification"],
+            "planSha256": external_sink["planSha256"],
+            "planRelativePath": references["externalSinkPlan"],
+            "status": external_sink["status"],
+            "programAnalysisSha256": external_sink["programAnalysisSha256"],
+            "externalSinkCount": external_sink["externalSinkCount"],
+            "resolvedExternalSinkCount": external_sink["resolvedExternalSinkCount"],
+            "remainingExternalSinkCount": external_sink["remainingExternalSinkCount"],
+            "remainingUnresolvedCount": external_sink["remainingUnresolvedCount"],
+        }
+    if object_flow is not None and object_flow_qualification_path is not None:
+        packet["evidenceAttachments"]["cordova-object-flow-qualification"] = {
+            "schema": OBJECT_FLOW_SCHEMA,
+            "sha256": digest(object_flow_qualification_path),
+            "relativePath": references["objectFlowQualification"],
+            "planSha256": object_flow["planSha256"],
+            "planRelativePath": references["objectFlowPlan"],
+            "status": object_flow["status"],
+            "programAnalysisSha256": object_flow["programAnalysisSha256"],
+            "externalSinkQualificationSha256": object_flow["externalSinkQualificationSha256"],
+            "resolvedBoundaryCount": len(object_flow["resolvedUnresolvedIds"]),
+            "remainingUnresolvedCount": object_flow["remainingUnresolvedCount"],
+            "selectedFlowParameterTypeResolved": object_flow["selectedFlowParameterTypeResolved"],
+            "memberObjectIdentityResolved": object_flow["memberObjectIdentityResolved"],
+            "templateObjectIdentityResolved": object_flow["templateObjectIdentityResolved"],
+        }
+    if selected_control_flow is not None and selected_control_flow_qualification_path is not None:
+        packet["evidenceAttachments"]["selected-control-flow-qualification"] = {
+            "schema": SELECTED_CONTROL_FLOW_SCHEMA,
+            "sha256": digest(selected_control_flow_qualification_path),
+            "relativePath": references["selectedControlFlowQualification"],
+            "planSha256": selected_control_flow["planSha256"],
+            "planRelativePath": references["selectedControlFlowPlan"],
+            "status": selected_control_flow["status"],
+            "programAnalysisSha256": selected_control_flow["programAnalysisSha256"],
+            "objectFlowQualificationSha256": selected_control_flow["objectFlowQualificationSha256"],
+            "repositoryCount": selected_control_flow["repositoryCount"],
+            "flowCount": selected_control_flow["flowCount"],
+            "resolvedBoundaryCount": len(selected_control_flow["resolvedUnresolvedIds"]),
+            "remainingUnresolvedCount": selected_control_flow["remainingUnresolvedCount"],
+            "conditionalReachabilityEstablished": selected_control_flow["conditionalReachabilityEstablished"],
+            "sinkDominanceEstablished": selected_control_flow["sinkDominanceEstablished"],
+            "exceptionExitsEnumerated": selected_control_flow["exceptionExitsEnumerated"],
+            "callbackSchedulingResolved": selected_control_flow["callbackSchedulingResolved"],
+            "selectedSourcePathsOnly": selected_control_flow["qualificationScope"]["selectedSourcePathsOnly"],
+            "wholeApplicationReachability": selected_control_flow["qualificationScope"]["wholeApplicationReachability"],
+        }
+    packet["reviewQuestions"] = [
+        {"id": "shared-behavior", "question": "Do the exact source facts and bounded paths express one coherent cross-repository purchase-data behavior rather than merely sharing an identifier?"},
+        {"id": "observable-gap", "question": "Is there an issue-level defect or extension whose pre-change failure is observable in every required repository?"},
+        {"id": "prompt-completeness", "question": "Can the participant-facing prompt state every required behavior without revealing the repair?"},
+        {"id": "repair-oracle", "question": "Can independent FAIL_TO_PASS checks accept structurally distinct valid repairs?"},
+        {"id": "preservation-oracle", "question": "Can independent PASS_TO_PASS checks cover existing repository-specific behavior?"},
+        {"id": "environment", "question": "Do the passed Harmony build and the two explicit Cordova build-contract failures define a reproducible environment boundary for the proposed task?"},
+        {"id": "cross-repo-necessity", "question": "Does the proposed behavior require coordinated multi-repository reasoning rather than two unrelated single-repository tasks?"},
+    ]
+    packet["risks"] = [
+        {"id": "syntactic-flow-is-not-semantics", "statement": "Contiguous bounded expression paths do not establish compatible types, aliases, reachability, behavior or product intent."},
+        {"id": "issue-contract-absent", "statement": "No participant-visible issue, repair behavior or preservation behavior has been approved."},
+        {"id": "build-boundary-partially-qualified", "statement": "The Harmony root builds, but the Cordova package and Ionic example retain two exact upstream build-contract failures."},
+        {"id": "oracle-unqualified", "statement": "No baseline, reference, alternative or meaningful-wrong calibration has executed for this candidate."},
+    ]
+    if program_analysis is not None:
+        packet["risks"][0] = {
+            "id": "partial-program-flow-is-not-semantics",
+            "statement": "Unique local targets and exact token dependencies are verified, but unresolved types, object identity, external SDK contracts and control flow still prevent a semantic or behavioral claim.",
+        }
+    if external_sink is not None:
+        if external_sink.get("schema") == EXTERNAL_SINK_SCHEMA_V2:
+            packet["risks"][0] = {
+                "id": "external-contract-resolution-is-not-semantics",
+                "statement": "Both external sink signatures and request declarations are exact, but Cordova local parameter/object identity and global control flow remain unresolved.",
+            }
+        else:
+            packet["risks"][0] = {
+                "id": "partial-external-contract-resolution-is-not-semantics",
+                "statement": "The Cordova sink contract and endpoint type compatibility are exact, but the Harmony SDK contract, Cordova local parameter/object identity and global control flow remain unresolved.",
+            }
+    if object_flow is not None:
+        packet["risks"][0] = {
+            "id": "qualified-object-flow-is-not-global-control-flow",
+            "statement": "The selected value type and object identity path are exact, but global reachability, dominance, exception flow and callback scheduling remain unresolved.",
+        }
+    if selected_control_flow is not None:
+        packet["risks"][0] = {
+            "id": "selected-control-flow-is-not-semantic-or-runtime-proof",
+            "statement": "Conditional source-level reachability, selected-path dominance, async branches and terminal exits are exact for two pinned paths, but they do not prove whole-application reachability, framework correctness, external API success, product intent or a behavior Oracle.",
+        }
+    question_ids = [row["id"] for row in packet["reviewQuestions"]]
+    risk_ids = [row["id"] for row in packet["risks"]]
+    packet["reviewDecisionContract"] = {
+        "schema": DECISION_SCHEMA,
+        "allowedVerdicts": ["advance-to-case-contract", "defer-for-more-evidence", "reject-as-noncoherent"],
+        "requiredQuestionIds": question_ids,
+        "requiredRiskIds": risk_ids,
+        "requiredEvidenceAttachmentIds": sorted(packet["evidenceAttachments"]),
+        "reviewerMustBeIndependentOfPacketGenerator": True,
+    }
+    packet["semanticAlignmentVerified"] = False
+    packet["behaviorOracleVerified"] = False
+    packet["allowsCaseContract"] = False
+    packet["automaticPromotion"] = False
+    return packet
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--base-packet", required=True, type=Path)
+    parser.add_argument("--build-qualification", required=True, type=Path)
+    parser.add_argument("--expression-qualification", required=True, type=Path)
+    parser.add_argument("--flow-plan", required=True, type=Path)
+    parser.add_argument("--flow-proposal", required=True, type=Path)
+    parser.add_argument("--program-analysis", type=Path)
+    parser.add_argument("--external-sink-plan", type=Path)
+    parser.add_argument("--external-sink-qualification", type=Path)
+    parser.add_argument("--object-flow-plan", type=Path)
+    parser.add_argument("--object-flow-qualification", type=Path)
+    parser.add_argument("--selected-control-flow-plan", type=Path)
+    parser.add_argument("--selected-control-flow-qualification", type=Path)
+    parser.add_argument("--method-revision", required=True)
+    parser.add_argument("--evidence-root", required=True, type=Path)
+    parser.add_argument("--output", required=True, type=Path)
+    args = parser.parse_args()
+    result = enrich(
+        args.base_packet,
+        args.build_qualification,
+        args.expression_qualification,
+        args.flow_plan,
+        args.flow_proposal,
+        args.method_revision,
+        args.evidence_root,
+        args.program_analysis,
+        args.external_sink_plan,
+        args.external_sink_qualification,
+        args.object_flow_plan,
+        args.object_flow_qualification,
+        args.selected_control_flow_plan,
+        args.selected_control_flow_qualification,
+    )
+    require(not args.output.exists(), "refusing to overwrite enriched review packet")
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(json.dumps({"schema": result["schema"], "status": result["status"], "attachmentCount": len(result["evidenceAttachments"])}, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,106 @@
+{
+  "schema": "agentlab.harmony_source_build_runtime_qualification.v1",
+  "status": "baseline-build-runtime-qualified",
+  "automaticPromotion": false,
+  "source": {
+    "repositoryId": "guide-snippets",
+    "repository": "https://gitcode.com/HarmonyOS_Samples/guide-snippets.git",
+    "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+    "projectRoot": "ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo",
+    "buildModule": "entry",
+    "buildProfileSha256": "a522ec260215a9fa6b881cb1fbb15a6ba69859ce17842622ee57dff645d7274c"
+  },
+  "build": {
+    "status": "successful",
+    "host": "youdeMac-mini.local",
+    "platform": "darwin-arm64",
+    "devEcoStudioVersion": "6.0.2",
+    "sdkVersion": "6.0.2.130",
+    "sdkApiVersion": "22",
+    "ohpmVersion": "6.0.1",
+    "hvigorVersion": "6.22.3",
+    "command": "hvigorw.js clean --mode module -p product=default assembleHap --analyze=normal --parallel --incremental --daemon",
+    "cleanBuilds": 2,
+    "rawArchiveReproducible": false,
+    "memberContentReproducible": true,
+    "archiveDifference": "The two unsigned HAP ZIP timestamps differ; all 13 uncompressed members are byte-identical.",
+    "attempts": [
+      {
+        "id": "build-1-runtime-subject",
+        "hapSha256": "af20e2c0aa516b7853a0f99c03f0b6b0aa5fe9b73b89144a3f082f490a67a97a",
+        "hapBytes": 176791,
+        "canonicalMemberSha256": "654f10574b9df67e5e0b83ca22f6400df7344c07778a6a3fdb32362b69ba0df7",
+        "memberCount": 13,
+        "zipTimestamp": "2026-09-24T21:51:24+03:00",
+        "buildLogSha256": null
+      },
+      {
+        "id": "build-2-clean-replay",
+        "hapSha256": "e61f889519f5345d1af6e8bde402f5312cebe77ca52cae2e93d21ed7a8baca91",
+        "hapBytes": 176791,
+        "canonicalMemberSha256": "654f10574b9df67e5e0b83ca22f6400df7344c07778a6a3fdb32362b69ba0df7",
+        "memberCount": 13,
+        "zipTimestamp": "2026-09-24T21:55:50+03:00",
+        "buildLogSha256": "86bca4936e6c467f9824b453926ca8f7945dac005e0a13a54d7b4f0a4a59d345"
+      }
+    ]
+  },
+  "transfer": {
+    "transport": "LAN HTTP",
+    "sourceAddress": "192.168.0.129:8765",
+    "destination": "/home/huawei/agentlab-source-builds/guide-snippets-71bbb391/entry-default-unsigned.hap",
+    "verifiedSha256": "af20e2c0aa516b7853a0f99c03f0b6b0aa5fe9b73b89144a3f082f490a67a97a",
+    "traceId": "3ec5b943-55bc-4169-b2e2-f07c269b49fc"
+  },
+  "linuxRuntime": {
+    "executionAuthority": {
+      "routeDecision": "peer_direct",
+      "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+      "host": "huawei-ThinkCentre-M920t",
+      "operationId": "exec-00000000000001bc",
+      "traceIds": [
+        "f77cb0c4-c8dc-4960-bfbc-6e081f20cb4c",
+        "d03bdb87-9a52-48a5-b266-1b56beadb3b3",
+        "7292b1ef-b6ba-4e87-98ea-8af64bad0d70"
+      ]
+    },
+    "environment": {
+      "emulator": "commandline-tools-linux-x64-26.0.0.821",
+      "systemImage": "HarmonyOS-7.0.0-phone_all_x86",
+      "instance": "codex_phone_7",
+      "target": "127.0.0.1:10100",
+      "compileSdkVersionObserved": "6.0.2.130",
+      "cpuAbiObserved": "x86_64"
+    },
+    "result": {
+      "schema": "agentlab.harmony_emulator_case_result.v1",
+      "status": "passed",
+      "hapSha256": "af20e2c0aa516b7853a0f99c03f0b6b0aa5fe9b73b89144a3f082f490a67a97a",
+      "resultSha256": "a0679c82a1a493aa651b5cb2b3f3896f1561807fdb790c47a6b3c29e062f0f52",
+      "screenshotSha256": "423ddede47dc224b2c67e116624eb2afe98311b649d08e4d75ea78f19da5e4a1",
+      "bundleDumpSha256": "f7ee8948506899606690c295a60f60224281c8ce7de3e528fd9374b2bb9a28df",
+      "installLogSha256": "d67871ff692311422e33c77be3b4054f83f3aa10e06e0ce5f4b5a3387a527674",
+      "launchLogSha256": "4765cf6e38f61be3ce9fa13fdcf53077b79f3da39c947a2123d1facd6c0e3962",
+      "processLogSha256": "383982f8b1305138fa0c50397c472e8c387f32c5d72b5c9afb615898be742cb6",
+      "installSucceeded": true,
+      "launchSucceeded": true,
+      "processAlive": true,
+      "profileStatus": "collected",
+      "powerThermalAuthority": "unavailable_on_emulator"
+    },
+    "evidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-baseline-af20e2c0"
+  },
+  "qualificationScope": {
+    "baselineBuild": true,
+    "linuxInstallLaunchProcess": true,
+    "businessUiOracle": false,
+    "referenceRepair": false,
+    "performanceComparison": false
+  },
+  "remainingGates": [
+    "Define and independently review a bounded business UI Oracle for the selected UserAgent_four route.",
+    "Apply only a reviewed reference repair, then prove repair and preservation checks against the frozen baseline.",
+    "Run repeated baseline/reference workloads before interpreting performance.",
+    "Acquire API 23/24 and DevEco 6.1-compatible build tooling for the code-workshop project."
+  ]
+}

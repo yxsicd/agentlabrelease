@@ -1,0 +1,66 @@
+{
+  "candidateCount": 1,
+  "candidates": [
+    {
+      "automaticPromotion": false,
+      "caseId": "harmony-assessed-ohostest-device-discrimination",
+      "caseSelection": {
+        "decision": "high-discrimination-candidate",
+        "discriminationScore": 1.0,
+        "eligible": true
+      },
+      "dimensionId": "assessed-agent-stage-failure",
+      "failingAttemptCount": 1,
+      "failureMode": "oracle-failure",
+      "id": "assessment-feedback-a6a1b3d8a4ce4835db0c",
+      "maturityState": "candidate",
+      "mechanism": "oracle-failure at frozen stage harmony-device",
+      "observations": [
+        {
+          "attemptId": "weak-ohostest-1",
+          "decisionPackageSha256": "4d7569f97de1cf620258eee9ccf04a0830162996b2206b5de4fac119e1d32b4e",
+          "participantId": "weak"
+        }
+      ],
+      "participantProfiles": [
+        {
+          "failingAttemptCount": 0,
+          "failureRate": 0.0,
+          "participantId": "strong",
+          "validAttemptCount": 1
+        },
+        {
+          "failingAttemptCount": 1,
+          "failureRate": 1.0,
+          "participantId": "weak",
+          "validAttemptCount": 1
+        }
+      ],
+      "primaryDimension": "evaluation-feedback",
+      "stageId": "harmony-device",
+      "status": "candidate",
+      "validAttemptCount": 2,
+      "verificationContract": {
+        "caseReady": false,
+        "required": [
+          "maintainer-adjudication",
+          "new-source-and-analysis-cut",
+          "independent-oracle-calibration"
+        ]
+      }
+    }
+  ],
+  "caseId": "harmony-assessed-ohostest-device-discrimination",
+  "caseSha256": "d2d074e77816e037c8d6f0c4155f3ac37415be93d1da40efd912f4f91999576b",
+  "discriminationInputSha256": "eac3a6dd5d4adcfcf99c994c122fb611ca9d5476dfec67153a92b992eabb7016",
+  "discriminationReportSha256": "7a493e475568fee3b72c07f738a237e39865503aa95c442d8789804efb968b77",
+  "methodRevision": "4f24f9a7eb1de98cbb0b695f02cf01da03ae26fb",
+  "policy": {
+    "automaticPromotion": false,
+    "infrastructureFailuresExcluded": true,
+    "nextAction": "maintainer-adjudicate-for-next-analysis-cut"
+  },
+  "schema": "agentlab.assessment_feedback_candidates.v1",
+  "sourceSetSha256": "7f96da1f672e7e9286e759cc6c95f29f4b9cc1b50987a53e0d1d465d0c04a8d8",
+  "validAttemptCount": 2
+}

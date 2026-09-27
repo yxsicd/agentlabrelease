@@ -1,0 +1,107 @@
+{
+  "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "flows": [
+    {
+      "flowId": "harmony-consumable-purchase-data-to-finish",
+      "repositoryId": "harmony-iap-client",
+      "sinkNode": "ConsumablesPage::finishPurchase::sink:iap.finishPurchase[1]",
+      "sourceNode": "ConsumablesPage::buy::result.purchaseData",
+      "steps": [
+        {
+          "argumentIndex": 0,
+          "callFactId": "ast-2f348f73ecb3ba11e227f1c8",
+          "callScope": "ConsumablesPage::buy",
+          "callableFactId": "ast-3ca52252c9decdb5bdfa3fd4",
+          "kind": "call-argument-to-parameter",
+          "parameterIndex": 0
+        },
+        {
+          "dependsOn": "purchaseData",
+          "factId": "ast-93d43d7e7b6e33061757cb2e",
+          "kind": "binding-dependency"
+        },
+        {
+          "dependsOn": "jwsPurchaseOrder",
+          "factId": "ast-ad5871690a57646d2f0b356e",
+          "kind": "binding-dependency"
+        },
+        {
+          "dependsOn": "purchaseOrderStr",
+          "factId": "ast-38961a5bb5e745d3c07f6066",
+          "kind": "binding-dependency"
+        },
+        {
+          "argumentIndex": 0,
+          "callFactId": "ast-5cfca55447fff84520a83a40",
+          "callScope": "ConsumablesPage::dealPurchaseData",
+          "callableFactId": "ast-68a8a24ab3e68092d86836c2",
+          "kind": "call-argument-to-parameter",
+          "parameterIndex": 0
+        },
+        {
+          "dependsOn": "purchaseOrder",
+          "factId": "ast-a3f005d63699fbfa8ec33a15",
+          "kind": "binding-dependency"
+        },
+        {
+          "argumentIndex": 1,
+          "callFactId": "ast-a284ab0b32730a73790fa6bc",
+          "callScope": "ConsumablesPage::finishPurchase",
+          "dependsOn": "finishPurchaseParam",
+          "kind": "call-argument-to-sink",
+          "targetExpression": "iap.finishPurchase"
+        }
+      ]
+    },
+    {
+      "flowId": "cordova-owned-purchase-data-to-consume",
+      "repositoryId": "hms-cordova-iap",
+      "sinkNode": "HomePage::consumeOwnedPurchase::sink:this.iap.consumeOwnedPurchase[0]",
+      "sourceNode": "HomePage::obtainOwnedPurchasesFromType::message.inAppPurchaseDataList[ind]",
+      "steps": [
+        {
+          "argumentIndex": 1,
+          "callFactId": "ast-f364faa14fe09a67a1d551ab",
+          "callScope": "HomePage::obtainOwnedPurchasesFromType",
+          "callableFactId": "ast-377c564300cbf4a32df9a8a2",
+          "kind": "call-argument-to-parameter",
+          "parameterIndex": 1
+        },
+        {
+          "factId": "ast-6f8ae557023209f612519f6b",
+          "kind": "assignment-dependency"
+        },
+        {
+          "callableFactId": "ast-67a6cdf22ef18b8f786be961",
+          "argumentExpressions": [
+            "product",
+            "product.purchaseData",
+            "'consumable'"
+          ],
+          "argumentIndex": 1,
+          "contentSha256": "3f12439f5538b9ded3ffcfb7f0ee34e9b0e6cd37e508f031bbab6fb4140040c8",
+          "exactExpression": "consumeOwnedPurchase(product, product.purchaseData, 'consumable')",
+          "fromExpression": "product.purchaseData",
+          "fromScope": "HomePage::createPurchasedProductOnList",
+          "gitBlobOid": "e154947d259c1114717572d66f2d56289b36b3f9",
+          "kind": "template-event-bridge",
+          "occurrences": 2,
+          "parameterIndex": 1,
+          "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.html"
+        },
+        {
+          "argumentIndex": 0,
+          "callFactId": "ast-57808ee67f2e567c08f227d5",
+          "callScope": "HomePage::consumeOwnedPurchase",
+          "dependsOn": "purchaseData",
+          "kind": "call-argument-to-sink",
+          "objectEntryFactId": "ast-97f3905c745594f40fbeaadc",
+          "objectKey": "inAppPurchaseData",
+          "targetExpression": "this.iap.consumeOwnedPurchase"
+        }
+      ]
+    }
+  ],
+  "schema": "agentlab.bounded_expression_flow_plan.v1",
+  "sourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b"
+}

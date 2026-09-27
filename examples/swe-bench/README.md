@@ -1,5 +1,10 @@
 # Curated official SWE seeds
 
+These seeds exercise the imported SWE-bench methodology; they are not the
+design ceiling for generated AgentLab cases. The rationale, advantages, gaps
+and adopted generalized repair/preservation qualification matrix are recorded
+in [the SWE-bench strategy comparison](../../docs/swe-bench-strategy-comparison.md).
+
 Run `swe-campaign.yml` for one seed or all four. The catalog binds full official
 SWE-bench Lite records by canonical SHA and base commit. `seeds.py` retains the
 complete original task, reference patch, test patch and FAIL_TO_PASS/PASS_TO_PASS.

@@ -1,0 +1,46 @@
+diff --git a/ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/pages/Index.ets b/ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/pages/Index.ets
+index 8ad18527..92d42561 100644
+--- a/ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/pages/Index.ets
++++ b/ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/pages/Index.ets
+@@ -13,7 +13,7 @@
+  * limitations under the License.
+  */
+ 
+-import { router } from '@kit.ArkUI'
++import './UserAgent_four';
+ 
+ @Entry
+ @Component
+@@ -54,9 +54,9 @@ struct Index {
+         })
+       Button('UserAgent_four')
+         .onClick(() => {
+-          this.getUIContext().getRouter().pushUrl({ url: 'pages/UserAgent_four' });
++          this.getUIContext().getRouter().pushNamedRoute({ name: 'UserAgentFour' });
+         })
+     }.height('100%')
+     .width('100%')
+   }
+-}
+\ No newline at end of file
++}
+diff --git a/ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/pages/UserAgent_four.ets b/ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/pages/UserAgent_four.ets
+index a0bda3dc..8cd1b190 100644
+--- a/ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/pages/UserAgent_four.ets
++++ b/ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/pages/UserAgent_four.ets
+@@ -17,7 +17,7 @@
+ import { webview } from '@kit.ArkWeb';	
+ import { BusinessError } from '@kit.BasicServicesKit';	
+ 
+-@Entry	
++@Entry({ routeName: 'UserAgentFour' })
+ @Component	
+ struct WebComponent {	
+   controller: webview.WebviewController = new webview.WebviewController();	
+@@ -46,4 +46,4 @@ struct WebComponent {
+     }	
+   }	
+ }
+-// [End set_app_custom_user_agent]
+\ No newline at end of file
++// [End set_app_custom_user_agent]

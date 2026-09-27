@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/participant-experiment-dispatch.schema.json",
+  "title": "AgentLab attested portable participant experiment dispatch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "workflow", "caseId", "sourceSetSha256", "evaluationCaseSha256", "caseReviewRunId", "methodRevision", "providerRoute", "trialsPerParticipant", "participantProfileCount", "participantProfiles", "executionProtocol", "allowsAssessmentExecution", "automaticPromotion"],
+  "properties": {
+    "schema": {"const": "agentlab.participant_experiment_dispatch.v1"},
+    "status": {"const": "attested-plan-gate-frozen-before-assessment"},
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "path", "runId", "runAttempt"],
+      "properties": {
+        "repository": {"$ref": "#/$defs/token"},
+        "path": {"const": ".github/workflows/multi-repo-assessed-campaign.yml"},
+        "runId": {"type": "integer", "minimum": 1},
+        "runAttempt": {"type": "integer", "minimum": 1}
+      }
+    },
+    "caseId": {"$ref": "#/$defs/token"},
+    "sourceSetSha256": {"$ref": "#/$defs/sha256"},
+    "evaluationCaseSha256": {"$ref": "#/$defs/sha256"},
+    "caseReviewRunId": {"type": "integer", "minimum": 1},
+    "methodRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "providerRoute": {"$ref": "#/$defs/token"},
+    "trialsPerParticipant": {"enum": [3, 5, 10, 20]},
+    "participantProfileCount": {"type": "integer", "minimum": 3, "maximum": 8},
+    "participantProfiles": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ordinal", "participantId", "model"],
+        "properties": {
+          "ordinal": {"type": "integer", "minimum": 0, "maximum": 7},
+          "participantId": {"$ref": "#/$defs/token"},
+          "model": {"$ref": "#/$defs/token"}
+        }
+      }
+    },
+    "executionProtocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "agentImplementation", "agentPackage", "agentPackageVersion", "participantAdapter", "participantDriver", "participantPackageLock", "runtimeDockerfile", "runtimeBuildScript", "runtimeImageArchive", "participantManifestSha256", "promptAuthority", "sessionPolicy", "thinkingMode", "reasoningEffort", "extensionPolicy", "skillsPolicy", "contextFilePolicy", "turnTimeoutSeconds", "samplingPolicy", "portableRuntimeQualified", "crossCampaignProviderReproducibilityQualified"],
+      "properties": {
+        "schema": {"const": "agentlab.participant_execution_protocol_portable.v1"},
+        "agentImplementation": {"const": "pi"},
+        "agentPackage": {"const": "@mariozechner/pi-coding-agent"},
+        "agentPackageVersion": {"$ref": "#/$defs/token"},
+        "participantAdapter": {"$ref": "#/$defs/fileBinding"},
+        "participantDriver": {"$ref": "#/$defs/fileBinding"},
+        "participantPackageLock": {"$ref": "#/$defs/fileBinding"},
+        "runtimeDockerfile": {"$ref": "#/$defs/fileBinding"},
+        "runtimeBuildScript": {"$ref": "#/$defs/fileBinding"},
+        "runtimeImageArchive": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["filename", "byteLength", "sha256", "imageId"],
+          "properties": {
+            "filename": {"$ref": "#/$defs/token"},
+            "byteLength": {"type": "integer", "minimum": 1},
+            "sha256": {"$ref": "#/$defs/sha256"},
+            "imageId": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+          }
+        },
+        "participantManifestSha256": {"$ref": "#/$defs/sha256"},
+        "promptAuthority": {"const": "digest-bound-adapter-driver-and-blind-case-manifest"},
+        "sessionPolicy": {"const": "fresh-per-attempt-persistent-across-case-stages"},
+        "thinkingMode": {"const": "off"},
+        "reasoningEffort": {"type": "null"},
+        "extensionPolicy": {"const": "disabled"},
+        "skillsPolicy": {"const": "disabled"},
+        "contextFilePolicy": {"const": "disabled"},
+        "turnTimeoutSeconds": {"const": 420},
+        "samplingPolicy": {"const": "provider-default-stochastic-repeated-trials"},
+        "portableRuntimeQualified": {"const": true},
+        "crossCampaignProviderReproducibilityQualified": {"const": false}
+      }
+    },
+    "allowsAssessmentExecution": {"const": true},
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "token": {"type": "string", "pattern": "^[A-Za-z0-9_.:@/+\\-]{1,200}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "fileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"$ref": "#/$defs/token"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

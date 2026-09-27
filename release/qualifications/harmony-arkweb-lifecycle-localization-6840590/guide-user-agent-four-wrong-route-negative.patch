@@ -1,0 +1,17 @@
+diff --git a/ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/pages/Index.ets b/ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/pages/Index.ets
+index 8ad18527..4cef4d83 100644
+--- a/ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/pages/Index.ets
++++ b/ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/pages/Index.ets
+@@ -54,9 +54,9 @@ struct Index {
+         })
+       Button('UserAgent_four')
+         .onClick(() => {
+-          this.getUIContext().getRouter().pushUrl({ url: 'pages/UserAgent_four' });
++          this.getUIContext().getRouter().pushUrl({ url: 'pages/UserAgent_three' });
+         })
+     }.height('100%')
+     .width('100%')
+   }
+-}
+\ No newline at end of file
++}

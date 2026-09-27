@@ -1,0 +1,67 @@
+{
+  "schema": "agentlab.case_discrimination_input.v1",
+  "sourceRevision": "1111111111111111111111111111111111111111",
+  "methodRevision": "2222222222222222222222222222222222222222",
+  "cases": [
+    {
+      "id": "case-strong-separation",
+      "calibration": {
+        "infrastructureValid": true,
+        "baselineExpectedPass": false,
+        "baselineObservedPass": false,
+        "referenceExpectedPass": true,
+        "referenceObservedPass": true,
+        "negativeVariants": [
+          {"id": "wrong-boundary", "expectedPass": false, "observedPass": false, "infrastructureValid": true}
+        ]
+      },
+      "attempts": [
+        {"attemptId": "strong-1", "participantId": "agent-strong", "infrastructureValid": true, "taskPassed": true},
+        {"attemptId": "strong-2", "participantId": "agent-strong", "infrastructureValid": true, "taskPassed": true},
+        {"attemptId": "strong-3", "participantId": "agent-strong", "infrastructureValid": true, "taskPassed": true},
+        {"attemptId": "base-1", "participantId": "agent-baseline", "infrastructureValid": true, "taskPassed": false},
+        {"attemptId": "base-2", "participantId": "agent-baseline", "infrastructureValid": true, "taskPassed": false},
+        {"attemptId": "base-3", "participantId": "agent-baseline", "infrastructureValid": true, "taskPassed": false}
+      ]
+    },
+    {
+      "id": "case-everyone-passes",
+      "calibration": {
+        "infrastructureValid": true,
+        "baselineExpectedPass": false,
+        "baselineObservedPass": false,
+        "referenceExpectedPass": true,
+        "referenceObservedPass": true,
+        "negativeVariants": [
+          {"id": "wrong-outcome", "expectedPass": false, "observedPass": false, "infrastructureValid": true}
+        ]
+      },
+      "attempts": [
+        {"attemptId": "all-a1", "participantId": "agent-a", "infrastructureValid": true, "taskPassed": true},
+        {"attemptId": "all-a2", "participantId": "agent-a", "infrastructureValid": true, "taskPassed": true},
+        {"attemptId": "all-a3", "participantId": "agent-a", "infrastructureValid": true, "taskPassed": true},
+        {"attemptId": "all-b1", "participantId": "agent-b", "infrastructureValid": true, "taskPassed": true},
+        {"attemptId": "all-b2", "participantId": "agent-b", "infrastructureValid": true, "taskPassed": true},
+        {"attemptId": "all-b3", "participantId": "agent-b", "infrastructureValid": true, "taskPassed": true}
+      ]
+    },
+    {
+      "id": "case-infrastructure-excluded",
+      "calibration": {
+        "infrastructureValid": true,
+        "baselineExpectedPass": false,
+        "baselineObservedPass": false,
+        "referenceExpectedPass": true,
+        "referenceObservedPass": true,
+        "negativeVariants": [
+          {"id": "lost-history", "expectedPass": false, "observedPass": false, "infrastructureValid": true}
+        ]
+      },
+      "attempts": [
+        {"attemptId": "infra-1", "participantId": "agent-a", "infrastructureValid": false, "taskPassed": false},
+        {"attemptId": "valid-1", "participantId": "agent-a", "infrastructureValid": true, "taskPassed": true},
+        {"attemptId": "valid-2", "participantId": "agent-b", "infrastructureValid": true, "taskPassed": false}
+      ]
+    }
+  ]
+}

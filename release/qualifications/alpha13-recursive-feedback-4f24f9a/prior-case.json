@@ -1,0 +1,51 @@
+{
+  "allowedEdits": [
+    {
+      "path": "app/Index.ets",
+      "repositoryId": "app"
+    }
+  ],
+  "automaticPromotion": false,
+  "calibration": {
+    "qualified": true
+  },
+  "id": "harmony-assessed-ohostest-device-discrimination",
+  "oracle": {
+    "authority": "independent-executable-oracle",
+    "path": "/home/huawei/.agentlab/evidence/harmony-assessed-ohostest-aa799f9/static-oracle.mjs",
+    "receiptSchema": "agentlab.multi_repo_oracle_receipt.v1",
+    "sha256": "26a8767e128684e6c6c40e1204c2f382933d37f3823f86dc25a663ab46d1e5c5"
+  },
+  "schema": "agentlab.multi_repo_evaluation_case.v1",
+  "sourceSetSha256": "7f96da1f672e7e9286e759cc6c95f29f4b9cc1b50987a53e0d1d465d0c04a8d8",
+  "sources": [
+    {
+      "id": "app",
+      "repository": "https://example.invalid/agentlab-harmony-app-ohostest.git",
+      "revision": "c9940ac264bc47dec903c2c815cb62b11283ee28"
+    },
+    {
+      "id": "contracts",
+      "repository": "https://example.invalid/agentlab-payment-contracts.git",
+      "revision": "0a7b3b179a97dbaf82e7025a531573c7090b015c"
+    }
+  ],
+  "stages": [
+    {
+      "checkIds": [
+        "policy-import-bound"
+      ],
+      "demand": "Understand and preserve the cross-repository payment authority binding.",
+      "id": "turn-1"
+    },
+    {
+      "checkIds": [
+        "authority-branches-bound"
+      ],
+      "demand": "Keep the composed application ready for the device-visible workflow and its Harmony ohosTest gate.",
+      "id": "turn-2"
+    }
+  ],
+  "status": "frozen-calibrated",
+  "title": "Harmony ohosTest and device Oracle catch failures beyond the static Oracle"
+}

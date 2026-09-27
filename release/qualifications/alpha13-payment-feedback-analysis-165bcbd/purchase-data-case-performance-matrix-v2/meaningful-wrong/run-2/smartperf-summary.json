@@ -1,0 +1,537 @@
+{
+  "authority": {
+    "absolutePowerThermal": "unavailable-on-emulator",
+    "functional": "none",
+    "nonGatingPowerThermalMetrics": [],
+    "relativePerformance": "smartperf-emulator-proxy"
+  },
+  "canonicalMetrics": {
+    "appCpuUsagePercent": {
+      "count": 15,
+      "max": 25.0,
+      "mean": 2.970833333333333,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 21.184999999999995,
+      "unit": "reported-percent"
+    },
+    "appPssKiB": {
+      "count": 12,
+      "max": 16500.0,
+      "mean": 16500.0,
+      "min": 16500.0,
+      "p50": 16500.0,
+      "p95": 16500.0,
+      "unit": "reported-kibibytes"
+    },
+    "fps": {
+      "count": 48,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "frames-per-second"
+    },
+    "gpuLoadPercent": {
+      "count": 48,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "reported-percent"
+    }
+  },
+  "environmentIdentity": "hwlinux:emulator-26.0.0.821:harmonyos-7.0.0-phone-x86:codex-phone-7",
+  "input": {
+    "byteLength": 73815,
+    "sha256": "abd25212734c7eecae240bd531a2f5a18a5ed63fe0ebd74593e0c31a4b4adb94"
+  },
+  "metricAvailability": {
+    "appCpuUsagePercent": true,
+    "appPssKiB": true,
+    "fps": true,
+    "frameIntervalMs": false,
+    "gpuLoadPercent": true
+  },
+  "minimumSampleCount": 48,
+  "performancePolicy": {
+    "id": "purchase-data-case-bound-cpu-pss-v1",
+    "observedOnlyMetrics": [
+      "fps",
+      "frameIntervalMs",
+      "gpuLoadPercent"
+    ],
+    "requiredMetrics": [
+      {
+        "direction": "lower",
+        "maximumAbsoluteIncrease": 2.0,
+        "maximumRelativeIncrease": 0.2,
+        "metric": "appCpuUsagePercent",
+        "statistic": "mean"
+      },
+      {
+        "direction": "lower",
+        "maximumRelativeIncrease": 0.15,
+        "metric": "appPssKiB",
+        "statistic": "mean"
+      }
+    ],
+    "sha256": "ae914ba0c30dd8aec098531497021d75a3fa1311e7c371290d43a0a4eccffb3e"
+  },
+  "profileValid": true,
+  "profileWorkload": {
+    "id": "purchase-data-case-bound-ohostest-repeat-v1",
+    "sha256": "7812fa159f8c7ec8ea69f48987cca39b0f373280eb7af847c16ea4dfaf7d563f"
+  },
+  "rawNumericMetrics": {
+    "ChildProcCpuLoad": {
+      "count": 11,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "ChildProcCpuUsage": {
+      "count": 11,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "ChildProcId": {
+      "count": 11,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "ChildProcSCpuUsage": {
+      "count": 11,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "ChildProcUCpuUsage": {
+      "count": 11,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "ProcCpuLoad": {
+      "count": 15,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "ProcCpuUsage": {
+      "count": 15,
+      "max": 25.0,
+      "mean": 2.970833333333333,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 21.184999999999995,
+      "unit": "smartperf-reported"
+    },
+    "ProcId": {
+      "count": 15,
+      "max": 3967.0,
+      "mean": 855.2666666666667,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 3257.8999999999987,
+      "unit": "smartperf-reported"
+    },
+    "ProcSCpuUsage": {
+      "count": 15,
+      "max": 2.95,
+      "mean": 0.22166666666666668,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 1.1474999999999973,
+      "unit": "smartperf-reported"
+    },
+    "ProcUCpuUsage": {
+      "count": 15,
+      "max": 24.625,
+      "mean": 2.749166666666667,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 19.007499999999993,
+      "unit": "smartperf-reported"
+    },
+    "anonPage": {
+      "count": 12,
+      "max": 547.0,
+      "mean": 547.0,
+      "min": 547.0,
+      "p50": 547.0,
+      "p95": 547.0,
+      "unit": "smartperf-reported"
+    },
+    "arktsHeapPss": {
+      "count": 12,
+      "max": 1379.0,
+      "mean": 1379.0,
+      "min": 1379.0,
+      "p50": 1379.0,
+      "p95": 1379.0,
+      "unit": "smartperf-reported"
+    },
+    "cpu0Frequency": {
+      "count": 48,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "cpu1Frequency": {
+      "count": 48,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "cpu2Frequency": {
+      "count": 48,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "cpu3Frequency": {
+      "count": 48,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "ddrFrequency": {
+      "count": 48,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "dev": {
+      "count": 12,
+      "max": 13.0,
+      "mean": 13.0,
+      "min": 13.0,
+      "p50": 13.0,
+      "p95": 13.0,
+      "unit": "smartperf-reported"
+    },
+    "filePage": {
+      "count": 12,
+      "max": 406.0,
+      "mean": 406.0,
+      "min": 406.0,
+      "p50": 406.0,
+      "p95": 406.0,
+      "unit": "smartperf-reported"
+    },
+    "fps": {
+      "count": 48,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "gpuFrequency": {
+      "count": 48,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "gpuLoad": {
+      "count": 48,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "gpuPss": {
+      "count": 12,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "graphicPss": {
+      "count": 12,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "guard": {
+      "count": 12,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "hap": {
+      "count": 12,
+      "max": 216.0,
+      "mean": 216.0,
+      "min": 216.0,
+      "p50": 216.0,
+      "p95": 216.0,
+      "unit": "smartperf-reported"
+    },
+    "heapAlloc": {
+      "count": 12,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "heapSize": {
+      "count": 12,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "memAvailable": {
+      "count": 48,
+      "max": 2685272.0,
+      "mean": 2622670.0,
+      "min": 2551112.0,
+      "p50": 2634972.0,
+      "p95": 2685272.0,
+      "unit": "smartperf-reported"
+    },
+    "memFree": {
+      "count": 48,
+      "max": 1702768.0,
+      "mean": 1645279.5,
+      "min": 1583320.0,
+      "p50": 1656104.0,
+      "p95": 1702768.0,
+      "unit": "smartperf-reported"
+    },
+    "memTotal": {
+      "count": 48,
+      "max": 4025328.0,
+      "mean": 4025328.0,
+      "min": 4025328.0,
+      "p50": 4025328.0,
+      "p95": 4025328.0,
+      "unit": "smartperf-reported"
+    },
+    "nativeHeapPss": {
+      "count": 12,
+      "max": 8479.0,
+      "mean": 8479.0,
+      "min": 8479.0,
+      "p50": 8479.0,
+      "p95": 8479.0,
+      "unit": "smartperf-reported"
+    },
+    "networkDown": {
+      "count": 48,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "networkUp": {
+      "count": 48,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "unit": "smartperf-reported"
+    },
+    "privateClean": {
+      "count": 12,
+      "max": 2136.0,
+      "mean": 2136.0,
+      "min": 2136.0,
+      "p50": 2136.0,
+      "p95": 2136.0,
+      "unit": "smartperf-reported"
+    },
+    "privateDirty": {
+      "count": 12,
+      "max": 7552.0,
+      "mean": 7552.0,
+      "min": 7552.0,
+      "p50": 7552.0,
+      "p95": 7552.0,
+      "unit": "smartperf-reported"
+    },
+    "pss": {
+      "count": 12,
+      "max": 16500.0,
+      "mean": 16500.0,
+      "min": 16500.0,
+      "p50": 16500.0,
+      "p95": 16500.0,
+      "unit": "smartperf-reported"
+    },
+    "refreshrate": {
+      "count": 48,
+      "max": 60.0,
+      "mean": 60.0,
+      "min": 60.0,
+      "p50": 60.0,
+      "p95": 60.0,
+      "unit": "smartperf-reported"
+    },
+    "sharedClean": {
+      "count": 12,
+      "max": 58952.0,
+      "mean": 58952.0,
+      "min": 58952.0,
+      "p50": 58952.0,
+      "p95": 58952.0,
+      "unit": "smartperf-reported"
+    },
+    "sharedDirty": {
+      "count": 12,
+      "max": 16796.0,
+      "mean": 16796.0,
+      "min": 16796.0,
+      "p50": 16796.0,
+      "p95": 16796.0,
+      "unit": "smartperf-reported"
+    },
+    "so": {
+      "count": 12,
+      "max": 5193.0,
+      "mean": 5193.0,
+      "min": 5193.0,
+      "p50": 5193.0,
+      "p95": 5193.0,
+      "unit": "smartperf-reported"
+    },
+    "stackPss": {
+      "count": 12,
+      "max": 248.0,
+      "mean": 248.0,
+      "min": 248.0,
+      "p50": 248.0,
+      "p95": 248.0,
+      "unit": "smartperf-reported"
+    },
+    "swap": {
+      "count": 12,
+      "max": 55684.0,
+      "mean": 55684.0,
+      "min": 55684.0,
+      "p50": 55684.0,
+      "p95": 55684.0,
+      "unit": "smartperf-reported"
+    },
+    "swapPss": {
+      "count": 12,
+      "max": 3258.0,
+      "mean": 3258.0,
+      "min": 3258.0,
+      "p50": 3258.0,
+      "p95": 3258.0,
+      "unit": "smartperf-reported"
+    },
+    "timestamp": {
+      "count": 48,
+      "max": 1790474975973.0,
+      "mean": 1790474952473.1875,
+      "min": 1790474928973.0,
+      "p50": 1790474952473.0,
+      "p95": 1790474973623.0,
+      "unit": "smartperf-reported"
+    }
+  },
+  "runId": "meaningful-wrong-run-2",
+  "sampleCount": 48,
+  "schema": "agentlab.smartperf_summary.v2",
+  "sourceIdentity": "artifact-sha256:a2ca9b782c6f4411ee3d6b07bf680cf0f224402019808e64699a12c60d35e70b",
+  "taskId": "purchase-data-finalization-ee2bc87594f1",
+  "unknownNumericMetricNames": [
+    "ChildProcCpuLoad",
+    "ChildProcCpuUsage",
+    "ChildProcId",
+    "ChildProcSCpuUsage",
+    "ChildProcUCpuUsage",
+    "ProcCpuLoad",
+    "ProcSCpuUsage",
+    "ProcUCpuUsage",
+    "anonPage",
+    "arktsHeapPss",
+    "ddrFrequency",
+    "dev",
+    "filePage",
+    "gpuFrequency",
+    "gpuPss",
+    "graphicPss",
+    "guard",
+    "hap",
+    "heapAlloc",
+    "heapSize",
+    "memAvailable",
+    "memFree",
+    "memTotal",
+    "nativeHeapPss",
+    "networkDown",
+    "networkUp",
+    "privateClean",
+    "privateDirty",
+    "refreshrate",
+    "sharedClean",
+    "sharedDirty",
+    "so",
+    "stackPss",
+    "swap",
+    "swapPss"
+  ]
+}

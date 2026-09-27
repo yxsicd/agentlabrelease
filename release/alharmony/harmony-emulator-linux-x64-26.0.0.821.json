@@ -70,6 +70,7 @@
       "ability-launch",
       "process-check",
       "smartperf-proxy-profile",
+      "policy-bound-dynamic-cpu-pss-profile",
       "declarative-ui-actions",
       "layout-text-oracle",
       "agentlab-evaluation-instance-export"

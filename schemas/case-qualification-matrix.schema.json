@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-qualification-matrix.schema.json",
+  "title": "AgentLab generated-case qualification matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "caseId",
+    "sourceSetSha256",
+    "status",
+    "scope",
+    "repairChecks",
+    "preservationChecks",
+    "stageChecks",
+    "deviceChecks",
+    "harmonyStandardTests",
+    "performanceGuardrails",
+    "oracleAuthority",
+    "referenceReplay",
+    "freshness",
+    "review",
+    "automaticPromotion"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.case_qualification_matrix.v1"},
+    "caseId": {"type": "string", "minLength": 1},
+    "sourceSetSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "status": {"const": "functional-calibration-qualified-runtime-and-freshness-pending"},
+    "scope": {"const": "static-multi-repository"},
+    "repairChecks": {"$ref": "#/$defs/checks"},
+    "preservationChecks": {"$ref": "#/$defs/checks"},
+    "stageChecks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stageId", "checkIds", "cumulativeCheckIds"],
+        "properties": {
+          "stageId": {"type": "string", "minLength": 1},
+          "checkIds": {"$ref": "#/$defs/ids"},
+          "cumulativeCheckIds": {"$ref": "#/$defs/ids"}
+        }
+      }
+    },
+    "deviceChecks": {"$ref": "#/$defs/separateGate"},
+    "harmonyStandardTests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "requiredForHarmonyCases", "acceptedFrameworks", "customUiOracleAuthority", "checks"],
+      "properties": {
+        "status": {"const": "separate-gate"},
+        "requiredForHarmonyCases": {"const": true},
+        "acceptedFrameworks": {
+          "const": ["instrument-test-ohosTest-hypium", "local-test-hypium", "deveco-testing-hypium-ui"]
+        },
+        "customUiOracleAuthority": {"const": "supplemental-only"},
+        "checks": {"type": "array", "maxItems": 0}
+      }
+    },
+    "performanceGuardrails": {"$ref": "#/$defs/separateGate"},
+    "oracleAuthority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "authority", "sha256", "receiptSchema"],
+      "properties": {
+        "status": {"const": "qualified"},
+        "authority": {"const": "independent-executable-oracle"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "receiptSchema": {"type": "string", "minLength": 1}
+      }
+    },
+    "referenceReplay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "summarySha256", "infrastructureAvailable", "alternativeValidCount", "alternativeValidQualified", "variants"],
+      "properties": {
+        "status": {"const": "qualified"},
+        "summarySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "infrastructureAvailable": {"const": true},
+        "alternativeValidCount": {"type": "integer", "minimum": 0},
+        "alternativeValidQualified": {"type": "boolean"},
+        "variants": {
+          "type": "array",
+          "minItems": 3,
+          "items": {"$ref": "#/$defs/variant"}
+        }
+      }
+    },
+    "freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "qualified", "sourceVisibility", "contaminationReview"],
+      "properties": {
+        "status": {"const": "unqualified-unknown"},
+        "qualified": {"const": false},
+        "sourceVisibility": {"const": "unknown"},
+        "contaminationReview": {"const": "not-performed"}
+      }
+    },
+    "review": {"type": "object"},
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "stageId", "baselinePass", "referencePass"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "stageId": {"type": "string", "minLength": 1},
+          "baselinePass": {"type": "boolean"},
+          "referencePass": {"const": true}
+        }
+      }
+    },
+    "separateGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checks"],
+      "properties": {
+        "status": {"const": "separate-gate"},
+        "checks": {"type": "array", "maxItems": 0}
+      }
+    },
+    "variant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "role", "sourceSha256", "stagePass"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "role": {"enum": ["baseline", "reference", "wrong", "alternative-valid"]},
+        "sourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "stagePass": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

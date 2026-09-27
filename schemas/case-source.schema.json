@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-source.schema.json",
+  "title": "AgentLab case source",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "lane",
+    "strategy",
+    "candidateId",
+    "sourceSetSha256",
+    "authority",
+    "evidence",
+    "naturalRepresentativenessClaimed",
+    "automaticPromotion"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.case_source.v1"},
+    "lane": {"enum": ["natural", "derived"]},
+    "strategy": {
+      "enum": [
+        "historical-repair",
+        "operator-reported-failure",
+        "semantic-program-analysis",
+        "controlled-mutation",
+        "participant-failure-feedback"
+      ]
+    },
+    "candidateId": {"type": "string", "minLength": 1},
+    "sourceSetSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "authority": {"type": "string", "minLength": 1},
+    "evidence": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    },
+    "naturalRepresentativenessClaimed": {"const": false},
+    "automaticPromotion": {"const": false}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"lane": {"const": "natural"}}},
+      "then": {"properties": {"strategy": {"enum": ["historical-repair", "operator-reported-failure"]}}},
+      "else": {"properties": {"strategy": {"enum": ["semantic-program-analysis", "controlled-mutation", "participant-failure-feedback"]}}}
+    }
+  ]
+}

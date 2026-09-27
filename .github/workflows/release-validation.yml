@@ -38,9 +38,21 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
       - name: Validate release manifests and tests
         run: |
           python3 scripts/validate-release.py
+          python3 scripts/component-reuse.py validate --registry release/components/registry.json
+          python3 scripts/validate-release-graph.py \
+            --closure release/closures/v0.1.0-alpha.13.json \
+            --registry release/components/registry.json \
+            --git-root "$GITHUB_WORKSPACE" \
+            --target release/targets/generic-linux-agentlab.json \
+            --target release/targets/wsl2-agentlab.json
+          python3 scripts/score-case-discrimination.py \
+            --input examples/case-discrimination/fixture.json \
+            > "$RUNNER_TEMP/case-discrimination-report.json"
           python3 -m unittest discover -s tests
           python3 scripts/validate-composition-release.py
       - name: Test and build public tools
@@ -48,6 +60,44 @@ jobs:
           cargo test --locked --workspace
           cargo build --locked --release --workspace
           python3 -m unittest discover -s tests -p test_mock_agent.py
+      - name: Run the integrated multi-repository golden path
+        run: |
+          python3 examples/multi-repo-case/run-golden-path.py \
+            --analyzer target/release/agentlab-multi-repo-analysis \
+            --method-revision "$GITHUB_SHA" \
+            --output "$RUNNER_TEMP/multi-repo-golden-path"
+          cat "$RUNNER_TEMP/multi-repo-golden-path/summary.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve the integrated golden-path evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-golden-path
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ runner.temp }}/multi-repo-golden-path/
+  participant-runtime-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Pull the participant smoke image
+        run: docker pull node:22-bookworm-slim
+      - name: Prove least-mounted filesystem, credential and network isolation
+        run: |
+          python3 scripts/participant-runtime-isolation-smoke.py \
+            --output "$RUNNER_TEMP/participant-runtime-isolation-evidence" \
+            | tee "$RUNNER_TEMP/participant-runtime-isolation-smoke.json"
+          cat "$RUNNER_TEMP/participant-runtime-isolation-smoke.json" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain the isolation summary
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: participant-runtime-isolation-smoke
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/participant-runtime-isolation-smoke.json
+            ${{ runner.temp }}/participant-runtime-isolation-evidence/
   public-install-deploy-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -58,15 +108,23 @@ jobs:
           - target: alprod
             channel: alprod
             composition: ''
+            closure: ''
             backend: copy-tree
           - target: candidate-copy
             channel: candidate-20260913-40ecdf4b-sdk-c075105a-linux-x64
             composition: release/candidates/40ecdf4b-linux-x64
+            closure: ''
             backend: copy-tree
           - target: candidate-btrfs
             channel: candidate-20260913-40ecdf4b-sdk-c075105a-linux-x64
             composition: release/candidates/40ecdf4b-linux-x64
+            closure: ''
             backend: btrfs-subvolume
+          - target: release-closure
+            channel: ''
+            composition: ''
+            closure: release/closures/v0.1.0-alpha.13.json
+            backend: copy-tree
     env:
       AGENTLAB_CI_ROOT: /tmp/agentlab-${{ matrix.target }}
     steps:
@@ -79,6 +137,7 @@ jobs:
         env:
           AGENTLAB_RELEASE_CHANNEL: ${{ matrix.channel }}
           AGENTLAB_COMPOSITION_DIR: ${{ matrix.composition }}
+          AGENTLAB_RELEASE_CLOSURE: ${{ matrix.closure }}
           AGENTLAB_RELEASE_REPO: yxsicd/agentlabrelease
           GITHUB_TOKEN: ${{ github.token }}
         run: scripts/ci-public-install-deploy-smoke.sh

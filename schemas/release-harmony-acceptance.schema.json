@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/release-harmony-acceptance.schema.json",
+  "title": "AgentLab release-bound Harmony emulator acceptance",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "releaseTag",
+    "releaseGitSha",
+    "closure",
+    "campaign",
+    "environmentIdentity",
+    "attempts",
+    "remoteInspection",
+    "qualificationBoundary",
+    "automaticPromotion"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.release_harmony_acceptance.v1"},
+    "status": {"const": "accepted-developer-preview-review-required"},
+    "releaseTag": {"type": "string", "minLength": 1},
+    "releaseGitSha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "closure": {"type": "object"},
+    "campaign": {"type": "object"},
+    "environmentIdentity": {"type": "string", "pattern": ":x86:kvm$"},
+    "attempts": {"type": "array", "minItems": 2, "items": {"type": "object"}},
+    "remoteInspection": {"type": "object"},
+    "qualificationBoundary": {"type": "object"},
+    "automaticPromotion": {"const": false}
+  }
+}

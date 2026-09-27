@@ -1,0 +1,56 @@
+{
+  "baselineRunId": "reference-run-2",
+  "baselineSampleCount": 48,
+  "baselineSourceIdentity": "artifact-sha256:043a96090d8565e4c8216363075946040ab0c35eae95db3f99850b4a81eb2822",
+  "baselineSummarySha256": "f801387d595dd926ae15786f5a9f49bb1051f187bd0c30df7e01261ec68c9699",
+  "candidateRunId": "baseline-task-start-run-2",
+  "candidateSampleCount": 48,
+  "candidateSourceIdentity": "artifact-sha256:d5da1fba7bcb19005c649726f34755b75dbfa3c2e1003cb11e4c277b821697d6",
+  "candidateSummarySha256": "f32137ad8924ff51f5149ea855904bbc95dadfd46b475e9b19248e71b9771fda",
+  "comparable": true,
+  "decision": "performance-regression-candidate",
+  "environmentIdentity": "hwlinux:emulator-26.0.0.821:harmonyos-7.0.0-phone-x86:codex-phone-7",
+  "incomparabilityReasons": [],
+  "metrics": [
+    {
+      "absoluteIncrease": 2.960927288888889,
+      "baseline": 0.013194444444444444,
+      "candidate": 2.9741217333333334,
+      "candidateToBaselineRatio": 225.40712084210526,
+      "guardrail": {
+        "maximumAbsoluteIncrease": 2.0,
+        "maximumRelativeIncrease": 0.2
+      },
+      "metric": "appCpuUsagePercent",
+      "statistic": "mean",
+      "status": "regressed"
+    },
+    {
+      "absoluteIncrease": -1098.0,
+      "baseline": 20719.0,
+      "candidate": 19621.0,
+      "candidateToBaselineRatio": 0.9470051643419084,
+      "guardrail": {
+        "maximumRelativeIncrease": 0.15
+      },
+      "metric": "appPssKiB",
+      "statistic": "mean",
+      "status": "passed"
+    }
+  ],
+  "performancePolicy": {
+    "id": "purchase-data-case-bound-cpu-pss-v1",
+    "sha256": "ae914ba0c30dd8aec098531497021d75a3fa1311e7c371290d43a0a4eccffb3e"
+  },
+  "policy": {
+    "absolutePowerThermalUsed": false,
+    "automaticPromotion": false,
+    "interpretation": "relative emulator regression signal only"
+  },
+  "profileWorkload": {
+    "id": "purchase-data-case-bound-ohostest-repeat-v1",
+    "sha256": "7812fa159f8c7ec8ea69f48987cca39b0f373280eb7af847c16ea4dfaf7d563f"
+  },
+  "schema": "agentlab.smartperf_comparison.v1",
+  "taskId": "purchase-data-finalization-ee2bc87594f1"
+}

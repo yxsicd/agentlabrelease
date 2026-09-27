@@ -1,0 +1,114 @@
+# Immutable component registry and aggregate releases
+
+AgentLab publishes a component only when its effective build input changes.
+An aggregate version selects already-published immutable components; it does
+not copy or rebuild their payloads.
+
+`release/components/registry.json` is the current machine-readable inventory.
+Every entry binds an immutable Release tag, exact asset bytes and SHA-256,
+source provenance, and an input identity. A source commit is retained for
+audit, but a monorepo commit alone is not the rebuild key.
+
+Three input modes are supported:
+
+- `git-tree-v1` hashes the Git object IDs for the component's owned source
+  paths and build-recipe paths together with declared dependency identities.
+  A commit that changes only unrelated paths therefore reuses the component.
+- `external-payload-v1` treats exact externally supplied payload identities as
+  the input. The two Harmony emulator archives use this mode.
+- `legacy-published-v1` preserves an already-published component by exact
+  bytes/SHA while its source-path and build-recipe ownership is migrated. It
+  is reusable, but does not claim an automatic source-impact decision.
+
+Run:
+
+```sh
+python3 scripts/component-reuse.py validate \
+  --registry release/components/registry.json
+
+python3 scripts/component-reuse.py plan \
+  --registry release/components/registry.json \
+  --component <component-id> \
+  --repo <source-checkout> --revision <commit>
+```
+
+The planner returns `reuse` only when the effective input digest is unchanged;
+otherwise it returns `rebuild`. Build recipes and dependency identities are
+part of the digest, so a path-only optimization cannot silently reuse a stale
+binary.
+
+Aggregate closures remain immutable, small JSON documents. They reference
+component assets by URL, byte count, SHA-256 and immutable tag. Promotion and
+new aggregate versions may reuse those references indefinitely. A no-op
+component change must not create a new component Release.
+
+## Independent Rust analysis-tools component
+
+The repository's semantic analysis, qualification and review compilers are a
+separate optional `analysis-tools` pack. They do not belong to the generic
+`developer-tools` pack (Bun/jq/ripgrep) or the service runtime pack. The
+Rust-native `agentlab-analysis-tools-pack` producer requires the complete
+27-binary `x86_64` Linux ELF inventory, rejects missing/non-ELF/symlinked
+inputs, writes a deterministic USTAR stream, compresses it with single-threaded
+zstd, and emits both the capability-pack descriptor and a relative-URL
+`agentlab.component_update.v1` descriptor.
+
+`analysis-tools-component.yml` builds static musl binaries and reproduces the
+candidate bytes twice. Pull requests and the default manual run only retain CI
+artifacts. Publishing is a distinct manual `main` action requiring
+`publish=true` and the exact 40-character `expected_revision`; it creates a new
+source-derived prerelease tag once and never changes an aggregate channel.
+Because the current channel graph predates this optional slot, its first
+selection requires a separately reviewed coordinated composition. Subsequent
+versions can use the ordinary single-component upgrade path while every
+unchanged runtime, developer-tool and Harmony asset remains referenced by its
+existing immutable URL.
+
+The first composition is produced by the Rust-native
+`agentlab-component-introduce` command. It rejects fixed-channel component
+URLs, cross-Release asset references, duplicate slots, duplicate contract
+providers, required new packs and changed base source identity. Its output is a
+new inactive candidate with all qualification gates reset. Pull-request CI
+reproduces that candidate twice from the current `aldev` base and retains it as
+an explicitly non-published preview; the component Release and any later
+channel activation remain separate manual decisions.
+
+When explicitly requested on `main`, publication closes by reading every asset
+identity back from GitHub before the coordinated candidate is eligible to be
+published. Candidate publication has its own boolean input and uploads only
+the environment lock, publication metadata and introduction receipt. This
+creates the bridge into the existing frozen channel qualification workflow
+without copying any component payload or mutating a fixed channel.
+
+Every file required to consume a selected component belongs to that component
+identity. This includes small descriptors and inventories as well as archives
+and executables. A developer-preview closure must contain the full selected
+registry asset set; listing one representative archive while omitting its
+descriptor is not a closed aggregate and is rejected. The registry therefore
+tracks component count independently from asset-file count.
+
+Container-image metadata has one additional content check. The compressed
+Docker archive SHA-256 identifies the transport bytes, while the image ID is
+the SHA-256 of the exact config object named by `manifest.json`; neither value
+may stand in for the other. Before publishing or reusing an image descriptor,
+run:
+
+```sh
+python3 scripts/verify-docker-image-archive.py \
+  --archive <image.docker.tar.zst> \
+  --descriptor <image.docker.tar.zst.json> \
+  --expected-archive-sha256 <archive-sha256> \
+  --expected-image-id sha256:<config-sha256> \
+  --expected-reference <repository:tag> \
+  --receipt <verification.json>
+```
+
+The verifier streams the archive, binds the selected tag to its Docker config
+member and (when present) the OCI index/manifest, and fails closed on archive,
+descriptor, reference or identity drift. Docker's classic store commonly
+reports the config digest as `.Id`; the containerd image store may report the
+OCI manifest digest instead. Admission must accept only the two identities
+proven from the same archive receipt, never equate them or accept an arbitrary
+locally tagged image. A real metadata-only correction must use a new immutable
+descriptor Release; keep the unchanged large archive at its existing immutable
+URL.

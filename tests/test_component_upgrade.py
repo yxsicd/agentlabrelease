@@ -79,6 +79,39 @@ class ComponentUpgradeTests(unittest.TestCase):
     def test_descriptor_relative_metadata_resolves_at_its_original_url(self):
         pub = self.base[0]
         manifest = dict(schema='agentlab.component_update.v1',component='session-sdk',
-                        value=pub['sessionSdk'],assets=[])
+                        value=pub['sessionSdk'],assets=[dict(url='./sdk',bytes=7,sha256='a'*64)])
         donor = upgrade.replacement_donor(self.base,manifest,'session-sdk','https://example.com/a/b/update.json')
         self.assertEqual(donor[0]['sessionSdk']['templateInventory'],'https://example.com/a/b/session-template-inventory.json')
+        self.assertEqual(donor[0]['assets'][-1]['url'],'https://example.com/a/b/sdk')
+
+    def test_existing_analysis_tools_slot_accepts_independent_relative_update(self):
+        pub, lock = copy.deepcopy(self.base)
+        old = copy.deepcopy(lock['components'][1])
+        old.update(slot='analysis-tools',packId='analysis-tools',version='old',
+                   mountTarget='/agentlab-analysis-tools',required=False,
+                   artifact='https://example.com/old.tar.zst',
+                   descriptor='https://example.com/old.tar.zst.json')
+        lock['components'].append(old)
+        old_node = dict(id='component-analysis-tools',platform=pub['platform'],version='old',
+                        binding=dict(kind='pack-slot',slot='analysis-tools'),
+                        provides={'agentlab.analysis-tools':1},requires={},upgradePolicy='independent')
+        lock['componentGraph']['nodes'].append(old_node)
+        manifest = dict(
+            schema='agentlab.component_update.v1', component='pack:analysis-tools',
+            sourceRevision='a'*40,
+            value={**old,'version':'aaaaaaaa','archiveSha256':'b'*64,
+                   'artifact':'./analysis.tar.zst','descriptor':'./analysis.tar.zst.json'},
+            graphNode={**old_node,'version':'aaaaaaaa'},
+            assets=[dict(url='./analysis.tar.zst',bytes=11,sha256='b'*64),
+                    dict(url='./analysis.tar.zst.json',bytes=12,sha256='c'*64)])
+        origin = ('https://github.com/yxsicd/agentlabrelease/releases/download/'
+                  'analysis-tools-aaaaaaaa-linux-x64/update.json')
+        donor = upgrade.replacement_donor((pub,lock),manifest,'pack:analysis-tools',origin)
+        result,new_lock,_,receipt = upgrade.compose((pub,lock),donor,'pack:analysis-tools','candidate-analysis')
+        selected = next(row for row in new_lock['components'] if row['slot']=='analysis-tools')
+        self.assertEqual(selected['artifact'],
+                         'https://github.com/yxsicd/agentlabrelease/releases/download/'
+                         'analysis-tools-aaaaaaaa-linux-x64/analysis.tar.zst')
+        self.assertEqual(receipt['component'],'pack:analysis-tools')
+        self.assertEqual(result['sourceRevision'],pub['sourceRevision'])
+        self.assertEqual(new_lock['components'][0],lock['components'][0])

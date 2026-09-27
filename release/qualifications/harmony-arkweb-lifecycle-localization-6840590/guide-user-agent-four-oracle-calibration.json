@@ -1,0 +1,131 @@
+{
+  "schema": "agentlab.harmony_ui_oracle_calibration.v1",
+  "status": "candidate-baseline-failure-observed",
+  "automaticPromotion": false,
+  "source": {
+    "repositoryId": "guide-snippets",
+    "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+    "projectRoot": "ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo",
+    "hapSha256": "af20e2c0aa516b7853a0f99c03f0b6b0aa5fe9b73b89144a3f082f490a67a97a",
+    "sourceIdentity": "artifact-sha256:af20e2c0aa516b7853a0f99c03f0b6b0aa5fe9b73b89144a3f082f490a67a97a"
+  },
+  "scenario": {
+    "path": "guide-user-agent-four-route.ui",
+    "id": "guide-user-agent-four-route",
+    "sha256": "f66ac9e6ac8f16ed9ee31f33b37766faf3e88b90936fc1548a8bf95f163e06a8",
+    "intendedControl": "UserAgent_four",
+    "tap": [
+      628,
+      1606
+    ],
+    "candidateCheck": "Index no longer contains UserAgent_four after selecting the route."
+  },
+  "layoutCalibration": {
+    "deviceResolution": [
+      1256,
+      2760
+    ],
+    "decoyControl": "DomStorage",
+    "controls": [
+      {
+        "label": "DomStorage",
+        "bounds": [
+          410,
+          1186,
+          847,
+          1326
+        ]
+      },
+      {
+        "label": "UserAgent_four",
+        "bounds": [
+          369,
+          1536,
+          887,
+          1676
+        ]
+      }
+    ],
+    "authority": "Exact uitest layout bounds from the frozen baseline HAP; screenshot display scaling is not coordinate authority."
+  },
+  "rejectedAttempt": {
+    "scenarioSha256": "ba3934d60fb44a1f65ca3e51db3c9e0f5679372bb73a57d8cf82a952ae719e1f",
+    "tap": [
+      468,
+      1190
+    ],
+    "hitControl": "DomStorage",
+    "observedPagePath": "pages/DomStorage",
+    "runnerVerdict": "passed",
+    "qualificationAccepted": false,
+    "rejectionReason": "The screenshot-space coordinate was used as a device-space coordinate. The tap hit DomStorage, whose Web view rendered Example Domain, instead of UserAgent_four.",
+    "resultSha256": "b10ba425e4c286c9c50fdfab0834c1e70dc4e6be3d050813cffae06f445e70a9",
+    "actionsSha256": "3b32f169ebd77db3f37eb11621f62dd40883085b9c23c3dd4906651547cac3b6",
+    "checksSha256": "68d28fcabcbb20a857ee630bdea0cd03b35d95c9cfec53e906603fbe17e332e1",
+    "layoutBeforeSha256": "767ada8b503509db638674213c587f213c3593a891a81734a05834540dae1317",
+    "layoutAfterSha256": "75fdd69701507ae9c67b88fe783b8cd9a278c3409fbb1c7d012288498ad6f24b"
+  },
+  "correctedBaselineAttempt": {
+    "executionAuthority": {
+      "routeDecision": "peer_direct",
+      "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+      "host": "huawei-ThinkCentre-M920t",
+      "operationId": "exec-00000000000001ea",
+      "traceIds": [
+        "b89f5950-f7ff-429f-adcf-10a007a09331",
+        "03f89b7e-3713-4e8c-9d96-82a7c9df1881",
+        "74da2836-9713-4f6a-8cbc-875859233da4"
+      ]
+    },
+    "runner": {
+      "sha256": "8d4ea29803c00c48b86655fc02b4f498205ba09d3c2ad61487c70e6b21bf8838",
+      "boundedHdcSeconds": 15,
+      "uiReadyWallClockSeconds": 120,
+      "executionUser": "huawei",
+      "supplementaryGroupsRefreshed": true
+    },
+    "result": {
+      "schema": "agentlab.harmony_emulator_case_result.v2",
+      "status": "failed",
+      "oracleStatus": "failed",
+      "assessmentStatus": "assessed",
+      "infrastructureAvailable": true,
+      "subjectTaskSucceeded": false,
+      "failureClass": "oracle",
+      "hapSha256": "af20e2c0aa516b7853a0f99c03f0b6b0aa5fe9b73b89144a3f082f490a67a97a",
+      "scenarioSha256": "f66ac9e6ac8f16ed9ee31f33b37766faf3e88b90936fc1548a8bf95f163e06a8"
+    },
+    "resultSha256": "aeb52b22e5a09f586963811673804ac218d8c42c7351fba3157fd84e50cd3381",
+    "actionsSha256": "4e23f5c5e05bc288248fd1aee6140e408ba94746be949c8ac70fbd0b7b1fbe38",
+    "checksSha256": "5c68d3b6da62b2b9ef099b9393edb9199c5d24118362809c91a0a4bf89d1b2dc",
+    "layoutBeforeSha256": "1254e4fa3d7b94473a8a79d235f074922250bedd80fa260e6b82332b76cc9c83",
+    "layoutAfterSha256": "1254e4fa3d7b94473a8a79d235f074922250bedd80fa260e6b82332b76cc9c83",
+    "installLogSha256": "d67871ff692311422e33c77be3b4054f83f3aa10e06e0ce5f4b5a3387a527674",
+    "launchLogSha256": "4765cf6e38f61be3ce9fa13fdcf53077b79f3da39c947a2123d1facd6c0e3962",
+    "processLogSha256": "896f3d79e633bbf5a58f65d3915e760baecbc8067d0f0cc9bedbccbfff8b11d8",
+    "observedChecks": [
+      {
+        "id": "user-agent-four-visible",
+        "passed": true
+      },
+      {
+        "id": "index-left-after-route",
+        "passed": false
+      }
+    ],
+    "evidenceRoot": "/home/huawei/agentlab-source-builds/guide-api20-useragent-four-baseline-f66ac9e6-v6"
+  },
+  "qualificationScope": {
+    "coordinateCalibration": true,
+    "candidateFailToPass": true,
+    "businessUiOracle": false,
+    "independentReview": false,
+    "referenceRepair": false,
+    "performanceComparison": false
+  },
+  "remainingGates": [
+    "An independent reviewer must decide whether leaving the Index page is sufficient or whether target-page semantics need a stronger assertion.",
+    "Apply the reviewed reference repair and demonstrate candidate FAIL_TO_PASS becomes PASS_TO_PASS without breaking preservation checks.",
+    "Only then repeat the identical workload for performance comparison."
+  ]
+}

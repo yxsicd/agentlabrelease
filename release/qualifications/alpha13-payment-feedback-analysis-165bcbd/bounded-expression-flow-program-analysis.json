@@ -1,0 +1,207 @@
+{
+  "aliasResolutionComplete": false,
+  "allowsCaseContract": false,
+  "automaticPromotion": false,
+  "behaviorOracleVerified": false,
+  "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "coverage": {
+    "exactDependencyCount": 7,
+    "exactDependencyReferencesVerified": true,
+    "externalSinkCount": 2,
+    "localCallTargetCount": 3,
+    "localCallTargetsUniquelyResolved": true,
+    "templateBridgeCount": 1,
+    "typedParameterMappingCount": 2,
+    "untypedParameterMappingCount": 1
+  },
+  "externalCallContractsResolved": false,
+  "flowCount": 2,
+  "flowPlanSha256": "20474b8e485abfafdceb5d904ae49ef3432c3e27901cc10240991a9b424a048b",
+  "flowProposalSha256": "481f8b283f0cfbc6f45cff17da52114b9d535f9b92221c82b22109030c2a3ce5",
+  "flowReplayExact": true,
+  "flows": [
+    {
+      "boundedProgramEdgesVerified": true,
+      "flowId": "harmony-consumable-purchase-data-to-finish",
+      "repositoryId": "harmony-iap-client",
+      "stepCount": 7,
+      "steps": [
+        {
+          "argumentExpression": "result.purchaseData",
+          "callFactId": "ast-2f348f73ecb3ba11e227f1c8",
+          "callableFactId": "ast-3ca52252c9decdb5bdfa3fd4",
+          "index": 0,
+          "kind": "call-argument-to-parameter",
+          "parameterExpression": "purchaseData: string",
+          "parameterTypeExpression": "string",
+          "resolution": "unique-same-file-owner-callable",
+          "status": "verified"
+        },
+        {
+          "bindingKind": "const",
+          "bindingName": "jwsPurchaseOrder",
+          "declaredTypeExpression": null,
+          "dependencyExpression": "purchaseData",
+          "factId": "ast-93d43d7e7b6e33061757cb2e",
+          "index": 1,
+          "kind": "binding-dependency",
+          "resolution": "exact-identifier-token-dependency",
+          "status": "verified"
+        },
+        {
+          "bindingKind": "const",
+          "bindingName": "purchaseOrderStr",
+          "declaredTypeExpression": null,
+          "dependencyExpression": "jwsPurchaseOrder",
+          "factId": "ast-ad5871690a57646d2f0b356e",
+          "index": 2,
+          "kind": "binding-dependency",
+          "resolution": "exact-identifier-token-dependency",
+          "status": "verified"
+        },
+        {
+          "bindingKind": "const",
+          "bindingName": "purchaseOrderPayload",
+          "declaredTypeExpression": null,
+          "dependencyExpression": "purchaseOrderStr",
+          "factId": "ast-38961a5bb5e745d3c07f6066",
+          "index": 3,
+          "kind": "binding-dependency",
+          "resolution": "exact-identifier-token-dependency",
+          "status": "verified"
+        },
+        {
+          "argumentExpression": "purchaseOrderPayload",
+          "callFactId": "ast-5cfca55447fff84520a83a40",
+          "callableFactId": "ast-68a8a24ab3e68092d86836c2",
+          "index": 4,
+          "kind": "call-argument-to-parameter",
+          "parameterExpression": "purchaseOrder: PurchaseOrderPayload",
+          "parameterTypeExpression": "PurchaseOrderPayload",
+          "resolution": "unique-same-file-owner-callable",
+          "status": "verified"
+        },
+        {
+          "bindingKind": "const",
+          "bindingName": "finishPurchaseParam",
+          "declaredTypeExpression": "iap.FinishPurchaseParameter",
+          "dependencyExpression": "purchaseOrder",
+          "factId": "ast-a3f005d63699fbfa8ec33a15",
+          "index": 5,
+          "kind": "binding-dependency",
+          "resolution": "exact-identifier-token-dependency",
+          "status": "verified"
+        },
+        {
+          "argumentIndex": 1,
+          "callFactId": "ast-a284ab0b32730a73790fa6bc",
+          "dependencyExpression": "finishPurchaseParam",
+          "index": 6,
+          "kind": "call-argument-to-sink",
+          "resolution": "exact-external-call-argument-unresolved-signature",
+          "status": "verified",
+          "targetExpression": "iap.finishPurchase"
+        }
+      ]
+    },
+    {
+      "boundedProgramEdgesVerified": true,
+      "flowId": "cordova-owned-purchase-data-to-consume",
+      "repositoryId": "hms-cordova-iap",
+      "stepCount": 4,
+      "steps": [
+        {
+          "argumentExpression": "message.inAppPurchaseDataList[ind]",
+          "callFactId": "ast-f364faa14fe09a67a1d551ab",
+          "callableFactId": "ast-377c564300cbf4a32df9a8a2",
+          "index": 0,
+          "kind": "call-argument-to-parameter",
+          "parameterExpression": "purchaseData",
+          "parameterTypeExpression": null,
+          "resolution": "unique-same-file-owner-callable",
+          "status": "verified"
+        },
+        {
+          "factId": "ast-6f8ae557023209f612519f6b",
+          "index": 1,
+          "kind": "assignment-dependency",
+          "leftExpression": "product.purchaseData",
+          "resolution": "exact-assignment-edge",
+          "rightExpression": "purchaseData",
+          "status": "verified"
+        },
+        {
+          "callableFactId": "ast-67a6cdf22ef18b8f786be961",
+          "contentSha256": "3f12439f5538b9ded3ffcfb7f0ee34e9b0e6cd37e508f031bbab6fb4140040c8",
+          "gitBlobOid": "e154947d259c1114717572d66f2d56289b36b3f9",
+          "index": 2,
+          "kind": "template-event-bridge",
+          "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.html",
+          "resolution": "exact-git-blob-positional-template-call",
+          "status": "verified"
+        },
+        {
+          "argumentIndex": 0,
+          "callFactId": "ast-57808ee67f2e567c08f227d5",
+          "dependencyExpression": "purchaseData",
+          "index": 3,
+          "kind": "call-argument-to-sink",
+          "resolution": "exact-external-call-argument-unresolved-signature",
+          "status": "verified",
+          "targetExpression": "this.iap.consumeOwnedPurchase"
+        }
+      ]
+    }
+  ],
+  "reachabilityAndDominanceResolved": false,
+  "repositoryCount": 2,
+  "reviewPacketSha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
+  "schema": "agentlab.bounded_expression_flow_program_analysis.v1",
+  "semanticAlignmentVerified": false,
+  "sourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
+  "status": "bounded-program-flow-partially-resolved-review-required",
+  "typeResolutionComplete": false,
+  "unresolved": [
+    {
+      "class": "external-call-contract",
+      "factId": "ast-a284ab0b32730a73790fa6bc",
+      "id": "external-sink-signature:harmony-iap-client:ast-a284ab0b32730a73790fa6bc",
+      "reason": "The sink argument is exact, but the external SDK signature and behavior are not resolved from this source cut.",
+      "repositoryId": "harmony-iap-client"
+    },
+    {
+      "class": "parameter-type",
+      "factId": "ast-377c564300cbf4a32df9a8a2",
+      "id": "untyped-parameter:hms-cordova-iap:ast-377c564300cbf4a32df9a8a2:1",
+      "reason": "The exact local parameter has no source type annotation.",
+      "repositoryId": "hms-cordova-iap"
+    },
+    {
+      "class": "alias-and-object-identity",
+      "factId": "ast-6f8ae557023209f612519f6b",
+      "id": "member-alias:hms-cordova-iap:ast-6f8ae557023209f612519f6b",
+      "reason": "A member assignment is exact, but object identity and later aliases are not resolved.",
+      "repositoryId": "hms-cordova-iap"
+    },
+    {
+      "class": "alias-and-object-identity",
+      "factId": "ast-67a6cdf22ef18b8f786be961",
+      "id": "template-object-identity:hms-cordova-iap:ast-67a6cdf22ef18b8f786be961",
+      "reason": "The template call is exact, but the rendered object identity is not proven to be the earlier assigned object.",
+      "repositoryId": "hms-cordova-iap"
+    },
+    {
+      "class": "external-call-contract",
+      "factId": "ast-57808ee67f2e567c08f227d5",
+      "id": "external-sink-signature:hms-cordova-iap:ast-57808ee67f2e567c08f227d5",
+      "reason": "The sink argument is exact, but the external SDK signature and behavior are not resolved from this source cut.",
+      "repositoryId": "hms-cordova-iap"
+    },
+    {
+      "class": "control-flow",
+      "id": "global:reachability-dominance-exception-flow",
+      "reason": "The bounded facts do not establish runtime reachability, dominance, exception flow, or callback scheduling."
+    }
+  ],
+  "unresolvedCount": 6
+}

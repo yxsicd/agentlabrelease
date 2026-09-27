@@ -1,0 +1,6 @@
+schema	agentlab.harmony_ui_scenario.v1
+case	guide-cookie-management-preservation
+wait-text	cookie-management-visible	30	CookieManagement
+tap	628	731
+sleep	1000
+assert-text	config-cookie-visible	configCookieSync

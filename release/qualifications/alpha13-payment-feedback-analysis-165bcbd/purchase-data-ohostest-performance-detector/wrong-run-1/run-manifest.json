@@ -1,0 +1,110 @@
+{
+  "absolutePowerThermalAuthority": false,
+  "appHapSha256": "7bf92151da1a85ba3291c4997d5f4e291cc38833f5e5dbef72a4b2e42ec2a7b3",
+  "automaticPromotion": false,
+  "baseRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+  "baselineAppHapSha256": "dfd61c2e5a33249aed059192798c449f7ab3a3a44d69b900fdd508978cdda073",
+  "controlledMutation": {
+    "baseSourceFileSha256": "daf0f32975c9c9d05174995b165669d3b19388df03f2d6b8284131cab9c1aea0",
+    "busyWindowMs": 400,
+    "bytes": 67108864,
+    "candidateSourceFileSha256": "99c0dd5acdf45973401cd8fefd7bc9daa055af4a12342ae8d0c3656c34f3924f",
+    "id": "retain-64m-and-bounded-cpu-entry-page-v2",
+    "intervalMs": 500,
+    "kind": "combined-cpu-memory",
+    "sourcePath": "entry/src/main/ets/pages/EntryPage.ets"
+  },
+  "environmentIdentity": "hwlinux:emulator-26.0.0.821:harmonyos-7.0.0-phone-x86:codex-phone-7",
+  "functionalRepeatCount": 6,
+  "functionalRepeats": [
+    {
+      "counts": {
+        "error": 0,
+        "failure": 0,
+        "ignore": 0,
+        "pass": 7,
+        "total": 7
+      },
+      "nativeReportSha256": "123fbf9bcff0dbf9c946b60e7f407b4695582072c45f15ebc249cb33aa93ba65",
+      "ordinal": 1,
+      "receiptSha256": "6a6f342b6584624327b9950c5cd798880d411be661effb0aea0f0e3b7ec9c188"
+    },
+    {
+      "counts": {
+        "error": 0,
+        "failure": 0,
+        "ignore": 0,
+        "pass": 7,
+        "total": 7
+      },
+      "nativeReportSha256": "123fbf9bcff0dbf9c946b60e7f407b4695582072c45f15ebc249cb33aa93ba65",
+      "ordinal": 2,
+      "receiptSha256": "199286071403c44ddc75512fb45b380915d1cef8428e14a76c1d0364353bbc95"
+    },
+    {
+      "counts": {
+        "error": 0,
+        "failure": 0,
+        "ignore": 0,
+        "pass": 7,
+        "total": 7
+      },
+      "nativeReportSha256": "123fbf9bcff0dbf9c946b60e7f407b4695582072c45f15ebc249cb33aa93ba65",
+      "ordinal": 3,
+      "receiptSha256": "7eab16014a7edfc625fdd418ced2ee7d2d25ed6a63c9f57e3dc5c5dfbd442927"
+    },
+    {
+      "counts": {
+        "error": 0,
+        "failure": 0,
+        "ignore": 0,
+        "pass": 7,
+        "total": 7
+      },
+      "nativeReportSha256": "123fbf9bcff0dbf9c946b60e7f407b4695582072c45f15ebc249cb33aa93ba65",
+      "ordinal": 4,
+      "receiptSha256": "2e982f75e3b75edbc3c2b575bf8c39bf147d842d407d269d2fe855a6120bbd72"
+    },
+    {
+      "counts": {
+        "error": 0,
+        "failure": 0,
+        "ignore": 0,
+        "pass": 7,
+        "total": 7
+      },
+      "nativeReportSha256": "123fbf9bcff0dbf9c946b60e7f407b4695582072c45f15ebc249cb33aa93ba65",
+      "ordinal": 5,
+      "receiptSha256": "d49b1ac278f592dc63ac10a3ec224a043f46a9d8726ee324fa0fb55594706657"
+    },
+    {
+      "counts": {
+        "error": 0,
+        "failure": 0,
+        "ignore": 0,
+        "pass": 7,
+        "total": 7
+      },
+      "nativeReportSha256": "123fbf9bcff0dbf9c946b60e7f407b4695582072c45f15ebc249cb33aa93ba65",
+      "ordinal": 6,
+      "receiptSha256": "f08760248e4db88ffc25457660ca37d63d0e172c5c7694db92153ee24847ee25"
+    }
+  ],
+  "functionalRepeatsWithinProfileWindow": true,
+  "liveVendorIapExecuted": false,
+  "performanceDetectorCalibrationOnly": true,
+  "performancePolicySha256": "3a431b7567c21946b7c2869b3f617b55a422c3f2fc953669d64c2e576d6c8a95",
+  "profileSampleCount": 48,
+  "profileWindowFinishedAt": "2026-09-27T00:27:58.176336+00:00",
+  "profileWindowStartedAt": "2026-09-27T00:27:09.454123+00:00",
+  "profileWorkloadActionsSha256": "b208bad32fa5f1408223b3b78cbfa8a0ac9230e6526020e1a3d67e5a3490c93f",
+  "profileWorkloadSha256": "9a9430a6267db477461d9d7466513cbd8e97e6b571647537175709e8a0ac3781",
+  "realDeviceExecuted": false,
+  "role": "controlled-meaningful-wrong-not-agent-not-gold",
+  "runId": "wrong-run-1",
+  "schema": "agentlab.purchase_data_ohostest_performance_variant_run.v1",
+  "smartPerfSummarySha256": "45ffc57bd8c7a0dfe281b6878aa22a0ea54d1eb2d42103b293663832da74870d",
+  "sourceSetSha256": "cbc01c94755f2d8da5449902ad1a309488d0a9defa9fede23318ad360dd4c2c2",
+  "status": "passed",
+  "testHapSha256": "2a9ee43900d7f4813b896909bc40b192319f7db79df117f4e4243b56278d53b5"
+}

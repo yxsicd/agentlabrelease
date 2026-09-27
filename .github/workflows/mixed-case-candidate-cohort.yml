@@ -1,0 +1,124 @@
+name: Mixed natural and derived candidate cohort proposal
+on:
+  workflow_dispatch:
+    inputs:
+      cohort_id:
+        description: Stable identifier for this predeclared mixed-lane sampling frame
+        required: true
+        type: string
+      analysis_run_id:
+        description: Successful trusted-main multi-repository exact-analysis run
+        required: true
+        type: string
+      expected_analysis_run_sha256:
+        description: Exact analysis-run digest inspected before mixed proposal
+        required: true
+        type: string
+      natural_source_run_id:
+        description: Successful trusted-main GitHub natural repair collection run
+        required: true
+        type: string
+      expected_natural_receipt_sha256:
+        description: Exact natural collection-receipt digest inspected before mixed proposal
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  propose:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/mixed-case-candidate-cohort
+      COHORT_ID: ${{ inputs.cohort_id }}
+      ANALYSIS_RUN_ID: ${{ inputs.analysis_run_id }}
+      EXPECTED_ANALYSIS_RUN_SHA256: ${{ inputs.expected_analysis_run_sha256 }}
+      NATURAL_RUN_ID: ${{ inputs.natural_source_run_id }}
+      EXPECTED_NATURAL_RECEIPT_SHA256: ${{ inputs.expected_natural_receipt_sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Verify and recover exact analyzer and natural source runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/analysis-source" "$AGENTLAB_ROOT/natural-source"
+          [[ "$ANALYSIS_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$NATURAL_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ANALYSIS_RUN_ID" > "$AGENTLAB_ROOT/analysis-source-run.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$NATURAL_RUN_ID" > "$AGENTLAB_ROOT/natural-source-run.json"
+          python3 - <<'PY'
+          import json, os, pathlib
+          root = pathlib.Path(os.environ["AGENTLAB_ROOT"])
+          expected = {
+              "analysis-source-run.json": ".github/workflows/multi-repo-analysis.yml",
+              "natural-source-run.json": ".github/workflows/github-natural-repair-source.yml",
+          }
+          for filename, workflow in expected.items():
+              value = json.loads((root / filename).read_text())
+              assert value["head_branch"] == "main"
+              assert value["path"] == workflow
+              assert value["event"] == "workflow_dispatch"
+              assert value["conclusion"] == "success"
+          PY
+          gh run download "$ANALYSIS_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-analysis --dir "$AGENTLAB_ROOT/analysis-source"
+          gh run download "$NATURAL_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name github-natural-repair-source --dir "$AGENTLAB_ROOT/natural-source"
+          python3 scripts/multi-repo-analysis-run.py validate \
+            --root "$AGENTLAB_ROOT/analysis-source" \
+            --run "$AGENTLAB_ROOT/analysis-source/analysis-run.json"
+          python3 scripts/collect-github-natural-repair.py validate \
+            --root "$AGENTLAB_ROOT/natural-source" \
+            --receipt "$AGENTLAB_ROOT/natural-source/collection-receipt.json"
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib
+          root = pathlib.Path(os.environ["AGENTLAB_ROOT"])
+          analysis_path = root / "analysis-source/analysis-run.json"
+          natural_path = root / "natural-source/collection-receipt.json"
+          assert hashlib.sha256(analysis_path.read_bytes()).hexdigest() == os.environ["EXPECTED_ANALYSIS_RUN_SHA256"]
+          assert hashlib.sha256(natural_path.read_bytes()).hexdigest() == os.environ["EXPECTED_NATURAL_RECEIPT_SHA256"]
+          analysis = json.loads(analysis_path.read_text())
+          natural = json.loads(natural_path.read_text())
+          analysis_run = json.loads((root / "analysis-source-run.json").read_text())
+          natural_run = json.loads((root / "natural-source-run.json").read_text())
+          assert analysis["methodRevision"] == analysis_run["head_sha"]
+          assert natural["methodRevision"] == natural_run["head_sha"]
+          assert analysis["sourceSetSha256"] == natural["sourceSetSha256"]
+          PY
+      - name: Merge and bind the exact mixed candidate source
+        run: |
+          set -euo pipefail
+          python3 scripts/merge-case-candidate-sources.py \
+            --input "$AGENTLAB_ROOT/analysis-source/analysis/difficulty_candidates.json" \
+            --input "$AGENTLAB_ROOT/natural-source/difficulty_candidates.json" \
+            --output "$AGENTLAB_ROOT/difficulty_candidates.json"
+          python3 scripts/candidate-source-bundle.py create \
+            --root "$AGENTLAB_ROOT" \
+            --method-revision "$GITHUB_SHA" \
+            --output "$AGENTLAB_ROOT/candidate-source-bundle.json"
+          python3 scripts/candidate-source-bundle.py validate \
+            --root "$AGENTLAB_ROOT" \
+            --bundle "$AGENTLAB_ROOT/candidate-source-bundle.json"
+      - name: Propose the complete mixed-lane sampling frame
+        run: |
+          set -euo pipefail
+          python3 scripts/propose-multi-repo-candidate-cohort.py \
+            --difficulty "$AGENTLAB_ROOT/difficulty_candidates.json" \
+            --cohort-id "$COHORT_ID" \
+            --method-revision "$GITHUB_SHA" \
+            --proposal-method-revision "$GITHUB_SHA" \
+            --output "$AGENTLAB_ROOT/candidate-cohort-proposal.json"
+          sha256sum "$AGENTLAB_ROOT/candidate-source-bundle.json" >> "$GITHUB_STEP_SUMMARY"
+          sha256sum "$AGENTLAB_ROOT/candidate-cohort-proposal.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve proposal and both exact source histories
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-candidate-cohort-proposal
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/

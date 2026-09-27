@@ -1,0 +1,119 @@
+name: Multi-repository calibration bundle source
+on:
+  workflow_dispatch:
+    inputs:
+      construction_contract_review_run_id:
+        description: Successful trusted-main reviewed construction-contract run
+        required: true
+        type: string
+      expected_construction_contract_sha256:
+        description: Exact reviewed construction-contract digest
+        required: true
+        type: string
+      source_repository:
+        description: Credential-free public GitHub HTTPS repository containing the bundle
+        required: true
+        type: string
+      source_revision:
+        description: Exact 40-character Git commit containing the bundle
+        required: true
+        type: string
+      bundle_path:
+        description: Repository-relative calibration bundle directory at that commit
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  stage:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/multi-repo-calibration-bundle-source
+      CONTRACT_RUN_ID: ${{ inputs.construction_contract_review_run_id }}
+      EXPECTED_CONSTRUCTION_CONTRACT_SHA256: ${{ inputs.expected_construction_contract_sha256 }}
+      SOURCE_REPOSITORY: ${{ inputs.source_repository }}
+      SOURCE_REVISION: ${{ inputs.source_revision }}
+      BUNDLE_PATH_INPUT: ${{ inputs.bundle_path }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Recover the exact reviewed construction contract
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/contract" "$AGENTLAB_ROOT/output"
+          [[ "$CONTRACT_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_CONSTRUCTION_CONTRACT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CONTRACT_RUN_ID" > "$AGENTLAB_ROOT/contract-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/contract-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-construction-contract-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$CONTRACT_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-construction-contract-review --dir "$AGENTLAB_ROOT/contract"
+          [[ "$(sha256sum "$AGENTLAB_ROOT/contract/construction-contract.json" | cut -d' ' -f1)" == "$EXPECTED_CONSTRUCTION_CONTRACT_SHA256" ]]
+      - name: Fetch only the exact public source revision
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, pathlib, re
+          repository = os.environ["SOURCE_REPOSITORY"]
+          revision = os.environ["SOURCE_REVISION"]
+          bundle = os.environ["BUNDLE_PATH_INPUT"]
+          assert re.fullmatch(r"https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:\.git)?", repository)
+          assert re.fullmatch(r"[0-9a-f]{40}", revision)
+          path = pathlib.PurePosixPath(bundle)
+          assert bundle and "\\" not in bundle and not path.is_absolute()
+          assert all(part not in ("", ".", "..") for part in path.parts)
+          PY
+          mkdir -p "$AGENTLAB_ROOT/repository"
+          git -C "$AGENTLAB_ROOT/repository" init
+          git -C "$AGENTLAB_ROOT/repository" remote add origin "$SOURCE_REPOSITORY"
+          git -C "$AGENTLAB_ROOT/repository" -c protocol.file.allow=never -c protocol.ext.allow=never \
+            fetch --depth=1 --no-tags origin "$SOURCE_REVISION"
+          git -C "$AGENTLAB_ROOT/repository" checkout --detach FETCH_HEAD
+          [[ "$(git -C "$AGENTLAB_ROOT/repository" rev-parse HEAD)" == "$SOURCE_REVISION" ]]
+      - name: Validate and stage the exact executable bytes
+        run: |
+          set -euo pipefail
+          BUNDLE_ROOT="$AGENTLAB_ROOT/repository/$BUNDLE_PATH_INPUT"
+          [[ -d "$BUNDLE_ROOT" && ! -L "$BUNDLE_ROOT" ]]
+          python3 scripts/multi-repo-calibration-bundle.py propose \
+            --bundle-root "$BUNDLE_ROOT" \
+            --descriptor "$BUNDLE_ROOT/calibration-bundle.json" \
+            --construction-contract "$AGENTLAB_ROOT/contract/construction-contract.json" \
+            --output "$AGENTLAB_ROOT/source-proposal.json"
+          python3 scripts/multi-repo-calibration-bundle.py stage \
+            --bundle-root "$BUNDLE_ROOT" \
+            --descriptor "$BUNDLE_ROOT/calibration-bundle.json" \
+            --construction-contract "$AGENTLAB_ROOT/contract/construction-contract.json" \
+            --proposal "$AGENTLAB_ROOT/source-proposal.json" \
+            --output "$AGENTLAB_ROOT/output/bundle"
+          python3 scripts/multi-repo-calibration-bundle.py source-receipt \
+            --bundle-root "$AGENTLAB_ROOT/output/bundle" \
+            --construction-contract "$AGENTLAB_ROOT/contract/construction-contract.json" \
+            --repository "$SOURCE_REPOSITORY" \
+            --revision "$SOURCE_REVISION" \
+            --bundle-path "$BUNDLE_PATH_INPUT" \
+            --output "$AGENTLAB_ROOT/output/calibration-bundle-source.json"
+          python3 scripts/multi-repo-calibration-bundle.py validate-source-receipt \
+            --receipt "$AGENTLAB_ROOT/output/calibration-bundle-source.json" \
+            --bundle-root "$AGENTLAB_ROOT/output/bundle" \
+            --construction-contract "$AGENTLAB_ROOT/contract/construction-contract.json"
+          sha256sum "$AGENTLAB_ROOT/output/calibration-bundle-source.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve portable source and complete byte lineage
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-calibration-bundle-source
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/output/

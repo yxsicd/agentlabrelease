@@ -1,0 +1,26 @@
+{
+  "command": [
+    "/home/huawei/commandline-tools-26.0.0.821/sdk/default/openharmony/toolchains/hdc",
+    "-t",
+    "127.0.0.1:10100",
+    "shell",
+    "aa",
+    "test",
+    "-b",
+    "xxx.xxx.xxx",
+    "-m",
+    "entry_test",
+    "-s",
+    "unittest",
+    "OpenHarmonyTestRunner",
+    "-s",
+    "timeout",
+    "60000"
+  ],
+  "exitCode": 0,
+  "finishedAt": "2026-09-26T23:48:47.502719+00:00",
+  "startedAt": "2026-09-26T23:48:46.431898+00:00",
+  "stderr": "",
+  "stdout": "start ability successfully.\n\nOHOS_REPORT_SUM: 7\nOHOS_REPORT_STATUS: class=PurchaseFinalizationPolicyTest\n\n\nOHOS_REPORT_STATUS: class=PurchaseFinalizationPolicyTest\nOHOS_REPORT_STATUS: current=1\nOHOS_REPORT_STATUS: id=JS\nOHOS_REPORT_STATUS: numtests=7\nOHOS_REPORT_STATUS: stream=\nOHOS_REPORT_STATUS: test=missingJwsDoesNotFinish\nOHOS_REPORT_STATUS_CODE: 1\n\n\nOHOS_REPORT_STATUS: class=PurchaseFinalizationPolicyTest\nOHOS_REPORT_STATUS: current=1\nOHOS_REPORT_STATUS: id=JS\nOHOS_REPORT_STATUS: numtests=7\nOHOS_REPORT_STATUS: stream=\nOHOS_REPORT_STATUS: test=missingJwsDoesNotFinish\nOHOS_REPORT_STATUS_CODE: 0\nOHOS_REPORT_STATUS: consuming=1\n\n\nOHOS_REPORT_STATUS: class=PurchaseFinalizationPolicyTest\nOHOS_REPORT_STATUS: current=2\nOHOS_REPORT_STATUS: id=JS\nOHOS_REPORT_STATUS: numtests=7\nOHOS_REPORT_STATUS: stream=\nOHOS_REPORT_STATUS: test=malformedDataDoesNotFinish\nOHOS_REPORT_STATUS_CODE: 1\n\n\nOHOS_REPORT_STATUS: class=PurchaseFinalizationPolicyTest\nOHOS_REPORT_STATUS: current=2\nOHOS_REPORT_STATUS: id=JS\nOHOS_REPORT_STATUS: numtests=7\nOHOS_REPORT_STATUS: stream=\nOHOS_REPORT_STATUS: test=malformedDataDoesNotFinish\nOHOS_REPORT_STATUS_CODE: 0\nOHOS_REPORT_STATUS: consuming=0\n\n\nOHOS_REPORT_STATUS: class=PurchaseFinalizationPolicyTest\nOHOS_REPORT_STATUS: current=3\nOHOS_REPORT_STATUS: id=JS\nOHOS_REPORT_STATUS: numtests=7\nOHOS_REPORT_STATUS: stream=\nOHOS_REPORT_STATUS: test=decodeFailureDoesNotFinish\nOHOS_REPORT_STATUS_CODE: 1\n\n\nOHOS_REPORT_STATUS: class=PurchaseFinalizationPolicyTest\nOHOS_REPORT_STATUS: current=3\nOHOS_REPORT_STATUS: id=JS\nOHOS_REPORT_STATUS: numtests=7\nOHOS_REPORT_STATUS: stream=\nOHOS_REPORT_STATUS: test=decodeFailureDoesNotFinish\nOHOS_REPORT_STATUS_CODE: 0\nOHOS_REPORT_STATUS: consuming=0\n\n\nOHOS_REPORT_STATUS: class=PurchaseFinalizationPolicyTest\nOHOS_REPORT_STATUS: current=4\nOHOS_REPORT_STATUS: id=JS\nOHOS_REPORT_STATUS: numtests=7\nOHOS_REPORT_STATUS: stream=\nOHOS_REPORT_STATUS: test=alreadyFinishedPurchaseDoesNotFinishAgain\nOHOS_REPORT_STATUS_CODE: 1\n\n\nOHOS_REPORT_STATUS: class=PurchaseFinalizationPolicyTest\nOHOS_REPORT_STATUS: current=4\nOHOS_REPORT_STATUS: id=JS\nOHOS_REPORT_STATUS: numtests=7\nOHOS_REPORT_STATUS: stream=\nOHOS_REPORT_STATUS: test=alreadyFinishedPurchaseDoesNotFinishAgain\nOHOS_REPORT_STATUS_CODE: 0\nOHOS_REPORT_STATUS: consuming=1\n\n\nOHOS_REPORT_STATUS: class=PurchaseFinalizationPolicyTest\nOHOS_REPORT_STATUS: current=5\nOHOS_REPORT_STATUS: id=JS\nOHOS_REPORT_STATUS: numtests=7\nOHOS_REPORT_STATUS: stream=\nOHOS_REPORT_STATUS: test=pendingPurchaseForwardsExactFinishFields\nOHOS_REPORT_STATUS_CODE: 1\n\n\nOHOS_REPORT_STATUS: class=PurchaseFinalizationPolicyTest\nOHOS_REPORT_STATUS: current=5\nOHOS_REPORT_STATUS: id=JS\nOHOS_REPORT_STATUS: numtests=7\nOHOS_REPORT_STATUS: stream=\nOHOS_REPORT_STATUS: test=pendingPurchaseForwardsExactFinishFields\nOHOS_REPORT_STATUS_CODE: 0\nOHOS_REPORT_STATUS: consuming=1\n\n\nOHOS_REPORT_STATUS: class=PurchaseFinalizationPolicyTest\nOHOS_REPORT_STATUS: current=6\nOHOS_REPORT_STATUS: id=JS\nOHOS_REPORT_STATUS: numtests=7\nOHOS_REPORT_STATUS: stream=\nOHOS_REPORT_STATUS: test=missingProductTypeBlocksFinish\nOHOS_REPORT_STATUS_CODE: 1\n\n\nOHOS_REPORT_STATUS: class=PurchaseFinalizationPolicyTest\nOHOS_REPORT_STATUS: current=6\nOHOS_REPORT_STATUS: id=JS\nOHOS_REPORT_STATUS: numtests=7\nOHOS_REPORT_STATUS: stream=\nOHOS_REPORT_STATUS: test=missingProductTypeBlocksFinish\nOHOS_REPORT_STATUS_CODE: 0\nOHOS_REPORT_STATUS: consuming=0\n\n\nOHOS_REPORT_STATUS: class=PurchaseFinalizationPolicyTest\nOHOS_REPORT_STATUS: current=7\nOHOS_REPORT_STATUS: id=JS\nOHOS_REPORT_STATUS: numtests=7\nOHOS_REPORT_STATUS: stream=\nOHOS_REPORT_STATUS: test=finishRejectionRemainsObservable\nOHOS_REPORT_STATUS_CODE: 1\n\n\nOHOS_REPORT_STATUS: class=PurchaseFinalizationPolicyTest\nOHOS_REPORT_STATUS: current=7\nOHOS_REPORT_STATUS: id=JS\nOHOS_REPORT_STATUS: numtests=7\nOHOS_REPORT_STATUS: stream=\nOHOS_REPORT_STATUS: test=finishRejectionRemainsObservable\nOHOS_REPORT_STATUS_CODE: 0\nOHOS_REPORT_STATUS: consuming=1\n\n\nOHOS_REPORT_STATUS: class=PurchaseFinalizationPolicyTest\nOHOS_REPORT_STATUS: suiteconsuming=4\n\n\nOHOS_REPORT_RESULT: stream=Tests run: 7, Failure: 0, Error: 0, Pass: 7, Ignore: 0\nOHOS_REPORT_CODE: 0\nOHOS_REPORT_STATUS: taskconsuming=4\n\nTestFinished-ResultCode: 0\nTestFinished-ResultMsg: your test finished!!!\nuser test finished.\n",
+  "timedOut": false
+}

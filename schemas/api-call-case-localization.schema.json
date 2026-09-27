@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/api-call-case-localization.schema.json",
+  "type": "object",
+  "required": [
+    "schema", "status", "candidateId", "sourceSetSha256", "methodRevision",
+    "apiContract", "targetCallSites", "referenceCallSites", "editablePaths",
+    "contextPaths", "proposedChecks", "risks", "lineage", "reviewPolicy",
+    "automaticPromotion"
+  ],
+  "properties": {
+    "schema": { "enum": ["agentlab.api_call_case_localization_proposal.v1", "agentlab.api_call_case_localization.v1"] },
+    "status": { "enum": ["review-required", "reviewed-for-intent-construction"] },
+    "candidateId": { "type": "string", "minLength": 1 },
+    "sourceSetSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "methodRevision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "title": { "type": "string", "minLength": 1 },
+    "hypothesis": { "type": "string", "minLength": 1 },
+    "apiContract": { "type": "object" },
+    "targetCallSites": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/callSite" } },
+    "referenceCallSites": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/callSite" } },
+    "editablePaths": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/sourcePath" } },
+    "contextPaths": { "type": "array", "items": { "$ref": "#/$defs/sourcePath" } },
+    "expandedPaths": { "type": "array" },
+    "proposedChecks": {
+      "type": "object",
+      "required": ["repair", "preservation"],
+      "properties": {
+        "repair": { "$ref": "#/$defs/checks" },
+        "preservation": { "$ref": "#/$defs/checks" },
+        "device": { "$ref": "#/$defs/checks" },
+        "performance": { "$ref": "#/$defs/checks" }
+      }
+    },
+    "risks": { "type": "array", "minItems": 1 },
+    "lineage": { "type": "object" },
+    "reviewPolicy": { "type": "object" },
+    "review": { "type": "object" },
+    "automaticPromotion": { "const": false }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "schema": { "const": "agentlab.api_call_case_localization_proposal.v1" } } },
+      "then": { "properties": { "status": { "const": "review-required" } } }
+    },
+    {
+      "if": { "properties": { "schema": { "const": "agentlab.api_call_case_localization.v1" } } },
+      "then": {
+        "required": ["review"],
+        "properties": { "status": { "const": "reviewed-for-intent-construction" } }
+      }
+    }
+  ],
+  "$defs": {
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "behavior"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "behavior": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "sourcePath": {
+      "type": "object",
+      "required": ["repositoryId", "path", "reason", "sourceIdentity", "gitBlobOid", "sha256", "byteLength"],
+      "properties": {
+        "repositoryId": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 },
+        "sourceIdentity": { "type": "string", "minLength": 1 },
+        "gitBlobOid": { "type": "string", "pattern": "^[0-9a-f]{40,64}$" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "byteLength": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "callSite": {
+      "type": "object",
+      "required": ["role", "factId", "repositoryId", "path", "owner", "span", "targetExpression", "sourceIdentity"],
+      "properties": {
+        "role": { "enum": ["target", "reference"] },
+        "factId": { "type": "string", "minLength": 1 },
+        "repositoryId": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 },
+        "owner": { "type": "string" },
+        "span": { "type": "object" },
+        "targetExpression": { "type": "string", "minLength": 1 },
+        "sourceIdentity": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

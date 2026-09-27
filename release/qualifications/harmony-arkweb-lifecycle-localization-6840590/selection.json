@@ -1,0 +1,116 @@
+{
+  "schema": "agentlab.api_call_case_localization_selection.v1",
+  "candidateId": "difficulty-9884f55b9479b7df35e91fe6",
+  "title": "Pre-initialize the ArkWeb engine at the application lifecycle boundary",
+  "hypothesis": "The two late initialization sites can be moved to their owning UIAbility onCreate paths so ArkWeb startup work begins before page construction, while UIContext-dependent node creation and user-agent configuration remain behaviorally unchanged.",
+  "targetCallFactIds": [
+    "workspace-fact-b2f228228ac1dbd7e87da0b0",
+    "workspace-fact-f56c674ddfdda4c1e54a8a63"
+  ],
+  "referenceCallFactIds": [
+    "workspace-fact-605cc0fcc31fbe67f6feb17d",
+    "workspace-fact-b4bdcf26602427f60c3a61dc",
+    "workspace-fact-024ab30d5a5a1fa5454b91e8",
+    "workspace-fact-67a8859082640eec284676f1"
+  ],
+  "editablePaths": [
+    {
+      "repositoryId": "code-workshop",
+      "path": "common/src/main/ets/util/WebUtil.ets",
+      "reason": "Localized late initializeWebEngine call and the UIContext-dependent initialization that must remain after window creation."
+    },
+    {
+      "repositoryId": "code-workshop",
+      "path": "features/abilitycommon/src/main/ets/abilityhelper/BaseAbilityHelper.ets",
+      "reason": "Owning application onCreate lifecycle and the later loadContent callback that currently invokes WebUtil.initialize."
+    },
+    {
+      "repositoryId": "guide-snippets",
+      "path": "ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/pages/UserAgent_four.ets",
+      "reason": "Localized component aboutToAppear initialization and dependent user-agent configuration calls."
+    },
+    {
+      "repositoryId": "guide-snippets",
+      "path": "ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/entryability/EntryAbility.ets",
+      "reason": "Owning UIAbility onCreate lifecycle for the selected UserAgent sample."
+    },
+    {
+      "repositoryId": "guide-snippets",
+      "path": "ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/resources/base/profile/main_pages.json",
+      "reason": "The Index page links to pages/UserAgent_four but the route is absent from the committed main-pages profile."
+    }
+  ],
+  "contextPaths": [
+    {
+      "repositoryId": "guide-snippets",
+      "path": "ArkWeb/ArkWebSchemeHandler/entry/src/main/ets/entryability/EntryAbility.ets",
+      "reason": "Pinned same-API reference call in EntryAbility.onCreate before scheme-handler configuration."
+    },
+    {
+      "repositoryId": "guide-snippets",
+      "path": "ArkWeb/ManageWebPageLoadBrowse/AcceleratePageAccess/entry1/src/main/ets/entry1ability/Entry1Ability.ets",
+      "reason": "Pinned same-API reference call in Entry1Ability.onCreate before prepareForPageLoad."
+    },
+    {
+      "repositoryId": "guide-snippets",
+      "path": "ArkWeb/ManageWebPageLoadBrowse/NetReqInterceptCacheWinOps/entry/src/main/ets/entryability/EntryAbility.ets",
+      "reason": "Pinned same-API reference call in EntryAbility.onCreate before scheme-handler setup."
+    },
+    {
+      "repositoryId": "guide-snippets",
+      "path": "ArkWeb/ManageWebPageLoadBrowse/NetReqInterceptCacheWinOps/entry2/src/main/ets/entry2ability/Entry2Ability.ets",
+      "reason": "Pinned same-API reference call in Entry2Ability.onCreate after cache feature selection."
+    }
+  ],
+  "proposedChecks": {
+    "repair": [
+      {
+        "id": "code-workshop-engine-init-at-app-create",
+        "behavior": "The code-workshop application starts ArkWeb engine initialization from BaseAbilityHelper.doOnCreate before window content is loaded and does not repeat the engine call in WebUtil.initialize."
+      },
+      {
+        "id": "guide-engine-init-at-app-create",
+        "behavior": "The selected guide application initializes the ArkWeb engine in EntryAbility.onCreate and no longer initializes it from UserAgent_four.aboutToAppear."
+      },
+      {
+        "id": "guide-user-agent-four-route-registered",
+        "behavior": "The pages/UserAgent_four destination linked by the Index page is registered in the main-pages profile."
+      }
+    ],
+    "preservation": [
+      {
+        "id": "code-workshop-ui-context-node-preserved",
+        "behavior": "WebUtil.initialize still binds the window UIContext, clears retained Web state and creates the code-preview Web node only after window content succeeds."
+      },
+      {
+        "id": "guide-user-agent-configuration-preserved",
+        "behavior": "UserAgent_four still reads the default user agent and applies the application-wide and host-specific user-agent configuration after engine initialization."
+      },
+      {
+        "id": "reference-call-sites-read-only",
+        "behavior": "The four pinned onCreate reference call sites remain byte-identical context and are not participant-editable."
+      }
+    ],
+    "device": [
+      {
+        "id": "guide-user-agent-four-device-route",
+        "behavior": "On the frozen Linux Harmony emulator, launching the guide app and selecting UserAgent_four reaches the registered page with an attached Web controller and no white-screen or route error."
+      },
+      {
+        "id": "code-workshop-web-device-smoke",
+        "behavior": "On the same environment identity, the code-workshop Web-backed article path reaches its functional UI Oracle after cold launch."
+      }
+    ],
+    "performance": [
+      {
+        "id": "cold-web-readiness-latency",
+        "behavior": "Repeated cold launches use an identical navigation workload and compare Ability onCreate-to-Web-ready latency only after both functional Oracles pass."
+      },
+      {
+        "id": "cpu-pss-guardrails",
+        "behavior": "Policy-bound SmartPerf CPU and PSS guardrails remain within the calibrated threshold; unavailable frame, power and thermal signals remain observed-only."
+      }
+    ]
+  },
+  "automaticPromotion": false
+}

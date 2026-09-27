@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-performance-calibration-manifest.schema.json",
+  "title": "Portable case performance calibration manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "caseId", "sourceSetSha256", "functionalCalibrationSha256", "feedbackPerformanceEvidence", "variants", "automaticPromotion"],
+  "properties": {
+    "schema": {"const": "agentlab.case_performance_calibration_manifest.v1"},
+    "caseId": {"type": "string", "minLength": 1},
+    "sourceSetSha256": {"$ref": "#/$defs/sha256"},
+    "functionalCalibrationSha256": {"$ref": "#/$defs/sha256"},
+    "feedbackPerformanceEvidence": {"$ref": "case-performance-requirement.schema.json#/$defs/performanceEvidence"},
+    "variants": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline", "reference", "wrong"],
+      "properties": {
+        "baseline": {"$ref": "#/$defs/observations"},
+        "reference": {"$ref": "#/$defs/observations"},
+        "wrong": {"$ref": "#/$defs/observations"}
+      }
+    },
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "observations": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["baselineSummary", "candidateSummary", "baselineResult", "candidateResult", "comparison"],
+        "properties": {
+          "baselineSummary": {"$ref": "#/$defs/path"},
+          "candidateSummary": {"$ref": "#/$defs/path"},
+          "baselineResult": {"$ref": "#/$defs/path"},
+          "candidateResult": {"$ref": "#/$defs/path"},
+          "comparison": {"$ref": "#/$defs/path"}
+        }
+      }
+    },
+    "path": {"type": "string", "minLength": 1}
+  }
+}

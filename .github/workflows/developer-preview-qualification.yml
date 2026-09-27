@@ -1,0 +1,105 @@
+name: Qualify tagged developer preview
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Exact immutable developer preview tag selected as the workflow ref
+        required: true
+        default: v0.1.0-alpha.13
+        type: string
+      closure_path:
+        description: Committed closure bound to the selected release tag
+        required: true
+        default: release/closures/v0.1.0-alpha.13.json
+        type: string
+      asset_receipt_path:
+        description: Committed remote immutable-asset receipt for the closure
+        required: true
+        default: release/qualifications/alpha13-immutable-assets/summary.json
+        type: string
+      harmony_receipt_path:
+        description: Committed release-bound Harmony acceptance receipt
+        required: true
+        default: release/qualifications/alpha13-harmony-acceptance/summary.json
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  tagged-clean-install:
+    if: github.ref_type == 'tag' && github.ref_name == inputs.release_tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      AGENTLAB_CI_ROOT: /tmp/agentlab-tagged-preview
+      AGENTLAB_RELEASE_CLOSURE: ${{ inputs.closure_path }}
+      AGENTLAB_ASSET_RECEIPT: ${{ inputs.asset_receipt_path }}
+      AGENTLAB_HARMONY_RECEIPT: ${{ inputs.harmony_receipt_path }}
+      AGENTLAB_RELEASE_REPO: yxsicd/agentlabrelease
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - name: Reject a branch, moving ref or mismatched closure
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          TAG_SHA: ${{ github.sha }}
+        run: |
+          test "$GITHUB_REF" = "refs/tags/$RELEASE_TAG"
+          test "$(git rev-parse HEAD)" = "$TAG_SHA"
+          test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$TAG_SHA"
+          case "$AGENTLAB_RELEASE_CLOSURE" in release/closures/*.json) ;; *) exit 1 ;; esac
+          case "$AGENTLAB_ASSET_RECEIPT" in release/qualifications/*/summary.json) ;; *) exit 1 ;; esac
+          case "$AGENTLAB_HARMONY_RECEIPT" in release/qualifications/*/summary.json) ;; *) exit 1 ;; esac
+          python3 scripts/validate-release.py
+          python3 scripts/validate-release-graph.py \
+            --closure "$AGENTLAB_RELEASE_CLOSURE" \
+            --registry release/components/registry.json \
+            --git-root "$GITHUB_WORKSPACE"
+      - name: Install clean-runner dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes zstd btrfs-progs python3-websocket
+      - name: Install immutable closure and run the public basic use case
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/ci-public-install-deploy-smoke.sh
+      - name: Close exact-tag qualification without promotion
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          TAG_SHA: ${{ github.sha }}
+        run: |
+          python3 scripts/qualify-tagged-developer-preview.py \
+            --closure "$AGENTLAB_RELEASE_CLOSURE" \
+            --asset-receipt "$AGENTLAB_ASSET_RECEIPT" \
+            --harmony-receipt "$AGENTLAB_HARMONY_RECEIPT" \
+            --install-summary "$AGENTLAB_CI_ROOT/summary.json" \
+            --environment-lock "$AGENTLAB_CI_ROOT/closure-materialized/environment-lock.json" \
+            --tag "$RELEASE_TAG" \
+            --tag-sha "$TAG_SHA" \
+            --repository "$GITHUB_REPOSITORY" \
+            --run-id "$GITHUB_RUN_ID" \
+            --event "$GITHUB_EVENT_NAME" \
+            --git-root "$GITHUB_WORKSPACE" \
+            --output "$AGENTLAB_CI_ROOT/developer-preview-qualification.json"
+          cat "$AGENTLAB_CI_ROOT/developer-preview-qualification.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Prepare metadata-only publication bundle
+        run: |
+          python3 scripts/prepare-developer-preview-publication.py \
+            --closure "$AGENTLAB_RELEASE_CLOSURE" \
+            --qualification "$AGENTLAB_CI_ROOT/developer-preview-qualification.json" \
+            --output "$AGENTLAB_CI_ROOT/release-bundle"
+      - name: Retain tagged clean-install evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: developer-preview-qualification-${{ inputs.release_tag }}
+          if-no-files-found: error
+          include-hidden-files: true
+          path: |
+            ${{ env.AGENTLAB_CI_ROOT }}/developer-preview-qualification.json
+            ${{ env.AGENTLAB_CI_ROOT }}/summary.json
+            ${{ env.AGENTLAB_CI_ROOT }}/closure-materialized/
+            ${{ env.AGENTLAB_CI_ROOT }}/release-bundle/
+            ${{ env.AGENTLAB_CI_ROOT }}/runs/

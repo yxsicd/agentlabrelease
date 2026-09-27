@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/harmony-standard-test-contract.schema.json",
+  "title": "AgentLab Harmony standard test contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "caseId", "sourceSetSha256", "projectTreeSha256", "standardTestLanes", "deviceFunctionalStandardSourceQualified", "deviceFunctionalStandardExecutionQualified", "status", "executionReceipt", "customUiOracle", "policy", "automaticPromotion"],
+  "properties": {
+    "schema": {"const": "agentlab.harmony_standard_test_contract.v1"},
+    "caseId": {"type": "string", "minLength": 1},
+    "sourceSetSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "projectTreeSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "standardTestLanes": {"type": "array", "items": {"type": "object"}},
+    "deviceFunctionalStandardSourceQualified": {"type": "boolean"},
+    "deviceFunctionalStandardExecutionQualified": {"type": "boolean"},
+    "status": {"enum": ["unqualified-no-device-standard-test", "standard-test-source-qualified-execution-pending", "qualified-standard-test-executed"]},
+    "executionReceipt": {"type": ["object", "null"]},
+    "customUiOracle": {"type": ["object", "null"]},
+    "policy": {
+      "type": "object",
+      "required": ["acceptedFrameworks", "deviceQualificationRequires", "customUiOracleAuthority"],
+      "properties": {
+        "acceptedFrameworks": {"const": ["instrument-test-ohosTest-hypium", "local-test-hypium", "deveco-testing-hypium-ui"]},
+        "deviceQualificationRequires": {"const": ["device-capable-standard-source-contract", "passing-bound-execution-receipt"]},
+        "customUiOracleAuthority": {"const": "supplemental-only"}
+      }
+    },
+    "automaticPromotion": {"const": false}
+  }
+}

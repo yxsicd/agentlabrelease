@@ -1,0 +1,82 @@
+{
+  "baselineRunId": "tutu-controlled-regression-baseline-v2",
+  "baselineSampleCount": 12,
+  "baselineSourceIdentity": "artifact-sha256:cb28263c81b0e45cb909c6576f377e4ba704b2401c17a8c542ec2df7e9d74164",
+  "baselineSummarySha256": "d52bcf156cc00313982d584cbb6aedc0592f23671696ab1210da3cb8268b0f81",
+  "candidateRunId": "tutu-controlled-regression-candidate-v1",
+  "candidateSampleCount": 12,
+  "candidateSourceIdentity": "artifact-sha256:e1ff7ee955a3ad2cfe239c721e1c65b7e4087030f26537e79c928d13da34e8a1",
+  "candidateSummarySha256": "11cd76c8b1c74eb996dc0ea37d4a5038c366ae0a47d386bc9a4b8f0fcfeff07f",
+  "comparable": true,
+  "decision": "performance-regression-candidate",
+  "environmentIdentity": "hwlinux:emulator-26.0.0.821:harmonyos-7.0.0-phone-x86:codex-phone-7",
+  "functionalGate": {
+    "baseline": {
+      "assessmentStatus": "assessed",
+      "environmentIdentity": "hwlinux:emulator-26.0.0.821:harmonyos-7.0.0-phone-x86:codex-phone-7",
+      "infrastructureAvailable": true,
+      "oracleStatus": "passed",
+      "passed": true,
+      "profileRunId": "tutu-controlled-regression-baseline-v2",
+      "resultSha256": "7b7e1850c5a19e13f05aae02c15592f8e24bad3015672d8b3ee9dc8b9df5a0d7",
+      "scenarioId": "tutu-cookie-dismiss",
+      "scenarioSha256": "f5b7d6859e72df78fdcc2cf517bfdff8bdcd3e52093c40943f81a07ec5090afb",
+      "sourceIdentity": "artifact-sha256:cb28263c81b0e45cb909c6576f377e4ba704b2401c17a8c542ec2df7e9d74164",
+      "subjectTaskSucceeded": true
+    },
+    "candidate": {
+      "assessmentStatus": "assessed",
+      "environmentIdentity": "hwlinux:emulator-26.0.0.821:harmonyos-7.0.0-phone-x86:codex-phone-7",
+      "infrastructureAvailable": true,
+      "oracleStatus": "passed",
+      "passed": true,
+      "profileRunId": "tutu-controlled-regression-candidate-v1",
+      "resultSha256": "5853546d14a2ff94ccd1d10b29b1dbca56a72b0ca0f9160961bc7c56089cee08",
+      "scenarioId": "tutu-cookie-dismiss",
+      "scenarioSha256": "f5b7d6859e72df78fdcc2cf517bfdff8bdcd3e52093c40943f81a07ec5090afb",
+      "sourceIdentity": "artifact-sha256:e1ff7ee955a3ad2cfe239c721e1c65b7e4087030f26537e79c928d13da34e8a1",
+      "subjectTaskSucceeded": true
+    },
+    "passed": true
+  },
+  "incomparabilityReasons": [],
+  "metrics": [
+    {
+      "baseline": 6.508479666666666,
+      "candidate": 7.2289115,
+      "candidateToBaselineRatio": 1.110691262818726,
+      "guardrail": {
+        "maximumRelativeIncrease": 0.2
+      },
+      "metric": "appCpuUsagePercent",
+      "statistic": "mean",
+      "status": "passed"
+    },
+    {
+      "baseline": 170392.0,
+      "candidate": 239204.0,
+      "candidateToBaselineRatio": 1.4038452509507489,
+      "guardrail": {
+        "maximumRelativeIncrease": 0.15
+      },
+      "metric": "appPssKiB",
+      "statistic": "mean",
+      "status": "regressed"
+    }
+  ],
+  "performancePolicy": {
+    "id": "emulator-cpu-memory-relative-v1",
+    "sha256": "667c57040484c308bab6c7942bc2638283aa1dd93c3a0c19d11aabe3aae77ef9"
+  },
+  "policy": {
+    "absolutePowerThermalUsed": false,
+    "automaticPromotion": false,
+    "interpretation": "relative emulator regression signal only"
+  },
+  "profileWorkload": {
+    "id": "tutu-scroll-v1",
+    "sha256": "86a52cb852875c4e80a637d3a2921ddd9f14b47f2c8d128b7475f482af72e4c5"
+  },
+  "schema": "agentlab.smartperf_comparison.v3",
+  "taskId": "tutu-controlled-regression-v1"
+}

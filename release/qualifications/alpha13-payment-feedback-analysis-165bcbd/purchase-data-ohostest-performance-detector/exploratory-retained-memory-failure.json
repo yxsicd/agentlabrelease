@@ -1,0 +1,38 @@
+{
+  "schema": "agentlab.purchase_data_ohostest_performance_detector_exploration.v1",
+  "status": "rejected-no-repeatable-common-regression",
+  "variant": {
+    "id": "retain-and-touch-64m-entry-page-v1",
+    "kind": "retained-memory",
+    "bytes": 67108864,
+    "sourcePath": "entry/src/main/ets/pages/EntryPage.ets",
+    "baseSourceFileSha256": "daf0f32975c9c9d05174995b165669d3b19388df03f2d6b8284131cab9c1aea0",
+    "candidateSourceFileSha256": "d0a765942abdc893baa01309f393642b8e11f2401b48deec32aa15d4931d5060",
+    "appHapSha256": "8263275755261ed754cc5845ca77e24ca0b5cb33c2226a098f38b78c0e85ab13",
+    "testHapSha256": "aeebec173f3ef1af4ce48572a1daaeb903197c05499d23b404f67fc4df27255a"
+  },
+  "runnerSha256": "d6b8d052e6a3d380c010cbb24d11c5014f5d3a61891af4e3c4736bfef950f307",
+  "runs": [
+    {
+      "runId": "wrong-run-1",
+      "functionalAssertionCount": 42,
+      "appCpuUsagePercentMean": 1.401388888888889,
+      "appPssKiBMean": 19911.0,
+      "decision": "within-relative-guardrails",
+      "manifestSha256": "f9f1b778a97179a8cba2eccec70073236db85e1ebca845a63fcf4c9872308419",
+      "comparisonSha256": "6e55ff76e7aabf1148bbd58cd759971af03f3dce516e4609a670f88669825625"
+    },
+    {
+      "runId": "wrong-run-2",
+      "functionalAssertionCount": 42,
+      "appCpuUsagePercentMean": 3.7152777777777777,
+      "appPssKiBMean": 16480.0,
+      "decision": "performance-regression-candidate",
+      "manifestSha256": "6438a60b3d74a3fdc3af7493892605030c932f4e44fffebc51b38e043257fbdf",
+      "comparisonSha256": "66ad2746a00f91354f1d01e258a423932ed8c458f561f5cfc3b323b47e92559b"
+    }
+  ],
+  "consistentRegressedMetrics": [],
+  "interpretation": "A touched 64 MiB ArkTS Uint8Array did not produce repeatable target-process PSS regression under this workload. The detector correctly withheld qualification; thresholds were not relaxed.",
+  "automaticPromotion": false
+}

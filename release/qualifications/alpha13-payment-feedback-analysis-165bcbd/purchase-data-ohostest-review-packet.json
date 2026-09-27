@@ -1,0 +1,119 @@
+{
+  "allowsCaseContract": false,
+  "artifacts": {
+    "executionReceiptSha256": "0cf41095b6624644406962432a7fc927efc086fe5c192a6f783e5c90bd97ec4d",
+    "nativeReportSha256": "123fbf9bcff0dbf9c946b60e7f407b4695582072c45f15ebc249cb33aa93ba65",
+    "observationSha256": "c2b8759ae32482413c48c7526bd72b4e8bf4756510d79074b14eafc9204272fa",
+    "patch": {
+      "byteLength": 10580,
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-ohostest-candidate.patch",
+      "sha256": "cbc01c94755f2d8da5449902ad1a309488d0a9defa9fede23318ad360dd4c2c2"
+    },
+    "qualificationSha256": "3e9f533c8784630c8e220d6b2a315b3da0fe9833d5bc2d5834ec0510c6ecbfc6"
+  },
+  "automaticPromotion": false,
+  "baseRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+  "behaviorOracleVerified": false,
+  "boundary": "This packet makes the exact candidate patch and clean emulator evidence reviewable. It does not itself approve the patch, publish upstream source, prove live vendor-IAP behavior, establish semantic alignment, calibrate performance/power/thermal behavior, or authorize case promotion.",
+  "candidateAuthor": {
+    "authority": "exact-format-patch-header",
+    "email": "agentlab-evidence@localhost",
+    "name": "AgentLab Evidence"
+  },
+  "candidateId": "purchase-data-finalization-ee2bc87594f1",
+  "candidateRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+  "change": {
+    "deletions": 20,
+    "fileCount": 6,
+    "insertions": 206,
+    "ohosTestFileCount": 4,
+    "paths": [
+      "entry/src/main/ets/common/PurchaseFinalizationPolicy.ets",
+      "entry/src/main/ets/pages/ConsumablesPage.ets",
+      "entry/src/ohosTest/ets/test/Ability.test.ets",
+      "entry/src/ohosTest/ets/test/List.test.ets",
+      "entry/src/ohosTest/ets/test/PurchaseFinalizationPolicy.test.ets",
+      "entry/src/ohosTest/module.json5"
+    ],
+    "productionSourceFileCount": 2
+  },
+  "execution": {
+    "emulatorStopped": true,
+    "error": 0,
+    "failure": 0,
+    "framework": "instrument-test-ohosTest-hypium",
+    "ignore": 0,
+    "linuxX86EmulatorExecuted": true,
+    "passed": 7,
+    "testCount": 7,
+    "worktreeCleanAfterExecution": true,
+    "worktreeCleanBeforeBuild": true
+  },
+  "independentReviewVerified": false,
+  "nextGate": "authenticated-independent-source-review-on-trusted-main",
+  "performanceCalibrated": false,
+  "projectTreeSha256": "85d851734450a611e2bed1c5f15ddf9da150309ca97c3b914b0d3d19eb443144",
+  "publishedToUpstream": false,
+  "reviewDecisionContract": {
+    "answers": [
+      "yes",
+      "no",
+      "unknown"
+    ],
+    "approvalRequiresEveryAnswerYes": true,
+    "questions": [
+      {
+        "id": "exact-lineage",
+        "question": "Does the exact patch represent the recorded base-to-candidate transition and match every retained digest?"
+      },
+      {
+        "id": "production-seam-preservation",
+        "question": "Does extracting PurchaseFinalizationPolicy preserve intended purchase finalization behavior without introducing a new production defect?"
+      },
+      {
+        "id": "guard-and-field-correctness",
+        "question": "Are finish guards, productType conversion, token and order identifiers correct for the source API contract?"
+      },
+      {
+        "id": "ohostest-discrimination",
+        "question": "Do the seven OHOS Test cases distinguish meaningful wrong implementations rather than only replay the extracted implementation?"
+      },
+      {
+        "id": "failure-observability",
+        "question": "Do decode and finish failures remain observable enough for a verifiable AgentLab case contract?"
+      },
+      {
+        "id": "boundary-honesty",
+        "question": "Does the candidate remain review-only until semantic, behavior-Oracle, live-runtime and performance gates are independently satisfied?"
+      }
+    ],
+    "reviewerIdentityAuthority": "authenticated-github-actor-on-trusted-main",
+    "reviewerMustAcknowledgeEveryRisk": true,
+    "reviewerMustDifferFromCandidateAuthor": true,
+    "verdicts": [
+      "approve-for-upstream-publication",
+      "reject-candidate",
+      "defer-for-more-evidence"
+    ]
+  },
+  "risks": [
+    "self-authored-candidate",
+    "signature-verification-outside-test-seam",
+    "live-vendor-iap-service-unexecuted",
+    "x86-emulator-not-real-device",
+    "performance-power-thermal-uncalibrated",
+    "semantic-and-behavior-oracle-review-pending"
+  ],
+  "schema": "agentlab.purchase_data_ohostest_review_packet.v1",
+  "sourceRepository": "https://gitcode.com/HarmonyOS_Samples/iapkit-sample-clientdemo-arkts.git",
+  "status": "independent-source-review-required",
+  "testNames": [
+    "missingJwsDoesNotFinish",
+    "malformedDataDoesNotFinish",
+    "decodeFailureDoesNotFinish",
+    "alreadyFinishedPurchaseDoesNotFinishAgain",
+    "pendingPurchaseForwardsExactFinishFields",
+    "missingProductTypeBlocksFinish",
+    "finishRejectionRemainsObservable"
+  ]
+}

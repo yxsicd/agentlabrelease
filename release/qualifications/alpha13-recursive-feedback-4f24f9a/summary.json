@@ -1,0 +1,114 @@
+{
+  "automaticPromotion": false,
+  "campaign": {
+    "campaignId": "alpha13-release-c3c8adb",
+    "caseId": "harmony-assessed-ohostest-device-discrimination",
+    "methodRevision": "4f24f9a7eb1de98cbb0b695f02cf01da03ae26fb",
+    "sourceSetSha256": "7f96da1f672e7e9286e759cc6c95f29f4b9cc1b50987a53e0d1d465d0c04a8d8",
+    "summary": {
+      "byteLength": 1093,
+      "sha256": "cec2486f87e68fb7291c2577de2ecf64b644a4caa22db48ec9957b6db5df97a9"
+    }
+  },
+  "candidates": [
+    {
+      "automaticPromotion": false,
+      "caseSelection": {
+        "decision": "high-discrimination-candidate",
+        "discriminationScore": 1.0,
+        "eligible": true
+      },
+      "dimensionId": "assessed-agent-stage-failure",
+      "failingAttemptCount": 1,
+      "failureMode": "oracle-failure",
+      "id": "assessment-feedback-a6a1b3d8a4ce4835db0c",
+      "mechanism": "oracle-failure at frozen stage harmony-device",
+      "primaryDimension": "evaluation-feedback",
+      "stageId": "harmony-device",
+      "validAttemptCount": 2,
+      "verificationContract": {
+        "caseReady": false,
+        "required": [
+          "maintainer-adjudication",
+          "new-source-and-analysis-cut",
+          "independent-oracle-calibration"
+        ]
+      }
+    }
+  ],
+  "closure": {
+    "byteLength": 13780,
+    "sha256": "a587edf000a50a3ee72e0119e25e64775eb6ded95a973aff5a75d24498b9d717"
+  },
+  "discrimination": {
+    "decision": "high-discrimination-candidate",
+    "eligible": true,
+    "score": 1.0,
+    "validAttemptCount": 2,
+    "wilson95Separated": false
+  },
+  "evidence": {
+    "assessmentFeedback": {
+      "byteLength": 2285,
+      "sha256": "49293ffbf13094a92b38831aa59abe88f367ae8252bac1f4057972dca6e17e21"
+    },
+    "discriminationReport": {
+      "byteLength": 10633,
+      "sha256": "b62ac9334928fe4fef2eb69f7821ad1c2b0313a9fe7763525e5b091609b47c6c"
+    }
+  },
+  "harmonyAcceptance": {
+    "byteLength": 2921,
+    "sha256": "98823b2a20100c5b21ade5ed875a1fb5d9e49921817138898ca067fd6f66521c"
+  },
+  "nextAnalysis": {
+    "nextGate": "maintainer-adjudication-and-new-analysis-cut",
+    "proposer": "scripts/propose-feedback-analysis-cut.py",
+    "requiredArtifacts": [
+      "prior-frozen-case",
+      "new-multi-repository-analysis-receipt",
+      "new-difficulty-candidates",
+      "maintainer-feedback-analysis-cut-review"
+    ],
+    "requiredChange": "new-source-set-or-method-revision"
+  },
+  "performanceBoundary": {
+    "authority": {
+      "absolutePowerThermal": "unavailable-on-emulator",
+      "functional": "none",
+      "relativePerformance": "smartperf-emulator-proxy"
+    },
+    "observationCount": 1,
+    "qualifiedForRecursivePerformanceFeedback": false,
+    "repeatableProfileCount": 0
+  },
+  "portableEvidence": {
+    "assessmentFeedback": {
+      "byteLength": 2285,
+      "fileName": "assessment-feedback-candidates.json",
+      "sha256": "49293ffbf13094a92b38831aa59abe88f367ae8252bac1f4057972dca6e17e21"
+    },
+    "priorCase": {
+      "byteLength": 1599,
+      "fileName": "prior-case.json",
+      "sha256": "747c33e7f4f04fa4fbcbff44456e934e8804aad8c4f21b2b8fc2ca0486b7a6dd"
+    }
+  },
+  "qualificationBoundary": {
+    "notQualified": [
+      "population-level discrimination confidence",
+      "repeatable relative-performance separation",
+      "absolute power or thermal behavior",
+      "automatic case generation or promotion"
+    ],
+    "qualified": [
+      "release-bound functional pass/fail feedback",
+      "high-discrimination recursive difficulty candidate",
+      "exact evidence handoff to the next analysis cut"
+    ]
+  },
+  "releaseGitSha": "4f24f9a7eb1de98cbb0b695f02cf01da03ae26fb",
+  "releaseTag": "v0.1.0-alpha.13",
+  "schema": "agentlab.release_recursive_feedback_handoff.v1",
+  "status": "next-analysis-review-required"
+}

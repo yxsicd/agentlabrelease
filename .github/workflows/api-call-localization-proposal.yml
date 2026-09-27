@@ -1,0 +1,137 @@
+name: API-call localization proposal
+on:
+  workflow_dispatch:
+    inputs:
+      cohort_review_run_id:
+        description: Successful trusted-main reviewed candidate-cohort run
+        required: true
+        type: string
+      expected_cohort_sha256:
+        description: Exact reviewed cohort digest
+        required: true
+        type: string
+      candidate_id:
+        description: API-call-specific member of the reviewed cohort
+        required: true
+        type: string
+      semantic_review_run_id:
+        description: Successful trusted-main approved semantic review run
+        required: true
+        type: string
+      expected_semantic_gate_sha256:
+        description: Exact approved semantic gate digest
+        required: true
+        type: string
+      localization_selection_json:
+        description: Exact agentlab.api_call_case_localization_selection.v1 JSON
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  propose:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/api-call-localization-proposal
+      COHORT_RUN_ID: ${{ inputs.cohort_review_run_id }}
+      EXPECTED_COHORT_SHA256: ${{ inputs.expected_cohort_sha256 }}
+      CANDIDATE_ID: ${{ inputs.candidate_id }}
+      SEMANTIC_RUN_ID: ${{ inputs.semantic_review_run_id }}
+      EXPECTED_SEMANTIC_GATE_SHA256: ${{ inputs.expected_semantic_gate_sha256 }}
+      LOCALIZATION_SELECTION_JSON: ${{ inputs.localization_selection_json }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Recover the exact reviewed cohort and rematerialize sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/cohort" "$AGENTLAB_ROOT/output"
+          [[ "$COHORT_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_COHORT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$COHORT_RUN_ID" > "$AGENTLAB_ROOT/cohort-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/cohort-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-candidate-cohort-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$COHORT_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-candidate-cohort-review --dir "$AGENTLAB_ROOT/cohort"
+          python3 scripts/multi-repo-analysis-run.py validate \
+            --root "$AGENTLAB_ROOT/cohort/source/analysis-source" \
+            --run "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis-run.json"
+          python3 scripts/select-multi-repo-cohort-candidate.py \
+            --cohort "$AGENTLAB_ROOT/cohort/candidate-cohort.json" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
+            --expected-cohort-sha256 "$EXPECTED_COHORT_SHA256" \
+            --candidate-id "$CANDIDATE_ID" \
+            --output "$AGENTLAB_ROOT/output/candidate-selection.json"
+          python3 scripts/prepare-multi-repo-analysis-sources.py \
+            --spec "$AGENTLAB_ROOT/cohort/source/analysis-source/source-spec.json" \
+            --output "$AGENTLAB_ROOT/input"
+      - name: Recover the exact approved semantic gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/semantic"
+          [[ "$SEMANTIC_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_SEMANTIC_GATE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SEMANTIC_RUN_ID" > "$AGENTLAB_ROOT/semantic-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/semantic-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-candidate-semantic-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$SEMANTIC_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-candidate-semantic-review --dir "$AGENTLAB_ROOT/semantic"
+          [[ "$(sha256sum "$AGENTLAB_ROOT/semantic/gate.json" | cut -d' ' -f1)" == "$EXPECTED_SEMANTIC_GATE_SHA256" ]]
+      - name: Normalize the operator-owned localization selection
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib
+          value = json.loads(os.environ["LOCALIZATION_SELECTION_JSON"])
+          path = pathlib.Path(os.environ["AGENTLAB_ROOT"]) / "output/localization-selection.json"
+          path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+          PY
+      - name: Bind exact calls, source bytes and semantic authorization
+        run: |
+          python3 scripts/propose-api-call-case-localization.py \
+            --manifest "$AGENTLAB_ROOT/input/manifest.json" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
+            --facts "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/workspace_facts.jsonl" \
+            --candidate-id "$CANDIDATE_ID" \
+            --selection "$AGENTLAB_ROOT/output/localization-selection.json" \
+            --cohort-selection "$AGENTLAB_ROOT/output/candidate-selection.json" \
+            --candidate-cohort "$AGENTLAB_ROOT/cohort/candidate-cohort.json" \
+            --semantic-packet "$AGENTLAB_ROOT/semantic/packet.json" \
+            --semantic-decision "$AGENTLAB_ROOT/semantic/decision.json" \
+            --semantic-gate "$AGENTLAB_ROOT/semantic/gate.json" \
+            --method-revision "$GITHUB_SHA" \
+            --output "$AGENTLAB_ROOT/output/proposal.json"
+          cp "$AGENTLAB_ROOT/semantic/packet.json" "$AGENTLAB_ROOT/output/semantic-packet.json"
+          cp "$AGENTLAB_ROOT/semantic/decision.json" "$AGENTLAB_ROOT/output/semantic-decision.json"
+          cp "$AGENTLAB_ROOT/semantic/gate.json" "$AGENTLAB_ROOT/output/semantic-gate.json"
+          cp "$AGENTLAB_ROOT/cohort/candidate-cohort.json" "$AGENTLAB_ROOT/output/candidate-cohort.json"
+          cp "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis-run.json" "$AGENTLAB_ROOT/output/analysis-run.json"
+          cp "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
+            "$AGENTLAB_ROOT/output/difficulty_candidates.json"
+          sha256sum "$AGENTLAB_ROOT/output/"*.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve the proposal and exact review inputs
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: api-call-localization-proposal
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/output/
