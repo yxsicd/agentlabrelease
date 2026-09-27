@@ -1,0 +1,114 @@
+{
+  "allowsCaseContract": false,
+  "authoritySeparation": {
+    "evaluatorRetains": [
+      "OHOS Test functional Oracle",
+      "dependency obligations",
+      "case-performance policy",
+      "SmartPerf comparison authority"
+    ],
+    "participantMustNotReceive": [
+      "gold repair",
+      "evaluator Oracle",
+      "reference workspace",
+      "calibration outcomes",
+      "controlled baseline or meaningful-wrong variants"
+    ],
+    "participantReceives": [
+      "blind task contract",
+      "held-out source repositories",
+      "participant-visible build and test instructions"
+    ]
+  },
+  "automaticPromotion": false,
+  "currentReadiness": {
+    "exactPatchPublishedUpstream": false,
+    "harmonyAttemptFeedbackExecuted": false,
+    "independentDualReviewApproved": false,
+    "publishedRevisionRebound": false,
+    "readyToDispatch": false,
+    "trustedFrozenCaseAvailable": false,
+    "unseenAgentCohortExecuted": false
+  },
+  "implementationBindings": {
+    "assessedCampaign": {
+      "path": ".github/workflows/multi-repo-assessed-campaign.yml",
+      "sha256": "d3412a810800d41ee977779cdf7848456b37dbb4a6987c0c9d07228ca8f06aa8"
+    },
+    "participantExperimentPlan": {
+      "path": "scripts/participant-experiment-plan.py",
+      "sha256": "48e950f53289c39c0e450cacc26e5730f801e7fd24612f04b7a072f7456b7743"
+    },
+    "trustedCaseReview": {
+      "path": ".github/workflows/multi-repo-case-review.yml",
+      "sha256": "74af43c901294758cb766416eb0dbf3ca63242a3951201b2c79adea6e2ad3efc"
+    }
+  },
+  "nextGate": "two-distinct-authenticated-reviewers-approve-exact-packet",
+  "packetSha256": "3c8bce352c03b7dde565e3cc1dbe602d817b8e57f13abe5292daee1743248efd",
+  "participantCohort": {
+    "allowedTrialsPerProfile": [
+      3,
+      5,
+      10,
+      20
+    ],
+    "experimentPlanSchema": "agentlab.participant_experiment_plan.v1",
+    "freshRuntimePerAttempt": true,
+    "maximumProfiles": 8,
+    "minimumProfiles": 3,
+    "participantAndModelIdentitiesMustBeUnique": true,
+    "profileOrder": "weakest-to-strongest-declared-before-outcomes"
+  },
+  "performanceQualification": {
+    "coldRunCount": 6,
+    "controlledVariantsAreAgentRuns": false,
+    "functionalVerdictCount": 288,
+    "path": "purchase-data-case-performance-qualification.json",
+    "profileSampleCount": 288,
+    "relativeMetricAuthority": "appCpuUsagePercent",
+    "sha256": "3dc1dd230e79a2d2dc2b84c6813fe303b7c9cdc943188ccc857da87f3578b00d"
+  },
+  "requiredSequence": [
+    {
+      "gate": "independent-dual-integrated-review",
+      "ordinal": 1,
+      "requiredEvidence": "approved agentlab.purchase_data_integrated_review_gate.v1 bound to this packet"
+    },
+    {
+      "gate": "exact-patch-upstream-publication",
+      "ordinal": 2,
+      "requiredEvidence": "published upstream revision containing the exact reviewed patch"
+    },
+    {
+      "gate": "published-revision-reexecution",
+      "ordinal": 3,
+      "requiredEvidence": "semantic, OHOS Test and performance evidence rebound to the published source revision"
+    },
+    {
+      "gate": "trusted-case-freeze",
+      "ordinal": 4,
+      "requiredEvidence": "successful trusted-main multi-repo-case-review run with held-out public revision"
+    },
+    {
+      "gate": "unseen-agent-cohort",
+      "ordinal": 5,
+      "requiredEvidence": "pre-outcome signed experiment plan and repeated blind attempts for every declared profile"
+    },
+    {
+      "gate": "harmony-functional-performance-feedback",
+      "ordinal": 6,
+      "requiredEvidence": "Harmony handoff plus OHOS Test and relative SmartPerf results linked to each assessed attempt"
+    }
+  ],
+  "runtimeCandidateId": "purchase-data-finalization-ee2bc87594f1",
+  "schema": "agentlab.purchase_data_unseen_agent_cohort_contract.v1",
+  "semanticCandidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "sourceLineage": {
+    "analysisSourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
+    "baseRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+    "candidateRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+    "runtimeSourceSetSha256": "cbc01c94755f2d8da5449902ad1a309488d0a9defa9fede23318ad360dd4c2c2"
+  },
+  "status": "execution-contract-frozen-prerequisites-pending"
+}

@@ -681,6 +681,15 @@ or attachment drift, incomplete answers/risks, and any forged case-contract or
 automatic-promotion authority. Until those workflows are run by two real
 reviewers, every independent-review flag remains false.
 
+`agentlab-purchase-data-unseen-agent-cohort-contract` binds the approved-review
+successor to the existing trusted multi-repository case freeze, blind assessed
+campaign and participant experiment-plan producer. The retained contract keeps
+the present lane blocked until dual review, exact-patch upstream publication and
+published-revision re-execution exist. Only then may a predeclared 3–8 profile
+cohort run fresh trials and hand each assessed workspace to the Harmony OHOS Test
+and relative SmartPerf feedback lane. Controlled calibration variants remain
+evaluator evidence, never Agent attempts or gold repairs.
+
 ### Review-transaction preparation
 
 After a calibration succeeds, use

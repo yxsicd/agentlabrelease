@@ -680,6 +680,34 @@
       "automaticPromotion": false,
       "status": "current-evidence-bound-independent-dual-review-required"
     },
+    "unseenAgentCohortContract": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-unseen-agent-cohort-contract.json",
+      "schema": "agentlab.purchase_data_unseen_agent_cohort_contract.v1",
+      "sha256": "404303ded46274009aaeab70873525b884467223ee916446aaecc1def55ab589",
+      "implementation": "crates/agentlab_code_analysis/src/purchase_data_unseen_agent_cohort_contract.rs",
+      "binary": "agentlab-purchase-data-unseen-agent-cohort-contract",
+      "language": "rust",
+      "requiredStageCount": 6,
+      "minimumParticipantProfiles": 3,
+      "maximumParticipantProfiles": 8,
+      "allowedTrialsPerProfile": [
+        3,
+        5,
+        10,
+        20
+      ],
+      "controlledVariantsAreAgentRuns": false,
+      "independentDualReviewApproved": false,
+      "exactPatchPublishedUpstream": false,
+      "publishedRevisionRebound": false,
+      "trustedFrozenCaseAvailable": false,
+      "unseenAgentCohortExecuted": false,
+      "harmonyAttemptFeedbackExecuted": false,
+      "readyToDispatch": false,
+      "allowsCaseContract": false,
+      "automaticPromotion": false,
+      "status": "execution-contract-frozen-prerequisites-pending"
+    },
     "semanticAlignmentVerified": false,
     "behaviorOracleVerified": false,
     "allowsCaseContract": false,
@@ -689,6 +717,6 @@
   "retention": {
     "authority": "compact-qualification-and-exact-source-patch",
     "fullReplayEvidence": "retained-source-review-packet-plus-run-addressed-workflow-artifact",
-    "nextGate": "execute-predeclared-case-bound-performance-matrix-and-authenticated-distinct-semantic-oracle-review"
+    "nextGate": "authenticated-distinct-semantic-oracle-review-then-exact-patch-publication-and-upstream-rebinding"
   }
 }

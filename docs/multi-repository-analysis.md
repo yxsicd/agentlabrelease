@@ -1480,6 +1480,24 @@ matrix; `behaviorOracleVerified`, `allowsCaseContract` and
 review mechanism; no retained decision or approval exists until two actual,
 distinct authenticated reviewers execute it.
 
+The Rust-native
+`agentlab-purchase-data-unseen-agent-cohort-contract` now freezes the transition
+from that approval to the existing generic blind-case pipeline instead of
+creating a parallel evaluator. It digest-binds the trusted case-review workflow,
+assessed-Agent campaign and pre-outcome participant-plan producer. The retained
+contract requires, in order: dual review, publication of the exact patch,
+re-execution on the published revision, trusted held-out case freeze, a blind
+3–8 profile cohort with 3/5/10/20 fresh trials, and per-attempt Harmony OHOS Test
+plus relative SmartPerf feedback. Gold repairs, evaluator Oracles, reference
+workspaces, calibration outcomes and the controlled baseline/wrong variants are
+explicitly excluded from participant input.
+
+This is an executable handoff contract, not an execution receipt. Its current
+status is `execution-contract-frozen-prerequisites-pending`; all six readiness
+flags, case-contract authority and automatic promotion remain false. In
+particular, the 288 functional verdicts and 288 SmartPerf samples calibrate the
+evaluator but are not relabeled as unseen Agent attempts.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \

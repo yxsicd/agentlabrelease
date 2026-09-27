@@ -86,6 +86,25 @@ the source was built, OHOS Test ran, the emulator was launched, the functional
 Oracle passed, or SmartPerf evidence exists. Those flags remain false until
 independently validated runtime receipts are attached.
 
+After the retained runtime and case-performance evidence is assembled, freeze
+the next unseen-Agent transition with the Rust contract producer:
+
+```sh
+cargo run --locked -p agentlab_code_analysis \
+  --bin agentlab-purchase-data-unseen-agent-cohort-contract -- \
+  --packet release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-integrated-review-packet-v2.json \
+  --expected-packet-sha256 3c8bce352c03b7dde565e3cc1dbe602d817b8e57f13abe5292daee1743248efd \
+  --qualification-root release/qualifications/alpha13-payment-feedback-analysis-165bcbd \
+  --case-review-workflow .github/workflows/multi-repo-case-review.yml \
+  --assessed-campaign-workflow .github/workflows/multi-repo-assessed-campaign.yml \
+  --participant-plan scripts/participant-experiment-plan.py \
+  --output /tmp/purchase-data-unseen-agent-cohort-contract.json
+```
+
+The command verifies and digest-binds those existing execution surfaces. It
+does not bypass independent review, upstream revision rebinding, blind-case
+freeze or the pre-outcome cohort plan, and it never grants automatic promotion.
+
 Before the runtime plan can advance,
 `agentlab-purchase-data-ohostest-proposal` reads the selected source directly
 from its exact Git revision and combines content-addressed identity with Rust
