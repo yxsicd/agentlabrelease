@@ -33,7 +33,7 @@
   "implementationBindings": {
     "assessedCampaign": {
       "path": ".github/workflows/multi-repo-assessed-campaign.yml",
-      "sha256": "d3412a810800d41ee977779cdf7848456b37dbb4a6987c0c9d07228ca8f06aa8"
+      "sha256": "de5015a7212709df7b7df9641f92ce1bceb0a2e45bbe7bbc7c7099a80fdbda5a"
     },
     "participantExperimentPlan": {
       "path": "scripts/participant-experiment-plan.py",

@@ -304,13 +304,22 @@ scorecard preserves that denominator alongside model discrimination evidence.
 It now distinguishes extreme weak/strong separation from full capability
 resolution: the latter requires a predeclared weak/middle/strong-or-richer
 ordering and separately separated Wilson intervals for every adjacent tier.
-The assessed campaign now freezes three to eight unique participant/model
-profiles, route and trial count in a signed pre-outcome plan; the v3 suite
-derives its order from that evidence instead of accepting a post-hoc order.
-Harmony imports verify and re-attest the unchanged plan. Two extreme profiles
-may still qualify the historical base measurement, but v1/v2 evidence and any
-unsigned ordering can no longer be reported as resolving the intermediate
-capability frontier.
+The assessed campaign now uses a separate `freeze-plan` job to freeze three to
+eight unique participant/model profiles, route and trial count before the
+assessment job can start. The Rust-native
+`agentlab-participant-experiment-dispatch` compiler binds those choices to the
+exact held-out case, repository-owned participant inputs, Docker build recipe,
+image ID and byte-exact Docker archive. GitHub attests that portable dispatch;
+the dependent assessment job must download it, independently verify its SLSA
+provenance, load the same archive and materialize a runner-local v1 plan through
+the Rust verifier before any attempt begins. Temporary absolute mount paths are
+therefore not mistaken for portable authority. The v3 suite derives its order
+from the materialized plan instead of accepting a post-hoc order, while the
+dispatch and its materialization receipt remain available for audit. Harmony
+imports verify and re-attest the unchanged plan. Two extreme profiles may still
+qualify the historical base measurement, but v1/v2 evidence and any unsigned
+ordering can no longer be reported as resolving the intermediate capability
+frontier.
 
 Candidate adjudication yield is not case qualification yield. Every newly
 generated analyzer-backed case now carries an `agentlab.case_source.v1` record

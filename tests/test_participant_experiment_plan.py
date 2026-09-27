@@ -134,14 +134,17 @@ class ParticipantExperimentPlanTests(unittest.TestCase):
         scorecard = (ROOT / ".github/workflows/agent-suite-scorecard.yml").read_text()
         device_import = (ROOT / ".github/workflows/harmony-device-campaign-import.yml").read_text()
         self.assertIn("participant_profiles_json", campaign)
-        self.assertIn("participant-experiment-plan.py create", campaign)
-        self.assertIn("--participant-adapter", campaign)
-        self.assertIn("--participant-driver", campaign)
-        self.assertIn("--participant-package-lock", campaign)
-        self.assertIn("--runtime-config", campaign)
+        self.assertNotIn("participant-experiment-plan.py create", campaign)
+        self.assertIn("freeze-plan:", campaign)
+        self.assertIn("needs: freeze-plan", campaign)
+        self.assertIn("agentlab-participant-experiment-dispatch -- freeze", campaign)
+        self.assertIn("agentlab-participant-experiment-dispatch -- materialize", campaign)
+        self.assertIn("participant-runtime-image.tar", campaign)
+        self.assertIn("gh attestation verify", campaign)
+        self.assertIn("participant-dispatch-materialization.json", campaign)
         self.assertIn('--experiment-plan "$AGENTLAB_ROOT/participant-experiment-plan.json"', campaign)
         self.assertLess(
-            campaign.index("Sign the pre-outcome participant experiment plan"),
+            campaign.index("Attest the pre-execution participant dispatch"),
             campaign.index("Run fresh staged attempts for every predeclared capability tier"),
         )
         self.assertNotIn("model_a:", campaign)

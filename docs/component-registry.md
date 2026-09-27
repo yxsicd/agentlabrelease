@@ -48,7 +48,7 @@ The repository's semantic analysis, qualification and review compilers are a
 separate optional `analysis-tools` pack. They do not belong to the generic
 `developer-tools` pack (Bun/jq/ripgrep) or the service runtime pack. The
 Rust-native `agentlab-analysis-tools-pack` producer requires the complete
-26-binary `x86_64` Linux ELF inventory, rejects missing/non-ELF/symlinked
+27-binary `x86_64` Linux ELF inventory, rejects missing/non-ELF/symlinked
 inputs, writes a deterministic USTAR stream, compresses it with single-threaded
 zstd, and emits both the capability-pack descriptor and a relative-URL
 `agentlab.component_update.v1` descriptor.

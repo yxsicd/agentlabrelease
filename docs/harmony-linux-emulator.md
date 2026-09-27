@@ -687,7 +687,11 @@ are run by two real reviewers, every independent-review flag remains false.
 
 `agentlab-purchase-data-unseen-agent-cohort-contract` binds the approved-review
 successor to the existing trusted multi-repository case freeze, blind assessed
-campaign and participant experiment-plan producer. The retained contract keeps
+campaign and participant experiment-plan producer. The campaign now has a
+separate Rust-compiled `freeze-plan` gate: it attests the profiles, trial count,
+case and exact Docker image archive before the dependent assessment job exists;
+the assessment job verifies that attestation and byte identity before
+materializing its runner-local plan. The retained contract keeps
 the present lane blocked until dual review, exact-patch upstream publication and
 published-revision re-execution exist. Only then may a predeclared 3–8 profile
 cohort run fresh trials and hand each assessed workspace to the Harmony OHOS Test

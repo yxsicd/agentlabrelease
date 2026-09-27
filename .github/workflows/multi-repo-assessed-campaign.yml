@@ -37,16 +37,101 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  freeze-plan:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      AGENTLAB_PLAN_GATE: ${{ github.workspace }}/.agentlab-work/participant-plan-gate
+      PARTICIPANT_PROFILES_JSON: ${{ inputs.participant_profiles_json }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Recover the exact trusted case for the plan gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.case_run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_PLAN_GATE/case"
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$AGENTLAB_PLAN_GATE/source-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_PLAN_GATE"] + "/source-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-case-review.yml"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-frozen-case --dir "$AGENTLAB_PLAN_GATE/case"
+      - name: Freeze participant-visible manifest before assessment
+        run: |
+          python3 scripts/build-blind-case-cut.py validate \
+            --cut "$AGENTLAB_PLAN_GATE/case/blind-cut"
+          python3 scripts/build-blind-case-cut.py stage-participant \
+            --cut "$AGENTLAB_PLAN_GATE/case/blind-cut" \
+            --output "$RUNNER_TEMP/agentlab-plan-gate-participant" \
+            --receipt "$AGENTLAB_PLAN_GATE/blind-dispatch-receipt.json"
+      - name: Build and preserve the exact portable participant image
+        run: |
+          set -euo pipefail
+          participant_tag="agentlab-pi-participant:${GITHUB_SHA}"
+          AGENTLAB_PARTICIPANT_CACHE_TAR="$AGENTLAB_PLAN_GATE/participant-runtime-image.tar" \
+            examples/knowledge-seed/subject/participant-runtime.sh \
+              "$AGENTLAB_PLAN_GATE/participant-container" "$participant_tag"
+          image_id=$(<"$AGENTLAB_PLAN_GATE/participant-container/image.txt")
+          printf '%s\n' "$image_id" > "$AGENTLAB_PLAN_GATE/runtime-image-id.txt"
+      - name: Freeze the portable participant dispatch in Rust
+        run: |
+          set -euo pipefail
+          cargo run --locked --release -p agentlab_code_analysis \
+            --bin agentlab-participant-experiment-dispatch -- freeze \
+            --repository-root "$GITHUB_WORKSPACE" \
+            --repository "$GITHUB_REPOSITORY" \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --workflow-run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --case "$AGENTLAB_PLAN_GATE/case/evaluation-case.json" \
+            --case-review-run-id "${{ inputs.case_run_id }}" \
+            --method-revision "$GITHUB_SHA" \
+            --profiles-json "$PARTICIPANT_PROFILES_JSON" \
+            --provider-route "${{ inputs.provider_route }}" \
+            --trials "${{ inputs.trials }}" \
+            --participant-adapter examples/multi-repo-case/pi-assessed-agent.py \
+            --participant-driver examples/real-code-agent/participant.py \
+            --participant-package-lock examples/real-code-agent/participant/package-lock.json \
+            --participant-manifest "$RUNNER_TEMP/agentlab-plan-gate-participant/manifest.json" \
+            --runtime-dockerfile examples/knowledge-seed/subject/participant.Dockerfile \
+            --runtime-build-script examples/knowledge-seed/subject/participant-runtime.sh \
+            --runtime-image-id "$(<"$AGENTLAB_PLAN_GATE/runtime-image-id.txt")" \
+            --runtime-image-archive "$AGENTLAB_PLAN_GATE/participant-runtime-image.tar" \
+            --output "$AGENTLAB_PLAN_GATE/participant-experiment-dispatch.json"
+          sha256sum "$AGENTLAB_PLAN_GATE/participant-experiment-dispatch.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Attest the pre-execution participant dispatch
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: ${{ env.AGENTLAB_PLAN_GATE }}/participant-experiment-dispatch.json
+      - name: Preserve the gated plan and exact participant image
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: participant-plan-gate
+          if-no-files-found: error
+          compression-level: 6
+          retention-days: 7
+          path: |
+            ${{ env.AGENTLAB_PLAN_GATE }}/participant-experiment-dispatch.json
+            ${{ env.AGENTLAB_PLAN_GATE }}/participant-runtime-image.tar
+            ${{ env.AGENTLAB_PLAN_GATE }}/runtime-image-id.txt
+            ${{ env.AGENTLAB_PLAN_GATE }}/participant-container/participant-image.json
+            ${{ env.AGENTLAB_PLAN_GATE }}/participant-container/participant-runtime-preflight.txt
+
   assess:
+    needs: freeze-plan
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
       AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/multi-repo-assessed-campaign
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
-      AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
-      PARTICIPANT_PROFILES_JSON: ${{ inputs.participant_profiles_json }}
-      TRIALS: ${{ inputs.trials }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Verify and recover the trusted frozen case
@@ -99,6 +184,24 @@ jobs:
             --run-id "$REVIEW_RUN_ID" \
             --verification-output "$AGENTLAB_ROOT/authenticated-review-final-attestation-verification.json" \
             | tee "$AGENTLAB_ROOT/authenticated-review-validation.json"
+      - name: Download the separately frozen participant plan gate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: participant-plan-gate
+          path: ${{ runner.temp }}/participant-plan-gate
+      - name: Verify the dispatch attestation before runtime materialization
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh attestation verify "$RUNNER_TEMP/participant-plan-gate/participant-experiment-dispatch.json" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/multi-repo-assessed-campaign.yml" \
+            --source-ref refs/heads/main \
+            --source-digest "$GITHUB_SHA" \
+            --format json > "$AGENTLAB_ROOT/participant-dispatch-attestation-verification.json"
+          cp "$RUNNER_TEMP/participant-plan-gate/participant-experiment-dispatch.json" \
+            "$AGENTLAB_ROOT/participant-experiment-dispatch.json"
       - name: Install a separately contained Pi runtime
         run: |
           mkdir -p "$RUNNER_TEMP/pi-runtime"
@@ -108,8 +211,9 @@ jobs:
       - name: Freeze the least-mounted participant container runtime
         run: |
           participant_tag="agentlab-pi-participant:${GITHUB_SHA}"
-          examples/knowledge-seed/subject/participant-runtime.sh \
-            "$AGENTLAB_ROOT/participant-container" "$participant_tag"
+          AGENTLAB_PARTICIPANT_CACHE_TAR="$RUNNER_TEMP/participant-plan-gate/participant-runtime-image.tar" \
+            examples/knowledge-seed/subject/participant-runtime.sh \
+              "$AGENTLAB_ROOT/participant-container" "$participant_tag"
           python3 scripts/prepare-participant-runtime.py \
             --image "$participant_tag" \
             --pi-runtime "$RUNNER_TEMP/pi-runtime" \
@@ -117,24 +221,30 @@ jobs:
             --forbid "$AGENTLAB_ROOT/case" \
             --forbid "$AGENTLAB_ROOT/blind-dispatch-receipt.json" \
             --output "$AGENTLAB_ROOT/participant-runtime.json"
-      - name: Freeze the ordered participant experiment and exact execution protocol before attempts
+      - name: Materialize the attested portable dispatch into the local execution plan
         run: |
           set -euo pipefail
-          python3 scripts/participant-experiment-plan.py create \
-            --case "$AGENTLAB_ROOT/case/evaluation-case.json" \
-            --profiles-json "$PARTICIPANT_PROFILES_JSON" \
-            --provider-route "$AGENTLAB_PROVIDER_ROUTE" \
-            --trials "$TRIALS" \
+          cargo run --locked --release -p agentlab_code_analysis \
+            --bin agentlab-participant-experiment-dispatch -- materialize \
+            --repository-root "$GITHUB_WORKSPACE" \
+            --repository "$GITHUB_REPOSITORY" \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --workflow-run-attempt "$GITHUB_RUN_ATTEMPT" \
             --method-revision "$GITHUB_SHA" \
-            --case-review-run-id "${{ inputs.case_run_id }}" \
-            --participant-adapter examples/multi-repo-case/pi-assessed-agent.py \
-            --participant-driver examples/real-code-agent/participant.py \
-            --participant-package-lock examples/real-code-agent/participant/package-lock.json \
+            --dispatch "$AGENTLAB_ROOT/participant-experiment-dispatch.json" \
+            --attestation-verification "$AGENTLAB_ROOT/participant-dispatch-attestation-verification.json" \
+            --case "$AGENTLAB_ROOT/case/evaluation-case.json" \
+            --runtime-image-archive "$RUNNER_TEMP/participant-plan-gate/participant-runtime-image.tar" \
             --runtime-config "$AGENTLAB_ROOT/participant-runtime.json" \
-            --output "$AGENTLAB_ROOT/participant-experiment-plan.json"
+            --output "$AGENTLAB_ROOT/participant-experiment-plan.json" \
+            --verification-output "$AGENTLAB_ROOT/participant-dispatch-materialization.json"
           python3 scripts/participant-experiment-plan.py validate \
             --plan "$AGENTLAB_ROOT/participant-experiment-plan.json" \
             --case "$AGENTLAB_ROOT/case/evaluation-case.json"
+          AGENTLAB_PROVIDER_ROUTE=$(jq -r .providerRoute "$AGENTLAB_ROOT/participant-experiment-plan.json")
+          TRIALS=$(jq -r .trialsPerParticipant "$AGENTLAB_ROOT/participant-experiment-plan.json")
+          printf 'AGENTLAB_PROVIDER_ROUTE=%s\nTRIALS=%s\n' \
+            "$AGENTLAB_PROVIDER_ROUTE" "$TRIALS" >> "$GITHUB_ENV"
           sha256sum "$AGENTLAB_ROOT/participant-experiment-plan.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Sign the pre-outcome participant experiment plan
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4

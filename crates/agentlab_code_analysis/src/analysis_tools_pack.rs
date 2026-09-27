@@ -20,6 +20,7 @@ const BINARIES: &[&str] = &[
     "agentlab-experience",
     "agentlab-harmony-materialize",
     "agentlab-multi-repo-analysis",
+    "agentlab-participant-experiment-dispatch",
     "agentlab-purchase-data-case-performance-plan",
     "agentlab-purchase-data-case-performance-qualification",
     "agentlab-purchase-data-integrated-review",
