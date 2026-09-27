@@ -687,7 +687,7 @@ are run by two real reviewers, every independent-review flag remains false.
 
 `agentlab-purchase-data-unseen-agent-cohort-contract` binds the approved-review
 successor to the existing trusted multi-repository case freeze, blind assessed
-campaign and participant experiment-plan producer. The campaign now has a
+campaign, Rust portable-dispatch compiler and its JSON schema. The campaign now has a
 separate Rust-compiled `freeze-plan` gate: it attests the profiles, trial count,
 case and exact Docker image archive before the dependent assessment job exists;
 the assessment job verifies that attestation and byte identity before
@@ -703,7 +703,9 @@ fail-closed bridge from those authorities to dispatch. It accepts only the
 actual approved dual-review status with two distinct GitHub reviewers, binds
 the exact published patch and revision through semantic/OHOS Test/performance
 re-execution and trusted-main held-out case freeze, and requires the 3–8-profile
-experiment plan to have a verified online GitHub attestation. Its success
+portable dispatch to be the exact subject of raw GitHub SLSA attestation
+verification for the same workflow run and attempt. The runner-local plan is a
+derived compatibility artifact, not readiness authority. Its success
 receipt authorizes an explicit operator dispatch only; it does not claim that
 any Agent attempt, OHOS Test feedback or SmartPerf feedback has run.
 

@@ -12,7 +12,9 @@ const CONTRACT_SCHEMA: &str = "agentlab.purchase_data_unseen_agent_cohort_contra
 const PERFORMANCE_ATTACHMENT: &str = "case-performance-qualification";
 const CASE_REVIEW_PATH: &str = ".github/workflows/multi-repo-case-review.yml";
 const CAMPAIGN_PATH: &str = ".github/workflows/multi-repo-assessed-campaign.yml";
-const PLAN_PATH: &str = "scripts/participant-experiment-plan.py";
+const DISPATCH_SOURCE_PATH: &str =
+    "crates/agentlab_code_analysis/src/participant_experiment_dispatch.rs";
+const DISPATCH_SCHEMA_PATH: &str = "schemas/participant-experiment-dispatch.schema.json";
 
 struct Input {
     bytes: Vec<u8>,
@@ -259,19 +261,34 @@ fn derive(values: &BTreeMap<String, String>) -> Result<Value, String> {
         ],
         "assessed-campaign workflow",
     )?;
-    let plan = TextInput::load(
-        &path(values, "--participant-plan")?,
-        "participant experiment plan",
+    let dispatch_source = TextInput::load(
+        &path(values, "--participant-dispatch-source")?,
+        "participant dispatch source",
     )?;
-    plan.require_fragments(
+    dispatch_source.require_fragments(
         &[
-            "SCHEMA = \"agentlab.participant_experiment_plan.v1\"",
-            "3 <= len(value) <= 8",
-            "trials in {3, 5, 10, 20}",
-            "\"status\": \"predeclared-before-attempts\"",
-            "\"automaticPromotion\": False",
+            "const DISPATCH_SCHEMA: &str = \"agentlab.participant_experiment_dispatch.v1\"",
+            "\"attested-plan-gate-frozen-before-assessment\"",
+            "\"freeze\" =>",
+            "\"materialize\" =>",
+            "validate_attestation(",
+            "\"automaticPromotion\": false",
         ],
-        "participant experiment plan",
+        "participant dispatch source",
+    )?;
+    let dispatch_schema = TextInput::load(
+        &path(values, "--participant-dispatch-schema")?,
+        "participant dispatch schema",
+    )?;
+    dispatch_schema.require_fragments(
+        &[
+            "\"$schema\": \"https://json-schema.org/draft/2020-12/schema\"",
+            "\"schema\": {\"const\": \"agentlab.participant_experiment_dispatch.v1\"}",
+            "\"status\": {\"const\": \"attested-plan-gate-frozen-before-assessment\"}",
+            "\"allowsAssessmentExecution\": {\"const\": true}",
+            "\"automaticPromotion\": {\"const\": false}",
+        ],
+        "participant dispatch schema",
     )?;
 
     Ok(json!({
@@ -293,14 +310,15 @@ fn derive(values: &BTreeMap<String, String>) -> Result<Value, String> {
         "implementationBindings": {
             "trustedCaseReview": binding(CASE_REVIEW_PATH, &case_review),
             "assessedCampaign": binding(CAMPAIGN_PATH, &campaign),
-            "participantExperimentPlan": binding(PLAN_PATH, &plan)
+            "participantExperimentDispatch": binding(DISPATCH_SOURCE_PATH, &dispatch_source),
+            "participantExperimentDispatchSchema": binding(DISPATCH_SCHEMA_PATH, &dispatch_schema)
         },
         "requiredSequence": [
             {"ordinal": 1, "gate": "independent-dual-integrated-review", "requiredEvidence": "approved agentlab.purchase_data_integrated_review_gate.v1 bound to this packet"},
             {"ordinal": 2, "gate": "exact-patch-upstream-publication", "requiredEvidence": "published upstream revision containing the exact reviewed patch"},
             {"ordinal": 3, "gate": "published-revision-reexecution", "requiredEvidence": "semantic, OHOS Test and performance evidence rebound to the published source revision"},
             {"ordinal": 4, "gate": "trusted-case-freeze", "requiredEvidence": "successful trusted-main multi-repo-case-review run with held-out public revision"},
-            {"ordinal": 5, "gate": "unseen-agent-cohort", "requiredEvidence": "pre-outcome signed experiment plan and repeated blind attempts for every declared profile"},
+            {"ordinal": 5, "gate": "unseen-agent-cohort", "requiredEvidence": "pre-outcome attested portable dispatch and repeated blind attempts for every declared profile"},
             {"ordinal": 6, "gate": "harmony-functional-performance-feedback", "requiredEvidence": "Harmony handoff plus OHOS Test and relative SmartPerf results linked to each assessed attempt"}
         ],
         "participantCohort": {
@@ -310,7 +328,8 @@ fn derive(values: &BTreeMap<String, String>) -> Result<Value, String> {
             "participantAndModelIdentitiesMustBeUnique": true,
             "allowedTrialsPerProfile": [3, 5, 10, 20],
             "freshRuntimePerAttempt": true,
-            "experimentPlanSchema": "agentlab.participant_experiment_plan.v1"
+            "portableDispatchSchema": "agentlab.participant_experiment_dispatch.v1",
+            "materializedPlanCompatibilitySchema": "agentlab.participant_experiment_plan.v1"
         },
         "authoritySeparation": {
             "participantReceives": ["blind task contract", "held-out source repositories", "participant-visible build and test instructions"],

@@ -97,7 +97,8 @@ cargo run --locked -p agentlab_code_analysis \
   --qualification-root release/qualifications/alpha13-payment-feedback-analysis-165bcbd \
   --case-review-workflow .github/workflows/multi-repo-case-review.yml \
   --assessed-campaign-workflow .github/workflows/multi-repo-assessed-campaign.yml \
-  --participant-plan scripts/participant-experiment-plan.py \
+  --participant-dispatch-source crates/agentlab_code_analysis/src/participant_experiment_dispatch.rs \
+  --participant-dispatch-schema schemas/participant-experiment-dispatch.schema.json \
   --output /tmp/purchase-data-unseen-agent-cohort-contract.json
 ```
 
@@ -115,8 +116,8 @@ agentlab-purchase-data-unseen-agent-readiness \
   --publication exact-patch-publication.json \
   --reexecution published-revision-reexecution.json \
   --case-freeze trusted-case-freeze.json \
-  --experiment-plan participant-experiment-plan.json \
-  --plan-attestation verified-plan-attestation.json \
+  --participant-dispatch participant-experiment-dispatch.json \
+  --dispatch-attestation-verification dispatch-attestation-verification.json \
   --output unseen-agent-dispatch-readiness.json
 ```
 
@@ -124,8 +125,11 @@ The compiler accepts only the real approved gate status emitted by the
 integrated reviewer, two distinct GitHub reviewer identities, an exact patch
 publication bound to the reviewed candidate, semantic/OHOS Test/performance
 re-execution on the published revision, a trusted-main held-out case freeze,
-and a 3–8-profile pre-outcome plan with an online-verified GitHub attestation.
-It binds all seven inputs by raw-byte SHA-256 and length. Success permits only
+and a 3–8-profile pre-outcome portable dispatch whose exact subject and workflow
+run/attempt occur in raw `gh attestation verify --format json` output. The
+certificate identity must also bind the exact repository, main ref, source
+revision, signer workflow and GitHub-hosted runner. It binds
+all seven inputs by raw-byte SHA-256 and length. Success permits only
 explicit dispatch of that declared cohort: execution and Harmony feedback
 remain false, and automatic dispatch/promotion remain forbidden.
 

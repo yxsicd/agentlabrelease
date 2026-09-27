@@ -49,7 +49,7 @@ struct Fixture {
     publication: PathBuf,
     reexecution: PathBuf,
     case_freeze: PathBuf,
-    plan: PathBuf,
+    dispatch: PathBuf,
     attestation: PathBuf,
     output: PathBuf,
 }
@@ -143,12 +143,18 @@ impl Fixture {
                 "automaticPromotion": false
             }),
         );
-        let plan = root.join("plan.json");
+        let dispatch = root.join("dispatch.json");
         write(
-            &plan,
+            &dispatch,
             &json!({
-                "schema": "agentlab.participant_experiment_plan.v1",
-                "status": "predeclared-before-attempts",
+                "schema": "agentlab.participant_experiment_dispatch.v1",
+                "status": "attested-plan-gate-frozen-before-assessment",
+                "workflow": {
+                    "repository": "example/agentlabrelease",
+                    "path": ".github/workflows/multi-repo-assessed-campaign.yml",
+                    "runId": 23456,
+                    "runAttempt": 1
+                },
                 "caseId": "purchase-data-case",
                 "sourceSetSha256": "8888888888888888888888888888888888888888888888888888888888888888",
                 "evaluationCaseSha256": "6666666666666666666666666666666666666666666666666666666666666666",
@@ -163,15 +169,21 @@ impl Fixture {
                     {"ordinal": 2, "participantId": "strong", "model": "model-c"}
                 ],
                 "executionProtocol": {
-                    "schema": "agentlab.participant_execution_protocol.v1",
+                    "schema": "agentlab.participant_execution_protocol_portable.v1",
                     "agentImplementation": "pi",
                     "agentPackage": "@mariozechner/pi-coding-agent",
                     "agentPackageVersion": "1.2.3",
                     "participantAdapter": {"path": "adapter.py", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
                     "participantDriver": {"path": "driver.py", "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
-                    "participantPackageLockSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-                    "participantRuntimeConfigSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-                    "runtimeImageId": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                    "participantPackageLock": {"path": "package-lock.json", "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"},
+                    "runtimeDockerfile": {"path": "participant.Dockerfile", "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"},
+                    "runtimeBuildScript": {"path": "participant-runtime.sh", "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"},
+                    "runtimeImageArchive": {
+                        "filename": "participant-runtime-image.tar",
+                        "byteLength": 1024,
+                        "sha256": "1212121212121212121212121212121212121212121212121212121212121212",
+                        "imageId": "sha256:1313131313131313131313131313131313131313131313131313131313131313"
+                    },
                     "participantManifestSha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
                     "promptAuthority": "digest-bound-adapter-driver-and-blind-case-manifest",
                     "sessionPolicy": "fresh-per-attempt-persistent-across-case-stages",
@@ -182,25 +194,41 @@ impl Fixture {
                     "contextFilePolicy": "disabled",
                     "turnTimeoutSeconds": 420,
                     "samplingPolicy": "provider-default-stochastic-repeated-trials",
-                    "withinCampaignExecutionProtocolQualified": true,
+                    "portableRuntimeQualified": true,
                     "crossCampaignProviderReproducibilityQualified": false
                 },
+                "allowsAssessmentExecution": true,
                 "automaticPromotion": false
             }),
         );
         let attestation = root.join("attestation.json");
         write(
             &attestation,
-            &json!({
-                "schema": "agentlab.participant_experiment_plan_attestation.v1",
-                "status": "verified-github-attestation",
-                "planSha256": digest(&fs::read(&plan).unwrap()),
-                "workflowPath": ".github/workflows/multi-repo-assessed-campaign.yml",
-                "repository": "example/agentlabrelease",
-                "runId": 23456,
-                "verifiedOnline": true,
-                "automaticPromotion": false
-            }),
+            &json!([{
+                "verificationResult": {
+                    "signature": {"certificate": {
+                        "issuer": "https://token.actions.githubusercontent.com",
+                        "sourceRepositoryURI": "https://github.com/example/agentlabrelease",
+                        "sourceRepositoryDigest": "9999999999999999999999999999999999999999",
+                        "sourceRepositoryRef": "refs/heads/main",
+                        "githubWorkflowRepository": "example/agentlabrelease",
+                        "githubWorkflowRef": "refs/heads/main",
+                        "githubWorkflowSHA": "9999999999999999999999999999999999999999",
+                        "subjectAlternativeName": "https://github.com/example/agentlabrelease/.github/workflows/multi-repo-assessed-campaign.yml@refs/heads/main",
+                        "buildSignerURI": "https://github.com/example/agentlabrelease/.github/workflows/multi-repo-assessed-campaign.yml@refs/heads/main",
+                        "buildSignerDigest": "9999999999999999999999999999999999999999",
+                        "runnerEnvironment": "github-hosted",
+                        "runInvocationURI": "https://github.com/example/agentlabrelease/actions/runs/23456/attempts/1"
+                    }},
+                    "statement": {
+                        "predicateType": "https://slsa.dev/provenance/v1",
+                        "subject": [{"digest": {"sha256": digest(&fs::read(&dispatch).unwrap())}}],
+                        "predicate": {"runDetails": {"metadata": {
+                            "invocationId": "https://github.com/example/agentlabrelease/actions/runs/23456/attempts/1"
+                        }}}
+                    }
+                }
+            }]),
         );
         let output = root.join("readiness.json");
         Self {
@@ -210,7 +238,7 @@ impl Fixture {
             publication,
             reexecution,
             case_freeze,
-            plan,
+            dispatch,
             attestation,
             output,
         }
@@ -231,9 +259,9 @@ impl Fixture {
             self.reexecution.to_str().unwrap(),
             "--case-freeze",
             self.case_freeze.to_str().unwrap(),
-            "--experiment-plan",
-            self.plan.to_str().unwrap(),
-            "--plan-attestation",
+            "--participant-dispatch",
+            self.dispatch.to_str().unwrap(),
+            "--dispatch-attestation-verification",
             self.attestation.to_str().unwrap(),
             "--output",
             self.output.to_str().unwrap(),
@@ -279,7 +307,7 @@ fn compiles_exact_evidence_chain_into_operator_gated_dispatch_readiness() {
         true
     );
     assert_eq!(
-        value["currentReadiness"]["experimentPlanPredeclaredAndAttested"],
+        value["currentReadiness"]["participantDispatchPredeclaredAndAttested"],
         true
     );
     assert_eq!(
@@ -320,29 +348,57 @@ fn rejects_publication_or_reexecution_lineage_drift() {
 }
 
 #[test]
-fn rejects_case_or_plan_drift() {
+fn rejects_case_or_dispatch_drift() {
     let fixture = Fixture::new();
-    let mut plan = read(&fixture.plan);
-    plan["caseReviewRunId"] = json!(12346);
-    write(&fixture.plan, &plan);
+    let mut dispatch = read(&fixture.dispatch);
+    dispatch["caseReviewRunId"] = json!(12346);
+    write(&fixture.dispatch, &dispatch);
     let result = fixture.run();
     assert!(!result.status.success());
-    assert!(
-        String::from_utf8_lossy(&result.stderr).contains("experiment plan case-review run differs")
-    );
+    assert!(String::from_utf8_lossy(&result.stderr)
+        .contains("participant dispatch case-review run differs"));
     assert!(!fixture.output.exists());
 }
 
 #[test]
-fn rejects_unverified_or_stale_plan_attestation() {
+fn rejects_attestation_for_another_dispatch() {
     let fixture = Fixture::new();
     let mut attestation = read(&fixture.attestation);
-    attestation["verifiedOnline"] = json!(false);
+    attestation[0]["verificationResult"]["statement"]["subject"][0]["digest"]["sha256"] =
+        json!("abababababababababababababababababababababababababababababababab");
     write(&fixture.attestation, &attestation);
     let result = fixture.run();
     assert!(!result.status.success());
-    assert!(
-        String::from_utf8_lossy(&result.stderr).contains("plan attestation verifiedOnline differs")
-    );
+    assert!(String::from_utf8_lossy(&result.stderr)
+        .contains("GitHub attestation does not bind the exact trusted workflow identity"));
+    assert!(!fixture.output.exists());
+}
+
+#[test]
+fn rejects_attestation_from_another_workflow_attempt() {
+    let fixture = Fixture::new();
+    let mut attestation = read(&fixture.attestation);
+    attestation[0]["verificationResult"]["statement"]["predicate"]["runDetails"]["metadata"]
+        ["invocationId"] =
+        json!("https://github.com/example/agentlabrelease/actions/runs/23456/attempts/2");
+    write(&fixture.attestation, &attestation);
+    let result = fixture.run();
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr)
+        .contains("GitHub attestation does not bind the exact trusted workflow identity"));
+    assert!(!fixture.output.exists());
+}
+
+#[test]
+fn rejects_cryptographically_verified_but_wrong_certificate_identity() {
+    let fixture = Fixture::new();
+    let mut attestation = read(&fixture.attestation);
+    attestation[0]["verificationResult"]["signature"]["certificate"]["sourceRepositoryRef"] =
+        json!("refs/heads/feature");
+    write(&fixture.attestation, &attestation);
+    let result = fixture.run();
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr)
+        .contains("GitHub attestation does not bind the exact trusted workflow identity"));
     assert!(!fixture.output.exists());
 }

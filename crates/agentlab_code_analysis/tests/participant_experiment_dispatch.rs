@@ -156,6 +156,20 @@ impl Fixture {
             &self.attestation,
             &json!([{
                 "verificationResult": {
+                    "signature": {"certificate": {
+                        "issuer": "https://token.actions.githubusercontent.com",
+                        "sourceRepositoryURI": "https://github.com/example/agentlab",
+                        "sourceRepositoryDigest": "c".repeat(40),
+                        "sourceRepositoryRef": "refs/heads/main",
+                        "githubWorkflowRepository": "example/agentlab",
+                        "githubWorkflowRef": "refs/heads/main",
+                        "githubWorkflowSHA": "c".repeat(40),
+                        "subjectAlternativeName": "https://github.com/example/agentlab/.github/workflows/multi-repo-assessed-campaign.yml@refs/heads/main",
+                        "buildSignerURI": "https://github.com/example/agentlab/.github/workflows/multi-repo-assessed-campaign.yml@refs/heads/main",
+                        "buildSignerDigest": "c".repeat(40),
+                        "runnerEnvironment": "github-hosted",
+                        "runInvocationURI": "https://github.com/example/agentlab/actions/runs/1001/attempts/2"
+                    }},
                     "statement": {
                         "predicateType": "https://slsa.dev/provenance/v1",
                         "subject": [{"digest": {"sha256": digest(&fs::read(&self.dispatch).unwrap())}}],
@@ -277,7 +291,7 @@ fn rejects_attestation_from_another_run() {
     let result = fixture.materialize();
     assert!(!result.status.success());
     assert!(String::from_utf8_lossy(&result.stderr)
-        .contains("dispatch attestation does not bind the exact workflow run"));
+        .contains("GitHub attestation does not bind the exact trusted workflow identity"));
     fs::remove_dir_all(fixture.root).unwrap();
 }
 
@@ -336,6 +350,8 @@ fn workflow_requires_attested_freeze_job_before_assessment() {
     assert!(workflow.contains("agentlab-participant-experiment-dispatch -- freeze"));
     assert!(workflow.contains("agentlab-participant-experiment-dispatch -- materialize"));
     assert!(workflow.contains("gh attestation verify"));
+    assert!(workflow.contains("--signer-digest \"$GITHUB_SHA\""));
+    assert!(workflow.contains("--deny-self-hosted-runners"));
     assert!(workflow.contains("participant-runtime-image.tar"));
     assert!(!workflow.contains("participant-experiment-plan.py create"));
     assert!(

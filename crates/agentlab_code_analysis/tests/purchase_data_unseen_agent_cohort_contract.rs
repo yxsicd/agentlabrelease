@@ -51,7 +51,8 @@ fn run(
     root: &Path,
     case_review: &Path,
     campaign: &Path,
-    plan: &Path,
+    dispatch_source: &Path,
+    dispatch_schema: &Path,
     output: &Path,
 ) -> Output {
     let packet_sha256 = format!("{:x}", Sha256::digest(fs::read(packet).unwrap()));
@@ -69,8 +70,10 @@ fn run(
         case_review.to_str().unwrap(),
         "--assessed-campaign-workflow",
         campaign.to_str().unwrap(),
-        "--participant-plan",
-        plan.to_str().unwrap(),
+        "--participant-dispatch-source",
+        dispatch_source.to_str().unwrap(),
+        "--participant-dispatch-schema",
+        dispatch_schema.to_str().unwrap(),
         "--output",
         output.to_str().unwrap(),
     ])
@@ -86,7 +89,8 @@ fn normal_run(packet: &Path, root: &Path, output: &Path) -> Output {
         root,
         &repository.join(".github/workflows/multi-repo-case-review.yml"),
         &repository.join(".github/workflows/multi-repo-assessed-campaign.yml"),
-        &repository.join("scripts/participant-experiment-plan.py"),
+        &repository.join("crates/agentlab_code_analysis/src/participant_experiment_dispatch.rs"),
+        &repository.join("schemas/participant-experiment-dispatch.schema.json"),
         output,
     )
 }
@@ -118,6 +122,17 @@ fn freezes_blocked_unseen_agent_execution_contract_without_promoting_case() {
         value["participantCohort"]["allowedTrialsPerProfile"],
         json!([3, 5, 10, 20])
     );
+    assert_eq!(
+        value["participantCohort"]["portableDispatchSchema"],
+        "agentlab.participant_experiment_dispatch.v1"
+    );
+    assert_eq!(
+        value["implementationBindings"]["participantExperimentDispatch"]["path"],
+        "crates/agentlab_code_analysis/src/participant_experiment_dispatch.rs"
+    );
+    assert!(value["implementationBindings"]
+        .get("participantExperimentPlan")
+        .is_none());
     assert_eq!(
         value["performanceQualification"]["controlledVariantsAreAgentRuns"],
         false
@@ -172,12 +187,45 @@ fn rejects_assessed_campaign_without_discrimination_scoring() {
         &root,
         &repository.join(".github/workflows/multi-repo-case-review.yml"),
         &campaign,
-        &repository.join("scripts/participant-experiment-plan.py"),
+        &repository.join("crates/agentlab_code_analysis/src/participant_experiment_dispatch.rs"),
+        &repository.join("schemas/participant-experiment-dispatch.schema.json"),
         &temp.join("contract.json"),
     );
     assert!(!result.status.success());
     assert!(String::from_utf8_lossy(&result.stderr)
         .contains("assessed-campaign workflow contract fragment is absent"));
+    fs::remove_dir_all(temp).unwrap();
+}
+
+#[test]
+fn rejects_dispatch_schema_that_grants_automatic_promotion() {
+    let temp = temp_root();
+    let repository = repository();
+    let schema = temp.join("participant-experiment-dispatch.schema.json");
+    let source =
+        fs::read_to_string(repository.join("schemas/participant-experiment-dispatch.schema.json"))
+            .unwrap();
+    fs::write(
+        &schema,
+        source.replace(
+            "\"automaticPromotion\": {\"const\": false}",
+            "\"automaticPromotion\": {\"const\": true}",
+        ),
+    )
+    .unwrap();
+    let root = qualification_root();
+    let result = run(
+        &root.join("purchase-data-integrated-review-packet-v2.json"),
+        &root,
+        &repository.join(".github/workflows/multi-repo-case-review.yml"),
+        &repository.join(".github/workflows/multi-repo-assessed-campaign.yml"),
+        &repository.join("crates/agentlab_code_analysis/src/participant_experiment_dispatch.rs"),
+        &schema,
+        &temp.join("contract.json"),
+    );
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr)
+        .contains("participant dispatch schema contract fragment is absent"));
     fs::remove_dir_all(temp).unwrap();
 }
 

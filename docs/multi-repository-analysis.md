@@ -1493,7 +1493,7 @@ The Rust-native
 `agentlab-purchase-data-unseen-agent-cohort-contract` now freezes the transition
 from that approval to the existing generic blind-case pipeline instead of
 creating a parallel evaluator. It digest-binds the trusted case-review workflow,
-assessed-Agent campaign and pre-outcome participant-plan producer. The retained
+assessed-Agent campaign, Rust portable-dispatch compiler and dispatch schema. The retained
 contract requires, in order: dual review, publication of the exact patch,
 re-execution on the published revision, trusted held-out case freeze, a blind
 3–8 profile cohort with 3/5/10/20 fresh trials, and per-attempt Harmony OHOS Test
@@ -1510,11 +1510,17 @@ evaluator but are not relabeled as unseen Agent attempts.
 `agentlab-purchase-data-unseen-agent-readiness` closes the next mechanical
 boundary without weakening those authorities. It consumes the frozen contract
 and the exact approved-review, upstream-publication, published-revision
-re-execution, trusted-case-freeze, participant-plan and verified-attestation
+re-execution, trusted-case-freeze, portable dispatch and raw GitHub attestation-verification
 receipts. Every predecessor is byte-digest-bound to the next, the published
 revision must remain identical through re-execution and case freeze, and the
 case review run and evaluation-case digest must agree with the pre-outcome
-plan. Only the complete chain yields
+dispatch. The verified SLSA statement must name that dispatch digest and the
+same workflow run/attempt; a caller-authored boolean attestation receipt is no
+longer accepted. The shared Rust verifier additionally requires the certificate
+identity to name the exact repository, main ref, method revision, signing
+workflow, GitHub-hosted runner and run invocation; the workflow invokes
+`gh attestation verify --deny-self-hosted-runners` before that local policy
+check. Only the complete chain yields
 `ready-to-dispatch-unseen-agent-cohort`; missing, deferred, self-inconsistent or
 unattested evidence yields no output. Readiness still sets cohort execution and
 Harmony feedback to false and cannot dispatch or promote automatically.

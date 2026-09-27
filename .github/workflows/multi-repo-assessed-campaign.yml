@@ -197,8 +197,10 @@ jobs:
           gh attestation verify "$RUNNER_TEMP/participant-plan-gate/participant-experiment-dispatch.json" \
             --repo "$GITHUB_REPOSITORY" \
             --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/multi-repo-assessed-campaign.yml" \
+            --signer-digest "$GITHUB_SHA" \
             --source-ref refs/heads/main \
             --source-digest "$GITHUB_SHA" \
+            --deny-self-hosted-runners \
             --format json > "$AGENTLAB_ROOT/participant-dispatch-attestation-verification.json"
           cp "$RUNNER_TEMP/participant-plan-gate/participant-experiment-dispatch.json" \
             "$AGENTLAB_ROOT/participant-experiment-dispatch.json"

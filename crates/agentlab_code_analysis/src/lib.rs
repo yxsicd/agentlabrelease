@@ -14,6 +14,70 @@ pub const ANALYZER_DIGEST: &str = env!("AGENTLAB_ANALYZER_DIGEST");
 pub fn digest(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
+
+pub struct GitHubActionsAttestationIdentity<'a> {
+    pub repository: &'a str,
+    pub workflow_path: &'a str,
+    pub source_digest: &'a str,
+    pub source_ref: &'a str,
+    pub run_id: u64,
+    pub run_attempt: u64,
+    pub subject_sha256: &'a str,
+}
+
+pub fn validate_github_actions_attestation(
+    value: &Value,
+    expected: &GitHubActionsAttestationIdentity<'_>,
+) -> Result<(), String> {
+    const SLSA_PROVENANCE: &str = "https://slsa.dev/provenance/v1";
+    const ACTIONS_ISSUER: &str = "https://token.actions.githubusercontent.com";
+    let rows = value
+        .as_array()
+        .filter(|rows| !rows.is_empty())
+        .ok_or_else(|| "GitHub attestation verification is empty".to_owned())?;
+    let repository_uri = format!("https://github.com/{}", expected.repository);
+    let signer_uri = format!(
+        "{repository_uri}/{}@{}",
+        expected.workflow_path, expected.source_ref
+    );
+    let invocation_suffix = format!(
+        "/actions/runs/{}/attempts/{}",
+        expected.run_id, expected.run_attempt
+    );
+    let matched = rows.iter().any(|row| {
+        let result = &row["verificationResult"];
+        let statement = &result["statement"];
+        let certificate = &result["signature"]["certificate"];
+        let subject_matches = statement["subject"].as_array().is_some_and(|subjects| {
+            subjects.iter().any(|subject| {
+                subject["digest"]["sha256"].as_str() == Some(expected.subject_sha256)
+            })
+        });
+        statement["predicateType"].as_str() == Some(SLSA_PROVENANCE)
+            && subject_matches
+            && statement["predicate"]["runDetails"]["metadata"]["invocationId"]
+                .as_str()
+                .is_some_and(|value| value.ends_with(&invocation_suffix))
+            && certificate["issuer"].as_str() == Some(ACTIONS_ISSUER)
+            && certificate["sourceRepositoryURI"].as_str() == Some(repository_uri.as_str())
+            && certificate["sourceRepositoryDigest"].as_str() == Some(expected.source_digest)
+            && certificate["sourceRepositoryRef"].as_str() == Some(expected.source_ref)
+            && certificate["githubWorkflowRepository"].as_str() == Some(expected.repository)
+            && certificate["githubWorkflowRef"].as_str() == Some(expected.source_ref)
+            && certificate["githubWorkflowSHA"].as_str() == Some(expected.source_digest)
+            && certificate["subjectAlternativeName"].as_str() == Some(signer_uri.as_str())
+            && certificate["buildSignerURI"].as_str() == Some(signer_uri.as_str())
+            && certificate["buildSignerDigest"].as_str() == Some(expected.source_digest)
+            && certificate["runnerEnvironment"].as_str() == Some("github-hosted")
+            && certificate["runInvocationURI"]
+                .as_str()
+                .is_some_and(|value| value.ends_with(&invocation_suffix))
+    });
+    if !matched {
+        return Err("GitHub attestation does not bind the exact trusted workflow identity".into());
+    }
+    Ok(())
+}
 fn text<'a>(node: Node, source: &'a [u8]) -> &'a str {
     std::str::from_utf8(&source[node.byte_range()]).unwrap_or("")
 }

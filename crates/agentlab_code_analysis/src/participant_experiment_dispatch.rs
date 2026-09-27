@@ -1,4 +1,6 @@
-use agentlab_code_analysis::digest;
+use agentlab_code_analysis::{
+    digest, validate_github_actions_attestation, GitHubActionsAttestationIdentity,
+};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
@@ -11,7 +13,6 @@ use std::{
 const DISPATCH_SCHEMA: &str = "agentlab.participant_experiment_dispatch.v1";
 const PLAN_SCHEMA: &str = "agentlab.participant_experiment_plan.v1";
 const WORKFLOW_PATH: &str = ".github/workflows/multi-repo-assessed-campaign.yml";
-const SLSA_PROVENANCE: &str = "https://slsa.dev/provenance/v1";
 
 struct FileInput {
     bytes: Vec<u8>,
@@ -589,6 +590,8 @@ fn validate_dispatch(dispatch: &FileInput) -> Result<(), String> {
 fn validate_attestation(
     path: &Path,
     dispatch_sha: &str,
+    repository: &str,
+    source_digest: &str,
     run_id: u64,
     run_attempt: u64,
 ) -> Result<String, String> {
@@ -601,26 +604,18 @@ fn validate_attestation(
         .map_err(|error| format!("cannot read dispatch attestation verification: {error}"))?;
     let value: Value = serde_json::from_slice(&bytes)
         .map_err(|error| format!("cannot parse dispatch attestation verification: {error}"))?;
-    let rows = value
-        .as_array()
-        .filter(|rows| !rows.is_empty())
-        .ok_or_else(|| "dispatch attestation verification is empty".to_owned())?;
-    let suffix = format!("/actions/runs/{run_id}/attempts/{run_attempt}");
-    let matched = rows.iter().any(|row| {
-        let statement = &row["verificationResult"]["statement"];
-        statement["predicateType"].as_str() == Some(SLSA_PROVENANCE)
-            && statement["subject"].as_array().is_some_and(|subjects| {
-                subjects
-                    .iter()
-                    .any(|subject| subject["digest"]["sha256"].as_str() == Some(dispatch_sha))
-            })
-            && statement["predicate"]["runDetails"]["metadata"]["invocationId"]
-                .as_str()
-                .is_some_and(|value| value.ends_with(&suffix))
-    });
-    if !matched {
-        return Err("dispatch attestation does not bind the exact workflow run".into());
-    }
+    validate_github_actions_attestation(
+        &value,
+        &GitHubActionsAttestationIdentity {
+            repository,
+            workflow_path: WORKFLOW_PATH,
+            source_digest,
+            source_ref: "refs/heads/main",
+            run_id,
+            run_attempt,
+            subject_sha256: dispatch_sha,
+        },
+    )?;
     Ok(digest(&bytes))
 }
 
@@ -744,6 +739,8 @@ fn materialize(values: &BTreeMap<String, String>) -> Result<Value, String> {
     let attestation_sha = validate_attestation(
         &path(values, "--attestation-verification")?,
         &dispatch.sha256(),
+        string(workflow, "repository", "dispatch workflow")?,
+        string(value, "methodRevision", "dispatch")?,
         run_id,
         run_attempt,
     )?;

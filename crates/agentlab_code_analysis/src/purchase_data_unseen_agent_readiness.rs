@@ -1,7 +1,9 @@
-use agentlab_code_analysis::digest;
+use agentlab_code_analysis::{
+    digest, validate_github_actions_attestation, GitHubActionsAttestationIdentity,
+};
 use serde_json::{json, Value};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     env, fs,
     path::{Path, PathBuf},
 };
@@ -11,13 +13,36 @@ const GATE_SCHEMA: &str = "agentlab.purchase_data_integrated_review_gate.v1";
 const PUBLICATION_SCHEMA: &str = "agentlab.purchase_data_exact_patch_publication.v1";
 const REEXECUTION_SCHEMA: &str = "agentlab.purchase_data_published_revision_reexecution.v1";
 const CASE_FREEZE_SCHEMA: &str = "agentlab.purchase_data_trusted_case_freeze.v1";
-const PLAN_SCHEMA: &str = "agentlab.participant_experiment_plan.v1";
-const ATTESTATION_SCHEMA: &str = "agentlab.participant_experiment_plan_attestation.v1";
+const DISPATCH_SCHEMA: &str = "agentlab.participant_experiment_dispatch.v1";
+const DISPATCH_WORKFLOW: &str = ".github/workflows/multi-repo-assessed-campaign.yml";
 const OUTPUT_SCHEMA: &str = "agentlab.purchase_data_unseen_agent_dispatch_readiness.v1";
 
 struct Input {
     bytes: Vec<u8>,
     value: Value,
+}
+
+struct RawInput {
+    bytes: Vec<u8>,
+    value: Value,
+}
+
+impl RawInput {
+    fn load(path: &Path, label: &str) -> Result<Self, String> {
+        let metadata = fs::symlink_metadata(path)
+            .map_err(|error| format!("cannot inspect {label}: {error}"))?;
+        if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
+            return Err(format!("{label} must be a regular file"));
+        }
+        let bytes = fs::read(path).map_err(|error| format!("cannot read {label}: {error}"))?;
+        let value = serde_json::from_slice(&bytes)
+            .map_err(|error| format!("cannot parse {label}: {error}"))?;
+        Ok(Self { bytes, value })
+    }
+
+    fn sha256(&self) -> String {
+        digest(&self.bytes)
+    }
 }
 
 impl Input {
@@ -372,11 +397,11 @@ fn validate_case_freeze(
     Ok((run, case_sha, source_set))
 }
 
-fn validate_execution_protocol(protocol: &Value) -> Result<(), String> {
+fn validate_portable_execution_protocol(protocol: &Value) -> Result<(), String> {
     same(
-        string(protocol, "schema", "execution protocol")?,
-        "agentlab.participant_execution_protocol.v1",
-        "execution protocol schema",
+        string(protocol, "schema", "portable execution protocol")?,
+        "agentlab.participant_execution_protocol_portable.v1",
+        "portable execution protocol schema",
     )?;
     for (key, expected) in [
         ("agentImplementation", "pi"),
@@ -399,141 +424,182 @@ fn validate_execution_protocol(protocol: &Value) -> Result<(), String> {
         ),
     ] {
         same(
-            string(protocol, key, "execution protocol")?,
+            string(protocol, key, "portable execution protocol")?,
             expected,
-            &format!("execution protocol {key}"),
+            &format!("portable execution protocol {key}"),
         )?;
     }
-    string(protocol, "agentPackageVersion", "execution protocol")?;
-    for key in ["participantAdapter", "participantDriver"] {
-        let binding = &protocol[key];
-        string(binding, "path", "execution protocol binding")?;
-        sha(binding, "sha256", "execution protocol binding")?;
-    }
+    string(
+        protocol,
+        "agentPackageVersion",
+        "portable execution protocol",
+    )?;
     for key in [
-        "participantPackageLockSha256",
-        "participantRuntimeConfigSha256",
-        "participantManifestSha256",
+        "participantAdapter",
+        "participantDriver",
+        "participantPackageLock",
+        "runtimeDockerfile",
+        "runtimeBuildScript",
     ] {
-        sha(protocol, key, "execution protocol")?;
+        let binding = &protocol[key];
+        let relative = string(binding, "path", "portable execution protocol binding")?;
+        if Path::new(relative).is_absolute()
+            || relative
+                .split('/')
+                .any(|part| part.is_empty() || part == "..")
+        {
+            return Err(format!("portable execution protocol {key} path is invalid"));
+        }
+        sha(binding, "sha256", "portable execution protocol binding")?;
     }
-    let image = string(protocol, "runtimeImageId", "execution protocol")?;
+    sha(
+        protocol,
+        "participantManifestSha256",
+        "portable execution protocol",
+    )?;
+    let archive = &protocol["runtimeImageArchive"];
+    string(archive, "filename", "runtime image archive")?;
+    if archive["byteLength"]
+        .as_u64()
+        .filter(|bytes| *bytes > 0)
+        .is_none()
+    {
+        return Err("runtime image archive byte length is invalid".into());
+    }
+    sha(archive, "sha256", "runtime image archive")?;
+    let image = string(archive, "imageId", "runtime image archive")?;
     if !image.starts_with("sha256:") || !valid_hex(&image[7..], 64) {
-        return Err("execution protocol runtime image ID is invalid".into());
+        return Err("portable execution protocol runtime image ID is invalid".into());
     }
     if !protocol["reasoningEffort"].is_null() {
-        return Err("execution protocol reasoning effort must be null".into());
+        return Err("portable execution protocol reasoning effort must be null".into());
     }
     if protocol["turnTimeoutSeconds"].as_u64() != Some(420) {
-        return Err("execution protocol turn timeout differs".into());
+        return Err("portable execution protocol turn timeout differs".into());
     }
     exact_bool(
         protocol,
-        "withinCampaignExecutionProtocolQualified",
+        "portableRuntimeQualified",
         true,
-        "execution protocol",
+        "portable execution protocol",
     )?;
     exact_bool(
         protocol,
         "crossCampaignProviderReproducibilityQualified",
         false,
-        "execution protocol",
+        "portable execution protocol",
     )
 }
 
-fn validate_plan(plan: &Input, run: u64, case_sha: &str, source_set: &str) -> Result<(), String> {
+fn validate_dispatch(
+    dispatch: &Input,
+    run: u64,
+    case_sha: &str,
+    source_set: &str,
+) -> Result<(u64, u64), String> {
     same(
-        string(&plan.value, "schema", "experiment plan")?,
-        PLAN_SCHEMA,
-        "experiment plan schema",
+        string(&dispatch.value, "schema", "participant dispatch")?,
+        DISPATCH_SCHEMA,
+        "participant dispatch schema",
     )?;
     same(
-        string(&plan.value, "status", "experiment plan")?,
-        "predeclared-before-attempts",
-        "experiment plan status",
+        string(&dispatch.value, "status", "participant dispatch")?,
+        "attested-plan-gate-frozen-before-assessment",
+        "participant dispatch status",
     )?;
-    if plan.value["caseReviewRunId"].as_u64() != Some(run) {
-        return Err("experiment plan case-review run differs".into());
+    if dispatch.value["caseReviewRunId"].as_u64() != Some(run) {
+        return Err("participant dispatch case-review run differs".into());
     }
     same(
-        sha(&plan.value, "evaluationCaseSha256", "experiment plan")?,
+        sha(
+            &dispatch.value,
+            "evaluationCaseSha256",
+            "participant dispatch",
+        )?,
         case_sha,
-        "experiment plan case digest",
+        "participant dispatch case digest",
     )?;
     same(
-        sha(&plan.value, "sourceSetSha256", "experiment plan")?,
+        sha(&dispatch.value, "sourceSetSha256", "participant dispatch")?,
         source_set,
-        "experiment plan source set",
+        "participant dispatch source set",
     )?;
-    revision(&plan.value, "methodRevision", "experiment plan")?;
-    let trials = plan.value["trialsPerParticipant"].as_u64();
+    revision(&dispatch.value, "methodRevision", "participant dispatch")?;
+    let trials = dispatch.value["trialsPerParticipant"].as_u64();
     if !matches!(trials, Some(3 | 5 | 10 | 20)) {
-        return Err("experiment plan trial count is invalid".into());
+        return Err("participant dispatch trial count is invalid".into());
     }
-    let profiles = plan.value["participantProfiles"]
+    let profiles = dispatch.value["participantProfiles"]
         .as_array()
         .filter(|items| (3..=8).contains(&items.len()))
-        .ok_or_else(|| "experiment plan must contain 3-8 profiles".to_owned())?;
-    let mut identities = std::collections::BTreeSet::new();
+        .ok_or_else(|| "participant dispatch must contain 3-8 profiles".to_owned())?;
+    let mut participants = BTreeSet::new();
+    let mut models = BTreeSet::new();
     for (offset, profile) in profiles.iter().enumerate() {
         if profile["ordinal"].as_u64() != Some(offset as u64) {
-            return Err("experiment plan profile ordinals differ".into());
+            return Err("participant dispatch profile ordinals differ".into());
         }
-        let participant = string(profile, "participantId", "experiment profile")?;
-        let model = string(profile, "model", "experiment profile")?;
-        if !identities.insert(("participant", participant.to_owned()))
-            || !identities.insert(("model", model.to_owned()))
-        {
-            return Err("experiment plan participant or model identity is duplicated".into());
+        let participant = string(profile, "participantId", "dispatch profile")?;
+        let model = string(profile, "model", "dispatch profile")?;
+        if !participants.insert(participant.to_owned()) || !models.insert(model.to_owned()) {
+            return Err("participant dispatch identity is duplicated".into());
         }
     }
-    if plan.value["participantProfileCount"].as_u64() != Some(profiles.len() as u64) {
-        return Err("experiment plan profile count differs".into());
+    if dispatch.value["participantProfileCount"].as_u64() != Some(profiles.len() as u64) {
+        return Err("participant dispatch profile count differs".into());
     }
-    validate_execution_protocol(&plan.value["executionProtocol"])?;
-    exact_bool(&plan.value, "automaticPromotion", false, "experiment plan")
-}
-
-fn validate_attestation(plan: &Input, attestation: &Input) -> Result<(), String> {
-    same(
-        string(&attestation.value, "schema", "plan attestation")?,
-        ATTESTATION_SCHEMA,
-        "plan attestation schema",
-    )?;
-    same(
-        string(&attestation.value, "status", "plan attestation")?,
-        "verified-github-attestation",
-        "plan attestation status",
-    )?;
-    same(
-        sha(&attestation.value, "planSha256", "plan attestation")?,
-        &plan.sha256(),
-        "plan attestation plan digest",
-    )?;
-    same(
-        string(&attestation.value, "workflowPath", "plan attestation")?,
-        ".github/workflows/multi-repo-assessed-campaign.yml",
-        "plan attestation workflow",
-    )?;
-    string(&attestation.value, "repository", "plan attestation")?;
-    if attestation.value["runId"]
-        .as_u64()
-        .filter(|id| *id > 0)
-        .is_none()
-    {
-        return Err("plan attestation runId is invalid".into());
-    }
+    validate_portable_execution_protocol(&dispatch.value["executionProtocol"])?;
     exact_bool(
-        &attestation.value,
-        "verifiedOnline",
+        &dispatch.value,
+        "allowsAssessmentExecution",
         true,
-        "plan attestation",
+        "participant dispatch",
     )?;
     exact_bool(
-        &attestation.value,
+        &dispatch.value,
         "automaticPromotion",
         false,
-        "plan attestation",
+        "participant dispatch",
+    )?;
+    let workflow = &dispatch.value["workflow"];
+    string(workflow, "repository", "participant dispatch workflow")?;
+    same(
+        string(workflow, "path", "participant dispatch workflow")?,
+        DISPATCH_WORKFLOW,
+        "participant dispatch workflow path",
+    )?;
+    let run_id = workflow["runId"]
+        .as_u64()
+        .filter(|value| *value > 0)
+        .ok_or_else(|| "participant dispatch workflow run is invalid".to_owned())?;
+    let run_attempt = workflow["runAttempt"]
+        .as_u64()
+        .filter(|value| *value > 0)
+        .ok_or_else(|| "participant dispatch workflow attempt is invalid".to_owned())?;
+    Ok((run_id, run_attempt))
+}
+
+fn validate_attestation(
+    dispatch: &Input,
+    attestation: &RawInput,
+    run_id: u64,
+    run_attempt: u64,
+) -> Result<(), String> {
+    validate_github_actions_attestation(
+        &attestation.value,
+        &GitHubActionsAttestationIdentity {
+            repository: string(
+                &dispatch.value["workflow"],
+                "repository",
+                "participant dispatch workflow",
+            )?,
+            workflow_path: DISPATCH_WORKFLOW,
+            source_digest: string(&dispatch.value, "methodRevision", "participant dispatch")?,
+            source_ref: "refs/heads/main",
+            run_id,
+            run_attempt,
+            subject_sha256: &dispatch.sha256(),
+        },
     )
 }
 
@@ -543,16 +609,23 @@ fn derive(values: &BTreeMap<String, String>) -> Result<Value, String> {
     let publication = Input::load(&path(values, "--publication")?, "publication")?;
     let reexecution = Input::load(&path(values, "--reexecution")?, "re-execution")?;
     let case_freeze = Input::load(&path(values, "--case-freeze")?, "case freeze")?;
-    let plan = Input::load(&path(values, "--experiment-plan")?, "experiment plan")?;
-    let attestation = Input::load(&path(values, "--plan-attestation")?, "plan attestation")?;
+    let dispatch = Input::load(
+        &path(values, "--participant-dispatch")?,
+        "participant dispatch",
+    )?;
+    let attestation = RawInput::load(
+        &path(values, "--dispatch-attestation-verification")?,
+        "dispatch attestation verification",
+    )?;
     validate_contract(&contract)?;
     validate_gate(&contract, &gate)?;
     let published = validate_publication(&contract, &gate, &publication)?;
     validate_reexecution(&contract, &publication, &reexecution, &published)?;
     let (case_run, case_sha, source_set) =
         validate_case_freeze(&reexecution, &case_freeze, &published)?;
-    validate_plan(&plan, case_run, &case_sha, &source_set)?;
-    validate_attestation(&plan, &attestation)?;
+    let (dispatch_run, dispatch_attempt) =
+        validate_dispatch(&dispatch, case_run, &case_sha, &source_set)?;
+    validate_attestation(&dispatch, &attestation, dispatch_run, dispatch_attempt)?;
 
     Ok(json!({
         "schema": OUTPUT_SCHEMA,
@@ -563,20 +636,25 @@ fn derive(values: &BTreeMap<String, String>) -> Result<Value, String> {
         "publishedRevision": published,
         "caseReviewRunId": case_run,
         "evaluationCaseSha256": case_sha,
-        "participantProfileCount": plan.value["participantProfileCount"],
-        "trialsPerParticipant": plan.value["trialsPerParticipant"],
+        "participantProfileCount": dispatch.value["participantProfileCount"],
+        "trialsPerParticipant": dispatch.value["trialsPerParticipant"],
+        "dispatchWorkflowRunId": dispatch_run,
+        "dispatchWorkflowRunAttempt": dispatch_attempt,
         "evidence": {
             "contract": bind(&contract), "reviewGate": bind(&gate),
             "publication": bind(&publication), "reexecution": bind(&reexecution),
-            "caseFreeze": bind(&case_freeze), "experimentPlan": bind(&plan),
-            "planAttestation": bind(&attestation)
+            "caseFreeze": bind(&case_freeze), "participantDispatch": bind(&dispatch),
+            "dispatchAttestationVerification": {
+                "sha256": attestation.sha256(),
+                "byteLength": attestation.bytes.len()
+            }
         },
         "currentReadiness": {
             "independentDualReviewApproved": true,
             "exactPatchPublishedUpstream": true,
             "publishedRevisionRebound": true,
             "trustedFrozenCaseAvailable": true,
-            "experimentPlanPredeclaredAndAttested": true,
+            "participantDispatchPredeclaredAndAttested": true,
             "unseenAgentCohortExecuted": false,
             "harmonyAttemptFeedbackExecuted": false,
             "readyToDispatch": true

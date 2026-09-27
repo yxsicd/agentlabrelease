@@ -33,11 +33,15 @@
   "implementationBindings": {
     "assessedCampaign": {
       "path": ".github/workflows/multi-repo-assessed-campaign.yml",
-      "sha256": "de5015a7212709df7b7df9641f92ce1bceb0a2e45bbe7bbc7c7099a80fdbda5a"
+      "sha256": "c45c97efff2464085235cbdc612a83f045fb872314b6befe0616e2001466834b"
     },
-    "participantExperimentPlan": {
-      "path": "scripts/participant-experiment-plan.py",
-      "sha256": "48e950f53289c39c0e450cacc26e5730f801e7fd24612f04b7a072f7456b7743"
+    "participantExperimentDispatch": {
+      "path": "crates/agentlab_code_analysis/src/participant_experiment_dispatch.rs",
+      "sha256": "b932fc4986649fe3949cb578f9d36b0c1c1b292b7af4401c0985aa062787b52a"
+    },
+    "participantExperimentDispatchSchema": {
+      "path": "schemas/participant-experiment-dispatch.schema.json",
+      "sha256": "8411d2565f4e78231d457e70b7184f57299cbb24ddbc4801750df74db025275c"
     },
     "trustedCaseReview": {
       "path": ".github/workflows/multi-repo-case-review.yml",
@@ -53,11 +57,12 @@
       10,
       20
     ],
-    "experimentPlanSchema": "agentlab.participant_experiment_plan.v1",
     "freshRuntimePerAttempt": true,
+    "materializedPlanCompatibilitySchema": "agentlab.participant_experiment_plan.v1",
     "maximumProfiles": 8,
     "minimumProfiles": 3,
     "participantAndModelIdentitiesMustBeUnique": true,
+    "portableDispatchSchema": "agentlab.participant_experiment_dispatch.v1",
     "profileOrder": "weakest-to-strongest-declared-before-outcomes"
   },
   "performanceQualification": {
@@ -93,7 +98,7 @@
     {
       "gate": "unseen-agent-cohort",
       "ordinal": 5,
-      "requiredEvidence": "pre-outcome signed experiment plan and repeated blind attempts for every declared profile"
+      "requiredEvidence": "pre-outcome attested portable dispatch and repeated blind attempts for every declared profile"
     },
     {
       "gate": "harmony-functional-performance-feedback",
