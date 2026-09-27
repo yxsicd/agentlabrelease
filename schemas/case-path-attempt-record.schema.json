@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-path-attempt-record.schema.json",
+  "title": "Assessed long-horizon path attempt record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "attemptRecordId", "qualifiedDispatch", "attemptInput", "attemptId", "participantId", "trialOrdinal", "plannedStageCount", "executedStageCount", "overallVerdict", "stages", "nextDifficultyCandidate", "automaticPromotion", "nextGate"],
+  "properties": {
+    "schema": {"const": "agentlab.case_path_attempt_record.v1"},
+    "status": {"enum": ["assessed-pass", "assessed-failure"]},
+    "attemptRecordId": {"type": "string", "pattern": "^case-path-attempt-[0-9a-f]{20}$"},
+    "qualifiedDispatch": {"$ref": "#/$defs/fileBinding"},
+    "attemptInput": {"$ref": "#/$defs/fileBinding"},
+    "attemptId": {"$ref": "#/$defs/token"},
+    "participantId": {"$ref": "#/$defs/token"},
+    "trialOrdinal": {"type": "integer", "minimum": 1},
+    "plannedStageCount": {"type": "integer", "minimum": 3},
+    "executedStageCount": {"type": "integer", "minimum": 1},
+    "overallVerdict": {"enum": ["pass", "fail"]},
+    "stages": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+    "nextDifficultyCandidate": {
+      "anyOf": [
+        {"type": "null"},
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["candidateId", "status", "stageOrdinal", "nodeId", "caseId", "failureClass", "postState", "caseReady"],
+          "properties": {
+            "candidateId": {"type": "string", "pattern": "^case-difficulty-candidate-[0-9a-f]{20}$"},
+            "status": {"const": "review-required"},
+            "stageOrdinal": {"type": "integer", "minimum": 0},
+            "nodeId": {"type": "string", "pattern": "^case-node-[0-9a-f]{20}$"},
+            "caseId": {"$ref": "#/$defs/token"},
+            "failureClass": {"enum": ["functional", "resource", "execution"]},
+            "postState": {"$ref": "#/$defs/fileBinding"},
+            "caseReady": {"const": false}
+          }
+        }
+      ]
+    },
+    "automaticPromotion": {"const": false},
+    "nextGate": {"enum": ["review-difficulty-candidate", "aggregate-predeclared-comparison-results"]}
+  },
+  "$defs": {
+    "token": {"type": "string", "pattern": "^[A-Za-z0-9_.:@/+\\-]{1,200}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "fileBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "byteLength", "sha256"],
+      "properties": {"path": {"type": "string", "minLength": 1}, "byteLength": {"type": "integer", "minimum": 1}, "sha256": {"$ref": "#/$defs/sha256"}}
+    }
+  }
+}
