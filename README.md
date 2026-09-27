@@ -7,15 +7,16 @@ Agents.
 Current runtime candidate: `candidate-20260912-c22b7bfd-linux-x64`.
 The historical environment-kit preview remains `v0.1.0-alpha.9`.
 
-The current lightweight aggregate is `v0.1.0-alpha.14`. It binds release-method
-source commit `7d7d9ee57adaa5ed90be867cf3a9fa2ce22afed6` to 15 already-published
+The current lightweight aggregate candidate is `v0.1.0-alpha.15`. It binds
+release-method source commit `665be12b74fcb0690f67b9482a075423ddfe7dd5` to 15 already-published
 immutable components and all 26 registered payload and descriptor assets,
-including the standalone long-horizon case-modeling analysis tools, without
-rebuilding or uploading any unchanged binary. All 26 assets are independently
-re-observed on immutable GitHub Releases and the exact tag is qualified through
-a fresh-runner closure install before publication. Linux Harmony emulator
-execution is explicitly not requalified for this cut: the Alpha.13 acceptance
-receipt is not transferred to Alpha.14. Its earlier pass/fail evidence remains
+including MCPGit program revision `19f92d4aea35378ef7665b22df7d2b2fcb15ccd4`
+and the standalone long-horizon case-modeling analysis tools, without rebuilding
+or uploading any unchanged binary. All 26 assets are independently re-observed
+on immutable GitHub Releases. The candidate still requires exact-tag clean-runner
+qualification before publication. Linux Harmony emulator execution is explicitly
+not requalified for this cut: the Alpha.13 acceptance receipt is not transferred
+to Alpha.15. Its earlier pass/fail evidence remains
 a review-only recursive-feedback handoff. That successor cut has been replayed
 over two exact public Harmony repositories, producing 404,308 facts, 19,374
 difficulty candidates, 97 eligible cross-repository candidates and a bounded

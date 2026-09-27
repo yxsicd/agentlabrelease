@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import copy
 import json
 import pathlib
 import subprocess
@@ -93,6 +94,67 @@ class ReleaseClosureCompositionTests(unittest.TestCase):
         self.assertFalse(
             value["qualificationPlan"]["linuxEmulatorAcceptanceRequired"]
         )
+
+    def test_composition_replaces_one_independently_released_component(self) -> None:
+        registry = copy.deepcopy(self.registry)
+        component = next(
+            item for item in registry["components"]
+            if item["id"] == "mcpgit-program-linux-x64"
+        )
+        old_urls = {
+            asset["url"]
+            for asset in self.base["assets"]
+            if asset["registryComponent"] == component["id"]
+        }
+        component["immutableRef"] = "mcpgit-git-" + "f" * 40 + "-linux-amd64"
+        component["assets"] = [{
+            "id": "mcpgit-program-archive",
+            "url": "https://github.com/yxsicd/mcpgitrelease/releases/download/"
+                   + component["immutableRef"] + "/mcpgit-program-updated.tar.gz",
+            "bytes": 43,
+            "sha256": "f" * 64,
+        }]
+        registry_bytes = json.dumps(registry, sort_keys=True).encode()
+
+        value = MODULE.compose(
+            self.base,
+            registry,
+            registry_bytes,
+            "0.1.0-alpha.15",
+            self.revision,
+        )
+
+        selected = [
+            asset for asset in value["assets"]
+            if asset["registryComponent"] == component["id"]
+        ]
+        self.assertEqual(selected, [{
+            "id": "mcpgit-program-archive",
+            "kind": "mcpgit",
+            "url": component["assets"][0]["url"],
+            "sha256": "f" * 64,
+            "bytes": 43,
+            "immutableRef": component["immutableRef"],
+            "registryComponent": component["id"],
+        }])
+        self.assertTrue(old_urls.isdisjoint({asset["url"] for asset in value["assets"]}))
+
+    def test_composition_rejects_asset_drift_under_same_immutable_ref(self) -> None:
+        registry = copy.deepcopy(self.registry)
+        component = next(
+            item for item in registry["components"]
+            if item["id"] == "agentlab-control-linux-x64"
+        )
+        component["assets"][0]["sha256"] = "f" * 64
+        registry_bytes = json.dumps(registry, sort_keys=True).encode()
+        with self.assertRaisesRegex(ValueError, "unchanged component asset identity"):
+            MODULE.compose(
+                self.base,
+                registry,
+                registry_bytes,
+                "0.1.0-alpha.15",
+                self.revision,
+            )
 
     def test_preview_rejects_omitting_one_registered_descriptor(self) -> None:
         value = MODULE.compose(

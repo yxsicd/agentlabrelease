@@ -129,6 +129,20 @@ class ComponentReuseTests(unittest.TestCase):
         self.assertEqual(result["action"], "reuse")
         self.assertTrue(result["automaticSourceImpactDecision"])
 
+    def test_mcpgit_program_lock_matches_selected_registry_component(self) -> None:
+        registry = MODULE.load_registry(ROOT / "release/components/registry.json")
+        component = MODULE.find_component(registry, "mcpgit-program-linux-x64")
+        lock = json.loads((ROOT / "release/ci/mcpgit-program.json").read_text())
+        self.assertEqual(lock["schema"], "agentlab.demo_dependency.v1")
+        self.assertEqual(lock["platform"], component["platform"])
+        self.assertEqual(lock["sourceRevision"], component["source"]["revision"])
+        self.assertEqual(len(component["assets"]), 1)
+        asset = component["assets"][0]
+        self.assertEqual(lock["artifact"], asset["url"])
+        self.assertEqual(lock["sha256"], asset["sha256"])
+        self.assertEqual(lock["bytes"], asset["bytes"])
+        self.assertIn(lock["sourceRevision"], component["immutableRef"])
+
     def test_duplicate_component_is_rejected(self) -> None:
         registry = json.loads((ROOT / "release/components/registry.json").read_text())
         registry["components"].append(registry["components"][0])

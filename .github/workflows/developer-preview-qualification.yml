@@ -5,17 +5,17 @@ on:
       release_tag:
         description: Exact immutable developer preview tag selected as the workflow ref
         required: true
-        default: v0.1.0-alpha.14
+        default: v0.1.0-alpha.15
         type: string
       closure_path:
         description: Committed closure bound to the selected release tag
         required: true
-        default: release/closures/v0.1.0-alpha.14.json
+        default: release/closures/v0.1.0-alpha.15.json
         type: string
       asset_receipt_path:
         description: Committed remote immutable-asset receipt for the closure
         required: true
-        default: release/qualifications/alpha14-immutable-assets/summary.json
+        default: release/qualifications/alpha15-immutable-assets/summary.json
         type: string
       harmony_receipt_path:
         description: Optional release-bound Harmony receipt when the closure requires it

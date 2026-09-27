@@ -45,7 +45,7 @@ jobs:
           python3 scripts/validate-release.py
           python3 scripts/component-reuse.py validate --registry release/components/registry.json
           python3 scripts/validate-release-graph.py \
-            --closure release/closures/v0.1.0-alpha.14.json \
+            --closure release/closures/v0.1.0-alpha.15.json \
             --registry release/components/registry.json \
             --git-root "$GITHUB_WORKSPACE" \
             --target release/targets/generic-linux-agentlab.json \
@@ -123,7 +123,7 @@ jobs:
           - target: release-closure
             channel: ''
             composition: ''
-            closure: release/closures/v0.1.0-alpha.14.json
+            closure: release/closures/v0.1.0-alpha.15.json
             backend: copy-tree
     env:
       AGENTLAB_CI_ROOT: /tmp/agentlab-${{ matrix.target }}
