@@ -648,19 +648,6 @@ fn git(root: &Path, args: &[&str]) -> Result<Vec<u8>, Box<dyn std::error::Error>
     Ok(result.stdout)
 }
 
-fn supports_nul_batch_input(root: &Path) -> bool {
-    Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args(["cat-file", "--batch", "-z"])
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .map(|status| status.success())
-        .unwrap_or(false)
-}
-
 fn git_batch_blobs(
     repository: &Repository,
     paths: &[String],
@@ -749,14 +736,11 @@ fn git_blobs(
     repository: &Repository,
     paths: &[String],
 ) -> Result<BTreeMap<String, Vec<u8>>, Box<dyn std::error::Error>> {
-    if supports_nul_batch_input(&repository.root) {
-        return git_batch_blobs(repository, paths, true);
-    }
-
-    // Git before the `cat-file --batch -z` option accepts only line-delimited
-    // queries. Batch ordinary paths and read newline-containing paths through
-    // an argv-bound single-object query so no path byte is interpreted as a
-    // protocol delimiter.
+    // Keep the portable line-delimited batch protocol for ordinary paths.
+    // `cat-file --batch -z` behavior has varied across Git releases and can
+    // terminate a large response stream before every queued path is emitted.
+    // Read newline-containing paths through an argv-bound single-object query
+    // so no path byte is interpreted as a protocol delimiter.
     let ordinary_paths = paths
         .iter()
         .filter(|path| !path.contains('\n'))
