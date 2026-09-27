@@ -592,6 +592,37 @@
       "automaticPromotion": false,
       "status": "controlled-performance-detector-qualified-independent-review-required"
     },
+    "casePerformanceCalibrationPlan": {
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-case-performance-plan.json",
+      "policyPath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-case-performance-policy.json",
+      "workloadPath": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-case-performance-workload.tsv",
+      "schema": "agentlab.purchase_data_case_performance_calibration_plan.v1",
+      "sha256": "3a728dc5a74d182f85de9ab99e343c2490db9334d87eda87272a81c71c52f7ca",
+      "policySha256": "ae914ba0c30dd8aec098531497021d75a3fa1311e7c371290d43a0a4eccffb3e",
+      "workloadSha256": "7812fa159f8c7ec8ea69f48987cca39b0f373280eb7af847c16ea4dfaf7d563f",
+      "implementation": "crates/agentlab_code_analysis/src/purchase_data_case_performance_plan.rs",
+      "binary": "agentlab-purchase-data-case-performance-plan",
+      "language": "rust",
+      "caseBoundFunction": "planPurchaseFinalization",
+      "evaluatorOhosTestCount": 8,
+      "calibrationRoleCount": 3,
+      "coldRunCountPerRole": 2,
+      "totalColdRunCount": 6,
+      "profileSampleCountPerRun": 48,
+      "functionalVerdictCountPerRole": 96,
+      "referenceBuilt": false,
+      "baselineBuilt": false,
+      "meaningfulWrongBuilt": false,
+      "linuxX86EmulatorExecuted": false,
+      "functionalMatrixVerified": false,
+      "caseBoundWorkloadObserved": false,
+      "performanceMatrixVerified": false,
+      "distinctBaselineReferenceWrongCaseCalibrationComplete": false,
+      "performanceCalibrated": false,
+      "allowsCaseContract": false,
+      "automaticPromotion": false,
+      "status": "case-bound-performance-calibration-planned-not-executed"
+    },
     "integratedReviewPacket": {
       "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-integrated-review-packet.json",
       "schema": "agentlab.purchase_data_integrated_review_packet.v1",
@@ -629,6 +660,6 @@
   "retention": {
     "authority": "compact-qualification-and-exact-source-patch",
     "fullReplayEvidence": "retained-source-review-packet-plus-run-addressed-workflow-artifact",
-    "nextGate": "authenticated-distinct-semantic-and-oracle-reviewers-then-upstream-publication-and-distinct-case-performance-calibration"
+    "nextGate": "execute-predeclared-case-bound-performance-matrix-and-authenticated-distinct-semantic-oracle-review"
   }
 }

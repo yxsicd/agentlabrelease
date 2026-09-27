@@ -635,6 +635,24 @@ The mutation is not an Agent run, unseen case or gold repair; distinct
 baseline/reference/wrong case calibration, independent review, live vendor IAP,
 real-device execution and absolute power/thermal authority remain open gates.
 
+That detector mutation ran on `EntryPage`, while the candidate case is about
+`planPurchaseFinalization`; detector sensitivity alone therefore cannot prove
+case-level performance discrimination. The retained
+`purchase-data-case-performance-plan.json` closes the planning gap without
+claiming execution. Its Rust producer digest-binds the current integrated packet,
+functional mutation plan and qualification, clean profile, detector
+qualification, a new policy and an exact eight-test workload. The eighth
+evaluator-owned OHOS Test calls `planPurchaseFinalization` 5,000 times.
+
+The plan predeclares clean reference, redundant purchase-data reparse and
+redundant purchase-order decode roles. Each role must pass 8/8 functional tests
+across two cold runs and six repeats per run, while 48 SmartPerf samples are
+captured per run. The two slower roles must share a rejected
+`appCpuUsagePercent` decision against the reference. All execution fields remain
+false until hwlinux evidence exists; a missing case-bound signal is an
+observability failure, not a performance pass. These controlled variants remain
+calibration inputs rather than Agent runs, unseen cases or gold repairs.
+
 The current evidence is now assembled by
 `agentlab-purchase-data-integrated-review-packet`. This Rust producer reopens
 the exact v11 semantic packet, behavior-Oracle plan and source-seam calibration,

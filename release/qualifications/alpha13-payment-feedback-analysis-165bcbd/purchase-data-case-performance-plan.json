@@ -1,0 +1,145 @@
+{
+  "absolutePowerThermalQualified": false,
+  "allowsCaseContract": false,
+  "automaticPromotion": false,
+  "boundary": "This plan replaces the unrelated EntryPage load with an evaluator-owned workload and two functionally equivalent performance faults inside planPurchaseFinalization. It binds exact current evidence and predeclares six cold runs, but it contains no new build, emulator or performance result. Controlled variants are calibration inputs, never Agent runs, unseen cases or gold repairs. Emulator CPU/PSS remain relative proxies; live vendor IAP, Cordova runtime, real-device and absolute power/thermal authority remain unqualified.",
+  "calibrationRoles": [
+    {
+      "edit": null,
+      "expectedFunctionalResult": "8-of-8-pass",
+      "expectedPerformanceResult": "repeatable-reference",
+      "id": "clean-candidate-ee2bc87594f1",
+      "role": "reference",
+      "sourcePath": "entry/src/main/ets/common/PurchaseFinalizationPolicy.ets",
+      "sourceSha256": "cd53dcfe1c5e364d67b57e59e27f4336c32d6058ef5abf45bd75385817d24bb0"
+    },
+    {
+      "edit": {
+        "expectedOccurrenceCount": 1,
+        "find": "    const jwsPurchaseOrder = (JSON.parse(purchaseData) as PurchaseData).jwsPurchaseOrder;",
+        "replace": "    let parsedPurchaseData = JSON.parse(purchaseData) as PurchaseData;\n    for (let pass: number = 0; pass < 200; pass++) {\n      parsedPurchaseData = JSON.parse(purchaseData) as PurchaseData;\n    }\n    const jwsPurchaseOrder = parsedPurchaseData.jwsPurchaseOrder;"
+      },
+      "expectedFunctionalResult": "8-of-8-pass",
+      "expectedPerformanceResult": "rejected-versus-reference-on-appCpuUsagePercent",
+      "id": "redundant-purchase-data-reparse-200x-v1",
+      "role": "baseline-task-start",
+      "semanticFault": "The task-start implementation reparses identical purchaseData 200 additional times before reading the same jwsPurchaseOrder.",
+      "sourcePath": "entry/src/main/ets/common/PurchaseFinalizationPolicy.ets"
+    },
+    {
+      "edit": {
+        "expectedOccurrenceCount": 1,
+        "find": "    const purchaseOrderPayload =\n      JSON.parse(decodeJws(jwsPurchaseOrder)) as PurchaseOrderPayload;",
+        "replace": "    let purchaseOrderPayload =\n      JSON.parse(decodeJws(jwsPurchaseOrder)) as PurchaseOrderPayload;\n    for (let pass: number = 0; pass < 200; pass++) {\n      purchaseOrderPayload =\n        JSON.parse(decodeJws(jwsPurchaseOrder)) as PurchaseOrderPayload;\n    }"
+      },
+      "expectedFunctionalResult": "8-of-8-pass",
+      "expectedPerformanceResult": "rejected-versus-reference-on-appCpuUsagePercent",
+      "id": "redundant-purchase-order-decode-200x-v1",
+      "role": "meaningful-wrong",
+      "semanticFault": "The implementation repeats the same JWS decode and payload parse 200 additional times before using an equivalent final payload.",
+      "sourcePath": "entry/src/main/ets/common/PurchaseFinalizationPolicy.ets"
+    }
+  ],
+  "candidateId": "purchase-data-finalization-ee2bc87594f1",
+  "candidateRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+  "candidateSourceSha256": "cd53dcfe1c5e364d67b57e59e27f4336c32d6058ef5abf45bd75385817d24bb0",
+  "casePerformanceRequirement": {
+    "authority": "same-environment-linux-x86-emulator-relative-proxy",
+    "caseBoundFunction": "planPurchaseFinalization",
+    "caseBoundWorkloadVerified": false,
+    "direction": "lower",
+    "metric": "appCpuUsagePercent",
+    "performancePolicySha256": "ae914ba0c30dd8aec098531497021d75a3fa1311e7c371290d43a0a4eccffb3e",
+    "profileWorkloadSha256": "7812fa159f8c7ec8ea69f48987cca39b0f373280eb7af847c16ea4dfaf7d563f",
+    "schema": "agentlab.case_performance_requirement.v1",
+    "statistic": "mean"
+  },
+  "distinctBaselineReferenceWrongCaseCalibrationComplete": false,
+  "environmentIdentity": "hwlinux:emulator-26.0.0.821:harmonyos-7.0.0-phone-x86:codex-phone-7",
+  "evaluatorWorkloadEdit": {
+    "content": "    it('purchaseFinalizationPerformanceWorkload', 0, () => {\n      const encodedPurchase = purchaseData(JSON.stringify({\n        productId: 'p-performance',\n        productType: '0',\n        purchaseOrderId: 'order-performance',\n        purchaseToken: 'token-performance',\n        finishStatus: '2'\n      }));\n      let plan = new PurchaseFinalizationPlan();\n      for (let iteration: number = 0; iteration < 5000; iteration++) {\n        plan = planPurchaseFinalization(encodedPurchase, identityDecode);\n      }\n      expect(plan.shouldFinish).assertTrue();\n      expect(plan.request.purchaseToken).assertEqual('token-performance');\n    })\n\n",
+    "expectedOccurrenceCount": 1,
+    "insertBefore": "    it('finishRejectionRemainsObservable', 0, async () => {",
+    "iterationCount": 5000,
+    "path": "entry/src/ohosTest/ets/test/PurchaseFinalizationPolicy.test.ets",
+    "role": "evaluator-only-not-participant-source",
+    "testName": "purchaseFinalizationPerformanceWorkload"
+  },
+  "evidenceAttachments": {
+    "case-performance-policy": {
+      "byteLength": 1093,
+      "path": "purchase-data-case-performance-policy.json",
+      "schema": "agentlab.harmony_performance_policy.v1",
+      "sha256": "ae914ba0c30dd8aec098531497021d75a3fa1311e7c371290d43a0a4eccffb3e",
+      "status": null
+    },
+    "case-performance-workload": {
+      "byteLength": 301,
+      "path": "purchase-data-case-performance-workload.tsv",
+      "schema": "agentlab.harmony_profile_workload.v1",
+      "sha256": "7812fa159f8c7ec8ea69f48987cca39b0f373280eb7af847c16ea4dfaf7d563f"
+    },
+    "clean-profile-qualification": {
+      "byteLength": 2558,
+      "path": "purchase-data-ohostest-profile-qualification.json",
+      "schema": "agentlab.purchase_data_ohostest_profile_qualification.v1",
+      "sha256": "f844673c115b0be92ad8cfab26f5617bd15b9aa0ea634f31b7eac47679ec341e",
+      "status": "linux-emulator-functional-and-relative-performance-repeatability-qualified-independent-review-required"
+    },
+    "functional-mutation-plan": {
+      "byteLength": 8165,
+      "path": "purchase-data-ohostest-mutation-plan.json",
+      "schema": "agentlab.purchase_data_ohostest_mutation_plan.v1",
+      "sha256": "fdeb40dd7f45f1c35fe669d3099d7119d4355488d3d4abb735f94cc10ee5f97c",
+      "status": "mutation-calibration-planned-not-executed"
+    },
+    "functional-mutation-qualification": {
+      "byteLength": 1476,
+      "path": "purchase-data-ohostest-mutation-qualification.json",
+      "schema": "agentlab.purchase_data_ohostest_mutation_qualification.v1",
+      "sha256": "1721064f5e350227fd3dffdab1aac625f2cab774959d2fddd5722f36b98d7934",
+      "status": "mutation-discrimination-qualified-source-review-still-required"
+    },
+    "integrated-review-packet": {
+      "byteLength": 8581,
+      "path": "purchase-data-integrated-review-packet.json",
+      "schema": "agentlab.purchase_data_integrated_review_packet.v1",
+      "sha256": "eaaffcf8590bd7d1468cc679d259c2106286d83a6f75c4de26ad236e7bf9f17e",
+      "status": "current-evidence-bound-independent-dual-review-required"
+    },
+    "performance-detector-qualification": {
+      "byteLength": 4229,
+      "path": "purchase-data-ohostest-performance-detector-qualification.json",
+      "schema": "agentlab.purchase_data_ohostest_performance_detector_qualification.v1",
+      "sha256": "57658baa93d4a2b78e81e3d9478639c9ab755bb45d92e4dc6a98c32e9da81f1c",
+      "status": "controlled-performance-detector-qualified-independent-review-required"
+    }
+  },
+  "execution": {
+    "baselineBuilt": false,
+    "caseBoundWorkloadObserved": false,
+    "functionalMatrixVerified": false,
+    "linuxX86EmulatorExecuted": false,
+    "meaningfulWrongBuilt": false,
+    "performanceMatrixVerified": false,
+    "referenceBuilt": false
+  },
+  "executionMatrix": {
+    "coldRunCountPerRole": 2,
+    "expectedFunctionalVerdictCountPerRole": 96,
+    "functionalRepeatCountPerRun": 6,
+    "functionalTestCountPerRepeat": 8,
+    "profileSampleCountPerRun": 48,
+    "requiredCommonRegressedMetric": "appCpuUsagePercent",
+    "requiresEmulatorPortReleasedAfterEveryRun": true,
+    "requiresNoInstallInsideProfileWindow": true,
+    "roleCount": 3,
+    "totalColdRunCount": 6
+  },
+  "nextGate": "build-and-run-reference-baseline-and-meaningful-wrong-case-bound-matrix-on-linux-emulator",
+  "performanceCalibrated": false,
+  "relativePerformanceDetectorCalibrated": true,
+  "schema": "agentlab.purchase_data_case_performance_calibration_plan.v1",
+  "sourceSetSha256": "cbc01c94755f2d8da5449902ad1a309488d0a9defa9fede23318ad360dd4c2c2",
+  "status": "case-bound-performance-calibration-planned-not-executed"
+}

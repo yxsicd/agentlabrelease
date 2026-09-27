@@ -73,6 +73,10 @@ path = "src/purchase_data_integrated_review_packet.rs"
 name = "agentlab-purchase-data-integrated-review"
 path = "src/purchase_data_integrated_review.rs"
 
+[[bin]]
+name = "agentlab-purchase-data-case-performance-plan"
+path = "src/purchase_data_case_performance_plan.rs"
+
 [dependencies]
 tree-sitter = "=0.27.0"
 tree-sitter-language = "=0.1.8"

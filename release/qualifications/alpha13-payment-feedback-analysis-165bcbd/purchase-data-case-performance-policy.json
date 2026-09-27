@@ -1,0 +1,30 @@
+{
+  "authority": {
+    "absolutePowerThermal": "unavailable-on-emulator",
+    "relativePerformance": "same-environment-emulator-proxy"
+  },
+  "id": "purchase-data-case-bound-cpu-pss-v1",
+  "interpretation": "CPU and PSS are relative emulator signals while the exact eight-test workload repeatedly executes planPurchaseFinalization. CPU passes either the relative threshold or a two percentage point absolute noise allowance because near-zero baselines make ratios unstable. FPS, frame interval, GPU, power and thermal are observed-only or unavailable and are not pass criteria.",
+  "observedOnlyMetrics": [
+    "fps",
+    "frameIntervalMs",
+    "gpuLoadPercent"
+  ],
+  "requiredMetrics": [
+    {
+      "direction": "lower",
+      "maximumAbsoluteIncrease": 2.0,
+      "maximumRelativeIncrease": 0.2,
+      "metric": "appCpuUsagePercent",
+      "statistic": "mean"
+    },
+    {
+      "direction": "lower",
+      "maximumRelativeIncrease": 0.15,
+      "metric": "appPssKiB",
+      "statistic": "mean"
+    }
+  ],
+  "requiresWorkload": true,
+  "schema": "agentlab.harmony_performance_policy.v1"
+}

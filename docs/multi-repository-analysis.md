@@ -1422,6 +1422,24 @@ run, unseen case or gold repair, and distinct case-level
 baseline/reference/wrong calibration, independent semantic/Oracle review and
 upstream exact-revision reexecution remain required.
 
+The detector's wrong variant is intentionally outside the purchase-data
+function, so it proves instrumentation sensitivity but not case attribution.
+`agentlab-purchase-data-case-performance-plan` now fail-closes that gap at the
+planning boundary. It reopens the current integrated, mutation, clean-profile
+and detector evidence, then binds an exact evaluator-owned eighth OHOS Test that
+executes `planPurchaseFinalization` 5,000 times. It also predeclares three
+functionally equivalent roles: the clean reference, a task-start implementation
+that redundantly reparses purchase data, and a meaningful-wrong implementation
+that redundantly decodes the purchase-order payload.
+
+The retained matrix requires two cold runs per role, six 8/8 OHOS Test repeats
+and 48 SmartPerf samples per run. Both degraded roles must be rejected versus
+the reference on the same CPU metric. The plan contains no build or emulator
+result, leaves every execution and promotion flag false, and treats absent
+case-bound observability as failure. This gives the next hwlinux run an
+immutable, auditable calibration contract rather than tuning thresholds after
+seeing measurements.
+
 The Rust-native `agentlab-purchase-data-integrated-review-packet` now closes a
 review-freshness gap. The previous v11 semantic packet correctly froze program
 analysis but predated the later OHOS Test mutation, runtime bridge and
