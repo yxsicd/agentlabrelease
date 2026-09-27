@@ -40,3 +40,7 @@ claim would be incorrect.
 
 Machine names in qualification cases are evidence labels only; they are never
 installation selectors or requirements.
+
+The retained consumer-side WSL2 validation for `v0.1.0-alpha.13`, including
+timings, failure lessons, and the LocalSystem-to-user WSL control pattern, is
+documented in [hwpc-wsl-public-install-alpha13.md](hwpc-wsl-public-install-alpha13.md).
