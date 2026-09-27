@@ -86,6 +86,10 @@ name = "agentlab-purchase-data-unseen-agent-cohort-contract"
 path = "src/purchase_data_unseen_agent_cohort_contract.rs"
 
 [[bin]]
+name = "agentlab-purchase-data-unseen-agent-readiness"
+path = "src/purchase_data_unseen_agent_readiness.rs"
+
+[[bin]]
 name = "agentlab-analysis-tools-pack"
 path = "src/analysis_tools_pack.rs"
 

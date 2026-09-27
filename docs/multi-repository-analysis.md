@@ -1498,6 +1498,18 @@ flags, case-contract authority and automatic promotion remain false. In
 particular, the 288 functional verdicts and 288 SmartPerf samples calibrate the
 evaluator but are not relabeled as unseen Agent attempts.
 
+`agentlab-purchase-data-unseen-agent-readiness` closes the next mechanical
+boundary without weakening those authorities. It consumes the frozen contract
+and the exact approved-review, upstream-publication, published-revision
+re-execution, trusted-case-freeze, participant-plan and verified-attestation
+receipts. Every predecessor is byte-digest-bound to the next, the published
+revision must remain identical through re-execution and case freeze, and the
+case review run and evaluation-case digest must agree with the pre-outcome
+plan. Only the complete chain yields
+`ready-to-dispatch-unseen-agent-cohort`; missing, deferred, self-inconsistent or
+unattested evidence yields no output. Readiness still sets cohort execution and
+Harmony feedback to false and cannot dispatch or promote automatically.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \

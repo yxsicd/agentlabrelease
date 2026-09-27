@@ -105,6 +105,30 @@ The command verifies and digest-binds those existing execution surfaces. It
 does not bypass independent review, upstream revision rebinding, blind-case
 freeze or the pre-outcome cohort plan, and it never grants automatic promotion.
 
+Once those external gates actually exist, compile their exact byte chain into
+an operator-gated dispatch decision with the Rust readiness validator:
+
+```sh
+agentlab-purchase-data-unseen-agent-readiness \
+  --contract purchase-data-unseen-agent-cohort-contract.json \
+  --review-gate approved-integrated-review-gate.json \
+  --publication exact-patch-publication.json \
+  --reexecution published-revision-reexecution.json \
+  --case-freeze trusted-case-freeze.json \
+  --experiment-plan participant-experiment-plan.json \
+  --plan-attestation verified-plan-attestation.json \
+  --output unseen-agent-dispatch-readiness.json
+```
+
+The compiler accepts only the real approved gate status emitted by the
+integrated reviewer, two distinct GitHub reviewer identities, an exact patch
+publication bound to the reviewed candidate, semantic/OHOS Test/performance
+re-execution on the published revision, a trusted-main held-out case freeze,
+and a 3–8-profile pre-outcome plan with an online-verified GitHub attestation.
+It binds all seven inputs by raw-byte SHA-256 and length. Success permits only
+explicit dispatch of that declared cohort: execution and Harmony feedback
+remain false, and automatic dispatch/promotion remain forbidden.
+
 ## Independent component packaging
 
 `agentlab-analysis-tools-pack` packages the complete Linux x64 Rust binary

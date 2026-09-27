@@ -694,6 +694,15 @@ cohort run fresh trials and hand each assessed workspace to the Harmony OHOS Tes
 and relative SmartPerf feedback lane. Controlled calibration variants remain
 evaluator evidence, never Agent attempts or gold repairs.
 
+The Rust-native `agentlab-purchase-data-unseen-agent-readiness` compiler is the
+fail-closed bridge from those authorities to dispatch. It accepts only the
+actual approved dual-review status with two distinct GitHub reviewers, binds
+the exact published patch and revision through semantic/OHOS Test/performance
+re-execution and trusted-main held-out case freeze, and requires the 3–8-profile
+experiment plan to have a verified online GitHub attestation. Its success
+receipt authorizes an explicit operator dispatch only; it does not claim that
+any Agent attempt, OHOS Test feedback or SmartPerf feedback has run.
+
 ### Review-transaction preparation
 
 After a calibration succeeds, use
