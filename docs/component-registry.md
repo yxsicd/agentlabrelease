@@ -48,7 +48,7 @@ The repository's semantic analysis, qualification and review compilers are a
 separate optional `analysis-tools` pack. They do not belong to the generic
 `developer-tools` pack (Bun/jq/ripgrep) or the service runtime pack. The
 Rust-native `agentlab-analysis-tools-pack` producer requires the complete
-24-binary `x86_64` Linux ELF inventory, rejects missing/non-ELF/symlinked
+25-binary `x86_64` Linux ELF inventory, rejects missing/non-ELF/symlinked
 inputs, writes a deterministic USTAR stream, compresses it with single-threaded
 zstd, and emits both the capability-pack descriptor and a relative-URL
 `agentlab.component_update.v1` descriptor.
@@ -63,6 +63,15 @@ selection requires a separately reviewed coordinated composition. Subsequent
 versions can use the ordinary single-component upgrade path while every
 unchanged runtime, developer-tool and Harmony asset remains referenced by its
 existing immutable URL.
+
+The first composition is produced by the Rust-native
+`agentlab-component-introduce` command. It rejects fixed-channel component
+URLs, cross-Release asset references, duplicate slots, duplicate contract
+providers, required new packs and changed base source identity. Its output is a
+new inactive candidate with all qualification gates reset. Pull-request CI
+reproduces that candidate twice from the current `aldev` base and retains it as
+an explicitly non-published preview; the component Release and any later
+channel activation remain separate manual decisions.
 
 Every file required to consume a selected component belongs to that component
 identity. This includes small descriptors and inventories as well as archives

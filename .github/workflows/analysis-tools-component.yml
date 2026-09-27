@@ -56,6 +56,44 @@ jobs:
             -eq "$(jq -r .binaryCount "$RUNNER_TEMP/pack-receipt.json")"
           sha256sum "$first"/* >> "$GITHUB_STEP_SUMMARY"
           cat "$RUNNER_TEMP/pack-receipt.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Reproduce the first coordinated optional-slot composition
+        run: |
+          set -euo pipefail
+          version="${GITHUB_SHA:0:12}"
+          component="$RUNNER_TEMP/analysis-tools-component"
+          update="analysis-tools-$version-linux-x64.json"
+          update_url="https://github.com/$GITHUB_REPOSITORY/releases/download/analysis-tools-$version-linux-x64/$update"
+          composer="target/x86_64-unknown-linux-musl/release/agentlab-component-introduce"
+          first="$RUNNER_TEMP/analysis-tools-coordinated-candidate"
+          second="$RUNNER_TEMP/analysis-tools-coordinated-candidate-repeat"
+          "$composer" \
+            --base-publication release/channels/aldev/publication.json \
+            --base-lock release/channels/aldev/environment-lock.json \
+            --component-update "$component/$update" \
+            --component-update-url "$update_url" \
+            --tag "candidate-analysis-tools-$version-linux-x64" \
+            --output "$first" | tee "$RUNNER_TEMP/component-introduction-receipt.json"
+          "$composer" \
+            --base-publication release/channels/aldev/publication.json \
+            --base-lock release/channels/aldev/environment-lock.json \
+            --component-update "$component/$update" \
+            --component-update-url "$update_url" \
+            --tag "candidate-analysis-tools-$version-linux-x64" \
+            --output "$second" > "$RUNNER_TEMP/component-introduction-repeat-receipt.json"
+          diff -qr "$first" "$second"
+          python3 - "$first" <<'PY'
+          import importlib.util, json, pathlib, sys
+          candidate = pathlib.Path(sys.argv[1])
+          spec = importlib.util.spec_from_file_location(
+              "validator", pathlib.Path("scripts/validate-composition-release.py"))
+          validator = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(validator)
+          raw = (candidate / "environment-lock.json").read_bytes()
+          validator.validate(
+              json.loads((candidate / "publication.json").read_bytes()),
+              json.loads(raw), raw)
+          PY
+          cat "$RUNNER_TEMP/component-introduction-receipt.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve candidate component and reproducibility evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -71,6 +109,14 @@ jobs:
             ${{ runner.temp }}/pack-receipt.json
             ${{ runner.temp }}/repeat-receipt.json
             ${{ runner.temp }}/archive-members.txt
+            ${{ runner.temp }}/component-introduction-receipt.json
+            ${{ runner.temp }}/component-introduction-repeat-receipt.json
+      - name: Preserve coordinated candidate preview without publishing or promotion
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: analysis-tools-coordinated-candidate-preview
+          if-no-files-found: error
+          path: ${{ runner.temp }}/analysis-tools-coordinated-candidate/
 
   publish-immutable-analysis-tools:
     needs: build-analysis-tools-component

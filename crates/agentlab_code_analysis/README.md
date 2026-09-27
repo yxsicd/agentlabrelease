@@ -124,6 +124,25 @@ binary manifest and relative-URL component-update descriptor. Creation alone is
 not publication or aggregate promotion; the dedicated workflow keeps those as
 separate explicit operations.
 
+The first selection of a newly published optional pack uses the Rust-native
+`agentlab-component-introduce` coordinator:
+
+```sh
+agentlab-component-introduce \
+  --base-publication release/channels/aldev/publication.json \
+  --base-lock release/channels/aldev/environment-lock.json \
+  --component-update analysis-tools-<revision>-linux-x64.json \
+  --component-update-url https://github.com/yxsicd/agentlabrelease/releases/download/analysis-tools-<revision>-linux-x64/analysis-tools-<revision>-linux-x64.json \
+  --tag candidate-analysis-tools-<revision>-linux-x64 \
+  --output /tmp/analysis-tools-coordinated-candidate
+```
+
+It accepts only a new enabled-but-optional pack slot from a canonical immutable
+Release, preserves every existing component and aggregate source revision,
+recomputes the contract graph, and resets qualification gates. Reusing it for
+an existing slot fails closed; later revisions use the ordinary independent
+component-upgrade path.
+
 Before the runtime plan can advance,
 `agentlab-purchase-data-ohostest-proposal` reads the selected source directly
 from its exact Git revision and combines content-addressed identity with Rust

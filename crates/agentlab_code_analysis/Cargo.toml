@@ -89,6 +89,10 @@ path = "src/purchase_data_unseen_agent_cohort_contract.rs"
 name = "agentlab-analysis-tools-pack"
 path = "src/analysis_tools_pack.rs"
 
+[[bin]]
+name = "agentlab-component-introduce"
+path = "src/component_introduce.rs"
+
 [dependencies]
 tree-sitter = "=0.27.0"
 tree-sitter-language = "=0.1.8"

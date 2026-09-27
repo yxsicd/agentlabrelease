@@ -141,3 +141,10 @@ descriptor and update descriptor together without embedding a mutable channel.
 Introducing its new optional graph slot is a coordinated composition; later
 analysis-tool revisions are ordinary `pack:analysis-tools` replacements and do
 not rebuild unchanged large components.
+
+The coordinated introduction must preserve the base publication's existing
+asset rows and component rows value-for-value, append only the new optional pack
+and its graph node, retain the aggregate source revision, and reset all gates.
+`agentlab-component-introduce` enforces those invariants and emits a digest-bound
+`agentlab.component_introduction.v1` receipt with `rebuildComponents=false` and
+`automaticPromotion=false`.
