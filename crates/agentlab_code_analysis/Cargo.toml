@@ -69,6 +69,10 @@ path = "src/purchase_data_ohostest_performance_detector_qualification.rs"
 name = "agentlab-purchase-data-integrated-review-packet"
 path = "src/purchase_data_integrated_review_packet.rs"
 
+[[bin]]
+name = "agentlab-purchase-data-integrated-review"
+path = "src/purchase_data_integrated_review.rs"
+
 [dependencies]
 tree-sitter = "=0.27.0"
 tree-sitter-language = "=0.1.8"

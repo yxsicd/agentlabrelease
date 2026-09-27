@@ -1436,6 +1436,25 @@ semantic and Oracle reviewers. It leaves all promotion flags false and does not
 convert controlled variants into Agent runs or claim Cordova runtime, vendor
 IAP, real-device, absolute power/thermal or case-level performance authority.
 
+The corresponding review transaction is now Rust-owned rather than another
+Python business-rule implementation. First run
+`purchase-data-integrated-semantic-review.yml` on trusted `main`; it binds the
+authenticated GitHub actor, the exact packet SHA-256, answers to all six
+questions, all eight risk acknowledgements and one verdict. A different actor
+then runs `purchase-data-integrated-oracle-review.yml`, which downloads that
+exact successful semantic decision, verifies its workflow/run ancestry, binds
+the Oracle decision and invokes
+`agentlab-purchase-data-integrated-review` to compile and revalidate the final
+gate. The Rust compiler reopens all eight packet attachments from the retained
+qualification root and rejects digest, byte-length, schema or status drift.
+
+Even unanimous approval authorizes only publication of the exact reviewed patch,
+upstream revision rebinding and distinct case-level performance calibration.
+`behaviorOracleVerified`, full `performanceCalibrated`, `allowsCaseContract`
+and `automaticPromotion` remain false. The workflows and compiler provide the
+review mechanism; no retained decision or approval exists until two actual,
+distinct authenticated reviewers execute it.
+
 ```sh
 python3 scripts/triage-feedback-analysis-proposal-queue.py \
   --queue /next-analysis/feedback-analysis-proposals/index.json \

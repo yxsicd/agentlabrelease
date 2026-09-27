@@ -650,6 +650,15 @@ keeps Cordova runtime, live vendor IAP, real-device behavior, absolute
 power/thermal authority, upstream publication and distinct case-level
 baseline/reference/wrong performance calibration explicitly unqualified.
 
+The two-stage trusted-main execution surface is
+`purchase-data-integrated-semantic-review.yml` followed by
+`purchase-data-integrated-oracle-review.yml`. Both call the Rust-native
+`agentlab-purchase-data-integrated-review` compiler. The second stage rejects a
+reused GitHub actor, a non-successful or non-main semantic workflow run, packet
+or attachment drift, incomplete answers/risks, and any forged case-contract or
+automatic-promotion authority. Until those workflows are run by two real
+reviewers, every independent-review flag remains false.
+
 ### Review-transaction preparation
 
 After a calibration succeeds, use

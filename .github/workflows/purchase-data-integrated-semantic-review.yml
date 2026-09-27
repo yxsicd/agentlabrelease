@@ -1,0 +1,107 @@
+name: Purchase-data integrated semantic review
+on:
+  workflow_dispatch:
+    inputs:
+      packet_path:
+        description: Retained current-evidence review packet below release/qualifications
+        required: true
+        default: release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-integrated-review-packet.json
+        type: string
+      expected_packet_sha256:
+        description: Exact integrated-packet digest inspected by the reviewer
+        required: true
+        type: string
+      answers_json:
+        description: Exact agentlab.purchase_data_integrated_review_answers.v1 JSON
+        required: true
+        type: string
+      acknowledged_risk_ids:
+        description: Comma-separated integrated-packet risk IDs, exactly as reviewed
+        required: true
+        type: string
+      verdict:
+        description: Semantic-review verdict
+        required: true
+        type: choice
+        options:
+          - approve-for-next-calibration-gate
+          - reject-candidate
+          - defer-for-more-evidence
+      rationale:
+        description: Evidence-based rationale for this exact verdict
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/purchase-data-integrated-semantic-review
+      PACKET_RELATIVE_PATH: ${{ inputs.packet_path }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Resolve exact retained packet
+        id: packet
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT"
+          python3 - <<'PY'
+          import os, pathlib, re
+          root = pathlib.Path.cwd().resolve()
+          relative = os.environ["PACKET_RELATIVE_PATH"]
+          assert re.fullmatch(r"release/qualifications/[A-Za-z0-9._/-]+\.json", relative), relative
+          packet = (root / relative).resolve()
+          qualifications = (root / "release" / "qualifications").resolve()
+          packet.relative_to(qualifications)
+          assert packet.is_file() and not packet.is_symlink(), packet
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("packet_path=" + str(packet) + "\n")
+              output.write("qualification_root=" + str(packet.parent) + "\n")
+          PY
+      - name: Normalize reviewer answers
+        env:
+          ANSWERS_JSON: ${{ inputs.answers_json }}
+        run: jq -S . <<<"$ANSWERS_JSON" > "$AGENTLAB_ROOT/answers.json"
+      - name: Build Rust integrated-review gate
+        run: cargo build --locked --release -p agentlab_code_analysis --bin agentlab-purchase-data-integrated-review
+      - name: Bind authenticated semantic reviewer
+        env:
+          PACKET_PATH: ${{ steps.packet.outputs.packet_path }}
+          QUALIFICATION_ROOT: ${{ steps.packet.outputs.qualification_root }}
+          EXPECTED_PACKET_SHA256: ${{ inputs.expected_packet_sha256 }}
+          REVIEWER: github:${{ github.actor }}
+          ACKNOWLEDGED_RISK_IDS: ${{ inputs.acknowledged_risk_ids }}
+          VERDICT: ${{ inputs.verdict }}
+          REVIEW_RATIONALE: ${{ inputs.rationale }}
+        run: |
+          set -euo pipefail
+          REVIEW_BIN="$GITHUB_WORKSPACE/target/release/agentlab-purchase-data-integrated-review"
+          "$REVIEW_BIN" decide \
+            --packet "$PACKET_PATH" \
+            --qualification-root "$QUALIFICATION_ROOT" \
+            --expected-packet-sha256 "$EXPECTED_PACKET_SHA256" \
+            --role semantic \
+            --reviewer "$REVIEWER" \
+            --answers "$AGENTLAB_ROOT/answers.json" \
+            --acknowledged-risk-ids "$ACKNOWLEDGED_RISK_IDS" \
+            --verdict "$VERDICT" \
+            --rationale "$REVIEW_RATIONALE" \
+            --output "$AGENTLAB_ROOT/semantic-decision.json"
+          cp "$PACKET_PATH" "$AGENTLAB_ROOT/packet.json"
+          sha256sum \
+            "$AGENTLAB_ROOT/packet.json" \
+            "$AGENTLAB_ROOT/answers.json" \
+            "$AGENTLAB_ROOT/semantic-decision.json" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve authenticated semantic-review lineage
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: purchase-data-integrated-semantic-review
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/
