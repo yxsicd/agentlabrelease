@@ -159,7 +159,6 @@ fn write_member(
 fn write_tar(path: &Path, manifest: &[u8], binaries: &[Binary]) -> Result<u64, String> {
     let mut file = fs::File::create(path).map_err(|error| format!("cannot create tar: {error}"))?;
     write_member(&mut file, "manifest.json", manifest, 0o644, b'0')?;
-    write_member(&mut file, "payload/", &[], 0o755, b'5')?;
     write_member(&mut file, "payload/bin/", &[], 0o755, b'5')?;
     for binary in binaries {
         write_member(

@@ -255,10 +255,15 @@ fn builds_byte_identical_independent_candidate_component() {
         .output()
         .unwrap();
     assert!(members.status.success());
+    let members: Vec<_> = String::from_utf8(members.stdout)
+        .unwrap()
+        .lines()
+        .map(str::to_owned)
+        .collect();
+    assert!(!members.iter().any(|line| line == "payload/"));
     assert_eq!(
-        String::from_utf8(members.stdout)
-            .unwrap()
-            .lines()
+        members
+            .iter()
             .filter(|line| line.starts_with("payload/bin/agentlab-"))
             .count(),
         binary_names().len()
