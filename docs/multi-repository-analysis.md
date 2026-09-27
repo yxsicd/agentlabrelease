@@ -1450,13 +1450,15 @@ analysis but predated the later OHOS Test mutation, runtime bridge and
 performance evidence. The integrated packet reopens and digest-binds that
 semantic packet together with the behavior-Oracle plan/calibration, exact source
 review packet, 6/6 killed functional variants, five Harmony runtime mappings,
-two clean profile runs and two controlled performance-wrong runs.
+two clean profile runs, two detector-control runs and the six-run case-bound
+reference/baseline/meaningful-wrong matrix.
 
 The packet is deliberately incapable of self-approval. It declares six review
 questions, eight residual risks and a minimum of two distinct authenticated
-semantic and Oracle reviewers. It leaves all promotion flags false and does not
-convert controlled variants into Agent runs or claim Cordova runtime, vendor
-IAP, real-device, absolute power/thermal or case-level performance authority.
+semantic and Oracle reviewers. It binds qualified relative case-level
+performance while leaving all promotion flags false, and does not convert
+controlled variants into Agent runs or claim Cordova runtime, vendor IAP,
+real-device or absolute power/thermal authority.
 
 The corresponding review transaction is now Rust-owned rather than another
 Python business-rule implementation. First run
@@ -1467,13 +1469,14 @@ then runs `purchase-data-integrated-oracle-review.yml`, which downloads that
 exact successful semantic decision, verifies its workflow/run ancestry, binds
 the Oracle decision and invokes
 `agentlab-purchase-data-integrated-review` to compile and revalidate the final
-gate. The Rust compiler reopens all eight packet attachments from the retained
+gate. The Rust compiler reopens all nine packet attachments from the retained
 qualification root and rejects digest, byte-length, schema or status drift.
 
 Even unanimous approval authorizes only publication of the exact reviewed patch,
-upstream revision rebinding and distinct case-level performance calibration.
-`behaviorOracleVerified`, full `performanceCalibrated`, `allowsCaseContract`
-and `automaticPromotion` remain false. The workflows and compiler provide the
+upstream revision rebinding and subsequent unseen Agent cohort evaluation.
+Case-bound relative `performanceCalibrated` is already true from the emulator
+matrix; `behaviorOracleVerified`, `allowsCaseContract` and
+`automaticPromotion` remain false. The workflows and compiler provide the
 review mechanism; no retained decision or approval exists until two actual,
 distinct authenticated reviewers execute it.
 

@@ -18,6 +18,7 @@ const INPUTS: &[&str] = &[
     "purchase-data-runtime-oracle-bridge.json",
     "purchase-data-ohostest-profile-qualification.json",
     "purchase-data-ohostest-performance-detector-qualification.json",
+    "purchase-data-case-performance-qualification.json",
 ];
 
 fn repository() -> PathBuf {
@@ -96,7 +97,7 @@ fn binds_current_semantic_runtime_and_performance_evidence_without_self_approval
         packet["schema"],
         "agentlab.purchase_data_integrated_review_packet.v1"
     );
-    assert_eq!(packet["evidenceAttachments"].as_object().unwrap().len(), 8);
+    assert_eq!(packet["evidenceAttachments"].as_object().unwrap().len(), 9);
     assert_eq!(packet["coverage"]["repositoryCount"], 2);
     assert_eq!(packet["coverage"]["functionalMutationScore"], 1.0);
     assert_eq!(packet["coverage"]["controlledPerformanceWrongRunCount"], 2);
@@ -107,7 +108,12 @@ fn binds_current_semantic_runtime_and_performance_evidence_without_self_approval
     assert_eq!(packet["relativePerformanceDetectorCalibrated"], true);
     assert_eq!(packet["semanticAlignmentVerified"], false);
     assert_eq!(packet["behaviorOracleVerified"], false);
-    assert_eq!(packet["performanceCalibrated"], false);
+    assert_eq!(
+        packet["coverage"]["casePerformanceFunctionalVerdictCount"],
+        288
+    );
+    assert_eq!(packet["coverage"]["casePerformanceProfileSampleCount"], 288);
+    assert_eq!(packet["performanceCalibrated"], true);
     assert_eq!(packet["allowsCaseContract"], false);
     assert_eq!(packet["automaticPromotion"], false);
     fs::remove_dir_all(root).unwrap();
@@ -138,6 +144,20 @@ fn rejects_forged_full_performance_calibration() {
     assert!(!result.status.success());
     assert!(String::from_utf8_lossy(&result.stderr)
         .contains("detector qualification performanceCalibrated differs"));
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn rejects_forged_case_performance_coverage() {
+    let root = fixture();
+    let path = root.join("purchase-data-case-performance-qualification.json");
+    let mut value = read(&path);
+    value["coverage"]["functionalVerdictCount"] = json!(287);
+    write(&path, &value);
+    let result = run(&root, &root.join("packet.json"));
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr)
+        .contains("case performance coverage functionalVerdictCount differs"));
     fs::remove_dir_all(root).unwrap();
 }
 

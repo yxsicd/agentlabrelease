@@ -19,10 +19,11 @@ const INPUTS: &[&str] = &[
     "purchase-data-runtime-oracle-bridge.json",
     "purchase-data-ohostest-profile-qualification.json",
     "purchase-data-ohostest-performance-detector-qualification.json",
-    "purchase-data-integrated-review-packet.json",
+    "purchase-data-case-performance-qualification.json",
+    "purchase-data-integrated-review-packet-v2.json",
 ];
 
-const RISKS: &str = "independent-semantic-review-pending,self-authored-source-candidate,cordova-runtime-source-seam-only,live-vendor-iap-unexecuted,x86-emulator-not-real-device,relative-detector-not-case-calibration,absolute-power-thermal-unavailable,upstream-source-unpublished";
+const RISKS: &str = "independent-semantic-review-pending,self-authored-source-candidate,cordova-runtime-source-seam-only,live-vendor-iap-unexecuted,x86-emulator-not-real-device,controlled-performance-variants-not-agent-evaluation,absolute-power-thermal-unavailable,upstream-source-unpublished";
 
 fn repository() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -79,7 +80,7 @@ fn answers(answer: &str) -> Value {
             {"id": "source-patch-preservation", "answer": answer, "rationale": "The exact source patch and production-preservation boundary were inspected."},
             {"id": "functional-oracle-discrimination", "answer": answer, "rationale": "The OHOS Test cases and all killed meaningful wrong variants were inspected."},
             {"id": "runtime-mapping-scope", "answer": answer, "rationale": "The Harmony runtime mapping and absent Cordova runtime mapping were inspected."},
-            {"id": "performance-detector-scope", "answer": answer, "rationale": "The clean and controlled performance evidence and detector scope were inspected."},
+            {"id": "case-performance-discrimination", "answer": answer, "rationale": "The six case-bound cold runs and both consistently rejected controlled performance faults were inspected."},
             {"id": "residual-boundary-honesty", "answer": answer, "rationale": "Every retained unqualified runtime and device boundary was inspected."}
         ]
     })
@@ -102,7 +103,7 @@ fn decide(
     verdict: &str,
     output: &Path,
 ) -> Output {
-    let packet = root.join("purchase-data-integrated-review-packet.json");
+    let packet = root.join("purchase-data-integrated-review-packet-v2.json");
     let packet_sha = digest(&fs::read(&packet).unwrap());
     run(&[
         "decide",
@@ -133,7 +134,7 @@ fn compile(root: &Path, semantic: &Path, oracle: &Path, gate: &Path) -> Output {
     run(&[
         "compile",
         "--packet",
-        root.join("purchase-data-integrated-review-packet.json")
+        root.join("purchase-data-integrated-review-packet-v2.json")
             .to_str()
             .unwrap(),
         "--qualification-root",
@@ -151,7 +152,7 @@ fn validate(root: &Path, semantic: &Path, oracle: &Path, gate: &Path) -> Output 
     run(&[
         "validate",
         "--packet",
-        root.join("purchase-data-integrated-review-packet.json")
+        root.join("purchase-data-integrated-review-packet-v2.json")
             .to_str()
             .unwrap(),
         "--qualification-root",
@@ -210,9 +211,10 @@ fn two_distinct_unanimous_reviewers_authorize_only_next_gates() {
     assert_eq!(value["independentSourceReviewCompleted"], true);
     assert_eq!(value["independentOracleReviewCompleted"], true);
     assert_eq!(value["allowsExactPatchPublication"], true);
-    assert_eq!(value["allowsDistinctCasePerformanceCalibration"], true);
+    assert_eq!(value["allowsDistinctCasePerformanceCalibration"], false);
+    assert_eq!(value["allowsUnseenAgentCohortEvaluation"], true);
     assert_eq!(value["behaviorOracleVerified"], false);
-    assert_eq!(value["performanceCalibrated"], false);
+    assert_eq!(value["performanceCalibrated"], true);
     assert_eq!(value["allowsCaseContract"], false);
     assert_eq!(value["automaticPromotion"], false);
     fs::remove_dir_all(root).unwrap();
@@ -361,7 +363,7 @@ fn rejects_tampered_case_contract_authority() {
 #[test]
 fn rejects_weakened_minimum_reviewer_contract() {
     let root = fixture();
-    let packet = root.join("purchase-data-integrated-review-packet.json");
+    let packet = root.join("purchase-data-integrated-review-packet-v2.json");
     let mut value = read(&packet);
     value["reviewDecisionContract"]["minimumDistinctReviewerCount"] = json!(1);
     write(&packet, &value);

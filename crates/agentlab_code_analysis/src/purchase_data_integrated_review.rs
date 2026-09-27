@@ -16,7 +16,7 @@ const QUESTION_IDS: &[&str] = &[
     "source-patch-preservation",
     "functional-oracle-discrimination",
     "runtime-mapping-scope",
-    "performance-detector-scope",
+    "case-performance-discrimination",
     "residual-boundary-honesty",
 ];
 
@@ -26,7 +26,7 @@ const RISK_IDS: &[&str] = &[
     "cordova-runtime-source-seam-only",
     "live-vendor-iap-unexecuted",
     "x86-emulator-not-real-device",
-    "relative-detector-not-case-calibration",
+    "controlled-performance-variants-not-agent-evaluation",
     "absolute-power-thermal-unavailable",
     "upstream-source-unpublished",
 ];
@@ -34,6 +34,7 @@ const RISK_IDS: &[&str] = &[
 const ATTACHMENT_IDS: &[&str] = &[
     "behavior-oracle-calibration",
     "behavior-oracle-plan",
+    "case-performance-qualification",
     "functional-mutation-qualification",
     "performance-detector-qualification",
     "profile-qualification",
@@ -49,8 +50,8 @@ const VERDICTS: &[&str] = &[
     "defer-for-more-evidence",
 ];
 
-const APPROVED_BOUNDARY: &str = "Two distinct authenticated reviewers approved the exact current-evidence packet. This authorizes only publication of the exact reviewed source patch and the next distinct case-performance calibration. It does not publish source, verify the full cross-repository behavior Oracle, qualify Cordova runtime, live vendor IAP, real-device or absolute power/thermal behavior, authorize a case contract, convert controlled variants into Agent runs, or promote automatically.";
-const NON_APPROVED_BOUNDARY: &str = "Two distinct authenticated review decisions were retained for the exact current-evidence packet, but they did not unanimously approve advancement. No source publication, additional calibration, case contract or automatic promotion is authorized.";
+const APPROVED_BOUNDARY: &str = "Two distinct authenticated reviewers approved the exact current-evidence packet. This authorizes only publication of the exact reviewed source patch, upstream revision rebinding and subsequent unseen Agent cohort evaluation. It does not publish source, verify the full cross-repository behavior Oracle, qualify Cordova runtime, live vendor IAP, real-device or absolute power/thermal behavior, authorize a case contract, convert controlled calibration variants into Agent runs, or promote automatically.";
+const NON_APPROVED_BOUNDARY: &str = "Two distinct authenticated review decisions were retained for the exact current-evidence packet, but they did not unanimously approve advancement. No source publication, upstream rebinding, unseen Agent cohort evaluation, case contract or automatic promotion is authorized.";
 
 struct Input {
     bytes: Vec<u8>,
@@ -162,7 +163,7 @@ fn validate_packet(packet: &Value) -> Result<(), String> {
     )?;
     same(
         string(packet, "nextGate", "integrated packet")?,
-        "authenticated-distinct-semantic-and-oracle-reviewers-then-upstream-publication-and-distinct-case-performance-calibration",
+        "authenticated-distinct-semantic-and-oracle-reviewers-then-upstream-publication-rebinding-and-unseen-agent-cohort-evaluation",
         "integrated packet next gate",
     )?;
     for key in [
@@ -173,8 +174,6 @@ fn validate_packet(packet: &Value) -> Result<(), String> {
         "cordovaRuntimeCalibrated",
         "liveVendorIapExecuted",
         "realDeviceExecuted",
-        "distinctBaselineReferenceWrongCaseCalibrationComplete",
-        "performanceCalibrated",
         "absolutePowerThermalQualified",
         "allowsCaseContract",
         "automaticPromotion",
@@ -187,6 +186,12 @@ fn validate_packet(packet: &Value) -> Result<(), String> {
         true,
         "integrated packet",
     )?;
+    for key in [
+        "distinctBaselineReferenceWrongCaseCalibrationComplete",
+        "performanceCalibrated",
+    ] {
+        exact_bool(packet, key, true, "integrated packet")?;
+    }
 
     let lineage = &packet["sourceLineage"];
     for key in ["analysisSourceSetSha256", "runtimeSourceSetSha256"] {
@@ -584,20 +589,21 @@ fn compile(values: &BTreeMap<String, String>) -> Result<Value, String> {
         "independentOracleReviewCompleted": approved,
         "allowsExactPatchPublication": approved,
         "requiresUpstreamRevisionReexecution": approved,
-        "allowsDistinctCasePerformanceCalibration": approved,
+        "allowsDistinctCasePerformanceCalibration": false,
+        "allowsUnseenAgentCohortEvaluation": approved,
         "behaviorOracleVerified": false,
         "cordovaRuntimeCalibrated": false,
         "liveVendorIapExecuted": false,
         "realDeviceExecuted": false,
         "relativePerformanceDetectorCalibrated": true,
-        "distinctBaselineReferenceWrongCaseCalibrationComplete": false,
-        "performanceCalibrated": false,
+        "distinctBaselineReferenceWrongCaseCalibrationComplete": true,
+        "performanceCalibrated": true,
         "absolutePowerThermalQualified": false,
         "allowsCaseContract": false,
         "automaticPromotion": false,
         "boundary": if approved { APPROVED_BOUNDARY } else { NON_APPROVED_BOUNDARY },
         "nextGate": if approved {
-            "publish-exact-reviewed-patch-rebind-upstream-revision-and-run-distinct-case-performance-calibration"
+            "publish-exact-reviewed-patch-rebind-upstream-revision-and-run-unseen-agent-cohort-evaluation"
         } else {
             "candidate-evidence-or-review-decision-change"
         }
@@ -684,7 +690,7 @@ fn validate_gate(
     same(
         string(gate, "nextGate", "integrated gate")?,
         if approved {
-            "publish-exact-reviewed-patch-rebind-upstream-revision-and-run-distinct-case-performance-calibration"
+            "publish-exact-reviewed-patch-rebind-upstream-revision-and-run-unseen-agent-cohort-evaluation"
         } else {
             "candidate-evidence-or-review-decision-change"
         },
@@ -699,7 +705,7 @@ fn validate_gate(
         "independentOracleReviewCompleted",
         "allowsExactPatchPublication",
         "requiresUpstreamRevisionReexecution",
-        "allowsDistinctCasePerformanceCalibration",
+        "allowsUnseenAgentCohortEvaluation",
     ] {
         exact_bool(gate, key, approved, "integrated gate")?;
     }
@@ -709,13 +715,23 @@ fn validate_gate(
         true,
         "integrated gate",
     )?;
+    exact_bool(
+        gate,
+        "allowsDistinctCasePerformanceCalibration",
+        false,
+        "integrated gate",
+    )?;
+    for key in [
+        "distinctBaselineReferenceWrongCaseCalibrationComplete",
+        "performanceCalibrated",
+    ] {
+        exact_bool(gate, key, true, "integrated gate")?;
+    }
     for key in [
         "behaviorOracleVerified",
         "cordovaRuntimeCalibrated",
         "liveVendorIapExecuted",
         "realDeviceExecuted",
-        "distinctBaselineReferenceWrongCaseCalibrationComplete",
-        "performanceCalibrated",
         "absolutePowerThermalQualified",
         "allowsCaseContract",
         "automaticPromotion",

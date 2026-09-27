@@ -1,0 +1,192 @@
+{
+  "absolutePowerThermalQualified": false,
+  "allowsCaseContract": false,
+  "automaticPromotion": false,
+  "behaviorOracleVerified": false,
+  "boundary": "This packet binds the current semantic, source, functional mutation, runtime mapping, repeatable profile, relative detector and case-bound reference/baseline/meaningful-wrong performance evidence into one review input. It does not perform or impersonate independent review, publish source, authorize a case contract, convert controlled variants into Agent runs, or qualify Cordova runtime, live vendor IAP, real-device or absolute power/thermal behavior.",
+  "cordovaRuntimeCalibrated": false,
+  "coverage": {
+    "casePerformanceColdRunCount": 6,
+    "casePerformanceFunctionalVerdictCount": 288,
+    "casePerformanceOhosTestCount": 8,
+    "casePerformanceProfileSampleCount": 288,
+    "casePerformanceRoleCount": 3,
+    "cleanProfileRunCount": 2,
+    "cleanProfileSampleCount": 96,
+    "consistentRegressedMetrics": [
+      "appCpuUsagePercent"
+    ],
+    "controlledPerformanceWrongFunctionalAssertionCount": 84,
+    "controlledPerformanceWrongRunCount": 2,
+    "controlledPerformanceWrongSampleCount": 96,
+    "cordovaRuntimeBoundCheckCount": 0,
+    "crossRepositoryBehaviorCheckCount": 10,
+    "functionalKilledMeaningfulWrongVariantCount": 6,
+    "functionalMeaningfulWrongVariantCount": 6,
+    "functionalMutationOhosTestCount": 7,
+    "functionalMutationScore": 1.0,
+    "harmonyRuntimeBoundCheckCount": 5,
+    "repositoryCount": 2,
+    "sourceSeamNegativeControlCount": 5
+  },
+  "distinctBaselineReferenceWrongCaseCalibrationComplete": true,
+  "evidenceAttachments": {
+    "behavior-oracle-calibration": {
+      "byteLength": 13182,
+      "path": "purchase-data-behavior-oracle-calibration.json",
+      "schema": "agentlab.purchase_data_behavior_oracle_calibration.v1",
+      "sha256": "1c5177f3d97af8f4904ca67f7494eafb30e9249b656624f04d594e3c30aecaac",
+      "status": "source-seam-calibrated-independent-review-required"
+    },
+    "behavior-oracle-plan": {
+      "byteLength": 9090,
+      "path": "purchase-data-behavior-oracle-plan.json",
+      "schema": "agentlab.purchase_data_behavior_oracle_plan.v1",
+      "sha256": "a436bcb578b95738521fd7c23b3ff0cbf195b3d809bfa465e0b7b0a741e7f60f"
+    },
+    "case-performance-qualification": {
+      "byteLength": 5290,
+      "path": "purchase-data-case-performance-qualification.json",
+      "schema": "agentlab.purchase_data_case_performance_qualification.v1",
+      "sha256": "3dc1dd230e79a2d2dc2b84c6813fe303b7c9cdc943188ccc857da87f3578b00d",
+      "status": "case-bound-reference-baseline-meaningful-wrong-performance-calibrated"
+    },
+    "functional-mutation-qualification": {
+      "byteLength": 1476,
+      "path": "purchase-data-ohostest-mutation-qualification.json",
+      "schema": "agentlab.purchase_data_ohostest_mutation_qualification.v1",
+      "sha256": "1721064f5e350227fd3dffdab1aac625f2cab774959d2fddd5722f36b98d7934",
+      "status": "mutation-discrimination-qualified-source-review-still-required"
+    },
+    "performance-detector-qualification": {
+      "byteLength": 4229,
+      "path": "purchase-data-ohostest-performance-detector-qualification.json",
+      "schema": "agentlab.purchase_data_ohostest_performance_detector_qualification.v1",
+      "sha256": "57658baa93d4a2b78e81e3d9478639c9ab755bb45d92e4dc6a98c32e9da81f1c",
+      "status": "controlled-performance-detector-qualified-independent-review-required"
+    },
+    "profile-qualification": {
+      "byteLength": 2558,
+      "path": "purchase-data-ohostest-profile-qualification.json",
+      "schema": "agentlab.purchase_data_ohostest_profile_qualification.v1",
+      "sha256": "f844673c115b0be92ad8cfab26f5617bd15b9aa0ea634f31b7eac47679ec341e",
+      "status": "linux-emulator-functional-and-relative-performance-repeatability-qualified-independent-review-required"
+    },
+    "runtime-oracle-bridge": {
+      "byteLength": 5079,
+      "path": "purchase-data-runtime-oracle-bridge.json",
+      "schema": "agentlab.purchase_data_runtime_oracle_bridge.v1",
+      "sha256": "4d24e409678502fd3b0fade142e36f86e898b09d2bb38811bc769431afbe0bef",
+      "status": "harmony-runtime-oracle-bridge-qualified-independent-review-required"
+    },
+    "semantic-review-packet": {
+      "byteLength": 10334,
+      "path": "review-packets/purchase-data-control-flow-v11.json",
+      "schema": "agentlab.multi_repo_candidate_review_packet.v11",
+      "sha256": "36c35c021a26a9e7a15da786ab4e138780bd47553eb05f82ba73e386e1342455",
+      "status": "independent-semantic-review-required"
+    },
+    "source-review-packet": {
+      "byteLength": 4902,
+      "path": "purchase-data-ohostest-review-packet.json",
+      "schema": "agentlab.purchase_data_ohostest_review_packet.v1",
+      "sha256": "6e734c807d67ffcca4a6403a46321dca8acc91b70c55f1443550504e3597b53e",
+      "status": "independent-source-review-required"
+    }
+  },
+  "independentOracleReviewCompleted": false,
+  "independentSourceReviewCompleted": false,
+  "liveVendorIapExecuted": false,
+  "nextGate": "authenticated-distinct-semantic-and-oracle-reviewers-then-upstream-publication-rebinding-and-unseen-agent-cohort-evaluation",
+  "performanceCalibrated": true,
+  "realDeviceExecuted": false,
+  "relativePerformanceDetectorCalibrated": true,
+  "reviewDecisionContract": {
+    "answers": [
+      "yes",
+      "no",
+      "unknown"
+    ],
+    "approvalRequiresEveryAnswerYes": true,
+    "minimumDistinctReviewerCount": 2,
+    "questions": [
+      {
+        "id": "cross-repository-semantic-coherence",
+        "question": "Do the exact two-repository facts and selected control-flow evidence support one coherent purchase-data behavior contract?"
+      },
+      {
+        "id": "source-patch-preservation",
+        "question": "Does the exact source patch preserve intended production behavior while creating a legitimate OHOS Test seam?"
+      },
+      {
+        "id": "functional-oracle-discrimination",
+        "question": "Do the seven OHOS Tests and six killed meaningful-wrong variants discriminate the intended Harmony behavior boundaries?"
+      },
+      {
+        "id": "runtime-mapping-scope",
+        "question": "Is the mapping from five Harmony source-seam checks to runtime OHOS Tests exact without implying Cordova runtime execution?"
+      },
+      {
+        "id": "case-performance-discrimination",
+        "question": "Do the six case-bound cold runs establish stable reference behavior and consistently reject both functionally passing controlled performance faults on appCpuUsagePercent?"
+      },
+      {
+        "id": "residual-boundary-honesty",
+        "question": "Are controlled variants kept distinct from Agent runs, unseen cases and gold repairs while live vendor IAP, real-device, Cordova runtime and absolute power/thermal remain unqualified?"
+      }
+    ],
+    "reviewerIdentityAuthority": "authenticated-github-actor-on-trusted-main",
+    "reviewersMustDifferFromCandidateAuthor": true,
+    "semanticAndOracleReviewerMustDiffer": true,
+    "verdicts": [
+      "approve-for-next-calibration-gate",
+      "reject-candidate",
+      "defer-for-more-evidence"
+    ]
+  },
+  "risks": [
+    {
+      "id": "independent-semantic-review-pending",
+      "statement": "The current semantic packet is exact and reviewable but has not been approved by an authenticated independent reviewer."
+    },
+    {
+      "id": "self-authored-source-candidate",
+      "statement": "The OHOS Test source candidate and its review packet remain self-authored until an independent source decision is retained."
+    },
+    {
+      "id": "cordova-runtime-source-seam-only",
+      "statement": "All five Cordova behavior checks remain source-seam-only and have no runtime-bound execution evidence."
+    },
+    {
+      "id": "live-vendor-iap-unexecuted",
+      "statement": "The retained emulator executions do not contact or qualify the live vendor IAP service."
+    },
+    {
+      "id": "x86-emulator-not-real-device",
+      "statement": "Linux x86 emulator evidence does not establish real-device behavior."
+    },
+    {
+      "id": "controlled-performance-variants-not-agent-evaluation",
+      "statement": "The case-bound baseline and meaningful-wrong variants calibrate discrimination only and are not Agent runs, unseen cases or gold repairs."
+    },
+    {
+      "id": "absolute-power-thermal-unavailable",
+      "statement": "Absolute power and thermal authority are unavailable in the retained emulator lane."
+    },
+    {
+      "id": "upstream-source-unpublished",
+      "statement": "The exact OHOS Test candidate revision has not been published upstream and rebound to a new source identity."
+    }
+  ],
+  "runtimeCandidateId": "purchase-data-finalization-ee2bc87594f1",
+  "schema": "agentlab.purchase_data_integrated_review_packet.v1",
+  "semanticAlignmentVerified": false,
+  "semanticCandidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "sourceLineage": {
+    "analysisSourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
+    "baseRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+    "candidateRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+    "runtimeSourceSetSha256": "cbc01c94755f2d8da5449902ad1a309488d0a9defa9fede23318ad360dd4c2c2"
+  },
+  "status": "current-evidence-bound-independent-dual-review-required"
+}

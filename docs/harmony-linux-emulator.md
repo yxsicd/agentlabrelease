@@ -660,15 +660,17 @@ The current evidence is now assembled by
 the exact v11 semantic packet, behavior-Oracle plan and source-seam calibration,
 OHOS Test source-review packet, six-variant mutation qualification, runtime
 Oracle bridge, repeatable clean profile and performance-detector qualification.
-The resulting packet binds eight inputs by path, SHA-256 and byte length and
-replaces the earlier stale review view that still described the Oracle as wholly
-uncalibrated.
+The resulting packet binds nine inputs by path, SHA-256 and byte length,
+including the Rust-qualified six-run case-performance matrix, and replaces the
+earlier stale review view that still described the Oracle and case-bound
+performance lane as uncalibrated.
 
 This is a review-input improvement, not a review result. It requires at least
-two distinct authenticated reviewers for semantic and Oracle decisions, and it
-keeps Cordova runtime, live vendor IAP, real-device behavior, absolute
-power/thermal authority, upstream publication and distinct case-level
-baseline/reference/wrong performance calibration explicitly unqualified.
+two distinct authenticated reviewers for semantic and Oracle decisions. The
+case-bound reference/baseline/meaningful-wrong performance calibration is now
+qualified, while Cordova runtime, live vendor IAP, real-device behavior,
+absolute power/thermal authority and upstream publication remain explicitly
+unqualified.
 
 The two-stage trusted-main execution surface is
 `purchase-data-integrated-semantic-review.yml` followed by

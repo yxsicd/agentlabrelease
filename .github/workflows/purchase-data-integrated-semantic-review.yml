@@ -5,7 +5,7 @@ on:
       packet_path:
         description: Retained current-evidence review packet below release/qualifications
         required: true
-        default: release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-integrated-review-packet.json
+        default: release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-integrated-review-packet-v2.json
         type: string
       expected_packet_sha256:
         description: Exact integrated-packet digest inspected by the reviewer

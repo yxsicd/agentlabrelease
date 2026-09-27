@@ -15,6 +15,7 @@ const RUNTIME_BRIDGE_SCHEMA: &str = "agentlab.purchase_data_runtime_oracle_bridg
 const PROFILE_SCHEMA: &str = "agentlab.purchase_data_ohostest_profile_qualification.v1";
 const DETECTOR_SCHEMA: &str =
     "agentlab.purchase_data_ohostest_performance_detector_qualification.v1";
+const CASE_PERFORMANCE_SCHEMA: &str = "agentlab.purchase_data_case_performance_qualification.v1";
 
 const SEMANTIC_CANDIDATE: &str = "difficulty-c75c82b3a697d8053e74bb37";
 const RUNTIME_CANDIDATE: &str = "purchase-data-finalization-ee2bc87594f1";
@@ -64,6 +65,11 @@ const ATTACHMENTS: &[(&str, &str, &str)] = &[
         "performance-detector-qualification",
         "purchase-data-ohostest-performance-detector-qualification.json",
         DETECTOR_SCHEMA,
+    ),
+    (
+        "case-performance-qualification",
+        "purchase-data-case-performance-qualification.json",
+        CASE_PERFORMANCE_SCHEMA,
     ),
 ];
 
@@ -641,6 +647,71 @@ fn validate_detector(input: &Input, profile: &Input) -> Result<(), String> {
     )
 }
 
+fn validate_case_performance(input: &Input) -> Result<(), String> {
+    let value = &input.value;
+    same(
+        string(value, "schema", "case performance qualification")?,
+        CASE_PERFORMANCE_SCHEMA,
+        "case performance qualification schema",
+    )?;
+    same(
+        string(value, "status", "case performance qualification")?,
+        "case-bound-reference-baseline-meaningful-wrong-performance-calibrated",
+        "case performance qualification status",
+    )?;
+    same(
+        string(value, "candidateRevision", "case performance qualification")?,
+        CANDIDATE_REVISION,
+        "case performance candidate revision",
+    )?;
+    same(
+        string(
+            value,
+            "requiredCommonRegressedMetric",
+            "case performance qualification",
+        )?,
+        "appCpuUsagePercent",
+        "case performance regressed metric",
+    )?;
+    let coverage = &value["coverage"];
+    exact_u64(coverage, "roleCount", 3, "case performance coverage")?;
+    exact_u64(coverage, "coldRunCount", 6, "case performance coverage")?;
+    exact_u64(
+        coverage,
+        "functionalVerdictCount",
+        288,
+        "case performance coverage",
+    )?;
+    exact_u64(
+        coverage,
+        "profileSampleCount",
+        288,
+        "case performance coverage",
+    )?;
+    for key in [
+        "functionalMatrixVerified",
+        "caseBoundWorkloadObserved",
+        "performanceMatrixVerified",
+        "distinctBaselineReferenceWrongCaseCalibrationComplete",
+        "performanceCalibrated",
+        "controlledVariantsAreNotAgentRunsUnseenCasesOrGoldRepairs",
+    ] {
+        exact_bool(value, key, true, "case performance qualification")?;
+    }
+    false_boundary(
+        value,
+        &[
+            "independentOracleReviewCompleted",
+            "liveVendorIapExecuted",
+            "realDeviceExecuted",
+            "absolutePowerThermalQualified",
+            "allowsCaseContract",
+            "automaticPromotion",
+        ],
+        "case performance qualification",
+    )
+}
+
 fn attachment(input: &Input, schema: &str, status: Option<&str>) -> Value {
     let mut value = Map::new();
     value.insert("path".into(), json!(input.relative_path));
@@ -666,6 +737,7 @@ fn build(root: &Path) -> Result<Value, String> {
     let bridge = &inputs[5];
     let profile = &inputs[6];
     let detector = &inputs[7];
+    let case_performance = &inputs[8];
 
     validate_semantic(semantic)?;
     validate_oracle_plan(plan, semantic)?;
@@ -675,6 +747,7 @@ fn build(root: &Path) -> Result<Value, String> {
     validate_runtime_bridge(bridge, plan, calibration, mutation)?;
     validate_profile(profile)?;
     validate_detector(detector, profile)?;
+    validate_case_performance(case_performance)?;
 
     let mut attachments = Map::new();
     for ((id, _, schema), input) in ATTACHMENTS.iter().zip(&inputs) {
@@ -702,7 +775,8 @@ fn build(root: &Path) -> Result<Value, String> {
             "sourceSeamNegativeControlCount": 5,
             "harmonyRuntimeBoundCheckCount": 5,
             "cordovaRuntimeBoundCheckCount": 0,
-            "ohosTestCount": 7,
+            "functionalMutationOhosTestCount": 7,
+            "casePerformanceOhosTestCount": 8,
             "functionalMeaningfulWrongVariantCount": 6,
             "functionalKilledMeaningfulWrongVariantCount": 6,
             "functionalMutationScore": 1.0,
@@ -711,6 +785,10 @@ fn build(root: &Path) -> Result<Value, String> {
             "controlledPerformanceWrongRunCount": 2,
             "controlledPerformanceWrongSampleCount": 96,
             "controlledPerformanceWrongFunctionalAssertionCount": 84,
+            "casePerformanceRoleCount": 3,
+            "casePerformanceColdRunCount": 6,
+            "casePerformanceFunctionalVerdictCount": 288,
+            "casePerformanceProfileSampleCount": 288,
             "consistentRegressedMetrics": ["appCpuUsagePercent"]
         },
         "reviewDecisionContract": {
@@ -726,8 +804,8 @@ fn build(root: &Path) -> Result<Value, String> {
                 {"id": "source-patch-preservation", "question": "Does the exact source patch preserve intended production behavior while creating a legitimate OHOS Test seam?"},
                 {"id": "functional-oracle-discrimination", "question": "Do the seven OHOS Tests and six killed meaningful-wrong variants discriminate the intended Harmony behavior boundaries?"},
                 {"id": "runtime-mapping-scope", "question": "Is the mapping from five Harmony source-seam checks to runtime OHOS Tests exact without implying Cordova runtime execution?"},
-                {"id": "performance-detector-scope", "question": "Does the retained controlled CPU regression calibrate only the relative detector without being treated as an unseen case or gold repair?"},
-                {"id": "residual-boundary-honesty", "question": "Are live vendor IAP, real-device, Cordova runtime, absolute power/thermal and case-level performance calibration correctly left unqualified?"}
+                {"id": "case-performance-discrimination", "question": "Do the six case-bound cold runs establish stable reference behavior and consistently reject both functionally passing controlled performance faults on appCpuUsagePercent?"},
+                {"id": "residual-boundary-honesty", "question": "Are controlled variants kept distinct from Agent runs, unseen cases and gold repairs while live vendor IAP, real-device, Cordova runtime and absolute power/thermal remain unqualified?"}
             ]
         },
         "risks": [
@@ -736,7 +814,7 @@ fn build(root: &Path) -> Result<Value, String> {
             {"id": "cordova-runtime-source-seam-only", "statement": "All five Cordova behavior checks remain source-seam-only and have no runtime-bound execution evidence."},
             {"id": "live-vendor-iap-unexecuted", "statement": "The retained emulator executions do not contact or qualify the live vendor IAP service."},
             {"id": "x86-emulator-not-real-device", "statement": "Linux x86 emulator evidence does not establish real-device behavior."},
-            {"id": "relative-detector-not-case-calibration", "statement": "The controlled performance variant calibrates the relative CPU detector but is not distinct baseline/reference/wrong case calibration."},
+            {"id": "controlled-performance-variants-not-agent-evaluation", "statement": "The case-bound baseline and meaningful-wrong variants calibrate discrimination only and are not Agent runs, unseen cases or gold repairs."},
             {"id": "absolute-power-thermal-unavailable", "statement": "Absolute power and thermal authority are unavailable in the retained emulator lane."},
             {"id": "upstream-source-unpublished", "statement": "The exact OHOS Test candidate revision has not been published upstream and rebound to a new source identity."}
         ],
@@ -748,13 +826,13 @@ fn build(root: &Path) -> Result<Value, String> {
         "liveVendorIapExecuted": false,
         "realDeviceExecuted": false,
         "relativePerformanceDetectorCalibrated": true,
-        "distinctBaselineReferenceWrongCaseCalibrationComplete": false,
-        "performanceCalibrated": false,
+        "distinctBaselineReferenceWrongCaseCalibrationComplete": true,
+        "performanceCalibrated": true,
         "absolutePowerThermalQualified": false,
         "allowsCaseContract": false,
         "automaticPromotion": false,
-        "boundary": "This packet binds the current semantic, source, functional mutation, runtime mapping, repeatable profile and relative performance-detector evidence into one review input. It does not perform or impersonate independent review, publish source, authorize a case contract, convert controlled variants into Agent runs, or qualify Cordova runtime, live vendor IAP, real-device, absolute power/thermal or distinct case-level performance behavior.",
-        "nextGate": "authenticated-distinct-semantic-and-oracle-reviewers-then-upstream-publication-and-distinct-case-performance-calibration"
+        "boundary": "This packet binds the current semantic, source, functional mutation, runtime mapping, repeatable profile, relative detector and case-bound reference/baseline/meaningful-wrong performance evidence into one review input. It does not perform or impersonate independent review, publish source, authorize a case contract, convert controlled variants into Agent runs, or qualify Cordova runtime, live vendor IAP, real-device or absolute power/thermal behavior.",
+        "nextGate": "authenticated-distinct-semantic-and-oracle-reviewers-then-upstream-publication-rebinding-and-unseen-agent-cohort-evaluation"
     }))
 }
 

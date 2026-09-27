@@ -650,9 +650,9 @@
       "status": "case-bound-reference-baseline-meaningful-wrong-performance-calibrated"
     },
     "integratedReviewPacket": {
-      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-integrated-review-packet.json",
+      "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-integrated-review-packet-v2.json",
       "schema": "agentlab.purchase_data_integrated_review_packet.v1",
-      "sha256": "eaaffcf8590bd7d1468cc679d259c2106286d83a6f75c4de26ad236e7bf9f17e",
+      "sha256": "3c8bce352c03b7dde565e3cc1dbe602d817b8e57f13abe5292daee1743248efd",
       "implementation": "crates/agentlab_code_analysis/src/purchase_data_integrated_review_packet.rs",
       "binary": "agentlab-purchase-data-integrated-review-packet",
       "reviewImplementation": "crates/agentlab_code_analysis/src/purchase_data_integrated_review.rs",
@@ -660,7 +660,7 @@
       "semanticReviewWorkflow": ".github/workflows/purchase-data-integrated-semantic-review.yml",
       "oracleReviewWorkflow": ".github/workflows/purchase-data-integrated-oracle-review.yml",
       "language": "rust",
-      "evidenceAttachmentCount": 8,
+      "evidenceAttachmentCount": 9,
       "reviewQuestionCount": 6,
       "riskCount": 8,
       "minimumDistinctReviewerCount": 2,
@@ -672,7 +672,10 @@
       "independentSourceReviewCompleted": false,
       "independentOracleReviewCompleted": false,
       "behaviorOracleVerified": false,
-      "performanceCalibrated": false,
+      "casePerformanceFunctionalVerdictCount": 288,
+      "casePerformanceProfileSampleCount": 288,
+      "distinctBaselineReferenceWrongCaseCalibrationComplete": true,
+      "performanceCalibrated": true,
       "allowsCaseContract": false,
       "automaticPromotion": false,
       "status": "current-evidence-bound-independent-dual-review-required"
