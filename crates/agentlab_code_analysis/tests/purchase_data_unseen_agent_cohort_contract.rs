@@ -56,6 +56,10 @@ fn run(
     publication_source: &Path,
     publication_schema: &Path,
     publication_workflow: &Path,
+    reexecution_source: &Path,
+    reexecution_schema: &Path,
+    runtime_bundle_schema: &Path,
+    reexecution_workflow: &Path,
     output: &Path,
 ) -> Output {
     let packet_sha256 = format!("{:x}", Sha256::digest(fs::read(packet).unwrap()));
@@ -83,6 +87,14 @@ fn run(
         publication_schema.to_str().unwrap(),
         "--exact-patch-publication-workflow",
         publication_workflow.to_str().unwrap(),
+        "--published-revision-reexecution-source",
+        reexecution_source.to_str().unwrap(),
+        "--published-revision-reexecution-schema",
+        reexecution_schema.to_str().unwrap(),
+        "--published-revision-runtime-bundle-schema",
+        runtime_bundle_schema.to_str().unwrap(),
+        "--published-revision-reexecution-workflow",
+        reexecution_workflow.to_str().unwrap(),
         "--output",
         output.to_str().unwrap(),
     ])
@@ -104,6 +116,12 @@ fn normal_run(packet: &Path, root: &Path, output: &Path) -> Output {
             .join("crates/agentlab_code_analysis/src/purchase_data_exact_patch_publication.rs"),
         &repository.join("schemas/purchase-data-exact-patch-publication.schema.json"),
         &repository.join(".github/workflows/purchase-data-exact-patch-publication.yml"),
+        &repository.join(
+            "crates/agentlab_code_analysis/src/purchase_data_published_revision_reexecution.rs",
+        ),
+        &repository.join("schemas/purchase-data-published-revision-reexecution.schema.json"),
+        &repository.join("schemas/purchase-data-published-revision-runtime-bundle.schema.json"),
+        &repository.join(".github/workflows/purchase-data-published-revision-reexecution.yml"),
         output,
     )
 }
@@ -146,6 +164,10 @@ fn freezes_blocked_unseen_agent_execution_contract_without_promoting_case() {
     assert_eq!(
         value["implementationBindings"]["exactPatchPublicationWorkflow"]["path"],
         ".github/workflows/purchase-data-exact-patch-publication.yml"
+    );
+    assert_eq!(
+        value["implementationBindings"]["publishedRevisionReexecutionWorkflow"]["path"],
+        ".github/workflows/purchase-data-published-revision-reexecution.yml"
     );
     assert!(value["implementationBindings"]
         .get("participantExperimentPlan")
@@ -210,6 +232,12 @@ fn rejects_assessed_campaign_without_discrimination_scoring() {
             .join("crates/agentlab_code_analysis/src/purchase_data_exact_patch_publication.rs"),
         &repository.join("schemas/purchase-data-exact-patch-publication.schema.json"),
         &repository.join(".github/workflows/purchase-data-exact-patch-publication.yml"),
+        &repository.join(
+            "crates/agentlab_code_analysis/src/purchase_data_published_revision_reexecution.rs",
+        ),
+        &repository.join("schemas/purchase-data-published-revision-reexecution.schema.json"),
+        &repository.join("schemas/purchase-data-published-revision-runtime-bundle.schema.json"),
+        &repository.join(".github/workflows/purchase-data-published-revision-reexecution.yml"),
         &temp.join("contract.json"),
     );
     assert!(!result.status.success());
@@ -246,6 +274,12 @@ fn rejects_dispatch_schema_that_grants_automatic_promotion() {
             .join("crates/agentlab_code_analysis/src/purchase_data_exact_patch_publication.rs"),
         &repository.join("schemas/purchase-data-exact-patch-publication.schema.json"),
         &repository.join(".github/workflows/purchase-data-exact-patch-publication.yml"),
+        &repository.join(
+            "crates/agentlab_code_analysis/src/purchase_data_published_revision_reexecution.rs",
+        ),
+        &repository.join("schemas/purchase-data-published-revision-reexecution.schema.json"),
+        &repository.join("schemas/purchase-data-published-revision-runtime-bundle.schema.json"),
+        &repository.join(".github/workflows/purchase-data-published-revision-reexecution.yml"),
         &temp.join("contract.json"),
     );
     assert!(!result.status.success());

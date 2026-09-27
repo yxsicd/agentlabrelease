@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.dev/schemas/purchase-data-published-revision-reexecution.schema.json",
+  "title": "AgentLab trusted-main published-revision re-execution receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "contractSha256",
+    "publicationSha256",
+    "publishedRevision",
+    "publishedTreeOid",
+    "repository",
+    "semanticPassed",
+    "ohosTestPassed",
+    "performancePassed",
+    "semanticSourceSetSha256",
+    "runtimeSourceSetSha256",
+    "environmentIdentity",
+    "semanticEvidenceSha256",
+    "ohosTestEvidenceSha256",
+    "performanceEvidenceSha256",
+    "runtimeArchiveSha256",
+    "semanticAnalysisRunId",
+    "runId",
+    "runAttempt",
+    "trustedMainRun",
+    "workflow",
+    "evidence",
+    "allowsCaseContract",
+    "automaticPromotion",
+    "nextGate"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.purchase_data_published_revision_reexecution.v1"},
+    "status": {"const": "published-revision-semantic-ohostest-performance-passed"},
+    "contractSha256": {"$ref": "#/$defs/sha256"},
+    "publicationSha256": {"$ref": "#/$defs/sha256"},
+    "publishedRevision": {"$ref": "#/$defs/revision"},
+    "publishedTreeOid": {"$ref": "#/$defs/revision"},
+    "repository": {"type": "string", "minLength": 1},
+    "semanticPassed": {"const": true},
+    "ohosTestPassed": {"const": true},
+    "performancePassed": {"const": true},
+    "semanticSourceSetSha256": {"$ref": "#/$defs/sha256"},
+    "runtimeSourceSetSha256": {"$ref": "#/$defs/sha256"},
+    "environmentIdentity": {"type": "string", "minLength": 1},
+    "semanticEvidenceSha256": {"$ref": "#/$defs/sha256"},
+    "ohosTestEvidenceSha256": {"$ref": "#/$defs/sha256"},
+    "performanceEvidenceSha256": {"$ref": "#/$defs/sha256"},
+    "runtimeArchiveSha256": {"$ref": "#/$defs/sha256"},
+    "semanticAnalysisRunId": {"type": "integer", "minimum": 1},
+    "runId": {"type": "integer", "minimum": 1},
+    "runAttempt": {"type": "integer", "minimum": 1},
+    "trustedMainRun": {"const": true},
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "path", "sourceRevision", "sourceRef", "runId", "runAttempt"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "path": {"const": ".github/workflows/purchase-data-published-revision-reexecution.yml"},
+        "sourceRevision": {"$ref": "#/$defs/revision"},
+        "sourceRef": {"const": "refs/heads/main"},
+        "runId": {"type": "integer", "minimum": 1},
+        "runAttempt": {"type": "integer", "minimum": 1}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "publicationSourceRun",
+        "publicationAttestationVerification",
+        "semanticSourceRun",
+        "semanticAnalysisRun",
+        "semanticAnalysisReceipt",
+        "runtimeBundleManifest",
+        "ohosTestReceipt",
+        "performanceQualification"
+      ],
+      "properties": {
+        "publicationSourceRun": {"$ref": "#/$defs/evidence"},
+        "publicationAttestationVerification": {"$ref": "#/$defs/evidence"},
+        "semanticSourceRun": {"$ref": "#/$defs/evidence"},
+        "semanticAnalysisRun": {"$ref": "#/$defs/evidence"},
+        "semanticAnalysisReceipt": {"$ref": "#/$defs/evidence"},
+        "runtimeBundleManifest": {"$ref": "#/$defs/evidence"},
+        "ohosTestReceipt": {"$ref": "#/$defs/evidence"},
+        "performanceQualification": {"$ref": "#/$defs/evidence"}
+      }
+    },
+    "allowsCaseContract": {"const": false},
+    "automaticPromotion": {"const": false},
+    "nextGate": {"const": "trusted-held-out-case-freeze"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "byteLength"],
+      "properties": {
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "byteLength": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

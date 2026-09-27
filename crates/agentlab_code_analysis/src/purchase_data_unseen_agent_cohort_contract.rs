@@ -20,6 +20,14 @@ const PUBLICATION_SOURCE_PATH: &str =
 const PUBLICATION_SCHEMA_PATH: &str = "schemas/purchase-data-exact-patch-publication.schema.json";
 const PUBLICATION_WORKFLOW_PATH: &str =
     ".github/workflows/purchase-data-exact-patch-publication.yml";
+const REEXECUTION_SOURCE_PATH: &str =
+    "crates/agentlab_code_analysis/src/purchase_data_published_revision_reexecution.rs";
+const REEXECUTION_SCHEMA_PATH: &str =
+    "schemas/purchase-data-published-revision-reexecution.schema.json";
+const RUNTIME_BUNDLE_SCHEMA_PATH: &str =
+    "schemas/purchase-data-published-revision-runtime-bundle.schema.json";
+const REEXECUTION_WORKFLOW_PATH: &str =
+    ".github/workflows/purchase-data-published-revision-reexecution.yml";
 
 struct Input {
     bytes: Vec<u8>,
@@ -336,6 +344,62 @@ fn derive(values: &BTreeMap<String, String>) -> Result<Value, String> {
         ],
         "exact-patch publication workflow",
     )?;
+    let reexecution_source = TextInput::load(
+        &path(values, "--published-revision-reexecution-source")?,
+        "published-revision re-execution source",
+    )?;
+    reexecution_source.require_fragments(
+        &[
+            "const OUTPUT_SCHEMA: &str = \"agentlab.purchase_data_published_revision_reexecution.v1\"",
+            "validate_publication_attestation(",
+            "validate_semantic(",
+            "validate_runtime(",
+            "published-revision-semantic-ohostest-performance-passed",
+            "\"automaticPromotion\": false",
+        ],
+        "published-revision re-execution source",
+    )?;
+    let reexecution_schema = TextInput::load(
+        &path(values, "--published-revision-reexecution-schema")?,
+        "published-revision re-execution schema",
+    )?;
+    reexecution_schema.require_fragments(
+        &[
+            "\"schema\": {\"const\": \"agentlab.purchase_data_published_revision_reexecution.v1\"}",
+            "\"semanticPassed\": {\"const\": true}",
+            "\"ohosTestPassed\": {\"const\": true}",
+            "\"performancePassed\": {\"const\": true}",
+            "\"automaticPromotion\": {\"const\": false}",
+        ],
+        "published-revision re-execution schema",
+    )?;
+    let runtime_bundle_schema = TextInput::load(
+        &path(values, "--published-revision-runtime-bundle-schema")?,
+        "published-revision runtime bundle schema",
+    )?;
+    runtime_bundle_schema.require_fragments(
+        &[
+            "\"schema\": {\"const\": \"agentlab.purchase_data_published_revision_runtime_bundle.v1\"}",
+            "\"ohosTestReceipt\": {\"$ref\": \"#/$defs/fileBinding\"}",
+            "\"performanceQualification\": {\"$ref\": \"#/$defs/fileBinding\"}",
+            "\"automaticPromotion\": {\"const\": false}",
+        ],
+        "published-revision runtime bundle schema",
+    )?;
+    let reexecution_workflow = TextInput::load(
+        &path(values, "--published-revision-reexecution-workflow")?,
+        "published-revision re-execution workflow",
+    )?;
+    reexecution_workflow.require_fragments(
+        &[
+            "name: Verify purchase-data published revision re-execution",
+            "github.ref == 'refs/heads/main'",
+            "gh attestation verify",
+            "agentlab-purchase-data-published-revision-reexecution",
+            "Attest the exact published-revision re-execution receipt",
+        ],
+        "published-revision re-execution workflow",
+    )?;
 
     Ok(json!({
         "schema": CONTRACT_SCHEMA,
@@ -360,7 +424,11 @@ fn derive(values: &BTreeMap<String, String>) -> Result<Value, String> {
             "participantExperimentDispatchSchema": binding(DISPATCH_SCHEMA_PATH, &dispatch_schema),
             "exactPatchPublication": binding(PUBLICATION_SOURCE_PATH, &publication_source),
             "exactPatchPublicationSchema": binding(PUBLICATION_SCHEMA_PATH, &publication_schema),
-            "exactPatchPublicationWorkflow": binding(PUBLICATION_WORKFLOW_PATH, &publication_workflow)
+            "exactPatchPublicationWorkflow": binding(PUBLICATION_WORKFLOW_PATH, &publication_workflow),
+            "publishedRevisionReexecution": binding(REEXECUTION_SOURCE_PATH, &reexecution_source),
+            "publishedRevisionReexecutionSchema": binding(REEXECUTION_SCHEMA_PATH, &reexecution_schema),
+            "publishedRevisionRuntimeBundleSchema": binding(RUNTIME_BUNDLE_SCHEMA_PATH, &runtime_bundle_schema),
+            "publishedRevisionReexecutionWorkflow": binding(REEXECUTION_WORKFLOW_PATH, &reexecution_workflow)
         },
         "requiredSequence": [
             {"ordinal": 1, "gate": "independent-dual-integrated-review", "requiredEvidence": "approved agentlab.purchase_data_integrated_review_gate.v1 bound to this packet"},

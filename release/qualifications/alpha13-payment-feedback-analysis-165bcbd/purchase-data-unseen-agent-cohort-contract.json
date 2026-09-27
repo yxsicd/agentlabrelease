@@ -55,6 +55,22 @@
       "path": "schemas/participant-experiment-dispatch.schema.json",
       "sha256": "8411d2565f4e78231d457e70b7184f57299cbb24ddbc4801750df74db025275c"
     },
+    "publishedRevisionReexecution": {
+      "path": "crates/agentlab_code_analysis/src/purchase_data_published_revision_reexecution.rs",
+      "sha256": "ab7602287226dff1ad2ca177407c5ba71419c393f99111a3b78157e2846d5450"
+    },
+    "publishedRevisionReexecutionSchema": {
+      "path": "schemas/purchase-data-published-revision-reexecution.schema.json",
+      "sha256": "104a16e6d6d6d6bba5380786344b093727efff303815078b7adcccaa60f4bc8e"
+    },
+    "publishedRevisionReexecutionWorkflow": {
+      "path": ".github/workflows/purchase-data-published-revision-reexecution.yml",
+      "sha256": "46579a13b6d3752fc3dc065d6e819f3b70a92056adb0d00e4b43957b0a64d944"
+    },
+    "publishedRevisionRuntimeBundleSchema": {
+      "path": "schemas/purchase-data-published-revision-runtime-bundle.schema.json",
+      "sha256": "7c69fae020bf156643138682b85a19a604e319cb64f1139579c933c901a70837"
+    },
     "trustedCaseReview": {
       "path": ".github/workflows/multi-repo-case-review.yml",
       "sha256": "74af43c901294758cb766416eb0dbf3ca63242a3951201b2c79adea6e2ad3efc"

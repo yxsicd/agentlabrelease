@@ -702,7 +702,16 @@ The Rust-native `agentlab-purchase-data-unseen-agent-readiness` compiler is the
 fail-closed bridge from those authorities to dispatch. It accepts only the
 actual approved dual-review status with two distinct GitHub reviewers, binds
 the exact published patch and revision through semantic/OHOS Test/performance
-re-execution and trusted-main held-out case freeze, and requires the 3–8-profile
+re-execution and trusted-main held-out case freeze. The re-execution itself is
+now compiled by the Rust-native
+`agentlab-purchase-data-published-revision-reexecution`: it reopens the exact
+semantic source specification and analysis run, the source-standard OHOS Test
+build/execution receipts, and the case-bound performance matrix imported from
+hwlinux. Its trusted-main workflow authenticates the publication and analysis
+runs, verifies the runtime ZIP digest, executes the immutable analysis-tools
+component and attests the output; it does not relabel GitHub as the emulator
+execution host. Readiness verifies that raw attestation before accepting the
+gate, then requires the 3–8-profile
 portable dispatch to be the exact subject of raw GitHub SLSA attestation
 verification for the same workflow run and attempt. The runner-local plan is a
 derived compatibility artifact, not readiness authority. Its success

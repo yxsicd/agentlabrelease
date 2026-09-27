@@ -102,6 +102,10 @@ cargo run --locked -p agentlab_code_analysis \
   --exact-patch-publication-source crates/agentlab_code_analysis/src/purchase_data_exact_patch_publication.rs \
   --exact-patch-publication-schema schemas/purchase-data-exact-patch-publication.schema.json \
   --exact-patch-publication-workflow .github/workflows/purchase-data-exact-patch-publication.yml \
+  --published-revision-reexecution-source crates/agentlab_code_analysis/src/purchase_data_published_revision_reexecution.rs \
+  --published-revision-reexecution-schema schemas/purchase-data-published-revision-reexecution.schema.json \
+  --published-revision-runtime-bundle-schema schemas/purchase-data-published-revision-runtime-bundle.schema.json \
+  --published-revision-reexecution-workflow .github/workflows/purchase-data-published-revision-reexecution.yml \
   --output /tmp/purchase-data-unseen-agent-cohort-contract.json
 ```
 
@@ -120,6 +124,17 @@ authenticated successful Oracle-review run, runs this Rust producer from the
 immutable analysis-tools component, and attests the resulting receipt. It does
 not push or otherwise mutate the upstream repository.
 
+`agentlab-purchase-data-published-revision-reexecution` implements the next
+gate without trusting summary booleans. It verifies the attested publication,
+an authenticated trusted-main multi-repository analysis whose source spec
+names the exact published revision, a digest-bound hwlinux bundle containing a
+passing source-to-OHOS-Test build/execution chain, and a case-bound
+baseline/reference/meaningful-wrong performance qualification for that same
+revision. The trusted-main re-execution workflow imports the exact runtime ZIP,
+runs the immutable Rust component, and attests the compiled receipt. GitHub is
+the verifier/import authority; the workflow does not claim its hosted runner
+executed the Harmony emulator.
+
 Once those external gates actually exist, compile their exact byte chain into
 an operator-gated dispatch decision with the Rust readiness validator:
 
@@ -129,6 +144,7 @@ agentlab-purchase-data-unseen-agent-readiness \
   --review-gate approved-integrated-review-gate.json \
   --publication exact-patch-publication.json \
   --reexecution published-revision-reexecution.json \
+  --reexecution-attestation-verification reexecution-attestation-verification.json \
   --case-freeze trusted-case-freeze.json \
   --participant-dispatch participant-experiment-dispatch.json \
   --dispatch-attestation-verification dispatch-attestation-verification.json \
@@ -142,8 +158,9 @@ re-execution on the published revision, a trusted-main held-out case freeze,
 and a 3–8-profile pre-outcome portable dispatch whose exact subject and workflow
 run/attempt occur in raw `gh attestation verify --format json` output. The
 certificate identity must also bind the exact repository, main ref, source
-revision, signer workflow and GitHub-hosted runner. It binds
-all seven inputs by raw-byte SHA-256 and length. Success permits only
+revision, signer workflow and GitHub-hosted runner. Both the re-execution and
+participant-dispatch receipts require raw attestation verification. It binds
+all eight inputs by raw-byte SHA-256 and length. Success permits only
 explicit dispatch of that declared cohort: execution and Harmony feedback
 remain false, and automatic dispatch/promotion remain forbidden.
 

@@ -94,6 +94,10 @@ name = "agentlab-purchase-data-exact-patch-publication"
 path = "src/purchase_data_exact_patch_publication.rs"
 
 [[bin]]
+name = "agentlab-purchase-data-published-revision-reexecution"
+path = "src/purchase_data_published_revision_reexecution.rs"
+
+[[bin]]
 name = "agentlab-participant-experiment-dispatch"
 path = "src/participant_experiment_dispatch.rs"
 

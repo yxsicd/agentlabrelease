@@ -12,6 +12,8 @@ const CONTRACT_SCHEMA: &str = "agentlab.purchase_data_unseen_agent_cohort_contra
 const GATE_SCHEMA: &str = "agentlab.purchase_data_integrated_review_gate.v1";
 const PUBLICATION_SCHEMA: &str = "agentlab.purchase_data_exact_patch_publication.v1";
 const REEXECUTION_SCHEMA: &str = "agentlab.purchase_data_published_revision_reexecution.v1";
+const REEXECUTION_WORKFLOW: &str =
+    ".github/workflows/purchase-data-published-revision-reexecution.yml";
 const CASE_FREEZE_SCHEMA: &str = "agentlab.purchase_data_trusted_case_freeze.v1";
 const DISPATCH_SCHEMA: &str = "agentlab.participant_experiment_dispatch.v1";
 const DISPATCH_WORKFLOW: &str = ".github/workflows/multi-repo-assessed-campaign.yml";
@@ -298,7 +300,7 @@ fn validate_reexecution(
     publication: &Input,
     reexecution: &Input,
     published: &str,
-) -> Result<(), String> {
+) -> Result<(u64, u64), String> {
     same(
         string(&reexecution.value, "schema", "re-execution")?,
         REEXECUTION_SCHEMA,
@@ -324,29 +326,113 @@ fn validate_reexecution(
         published,
         "re-execution published revision",
     )?;
+    same(
+        revision(&reexecution.value, "publishedTreeOid", "re-execution")?,
+        revision(&publication.value, "publishedTreeOid", "publication")?,
+        "re-execution published tree",
+    )?;
+    same(
+        string(&reexecution.value, "repository", "re-execution")?,
+        string(&publication.value, "repository", "publication")?,
+        "re-execution repository",
+    )?;
     for key in ["semanticPassed", "ohosTestPassed", "performancePassed"] {
         exact_bool(&reexecution.value, key, true, "re-execution")?;
     }
     exact_bool(&reexecution.value, "trustedMainRun", true, "re-execution")?;
-    if reexecution.value["runId"]
+    let run_id = reexecution.value["runId"]
         .as_u64()
         .filter(|id| *id > 0)
-        .is_none()
-    {
-        return Err("re-execution runId is invalid".into());
-    }
+        .ok_or_else(|| "re-execution runId is invalid".to_owned())?;
+    let run_attempt = reexecution.value["runAttempt"]
+        .as_u64()
+        .filter(|id| *id > 0)
+        .ok_or_else(|| "re-execution runAttempt is invalid".to_owned())?;
     for key in [
         "semanticEvidenceSha256",
         "ohosTestEvidenceSha256",
         "performanceEvidenceSha256",
+        "semanticSourceSetSha256",
+        "runtimeSourceSetSha256",
+        "runtimeArchiveSha256",
     ] {
         sha(&reexecution.value, key, "re-execution")?;
     }
+    same(
+        sha(&reexecution.value, "runtimeSourceSetSha256", "re-execution")?,
+        sha(
+            &contract.value["sourceLineage"],
+            "runtimeSourceSetSha256",
+            "contract source lineage",
+        )?,
+        "re-execution runtime source set",
+    )?;
+    if reexecution.value["semanticAnalysisRunId"]
+        .as_u64()
+        .filter(|id| *id > 0)
+        .is_none()
+    {
+        return Err("re-execution semanticAnalysisRunId is invalid".into());
+    }
+    string(&reexecution.value, "environmentIdentity", "re-execution")?;
+    let workflow = &reexecution.value["workflow"];
+    string(workflow, "repository", "re-execution workflow")?;
+    same(
+        string(workflow, "path", "re-execution workflow")?,
+        REEXECUTION_WORKFLOW,
+        "re-execution workflow path",
+    )?;
+    same(
+        string(workflow, "sourceRef", "re-execution workflow")?,
+        "refs/heads/main",
+        "re-execution workflow source ref",
+    )?;
+    revision(workflow, "sourceRevision", "re-execution workflow")?;
+    if workflow["runId"].as_u64() != Some(run_id)
+        || workflow["runAttempt"].as_u64() != Some(run_attempt)
+    {
+        return Err("re-execution workflow invocation differs".into());
+    }
+    exact_bool(
+        &reexecution.value,
+        "allowsCaseContract",
+        false,
+        "re-execution",
+    )?;
     exact_bool(
         &reexecution.value,
         "automaticPromotion",
         false,
         "re-execution",
+    )?;
+    Ok((run_id, run_attempt))
+}
+
+fn validate_reexecution_attestation(
+    reexecution: &Input,
+    attestation: &RawInput,
+    run_id: u64,
+    run_attempt: u64,
+) -> Result<(), String> {
+    validate_github_actions_attestation(
+        &attestation.value,
+        &GitHubActionsAttestationIdentity {
+            repository: string(
+                &reexecution.value["workflow"],
+                "repository",
+                "re-execution workflow",
+            )?,
+            workflow_path: REEXECUTION_WORKFLOW,
+            source_digest: revision(
+                &reexecution.value["workflow"],
+                "sourceRevision",
+                "re-execution workflow",
+            )?,
+            source_ref: "refs/heads/main",
+            run_id,
+            run_attempt,
+            subject_sha256: &reexecution.sha256(),
+        },
     )
 }
 
@@ -608,6 +694,10 @@ fn derive(values: &BTreeMap<String, String>) -> Result<Value, String> {
     let gate = Input::load(&path(values, "--review-gate")?, "review gate")?;
     let publication = Input::load(&path(values, "--publication")?, "publication")?;
     let reexecution = Input::load(&path(values, "--reexecution")?, "re-execution")?;
+    let reexecution_attestation = RawInput::load(
+        &path(values, "--reexecution-attestation-verification")?,
+        "re-execution attestation verification",
+    )?;
     let case_freeze = Input::load(&path(values, "--case-freeze")?, "case freeze")?;
     let dispatch = Input::load(
         &path(values, "--participant-dispatch")?,
@@ -620,7 +710,14 @@ fn derive(values: &BTreeMap<String, String>) -> Result<Value, String> {
     validate_contract(&contract)?;
     validate_gate(&contract, &gate)?;
     let published = validate_publication(&contract, &gate, &publication)?;
-    validate_reexecution(&contract, &publication, &reexecution, &published)?;
+    let (reexecution_run, reexecution_attempt) =
+        validate_reexecution(&contract, &publication, &reexecution, &published)?;
+    validate_reexecution_attestation(
+        &reexecution,
+        &reexecution_attestation,
+        reexecution_run,
+        reexecution_attempt,
+    )?;
     let (case_run, case_sha, source_set) =
         validate_case_freeze(&reexecution, &case_freeze, &published)?;
     let (dispatch_run, dispatch_attempt) =
@@ -643,6 +740,10 @@ fn derive(values: &BTreeMap<String, String>) -> Result<Value, String> {
         "evidence": {
             "contract": bind(&contract), "reviewGate": bind(&gate),
             "publication": bind(&publication), "reexecution": bind(&reexecution),
+            "reexecutionAttestationVerification": {
+                "sha256": reexecution_attestation.sha256(),
+                "byteLength": reexecution_attestation.bytes.len()
+            },
             "caseFreeze": bind(&case_freeze), "participantDispatch": bind(&dispatch),
             "dispatchAttestationVerification": {
                 "sha256": attestation.sha256(),

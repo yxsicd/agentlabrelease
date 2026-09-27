@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.dev/schemas/purchase-data-published-revision-runtime-bundle.schema.json",
+  "title": "AgentLab published-revision Harmony runtime evidence bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "repository",
+    "publishedRevision",
+    "publishedTreeOid",
+    "sourceSetSha256",
+    "environmentIdentity",
+    "ohosTestReceipt",
+    "packages",
+    "performanceQualification",
+    "automaticPromotion"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.purchase_data_published_revision_runtime_bundle.v1"},
+    "repository": {"type": "string", "minLength": 1},
+    "publishedRevision": {"$ref": "#/$defs/revision"},
+    "publishedTreeOid": {"$ref": "#/$defs/revision"},
+    "sourceSetSha256": {"$ref": "#/$defs/sha256"},
+    "environmentIdentity": {"type": "string", "minLength": 1},
+    "ohosTestReceipt": {"$ref": "#/$defs/fileBinding"},
+    "packages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["app", "test"],
+      "properties": {
+        "app": {"$ref": "#/$defs/fileBinding"},
+        "test": {"$ref": "#/$defs/fileBinding"}
+      }
+    },
+    "performanceQualification": {"$ref": "#/$defs/fileBinding"},
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "fileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "byteLength"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "byteLength": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

@@ -48,6 +48,7 @@ struct Fixture {
     gate: PathBuf,
     publication: PathBuf,
     reexecution: PathBuf,
+    reexecution_attestation: PathBuf,
     case_freeze: PathBuf,
     dispatch: PathBuf,
     attestation: PathBuf,
@@ -100,6 +101,7 @@ impl Fixture {
                 "reviewedPatchSha256": "1111111111111111111111111111111111111111111111111111111111111111",
                 "repository": "example/purchase-data",
                 "publishedRevision": "2222222222222222222222222222222222222222",
+                "publishedTreeOid": "1212121212121212121212121212121212121212",
                 "publishedRevisionContainsExactReviewedPatch": true,
                 "reviewGateRunId": 10001,
                 "verifiedOnline": true,
@@ -115,16 +117,62 @@ impl Fixture {
                 "contractSha256": digest(&fs::read(&contract).unwrap()),
                 "publicationSha256": digest(&fs::read(&publication).unwrap()),
                 "publishedRevision": "2222222222222222222222222222222222222222",
+                "publishedTreeOid": "1212121212121212121212121212121212121212",
+                "repository": "example/purchase-data",
                 "semanticPassed": true,
                 "ohosTestPassed": true,
                 "performancePassed": true,
                 "runId": 10002,
+                "runAttempt": 1,
                 "trustedMainRun": true,
                 "semanticEvidenceSha256": "3333333333333333333333333333333333333333333333333333333333333333",
                 "ohosTestEvidenceSha256": "4444444444444444444444444444444444444444444444444444444444444444",
                 "performanceEvidenceSha256": "5555555555555555555555555555555555555555555555555555555555555555",
+                "semanticSourceSetSha256": "abababababababababababababababababababababababababababababababab",
+                "runtimeSourceSetSha256": contract_value["sourceLineage"]["runtimeSourceSetSha256"],
+                "runtimeArchiveSha256": "c".repeat(64),
+                "semanticAnalysisRunId": 10001,
+                "environmentIdentity": "hwlinux:emulator:test",
+                "workflow": {
+                    "repository": "example/agentlabrelease",
+                    "path": ".github/workflows/purchase-data-published-revision-reexecution.yml",
+                    "sourceRevision": "8989898989898989898989898989898989898989",
+                    "sourceRef": "refs/heads/main",
+                    "runId": 10002,
+                    "runAttempt": 1
+                },
+                "allowsCaseContract": false,
                 "automaticPromotion": false
             }),
+        );
+        let reexecution_attestation = root.join("reexecution-attestation.json");
+        write(
+            &reexecution_attestation,
+            &json!([{
+                "verificationResult": {
+                    "signature": {"certificate": {
+                        "issuer": "https://token.actions.githubusercontent.com",
+                        "sourceRepositoryURI": "https://github.com/example/agentlabrelease",
+                        "sourceRepositoryDigest": "8989898989898989898989898989898989898989",
+                        "sourceRepositoryRef": "refs/heads/main",
+                        "githubWorkflowRepository": "example/agentlabrelease",
+                        "githubWorkflowRef": "refs/heads/main",
+                        "githubWorkflowSHA": "8989898989898989898989898989898989898989",
+                        "subjectAlternativeName": "https://github.com/example/agentlabrelease/.github/workflows/purchase-data-published-revision-reexecution.yml@refs/heads/main",
+                        "buildSignerURI": "https://github.com/example/agentlabrelease/.github/workflows/purchase-data-published-revision-reexecution.yml@refs/heads/main",
+                        "buildSignerDigest": "8989898989898989898989898989898989898989",
+                        "runnerEnvironment": "github-hosted",
+                        "runInvocationURI": "https://github.com/example/agentlabrelease/actions/runs/10002/attempts/1"
+                    }},
+                    "statement": {
+                        "predicateType": "https://slsa.dev/provenance/v1",
+                        "subject": [{"digest": {"sha256": digest(&fs::read(&reexecution).unwrap())}}],
+                        "predicate": {"runDetails": {"metadata": {
+                            "invocationId": "https://github.com/example/agentlabrelease/actions/runs/10002/attempts/1"
+                        }}}
+                    }
+                }
+            }]),
         );
         let case_freeze = root.join("case-freeze.json");
         write(
@@ -237,6 +285,7 @@ impl Fixture {
             gate,
             publication,
             reexecution,
+            reexecution_attestation,
             case_freeze,
             dispatch,
             attestation,
@@ -257,6 +306,8 @@ impl Fixture {
             self.publication.to_str().unwrap(),
             "--reexecution",
             self.reexecution.to_str().unwrap(),
+            "--reexecution-attestation-verification",
+            self.reexecution_attestation.to_str().unwrap(),
             "--case-freeze",
             self.case_freeze.to_str().unwrap(),
             "--participant-dispatch",
@@ -318,7 +369,7 @@ fn compiles_exact_evidence_chain_into_operator_gated_dispatch_readiness() {
     assert_eq!(value["allowsUnseenAgentDispatch"], true);
     assert_eq!(value["automaticDispatch"], false);
     assert_eq!(value["automaticPromotion"], false);
-    assert_eq!(value["evidence"].as_object().unwrap().len(), 7);
+    assert_eq!(value["evidence"].as_object().unwrap().len(), 8);
 }
 
 #[test]
@@ -367,6 +418,20 @@ fn rejects_attestation_for_another_dispatch() {
     attestation[0]["verificationResult"]["statement"]["subject"][0]["digest"]["sha256"] =
         json!("abababababababababababababababababababababababababababababababab");
     write(&fixture.attestation, &attestation);
+    let result = fixture.run();
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr)
+        .contains("GitHub attestation does not bind the exact trusted workflow identity"));
+    assert!(!fixture.output.exists());
+}
+
+#[test]
+fn rejects_attestation_for_another_reexecution_receipt() {
+    let fixture = Fixture::new();
+    let mut attestation = read(&fixture.reexecution_attestation);
+    attestation[0]["verificationResult"]["statement"]["subject"][0]["digest"]["sha256"] =
+        json!("abababababababababababababababababababababababababababababababab");
+    write(&fixture.reexecution_attestation, &attestation);
     let result = fixture.run();
     assert!(!result.status.success());
     assert!(String::from_utf8_lossy(&result.stderr)
