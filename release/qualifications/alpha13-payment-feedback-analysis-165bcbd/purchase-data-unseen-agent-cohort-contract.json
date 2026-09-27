@@ -35,6 +35,18 @@
       "path": ".github/workflows/multi-repo-assessed-campaign.yml",
       "sha256": "c45c97efff2464085235cbdc612a83f045fb872314b6befe0616e2001466834b"
     },
+    "exactPatchPublication": {
+      "path": "crates/agentlab_code_analysis/src/purchase_data_exact_patch_publication.rs",
+      "sha256": "82b396147657a2c43f6665885b801218c64a62a16082bccca16b62a49fba0d31"
+    },
+    "exactPatchPublicationSchema": {
+      "path": "schemas/purchase-data-exact-patch-publication.schema.json",
+      "sha256": "ce39b6ec17c948ace5f3b89d4aa077b28a88085c8052e200ae0f74f1b48a3791"
+    },
+    "exactPatchPublicationWorkflow": {
+      "path": ".github/workflows/purchase-data-exact-patch-publication.yml",
+      "sha256": "d01dbbfdf002fac22c46acdddd07a328e693361a2159a6224012669dc21b3f3b"
+    },
     "participantExperimentDispatch": {
       "path": "crates/agentlab_code_analysis/src/participant_experiment_dispatch.rs",
       "sha256": "b932fc4986649fe3949cb578f9d36b0c1c1b292b7af4401c0985aa062787b52a"

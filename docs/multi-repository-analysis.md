@@ -1489,12 +1489,25 @@ matrix; `behaviorOracleVerified`, `allowsCaseContract` and
 review mechanism; no retained decision or approval exists until two actual,
 distinct authenticated reviewers execute it.
 
+The next transition now has a real Rust producer rather than only a readiness
+fixture. `agentlab-purchase-data-exact-patch-publication` binds the frozen cohort
+contract, integrated packet, approved dual-review gate, retained source-review
+packet and format-patch. Using an isolated Git index, it computes the exact tree
+formed by applying that patch to the recorded base and accepts only an upstream
+checkout whose published commit has the same tree, descends from the base, is
+the checkout HEAD, and is still advertised by its exact `origin`. The
+trusted-main `purchase-data-exact-patch-publication.yml` workflow downloads the
+authenticated Oracle-review artifact, runs this producer from the immutable
+analysis-tools component and attests the receipt. It verifies an already
+published revision; it does not push source or grant case-contract authority.
+
 The Rust-native
 `agentlab-purchase-data-unseen-agent-cohort-contract` now freezes the transition
 from that approval to the existing generic blind-case pipeline instead of
 creating a parallel evaluator. It digest-binds the trusted case-review workflow,
 assessed-Agent campaign, Rust portable-dispatch compiler and dispatch schema. The retained
-contract requires, in order: dual review, publication of the exact patch,
+contract also digest-binds the exact-patch publication producer, schema and
+trusted-main workflow. It requires, in order: dual review, publication of the exact patch,
 re-execution on the published revision, trusted held-out case freeze, a blind
 3–8 profile cohort with 3/5/10/20 fresh trials, and per-attempt Harmony OHOS Test
 plus relative SmartPerf feedback. Gold repairs, evaluator Oracles, reference

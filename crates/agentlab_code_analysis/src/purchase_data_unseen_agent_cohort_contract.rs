@@ -15,6 +15,11 @@ const CAMPAIGN_PATH: &str = ".github/workflows/multi-repo-assessed-campaign.yml"
 const DISPATCH_SOURCE_PATH: &str =
     "crates/agentlab_code_analysis/src/participant_experiment_dispatch.rs";
 const DISPATCH_SCHEMA_PATH: &str = "schemas/participant-experiment-dispatch.schema.json";
+const PUBLICATION_SOURCE_PATH: &str =
+    "crates/agentlab_code_analysis/src/purchase_data_exact_patch_publication.rs";
+const PUBLICATION_SCHEMA_PATH: &str = "schemas/purchase-data-exact-patch-publication.schema.json";
+const PUBLICATION_WORKFLOW_PATH: &str =
+    ".github/workflows/purchase-data-exact-patch-publication.yml";
 
 struct Input {
     bytes: Vec<u8>,
@@ -290,6 +295,47 @@ fn derive(values: &BTreeMap<String, String>) -> Result<Value, String> {
         ],
         "participant dispatch schema",
     )?;
+    let publication_source = TextInput::load(
+        &path(values, "--exact-patch-publication-source")?,
+        "exact-patch publication source",
+    )?;
+    publication_source.require_fragments(
+        &[
+            "const OUTPUT_SCHEMA: &str = \"agentlab.purchase_data_exact_patch_publication.v1\"",
+            "exact_patch_tree(",
+            "published revision exact reviewed-patch tree",
+            "published revision is absent from the upstream origin",
+            "\"automaticPromotion\": false",
+        ],
+        "exact-patch publication source",
+    )?;
+    let publication_schema = TextInput::load(
+        &path(values, "--exact-patch-publication-schema")?,
+        "exact-patch publication schema",
+    )?;
+    publication_schema.require_fragments(
+        &[
+            "\"schema\": {\"const\": \"agentlab.purchase_data_exact_patch_publication.v1\"}",
+            "\"publishedRevisionContainsExactReviewedPatch\": {\"const\": true}",
+            "\"verifiedOnline\": {\"const\": true}",
+            "\"automaticPromotion\": {\"const\": false}",
+        ],
+        "exact-patch publication schema",
+    )?;
+    let publication_workflow = TextInput::load(
+        &path(values, "--exact-patch-publication-workflow")?,
+        "exact-patch publication workflow",
+    )?;
+    publication_workflow.require_fragments(
+        &[
+            "name: Record purchase-data exact patch publication",
+            "github.ref == 'refs/heads/main'",
+            "purchase-data-integrated-oracle-review.yml",
+            "agentlab-purchase-data-exact-patch-publication",
+            "Attest the exact publication receipt",
+        ],
+        "exact-patch publication workflow",
+    )?;
 
     Ok(json!({
         "schema": CONTRACT_SCHEMA,
@@ -311,7 +357,10 @@ fn derive(values: &BTreeMap<String, String>) -> Result<Value, String> {
             "trustedCaseReview": binding(CASE_REVIEW_PATH, &case_review),
             "assessedCampaign": binding(CAMPAIGN_PATH, &campaign),
             "participantExperimentDispatch": binding(DISPATCH_SOURCE_PATH, &dispatch_source),
-            "participantExperimentDispatchSchema": binding(DISPATCH_SCHEMA_PATH, &dispatch_schema)
+            "participantExperimentDispatchSchema": binding(DISPATCH_SCHEMA_PATH, &dispatch_schema),
+            "exactPatchPublication": binding(PUBLICATION_SOURCE_PATH, &publication_source),
+            "exactPatchPublicationSchema": binding(PUBLICATION_SCHEMA_PATH, &publication_schema),
+            "exactPatchPublicationWorkflow": binding(PUBLICATION_WORKFLOW_PATH, &publication_workflow)
         },
         "requiredSequence": [
             {"ordinal": 1, "gate": "independent-dual-integrated-review", "requiredEvidence": "approved agentlab.purchase_data_integrated_review_gate.v1 bound to this packet"},

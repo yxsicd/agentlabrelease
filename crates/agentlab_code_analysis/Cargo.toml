@@ -90,6 +90,10 @@ name = "agentlab-purchase-data-unseen-agent-readiness"
 path = "src/purchase_data_unseen_agent_readiness.rs"
 
 [[bin]]
+name = "agentlab-purchase-data-exact-patch-publication"
+path = "src/purchase_data_exact_patch_publication.rs"
+
+[[bin]]
 name = "agentlab-participant-experiment-dispatch"
 path = "src/participant_experiment_dispatch.rs"
 

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.dev/schemas/purchase-data-exact-patch-publication.schema.json",
+  "title": "AgentLab exact reviewed patch publication receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "contractSha256",
+    "reviewGateSha256",
+    "packetSha256",
+    "reviewedCandidateRevision",
+    "reviewedPatchSha256",
+    "repository",
+    "baseRevision",
+    "publishedRevision",
+    "publishedTreeOid",
+    "remoteObservationSha256",
+    "reviewGateRunId",
+    "publishedRevisionContainsExactReviewedPatch",
+    "verifiedOnline",
+    "allowsCaseContract",
+    "automaticPromotion",
+    "nextGate"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.purchase_data_exact_patch_publication.v1"},
+    "status": {"const": "exact-reviewed-patch-published"},
+    "contractSha256": {"$ref": "#/$defs/sha256"},
+    "reviewGateSha256": {"$ref": "#/$defs/sha256"},
+    "packetSha256": {"$ref": "#/$defs/sha256"},
+    "reviewedCandidateRevision": {"$ref": "#/$defs/revision"},
+    "reviewedPatchSha256": {"$ref": "#/$defs/sha256"},
+    "repository": {"type": "string", "minLength": 1},
+    "baseRevision": {"$ref": "#/$defs/revision"},
+    "publishedRevision": {"$ref": "#/$defs/revision"},
+    "publishedTreeOid": {"$ref": "#/$defs/revision"},
+    "remoteObservationSha256": {"$ref": "#/$defs/sha256"},
+    "reviewGateRunId": {"type": "integer", "minimum": 1},
+    "publishedRevisionContainsExactReviewedPatch": {"const": true},
+    "verifiedOnline": {"const": true},
+    "allowsCaseContract": {"const": false},
+    "automaticPromotion": {"const": false},
+    "nextGate": {"const": "reexecute-exact-published-revision"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+  }
+}

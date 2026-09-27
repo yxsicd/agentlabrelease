@@ -99,12 +99,26 @@ cargo run --locked -p agentlab_code_analysis \
   --assessed-campaign-workflow .github/workflows/multi-repo-assessed-campaign.yml \
   --participant-dispatch-source crates/agentlab_code_analysis/src/participant_experiment_dispatch.rs \
   --participant-dispatch-schema schemas/participant-experiment-dispatch.schema.json \
+  --exact-patch-publication-source crates/agentlab_code_analysis/src/purchase_data_exact_patch_publication.rs \
+  --exact-patch-publication-schema schemas/purchase-data-exact-patch-publication.schema.json \
+  --exact-patch-publication-workflow .github/workflows/purchase-data-exact-patch-publication.yml \
   --output /tmp/purchase-data-unseen-agent-cohort-contract.json
 ```
 
 The command verifies and digest-binds those existing execution surfaces. It
 does not bypass independent review, upstream revision rebinding, blind-case
 freeze or the pre-outcome cohort plan, and it never grants automatic promotion.
+
+After an approved trusted-main integrated-review gate and an actual upstream
+publication exist, `agentlab-purchase-data-exact-patch-publication` produces the
+first non-fixture publication receipt. It reconstructs the reviewed tree by
+applying the retained format-patch to the recorded base through an isolated Git
+index, requires that tree to equal the checked-out published revision, and
+requires the exact revision to be visible from the packet's upstream origin.
+`.github/workflows/purchase-data-exact-patch-publication.yml` admits only the
+authenticated successful Oracle-review run, runs this Rust producer from the
+immutable analysis-tools component, and attests the resulting receipt. It does
+not push or otherwise mutate the upstream repository.
 
 Once those external gates actually exist, compile their exact byte chain into
 an operator-gated dispatch decision with the Rust readiness validator:

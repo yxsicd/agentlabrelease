@@ -53,6 +53,9 @@ fn run(
     campaign: &Path,
     dispatch_source: &Path,
     dispatch_schema: &Path,
+    publication_source: &Path,
+    publication_schema: &Path,
+    publication_workflow: &Path,
     output: &Path,
 ) -> Output {
     let packet_sha256 = format!("{:x}", Sha256::digest(fs::read(packet).unwrap()));
@@ -74,6 +77,12 @@ fn run(
         dispatch_source.to_str().unwrap(),
         "--participant-dispatch-schema",
         dispatch_schema.to_str().unwrap(),
+        "--exact-patch-publication-source",
+        publication_source.to_str().unwrap(),
+        "--exact-patch-publication-schema",
+        publication_schema.to_str().unwrap(),
+        "--exact-patch-publication-workflow",
+        publication_workflow.to_str().unwrap(),
         "--output",
         output.to_str().unwrap(),
     ])
@@ -91,6 +100,10 @@ fn normal_run(packet: &Path, root: &Path, output: &Path) -> Output {
         &repository.join(".github/workflows/multi-repo-assessed-campaign.yml"),
         &repository.join("crates/agentlab_code_analysis/src/participant_experiment_dispatch.rs"),
         &repository.join("schemas/participant-experiment-dispatch.schema.json"),
+        &repository
+            .join("crates/agentlab_code_analysis/src/purchase_data_exact_patch_publication.rs"),
+        &repository.join("schemas/purchase-data-exact-patch-publication.schema.json"),
+        &repository.join(".github/workflows/purchase-data-exact-patch-publication.yml"),
         output,
     )
 }
@@ -129,6 +142,10 @@ fn freezes_blocked_unseen_agent_execution_contract_without_promoting_case() {
     assert_eq!(
         value["implementationBindings"]["participantExperimentDispatch"]["path"],
         "crates/agentlab_code_analysis/src/participant_experiment_dispatch.rs"
+    );
+    assert_eq!(
+        value["implementationBindings"]["exactPatchPublicationWorkflow"]["path"],
+        ".github/workflows/purchase-data-exact-patch-publication.yml"
     );
     assert!(value["implementationBindings"]
         .get("participantExperimentPlan")
@@ -189,6 +206,10 @@ fn rejects_assessed_campaign_without_discrimination_scoring() {
         &campaign,
         &repository.join("crates/agentlab_code_analysis/src/participant_experiment_dispatch.rs"),
         &repository.join("schemas/participant-experiment-dispatch.schema.json"),
+        &repository
+            .join("crates/agentlab_code_analysis/src/purchase_data_exact_patch_publication.rs"),
+        &repository.join("schemas/purchase-data-exact-patch-publication.schema.json"),
+        &repository.join(".github/workflows/purchase-data-exact-patch-publication.yml"),
         &temp.join("contract.json"),
     );
     assert!(!result.status.success());
@@ -221,6 +242,10 @@ fn rejects_dispatch_schema_that_grants_automatic_promotion() {
         &repository.join(".github/workflows/multi-repo-assessed-campaign.yml"),
         &repository.join("crates/agentlab_code_analysis/src/participant_experiment_dispatch.rs"),
         &schema,
+        &repository
+            .join("crates/agentlab_code_analysis/src/purchase_data_exact_patch_publication.rs"),
+        &repository.join("schemas/purchase-data-exact-patch-publication.schema.json"),
+        &repository.join(".github/workflows/purchase-data-exact-patch-publication.yml"),
         &temp.join("contract.json"),
     );
     assert!(!result.status.success());
