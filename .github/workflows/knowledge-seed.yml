@@ -7,9 +7,11 @@ on:
       - 'Cargo.lock'
       - 'Cargo.toml'
       - 'examples/knowledge-seed/**'
+      - 'examples/real-code-agent/**'
       - 'examples/tablegit-session/**'
       - 'skills/agentlab-experiment-learning/**'
       - 'tests/test_knowledge_seed.py'
+      - 'tests/test_live_gateway.py'
       - '.github/workflows/knowledge-seed.yml'
   workflow_dispatch:
     inputs:
@@ -101,7 +103,15 @@ jobs:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
           AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
         run: |
-          python3 examples/knowledge-seed/agent_builder.py --root "$AGENTLAB_CI_ROOT/builder"             --agent-python "$RUNNER_TEMP/mini-runtime/bin/python" --gateway "$AGENTLAB_LM_GATEWAY_URL"
+          source_args=()
+          if [[ "${{ inputs.source }}" == "harmony" ]]; then
+            source_args+=(--source-root "$RUNNER_TEMP/harmony-source")
+          fi
+          python3 examples/knowledge-seed/agent_builder.py \
+            --root "$AGENTLAB_CI_ROOT/builder" \
+            --agent-python "$RUNNER_TEMP/mini-runtime/bin/python" \
+            --gateway "$AGENTLAB_LM_GATEWAY_URL" \
+            "${source_args[@]}"
       - name: Persist knowledge rows, revise stable Skills and recover both versions
         if: steps.install.outcome == 'success'
         env:
