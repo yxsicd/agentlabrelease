@@ -1,0 +1,151 @@
+name: API-call localization independent review
+on:
+  workflow_dispatch:
+    inputs:
+      qualification_path:
+        description: Retained qualification directory; exclusive with proposal_run_id
+        required: false
+        default: ''
+        type: string
+      proposal_run_id:
+        description: Successful trusted-main dynamic localization-proposal run; exclusive with qualification_path
+        required: false
+        default: ''
+        type: string
+      expected_proposal_sha256:
+        description: Exact localization proposal digest inspected by the reviewer
+        required: true
+        type: string
+      semantic_review_run_id:
+        description: Successful trusted-main semantic review workflow run
+        required: true
+        type: string
+      expected_semantic_gate_sha256:
+        description: Exact approved semantic gate digest inspected by the reviewer
+        required: true
+        type: string
+      acknowledged_risk_ids:
+        description: Comma-separated localization risk IDs, exactly as reviewed
+        required: true
+        type: string
+      rationale:
+        description: Why this exact localization is approved for intent construction
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  review:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/api-call-localization-review
+      QUALIFICATION_PATH: ${{ inputs.qualification_path }}
+      PROPOSAL_RUN_ID: ${{ inputs.proposal_run_id }}
+      SEMANTIC_REVIEW_RUN_ID: ${{ inputs.semantic_review_run_id }}
+      EXPECTED_SEMANTIC_GATE_SHA256: ${{ inputs.expected_semantic_gate_sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Resolve one exact retained or dynamic proposal
+        id: proposal
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT"
+          python3 - <<'PY'
+          import os, pathlib, re
+          root = pathlib.Path.cwd().resolve()
+          relative = os.environ["QUALIFICATION_PATH"]
+          run_id = os.environ["PROPOSAL_RUN_ID"]
+          assert bool(relative) != bool(run_id), "supply exactly one of qualification_path or proposal_run_id"
+          if run_id:
+              assert re.fullmatch(r"[0-9]+", run_id), run_id
+              raise SystemExit(0)
+          assert re.fullmatch(r"release/qualifications/[A-Za-z0-9._/-]+", relative), relative
+          proposal = (root / relative / "proposal.json").resolve()
+          proposal.relative_to(root / "release" / "qualifications")
+          assert proposal.is_file(), proposal
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("proposal_path=" + str(proposal) + "\n")
+          PY
+          if [[ -n "$PROPOSAL_RUN_ID" ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PROPOSAL_RUN_ID" > "$AGENTLAB_ROOT/proposal-source-run.json"
+            python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/proposal-source-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/api-call-localization-proposal.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+            mkdir -p "$AGENTLAB_ROOT/dynamic"
+            gh run download "$PROPOSAL_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+              --name api-call-localization-proposal --dir "$AGENTLAB_ROOT/dynamic"
+            test -f "$AGENTLAB_ROOT/dynamic/proposal.json"
+            test ! -L "$AGENTLAB_ROOT/dynamic/proposal.json"
+            echo "proposal_path=$AGENTLAB_ROOT/dynamic/proposal.json" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Recover the exact approved semantic gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$SEMANTIC_REVIEW_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_SEMANTIC_GATE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SEMANTIC_REVIEW_RUN_ID" > "$AGENTLAB_ROOT/semantic-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/semantic-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-candidate-semantic-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$SEMANTIC_REVIEW_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-candidate-semantic-review --dir "$AGENTLAB_ROOT/semantic"
+          [[ "$(sha256sum "$AGENTLAB_ROOT/semantic/gate.json" | cut -d' ' -f1)" == "$EXPECTED_SEMANTIC_GATE_SHA256" ]]
+          cp "$AGENTLAB_ROOT/semantic/packet.json" "$AGENTLAB_ROOT/semantic-packet.json"
+          cp "$AGENTLAB_ROOT/semantic/decision.json" "$AGENTLAB_ROOT/semantic-decision.json"
+          cp "$AGENTLAB_ROOT/semantic/gate.json" "$AGENTLAB_ROOT/semantic-gate.json"
+      - name: Bind reviewer identity, exact digest, risks and rationale
+        env:
+          PROPOSAL_PATH: ${{ steps.proposal.outputs.proposal_path }}
+          EXPECTED_PROPOSAL_SHA256: ${{ inputs.expected_proposal_sha256 }}
+          REVIEWER: ${{ github.actor }}
+          ACKNOWLEDGED_RISK_IDS: ${{ inputs.acknowledged_risk_ids }}
+          REVIEW_RATIONALE: ${{ inputs.rationale }}
+        run: |
+          python3 scripts/create-api-call-localization-review.py \
+            --proposal "$PROPOSAL_PATH" \
+            --expected-sha256 "$EXPECTED_PROPOSAL_SHA256" \
+            --reviewer "$REVIEWER" \
+            --acknowledged-risk-ids "$ACKNOWLEDGED_RISK_IDS" \
+            --rationale "$REVIEW_RATIONALE" \
+            --output "$AGENTLAB_ROOT/review.json"
+          python3 scripts/review-api-call-case-localization.py \
+            --proposal "$PROPOSAL_PATH" \
+            --review "$AGENTLAB_ROOT/review.json" \
+            --semantic-packet "$AGENTLAB_ROOT/semantic-packet.json" \
+            --semantic-decision "$AGENTLAB_ROOT/semantic-decision.json" \
+            --semantic-gate "$AGENTLAB_ROOT/semantic-gate.json" \
+            --output "$AGENTLAB_ROOT/localization.json"
+          cp "$PROPOSAL_PATH" "$AGENTLAB_ROOT/proposal.json"
+          sha256sum "$AGENTLAB_ROOT/proposal.json" \
+            "$AGENTLAB_ROOT/review.json" \
+            "$AGENTLAB_ROOT/semantic-packet.json" \
+            "$AGENTLAB_ROOT/semantic-decision.json" \
+            "$AGENTLAB_ROOT/semantic-gate.json" \
+            "$AGENTLAB_ROOT/localization.json" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve exact independent review lineage
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: api-call-localization-review
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/

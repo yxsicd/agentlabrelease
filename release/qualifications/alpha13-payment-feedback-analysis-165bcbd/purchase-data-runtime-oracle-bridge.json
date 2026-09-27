@@ -1,0 +1,124 @@
+{
+  "allowsCaseContract": false,
+  "artifactSha256": {
+    "behaviorCalibration": "1c5177f3d97af8f4904ca67f7494eafb30e9249b656624f04d594e3c30aecaac",
+    "behaviorPlan": "a436bcb578b95738521fd7c23b3ff0cbf195b3d809bfa465e0b7b0a741e7f60f",
+    "behaviorSeamExecutable": "9e53fbbe13eb9e0ac3fdc1cf70922847d0da6d66f28e1451fbdb270528b88104",
+    "candidateObservation": "c2b8759ae32482413c48c7526bd72b4e8bf4756510d79074b14eafc9204272fa",
+    "candidateQualification": "3e9f533c8784630c8e220d6b2a315b3da0fe9833d5bc2d5834ec0510c6ecbfc6",
+    "mutationCalibration": "3ba81a3d911948894d6f1d2196e8abf13a7bea17aabeae248f16367bd3c84ab6",
+    "mutationPlan": "fdeb40dd7f45f1c35fe669d3099d7119d4355488d3d4abb735f94cc10ee5f97c",
+    "mutationQualification": "1721064f5e350227fd3dffdab1aac625f2cab774959d2fddd5722f36b98d7934"
+  },
+  "automaticPromotion": false,
+  "baseRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+  "behaviorOracleVerified": false,
+  "boundary": "This bridge binds five source-seam Harmony behavior checks to seven OHOS Tests and six observed meaningful-wrong variants executed on one Linux x86 emulator. It does not runtime-calibrate the five Cordova checks, execute live vendor IAP, prove a real device, complete independent semantic or Oracle review, qualify performance/power/thermal behavior, approve a case contract or publish source upstream.",
+  "candidateRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+  "candidateSourceSha256": "cd53dcfe1c5e364d67b57e59e27f4336c32d6058ef5abf45bd75385817d24bb0",
+  "cordovaRuntimeCalibrated": false,
+  "coverage": {
+    "cordovaBehaviorCheckCount": 5,
+    "cordovaRuntimeBoundCheckCount": 0,
+    "crossRepositoryBehaviorCheckCount": 10,
+    "exactObservedMutationMatrix": true,
+    "exactRuntimeTestMapping": true,
+    "harmonyBehaviorCheckCount": 5,
+    "harmonyRuntimeBoundCheckCount": 5,
+    "ohosTestCount": 7,
+    "runtimeKilledMutationVariantCount": 6,
+    "runtimeMutationScore": 1.0,
+    "runtimeMutationVariantCount": 6,
+    "sourceSeamNegativeControlCount": 5
+  },
+  "execution": {
+    "candidatePassed": true,
+    "candidateSourceRestored": true,
+    "framework": "instrument-test-ohosTest-hypium",
+    "host": "hwlinux",
+    "linuxX86EmulatorExecuted": true,
+    "meaningfulWrongVariantsExecuted": true,
+    "sourceVariantsBuilt": true,
+    "worktreeCleanAfterExecution": true
+  },
+  "harmonyRuntimeMappings": [
+    {
+      "behaviorCheckId": "harmony-invalid-data-is-not-finished",
+      "meaningfulWrongVariantsKilled": true,
+      "observedKillingVariantIds": [
+        "finish-on-parse-or-decode-error",
+        "unsafe-default-finish"
+      ],
+      "ohosTestNames": [
+        "missingJwsDoesNotFinish",
+        "malformedDataDoesNotFinish",
+        "decodeFailureDoesNotFinish"
+      ],
+      "runtimeCandidatePassed": true,
+      "sourceSeamPassed": true
+    },
+    {
+      "behaviorCheckId": "harmony-finished-order-is-not-finished-again",
+      "meaningfulWrongVariantsKilled": true,
+      "observedKillingVariantIds": [
+        "drop-already-finished-guard",
+        "unsafe-default-finish"
+      ],
+      "ohosTestNames": [
+        "alreadyFinishedPurchaseDoesNotFinishAgain"
+      ],
+      "runtimeCandidatePassed": true,
+      "sourceSeamPassed": true
+    },
+    {
+      "behaviorCheckId": "harmony-pending-order-forwards-exact-identity",
+      "meaningfulWrongVariantsKilled": true,
+      "observedKillingVariantIds": [
+        "erase-purchase-token"
+      ],
+      "ohosTestNames": [
+        "pendingPurchaseForwardsExactFinishFields"
+      ],
+      "runtimeCandidatePassed": true,
+      "sourceSeamPassed": true
+    },
+    {
+      "behaviorCheckId": "harmony-missing-product-type-blocks-finish",
+      "meaningfulWrongVariantsKilled": true,
+      "observedKillingVariantIds": [
+        "drop-product-type-guard",
+        "unsafe-default-finish"
+      ],
+      "ohosTestNames": [
+        "missingProductTypeBlocksFinish"
+      ],
+      "runtimeCandidatePassed": true,
+      "sourceSeamPassed": true
+    },
+    {
+      "behaviorCheckId": "harmony-finish-rejection-is-observable",
+      "meaningfulWrongVariantsKilled": true,
+      "observedKillingVariantIds": [
+        "swallow-finish-rejection"
+      ],
+      "ohosTestNames": [
+        "finishRejectionRemainsObservable"
+      ],
+      "runtimeCandidatePassed": true,
+      "sourceSeamPassed": true
+    }
+  ],
+  "independentOracleReviewCompleted": false,
+  "liveVendorIapExecuted": false,
+  "nextGate": "independent-semantic-and-oracle-review-then-upstream-publication-and-exact-revision-reexecution",
+  "performanceCalibrated": false,
+  "powerCalibrated": false,
+  "realDeviceExecuted": false,
+  "runtimeCandidateId": "purchase-data-finalization-ee2bc87594f1",
+  "schema": "agentlab.purchase_data_runtime_oracle_bridge.v1",
+  "semanticAlignmentVerified": false,
+  "semanticCandidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "sourceRepository": "https://gitcode.com/HarmonyOS_Samples/iapkit-sample-clientdemo-arkts.git",
+  "status": "harmony-runtime-oracle-bridge-qualified-independent-review-required",
+  "thermalCalibrated": false
+}

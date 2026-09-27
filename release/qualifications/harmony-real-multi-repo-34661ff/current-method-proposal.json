@@ -1,0 +1,132 @@
+{
+  "schema": "agentlab.real_multi_repo_current_method_proposal.v1",
+  "status": "analysis-reproduced-cohort-review-required",
+  "methodRevision": "6adbbf6a7bc2d4016fe338396737a2ff4b9519d0",
+  "proposalMethodRevision": "b4635d78f3ca8275ce09882f200ce4ead4aff9c1",
+  "sourceSetSha256": "c4923e499fbb0ca2ed4fd205c66d6353bbe2aa58935413e3c897183a25493ca9",
+  "sourceSpecSha256": "0259cc69123dbc05d1fc29219c580d2da2434dab5a3f7aa4484353bc88641c63",
+  "analysisRunSha256": "9579febb61c23a19fc6acfbdfc6da2635f5c131e1d90a198faa7cae8957aee36",
+  "analysisReceiptSha256": "472f7a7ee02236d3ad197944a355389008be75245565203c965a89fff21a4931",
+  "difficultyEvidenceSha256": "d6b010bb0cf8dd71702dc6b88ac9f303dee64e9c25de3b117966efddcb9db72e",
+  "programFactsSha256": "a164c323ca7847117aa08b0f30b5b3895bce0787fb0539684ef7286cfbf35d79",
+  "transportReceiptSha256": "f397d9fd9dd6f8bbd9b11ee7b06c20d2278f26ac6fa43116a0b940d9c197cdb3",
+  "analysis": {
+    "repositories": 2,
+    "sourceFileCandidates": 12713,
+    "analyzedFiles": 12711,
+    "facts": 404308,
+    "difficultyCandidates": 19374,
+    "sharedExternalModuleContracts": 22,
+    "sharedExternalApiCallContracts": 75,
+    "unsupportedSources": 2,
+    "duplicateAffectedFiles": 0
+  },
+  "samplingFrame": {
+    "proposalSha256": "6fa2a58494f66de6c5776707f3792d3f708f4fa7a0ee73aa39b97ea16459b83f",
+    "eligibleCount": 97,
+    "excludedCount": 19277,
+    "strata": {
+      "shared-external-module-contract": 22,
+      "shared-external-api-call-contract": 75,
+      "affectedRepositoryCount": {
+        "2": 97
+      },
+      "maxDependencyDepth": {
+        "1": 97
+      }
+    },
+    "selectionAdvisoryCounts": {
+      "api-call-specific": 75,
+      "module-contract-only": 3,
+      "prefer-narrower-api-call": 19
+    },
+    "selectionPolicy": "Before case construction or outcome measurement, propose the minimum and maximum affected-file module-contract candidates that have no narrower API-call candidate, the minimum, median and maximum API-call candidates, and the equal-file-set API replacement for the smallest deferred module candidate; break ties by candidate ID.",
+    "declaredRepresentative": false
+  },
+  "proposedCandidates": [
+    {
+      "id": "difficulty-e57bcbd59a4d6116de80ab35",
+      "candidateSha256": "f63022f63978a4eae2e2e2ad0ab86ea572f1ad246f72226e5629cf05ceb75c8e",
+      "relationType": "shared-external-module-contract",
+      "affectedRepositoryCount": 2,
+      "maxDependencyDepth": 1,
+      "affectedFileCount": 19,
+      "selectionRoles": [
+        "smallest-module-contract-without-narrower-api"
+      ]
+    },
+    {
+      "id": "difficulty-c14e209c59d62b4ad7994b2e",
+      "candidateSha256": "806490349b65c1dc9bd1a1111b90c4bd6771db7f504f0f5318d825c1077d56d8",
+      "relationType": "shared-external-module-contract",
+      "affectedRepositoryCount": 2,
+      "maxDependencyDepth": 1,
+      "affectedFileCount": 1567,
+      "selectionRoles": [
+        "largest-module-contract-without-narrower-api"
+      ]
+    },
+    {
+      "id": "difficulty-029b14f310abe9975bbfdfa1",
+      "candidateSha256": "0ea3edcb78877701f61d3eb9f89e0c0781e861e99707535891c43bf4d517b67a",
+      "relationType": "shared-external-api-call-contract",
+      "affectedRepositoryCount": 2,
+      "maxDependencyDepth": 1,
+      "affectedFileCount": 2,
+      "selectionRoles": [
+        "minimum-api-call-file-count"
+      ]
+    },
+    {
+      "id": "difficulty-edcc0a335e8d61a4150431a0",
+      "candidateSha256": "ed720dcc8022d2d2e206964dd04ac8471f9707610c8f809060fe165fb56c6918",
+      "relationType": "shared-external-api-call-contract",
+      "affectedRepositoryCount": 2,
+      "maxDependencyDepth": 1,
+      "affectedFileCount": 7,
+      "selectionRoles": [
+        "median-api-call-file-count"
+      ]
+    },
+    {
+      "id": "difficulty-090fb55cb02f8f984e91766f",
+      "candidateSha256": "eb32d105627c768b866a6062229f3c251b5cb48d3c10f5e68382c53dc6ddcb68",
+      "relationType": "shared-external-api-call-contract",
+      "affectedRepositoryCount": 2,
+      "maxDependencyDepth": 1,
+      "affectedFileCount": 2871,
+      "selectionRoles": [
+        "maximum-api-call-file-count"
+      ]
+    },
+    {
+      "id": "difficulty-fa0919a29ad04dc5bd418f97",
+      "candidateSha256": "07204c8bf7c2b7a6d0b619acc2b09208e689a9c00f2a720a998f13d8c65d2f46",
+      "relationType": "shared-external-api-call-contract",
+      "affectedRepositoryCount": 2,
+      "maxDependencyDepth": 1,
+      "affectedFileCount": 2,
+      "selectionRoles": [
+        "equal-file-set-replacement-for-smallest-deferred-module"
+      ]
+    }
+  ],
+  "qualificationBoundary": {
+    "qualified": [
+      "exact current-method reproduction over the retained two-repository source set",
+      "complete analyzer receipt and native evidence digests",
+      "eligible denominator and relation strata",
+      "six-member specificity-aware proposal frozen before construction or participant outcomes",
+      "unique affected-file identities across all candidates"
+    ],
+    "notQualified": [
+      "independent cohort review",
+      "candidate semantics and issue-level task specification",
+      "repair and preservation checks",
+      "reference and alternative-valid calibration",
+      "unseen participant discrimination",
+      "trusted-main workflow execution"
+    ]
+  },
+  "automaticPromotion": false
+}

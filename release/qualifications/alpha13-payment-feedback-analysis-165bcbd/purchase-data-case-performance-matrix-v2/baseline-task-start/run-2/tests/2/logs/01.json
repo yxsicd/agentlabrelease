@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/home/huawei/commandline-tools-26.0.0.821/sdk/default/openharmony/toolchains/hdc",
+    "list",
+    "targets"
+  ],
+  "exitCode": 0,
+  "finishedAt": "2026-09-27T01:58:47.714206+00:00",
+  "startedAt": "2026-09-27T01:58:47.700557+00:00",
+  "stderr": "",
+  "stdout": "127.0.0.1:10100\n",
+  "timedOut": false
+}

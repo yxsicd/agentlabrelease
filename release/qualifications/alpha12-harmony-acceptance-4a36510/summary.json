@@ -1,0 +1,81 @@
+{
+  "attempts": [
+    {
+      "attemptId": "strong-ohostest-1",
+      "device": {
+        "failureClass": "none",
+        "oracleStatus": "passed",
+        "sha256": "ededdae9b6f59b59dfd905f6cc42ab9444cfd3b5d3ac5265530596f63402046d",
+        "status": "passed"
+      },
+      "performance": {
+        "profileValid": true,
+        "sampleCount": 3,
+        "sha256": "8c2d8e5cf4b2660e1a2b63c6b52f42ba8762fb248cd9153d765225beb9a33520"
+      },
+      "standardTest": {
+        "framework": "instrument-test-ohosTest-hypium",
+        "sha256": "6d41884e6e314c0c6edd5a915cf56bde1931cded78e7226cbd7ab72b4e7312ee",
+        "status": "passed-review-required"
+      }
+    },
+    {
+      "attemptId": "weak-ohostest-1",
+      "device": {
+        "failureClass": "oracle",
+        "oracleStatus": "failed",
+        "sha256": "60d4cb318d3b06bf89b7f179210a588241a7f09312c9f9af0ab90316a1cfb6b6",
+        "status": "failed"
+      },
+      "performance": {
+        "reason": "functional-oracle-failed",
+        "status": "not-run"
+      },
+      "standardTest": {
+        "framework": "instrument-test-ohosTest-hypium",
+        "sha256": "f7d2686ccd21259873a8863a046707f9599b2a6ce05de29edc1a9c72b7018c40",
+        "status": "passed-review-required"
+      }
+    }
+  ],
+  "automaticPromotion": false,
+  "campaign": {
+    "campaignId": "alpha12-release-4a36510",
+    "caseId": "harmony-assessed-ohostest-device-discrimination",
+    "planSha256": "e85fa6fa5569a373a524ff6ff136cbf6efa6d7b266fa9c9266740e66d59fc7d2",
+    "sourceSetSha256": "7f96da1f672e7e9286e759cc6c95f29f4b9cc1b50987a53e0d1d465d0c04a8d8",
+    "summarySha256": "63258dcc21862b2be4f35df5129deb9f6acb91e67fee6b00584b45af82db9f68"
+  },
+  "closure": {
+    "path": "/home/huawei/code/.worktrees/agentlabrelease/alpha12-release-acceptance/release/closures/v0.1.0-alpha.12.json",
+    "sha256": "c10dd513e6b07c0cbba1291a0e314497124b20b3add97f44740c54875a71194a"
+  },
+  "environmentIdentity": "hwlinux:harmonyos-7.0.0:x86:kvm",
+  "qualificationBoundary": {
+    "notQualified": [
+      "absolute power or thermal measurement",
+      "physical-device behavior",
+      "population-level discrimination confidence",
+      "automatic release promotion"
+    ],
+    "qualified": [
+      "release-bound Linux x86 KVM emulator execution",
+      "source-bound ohosTest/Hypium execution",
+      "functional Oracle pass/fail separation",
+      "functional-pass-gated SmartPerf proxy collection"
+    ]
+  },
+  "releaseGitSha": "4a365104cfd74af4c648f83ecb21d87ea3a9e787",
+  "releaseTag": "v0.1.0-alpha.12",
+  "remoteInspection": {
+    "cleanupEvidenceSha256": "623c838925965c23df82077ac228a482e19fcac9e64af0a38815f20cdd617767",
+    "operationIds": [
+      "exec-00000000000003bb",
+      "exec-00000000000003bc"
+    ],
+    "routeDecision": "peer_direct",
+    "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a"
+  },
+  "schema": "agentlab.release_harmony_acceptance.v1",
+  "status": "accepted-developer-preview-review-required"
+}

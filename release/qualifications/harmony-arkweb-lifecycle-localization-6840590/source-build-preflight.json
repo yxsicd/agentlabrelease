@@ -1,0 +1,72 @@
+{
+  "schema": "agentlab.harmony_source_build_preflight.v1",
+  "status": "blocked-missing-toolchain",
+  "qualified": false,
+  "observedAt": "2026-09-24T21:38:47+03:00",
+  "automaticPromotion": false,
+  "executionAuthority": {
+    "routeDecision": "peer_direct",
+    "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+    "host": "huawei-ThinkCentre-M920t",
+    "architecture": "x86_64",
+    "traceIds": [
+      "c38b7691-63fa-4855-bc1a-ecff3b4cdfb3",
+      "4cbcc5a8-ef35-4062-a304-7ec151ac4d1b",
+      "d4a11cc9-c7e6-445e-ba20-8573cc2e36f5",
+      "026b7a2a-d443-4968-9d79-13f71f14f74c"
+    ]
+  },
+  "toolchain": [
+    {"name": "git", "required": true, "available": true, "path": "/usr/bin/git"},
+    {"name": "node", "required": true, "available": true, "path": "/usr/local/bin/node"},
+    {"name": "java", "required": true, "available": true, "path": "/usr/bin/java"},
+    {"name": "ohpm", "required": true, "available": false, "path": null},
+    {"name": "hvigorw", "required": true, "available": false, "path": null},
+    {"name": "Harmony SDK", "required": true, "available": false, "path": null},
+    {"name": "hdc host client", "required": false, "available": false, "path": null}
+  ],
+  "runtimeEvidence": {
+    "emulatorToolsRoot": "/home/huawei/commandline-tools-26.0.0.821",
+    "systemImageArchive": "/home/huawei/HarmonyOS-Emulator/HarmonyOS-7.0.0-phone_all_x86.tar.zst",
+    "priorInstalledHap": "/home/huawei/.local/share/asrelease-node/evidence/2026-08-29-linux-harmony/entry-default-unsigned.hap",
+    "priorRuntimeReceipt": "/home/huawei/harmony-e2e-20260923/e2e-run.log",
+    "interpretation": "The retained install and launch receipt proves execution of an existing HAP, not compilation of either pinned source project."
+  },
+  "projects": [
+    {
+      "repositoryId": "code-workshop",
+      "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+      "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+      "projectRoot": ".",
+      "buildModule": "phone",
+      "dependencyModule": "abilitycommon",
+      "compatibleSdkVersion": "6.1.0(23)",
+      "targetSdkVersion": "6.1.1(24)",
+      "declaredBuildEnvironment": "DevEco Studio 6.1.0 Release or later",
+      "sourceBindings": [
+        {"path": "build-profile.json5", "sha256": "32cd807327fe607c27da50110ce39ad0efd1a4892a9a71fa762c5263b1672f4f"},
+        {"path": "features/abilitycommon/oh-package.json5", "sha256": "8cbe3a9a5a9c84fd190bf24cf1f5b0c0857d4b2738f34b812c2dd9a13389ea02"}
+      ]
+    },
+    {
+      "repositoryId": "guide-snippets",
+      "repository": "https://gitcode.com/HarmonyOS_Samples/guide-snippets.git",
+      "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "projectRoot": "ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo",
+      "buildModule": "entry",
+      "compatibleSdkVersion": "6.0.0(20)",
+      "targetSdkVersion": "6.0.0(20)",
+      "declaredBuildEnvironment": "DevEco Studio 5.0.1 Release",
+      "sourceBindings": [
+        {"path": "ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/build-profile.json5", "sha256": "a522ec260215a9fa6b881cb1fbb15a6ba69859ce17842622ee57dff645d7274c"},
+        {"path": "ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/module.json5", "sha256": "e23be6815810e6afad571f58b418a3d0a46644d81a7b21a7055bbfd943facea0"}
+      ]
+    }
+  ],
+  "nextRequiredEvidence": [
+    "Install or bind the matching Harmony SDK, ohpm and Hvigor CLI on the exact host.",
+    "Materialize both repositories at the pinned revisions and verify the bound source files.",
+    "Produce independent baseline HAP build receipts, artifact SHA-256 values and logs before applying any reference or participant patch."
+  ],
+  "buildReceipt": null
+}

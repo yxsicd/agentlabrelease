@@ -1,0 +1,30 @@
+{
+  "authority": {
+    "absolutePowerThermal": "unavailable-on-emulator",
+    "relativePerformance": "same-environment-emulator-proxy"
+  },
+  "id": "purchase-data-ohostest-cpu-pss-repeatability-v2",
+  "interpretation": "CPU and PSS are relative repeatability signals while the exact seven-test OHOS Test workload runs. CPU passes either the relative threshold or a two percentage point absolute noise allowance because near-zero baselines make ratios unstable. FPS, frame interval, GPU, power and thermal are not pass criteria.",
+  "observedOnlyMetrics": [
+    "fps",
+    "frameIntervalMs",
+    "gpuLoadPercent"
+  ],
+  "requiredMetrics": [
+    {
+      "direction": "lower",
+      "maximumAbsoluteIncrease": 2.0,
+      "maximumRelativeIncrease": 0.2,
+      "metric": "appCpuUsagePercent",
+      "statistic": "mean"
+    },
+    {
+      "direction": "lower",
+      "maximumRelativeIncrease": 0.15,
+      "metric": "appPssKiB",
+      "statistic": "mean"
+    }
+  ],
+  "requiresWorkload": true,
+  "schema": "agentlab.harmony_performance_policy.v1"
+}

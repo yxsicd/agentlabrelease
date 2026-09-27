@@ -1,0 +1,22 @@
+{
+  "authority": "git-object-id",
+  "repositories": [
+    {
+      "alreadyPresent": 0,
+      "fetched": 556,
+      "id": "code-workshop",
+      "remaining": 0,
+      "sourceBlobs": 556,
+      "transport": "git-filtered-promisor"
+    },
+    {
+      "alreadyPresent": 0,
+      "fetched": 12130,
+      "id": "guide-snippets",
+      "remaining": 27,
+      "sourceBlobs": 12157,
+      "transport": "git-filtered-promisor"
+    }
+  ],
+  "schema": "agentlab.multi_repo_blob_prefetch.v1"
+}

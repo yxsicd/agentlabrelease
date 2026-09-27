@@ -1,0 +1,55 @@
+{
+  "allowsCaseContract": false,
+  "automaticPromotion": false,
+  "baseRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+  "behaviorOracleVerified": false,
+  "boundary": "This qualifies one local Git candidate revision and seven source-bound OHOS Test cases on the Linux x86 emulator. It does not publish the candidate upstream, substitute self-review for independent review, validate live IAP service behavior, approve the cross-repository semantic claim, or authorize case promotion.",
+  "candidatePatchSha256": "cbc01c94755f2d8da5449902ad1a309488d0a9defa9fede23318ad360dd4c2c2",
+  "candidateRevision": "ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8",
+  "coverage": {
+    "emulatorExecuted": true,
+    "emulatorStopped": true,
+    "error": 0,
+    "failure": 0,
+    "ignore": 0,
+    "mainHapBuilt": true,
+    "ohosTestHapBuilt": true,
+    "passed": 7,
+    "testCount": 7
+  },
+  "framework": "instrument-test-ohosTest-hypium",
+  "independentReviewVerified": false,
+  "lineage": {
+    "executionReceiptSha256": "0cf41095b6624644406962432a7fc927efc086fe5c192a6f783e5c90bd97ec4d",
+    "nativeReportSha256": "123fbf9bcff0dbf9c946b60e7f407b4695582072c45f15ebc249cb33aa93ba65",
+    "observationSha256": "c2b8759ae32482413c48c7526bd72b4e8bf4756510d79074b14eafc9204272fa",
+    "referenceQualificationSha256": "8652ffab7ef3d358b8057f8dd561eab8e882f3de4e944e22fe9ee42dbd67d1f1"
+  },
+  "nextGate": "independent-review-then-upstream-publication-and-exact-revision-reexecution",
+  "packages": {
+    "app": {
+      "byteLength": 447093,
+      "path": "entry-default-unsigned.hap",
+      "sha256": "dfd61c2e5a33249aed059192798c449f7ab3a3a44d69b900fdd508978cdda073"
+    },
+    "test": {
+      "byteLength": 1191534,
+      "path": "entry-ohosTest-unsigned.hap",
+      "sha256": "5a2015114fd435daba3e25331df6a7ac48445827230079870cc2571c710934fe"
+    }
+  },
+  "projectTreeSha256": "85d851734450a611e2bed1c5f15ddf9da150309ca97c3b914b0d3d19eb443144",
+  "publishedToUpstream": false,
+  "schema": "agentlab.purchase_data_ohostest_candidate_qualification.v1",
+  "sourceRepository": "https://gitcode.com/HarmonyOS_Samples/iapkit-sample-clientdemo-arkts.git",
+  "status": "candidate-revision-emulator-qualified-independent-review-pending",
+  "testNames": [
+    "missingJwsDoesNotFinish",
+    "malformedDataDoesNotFinish",
+    "decodeFailureDoesNotFinish",
+    "alreadyFinishedPurchaseDoesNotFinishAgain",
+    "pendingPurchaseForwardsExactFinishFields",
+    "missingProductTypeBlocksFinish",
+    "finishRejectionRemainsObservable"
+  ]
+}

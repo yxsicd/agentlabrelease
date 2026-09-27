@@ -132,3 +132,44 @@ relative metadata references. The workflow supplies this automatically. Relative
 metadata follows the descriptor URL, and the receipt preserves its exact source
 digest. Auxiliary template inventory is metadata, not a duplicated component
 archive.
+
+Component-update assets may also use relative URLs. The composer resolves both
+the selected value's artifact/descriptor fields and every asset URL against the
+original update-descriptor URL. This allows an independently published
+`analysis-tools-<revision>-linux-x64` release to keep its archive, pack
+descriptor and update descriptor together without embedding a mutable channel.
+Introducing its new optional graph slot is a coordinated composition; later
+analysis-tool revisions are ordinary `pack:analysis-tools` replacements and do
+not rebuild unchanged large components.
+
+The coordinated introduction must preserve the base publication's existing
+asset rows and component rows value-for-value, append only the new optional pack
+and its graph node, retain the aggregate source revision, and reset all gates.
+`agentlab-component-introduce` enforces those invariants and emits a digest-bound
+`agentlab.component_introduction.v1` receipt with `rebuildComponents=false` and
+`automaticPromotion=false`.
+
+On `main`, the analysis-tools workflow requires the exact 40-character source
+revision before it can publish the component. It then verifies every referenced
+asset through the GitHub Release API, including the newly uploaded archive and
+descriptor. A second explicit `publish_composition_candidate=true` input may
+publish only the coordinated candidate JSON files. That reference-only release
+is accepted by `channel-plan.yml`; qualification and activation remain separate
+workflows and are never implied by component publication.
+Exact reruns are idempotent: an existing component or candidate tag is accepted
+only after every regenerated file matches its downloaded counterpart; tag reuse
+with any byte difference fails closed.
+
+`install-analysis-tools-component` is the shared consumer boundary for trusted
+workflows. It requires the full component source revision and exact coordinated
+environment-lock digest, admits only a reference-only non-activated candidate,
+installs through the content-addressed cache, verifies the loaded runtime image
+and component volume, and freezes an
+`agentlab.analysis_tools_component_runtime.v1` receipt. Multi-repository
+analysis and both purchase-data integrated-review stages execute their Rust
+tools through the installed pack controller with a read-only component mount,
+no network, a read-only root filesystem and a distinct
+`agentlab.analysis_tools_execution.v1` receipt per invocation. They do not
+rebuild those tools from the workflow checkout. Review decisions remain human
+authority: the reusable component proves exact execution identity, never an
+approval, publication or promotion.

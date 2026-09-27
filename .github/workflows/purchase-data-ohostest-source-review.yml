@@ -1,0 +1,141 @@
+name: Purchase-data OHOS Test source review
+on:
+  workflow_dispatch:
+    inputs:
+      packet_path:
+        description: Retained purchase-data OHOS Test review packet below release/qualifications
+        required: true
+        default: release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-ohostest-review-packet.json
+        type: string
+      expected_packet_sha256:
+        description: Exact review-packet digest inspected by the reviewer
+        required: true
+        type: string
+      answers_json:
+        description: Exact agentlab.purchase_data_ohostest_review_answers.v1 JSON
+        required: true
+        type: string
+      acknowledged_risk_ids:
+        description: Comma-separated source-review risk IDs, exactly as reviewed
+        required: true
+        type: string
+      verdict:
+        description: Exact candidate-source verdict
+        required: true
+        type: choice
+        options:
+          - approve-for-upstream-publication
+          - reject-candidate
+          - defer-for-more-evidence
+      rationale:
+        description: Evidence-based rationale for this exact verdict
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/purchase-data-ohostest-source-review
+      PACKET_RELATIVE_PATH: ${{ inputs.packet_path }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - name: Resolve exact retained packet
+        id: packet
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT"
+          python3 - <<'PY'
+          import os, pathlib, re
+          root = pathlib.Path.cwd().resolve()
+          relative = os.environ["PACKET_RELATIVE_PATH"]
+          assert re.fullmatch(r"release/qualifications/[A-Za-z0-9._/-]+\.json", relative), relative
+          packet = (root / relative).resolve()
+          packet.relative_to(root / "release" / "qualifications")
+          assert packet.is_file() and not packet.is_symlink(), packet
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("packet_path=" + str(packet) + "\n")
+          PY
+      - name: Normalize reviewer answers
+        env:
+          ANSWERS_JSON: ${{ inputs.answers_json }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib
+          value = json.loads(os.environ["ANSWERS_JSON"])
+          path = pathlib.Path(os.environ["AGENTLAB_ROOT"]) / "answers.json"
+          path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+          PY
+      - name: Build Rust source-review gate
+        run: cargo build --locked --release -p agentlab_code_analysis --bin agentlab-purchase-data-ohostest-review
+      - name: Bind authenticated reviewer and compile fail-closed gate
+        env:
+          PACKET_PATH: ${{ steps.packet.outputs.packet_path }}
+          EXPECTED_PACKET_SHA256: ${{ inputs.expected_packet_sha256 }}
+          REVIEWER: github:${{ github.actor }}
+          ACKNOWLEDGED_RISK_IDS: ${{ inputs.acknowledged_risk_ids }}
+          VERDICT: ${{ inputs.verdict }}
+          REVIEW_RATIONALE: ${{ inputs.rationale }}
+        run: |
+          set -euo pipefail
+          REVIEW_BIN="$GITHUB_WORKSPACE/target/release/agentlab-purchase-data-ohostest-review"
+          "$REVIEW_BIN" decide \
+            --packet "$PACKET_PATH" \
+            --repository-root "$GITHUB_WORKSPACE" \
+            --expected-packet-sha256 "$EXPECTED_PACKET_SHA256" \
+            --answers "$AGENTLAB_ROOT/answers.json" \
+            --reviewer "$REVIEWER" \
+            --acknowledged-risk-ids "$ACKNOWLEDGED_RISK_IDS" \
+            --verdict "$VERDICT" \
+            --rationale "$REVIEW_RATIONALE" \
+            --output "$AGENTLAB_ROOT/decision.json"
+          "$REVIEW_BIN" compile \
+            --packet "$PACKET_PATH" \
+            --repository-root "$GITHUB_WORKSPACE" \
+            --decision "$AGENTLAB_ROOT/decision.json" \
+            --output "$AGENTLAB_ROOT/gate.json"
+          "$REVIEW_BIN" validate \
+            --packet "$PACKET_PATH" \
+            --repository-root "$GITHUB_WORKSPACE" \
+            --decision "$AGENTLAB_ROOT/decision.json" \
+            --gate "$AGENTLAB_ROOT/gate.json"
+      - name: Preserve exact reviewed source and lineage
+        env:
+          PACKET_PATH: ${{ steps.packet.outputs.packet_path }}
+        run: |
+          set -euo pipefail
+          cp "$PACKET_PATH" "$AGENTLAB_ROOT/packet.json"
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, shutil
+          root = pathlib.Path(os.environ["GITHUB_WORKSPACE"]).resolve()
+          packet = json.loads(pathlib.Path(os.environ["PACKET_PATH"]).read_text())
+          relative = packet["artifacts"]["patch"]["path"]
+          patch = (root / relative).resolve()
+          patch.relative_to(root / "release" / "qualifications")
+          assert patch.is_file() and not patch.is_symlink(), patch
+          data = patch.read_bytes()
+          assert hashlib.sha256(data).hexdigest() == packet["artifacts"]["patch"]["sha256"]
+          assert len(data) == packet["artifacts"]["patch"]["byteLength"]
+          shutil.copy2(patch, pathlib.Path(os.environ["AGENTLAB_ROOT"]) / "candidate.patch")
+          PY
+          sha256sum \
+            "$AGENTLAB_ROOT/packet.json" \
+            "$AGENTLAB_ROOT/candidate.patch" \
+            "$AGENTLAB_ROOT/answers.json" \
+            "$AGENTLAB_ROOT/decision.json" \
+            "$AGENTLAB_ROOT/gate.json" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve authenticated source-review lineage
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: purchase-data-ohostest-source-review
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/

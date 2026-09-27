@@ -1,0 +1,23 @@
+{
+  "counts": {
+    "error": 0,
+    "failure": 0,
+    "ignore": 0,
+    "pass": 5,
+    "total": 5
+  },
+  "failureReasons": [],
+  "nativeFinalCode": 0,
+  "parserAuthority": {
+    "implementation": "OpenHarmony/testfwk_arkxtest",
+    "markers": [
+      "OHOS_REPORT_RESULT/OHOS_REPORT_CODE",
+      "OHOS_REPORT_ALL_RESULT/OHOS_REPORT_ALL_CODE"
+    ],
+    "policy": "process-zero-and-nonempty-consistent-zero-failure-summary-and-native-code-zero"
+  },
+  "passed": true,
+  "processExitCode": 0,
+  "schema": "agentlab.harmony_hypium_native_report.v1",
+  "timedOut": false
+}

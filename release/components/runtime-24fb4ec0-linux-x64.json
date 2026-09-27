@@ -1,0 +1,45 @@
+{
+  "schema": "agentlab.component_update.v1",
+  "component": "pack:release",
+  "sourceRevision": "24fb4ec0beaff395b790bf4d1678f7f2a9c76a3c",
+  "value": {
+    "archiveSha256": "e78188d3151644208dcc3502240602184ac8b30d3d13e26d1c2fffb479071cc4",
+    "artifact": "https://github.com/yxsicd/agentlabrelease/releases/download/runtime-24fb4ec0-linux-x64/agentlab-pack-agentlab-release-24fb4ec0-linux-x64.tar.zst",
+    "descriptor": "https://github.com/yxsicd/agentlabrelease/releases/download/runtime-24fb4ec0-linux-x64/agentlab-pack-agentlab-release-24fb4ec0-linux-x64.tar.zst.json",
+    "enabled": true,
+    "mountTarget": "/agentlab-release",
+    "packId": "agentlab-release",
+    "platform": "linux-x64",
+    "required": true,
+    "slot": "release",
+    "version": "24fb4ec0",
+    "volume": "vol-agentlab-pack-agentlab-release-24fb4ec0-linux-x64-e78188d31516"
+  },
+  "graphNode": {
+    "binding": {"kind": "pack-slot", "slot": "release"},
+    "id": "component-release",
+    "platform": "linux-x64",
+    "provides": {
+      "agentlab.runtime": 1,
+      "agentlab.template-qualification-reader": 2,
+      "agentlab.private-tool-dispatch-correlation": 2
+    },
+    "requires": {
+      "mcpgit.session-template-contract": {"min": 11, "maxExclusive": 12}
+    },
+    "upgradePolicy": "coordinated",
+    "version": "24fb4ec0"
+  },
+  "assets": [
+    {
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/runtime-24fb4ec0-linux-x64/agentlab-pack-agentlab-release-24fb4ec0-linux-x64.tar.zst",
+      "bytes": 33378281,
+      "sha256": "e78188d3151644208dcc3502240602184ac8b30d3d13e26d1c2fffb479071cc4"
+    },
+    {
+      "url": "https://github.com/yxsicd/agentlabrelease/releases/download/runtime-24fb4ec0-linux-x64/agentlab-pack-agentlab-release-24fb4ec0-linux-x64.tar.zst.json",
+      "bytes": 462,
+      "sha256": "26a9b442094a885229f9486bc2e3e00fa9a39b55579d4d544989e1058e4ce07a"
+    }
+  ]
+}

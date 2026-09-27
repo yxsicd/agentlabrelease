@@ -1,0 +1,228 @@
+name: Multi-repository case review and freeze
+on:
+  workflow_dispatch:
+    inputs:
+      construction_run_id:
+        description: Successful trusted-main model-construction run to review
+        required: true
+        type: string
+      calibration_bundle_review_run_id:
+        description: Successful trusted-main reviewed calibration-bundle run
+        required: true
+        type: string
+      expected_calibration_bundle_sha256:
+        description: Exact reviewed calibration-bundle digest
+        required: true
+        type: string
+      expected_proposal_sha256:
+        description: Exact proposal digest inspected by the reviewer
+        required: true
+        type: string
+      expected_dependency_plan_sha256:
+        description: Exact hidden dependency-plan proposal digest inspected by the reviewer
+        required: true
+        type: string
+      acknowledged_risk_ids:
+        description: Comma-separated proposal risk IDs, exactly as reviewed
+        required: true
+        type: string
+      rationale:
+        description: Why this exact proposal is approved for calibration
+        required: true
+        type: string
+      acknowledged_dependency_risk_ids:
+        description: Comma-separated dependency-plan risk IDs, exactly as reviewed
+        required: true
+        type: string
+      dependency_plan_rationale:
+        description: Why these hidden obligations are fair and source-inferable
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  freeze:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/multi-repo-case-review
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Verify and recover the trusted construction evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.construction_run_id }}
+        run: |
+          mkdir -p "$AGENTLAB_ROOT"
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$AGENTLAB_ROOT/source-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/source-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-model-construction.yml"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-model-construction --dir "$AGENTLAB_ROOT/source"
+      - name: Recover and verify the reviewed executable calibration bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CALIBRATION_BUNDLE_RUN_ID: ${{ inputs.calibration_bundle_review_run_id }}
+          EXPECTED_CALIBRATION_BUNDLE_SHA256: ${{ inputs.expected_calibration_bundle_sha256 }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/calibration-authority"
+          [[ "$CALIBRATION_BUNDLE_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_CALIBRATION_BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CALIBRATION_BUNDLE_RUN_ID" > "$AGENTLAB_ROOT/calibration-bundle-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/calibration-bundle-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/multi-repo-calibration-bundle-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          PY
+          gh run download "$CALIBRATION_BUNDLE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-calibration-bundle-review --dir "$AGENTLAB_ROOT/calibration-authority"
+          [[ "$(sha256sum "$AGENTLAB_ROOT/calibration-authority/calibration-bundle.json" | cut -d' ' -f1)" == "$EXPECTED_CALIBRATION_BUNDLE_SHA256" ]]
+          cmp "$AGENTLAB_ROOT/calibration-authority/bundle/construction-contract.json" \
+            "$AGENTLAB_ROOT/source/contract/construction-contract.json"
+          source_args=()
+          if [[ -f "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-source.json" ]]; then
+            source_args=(--source-receipt "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-source.json")
+          elif [[ -d "$AGENTLAB_ROOT/calibration-authority/calibration-authoring" ]]; then
+            source_args=(
+              --authoring-receipt "$AGENTLAB_ROOT/calibration-authority/calibration-authoring/authoring-receipt.json"
+              --authoring-root "$AGENTLAB_ROOT/calibration-authority/calibration-authoring"
+            )
+          fi
+          python3 scripts/multi-repo-calibration-bundle.py validate \
+            --bundle-root "$AGENTLAB_ROOT/calibration-authority/bundle" \
+            --descriptor "$AGENTLAB_ROOT/calibration-authority/bundle/descriptor.json" \
+            --construction-contract "$AGENTLAB_ROOT/source/contract/construction-contract.json" \
+            --proposal "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-proposal.json" \
+            --review "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-review.json" \
+            "${source_args[@]}" \
+            --contract "$AGENTLAB_ROOT/calibration-authority/calibration-bundle.json"
+      - name: Bind explicit operator review to the exact proposal
+        env:
+          EXPECTED_PROPOSAL_SHA256: ${{ inputs.expected_proposal_sha256 }}
+          REVIEWER: ${{ github.actor }}
+          ACKNOWLEDGED_RISK_IDS: ${{ inputs.acknowledged_risk_ids }}
+          REVIEW_RATIONALE: ${{ inputs.rationale }}
+        run: |
+          python3 scripts/create-multi-repo-review-decision.py \
+            --proposal "$AGENTLAB_ROOT/source/case-plan-proposal.json" \
+            --expected-sha256 "$EXPECTED_PROPOSAL_SHA256" \
+            --reviewer "$REVIEWER" \
+            --acknowledged-risk-ids "$ACKNOWLEDGED_RISK_IDS" \
+            --rationale "$REVIEW_RATIONALE" \
+            --output "$AGENTLAB_ROOT/case-plan-review.json"
+          python3 scripts/review-multi-repo-case-plan.py \
+            --proposal "$AGENTLAB_ROOT/source/case-plan-proposal.json" \
+            --review "$AGENTLAB_ROOT/case-plan-review.json" \
+            --output "$AGENTLAB_ROOT/case-plan.json"
+      - name: Bind explicit operator review to hidden dependency obligations
+        env:
+          EXPECTED_DEPENDENCY_PLAN_SHA256: ${{ inputs.expected_dependency_plan_sha256 }}
+          REVIEWER: ${{ github.actor }}
+          ACKNOWLEDGED_DEPENDENCY_RISK_IDS: ${{ inputs.acknowledged_dependency_risk_ids }}
+          DEPENDENCY_PLAN_RATIONALE: ${{ inputs.dependency_plan_rationale }}
+        run: |
+          python3 scripts/review-dependency-discovery-plan.py decide \
+            --proposal "$AGENTLAB_ROOT/source/dependency-discovery-plan-proposal.json" \
+            --expected-sha256 "$EXPECTED_DEPENDENCY_PLAN_SHA256" \
+            --reviewer "$REVIEWER" \
+            --acknowledged-risk-ids "$ACKNOWLEDGED_DEPENDENCY_RISK_IDS" \
+            --rationale "$DEPENDENCY_PLAN_RATIONALE" \
+            --output "$AGENTLAB_ROOT/dependency-discovery-plan-review.json"
+          python3 scripts/review-dependency-discovery-plan.py compile \
+            --proposal "$AGENTLAB_ROOT/source/dependency-discovery-plan-proposal.json" \
+            --review "$AGENTLAB_ROOT/dependency-discovery-plan-review.json" \
+            --output "$AGENTLAB_ROOT/dependency-discovery-plan.json"
+      - name: Re-run the independent executable calibration
+        run: |
+          set -euo pipefail
+          source_args=()
+          if [[ -f "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-source.json" ]]; then
+            source_args=(--source-receipt "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-source.json")
+          elif [[ -d "$AGENTLAB_ROOT/calibration-authority/calibration-authoring" ]]; then
+            source_args=(
+              --authoring-receipt "$AGENTLAB_ROOT/calibration-authority/calibration-authoring/authoring-receipt.json"
+              --authoring-root "$AGENTLAB_ROOT/calibration-authority/calibration-authoring"
+            )
+          fi
+          python3 scripts/multi-repo-calibration-bundle.py run \
+            --bundle-root "$AGENTLAB_ROOT/calibration-authority/bundle" \
+            --contract "$AGENTLAB_ROOT/calibration-authority/calibration-bundle.json" \
+            --proposal "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-proposal.json" \
+            --review "$AGENTLAB_ROOT/calibration-authority/calibration-bundle-review.json" \
+            --construction-contract "$AGENTLAB_ROOT/source/contract/construction-contract.json" \
+            "${source_args[@]}" \
+            --baseline "$AGENTLAB_ROOT/source/input/repositories" \
+            --output "$AGENTLAB_ROOT/calibration"
+      - name: Freeze only the reviewed and calibrated case
+        run: |
+          python3 scripts/generate-multi-repo-case.py \
+            --difficulty "$AGENTLAB_ROOT/source/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
+            --plan "$AGENTLAB_ROOT/case-plan.json" \
+            --proposal "$AGENTLAB_ROOT/source/case-plan-proposal.json" \
+            --review "$AGENTLAB_ROOT/case-plan-review.json" \
+            --construction-quality "$AGENTLAB_ROOT/source/construction/intent-quality.json" \
+            --candidate-selection "$AGENTLAB_ROOT/source/candidate-selection.json" \
+            --calibration "$AGENTLAB_ROOT/calibration/summary.json" \
+            --calibration-run "$AGENTLAB_ROOT/calibration/calibration-run.json" \
+            --output "$AGENTLAB_ROOT/base-evaluation-case.json"
+          python3 scripts/build-dependency-discovery-contract.py \
+            --case "$AGENTLAB_ROOT/base-evaluation-case.json" \
+            --program-facts "$AGENTLAB_ROOT/source/cohort/source/analysis-source/analysis/workspace_facts.jsonl" \
+            --plan "$AGENTLAB_ROOT/dependency-discovery-plan.json" \
+            --output "$AGENTLAB_ROOT/dependency-discovery-contract.json"
+          python3 scripts/bind-dependency-discovery-case.py \
+            --case "$AGENTLAB_ROOT/base-evaluation-case.json" \
+            --dependency-contract "$AGENTLAB_ROOT/dependency-discovery-contract.json" \
+            --program-facts "$AGENTLAB_ROOT/source/cohort/source/analysis-source/analysis/workspace_facts.jsonl" \
+            --output "$AGENTLAB_ROOT/evaluation-case.json"
+          python3 scripts/validate-case-qualification.py \
+            --case "$AGENTLAB_ROOT/evaluation-case.json" \
+            --calibration "$AGENTLAB_ROOT/calibration/summary.json" \
+            | tee "$AGENTLAB_ROOT/case-qualification-validation.json"
+          sha256sum "$AGENTLAB_ROOT/evaluation-case.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Split participant input from evaluator authority
+        run: |
+          mapfile -t calibration_paths < <(python3 - <<'PY'
+          import json, os
+          descriptor = json.load(open(os.environ["AGENTLAB_ROOT"] + "/calibration-authority/bundle/descriptor.json"))
+          print(descriptor["oraclePath"])
+          print(descriptor["referenceRoot"])
+          PY
+          )
+          python3 scripts/prepare-multi-repo-blind-cut.py \
+            --case "$AGENTLAB_ROOT/evaluation-case.json" \
+            --oracle "$AGENTLAB_ROOT/calibration-authority/bundle/${calibration_paths[0]}" \
+            --reference-root "$AGENTLAB_ROOT/calibration-authority/bundle/${calibration_paths[1]}" \
+            --calibration "$AGENTLAB_ROOT/calibration/summary.json" \
+            --review "$AGENTLAB_ROOT/case-plan-review.json" \
+            --dependency-contract "$AGENTLAB_ROOT/dependency-discovery-contract.json" \
+            --program-facts "$AGENTLAB_ROOT/source/cohort/source/analysis-source/analysis/workspace_facts.jsonl" \
+            --method-revision "$GITHUB_SHA" \
+            --constructed-at "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            --source-visibility held-out-public-revision \
+            --output "$AGENTLAB_ROOT/blind-cut"
+          python3 scripts/build-blind-case-cut.py validate \
+            --cut "$AGENTLAB_ROOT/blind-cut"
+          sha256sum "$AGENTLAB_ROOT/blind-cut/cut-receipt.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve exact review, calibration and frozen case lineage
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-frozen-case
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/

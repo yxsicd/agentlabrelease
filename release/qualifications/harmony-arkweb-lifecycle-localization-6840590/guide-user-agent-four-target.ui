@@ -1,0 +1,7 @@
+schema	agentlab.harmony_ui_scenario.v2
+case	guide-user-agent-four-target
+wait-text	user-agent-four-visible	30	UserAgent_four
+tap	628	1606
+sleep	2000
+assert-page-path	target-user-agent-four-route	pages/UserAgent_four
+assert-text	target-example-domain-visible	Example Domain

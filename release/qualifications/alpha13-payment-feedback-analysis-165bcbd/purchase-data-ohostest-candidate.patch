@@ -1,0 +1,297 @@
+From ee2bc87594f1d59e136d4c2c1f1e7e5444f9ccf8 Mon Sep 17 00:00:00 2001
+From: AgentLab Evidence <agentlab-evidence@localhost>
+Date: Sun, 27 Sep 2026 00:09:50 +0300
+Subject: [PATCH] Add source-bound purchase finalization OHOS tests
+
+---
+ .../ets/common/PurchaseFinalizationPolicy.ets | 68 +++++++++++++
+ entry/src/main/ets/pages/ConsumablesPage.ets  | 42 ++++----
+ entry/src/ohosTest/ets/test/Ability.test.ets  |  5 +
+ entry/src/ohosTest/ets/test/List.test.ets     |  5 +
+ .../test/PurchaseFinalizationPolicy.test.ets  | 97 +++++++++++++++++++
+ entry/src/ohosTest/module.json5               |  9 ++
+ 6 files changed, 206 insertions(+), 20 deletions(-)
+ create mode 100644 entry/src/main/ets/common/PurchaseFinalizationPolicy.ets
+ create mode 100644 entry/src/ohosTest/ets/test/Ability.test.ets
+ create mode 100644 entry/src/ohosTest/ets/test/List.test.ets
+ create mode 100644 entry/src/ohosTest/ets/test/PurchaseFinalizationPolicy.test.ets
+ create mode 100644 entry/src/ohosTest/module.json5
+
+diff --git a/entry/src/main/ets/common/PurchaseFinalizationPolicy.ets b/entry/src/main/ets/common/PurchaseFinalizationPolicy.ets
+new file mode 100644
+index 0000000..60fb96f
+--- /dev/null
++++ b/entry/src/main/ets/common/PurchaseFinalizationPolicy.ets
+@@ -0,0 +1,68 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
++ */
++
++import { FinishStatus, PurchaseData, PurchaseOrderPayload } from './IapDataModel';
++
++export interface FinishPurchaseRequest {
++  productType: number;
++  purchaseToken: string;
++  purchaseOrderId: string;
++}
++
++export class PurchaseFinalizationPlan {
++  shouldFinish: boolean = false;
++  reason: string = '';
++  request: FinishPurchaseRequest = {
++    productType: 0,
++    purchaseToken: '',
++    purchaseOrderId: ''
++  };
++}
++
++export function planPurchaseFinalization(
++  purchaseData: string,
++  decodeJws: (jws: string) => string
++): PurchaseFinalizationPlan {
++  const plan = new PurchaseFinalizationPlan();
++  try {
++    const jwsPurchaseOrder = (JSON.parse(purchaseData) as PurchaseData).jwsPurchaseOrder;
++    if (!jwsPurchaseOrder) {
++      plan.reason = 'missing-jws-purchase-order';
++      return plan;
++    }
++
++    const purchaseOrderPayload =
++      JSON.parse(decodeJws(jwsPurchaseOrder)) as PurchaseOrderPayload;
++    if (purchaseOrderPayload.finishStatus === FinishStatus.FINISHED) {
++      plan.reason = 'already-finished';
++      return plan;
++    }
++    if (!purchaseOrderPayload.productType) {
++      plan.reason = 'missing-product-type';
++      return plan;
++    }
++
++    plan.shouldFinish = true;
++    plan.reason = 'finish-required';
++    plan.request = {
++      productType: Number(purchaseOrderPayload.productType),
++      purchaseToken: purchaseOrderPayload.purchaseToken,
++      purchaseOrderId: purchaseOrderPayload.purchaseOrderId
++    };
++    return plan;
++  } catch (e) {
++    plan.reason = 'invalid-purchase-data';
++    return plan;
++  }
++}
++
++export function finishPlannedPurchase(
++  plan: PurchaseFinalizationPlan,
++  finishPurchase: (request: FinishPurchaseRequest) => Promise<void>
++): Promise<void> {
++  if (!plan.shouldFinish) {
++    return Promise.resolve();
++  }
++  return finishPurchase(plan.request);
++}
+diff --git a/entry/src/main/ets/pages/ConsumablesPage.ets b/entry/src/main/ets/pages/ConsumablesPage.ets
+index 88627d0..6fdd140 100644
+--- a/entry/src/main/ets/pages/ConsumablesPage.ets
++++ b/entry/src/main/ets/pages/ConsumablesPage.ets
+@@ -8,7 +8,12 @@ import { common } from '@kit.AbilityKit';
+ import { promptAction } from '@kit.ArkUI';
+ import { JWSUtil } from '../common/JWSUtil';
+ import Logger from '../common/Logger';
+-import { FinishStatus, PurchaseData, PurchaseOrderPayload } from '../common/IapDataModel';
++import { PurchaseOrderPayload } from '../common/IapDataModel';
++import {
++  finishPlannedPurchase,
++  FinishPurchaseRequest,
++  planPurchaseFinalization
++} from '../common/PurchaseFinalizationPolicy';
+ 
+ const TAG: string = 'ConsumablesPage';
+ 
+@@ -85,26 +90,23 @@ struct ConsumablesPage {
+   }
+ 
+   dealPurchaseData(purchaseData: string) {
+-    try {
+-      // You are advised to send purchaseData to the app server for signature verification.
+-      const jwsPurchaseOrder = (JSON.parse(purchaseData) as PurchaseData).jwsPurchaseOrder;
+-      if (!jwsPurchaseOrder) {
+-        Logger.error(TAG, 'dealPurchaseData, jwsPurchaseOrder invalid');
+-        return;
+-      }
+-      // Decode jwsPurchaseOrder and perform signature verification.
+-      const purchaseOrderStr = JWSUtil.decodeJwsObj(jwsPurchaseOrder);
+-      const purchaseOrderPayload = JSON.parse(purchaseOrderStr) as PurchaseOrderPayload;
+-      // If the verification is successful, deliver the product.
+-      // ...
+-      // After the delivery is successful, send a finishPurchase request to IAP Kit to acknowledge the delivery
+-      // and complete the purchase.
+-      if (purchaseOrderPayload && purchaseOrderPayload.finishStatus !== FinishStatus.FINISHED) {
+-        this.finishPurchase(purchaseOrderPayload);
+-      }
+-    } catch (e) {
+-      Logger.error(TAG, 'dealPurchaseData json error');
++    // You are advised to send purchaseData to the app server for signature verification.
++    const plan = planPurchaseFinalization(
++      purchaseData,
++      (jwsPurchaseOrder: string): string => JWSUtil.decodeJwsObj(jwsPurchaseOrder)
++    );
++    if (!plan.shouldFinish) {
++      Logger.error(TAG, `dealPurchaseData skipped: ${plan.reason}`);
++      return;
+     }
++    finishPlannedPurchase(
++      plan,
++      (request: FinishPurchaseRequest): Promise<void> => iap.finishPurchase(this.context, request)
++    ).then(() => {
++      Logger.info(TAG, 'Succeeded in finishing purchase.');
++    }).catch((err: BusinessError) => {
++      Logger.error(TAG, `Failed to finish purchase. Code is ${err.code}, message is ${err.message}`);
++    });
+   }
+ 
+   finishPurchase(purchaseOrder: PurchaseOrderPayload) {
+diff --git a/entry/src/ohosTest/ets/test/Ability.test.ets b/entry/src/ohosTest/ets/test/Ability.test.ets
+new file mode 100644
+index 0000000..2729629
+--- /dev/null
++++ b/entry/src/ohosTest/ets/test/Ability.test.ets
+@@ -0,0 +1,5 @@
++import purchaseFinalizationPolicyTest from './PurchaseFinalizationPolicy.test';
++
++export default function abilityTest() {
++  purchaseFinalizationPolicyTest();
++}
+diff --git a/entry/src/ohosTest/ets/test/List.test.ets b/entry/src/ohosTest/ets/test/List.test.ets
+new file mode 100644
+index 0000000..e03f925
+--- /dev/null
++++ b/entry/src/ohosTest/ets/test/List.test.ets
+@@ -0,0 +1,5 @@
++import abilityTest from './Ability.test';
++
++export default function testsuite() {
++  abilityTest();
++}
+diff --git a/entry/src/ohosTest/ets/test/PurchaseFinalizationPolicy.test.ets b/entry/src/ohosTest/ets/test/PurchaseFinalizationPolicy.test.ets
+new file mode 100644
+index 0000000..b283029
+--- /dev/null
++++ b/entry/src/ohosTest/ets/test/PurchaseFinalizationPolicy.test.ets
+@@ -0,0 +1,97 @@
++import { describe, it, expect } from '@ohos/hypium';
++import {
++  finishPlannedPurchase,
++  FinishPurchaseRequest,
++  planPurchaseFinalization,
++  PurchaseFinalizationPlan
++} from '../../../main/ets/common/PurchaseFinalizationPolicy';
++
++function identityDecode(jws: string): string {
++  return jws;
++}
++
++function failingDecode(_jws: string): string {
++  throw new Error('decode failed');
++}
++
++function purchaseData(payload: string): string {
++  return JSON.stringify({
++    type: 0,
++    jwsPurchaseOrder: payload
++  });
++}
++
++export default function purchaseFinalizationPolicyTest() {
++  describe('PurchaseFinalizationPolicyTest', () => {
++    it('missingJwsDoesNotFinish', 0, () => {
++      const plan = planPurchaseFinalization(JSON.stringify({ type: 0 }), identityDecode);
++      expect(plan.shouldFinish).assertFalse();
++      expect(plan.reason).assertEqual('missing-jws-purchase-order');
++    })
++
++    it('malformedDataDoesNotFinish', 0, () => {
++      const plan = planPurchaseFinalization('{', identityDecode);
++      expect(plan.shouldFinish).assertFalse();
++      expect(plan.reason).assertEqual('invalid-purchase-data');
++    })
++
++    it('decodeFailureDoesNotFinish', 0, () => {
++      const plan = planPurchaseFinalization(purchaseData('invalid-jws'), failingDecode);
++      expect(plan.shouldFinish).assertFalse();
++      expect(plan.reason).assertEqual('invalid-purchase-data');
++    })
++
++    it('alreadyFinishedPurchaseDoesNotFinishAgain', 0, () => {
++      const plan = planPurchaseFinalization(purchaseData(JSON.stringify({
++        productId: 'p1',
++        productType: '0',
++        purchaseOrderId: 'order-1',
++        purchaseToken: 'token-1',
++        finishStatus: '1'
++      })), identityDecode);
++      expect(plan.shouldFinish).assertFalse();
++      expect(plan.reason).assertEqual('already-finished');
++    })
++
++    it('pendingPurchaseForwardsExactFinishFields', 0, () => {
++      const plan = planPurchaseFinalization(purchaseData(JSON.stringify({
++        productId: 'p1',
++        productType: '0',
++        purchaseOrderId: 'order-2',
++        purchaseToken: 'token-2',
++        finishStatus: '2'
++      })), identityDecode);
++      expect(plan.shouldFinish).assertTrue();
++      expect(plan.request.productType).assertEqual(0);
++      expect(plan.request.purchaseToken).assertEqual('token-2');
++      expect(plan.request.purchaseOrderId).assertEqual('order-2');
++    })
++
++    it('missingProductTypeBlocksFinish', 0, () => {
++      const plan = planPurchaseFinalization(purchaseData(JSON.stringify({
++        productId: 'p1',
++        productType: '',
++        purchaseOrderId: 'order-3',
++        purchaseToken: 'token-3',
++        finishStatus: '2'
++      })), identityDecode);
++      expect(plan.shouldFinish).assertFalse();
++      expect(plan.reason).assertEqual('missing-product-type');
++    })
++
++    it('finishRejectionRemainsObservable', 0, async () => {
++      const plan = new PurchaseFinalizationPlan();
++      plan.shouldFinish = true;
++      let rejected = false;
++      try {
++        await finishPlannedPurchase(
++          plan,
++          (request: FinishPurchaseRequest): Promise<void> => Promise.reject(new Error('finish failed'))
++        );
++      } catch (e) {
++        rejected = true;
++      }
++      expect(rejected).assertTrue();
++    })
++  })
++}
+diff --git a/entry/src/ohosTest/module.json5 b/entry/src/ohosTest/module.json5
+new file mode 100644
+index 0000000..6c11c6e
+--- /dev/null
++++ b/entry/src/ohosTest/module.json5
+@@ -0,0 +1,9 @@
++{
++  module: {
++    name: 'entry_test',
++    type: 'feature',
++    deviceTypes: ['phone'],
++    deliveryWithInstall: true,
++    installationFree: false
++  }
++}
+-- 
+2.34.1
+

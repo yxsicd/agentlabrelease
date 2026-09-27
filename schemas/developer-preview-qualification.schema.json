@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/developer-preview-qualification.schema.json",
+  "title": "AgentLab tagged developer preview qualification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "releaseTag", "tagGitSha", "releaseGitSha", "closure", "immutableAssets", "harmonyAcceptance", "taggedCleanInstall", "github", "qualificationBoundary", "automaticPromotion"],
+  "properties": {
+    "schema": {"const": "agentlab.developer_preview_qualification.v1"},
+    "status": {"const": "qualified-developer-preview-review-required"},
+    "releaseTag": {"type": "string", "minLength": 1},
+    "tagGitSha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "releaseGitSha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "closure": {"type": "object"},
+    "immutableAssets": {"type": "object"},
+    "harmonyAcceptance": {"type": "object"},
+    "taggedCleanInstall": {"type": "object"},
+    "github": {"type": "object"},
+    "qualificationBoundary": {"type": "object"},
+    "automaticPromotion": {"const": false}
+  }
+}

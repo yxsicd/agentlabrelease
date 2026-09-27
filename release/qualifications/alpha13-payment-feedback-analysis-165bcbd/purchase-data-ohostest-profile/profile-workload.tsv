@@ -1,0 +1,5 @@
+schema	agentlab.harmony_profile_workload.v1
+workload	purchase-data-ohostest-foreground-repeat-v3
+profile-samples	48
+start-app	7	EntryAbility	xxx.xxx.xxx
+repeat-ohostest	6	7	OpenHarmonyTestRunner

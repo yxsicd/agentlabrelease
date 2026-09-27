@@ -1,0 +1,138 @@
+name: Blind case independent review
+on:
+  workflow_dispatch:
+    inputs:
+      frozen_case_run_id:
+        description: Successful trusted-main frozen-case run containing the exact blind cut
+        required: true
+        type: string
+      expected_request_sha256:
+        description: Exact blind review request digest inspected by this reviewer
+        required: true
+        type: string
+      semantic_leakage:
+        description: Does participant-visible material avoid evaluator or repair leakage?
+        required: true
+        type: choice
+        options: [qualified, rejected, unknown]
+      contamination_risk:
+        description: Is there no known contamination for the declared participant boundary?
+        required: true
+        type: choice
+        options: [qualified, rejected, unknown]
+      specification_fairness:
+        description: Is the participant specification fair and sufficiently constrained?
+        required: true
+        type: choice
+        options: [qualified, rejected, unknown]
+      oracle_breadth:
+        description: Is Oracle and preservation coverage sufficient for this blind pilot?
+        required: true
+        type: choice
+        options: [qualified, rejected, unknown]
+      evidence_sha256:
+        description: SHA-256 of retained evidence inspected for this decision
+        required: true
+        type: string
+      rationale:
+        description: Independent rationale for all four verdicts
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  artifact-metadata: write
+  attestations: write
+  contents: read
+  id-token: write
+
+jobs:
+  review:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/blind-case-independent-review
+      REVIEW_WORKFLOW_PATH: .github/workflows/blind-case-independent-review.yml
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Recover the exact trusted-main blind cut and constructor identity
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.frozen_case_run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/source"
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" \
+            > "$AGENTLAB_ROOT/source-run.json"
+          python3 - <<'PY'
+          import json, os
+          root = os.environ["AGENTLAB_ROOT"]
+          value = json.load(open(root + "/source-run.json"))
+          assert value["repository"]["full_name"] == os.environ["GITHUB_REPOSITORY"]
+          assert value["path"] == ".github/workflows/multi-repo-case-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["head_branch"] == "main"
+          assert value["status"] == "completed" and value["conclusion"] == "success"
+          constructor = value["actor"]["login"]
+          assert constructor and constructor == value["triggering_actor"]["login"]
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("constructor=" + constructor + "\n")
+          PY
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-frozen-case --dir "$AGENTLAB_ROOT/source"
+          python3 scripts/build-blind-case-cut.py validate \
+            --cut "$AGENTLAB_ROOT/source/blind-cut"
+      - name: Freeze the exact review request
+        env:
+          CONSTRUCTOR: ${{ steps.source.outputs.constructor }}
+          EXPECTED_REQUEST_SHA256: ${{ inputs.expected_request_sha256 }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTOR" != "$CONSTRUCTOR"
+          python3 scripts/review-blind-case-cut.py prepare \
+            --cut "$AGENTLAB_ROOT/source/blind-cut" \
+            --constructor "$CONSTRUCTOR" \
+            --output "$AGENTLAB_ROOT/request.json"
+          printf '%s  %s\n' "$EXPECTED_REQUEST_SHA256" "$AGENTLAB_ROOT/request.json" \
+            | sha256sum --check --strict
+      - name: Bind the authenticated reviewer to all four verdicts
+        env:
+          EXPECTED_REQUEST_SHA256: ${{ inputs.expected_request_sha256 }}
+          SEMANTIC_LEAKAGE: ${{ inputs.semantic_leakage }}
+          CONTAMINATION_RISK: ${{ inputs.contamination_risk }}
+          SPECIFICATION_FAIRNESS: ${{ inputs.specification_fairness }}
+          ORACLE_BREADTH: ${{ inputs.oracle_breadth }}
+          EVIDENCE_SHA256: ${{ inputs.evidence_sha256 }}
+          REVIEW_RATIONALE: ${{ inputs.rationale }}
+        run: |
+          set -euo pipefail
+          python3 scripts/review-blind-case-cut.py decide \
+            --request "$AGENTLAB_ROOT/request.json" \
+            --expected-request-sha256 "$EXPECTED_REQUEST_SHA256" \
+            --reviewer "$GITHUB_ACTOR" \
+            --semantic-leakage "$SEMANTIC_LEAKAGE" \
+            --contamination-risk "$CONTAMINATION_RISK" \
+            --specification-fairness "$SPECIFICATION_FAIRNESS" \
+            --oracle-breadth "$ORACLE_BREADTH" \
+            --evidence-sha256 "$EVIDENCE_SHA256" \
+            --rationale "$REVIEW_RATIONALE" \
+            --output "$AGENTLAB_ROOT/decision.json"
+          sha256sum "$AGENTLAB_ROOT/request.json" "$AGENTLAB_ROOT/decision.json" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Sign the exact review decision with GitHub OIDC provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: ${{ env.AGENTLAB_ROOT }}/decision.json
+      - name: Preserve the attested review evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: blind-case-independent-review
+          if-no-files-found: error
+          include-hidden-files: true
+          path: |
+            ${{ env.AGENTLAB_ROOT }}/request.json
+            ${{ env.AGENTLAB_ROOT }}/decision.json
+            ${{ env.AGENTLAB_ROOT }}/source-run.json

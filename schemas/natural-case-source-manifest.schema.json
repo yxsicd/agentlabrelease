@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/natural-case-source-manifest.schema.json",
+  "title": "AgentLab natural case source manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "strategy",
+    "title",
+    "sourceSetSha256",
+    "sources",
+    "affectedFiles",
+    "evidence",
+    "origin",
+    "testContract",
+    "sourceVisibility",
+    "collectedAt",
+    "automaticPromotion"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.natural_case_source_manifest.v1"},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]{1,160}$"},
+    "strategy": {"enum": ["historical-repair", "operator-reported-failure"]},
+    "title": {"type": "string", "minLength": 1},
+    "sourceSetSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "sources": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "repository", "revision"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "repository": {"type": "string", "minLength": 1},
+          "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+        }
+      }
+    },
+    "moduleBindings": {"type": "object"},
+    "affectedFiles": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["repositoryId", "path", "dependencyDepth"],
+        "properties": {
+          "repositoryId": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1},
+          "dependencyDepth": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "role", "path", "sha256"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]{1,160}$"},
+          "role": {"enum": ["problem-statement", "repair-patch", "test-patch", "failure-report", "reproduction", "discussion", "runtime-log"]},
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "origin": {"type": "object"},
+    "testContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observedFailureCheckIds", "preservationCheckIds"],
+      "properties": {
+        "observedFailureCheckIds": {"$ref": "#/$defs/ids"},
+        "preservationCheckIds": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "sourceVisibility": {"enum": ["public", "internal", "private-held-out"]},
+    "collectedAt": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "automaticPromotion": {"const": false}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"strategy": {"const": "historical-repair"}}},
+      "then": {"properties": {"origin": {"$ref": "#/$defs/historicalOrigin"}}},
+      "else": {"properties": {"origin": {"$ref": "#/$defs/operatorOrigin"}}}
+    }
+  ],
+  "$defs": {
+    "historicalOrigin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["issueUrls", "repairs", "openedAt", "resolvedAt"],
+      "properties": {
+        "issueUrls": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "format": "uri", "pattern": "^https://"}
+        },
+        "repairs": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["repositoryId", "repairUrl", "fixRevision"],
+            "properties": {
+              "repositoryId": {"type": "string", "minLength": 1},
+              "repairUrl": {"type": "string", "format": "uri", "pattern": "^https://"},
+              "fixRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+            }
+          }
+        },
+        "openedAt": {"$ref": "#/$defs/timestamp"},
+        "resolvedAt": {"$ref": "#/$defs/timestamp"}
+      }
+    },
+    "operatorOrigin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["incidentId", "observedAt", "reporterAuthority"],
+      "properties": {
+        "incidentId": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]{1,160}$"},
+        "observedAt": {"$ref": "#/$defs/timestamp"},
+        "reporterAuthority": {"type": "string", "minLength": 1}
+      }
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]{1,160}$"}
+    }
+  }
+}

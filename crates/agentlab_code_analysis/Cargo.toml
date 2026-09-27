@@ -17,6 +17,102 @@ path = "src/harmony_materialize.rs"
 name = "agentlab-source-probe"
 path = "src/source_probe.rs"
 
+[[bin]]
+name = "agentlab-multi-repo-analysis"
+path = "src/multi_repo.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-runtime-plan"
+path = "src/purchase_data_runtime_plan.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-ohostest-proposal"
+path = "src/purchase_data_ohostest_proposal.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-ohostest-reference-qualification"
+path = "src/purchase_data_ohostest_reference_qualification.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-ohostest-candidate-qualification"
+path = "src/purchase_data_ohostest_candidate_qualification.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-ohostest-review-packet"
+path = "src/purchase_data_ohostest_review_packet.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-ohostest-review"
+path = "src/purchase_data_ohostest_review.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-ohostest-mutation-plan"
+path = "src/purchase_data_ohostest_mutation_plan.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-ohostest-mutation-qualification"
+path = "src/purchase_data_ohostest_mutation_qualification.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-runtime-oracle-bridge"
+path = "src/purchase_data_runtime_oracle_bridge.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-ohostest-profile-qualification"
+path = "src/purchase_data_ohostest_profile_qualification.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-ohostest-performance-detector-qualification"
+path = "src/purchase_data_ohostest_performance_detector_qualification.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-integrated-review-packet"
+path = "src/purchase_data_integrated_review_packet.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-integrated-review"
+path = "src/purchase_data_integrated_review.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-case-performance-plan"
+path = "src/purchase_data_case_performance_plan.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-case-performance-qualification"
+path = "src/purchase_data_case_performance_qualification.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-unseen-agent-cohort-contract"
+path = "src/purchase_data_unseen_agent_cohort_contract.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-unseen-agent-readiness"
+path = "src/purchase_data_unseen_agent_readiness.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-exact-patch-publication"
+path = "src/purchase_data_exact_patch_publication.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-published-revision-reexecution"
+path = "src/purchase_data_published_revision_reexecution.rs"
+
+[[bin]]
+name = "agentlab-purchase-data-trusted-case-freeze"
+path = "src/purchase_data_trusted_case_freeze.rs"
+
+[[bin]]
+name = "agentlab-participant-experiment-dispatch"
+path = "src/participant_experiment_dispatch.rs"
+
+[[bin]]
+name = "agentlab-analysis-tools-pack"
+path = "src/analysis_tools_pack.rs"
+
+[[bin]]
+name = "agentlab-component-introduce"
+path = "src/component_introduce.rs"
+
 [dependencies]
 tree-sitter = "=0.27.0"
 tree-sitter-language = "=0.1.8"

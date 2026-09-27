@@ -1,0 +1,127 @@
+name: Harmony device campaign import
+on:
+  workflow_dispatch:
+    inputs:
+      source_assessed_campaign_run_id:
+        description: Successful trusted-main static assessed-campaign workflow run
+        required: true
+        type: string
+      evidence_release_tag:
+        description: Release tag containing the completed hwlinux campaign bundle
+        required: true
+        type: string
+      evidence_asset_name:
+        description: Exact ZIP asset name produced by import-harmony-device-campaign.py
+        required: true
+        type: string
+      evidence_asset_sha256:
+        description: Exact lowercase SHA256 of the ZIP asset
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  artifact-metadata: write
+  attestations: write
+  contents: read
+  id-token: write
+
+concurrency:
+  group: harmony-device-campaign-import
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/harmony-device-campaign-import
+      SOURCE_RUN_ID: ${{ inputs.source_assessed_campaign_run_id }}
+      EVIDENCE_RELEASE_TAG: ${{ inputs.evidence_release_tag }}
+      EVIDENCE_ASSET_NAME: ${{ inputs.evidence_asset_name }}
+      EVIDENCE_ASSET_SHA256: ${{ inputs.evidence_asset_sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Recover the authoritative static campaign and exact device bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EVIDENCE_RELEASE_TAG" =~ ^[A-Za-z0-9._-]{1,100}$ ]]
+          [[ "$EVIDENCE_ASSET_NAME" =~ ^[A-Za-z0-9._-]{1,200}\.zip$ ]]
+          [[ "$EVIDENCE_ASSET_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          mkdir -p "$AGENTLAB_ROOT/static" "$AGENTLAB_ROOT/download"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" \
+            > "$AGENTLAB_ROOT/source-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/source-run.json"))
+          assert value["repository"]["full_name"] == os.environ["GITHUB_REPOSITORY"]
+          assert value["path"] == ".github/workflows/multi-repo-assessed-campaign.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["head_branch"] == "main"
+          assert value["status"] == "completed" and value["conclusion"] == "success"
+          PY
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-assessed-campaign --dir "$AGENTLAB_ROOT/static"
+          source_head_sha=$(python3 -c 'import json,os; print(json.load(open(os.environ["AGENTLAB_ROOT"] + "/source-run.json"))["head_sha"])')
+          gh attestation verify "$AGENTLAB_ROOT/static/participant-experiment-plan.json" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/multi-repo-assessed-campaign.yml" \
+            --source-ref refs/heads/main \
+            --source-digest "$source_head_sha" \
+            --deny-self-hosted-runners \
+            --format json > "$AGENTLAB_ROOT/static-plan-attestation-verification.json"
+          gh release download "$EVIDENCE_RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern "$EVIDENCE_ASSET_NAME" --dir "$AGENTLAB_ROOT/download"
+          printf '%s  %s\n' "$EVIDENCE_ASSET_SHA256" \
+            "$AGENTLAB_ROOT/download/$EVIDENCE_ASSET_NAME" | sha256sum -c -
+      - name: Reconstruct and qualify the imported device report
+        run: |
+          set -euo pipefail
+          python3 scripts/import-harmony-device-campaign.py verify \
+            --archive "$AGENTLAB_ROOT/download/$EVIDENCE_ASSET_NAME" \
+            --static-root "$AGENTLAB_ROOT/static" \
+            --source-run "$AGENTLAB_ROOT/source-run.json" \
+            --verification-revision "$GITHUB_SHA" \
+            --output "$AGENTLAB_ROOT/imported"
+          mkdir -p "$AGENTLAB_ROOT/output/source"
+          cp "$AGENTLAB_ROOT/imported/verified/case-discrimination-input.json" \
+            "$AGENTLAB_ROOT/output/case-discrimination-input.json"
+          cp "$AGENTLAB_ROOT/imported/verified/case-discrimination-report.json" \
+            "$AGENTLAB_ROOT/output/case-discrimination-report.json"
+          cp "$AGENTLAB_ROOT/imported/verified/assessment-feedback-candidates.json" \
+            "$AGENTLAB_ROOT/output/assessment-feedback-candidates.json"
+          cp "$AGENTLAB_ROOT/imported/verified/import-verification.json" \
+            "$AGENTLAB_ROOT/output/import-verification.json"
+          cp "$AGENTLAB_ROOT/static/participant-experiment-plan.json" \
+            "$AGENTLAB_ROOT/output/participant-experiment-plan.json"
+          cp "$AGENTLAB_ROOT/imported/bundle-manifest.json" \
+            "$AGENTLAB_ROOT/output/source/bundle-manifest.json"
+          cp "$AGENTLAB_ROOT/imported/campaign/summary.json" \
+            "$AGENTLAB_ROOT/output/source/device-campaign-summary.json"
+          cp "$AGENTLAB_ROOT/source-run.json" \
+            "$AGENTLAB_ROOT/output/source/static-campaign-run.json"
+          cp "$AGENTLAB_ROOT/static-plan-attestation-verification.json" \
+            "$AGENTLAB_ROOT/output/source/static-plan-attestation-verification.json"
+          cat "$AGENTLAB_ROOT/output/import-verification.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Sign the trusted reconstructed discrimination report
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: ${{ env.AGENTLAB_ROOT }}/output/case-discrimination-report.json
+      - name: Sign the device import verification receipt
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: ${{ env.AGENTLAB_ROOT }}/output/import-verification.json
+      - name: Re-attest the pre-outcome participant experiment plan
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: ${{ env.AGENTLAB_ROOT }}/output/participant-experiment-plan.json
+      - name: Preserve imported device campaign qualification
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: harmony-device-assessed-campaign
+          if-no-files-found: error
+          path: ${{ env.AGENTLAB_ROOT }}/output/

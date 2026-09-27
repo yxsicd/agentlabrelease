@@ -19,7 +19,7 @@ on:
         description: Explicit component_update.v1 descriptor URL; use instead of donor_release
         default: ""
       component:
-        description: 'session-sdk, control, pack:release, pack:tools, pack:harmony-cli, pack:harmony-build-kit, image:runtime'
+        description: 'session-sdk, control, pack:release, pack:tools, pack:analysis-tools, pack:harmony-cli, pack:harmony-build-kit, image:runtime'
         required: true
 permissions:
   contents: write

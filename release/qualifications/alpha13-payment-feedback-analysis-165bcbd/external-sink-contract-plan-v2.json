@@ -1,0 +1,148 @@
+{
+  "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "contracts": [
+    {
+      "authority": {
+        "files": [
+          {
+            "contentSha256": "1a98dd1c587b4d9fba5720a17a34e30703ee15f3294430e9c14e75ff65741757",
+            "exactSnippets": [
+              "import { HMSInAppPurchases } from \"@hmscore/ionic-native-hms-iap/ngx\";",
+              "constructor(private iap: HMSInAppPurchases, platform: Platform,) {"
+            ],
+            "gitBlobOid": "0d551406043aad6e854acc389acea199c5533eaa",
+            "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.ts"
+          },
+          {
+            "contentSha256": "bc24c190a52a742f20db61ddbd2e184fff3ccdf8d96c81af1d77c4d56033b2dd",
+            "exactSnippets": [
+              "export declare function consumeOwnedPurchase(consumeOwnedPurchaseRequest: ConsumeOwnedPurchaseReq): Promise<ConsumeOwnedPurchaseResult>;",
+              "export interface OwnedPurchasesResult {\n    signatureAlgorithm?: string;\n    continuationToken: string;\n    errMsg: string;\n    itemList: string[];\n    inAppPurchaseDataList: string[];",
+              "export interface ConsumeOwnedPurchaseReq extends BaseReq {\n    signatureAlgorithm?: string;\n    inAppPurchaseData: string;\n    developerChallenge: string;\n}"
+            ],
+            "gitBlobOid": "fc07fb9c10b276d63a157f1631fb99d4ab8a47b2",
+            "path": "cordova-plugin-hms-iap/types/HMSInAppPurchases.d.ts"
+          },
+          {
+            "contentSha256": "2f61917bffa5d48d8a6e3521b788e50bb73a49217ffb0fd4f3b0d07553207893",
+            "exactSnippets": [
+              "export function consumeOwnedPurchase(\n  consumeOwnedPurchaseRequest: ConsumeOwnedPurchaseReq\n): Promise<ConsumeOwnedPurchaseResult> {",
+              "return asyncExec(\"HMSInAppPurchases\", \"InAppPurchases\", [\n    \"consumeOwnedPurchase\",\n    consumeOwnedPurchaseRequest,\n  ]);"
+            ],
+            "gitBlobOid": "ca404faf2023271881c79ff7b53b668cc71f17ea",
+            "path": "cordova-plugin-hms-iap/src/www/HMSInAppPurchases.ts"
+          },
+          {
+            "contentSha256": "7cf5a8a8116f23c6b1030c7e22b337b1086143c4408302a82f3f159d36868e69",
+            "exactSnippets": [
+              "consumeOwnedPurchase(\n    consumeOwnedPurchaseReq: ConsumeOwnedPurchaseReq\n  ): Promise<ConsumeOwnedPurchaseResult> {"
+            ],
+            "gitBlobOid": "c77c37762b8a70e8168b9bcf79a6f02c577916a1",
+            "path": "cordova-plugin-hms-iap/ionic-native/index.ts"
+          }
+        ],
+        "kind": "git-blob-set",
+        "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+      },
+      "contractId": "cordova-consume-owned-purchase",
+      "receiverBinding": {
+        "property": "iap",
+        "typeExpression": "HMSInAppPurchases"
+      },
+      "repositoryId": "hms-cordova-iap",
+      "requestField": {
+        "field": "inAppPurchaseData",
+        "interface": "ConsumeOwnedPurchaseReq",
+        "typeExpression": "string"
+      },
+      "signature": {
+        "callable": "consumeOwnedPurchase",
+        "parameterName": "consumeOwnedPurchaseReq",
+        "parameterType": "ConsumeOwnedPurchaseReq",
+        "returnType": "Promise<ConsumeOwnedPurchaseResult>"
+      },
+      "sinkCallFactId": "ast-57808ee67f2e567c08f227d5",
+      "sourceType": {
+        "field": "inAppPurchaseDataList",
+        "interface": "OwnedPurchasesResult",
+        "typeExpression": "string[]"
+      },
+      "targetExpression": "this.iap.consumeOwnedPurchase"
+    },
+    {
+      "authority": {
+        "archiveFormat": "tar-zstd-long31",
+        "archiveSha256": "8fc2199afaea5055c6a3ff762b7b58a9475c5ff7b6c30285336014dc647927c2",
+        "assetId": "harmony-linux-x64-6.1.1.300",
+        "kind": "sdk-archive-member-set",
+        "members": [
+          {
+            "contentSha256": "180980ea572ce1e451d56b79e6fd74940c2ea5ca50de66914b56be323213328e",
+            "exactSnippets": [
+              "import iap from '@hms.core.iap';",
+              "export { iap, CashierComponent, cashierComponentManager };"
+            ],
+            "path": "./sdk/default/hms/ets/kits/@kit.IAPKit.d.ts"
+          },
+          {
+            "contentSha256": "7ec65708eef67218489fece0013307f84693e73487d368ba95398d93a1e42687",
+            "exactSnippets": [
+              "\"iap\": {\n      \"source\": \"@hms.core.iap.d.ts\",\n      \"bindings\": \"default\"\n    }"
+            ],
+            "path": "./sdk/default/hms/ets/build-tools/ets-loader/kit_configs/@kit.IAPKit.json"
+          },
+          {
+            "contentSha256": "f92bb3d7dc8ac9ae62e29db19aa078c249e6d84ac789aa1bdec8dfda5abffd24",
+            "exactSnippets": [
+              "interface FinishPurchaseParameter {",
+              "purchaseOrderId: string;",
+              "function finishPurchase(context: common.UIAbilityContext, parameter: FinishPurchaseParameter): Promise<void>;"
+            ],
+            "path": "./sdk/default/hms/ets/api/@hms.core.iap.d.ts"
+          }
+        ],
+        "releaseTag": "harmony-linux-x64-6.1.1.300",
+        "releaseUrl": "https://github.com/yxsicd/agentlabrelease/releases/tag/harmony-linux-x64-6.1.1.300"
+      },
+      "contractId": "harmony-finish-purchase",
+      "moduleBinding": {
+        "kitConfigMember": "./sdk/default/hms/ets/build-tools/ets-loader/kit_configs/@kit.IAPKit.json",
+        "kitDeclarationMember": "./sdk/default/hms/ets/kits/@kit.IAPKit.d.ts",
+        "sourceDeclaration": "@hms.core.iap.d.ts",
+        "sourceDeclarationMember": "./sdk/default/hms/ets/api/@hms.core.iap.d.ts",
+        "sourceModule": "@hms.core.iap",
+        "symbol": "iap"
+      },
+      "repositoryId": "harmony-iap-client",
+      "requestType": {
+        "fields": [
+          {
+            "field": "productType",
+            "typeExpression": "ProductType"
+          },
+          {
+            "field": "purchaseToken",
+            "typeExpression": "string"
+          },
+          {
+            "field": "purchaseOrderId",
+            "typeExpression": "string"
+          }
+        ],
+        "interface": "FinishPurchaseParameter"
+      },
+      "signature": {
+        "callable": "finishPurchase",
+        "contextType": "common.UIAbilityContext",
+        "parameterIndex": 1,
+        "parameterName": "parameter",
+        "parameterType": "FinishPurchaseParameter",
+        "returnType": "Promise<void>"
+      },
+      "sinkCallFactId": "ast-a284ab0b32730a73790fa6bc",
+      "targetExpression": "iap.finishPurchase"
+    }
+  ],
+  "schema": "agentlab.external_sink_contract_plan.v2",
+  "sourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b"
+}

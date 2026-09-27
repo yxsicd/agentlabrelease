@@ -1,0 +1,53 @@
+name: GitHub natural repair source collection
+on:
+  workflow_dispatch:
+    inputs:
+      source_spec_json:
+        description: Exact agentlab.github_natural_repair_spec.v1 JSON for public GitHub issues, merged PRs, pinned bases and declared tests
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/github-natural-repair
+      SOURCE_SPEC_JSON: ${{ inputs.source_spec_json }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Freeze the explicit public GitHub repair specification
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT"
+          python3 - <<'PY'
+          import os, pathlib
+          pathlib.Path(os.environ["AGENTLAB_ROOT"], "source-spec-input.json").write_text(
+              os.environ["SOURCE_SPEC_JSON"] + "\n", encoding="utf-8"
+          )
+          PY
+      - name: Collect and normalize exact issue, repair and test evidence
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 scripts/collect-github-natural-repair.py create \
+            --spec "$AGENTLAB_ROOT/source-spec-input.json" \
+            --output "$AGENTLAB_ROOT/source" \
+            --method-revision "$GITHUB_SHA"
+          python3 scripts/collect-github-natural-repair.py validate \
+            --root "$AGENTLAB_ROOT/source" \
+            --receipt "$AGENTLAB_ROOT/source/collection-receipt.json"
+          sha256sum "$AGENTLAB_ROOT/source/collection-receipt.json" >> "$GITHUB_STEP_SUMMARY"
+          sha256sum "$AGENTLAB_ROOT/source/difficulty_candidates.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve the exact non-qualified natural source record
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: github-natural-repair-source
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/source/

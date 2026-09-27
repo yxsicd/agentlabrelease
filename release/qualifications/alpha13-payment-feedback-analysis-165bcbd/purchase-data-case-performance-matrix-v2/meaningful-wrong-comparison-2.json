@@ -1,0 +1,56 @@
+{
+  "baselineRunId": "reference-run-2",
+  "baselineSampleCount": 48,
+  "baselineSourceIdentity": "artifact-sha256:043a96090d8565e4c8216363075946040ab0c35eae95db3f99850b4a81eb2822",
+  "baselineSummarySha256": "f801387d595dd926ae15786f5a9f49bb1051f187bd0c30df7e01261ec68c9699",
+  "candidateRunId": "meaningful-wrong-run-2",
+  "candidateSampleCount": 48,
+  "candidateSourceIdentity": "artifact-sha256:a2ca9b782c6f4411ee3d6b07bf680cf0f224402019808e64699a12c60d35e70b",
+  "candidateSummarySha256": "275562578aa5b5cf847273ade21b7e4d00ca3f65a685228ba711714953370572",
+  "comparable": true,
+  "decision": "performance-regression-candidate",
+  "environmentIdentity": "hwlinux:emulator-26.0.0.821:harmonyos-7.0.0-phone-x86:codex-phone-7",
+  "incomparabilityReasons": [],
+  "metrics": [
+    {
+      "absoluteIncrease": 2.957638888888889,
+      "baseline": 0.013194444444444444,
+      "candidate": 2.970833333333333,
+      "candidateToBaselineRatio": 225.1578947368421,
+      "guardrail": {
+        "maximumAbsoluteIncrease": 2.0,
+        "maximumRelativeIncrease": 0.2
+      },
+      "metric": "appCpuUsagePercent",
+      "statistic": "mean",
+      "status": "regressed"
+    },
+    {
+      "absoluteIncrease": -4219.0,
+      "baseline": 20719.0,
+      "candidate": 16500.0,
+      "candidateToBaselineRatio": 0.7963704812008302,
+      "guardrail": {
+        "maximumRelativeIncrease": 0.15
+      },
+      "metric": "appPssKiB",
+      "statistic": "mean",
+      "status": "passed"
+    }
+  ],
+  "performancePolicy": {
+    "id": "purchase-data-case-bound-cpu-pss-v1",
+    "sha256": "ae914ba0c30dd8aec098531497021d75a3fa1311e7c371290d43a0a4eccffb3e"
+  },
+  "policy": {
+    "absolutePowerThermalUsed": false,
+    "automaticPromotion": false,
+    "interpretation": "relative emulator regression signal only"
+  },
+  "profileWorkload": {
+    "id": "purchase-data-case-bound-ohostest-repeat-v1",
+    "sha256": "7812fa159f8c7ec8ea69f48987cca39b0f373280eb7af847c16ea4dfaf7d563f"
+  },
+  "schema": "agentlab.smartperf_comparison.v1",
+  "taskId": "purchase-data-finalization-ee2bc87594f1"
+}

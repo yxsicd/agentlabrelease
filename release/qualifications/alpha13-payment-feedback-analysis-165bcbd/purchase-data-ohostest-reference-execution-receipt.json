@@ -1,0 +1,51 @@
+{
+  "automaticPromotion": false,
+  "bundle": "xxx.xxx.xxx",
+  "caseId": "purchase-data-finalization-reference-v1",
+  "command": [
+    "/home/huawei/commandline-tools-26.0.0.821/sdk/default/openharmony/toolchains/hdc",
+    "-t",
+    "127.0.0.1:10100",
+    "shell",
+    "aa",
+    "test",
+    "-b",
+    "xxx.xxx.xxx",
+    "-m",
+    "entry_test",
+    "-s",
+    "unittest",
+    "OpenHarmonyTestRunner",
+    "-s",
+    "timeout",
+    "60000"
+  ],
+  "finishedAt": "2026-09-26T20:35:17.983673+00:00",
+  "framework": "instrument-test-ohosTest-hypium",
+  "hdc": {
+    "byteLength": 6430848,
+    "path": "/home/huawei/commandline-tools-26.0.0.821/sdk/default/openharmony/toolchains/hdc",
+    "sha256": "90c2554a44855a3c541c24bad5cffd46badb7eb7323c5464f6c0fb7160bdf5d0"
+  },
+  "logs": [
+    {"byteLength": 327, "path": "logs/01.json", "sha256": "3add90e42fdf64e2a20030fba01a452b001b937fee85f3f5dc08f6d47f57c15c"},
+    {"byteLength": 701, "path": "logs/02.json", "sha256": "9e5465974a61c1907aa988125735606b994ab92e6a7ff86de3c9cd610a518f2c"},
+    {"byteLength": 705, "path": "logs/03.json", "sha256": "8d2a9294719652723082c21502d7a2ef58ca4ae5a464e4442c1d30065bd1484d"},
+    {"byteLength": 3816, "path": "logs/04.json", "sha256": "ff7078345ffd45280cb96865ba4dcf81e7d7048cc6790649b6ca2ad11e44f4d4"}
+  ],
+  "module": "entry_test",
+  "packages": {
+    "app": {"byteLength": 447093, "path": "entry-default-unsigned.hap", "sha256": "dfd61c2e5a33249aed059192798c449f7ab3a3a44d69b900fdd508978cdda073"},
+    "test": {"byteLength": 1189685, "path": "entry-ohosTest-unsigned.hap", "sha256": "54f89a24825e191a4452264959148e8573c4236f29b15da63acbab6b5b6d58cc"}
+  },
+  "passed": true,
+  "projectTreeSha256": "5d3d9ae92b3f1525c3a9dfb609b569f7477c9c9ae032b0d981f861d2c11771b3",
+  "report": {"byteLength": 568, "path": "native-report.json", "sha256": "acf93da454f5b13afaef7d2e429dfe0d37c2cd8ac657dac4b27a8d2f33409751"},
+  "runner": "OpenHarmonyTestRunner",
+  "schema": "agentlab.harmony_standard_test_execution_receipt.v1",
+  "sourceSetSha256": "39348d2379f90584b29805179740efde203d59958f3c7a3cb29d213c2a5b448c",
+  "startedAt": "2026-09-26T20:35:15.921563+00:00",
+  "status": "passed",
+  "target": "127.0.0.1:10100",
+  "testClass": null
+}

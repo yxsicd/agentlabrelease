@@ -1,0 +1,162 @@
+name: Install exact analysis-tools component
+description: Resolve, verify and install one immutable analysis-tools composition without promotion
+inputs:
+  component_revision:
+    description: Exact 40-character source revision of the analysis-tools component
+    required: true
+  composition_lock_sha256:
+    description: Exact SHA-256 of the reference-only composition environment lock
+    required: true
+  github_token:
+    description: Token used only to read immutable release assets
+    required: true
+  repository:
+    description: GitHub owner/repository containing the immutable releases
+    required: true
+  root:
+    description: Absolute job-local installation and evidence root
+    required: true
+outputs:
+  runtime_path:
+    description: Absolute path to the frozen runtime identity receipt
+    value: ${{ steps.freeze.outputs.runtime_path }}
+  composition_tag:
+    description: Exact source-derived reference-only composition tag
+    value: ${{ steps.acquire.outputs.composition_tag }}
+runs:
+  using: composite
+  steps:
+    - name: Install composition archive support
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo apt-get update
+        sudo apt-get install --yes zstd
+    - name: Acquire and validate exact reference-only composition
+      id: acquire
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+        EXPECTED_COMPONENT_REVISION: ${{ inputs.component_revision }}
+        EXPECTED_LOCK_SHA256: ${{ inputs.composition_lock_sha256 }}
+        RELEASE_REPOSITORY: ${{ inputs.repository }}
+        INSTALL_ROOT: ${{ inputs.root }}
+      run: |
+        set -euo pipefail
+        [[ "$EXPECTED_COMPONENT_REVISION" =~ ^[0-9a-f]{40}$ ]]
+        [[ "$EXPECTED_LOCK_SHA256" =~ ^[0-9a-f]{64}$ ]]
+        [[ "$INSTALL_ROOT" == /* ]]
+        tag="candidate-analysis-tools-${EXPECTED_COMPONENT_REVISION:0:12}-linux-x64"
+        composition="$INSTALL_ROOT/analysis-composition"
+        mkdir -p "$composition"
+        gh release download "$tag" --repo "$RELEASE_REPOSITORY" \
+          --pattern environment-lock.json --pattern publication.json \
+          --dir "$composition"
+        python3 - "$composition" "$tag" "$EXPECTED_COMPONENT_REVISION" \
+          "$EXPECTED_LOCK_SHA256" <<'PY'
+        import hashlib, importlib.util, json, pathlib, sys
+        root = pathlib.Path(sys.argv[1])
+        tag, revision, expected_lock_sha = sys.argv[2:]
+        lock_bytes = (root / "environment-lock.json").read_bytes()
+        publication = json.loads((root / "publication.json").read_bytes())
+        lock = json.loads(lock_bytes)
+        assert hashlib.sha256(lock_bytes).hexdigest() == expected_lock_sha
+        assert publication["tag"] == tag
+        assert publication["status"] == "candidate"
+        assert publication["activated"] is False
+        assert publication["componentPayloadsUploaded"] is False
+        spec = importlib.util.spec_from_file_location(
+            "validator", pathlib.Path("scripts/validate-composition-release.py"))
+        validator = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(validator)
+        validator.validate(publication, lock, lock_bytes)
+        components = [row for row in lock["components"]
+                      if row.get("enabled", True) and row["slot"] == "analysis-tools"]
+        assert len(components) == 1
+        component = components[0]
+        assert component["version"] == revision[:12]
+        assert component["mountTarget"] == "/agentlab-analysis-tools"
+        assert lock["componentGraph"]["resolvedContracts"]["linux-x64"]["agentlab.analysis-tools"] == 1
+        (root / "admission.json").write_text(json.dumps({
+            "schema": "agentlab.analysis_tools_composition_admission.v1",
+            "compositionTag": tag,
+            "environmentLockSha256": expected_lock_sha,
+            "expectedComponentSourceRevision": revision,
+            "automaticPromotion": False,
+        }, indent=2, sort_keys=True) + "\n")
+        PY
+        echo "composition_tag=$tag" >> "$GITHUB_OUTPUT"
+    - name: Restore content-addressed component cache
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: ${{ inputs.root }}/component-cas
+        key: agentlab-analysis-component-${{ runner.os }}-${{ inputs.composition_lock_sha256 }}
+    - name: Install composition and freeze runtime identity
+      id: freeze
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        EXPECTED_COMPONENT_REVISION: ${{ inputs.component_revision }}
+        EXPECTED_LOCK_SHA256: ${{ inputs.composition_lock_sha256 }}
+        RELEASE_REPOSITORY: ${{ inputs.repository }}
+        INSTALL_ROOT: ${{ inputs.root }}
+        COMPOSITION_TAG: ${{ steps.acquire.outputs.composition_tag }}
+      run: |
+        set -euo pipefail
+        AGENTLAB_CI_ROOT="$INSTALL_ROOT/component-install" \
+        AGENTLAB_CAS_DIR="$INSTALL_ROOT/component-cas" \
+        AGENTLAB_COMPOSITION_DIR="$INSTALL_ROOT/analysis-composition" \
+        AGENTLAB_RELEASE_CHANNEL="$COMPOSITION_TAG" \
+        AGENTLAB_RELEASE_REPO="$RELEASE_REPOSITORY" \
+        AGENTLAB_INSTALL_ONLY=true \
+          scripts/ci-public-install-deploy-smoke.sh
+        output="$INSTALL_ROOT/analysis-component-runtime.json"
+        python3 - "$INSTALL_ROOT/analysis-composition/environment-lock.json" \
+          "$output" "$COMPOSITION_TAG" "$EXPECTED_COMPONENT_REVISION" \
+          "$EXPECTED_LOCK_SHA256" \
+          "$INSTALL_ROOT/component-install/analysis-tools-runtime-probe.json" <<'PY'
+        import hashlib, json, pathlib, subprocess, sys
+        lock_path, output_path = map(pathlib.Path, sys.argv[1:3])
+        tag, revision, lock_sha = sys.argv[3:6]
+        installed_path = pathlib.Path(sys.argv[6])
+        lock = json.loads(lock_path.read_bytes())
+        installed_bytes = installed_path.read_bytes()
+        installed = json.loads(installed_bytes)
+        components = [row for row in lock["components"]
+                      if row.get("enabled", True) and row["slot"] == "analysis-tools"]
+        images = [row for row in lock["images"] if row.get("enabled", True)]
+        assert len(components) == 1 and images
+        component, image = components[0], images[0]
+        assert revision.startswith(component["version"])
+        assert installed["schema"] == "agentlab.analysis_tools_installed_execution.v1"
+        assert installed["status"] == "passed"
+        assert installed["componentSourceRevision"] == revision
+        assert installed["componentVersion"] == component["version"]
+        assert installed["componentArchiveSha256"] == component["archiveSha256"]
+        assert installed["volume"] == component["volume"]
+        assert installed["mountTarget"] == component["mountTarget"]
+        assert installed["runtimeImageReference"] == image["reference"]
+        assert installed["automaticPromotion"] is False
+        inspected = json.loads(subprocess.run(
+            ["docker", "image", "inspect", image["reference"]],
+            check=True, capture_output=True, text=True).stdout)
+        assert len(inspected) == 1 and inspected[0]["Id"] == image["imageId"]
+        subprocess.run(["docker", "volume", "inspect", component["volume"]], check=True,
+                       capture_output=True, text=True)
+        output_path.write_text(json.dumps({
+            "schema": "agentlab.analysis_tools_component_runtime.v1",
+            "compositionTag": tag,
+            "environmentLockSha256": lock_sha,
+            "aggregateSourceRevision": lock["sourceRevision"],
+            "expectedComponentSourceRevision": revision,
+            "componentVersion": component["version"],
+            "componentArchiveSha256": component["archiveSha256"],
+            "componentMountTarget": component["mountTarget"],
+            "componentVolume": component["volume"],
+            "runtimeImageReference": image["reference"],
+            "runtimeImageId": image["imageId"],
+            "installedRuntimeProbeSha256": hashlib.sha256(installed_bytes).hexdigest(),
+            "automaticPromotion": False,
+        }, indent=2, sort_keys=True) + "\n")
+        PY
+        echo "runtime_path=$output" >> "$GITHUB_OUTPUT"

@@ -1,0 +1,188 @@
+name: Freeze purchase-data published-revision case
+on:
+  workflow_dispatch:
+    inputs:
+      contract_path:
+        description: Frozen unseen-agent cohort contract below release/qualifications
+        required: true
+        default: release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-unseen-agent-cohort-contract.json
+        type: string
+      reexecution_run_id:
+        description: Successful trusted-main published-revision re-execution run
+        required: true
+        type: string
+      case_review_run_id:
+        description: Successful trusted-main multi-repository case-review run over the same published source set
+        required: true
+        type: string
+      analysis_component_revision:
+        description: Exact source revision of the published immutable analysis-tools component
+        required: true
+        type: string
+      analysis_composition_lock_sha256:
+        description: Exact SHA-256 of the reference-only analysis-tools composition environment lock
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  attestations: write
+  contents: read
+  id-token: write
+
+concurrency:
+  group: purchase-data-trusted-case-freeze
+  cancel-in-progress: false
+
+jobs:
+  freeze:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/purchase-data-trusted-case-freeze
+      CONTRACT_RELATIVE_PATH: ${{ inputs.contract_path }}
+      REEXECUTION_RUN_ID: ${{ inputs.reexecution_run_id }}
+      CASE_REVIEW_RUN_ID: ${{ inputs.case_review_run_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - name: Install exact immutable analysis-tools component
+        uses: ./.github/actions/install-analysis-tools-component
+        with:
+          component_revision: ${{ inputs.analysis_component_revision }}
+          composition_lock_sha256: ${{ inputs.analysis_composition_lock_sha256 }}
+          github_token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          root: ${{ runner.temp }}/agentlab-analysis-runtime
+      - name: Resolve frozen contract
+        id: contract
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT"
+          python3 - <<'PY'
+          import os, pathlib, re
+          root = pathlib.Path.cwd().resolve()
+          qualifications = (root / "release" / "qualifications").resolve()
+          relative = os.environ["CONTRACT_RELATIVE_PATH"]
+          assert re.fullmatch(r"release/qualifications/[A-Za-z0-9._/-]+\.json", relative), relative
+          path = (root / relative).resolve()
+          path.relative_to(qualifications)
+          assert path.is_file() and not path.is_symlink(), path
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"path={path}\n")
+          PY
+      - name: Recover and authenticate published-revision re-execution
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$REEXECUTION_RUN_ID" =~ ^[0-9]+$ ]]
+          mkdir -p "$AGENTLAB_ROOT/reexecution"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$REEXECUTION_RUN_ID" \
+            > "$AGENTLAB_ROOT/reexecution-source-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/reexecution-source-run.json"))
+          assert value["repository"]["full_name"] == os.environ["GITHUB_REPOSITORY"]
+          assert value["path"] == ".github/workflows/purchase-data-published-revision-reexecution.yml"
+          assert value["event"] == "workflow_dispatch" and value["head_branch"] == "main"
+          assert value["status"] == "completed" and value["conclusion"] == "success"
+          with open(os.environ["AGENTLAB_ROOT"] + "/reexecution-head-sha", "w") as output:
+              output.write(value["head_sha"] + "\n")
+          PY
+          read -r reexecution_head_sha < "$AGENTLAB_ROOT/reexecution-head-sha"
+          git merge-base --is-ancestor "$reexecution_head_sha" HEAD
+          gh run download "$REEXECUTION_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name purchase-data-published-revision-reexecution \
+            --dir "$AGENTLAB_ROOT/reexecution"
+          test -f "$AGENTLAB_ROOT/reexecution/reexecution.json"
+          test ! -L "$AGENTLAB_ROOT/reexecution/reexecution.json"
+          gh attestation verify "$AGENTLAB_ROOT/reexecution/reexecution.json" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/purchase-data-published-revision-reexecution.yml" \
+            --source-ref refs/heads/main \
+            --source-digest "$reexecution_head_sha" \
+            --deny-self-hosted-runners \
+            --format json > "$AGENTLAB_ROOT/reexecution-attestation-verification.json"
+      - name: Recover exact trusted-main frozen case artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$CASE_REVIEW_RUN_ID" =~ ^[0-9]+$ ]]
+          mkdir -p "$AGENTLAB_ROOT/case-review"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CASE_REVIEW_RUN_ID" \
+            > "$AGENTLAB_ROOT/case-review-source-run.json"
+          python3 - <<'PY'
+          import json, os
+          value = json.load(open(os.environ["AGENTLAB_ROOT"] + "/case-review-source-run.json"))
+          assert value["repository"]["full_name"] == os.environ["GITHUB_REPOSITORY"]
+          assert value["path"] == ".github/workflows/multi-repo-case-review.yml"
+          assert value["event"] == "workflow_dispatch" and value["head_branch"] == "main"
+          assert value["status"] == "completed" and value["conclusion"] == "success"
+          with open(os.environ["AGENTLAB_ROOT"] + "/case-review-head-sha", "w") as output:
+              output.write(value["head_sha"] + "\n")
+          PY
+          read -r case_review_head_sha < "$AGENTLAB_ROOT/case-review-head-sha"
+          git merge-base --is-ancestor "$case_review_head_sha" HEAD
+          gh run download "$CASE_REVIEW_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-frozen-case --dir "$AGENTLAB_ROOT/case-review"
+          test -f "$AGENTLAB_ROOT/case-review/evaluation-case.json"
+          test -f "$AGENTLAB_ROOT/case-review/blind-cut/cut-receipt.json"
+          test ! -L "$AGENTLAB_ROOT/case-review/evaluation-case.json"
+          test ! -L "$AGENTLAB_ROOT/case-review/blind-cut/cut-receipt.json"
+      - name: Compile trusted case-freeze receipt through the installed Rust component
+        env:
+          CONTRACT_PATH: ${{ steps.contract.outputs.path }}
+        run: |
+          set -euo pipefail
+          runtime_path="$RUNNER_TEMP/agentlab-analysis-runtime/analysis-component-runtime.json"
+          readarray -t runtime < <(python3 - "$runtime_path" <<'PY'
+          import json, sys
+          value = json.load(open(sys.argv[1]))
+          for field in ("runtimeImageReference", "componentVolume", "componentMountTarget"):
+              print(value[field])
+          PY
+          )
+          mkdir -p "$AGENTLAB_ROOT/analysis-execution"
+          docker run --rm --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges --pids-limit 128 \
+            --user "$(id -u):$(id -g)" \
+            --tmpfs /tmp:rw,nosuid,nodev,noexec,size=67108864 \
+            --mount "type=volume,src=${runtime[1]},dst=${runtime[2]},readonly" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=$GITHUB_WORKSPACE,readonly" \
+            --mount "type=bind,src=$AGENTLAB_ROOT,dst=$AGENTLAB_ROOT,readonly" \
+            --mount "type=bind,src=$AGENTLAB_ROOT/analysis-execution,dst=/agentlab-execution" \
+            --workdir "$GITHUB_WORKSPACE" \
+            --entrypoint "${runtime[2]}/payload/bin/agentlab-analysis-tools-pack" \
+            "${runtime[0]}" \
+              --execute agentlab-purchase-data-trusted-case-freeze \
+              --receipt /agentlab-execution/case-freeze-tool.json -- \
+              --contract "$CONTRACT_PATH" \
+              --reexecution "$AGENTLAB_ROOT/reexecution/reexecution.json" \
+              --reexecution-source-run "$AGENTLAB_ROOT/reexecution-source-run.json" \
+              --reexecution-attestation-verification "$AGENTLAB_ROOT/reexecution-attestation-verification.json" \
+              --case-review-source-run "$AGENTLAB_ROOT/case-review-source-run.json" \
+              --case-review-root "$AGENTLAB_ROOT/case-review" \
+              --workflow-repository "$GITHUB_REPOSITORY" \
+              --workflow-source-revision "$GITHUB_SHA" \
+              --workflow-run-id "$GITHUB_RUN_ID" \
+              --workflow-run-attempt "$GITHUB_RUN_ATTEMPT" \
+              --output /agentlab-execution/case-freeze.json
+          cp "$AGENTLAB_ROOT/analysis-execution/case-freeze.json" "$AGENTLAB_ROOT/case-freeze.json"
+          sha256sum "$AGENTLAB_ROOT/case-freeze.json" \
+            "$AGENTLAB_ROOT/analysis-execution/case-freeze-tool.json" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Attest the exact trusted case-freeze receipt
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: ${{ env.AGENTLAB_ROOT }}/case-freeze.json
+      - name: Preserve trusted case-freeze evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: purchase-data-trusted-case-freeze
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/

@@ -31,9 +31,12 @@ def replacement_donor(base, manifest, component, origin=None):
         raise ValueError('component update descriptor does not match selected role')
     pub, lock = copy.deepcopy(base)
     value = copy.deepcopy(manifest['value'])
+    declared_assets = copy.deepcopy(manifest['assets'])
     if origin:
         for field in ('artifact','descriptor','templateInventory'):
             if field in value: value[field] = urllib.parse.urljoin(origin,value[field])
+        for asset in declared_assets:
+            asset['url'] = urllib.parse.urljoin(origin, asset['url'])
     if component == 'session-sdk':
         pub['sessionSdk'] = value
     elif component == 'control':
@@ -55,7 +58,7 @@ def replacement_donor(base, manifest, component, origin=None):
         if component=='pack:release':
             pub['sourceRevision'] = lock['sourceRevision'] = manifest['sourceRevision']
     assets = {a['url']:a for a in pub['assets']}
-    assets.update({a['url']:copy.deepcopy(a) for a in manifest['assets']})
+    assets.update({a['url']:a for a in declared_assets})
     pub['assets'] = list(assets.values())
     return pub,lock
 

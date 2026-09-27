@@ -1,0 +1,194 @@
+{
+  "allBoundedPathsEstablished": true,
+  "allowsCaseContract": false,
+  "automaticPromotion": false,
+  "behaviorOracleVerified": false,
+  "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "coverage": "Plan-bounded syntactic dependencies, exact local argument-to-parameter mappings, and exact Git-blob template bridges only; no type, alias, call-target, reachability, dominance, dataflow, behavioral, or semantic resolution.",
+  "flowCount": 2,
+  "flows": [
+    {
+      "edgeCount": 7,
+      "edges": [
+        {
+          "evidence": {
+            "argumentIndex": 0,
+            "callFactId": "ast-2f348f73ecb3ba11e227f1c8",
+            "callableFactId": "ast-3ca52252c9decdb5bdfa3fd4",
+            "parameterIndex": 0
+          },
+          "from": "ConsumablesPage::buy::result.purchaseData",
+          "index": 0,
+          "kind": "call-argument-to-parameter",
+          "to": "ConsumablesPage::dealPurchaseData::purchaseData"
+        },
+        {
+          "evidence": {
+            "factId": "ast-93d43d7e7b6e33061757cb2e",
+            "initializerExpression": "(JSON.parse(purchaseData) as PurchaseData).jwsPurchaseOrder"
+          },
+          "from": "ConsumablesPage::dealPurchaseData::purchaseData",
+          "index": 1,
+          "kind": "binding-dependency",
+          "to": "ConsumablesPage::dealPurchaseData::jwsPurchaseOrder"
+        },
+        {
+          "evidence": {
+            "factId": "ast-ad5871690a57646d2f0b356e",
+            "initializerExpression": "JWSUtil.decodeJwsObj(jwsPurchaseOrder)"
+          },
+          "from": "ConsumablesPage::dealPurchaseData::jwsPurchaseOrder",
+          "index": 2,
+          "kind": "binding-dependency",
+          "to": "ConsumablesPage::dealPurchaseData::purchaseOrderStr"
+        },
+        {
+          "evidence": {
+            "factId": "ast-38961a5bb5e745d3c07f6066",
+            "initializerExpression": "JSON.parse(purchaseOrderStr) as PurchaseOrderPayload"
+          },
+          "from": "ConsumablesPage::dealPurchaseData::purchaseOrderStr",
+          "index": 3,
+          "kind": "binding-dependency",
+          "to": "ConsumablesPage::dealPurchaseData::purchaseOrderPayload"
+        },
+        {
+          "evidence": {
+            "argumentIndex": 0,
+            "callFactId": "ast-5cfca55447fff84520a83a40",
+            "callableFactId": "ast-68a8a24ab3e68092d86836c2",
+            "parameterIndex": 0
+          },
+          "from": "ConsumablesPage::dealPurchaseData::purchaseOrderPayload",
+          "index": 4,
+          "kind": "call-argument-to-parameter",
+          "to": "ConsumablesPage::finishPurchase::purchaseOrder"
+        },
+        {
+          "evidence": {
+            "factId": "ast-a3f005d63699fbfa8ec33a15",
+            "initializerExpression": "{\n      productType: Number(purchaseOrder.productType),\n      purchaseToken: purchaseOrder.purchaseToken,\n      purchaseOrderId: purchaseOrder.purchaseOrderId\n    }"
+          },
+          "from": "ConsumablesPage::finishPurchase::purchaseOrder",
+          "index": 5,
+          "kind": "binding-dependency",
+          "to": "ConsumablesPage::finishPurchase::finishPurchaseParam"
+        },
+        {
+          "evidence": {
+            "argumentIndex": 1,
+            "callFactId": "ast-a284ab0b32730a73790fa6bc",
+            "objectEntryFactId": null
+          },
+          "from": "ConsumablesPage::finishPurchase::finishPurchaseParam",
+          "index": 6,
+          "kind": "call-argument-to-sink",
+          "to": "ConsumablesPage::finishPurchase::sink:iap.finishPurchase[1]"
+        }
+      ],
+      "flowId": "harmony-consumable-purchase-data-to-finish",
+      "pathEstablished": true,
+      "repositoryId": "harmony-iap-client",
+      "sinkNode": "ConsumablesPage::finishPurchase::sink:iap.finishPurchase[1]",
+      "sourceNode": "ConsumablesPage::buy::result.purchaseData"
+    },
+    {
+      "edgeCount": 4,
+      "edges": [
+        {
+          "evidence": {
+            "argumentIndex": 1,
+            "callFactId": "ast-f364faa14fe09a67a1d551ab",
+            "callableFactId": "ast-377c564300cbf4a32df9a8a2",
+            "parameterIndex": 1
+          },
+          "from": "HomePage::obtainOwnedPurchasesFromType::message.inAppPurchaseDataList[ind]",
+          "index": 0,
+          "kind": "call-argument-to-parameter",
+          "to": "HomePage::createPurchasedProductOnList::purchaseData"
+        },
+        {
+          "evidence": {
+            "factId": "ast-6f8ae557023209f612519f6b"
+          },
+          "from": "HomePage::createPurchasedProductOnList::purchaseData",
+          "index": 1,
+          "kind": "assignment-dependency",
+          "to": "HomePage::createPurchasedProductOnList::product.purchaseData"
+        },
+        {
+          "evidence": {
+            "bridge": {
+              "argumentIndex": 1,
+              "contentSha256": "3f12439f5538b9ded3ffcfb7f0ee34e9b0e6cd37e508f031bbab6fb4140040c8",
+              "exactExpression": "consumeOwnedPurchase(product, product.purchaseData, 'consumable')",
+              "gitBlobOid": "e154947d259c1114717572d66f2d56289b36b3f9",
+              "occurrences": 2,
+              "parameterIndex": 1,
+              "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.html",
+              "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+            },
+            "callableFactId": "ast-67a6cdf22ef18b8f786be961"
+          },
+          "from": "HomePage::createPurchasedProductOnList::product.purchaseData",
+          "index": 2,
+          "kind": "template-event-bridge",
+          "to": "HomePage::consumeOwnedPurchase::purchaseData"
+        },
+        {
+          "evidence": {
+            "argumentIndex": 0,
+            "callFactId": "ast-57808ee67f2e567c08f227d5",
+            "objectEntryFactId": "ast-97f3905c745594f40fbeaadc"
+          },
+          "from": "HomePage::consumeOwnedPurchase::purchaseData",
+          "index": 3,
+          "kind": "call-argument-to-sink",
+          "to": "HomePage::consumeOwnedPurchase::sink:this.iap.consumeOwnedPurchase[0]"
+        }
+      ],
+      "flowId": "cordova-owned-purchase-data-to-consume",
+      "pathEstablished": true,
+      "repositoryId": "hms-cordova-iap",
+      "sinkNode": "HomePage::consumeOwnedPurchase::sink:this.iap.consumeOwnedPurchase[0]",
+      "sourceNode": "HomePage::obtainOwnedPurchasesFromType::message.inAppPurchaseDataList[ind]"
+    }
+  ],
+  "interpretation": "The exact revisions contain reviewable syntactic paths from purchase-data observations to purchase completion or consumption calls. The paths are Oracle hypotheses, not evidence of a defect, correct repair, or cross-repository behavioral equivalence.",
+  "planSha256": "20474b8e485abfafdceb5d904ae49ef3432c3e27901cc10240991a9b424a048b",
+  "repositories": [
+    {
+      "analysisSha256": "89e4871911462718fcf32900a25bf7218eeaff4da9860c3ace8bd7b36dd363c7",
+      "programFactsSha256": "dfc4e42173aff29b6aa0769734ffb3a8739325adedfef20fabc0fa7d85489164",
+      "repositoryId": "harmony-iap-client",
+      "rowCount": 1642,
+      "sourceRevision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3"
+    },
+    {
+      "analysisSha256": "6d0af40ebf521fe8e9f80f375bba78920f318861e344e68402dc2471ec02f820",
+      "programFactsSha256": "2ce76f800fcf691eac955af63f114af2db4250bb9dfe2e20b1e18ea4ed29307a",
+      "repositoryId": "hms-cordova-iap",
+      "rowCount": 67576,
+      "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+    }
+  ],
+  "repositoryCount": 2,
+  "reviewPacketSha256": "7cb34126fb17430ab973ff048b3bfe34d282e73ef86b9afa05cfe57a884ac008",
+  "schema": "agentlab.bounded_expression_flow_proposal.v1",
+  "semanticAlignmentVerified": false,
+  "sourceBridges": [
+    {
+      "argumentIndex": 1,
+      "contentSha256": "3f12439f5538b9ded3ffcfb7f0ee34e9b0e6cd37e508f031bbab6fb4140040c8",
+      "exactExpression": "consumeOwnedPurchase(product, product.purchaseData, 'consumable')",
+      "gitBlobOid": "e154947d259c1114717572d66f2d56289b36b3f9",
+      "occurrences": 2,
+      "parameterIndex": 1,
+      "path": "cordova-plugin-hms-iap/example/ionic/src/app/home/home.page.html",
+      "repositoryId": "hms-cordova-iap",
+      "sourceRevision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+    }
+  ],
+  "sourceSetSha256": "0b72a6d7c985f68b4e00d4dec6848e6cf5b25d34a903d7d9c8b365acc214ad1b",
+  "status": "bounded-syntactic-flow-proposal-review-required"
+}

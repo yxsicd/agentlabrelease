@@ -1,0 +1,49 @@
+{
+  "assessment": {
+    "attemptCount": 2,
+    "deviceAttemptCount": 2,
+    "discriminationScore": 1.0,
+    "eligibleCaseIds": [
+      "harmony-assessed-device-discrimination"
+    ],
+    "feedbackCandidateCount": 1,
+    "strongOutcome": true,
+    "strongSmartPerfCollected": true,
+    "weakFailureClass": "oracle",
+    "weakOutcome": false,
+    "weakSmartPerfExpectedNotRunAfterOracleFailure": true
+  },
+  "automaticPromotion": false,
+  "campaignId": "hwlinux-portable-real-2be1911",
+  "implementationRevision": "2be191108653a511d42721c4e4d40f8c891521ce",
+  "inputs": {
+    "handoffSha256": "3591ed5854591bd789bc3149d057eaf723714d5a87a7e9232264eac3f8326139",
+    "hostProfileSha256": "e0a086655f71657d249bf0be80e991bb17eaf0b2ad225c832252c3e09005b249",
+    "planSha256": "c28ddf4716a347ad5d8372aeba6226b3bef14383db243fc1331efd79c2ff76be"
+  },
+  "nextGate": "maintainer-adjudication-and-new-analysis-cut",
+  "outputs": {
+    "assessmentFeedbackSha256": "6c13d1df13495bbaa19e4b328a80ea3e5b43c220371658fe11f0417c7713d431",
+    "discriminationReportSha256": "559151dcf423f0f50f4372a381081a10d18d1a731a3bb41d4043e4388263989d",
+    "evidenceByteLength": 1147299,
+    "evidenceFileCount": 202,
+    "evidenceTreeSha256": "596297aa1b0b9e52349efd40c6289469f6891a8b321bd419f02f6bad9ef64caf",
+    "summarySha256": "68da86d2aaea9a15c10a394d3c403f3b9ce760bd16c5125755712e0f0d2c2432"
+  },
+  "recovery": {
+    "finalStatus": "assessed-review-required",
+    "initialFailure": "kvm-permission-unavailable-to-long-lived-agentweb-process",
+    "remediation": "execute-as-huawei-with-primary-group-kvm"
+  },
+  "routeEvidence": {
+    "idempotentReplayOperationId": "exec-0000000000000150",
+    "initialOperationId": "exec-0000000000000149",
+    "resumedOperationId": "exec-000000000000014e",
+    "routeDecision": "peer_direct",
+    "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a"
+  },
+  "schema": "agentlab.harmony_portable_handoff_qualification.v1",
+  "sourceMethodRevision": "b6de366b61674c1b58a686e4ffa5187c4d011414",
+  "sourceSetSha256": "a18237a4e8f541b423cd9283743ca1da5f18efbf54250403a782bfd114976b14",
+  "status": "assessed-review-required"
+}

@@ -1,0 +1,302 @@
+{
+  "apiContract": {
+    "callTarget": "webview.WebviewController.initializeWebEngine",
+    "exportedSymbol": "webview",
+    "specifier": "@kit.ArkWeb"
+  },
+  "automaticPromotion": false,
+  "candidateId": "difficulty-9884f55b9479b7df35e91fe6",
+  "contextPaths": [
+    {
+      "byteLength": 1704,
+      "gitBlobOid": "095c8f0dcd2249fab091a1eb756a21ec1ccd951f",
+      "path": "ArkWeb/ArkWebSchemeHandler/entry/src/main/ets/entryability/EntryAbility.ets",
+      "reason": "Pinned same-API reference call in EntryAbility.onCreate before scheme-handler configuration.",
+      "repositoryId": "guide-snippets",
+      "sha256": "88e894430f31b18ac9a9caad0241d0b7f9b4b169053eb49ebd50b5892a758cbc",
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525"
+    },
+    {
+      "byteLength": 2675,
+      "gitBlobOid": "8c742ec057a357350a85d90cb2b31a2551a16671",
+      "path": "ArkWeb/ManageWebPageLoadBrowse/AcceleratePageAccess/entry1/src/main/ets/entry1ability/Entry1Ability.ets",
+      "reason": "Pinned same-API reference call in Entry1Ability.onCreate before prepareForPageLoad.",
+      "repositoryId": "guide-snippets",
+      "sha256": "dac7a5f1ce975606bb9aa40076a8f7d9bb2d711529fbcdb29e786ff0b8fe17ea",
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525"
+    },
+    {
+      "byteLength": 1797,
+      "gitBlobOid": "8ddc53ccb115af8a04b0e6818d575dcfdf1f6769",
+      "path": "ArkWeb/ManageWebPageLoadBrowse/NetReqInterceptCacheWinOps/entry/src/main/ets/entryability/EntryAbility.ets",
+      "reason": "Pinned same-API reference call in EntryAbility.onCreate before scheme-handler setup.",
+      "repositoryId": "guide-snippets",
+      "sha256": "a4c4c9341c687ec59e69c70e38383ebe5aee2f78d18ded32cf0a6bbd0471e89e",
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525"
+    },
+    {
+      "byteLength": 2464,
+      "gitBlobOid": "1cef81f22c9dd1ba655a48299035cc69df5260c9",
+      "path": "ArkWeb/ManageWebPageLoadBrowse/NetReqInterceptCacheWinOps/entry2/src/main/ets/entry2ability/Entry2Ability.ets",
+      "reason": "Pinned same-API reference call in Entry2Ability.onCreate after cache feature selection.",
+      "repositoryId": "guide-snippets",
+      "sha256": "6290592025c3f16a83c9f2c66929a0e19a2e20129f158b66746c0b992e2a98b5",
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525"
+    }
+  ],
+  "editablePaths": [
+    {
+      "byteLength": 18997,
+      "gitBlobOid": "9fb6e30aeb59e433590c644dfd93c06de63ac11c",
+      "path": "common/src/main/ets/util/WebUtil.ets",
+      "reason": "Localized late initializeWebEngine call and the UIContext-dependent initialization that must remain after window creation.",
+      "repositoryId": "code-workshop",
+      "sha256": "01a7bdaa95402453866aaaf25e92cd27ebae8059d5ebe5f5e043a77b30860d11",
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git@7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+    },
+    {
+      "byteLength": 5087,
+      "gitBlobOid": "f0a6e7c157fb6f98b26d0eebaa52db38caca4e10",
+      "path": "features/abilitycommon/src/main/ets/abilityhelper/BaseAbilityHelper.ets",
+      "reason": "Owning application onCreate lifecycle and the later loadContent callback that currently invokes WebUtil.initialize.",
+      "repositoryId": "code-workshop",
+      "sha256": "4c905a80f7d1be4e0246cb9d44ad0ce1dad0eb222032bf55614f0dd3197000b8",
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git@7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+    },
+    {
+      "byteLength": 1604,
+      "gitBlobOid": "a0bda3dcdce61311ac0f475724fe7a8d6d4055fd",
+      "path": "ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/pages/UserAgent_four.ets",
+      "reason": "Localized component aboutToAppear initialization and dependent user-agent configuration calls.",
+      "repositoryId": "guide-snippets",
+      "sha256": "5af64a1b37b1b87d2451ad32bf9363a6ce882e479a1f3c6abf446ca18ee781df",
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525"
+    },
+    {
+      "byteLength": 2042,
+      "gitBlobOid": "0f2f8b94aa24b0a50e272270e4e18b6df93ac5fd",
+      "path": "ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/entryability/EntryAbility.ets",
+      "reason": "Owning UIAbility onCreate lifecycle for the selected UserAgent sample.",
+      "repositoryId": "guide-snippets",
+      "sha256": "95437bec6ee0302bcd82346c197e2b474c6d25e42aae2d59c222df472f8baf62",
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525"
+    },
+    {
+      "byteLength": 252,
+      "gitBlobOid": "1555514763f2c22e49ed472c8840eb93bd9bad75",
+      "path": "ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/resources/base/profile/main_pages.json",
+      "reason": "The Index page links to pages/UserAgent_four but the route is absent from the committed main-pages profile.",
+      "repositoryId": "guide-snippets",
+      "sha256": "1c2128638e4483c79d9824e3a3c3fe26b197623577931d8928b50866b59a7da8",
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525"
+    }
+  ],
+  "expandedPaths": [
+    {
+      "path": "features/abilitycommon/src/main/ets/abilityhelper/BaseAbilityHelper.ets",
+      "reason": "Owning application onCreate lifecycle and the later loadContent callback that currently invokes WebUtil.initialize.",
+      "repositoryId": "code-workshop"
+    },
+    {
+      "path": "ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/entryability/EntryAbility.ets",
+      "reason": "Owning UIAbility onCreate lifecycle for the selected UserAgent sample.",
+      "repositoryId": "guide-snippets"
+    },
+    {
+      "path": "ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/resources/base/profile/main_pages.json",
+      "reason": "The Index page links to pages/UserAgent_four but the route is absent from the committed main-pages profile.",
+      "repositoryId": "guide-snippets"
+    }
+  ],
+  "hypothesis": "The two late initialization sites can be moved to their owning UIAbility onCreate paths so ArkWeb startup work begins before page construction, while UIContext-dependent node creation and user-agent configuration remain behaviorally unchanged.",
+  "lineage": {
+    "difficultyEvidenceSha256": "4d7d562a231c70f691edc24191223e88775c8e9197a86160a88dcfecdb118918",
+    "manifestSha256": "1891a6340e489705ace6939cfe55fff3d60583161e38c8df7085c7dc7a2420e8",
+    "selectionSha256": "c972453de4a1bc21552cd8b9364e7d6d8d9f3483bd1c2bc5cf93146d8b592a49",
+    "workspaceFactsSha256": "a164c323ca7847117aa08b0f30b5b3895bce0787fb0539684ef7286cfbf35d79"
+  },
+  "methodRevision": "68405907e5a1b41cbf618245add6bfe98be45306",
+  "proposedChecks": {
+    "device": [
+      {
+        "behavior": "On the frozen Linux Harmony emulator, launching the guide app and selecting UserAgent_four reaches the registered page with an attached Web controller and no white-screen or route error.",
+        "id": "guide-user-agent-four-device-route"
+      },
+      {
+        "behavior": "On the same environment identity, the code-workshop Web-backed article path reaches its functional UI Oracle after cold launch.",
+        "id": "code-workshop-web-device-smoke"
+      }
+    ],
+    "performance": [
+      {
+        "behavior": "Repeated cold launches use an identical navigation workload and compare Ability onCreate-to-Web-ready latency only after both functional Oracles pass.",
+        "id": "cold-web-readiness-latency"
+      },
+      {
+        "behavior": "Policy-bound SmartPerf CPU and PSS guardrails remain within the calibrated threshold; unavailable frame, power and thermal signals remain observed-only.",
+        "id": "cpu-pss-guardrails"
+      }
+    ],
+    "preservation": [
+      {
+        "behavior": "WebUtil.initialize still binds the window UIContext, clears retained Web state and creates the code-preview Web node only after window content succeeds.",
+        "id": "code-workshop-ui-context-node-preserved"
+      },
+      {
+        "behavior": "UserAgent_four still reads the default user agent and applies the application-wide and host-specific user-agent configuration after engine initialization.",
+        "id": "guide-user-agent-configuration-preserved"
+      },
+      {
+        "behavior": "The four pinned onCreate reference call sites remain byte-identical context and are not participant-editable.",
+        "id": "reference-call-sites-read-only"
+      }
+    ],
+    "repair": [
+      {
+        "behavior": "The code-workshop application starts ArkWeb engine initialization from BaseAbilityHelper.doOnCreate before window content is loaded and does not repeat the engine call in WebUtil.initialize.",
+        "id": "code-workshop-engine-init-at-app-create"
+      },
+      {
+        "behavior": "The selected guide application initializes the ArkWeb engine in EntryAbility.onCreate and no longer initializes it from UserAgent_four.aboutToAppear.",
+        "id": "guide-engine-init-at-app-create"
+      },
+      {
+        "behavior": "The pages/UserAgent_four destination linked by the Index page is registered in the main-pages profile.",
+        "id": "guide-user-agent-four-route-registered"
+      }
+    ]
+  },
+  "referenceCallSites": [
+    {
+      "factId": "workspace-fact-605cc0fcc31fbe67f6feb17d",
+      "owner": "EntryAbility::onCreate",
+      "path": "ArkWeb/ArkWebSchemeHandler/entry/src/main/ets/entryability/EntryAbility.ets",
+      "repositoryId": "guide-snippets",
+      "role": "reference",
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "span": {
+        "endByte": 1214,
+        "endColumnByte": 51,
+        "endLine": 28,
+        "startByte": 1167,
+        "startColumnByte": 4,
+        "startLine": 28
+      },
+      "targetExpression": "webview.WebviewController.initializeWebEngine"
+    },
+    {
+      "factId": "workspace-fact-b4bdcf26602427f60c3a61dc",
+      "owner": "Entry1Ability::onCreate",
+      "path": "ArkWeb/ManageWebPageLoadBrowse/AcceleratePageAccess/entry1/src/main/ets/entry1ability/Entry1Ability.ets",
+      "repositoryId": "guide-snippets",
+      "role": "reference",
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "span": {
+        "endByte": 1091,
+        "endColumnByte": 51,
+        "endLine": 24,
+        "startByte": 1044,
+        "startColumnByte": 4,
+        "startLine": 24
+      },
+      "targetExpression": "webview.WebviewController.initializeWebEngine"
+    },
+    {
+      "factId": "workspace-fact-024ab30d5a5a1fa5454b91e8",
+      "owner": "EntryAbility::onCreate",
+      "path": "ArkWeb/ManageWebPageLoadBrowse/NetReqInterceptCacheWinOps/entry/src/main/ets/entryability/EntryAbility.ets",
+      "repositoryId": "guide-snippets",
+      "role": "reference",
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "span": {
+        "endByte": 1267,
+        "endColumnByte": 51,
+        "endLine": 29,
+        "startByte": 1220,
+        "startColumnByte": 4,
+        "startLine": 29
+      },
+      "targetExpression": "webview.WebviewController.initializeWebEngine"
+    },
+    {
+      "factId": "workspace-fact-67a8859082640eec284676f1",
+      "owner": "Entry2Ability::onCreate",
+      "path": "ArkWeb/ManageWebPageLoadBrowse/NetReqInterceptCacheWinOps/entry2/src/main/ets/entry2ability/Entry2Ability.ets",
+      "repositoryId": "guide-snippets",
+      "role": "reference",
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "span": {
+        "endByte": 1216,
+        "endColumnByte": 51,
+        "endLine": 28,
+        "startByte": 1169,
+        "startColumnByte": 4,
+        "startLine": 28
+      },
+      "targetExpression": "webview.WebviewController.initializeWebEngine"
+    }
+  ],
+  "reviewPolicy": {
+    "mustAcknowledgeEveryRisk": true,
+    "requiredDecisionSchema": "agentlab.api_call_case_localization_review.v1",
+    "requiredVerdict": "approve-for-intent-construction"
+  },
+  "risks": [
+    {
+      "id": "semantic-hypothesis-unverified",
+      "statement": "The lifecycle hypothesis is maintainer-supplied and is not proven by syntactic call localization."
+    },
+    {
+      "id": "reference-sites-not-gold",
+      "statement": "Observed reference call sites demonstrate an existing pattern but do not prove the correct implementation."
+    },
+    {
+      "id": "expanded-impact-surface",
+      "statement": "Additional editable or context paths require independent review because they are outside the localized call candidate."
+    },
+    {
+      "id": "runtime-oracle-pending",
+      "statement": "Build, emulator UI, startup performance and power or thermal authority remain separate qualification gates."
+    }
+  ],
+  "schema": "agentlab.api_call_case_localization_proposal.v1",
+  "sourceSetSha256": "c4923e499fbb0ca2ed4fd205c66d6353bbe2aa58935413e3c897183a25493ca9",
+  "status": "review-required",
+  "targetCallSites": [
+    {
+      "factId": "workspace-fact-b2f228228ac1dbd7e87da0b0",
+      "owner": "WebUtil::initialize",
+      "path": "common/src/main/ets/util/WebUtil.ets",
+      "repositoryId": "code-workshop",
+      "role": "target",
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git@7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+      "span": {
+        "endByte": 8112,
+        "endColumnByte": 53,
+        "endLine": 208,
+        "startByte": 8065,
+        "startColumnByte": 6,
+        "startLine": 208
+      },
+      "targetExpression": "webview.WebviewController.initializeWebEngine"
+    },
+    {
+      "factId": "workspace-fact-f56c674ddfdda4c1e54a8a63",
+      "owner": "WebComponent::aboutToAppear",
+      "path": "ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/ets/pages/UserAgent_four.ets",
+      "repositoryId": "guide-snippets",
+      "role": "target",
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "span": {
+        "endByte": 954,
+        "endColumnByte": 53,
+        "endLine": 27,
+        "startByte": 907,
+        "startColumnByte": 6,
+        "startLine": 27
+      },
+      "targetExpression": "webview.WebviewController.initializeWebEngine"
+    }
+  ],
+  "title": "Pre-initialize the ArkWeb engine at the application lifecycle boundary"
+}

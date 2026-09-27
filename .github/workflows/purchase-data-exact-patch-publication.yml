@@ -1,0 +1,195 @@
+name: Record purchase-data exact patch publication
+on:
+  workflow_dispatch:
+    inputs:
+      contract_path:
+        description: Frozen unseen-agent cohort contract below release/qualifications
+        required: true
+        default: release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-unseen-agent-cohort-contract.json
+        type: string
+      integrated_packet_path:
+        description: Exact integrated-review packet bound by the contract
+        required: true
+        default: release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-integrated-review-packet-v2.json
+        type: string
+      oracle_review_run_id:
+        description: Successful trusted-main integrated Oracle-review run that produced the approved gate
+        required: true
+        type: string
+      published_revision:
+        description: Exact 40-character upstream revision claimed to contain only the reviewed patch over its recorded base
+        required: true
+        type: string
+      analysis_component_revision:
+        description: Exact source revision of the published immutable analysis-tools component
+        required: true
+        type: string
+      analysis_composition_lock_sha256:
+        description: Exact SHA-256 of the reference-only analysis-tools composition environment lock
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  attestations: write
+  contents: read
+  id-token: write
+
+jobs:
+  record:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/purchase-data-exact-patch-publication
+      CONTRACT_RELATIVE_PATH: ${{ inputs.contract_path }}
+      PACKET_RELATIVE_PATH: ${{ inputs.integrated_packet_path }}
+      ORACLE_REVIEW_RUN_ID: ${{ inputs.oracle_review_run_id }}
+      PUBLISHED_REVISION: ${{ inputs.published_revision }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - name: Install exact immutable analysis-tools component
+        uses: ./.github/actions/install-analysis-tools-component
+        with:
+          component_revision: ${{ inputs.analysis_component_revision }}
+          composition_lock_sha256: ${{ inputs.analysis_composition_lock_sha256 }}
+          github_token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          root: ${{ runner.temp }}/agentlab-analysis-runtime
+      - name: Resolve frozen contract and integrated packet
+        id: inputs
+        run: |
+          set -euo pipefail
+          [[ "$PUBLISHED_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          mkdir -p "$AGENTLAB_ROOT"
+          python3 - <<'PY'
+          import json, os, pathlib, re
+          root = pathlib.Path.cwd().resolve()
+          qualifications = (root / "release" / "qualifications").resolve()
+          resolved = {}
+          for name, relative in (
+              ("contract", os.environ["CONTRACT_RELATIVE_PATH"]),
+              ("packet", os.environ["PACKET_RELATIVE_PATH"]),
+          ):
+              assert re.fullmatch(r"release/qualifications/[A-Za-z0-9._/-]+\.json", relative), relative
+              path = (root / relative).resolve()
+              path.relative_to(qualifications)
+              assert path.is_file() and not path.is_symlink(), path
+              resolved[name] = path
+          packet = json.loads(resolved["packet"].read_bytes())
+          binding = packet["evidenceAttachments"]["source-review-packet"]
+          source_packet = (resolved["packet"].parent / binding["path"]).resolve()
+          source_packet.relative_to(resolved["packet"].parent.resolve())
+          assert source_packet.is_file() and not source_packet.is_symlink(), source_packet
+          source = json.loads(source_packet.read_bytes())
+          repository = source["sourceRepository"]
+          assert repository.startswith(("https://", "ssh://", "git@")), repository
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"contract={resolved['contract']}\n")
+              output.write(f"packet={resolved['packet']}\n")
+              output.write(f"qualification_root={resolved['packet'].parent}\n")
+              output.write(f"source_repository={repository}\n")
+          PY
+      - name: Load authenticated approved integrated-review gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$ORACLE_REVIEW_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ORACLE_REVIEW_RUN_ID" \
+            > "$AGENTLAB_ROOT/oracle-review-source-run.json"
+          python3 - <<'PY'
+          import json, os
+          root = os.environ["AGENTLAB_ROOT"]
+          value = json.load(open(root + "/oracle-review-source-run.json"))
+          assert value["head_branch"] == "main"
+          assert value["path"] == ".github/workflows/purchase-data-integrated-oracle-review.yml"
+          assert value["event"] == "workflow_dispatch"
+          assert value["conclusion"] == "success"
+          with open(root + "/oracle-review-head-sha", "w") as output:
+              output.write(value["head_sha"] + "\n")
+          PY
+          read -r ORACLE_REVIEW_HEAD_SHA < "$AGENTLAB_ROOT/oracle-review-head-sha"
+          git merge-base --is-ancestor "$ORACLE_REVIEW_HEAD_SHA" HEAD
+          mkdir -p "$AGENTLAB_ROOT/oracle-review"
+          gh run download "$ORACLE_REVIEW_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name purchase-data-integrated-oracle-review \
+            --dir "$AGENTLAB_ROOT/oracle-review"
+          test -f "$AGENTLAB_ROOT/oracle-review/gate.json"
+          test ! -L "$AGENTLAB_ROOT/oracle-review/gate.json"
+          test -f "$AGENTLAB_ROOT/oracle-review/packet.json"
+          test ! -L "$AGENTLAB_ROOT/oracle-review/packet.json"
+          cmp "${{ steps.inputs.outputs.packet }}" "$AGENTLAB_ROOT/oracle-review/packet.json"
+      - name: Fetch the exact published upstream revision
+        env:
+          SOURCE_REPOSITORY: ${{ steps.inputs.outputs.source_repository }}
+        run: |
+          set -euo pipefail
+          source_root="$RUNNER_TEMP/published-source"
+          git clone --no-checkout "$SOURCE_REPOSITORY" "$source_root"
+          git -C "$source_root" checkout --detach "$PUBLISHED_REVISION"
+          test "$(git -C "$source_root" rev-parse HEAD)" = "$PUBLISHED_REVISION"
+      - name: Produce exact-patch publication receipt through the installed Rust component
+        env:
+          CONTRACT_PATH: ${{ steps.inputs.outputs.contract }}
+          PACKET_PATH: ${{ steps.inputs.outputs.packet }}
+          QUALIFICATION_ROOT: ${{ steps.inputs.outputs.qualification_root }}
+        run: |
+          set -euo pipefail
+          runtime_path="$RUNNER_TEMP/agentlab-analysis-runtime/analysis-component-runtime.json"
+          readarray -t runtime < <(python3 - "$runtime_path" <<'PY'
+          import json, sys
+          value = json.load(open(sys.argv[1]))
+          for field in ("runtimeImageReference", "componentVolume", "componentMountTarget"):
+              print(value[field])
+          PY
+          )
+          mkdir -p "$AGENTLAB_ROOT/analysis-execution"
+          cp "$runtime_path" "$AGENTLAB_ROOT/analysis-component-runtime.json"
+          cp "$RUNNER_TEMP/agentlab-analysis-runtime/analysis-composition/environment-lock.json" \
+            "$AGENTLAB_ROOT/analysis-composition-environment-lock.json"
+          cp "$RUNNER_TEMP/agentlab-analysis-runtime/component-install/composition-install-receipt.json" \
+            "$AGENTLAB_ROOT/analysis-component-install-receipt.json"
+          cp "$RUNNER_TEMP/agentlab-analysis-runtime/component-install/analysis-tools-runtime-probe.json" \
+            "$AGENTLAB_ROOT/analysis-component-install-probe.json"
+          docker run --rm --network bridge --read-only --cap-drop ALL \
+            --security-opt no-new-privileges --pids-limit 128 \
+            --user "$(id -u):$(id -g)" \
+            --tmpfs /tmp:rw,nosuid,nodev,noexec,size=67108864 \
+            --mount "type=volume,src=${runtime[1]},dst=${runtime[2]},readonly" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=$GITHUB_WORKSPACE,readonly" \
+            --mount "type=bind,src=$RUNNER_TEMP/published-source,dst=$RUNNER_TEMP/published-source,readonly" \
+            --mount "type=bind,src=$AGENTLAB_ROOT,dst=$AGENTLAB_ROOT" \
+            --mount "type=bind,src=$AGENTLAB_ROOT/analysis-execution,dst=/agentlab-execution" \
+            --workdir "$GITHUB_WORKSPACE" \
+            --entrypoint "${runtime[2]}/payload/bin/agentlab-analysis-tools-pack" \
+            "${runtime[0]}" \
+              --execute agentlab-purchase-data-exact-patch-publication \
+              --receipt /agentlab-execution/publication.json -- \
+              --contract "$CONTRACT_PATH" \
+              --integrated-packet "$PACKET_PATH" \
+              --review-gate "$AGENTLAB_ROOT/oracle-review/gate.json" \
+              --qualification-root "$QUALIFICATION_ROOT" \
+              --agentlab-root "$GITHUB_WORKSPACE" \
+              --source-repository-root "$RUNNER_TEMP/published-source" \
+              --published-revision "$PUBLISHED_REVISION" \
+              --review-gate-run-id "$ORACLE_REVIEW_RUN_ID" \
+              --output "$AGENTLAB_ROOT/publication.json"
+          sha256sum \
+            "$AGENTLAB_ROOT/oracle-review/gate.json" \
+            "$AGENTLAB_ROOT/publication.json" \
+            "$AGENTLAB_ROOT/analysis-execution/publication.json" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Attest the exact publication receipt
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: ${{ env.AGENTLAB_ROOT }}/publication.json
+      - name: Preserve exact-patch publication evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: purchase-data-exact-patch-publication
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/

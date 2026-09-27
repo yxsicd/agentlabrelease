@@ -1,0 +1,9 @@
+{
+  "schema": "agentlab.loaded_image_identity_verification.v1",
+  "status": "passed",
+  "actual": "sha256:4dd8c79b198315349f0ccebdb47aae535d593bb199346428a70e61b27017bdbc",
+  "admitted": [
+    "sha256:2128b0fdba2e7e3297533869ce0533944f348ea7f5b0fa1dc9832ba825a0bd74",
+    "sha256:4dd8c79b198315349f0ccebdb47aae535d593bb199346428a70e61b27017bdbc"
+  ]
+}

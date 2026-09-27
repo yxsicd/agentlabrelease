@@ -1,0 +1,79 @@
+{
+  "automaticPromotion": false,
+  "bundle": "xxx.xxx.xxx",
+  "caseId": "purchase-data-finalization-candidate-clean-v1",
+  "command": [
+    "/home/huawei/commandline-tools-26.0.0.821/sdk/default/openharmony/toolchains/hdc",
+    "-t",
+    "127.0.0.1:10100",
+    "shell",
+    "aa",
+    "test",
+    "-b",
+    "xxx.xxx.xxx",
+    "-m",
+    "entry_test",
+    "-s",
+    "unittest",
+    "OpenHarmonyTestRunner",
+    "-s",
+    "timeout",
+    "60000"
+  ],
+  "finishedAt": "2026-09-26T21:24:49.517662+00:00",
+  "framework": "instrument-test-ohosTest-hypium",
+  "hdc": {
+    "byteLength": 6430848,
+    "path": "/home/huawei/commandline-tools-26.0.0.821/sdk/default/openharmony/toolchains/hdc",
+    "sha256": "90c2554a44855a3c541c24bad5cffd46badb7eb7323c5464f6c0fb7160bdf5d0"
+  },
+  "logs": [
+    {
+      "byteLength": 327,
+      "path": "logs/01.json",
+      "sha256": "488698e930319a8114adafcbcc4281aae3f2a04cd58660c83f0d81f5c9e8e972"
+    },
+    {
+      "byteLength": 701,
+      "path": "logs/02.json",
+      "sha256": "b98e229d22bc270b3151d6a079aeaa55abff886b08c6afcaad5d32198e406fe8"
+    },
+    {
+      "byteLength": 705,
+      "path": "logs/03.json",
+      "sha256": "08d49bebd9b714d32796702ffaddb50acf94ab79f205ef5c063633b95085ba42"
+    },
+    {
+      "byteLength": 4924,
+      "path": "logs/04.json",
+      "sha256": "1f3a83e0741c196084872fef54831026a9859410f6ec8b52666293dad9bc0bc1"
+    }
+  ],
+  "module": "entry_test",
+  "packages": {
+    "app": {
+      "byteLength": 447093,
+      "path": "entry-default-unsigned.hap",
+      "sha256": "dfd61c2e5a33249aed059192798c449f7ab3a3a44d69b900fdd508978cdda073"
+    },
+    "test": {
+      "byteLength": 1191534,
+      "path": "entry-ohosTest-unsigned.hap",
+      "sha256": "5a2015114fd435daba3e25331df6a7ac48445827230079870cc2571c710934fe"
+    }
+  },
+  "passed": true,
+  "projectTreeSha256": "85d851734450a611e2bed1c5f15ddf9da150309ca97c3b914b0d3d19eb443144",
+  "report": {
+    "byteLength": 568,
+    "path": "native-report.json",
+    "sha256": "123fbf9bcff0dbf9c946b60e7f407b4695582072c45f15ebc249cb33aa93ba65"
+  },
+  "runner": "OpenHarmonyTestRunner",
+  "schema": "agentlab.harmony_standard_test_execution_receipt.v1",
+  "sourceSetSha256": "cbc01c94755f2d8da5449902ad1a309488d0a9defa9fede23318ad360dd4c2c2",
+  "startedAt": "2026-09-26T21:24:47.323706+00:00",
+  "status": "passed",
+  "target": "127.0.0.1:10100",
+  "testClass": null
+}

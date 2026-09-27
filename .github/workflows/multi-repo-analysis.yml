@@ -1,0 +1,232 @@
+name: Multi-repository exact analysis
+on:
+  workflow_dispatch:
+    inputs:
+      source_spec_json:
+        description: Exact agentlab.multi_repo_source_spec.v1 JSON with public HTTPS repositories and 40-character commits
+        required: true
+        type: string
+      analysis_component_revision:
+        description: Exact 40-character source revision of the published immutable analysis-tools component
+        required: true
+        type: string
+      analysis_composition_lock_sha256:
+        description: Exact SHA-256 of the reference-only analysis-tools composition environment lock
+        required: true
+        type: string
+      feedback_handoff_path:
+        description: Optional committed release/qualifications feedback handoff path
+        required: false
+        default: ""
+        type: string
+      feedback_candidate_id:
+        description: Required candidate id when feedback_handoff_path is supplied
+        required: false
+        default: ""
+        type: string
+      feedback_semantic_selection_json:
+        description: Required exact agentlab.feedback_semantic_source_selection_claim.v1 JSON when feedback_handoff_path is supplied
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/multi-repo-analysis
+      SOURCE_SPEC_JSON: ${{ inputs.source_spec_json }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install exact immutable analysis-tools component
+        uses: ./.github/actions/install-analysis-tools-component
+        with:
+          component_revision: ${{ inputs.analysis_component_revision }}
+          composition_lock_sha256: ${{ inputs.analysis_composition_lock_sha256 }}
+          github_token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          root: ${{ env.AGENTLAB_ROOT }}
+      - name: Materialize exact public Git sources
+        id: sources
+        run: |
+          mkdir -p "$AGENTLAB_ROOT"
+          python3 - <<'PY'
+          import os, pathlib
+          pathlib.Path(os.environ["AGENTLAB_ROOT"], "source-spec-input.json").write_text(
+              os.environ["SOURCE_SPEC_JSON"] + "\n", encoding="utf-8"
+          )
+          PY
+          python3 scripts/prepare-multi-repo-analysis-sources.py \
+            --spec "$AGENTLAB_ROOT/source-spec-input.json" \
+            --output "$AGENTLAB_ROOT/source"
+          python3 scripts/prefetch-multi-repo-analysis-blobs.py \
+            --manifest "$AGENTLAB_ROOT/source/manifest.json" \
+            --output "$AGENTLAB_ROOT/source/source-prefetch.json"
+          echo "sha256=$(sha256sum "$AGENTLAB_ROOT/source/source-spec.json" | cut -d' ' -f1)" \
+            >> "$GITHUB_OUTPUT"
+      - name: Bind optional feedback to this exact analysis request
+        env:
+          FEEDBACK_HANDOFF_PATH: ${{ inputs.feedback_handoff_path }}
+          FEEDBACK_CANDIDATE_ID: ${{ inputs.feedback_candidate_id }}
+          FEEDBACK_SEMANTIC_SELECTION_JSON: ${{ inputs.feedback_semantic_selection_json }}
+        run: |
+          if [[ -z "$FEEDBACK_HANDOFF_PATH" && -z "$FEEDBACK_CANDIDATE_ID" && -z "$FEEDBACK_SEMANTIC_SELECTION_JSON" ]]; then
+            exit 0
+          fi
+          if [[ -z "$FEEDBACK_HANDOFF_PATH" || -z "$FEEDBACK_CANDIDATE_ID" || -z "$FEEDBACK_SEMANTIC_SELECTION_JSON" ]]; then
+            echo "feedback_handoff_path, feedback_candidate_id and feedback_semantic_selection_json must be supplied together" >&2
+            exit 1
+          fi
+          case "$FEEDBACK_HANDOFF_PATH" in
+            release/qualifications/*/summary.json) ;;
+            *) echo "feedback handoff must be a committed qualification summary" >&2; exit 1 ;;
+          esac
+          qualification_root="$(dirname "$GITHUB_WORKSPACE/$FEEDBACK_HANDOFF_PATH")"
+          python3 - <<'PY'
+          import os, pathlib
+          pathlib.Path(os.environ["AGENTLAB_ROOT"], "feedback-semantic-source-selection-claim.json").write_text(
+              os.environ["FEEDBACK_SEMANTIC_SELECTION_JSON"] + "\n", encoding="utf-8"
+          )
+          PY
+          python3 scripts/prepare-feedback-semantic-source-selection.py \
+            --handoff "$GITHUB_WORKSPACE/$FEEDBACK_HANDOFF_PATH" \
+            --prior-case "$qualification_root/prior-case.json" \
+            --feedback "$qualification_root/assessment-feedback-candidates.json" \
+            --manifest "$AGENTLAB_ROOT/source/manifest.json" \
+            --claim "$AGENTLAB_ROOT/feedback-semantic-source-selection-claim.json" \
+            --output "$AGENTLAB_ROOT/feedback-semantic-source-selection.json"
+          python3 scripts/prepare-feedback-analysis-request.py \
+            --handoff "$GITHUB_WORKSPACE/$FEEDBACK_HANDOFF_PATH" \
+            --prior-case "$qualification_root/prior-case.json" \
+            --feedback "$qualification_root/assessment-feedback-candidates.json" \
+            --source-spec "$AGENTLAB_ROOT/source/source-spec.json" \
+            --semantic-selection "$AGENTLAB_ROOT/feedback-semantic-source-selection.json" \
+            --feedback-candidate-id "$FEEDBACK_CANDIDATE_ID" \
+            --next-method-revision "$GITHUB_SHA" \
+            --output "$AGENTLAB_ROOT/feedback-analysis-request.json"
+          sha256sum "$AGENTLAB_ROOT/feedback-analysis-request.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Restore rebuildable AST cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ env.AGENTLAB_ROOT }}/ast-cache
+          key: agentlab-ast-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'crates/agentlab_code_analysis/build.rs', 'crates/agentlab_code_analysis/src/lib.rs', 'crates/agentlab_code_analysis/src/multi_repo.rs', 'crates/agentlab_code_analysis/Cargo.toml', 'crates/agentlab_code_analysis/grammar/**') }}-${{ steps.sources.outputs.sha256 }}
+          restore-keys: |
+            agentlab-ast-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'crates/agentlab_code_analysis/build.rs', 'crates/agentlab_code_analysis/src/lib.rs', 'crates/agentlab_code_analysis/src/multi_repo.rs', 'crates/agentlab_code_analysis/Cargo.toml', 'crates/agentlab_code_analysis/grammar/**') }}-
+      - name: Analyze only committed bytes at exact revisions
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/source/analysis" "$AGENTLAB_ROOT/ast-cache" \
+            "$AGENTLAB_ROOT/analysis-execution"
+          cp "$AGENTLAB_ROOT/analysis-component-runtime.json" \
+            "$AGENTLAB_ROOT/source/analysis-component-runtime.json"
+          cp "$AGENTLAB_ROOT/analysis-composition/environment-lock.json" \
+            "$AGENTLAB_ROOT/source/analysis-composition-environment-lock.json"
+          cp "$AGENTLAB_ROOT/analysis-composition/publication.json" \
+            "$AGENTLAB_ROOT/source/analysis-composition-publication.json"
+          cp "$AGENTLAB_ROOT/component-install/composition-install-receipt.json" \
+            "$AGENTLAB_ROOT/source/analysis-component-install-receipt.json"
+          cp "$AGENTLAB_ROOT/component-install/analysis-tools-runtime-probe.json" \
+            "$AGENTLAB_ROOT/source/analysis-component-install-probe.json"
+          readarray -t runtime < <(python3 - "$AGENTLAB_ROOT/analysis-component-runtime.json" <<'PY'
+          import json, sys
+          value = json.load(open(sys.argv[1]))
+          for field in ("runtimeImageReference", "componentVolume", "componentMountTarget"):
+              print(value[field])
+          PY
+          )
+          docker run --rm --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges --pids-limit 256 \
+            --user "$(id -u):$(id -g)" \
+            --tmpfs /tmp:rw,nosuid,nodev,noexec,size=268435456 \
+            --mount "type=volume,src=${runtime[1]},dst=${runtime[2]},readonly" \
+            --mount "type=bind,src=$AGENTLAB_ROOT/source,dst=$AGENTLAB_ROOT/source,readonly" \
+            --mount "type=bind,src=$AGENTLAB_ROOT/source/analysis,dst=$AGENTLAB_ROOT/source/analysis" \
+            --mount "type=bind,src=$AGENTLAB_ROOT/ast-cache,dst=$AGENTLAB_ROOT/ast-cache" \
+            --mount "type=bind,src=$AGENTLAB_ROOT/analysis-execution,dst=/agentlab-execution" \
+            --workdir "$AGENTLAB_ROOT/source" \
+            --entrypoint "${runtime[2]}/payload/bin/agentlab-analysis-tools-pack" \
+            "${runtime[0]}" --execute agentlab-multi-repo-analysis \
+              --receipt /agentlab-execution/receipt.json -- \
+              --cache-dir "$AGENTLAB_ROOT/ast-cache" \
+              --cache-components \
+              "$AGENTLAB_ROOT/source/manifest.json" \
+              "$AGENTLAB_ROOT/source/analysis" \
+            > >(tee "$AGENTLAB_ROOT/source/analysis-tool-stdout.json") \
+            2> >(tee "$AGENTLAB_ROOT/source/analysis-cache-execution.json" >&2)
+          cp "$AGENTLAB_ROOT/analysis-execution/receipt.json" \
+            "$AGENTLAB_ROOT/source/analysis-tools-execution.json"
+          python3 - "$AGENTLAB_ROOT/source" <<'PY'
+          import hashlib, json, pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          runtime = json.loads((root / "analysis-component-runtime.json").read_bytes())
+          execution = json.loads((root / "analysis-tools-execution.json").read_bytes())
+          arguments = [
+              "--cache-dir", str(root.parent / "ast-cache"), "--cache-components",
+              str(root / "manifest.json"), str(root / "analysis"),
+          ]
+          encoded = json.dumps(arguments, separators=(",", ":")).encode()
+          assert execution["schema"] == "agentlab.analysis_tools_execution.v1"
+          assert execution["status"] == "passed"
+          assert execution["tool"] == "agentlab-multi-repo-analysis"
+          assert execution["exitCode"] == 0
+          assert execution["componentSourceRevision"] == runtime["expectedComponentSourceRevision"]
+          assert execution["argumentCount"] == len(arguments)
+          assert execution["argumentsSha256"] == hashlib.sha256(encoded).hexdigest()
+          assert execution["automaticPromotion"] is False
+          PY
+          python3 scripts/multi-repo-analysis-run.py create \
+            --root "$AGENTLAB_ROOT/source" \
+            --method-revision "$GITHUB_SHA" \
+            --output "$AGENTLAB_ROOT/source/analysis-run.json"
+          python3 scripts/multi-repo-analysis-run.py validate \
+            --root "$AGENTLAB_ROOT/source" \
+            --run "$AGENTLAB_ROOT/source/analysis-run.json"
+          sha256sum "$AGENTLAB_ROOT/source/analysis-run.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Prepare bounded feedback analysis-cut review queue
+        if: inputs.feedback_handoff_path != ''
+        env:
+          FEEDBACK_HANDOFF_PATH: ${{ inputs.feedback_handoff_path }}
+        run: |
+          qualification_root="$(dirname "$GITHUB_WORKSPACE/$FEEDBACK_HANDOFF_PATH")"
+          python3 scripts/prepare-feedback-analysis-proposals.py \
+            --request "$AGENTLAB_ROOT/feedback-analysis-request.json" \
+            --handoff "$GITHUB_WORKSPACE/$FEEDBACK_HANDOFF_PATH" \
+            --prior-case "$qualification_root/prior-case.json" \
+            --feedback "$qualification_root/assessment-feedback-candidates.json" \
+            --analysis-receipt "$AGENTLAB_ROOT/source/analysis/multi_repo_analysis.json" \
+            --analysis-run "$AGENTLAB_ROOT/source/analysis-run.json" \
+            --difficulty "$AGENTLAB_ROOT/source/analysis/difficulty_candidates.json" \
+            --semantic-selection "$AGENTLAB_ROOT/feedback-semantic-source-selection.json" \
+            --max-candidates 10 \
+            --output "$AGENTLAB_ROOT/feedback-analysis-proposals"
+          sha256sum "$AGENTLAB_ROOT/feedback-analysis-proposals/index.json" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve portable specification and complete analysis evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: multi-repo-analysis
+          if-no-files-found: error
+          include-hidden-files: true
+          path: |
+            ${{ env.AGENTLAB_ROOT }}/source/source-spec.json
+            ${{ env.AGENTLAB_ROOT }}/source/manifest.json
+            ${{ env.AGENTLAB_ROOT }}/source/source-prefetch.json
+            ${{ env.AGENTLAB_ROOT }}/source/analysis-cache-execution.json
+            ${{ env.AGENTLAB_ROOT }}/source/analysis-tool-stdout.json
+            ${{ env.AGENTLAB_ROOT }}/source/analysis-tools-execution.json
+            ${{ env.AGENTLAB_ROOT }}/source/analysis-component-runtime.json
+            ${{ env.AGENTLAB_ROOT }}/source/analysis-component-install-receipt.json
+            ${{ env.AGENTLAB_ROOT }}/source/analysis-component-install-probe.json
+            ${{ env.AGENTLAB_ROOT }}/source/analysis-composition-environment-lock.json
+            ${{ env.AGENTLAB_ROOT }}/source/analysis-composition-publication.json
+            ${{ env.AGENTLAB_ROOT }}/source/analysis-run.json
+            ${{ env.AGENTLAB_ROOT }}/source/analysis/
+            ${{ env.AGENTLAB_ROOT }}/feedback-analysis-request.json
+            ${{ env.AGENTLAB_ROOT }}/feedback-semantic-source-selection-claim.json
+            ${{ env.AGENTLAB_ROOT }}/feedback-semantic-source-selection.json
+            ${{ env.AGENTLAB_ROOT }}/feedback-analysis-proposals/

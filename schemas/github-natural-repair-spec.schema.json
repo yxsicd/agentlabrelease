@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/github-natural-repair-spec.schema.json",
+  "title": "AgentLab public GitHub natural repair collection specification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "title", "sources", "affectedFiles", "testFiles", "issueUrls", "repairs", "testContract", "collectedAt", "automaticPromotion"],
+  "properties": {
+    "schema": {"const": "agentlab.github_natural_repair_spec.v1"},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]{1,160}$"},
+    "title": {"type": "string", "minLength": 1},
+    "sources": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "repository", "revision"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]{1,160}$"},
+          "repository": {"type": "string", "format": "uri", "pattern": "^https://github\\.com/"},
+          "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+        }
+      }
+    },
+    "moduleBindings": {"type": "object"},
+    "affectedFiles": {"$ref": "#/$defs/files"},
+    "testFiles": {"$ref": "#/$defs/filesWithoutDepth"},
+    "issueUrls": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "format": "uri", "pattern": "^https://github\\.com/[^/]+/[^/]+/issues/[1-9][0-9]*/?$"}
+    },
+    "repairs": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["repositoryId", "pullRequestUrl", "fixRevision"],
+        "properties": {
+          "repositoryId": {"type": "string", "minLength": 1},
+          "pullRequestUrl": {"type": "string", "format": "uri", "pattern": "^https://github\\.com/[^/]+/[^/]+/pull/[1-9][0-9]*/?$"},
+          "fixRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+        }
+      }
+    },
+    "testContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observedFailureCheckIds", "preservationCheckIds"],
+      "properties": {
+        "observedFailureCheckIds": {"$ref": "#/$defs/ids"},
+        "preservationCheckIds": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "collectedAt": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "files": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["repositoryId", "path", "dependencyDepth"],
+        "properties": {
+          "repositoryId": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1},
+          "dependencyDepth": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "filesWithoutDepth": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["repositoryId", "path"],
+        "properties": {
+          "repositoryId": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]{1,160}$"}
+    }
+  }
+}

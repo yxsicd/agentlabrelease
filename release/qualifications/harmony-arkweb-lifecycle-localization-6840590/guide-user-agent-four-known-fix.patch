@@ -1,0 +1,12 @@
+diff --git a/ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/resources/base/profile/main_pages.json b/ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/resources/base/profile/main_pages.json
+index 15555147..13f49d2d 100644
+--- a/ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/resources/base/profile/main_pages.json
++++ b/ArkWeb/SetBasicAttrsEvts/SetBasicAttrsEvtsTwo/entry/src/main/resources/base/profile/main_pages.json
+@@ -8,6 +8,7 @@
+     "pages/UserAgent_one",
+     "pages/UserAgent_two",
+     "pages/UserAgent_three",
++    "pages/UserAgent_four",
+     "pages/UseMotionDirSensor"
+   ]
+ }

@@ -1,0 +1,6 @@
+schema	agentlab.harmony_ui_scenario.v1
+case	guide-user-agent-two-preservation
+wait-text	user-agent-two-visible	30	UserAgent_two
+tap	628	381
+sleep	1000
+assert-no-text	index-cache-two-absent	Cache_two

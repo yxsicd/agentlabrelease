@@ -1,0 +1,384 @@
+{
+  "apiContract": {
+    "callTarget": "AlertDialog",
+    "exportedSymbol": "AlertDialog",
+    "specifier": "@kit.ArkUI"
+  },
+  "automaticPromotion": false,
+  "callSiteEvidence": [
+    {
+      "excerpt": [
+        {
+          "line": 20,
+          "text": "  @Prop avatarUrl: string;"
+        },
+        {
+          "line": 21,
+          "text": "  @Prop nickName: String;"
+        },
+        {
+          "line": 22,
+          "text": "  dialogControllerConfirm: CustomDialogController = new CustomDialogController({"
+        },
+        {
+          "line": 23,
+          "text": "    builder: AlertDialog({"
+        },
+        {
+          "line": 24,
+          "text": "      primaryTitle: $r('app.string.exit_dialog_title'),"
+        },
+        {
+          "line": 25,
+          "text": "      content: $r('app.string.exit_dialog_content'),"
+        },
+        {
+          "line": 26,
+          "text": "      primaryButton: {"
+        },
+        {
+          "line": 27,
+          "text": "        value: $r('app.string.exit_dialog_cancel'),"
+        },
+        {
+          "line": 28,
+          "text": "        action: () => {"
+        },
+        {
+          "line": 29,
+          "text": "          this.dialogControllerConfirm.close();"
+        },
+        {
+          "line": 30,
+          "text": "        },"
+        },
+        {
+          "line": 31,
+          "text": "      },"
+        },
+        {
+          "line": 32,
+          "text": "      secondaryButton: {"
+        },
+        {
+          "line": 33,
+          "text": "        value: $r('app.string.exit_dialog_exit'),"
+        },
+        {
+          "line": 34,
+          "text": "        role: ButtonRole.ERROR,"
+        },
+        {
+          "line": 35,
+          "text": "        action: () => {"
+        },
+        {
+          "line": 36,
+          "text": "          AccountService.getInstance().logoutDirect();"
+        },
+        {
+          "line": 37,
+          "text": "        },"
+        },
+        {
+          "line": 38,
+          "text": "      },"
+        },
+        {
+          "line": 39,
+          "text": "    }),"
+        },
+        {
+          "line": 40,
+          "text": "  });"
+        },
+        {
+          "line": 41,
+          "text": ""
+        },
+        {
+          "line": 42,
+          "text": "  build() {"
+        },
+        {
+          "line": 43,
+          "text": "    WithTheme({ colorMode: ThemeColorMode.DARK}) {"
+        },
+        {
+          "line": 44,
+          "text": "      Column() {"
+        }
+      ],
+      "excerptSha256": "f635b79a3544e0a0f8d2cf33a1d6d4e53ed4f0d9d81302849801672238e48d07",
+      "factId": "workspace-fact-c703729272807d35a838188f",
+      "gitBlobOid": "5de8aacae1f5e72b189156d845052bed50d5e52f",
+      "kind": "call",
+      "owner": "AccountSheet",
+      "path": "products/tv/src/main/ets/component/AccountSheet.ets",
+      "projectBoundaryCandidates": [
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "products/tv"
+        }
+      ],
+      "repositoryId": "code-workshop",
+      "sourceByteLength": 4293,
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git@7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+      "sourceSha256": "98d186de70b20eb9e7191c835a63904a21d2aeecba8ef99a94b635839d47fd6e",
+      "span": {
+        "endByte": 1404,
+        "endColumnByte": 6,
+        "endLine": 39,
+        "startByte": 902,
+        "startColumnByte": 13,
+        "startLine": 23
+      },
+      "targetExpression": "AlertDialog"
+    },
+    {
+      "excerpt": [
+        {
+          "line": 25,
+          "text": "  @State result: JsResult | null = null;"
+        },
+        {
+          "line": 26,
+          "text": "  webviewController: webview.WebviewController = new webview.WebviewController();"
+        },
+        {
+          "line": 27,
+          "text": "  dialogControllerAlert: CustomDialogController = new CustomDialogController({"
+        },
+        {
+          "line": 28,
+          "text": "    builder: AlertDialog({"
+        },
+        {
+          "line": 29,
+          "text": "      primaryTitle: this.title,"
+        },
+        {
+          "line": 30,
+          "text": "      secondaryTitle: this.subtitle,"
+        },
+        {
+          "line": 31,
+          "text": "      content: this.message,"
+        },
+        {
+          "line": 32,
+          "text": "      primaryButton: {"
+        },
+        {
+          "line": 33,
+          "text": "        value: 'confirm',"
+        },
+        {
+          "line": 34,
+          "text": "        role: ButtonRole.ERROR,"
+        },
+        {
+          "line": 35,
+          "text": "        action: () => {"
+        },
+        {
+          "line": 36,
+          "text": "          console.info('Callback when the second button is clicked');"
+        },
+        {
+          "line": 37,
+          "text": "          this.result?.handleConfirm();"
+        },
+        {
+          "line": 38,
+          "text": "        }"
+        },
+        {
+          "line": 39,
+          "text": "      },"
+        },
+        {
+          "line": 40,
+          "text": "    }),"
+        },
+        {
+          "line": 41,
+          "text": "    onWillDismiss: () => {"
+        },
+        {
+          "line": 42,
+          "text": "      this.result?.handleCancel();"
+        },
+        {
+          "line": 43,
+          "text": "      this.dialogControllerAlert.close();"
+        },
+        {
+          "line": 44,
+          "text": "    }"
+        },
+        {
+          "line": 45,
+          "text": "  })"
+        }
+      ],
+      "excerptSha256": "7d245d0e2c26e427a3299002fc92233995ed1bf70bd8859261f9b67a1c80e0e8",
+      "factId": "workspace-fact-bac146bc96063a8bf8e9dfe9",
+      "gitBlobOid": "9966f2ad5ca020312b9e0a16dd7955b41ffd78ab",
+      "kind": "call",
+      "owner": "AlertDialogPage",
+      "path": "ArkWeb/ShowWebPageDialog/entry/src/main/ets/pages/AchieveAlertDialogPage2.ets",
+      "projectBoundaryCandidates": [
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "ArkWeb/ShowWebPageDialog"
+        },
+        {
+          "markers": [
+            "build-profile.json5",
+            "hvigorfile.ts",
+            "oh-package.json5"
+          ],
+          "path": "ArkWeb/ShowWebPageDialog/entry"
+        }
+      ],
+      "repositoryId": "guide-snippets",
+      "sourceByteLength": 2092,
+      "sourceIdentity": "git:https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "sourceSha256": "127b8da1c22ee5411734b7ae21de3c3c1d26683fc9ac3ae5ec080d43ee3c3040",
+      "span": {
+        "endByte": 1449,
+        "endColumnByte": 6,
+        "endLine": 40,
+        "startByte": 1097,
+        "startColumnByte": 13,
+        "startLine": 28
+      },
+      "targetExpression": "AlertDialog"
+    }
+  ],
+  "candidateId": "difficulty-029b14f310abe9975bbfdfa1",
+  "candidateSha256": "0ea3edcb78877701f61d3eb9f89e0c0781e861e99707535891c43bf4d517b67a",
+  "lineage": {
+    "analysisRunSha256": "9579febb61c23a19fc6acfbdfc6da2635f5c131e1d90a198faa7cae8957aee36",
+    "currentMethodProposalSha256": "d151b6ed91f8dfb6650e36d49546b70ebfa44641bc34fccba16369067c4ea93e",
+    "difficultyEvidenceSha256": "d6b010bb0cf8dd71702dc6b88ac9f303dee64e9c25de3b117966efddcb9db72e",
+    "manifestSha256": "13050f6fe8b4d7d0cc3d79f7ed1d89cc3f9a6fccf6e432e496b4cc73a3e98d31",
+    "proposalMethodRevision": "b4635d78f3ca8275ce09882f200ce4ead4aff9c1",
+    "workspaceFactsSha256": "a164c323ca7847117aa08b0f30b5b3895bce0787fb0539684ef7286cfbf35d79"
+  },
+  "mechanism": "same external API call target is observed across repository boundaries",
+  "packetMethodRevision": "5d730d1fbc7a6fa6eaee58fc4f7d580bb7a39469",
+  "requiredCalibration": {
+    "alternativeValid": "constructor-distinct repair passes the same checks",
+    "baseline": "expected issue behavior fails while infrastructure remains available",
+    "environment": "gold/reference execution proves each exact source and runtime before participant grading",
+    "meaningfulWrong": "plausible incomplete or wrong-boundary repair fails the intended check",
+    "reference": "known repair passes repair and preservation checks"
+  },
+  "reviewDecisionContract": {
+    "allowedVerdicts": [
+      "advance-to-case-contract",
+      "reject-as-noncoherent",
+      "defer-for-more-evidence"
+    ],
+    "requiredQuestionIds": [
+      "shared-behavior",
+      "observable-gap",
+      "prompt-completeness",
+      "repair-oracle",
+      "preservation-oracle",
+      "environment",
+      "cross-repo-necessity"
+    ],
+    "requiredRiskIds": [
+      "api-name-is-not-semantics",
+      "issue-contract-absent",
+      "build-boundary-unqualified",
+      "oracle-unqualified"
+    ],
+    "reviewerMustBeIndependentOfPacketGenerator": true,
+    "schema": "agentlab.multi_repo_candidate_semantic_review.v1"
+  },
+  "reviewQuestions": [
+    {
+      "id": "shared-behavior",
+      "question": "Do the call sites exercise one coherent cross-repository behavior rather than merely sharing an API name?"
+    },
+    {
+      "id": "observable-gap",
+      "question": "Is there an issue-level defect or extension whose pre-change failure is observable in every required repository?"
+    },
+    {
+      "id": "prompt-completeness",
+      "question": "Can the participant-facing prompt state every required behavior without revealing the repair?"
+    },
+    {
+      "id": "repair-oracle",
+      "question": "Can independent FAIL_TO_PASS checks accept structurally distinct valid repairs?"
+    },
+    {
+      "id": "preservation-oracle",
+      "question": "Can independent PASS_TO_PASS checks cover existing repository-specific behavior?"
+    },
+    {
+      "id": "environment",
+      "question": "Are exact SDK, build roots, modules and emulator capabilities reproducible for every source?"
+    },
+    {
+      "id": "cross-repo-necessity",
+      "question": "Does the task require coordinated multi-repository reasoning, rather than two unrelated single-repository tasks?"
+    }
+  ],
+  "risks": [
+    {
+      "id": "api-name-is-not-semantics",
+      "statement": "A shared call target does not establish a shared behavioral obligation."
+    },
+    {
+      "id": "issue-contract-absent",
+      "statement": "No participant-visible issue, repair behavior or preservation behavior has been approved."
+    },
+    {
+      "id": "build-boundary-unqualified",
+      "statement": "Marker-bearing ancestors have not been compiled or accepted as exact project/module roots."
+    },
+    {
+      "id": "oracle-unqualified",
+      "statement": "No baseline/reference/alternative/wrong calibration has executed for this candidate."
+    }
+  ],
+  "schema": "agentlab.multi_repo_candidate_review_packet.v1",
+  "selectionRoles": [
+    "minimum-api-call-file-count"
+  ],
+  "sourceProjectBoundary": {
+    "interpretation": "Marker-bearing ancestors are evidence candidates, not a qualified build root or module.",
+    "status": "review-required"
+  },
+  "sourceSetSha256": "c4923e499fbb0ca2ed4fd205c66d6353bbe2aa58935413e3c897183a25493ca9",
+  "status": "independent-semantic-review-required",
+  "sweStyleTaskContract": {
+    "required": [
+      "exact base source set",
+      "participant-visible problem statement",
+      "hidden FAIL_TO_PASS repair checks",
+      "hidden PASS_TO_PASS preservation checks",
+      "exact build and runtime environment identities",
+      "reference, alternative-valid and meaningful-wrong calibration receipts",
+      "blind participant/evaluator split"
+    ],
+    "satisfiedByThisPacket": [
+      "exact base source set",
+      "source-localized call evidence"
+    ]
+  }
+}

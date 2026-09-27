@@ -151,7 +151,297 @@ fn phase_for(path: &str) -> String {
         .trim_end_matches("-events.jsonl")
         .into()
 }
+
+fn harmony_instance(root: &Path, run: &str, archive: &str, result: Value) -> Tables {
+    let policy_bound = result["schema"] == "agentlab.harmony_emulator_case_result.v3";
+    let hap_sha256 = result["hapSha256"]
+        .as_str()
+        .expect("Harmony emulator result requires hapSha256");
+    assert!(
+        hap_sha256.len() == 64
+            && hap_sha256
+                .bytes()
+                .all(|value| value.is_ascii_hexdigit() && !value.is_ascii_uppercase()),
+        "Harmony emulator hapSha256 must be lowercase SHA-256"
+    );
+    assert_eq!(
+        result["sourceIdentity"],
+        format!("artifact-sha256:{hap_sha256}"),
+        "Harmony emulator sourceIdentity must bind the exact HAP"
+    );
+    assert_eq!(
+        result["powerThermalAuthority"], "unavailable_on_emulator",
+        "Harmony emulator result must not claim power or thermal authority"
+    );
+    let mut tables = Tables::new();
+    for name in [
+        "runs",
+        "device_assessments",
+        "performance_assessments",
+        "checks",
+        "evidence_files",
+    ] {
+        tables.entry(name.into()).or_default();
+    }
+    let functional_passed = result["status"] == "passed";
+    let oracle_passed = result["oracleStatus"] == "passed";
+    put(
+        &mut tables,
+        "runs",
+        json!({
+            "id":run,
+            "assetClass":"evaluation-instance",
+            "runId":run,
+            "taskId":result["taskId"],
+            "sourceIdentity":result["sourceIdentity"],
+            "summary":result.clone()
+        }),
+    );
+    put(
+        &mut tables,
+        "device_assessments",
+        json!({
+            "id":format!("{run}-harmony-emulator"),
+            "assetClass":"evaluation-instance",
+            "runId":run,
+            "taskId":result["taskId"],
+            "sourceIdentity":result["sourceIdentity"],
+            "scenarioId":result["scenarioId"],
+            "scenarioSha256":result["scenarioSha256"],
+            "hapSha256":result["hapSha256"],
+            "functionalPassed":functional_passed,
+            "oraclePassed":oracle_passed,
+            "assessmentStatus":result["assessmentStatus"],
+            "infrastructureAvailable":result["infrastructureAvailable"],
+            "subjectTaskSucceeded":result["subjectTaskSucceeded"],
+            "failureClass":result["failureClass"],
+            "profileCollected":result["profileStatus"] == "collected",
+            "profileRunId":result["profileRunId"],
+            "environmentIdentity":result["environmentIdentity"],
+            "performancePolicyId":result["performancePolicyId"],
+            "performancePolicySha256":result["performancePolicySha256"],
+            "profileWorkloadId":result["profileWorkloadId"],
+            "profileWorkloadSha256":result["profileWorkloadSha256"],
+            "powerThermalAuthority":result["powerThermalAuthority"],
+            "authority":"operator-owned-device-runner"
+        }),
+    );
+    for (check, passed) in [
+        ("functional-case-completed", functional_passed),
+        ("ui-oracle-completed", oracle_passed),
+        (
+            "smartperf-proxy-collected",
+            result["profileStatus"] == "collected",
+        ),
+    ] {
+        put(
+            &mut tables,
+            "checks",
+            json!({
+                "id":format!("{run}-{check}"),
+                "assetClass":"evaluation-instance",
+                "runId":run,
+                "phaseLabel":"harmony-emulator",
+                "check":check,
+                "passed":passed,
+                "authority":"operator-owned-device-runner"
+            }),
+        );
+    }
+    let performance = root.join("smartperf-summary.json");
+    assert!(
+        result["profileSummaryStatus"] != "normalized" || performance.exists(),
+        "normalized SmartPerf result is missing smartperf-summary.json"
+    );
+    if performance.exists() {
+        assert_eq!(result["profileSummaryStatus"], "normalized");
+        let summary = json(&performance);
+        assert!(
+            summary["schema"] == "agentlab.smartperf_summary.v1"
+                || summary["schema"] == "agentlab.smartperf_summary.v2",
+            "unsupported SmartPerf summary schema"
+        );
+        assert_eq!(summary["taskId"], result["taskId"]);
+        assert_eq!(summary["sourceIdentity"], result["sourceIdentity"]);
+        if !result["profileRunId"].is_null() {
+            assert_eq!(summary["runId"], result["profileRunId"]);
+        }
+        if !result["environmentIdentity"].is_null() {
+            assert_eq!(
+                summary["environmentIdentity"],
+                result["environmentIdentity"]
+            );
+        }
+        assert_eq!(
+            summary["authority"]["absolutePowerThermal"],
+            "unavailable-on-emulator"
+        );
+        if policy_bound {
+            assert_eq!(summary["schema"], "agentlab.smartperf_summary.v2");
+            let policy_path = root.join("performance-policy.json");
+            let workload_path = root.join("profile-workload.tsv");
+            assert!(
+                policy_path.exists(),
+                "policy-bound result is missing performance-policy.json"
+            );
+            assert!(
+                workload_path.exists(),
+                "policy-bound result is missing profile-workload.tsv"
+            );
+            let policy = json(&policy_path);
+            assert_eq!(policy["schema"], "agentlab.harmony_performance_policy.v1");
+            assert_eq!(policy["id"], result["performancePolicyId"]);
+            assert_eq!(
+                hash(&fs::read(&policy_path).unwrap()),
+                result["performancePolicySha256"]
+            );
+            assert_eq!(
+                hash(&fs::read(&workload_path).unwrap()),
+                result["profileWorkloadSha256"]
+            );
+            assert_eq!(
+                summary["performancePolicy"]["id"],
+                result["performancePolicyId"]
+            );
+            assert_eq!(
+                summary["performancePolicy"]["sha256"],
+                result["performancePolicySha256"]
+            );
+            assert_eq!(
+                summary["profileWorkload"]["id"],
+                result["profileWorkloadId"]
+            );
+            assert_eq!(
+                summary["profileWorkload"]["sha256"],
+                result["profileWorkloadSha256"]
+            );
+        }
+        put(
+            &mut tables,
+            "performance_assessments",
+            json!({
+                "id":format!("{run}-smartperf"),
+                "assetClass":"evaluation-instance",
+                "runId":run,
+                "taskId":result["taskId"],
+                "sourceIdentity":result["sourceIdentity"],
+                "environmentIdentity":summary["environmentIdentity"],
+                "sampleCount":summary["sampleCount"],
+                "profileValid":summary["profileValid"],
+                "canonicalMetrics":summary["canonicalMetrics"],
+                "performancePolicy":summary["performancePolicy"],
+                "profileWorkload":summary["profileWorkload"],
+                "metricAvailability":summary["metricAvailability"],
+                "authority":summary["authority"],
+                "evidencePath":"smartperf-summary.json"
+            }),
+        );
+        put(
+            &mut tables,
+            "checks",
+            json!({
+                "id":format!("{run}-smartperf-summary-normalized"),
+                "assetClass":"evaluation-instance",
+                "runId":run,
+                "phaseLabel":"harmony-emulator",
+                "check":"smartperf-summary-normalized",
+                "passed":summary["profileValid"] == true,
+                "authority":"operator-owned-performance-normalizer"
+            }),
+        );
+    }
+    let checks = root.join("ui-checks.tsv");
+    let mut ui_check_verdicts = Vec::new();
+    if checks.exists() {
+        for (line_number, line) in fs::read_to_string(&checks).unwrap().lines().enumerate() {
+            let fields: Vec<&str> = line.splitn(4, '\t').collect();
+            assert_eq!(
+                fields.len(),
+                4,
+                "Malformed ui-checks.tsv line {}",
+                line_number + 1
+            );
+            assert!(
+                matches!(fields[1], "true" | "false"),
+                "Malformed UI check outcome on line {}",
+                line_number + 1
+            );
+            ui_check_verdicts.push(fields[1] == "true");
+            put(
+                &mut tables,
+                "checks",
+                json!({
+                    "id":format!("{run}-{}",fields[0]),
+                    "assetClass":"evaluation-instance",
+                    "runId":run,
+                    "phaseLabel":"harmony-emulator-ui",
+                    "check":fields[0],
+                    "passed":fields[1] == "true",
+                    "kind":fields[2],
+                    "expected":fields[3],
+                    "authority":"operator-owned-ui-oracle"
+                }),
+            );
+        }
+    }
+    if result["assessmentStatus"] == "assessed" {
+        assert_eq!(result["infrastructureAvailable"], true);
+        assert!(result["subjectTaskSucceeded"].is_boolean());
+        assert!(
+            !ui_check_verdicts.is_empty(),
+            "assessed Harmony emulator result requires retained UI checks"
+        );
+        let aggregate = ui_check_verdicts.iter().all(|value| *value);
+        assert_eq!(
+            result["subjectTaskSucceeded"], aggregate,
+            "Harmony emulator verdict must match retained UI checks"
+        );
+        assert_eq!(
+            oracle_passed, aggregate,
+            "Harmony emulator Oracle status must match retained UI checks"
+        );
+        assert_eq!(
+            functional_passed, aggregate,
+            "Harmony emulator status must match retained UI checks"
+        );
+    } else {
+        assert_eq!(result["assessmentStatus"], "infrastructure-unavailable");
+        assert_eq!(result["infrastructureAvailable"], false);
+        assert!(result["subjectTaskSucceeded"].is_null());
+    }
+    for path in files(root) {
+        let rel = relative(&path, root);
+        let raw = fs::read(&path).unwrap();
+        let file_id = hash(format!("{run}:{rel}").as_bytes());
+        put(
+            &mut tables,
+            "evidence_files",
+            json!({
+                "id":file_id,
+                "assetClass":"evaluation-instance",
+                "runId":run,
+                "path":rel,
+                "sha256":hash(&raw),
+                "byteCount":raw.len(),
+                "archiveUri":archive,
+                "archivePath":format!("raw/{run}/{rel}"),
+                "storage":"external-instance-evidence"
+            }),
+        );
+    }
+    tables
+}
+
 fn instance(root: &Path, run: &str, archive: &str) -> Tables {
+    let result_path = root.join("result.json");
+    if result_path.exists() {
+        let result = json(&result_path);
+        if result["schema"] == "agentlab.harmony_emulator_case_result.v2"
+            || result["schema"] == "agentlab.harmony_emulator_case_result.v3"
+        {
+            return harmony_instance(root, run, archive, result);
+        }
+    }
     let mut t = Tables::new();
     for name in [
         "tool_calls",

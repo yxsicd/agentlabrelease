@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-supply-report.schema.json",
+  "title": "AgentLab case supply report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "cohortId",
+    "cohortSha256",
+    "methodRevision",
+    "denominators",
+    "sourceStrata",
+    "cases",
+    "laneCoverage",
+    "qualificationBoundary",
+    "automaticPromotion"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.case_supply_report.v1"},
+    "cohortId": {"type": "string", "minLength": 1},
+    "cohortSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "methodRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "denominators": {"$ref": "#/$defs/counts"},
+    "sourceStrata": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "allOf": [
+          {"$ref": "#/$defs/counts"},
+          {
+            "type": "object",
+            "required": ["lane", "strategy"],
+            "properties": {
+              "lane": {"enum": ["natural", "derived"]},
+              "strategy": {"type": "string", "minLength": 1}
+            }
+          }
+        ]
+      }
+    },
+    "cases": {"type": "array", "items": {"type": "object"}},
+    "laneCoverage": {"type": "object"},
+    "qualificationBoundary": {"type": "object"},
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "counts": {
+      "type": "object",
+      "required": [
+        "selectedCandidateCount",
+        "unconvertedCandidateCount",
+        "frozenCaseCount",
+        "functionalQualifiedCaseCount",
+        "endToEndQualifiedCaseCount",
+        "frozenCaseYieldRate",
+        "functionalCaseYieldRate",
+        "endToEndCaseYieldRate"
+      ],
+      "properties": {
+        "selectedCandidateCount": {"type": "integer", "minimum": 1},
+        "unconvertedCandidateCount": {"type": "integer", "minimum": 0},
+        "frozenCaseCount": {"type": "integer", "minimum": 0},
+        "functionalQualifiedCaseCount": {"type": "integer", "minimum": 0},
+        "endToEndQualifiedCaseCount": {"type": "integer", "minimum": 0},
+        "frozenCaseYieldRate": {"type": "number", "minimum": 0, "maximum": 1},
+        "functionalCaseYieldRate": {"type": "number", "minimum": 0, "maximum": 1},
+        "endToEndCaseYieldRate": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    }
+  }
+}
