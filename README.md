@@ -7,17 +7,19 @@ Agents.
 Current runtime candidate: `candidate-20260912-c22b7bfd-linux-x64`.
 The historical environment-kit preview remains `v0.1.0-alpha.9`.
 
-The current lightweight aggregate candidate is `v0.1.0-alpha.13`. It binds
-release-method source commit `4f24f9a7eb1de98cbb0b695f02cf01da03ae26fb`
-to 14 already-published immutable components and all 22 registered payload and
-descriptor assets without rebuilding or uploading any unchanged binary. It
-has revalidated all 22 remote immutable assets and passed its release-bound
-Linux-emulator acceptance. It remains a developer-preview candidate until the
-tagged clean install succeeds. Its accepted pass/fail evidence is retained as
-a review-only recursive-feedback handoff for the next multi-repository analysis
-cut. That successor cut has been replayed over two exact public Harmony
-repositories, producing 404,308 facts, 19,374 difficulty candidates, 97
-eligible cross-repository candidates and a bounded ten-proposal review queue.
+The current lightweight aggregate is `v0.1.0-alpha.14`. It binds release-method
+source commit `7d7d9ee57adaa5ed90be867cf3a9fa2ce22afed6` to 15 already-published
+immutable components and all 26 registered payload and descriptor assets,
+including the standalone long-horizon case-modeling analysis tools, without
+rebuilding or uploading any unchanged binary. All 26 assets are independently
+re-observed on immutable GitHub Releases and the exact tag is qualified through
+a fresh-runner closure install before publication. Linux Harmony emulator
+execution is explicitly not requalified for this cut: the Alpha.13 acceptance
+receipt is not transferred to Alpha.14. Its earlier pass/fail evidence remains
+a review-only recursive-feedback handoff. That successor cut has been replayed
+over two exact public Harmony repositories, producing 404,308 facts, 19,374
+difficulty candidates, 97 eligible cross-repository candidates and a bounded
+ten-proposal review queue.
 Maintainer triage rejected all ten generic framework candidates because none
 explained the payment-authority UI Oracle failure; no case was promoted. The
 next loop must select a semantically related source set or enrich the feedback

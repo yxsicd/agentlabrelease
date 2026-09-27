@@ -73,7 +73,7 @@ def validate_tag(root: pathlib.Path, tag: str, tag_sha: str, source_sha: str) ->
 def qualify(
     closure_path: pathlib.Path,
     asset_receipt_path: pathlib.Path,
-    harmony_receipt_path: pathlib.Path,
+    harmony_receipt_path: pathlib.Path | None,
     install_summary_path: pathlib.Path,
     environment_lock_path: pathlib.Path,
     *,
@@ -85,7 +85,6 @@ def qualify(
 ) -> dict[str, Any]:
     closure = load(closure_path, "release closure")
     asset_receipt = load(asset_receipt_path, "immutable asset receipt")
-    harmony_receipt = load(harmony_receipt_path, "Harmony acceptance receipt")
     install = load(install_summary_path, "clean install summary")
     lock = load(environment_lock_path, "materialized environment lock")
     closure_sha = sha256(closure_path)
@@ -101,7 +100,8 @@ def qualify(
     require(isinstance(source_sha, str) and REVISION.fullmatch(source_sha) is not None, "release source revision is invalid")
     qualification_plan = closure.get("qualificationPlan") or {}
     require(qualification_plan.get("taggedCleanInstallRequired") is True, "closure does not require tagged clean install")
-    require(qualification_plan.get("linuxEmulatorAcceptanceRequired") is True, "closure does not require Harmony acceptance")
+    harmony_required = qualification_plan.get("linuxEmulatorAcceptanceRequired")
+    require(isinstance(harmony_required, bool), "closure Harmony acceptance policy is invalid")
     require(qualification_plan.get("automaticPromotion") is False, "closure may not auto-promote")
 
     require(asset_receipt.get("schema") == "agentlab.release_graph_validation.v1", "unsupported asset receipt")
@@ -113,11 +113,22 @@ def qualify(
     require(asset_closure.get("assetCount") == len(closure.get("assets") or []), "asset receipt count differs")
     require(len(asset_closure.get("remoteAssets") or []) == len(closure.get("assets") or []), "not every closure asset was observed remotely")
 
-    require(harmony_receipt.get("schema") == "agentlab.release_harmony_acceptance.v1", "unsupported Harmony receipt")
-    require(harmony_receipt.get("status") == "accepted-developer-preview-review-required", "Harmony acceptance did not pass")
-    require(harmony_receipt.get("releaseTag") == tag and harmony_receipt.get("releaseGitSha") == source_sha, "Harmony receipt release identity differs")
-    require((harmony_receipt.get("closure") or {}).get("sha256") == closure_sha, "Harmony receipt is bound to another closure")
-    require(harmony_receipt.get("automaticPromotion") is False, "Harmony receipt may not auto-promote")
+    if harmony_required:
+        require(harmony_receipt_path is not None, "Harmony acceptance receipt is required")
+        harmony_receipt = load(harmony_receipt_path, "Harmony acceptance receipt")
+        require(harmony_receipt.get("schema") == "agentlab.release_harmony_acceptance.v1", "unsupported Harmony receipt")
+        require(harmony_receipt.get("status") == "accepted-developer-preview-review-required", "Harmony acceptance did not pass")
+        require(harmony_receipt.get("releaseTag") == tag and harmony_receipt.get("releaseGitSha") == source_sha, "Harmony receipt release identity differs")
+        require((harmony_receipt.get("closure") or {}).get("sha256") == closure_sha, "Harmony receipt is bound to another closure")
+        require(harmony_receipt.get("automaticPromotion") is False, "Harmony receipt may not auto-promote")
+        harmony_acceptance = {
+            "status": "accepted",
+            "receiptSha256": sha256(harmony_receipt_path),
+            "environmentIdentity": harmony_receipt["environmentIdentity"],
+        }
+    else:
+        require(harmony_receipt_path is None, "Harmony receipt must be omitted when acceptance is out of scope")
+        harmony_acceptance = {"status": "not-required-for-release-scope"}
 
     assets = {row.get("id"): row for row in closure.get("assets", []) if isinstance(row, dict)}
     lock_asset = assets.get("environment-lock.json")
@@ -137,12 +148,21 @@ def qualify(
         "releaseGitSha": source_sha,
         "closure": {"sha256": closure_sha, "assetCount": len(closure["assets"])},
         "immutableAssets": {"receiptSha256": sha256(asset_receipt_path), "remoteAssetCount": len(asset_closure["remoteAssets"])},
-        "harmonyAcceptance": {"receiptSha256": sha256(harmony_receipt_path), "environmentIdentity": harmony_receipt["environmentIdentity"]},
+        "harmonyAcceptance": harmony_acceptance,
         "taggedCleanInstall": {"summarySha256": sha256(install_summary_path), "environmentLockSha256": sha256(environment_lock_path), "checks": checks},
         "github": {"repository": repository, "runId": run_id, "event": event, "runUrl": f"https://github.com/{repository}/actions/runs/{run_id}"},
         "qualificationBoundary": {
-            "qualified": ["exact immutable tag checkout", "all closure assets observed on immutable GitHub releases", "release-bound Linux Harmony emulator acceptance", "fresh-runner closure installation and basic deployment"],
-            "notQualified": ["stable API compatibility", "absolute power or thermal measurement", "physical-device behavior", "automatic channel promotion"],
+            "qualified": [
+                "exact immutable tag checkout",
+                "all closure assets observed on immutable GitHub releases",
+                "fresh-runner closure installation and basic deployment",
+            ] + (["release-bound Linux Harmony emulator acceptance"] if harmony_required else []),
+            "notQualified": [
+                "stable API compatibility",
+                "absolute power or thermal measurement",
+                "physical-device behavior",
+                "automatic channel promotion",
+            ] + ([] if harmony_required else ["Linux Harmony emulator execution for this release"]),
         },
         "automaticPromotion": False,
     }
@@ -152,7 +172,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--closure", type=pathlib.Path, required=True)
     parser.add_argument("--asset-receipt", type=pathlib.Path, required=True)
-    parser.add_argument("--harmony-receipt", type=pathlib.Path, required=True)
+    parser.add_argument("--harmony-receipt", type=pathlib.Path)
     parser.add_argument("--install-summary", type=pathlib.Path, required=True)
     parser.add_argument("--environment-lock", type=pathlib.Path, required=True)
     parser.add_argument("--tag", required=True)
@@ -171,7 +191,8 @@ def main() -> int:
         require(isinstance(source_sha, str), "release source revision is absent")
         validate_tag(args.git_root.resolve(), args.tag, args.tag_sha, source_sha)
         receipt = qualify(
-            args.closure.resolve(), args.asset_receipt.resolve(), args.harmony_receipt.resolve(),
+            args.closure.resolve(), args.asset_receipt.resolve(),
+            args.harmony_receipt.resolve() if args.harmony_receipt else None,
             args.install_summary.resolve(), args.environment_lock.resolve(), tag=args.tag,
             tag_sha=args.tag_sha, repository=args.repository, run_id=args.run_id,
             event=args.event,

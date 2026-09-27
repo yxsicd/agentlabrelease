@@ -60,7 +60,7 @@ class ReleaseClosureCompositionTests(unittest.TestCase):
         self.assertEqual({asset["url"] for asset in value["assets"]}, expected_urls)
         self.assertGreater(len(value["assets"]), len(self.base["assets"]))
         self.assertEqual(value["reuse"]["reusedAssetCount"], len(expected_urls))
-        self.assertEqual(len(value["assets"]), 22)
+        self.assertEqual(len(value["assets"]), len(expected_urls))
         self.assertEqual(value["reuse"]["newBinaryBuildCount"], 0)
         self.assertEqual(value["reuse"]["newBinaryUploadCount"], 0)
         self.assertIn(
@@ -76,6 +76,23 @@ class ReleaseClosureCompositionTests(unittest.TestCase):
             "not-qualified",
         )
         self.assertFalse(value["qualificationPlan"]["automaticPromotion"])
+
+    def test_composition_can_exclude_unrequalified_harmony_execution(self) -> None:
+        value = MODULE.compose(
+            self.base,
+            self.registry,
+            self.registry_bytes,
+            "0.1.0-alpha.14",
+            self.revision,
+            linux_emulator_acceptance_required=False,
+        )
+        self.assertEqual(
+            value["developerPreviewScope"]["linuxHarmonyEmulatorExecution"],
+            "not-qualified-in-this-release",
+        )
+        self.assertFalse(
+            value["qualificationPlan"]["linuxEmulatorAcceptanceRequired"]
+        )
 
     def test_preview_rejects_omitting_one_registered_descriptor(self) -> None:
         value = MODULE.compose(

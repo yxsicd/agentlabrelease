@@ -154,6 +154,37 @@ class TaggedDeveloperPreviewQualificationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "checks are incomplete"):
             self.qualify()
 
+    def test_harmony_receipt_is_omitted_when_release_scope_excludes_it(self) -> None:
+        closure = json.loads(self.closure.read_text())
+        closure["developerPreviewScope"]["linuxHarmonyEmulatorExecution"] = (
+            "not-qualified-in-this-release"
+        )
+        closure["qualificationPlan"]["linuxEmulatorAcceptanceRequired"] = False
+        self.write(self.closure, closure)
+        assets = json.loads(self.assets.read_text())
+        assets["closures"][0]["sha256"] = digest(self.closure)
+        self.write(self.assets, assets)
+        receipt = MODULE.qualify(
+            self.closure,
+            self.assets,
+            None,
+            self.install,
+            self.lock,
+            tag="v0.1.0-alpha.12",
+            tag_sha="a" * 40,
+            repository="yxsicd/agentlabrelease",
+            run_id="424242",
+            event="workflow_dispatch",
+        )
+        self.assertEqual(
+            receipt["harmonyAcceptance"]["status"],
+            "not-required-for-release-scope",
+        )
+        self.assertIn(
+            "Linux Harmony emulator execution for this release",
+            receipt["qualificationBoundary"]["notQualified"],
+        )
+
     def test_workflow_requires_tag_ref_and_retains_receipt(self) -> None:
         body = WORKFLOW.read_text()
         self.assertIn("github.ref_type == 'tag'", body)
@@ -162,7 +193,7 @@ class TaggedDeveloperPreviewQualificationTests(unittest.TestCase):
         self.assertIn("AGENTLAB_RELEASE_CLOSURE: ${{ inputs.closure_path }}", body)
         self.assertIn('--git-root "$GITHUB_WORKSPACE"', body)
         self.assertIn('--asset-receipt "$AGENTLAB_ASSET_RECEIPT"', body)
-        self.assertIn('--harmony-receipt "$AGENTLAB_HARMONY_RECEIPT"', body)
+        self.assertIn('harmony_args=(--harmony-receipt "$AGENTLAB_HARMONY_RECEIPT")', body)
         self.assertIn("qualify-tagged-developer-preview.py", body)
         self.assertIn("developer-preview-qualification.json", body)
         self.assertIn("workflow_dispatch:", body)

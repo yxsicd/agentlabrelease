@@ -66,6 +66,11 @@ def validate(closure: dict[str, Any], closure_sha: str, qualification: dict[str,
 
 def notes(closure: dict[str, Any], qualification: dict[str, Any]) -> str:
     scope = closure["developerPreviewScope"]
+    harmony_included = (
+        "- Linux x86/KVM Harmony emulator execution with ohosTest/Hypium\n"
+        if scope["linuxHarmonyEmulatorExecution"] == "experimental"
+        else ""
+    )
     return f"""# AgentLab {closure['releaseTag']} developer preview
 
 This is a metadata-only aggregate of {closure['reuse']['selectedComponentCount']} independently
@@ -76,7 +81,7 @@ unchanged component was rebuilt or uploaded for this release.
 
 - Multi-repository semantic and program analysis
 - Recursive difficulty feedback and reviewed calibrated case generation
-- Linux x86/KVM Harmony emulator execution with ohosTest/Hypium
+{harmony_included.rstrip()}
 - Functional Oracle pass/fail separation and SmartPerf relative feedback
 - Immutable closure installation on a fresh tagged GitHub Actions runner
 

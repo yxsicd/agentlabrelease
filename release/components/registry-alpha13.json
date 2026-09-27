@@ -1,7 +1,7 @@
 {
   "schema": "agentlab.component_registry.v1",
-  "generatedFromRevision": "7d7d9ee57adaa5ed90be867cf3a9fa2ce22afed6",
-  "scope": "current-alpha14-assembly-components",
+  "generatedFromRevision": "c52eb41e7ff177fd029b815e31a9121f9d3bf7d6",
+  "scope": "current-alpha11-assembly-components",
   "policy": {
     "unchangedAction": "reuse",
     "changedAction": "publish-new-immutable-component",
@@ -9,47 +9,6 @@
     "sourceCommitRole": "audit-not-sole-rebuild-key"
   },
   "components": [
-    {
-      "id": "agentlab-analysis-tools-linux-x64",
-      "kind": "analysis-tools",
-      "platform": "linux-x64",
-      "status": "selected",
-      "immutableRef": "analysis-tools-7d7d9ee57ada-linux-x64",
-      "source": {
-        "repository": "https://github.com/yxsicd/agentlabrelease",
-        "revision": "7d7d9ee57adaa5ed90be867cf3a9fa2ce22afed6"
-      },
-      "inputIdentity": {
-        "mode": "legacy-published-v1",
-        "effectiveInputDigest": "61760042b9ee83b4139ed75ba233f67ace74a6dfb8c52cacc23751c4e85c8d6d"
-      },
-      "assets": [
-        {
-          "id": "agentlab-analysis-tools-archive",
-          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/analysis-tools-7d7d9ee57ada-linux-x64/agentlab-pack-analysis-tools-7d7d9ee57ada-linux-x64.tar.zst",
-          "bytes": 2841416,
-          "sha256": "61c0a1fdf646cee11f3c5bf23b6ecb2d7f073c2e486e0913bf41d65acb40fe03"
-        },
-        {
-          "id": "agentlab-analysis-tools-descriptor",
-          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/analysis-tools-7d7d9ee57ada-linux-x64/agentlab-pack-analysis-tools-7d7d9ee57ada-linux-x64.tar.zst.json",
-          "bytes": 556,
-          "sha256": "a9c79e4a6badbd7c52a1e801f2f72ab72dd9e35b9c8582dfcf718598325e7477"
-        },
-        {
-          "id": "agentlab-analysis-tools-update",
-          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/analysis-tools-7d7d9ee57ada-linux-x64/analysis-tools-7d7d9ee57ada-linux-x64.json",
-          "bytes": 1455,
-          "sha256": "ad4ead6e40144b7fca40d61c948bf88668e564b3b8f6f76fc76c9c802182954d"
-        },
-        {
-          "id": "agentlab-analysis-tools-manifest",
-          "url": "https://github.com/yxsicd/agentlabrelease/releases/download/analysis-tools-7d7d9ee57ada-linux-x64/manifest.json",
-          "bytes": 15169,
-          "sha256": "a7338e69f9c3e1791a97a0b3bf0968ab881454a01c23af09f93983c0030cadbd"
-        }
-      ]
-    },
     {
       "id": "agentlab-control-linux-x64",
       "kind": "control",
