@@ -156,9 +156,21 @@ fn write_member(
     Ok(())
 }
 
-fn write_tar(path: &Path, manifest: &[u8], binaries: &[Binary]) -> Result<u64, String> {
+fn write_tar(
+    path: &Path,
+    manifest: &[u8],
+    runtime_manifest: &[u8],
+    binaries: &[Binary],
+) -> Result<u64, String> {
     let mut file = fs::File::create(path).map_err(|error| format!("cannot create tar: {error}"))?;
     write_member(&mut file, "manifest.json", manifest, 0o644, b'0')?;
+    write_member(
+        &mut file,
+        "payload/runtime-manifest.json",
+        runtime_manifest,
+        0o644,
+        b'0',
+    )?;
     write_member(&mut file, "payload/bin/", &[], 0o755, b'5')?;
     for binary in binaries {
         write_member(
@@ -239,18 +251,18 @@ fn required_u64(value: &Value, field: &str) -> Result<u64, String> {
 }
 
 fn self_check(root: &Path) -> Result<Value, String> {
-    let manifest_path = root.join("manifest.json");
+    let payload_root = if root.join("payload").is_dir() {
+        root.join("payload")
+    } else {
+        root.to_path_buf()
+    };
+    let manifest_path = payload_root.join("runtime-manifest.json");
     let manifest_bytes = fs::read(&manifest_path)
         .map_err(|error| format!("cannot read installed manifest: {error}"))?;
     let manifest: Value = serde_json::from_slice(&manifest_bytes)
         .map_err(|error| format!("installed manifest is not valid JSON: {error}"))?;
-    if required_text(&manifest, "schema")? != "agentlab.capability_pack.v1" {
+    if required_text(&manifest, "schema")? != "agentlab.analysis_tools_runtime_manifest.v1" {
         return Err("installed manifest schema is unsupported".into());
-    }
-    if required_text(&manifest, "analysisToolsSchema")?
-        != "agentlab.analysis_tools_pack_manifest.v1"
-    {
-        return Err("installed analysis-tools manifest schema is unsupported".into());
     }
     let source_revision = required_text(&manifest, "sourceRevision")?;
     if !valid_revision(source_revision) {
@@ -272,11 +284,6 @@ fn self_check(root: &Path) -> Result<Value, String> {
     if inventory.len() != BINARIES.len() {
         return Err("installed manifest inventory length is invalid".into());
     }
-    let payload_root = if root.join("payload").is_dir() {
-        root.join("payload")
-    } else {
-        root.to_path_buf()
-    };
     let bin_directory = payload_root.join("bin");
     let mut installed_names = fs::read_dir(&bin_directory)
         .map_err(|error| format!("cannot inspect installed bin directory: {error}"))?
@@ -529,16 +536,37 @@ fn package(values: &BTreeMap<String, String>) -> Result<Value, String> {
                 })
             })
             .collect();
+        let runtime_manifest = json!({
+            "schema": "agentlab.analysis_tools_runtime_manifest.v1",
+            "packId": "analysis-tools",
+            "version": version,
+            "sourceRevision": revision,
+            "platform": "linux-x64",
+            "buildProfile": "release-static-musl-v1",
+            "binaryCount": binaries.len(),
+            "binaries": inventory.clone()
+        });
+        let runtime_manifest_bytes = json_bytes(&runtime_manifest)?;
         let payload_bytes: u64 = binaries
             .iter()
             .map(|binary| binary.bytes.len() as u64)
-            .sum();
-        let mut files = vec![json!({
-            "mode": 0o755,
-            "path": "bin",
-            "size": 0,
-            "type": "directory"
-        })];
+            .sum::<u64>()
+            + runtime_manifest_bytes.len() as u64;
+        let mut files = vec![
+            json!({
+                "mode": 0o644,
+                "path": "runtime-manifest.json",
+                "sha256": digest(&runtime_manifest_bytes),
+                "size": runtime_manifest_bytes.len(),
+                "type": "file"
+            }),
+            json!({
+                "mode": 0o755,
+                "path": "bin",
+                "size": 0,
+                "type": "directory"
+            }),
+        ];
         files.extend(binaries.iter().map(|binary| {
             json!({
                 "mode": 0o755,
@@ -551,6 +579,7 @@ fn package(values: &BTreeMap<String, String>) -> Result<Value, String> {
         let manifest = json!({
             "schema": "agentlab.capability_pack.v1",
             "analysisToolsSchema": "agentlab.analysis_tools_pack_manifest.v1",
+            "analysisToolsRuntimeManifest": "runtime-manifest.json",
             "packId": "analysis-tools",
             "version": version,
             "sourceRevision": revision,
@@ -571,7 +600,12 @@ fn package(values: &BTreeMap<String, String>) -> Result<Value, String> {
         let archive_name = format!("agentlab-pack-analysis-tools-{version}-linux-x64.tar.zst");
         let archive_path = output.join(&archive_name);
         let tar_path = output.join(format!(".{archive_name}.tar"));
-        write_tar(&tar_path, &manifest_bytes, &binaries)?;
+        write_tar(
+            &tar_path,
+            &manifest_bytes,
+            &runtime_manifest_bytes,
+            &binaries,
+        )?;
         run_zstd(&tar_path, &archive_path)?;
         fs::remove_file(&tar_path)
             .map_err(|error| format!("cannot remove temporary tar: {error}"))?;

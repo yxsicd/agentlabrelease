@@ -158,6 +158,21 @@ fn executable_install_with_layout(tool_body: &str, volume_layout: bool) -> PathB
             "sha256": digest(&bytes)
         }));
     }
+    let runtime_manifest = json!({
+        "schema": "agentlab.analysis_tools_runtime_manifest.v1",
+        "packId": "analysis-tools",
+        "version": "aaaaaaaa",
+        "sourceRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "platform": "linux-x64",
+        "buildProfile": "release-static-musl-v1",
+        "binaryCount": inventory.len(),
+        "binaries": inventory.clone()
+    });
+    fs::write(
+        bin.parent().unwrap().join("runtime-manifest.json"),
+        serde_json::to_vec_pretty(&runtime_manifest).unwrap(),
+    )
+    .unwrap();
     let payload_bytes: u64 = inventory
         .iter()
         .map(|row| row["bytes"].as_u64().unwrap())
@@ -180,6 +195,7 @@ fn executable_install_with_layout(tool_body: &str, volume_layout: bool) -> PathB
     let manifest = json!({
         "schema": "agentlab.capability_pack.v1",
         "analysisToolsSchema": "agentlab.analysis_tools_pack_manifest.v1",
+        "analysisToolsRuntimeManifest": "runtime-manifest.json",
         "packId": "analysis-tools",
         "version": "aaaaaaaa",
         "sourceRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -243,10 +259,10 @@ fn builds_byte_identical_independent_candidate_component() {
         "agentlab.analysis_tools_pack_manifest.v1"
     );
     assert_eq!(manifest["packId"], "analysis-tools");
-    assert_eq!(manifest["entryCount"], binary_names().len() + 1);
+    assert_eq!(manifest["entryCount"], binary_names().len() + 2);
     assert_eq!(
         manifest["files"].as_array().unwrap().len(),
-        binary_names().len() + 1
+        binary_names().len() + 2
     );
     assert_eq!(manifest["binaryCount"], binary_names().len());
     assert_eq!(manifest["buildProfile"], "release-static-musl-v1");
@@ -277,6 +293,9 @@ fn builds_byte_identical_independent_candidate_component() {
             .count(),
         binary_names().len()
     );
+    assert!(members
+        .iter()
+        .any(|line| line == "payload/runtime-manifest.json"));
     let archived_manifest = Command::new("tar")
         .args(["-xOf", tar.to_str().unwrap(), "manifest.json"])
         .output()
