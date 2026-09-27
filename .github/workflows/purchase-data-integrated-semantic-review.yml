@@ -119,7 +119,7 @@ jobs:
             --mount "type=bind,src=$AGENTLAB_ROOT,dst=$AGENTLAB_ROOT" \
             --mount "type=bind,src=$AGENTLAB_ROOT/analysis-execution,dst=/agentlab-execution" \
             --workdir "$GITHUB_WORKSPACE" \
-            --entrypoint "${runtime[2]}/payload/bin/agentlab-analysis-tools-pack" \
+            --entrypoint "${runtime[2]}/bin/agentlab-analysis-tools-pack" \
             "${runtime[0]}" --execute agentlab-purchase-data-integrated-review \
               --receipt /agentlab-execution/semantic-decision.json -- decide \
               --packet "$PACKET_PATH" \

@@ -272,7 +272,12 @@ fn self_check(root: &Path) -> Result<Value, String> {
     if inventory.len() != BINARIES.len() {
         return Err("installed manifest inventory length is invalid".into());
     }
-    let bin_directory = root.join("payload/bin");
+    let payload_root = if root.join("payload").is_dir() {
+        root.join("payload")
+    } else {
+        root.to_path_buf()
+    };
+    let bin_directory = payload_root.join("bin");
     let mut installed_names = fs::read_dir(&bin_directory)
         .map_err(|error| format!("cannot inspect installed bin directory: {error}"))?
         .map(|entry| {
@@ -297,7 +302,7 @@ fn self_check(root: &Path) -> Result<Value, String> {
                 "installed manifest inventory is not canonical: expected {expected_name}, got {name}"
             ));
         }
-        let expected_path = format!("payload/bin/{expected_name}");
+        let expected_path = format!("bin/{expected_name}");
         if required_text(row, "path")? != expected_path {
             return Err(format!(
                 "installed manifest path is invalid for {expected_name}"
@@ -314,7 +319,7 @@ fn self_check(root: &Path) -> Result<Value, String> {
                 "installed manifest sha256 is invalid for {expected_name}"
             ));
         }
-        let path = root.join(&expected_path);
+        let path = payload_root.join(&expected_path);
         let metadata = fs::symlink_metadata(&path)
             .map_err(|error| format!("cannot inspect installed binary {expected_name}: {error}"))?;
         if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
@@ -351,7 +356,7 @@ fn self_check(root: &Path) -> Result<Value, String> {
         "binaries": verified,
         "manifestSha256": digest(&manifest_bytes),
         "inventorySha256": digest(&inventory_bytes),
-        "probeExecutable": "payload/bin/agentlab-analysis-tools-pack",
+        "probeExecutable": "bin/agentlab-analysis-tools-pack",
         "automaticPromotion": false
     }))
 }
@@ -369,16 +374,16 @@ fn installed_root() -> Result<PathBuf, String> {
     if bin.file_name().and_then(|name| name.to_str()) != Some("bin") {
         return Err("self-check executable is not under payload/bin".into());
     }
-    let payload = bin
+    let parent = bin
         .parent()
-        .ok_or_else(|| "self-check executable has no payload directory".to_owned())?;
-    if payload.file_name().and_then(|name| name.to_str()) != Some("payload") {
-        return Err("self-check executable is not under payload/bin".into());
+        .ok_or_else(|| "self-check executable has no component root".to_owned())?;
+    if parent.file_name().and_then(|name| name.to_str()) == Some("payload") {
+        return parent
+            .parent()
+            .map(Path::to_path_buf)
+            .ok_or_else(|| "self-check executable has no package root".to_owned());
     }
-    payload
-        .parent()
-        .map(Path::to_path_buf)
-        .ok_or_else(|| "self-check executable has no package root".to_owned())
+    Ok(parent.to_path_buf())
 }
 
 fn write_execution_receipt(file: &mut fs::File, receipt: &Value) -> Result<(), String> {
@@ -438,7 +443,12 @@ fn execute(args: &[String]) -> Result<i32, String> {
     }
     let root = installed_root()?;
     let component = self_check(&root)?;
-    let tool_path = root.join("payload/bin").join(tool);
+    let payload_root = if root.join("payload").is_dir() {
+        root.join("payload")
+    } else {
+        root.clone()
+    };
+    let tool_path = payload_root.join("bin").join(tool);
     let tool_sha256 = digest(
         &fs::read(&tool_path)
             .map_err(|error| format!("cannot read selected installed tool: {error}"))?,
@@ -513,7 +523,7 @@ fn package(values: &BTreeMap<String, String>) -> Result<Value, String> {
             .map(|binary| {
                 json!({
                     "name": binary.name,
-                    "path": format!("payload/bin/{}", binary.name),
+                    "path": format!("bin/{}", binary.name),
                     "bytes": binary.bytes.len(),
                     "sha256": binary.sha256
                 })
