@@ -115,7 +115,7 @@ jobs:
           fi
           python3 scripts/multi-repo-construction-contract.py validate \
             --selection "$AGENTLAB_ROOT/contract/candidate-selection.json" \
-            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/source/analysis/difficulty_candidates.json" \
             --surface "$AGENTLAB_ROOT/contract/source-surface.json" \
             --oracle-contract "$AGENTLAB_ROOT/contract/oracle-contract.json" \
             "${localization_args[@]}" \
@@ -131,11 +131,11 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/prepare-multi-repo-analysis-sources.py \
-            --spec "$AGENTLAB_ROOT/cohort/source/analysis-source/source-spec.json" \
+            --spec "$AGENTLAB_ROOT/cohort/source/analysis-source/source/source-spec.json" \
             --output "$AGENTLAB_ROOT/input"
           python3 scripts/select-multi-repo-cohort-candidate.py \
             --cohort "$AGENTLAB_ROOT/cohort/candidate-cohort.json" \
-            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/source/analysis/difficulty_candidates.json" \
             --expected-cohort-sha256 "$EXPECTED_COHORT_SHA256" \
             --candidate-id "$CANDIDATE_ID" \
             --output "$AGENTLAB_ROOT/candidate-selection.json"
@@ -166,8 +166,8 @@ jobs:
           fi
           python3 scripts/run-multi-repo-intent-construction.py \
             --manifest "$AGENTLAB_ROOT/input/manifest.json" \
-            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
-            --facts "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/workspace_facts.jsonl" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/source/analysis/difficulty_candidates.json" \
+            --facts "$AGENTLAB_ROOT/cohort/source/analysis-source/source/analysis/workspace_facts.jsonl" \
             --candidate-id '${{ steps.analysis.outputs.candidate_id }}' \
             --oracle-contract "$AGENTLAB_ROOT/contract/oracle-contract.json" \
             --construction-contract "$AGENTLAB_ROOT/contract/construction-contract.json" \
@@ -186,7 +186,7 @@ jobs:
       - name: Build the exact review-required proposal
         run: |
           python3 scripts/propose-multi-repo-case-plan.py \
-            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/source/analysis/difficulty_candidates.json" \
             --intent "$AGENTLAB_ROOT/construction/intent.json" \
             --construction-receipt "$AGENTLAB_ROOT/construction/construction-receipt.json" \
             --quality-report "$AGENTLAB_ROOT/construction/intent-quality.json" \
@@ -196,8 +196,8 @@ jobs:
         run: |
           python3 scripts/propose-dependency-discovery-plan.py \
             --case-plan-proposal "$AGENTLAB_ROOT/case-plan-proposal.json" \
-            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
-            --program-facts "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/workspace_facts.jsonl" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/source/analysis/difficulty_candidates.json" \
+            --program-facts "$AGENTLAB_ROOT/cohort/source/analysis-source/source/analysis/workspace_facts.jsonl" \
             --output "$AGENTLAB_ROOT/dependency-discovery-plan-proposal.json"
           sha256sum "$AGENTLAB_ROOT/dependency-discovery-plan-proposal.json" \
             >> "$GITHUB_STEP_SUMMARY"

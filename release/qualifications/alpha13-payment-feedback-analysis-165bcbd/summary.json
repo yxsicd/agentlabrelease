@@ -683,7 +683,7 @@
     "unseenAgentCohortContract": {
       "path": "release/qualifications/alpha13-payment-feedback-analysis-165bcbd/purchase-data-unseen-agent-cohort-contract.json",
       "schema": "agentlab.purchase_data_unseen_agent_cohort_contract.v1",
-      "sha256": "48cd13379bf7cab0aaa61fbb9c0583b19aa192c2376f6903b4277f9ead7936e2",
+      "sha256": "d3b9d39d38c0118de98ccf0099e2f3c243f36d657418468af42c97a701192dfa",
       "implementation": "crates/agentlab_code_analysis/src/purchase_data_unseen_agent_cohort_contract.rs",
       "binary": "agentlab-purchase-data-unseen-agent-cohort-contract",
       "language": "rust",

@@ -902,7 +902,7 @@ class MultiRepoCandidateReviewPacketTests(unittest.TestCase):
         self.assertIn("scripts/prepare-multi-repo-analysis-sources.py", workflow)
         self.assertIn("scripts/select-multi-repo-cohort-candidate.py", workflow)
         self.assertIn("scripts/build-multi-repo-candidate-review-packet.py", workflow)
-        self.assertIn('--analysis-manifest "$AGENTLAB_ROOT/source/source/analysis-source/manifest.json"', workflow)
+        self.assertIn('--analysis-manifest "$AGENTLAB_ROOT/source/source/analysis-source/source/manifest.json"', workflow)
         self.assertIn("multi-repo-candidate-review-packet", workflow)
         self.assertNotIn("secrets.", workflow)
         self.assertNotIn("AGENTLAB_LM_GATEWAY", workflow)

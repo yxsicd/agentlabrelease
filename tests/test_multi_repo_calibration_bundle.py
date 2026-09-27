@@ -220,7 +220,7 @@ class MultiRepoCalibrationBundleTest(unittest.TestCase):
         self.assertIn("multi-repo-calibration-bundle.py run", freeze)
         self.assertIn("--calibration-run", freeze)
         self.assertNotIn("source/operator-fixture", freeze)
-        self.assertIn("source/cohort/source/analysis-source/analysis/difficulty_candidates.json", freeze)
+        self.assertIn("source/cohort/source/analysis-source/source/analysis/difficulty_candidates.json", freeze)
 
 
 if __name__ == "__main__":

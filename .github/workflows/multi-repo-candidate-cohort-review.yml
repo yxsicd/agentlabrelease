@@ -61,8 +61,8 @@ jobs:
           SOURCE_WORKFLOW="$(python3 -c 'import json,os; print(json.load(open(os.environ["AGENTLAB_ROOT"] + "/source-run.json"))["path"])')"
           if [[ "$SOURCE_WORKFLOW" == ".github/workflows/multi-repo-candidate-cohort.yml" ]]; then
             python3 scripts/multi-repo-analysis-run.py validate \
-              --root "$AGENTLAB_ROOT/source/analysis-source" \
-              --run "$AGENTLAB_ROOT/source/analysis-source/analysis-run.json"
+              --root "$AGENTLAB_ROOT/source/analysis-source/source" \
+              --run "$AGENTLAB_ROOT/source/analysis-source/source/analysis-run.json"
           else
             python3 scripts/candidate-source-bundle.py validate \
               --root "$AGENTLAB_ROOT/source" \
@@ -75,7 +75,7 @@ jobs:
           source_run = json.load(open(root + "/source-run.json"))
           assert proposal["proposalMethodRevision"] == source_run["head_sha"]
           if source_run["path"] == ".github/workflows/multi-repo-candidate-cohort.yml":
-              source = json.load(open(root + "/source/analysis-source/analysis-run.json"))
+              source = json.load(open(root + "/source/analysis-source/source/analysis-run.json"))
               expected_digest = source["difficultyEvidenceSha256"]
           else:
               source = json.load(open(root + "/source/candidate-source-bundle.json"))
