@@ -711,7 +711,13 @@ hwlinux. Its trusted-main workflow authenticates the publication and analysis
 runs, verifies the runtime ZIP digest, executes the immutable analysis-tools
 component and attests the output; it does not relabel GitHub as the emulator
 execution host. Readiness verifies that raw attestation before accepting the
-gate, then requires the 3–8-profile
+gate. The held-out freeze is now also compiled by the Rust-native
+`agentlab-purchase-data-trusted-case-freeze`: it reopens the exact case-review
+artifact, validates the published source identity and semantic source set,
+recalculates both physically separated bundle inventories, and rejects
+symlinks, unbound files or byte overlap. Its trusted-main workflow attests the
+freeze receipt, and readiness verifies that second raw attestation before it
+requires the 3–8-profile
 portable dispatch to be the exact subject of raw GitHub SLSA attestation
 verification for the same workflow run and attempt. The runner-local plan is a
 derived compatibility artifact, not readiness authority. Its success

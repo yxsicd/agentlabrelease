@@ -28,6 +28,10 @@ const RUNTIME_BUNDLE_SCHEMA_PATH: &str =
     "schemas/purchase-data-published-revision-runtime-bundle.schema.json";
 const REEXECUTION_WORKFLOW_PATH: &str =
     ".github/workflows/purchase-data-published-revision-reexecution.yml";
+const CASE_FREEZE_SOURCE_PATH: &str =
+    "crates/agentlab_code_analysis/src/purchase_data_trusted_case_freeze.rs";
+const CASE_FREEZE_SCHEMA_PATH: &str = "schemas/purchase-data-trusted-case-freeze.schema.json";
+const CASE_FREEZE_WORKFLOW_PATH: &str = ".github/workflows/purchase-data-trusted-case-freeze.yml";
 
 struct Input {
     bytes: Vec<u8>,
@@ -400,6 +404,49 @@ fn derive(values: &BTreeMap<String, String>) -> Result<Value, String> {
         ],
         "published-revision re-execution workflow",
     )?;
+    let case_freeze_source = TextInput::load(
+        &path(values, "--trusted-case-freeze-source")?,
+        "trusted case-freeze source",
+    )?;
+    case_freeze_source.require_fragments(
+        &[
+            "const OUTPUT_SCHEMA: &str = \"agentlab.purchase_data_trusted_case_freeze.v1\"",
+            "validate_reexecution_provenance(",
+            "validate_case_review(",
+            "trusted-held-out-case-frozen",
+            "\"allowsCaseContract\": true",
+            "\"automaticPromotion\": false",
+        ],
+        "trusted case-freeze source",
+    )?;
+    let case_freeze_schema = TextInput::load(
+        &path(values, "--trusted-case-freeze-schema")?,
+        "trusted case-freeze schema",
+    )?;
+    case_freeze_schema.require_fragments(
+        &[
+            "\"schema\": {\"const\": \"agentlab.purchase_data_trusted_case_freeze.v1\"}",
+            "\"status\": {\"const\": \"trusted-held-out-case-frozen\"}",
+            "\"allowsCaseContract\": {\"const\": true}",
+            "\"allowsUnseenAgentDispatch\": {\"const\": false}",
+            "\"automaticPromotion\": {\"const\": false}",
+        ],
+        "trusted case-freeze schema",
+    )?;
+    let case_freeze_workflow = TextInput::load(
+        &path(values, "--trusted-case-freeze-workflow")?,
+        "trusted case-freeze workflow",
+    )?;
+    case_freeze_workflow.require_fragments(
+        &[
+            "name: Freeze purchase-data published-revision case",
+            "github.ref == 'refs/heads/main'",
+            "gh attestation verify",
+            "agentlab-purchase-data-trusted-case-freeze",
+            "Attest the exact trusted case-freeze receipt",
+        ],
+        "trusted case-freeze workflow",
+    )?;
 
     Ok(json!({
         "schema": CONTRACT_SCHEMA,
@@ -428,13 +475,16 @@ fn derive(values: &BTreeMap<String, String>) -> Result<Value, String> {
             "publishedRevisionReexecution": binding(REEXECUTION_SOURCE_PATH, &reexecution_source),
             "publishedRevisionReexecutionSchema": binding(REEXECUTION_SCHEMA_PATH, &reexecution_schema),
             "publishedRevisionRuntimeBundleSchema": binding(RUNTIME_BUNDLE_SCHEMA_PATH, &runtime_bundle_schema),
-            "publishedRevisionReexecutionWorkflow": binding(REEXECUTION_WORKFLOW_PATH, &reexecution_workflow)
+            "publishedRevisionReexecutionWorkflow": binding(REEXECUTION_WORKFLOW_PATH, &reexecution_workflow),
+            "trustedCaseFreeze": binding(CASE_FREEZE_SOURCE_PATH, &case_freeze_source),
+            "trustedCaseFreezeSchema": binding(CASE_FREEZE_SCHEMA_PATH, &case_freeze_schema),
+            "trustedCaseFreezeWorkflow": binding(CASE_FREEZE_WORKFLOW_PATH, &case_freeze_workflow)
         },
         "requiredSequence": [
             {"ordinal": 1, "gate": "independent-dual-integrated-review", "requiredEvidence": "approved agentlab.purchase_data_integrated_review_gate.v1 bound to this packet"},
             {"ordinal": 2, "gate": "exact-patch-upstream-publication", "requiredEvidence": "published upstream revision containing the exact reviewed patch"},
             {"ordinal": 3, "gate": "published-revision-reexecution", "requiredEvidence": "semantic, OHOS Test and performance evidence rebound to the published source revision"},
-            {"ordinal": 4, "gate": "trusted-case-freeze", "requiredEvidence": "successful trusted-main multi-repo-case-review run with held-out public revision"},
+            {"ordinal": 4, "gate": "trusted-case-freeze", "requiredEvidence": "attested Rust-compiled case-freeze receipt over a successful trusted-main multi-repo-case-review run and the exact published source set"},
             {"ordinal": 5, "gate": "unseen-agent-cohort", "requiredEvidence": "pre-outcome attested portable dispatch and repeated blind attempts for every declared profile"},
             {"ordinal": 6, "gate": "harmony-functional-performance-feedback", "requiredEvidence": "Harmony handoff plus OHOS Test and relative SmartPerf results linked to each assessed attempt"}
         ],

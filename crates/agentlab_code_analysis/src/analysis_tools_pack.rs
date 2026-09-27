@@ -38,6 +38,7 @@ const BINARIES: &[&str] = &[
     "agentlab-purchase-data-published-revision-reexecution",
     "agentlab-purchase-data-runtime-oracle-bridge",
     "agentlab-purchase-data-runtime-plan",
+    "agentlab-purchase-data-trusted-case-freeze",
     "agentlab-purchase-data-unseen-agent-cohort-contract",
     "agentlab-purchase-data-unseen-agent-readiness",
     "agentlab-source-probe",

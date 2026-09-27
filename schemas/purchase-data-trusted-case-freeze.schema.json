@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.dev/schemas/purchase-data-trusted-case-freeze.schema.json",
+  "title": "AgentLab trusted-main held-out case-freeze receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "contractSha256",
+    "reexecutionSha256",
+    "publishedRevision",
+    "publishedTreeOid",
+    "repository",
+    "sourceVisibility",
+    "caseReviewRunId",
+    "caseReviewRunAttempt",
+    "caseReviewSourceRevision",
+    "evaluationCaseSha256",
+    "sourceSetSha256",
+    "blindCutReceiptSha256",
+    "participantManifestSha256",
+    "evaluatorManifestSha256",
+    "runId",
+    "runAttempt",
+    "trustedMainRun",
+    "workflow",
+    "evidence",
+    "allowsCaseContract",
+    "allowsUnseenAgentDispatch",
+    "automaticPromotion",
+    "nextGate"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.purchase_data_trusted_case_freeze.v1"},
+    "status": {"const": "trusted-held-out-case-frozen"},
+    "contractSha256": {"$ref": "#/$defs/sha256"},
+    "reexecutionSha256": {"$ref": "#/$defs/sha256"},
+    "publishedRevision": {"$ref": "#/$defs/revision"},
+    "publishedTreeOid": {"$ref": "#/$defs/revision"},
+    "repository": {"type": "string", "minLength": 1},
+    "sourceVisibility": {"const": "held-out-public-revision"},
+    "caseReviewRunId": {"type": "integer", "minimum": 1},
+    "caseReviewRunAttempt": {"type": "integer", "minimum": 1},
+    "caseReviewSourceRevision": {"$ref": "#/$defs/revision"},
+    "evaluationCaseSha256": {"$ref": "#/$defs/sha256"},
+    "sourceSetSha256": {"$ref": "#/$defs/sha256"},
+    "blindCutReceiptSha256": {"$ref": "#/$defs/sha256"},
+    "participantManifestSha256": {"$ref": "#/$defs/sha256"},
+    "evaluatorManifestSha256": {"$ref": "#/$defs/sha256"},
+    "runId": {"type": "integer", "minimum": 1},
+    "runAttempt": {"type": "integer", "minimum": 1},
+    "trustedMainRun": {"const": true},
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "path", "sourceRevision", "sourceRef", "runId", "runAttempt"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "path": {"const": ".github/workflows/purchase-data-trusted-case-freeze.yml"},
+        "sourceRevision": {"$ref": "#/$defs/revision"},
+        "sourceRef": {"const": "refs/heads/main"},
+        "runId": {"type": "integer", "minimum": 1},
+        "runAttempt": {"type": "integer", "minimum": 1}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reexecutionSourceRun",
+        "reexecutionAttestationVerification",
+        "caseReviewSourceRun",
+        "evaluationCase",
+        "blindCutReceipt",
+        "participantManifest",
+        "evaluatorManifest"
+      ],
+      "properties": {
+        "reexecutionSourceRun": {"$ref": "#/$defs/evidence"},
+        "reexecutionAttestationVerification": {"$ref": "#/$defs/evidence"},
+        "caseReviewSourceRun": {"$ref": "#/$defs/evidence"},
+        "evaluationCase": {"$ref": "#/$defs/evidence"},
+        "blindCutReceipt": {"$ref": "#/$defs/evidence"},
+        "participantManifest": {"$ref": "#/$defs/evidence"},
+        "evaluatorManifest": {"$ref": "#/$defs/evidence"}
+      }
+    },
+    "allowsCaseContract": {"const": true},
+    "allowsUnseenAgentDispatch": {"const": false},
+    "automaticPromotion": {"const": false},
+    "nextGate": {"const": "pre-outcome-attested-unseen-agent-dispatch"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "byteLength"],
+      "properties": {
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "byteLength": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

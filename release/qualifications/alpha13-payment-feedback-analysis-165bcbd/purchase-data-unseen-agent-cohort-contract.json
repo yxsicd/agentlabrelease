@@ -71,6 +71,18 @@
       "path": "schemas/purchase-data-published-revision-runtime-bundle.schema.json",
       "sha256": "7c69fae020bf156643138682b85a19a604e319cb64f1139579c933c901a70837"
     },
+    "trustedCaseFreeze": {
+      "path": "crates/agentlab_code_analysis/src/purchase_data_trusted_case_freeze.rs",
+      "sha256": "4d32d619fec1ed3be9f9ee13b8a3f1e6885453d5ef9d59f5e55e56d41cb43c15"
+    },
+    "trustedCaseFreezeSchema": {
+      "path": "schemas/purchase-data-trusted-case-freeze.schema.json",
+      "sha256": "0d45e645164fe36aa4d8072d1a2d275b8a546931f99d81e6108fb57db7401d35"
+    },
+    "trustedCaseFreezeWorkflow": {
+      "path": ".github/workflows/purchase-data-trusted-case-freeze.yml",
+      "sha256": "159b9528219f0e26880d01cde97f8908701b568f8d477eaa96ec85d8e007232f"
+    },
     "trustedCaseReview": {
       "path": ".github/workflows/multi-repo-case-review.yml",
       "sha256": "74af43c901294758cb766416eb0dbf3ca63242a3951201b2c79adea6e2ad3efc"
@@ -121,7 +133,7 @@
     {
       "gate": "trusted-case-freeze",
       "ordinal": 4,
-      "requiredEvidence": "successful trusted-main multi-repo-case-review run with held-out public revision"
+      "requiredEvidence": "attested Rust-compiled case-freeze receipt over a successful trusted-main multi-repo-case-review run and the exact published source set"
     },
     {
       "gate": "unseen-agent-cohort",

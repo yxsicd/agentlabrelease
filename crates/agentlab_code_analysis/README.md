@@ -106,6 +106,9 @@ cargo run --locked -p agentlab_code_analysis \
   --published-revision-reexecution-schema schemas/purchase-data-published-revision-reexecution.schema.json \
   --published-revision-runtime-bundle-schema schemas/purchase-data-published-revision-runtime-bundle.schema.json \
   --published-revision-reexecution-workflow .github/workflows/purchase-data-published-revision-reexecution.yml \
+  --trusted-case-freeze-source crates/agentlab_code_analysis/src/purchase_data_trusted_case_freeze.rs \
+  --trusted-case-freeze-schema schemas/purchase-data-trusted-case-freeze.schema.json \
+  --trusted-case-freeze-workflow .github/workflows/purchase-data-trusted-case-freeze.yml \
   --output /tmp/purchase-data-unseen-agent-cohort-contract.json
 ```
 
@@ -135,6 +138,16 @@ runs the immutable Rust component, and attests the compiled receipt. GitHub is
 the verifier/import authority; the workflow does not claim its hosted runner
 executed the Harmony emulator.
 
+`agentlab-purchase-data-trusted-case-freeze` then reopens the authenticated
+re-execution receipt and the exact successful `multi-repo-case-review`
+artifact. It validates the published repository/revision and semantic source
+set, recalculates every participant/evaluator inventory and manifest digest,
+rejects symlinks, unbound files and cross-boundary byte overlap, and requires
+the evaluator's frozen case to be the exact reviewed case. The trusted-main
+workflow runs this Rust producer from the immutable component and attests the
+resulting case-freeze receipt. A held-out declaration permits the next dispatch
+gate; it does not claim model-training exclusion or unseen-Agent results.
+
 Once those external gates actually exist, compile their exact byte chain into
 an operator-gated dispatch decision with the Rust readiness validator:
 
@@ -146,6 +159,7 @@ agentlab-purchase-data-unseen-agent-readiness \
   --reexecution published-revision-reexecution.json \
   --reexecution-attestation-verification reexecution-attestation-verification.json \
   --case-freeze trusted-case-freeze.json \
+  --case-freeze-attestation-verification case-freeze-attestation-verification.json \
   --participant-dispatch participant-experiment-dispatch.json \
   --dispatch-attestation-verification dispatch-attestation-verification.json \
   --output unseen-agent-dispatch-readiness.json
@@ -158,9 +172,9 @@ re-execution on the published revision, a trusted-main held-out case freeze,
 and a 3–8-profile pre-outcome portable dispatch whose exact subject and workflow
 run/attempt occur in raw `gh attestation verify --format json` output. The
 certificate identity must also bind the exact repository, main ref, source
-revision, signer workflow and GitHub-hosted runner. Both the re-execution and
-participant-dispatch receipts require raw attestation verification. It binds
-all eight inputs by raw-byte SHA-256 and length. Success permits only
+revision, signer workflow and GitHub-hosted runner. The re-execution,
+case-freeze and participant-dispatch receipts all require raw attestation
+verification. It binds all nine inputs by raw-byte SHA-256 and length. Success permits only
 explicit dispatch of that declared cohort: execution and Harmony feedback
 remain false, and automatic dispatch/promotion remain forbidden.
 

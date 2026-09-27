@@ -50,6 +50,7 @@ struct Fixture {
     reexecution: PathBuf,
     reexecution_attestation: PathBuf,
     case_freeze: PathBuf,
+    case_freeze_attestation: PathBuf,
     dispatch: PathBuf,
     attestation: PathBuf,
     output: PathBuf,
@@ -180,16 +181,65 @@ impl Fixture {
             &json!({
                 "schema": "agentlab.purchase_data_trusted_case_freeze.v1",
                 "status": "trusted-held-out-case-frozen",
+                "contractSha256": digest(&fs::read(&contract).unwrap()),
                 "reexecutionSha256": digest(&fs::read(&reexecution).unwrap()),
                 "publishedRevision": "2222222222222222222222222222222222222222",
+                "publishedTreeOid": "1212121212121212121212121212121212121212",
+                "repository": "example/purchase-data",
                 "sourceVisibility": "held-out-public-revision",
                 "caseReviewRunId": 12345,
+                "caseReviewRunAttempt": 1,
+                "caseReviewSourceRevision": "8787878787878787878787878787878787878787",
                 "evaluationCaseSha256": "6666666666666666666666666666666666666666666666666666666666666666",
-                "sourceSetSha256": "8888888888888888888888888888888888888888888888888888888888888888",
+                "sourceSetSha256": "abababababababababababababababababababababababababababababababab",
                 "blindCutReceiptSha256": "7777777777777777777777777777777777777777777777777777777777777777",
+                "participantManifestSha256": "7878787878787878787878787878787878787878787878787878787878787878",
+                "evaluatorManifestSha256": "7979797979797979797979797979797979797979797979797979797979797979",
+                "runId": 12346,
+                "runAttempt": 1,
                 "trustedMainRun": true,
-                "automaticPromotion": false
+                "workflow": {
+                    "repository": "example/agentlabrelease",
+                    "path": ".github/workflows/purchase-data-trusted-case-freeze.yml",
+                    "sourceRevision": "8686868686868686868686868686868686868686",
+                    "sourceRef": "refs/heads/main",
+                    "runId": 12346,
+                    "runAttempt": 1
+                },
+                "allowsCaseContract": true,
+                "allowsUnseenAgentDispatch": false,
+                "automaticPromotion": false,
+                "nextGate": "pre-outcome-attested-unseen-agent-dispatch"
             }),
+        );
+        let case_freeze_attestation = root.join("case-freeze-attestation.json");
+        write(
+            &case_freeze_attestation,
+            &json!([{
+                "verificationResult": {
+                    "signature": {"certificate": {
+                        "issuer": "https://token.actions.githubusercontent.com",
+                        "sourceRepositoryURI": "https://github.com/example/agentlabrelease",
+                        "sourceRepositoryDigest": "8686868686868686868686868686868686868686",
+                        "sourceRepositoryRef": "refs/heads/main",
+                        "githubWorkflowRepository": "example/agentlabrelease",
+                        "githubWorkflowRef": "refs/heads/main",
+                        "githubWorkflowSHA": "8686868686868686868686868686868686868686",
+                        "subjectAlternativeName": "https://github.com/example/agentlabrelease/.github/workflows/purchase-data-trusted-case-freeze.yml@refs/heads/main",
+                        "buildSignerURI": "https://github.com/example/agentlabrelease/.github/workflows/purchase-data-trusted-case-freeze.yml@refs/heads/main",
+                        "buildSignerDigest": "8686868686868686868686868686868686868686",
+                        "runnerEnvironment": "github-hosted",
+                        "runInvocationURI": "https://github.com/example/agentlabrelease/actions/runs/12346/attempts/1"
+                    }},
+                    "statement": {
+                        "predicateType": "https://slsa.dev/provenance/v1",
+                        "subject": [{"digest": {"sha256": digest(&fs::read(&case_freeze).unwrap())}}],
+                        "predicate": {"runDetails": {"metadata": {
+                            "invocationId": "https://github.com/example/agentlabrelease/actions/runs/12346/attempts/1"
+                        }}}
+                    }
+                }
+            }]),
         );
         let dispatch = root.join("dispatch.json");
         write(
@@ -204,7 +254,7 @@ impl Fixture {
                     "runAttempt": 1
                 },
                 "caseId": "purchase-data-case",
-                "sourceSetSha256": "8888888888888888888888888888888888888888888888888888888888888888",
+                "sourceSetSha256": "abababababababababababababababababababababababababababababababab",
                 "evaluationCaseSha256": "6666666666666666666666666666666666666666666666666666666666666666",
                 "caseReviewRunId": 12345,
                 "methodRevision": "9999999999999999999999999999999999999999",
@@ -287,6 +337,7 @@ impl Fixture {
             reexecution,
             reexecution_attestation,
             case_freeze,
+            case_freeze_attestation,
             dispatch,
             attestation,
             output,
@@ -310,6 +361,8 @@ impl Fixture {
             self.reexecution_attestation.to_str().unwrap(),
             "--case-freeze",
             self.case_freeze.to_str().unwrap(),
+            "--case-freeze-attestation-verification",
+            self.case_freeze_attestation.to_str().unwrap(),
             "--participant-dispatch",
             self.dispatch.to_str().unwrap(),
             "--dispatch-attestation-verification",
@@ -369,7 +422,7 @@ fn compiles_exact_evidence_chain_into_operator_gated_dispatch_readiness() {
     assert_eq!(value["allowsUnseenAgentDispatch"], true);
     assert_eq!(value["automaticDispatch"], false);
     assert_eq!(value["automaticPromotion"], false);
-    assert_eq!(value["evidence"].as_object().unwrap().len(), 8);
+    assert_eq!(value["evidence"].as_object().unwrap().len(), 9);
 }
 
 #[test]
@@ -432,6 +485,20 @@ fn rejects_attestation_for_another_reexecution_receipt() {
     attestation[0]["verificationResult"]["statement"]["subject"][0]["digest"]["sha256"] =
         json!("abababababababababababababababababababababababababababababababab");
     write(&fixture.reexecution_attestation, &attestation);
+    let result = fixture.run();
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr)
+        .contains("GitHub attestation does not bind the exact trusted workflow identity"));
+    assert!(!fixture.output.exists());
+}
+
+#[test]
+fn rejects_attestation_for_another_case_freeze_receipt() {
+    let fixture = Fixture::new();
+    let mut attestation = read(&fixture.case_freeze_attestation);
+    attestation[0]["verificationResult"]["statement"]["subject"][0]["digest"]["sha256"] =
+        json!("abababababababababababababababababababababababababababababababab");
+    write(&fixture.case_freeze_attestation, &attestation);
     let result = fixture.run();
     assert!(!result.status.success());
     assert!(String::from_utf8_lossy(&result.stderr)

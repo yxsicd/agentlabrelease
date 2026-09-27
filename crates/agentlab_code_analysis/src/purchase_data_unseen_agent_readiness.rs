@@ -15,6 +15,7 @@ const REEXECUTION_SCHEMA: &str = "agentlab.purchase_data_published_revision_reex
 const REEXECUTION_WORKFLOW: &str =
     ".github/workflows/purchase-data-published-revision-reexecution.yml";
 const CASE_FREEZE_SCHEMA: &str = "agentlab.purchase_data_trusted_case_freeze.v1";
+const CASE_FREEZE_WORKFLOW: &str = ".github/workflows/purchase-data-trusted-case-freeze.yml";
 const DISPATCH_SCHEMA: &str = "agentlab.participant_experiment_dispatch.v1";
 const DISPATCH_WORKFLOW: &str = ".github/workflows/multi-repo-assessed-campaign.yml";
 const OUTPUT_SCHEMA: &str = "agentlab.purchase_data_unseen_agent_dispatch_readiness.v1";
@@ -110,6 +111,13 @@ fn revision<'a>(value: &'a Value, key: &str, label: &str) -> Result<&'a str, Str
         return Err(format!("{label} {key} is not an exact lowercase revision"));
     }
     Ok(value)
+}
+
+fn positive(value: &Value, key: &str, label: &str) -> Result<u64, String> {
+    value[key]
+        .as_u64()
+        .filter(|item| *item > 0)
+        .ok_or_else(|| format!("{label} {key} is invalid"))
 }
 
 fn bind(input: &Input) -> Value {
@@ -437,10 +445,11 @@ fn validate_reexecution_attestation(
 }
 
 fn validate_case_freeze(
+    contract: &Input,
     reexecution: &Input,
     case_freeze: &Input,
     published: &str,
-) -> Result<(u64, String, String), String> {
+) -> Result<(u64, String, String, u64, u64), String> {
     same(
         string(&case_freeze.value, "schema", "case freeze")?,
         CASE_FREEZE_SCHEMA,
@@ -450,6 +459,11 @@ fn validate_case_freeze(
         string(&case_freeze.value, "status", "case freeze")?,
         "trusted-held-out-case-frozen",
         "case freeze status",
+    )?;
+    same(
+        sha(&case_freeze.value, "contractSha256", "case freeze")?,
+        &contract.sha256(),
+        "case freeze contract digest",
     )?;
     same(
         sha(&case_freeze.value, "reexecutionSha256", "case freeze")?,
@@ -462,6 +476,16 @@ fn validate_case_freeze(
         "case freeze published revision",
     )?;
     same(
+        revision(&case_freeze.value, "publishedTreeOid", "case freeze")?,
+        revision(&reexecution.value, "publishedTreeOid", "re-execution")?,
+        "case freeze published tree",
+    )?;
+    same(
+        string(&case_freeze.value, "repository", "case freeze")?,
+        string(&reexecution.value, "repository", "re-execution")?,
+        "case freeze repository",
+    )?;
+    same(
         string(&case_freeze.value, "sourceVisibility", "case freeze")?,
         "held-out-public-revision",
         "case freeze source visibility",
@@ -472,15 +496,100 @@ fn validate_case_freeze(
         .ok_or_else(|| "case freeze caseReviewRunId is invalid".to_owned())?;
     let case_sha = sha(&case_freeze.value, "evaluationCaseSha256", "case freeze")?.to_owned();
     let source_set = sha(&case_freeze.value, "sourceSetSha256", "case freeze")?.to_owned();
+    same(
+        &source_set,
+        sha(
+            &reexecution.value,
+            "semanticSourceSetSha256",
+            "re-execution",
+        )?,
+        "case freeze semantic source set",
+    )?;
     sha(&case_freeze.value, "blindCutReceiptSha256", "case freeze")?;
+    sha(
+        &case_freeze.value,
+        "participantManifestSha256",
+        "case freeze",
+    )?;
+    sha(&case_freeze.value, "evaluatorManifestSha256", "case freeze")?;
+    positive(&case_freeze.value, "caseReviewRunAttempt", "case freeze")?;
+    revision(
+        &case_freeze.value,
+        "caseReviewSourceRevision",
+        "case freeze",
+    )?;
     exact_bool(&case_freeze.value, "trustedMainRun", true, "case freeze")?;
+    exact_bool(
+        &case_freeze.value,
+        "allowsCaseContract",
+        true,
+        "case freeze",
+    )?;
+    exact_bool(
+        &case_freeze.value,
+        "allowsUnseenAgentDispatch",
+        false,
+        "case freeze",
+    )?;
     exact_bool(
         &case_freeze.value,
         "automaticPromotion",
         false,
         "case freeze",
     )?;
-    Ok((run, case_sha, source_set))
+    same(
+        string(&case_freeze.value, "nextGate", "case freeze")?,
+        "pre-outcome-attested-unseen-agent-dispatch",
+        "case freeze next gate",
+    )?;
+    let workflow = &case_freeze.value["workflow"];
+    same(
+        string(workflow, "path", "case freeze workflow")?,
+        CASE_FREEZE_WORKFLOW,
+        "case freeze workflow path",
+    )?;
+    same(
+        string(workflow, "sourceRef", "case freeze workflow")?,
+        "refs/heads/main",
+        "case freeze workflow ref",
+    )?;
+    revision(workflow, "sourceRevision", "case freeze workflow")?;
+    let workflow_run = positive(workflow, "runId", "case freeze workflow")?;
+    let workflow_attempt = positive(workflow, "runAttempt", "case freeze workflow")?;
+    if case_freeze.value["runId"].as_u64() != Some(workflow_run)
+        || case_freeze.value["runAttempt"].as_u64() != Some(workflow_attempt)
+    {
+        return Err("case freeze workflow invocation differs".into());
+    }
+    Ok((run, case_sha, source_set, workflow_run, workflow_attempt))
+}
+
+fn validate_case_freeze_attestation(
+    case_freeze: &Input,
+    attestation: &RawInput,
+    run_id: u64,
+    run_attempt: u64,
+) -> Result<(), String> {
+    validate_github_actions_attestation(
+        &attestation.value,
+        &GitHubActionsAttestationIdentity {
+            repository: string(
+                &case_freeze.value["workflow"],
+                "repository",
+                "case freeze workflow",
+            )?,
+            workflow_path: CASE_FREEZE_WORKFLOW,
+            source_digest: revision(
+                &case_freeze.value["workflow"],
+                "sourceRevision",
+                "case freeze workflow",
+            )?,
+            source_ref: "refs/heads/main",
+            run_id,
+            run_attempt,
+            subject_sha256: &case_freeze.sha256(),
+        },
+    )
 }
 
 fn validate_portable_execution_protocol(protocol: &Value) -> Result<(), String> {
@@ -699,6 +808,10 @@ fn derive(values: &BTreeMap<String, String>) -> Result<Value, String> {
         "re-execution attestation verification",
     )?;
     let case_freeze = Input::load(&path(values, "--case-freeze")?, "case freeze")?;
+    let case_freeze_attestation = RawInput::load(
+        &path(values, "--case-freeze-attestation-verification")?,
+        "case freeze attestation verification",
+    )?;
     let dispatch = Input::load(
         &path(values, "--participant-dispatch")?,
         "participant dispatch",
@@ -718,8 +831,14 @@ fn derive(values: &BTreeMap<String, String>) -> Result<Value, String> {
         reexecution_run,
         reexecution_attempt,
     )?;
-    let (case_run, case_sha, source_set) =
-        validate_case_freeze(&reexecution, &case_freeze, &published)?;
+    let (case_run, case_sha, source_set, case_freeze_run, case_freeze_attempt) =
+        validate_case_freeze(&contract, &reexecution, &case_freeze, &published)?;
+    validate_case_freeze_attestation(
+        &case_freeze,
+        &case_freeze_attestation,
+        case_freeze_run,
+        case_freeze_attempt,
+    )?;
     let (dispatch_run, dispatch_attempt) =
         validate_dispatch(&dispatch, case_run, &case_sha, &source_set)?;
     validate_attestation(&dispatch, &attestation, dispatch_run, dispatch_attempt)?;
@@ -744,7 +863,12 @@ fn derive(values: &BTreeMap<String, String>) -> Result<Value, String> {
                 "sha256": reexecution_attestation.sha256(),
                 "byteLength": reexecution_attestation.bytes.len()
             },
-            "caseFreeze": bind(&case_freeze), "participantDispatch": bind(&dispatch),
+            "caseFreeze": bind(&case_freeze),
+            "caseFreezeAttestationVerification": {
+                "sha256": case_freeze_attestation.sha256(),
+                "byteLength": case_freeze_attestation.bytes.len()
+            },
+            "participantDispatch": bind(&dispatch),
             "dispatchAttestationVerification": {
                 "sha256": attestation.sha256(),
                 "byteLength": attestation.bytes.len()

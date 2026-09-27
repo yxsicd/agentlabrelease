@@ -60,6 +60,9 @@ fn run(
     reexecution_schema: &Path,
     runtime_bundle_schema: &Path,
     reexecution_workflow: &Path,
+    case_freeze_source: &Path,
+    case_freeze_schema: &Path,
+    case_freeze_workflow: &Path,
     output: &Path,
 ) -> Output {
     let packet_sha256 = format!("{:x}", Sha256::digest(fs::read(packet).unwrap()));
@@ -95,6 +98,12 @@ fn run(
         runtime_bundle_schema.to_str().unwrap(),
         "--published-revision-reexecution-workflow",
         reexecution_workflow.to_str().unwrap(),
+        "--trusted-case-freeze-source",
+        case_freeze_source.to_str().unwrap(),
+        "--trusted-case-freeze-schema",
+        case_freeze_schema.to_str().unwrap(),
+        "--trusted-case-freeze-workflow",
+        case_freeze_workflow.to_str().unwrap(),
         "--output",
         output.to_str().unwrap(),
     ])
@@ -122,6 +131,9 @@ fn normal_run(packet: &Path, root: &Path, output: &Path) -> Output {
         &repository.join("schemas/purchase-data-published-revision-reexecution.schema.json"),
         &repository.join("schemas/purchase-data-published-revision-runtime-bundle.schema.json"),
         &repository.join(".github/workflows/purchase-data-published-revision-reexecution.yml"),
+        &repository.join("crates/agentlab_code_analysis/src/purchase_data_trusted_case_freeze.rs"),
+        &repository.join("schemas/purchase-data-trusted-case-freeze.schema.json"),
+        &repository.join(".github/workflows/purchase-data-trusted-case-freeze.yml"),
         output,
     )
 }
@@ -168,6 +180,10 @@ fn freezes_blocked_unseen_agent_execution_contract_without_promoting_case() {
     assert_eq!(
         value["implementationBindings"]["publishedRevisionReexecutionWorkflow"]["path"],
         ".github/workflows/purchase-data-published-revision-reexecution.yml"
+    );
+    assert_eq!(
+        value["implementationBindings"]["trustedCaseFreezeWorkflow"]["path"],
+        ".github/workflows/purchase-data-trusted-case-freeze.yml"
     );
     assert!(value["implementationBindings"]
         .get("participantExperimentPlan")
@@ -238,6 +254,9 @@ fn rejects_assessed_campaign_without_discrimination_scoring() {
         &repository.join("schemas/purchase-data-published-revision-reexecution.schema.json"),
         &repository.join("schemas/purchase-data-published-revision-runtime-bundle.schema.json"),
         &repository.join(".github/workflows/purchase-data-published-revision-reexecution.yml"),
+        &repository.join("crates/agentlab_code_analysis/src/purchase_data_trusted_case_freeze.rs"),
+        &repository.join("schemas/purchase-data-trusted-case-freeze.schema.json"),
+        &repository.join(".github/workflows/purchase-data-trusted-case-freeze.yml"),
         &temp.join("contract.json"),
     );
     assert!(!result.status.success());
@@ -280,6 +299,9 @@ fn rejects_dispatch_schema_that_grants_automatic_promotion() {
         &repository.join("schemas/purchase-data-published-revision-reexecution.schema.json"),
         &repository.join("schemas/purchase-data-published-revision-runtime-bundle.schema.json"),
         &repository.join(".github/workflows/purchase-data-published-revision-reexecution.yml"),
+        &repository.join("crates/agentlab_code_analysis/src/purchase_data_trusted_case_freeze.rs"),
+        &repository.join("schemas/purchase-data-trusted-case-freeze.schema.json"),
+        &repository.join(".github/workflows/purchase-data-trusted-case-freeze.yml"),
         &temp.join("contract.json"),
     );
     assert!(!result.status.success());

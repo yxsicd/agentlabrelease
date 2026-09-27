@@ -1509,6 +1509,8 @@ assessed-Agent campaign, Rust portable-dispatch compiler and dispatch schema. Th
 contract also digest-binds the exact-patch publication producer, schema and
 trusted-main workflow, plus the Rust published-revision re-execution producer,
 its receipt/runtime-bundle schemas and its trusted-main import workflow. It
+also binds the Rust trusted-case-freeze producer, receipt schema and
+trusted-main attestation workflow. It
 requires, in order: dual review, publication of the exact patch,
 re-execution on the published revision, trusted held-out case freeze, a blind
 3–8 profile cohort with 3/5/10/20 fresh trials, and per-attempt Harmony OHOS Test
@@ -1525,8 +1527,9 @@ evaluator but are not relabeled as unseen Agent attempts.
 `agentlab-purchase-data-unseen-agent-readiness` closes the next mechanical
 boundary without weakening those authorities. It consumes the frozen contract
 and the exact approved-review, upstream-publication, published-revision
-re-execution plus its raw GitHub attestation verification, trusted-case-freeze,
-portable dispatch and raw GitHub attestation-verification
+re-execution plus its raw GitHub attestation verification, trusted-case-freeze
+plus its raw GitHub attestation verification, portable dispatch and raw GitHub
+attestation-verification
 receipts. Every predecessor is byte-digest-bound to the next, the published
 revision must remain identical through re-execution and case freeze, and the
 case review run and evaluation-case digest must agree with the pre-outcome
@@ -1541,6 +1544,12 @@ check. The re-execution receipt is produced by
 exact-revision multi-repository source spec/analysis run, a digest-bound
 source-standard OHOS Test build and execution chain, and the calibrated
 baseline/reference/meaningful-wrong performance matrix imported from hwlinux.
+The case-freeze receipt is produced by
+`agentlab-purchase-data-trusted-case-freeze`, which reopens the exact
+trusted-main case-review artifact, verifies the published source and semantic
+source-set identity, and recalculates the physically separated participant and
+evaluator inventories before granting case-contract authority. It still does
+not claim model-training exclusion, unseen-Agent discrimination or promotion.
 Only the complete chain yields
 `ready-to-dispatch-unseen-agent-cohort`; missing, deferred, self-inconsistent or
 unattested evidence yields no output. Readiness still sets cohort execution and

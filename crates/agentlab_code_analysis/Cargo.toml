@@ -98,6 +98,10 @@ name = "agentlab-purchase-data-published-revision-reexecution"
 path = "src/purchase_data_published_revision_reexecution.rs"
 
 [[bin]]
+name = "agentlab-purchase-data-trusted-case-freeze"
+path = "src/purchase_data_trusted_case_freeze.rs"
+
+[[bin]]
 name = "agentlab-participant-experiment-dispatch"
 path = "src/participant_experiment_dispatch.rs"
 
