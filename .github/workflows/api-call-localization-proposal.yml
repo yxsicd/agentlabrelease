@@ -66,16 +66,16 @@ jobs:
           gh run download "$COHORT_RUN_ID" --repo "$GITHUB_REPOSITORY" \
             --name multi-repo-candidate-cohort-review --dir "$AGENTLAB_ROOT/cohort"
           python3 scripts/multi-repo-analysis-run.py validate \
-            --root "$AGENTLAB_ROOT/cohort/source/analysis-source" \
-            --run "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis-run.json"
+            --root "$AGENTLAB_ROOT/cohort/source/analysis-source/source" \
+            --run "$AGENTLAB_ROOT/cohort/source/analysis-source/source/analysis-run.json"
           python3 scripts/select-multi-repo-cohort-candidate.py \
             --cohort "$AGENTLAB_ROOT/cohort/candidate-cohort.json" \
-            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/source/analysis/difficulty_candidates.json" \
             --expected-cohort-sha256 "$EXPECTED_COHORT_SHA256" \
             --candidate-id "$CANDIDATE_ID" \
             --output "$AGENTLAB_ROOT/output/candidate-selection.json"
           python3 scripts/prepare-multi-repo-analysis-sources.py \
-            --spec "$AGENTLAB_ROOT/cohort/source/analysis-source/source-spec.json" \
+            --spec "$AGENTLAB_ROOT/cohort/source/analysis-source/source/source-spec.json" \
             --output "$AGENTLAB_ROOT/input"
       - name: Recover the exact approved semantic gate
         env:
@@ -109,8 +109,8 @@ jobs:
         run: |
           python3 scripts/propose-api-call-case-localization.py \
             --manifest "$AGENTLAB_ROOT/input/manifest.json" \
-            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
-            --facts "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/workspace_facts.jsonl" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/source/analysis/difficulty_candidates.json" \
+            --facts "$AGENTLAB_ROOT/cohort/source/analysis-source/source/analysis/workspace_facts.jsonl" \
             --candidate-id "$CANDIDATE_ID" \
             --selection "$AGENTLAB_ROOT/output/localization-selection.json" \
             --cohort-selection "$AGENTLAB_ROOT/output/candidate-selection.json" \
@@ -124,8 +124,8 @@ jobs:
           cp "$AGENTLAB_ROOT/semantic/decision.json" "$AGENTLAB_ROOT/output/semantic-decision.json"
           cp "$AGENTLAB_ROOT/semantic/gate.json" "$AGENTLAB_ROOT/output/semantic-gate.json"
           cp "$AGENTLAB_ROOT/cohort/candidate-cohort.json" "$AGENTLAB_ROOT/output/candidate-cohort.json"
-          cp "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis-run.json" "$AGENTLAB_ROOT/output/analysis-run.json"
-          cp "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
+          cp "$AGENTLAB_ROOT/cohort/source/analysis-source/source/analysis-run.json" "$AGENTLAB_ROOT/output/analysis-run.json"
+          cp "$AGENTLAB_ROOT/cohort/source/analysis-source/source/analysis/difficulty_candidates.json" \
             "$AGENTLAB_ROOT/output/difficulty_candidates.json"
           sha256sum "$AGENTLAB_ROOT/output/"*.json >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve the proposal and exact review inputs

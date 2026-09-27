@@ -81,7 +81,7 @@ jobs:
             --name multi-repo-candidate-cohort-review --dir "$AGENTLAB_ROOT/cohort"
           python3 scripts/select-multi-repo-cohort-candidate.py \
             --cohort "$AGENTLAB_ROOT/cohort/candidate-cohort.json" \
-            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/source/analysis/difficulty_candidates.json" \
             --expected-cohort-sha256 "$EXPECTED_COHORT_SHA256" \
             --candidate-id "$CANDIDATE_ID" \
             --output "$AGENTLAB_ROOT/selection/candidate-selection.json"
@@ -112,7 +112,7 @@ jobs:
       - name: Materialize exact source revisions
         run: |
           python3 scripts/prepare-multi-repo-analysis-sources.py \
-            --spec "$AGENTLAB_ROOT/cohort/source/analysis-source/source-spec.json" \
+            --spec "$AGENTLAB_ROOT/cohort/source/analysis-source/source/source-spec.json" \
             --output "$AGENTLAB_ROOT/input"
       - name: Install a separately contained Pi runtime
         run: |
@@ -139,9 +139,9 @@ jobs:
           fi
           python3 scripts/run-multi-repo-calibration-authoring.py run \
             --selection "$AGENTLAB_ROOT/selection/candidate-selection.json" \
-            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
+            --difficulty "$AGENTLAB_ROOT/cohort/source/analysis-source/source/analysis/difficulty_candidates.json" \
             --manifest "$AGENTLAB_ROOT/input/manifest.json" \
-            --facts "$AGENTLAB_ROOT/cohort/source/analysis-source/analysis/workspace_facts.jsonl" \
+            --facts "$AGENTLAB_ROOT/cohort/source/analysis-source/source/analysis/workspace_facts.jsonl" \
             "${localization_args[@]}" \
             --participant examples/multi-repo-case/pi-calibration-author.py \
             --participant-id "pi-evaluator-${AGENTLAB_MODEL}" \

@@ -154,7 +154,7 @@ jobs:
       - name: Reconstruct the exact reviewed source repositories
         run: |
           python3 scripts/prepare-multi-repo-analysis-sources.py \
-            --spec "$AGENTLAB_ROOT/case/source/cohort/source/analysis-source/source-spec.json" \
+            --spec "$AGENTLAB_ROOT/case/source/cohort/source/analysis-source/source/source-spec.json" \
             --output "$AGENTLAB_ROOT/input"
       - name: Stage only the participant-visible blind input
         run: |

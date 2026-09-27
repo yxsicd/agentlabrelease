@@ -144,9 +144,9 @@ jobs:
           git merge-base --is-ancestor "$semantic_head_sha" HEAD
           gh run download "$SEMANTIC_RUN_ID" --repo "$GITHUB_REPOSITORY" \
             --name multi-repo-analysis --dir "$AGENTLAB_ROOT/semantic"
-          test -f "$AGENTLAB_ROOT/semantic/source-spec.json"
-          test -f "$AGENTLAB_ROOT/semantic/analysis-run.json"
-          test -f "$AGENTLAB_ROOT/semantic/analysis/multi_repo_analysis.json"
+          test -f "$AGENTLAB_ROOT/semantic/source/source-spec.json"
+          test -f "$AGENTLAB_ROOT/semantic/source/analysis-run.json"
+          test -f "$AGENTLAB_ROOT/semantic/source/analysis/multi_repo_analysis.json"
       - name: Download and safely extract exact hwlinux runtime evidence
         env:
           GH_TOKEN: ${{ github.token }}

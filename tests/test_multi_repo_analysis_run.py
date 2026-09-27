@@ -270,7 +270,33 @@ class MultiRepoAnalysisRunTests(unittest.TestCase):
         self.assertIn("expected_analysis_run_sha256", cohort)
         self.assertIn(".github/workflows/multi-repo-analysis.yml", cohort)
         self.assertIn("scripts/multi-repo-analysis-run.py validate", cohort)
+        self.assertIn(
+            '--root "$AGENTLAB_ROOT/analysis-source/source"',
+            cohort,
+        )
+        self.assertIn(
+            '--run "$AGENTLAB_ROOT/analysis-source/source/analysis-run.json"',
+            cohort,
+        )
         self.assertNotIn("prepare-multi-repo-construction-fixture.py", cohort)
+
+    def test_analysis_artifact_consumers_preserve_the_uploaded_source_root(self):
+        expected = {
+            "mixed-case-candidate-cohort.yml": "analysis-source/source/analysis-run.json",
+            "multi-repo-candidate-cohort-review.yml": "source/analysis-source/source/analysis-run.json",
+            "api-call-localization-proposal.yml": "cohort/source/analysis-source/source/analysis-run.json",
+            "multi-repo-calibration-authoring.yml": "cohort/source/analysis-source/source/source-spec.json",
+            "multi-repo-construction-contract-proposal.yml": "cohort/source/analysis-source/source/analysis/difficulty_candidates.json",
+            "multi-repo-model-construction.yml": "cohort/source/analysis-source/source/source-spec.json",
+            "multi-repo-candidate-review-packet.yml": "source/source/analysis-source/source/analysis-run.json",
+            "multi-repo-case-review.yml": "source/cohort/source/analysis-source/source/analysis/workspace_facts.jsonl",
+            "multi-repo-assessed-campaign.yml": "case/source/cohort/source/analysis-source/source/source-spec.json",
+            "purchase-data-published-revision-reexecution.yml": "semantic/source/analysis-run.json",
+        }
+        for filename, path in expected.items():
+            with self.subTest(filename=filename):
+                workflow = (ROOT / ".github/workflows" / filename).read_text()
+                self.assertIn(path, workflow)
 
 
 if __name__ == "__main__":

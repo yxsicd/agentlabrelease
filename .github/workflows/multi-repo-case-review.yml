@@ -170,7 +170,7 @@ jobs:
       - name: Freeze only the reviewed and calibrated case
         run: |
           python3 scripts/generate-multi-repo-case.py \
-            --difficulty "$AGENTLAB_ROOT/source/cohort/source/analysis-source/analysis/difficulty_candidates.json" \
+            --difficulty "$AGENTLAB_ROOT/source/cohort/source/analysis-source/source/analysis/difficulty_candidates.json" \
             --plan "$AGENTLAB_ROOT/case-plan.json" \
             --proposal "$AGENTLAB_ROOT/source/case-plan-proposal.json" \
             --review "$AGENTLAB_ROOT/case-plan-review.json" \
@@ -181,13 +181,13 @@ jobs:
             --output "$AGENTLAB_ROOT/base-evaluation-case.json"
           python3 scripts/build-dependency-discovery-contract.py \
             --case "$AGENTLAB_ROOT/base-evaluation-case.json" \
-            --program-facts "$AGENTLAB_ROOT/source/cohort/source/analysis-source/analysis/workspace_facts.jsonl" \
+            --program-facts "$AGENTLAB_ROOT/source/cohort/source/analysis-source/source/analysis/workspace_facts.jsonl" \
             --plan "$AGENTLAB_ROOT/dependency-discovery-plan.json" \
             --output "$AGENTLAB_ROOT/dependency-discovery-contract.json"
           python3 scripts/bind-dependency-discovery-case.py \
             --case "$AGENTLAB_ROOT/base-evaluation-case.json" \
             --dependency-contract "$AGENTLAB_ROOT/dependency-discovery-contract.json" \
-            --program-facts "$AGENTLAB_ROOT/source/cohort/source/analysis-source/analysis/workspace_facts.jsonl" \
+            --program-facts "$AGENTLAB_ROOT/source/cohort/source/analysis-source/source/analysis/workspace_facts.jsonl" \
             --output "$AGENTLAB_ROOT/evaluation-case.json"
           python3 scripts/validate-case-qualification.py \
             --case "$AGENTLAB_ROOT/evaluation-case.json" \
@@ -210,7 +210,7 @@ jobs:
             --calibration "$AGENTLAB_ROOT/calibration/summary.json" \
             --review "$AGENTLAB_ROOT/case-plan-review.json" \
             --dependency-contract "$AGENTLAB_ROOT/dependency-discovery-contract.json" \
-            --program-facts "$AGENTLAB_ROOT/source/cohort/source/analysis-source/analysis/workspace_facts.jsonl" \
+            --program-facts "$AGENTLAB_ROOT/source/cohort/source/analysis-source/source/analysis/workspace_facts.jsonl" \
             --method-revision "$GITHUB_SHA" \
             --constructed-at "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
             --source-visibility held-out-public-revision \
