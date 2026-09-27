@@ -1219,6 +1219,10 @@ fn schemas_are_strict_and_match_tool_outputs() {
     let root = repository();
     for (path, expected) in [
         (
+            "schemas/case-generation-round.schema.json",
+            "agentlab.case_generation_round.v1",
+        ),
+        (
             "schemas/case-execution-state.schema.json",
             "agentlab.case_execution_state.v1",
         ),

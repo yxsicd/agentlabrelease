@@ -26,7 +26,7 @@
   "tables": {
     "maintainerSkills": {
       "path": "maintainer_skills.jsonl",
-      "sha256": "49e98ba5d4b7845d98669fc1bd5f0085ad4622f60001f06444f1e7934e75f57a"
+      "sha256": "3e821378485a91dcd0ca0540138ccab0e7e1250dbf4dc8671bd6eded0f4a3da4"
     },
     "maintainerScopeSkills": {
       "path": "maintainer_scope_skills.jsonl",
@@ -34,7 +34,7 @@
     },
     "maintainerSkillRefreshRounds": {
       "path": "maintainer_skill_refresh_rounds.jsonl",
-      "sha256": "e45406fb7de25b42f6bc3810f418d4c4158af53190756284266865871aeb82fa"
+      "sha256": "3a248d60532aae95ef045d52f62d8ef2f6bb357fffadfc4cea8b334460553731"
     },
     "programFacts": {
       "path": "program_facts.jsonl",

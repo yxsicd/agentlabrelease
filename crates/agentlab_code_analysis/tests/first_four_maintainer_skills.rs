@@ -83,9 +83,11 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     let skills = rows(&baseline.join("maintainer_skills.jsonl"));
     let facts = rows(&baseline.join("program_facts.jsonl"));
     let refresh_rounds = rows(&baseline.join("maintainer_skill_refresh_rounds.jsonl"));
+    let generation_rounds = rows(&baseline.join("case_generation_rounds.jsonl"));
     assert_eq!(skills.len(), 12);
     assert_eq!(facts.len(), 20);
-    assert_eq!(refresh_rounds.len(), 2);
+    assert_eq!(refresh_rounds.len(), 3);
+    assert_eq!(generation_rounds.len(), 1);
     assert!(
         fs::read_to_string(baseline.join("evaluation_cases.jsonl"))
             .unwrap()
@@ -104,6 +106,18 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
             .entry(repository_id.to_owned())
             .or_default()
             .insert(skill["stage"].as_str().unwrap().to_owned());
+
+        if skill["stage"] == "seed-extraction" {
+            assert_eq!(
+                skill["methodDigest"],
+                digest(&fs::read(root.join("skills/agentlab-seed-extraction/SKILL.md")).unwrap()),
+                "{skill_id} does not bind the current iterative generation method"
+            );
+            assert_eq!(
+                skill["methodRevision"], "59216bbc5bca6de2cb0d87bd29f8f154db9d4946",
+                "{skill_id} does not bind the method-defining revision"
+            );
+        }
 
         for fact_id in ids(skill, "factIds") {
             let fact = facts
@@ -165,6 +179,7 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
 
     let first = &refresh_rounds["first-four-round-1-structural-baseline"];
     let second = &refresh_rounds["first-four-round-2-ownership-and-lineage"];
+    let third = &refresh_rounds["first-four-round-3-iterative-case-generation"];
     assert_eq!(first["roundIndex"], 1);
     assert_eq!(first["parentRoundSha256"], Value::Null);
     assert_eq!(
@@ -174,11 +189,40 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     assert_eq!(second["roundIndex"], 2);
     assert_eq!(second["decision"], "continue");
     assert_eq!(
-        second["tables"]["processSkillsSha256"],
+        third["parentRoundSha256"],
+        digest(&serde_json::to_vec(second).unwrap())
+    );
+    assert_eq!(third["roundIndex"], 3);
+    assert_eq!(third["decision"], "continue");
+    assert_eq!(
+        third["tables"]["processSkillsSha256"],
         digest(&fs::read(baseline.join("maintainer_skills.jsonl")).unwrap())
     );
     assert_eq!(
-        second["tables"]["scopeSkillsSha256"],
+        third["tables"]["scopeSkillsSha256"],
         digest(&fs::read(baseline.join("maintainer_scope_skills.jsonl")).unwrap())
     );
+
+    let generation = &generation_rounds["first-four-case-generation-round-1-readiness-baseline"];
+    assert_eq!(generation["roundIndex"], 1);
+    assert_eq!(generation["parentRoundSha256"], Value::Null);
+    assert_eq!(generation["decision"], "continue");
+    assert_eq!(generation["automaticPromotion"], false);
+    assert_eq!(generation["maintainerSkillRefreshRoundId"], third["id"]);
+    assert_eq!(
+        generation["knowledgeCutSha256"],
+        digest(&fs::read(baseline.join("maintainer-knowledge-cut.json")).unwrap())
+    );
+    assert_eq!(
+        generation["coverage"]["scopeSkillCount"], 480,
+        "baseline must measure the complete structural partition"
+    );
+    assert!(generation["candidates"]["generatedIds"]
+        .as_array()
+        .unwrap()
+        .is_empty());
+    assert!(generation["qualification"]["qualifiedCaseIds"]
+        .as_array()
+        .unwrap()
+        .is_empty());
 }

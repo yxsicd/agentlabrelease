@@ -43,9 +43,19 @@ revision-bound tables rather than being guessed from paths.
 [`maintainer_skill_refresh_rounds.jsonl`](maintainer_skill_refresh_rounds.jsonl)
 records the iterative lineage. Round 1 established the structural baseline;
 round 2 separated repository-native and target-operations ownership and bound
-the refreshed tables. Its decision remains `continue`: later rounds must deepen
-behavior contracts, program relations, and executable Oracle coverage rather
-than treating the first code read as final.
+the refreshed tables; round 3 bound all four seed-extraction Skills to the
+iterative generation method. Its decision remains `continue`: later rounds
+must deepen behavior contracts, program relations, and executable Oracle
+coverage rather than treating the first code read as final.
+
+[`case_generation_rounds.jsonl`](case_generation_rounds.jsonl) starts the
+separate downstream generation lineage. Round 1 is intentionally an honest
+readiness baseline: the structural catalog is complete, but behavior-ready and
+Oracle-ready classifications have not yet been completed and no candidate was
+silently promoted. Its `continue` decision carries the exact gaps into the next
+cohort. This table is downstream of the immutable knowledge cut, so each row
+binds the cut digest; it is not included inside that cut and cannot create a
+hash cycle.
 
 The empty `evaluation_cases.jsonl` is deliberate. These rows are repository
 knowledge and candidate-mining policy, not approved cases. A future candidate
