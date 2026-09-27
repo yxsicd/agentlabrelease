@@ -310,6 +310,8 @@ fn publication_workflow_keeps_component_candidate_and_activation_as_separate_aut
             .unwrap();
     let component_upgrade =
         fs::read_to_string(repository().join(".github/workflows/component-upgrade.yml")).unwrap();
+    let public_smoke =
+        fs::read_to_string(repository().join("scripts/ci-public-install-deploy-smoke.sh")).unwrap();
     assert!(workflow.contains("publish_composition_candidate:"));
     assert!(workflow.contains("[[ \"$EXPECTED_REVISION\" == \"$GITHUB_SHA\" ]]"));
     assert!(workflow.contains("validator.remote_assets(assets)"));
@@ -331,4 +333,11 @@ fn publication_workflow_keeps_component_candidate_and_activation_as_separate_aut
         .unwrap();
     assert!(component_publish < remote_verification && remote_verification < candidate_publish);
     assert!(component_upgrade.contains("pack:analysis-tools"));
+    assert!(workflow.contains("agentlab-analysis-tools-pack\" --self-check"));
+    assert!(workflow.contains("runtime-self-check.json"));
+    assert!(public_smoke.contains("agentlab.analysis_tools_installed_execution.v1"));
+    assert!(public_smoke
+        .contains("--entrypoint \"${analysis_mount}/payload/bin/agentlab-analysis-tools-pack\""));
+    assert!(public_smoke.contains("\"${runtime_reference}\" --self-check"));
+    assert!(public_smoke.contains("\"status\":\"not-selected\""));
 }

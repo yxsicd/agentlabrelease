@@ -8,6 +8,9 @@ use std::{
     process::Command,
 };
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 const BINARIES: &[&str] = &[
     "agentlab-analysis-tools-pack",
     "agentlab-asset-model",
@@ -217,6 +220,158 @@ fn parse_values(args: impl Iterator<Item = String>) -> Result<BTreeMap<String, S
     Ok(values)
 }
 
+fn required_text<'a>(value: &'a Value, field: &str) -> Result<&'a str, String> {
+    value
+        .get(field)
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("manifest {field} must be a string"))
+}
+
+fn required_u64(value: &Value, field: &str) -> Result<u64, String> {
+    value
+        .get(field)
+        .and_then(Value::as_u64)
+        .ok_or_else(|| format!("manifest {field} must be an unsigned integer"))
+}
+
+fn self_check(root: &Path) -> Result<Value, String> {
+    let manifest_path = root.join("manifest.json");
+    let manifest_bytes = fs::read(&manifest_path)
+        .map_err(|error| format!("cannot read installed manifest: {error}"))?;
+    let manifest: Value = serde_json::from_slice(&manifest_bytes)
+        .map_err(|error| format!("installed manifest is not valid JSON: {error}"))?;
+    if required_text(&manifest, "schema")? != "agentlab.analysis_tools_pack_manifest.v1" {
+        return Err("installed manifest schema is unsupported".into());
+    }
+    let source_revision = required_text(&manifest, "sourceRevision")?;
+    if !valid_revision(source_revision) {
+        return Err("installed manifest sourceRevision must be exact 40-hex".into());
+    }
+    if required_text(&manifest, "platform")? != "linux-x64" {
+        return Err("installed manifest platform must be linux-x64".into());
+    }
+    if required_text(&manifest, "buildProfile")? != "release-static-musl-v1" {
+        return Err("installed manifest buildProfile is unsupported".into());
+    }
+    if required_u64(&manifest, "binaryCount")? != BINARIES.len() as u64 {
+        return Err("installed manifest binaryCount does not match the required inventory".into());
+    }
+    let inventory = manifest
+        .get("binaries")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "installed manifest binaries must be an array".to_owned())?;
+    if inventory.len() != BINARIES.len() {
+        return Err("installed manifest inventory length is invalid".into());
+    }
+    let bin_directory = root.join("payload/bin");
+    let mut installed_names = fs::read_dir(&bin_directory)
+        .map_err(|error| format!("cannot inspect installed bin directory: {error}"))?
+        .map(|entry| {
+            entry
+                .map_err(|error| format!("cannot inspect installed bin entry: {error}"))?
+                .file_name()
+                .into_string()
+                .map_err(|_| "installed binary name is not UTF-8".to_owned())
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    installed_names.sort();
+    let mut expected_names: Vec<String> = BINARIES.iter().map(|name| (*name).to_owned()).collect();
+    expected_names.sort();
+    if installed_names != expected_names {
+        return Err("installed bin directory does not match the required inventory".into());
+    }
+    let mut verified = Vec::with_capacity(BINARIES.len());
+    for (expected_name, row) in BINARIES.iter().zip(inventory) {
+        let name = required_text(row, "name")?;
+        if name != *expected_name {
+            return Err(format!(
+                "installed manifest inventory is not canonical: expected {expected_name}, got {name}"
+            ));
+        }
+        let expected_path = format!("payload/bin/{expected_name}");
+        if required_text(row, "path")? != expected_path {
+            return Err(format!(
+                "installed manifest path is invalid for {expected_name}"
+            ));
+        }
+        let expected_bytes = required_u64(row, "bytes")?;
+        let expected_sha256 = required_text(row, "sha256")?;
+        if expected_sha256.len() != 64
+            || !expected_sha256
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+        {
+            return Err(format!(
+                "installed manifest sha256 is invalid for {expected_name}"
+            ));
+        }
+        let path = root.join(&expected_path);
+        let metadata = fs::symlink_metadata(&path)
+            .map_err(|error| format!("cannot inspect installed binary {expected_name}: {error}"))?;
+        if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
+            return Err(format!(
+                "installed binary must be a regular file: {expected_name}"
+            ));
+        }
+        #[cfg(unix)]
+        if metadata.permissions().mode() & 0o111 == 0 {
+            return Err(format!(
+                "installed binary is not executable: {expected_name}"
+            ));
+        }
+        if metadata.len() != expected_bytes {
+            return Err(format!(
+                "installed binary byte count mismatch: {expected_name}"
+            ));
+        }
+        let bytes = fs::read(&path)
+            .map_err(|error| format!("cannot read installed binary {expected_name}: {error}"))?;
+        if digest(&bytes) != expected_sha256 {
+            return Err(format!("installed binary sha256 mismatch: {expected_name}"));
+        }
+        verified.push(Value::String((*expected_name).to_owned()));
+    }
+    let inventory_bytes = serde_json::to_vec(inventory).map_err(|error| error.to_string())?;
+    Ok(json!({
+        "schema": "agentlab.analysis_tools_runtime_probe.v1",
+        "status": "passed",
+        "sourceRevision": source_revision,
+        "platform": "linux-x64",
+        "buildProfile": "release-static-musl-v1",
+        "binaryCount": verified.len(),
+        "binaries": verified,
+        "manifestSha256": digest(&manifest_bytes),
+        "inventorySha256": digest(&inventory_bytes),
+        "probeExecutable": "payload/bin/agentlab-analysis-tools-pack",
+        "automaticPromotion": false
+    }))
+}
+
+fn installed_root() -> Result<PathBuf, String> {
+    let executable = env::current_exe()
+        .map_err(|error| format!("cannot locate self-check executable: {error}"))?;
+    if executable.file_name().and_then(|name| name.to_str()) != Some("agentlab-analysis-tools-pack")
+    {
+        return Err("self-check executable has an unexpected name".into());
+    }
+    let bin = executable
+        .parent()
+        .ok_or_else(|| "self-check executable has no bin directory".to_owned())?;
+    if bin.file_name().and_then(|name| name.to_str()) != Some("bin") {
+        return Err("self-check executable is not under payload/bin".into());
+    }
+    let payload = bin
+        .parent()
+        .ok_or_else(|| "self-check executable has no payload directory".to_owned())?;
+    if payload.file_name().and_then(|name| name.to_str()) != Some("payload") {
+        return Err("self-check executable is not under payload/bin".into());
+    }
+    payload
+        .parent()
+        .map(Path::to_path_buf)
+        .ok_or_else(|| "self-check executable has no package root".to_owned())
+}
+
 fn package(values: &BTreeMap<String, String>) -> Result<Value, String> {
     let binary_dir = path(values, "--binary-dir")?;
     let output = path(values, "--output")?;
@@ -353,8 +508,15 @@ fn package(values: &BTreeMap<String, String>) -> Result<Value, String> {
 }
 
 fn run() -> Result<(), String> {
-    let values = parse_values(env::args().skip(1))?;
-    let receipt = package(&values)?;
+    let args: Vec<String> = env::args().skip(1).collect();
+    let receipt = if args == ["--self-check"] {
+        self_check(&installed_root()?)?
+    } else if args.len() == 2 && args[0] == "--self-check-root" {
+        self_check(Path::new(&args[1]))?
+    } else {
+        let values = parse_values(args.into_iter())?;
+        package(&values)?
+    };
     println!(
         "{}",
         serde_json::to_string(&receipt).map_err(|error| error.to_string())?

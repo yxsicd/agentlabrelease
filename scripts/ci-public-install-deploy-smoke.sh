@@ -232,6 +232,82 @@ if [[ "${AGENTLAB_INSTALL_ONLY:-false}" == "true" ]]; then
   exit 0
 fi
 
+python3 - "${lock}" "${root}/analysis-tools-runtime-probe.tsv" <<'PY'
+import json, pathlib, re, sys
+
+lock = json.load(open(sys.argv[1]))
+selected = [row for row in lock["components"] if row.get("enabled", True) and row["slot"] == "analysis-tools"]
+assert len(selected) <= 1
+output = pathlib.Path(sys.argv[2])
+if not selected:
+    output.write_text("")
+else:
+    row = selected[0]
+    assert row["platform"] == "linux-x64"
+    assert row["packId"] == "analysis-tools"
+    assert row["mountTarget"] == "/agentlab-analysis-tools"
+    assert row["required"] is False
+    assert re.fullmatch(r"[A-Za-z0-9_.-]+", row["volume"])
+    assert re.fullmatch(r"[0-9a-f]{64}", row["archiveSha256"])
+    assert re.fullmatch(r"[0-9a-f]{8,40}", row["version"])
+    images = [image for image in lock["images"] if image.get("enabled", True)]
+    assert images
+    output.write_text("\t".join((
+        row["volume"], row["mountTarget"], row["version"],
+        row["archiveSha256"], images[0]["reference"],
+    )) + "\n")
+PY
+analysis_probe="${root}/analysis-tools-runtime-probe.json"
+if [[ -s "${root}/analysis-tools-runtime-probe.tsv" ]]; then
+  IFS=$'\t' read -r analysis_volume analysis_mount analysis_version analysis_archive_sha runtime_reference \
+    < "${root}/analysis-tools-runtime-probe.tsv"
+  analysis_raw="${root}/analysis-tools-runtime-self-check.json"
+  docker run --rm --network none \
+    --mount "type=volume,src=${analysis_volume},dst=${analysis_mount},readonly" \
+    --entrypoint "${analysis_mount}/payload/bin/agentlab-analysis-tools-pack" \
+    "${runtime_reference}" --self-check > "${analysis_raw}"
+  python3 - "${analysis_raw}" "${analysis_probe}" "${source_revision}" \
+    "${analysis_volume}" "${analysis_mount}" "${analysis_version}" \
+    "${analysis_archive_sha}" "${runtime_reference}" <<'PY'
+import json, pathlib, sys
+
+raw_path, receipt_path = map(pathlib.Path, sys.argv[1:3])
+aggregate_revision, volume, mount, version, archive_sha, runtime_reference = sys.argv[3:]
+probe = json.loads(raw_path.read_bytes())
+assert probe["schema"] == "agentlab.analysis_tools_runtime_probe.v1"
+assert probe["status"] == "passed"
+assert probe["platform"] == "linux-x64"
+assert probe["sourceRevision"].startswith(version)
+assert probe["binaryCount"] == len(probe["binaries"])
+assert len(probe["binaries"]) == len(set(probe["binaries"]))
+for required in (
+    "agentlab-analysis-tools-pack",
+    "agentlab-code-analysis",
+    "agentlab-component-introduce",
+    "agentlab-multi-repo-analysis",
+):
+    assert required in probe["binaries"]
+assert probe["automaticPromotion"] is False
+receipt = {
+    "schema": "agentlab.analysis_tools_installed_execution.v1",
+    "status": "passed",
+    "aggregateSourceRevision": aggregate_revision,
+    "componentSourceRevision": probe["sourceRevision"],
+    "componentVersion": version,
+    "componentArchiveSha256": archive_sha,
+    "volume": volume,
+    "mountTarget": mount,
+    "runtimeImageReference": runtime_reference,
+    "runtimeProbe": probe,
+    "automaticPromotion": False,
+}
+receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+PY
+else
+  printf '{"schema":"agentlab.analysis_tools_installed_execution.v1","status":"not-selected","aggregateSourceRevision":"%s","automaticPromotion":false}\n' \
+    "${source_revision}" > "${analysis_probe}"
+fi
+
 # Source-only Harmony assessment needs only the digest-pinned composition
 # installed into Docker. Keep the broader standalone SessionFS/Harmony smoke
 # for qualification runs, but let fast assessment stop here.

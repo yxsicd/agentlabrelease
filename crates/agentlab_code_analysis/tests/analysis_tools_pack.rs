@@ -89,6 +89,33 @@ fn run(binary_dir: &Path, output: &Path) -> std::process::Output {
         .unwrap()
 }
 
+fn self_check(root: &Path) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_agentlab-analysis-tools-pack"))
+        .args(["--self-check-root", root.to_str().unwrap()])
+        .current_dir(repository())
+        .output()
+        .unwrap()
+}
+
+fn extract(archive: &Path, output: &Path) {
+    fs::create_dir_all(output).unwrap();
+    let tar = output.with_extension("tar");
+    assert!(Command::new("zstd")
+        .args(["-q", "-d", "-f"])
+        .arg(archive)
+        .arg("-o")
+        .arg(&tar)
+        .status()
+        .unwrap()
+        .success());
+    assert!(Command::new("tar")
+        .args(["-xf", tar.to_str().unwrap(), "-C", output.to_str().unwrap()])
+        .status()
+        .unwrap()
+        .success());
+    fs::remove_file(tar).unwrap();
+}
+
 fn read(path: &Path) -> Value {
     serde_json::from_slice(&fs::read(path).unwrap()).unwrap()
 }
@@ -169,6 +196,66 @@ fn builds_byte_identical_independent_candidate_component() {
     assert_eq!(receipt["status"], "candidate-component-built-not-published");
     assert_eq!(receipt["automaticPublication"], false);
     assert_eq!(receipt["automaticPromotion"], false);
+
+    let installed = root.join("installed");
+    extract(&first.join(archive_name()), &installed);
+    let checked = self_check(&installed);
+    assert!(
+        checked.status.success(),
+        "{}",
+        String::from_utf8_lossy(&checked.stderr)
+    );
+    let checked: Value = serde_json::from_slice(&checked.stdout).unwrap();
+    assert_eq!(
+        checked["schema"],
+        "agentlab.analysis_tools_runtime_probe.v1"
+    );
+    assert_eq!(checked["status"], "passed");
+    assert_eq!(checked["binaryCount"], binary_names().len());
+    assert_eq!(
+        checked["binaries"].as_array().unwrap().len(),
+        binary_names().len()
+    );
+    assert_eq!(checked["automaticPromotion"], false);
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn self_check_rejects_installed_binary_drift() {
+    let (root, binaries) = fixture();
+    let output = root.join("output");
+    let result = run(&binaries, &output);
+    assert!(result.status.success());
+    let installed = root.join("installed");
+    extract(&output.join(archive_name()), &installed);
+    let path = installed.join("payload/bin/agentlab-source-probe");
+    let mut bytes = fs::read(&path).unwrap();
+    let last = bytes.last_mut().unwrap();
+    *last ^= 1;
+    fs::write(&path, bytes).unwrap();
+    let checked = self_check(&installed);
+    assert!(!checked.status.success());
+    assert!(String::from_utf8_lossy(&checked.stderr)
+        .contains("installed binary sha256 mismatch: agentlab-source-probe"));
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn self_check_rejects_extra_installed_binary() {
+    let (root, binaries) = fixture();
+    let output = root.join("output");
+    assert!(run(&binaries, &output).status.success());
+    let installed = root.join("installed");
+    extract(&output.join(archive_name()), &installed);
+    fs::write(
+        installed.join("payload/bin/unmanifested-tool"),
+        b"unexpected",
+    )
+    .unwrap();
+    let checked = self_check(&installed);
+    assert!(!checked.status.success());
+    assert!(String::from_utf8_lossy(&checked.stderr)
+        .contains("installed bin directory does not match the required inventory"));
     fs::remove_dir_all(root).unwrap();
 }
 
