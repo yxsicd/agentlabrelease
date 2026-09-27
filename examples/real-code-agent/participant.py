@@ -199,7 +199,8 @@ class Participant:
         return any(token in text for token in ('frp', '404 <!doctype', 'http 404', 'gateway exchange failed', '502 bad gateway'))
 
     def turn(self, label, project, marker=None, repair=False, prompt=None, container=None, requirement=None,
-             reasoning_effort=None, _transport_retry=0):
+             reasoning_effort=None, step_limit=None, wall_time_limit_seconds=None,
+             _transport_retry=0):
         self.active_reasoning_effort = reasoning_effort if reasoning_effort is not None else self.reasoning_effort
         prompt = prompt or (f'Work in the current Harmony ArkTS project. Read the page source and '
                   f'{"repair its invalid trailing text, then " if repair else ""}'
@@ -220,8 +221,12 @@ class Participant:
             command = [self.binary, str(Path(__file__).with_name('mini_runner.py')),
                        '--base-url', f'http://127.0.0.1:{self.server.server_port}/v1',
                        '--model', self.model, '--trajectory',
-                       str(self.evidence / f'{label}-mini-trajectory.json'), prompt]
+                       str(self.evidence / f'{label}-mini-trajectory.json')]
             if container: command += ['--container',container]
+            if step_limit is not None: command += ['--step-limit',str(step_limit)]
+            if wall_time_limit_seconds is not None:
+                command += ['--wall-time-limit-seconds',str(wall_time_limit_seconds)]
+            command.append(prompt)
         # Only the operator-side proxy has the external credential.
         env = {k: os.environ[k] for k in ('PATH', 'LANG', 'LC_ALL', 'TMPDIR') if k in os.environ}
         env.update(HOME=str(self.state.parent), PI_CODING_AGENT_DIR=str(self.state))
@@ -242,11 +247,18 @@ class Participant:
         lifecycle = {'label': label, 'startedAt': datetime.now(timezone.utc).isoformat(),
                      'captureAuthority': 'operator', 'exitCode': None, 'timedOut': False,
                      'providerReasoningEffort': self.active_reasoning_effort}
+        if self.implementation == 'mini-swe-agent':
+            lifecycle.update(stepLimit=step_limit or 30,
+                             wallTimeLimitSeconds=wall_time_limit_seconds or 360)
         started = time.monotonic()
         turn_error = None
         turn_result = None
         try:
-            turn_result = self._run_turn(command, project, env, label, lifecycle)
+            run_options = {}
+            if wall_time_limit_seconds is not None:
+                run_options['timeout_seconds'] = max(420, wall_time_limit_seconds + 60)
+                lifecycle['supervisorTimeoutSeconds'] = run_options['timeout_seconds']
+            turn_result = self._run_turn(command, project, env, label, lifecycle, **run_options)
         except RuntimeError as error:
             turn_error = error
         finally:
@@ -287,7 +299,10 @@ class Participant:
                     schema='agentlab.participant_transport_retry.v1', label=label, retryCount=1,
                     reason=combined, preserved=preserved), indent=2)+'\n')
                 return self.turn(label, project, marker=marker, repair=repair, prompt=prompt, container=container,
-                                 requirement=requirement, reasoning_effort=reasoning_effort, _transport_retry=1)
+                                 requirement=requirement, reasoning_effort=reasoning_effort,
+                                 step_limit=step_limit,
+                                 wall_time_limit_seconds=wall_time_limit_seconds,
+                                 _transport_retry=1)
             raise turn_error
         source = project / 'entry/src/main/ets/pages/Index.ets'
         if marker is not None and marker not in source.read_text():
@@ -295,13 +310,13 @@ class Participant:
         print(f'{label}: real {self.implementation} turn completed', flush=True)
         return turn_result
 
-    def _run_turn(self, command, project, env, label, lifecycle):
+    def _run_turn(self, command, project, env, label, lifecycle, timeout_seconds=420):
         with (self.evidence / f'{label}-events.jsonl').open('wb') as out, \
              (self.evidence / f'{label}-stderr.log').open('wb') as err:
             process = subprocess.Popen(command, cwd=project, env=env, stdout=out, stderr=err,
                                        stdin=subprocess.DEVNULL, start_new_session=True)
             try:
-                code = process.wait(timeout=420)
+                code = process.wait(timeout=timeout_seconds)
             except subprocess.TimeoutExpired:
                 lifecycle['timedOut'] = True
                 import signal

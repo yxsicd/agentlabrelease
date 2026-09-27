@@ -135,6 +135,27 @@ class GatewayCaptureTests(unittest.TestCase):
             self.assertEqual(json.loads((evidence/'runtime-probe.json').read_text())['exitCode'],1)
             self.assertFalse((evidence/'gateway').exists())
 
+    def test_mini_runtime_receives_explicit_builder_budgets(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ,
+                {'AGENTLAB_LM_GATEWAY_KEY':'synthetic-key'}), \
+                patch.object(MODULE.subprocess,'run',return_value=subprocess.CompletedProcess([],0,b'',b'')):
+            root=Path(tmp);evidence=root/'evidence';evidence.mkdir();captured={}
+            participant=MODULE.Participant(evidence,root/'state',sys.executable,
+                'http://127.0.0.1:1','test-model',implementation='mini-swe-agent')
+            try:
+                def capture(command, project, environment, label, lifecycle, **options):
+                    captured.update(command=command,lifecycle=lifecycle,options=options)
+                with patch.object(participant,'_run_turn',side_effect=capture):
+                    participant.turn('builder',root,prompt='fixture prompt',
+                                     step_limit=20,wall_time_limit_seconds=720)
+            finally:participant.close()
+            command=captured['command']
+            self.assertEqual(command[command.index('--step-limit')+1],'20')
+            self.assertEqual(command[command.index('--wall-time-limit-seconds')+1],'720')
+            self.assertEqual(command[-1],'fixture prompt')
+            self.assertEqual(captured['options']['timeout_seconds'],780)
+            self.assertEqual(captured['lifecycle']['supervisorTimeoutSeconds'],780)
+
     def test_native_banner_is_retained_without_vetoing_completed_tools(self):
         with tempfile.TemporaryDirectory() as tmp,patch.dict(os.environ,
                 {'AGENTLAB_LM_GATEWAY_KEY':'synthetic-key'}):

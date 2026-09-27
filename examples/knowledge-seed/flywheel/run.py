@@ -188,7 +188,9 @@ def main():
  tables['program_facts'].append(dict(id='oracle-debounce',kind='oracle',sourceRevision=PIN,code=Path(__file__).with_name('debounce.js').read_text(),request={'runtime':subprocess.check_output(['node','--version'],text=True).strip(),'sourcePath':SPECS[-1][2][0],'modes':['baseline','reference','wrong-boundary'],'captureAuthority':'operator-owned construction runner'},result=results,interpretation='Exact isolated-method calibration; not an assessed Code Agent or Harmony compiler'))
  tables['evaluation_cases'].append(dict(id='calibration-debounce',kind='calibration',title='Isolated method calibration',sourceRevision=PIN,paths=SPECS[-1][2],status='isolated-method-qualified',calibration=results,buildQualified=False))
  if not a.development:
-  package={'tables':tables,'updates':[dict(table='maintainer_skills',id='skill-debounce',fields={'body':next(r['body'] for r in tables['maintainer_skills'] if r['id']=='skill-debounce')+'\nOperator isolated oracle confirms the shared-timestamp collision; per-handler reference passes. No HAP qualification.\n'})],'calibrated':False,'scope':'real Harmony source; five isolated scenarios calibrated; complete cross-file/HAP subject tasks unqualified'}
+  seed_bytes=Path(__file__).resolve().parents[1].joinpath('builder-seed.json').read_bytes()
+  (e/'builder-seed.json').write_bytes(seed_bytes)
+  package={'schema':'agentlab.knowledge_seed.v1','builder':'deterministic_harmony_analysis','builderSeedSha256':hashlib.sha256(seed_bytes).hexdigest(),'sourceRevision':PIN,'tables':tables,'updates':[dict(table='maintainer_skills',id=row['id'],fields={'body':row['body'],'status':row['status']}) for row in tables['maintainer_skills']],'calibrated':False,'scope':'real Harmony source; five isolated scenarios calibrated; complete cross-file/HAP subject tasks unqualified'}
   dump(e/'knowledge-package.json',package)
   dump(e/'isolated-calibration.json',results)
   print(json.dumps({'sourceRevision':PIN,'taskCandidates':5,'isolatedCalibration':True,'calibratedMethods':5,'harmonyBuildQualified':False}))

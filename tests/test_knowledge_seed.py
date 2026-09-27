@@ -38,6 +38,28 @@ class AgentDraftTest(unittest.TestCase):
             self.assertTrue(all(u['fields']['body']=='Caller-aware maintainer workflow' for u in result['updates']))
             with self.assertRaises(ValueError): adapter.apply_draft(package,{'skills':[{'id':'invented','body':'x'}]})
 
+    def test_harmony_source_slice_uses_only_frozen_file_facts(self):
+        import hashlib
+        spec=importlib.util.spec_from_file_location('agent_builder',Path(__file__).parents[1]/'examples/knowledge-seed/agent_builder.py')
+        adapter=importlib.util.module_from_spec(spec);spec.loader.exec_module(adapter)
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);source=root/'source';project=root/'project'
+            wanted=source/'common/src/main/ets/util/UrlUtil.ets'
+            wanted.parent.mkdir(parents=True);wanted.write_text('export class UrlUtil {}\n')
+            extra=source/'not-selected.ets';extra.write_text('must not be copied\n')
+            package={'tables':{'program_facts':[
+                {'kind':'file','path':'common/src/main/ets/util/UrlUtil.ets',
+                 'sha256':hashlib.sha256(wanted.read_bytes()).hexdigest()},
+                {'kind':'import','path':'not-selected.ets'},
+            ]}}
+            copied=adapter.materialize_source_slice(project,source,package)
+            self.assertEqual(copied,['common/src/main/ets/util/UrlUtil.ets'])
+            self.assertEqual((project/copied[0]).read_text(),wanted.read_text())
+            self.assertFalse((project/'not-selected.ets').exists())
+            package['tables']['program_facts'][0]['sha256']='0'*64
+            with self.assertRaisesRegex(ValueError,'do not match frozen fact'):
+                adapter.materialize_source_slice(project,source,package)
+
 store_spec=importlib.util.spec_from_file_location('knowledge_store',Path(__file__).parents[1]/'examples/knowledge-seed/store.py')
 store=importlib.util.module_from_spec(store_spec);store_spec.loader.exec_module(store)
 
