@@ -146,6 +146,15 @@ these separate checks do not qualify the complete whitebox evaluation chain.
 - Read [`RELEASES.md`](RELEASES.md) for version scope and limitations.
 - Use [revision-fenced multi-repository analysis](docs/multi-repository-analysis.md)
   to derive explicit dependency graphs and non-promoted difficulty candidates.
+- Apply the mandatory
+  [Maintainer-Skill-gated case pipeline](docs/maintainer-skill-gated-case-pipeline.md)
+  before candidate review, construction, calibration, or freeze. Its Rust gate
+  binds exact repository revisions to instance Skills, program facts, archived
+  analyses, complete Maintainer SKU source-tree partitions, semantic coverage,
+  and independently checkable behavior contracts.
+  The [sample-repository portfolio](examples/maintainer-knowledge-gate/README.md)
+  separates mined Harmony sources, scale/noise samples, toolchain integration,
+  and imported SWE-bench controls.
 - Use the [calibrated multi-repository case pipeline](examples/multi-repo-case/README.md)
   to capture a replaceable construction participant, construct a review-required
   proposal, apply a leakage/coverage/stage-separation preflight, bind an explicit

@@ -1,0 +1,91 @@
+name: Maintainer knowledge cut qualification
+on:
+  workflow_dispatch:
+    inputs:
+      analysis_run_id:
+        description: Successful trusted-main exact multi-repository analysis run
+        required: true
+        type: string
+      candidate_id:
+        description: Exact difficulty candidate bound by the knowledge cut
+        required: true
+        type: string
+      knowledge_directory:
+        description: Repository-relative committed directory containing maintainer-knowledge-cut.json, candidate-knowledge-binding.json and the four JSONL tables including Maintainer SKUs
+        required: true
+        type: string
+      stage:
+        description: Hard-gate maturity stage
+        required: true
+        type: choice
+        options: [candidate, construction, calibration, freeze]
+        default: candidate
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  qualify:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      AGENTLAB_ROOT: ${{ github.workspace }}/.agentlab-work/maintainer-knowledge-cut
+      ANALYSIS_RUN_ID: ${{ inputs.analysis_run_id }}
+      CANDIDATE_ID: ${{ inputs.candidate_id }}
+      KNOWLEDGE_DIRECTORY: ${{ inputs.knowledge_directory }}
+      GATE_STAGE: ${{ inputs.stage }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Recover exact source analysis
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$ANALYSIS_RUN_ID" =~ ^[0-9]+$ ]]
+          mkdir -p "$AGENTLAB_ROOT/source" "$AGENTLAB_ROOT/bundle"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ANALYSIS_RUN_ID" > "$AGENTLAB_ROOT/source-run.json"
+          python3 - <<'PY'
+          import json, os
+          value=json.load(open(os.environ['AGENTLAB_ROOT']+'/source-run.json'))
+          assert value['head_branch']=='main'
+          assert value['path']=='.github/workflows/multi-repo-analysis.yml'
+          assert value['conclusion']=='success'
+          PY
+          gh run download "$ANALYSIS_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name multi-repo-analysis --dir "$AGENTLAB_ROOT/source"
+          python3 scripts/multi-repo-analysis-run.py validate \
+            --root "$AGENTLAB_ROOT/source/source" \
+            --run "$AGENTLAB_ROOT/source/source/analysis-run.json"
+      - name: Validate committed knowledge and candidate binding
+        run: |
+          set -euo pipefail
+          knowledge_root=$(realpath "$GITHUB_WORKSPACE/$KNOWLEDGE_DIRECTORY")
+          case "$knowledge_root" in "$GITHUB_WORKSPACE"/*) ;; *) exit 1 ;; esac
+          test -f "$knowledge_root/maintainer-knowledge-cut.json"
+          test -f "$knowledge_root/candidate-knowledge-binding.json"
+          cargo build --locked -p agentlab_code_analysis --bin agentlab-maintainer-knowledge-gate
+          target/debug/agentlab-maintainer-knowledge-gate \
+            --stage "$GATE_STAGE" \
+            --source-spec "$AGENTLAB_ROOT/source/source/manifest.json" \
+            --difficulty "$AGENTLAB_ROOT/source/source/analysis/difficulty_candidates.json" \
+            --knowledge-cut "$knowledge_root/maintainer-knowledge-cut.json" \
+            --binding "$knowledge_root/candidate-knowledge-binding.json" \
+            --candidate-id "$CANDIDATE_ID" \
+            --output "$AGENTLAB_ROOT/bundle/maintainer-knowledge-gate-receipt.json"
+          cp "$knowledge_root/maintainer-knowledge-cut.json" \
+            "$knowledge_root/candidate-knowledge-binding.json" \
+            "$AGENTLAB_ROOT/bundle/"
+          while IFS= read -r table; do
+            relative=$(jq -r --arg table "$table" '.tables[$table].path' "$knowledge_root/maintainer-knowledge-cut.json")
+            mkdir -p -- "$AGENTLAB_ROOT/bundle/$(dirname "$relative")"
+            cp -- "$knowledge_root/$relative" "$AGENTLAB_ROOT/bundle/$relative"
+          done < <(printf '%s\n' maintainerSkills maintainerSkus programFacts evaluationCases)
+          find "$AGENTLAB_ROOT/bundle" -type f -print0 | sort -z | xargs -0 sha256sum >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish exact qualified knowledge bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: maintainer-knowledge-${{ inputs.candidate_id }}-${{ github.run_id }}
+          if-no-files-found: error
+          path: ${{ env.AGENTLAB_ROOT }}/bundle/

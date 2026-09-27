@@ -1,0 +1,51 @@
+{
+  "schema": "agentlab.maintainer_knowledge_cut.v1",
+  "sourceSetSha256": "88310ecd6a5ace0c7393c7981b8f9ba9103afff41133b71d0b84e951e95f24a6",
+  "repositories": [
+    {
+      "id": "code-workshop",
+      "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+      "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+    },
+    {
+      "id": "guide-snippets",
+      "repository": "https://gitcode.com/HarmonyOS_Samples/guide-snippets.git",
+      "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525"
+    },
+    {
+      "id": "harmony-iap-client",
+      "repository": "https://gitcode.com/HarmonyOS_Samples/iapkit-sample-clientdemo-arkts.git",
+      "revision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3"
+    },
+    {
+      "id": "hms-cordova-iap",
+      "repository": "https://github.com/HMS-Core/hms-cordova-plugin.git",
+      "revision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
+    }
+  ],
+  "tables": {
+    "maintainerSkills": {
+      "path": "maintainer_skills.jsonl",
+      "sha256": "fe4f99028efe5f752eb58319c83ee2b4dbfdf0e91f9d832ac73f83eeeb5c5a6e"
+    },
+    "maintainerSkus": {
+      "path": "maintainer_skus.jsonl",
+      "sha256": "351e394c8597f9cb2a5ae4d4c0752d4f36a65e032abfdbcf5c1999b733292a4d"
+    },
+    "programFacts": {
+      "path": "program_facts.jsonl",
+      "sha256": "3bd2efd317f57e57af2c65c2b4f1b8dc7e64d619a2c0a9d322880c89fb303dcf"
+    },
+    "evaluationCases": {
+      "path": "evaluation_cases.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "policy": {
+    "wholeRepositoryInventoryRequired": true,
+    "semanticCoverageRequired": true,
+    "programAnalysisBound": true,
+    "candidateBindingsRequired": true
+  },
+  "automaticPromotion": false
+}

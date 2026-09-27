@@ -39,8 +39,21 @@ on:
         description: Evidence-based rationale for this exact verdict
         required: true
         type: string
+      knowledge_gate_run_id:
+        description: Trusted maintainer-knowledge qualification run
+        required: true
+        type: string
+      knowledge_gate_artifact:
+        description: Exact qualified maintainer-knowledge artifact name
+        required: true
+        type: string
+      expected_knowledge_gate_receipt_sha256:
+        description: Exact calibration-stage-or-later gate receipt digest
+        required: true
+        type: string
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -53,6 +66,14 @@ jobs:
       PACKET_RELATIVE_PATH: ${{ inputs.packet_path }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/require-maintainer-knowledge-gate
+        with:
+          run_id: ${{ inputs.knowledge_gate_run_id }}
+          artifact: ${{ inputs.knowledge_gate_artifact }}
+          expected_receipt_sha256: ${{ inputs.expected_knowledge_gate_receipt_sha256 }}
+          candidate_id: difficulty-c75c82b3a697d8053e74bb37
+          minimum_stage: calibration
+          github_token: ${{ github.token }}
       - name: Install exact immutable analysis-tools component
         uses: ./.github/actions/install-analysis-tools-component
         with:

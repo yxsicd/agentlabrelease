@@ -1,0 +1,62 @@
+name: Require maintainer knowledge gate
+description: Fail closed unless a trusted-main maintainer-knowledge qualification produced the exact stage receipt
+inputs:
+  run_id:
+    description: Trusted maintainer-knowledge-cut workflow run ID
+    required: true
+  artifact:
+    description: Exact knowledge artifact name
+    required: true
+  expected_receipt_sha256:
+    description: Exact gate receipt SHA-256 inspected by the operator
+    required: true
+  candidate_id:
+    description: Exact candidate identity
+    required: true
+  minimum_stage:
+    description: Minimum accepted gate stage
+    required: true
+  github_token:
+    description: Read-only GitHub Actions token
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+        GATE_RUN_ID: ${{ inputs.run_id }}
+        GATE_ARTIFACT: ${{ inputs.artifact }}
+        EXPECTED_RECEIPT_SHA256: ${{ inputs.expected_receipt_sha256 }}
+        EXPECTED_CANDIDATE_ID: ${{ inputs.candidate_id }}
+        MINIMUM_STAGE: ${{ inputs.minimum_stage }}
+      run: |
+        set -euo pipefail
+        [[ "$GATE_RUN_ID" =~ ^[0-9]+$ ]]
+        [[ "$EXPECTED_RECEIPT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+        case "$MINIMUM_STAGE" in candidate|construction|calibration|freeze) ;; *) exit 1 ;; esac
+        root="$RUNNER_TEMP/agentlab-maintainer-knowledge-gate-$GATE_RUN_ID"
+        mkdir -p "$root"
+        gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GATE_RUN_ID" > "$root/run.json"
+        python3 - "$root/run.json" <<'PY'
+        import json,sys
+        value=json.load(open(sys.argv[1]))
+        assert value['head_branch']=='main'
+        assert value['path']=='.github/workflows/maintainer-knowledge-cut.yml'
+        assert value['event']=='workflow_dispatch'
+        assert value['conclusion']=='success'
+        PY
+        gh run download "$GATE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+          --name "$GATE_ARTIFACT" --dir "$root/artifact"
+        mapfile -t receipts < <(find "$root/artifact" -type f -name maintainer-knowledge-gate-receipt.json)
+        [[ "${#receipts[@]}" -eq 1 ]]
+        printf '%s  %s\n' "$EXPECTED_RECEIPT_SHA256" "${receipts[0]}" | sha256sum -c -
+        python3 - "${receipts[0]}" "$EXPECTED_CANDIDATE_ID" "$MINIMUM_STAGE" <<'PY'
+        import json,sys
+        receipt=json.load(open(sys.argv[1]))
+        order={'candidate':0,'construction':1,'calibration':2,'freeze':3}
+        assert receipt['schema']=='agentlab.maintainer_knowledge_gate_receipt.v1'
+        assert receipt['status']=='passed' and receipt['automaticPromotion'] is False
+        assert receipt['candidateId']==sys.argv[2]
+        assert order[receipt['stage']]>=order[sys.argv[3]]
+        PY

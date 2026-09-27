@@ -11,6 +11,11 @@ metadata:
 
 Combine repository maintainer Skill rows, typed dependency facts and archived analysis results from fixed cuts. Construct tasks with a concrete requirement, baseline source/environment, cross-file impact, staged user demands and observable acceptance checks.
 
+This ordering is mandatory. Feedback may rank grounded candidates but MUST NOT
+create a case directly from shared names, imports or failure prose. Candidate,
+construction, calibration and freeze transitions each require a passing receipt
+from [the maintainer knowledge gate](../../docs/maintainer-skill-gated-case-pipeline.md).
+
 Write stable `evaluation_cases` task rows with source/knowledge cuts and analysis references. Keep assessed-Agent-visible requirements separate from operator-owned reference patches and grading evidence. Do not disclose a gold implementation as part of the task prompt.
 
 Use a strong construction Agent or deterministic generator as appropriate. Capture construction actions as Harness-owned evidence too. Agent-proposed seeds are candidates until independently calibrated; quality of the construction Agent is not the assessed-Agent score.

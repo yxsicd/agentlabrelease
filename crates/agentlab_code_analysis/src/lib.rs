@@ -2,6 +2,8 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use tree_sitter::{Node, Parser};
+
+pub mod knowledge_gate;
 extern "C" {
     fn tree_sitter_agentlab_arkts() -> *const ();
 }
