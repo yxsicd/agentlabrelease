@@ -239,9 +239,11 @@ class MultiRepoAnalysisRunTests(unittest.TestCase):
 
     def test_prefetch_uses_bounded_git_filter_tiers_and_promisor_inventory(self):
         source = (ROOT / "scripts/prefetch-multi-repo-analysis-blobs.py").read_text()
-        self.assertIn("(8192, 32768)", source)
+        self.assertIn("(8192, 32768, 1048576)", source)
         self.assertIn('"GIT_NO_LAZY_FETCH": "1"', source)
-        self.assertIn('"git-filtered-promisor"', source)
+        self.assertIn("hydrate_exact_blobs(root, missing)", source)
+        self.assertIn("require(remaining == 0", source)
+        self.assertIn('"git-filtered-promisor+exact-oid-hydration"', source)
         self.assertNotIn("raw.gitcode.com", source)
 
     def test_workflows_use_run_addressed_analysis_not_fixture(self):

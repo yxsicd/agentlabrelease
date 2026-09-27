@@ -70,7 +70,7 @@ def missing_blobs(root: Path, rows: list[tuple[str, str]]) -> list[tuple[str, st
 
 
 def refetch_small_blobs(root: Path, revision: str) -> None:
-    for limit in (8192, 32768):
+    for limit in (8192, 32768, 1048576):
         errors = []
         for attempt in range(1, 4):
             completed = subprocess.run(
@@ -95,6 +95,23 @@ def refetch_small_blobs(root: Path, revision: str) -> None:
             raise PrefetchError("filtered Git refetch failed after bounded retries: " + " | ".join(errors))
 
 
+def hydrate_exact_blobs(root: Path, rows: list[tuple[str, str]]) -> None:
+    if not rows:
+        return
+    completed = subprocess.run(
+        ["git", "-C", str(root), "cat-file", "--batch"],
+        input="".join(f"{oid}\n" for oid, _ in rows).encode("ascii"),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    require(
+        completed.returncode == 0,
+        "exact Git blob hydration failed: "
+        + completed.stderr.decode("utf-8", errors="replace").strip(),
+    )
+
+
 def prefetch(manifest_path: Path) -> dict[str, Any]:
     require(manifest_path.is_file() and not manifest_path.is_symlink(), "manifest must be a regular file")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -117,14 +134,17 @@ def prefetch(manifest_path: Path) -> dict[str, Any]:
         if len(initial_missing) > 128:
             refetch_small_blobs(root, revision)
         missing = missing_blobs(root, rows)
+        hydrate_exact_blobs(root, missing)
+        missing = missing_blobs(root, rows)
         remaining = len(missing)
+        require(remaining == 0, f"{repository.get('id')} retains {remaining} unavailable source blobs")
         receipt_rows.append({
             "id": repository.get("id"),
             "sourceBlobs": len(rows),
             "alreadyPresent": len(rows) - len(initial_missing),
             "fetched": len(initial_missing) - remaining,
             "remaining": remaining,
-            "transport": "git-filtered-promisor",
+            "transport": "git-filtered-promisor+exact-oid-hydration",
         })
     return {
         "schema": "agentlab.multi_repo_blob_prefetch.v1",
