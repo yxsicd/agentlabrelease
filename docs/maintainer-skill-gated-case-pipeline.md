@@ -17,12 +17,22 @@ exact source set
   -> task construction
   -> independent Oracle and variant calibration
   -> frozen evaluation case
-  -> assessed attempts and feedback into a later knowledge cut
+  -> assessed attempts and round assessment
+  -> feedback into a later knowledge cut and generation round
+  -> repeat until an evidenced scoped convergence or blocker
 ```
 
 The order is normative. A feedback signal may choose the next source set or
 rank already grounded candidates, but it MUST NOT replace repository knowledge,
 program analysis, independent calibration, or cohort review.
+
+Case generation is therefore a lineage, not a one-shot job. Every pass writes a
+`case_generation_rounds.jsonl` row conforming to
+[`case-generation-round.schema.json`](../schemas/case-generation-round.schema.json).
+The row binds its exact knowledge cut and latest Maintainer Skill refresh,
+measures behavior/Oracle readiness, preserves candidate outcomes and returns
+gaps to the next round. An empty or unsuccessful first cohort is retained as a
+baseline and MUST NOT be called convergence.
 
 ## Ownership planes and refresh rounds
 
@@ -98,7 +108,8 @@ independent approval.
 The authoritative schemas are
 [`maintainer-knowledge-cut.schema.json`](../schemas/maintainer-knowledge-cut.schema.json),
 [`maintainer-scope-skill.schema.json`](../schemas/maintainer-scope-skill.schema.json),
-[`maintainer-skill-refresh-round.schema.json`](../schemas/maintainer-skill-refresh-round.schema.json), and
+[`maintainer-skill-refresh-round.schema.json`](../schemas/maintainer-skill-refresh-round.schema.json),
+[`case-generation-round.schema.json`](../schemas/case-generation-round.schema.json), and
 [`candidate-knowledge-binding.schema.json`](../schemas/candidate-knowledge-binding.schema.json).
 
 ## Migration rule for existing evidence

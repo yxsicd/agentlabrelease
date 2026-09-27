@@ -12,6 +12,24 @@ metadata:
 
 Combine repository maintainer Skill rows, typed dependency facts and archived analysis results from fixed cuts. Construct tasks with a concrete requirement, baseline source/environment, cross-file impact, staged user demands and observable acceptance checks.
 
+Treat case generation as an iterative search over a revision-bound knowledge
+cut, never as a one-pass export. A scope Skill that only names files,
+languages, build entrypoints or imports is routing evidence; it is not yet a
+behavior-ready seed. Generate a candidate only after binding a semantic
+responsibility, a program relation or state transition, and an executable
+Oracle hypothesis to the same source revision.
+
+For every generation round, preserve the parent round, objectives, exact
+knowledge cut, coverage before and after, generated/retained/rejected
+candidates, Oracle and calibration outcomes, and feedback gaps. Use failures
+and uncovered responsibilities to select the next Maintainer Skill refresh,
+program-analysis expansion, or candidate cohort. A first round, an empty
+cohort, or zero qualified cases is a baseline result, not convergence. Stop
+only with an explicit `converged` or `blocked` decision and its evidence. Follow
+[the iterative generation contract](references/iterative-case-generation.md)
+and validate round records against
+[`case-generation-round.schema.json`](../../schemas/case-generation-round.schema.json).
+
 This ordering is mandatory. Feedback may rank grounded candidates but MUST NOT
 create a case directly from shared names, imports or failure prose. Candidate,
 construction, calibration and freeze transitions each require a passing receipt
