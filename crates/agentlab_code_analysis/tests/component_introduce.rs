@@ -369,7 +369,8 @@ fn publication_workflow_keeps_component_candidate_and_activation_as_separate_aut
     assert!(!analysis_workflow.contains(
         "cargo build --locked -p agentlab_code_analysis --bin agentlab-multi-repo-analysis"
     ));
-    assert!(component_install_action.contains("AGENTLAB_INSTALL_ONLY=true"));
+    assert!(component_install_action.contains("AGENTLAB_SUBJECT_ONLY=true"));
+    assert!(!component_install_action.contains("AGENTLAB_INSTALL_ONLY=true"));
     assert!(component_install_action.contains("componentPayloadsUploaded\"] is False"));
     assert!(component_install_action.contains("automaticPromotion\": False"));
     assert!(component_install_action.contains("docker\", \"image\", \"inspect"));
