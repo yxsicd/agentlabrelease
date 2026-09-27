@@ -76,7 +76,7 @@ impl Fixture {
             ohostest_proposal: evidence.join("purchase-data-ohostest-proposal.json"),
             closure: repository.join("release/closures/v0.1.0-alpha.13.json"),
             target: repository.join("release/targets/generic-linux-agentlab.json"),
-            registry: repository.join("release/components/registry.json"),
+            registry: repository.join("release/components/registry-alpha13.json"),
             gate,
             output: root.join("runtime-plan.json"),
         }
@@ -240,7 +240,9 @@ fn rejects_registry_or_calibration_digest_drift() {
     assert!(!changed_registry.status.success());
     assert!(stderr(&changed_registry).contains("component registry digest differs"));
 
-    fixture.registry = fixture.repository.join("release/components/registry.json");
+    fixture.registry = fixture
+        .repository
+        .join("release/components/registry-alpha13.json");
     fixture.calibration = fixture.copy_to_root(&fixture.calibration, "calibration.json");
     let mut calibration = read_json(&fixture.calibration);
     calibration["coverage"]["methodCount"] = json!(4);

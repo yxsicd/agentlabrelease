@@ -67,10 +67,7 @@ class ReleaseGraphTests(unittest.TestCase):
         alpha12 = json.loads(
             (ROOT / "release/closures/v0.1.0-alpha.12.json").read_text()
         )
-        registry_path = ROOT / "release/components/registry.json"
-        registry_bytes = registry_path.read_bytes()
-        registry = json.loads(registry_bytes)
-        MODULE.validate_closure(alpha12, registry, registry_bytes)
+        MODULE.validate_closure(alpha12)
         self.assertTrue(
             {asset["url"] for asset in alpha11["assets"]}.issubset(
                 {asset["url"] for asset in alpha12["assets"]}
@@ -90,9 +87,7 @@ class ReleaseGraphTests(unittest.TestCase):
         alpha13 = json.loads(
             (ROOT / "release/closures/v0.1.0-alpha.13.json").read_text()
         )
-        registry_path = ROOT / "release/components/registry.json"
-        registry_bytes = registry_path.read_bytes()
-        MODULE.validate_closure(alpha13, json.loads(registry_bytes), registry_bytes)
+        MODULE.validate_closure(alpha13)
         head = MODULE.validate_release_source_git(alpha13, ROOT)
         self.assertEqual(len(head), 40)
         self.assertEqual(
@@ -212,9 +207,9 @@ class ReleaseGraphTests(unittest.TestCase):
         self.assertGreaterEqual(len(receipt["remoteInspection"]["operationIds"]), 2)
         self.assertFalse(receipt["automaticPromotion"])
 
-    def test_alpha12_registry_asset_drift_is_rejected(self) -> None:
+    def test_current_registry_asset_drift_is_rejected(self) -> None:
         closure_value = json.loads(
-            (ROOT / "release/closures/v0.1.0-alpha.12.json").read_text()
+            (ROOT / "release/closures/v0.1.0-alpha.14.json").read_text()
         )
         registry_path = ROOT / "release/components/registry.json"
         registry_bytes = registry_path.read_bytes()
@@ -243,7 +238,7 @@ class ReleaseGraphTests(unittest.TestCase):
         registry_bytes = registry_path.read_bytes()
         registry = json.loads(registry_bytes)
         value = json.loads(
-            (ROOT / "release/closures/v0.1.0-alpha.12.json").read_text()
+            (ROOT / "release/closures/v0.1.0-alpha.14.json").read_text()
         )
         value.pop("developerPreviewScope")
         with self.assertRaisesRegex(ValueError, "scope"):

@@ -1,5 +1,23 @@
 # Releases
 
+## v0.1.0-alpha.14 developer preview
+
+Promotes the long-horizon case model and the independently published Linux x64
+analysis tools into a formal top-level developer-preview release. The aggregate
+closure binds release-method source commit
+`7d7d9ee57adaa5ed90be867cf3a9fa2ce22afed6`, references 15 immutable components
+and 26 payload/descriptor assets, and rebuilds or reuploads no unchanged binary.
+
+This cut qualifies the exact tag, all 26 remotely observed immutable assets and
+a fresh-runner closure installation. Linux Harmony emulator assets remain in
+the reusable component graph, but emulator execution is explicitly not
+requalified for Alpha.14; the Alpha.13 acceptance receipt is not transferred
+to this release. Relative performance feedback remains experimental, absolute
+power and thermal authority remains unqualified, and automatic promotion stays
+disabled. The exact Alpha.13 component registry is retained separately so its
+historical runtime-plan evidence remains reproducible after the current
+registry advances.
+
 ## v0.1.0-alpha.13 candidate
 
 Supersedes the unpublished Alpha.12 cut with a release source identity that is

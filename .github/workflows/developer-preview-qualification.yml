@@ -5,22 +5,22 @@ on:
       release_tag:
         description: Exact immutable developer preview tag selected as the workflow ref
         required: true
-        default: v0.1.0-alpha.13
+        default: v0.1.0-alpha.14
         type: string
       closure_path:
         description: Committed closure bound to the selected release tag
         required: true
-        default: release/closures/v0.1.0-alpha.13.json
+        default: release/closures/v0.1.0-alpha.14.json
         type: string
       asset_receipt_path:
         description: Committed remote immutable-asset receipt for the closure
         required: true
-        default: release/qualifications/alpha13-immutable-assets/summary.json
+        default: release/qualifications/alpha14-immutable-assets/summary.json
         type: string
       harmony_receipt_path:
-        description: Committed release-bound Harmony acceptance receipt
-        required: true
-        default: release/qualifications/alpha13-harmony-acceptance/summary.json
+        description: Optional release-bound Harmony receipt when the closure requires it
+        required: false
+        default: ''
         type: string
 
 permissions:
@@ -51,7 +51,9 @@ jobs:
           test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$TAG_SHA"
           case "$AGENTLAB_RELEASE_CLOSURE" in release/closures/*.json) ;; *) exit 1 ;; esac
           case "$AGENTLAB_ASSET_RECEIPT" in release/qualifications/*/summary.json) ;; *) exit 1 ;; esac
-          case "$AGENTLAB_HARMONY_RECEIPT" in release/qualifications/*/summary.json) ;; *) exit 1 ;; esac
+          if [[ -n "$AGENTLAB_HARMONY_RECEIPT" ]]; then
+            case "$AGENTLAB_HARMONY_RECEIPT" in release/qualifications/*/summary.json) ;; *) exit 1 ;; esac
+          fi
           python3 scripts/validate-release.py
           python3 scripts/validate-release-graph.py \
             --closure "$AGENTLAB_RELEASE_CLOSURE" \
@@ -70,10 +72,14 @@ jobs:
           RELEASE_TAG: ${{ inputs.release_tag }}
           TAG_SHA: ${{ github.sha }}
         run: |
+          harmony_args=()
+          if [[ -n "$AGENTLAB_HARMONY_RECEIPT" ]]; then
+            harmony_args=(--harmony-receipt "$AGENTLAB_HARMONY_RECEIPT")
+          fi
           python3 scripts/qualify-tagged-developer-preview.py \
             --closure "$AGENTLAB_RELEASE_CLOSURE" \
             --asset-receipt "$AGENTLAB_ASSET_RECEIPT" \
-            --harmony-receipt "$AGENTLAB_HARMONY_RECEIPT" \
+            "${harmony_args[@]}" \
             --install-summary "$AGENTLAB_CI_ROOT/summary.json" \
             --environment-lock "$AGENTLAB_CI_ROOT/closure-materialized/environment-lock.json" \
             --tag "$RELEASE_TAG" \

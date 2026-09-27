@@ -68,6 +68,8 @@ def compose(
     registry_bytes: bytes,
     version: str,
     revision: str,
+    *,
+    linux_emulator_acceptance_required: bool = True,
 ) -> dict[str, Any]:
     validator = validator_module()
     validator.validate_closure(base)
@@ -165,7 +167,11 @@ def compose(
         "multiRepositorySemanticAndProgramAnalysis": "included",
         "recursiveDifficultyFeedback": "included",
         "reviewedCalibratedCaseGeneration": "included",
-        "linuxHarmonyEmulatorExecution": "experimental",
+        "linuxHarmonyEmulatorExecution": (
+            "experimental"
+            if linux_emulator_acceptance_required
+            else "not-qualified-in-this-release"
+        ),
         "relativePerformanceFeedback": "experimental",
         "absolutePowerThermal": "not-qualified",
         "automaticPromotion": False,
@@ -184,7 +190,7 @@ def compose(
             "public-install-deploy-smoke-release-closure",
         ],
         "taggedCleanInstallRequired": True,
-        "linuxEmulatorAcceptanceRequired": True,
+        "linuxEmulatorAcceptanceRequired": linux_emulator_acceptance_required,
         "automaticPromotion": False,
     }
     validator.validate_closure(result, registry, registry_bytes)
@@ -211,6 +217,11 @@ def main() -> int:
     parser.add_argument("--registry", type=pathlib.Path, required=True)
     parser.add_argument("--version", required=True)
     parser.add_argument("--release-source-revision", required=True)
+    parser.add_argument(
+        "--without-linux-emulator-requalification",
+        action="store_true",
+        help="exclude Linux Harmony execution from this release's qualification claim",
+    )
     parser.add_argument("--output", type=pathlib.Path, required=True)
     args = parser.parse_args()
     require(not args.output.exists(), f"refusing to overwrite output: {args.output}")
@@ -222,6 +233,7 @@ def main() -> int:
         registry_bytes,
         args.version,
         args.release_source_revision,
+        linux_emulator_acceptance_required=not args.without_linux_emulator_requalification,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")

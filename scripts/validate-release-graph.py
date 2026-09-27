@@ -326,7 +326,11 @@ def validate_closure(
             "absolutePowerThermal": "not-qualified",
             "automaticPromotion": False,
         }
-        if scope != expected_scope:
+        unqualified_harmony_scope = {
+            **expected_scope,
+            "linuxHarmonyEmulatorExecution": "not-qualified-in-this-release",
+        }
+        if scope not in (expected_scope, unqualified_harmony_scope):
             fail("developer preview scope differs")
         plan = value.get("qualificationPlan")
         if not isinstance(plan, dict):
@@ -338,7 +342,8 @@ def validate_closure(
             or len(checks) != len(set(checks))
             or set(checks) != DEVELOPER_PREVIEW_CHECKS
             or plan.get("taggedCleanInstallRequired") is not True
-            or plan.get("linuxEmulatorAcceptanceRequired") is not True
+            or plan.get("linuxEmulatorAcceptanceRequired")
+            is not (scope == expected_scope)
             or plan.get("automaticPromotion") is not False
         ):
             fail("developer preview qualification plan differs")
