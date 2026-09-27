@@ -28,9 +28,9 @@
       "path": "maintainer_skills.jsonl",
       "sha256": "fe4f99028efe5f752eb58319c83ee2b4dbfdf0e91f9d832ac73f83eeeb5c5a6e"
     },
-    "maintainerSkus": {
-      "path": "maintainer_skus.jsonl",
-      "sha256": "351e394c8597f9cb2a5ae4d4c0752d4f36a65e032abfdbcf5c1999b733292a4d"
+    "maintainerScopeSkills": {
+      "path": "maintainer_scope_skills.jsonl",
+      "sha256": "df5e32d245d2c8e0deb3eee201283d755aba884f35a88bb1c3d9bce910211107"
     },
     "programFacts": {
       "path": "program_facts.jsonl",

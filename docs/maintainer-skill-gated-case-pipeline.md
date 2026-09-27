@@ -9,8 +9,8 @@ an optional knowledge-seed experiment.
 ```text
 exact source set
   -> whole-repository inventory and parser receipt
-  -> repository maintainer Skills
-  -> complete Maintainer SKU partition of the source tree
+  -> repository process Maintainer Skills
+  -> complete scope-level Maintainer Skill partition of the source tree
   -> revision-bound program facts and archived analyses
   -> explicit Skill/fact/analysis candidate binding
   -> reviewed multi-candidate cohort
@@ -29,17 +29,17 @@ program analysis, independent calibration, or cohort review.
 1. Every repository is pinned by URL and 40-hex Git revision.
 2. Every repository has instance Skills for `repository-analysis`,
    `program-analysis`, and `seed-extraction` at that exact revision.
-3. Every tracked file belongs to exactly one leaf Maintainer SKU. Each SKU
-   binds its repository revision, path boundary, responsibility, language mix,
-   build/test entrypoints, and Git Blob evidence. A candidate must name the
-   exact SKU or SKUs whose responsibility it exercises.
+3. Every tracked file belongs to exactly one scope-level Maintainer Skill. Each
+   scope Skill binds its repository revision, path boundary, responsibility,
+   language mix, build/test entrypoints, and Git Blob evidence. A candidate
+   must name the exact scope Skill or Skills whose responsibility it exercises.
 4. Repository coverage explicitly records architecture, build/test entrypoints,
    behavior contracts, state transitions, cross-file responsibilities, and
    known gaps. A parser inventory alone is not semantic coverage.
 5. Program facts and archived analysis records use the same repository revision
    as their linked Skills.
 6. Every candidate binds every source repository exactly once and names the
-   supporting SKU IDs, Skill IDs, fact IDs, and analysis IDs.
+   supporting scope Skill IDs, Skill IDs, fact IDs, and analysis IDs.
 7. Every candidate defines responsibilities, state transitions, independently
    observable acceptance behavior, and unresolved risks before semantic review.
 8. Construction adds staged demands, editable and context-only paths, and
@@ -80,7 +80,7 @@ independent approval.
 
 The authoritative schemas are
 [`maintainer-knowledge-cut.schema.json`](../schemas/maintainer-knowledge-cut.schema.json),
-[`maintainer-sku.schema.json`](../schemas/maintainer-sku.schema.json), and
+[`maintainer-scope-skill.schema.json`](../schemas/maintainer-scope-skill.schema.json), and
 [`candidate-knowledge-binding.schema.json`](../schemas/candidate-knowledge-binding.schema.json).
 
 ## Migration rule for existing evidence

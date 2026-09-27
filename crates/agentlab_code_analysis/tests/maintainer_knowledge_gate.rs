@@ -91,13 +91,15 @@ fn fixture() -> Fixture {
         ),
     )
     .unwrap();
-    let skus = root.join("maintainer_skus.jsonl");
+    let scope_skills = root.join("maintainer_scope_skills.jsonl");
     fs::write(
-        &skus,
+        &scope_skills,
         format!(
             "{}\n",
             json!({
-                "id":"sku-a",
+                "id":"skill-scope-a",
+                "skillLayer":"instance",
+                "stage":"repository-scope",
                 "repositoryId":"repo-a",
                 "sourceRevision":revision,
                 "trackedFileCount":1,
@@ -117,7 +119,7 @@ fn fixture() -> Fixture {
             "repositories":repositories,
             "tables":{
                 "maintainerSkills":{"path":"maintainer_skills.jsonl","sha256":digest(&fs::read(&skills).unwrap())},
-                "maintainerSkus":{"path":"maintainer_skus.jsonl","sha256":digest(&fs::read(&skus).unwrap())},
+                "maintainerScopeSkills":{"path":"maintainer_scope_skills.jsonl","sha256":digest(&fs::read(&scope_skills).unwrap())},
                 "programFacts":{"path":"program_facts.jsonl","sha256":digest(&fs::read(&facts).unwrap())},
                 "evaluationCases":{"path":"evaluation_cases.jsonl","sha256":digest(&fs::read(&cases).unwrap())}
             },
@@ -144,7 +146,7 @@ fn fixture() -> Fixture {
             "repositoryBindings":[{
                 "repositoryId":"repo-a",
                 "revision":revision,
-                "skuIds":["sku-a"],
+                "scopeSkillIds":["skill-scope-a"],
                 "skillIds":["skill-program","skill-repository","skill-seed"],
                 "factIds":["fact-a"],
                 "analysisIds":["analysis-a"],
@@ -190,7 +192,7 @@ fn candidate_gate_accepts_exact_revision_bound_knowledge() {
     assert_eq!(receipt["status"], "passed");
     assert_eq!(receipt["repositoryCount"], 1);
     assert_eq!(receipt["maintainerSkillCount"], 3);
-    assert_eq!(receipt["maintainerSkuCount"], 1);
+    assert_eq!(receipt["maintainerScopeSkillCount"], 1);
     assert_eq!(receipt["programFactCount"], 1);
     assert_eq!(receipt["analysisRecordCount"], 1);
 }
@@ -214,10 +216,10 @@ fn candidate_gate_rejects_missing_program_analysis_skill() {
 }
 
 #[test]
-fn candidate_gate_rejects_unknown_maintainer_sku() {
+fn candidate_gate_rejects_unknown_maintainer_scope_skill() {
     let fixture = fixture();
     let mut binding: Value = serde_json::from_slice(&fs::read(&fixture.binding).unwrap()).unwrap();
-    binding["repositoryBindings"][0]["skuIds"] = json!(["sku-not-in-cut"]);
+    binding["repositoryBindings"][0]["scopeSkillIds"] = json!(["skill-scope-not-in-cut"]);
     write_json(&fixture.binding, &binding);
     let error = validate_gate(
         GateStage::Candidate,
@@ -228,7 +230,7 @@ fn candidate_gate_rejects_unknown_maintainer_sku() {
         "difficulty-a",
     )
     .unwrap_err();
-    assert!(error.contains("unknown maintainer SKU"), "{error}");
+    assert!(error.contains("unknown maintainer scope Skill"), "{error}");
 }
 
 #[test]

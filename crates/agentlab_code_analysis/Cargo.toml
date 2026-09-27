@@ -122,8 +122,8 @@ name = "agentlab-maintainer-knowledge-gate"
 path = "src/maintainer_knowledge_gate.rs"
 
 [[bin]]
-name = "agentlab-maintainer-sku-catalog"
-path = "src/maintainer_sku_catalog.rs"
+name = "agentlab-maintainer-skill-catalog"
+path = "src/maintainer_skill_catalog.rs"
 
 [dependencies]
 tree-sitter = "=0.27.0"

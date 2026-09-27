@@ -295,7 +295,7 @@ fn responsibility(strategy: &str, kind: &str, boundary: &str) -> String {
         (_, "domain-support") => format!("Maintain shared documentation or support assets for the {} sample domain without treating them as an application.", boundary.trim_end_matches("/_support")),
         (_, "source-unit") => format!("Maintain the application behavior owned by {boundary} and its callers, state transitions, and IAP contract."),
         (_, "plugin") => format!("Maintain the complete Cordova plugin package rooted at {boundary}, including JS/TS, native bridge, metadata, examples, and generated distributions."),
-        (_, "iap-layer") => format!("Maintain the Cordova IAP layer {boundary} and its cross-layer contract with adjacent IAP SKUs."),
+        (_, "iap-layer") => format!("Maintain the Cordova IAP layer {boundary} and its cross-layer contract with adjacent IAP scope Skills."),
         (_, "module") => format!("Maintain the Harmony module rooted at {boundary}, including its build manifest, source, resources, and tests."),
         _ if boundary == "." => "Maintain repository-wide build, policy, documentation, and release support files.".to_owned(),
         _ => format!("Maintain the tracked repository support boundary {boundary}."),
@@ -358,7 +358,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let key = boundary(strategy, &file.path, &guide_roots);
             groups.entry(key).or_default().push(file);
         }
-        let sku_count = groups.len();
+        let scope_skill_count = groups.len();
         let mut repository_source_files = 0usize;
         let mut repository_code_lines = 0usize;
         let mut repository_test_files = 0usize;
@@ -403,8 +403,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .map(|member| json!({"path":member.path,"gitBlobOid":member.oid}))
                 .collect();
             rows.push(json!({
-                "schema":"agentlab.maintainer_sku.v1",
-                "id":format!("sku-{}-{}", slug(id), slug(&path)),
+                "schema":"agentlab.maintainer_scope_skill.v1",
+                "id":format!("skill-scope-{}-{}", slug(id), slug(&path)),
+                "skillLayer":"instance",
+                "stage":"repository-scope",
+                "assetClass":"reusable-knowledge",
+                "status":"source-supported",
                 "repositoryId":id,
                 "repository":repository["repository"],
                 "sourceRevision":revision,
@@ -441,7 +445,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "externalDependencyCount":repository_dependencies.len(),
             "assignedFileCount":files.len(),
             "unassignedFileCount":0,
-            "skuCount":sku_count,
+            "scopeSkillCount":scope_skill_count,
             "sampleProjectRootCount":guide_roots.len()
         }));
     }
@@ -451,11 +455,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|row| serde_json::to_string(row).unwrap() + "\n")
         .collect::<String>();
     let summary = json!({
-        "schema":"agentlab.maintainer_sku_catalog_summary.v1",
+        "schema":"agentlab.maintainer_skill_catalog_summary.v1",
         "sourceSpecSha256":digest(&fs::read(&spec_path)?),
         "catalogSha256":digest(jsonl.as_bytes()),
         "repositoryCount":repository_summaries.len(),
-        "skuCount":rows.len(),
+        "scopeSkillCount":rows.len(),
         "repositories":repository_summaries,
         "trackedFilesAssignedExactlyOnce":true,
         "automaticPromotion":false

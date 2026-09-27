@@ -1,12 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentlab.dev/schemas/maintainer-sku.schema.json",
-  "title": "AgentLab Maintainer SKU",
+  "$id": "https://agentlab.dev/schemas/maintainer-scope-skill.schema.json",
+  "title": "AgentLab Maintainer Scope Skill",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "schema",
     "id",
+    "skillLayer",
+    "stage",
+    "assetClass",
+    "status",
     "repositoryId",
     "repository",
     "sourceRevision",
@@ -31,8 +35,12 @@
     "automaticPromotion"
   ],
   "properties": {
-    "schema": { "const": "agentlab.maintainer_sku.v1" },
-    "id": { "type": "string", "pattern": "^sku-[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "schema": { "const": "agentlab.maintainer_scope_skill.v1" },
+    "id": { "type": "string", "pattern": "^skill-scope-[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "skillLayer": { "const": "instance" },
+    "stage": { "const": "repository-scope" },
+    "assetClass": { "const": "reusable-knowledge" },
+    "status": { "const": "source-supported" },
     "repositoryId": { "type": "string", "minLength": 1 },
     "repository": { "type": "string", "minLength": 1 },
     "sourceRevision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },

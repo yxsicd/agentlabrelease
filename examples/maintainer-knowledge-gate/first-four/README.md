@@ -1,9 +1,10 @@
 # First-four Maintainer Skill baseline
 
 This directory is the revision-pinned, Git-portable staging cut for the first
-four source repositories. It contains exactly three instance Maintainer Skills
-per repository: `repository-analysis`, `program-analysis`, and
-`seed-extraction`.
+four source repositories. It has two complementary Maintainer Skill layers:
+three process Skills per repository (`repository-analysis`, `program-analysis`,
+and `seed-extraction`) plus scope-level Skills for every maintainable source
+boundary.
 
 | Repository | Actual boundary | Current hard fact | Mining implication |
 | --- | --- | --- | --- |
@@ -12,22 +13,23 @@ per repository: `repository-analysis`, `program-analysis`, and
 | `harmony-iap-client` | One small Harmony entry application | 44 tracked files, 9 ArkTS files, no tracked tests | Diversify beyond `purchaseData`; add upstream-aligned ohosTest/device Oracles |
 | `hms-cordova-iap` | IAP is a 104-file subtree in a 24-plugin monorepo | TypeScript-to-Cordova-to-Java bridge; upstream package build exits 1 | Mine cross-language bridge contracts only after repairing the build/test contract |
 
-The complete [`maintainer_skus.jsonl`](maintainer_skus.jsonl) catalog is the
-maintainable-unit map, not a candidate list. Its 480 leaf SKUs partition every
-tracked file exactly once:
+The complete [`maintainer_scope_skills.jsonl`](maintainer_scope_skills.jsonl)
+catalog is the maintainable-unit Skill map, not a candidate list. Its 480
+scope-level Maintainer Skills partition every tracked file exactly once:
 
-| Repository | SKU count | Partition rule |
+| Repository | Scope Skill count | Partition rule |
 | --- | ---: | --- |
 | `code-workshop` | 16 | shared module, seven feature modules, four product modules, build/support boundaries |
 | `guide-snippets` | 416 | 410 independent sample projects plus domain/repository support boundaries |
 | `harmony-iap-client` | 14 | nine ArkTS source-owner units plus application, resources, build, documentation, and repository support |
 | `hms-cordova-iap` | 34 | 23 non-IAP plugin packages, nine detailed IAP layers, and repository support |
 
-[`maintainer-sku-summary.json`](maintainer-sku-summary.json) binds the catalog
+[`maintainer-skill-summary.json`](maintainer-skill-summary.json) binds the catalog
 to all four Git Tree OIDs and proves that all 44,567 tracked files are assigned
-with zero unassigned files. `agentlab-maintainer-sku-catalog` regenerates the
+with zero unassigned files. `agentlab-maintainer-skill-catalog` regenerates the
 catalog deterministically from exact checkouts when a source revision changes.
-Every SKU follows [`maintainer-sku.schema.json`](../../../schemas/maintainer-sku.schema.json)
+Every scope-level Maintainer Skill follows
+[`maintainer-scope-skill.schema.json`](../../../schemas/maintainer-scope-skill.schema.json)
 and records its stable responsibility boundary, documented purpose, language
 composition, source and test inventory, build/test entrypoints, external
 dependency surface, and Git Blob evidence. This is the complete structural
@@ -48,5 +50,5 @@ Validate it with:
 
 ```bash
 cargo test -p agentlab_code_analysis --test first_four_maintainer_skills
-cargo test -p agentlab_code_analysis --test maintainer_sku_catalog
+cargo test -p agentlab_code_analysis --test maintainer_skill_catalog
 ```

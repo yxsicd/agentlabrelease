@@ -1,6 +1,6 @@
 {
   "automaticPromotion": false,
-  "catalogSha256": "351e394c8597f9cb2a5ae4d4c0752d4f36a65e032abfdbcf5c1999b733292a4d",
+  "catalogSha256": "df5e32d245d2c8e0deb3eee201283d755aba884f35a88bb1c3d9bce910211107",
   "repositories": [
     {
       "assignedFileCount": 1512,
@@ -9,7 +9,7 @@
       "repositoryId": "code-workshop",
       "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
       "sampleProjectRootCount": 0,
-      "skuCount": 16,
+      "scopeSkillCount": 16,
       "sourceFileCount": 614,
       "strategy": "harmony-multi-product-modules",
       "testFileCount": 87,
@@ -24,7 +24,7 @@
       "repositoryId": "guide-snippets",
       "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
       "sampleProjectRootCount": 410,
-      "skuCount": 416,
+      "scopeSkillCount": 416,
       "sourceFileCount": 13736,
       "strategy": "harmony-sample-project-corpus",
       "testFileCount": 4491,
@@ -39,7 +39,7 @@
       "repositoryId": "harmony-iap-client",
       "revision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
       "sampleProjectRootCount": 0,
-      "skuCount": 14,
+      "scopeSkillCount": 14,
       "sourceFileCount": 11,
       "strategy": "harmony-small-app-source-units",
       "testFileCount": 0,
@@ -54,7 +54,7 @@
       "repositoryId": "hms-cordova-iap",
       "revision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9",
       "sampleProjectRootCount": 0,
-      "skuCount": 34,
+      "scopeSkillCount": 34,
       "sourceFileCount": 2665,
       "strategy": "cordova-plugin-monorepo",
       "testFileCount": 158,
@@ -64,8 +64,8 @@
     }
   ],
   "repositoryCount": 4,
-  "schema": "agentlab.maintainer_sku_catalog_summary.v1",
-  "skuCount": 480,
-  "sourceSpecSha256": "46513df6016cff5f27538ac168ee7c9779983faf0b457def61c714972b93565a",
+  "schema": "agentlab.maintainer_skill_catalog_summary.v1",
+  "scopeSkillCount": 480,
+  "sourceSpecSha256": "58c882f60b136ec517fe0b42dae4c2f8b035ec548e144dc36e8b968b703b7911",
   "trackedFilesAssignedExactlyOnce": true
 }

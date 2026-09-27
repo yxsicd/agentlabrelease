@@ -53,7 +53,7 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
 
     for table in [
         "maintainerSkills",
-        "maintainerSkus",
+        "maintainerScopeSkills",
         "programFacts",
         "evaluationCases",
     ] {

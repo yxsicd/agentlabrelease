@@ -16,19 +16,19 @@ fn root() -> PathBuf {
 }
 
 #[test]
-fn first_four_catalog_partitions_every_tracked_file_into_maintainer_skus() {
+fn first_four_catalog_partitions_every_tracked_file_into_maintainer_scope_skills() {
     let directory = root().join("examples/maintainer-knowledge-gate/first-four");
-    let catalog_bytes = fs::read(directory.join("maintainer_skus.jsonl")).unwrap();
+    let catalog_bytes = fs::read(directory.join("maintainer_scope_skills.jsonl")).unwrap();
     let summary: Value =
-        serde_json::from_slice(&fs::read(directory.join("maintainer-sku-summary.json")).unwrap())
+        serde_json::from_slice(&fs::read(directory.join("maintainer-skill-summary.json")).unwrap())
             .unwrap();
     assert_eq!(
         summary["schema"],
-        "agentlab.maintainer_sku_catalog_summary.v1"
+        "agentlab.maintainer_skill_catalog_summary.v1"
     );
     assert_eq!(summary["catalogSha256"], digest(&catalog_bytes));
     assert_eq!(summary["repositoryCount"], 4);
-    assert_eq!(summary["skuCount"], 480);
+    assert_eq!(summary["scopeSkillCount"], 480);
     assert_eq!(summary["trackedFilesAssignedExactlyOnce"], true);
     assert_eq!(summary["automaticPromotion"], false);
 
@@ -40,11 +40,11 @@ fn first_four_catalog_partitions_every_tracked_file_into_maintainer_skus() {
     ]);
     for repository in summary["repositories"].as_array().unwrap() {
         let id = repository["repositoryId"].as_str().unwrap();
-        let (files, skus) = expected[id];
+        let (files, scope_skills) = expected[id];
         assert_eq!(repository["trackedFileCount"], files);
         assert_eq!(repository["assignedFileCount"], files);
         assert_eq!(repository["unassignedFileCount"], 0);
-        assert_eq!(repository["skuCount"], skus);
+        assert_eq!(repository["scopeSkillCount"], scope_skills);
     }
     assert_eq!(summary["repositories"][1]["sampleProjectRootCount"], 410);
 
@@ -54,9 +54,11 @@ fn first_four_catalog_partitions_every_tracked_file_into_maintainer_skus() {
     let mut row_count = 0usize;
     for line in String::from_utf8(catalog_bytes).unwrap().lines() {
         let row: Value = serde_json::from_str(line).unwrap();
-        assert_eq!(row["schema"], "agentlab.maintainer_sku.v1");
+        assert_eq!(row["schema"], "agentlab.maintainer_scope_skill.v1");
+        assert_eq!(row["skillLayer"], "instance");
+        assert_eq!(row["stage"], "repository-scope");
         let id = row["id"].as_str().unwrap();
-        assert!(ids.insert(id.to_owned()), "duplicate SKU {id}");
+        assert!(ids.insert(id.to_owned()), "duplicate scope Skill {id}");
         assert!(!id.ends_with('-'));
         assert!(row["responsibility"]
             .as_str()

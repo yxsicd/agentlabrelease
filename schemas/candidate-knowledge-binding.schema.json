@@ -61,11 +61,11 @@
     },
     "repositoryBinding": {
       "type": "object",
-      "required": ["repositoryId", "revision", "skuIds", "skillIds", "factIds", "analysisIds", "coverage"],
+      "required": ["repositoryId", "revision", "scopeSkillIds", "skillIds", "factIds", "analysisIds", "coverage"],
       "properties": {
         "repositoryId": { "type": "string", "minLength": 1 },
         "revision": { "$ref": "#/$defs/revision" },
-        "skuIds": { "$ref": "#/$defs/nonEmptyStrings" },
+        "scopeSkillIds": { "$ref": "#/$defs/nonEmptyStrings" },
         "skillIds": { "$ref": "#/$defs/nonEmptyStrings" },
         "factIds": { "$ref": "#/$defs/nonEmptyStrings" },
         "analysisIds": { "$ref": "#/$defs/nonEmptyStrings" },

@@ -280,51 +280,56 @@ pub fn validate_gate(
     }
 
     let skills_path = table_path(knowledge_cut_path, &cut, "maintainerSkills")?;
-    let skus_path = table_path(knowledge_cut_path, &cut, "maintainerSkus")?;
+    let scope_skills_path = table_path(knowledge_cut_path, &cut, "maintainerScopeSkills")?;
     let facts_path = table_path(knowledge_cut_path, &cut, "programFacts")?;
     let cases_path = table_path(knowledge_cut_path, &cut, "evaluationCases")?;
     let skills = load_jsonl(&skills_path, "maintainer skills", true)?;
-    let skus = load_jsonl(&skus_path, "maintainer SKUs", true)?;
+    let scope_skills = load_jsonl(&scope_skills_path, "maintainer scope Skills", true)?;
     let facts = load_jsonl(&facts_path, "program facts", true)?;
     let cases = load_jsonl(
         &cases_path,
         "evaluation cases",
         matches!(stage, GateStage::Calibration | GateStage::Freeze),
     )?;
-    let mut sku_repositories = BTreeSet::new();
-    for (id, row) in &skus {
+    let mut scope_skill_repositories = BTreeSet::new();
+    for (id, row) in &scope_skills {
         let repository_id = row["repositoryId"]
             .as_str()
-            .ok_or_else(|| format!("maintainer SKU {id} has no repositoryId"))?;
+            .ok_or_else(|| format!("maintainer scope Skill {id} has no repositoryId"))?;
         let (_, revision) = source_repositories.get(repository_id).ok_or_else(|| {
-            format!("maintainer SKU {id} references unknown repository {repository_id}")
+            format!("maintainer scope Skill {id} references unknown repository {repository_id}")
         })?;
         require(
             row["sourceRevision"].as_str() == Some(revision),
-            format!("maintainer SKU {id} revision differs"),
+            format!("maintainer scope Skill {id} revision differs"),
+        )?;
+        require(
+            row["skillLayer"].as_str() == Some("instance")
+                && row["stage"].as_str() == Some("repository-scope"),
+            format!("maintainer scope Skill {id} is not an instance repository-scope Skill"),
         )?;
         require(
             row["trackedFileCount"]
                 .as_u64()
                 .is_some_and(|count| count > 0),
-            format!("maintainer SKU {id} has no tracked-file coverage"),
+            format!("maintainer scope Skill {id} has no tracked-file coverage"),
         )?;
         require(
             row["automaticPromotion"].as_bool() == Some(false),
-            format!("maintainer SKU {id} can auto-promote"),
+            format!("maintainer scope Skill {id} can auto-promote"),
         )?;
-        sku_repositories.insert(repository_id.to_owned());
+        scope_skill_repositories.insert(repository_id.to_owned());
     }
     require(
-        sku_repositories == source_repositories.keys().cloned().collect(),
-        "maintainer SKU catalog does not cover every source repository",
+        scope_skill_repositories == source_repositories.keys().cloned().collect(),
+        "maintainer scope Skill catalog does not cover every source repository",
     )?;
     let bindings = binding["repositoryBindings"]
         .as_array()
         .ok_or_else(|| "candidate binding has no repositoryBindings".to_owned())?;
     let mut bound_repositories = BTreeSet::new();
     let mut all_skill_ids = BTreeSet::new();
-    let mut all_sku_ids = BTreeSet::new();
+    let mut all_scope_skill_ids = BTreeSet::new();
     let mut all_fact_ids = BTreeSet::new();
     let mut all_analysis_ids = BTreeSet::new();
     for repository_binding in bindings {
@@ -347,8 +352,8 @@ pub fn validate_gate(
             &format!("{repository_id} skillIds"),
         )?;
         let sku_ids = string_set(
-            &repository_binding["skuIds"],
-            &format!("{repository_id} skuIds"),
+            &repository_binding["scopeSkillIds"],
+            &format!("{repository_id} scopeSkillIds"),
         )?;
         let fact_ids = string_set(
             &repository_binding["factIds"],
@@ -377,28 +382,28 @@ pub fn validate_gate(
             all_skill_ids.insert(id.clone());
         }
         for id in &sku_ids {
-            let row = skus
+            let row = scope_skills
                 .get(id)
-                .ok_or_else(|| format!("unknown maintainer SKU {id}"))?;
+                .ok_or_else(|| format!("unknown maintainer scope Skill {id}"))?;
             require(
                 row["repositoryId"].as_str() == Some(repository_id),
-                format!("maintainer SKU {id} repository differs"),
+                format!("maintainer scope Skill {id} repository differs"),
             )?;
             require(
                 row["sourceRevision"].as_str() == Some(revision),
-                format!("maintainer SKU {id} revision differs"),
+                format!("maintainer scope Skill {id} revision differs"),
             )?;
             require(
                 row["automaticPromotion"].as_bool() == Some(false),
-                format!("maintainer SKU {id} can auto-promote"),
+                format!("maintainer scope Skill {id} can auto-promote"),
             )?;
             require(
                 row["trackedFileCount"]
                     .as_u64()
                     .is_some_and(|count| count > 0),
-                format!("maintainer SKU {id} has no tracked-file coverage"),
+                format!("maintainer scope Skill {id} has no tracked-file coverage"),
             )?;
-            all_sku_ids.insert(id.clone());
+            all_scope_skill_ids.insert(id.clone());
         }
         for required_stage in ["repository-analysis", "program-analysis", "seed-extraction"] {
             require(
@@ -494,8 +499,9 @@ pub fn validate_gate(
             "evaluation case Skill binding differs",
         )?;
         require(
-            string_set(&row["skuIds"], "evaluation case skuIds")? == all_sku_ids,
-            "evaluation case SKU binding differs",
+            string_set(&row["scopeSkillIds"], "evaluation case scopeSkillIds")?
+                == all_scope_skill_ids,
+            "evaluation case scope Skill binding differs",
         )?;
         require(
             string_set(&row["factIds"], "evaluation case factIds")? == all_fact_ids,
@@ -537,7 +543,7 @@ pub fn validate_gate(
         "bindingSha256":file_digest(binding_path)?,
         "repositoryCount":source_repositories.len(),
         "maintainerSkillCount":all_skill_ids.len(),
-        "maintainerSkuCount":all_sku_ids.len(),
+        "maintainerScopeSkillCount":all_scope_skill_ids.len(),
         "programFactCount":all_fact_ids.len(),
         "analysisRecordCount":all_analysis_ids.len(),
         "caseBound":matches!(stage, GateStage::Calibration | GateStage::Freeze),

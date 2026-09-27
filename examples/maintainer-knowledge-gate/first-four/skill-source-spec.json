@@ -1,5 +1,5 @@
 {
-  "schema": "agentlab.maintainer_sku_source_spec.v1",
+  "schema": "agentlab.maintainer_skill_source_spec.v1",
   "repositories": [
     {
       "id": "code-workshop",
