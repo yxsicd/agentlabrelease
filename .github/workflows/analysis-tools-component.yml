@@ -62,7 +62,9 @@ jobs:
           installed="$RUNNER_TEMP/analysis-tools-installed"
           mkdir "$installed"
           zstd -dc "$archive" | tar -xf - -C "$installed"
-          "$installed/payload/bin/agentlab-analysis-tools-pack" --self-check \
+          "$installed/payload/bin/agentlab-analysis-tools-pack" \
+            --execute agentlab-analysis-tools-pack \
+            --receipt "$RUNNER_TEMP/runtime-execution-receipt.json" -- --self-check \
             | tee "$RUNNER_TEMP/runtime-self-check.json"
           jq -e '
             .schema == "agentlab.analysis_tools_runtime_probe.v1" and
@@ -71,6 +73,14 @@ jobs:
             .binaryCount == (.binaries | length) and
             .automaticPromotion == false
           ' "$RUNNER_TEMP/runtime-self-check.json" >/dev/null
+          jq -e '
+            .schema == "agentlab.analysis_tools_execution.v1" and
+            .status == "passed" and
+            .tool == "agentlab-analysis-tools-pack" and
+            .argumentCount == 1 and
+            .exitCode == 0 and
+            .automaticPromotion == false
+          ' "$RUNNER_TEMP/runtime-execution-receipt.json" >/dev/null
           sha256sum "$first"/* >> "$GITHUB_STEP_SUMMARY"
           cat "$RUNNER_TEMP/pack-receipt.json" >> "$GITHUB_STEP_SUMMARY"
           cat "$RUNNER_TEMP/runtime-self-check.json" >> "$GITHUB_STEP_SUMMARY"
@@ -128,6 +138,7 @@ jobs:
             ${{ runner.temp }}/repeat-receipt.json
             ${{ runner.temp }}/archive-members.txt
             ${{ runner.temp }}/runtime-self-check.json
+            ${{ runner.temp }}/runtime-execution-receipt.json
             ${{ runner.temp }}/component-introduction-receipt.json
             ${{ runner.temp }}/component-introduction-repeat-receipt.json
       - name: Preserve coordinated candidate preview without publishing or promotion

@@ -262,18 +262,25 @@ if [[ -s "${root}/analysis-tools-runtime-probe.tsv" ]]; then
   IFS=$'\t' read -r analysis_volume analysis_mount analysis_version analysis_archive_sha runtime_reference \
     < "${root}/analysis-tools-runtime-probe.tsv"
   analysis_raw="${root}/analysis-tools-runtime-self-check.json"
+  analysis_execution_dir="${root}/analysis-tools-execution"
+  mkdir "${analysis_execution_dir}"
   docker run --rm --network none \
     --mount "type=volume,src=${analysis_volume},dst=${analysis_mount},readonly" \
+    --mount "type=bind,src=${analysis_execution_dir},dst=/agentlab-execution" \
     --entrypoint "${analysis_mount}/payload/bin/agentlab-analysis-tools-pack" \
-    "${runtime_reference}" --self-check > "${analysis_raw}"
+    "${runtime_reference}" --execute agentlab-analysis-tools-pack \
+      --receipt /agentlab-execution/receipt.json -- --self-check > "${analysis_raw}"
+  cp "${analysis_execution_dir}/receipt.json" "${root}/analysis-tools-execution-receipt.json"
   python3 - "${analysis_raw}" "${analysis_probe}" "${source_revision}" \
     "${analysis_volume}" "${analysis_mount}" "${analysis_version}" \
-    "${analysis_archive_sha}" "${runtime_reference}" <<'PY'
+    "${analysis_archive_sha}" "${runtime_reference}" \
+    "${root}/analysis-tools-execution-receipt.json" <<'PY'
 import json, pathlib, sys
 
 raw_path, receipt_path = map(pathlib.Path, sys.argv[1:3])
-aggregate_revision, volume, mount, version, archive_sha, runtime_reference = sys.argv[3:]
+aggregate_revision, volume, mount, version, archive_sha, runtime_reference, execution_path = sys.argv[3:]
 probe = json.loads(raw_path.read_bytes())
+execution = json.loads(pathlib.Path(execution_path).read_bytes())
 assert probe["schema"] == "agentlab.analysis_tools_runtime_probe.v1"
 assert probe["status"] == "passed"
 assert probe["platform"] == "linux-x64"
@@ -288,6 +295,15 @@ for required in (
 ):
     assert required in probe["binaries"]
 assert probe["automaticPromotion"] is False
+assert execution["schema"] == "agentlab.analysis_tools_execution.v1"
+assert execution["status"] == "passed"
+assert execution["tool"] == "agentlab-analysis-tools-pack"
+assert execution["argumentCount"] == 1
+assert execution["exitCode"] == 0
+assert execution["componentSourceRevision"] == probe["sourceRevision"]
+assert execution["componentManifestSha256"] == probe["manifestSha256"]
+assert execution["componentInventorySha256"] == probe["inventorySha256"]
+assert execution["automaticPromotion"] is False
 receipt = {
     "schema": "agentlab.analysis_tools_installed_execution.v1",
     "status": "passed",
@@ -299,6 +315,7 @@ receipt = {
     "mountTarget": mount,
     "runtimeImageReference": runtime_reference,
     "runtimeProbe": probe,
+    "executionReceipt": execution,
     "automaticPromotion": False,
 }
 receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")

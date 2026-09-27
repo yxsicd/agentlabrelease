@@ -1,4 +1,5 @@
-use serde_json::Value;
+use agentlab_code_analysis::digest;
+use serde_json::{json, Value};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -114,6 +115,54 @@ fn extract(archive: &Path, output: &Path) {
         .unwrap()
         .success());
     fs::remove_file(tar).unwrap();
+}
+
+#[cfg(unix)]
+fn executable_install(tool_body: &str) -> PathBuf {
+    use std::os::unix::fs::PermissionsExt;
+
+    let root = temp_root();
+    let bin = root.join("payload/bin");
+    fs::create_dir_all(&bin).unwrap();
+    let controller = env!("CARGO_BIN_EXE_agentlab-analysis-tools-pack");
+    let mut inventory = Vec::new();
+    for name in binary_names() {
+        let path = bin.join(&name);
+        if name == "agentlab-analysis-tools-pack" {
+            fs::copy(controller, &path).unwrap();
+        } else {
+            let body = if name == "agentlab-source-probe" {
+                tool_body
+            } else {
+                "#!/bin/sh\nexit 0\n"
+            };
+            fs::write(&path, body).unwrap();
+        }
+        let mut permissions = fs::metadata(&path).unwrap().permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&path, permissions).unwrap();
+        let bytes = fs::read(&path).unwrap();
+        inventory.push(json!({
+            "name": name,
+            "path": format!("payload/bin/{name}"),
+            "bytes": bytes.len(),
+            "sha256": digest(&bytes)
+        }));
+    }
+    let manifest = json!({
+        "schema": "agentlab.analysis_tools_pack_manifest.v1",
+        "sourceRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "platform": "linux-x64",
+        "buildProfile": "release-static-musl-v1",
+        "binaryCount": inventory.len(),
+        "binaries": inventory
+    });
+    fs::write(
+        root.join("manifest.json"),
+        serde_json::to_vec_pretty(&manifest).unwrap(),
+    )
+    .unwrap();
+    root
 }
 
 fn read(path: &Path) -> Value {
@@ -256,6 +305,102 @@ fn self_check_rejects_extra_installed_binary() {
     assert!(!checked.status.success());
     assert!(String::from_utf8_lossy(&checked.stderr)
         .contains("installed bin directory does not match the required inventory"));
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn installed_controller_dispatches_allowlisted_tool_and_writes_bound_receipt() {
+    let root = executable_install(
+        "#!/bin/sh\nprintf 'child:%s:%s\\n' \"$1\" \"$2\"\nprintf 'child-error\\n' >&2\nexit 0\n",
+    );
+    let receipt = root.join("execution-receipt.json");
+    let output = Command::new(root.join("payload/bin/agentlab-analysis-tools-pack"))
+        .args([
+            "--execute",
+            "agentlab-source-probe",
+            "--receipt",
+            receipt.to_str().unwrap(),
+            "--",
+            "alpha",
+            "beta",
+        ])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    assert_eq!(output.stdout, b"child:alpha:beta\n");
+    assert_eq!(output.stderr, b"child-error\n");
+    let value = read(&receipt);
+    assert_eq!(value["schema"], "agentlab.analysis_tools_execution.v1");
+    assert_eq!(value["status"], "passed");
+    assert_eq!(value["tool"], "agentlab-source-probe");
+    assert_eq!(value["argumentCount"], 2);
+    assert_eq!(value["exitCode"], 0);
+    assert_eq!(value["automaticPromotion"], false);
+    assert_eq!(
+        value["argumentsSha256"],
+        digest(&serde_json::to_vec(&["alpha", "beta"]).unwrap())
+    );
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn installed_controller_propagates_failure_and_refuses_receipt_overwrite() {
+    let root = executable_install("#!/bin/sh\nexit 7\n");
+    let receipt = root.join("execution-receipt.json");
+    let controller = root.join("payload/bin/agentlab-analysis-tools-pack");
+    let first = Command::new(&controller)
+        .args([
+            "--execute",
+            "agentlab-source-probe",
+            "--receipt",
+            receipt.to_str().unwrap(),
+            "--",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(first.status.code(), Some(7));
+    let value = read(&receipt);
+    assert_eq!(value["status"], "failed");
+    assert_eq!(value["exitCode"], 7);
+    let before = fs::read(&receipt).unwrap();
+    let second = Command::new(&controller)
+        .args([
+            "--execute",
+            "agentlab-source-probe",
+            "--receipt",
+            receipt.to_str().unwrap(),
+            "--",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(second.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&second.stderr).contains("cannot create execution receipt"));
+    assert_eq!(fs::read(&receipt).unwrap(), before);
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn installed_controller_rejects_unlisted_tool_before_creating_receipt() {
+    let root = executable_install("#!/bin/sh\nexit 0\n");
+    let receipt = root.join("execution-receipt.json");
+    let output = Command::new(root.join("payload/bin/agentlab-analysis-tools-pack"))
+        .args([
+            "--execute",
+            "unlisted-tool",
+            "--receipt",
+            receipt.to_str().unwrap(),
+            "--",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("tool is not in the installed inventory")
+    );
+    assert!(!receipt.exists());
     fs::remove_dir_all(root).unwrap();
 }
 

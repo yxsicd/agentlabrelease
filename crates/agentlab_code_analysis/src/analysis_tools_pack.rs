@@ -372,6 +372,116 @@ fn installed_root() -> Result<PathBuf, String> {
         .ok_or_else(|| "self-check executable has no package root".to_owned())
 }
 
+fn write_execution_receipt(file: &mut fs::File, receipt: &Value) -> Result<(), String> {
+    file.write_all(&json_bytes(receipt)?)
+        .map_err(|error| format!("cannot write execution receipt: {error}"))?;
+    file.sync_all()
+        .map_err(|error| format!("cannot sync execution receipt: {error}"))
+}
+
+fn execute(args: &[String]) -> Result<i32, String> {
+    if args.len() < 4 || args.first().map(String::as_str) != Some("--execute") {
+        return Err("usage: --execute TOOL --receipt ABSOLUTE_PATH -- [TOOL_ARGUMENT ...]".into());
+    }
+    let tool = &args[1];
+    if !BINARIES.contains(&tool.as_str()) {
+        return Err(format!("tool is not in the installed inventory: {tool}"));
+    }
+    let mut receipt = None;
+    let mut separator = None;
+    let mut index = 2usize;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--receipt" => {
+                index += 1;
+                let value = args
+                    .get(index)
+                    .ok_or_else(|| "--receipt requires a path".to_owned())?;
+                if receipt.replace(PathBuf::from(value)).is_some() {
+                    return Err("duplicate --receipt".into());
+                }
+            }
+            "--" => {
+                separator = Some(index);
+                break;
+            }
+            value => return Err(format!("unknown execution argument: {value}")),
+        }
+        index += 1;
+    }
+    let separator =
+        separator.ok_or_else(|| "execution arguments require -- separator".to_owned())?;
+    let receipt_path = receipt.ok_or_else(|| "execution requires --receipt".to_owned())?;
+    if !receipt_path.is_absolute() {
+        return Err("execution receipt path must be absolute".into());
+    }
+    let receipt_parent = receipt_path
+        .parent()
+        .ok_or_else(|| "execution receipt has no parent directory".to_owned())?;
+    let parent_metadata = fs::symlink_metadata(receipt_parent)
+        .map_err(|error| format!("cannot inspect execution receipt directory: {error}"))?;
+    if !parent_metadata.file_type().is_dir() || parent_metadata.file_type().is_symlink() {
+        return Err("execution receipt parent must be a real directory".into());
+    }
+    let tool_args = &args[separator + 1..];
+    if tool == "agentlab-analysis-tools-pack" && tool_args != ["--self-check"] {
+        return Err("the pack controller may only dispatch its own --self-check".into());
+    }
+    let root = installed_root()?;
+    let component = self_check(&root)?;
+    let tool_path = root.join("payload/bin").join(tool);
+    let tool_sha256 = digest(
+        &fs::read(&tool_path)
+            .map_err(|error| format!("cannot read selected installed tool: {error}"))?,
+    );
+    let argument_bytes = serde_json::to_vec(tool_args).map_err(|error| error.to_string())?;
+    let mut receipt_file = fs::OpenOptions::new()
+        .create_new(true)
+        .write(true)
+        .open(&receipt_path)
+        .map_err(|error| format!("cannot create execution receipt: {error}"))?;
+    let status = match Command::new(&tool_path).args(tool_args).status() {
+        Ok(status) => status,
+        Err(error) => {
+            write_execution_receipt(
+                &mut receipt_file,
+                &json!({
+                    "schema": "agentlab.analysis_tools_execution.v1",
+                    "status": "launch-failed",
+                    "tool": tool,
+                    "toolSha256": tool_sha256,
+                    "componentSourceRevision": component["sourceRevision"],
+                    "componentManifestSha256": component["manifestSha256"],
+                    "componentInventorySha256": component["inventorySha256"],
+                    "argumentCount": tool_args.len(),
+                    "argumentsSha256": digest(&argument_bytes),
+                    "exitCode": Value::Null,
+                    "automaticPromotion": false
+                }),
+            )?;
+            return Err(format!("cannot launch installed tool {tool}: {error}"));
+        }
+    };
+    let exit_code = status.code().unwrap_or(1);
+    write_execution_receipt(
+        &mut receipt_file,
+        &json!({
+            "schema": "agentlab.analysis_tools_execution.v1",
+            "status": if status.success() { "passed" } else { "failed" },
+            "tool": tool,
+            "toolSha256": tool_sha256,
+            "componentSourceRevision": component["sourceRevision"],
+            "componentManifestSha256": component["manifestSha256"],
+            "componentInventorySha256": component["inventorySha256"],
+            "argumentCount": tool_args.len(),
+            "argumentsSha256": digest(&argument_bytes),
+            "exitCode": exit_code,
+            "automaticPromotion": false
+        }),
+    )?;
+    Ok(exit_code)
+}
+
 fn package(values: &BTreeMap<String, String>) -> Result<Value, String> {
     let binary_dir = path(values, "--binary-dir")?;
     let output = path(values, "--output")?;
@@ -507,8 +617,7 @@ fn package(values: &BTreeMap<String, String>) -> Result<Value, String> {
     result
 }
 
-fn run() -> Result<(), String> {
-    let args: Vec<String> = env::args().skip(1).collect();
+fn run(args: Vec<String>) -> Result<(), String> {
     let receipt = if args == ["--self-check"] {
         self_check(&installed_root()?)?
     } else if args.len() == 2 && args[0] == "--self-check-root" {
@@ -525,7 +634,17 @@ fn run() -> Result<(), String> {
 }
 
 fn main() {
-    if let Err(error) = run() {
+    let args: Vec<String> = env::args().skip(1).collect();
+    if args.first().map(String::as_str) == Some("--execute") {
+        match execute(&args) {
+            Ok(exit_code) => std::process::exit(exit_code),
+            Err(error) => {
+                eprintln!("analysis-tools execution invalid: {error}");
+                std::process::exit(1);
+            }
+        }
+    }
+    if let Err(error) = run(args) {
         eprintln!("analysis-tools pack invalid: {error}");
         std::process::exit(1);
     }
