@@ -108,7 +108,7 @@ runs:
         AGENTLAB_COMPOSITION_DIR="$INSTALL_ROOT/analysis-composition" \
         AGENTLAB_RELEASE_CHANNEL="$COMPOSITION_TAG" \
         AGENTLAB_RELEASE_REPO="$RELEASE_REPOSITORY" \
-        AGENTLAB_INSTALL_ONLY=true \
+        AGENTLAB_SUBJECT_ONLY=true \
           scripts/ci-public-install-deploy-smoke.sh
         output="$INSTALL_ROOT/analysis-component-runtime.json"
         python3 - "$INSTALL_ROOT/analysis-composition/environment-lock.json" \
