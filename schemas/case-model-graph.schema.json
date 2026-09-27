@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-model-graph.schema.json",
+  "title": "Review-required recursive case model graph",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "graphId", "rootCase", "predecessorGraph", "nodes", "edges", "summary", "qualification", "automaticPromotion", "nextGate"],
+  "properties": {
+    "schema": {"const": "agentlab.case_model_graph.v1"},
+    "status": {"const": "review-required"},
+    "graphId": {"type": "string", "pattern": "^case-model-graph-[0-9a-f]{20}$"},
+    "rootCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caseId", "sourceSetSha256", "evaluationCase"],
+      "properties": {
+        "caseId": {"$ref": "#/$defs/token"},
+        "sourceSetSha256": {"$ref": "#/$defs/sha256"},
+        "evaluationCase": {"$ref": "#/$defs/fileBinding"}
+      }
+    },
+    "predecessorGraph": {"anyOf": [{"$ref": "#/$defs/fileBinding"}, {"type": "null"}]},
+    "nodes": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["nodeId", "caseId", "provisionalCaseId", "kind", "status", "depth", "sourceSetSha256", "case", "derivation", "difficultyCandidateId", "scenario", "verification", "executable"],
+        "properties": {
+          "nodeId": {"type": "string", "pattern": "^case-node-[0-9a-f]{20}$"},
+          "caseId": {"$ref": "#/$defs/token"},
+          "provisionalCaseId": {"$ref": "#/$defs/token"},
+          "kind": {"enum": ["root-qualified-case", "derived-candidate", "derived-qualified-case"]},
+          "status": {"enum": ["frozen-calibrated", "review-required"]},
+          "depth": {"type": "integer", "minimum": 0},
+          "sourceSetSha256": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+          "case": {"anyOf": [{"$ref": "#/$defs/fileBinding"}, {"type": "null"}]},
+          "derivation": {"anyOf": [{"$ref": "#/$defs/fileBinding"}, {"type": "null"}]},
+          "difficultyCandidateId": {"anyOf": [{"$ref": "#/$defs/token"}, {"type": "null"}]},
+          "scenario": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status"],
+            "properties": {"status": {"enum": ["exact-frozen-case", "difficulty-only-requires-authoring"]}}
+          },
+          "verification": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["independentOracleCalibrated"],
+            "properties": {"independentOracleCalibrated": {"type": "boolean"}}
+          },
+          "executable": {"type": "boolean"}
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["edgeId", "fromNodeId", "toNodeId", "derivation", "difficulty", "forkPolicy", "qualification", "restoreQualified"],
+        "properties": {
+          "edgeId": {"type": "string", "pattern": "^case-edge-[0-9a-f]{20}$"},
+          "fromNodeId": {"$ref": "#/$defs/token"},
+          "toNodeId": {"$ref": "#/$defs/token"},
+          "derivation": {"$ref": "#/$defs/fileBinding"},
+          "difficulty": {"$ref": "#/$defs/difficulty"},
+          "forkPolicy": {"$ref": "#/$defs/forkPolicy"},
+          "qualification": {"anyOf": [{"$ref": "#/$defs/fileBinding"}, {"type": "null"}]},
+          "restoreQualified": {"type": "boolean"}
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nodeCount", "edgeCount", "maximumDepth", "maximumQualifiedDepth", "qualifiedNodeCount", "leafNodeIds", "readyPathNodeIds", "longHorizonReady"],
+      "properties": {
+        "nodeCount": {"type": "integer", "minimum": 2},
+        "edgeCount": {"type": "integer", "minimum": 1},
+        "maximumDepth": {"type": "integer", "minimum": 1},
+        "maximumQualifiedDepth": {"type": "integer", "minimum": 0},
+        "qualifiedNodeCount": {"type": "integer", "minimum": 1},
+        "leafNodeIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/token"}},
+        "readyPathNodeIds": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/token"}},
+        "longHorizonReady": {"type": "boolean"}
+      }
+    },
+    "qualification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allNodesScenarioAuthored", "allNodesIndependentlyCalibrated", "allEdgesRestoreQualified", "required"],
+      "properties": {
+        "allNodesScenarioAuthored": {"type": "boolean"},
+        "allNodesIndependentlyCalibrated": {"type": "boolean"},
+        "allEdgesRestoreQualified": {"type": "boolean"},
+        "required": {"type": "array", "minItems": 4, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "automaticPromotion": {"const": false},
+    "nextGate": {"enum": ["qualify-derived-node-before-long-horizon-extension", "select-qualified-path-for-execution"]}
+  },
+  "$defs": {
+    "token": {"type": "string", "pattern": "^[A-Za-z0-9_.:@/+\\-]{1,200}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "fileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "byteLength", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "byteLength": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "difficulty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidateId", "dimensionId", "stageId", "failureMode", "mechanism", "evidenceAttemptId"],
+      "properties": {
+        "candidateId": {"$ref": "#/$defs/token"},
+        "dimensionId": {"$ref": "#/$defs/token"},
+        "stageId": {"$ref": "#/$defs/token"},
+        "failureMode": {"$ref": "#/$defs/token"},
+        "mechanism": {"type": "string", "minLength": 1},
+        "evidenceAttemptId": {"$ref": "#/$defs/token"}
+      }
+    },
+    "forkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent", "workspace", "requiresNativeSessionQualification"],
+      "properties": {
+        "agent": {"enum": ["fresh-agent", "preserve-native", "replace-agent", "semantic-transfer"]},
+        "workspace": {"enum": ["restore-captured-tree", "restore-sessionfs-snapshot", "minimize-from-captured-tree"]},
+        "requiresNativeSessionQualification": {"type": "boolean"}
+      }
+    }
+  }
+}

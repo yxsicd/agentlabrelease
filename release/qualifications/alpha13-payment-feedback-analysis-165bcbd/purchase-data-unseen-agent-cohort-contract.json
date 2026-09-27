@@ -33,7 +33,7 @@
   "implementationBindings": {
     "assessedCampaign": {
       "path": ".github/workflows/multi-repo-assessed-campaign.yml",
-      "sha256": "c214925f8874ad6e512538e1186518291b72252b9ea74e3a3ec1e361365860bd"
+      "sha256": "21eb907eac56a4dca0515bb3bafc158c3ef55d08cf45c4e30afdb5a05c525f22"
     },
     "exactPatchPublication": {
       "path": "crates/agentlab_code_analysis/src/purchase_data_exact_patch_publication.rs",

@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-path-dispatch-plan.schema.json",
+  "title": "Digest-bound predeclared dispatch plan for a long-horizon case path",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "dispatchPlanId", "pathPlan", "participantMatrix", "methodRevision", "stageCount", "cellCount", "trialsPerCell", "expectedAttemptCount", "expectedStageExecutionCount", "cells", "comparisonPairs", "controlPolicy", "qualification", "automaticPromotion", "nextGate"],
+  "properties": {
+    "schema": {"const": "agentlab.case_path_dispatch_plan.v1"},
+    "status": {"const": "predeclared-awaiting-runtime-qualification"},
+    "dispatchPlanId": {"type": "string", "pattern": "^case-path-dispatch-[0-9a-f]{20}$"},
+    "pathPlan": {"$ref": "#/$defs/fileBinding"},
+    "participantMatrix": {"$ref": "#/$defs/fileBinding"},
+    "methodRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "stageCount": {"type": "integer", "minimum": 3},
+    "cellCount": {"type": "integer", "minimum": 3, "maximum": 8},
+    "trialsPerCell": {"enum": [3, 5, 10, 20]},
+    "expectedAttemptCount": {"type": "integer", "minimum": 9},
+    "expectedStageExecutionCount": {"type": "integer", "minimum": 27},
+    "cells": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 8,
+      "items": {"$ref": "#/$defs/cell"}
+    },
+    "comparisonPairs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 28,
+      "items": {"$ref": "#/$defs/comparisonPair"}
+    },
+    "controlPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["comparisonPairsChangeExactlyOneDimension", "everyCellCoveredByComparison", "outcomeDataObservedBeforeFreeze"],
+      "properties": {
+        "comparisonPairsChangeExactlyOneDimension": {"const": true},
+        "everyCellCoveredByComparison": {"const": true},
+        "outcomeDataObservedBeforeFreeze": {"const": false}
+      }
+    },
+    "qualification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pathStructurallyQualified", "agentModelEnvironmentIdentitiesExact", "matrixPredeclaredBeforeAttempts", "portableRuntimeQualified", "blindDispatchQualified", "readyForDispatch"],
+      "properties": {
+        "pathStructurallyQualified": {"const": true},
+        "agentModelEnvironmentIdentitiesExact": {"const": true},
+        "matrixPredeclaredBeforeAttempts": {"const": true},
+        "portableRuntimeQualified": {"const": false},
+        "blindDispatchQualified": {"const": false},
+        "readyForDispatch": {"const": false}
+      }
+    },
+    "automaticPromotion": {"const": false},
+    "nextGate": {"const": "qualify-portable-runtime-and-blind-dispatch-per-cell"}
+  },
+  "$defs": {
+    "token": {"type": "string", "pattern": "^[A-Za-z0-9_.:@/+\\-]{1,200}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "fileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "byteLength", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "byteLength": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "cell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ordinal", "participantId", "agentConfigId", "modelConfigId", "environmentConfigId"],
+      "properties": {
+        "ordinal": {"type": "integer", "minimum": 0, "maximum": 7},
+        "participantId": {"$ref": "#/$defs/token"},
+        "agentConfigId": {"$ref": "#/$defs/token"},
+        "modelConfigId": {"$ref": "#/$defs/token"},
+        "environmentConfigId": {"$ref": "#/$defs/token"}
+      }
+    },
+    "comparisonPair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["leftParticipantId", "rightParticipantId", "changedDimension"],
+      "properties": {
+        "leftParticipantId": {"$ref": "#/$defs/token"},
+        "rightParticipantId": {"$ref": "#/$defs/token"},
+        "changedDimension": {"enum": ["agent", "model", "environment"]}
+      }
+    }
+  }
+}

@@ -317,6 +317,39 @@ jobs:
               printf '%s\n' "$status" > "$output/runner-exit-code.txt"
             done
           done < "$AGENTLAB_ROOT/participant-arms.tsv"
+      - name: Compose digest-bound execution states in shadow mode
+        id: case_state_shadow
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          cargo build --locked --release -p agentlab_code_analysis \
+            --bin agentlab-case-state
+          mkdir -p "$AGENTLAB_ROOT/execution-states"
+          while IFS=$'\t' read -r arm participant_id model; do
+            for trial in $(seq 1 "$TRIALS"); do
+              attempt_id="${arm}-${trial}"
+              attempt="$AGENTLAB_ROOT/runs/$attempt_id"
+              optional=()
+              if [[ -s "$attempt/participant-protocol.json" ]]; then
+                optional+=(--event-log "$attempt/participant-protocol.json")
+              fi
+              if [[ -s "$attempt/participant-state/pi-session.jsonl" ]]; then
+                optional+=(--native-session "$attempt/participant-state/pi-session.jsonl")
+              fi
+              target/release/agentlab-case-state compose \
+                --root "$AGENTLAB_ROOT" \
+                --case "$AGENTLAB_ROOT/case/evaluation-case.json" \
+                --experiment-plan "$AGENTLAB_ROOT/participant-experiment-plan.json" \
+                --attempt-summary "$attempt/summary.json" \
+                --decision-package "$attempt/decision-package.json" \
+                --initial-state "$attempt/initial-source-state.json" \
+                --final-state "$attempt/final-source-state.json" \
+                --workspace "$attempt/workspace" \
+                --attempt-id "$attempt_id" \
+                "${optional[@]}" \
+                --output "$AGENTLAB_ROOT/execution-states/$attempt_id.json"
+            done
+          done < "$AGENTLAB_ROOT/participant-arms.tsv"
       - name: Collect attempts and score repeatable model separation
         run: |
           set -euo pipefail
@@ -392,6 +425,51 @@ jobs:
           (root / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
           PY
           cat "$AGENTLAB_ROOT/assessment-feedback-candidates.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Propose execution-state derived cases in shadow mode
+        if: steps.case_state_shadow.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/case-derivations"
+          mkdir -p "$AGENTLAB_ROOT/case-model-graphs"
+          python3 - <<'PY' > "$AGENTLAB_ROOT/derivation-candidates.tsv"
+          import json, os, pathlib
+          root = pathlib.Path(os.environ["AGENTLAB_ROOT"])
+          value = json.loads((root / "assessment-feedback-candidates.json").read_text())
+          for candidate in value["candidates"]:
+              for observation in candidate.get("observations", []):
+                  print(candidate["id"], observation["attemptId"], sep="\t")
+          PY
+          graph_index=0
+          previous_graph=''
+          while IFS=$'\t' read -r candidate_id attempt_id; do
+            [[ -n "$candidate_id" && -n "$attempt_id" ]]
+            derivation="$AGENTLAB_ROOT/case-derivations/${candidate_id}-${attempt_id}.json"
+            target/release/agentlab-case-state derive \
+              --root "$AGENTLAB_ROOT" \
+              --state "$AGENTLAB_ROOT/execution-states/$attempt_id.json" \
+              --feedback "$AGENTLAB_ROOT/assessment-feedback-candidates.json" \
+              --candidate-id "$candidate_id" \
+              --mode fresh-agent-continuation \
+              --output "$derivation"
+            graph_index=$((graph_index + 1))
+            graph_output=$(printf '%s/case-model-graphs/%04d.json' \
+              "$AGENTLAB_ROOT" "$graph_index")
+            graph_args=()
+            if [[ -n "$previous_graph" ]]; then
+              graph_args+=(--graph "$previous_graph")
+            fi
+            target/release/agentlab-case-state graph \
+              --root "$AGENTLAB_ROOT" \
+              --parent-case "$AGENTLAB_ROOT/case/evaluation-case.json" \
+              --derivation "$derivation" \
+              "${graph_args[@]}" \
+              --output "$graph_output"
+            previous_graph="$graph_output"
+          done < "$AGENTLAB_ROOT/derivation-candidates.tsv"
+          if [[ -n "$previous_graph" ]]; then
+            cp "$previous_graph" "$AGENTLAB_ROOT/case-model-graph.json"
+          fi
       - name: Freeze relocation-safe Harmony device handoff
         run: |
           python3 scripts/prepare-harmony-assessed-handoff.py \

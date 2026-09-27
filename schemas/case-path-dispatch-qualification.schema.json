@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-path-dispatch-qualification.schema.json",
+  "title": "Independent per-cell runtime and blind-dispatch qualification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "authority", "dispatchPlan", "methodRevision", "cells", "automaticPromotion"],
+  "properties": {
+    "schema": {"const": "agentlab.case_path_dispatch_qualification.v1"},
+    "status": {"const": "qualified"},
+    "authority": {"const": "independent-harness-runtime-and-blind-dispatch"},
+    "dispatchPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dispatchPlanId", "sha256"],
+      "properties": {
+        "dispatchPlanId": {"type": "string", "pattern": "^case-path-dispatch-[0-9a-f]{20}$"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "methodRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "cells": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["participantId", "environmentConfigId", "runtimeImageId", "runtimeEvidence", "blindDispatchEvidence", "verification"],
+        "properties": {
+          "participantId": {"$ref": "#/$defs/token"},
+          "environmentConfigId": {"$ref": "#/$defs/token"},
+          "runtimeImageId": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "runtimeEvidence": {"$ref": "#/$defs/fileBinding"},
+          "blindDispatchEvidence": {"$ref": "#/$defs/fileBinding"},
+          "verification": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["portableRuntimeStarted", "currentStageParticipantBundleOnly", "evaluatorBundleOutsideParticipant", "networkPolicyEnforced", "freshTrialBoundaryVerified"],
+            "properties": {
+              "portableRuntimeStarted": {"const": true},
+              "currentStageParticipantBundleOnly": {"const": true},
+              "evaluatorBundleOutsideParticipant": {"const": true},
+              "networkPolicyEnforced": {"const": true},
+              "freshTrialBoundaryVerified": {"const": true}
+            }
+          }
+        }
+      }
+    },
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "token": {"type": "string", "pattern": "^[A-Za-z0-9_.:@/+\\-]{1,200}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "fileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "byteLength", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "byteLength": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

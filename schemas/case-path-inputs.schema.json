@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-path-inputs.schema.json",
+  "title": "Blind-cut inputs for one qualified long-horizon path",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "graph", "terminalNodeId", "blindCuts", "automaticPromotion"],
+  "properties": {
+    "schema": {"const": "agentlab.case_path_inputs.v1"},
+    "graph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["graphId", "sha256"],
+      "properties": {
+        "graphId": {"type": "string", "pattern": "^case-model-graph-[0-9a-f]{20}$"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "terminalNodeId": {"type": "string", "pattern": "^case-node-[0-9a-f]{20}$"},
+    "blindCuts": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["nodeId", "cutReceipt", "participantManifest", "evaluatorManifest"],
+        "properties": {
+          "nodeId": {"type": "string", "pattern": "^case-node-[0-9a-f]{20}$"},
+          "cutReceipt": {"$ref": "#/$defs/fileBinding"},
+          "participantManifest": {"$ref": "#/$defs/fileBinding"},
+          "evaluatorManifest": {"$ref": "#/$defs/fileBinding"}
+        }
+      }
+    },
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "fileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "byteLength", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "byteLength": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

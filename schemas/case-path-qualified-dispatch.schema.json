@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-path-qualified-dispatch.schema.json",
+  "title": "Qualified long-horizon path dispatch authority",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "qualifiedDispatchId", "dispatchPlan", "dispatchQualification", "methodRevision", "stageCount", "cellCount", "trialsPerCell", "expectedAttemptCount", "expectedStageExecutionCount", "cells", "qualification", "automaticPromotion", "nextGate"],
+  "properties": {
+    "schema": {"const": "agentlab.case_path_qualified_dispatch.v1"},
+    "status": {"const": "qualified-ready-for-dispatch"},
+    "qualifiedDispatchId": {"type": "string", "pattern": "^case-path-qualified-dispatch-[0-9a-f]{20}$"},
+    "dispatchPlan": {"$ref": "#/$defs/fileBinding"},
+    "dispatchQualification": {"$ref": "#/$defs/fileBinding"},
+    "methodRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "stageCount": {"type": "integer", "minimum": 3},
+    "cellCount": {"type": "integer", "minimum": 3, "maximum": 8},
+    "trialsPerCell": {"enum": [3, 5, 10, 20]},
+    "expectedAttemptCount": {"type": "integer", "minimum": 9},
+    "expectedStageExecutionCount": {"type": "integer", "minimum": 27},
+    "cells": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ordinal", "participantId", "agentConfigId", "modelConfigId", "environmentConfigId"],
+        "properties": {
+          "ordinal": {"type": "integer", "minimum": 0, "maximum": 7},
+          "participantId": {"$ref": "#/$defs/token"},
+          "agentConfigId": {"$ref": "#/$defs/token"},
+          "modelConfigId": {"$ref": "#/$defs/token"},
+          "environmentConfigId": {"$ref": "#/$defs/token"}
+        }
+      }
+    },
+    "qualification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pathStructurallyQualified", "matrixPredeclaredBeforeAttempts", "portableRuntimeQualifiedPerCell", "blindDispatchQualifiedPerCell", "readyForDispatch"],
+      "properties": {
+        "pathStructurallyQualified": {"const": true},
+        "matrixPredeclaredBeforeAttempts": {"const": true},
+        "portableRuntimeQualifiedPerCell": {"const": true},
+        "blindDispatchQualifiedPerCell": {"const": true},
+        "readyForDispatch": {"const": true}
+      }
+    },
+    "automaticPromotion": {"const": false},
+    "nextGate": {"const": "execute-predeclared-attempts-and-record-stage-verdicts"}
+  },
+  "$defs": {
+    "token": {"type": "string", "pattern": "^[A-Za-z0-9_.:@/+\\-]{1,200}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "fileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "byteLength", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "byteLength": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

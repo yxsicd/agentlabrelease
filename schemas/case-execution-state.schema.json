@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/case-execution-state.schema.json",
+  "title": "Digest-bound case execution state sidecar",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "stateId", "case", "attempt", "execution", "agent", "workspace", "environment", "verification", "restoreCapabilities", "visibility", "automaticPromotion"],
+  "properties": {
+    "schema": {"const": "agentlab.case_execution_state.v1"},
+    "status": {"const": "captured-evaluation-instance"},
+    "stateId": {"type": "string", "pattern": "^execution-state-[0-9a-f]{20}$"},
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caseId", "sourceSetSha256", "evaluationCase"],
+      "properties": {
+        "caseId": {"$ref": "#/$defs/token"},
+        "sourceSetSha256": {"$ref": "#/$defs/sha256"},
+        "evaluationCase": {"$ref": "#/$defs/fileBinding"}
+      }
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attemptId", "participantId", "summary", "decisionPackage"],
+      "properties": {
+        "attemptId": {"$ref": "#/$defs/token"},
+        "participantId": {"$ref": "#/$defs/token"},
+        "summary": {"$ref": "#/$defs/fileBinding"},
+        "decisionPackage": {"$ref": "#/$defs/fileBinding"}
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lifecycle", "outcome", "stageCount", "completedStageCount", "terminalStageId"],
+      "properties": {
+        "lifecycle": {"const": "closed"},
+        "outcome": {"enum": ["pass", "fail", "partial", "infrastructure-error"]},
+        "stageCount": {"type": "integer", "minimum": 1},
+        "completedStageCount": {"type": "integer", "minimum": 0},
+        "terminalStageId": {"type": ["string", "null"], "minLength": 1}
+      }
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["configuration", "participantProfile", "context"],
+      "properties": {
+        "configuration": {"$ref": "#/$defs/fileBinding"},
+        "participantProfile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["agentImplementation", "agentPackage", "agentPackageVersion", "model", "sessionPolicy"],
+          "properties": {
+            "agentImplementation": {"$ref": "#/$defs/token"},
+            "agentPackage": {"type": "string", "minLength": 1},
+            "agentPackageVersion": {"$ref": "#/$defs/token"},
+            "model": {"$ref": "#/$defs/token"},
+            "sessionPolicy": {"type": "string", "minLength": 1}
+          }
+        },
+        "context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "eventLog", "nativeSession", "nativeRestoreQualified"],
+          "properties": {
+            "mode": {"enum": ["fresh-only", "event-log", "native-session-candidate"]},
+            "eventLog": {"anyOf": [{"$ref": "#/$defs/fileBinding"}, {"type": "null"}]},
+            "nativeSession": {"anyOf": [{"$ref": "#/$defs/fileBinding"}, {"type": "null"}]},
+            "nativeRestoreQualified": {"const": false}
+          }
+        }
+      }
+    },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["initialState", "finalState", "capturedTree", "sessionFsSnapshot", "sessionFsRestoreQualified"],
+      "properties": {
+        "initialState": {"$ref": "#/$defs/fileBinding"},
+        "finalState": {"$ref": "#/$defs/fileBinding"},
+        "capturedTree": {"$ref": "#/$defs/treeBinding"},
+        "sessionFsSnapshot": {"anyOf": [{"$ref": "#/$defs/fileBinding"}, {"type": "null"}]},
+        "sessionFsRestoreQualified": {"type": "boolean"}
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtimeImageId", "environmentLock", "deviceState"],
+      "properties": {
+        "runtimeImageId": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "environmentLock": {"anyOf": [{"$ref": "#/$defs/fileBinding"}, {"type": "null"}]},
+        "deviceState": {"const": "not-captured"}
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "assessmentStatus", "infrastructureAvailable", "subjectTaskSucceeded", "sourceStateBound", "agentContextRestoreVerified", "workspaceRestoreVerified"],
+      "properties": {
+        "authority": {"const": "independent-harness-decision-package"},
+        "assessmentStatus": {"enum": ["assessed", "infrastructure-unavailable"]},
+        "infrastructureAvailable": {"type": "boolean"},
+        "subjectTaskSucceeded": {"type": ["boolean", "null"]},
+        "sourceStateBound": {"const": true},
+        "agentContextRestoreVerified": {"const": false},
+        "workspaceRestoreVerified": {"type": "boolean"}
+      }
+    },
+    "restoreCapabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "semantic", "agentConfiguration", "agentContext", "workspace", "environment", "verification"],
+      "properties": {
+        "profile": {"enum": ["source-continuation", "native-continuation-candidate", "exact-workspace-fork"]},
+        "semantic": {"const": "case-stage-and-verdict"},
+        "agentConfiguration": {"const": "exact-plan-bound"},
+        "agentContext": {"enum": ["fresh-only", "event-log-replay", "native-candidate-not-qualified"]},
+        "workspace": {"enum": ["captured-source-tree", "sessionfs-snapshot"]},
+        "environment": {"const": "participant-runtime-plan-bound"},
+        "verification": {"enum": ["captured", "workspace-requalified"]}
+      }
+    },
+    "visibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["participantEvaluatorSeparated", "operatorSecretsPersisted"],
+      "properties": {
+        "participantEvaluatorSeparated": {"const": true},
+        "operatorSecretsPersisted": {"const": false}
+      }
+    },
+    "automaticPromotion": {"const": false}
+  },
+  "$defs": {
+    "token": {"type": "string", "pattern": "^[A-Za-z0-9_.:@/+\\-]{1,200}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "fileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "byteLength", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "byteLength": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "treeBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "fileCount", "byteLength", "treeSha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "fileCount": {"type": "integer", "minimum": 1},
+        "byteLength": {"type": "integer", "minimum": 0},
+        "treeSha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}
