@@ -131,6 +131,17 @@ without blocking the first two knowledge flywheels or granting automatic
 promotion. Candidate-stage binding, independent Oracle execution, wrong-variant
 calibration and freeze remain separate mandatory gates.
 
+The unattended third flywheel is emulator-first. Before spending a construction
+Agent turn, it rejects a newly analyzed scope whose revision-bound structural
+or semantic evidence requires a serial, USB, or other attached peripheral. A
+retained proposal must name a HarmonyOS emulator environment and the hard gate
+rejects physical-device fallback or external-hardware requirements. This does
+not suppress hardware-related repository knowledge from the first two
+flywheels: such facts remain useful Maintainer Skills and their blocked shadow
+attempts remain explicit feedback. Hardware-dependent cases may later use a
+separate, explicitly selected real-device campaign, but they cannot enter the
+default scalable emulator cohort.
+
 TableGit authoring and Git remote publication are intentionally separate
 authority lanes. The public Action needs `table.write`; it does not receive or
 attempt to bypass `mcp.publish`. An authenticated operator may separately run

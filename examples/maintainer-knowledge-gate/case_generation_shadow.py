@@ -15,6 +15,15 @@ import subprocess
 SAFE_ID = re.compile(r"shadow-case-[a-z0-9-]{8,140}")
 SHA1 = re.compile(r"[0-9a-f]{40}")
 SHA256 = re.compile(r"[0-9a-f]{64}")
+EMULATOR_MARKERS = ("emulator", "模拟器")
+EXTERNAL_HARDWARE_PATTERNS = {
+    "serial-peripheral": re.compile(r"\b(?:serial(?: port)?|uart)\b|串口", re.IGNORECASE),
+    "usb-peripheral": re.compile(r"\busb\b|USB设备|USB外设", re.IGNORECASE),
+    "attached-peripheral": re.compile(
+        r"\b(?:attached|external) (?:hardware|peripheral|device)\b|外接(?:硬件|外设|设备)",
+        re.IGNORECASE,
+    ),
+}
 
 
 def canonical(value) -> bytes:
@@ -65,6 +74,29 @@ def previous_oracle_count(rounds: list[dict]) -> int:
         for row in rounds
         for candidate_id in (row.get("qualification") or {}).get("oracleQualifiedIds", [])
     })
+
+
+def external_hardware_blockers(scope: dict, fact: dict) -> list[str]:
+    """Return generic external-hardware signals without repository-specific rules."""
+    text_values = [
+        scope.get("documentedTitle"), scope.get("documentedPurpose"),
+        scope.get("responsibility"), fact.get("id"), fact.get("interpretation"),
+        *(fact.get("limitations") or []), *(scope.get("externalDependencies") or []),
+    ]
+    text = "\n".join(value for value in text_values if isinstance(value, str))
+    return [name for name, pattern in EXTERNAL_HARDWARE_PATTERNS.items() if pattern.search(text)]
+
+
+def require_emulator_environment(values: list[str]) -> None:
+    text = "\n".join(values)
+    blockers = [
+        name for name, pattern in EXTERNAL_HARDWARE_PATTERNS.items() if pattern.search(text)
+    ]
+    require(not blockers, f"shadow environment requires external hardware: {','.join(blockers)}")
+    require(not re.search(r"\bphysical device\b|真机", text, re.IGNORECASE),
+            "shadow environment requires a physical device")
+    require(any(marker in text.lower() for marker in EMULATOR_MARKERS),
+            "shadow environment does not require a HarmonyOS emulator")
 
 
 def select_iteration(loop_receipt: dict, facts: dict[str, dict], existing: list[dict]) -> tuple[dict, dict]:
@@ -128,6 +160,11 @@ def prepare(args) -> None:
             "candidateGateRequired": True,
             "independentOracleRequired": True,
             "wrongVariantCalibrationRequired": True,
+            "runtimeTarget": "harmony-emulator",
+            "externalHardwareAllowed": False,
+            "physicalDeviceFallbackAllowed": False,
+            "shadowEligible": not external_hardware_blockers(scope, fact),
+            "blockers": external_hardware_blockers(scope, fact),
         },
         "output": "shadow-case-proposal.json",
     }
@@ -137,6 +174,8 @@ def prepare(args) -> None:
 def run_agent(args) -> None:
     request = load(args.request)
     require(request.get("schema") == "agentlab.case_generation_shadow_request.v1", "bad shadow request")
+    require(request["policy"].get("shadowEligible") is True,
+            "shadow input is not eligible for emulator-only construction")
     source_root = args.source.resolve(strict=True)
     head = subprocess.check_output(["git", "-C", str(source_root), "rev-parse", "HEAD"], text=True).strip()
     require(head == request["repository"]["revision"], "source checkout revision differs")
@@ -176,7 +215,7 @@ The object must have exactly these fields:
 - status: shadow-proposal
 - automaticPromotion: false
 
-Give at least two observables and two meaningful wrong variants, validate every field type against the exact shape above, and parse the completed JSON once before finishing. The Oracle remains operator-owned: do not include a gold patch, claim build/runtime success, or claim approval. Use only paths present in the fact evidence. Prefer a mechanism supported by the semantic interpretation rather than a generic build task.
+Give at least two observables and two meaningful wrong variants. The complete functional Oracle must be executable on a HarmonyOS emulator with no physical-device fallback and no attached USB, serial, or other external hardware; name the emulator image/device type in requiredEnvironment. Validate every field type against the exact shape above, and parse the completed JSON once before finishing. The Oracle remains operator-owned: do not include a gold patch, claim build/runtime success, or claim approval. Use only paths present in the fact evidence. Prefer a mechanism supported by the semantic interpretation rather than a generic build task.
 """
     try:
         participant.turn("shadow-case-constructor", workspace, prompt=prompt, wall_time_limit_seconds=720)
@@ -235,7 +274,14 @@ def validate_proposal(request: dict, proposal: dict) -> dict:
     require(oracle["framework"] == expected_framework, "oracle framework differs")
     require(oracle["status"] == "hypothesis-unqualified", "oracle status overclaims qualification")
     strings(oracle["observables"], "oracle observables", 2, 8)
-    strings(oracle["requiredEnvironment"], "oracle requiredEnvironment", 1, 8)
+    environment = strings(oracle["requiredEnvironment"], "oracle requiredEnvironment", 1, 8)
+    require(request["policy"].get("runtimeTarget") == "harmony-emulator",
+            "shadow request runtime target differs")
+    require(request["policy"].get("externalHardwareAllowed") is False,
+            "shadow request permits external hardware")
+    require(request["policy"].get("physicalDeviceFallbackAllowed") is False,
+            "shadow request permits physical-device fallback")
+    require_emulator_environment(environment)
     strings(oracle["wrongVariants"], "oracle wrongVariants", 2, 8)
     strings(proposal["limitations"], "limitations", 2, 8)
     require(proposal["status"] == "shadow-proposal" and proposal["automaticPromotion"] is False,

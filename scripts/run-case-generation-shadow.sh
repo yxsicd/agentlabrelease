@@ -18,6 +18,17 @@ python3 examples/maintainer-knowledge-gate/case_generation_shadow.py prepare \
   --knowledge "$knowledge" --loop-receipt "$run_root/loop/loop-receipt.json" \
   --output "$request"
 
+if [[ $(jq -r '.policy.shadowEligible' "$request") != true ]]; then
+  python3 examples/maintainer-knowledge-gate/case_generation_shadow.py record-failure \
+    --request "$request" --rounds "$knowledge/case_generation_rounds.jsonl" \
+    --receipt "$receipt" --run-id "$GITHUB_RUN_ID" \
+    --reason shadow-input-requires-external-hardware
+  if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
+    jq '{status,candidateId,reason,roundId,automaticPromotion}' "$receipt" >> "$GITHUB_STEP_SUMMARY"
+  fi
+  exit 0
+fi
+
 repository_id=$(jq -r '.repository.id' "$request")
 revision=$(jq -r '.repository.revision' "$request")
 source_dir="$run_root/../sources/$repository_id-$revision"
