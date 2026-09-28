@@ -37,16 +37,14 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
     "$iteration_root/flywheel-request.json")
   repository_id=$(jq -r '.repository.id' "$iteration_root/flywheel-request.json")
   scope_id=$(jq -r '.scope.id' "$iteration_root/flywheel-request.json")
+  scope_path=$(jq -r '.scope.pathBoundary' "$iteration_root/flywheel-request.json")
   [[ ${#source[@]} -eq 2 && "${source[1]}" =~ ^[0-9a-f]{40}$ ]]
 
   # Source checkouts are execution inputs, not evidence artifacts. Keep them
   # beside run_root so the workflow's run/ upload cannot retain whole repos.
   source_dir="$source_root/$repository_id-${source[1]}"
-  if [[ ! -d "$source_dir/.git" ]]; then
-    git clone --filter=blob:none --no-checkout "${source[0]}" "$source_dir"
-    git -C "$source_dir" fetch --depth 1 origin "${source[1]}"
-    git -C "$source_dir" checkout --detach FETCH_HEAD
-  fi
+  scripts/checkout-maintainer-scope.sh \
+    "${source[0]}" "${source[1]}" "$scope_path" "$source_dir"
 
   python3 examples/maintainer-knowledge-gate/agent_flywheel.py run-agent \
     --request "$iteration_root/flywheel-request.json" \
