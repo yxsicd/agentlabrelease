@@ -192,6 +192,9 @@ pub fn assess(
         }
         if bound.is_empty() {
             for evidence in fact["evidence"].as_array().into_iter().flatten() {
+                if !valid_hex(&evidence["gitBlobOid"], 40) {
+                    continue;
+                }
                 let Some(path) = evidence["path"].as_str() else {
                     continue;
                 };

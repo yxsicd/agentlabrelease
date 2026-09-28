@@ -13,9 +13,10 @@ branches in the standard.
 - `operation`: build, test, runtime or maintenance verification.
 
 Program facts bind these dimensions to a scope through `scopeSkillIds`. An exact
-source evidence path may provide a deterministic provisional binding to the
-longest matching scope boundary. A filename, import count, README statement or
-repository-wide fact does not prove behavior by itself.
+source evidence path with a Git Blob OID may provide a deterministic provisional
+binding to the longest matching scope boundary. Release-artifact paths without
+target-source Blob identity never bind implicitly. A filename, import count,
+README statement or repository-wide fact does not prove behavior by itself.
 
 ## Maturity
 

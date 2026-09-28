@@ -38,6 +38,10 @@ fn ids(value: &Value, field: &str) -> Vec<String> {
         .collect()
 }
 
+fn json(path: &Path) -> Value {
+    serde_json::from_slice(&fs::read(path).unwrap()).unwrap()
+}
+
 #[test]
 fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     let root = repository_root();
@@ -86,7 +90,7 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     let generation_rounds = rows(&baseline.join("case_generation_rounds.jsonl"));
     assert_eq!(skills.len(), 12);
     assert_eq!(facts.len(), 20);
-    assert_eq!(refresh_rounds.len(), 3);
+    assert_eq!(refresh_rounds.len(), 4);
     assert_eq!(generation_rounds.len(), 1);
     assert!(
         fs::read_to_string(baseline.join("evaluation_cases.jsonl"))
@@ -115,6 +119,17 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
             );
             assert_eq!(
                 skill["methodRevision"], "59216bbc5bca6de2cb0d87bd29f8f154db9d4946",
+                "{skill_id} does not bind the method-defining revision"
+            );
+        }
+        if skill["stage"] == "repository-analysis" {
+            assert_eq!(
+                skill["methodDigest"],
+                digest(&fs::read(root.join("skills/agentlab-codebase-analysis/SKILL.md")).unwrap()),
+                "{skill_id} does not bind the current evidence-flywheel method"
+            );
+            assert_eq!(
+                skill["methodRevision"], "f697ba31f0c6197a097e252b86ea3ed8e29ba551",
                 "{skill_id} does not bind the method-defining revision"
             );
         }
@@ -180,6 +195,7 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     let first = &refresh_rounds["first-four-round-1-structural-baseline"];
     let second = &refresh_rounds["first-four-round-2-ownership-and-lineage"];
     let third = &refresh_rounds["first-four-round-3-iterative-case-generation"];
+    let fourth = &refresh_rounds["first-four-round-4-evidence-flywheel-practice"];
     assert_eq!(first["roundIndex"], 1);
     assert_eq!(first["parentRoundSha256"], Value::Null);
     assert_eq!(
@@ -195,12 +211,51 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     assert_eq!(third["roundIndex"], 3);
     assert_eq!(third["decision"], "continue");
     assert_eq!(
-        third["tables"]["processSkillsSha256"],
+        fourth["parentRoundSha256"],
+        digest(&serde_json::to_vec(third).unwrap())
+    );
+    assert_eq!(fourth["roundIndex"], 4);
+    assert_eq!(fourth["decision"], "continue");
+    assert_eq!(
+        fourth["tables"]["processSkillsSha256"],
         digest(&fs::read(baseline.join("maintainer_skills.jsonl")).unwrap())
     );
     assert_eq!(
-        third["tables"]["scopeSkillsSha256"],
+        fourth["tables"]["scopeSkillsSha256"],
         digest(&fs::read(baseline.join("maintainer_scope_skills.jsonl")).unwrap())
+    );
+    assert_eq!(
+        fourth["tables"]["programFactsSha256"],
+        digest(&fs::read(baseline.join("program_facts.jsonl")).unwrap())
+    );
+
+    let assessment_root = baseline.join("assessments");
+    let assessment_one = json(&assessment_root.join("round-1-structural.json"));
+    let assessment_two = json(&assessment_root.join("round-2-current-program-facts.json"));
+    let assessment_three = json(&assessment_root.join("round-3-explicit-evidence-bindings.json"));
+    assert_eq!(assessment_one["roundIndex"], 1);
+    assert_eq!(assessment_one["parentAssessmentSha256"], Value::Null);
+    assert_eq!(
+        assessment_two["parentAssessmentSha256"],
+        digest(&fs::read(assessment_root.join("round-1-structural.json")).unwrap())
+    );
+    assert_eq!(
+        assessment_three["parentAssessmentSha256"],
+        digest(&fs::read(assessment_root.join("round-2-current-program-facts.json")).unwrap())
+    );
+    assert_eq!(assessment_one["totals"]["structuralReadyCount"], 480);
+    assert_eq!(assessment_two["totals"]["programBoundCount"], 10);
+    assert_eq!(assessment_two["totals"]["semanticReadyCount"], 0);
+    assert_eq!(assessment_three["totals"]["programBoundCount"], 11);
+    assert_eq!(assessment_three["totals"]["semanticReadyCount"], 4);
+    assert_eq!(assessment_three["totals"]["maintenanceReadyCount"], 0);
+    assert_eq!(
+        assessment_three["gapCounts"]["MS-PROGRAM-EVIDENCE-UNBOUND"],
+        469
+    );
+    assert_eq!(
+        assessment_three["inputs"]["programFactsSha256"],
+        digest(&fs::read(baseline.join("program_facts.jsonl")).unwrap())
     );
 
     let generation = &generation_rounds["first-four-case-generation-round-1-readiness-baseline"];
@@ -211,7 +266,8 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     assert_eq!(generation["maintainerSkillRefreshRoundId"], third["id"]);
     assert_eq!(
         generation["knowledgeCutSha256"],
-        digest(&fs::read(baseline.join("maintainer-knowledge-cut.json")).unwrap())
+        "2e31989f0ec07c82f57aa580dd0845bd385699429dec43bf43e838253b7b874a",
+        "the historical generation baseline must retain its original knowledge cut"
     );
     assert_eq!(
         generation["coverage"]["scopeSkillCount"], 480,

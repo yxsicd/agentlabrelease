@@ -44,9 +44,27 @@ revision-bound tables rather than being guessed from paths.
 records the iterative lineage. Round 1 established the structural baseline;
 round 2 separated repository-native and target-operations ownership and bound
 the refreshed tables; round 3 bound all four seed-extraction Skills to the
-iterative generation method. Its decision remains `continue`: later rounds
-must deepen behavior contracts, program relations, and executable Oracle
-coverage rather than treating the first code read as final.
+iterative generation method; round 4 ran the repository-independent evidence
+flywheel and bound existing analysis to exact scope Skills. Its decision
+remains `continue`: later rounds must deepen behavior contracts, program
+relations, and executable operation evidence rather than treating the first
+code read as final.
+
+The retained reports under [`assessments/`](assessments/) are the first three
+real flywheel passes over all four repositories:
+
+| Pass | Structural ready | Program bound | Semantic ready | Maintenance ready |
+| --- | ---: | ---: | ---: | ---: |
+| Structural catalog only | 480 | 0 | 0 | 0 |
+| Existing 20 program/analysis facts | 480 | 10 | 0 | 0 |
+| Explicit universal dimensions and scope bindings | 480 | 11 | 4 | 0 |
+
+The four L2 scopes are the Harmony IAP consumable page and the Cordova IAP
+Ionic, TypeScript and Java bridge layers supported by the existing bounded-flow
+analysis. No scope is L3: the existing build evidence is repository/package
+level or blocked and is not silently treated as executable verification for
+those four scopes. The latest gap queue retains 469 unbound scopes and drives
+the next targeted program-analysis round.
 
 [`case_generation_rounds.jsonl`](case_generation_rounds.jsonl) starts the
 separate downstream generation lineage. Round 1 is intentionally an honest
