@@ -256,9 +256,7 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     );
     assert_eq!(
         latest["assessment"]["sha256"],
-        digest(
-            &fs::read(baseline.join(latest["assessment"]["path"].as_str().unwrap())).unwrap()
-        )
+        digest(&fs::read(baseline.join(latest["assessment"]["path"].as_str().unwrap())).unwrap())
     );
 
     let assessment_root = baseline.join("assessments");
