@@ -2,6 +2,12 @@ name: Maintainer Skill Agent flywheel
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: Expand an unbound scope or refresh one fact from candidate feedback
+        required: true
+        type: choice
+        options: [expand, focused-refresh]
+        default: expand
       repository:
         description: Repository selection; auto balances normalized semantic coverage
         required: true
@@ -14,6 +20,16 @@ on:
         type: choice
         options: ['1', '2', '3']
         default: '1'
+      candidate_id:
+        description: Existing shadow candidate for focused-refresh mode
+        required: false
+        default: shadow-case-uiability-backup-restore-state-recovery
+        type: string
+      construction_plan:
+        description: Repository-relative readiness plan for focused-refresh mode
+        required: false
+        default: examples/maintainer-knowledge-gate/first-four/construction-plans/uiability-backup-restore.json
+        type: string
       model:
         description: Model exposed by the LM Gateway
         required: true
@@ -46,6 +62,8 @@ jobs:
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_MODEL: ${{ inputs.model }}
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
+      FOCUSED_CANDIDATE_ID: ${{ inputs.candidate_id }}
+      FOCUSED_CONSTRUCTION_PLAN: ${{ inputs.construction_plan }}
       AGENTLAB_TABLEGIT_MCP_URL: ${{ vars.AGENTLAB_TABLEGIT_MCP_URL }}
       AGENTLAB_TABLEGIT_PERSON_ID: ${{ vars.AGENTLAB_TABLEGIT_PERSON_ID }}
     steps:
@@ -56,7 +74,9 @@ jobs:
           python3 -m unittest \
             tests.test_maintainer_skill_agent_flywheel \
             tests.test_maintainer_skill_tablegit \
-            tests.test_case_generation_shadow
+            tests.test_case_generation_shadow \
+            tests.test_shadow_construction_readiness \
+            tests.test_focused_fact_refresh
           cargo build --locked -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
       - name: Install the separately contained Pi runtime
         run: |
@@ -66,6 +86,7 @@ jobs:
           "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" --version
       - name: Run the bounded hard-gated Maintainer Skill loop
         id: loop
+        if: inputs.mode == 'expand'
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
         run: |
@@ -73,18 +94,30 @@ jobs:
           scripts/run-maintainer-skill-agent-loop.sh \
             "$KNOWLEDGE" "$AGENTLAB_ROOT/run" "$REPOSITORY_SELECTOR" "$ITERATIONS" \
             "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi"
+      - name: Run the candidate-feedback focused refresh
+        id: focused
+        if: inputs.mode == 'focused-refresh'
+        env:
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+        run: |
+          set -euo pipefail
+          scripts/run-maintainer-skill-focused-refresh.sh \
+            "$KNOWLEDGE" "$AGENTLAB_ROOT/run" \
+            "$FOCUSED_CANDIDATE_ID" "$FOCUSED_CONSTRUCTION_PLAN" \
+            "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi"
       - name: Persist in TableGit and export the exact committed revision
         run: |
           set -euo pipefail
           test -n "$AGENTLAB_TABLEGIT_MCP_URL"
           test -n "$AGENTLAB_TABLEGIT_PERSON_ID"
           python3 scripts/maintainer-skill-tablegit.py sync \
-            --base "$KNOWLEDGE" --snapshot '${{ steps.loop.outputs.snapshot }}' \
+            --base "$KNOWLEDGE" --snapshot '${{ steps.loop.outputs.snapshot || steps.focused.outputs.snapshot }}' \
             --export "$KNOWLEDGE" --receipt "$AGENTLAB_ROOT/run/tablegit-sync-receipt.json" \
             --run-id "$GITHUB_RUN_ID" --github-repository "$GITHUB_REPOSITORY"
           jq '{repo,revision,authorityVerified,mirror,tables}' \
             "$AGENTLAB_ROOT/run/tablegit-sync-receipt.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Sample one non-promoted shadow case from the knowledge gain
+        if: inputs.mode == 'expand'
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
         run: |
@@ -111,7 +144,7 @@ jobs:
           url=$(gh pr create \
             --base main --head "$branch" \
             --title "Export Maintainer Skill flywheel $GITHUB_RUN_ID" \
-            --body "Exports $ITERATIONS hard-gated Maintainer Skill iteration(s) from the exact committed TableGit revision recorded in maintainer-knowledge-cut.json. Every iteration advanced exactly one scope to L2. The downstream shadow generation round sampled at most one non-promoted case hypothesis and retained failure feedback when construction was rejected; automatic promotion remains disabled. Source run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
+            --body "Exports the ${{ inputs.mode }} Maintainer Skill transaction from the exact committed TableGit revision recorded in maintainer-knowledge-cut.json. Expand mode advances one bounded L1 scope per iteration; focused-refresh mode updates one existing fact from an exact candidate readiness blocker without changing maturity counts. Automatic promotion remains disabled. Source run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
           echo "Release export PR: $url" >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve the proposal, gateway capture and hard-gate result
         if: always()

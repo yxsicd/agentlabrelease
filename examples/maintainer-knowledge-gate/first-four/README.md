@@ -150,6 +150,17 @@ wrong variants. The next loop must first deepen the revision-bound program fact
 and refresh the shadow candidate; emulator execution is not yet the next valid
 gate.
 
+The Maintainer Skill Agent Action has two explicit transaction modes. `expand`
+retains the existing balanced selection of previously unbound L1 scopes and may
+run one to three atomic iterations. `focused-refresh` consumes one retained
+candidate plus its repository-owned construction plan, updates exactly one
+existing fact, retains all prior evidence, and requires every missing
+implementation/Oracle path by exact Git Blob. The independent maturity
+assessment must keep all counts and the selected scope's L2 status unchanged.
+The refreshed fact is committed once to TableGit and exported through a review
+PR; it does not rewrite the candidate or run the emulator. A later generation
+round must rebind the candidate to the new knowledge cut before qualification.
+
 The unattended third flywheel is emulator-first. Before spending a construction
 Agent turn, it rejects a newly analyzed scope whose revision-bound structural
 or semantic evidence requires a serial, USB, or other attached peripheral. A

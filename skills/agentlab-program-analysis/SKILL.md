@@ -48,6 +48,16 @@ the first run. Test fixtures need process-local uniqueness under parallel tests.
 
 When expanding the selected corpus, validate established dependency paths while allowing additional legitimate paths. A fixed result count confuses broader coverage with regression; archive the query/input cut and describe the observed path count without claiming symbol resolution.
 
+When downstream construction readiness finds that an already semantic-ready
+fact omitted required implementation or Oracle paths, refresh that same stable
+fact instead of inventing another fact or consuming a random unbound scope.
+Bind the exact candidate and readiness-plan digests, retain every prior evidence
+Blob, require every missing path with its exact source Blob, and independently
+reassess the full table. A focused refresh must not increase program-bound or
+semantic-ready counts, grant operation readiness, execute the Oracle, or mutate
+the frozen candidate. Persist the enhanced fact as one revision-fenced TableGit
+transaction; regenerate the downstream candidate only from the later cut.
+
 ### Feedback multi-round instance
 
 Use [the shared subject runner](../../examples/knowledge-seed/subject/README.md)
