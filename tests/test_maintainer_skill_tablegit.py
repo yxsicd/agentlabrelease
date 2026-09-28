@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,6 +15,27 @@ SPEC.loader.exec_module(MODULE)
 
 
 class MaintainerSkillTableGitTest(unittest.TestCase):
+    def test_expected_mcp_tool_error_is_parsed_even_when_inspector_exits_nonzero(self):
+        structured = {
+            "outcome": "error",
+            "error": {
+                "code": "validation",
+                "message": "validation error: table program_facts does not exist at " + "a" * 40,
+            },
+        }
+        process = MODULE.subprocess.CompletedProcess(
+            args=[], returncode=1,
+            stdout=json.dumps({"result": {"structuredContent": structured, "isError": True}}),
+            stderr='{"error":{"code":"tool_is_error"}}',
+        )
+        client = MODULE.Inspector("https://example.invalid/mcp", "person")
+        with mock.patch.object(MODULE.subprocess, "run", return_value=process):
+            result = client.call(
+                "skill_run_read", "table.query", "table_status",
+                {"repo": "agentlabtablegit", "path": "program_facts"}, allow_error=True,
+            )
+        self.assertTrue(MODULE.is_missing_table(result, "program_facts"))
+
     def test_envelope_round_trip_is_digest_bound(self):
         row = {
             "id": "fact-one",
