@@ -286,18 +286,32 @@ def is_missing_table(response: dict, table: str) -> bool:
 
 
 def operation_chunks(table: str, rows: list[dict], run_id: str,
-                     max_bytes: int = 70_000) -> list[list[dict]]:
+                     max_bytes: int = 70_000,
+                     row_versions: dict[str, int] | None = None) -> list[list[dict]]:
     chunks: list[list[dict]] = []
     current: list[dict] = []
     size = 0
+    row_versions = row_versions or {}
     for row in rows:
         wrapped = envelope(row)
-        operation = {
-            "op": "insert",
-            "operation_id": stable_uuid(run_id, table, row["id"], "insert"),
-            "key": row["id"],
-            "row": wrapped,
-        }
+        if row["id"] in row_versions:
+            version = row_versions[row["id"]]
+            operation = {
+                "op": "upsert",
+                "operation_id": stable_uuid(
+                    run_id, table, row["id"], f"upsert-{version}"
+                ),
+                "key": row["id"],
+                "expected_row_version": version,
+                "row": wrapped,
+            }
+        else:
+            operation = {
+                "op": "insert",
+                "operation_id": stable_uuid(run_id, table, row["id"], "insert"),
+                "key": row["id"],
+                "row": wrapped,
+            }
         operation_size = len(canonical(operation))
         if operation_size > max_bytes:
             raise ValueError(f"one {table} row exceeds the bounded MCP transaction size")
@@ -412,27 +426,45 @@ def apply_transaction(client: Inspector, repo: str, revision: str, tables: list[
 def persist_snapshot(client: Inspector, repo: str, revision: str, base: Path,
                      snapshot: Path, run_id: str, github_repository: str) -> str:
     remote_by_table = {}
+    remote_versions_by_table = {}
+    base_by_table = {}
     desired_by_table = {}
     for table, filename in TABLE_FILES.items():
+        base_rows = load_jsonl(base / filename)
         desired = load_jsonl(snapshot / filename)
         remote_items = query_all(client, repo, table, revision)
         remote = {row["id"]: row for row in unwrap_rows(table, remote_items)}
+        remote_versions = {
+            item["key"]: item.get("row_version")
+            for item in remote_items if not item.get("deleted")
+        }
+        if any(not isinstance(value, int) or value < 1 for value in remote_versions.values()):
+            raise RuntimeError(f"{table} remote authority omitted a valid row version")
+        base_by_id = {row["id"]: row for row in base_rows}
         desired_by_id = {row["id"]: row for row in desired}
+        if len(base_by_id) != len(base_rows):
+            raise RuntimeError(f"{table} Release base contains duplicate ids")
         if len(desired_by_id) != len(desired):
             raise RuntimeError(f"{table} snapshot contains duplicate ids")
         for key, row in remote.items():
             if key not in desired_by_id:
                 raise RuntimeError(f"{table} remote authority contains unexported row {key}")
-            if value_sha256(row) != value_sha256(desired_by_id[key]):
+            remote_digest = value_sha256(row)
+            desired_digest = value_sha256(desired_by_id[key])
+            if remote_digest == desired_digest:
+                continue
+            if key not in base_by_id or remote_digest != value_sha256(base_by_id[key]):
                 raise RuntimeError(f"{table} remote row {key} conflicts with the Release snapshot")
         remote_by_table[table] = remote
+        remote_versions_by_table[table] = remote_versions
+        base_by_table[table] = base_by_id
         desired_by_table[table] = desired_by_id
 
     # Bootstrap/recover the checked-in base first. These rows are stable across
     # re-runs even when the Agent proposes a different candidate. Large tables
     # are bounded into resumable, content-addressed transactions.
     for table, filename in TABLE_FILES.items():
-        base_rows = {row["id"]: row for row in load_jsonl(base / filename)}
+        base_rows = base_by_table[table]
         missing = [base_rows[key] for key in sorted(set(base_rows) - set(remote_by_table[table]))]
         for index, operations in enumerate(operation_chunks(table, missing, "release-base"), start=1):
             revision = apply_transaction(
@@ -441,17 +473,28 @@ def persist_snapshot(client: Inspector, repo: str, revision: str, base: Path,
             )
             for operation in operations:
                 remote_by_table[table][operation["key"]] = operation["row"]["payload"]
+                remote_versions_by_table[table][operation["key"]] = 1
 
-    # Candidate facts and their refresh-lineage row are one small atomic batch.
-    # This prevents a crash from publishing a fact without its flywheel round.
+    # New candidate rows and fenced updates to existing facts share one small
+    # atomic batch. This prevents a crash from publishing a fact without its
+    # flywheel round and refuses to overwrite a concurrently changed row.
     delta_tables = []
     for table, filename in TABLE_FILES.items():
-        base_ids = {row["id"] for row in load_jsonl(base / filename)}
         delta = [
             desired_by_table[table][key]
-            for key in sorted(set(desired_by_table[table]) - base_ids - set(remote_by_table[table]))
+            for key in sorted(desired_by_table[table])
+            if key not in remote_by_table[table]
+            or value_sha256(desired_by_table[table][key])
+            != value_sha256(remote_by_table[table][key])
         ]
-        operations = [operation for chunk in operation_chunks(table, delta, run_id) for operation in chunk]
+        operations = [
+            operation
+            for chunk in operation_chunks(
+                table, delta, run_id,
+                row_versions=remote_versions_by_table[table],
+            )
+            for operation in chunk
+        ]
         if operations:
             delta_tables.append({"path": table, "operations": operations})
     if len(canonical(delta_tables)) > 70_000:
