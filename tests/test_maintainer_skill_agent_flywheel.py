@@ -1,6 +1,7 @@
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 
@@ -14,6 +15,48 @@ SPEC.loader.exec_module(MODULE)
 
 
 class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
+    def test_scope_checkout_materializes_only_exact_requested_boundary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            source.mkdir()
+            subprocess.run(["git", "init", "-q", str(source)], check=True)
+            subprocess.run(["git", "-C", str(source), "config", "user.name", "test"], check=True)
+            subprocess.run(["git", "-C", str(source), "config", "user.email", "test@example.com"], check=True)
+            (source / "wanted").mkdir()
+            (source / "wanted" / "main.ets").write_text("wanted\n")
+            (source / "sibling").mkdir()
+            (source / "sibling" / "large.bin").write_bytes(b"x" * 4096)
+            subprocess.run(["git", "-C", str(source), "add", "."], check=True)
+            subprocess.run(["git", "-C", str(source), "commit", "-qm", "fixture"], check=True)
+            revision = subprocess.check_output(
+                ["git", "-C", str(source), "rev-parse", "HEAD"], text=True
+            ).strip()
+            bare = root / "remote.git"
+            subprocess.run(["git", "clone", "-q", "--bare", str(source), str(bare)], check=True)
+            subprocess.run(
+                ["git", "-C", str(bare), "config", "uploadpack.allowFilter", "true"], check=True
+            )
+            destination = root / "checkout"
+            subprocess.run([
+                str(ROOT / "scripts/checkout-maintainer-scope.sh"),
+                bare.as_uri(), revision, "wanted", str(destination),
+            ], check=True)
+            self.assertEqual(
+                subprocess.check_output(
+                    ["git", "-C", str(destination), "rev-parse", "HEAD"], text=True
+                ).strip(),
+                revision,
+            )
+            self.assertTrue((destination / "wanted/main.ets").is_file())
+            self.assertFalse((destination / "sibling").exists())
+            self.assertEqual(
+                subprocess.check_output(
+                    ["git", "-C", str(destination), "status", "--porcelain"], text=True
+                ),
+                "",
+            )
+
     def test_selection_prefers_small_tested_unbound_scope(self):
         scopes = [
             {"id": "large", "repositoryId": "r", "pathBoundary": "large", "sourceFileCount": 40, "testFileCount": 8, "evidence": [{"path": "large/main.rs"}]},
