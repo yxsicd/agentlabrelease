@@ -135,7 +135,7 @@ The object must have exactly these fields:
 - scopeSkillIds: an array containing only the selected scope id
 - kind: analysis
 - dimensions: exactly responsibility, boundary, relations, behavior
-- interpretation: a concise evidence-backed maintenance contract
+- interpretation: a concise evidence-backed maintenance contract of 400-1200 Unicode characters
 - evidence: at least two objects with repository-relative path and exact 40-hex gitBlobOid
 - limitations: at least two concrete unproved claims
 
@@ -150,6 +150,9 @@ Use git rev-parse HEAD:path to obtain every blob identity. Evidence paths may in
         )
     finally:
         participant.close()
+        # The Agent needs a read-only view while it runs, but the evidence
+        # artifact must never follow this link and copy the whole repository.
+        (workspace / "source").unlink(missing_ok=True)
     proposal = workspace / "program-fact-proposal.json"
     require(proposal.is_file() and not proposal.is_symlink(), "Agent did not produce a proposal")
     shutil.copy2(proposal, args.output / "program-fact-proposal.json")
