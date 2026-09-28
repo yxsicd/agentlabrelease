@@ -61,6 +61,35 @@ class FocusedFactRefreshTest(unittest.TestCase):
                     "evidence_root": ROOT, "output": Path(directory) / "request.json",
                 }))
 
+    def test_interpretation_repair_is_only_requested_for_string_length_violation(self):
+        self.assertEqual(
+            MODULE.interpretation_length_to_repair({"interpretation": "x" * 1601}),
+            1601,
+        )
+        self.assertEqual(
+            MODULE.interpretation_length_to_repair({"interpretation": "x" * 79}),
+            79,
+        )
+        self.assertIsNone(
+            MODULE.interpretation_length_to_repair({"interpretation": "x" * 1600})
+        )
+        self.assertIsNone(MODULE.interpretation_length_to_repair({"interpretation": []}))
+
+    def test_interpretation_repair_cannot_mutate_other_agent_evidence(self):
+        before = {"id": "fact", "evidence": [{"path": "a"}], "interpretation": "x" * 1601}
+        after = {**before, "interpretation": "y" * 500}
+        self.assertEqual(MODULE.validate_interpretation_only_repair(before, after), 500)
+        with self.assertRaisesRegex(ValueError, "non-interpretation fields"):
+            MODULE.validate_interpretation_only_repair(
+                before,
+                {**after, "evidence": [{"path": "different"}]},
+            )
+        with self.assertRaisesRegex(ValueError, "requested length range"):
+            MODULE.validate_interpretation_only_repair(
+                before,
+                {**before, "interpretation": "z" * 399},
+            )
+
     def test_validate_replaces_one_fact_and_requires_every_feedback_path(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

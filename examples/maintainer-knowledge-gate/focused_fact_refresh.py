@@ -23,6 +23,37 @@ def module(name: str, path: Path):
 BASE = module("agent_flywheel_base", HERE / "agent_flywheel.py")
 READINESS = module("shadow_readiness", HERE / "shadow_construction_readiness.py")
 
+INTERPRETATION_MIN = 80
+INTERPRETATION_MAX = 1600
+INTERPRETATION_TARGET_MIN = 400
+INTERPRETATION_TARGET_MAX = 1500
+
+
+def interpretation_length_to_repair(proposal: dict) -> int | None:
+    """Return the invalid string length, leaving non-length schema errors to validation."""
+    value = proposal.get("interpretation")
+    if not isinstance(value, str):
+        return None
+    length = len(value)
+    if INTERPRETATION_MIN <= length <= INTERPRETATION_MAX:
+        return None
+    return length
+
+
+def validate_interpretation_only_repair(before: dict, after: dict) -> int:
+    before_stable = {key: value for key, value in before.items() if key != "interpretation"}
+    after_stable = {key: value for key, value in after.items() if key != "interpretation"}
+    BASE.require(before_stable == after_stable,
+                 "interpretation repair changed non-interpretation fields")
+    value = after.get("interpretation")
+    BASE.require(isinstance(value, str), "interpretation repair produced a non-string value")
+    length = len(value)
+    BASE.require(
+        INTERPRETATION_TARGET_MIN <= length <= INTERPRETATION_TARGET_MAX,
+        "interpretation repair did not satisfy the requested length range",
+    )
+    return length
+
 
 def prepare(args) -> None:
     plan_root = (args.knowledge / "construction-plans").resolve(strict=True)
@@ -103,10 +134,42 @@ Read focused-refresh-request.json and inspect the exact read-only source checkou
 Write exactly one JSON object to program-fact-proposal.json. Do not modify source/ or the request.
 
 The object must use the same exact schema, id, repositoryId, sourceRevision, scopeSkillIds, kind and four semantic dimensions as existingFact. Preserve every existing evidence path and add exact Git Blob evidence for every required path: {json.dumps(required)}. Update interpretation so it accurately covers the complete implementation/Oracle source surface, and retain at least two concrete limitations without claiming build, emulator, Oracle, or operation success. Evidence objects contain only path and exact 40-hex gitBlobOid obtained with git rev-parse HEAD:path. Do not add unrelated paths, secrets, generated files, runtime claims, a gold patch, or automatic-promotion fields. Parse the completed JSON once, then finish.
+
+The interpretation is a bounded maintenance contract: it must contain {INTERPRETATION_TARGET_MIN}-{INTERPRETATION_TARGET_MAX} Unicode characters and must never exceed {INTERPRETATION_MAX}. Put detailed uncertainty in limitations rather than expanding interpretation.
 """
     try:
         participant.turn("maintainer-skill-focused-refresh", workspace, prompt=prompt,
                          wall_time_limit_seconds=720)
+        proposal = workspace / "program-fact-proposal.json"
+        BASE.require(proposal.is_file() and not proposal.is_symlink(),
+                     "Agent did not produce a refresh proposal")
+        proposed = BASE.load(proposal)
+        invalid_length = interpretation_length_to_repair(proposed)
+        if invalid_length is not None:
+            before_repair = args.output / "pre-repair-program-fact-proposal.json"
+            shutil.copy2(proposal, before_repair)
+            repair_prompt = f"""Repair only the interpretation length in program-fact-proposal.json.
+Its current interpretation has {invalid_length} Unicode characters; the hard limit is {INTERPRETATION_MAX}.
+Rewrite only interpretation to {INTERPRETATION_TARGET_MIN}-{INTERPRETATION_TARGET_MAX} Unicode characters while preserving its evidence-backed responsibility, boundary, relations, behavior, and uncertainty. Keep every other JSON field and value exactly unchanged. Parse the JSON once, verify the new interpretation length, then finish. Do not inspect or modify source/.
+"""
+            participant.turn(
+                "maintainer-skill-focused-refresh-interpretation-repair",
+                workspace,
+                prompt=repair_prompt,
+                wall_time_limit_seconds=360,
+            )
+            repaired = BASE.load(proposal)
+            repaired_length = validate_interpretation_only_repair(proposed, repaired)
+            BASE.write(args.output / "interpretation-repair-receipt.json", {
+                "schema": "agentlab.maintainer_skill_interpretation_repair_receipt.v1",
+                "automaticPromotion": False,
+                "changedFields": ["interpretation"],
+                "beforeLength": invalid_length,
+                "afterLength": repaired_length,
+                "beforeSha256": BASE.digest(before_repair),
+                "afterSha256": BASE.digest(proposal),
+                "decision": "accepted-bounded-agent-repair-for-validation",
+            })
     finally:
         participant.close()
         (workspace / "source").unlink(missing_ok=True)
