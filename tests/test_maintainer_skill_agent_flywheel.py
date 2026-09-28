@@ -16,9 +16,9 @@ SPEC.loader.exec_module(MODULE)
 class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
     def test_selection_prefers_small_tested_unbound_scope(self):
         scopes = [
-            {"id": "large", "repositoryId": "r", "pathBoundary": "large", "sourceFileCount": 40, "testFileCount": 8},
-            {"id": "small-no-tests", "repositoryId": "r", "pathBoundary": "small", "sourceFileCount": 2, "testFileCount": 0},
-            {"id": "small-tested", "repositoryId": "r", "pathBoundary": "tested", "sourceFileCount": 3, "testFileCount": 1},
+            {"id": "large", "repositoryId": "r", "pathBoundary": "large", "sourceFileCount": 40, "testFileCount": 8, "evidence": [{"path": "large/main.rs"}]},
+            {"id": "small-no-tests", "repositoryId": "r", "pathBoundary": "small", "sourceFileCount": 2, "testFileCount": 0, "evidence": [{"path": "small/main.rs"}]},
+            {"id": "small-tested", "repositoryId": "r", "pathBoundary": "tested", "sourceFileCount": 3, "testFileCount": 1, "evidence": [{"path": "tested/main.rs"}]},
         ]
         assessment = {"skills": [
             {"skillId": "large", "maturity": "L1-structural-ready"},
@@ -26,6 +26,19 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
             {"skillId": "small-tested", "maturity": "L1-structural-ready"},
         ]}
         self.assertEqual(MODULE.select_scope(scopes, assessment, "r")["id"], "small-tested")
+
+    def test_selection_skips_scope_whose_inventory_evidence_is_outside_boundary(self):
+        scopes = [
+            {"id": "broken", "repositoryId": "r", "pathBoundary": "entry/_build", "sourceFileCount": 1,
+             "testFileCount": 1, "evidence": [{"path": "entry/build-profile.json5"}]},
+            {"id": "reachable", "repositoryId": "r", "pathBoundary": "entry/src", "sourceFileCount": 2,
+             "testFileCount": 0, "evidence": [{"path": "entry/src/main.ets"}]},
+        ]
+        assessment = {"skills": [
+            {"skillId": "broken", "maturity": "L1-structural-ready"},
+            {"skillId": "reachable", "maturity": "L1-structural-ready"},
+        ]}
+        self.assertEqual(MODULE.select_scope(scopes, assessment, "r")["id"], "reachable")
 
     def test_compare_requires_one_l2_gain_without_l3_promotion(self):
         before = {
