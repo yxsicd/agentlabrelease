@@ -1,5 +1,5 @@
 {
-  "assessmentId": "maintainer-skill-assessment-65804d02a51a5d2bb858",
+  "assessmentId": "maintainer-skill-assessment-f69f707f7fb3b8fc2c9b",
   "automaticPromotion": false,
   "decision": "continue",
   "gapCounts": {
@@ -11,7 +11,7 @@
     "MS-RESPONSIBILITY-EVIDENCE-MISSING": 466
   },
   "inputs": {
-    "programFactsSha256": "4e9c27ca50ff3d42521408bd44a442570dc7f90888802186144b15d2d0132cf7",
+    "programFactsSha256": "37874bb03210e15e5f3aaf6f5bdcd66250ef9bbf911dc5ac53b4d10493021e96",
     "scopeSkillsSha256": "65532f79e008a0e9a2589f966808fc8225e19ab78f96981a3c3eef273e941a28"
   },
   "nextRoundObjectives": [
