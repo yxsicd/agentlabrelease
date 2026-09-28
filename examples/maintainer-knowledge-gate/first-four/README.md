@@ -48,9 +48,11 @@ iterative generation method; round 4 ran the repository-independent evidence
 flywheel and bound existing analysis to exact scope Skills. Its decision
 remains `continue`: later rounds must deepen behavior contracts, program
 relations, and executable operation evidence rather than treating the first
-code read as final.
+code read as final. Round 5 consumed that gap queue selectively: evidence was
+promoted only when it was exact-revision, scope-bound, and honest about its
+limits.
 
-The retained reports under [`assessments/`](assessments/) are the first three
+The retained reports under [`assessments/`](assessments/) are the first four
 real flywheel passes over all four repositories:
 
 | Pass | Structural ready | Program bound | Semantic ready | Maintenance ready |
@@ -58,13 +60,16 @@ real flywheel passes over all four repositories:
 | Structural catalog only | 480 | 0 | 0 | 0 |
 | Existing 20 program/analysis facts | 480 | 10 | 0 | 0 |
 | Explicit universal dimensions and scope bindings | 480 | 11 | 4 | 0 |
+| Targeted semantic and executable operation evidence | 480 | 13 | 6 | 2 |
 
-The four L2 scopes are the Harmony IAP consumable page and the Cordova IAP
-Ionic, TypeScript and Java bridge layers supported by the existing bounded-flow
-analysis. No scope is L3: the existing build evidence is repository/package
-level or blocked and is not silently treated as executable verification for
-those four scopes. The latest gap queue retains 469 unbound scopes and drives
-the next targeted program-analysis round.
+The guide `ArkWeb/SetBasicAttrsEvts` sample and the Harmony IAP consumable page
+are now L3 maintenance-ready. Both have complete bounded semantic dimensions
+and executable emulator evidence, but neither is automatically an approved
+evaluation case: independent Oracle review and case promotion remain separate
+gates. The code-workshop `features/devpractices` scope is newly L2 based on
+cache/image contracts; the Cordova IAP Ionic, TypeScript and Java bridge layers
+remain L2 because their build/runtime contract is still unresolved. The latest
+gap queue retains 467 unbound scopes and drives the next targeted round.
 
 [`case_generation_rounds.jsonl`](case_generation_rounds.jsonl) starts the
 separate downstream generation lineage. Round 1 is intentionally an honest

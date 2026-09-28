@@ -89,8 +89,8 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     let refresh_rounds = rows(&baseline.join("maintainer_skill_refresh_rounds.jsonl"));
     let generation_rounds = rows(&baseline.join("case_generation_rounds.jsonl"));
     assert_eq!(skills.len(), 12);
-    assert_eq!(facts.len(), 20);
-    assert_eq!(refresh_rounds.len(), 4);
+    assert_eq!(facts.len(), 24);
+    assert_eq!(refresh_rounds.len(), 5);
     assert_eq!(generation_rounds.len(), 1);
     assert!(
         fs::read_to_string(baseline.join("evaluation_cases.jsonl"))
@@ -196,6 +196,7 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     let second = &refresh_rounds["first-four-round-2-ownership-and-lineage"];
     let third = &refresh_rounds["first-four-round-3-iterative-case-generation"];
     let fourth = &refresh_rounds["first-four-round-4-evidence-flywheel-practice"];
+    let fifth = &refresh_rounds["first-four-round-5-targeted-operation-evidence"];
     assert_eq!(first["roundIndex"], 1);
     assert_eq!(first["parentRoundSha256"], Value::Null);
     assert_eq!(
@@ -217,15 +218,25 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     assert_eq!(fourth["roundIndex"], 4);
     assert_eq!(fourth["decision"], "continue");
     assert_eq!(
-        fourth["tables"]["processSkillsSha256"],
+        fifth["parentRoundSha256"],
+        digest(&serde_json::to_vec(fourth).unwrap())
+    );
+    assert_eq!(fifth["roundIndex"], 5);
+    assert_eq!(fifth["decision"], "continue");
+    assert_eq!(
+        fifth["assessment"]["sha256"],
+        digest(&fs::read(baseline.join(fifth["assessment"]["path"].as_str().unwrap())).unwrap())
+    );
+    assert_eq!(
+        fifth["tables"]["processSkillsSha256"],
         digest(&fs::read(baseline.join("maintainer_skills.jsonl")).unwrap())
     );
     assert_eq!(
-        fourth["tables"]["scopeSkillsSha256"],
+        fifth["tables"]["scopeSkillsSha256"],
         digest(&fs::read(baseline.join("maintainer_scope_skills.jsonl")).unwrap())
     );
     assert_eq!(
-        fourth["tables"]["programFactsSha256"],
+        fifth["tables"]["programFactsSha256"],
         digest(&fs::read(baseline.join("program_facts.jsonl")).unwrap())
     );
 
@@ -233,6 +244,7 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     let assessment_one = json(&assessment_root.join("round-1-structural.json"));
     let assessment_two = json(&assessment_root.join("round-2-current-program-facts.json"));
     let assessment_three = json(&assessment_root.join("round-3-explicit-evidence-bindings.json"));
+    let assessment_four = json(&assessment_root.join("round-4-targeted-operation-evidence.json"));
     assert_eq!(assessment_one["roundIndex"], 1);
     assert_eq!(assessment_one["parentAssessmentSha256"], Value::Null);
     assert_eq!(
@@ -242,6 +254,10 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     assert_eq!(
         assessment_three["parentAssessmentSha256"],
         digest(&fs::read(assessment_root.join("round-2-current-program-facts.json")).unwrap())
+    );
+    assert_eq!(
+        assessment_four["parentAssessmentSha256"],
+        digest(&fs::read(assessment_root.join("round-3-explicit-evidence-bindings.json")).unwrap())
     );
     assert_eq!(assessment_one["totals"]["structuralReadyCount"], 480);
     assert_eq!(assessment_two["totals"]["programBoundCount"], 10);
@@ -253,8 +269,15 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
         assessment_three["gapCounts"]["MS-PROGRAM-EVIDENCE-UNBOUND"],
         469
     );
+    assert_eq!(assessment_four["totals"]["programBoundCount"], 13);
+    assert_eq!(assessment_four["totals"]["semanticReadyCount"], 6);
+    assert_eq!(assessment_four["totals"]["maintenanceReadyCount"], 2);
     assert_eq!(
-        assessment_three["inputs"]["programFactsSha256"],
+        assessment_four["gapCounts"]["MS-PROGRAM-EVIDENCE-UNBOUND"],
+        467
+    );
+    assert_eq!(
+        assessment_four["inputs"]["programFactsSha256"],
         digest(&fs::read(baseline.join("program_facts.jsonl")).unwrap())
     );
 
