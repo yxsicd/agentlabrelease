@@ -222,9 +222,17 @@ class Inspector:
                             "--tool-args-json", canonical(payload).decode()],
             text=True, capture_output=True,
         )
-        if proc.returncode:
+        try:
+            outer = json.loads(proc.stdout) if proc.stdout.strip() else None
+        except json.JSONDecodeError:
+            outer = None
+        # Inspector intentionally exits non-zero when an MCP tool returns
+        # isError=true. The JSON envelope is still authoritative and, for
+        # probes such as a not-yet-created table, is expected control flow.
+        if outer is None and proc.returncode:
             raise RuntimeError(f"MCP inspector failed for {operation}: {proc.stderr.strip()}")
-        outer = json.loads(proc.stdout)
+        if outer is None:
+            raise RuntimeError(f"MCP inspector returned no JSON for {operation}")
         structured = outer.get("result", {}).get("structuredContent", {})
         if structured.get("outcome") == "error" or outer.get("result", {}).get("isError"):
             if allow_error:
