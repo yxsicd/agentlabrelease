@@ -140,7 +140,12 @@ class MaintainerSkillTableGitTest(unittest.TestCase):
                 latest["tables"]["programFactsSha256"],
                 MODULE.file_sha256(output / "program_facts.jsonl"),
             )
-            self.assertEqual(MODULE.load(output / "stage-manifest.json")["assessment"], "round-5-agent-42.json")
+            self.assertEqual(
+                MODULE.load(output / "stage-manifest.json")["assessment"],
+                "assessments/round-5-agent-42.json",
+            )
+            self.assertTrue((output / "maintainer-knowledge-cut.json").is_file())
+            self.assertTrue((output / "assessments/round-5-agent-42.json").is_file())
 
 
 if __name__ == "__main__":

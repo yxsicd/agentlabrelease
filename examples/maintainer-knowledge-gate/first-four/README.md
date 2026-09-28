@@ -97,6 +97,27 @@ exact committed revision and opens a Release pull request containing the sorted
 JSONL export. `tableGitAuthority.revision` in the cut binds that export. The pull
 request remains a review boundary and `automaticPromotion` stays false.
 
+The workflow can run one to three iterations as one bounded loop. Each
+iteration consumes the assessment produced by the immediately preceding
+iteration, adds exactly one previously unbound semantic fact, and must increase
+both `programBoundCount` and `semanticReadyCount` by exactly one without
+increasing `maintenanceReadyCount`. All iterations are staged locally first;
+TableGit receives the successful batch only after every requested iteration has
+passed source-Blob verification and the Rust maturity gate. Therefore a later
+failed iteration cannot leave a partially published loop. The final exact
+TableGit revision is exported in one review PR.
+
+`repository=auto` is the standard unattended policy. It considers only bounded
+L1 scopes whose own inventory evidence is reachable inside their declared path
+boundary, then chooses the repository with the lowest normalized semantic
+coverage. This prevents a large repository from monopolizing the loop and
+prevents impossible generated scopes from consuming an Agent turn. Explicit
+repository selection remains available for diagnosis. A loop stops without a
+TableGit write on an invalid proposal, duplicate fact id, source revision or
+Blob mismatch, zero/multiple-scope gain, attempted L3 promotion, or exhaustion
+of reachable L1 scopes. The hard maximum of three iterations limits model cost
+and the size of one atomic authority transaction.
+
 TableGit authoring and Git remote publication are intentionally separate
 authority lanes. The public Action needs `table.write`; it does not receive or
 attempt to bypass `mcp.publish`. An authenticated operator may separately run
