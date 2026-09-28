@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.dev/schemas/shadow-case-construction-plan.schema.json",
+  "title": "Shadow case construction-readiness plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "candidateId", "candidateSha256", "requiredImplementationPaths", "requiredOraclePaths", "runtimeRequirements", "oracleExecution", "wrongVariantCalibration", "automaticPromotion"],
+  "properties": {
+    "schema": { "const": "agentlab.shadow_case_construction_plan.v1" },
+    "candidateId": { "type": "string", "minLength": 1 },
+    "candidateSha256": { "$ref": "#/$defs/sha256" },
+    "requiredImplementationPaths": { "$ref": "#/$defs/pathRequirements" },
+    "requiredOraclePaths": { "$ref": "#/$defs/pathRequirements" },
+    "runtimeRequirements": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "description", "status", "evidence"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,80}$" },
+          "description": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["qualified", "unqualified"] },
+          "evidence": { "$ref": "#/$defs/evidence" }
+        }
+      }
+    },
+    "oracleExecution": { "$ref": "#/$defs/qualification" },
+    "wrongVariantCalibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidence", "requiredCount", "executedCount"],
+      "properties": {
+        "status": { "enum": ["qualified", "unqualified"] },
+        "evidence": { "$ref": "#/$defs/evidence" },
+        "requiredCount": { "type": "integer", "minimum": 2 },
+        "executedCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "automaticPromotion": { "const": false }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "pathRequirements": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "reason"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "sha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    },
+    "qualification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidence"],
+      "properties": {
+        "status": { "enum": ["qualified", "unqualified"] },
+        "evidence": { "$ref": "#/$defs/evidence" }
+      }
+    }
+  }
+}

@@ -30,5 +30,24 @@ The next qualification work should proceed in this order:
 4. onboard `asrelease` only after its repository boundaries and public/private
    release responsibilities have explicit maintainer Skills.
 
+For a retained shadow proposal, run the fail-closed construction-readiness
+check before implementing an Oracle:
+
+```sh
+python3 examples/maintainer-knowledge-gate/shadow_construction_readiness.py \
+  --knowledge examples/maintainer-knowledge-gate/first-four \
+  --candidate-id shadow-case-uiability-backup-restore-state-recovery \
+  --plan examples/maintainer-knowledge-gate/first-four/construction-plans/uiability-backup-restore.json \
+  --evidence-root . \
+  --output construction-readiness.json
+```
+
+`blocked-knowledge-refresh` means required implementation or Oracle paths are
+not revision-bound by the candidate's facts and visible path surface.
+`blocked-qualification` means knowledge is sufficient but runtime, Oracle, or
+wrong-variant evidence is incomplete. Only `ready-for-construction` may proceed
+to the existing construction-stage Maintainer knowledge gate. A qualified
+claim must reference regular evidence files by exact SHA-256.
+
 Do not copy the portfolio into mutable runtime state. TableGit remains the live
 knowledge authority; this file is a Release-pinned sampling plan.
