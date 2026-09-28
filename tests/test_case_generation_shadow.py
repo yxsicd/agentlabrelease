@@ -50,6 +50,11 @@ class CaseGenerationShadowTest(unittest.TestCase):
                 "candidateLimit": 1, "constructionMode": "shadow",
                 "candidateGateRequired": True, "independentOracleRequired": True,
                 "wrongVariantCalibrationRequired": True,
+                "runtimeTarget": "harmony-emulator",
+                "externalHardwareAllowed": False,
+                "physicalDeviceFallbackAllowed": False,
+                "shadowEligible": True,
+                "blockers": [],
             },
             "output": "shadow-case-proposal.json",
         }
@@ -81,7 +86,7 @@ class CaseGenerationShadowTest(unittest.TestCase):
             "oracleHypothesis": {
                 "framework": framework,
                 "observables": ["the first-stage state is preserved", "the second-stage transition is observable"],
-                "requiredEnvironment": ["the exact pinned repository test environment"],
+                "requiredEnvironment": ["a pinned HarmonyOS emulator image and repository test environment"],
                 "wrongVariants": ["drop the first-stage state", "apply the second-stage rule unconditionally"],
                 "status": "hypothesis-unqualified",
             },
@@ -128,6 +133,7 @@ class CaseGenerationShadowTest(unittest.TestCase):
                 MODULE.file_digest(KNOWLEDGE / "maintainer-knowledge-cut.json"),
             )
             self.assertFalse(prepared["automaticPromotion"])
+            self.assertEqual(prepared["policy"]["runtimeTarget"], "harmony-emulator")
 
     def test_retained_shadow_candidate_and_round_are_exactly_bound(self):
         request = self.request()
@@ -203,6 +209,56 @@ class CaseGenerationShadowTest(unittest.TestCase):
         proposal["oracleHypothesis"]["requiredEnvironment"] = "one environment"
         with self.assertRaisesRegex(ValueError, "requiredEnvironment is incomplete"):
             MODULE.validate_proposal(request, proposal)
+
+    def test_validator_rejects_physical_or_external_hardware_environment(self):
+        request = self.request()
+        proposal = self.proposal(request)
+        proposal["oracleHypothesis"]["requiredEnvironment"] = [
+            "a HarmonyOS emulator plus an attached USB serial port",
+        ]
+        with self.assertRaisesRegex(ValueError, "requires external hardware"):
+            MODULE.validate_proposal(request, proposal)
+
+        proposal["oracleHypothesis"]["requiredEnvironment"] = [
+            "a physical device running the pinned HarmonyOS image",
+        ]
+        with self.assertRaisesRegex(ValueError, "physical device"):
+            MODULE.validate_proposal(request, proposal)
+
+    def test_serial_scope_is_blocked_before_the_construction_agent_runs(self):
+        scopes = {row["id"]: row for row in MODULE.rows(KNOWLEDGE / "maintainer_scope_skills.jsonl")}
+        facts = {row["id"]: row for row in MODULE.rows(KNOWLEDGE / "program_facts.jsonl")}
+        scope = scopes["skill-scope-guide-snippets-serial-serialmanagersample"]
+        fact = facts["agent-analysis-serial-port-demo-app"]
+        self.assertIn("serial-peripheral", MODULE.external_hardware_blockers(scope, fact))
+        self.assertIn("usb-peripheral", MODULE.external_hardware_blockers(scope, fact))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            loop_path = root / "loop-receipt.json"
+            request_path = root / "shadow-request.json"
+            MODULE.write_json(loop_path, {
+                "schema": "agentlab.maintainer_skill_bounded_loop_receipt.v1",
+                "requestedIterations": 1,
+                "completedIterations": 1,
+                "automaticPromotion": False,
+                "iterations": [{
+                    "iteration": 1,
+                    "repository": fact["repositoryId"],
+                    "scope": scope["id"],
+                    "acceptedFactId": fact["id"],
+                    "before": self.request()["loopBefore"],
+                    "after": self.request()["loopAfter"],
+                    "automaticPromotion": False,
+                }],
+            })
+            MODULE.prepare(type("Args", (), {
+                "knowledge": KNOWLEDGE,
+                "loop_receipt": loop_path,
+                "output": request_path,
+            }))
+            policy = MODULE.load(request_path)["policy"]
+            self.assertFalse(policy["shadowEligible"])
+            self.assertEqual(policy["runtimeTarget"], "harmony-emulator")
 
 
 if __name__ == "__main__":
