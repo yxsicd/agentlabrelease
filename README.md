@@ -123,6 +123,20 @@ The acceptance plan and receipt workflow is documented in
 [the immutable Release Graph](docs/release-graph.md); older emulator evidence
 cannot qualify a newer closure.
 
+The UIAbility recovery shadow candidate now has an external, supervisor-owned
+layout Oracle calibrated on the Linux HarmonyOS emulator. Two source-bound
+meaningful-wrong variants are qualified: a hard-coded saved value is observed
+as `Welcome + APP_RECOVERY`, while disabled recovery wiring remains
+`Recovered Twice + NORMAL`. Each run uses a unique execution-only bundle
+identity and is bracketed by passing reference controls, preventing bundle-local
+recovery state from contaminating the result. The Rust-native
+`agentlab-uiability-recovery-mutation-qualification` gate binds the exact plan,
+reference receipt, source revision, HAP/layout digests and direct hwlinux
+operations. This proves abnormal-recovery discrimination only; normal-exit
+negative control, exact API 22 runtime, real-device and performance/power/thermal
+qualification remain open, so case-contract authority and automatic promotion
+remain false.
+
 Component-based publication now uses [reference-only environment releases](docs/component-publication.md).
 Tagged releases additionally use an [immutable Release Graph](docs/release-graph.md)
 to bind exact component bytes, schema compatibility and target qualification

@@ -1,0 +1,124 @@
+{
+  "schema": "agentlab.uiability_recovery_mutation_calibration.v1",
+  "status": "passed",
+  "planSha256": "c9b1d35bbdd5029f76a0526ece1271f9b40acebfdf341d73af872c23c9752ec2",
+  "referenceRuntimeReceiptSha256": "ae6f49eefb0d8478ff7c23ac802bb9f614ea0712b51c4714b900f5d72fb97bb9",
+  "source": {
+    "repositoryId": "guide-snippets",
+    "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+    "treeOid": "20bc24c3933662e0f7a55022bf918015407a94b2"
+  },
+  "environment": {
+    "host": "huawei-ThinkCentre-M920t",
+    "emulator": "codex_phone_7",
+    "runtime": "HarmonyOS 7.0.0 API 26",
+    "architecture": "x86_64",
+    "buildTargetApi": 22
+  },
+  "execution": {
+    "oracleAuthority": "host-supervisor-layout-dump",
+    "trigger": "click-AgentLabRecoveryTrigger-appRecovery-saveAppState-restartApp",
+    "routeDecision": "peer_direct",
+    "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a"
+  },
+  "identityIsolation": {
+    "executionOnly": true,
+    "semanticMutationOrthogonal": true,
+    "bundleIdentityCount": 4,
+    "reason": "HarmonyOS appRecovery state is bundle-scoped; a fresh bundle identity prevents a previous recovery run from contaminating the next control or variant."
+  },
+  "referenceControls": [
+    {
+      "phase": "pre",
+      "bundleName": "com.samples.myapplication.refiso",
+      "appScopeSha256": "04824b8812e940e6ab4e98810bd12efef343364bff33a3ddc4595ca6fa14e5c0",
+      "applicationHapSha256": "7dcec02c18f436b1d9e917a879990f897456a2164e41900bdb7ed68a49706b11",
+      "built": true,
+      "executed": true,
+      "oraclePassed": true,
+      "operationId": "exec-00000000000000b5",
+      "routeDecision": "peer_direct",
+      "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+      "beforeLayoutSha256": "b27866a81f11f49f0a093e1dc294894a4d25a4a9c15c3ba02b0429f76941bd9e",
+      "afterLayoutSha256": "6c8422350511c805309a7ed0abfee0481ecd65e72c3f8e331cf6399e2bd181d7",
+      "before": {"visibleText": "Recovered Twice", "launchReason": "NORMAL"},
+      "after": {"visibleText": "Recovered Twice", "launchReason": "APP_RECOVERY"}
+    },
+    {
+      "phase": "post",
+      "bundleName": "com.samples.myapplication.refpost",
+      "appScopeSha256": "aaaf3b0694f4bdd244906214f753610088aa03f64411595ef7a66b71d03dd9e9",
+      "applicationHapSha256": "7e3a3fbc2ad2cc7a5afa11d8b11c4ac451d061c8e79c970a4e36287717ccb634",
+      "built": true,
+      "executed": true,
+      "oraclePassed": true,
+      "operationId": "exec-00000000000000b8",
+      "routeDecision": "peer_direct",
+      "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+      "beforeLayoutSha256": "9c0fdf1c9382954387bb32679dba3a0e00b211b289f98e52f292f670508bbbbb",
+      "afterLayoutSha256": "3df82ae6c086938c7b4d2380166790905d122a108649609f1a7bbaee83545fe5",
+      "before": {"visibleText": "Recovered Twice", "launchReason": "NORMAL"},
+      "after": {"visibleText": "Recovered Twice", "launchReason": "APP_RECOVERY"}
+    }
+  ],
+  "variants": [
+    {
+      "id": "hardcoded-recovered-value",
+      "bundleName": "com.samples.myapplication.hardcoded",
+      "appScopeSha256": "f72921a07d6830b7cd92d4fde040e2aff444c1e19f78dec7a85f2854eb9a3e98",
+      "sourceMutation": {
+        "path": "Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets",
+        "mutatedFileSha256": "2b129bc9dbab6f96d8df491bca92c319a7a2c7405afe5d90729b644d590b62af",
+        "normalizedPatchSha256": "df98ea528360b403cc2cbda7b6979318fc5d7ef89c1c6472cf1a254e95c38200",
+        "normalizedPatchByteLength": 467
+      },
+      "applicationHapSha256": "053aacc595d4577fcd209b3fef5e1b04f4f691b0846dbf9bfb9c09cc1a1aa9f0",
+      "built": true,
+      "executed": true,
+      "oracleKilled": true,
+      "failedAssertions": ["recovery-assertion"],
+      "operationId": "exec-00000000000000b6",
+      "routeDecision": "peer_direct",
+      "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+      "beforeLayoutSha256": "9d9ffbc42f54a55d421f2245a873eb46b3ebfc9967e713fc1e25c10022d473d1",
+      "afterLayoutSha256": "34ed67359d89cbf302cd7b7b049aa1c29347b8ba360b531423a7fabd2b6d71fa",
+      "before": {"visibleText": "Recovered Twice", "launchReason": "NORMAL"},
+      "after": {"visibleText": "Welcome", "launchReason": "APP_RECOVERY"}
+    },
+    {
+      "id": "restore-wiring-disabled",
+      "bundleName": "com.samples.myapplication.wiring",
+      "appScopeSha256": "73e8d3edd79a763a3dbba4cb1a894ea5348aa2c3121285f63a128a38e6fe96a0",
+      "sourceMutation": {
+        "path": "Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets",
+        "mutatedFileSha256": "154a5038cdc6b4270744e738dc44c5b428e5338e6be4ec91c19ff4e547e56027",
+        "normalizedPatchSha256": "468321a435f9921c9caa84df0bb3cfd0f7f83f43415e64dd2dd5085e303823e0",
+        "normalizedPatchByteLength": 349
+      },
+      "applicationHapSha256": "5f740fa1d21a11141115f7b1bbfc434407b2654e52df5ae3df5d4e32ab3ac071",
+      "built": true,
+      "executed": true,
+      "oracleKilled": true,
+      "failedAssertions": ["recovery-assertion"],
+      "operationId": "exec-00000000000000b7",
+      "routeDecision": "peer_direct",
+      "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+      "beforeLayoutSha256": "19ab170554ae2b8ceadaf1e9341fe2ca576aa05dba2d5a97d185ab86c3602757",
+      "afterLayoutSha256": "314e8d41d6160f0fe6c82c44a3987c0c8e136653b59a534399f39bbec07f0822",
+      "before": {"visibleText": "Recovered Twice", "launchReason": "NORMAL"},
+      "after": {"visibleText": "Recovered Twice", "launchReason": "NORMAL"}
+    }
+  ],
+  "variantCount": 2,
+  "killedVariantCount": 2,
+  "mutationScore": 1.0,
+  "sameOracleApplied": true,
+  "referenceSandwichVerified": true,
+  "identityIsolationVerified": true,
+  "abnormalStopRecoveryCycle": true,
+  "independentOracleExecuted": true,
+  "normalExitNegativeControl": false,
+  "exactApi22Runtime": false,
+  "allowsCaseContract": false,
+  "automaticPromotion": false
+}

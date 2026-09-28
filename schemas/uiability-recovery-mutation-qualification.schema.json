@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/uiability-recovery-mutation-qualification.schema.json",
+  "title": "AgentLab UIAbility recovery mutation qualification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "candidateId", "source", "planSha256", "referenceRuntimeReceiptSha256", "mutationCalibrationSha256", "variantCount", "killedVariantCount", "mutationScore", "referenceSandwichVerified", "identityIsolationVerified", "abnormalStopRecoveryCycle", "independentOracleExecuted", "normalExitNegativeControl", "exactApi22Runtime", "allowsCaseContract", "automaticPromotion", "boundary", "nextGate"],
+  "properties": {
+    "schema": {"const": "agentlab.uiability_recovery_mutation_qualification.v1"},
+    "status": {"const": "mutation-discrimination-qualified-normal-exit-negative-control-required"},
+    "candidateId": {"const": "shadow-case-uiability-backup-restore-state-recovery"},
+    "source": {"type": "object"},
+    "planSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "referenceRuntimeReceiptSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "mutationCalibrationSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "variantCount": {"const": 2}, "killedVariantCount": {"const": 2}, "mutationScore": {"const": 1.0},
+    "referenceSandwichVerified": {"const": true}, "identityIsolationVerified": {"const": true}, "abnormalStopRecoveryCycle": {"const": true}, "independentOracleExecuted": {"const": true},
+    "normalExitNegativeControl": {"const": false}, "exactApi22Runtime": {"const": false}, "allowsCaseContract": {"const": false}, "automaticPromotion": {"const": false},
+    "boundary": {"type": "string", "minLength": 1}, "nextGate": {"const": "normal-exit-negative-control-on-independent-bundle-identity"}
+  }
+}

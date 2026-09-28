@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/uiability-recovery-mutation-calibration.schema.json",
+  "title": "AgentLab UIAbility recovery mutation calibration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "planSha256", "referenceRuntimeReceiptSha256", "source", "environment", "execution", "identityIsolation", "referenceControls", "variants", "variantCount", "killedVariantCount", "mutationScore", "sameOracleApplied", "referenceSandwichVerified", "identityIsolationVerified", "abnormalStopRecoveryCycle", "independentOracleExecuted", "normalExitNegativeControl", "exactApi22Runtime", "allowsCaseContract", "automaticPromotion"],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "tuple": {
+      "type": "object", "additionalProperties": false,
+      "required": ["visibleText", "launchReason"],
+      "properties": {"visibleText": {"type": "string", "minLength": 1}, "launchReason": {"enum": ["NORMAL", "APP_RECOVERY"]}}
+    },
+    "runEvidence": {
+      "type": "object",
+      "required": ["bundleName", "applicationHapSha256", "built", "executed", "operationId", "routeDecision", "targetPeerId", "beforeLayoutSha256", "afterLayoutSha256", "before", "after"],
+      "properties": {
+        "bundleName": {"type": "string", "minLength": 1}, "appScopeSha256": {"$ref": "#/$defs/sha256"}, "applicationHapSha256": {"$ref": "#/$defs/sha256"},
+        "built": {"const": true}, "executed": {"const": true}, "operationId": {"type": "string", "minLength": 1}, "routeDecision": {"const": "peer_direct"}, "targetPeerId": {"type": "string", "minLength": 1},
+        "beforeLayoutSha256": {"$ref": "#/$defs/sha256"}, "afterLayoutSha256": {"$ref": "#/$defs/sha256"}, "before": {"$ref": "#/$defs/tuple"}, "after": {"$ref": "#/$defs/tuple"}
+      }
+    }
+  },
+  "properties": {
+    "schema": {"const": "agentlab.uiability_recovery_mutation_calibration.v1"}, "status": {"const": "passed"},
+    "planSha256": {"$ref": "#/$defs/sha256"}, "referenceRuntimeReceiptSha256": {"$ref": "#/$defs/sha256"},
+    "source": {"type": "object", "additionalProperties": false, "required": ["repositoryId", "revision", "treeOid"], "properties": {"repositoryId": {"const": "guide-snippets"}, "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"}, "treeOid": {"type": "string", "pattern": "^[0-9a-f]{40}$"}}},
+    "environment": {"type": "object", "additionalProperties": false, "required": ["host", "emulator", "runtime", "architecture", "buildTargetApi"], "properties": {"host": {"type": "string"}, "emulator": {"type": "string"}, "runtime": {"type": "string"}, "architecture": {"type": "string"}, "buildTargetApi": {"const": 22}}},
+    "execution": {"type": "object", "additionalProperties": false, "required": ["oracleAuthority", "trigger", "routeDecision", "targetPeerId"], "properties": {"oracleAuthority": {"const": "host-supervisor-layout-dump"}, "trigger": {"const": "click-AgentLabRecoveryTrigger-appRecovery-saveAppState-restartApp"}, "routeDecision": {"const": "peer_direct"}, "targetPeerId": {"type": "string", "minLength": 1}}},
+    "identityIsolation": {"type": "object", "additionalProperties": false, "required": ["executionOnly", "semanticMutationOrthogonal", "bundleIdentityCount", "reason"], "properties": {"executionOnly": {"const": true}, "semanticMutationOrthogonal": {"const": true}, "bundleIdentityCount": {"const": 4}, "reason": {"type": "string", "minLength": 1}}},
+    "referenceControls": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"allOf": [{"$ref": "#/$defs/runEvidence"}, {"type": "object", "required": ["phase", "oraclePassed"], "properties": {"phase": {"enum": ["pre", "post"]}, "oraclePassed": {"const": true}}}]}},
+    "variants": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"allOf": [{"$ref": "#/$defs/runEvidence"}, {"type": "object", "required": ["id", "sourceMutation", "oracleKilled", "failedAssertions"], "properties": {"id": {"enum": ["hardcoded-recovered-value", "restore-wiring-disabled"]}, "sourceMutation": {"type": "object", "additionalProperties": false, "required": ["path", "mutatedFileSha256", "normalizedPatchSha256", "normalizedPatchByteLength"], "properties": {"path": {"type": "string"}, "mutatedFileSha256": {"$ref": "#/$defs/sha256"}, "normalizedPatchSha256": {"$ref": "#/$defs/sha256"}, "normalizedPatchByteLength": {"type": "integer", "minimum": 1}}}, "oracleKilled": {"const": true}, "failedAssertions": {"const": ["recovery-assertion"]}}}]}},
+    "variantCount": {"const": 2}, "killedVariantCount": {"const": 2}, "mutationScore": {"const": 1.0},
+    "sameOracleApplied": {"const": true}, "referenceSandwichVerified": {"const": true}, "identityIsolationVerified": {"const": true}, "abnormalStopRecoveryCycle": {"const": true}, "independentOracleExecuted": {"const": true},
+    "normalExitNegativeControl": {"const": false}, "exactApi22Runtime": {"const": false}, "allowsCaseContract": {"const": false}, "automaticPromotion": {"const": false}
+  }
+}
