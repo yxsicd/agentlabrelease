@@ -27,6 +27,10 @@ INTERPRETATION_MIN = 80
 INTERPRETATION_MAX = 1600
 INTERPRETATION_TARGET_MIN = 400
 INTERPRETATION_TARGET_MAX = 1500
+PROPOSAL_FIELDS = frozenset({
+    "schema", "id", "repositoryId", "sourceRevision", "scopeSkillIds", "kind",
+    "dimensions", "interpretation", "evidence", "limitations",
+})
 
 
 def interpretation_length_to_repair(proposal: dict) -> int | None:
@@ -40,18 +44,30 @@ def interpretation_length_to_repair(proposal: dict) -> int | None:
     return length
 
 
-def validate_interpretation_only_repair(before: dict, after: dict) -> int:
-    before_stable = {key: value for key, value in before.items() if key != "interpretation"}
-    after_stable = {key: value for key, value in after.items() if key != "interpretation"}
-    BASE.require(before_stable == after_stable,
-                 "interpretation repair changed non-interpretation fields")
+def proposal_repair_plan(proposal: dict) -> dict:
+    missing = sorted(PROPOSAL_FIELDS - set(proposal))
+    extras = sorted(set(proposal) - PROPOSAL_FIELDS) if not missing else []
+    return {
+        "interpretationLength": interpretation_length_to_repair(proposal),
+        "extraFields": extras,
+    }
+
+
+def validate_bounded_repair(before: dict, after: dict, plan: dict) -> int:
+    BASE.require(set(after) == PROPOSAL_FIELDS,
+                 "bounded repair did not produce the exact proposal fields")
+    mutable = {"interpretation"} if plan["interpretationLength"] is not None else set()
+    for key in PROPOSAL_FIELDS - mutable:
+        BASE.require(before[key] == after[key],
+                     f"bounded repair changed protected field: {key}")
     value = after.get("interpretation")
     BASE.require(isinstance(value, str), "interpretation repair produced a non-string value")
     length = len(value)
-    BASE.require(
-        INTERPRETATION_TARGET_MIN <= length <= INTERPRETATION_TARGET_MAX,
-        "interpretation repair did not satisfy the requested length range",
-    )
+    if plan["interpretationLength"] is not None:
+        BASE.require(
+            INTERPRETATION_TARGET_MIN <= length <= INTERPRETATION_TARGET_MAX,
+            "interpretation repair did not satisfy the requested length range",
+        )
     return length
 
 
@@ -133,7 +149,7 @@ def run_agent(args) -> None:
 Read focused-refresh-request.json and inspect the exact read-only source checkout. Update fact {fact['id']} only.
 Write exactly one JSON object to program-fact-proposal.json. Do not modify source/ or the request.
 
-The object must use the same exact schema, id, repositoryId, sourceRevision, scopeSkillIds, kind and four semantic dimensions as existingFact. Preserve every existing evidence path and add exact Git Blob evidence for every required path: {json.dumps(required)}. Update interpretation so it accurately covers the complete implementation/Oracle source surface, and retain at least two concrete limitations without claiming build, emulator, Oracle, or operation success. Evidence objects contain only path and exact 40-hex gitBlobOid obtained with git rev-parse HEAD:path. Do not add unrelated paths, secrets, generated files, runtime claims, a gold patch, or automatic-promotion fields. Parse the completed JSON once, then finish.
+The object must have exactly these top-level fields and no others: schema, id, repositoryId, sourceRevision, scopeSkillIds, kind, dimensions, interpretation, evidence, limitations. schema must be agentlab.maintainer_skill_fact_proposal.v1. Copy the id, repositoryId, sourceRevision, scopeSkillIds, kind and four semantic dimensions from existingFact, but do not copy its derived agentProposal field. Preserve every existing evidence path and add exact Git Blob evidence for every required path: {json.dumps(required)}. Update interpretation so it accurately covers the complete implementation/Oracle source surface, and retain at least two concrete limitations without claiming build, emulator, Oracle, or operation success. Evidence objects contain only path and exact 40-hex gitBlobOid obtained with git rev-parse HEAD:path. Do not add unrelated paths, secrets, generated files, runtime claims, a gold patch, or automatic-promotion fields. Parse the completed JSON once, then finish.
 
 The interpretation is a bounded maintenance contract: it must contain {INTERPRETATION_TARGET_MIN}-{INTERPRETATION_TARGET_MAX} Unicode characters and must never exceed {INTERPRETATION_MAX}. Put detailed uncertainty in limitations rather than expanding interpretation.
 """
@@ -144,13 +160,21 @@ The interpretation is a bounded maintenance contract: it must contain {INTERPRET
         BASE.require(proposal.is_file() and not proposal.is_symlink(),
                      "Agent did not produce a refresh proposal")
         proposed = BASE.load(proposal)
-        invalid_length = interpretation_length_to_repair(proposed)
-        if invalid_length is not None:
+        repair_plan = proposal_repair_plan(proposed)
+        if repair_plan["interpretationLength"] is not None or repair_plan["extraFields"]:
             before_repair = args.output / "pre-repair-program-fact-proposal.json"
             shutil.copy2(proposal, before_repair)
-            repair_prompt = f"""Repair only the interpretation length in program-fact-proposal.json.
-Its current interpretation has {invalid_length} Unicode characters; the hard limit is {INTERPRETATION_MAX}.
-Rewrite only interpretation to {INTERPRETATION_TARGET_MIN}-{INTERPRETATION_TARGET_MAX} Unicode characters while preserving its evidence-backed responsibility, boundary, relations, behavior, and uncertainty. Keep every other JSON field and value exactly unchanged. Parse the JSON once, verify the new interpretation length, then finish. Do not inspect or modify source/.
+            length_instruction = (
+                f"Rewrite interpretation from {repair_plan['interpretationLength']} to "
+                f"{INTERPRETATION_TARGET_MIN}-{INTERPRETATION_TARGET_MAX} Unicode characters while preserving "
+                "its evidence-backed responsibility, boundary, relations, behavior, and uncertainty."
+                if repair_plan["interpretationLength"] is not None
+                else "Keep interpretation exactly unchanged."
+            )
+            repair_prompt = f"""Apply one bounded shape repair to program-fact-proposal.json.
+{length_instruction}
+Remove only these unsupported top-level fields: {json.dumps(repair_plan['extraFields'])}.
+The final object must contain exactly: {json.dumps(sorted(PROPOSAL_FIELDS))}. Keep every protected field and value exactly unchanged. Parse the JSON once, verify the field names and interpretation length, then finish. Do not inspect or modify source/.
 """
             participant.turn(
                 "maintainer-skill-focused-refresh-interpretation-repair",
@@ -159,12 +183,15 @@ Rewrite only interpretation to {INTERPRETATION_TARGET_MIN}-{INTERPRETATION_TARGE
                 wall_time_limit_seconds=360,
             )
             repaired = BASE.load(proposal)
-            repaired_length = validate_interpretation_only_repair(proposed, repaired)
-            BASE.write(args.output / "interpretation-repair-receipt.json", {
-                "schema": "agentlab.maintainer_skill_interpretation_repair_receipt.v1",
+            repaired_length = validate_bounded_repair(proposed, repaired, repair_plan)
+            BASE.write(args.output / "bounded-repair-receipt.json", {
+                "schema": "agentlab.maintainer_skill_bounded_repair_receipt.v1",
                 "automaticPromotion": False,
-                "changedFields": ["interpretation"],
-                "beforeLength": invalid_length,
+                "changedFields": (["interpretation"]
+                                  if repair_plan["interpretationLength"] is not None else []),
+                "removedFields": repair_plan["extraFields"],
+                "beforeLength": (len(proposed["interpretation"])
+                                 if isinstance(proposed.get("interpretation"), str) else None),
                 "afterLength": repaired_length,
                 "beforeSha256": BASE.digest(before_repair),
                 "afterSha256": BASE.digest(proposal),

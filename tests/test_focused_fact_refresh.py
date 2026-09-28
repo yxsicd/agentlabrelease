@@ -75,19 +75,45 @@ class FocusedFactRefreshTest(unittest.TestCase):
         )
         self.assertIsNone(MODULE.interpretation_length_to_repair({"interpretation": []}))
 
-    def test_interpretation_repair_cannot_mutate_other_agent_evidence(self):
-        before = {"id": "fact", "evidence": [{"path": "a"}], "interpretation": "x" * 1601}
-        after = {**before, "interpretation": "y" * 500}
-        self.assertEqual(MODULE.validate_interpretation_only_repair(before, after), 500)
-        with self.assertRaisesRegex(ValueError, "non-interpretation fields"):
-            MODULE.validate_interpretation_only_repair(
+    def test_bounded_repair_removes_extras_without_mutating_agent_evidence(self):
+        before = {key: key for key in MODULE.PROPOSAL_FIELDS}
+        before.update({"interpretation": "x" * 1601, "agentProposal": {"derived": True}})
+        plan = MODULE.proposal_repair_plan(before)
+        self.assertEqual(plan, {
+            "interpretationLength": 1601,
+            "extraFields": ["agentProposal"],
+        })
+        after = {key: value for key, value in before.items() if key != "agentProposal"}
+        after["interpretation"] = "y" * 500
+        self.assertEqual(MODULE.validate_bounded_repair(before, after, plan), 500)
+        with self.assertRaisesRegex(ValueError, "protected field: evidence"):
+            MODULE.validate_bounded_repair(
                 before,
-                {**after, "evidence": [{"path": "different"}]},
+                {**after, "evidence": "different"},
+                plan,
             )
         with self.assertRaisesRegex(ValueError, "requested length range"):
-            MODULE.validate_interpretation_only_repair(
+            MODULE.validate_bounded_repair(
                 before,
-                {**before, "interpretation": "z" * 399},
+                {**after, "interpretation": "z" * 399},
+                plan,
+            )
+
+    def test_missing_required_field_is_not_automatically_repaired(self):
+        proposal = {key: key for key in MODULE.PROPOSAL_FIELDS - {"evidence"}}
+        self.assertEqual(MODULE.proposal_repair_plan(proposal)["extraFields"], [])
+
+    def test_extra_only_repair_must_preserve_valid_interpretation(self):
+        before = {key: key for key in MODULE.PROPOSAL_FIELDS}
+        before.update({"interpretation": "x" * 500, "agentProposal": {"derived": True}})
+        plan = MODULE.proposal_repair_plan(before)
+        after = {key: value for key, value in before.items() if key != "agentProposal"}
+        self.assertEqual(MODULE.validate_bounded_repair(before, after, plan), 500)
+        with self.assertRaisesRegex(ValueError, "protected field: interpretation"):
+            MODULE.validate_bounded_repair(
+                before,
+                {**after, "interpretation": "y" * 500},
+                plan,
             )
 
     def test_validate_replaces_one_fact_and_requires_every_feedback_path(self):
