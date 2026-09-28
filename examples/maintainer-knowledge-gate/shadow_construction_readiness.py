@@ -91,7 +91,13 @@ def assess(knowledge: Path, candidate_id: str, plan_path: Path, evidence_root: P
     candidate_sha = value_digest(candidate)
     require(plan.get("candidateSha256") == candidate_sha, "construction plan candidate digest differs")
     require(candidate.get("sourceSetSha256") == cut.get("sourceSetSha256"), "candidate source set differs")
-    require(candidate.get("knowledgeCutSha256") == file_digest(cut_path), "candidate knowledge cut differs")
+    require(SHA256.fullmatch(candidate.get("knowledgeCutSha256", "")) is not None,
+            "candidate knowledge cut digest is invalid")
+    refresh_rounds = {
+        row["id"]: row for row in rows(knowledge / "maintainer_skill_refresh_rounds.jsonl")
+    }
+    require(candidate.get("maintainerSkillRefreshRoundId") in refresh_rounds,
+            "candidate Maintainer Skill refresh round is absent")
 
     scopes = {row["id"]: row for row in rows(knowledge / "maintainer_scope_skills.jsonl")}
     facts = {row["id"]: row for row in rows(knowledge / "program_facts.jsonl")}
@@ -215,6 +221,7 @@ def assess(knowledge: Path, candidate_id: str, plan_path: Path, evidence_root: P
         "sourceRevision": candidate["sourceRevision"],
         "sourceSetSha256": candidate["sourceSetSha256"],
         "knowledgeCutSha256": candidate["knowledgeCutSha256"],
+        "currentKnowledgeCutSha256": file_digest(cut_path),
         "planSha256": file_digest(plan_path),
         "checks": {
             "implementationPaths": implementation,
