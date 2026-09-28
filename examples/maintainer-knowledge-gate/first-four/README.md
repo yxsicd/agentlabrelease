@@ -159,14 +159,25 @@ upstream change. It extends the existing `ohosTest` lane with cold-default,
 dynamic-state seeding, recovery and normal-exit negative assertions and declares
 three meaningful wrong variants.
 
-The abnormal termination remains an explicit exact-image probe rather than a
-guessed command. The supervisor must select and retain a trigger that actually
-produces `APP_RECOVERY` on the pinned Linux x86/API 22 image. Killing the bundle
-from inside its own `ohosTest` process is rejected because it can kill the
-Oracle itself. Until that probe, reference build/run and wrong-variant execution
-complete, the plan remains
-`oracle-and-calibration-planned-trigger-probe-required`, grants no case contract,
-and keeps `automaticPromotion=false`.
+The reference positive control was calibrated on the Linux x86_64 emulator by
+an external host supervisor. It launches the normal app, creates the dynamic
+`Recovered Twice` state, verifies the pre-trigger launch reason is `NORMAL`,
+clicks the evaluator-only recovery control that calls `appRecovery.saveAppState`
+and `appRecovery.restartApp`, and then requires both the retained text and the
+`APP_RECOVERY` launch reason in a fresh layout dump. The paired layout hashes,
+HAP hashes, route identity and exact runtime are retained in
+[`qualification-receipts/uiability-backup-restore-reference-runtime.json`](qualification-receipts/uiability-backup-restore-reference-runtime.json)
+under the public runtime-receipt schema. The observed runtime is API 26 x86_64;
+it proves the API-22-compatible build on that runtime, not an exact API 22 image.
+
+Killing the bundle from inside its own `ohosTest` process remains rejected
+because it can kill the Oracle itself, and the emulator shell is not assumed to
+have application-process signal authority. The static plan therefore names the
+calibrated trigger but still requires the separately bound runtime receipt.
+Until at least two wrong variants are built and killed by the independent
+Oracle, the plan remains
+`reference-positive-control-calibrated-wrong-variants-required`, grants no case
+contract, and keeps `automaticPromotion=false`.
 
 The Maintainer Skill Agent Action has two explicit transaction modes. `expand`
 retains the existing balanced selection of previously unbound L1 scopes and may

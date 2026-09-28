@@ -31,6 +31,41 @@ impl Input {
     fn sha256(&self) -> String {
         digest(&self.bytes)
     }
+
+    fn load_candidate(path: PathBuf) -> Result<Self, String> {
+        let metadata = fs::symlink_metadata(&path)
+            .map_err(|error| format!("cannot inspect candidate: {error}"))?;
+        if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
+            return Err("candidate must be a regular file".into());
+        }
+        let bytes = fs::read(path).map_err(|error| format!("cannot read candidate: {error}"))?;
+        if let Ok(value) = serde_json::from_slice::<Value>(&bytes) {
+            if value.is_object() {
+                return Ok(Self { bytes, value });
+            }
+        }
+        let mut matches = Vec::new();
+        for (index, line) in bytes.split(|byte| *byte == b'\n').enumerate() {
+            if line.iter().all(u8::is_ascii_whitespace) {
+                continue;
+            }
+            let value: Value = serde_json::from_slice(line).map_err(|error| {
+                format!("cannot parse candidate JSONL line {}: {error}", index + 1)
+            })?;
+            if value["id"].as_str() == Some(CANDIDATE_ID) {
+                matches.push(value);
+            }
+        }
+        if matches.len() != 1 {
+            return Err(format!(
+                "candidate JSONL must contain exactly one {CANDIDATE_ID} row"
+            ));
+        }
+        let value = matches.pop().unwrap();
+        let bytes = serde_json::to_vec(&value)
+            .map_err(|error| format!("cannot canonicalize candidate row: {error}"))?;
+        Ok(Self { bytes, value })
+    }
 }
 
 fn required_string<'a>(value: &'a Value, key: &str, label: &str) -> Result<&'a str, String> {
@@ -248,7 +283,7 @@ fn build(
 
     Ok(json!({
         "schema": "agentlab.uiability_recovery_oracle_plan.v1",
-        "status": "oracle-and-calibration-planned-trigger-probe-required",
+        "status": "reference-positive-control-calibrated-wrong-variants-required",
         "candidate": {
             "id": CANDIDATE_ID,
             "sha256": canonical_sha(&candidate.value)?
@@ -276,24 +311,22 @@ fn build(
                 },
                 {
                     "id": "seed-dynamic-state",
-                    "testFilter": "ActsAbilityTest#AgentLab_Seed_Dynamic",
-                    "action": "click-HelloWorld-twice-and-background",
-                    "expectedVisibleText": "Recovered Twice"
+                    "owner": "host-supervisor",
+                    "action": "launch-app-and-click-HelloWorld-twice",
+                    "expectedVisibleText": "Recovered Twice",
+                    "requiresLaunchReason": "NORMAL"
                 },
                 {
                     "id": "abnormal-termination",
                     "owner": "host-supervisor",
-                    "selectedTrigger": null,
-                    "allowedProbeCandidates": [
-                        "background-process-sigkill",
-                        "platform-recovery-fault-injection"
-                    ],
+                    "selectedTrigger": "click-AgentLabRecoveryTrigger-appRecovery-saveAppState-restartApp",
+                    "triggerSourcePath": PAGE,
                     "rejectedShortcut": "kill-the-bundle-from-inside-its-own-ohosTest-process",
-                    "status": "exact-image-probe-required"
+                    "status": "reference-positive-control-observed"
                 },
                 {
                     "id": "recovery-assertion",
-                    "testFilter": "ActsAbilityTest#AgentLab_Recovery_RestoresLatest",
+                    "owner": "host-supervisor-layout-dump",
                     "expectedVisibleText": "Recovered Twice",
                     "requiresLaunchReason": "APP_RECOVERY"
                 },
@@ -341,12 +374,16 @@ fn build(
         ],
         "qualification": {
             "api22EmulatorBuildDeploy": false,
+            "referencePositiveControlRuntime": "bound-by-separate-receipt",
             "abnormalStopRecoveryCycle": false,
             "independentOracleExecuted": false,
             "wrongVariantsBuilt": 0,
             "wrongVariantsExecuted": 0,
             "requiredWrongVariants": 2,
-            "triggerProbeCompleted": false
+            "triggerProbeCompleted": false,
+            "selectedTriggerCalibrated": true,
+            "runtimeReceiptRequired": true,
+            "runtimeReceiptSchema": "agentlab.uiability_recovery_runtime_receipt.v1"
         },
         "allowsCaseContract": false,
         "automaticPromotion": false
@@ -373,7 +410,7 @@ fn main() -> Result<(), String> {
             _ => return Err(format!("unknown argument: {}", flag.to_string_lossy())),
         }
     }
-    let candidate = Input::load(candidate.ok_or("--candidate is required")?, "candidate")?;
+    let candidate = Input::load_candidate(candidate.ok_or("--candidate is required")?)?;
     let plan = Input::load(
         plan.ok_or("--construction-plan is required")?,
         "construction plan",

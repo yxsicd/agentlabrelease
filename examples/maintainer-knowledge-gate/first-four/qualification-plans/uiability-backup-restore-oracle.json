@@ -20,27 +20,25 @@
         "testFilter": "ActsAbilityTest#AgentLab_Cold_Default"
       },
       {
-        "action": "click-HelloWorld-twice-and-background",
+        "action": "launch-app-and-click-HelloWorld-twice",
         "expectedVisibleText": "Recovered Twice",
         "id": "seed-dynamic-state",
-        "testFilter": "ActsAbilityTest#AgentLab_Seed_Dynamic"
+        "owner": "host-supervisor",
+        "requiresLaunchReason": "NORMAL"
       },
       {
-        "allowedProbeCandidates": [
-          "background-process-sigkill",
-          "platform-recovery-fault-injection"
-        ],
         "id": "abnormal-termination",
         "owner": "host-supervisor",
         "rejectedShortcut": "kill-the-bundle-from-inside-its-own-ohosTest-process",
-        "selectedTrigger": null,
-        "status": "exact-image-probe-required"
+        "selectedTrigger": "click-AgentLabRecoveryTrigger-appRecovery-saveAppState-restartApp",
+        "status": "reference-positive-control-observed",
+        "triggerSourcePath": "Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets"
       },
       {
         "expectedVisibleText": "Recovered Twice",
         "id": "recovery-assertion",
-        "requiresLaunchReason": "APP_RECOVERY",
-        "testFilter": "ActsAbilityTest#AgentLab_Recovery_RestoresLatest"
+        "owner": "host-supervisor-layout-dump",
+        "requiresLaunchReason": "APP_RECOVERY"
       },
       {
         "expectedVisibleText": "Hello World",
@@ -55,20 +53,24 @@
     "abnormalStopRecoveryCycle": false,
     "api22EmulatorBuildDeploy": false,
     "independentOracleExecuted": false,
+    "referencePositiveControlRuntime": "bound-by-separate-receipt",
     "requiredWrongVariants": 2,
+    "runtimeReceiptRequired": true,
+    "runtimeReceiptSchema": "agentlab.uiability_recovery_runtime_receipt.v1",
+    "selectedTriggerCalibrated": true,
     "triggerProbeCompleted": false,
     "wrongVariantsBuilt": 0,
     "wrongVariantsExecuted": 0
   },
   "referenceContract": {
     "patch": {
-      "byteLength": 5574,
+      "byteLength": 7527,
       "changedPaths": [
         "Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets",
         "Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets",
         "Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets"
       ],
-      "sha256": "319fe184ad826a51741bb65a2e031e206236661fbbff4ca215555995c6597c42"
+      "sha256": "63256263bd260e9527a859b5121ddbb08e6db8a910f709dcdd0673c39a485de3"
     },
     "requiredSourceAnchors": [
       {
@@ -122,7 +124,7 @@
     "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
     "treeOid": "20bc24c3933662e0f7a55022bf918015407a94b2"
   },
-  "status": "oracle-and-calibration-planned-trigger-probe-required",
+  "status": "reference-positive-control-calibrated-wrong-variants-required",
   "wrongVariants": [
     {
       "expectedKilledBy": [
