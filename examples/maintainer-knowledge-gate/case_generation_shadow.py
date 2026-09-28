@@ -1,0 +1,386 @@
+#!/usr/bin/env python3
+"""Turn one newly semantic-ready scope into a non-promoted case hypothesis."""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import importlib.util
+import json
+from pathlib import Path
+import re
+import shutil
+import subprocess
+
+
+SAFE_ID = re.compile(r"shadow-case-[a-z0-9-]{8,140}")
+SHA1 = re.compile(r"[0-9a-f]{40}")
+SHA256 = re.compile(r"[0-9a-f]{64}")
+
+
+def canonical(value) -> bytes:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode()
+
+
+def value_digest(value) -> str:
+    return hashlib.sha256(canonical(value)).hexdigest()
+
+
+def file_digest(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def load(path: Path):
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def rows(path: Path) -> list[dict]:
+    if not path.is_file():
+        return []
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def write_json(path: Path, value) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def write_jsonl(path: Path, values: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"".join(canonical(value) + b"\n" for value in values))
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def path_is_within(path: str, boundary: str) -> bool:
+    boundary = boundary.rstrip("/")
+    return path == boundary or path.startswith(boundary + "/")
+
+
+def previous_oracle_count(rounds: list[dict]) -> int:
+    return len({
+        candidate_id
+        for row in rounds
+        for candidate_id in (row.get("qualification") or {}).get("oracleQualifiedIds", [])
+    })
+
+
+def select_iteration(loop_receipt: dict, facts: dict[str, dict], existing: list[dict]) -> tuple[dict, dict]:
+    iterations = loop_receipt.get("iterations")
+    require(isinstance(iterations, list) and iterations, "bounded loop has no completed iterations")
+    repository_counts: dict[str, int] = {}
+    for row in existing:
+        repository_id = row.get("repositoryId")
+        if isinstance(repository_id, str):
+            repository_counts[repository_id] = repository_counts.get(repository_id, 0) + 1
+    eligible = []
+    for offset, iteration in enumerate(iterations):
+        fact = facts.get(iteration.get("acceptedFactId"))
+        if not fact:
+            continue
+        require(fact.get("scopeSkillIds") == [iteration.get("scope")], "loop scope and fact binding differ")
+        require(fact.get("repositoryId") == iteration.get("repository"), "loop repository and fact binding differ")
+        eligible.append((repository_counts.get(fact["repositoryId"], 0), offset, iteration, fact))
+    require(eligible, "bounded loop has no exported accepted fact")
+    _, _, iteration, fact = min(eligible, key=lambda item: (item[0], item[1]))
+    return iteration, fact
+
+
+def prepare(args) -> None:
+    knowledge = args.knowledge
+    cut_path = knowledge / "maintainer-knowledge-cut.json"
+    cut = load(cut_path)
+    scopes = {row["id"]: row for row in rows(knowledge / "maintainer_scope_skills.jsonl")}
+    facts = {row["id"]: row for row in rows(knowledge / "program_facts.jsonl")}
+    existing = rows(knowledge / "case_generation_candidates.jsonl")
+    loop_receipt = load(args.loop_receipt)
+    iteration, fact = select_iteration(loop_receipt, facts, existing)
+    scope = scopes.get(iteration["scope"])
+    require(scope is not None, "selected scope is absent from the exported knowledge cut")
+    repository = next(
+        (row for row in cut.get("repositories", []) if row.get("id") == fact["repositoryId"]), None
+    )
+    require(repository is not None, "selected repository is absent from the knowledge cut")
+    require(scope.get("sourceRevision") == fact.get("sourceRevision") == repository.get("revision"),
+            "shadow input revisions differ")
+    latest_refresh = max(rows(knowledge / "maintainer_skill_refresh_rounds.jsonl"),
+                         key=lambda row: row["roundIndex"])
+    candidate_id = f"shadow-case-{fact['id'].removeprefix('agent-analysis-')}"
+    require(SAFE_ID.fullmatch(candidate_id), "derived shadow candidate id is invalid")
+    request = {
+        "schema": "agentlab.case_generation_shadow_request.v1",
+        "automaticPromotion": False,
+        "sourceSetSha256": cut["sourceSetSha256"],
+        "knowledgeCutSha256": file_digest(cut_path),
+        "maintainerSkillRefreshRoundId": latest_refresh["id"],
+        "loopReceiptSha256": file_digest(args.loop_receipt),
+        "loopBefore": loop_receipt["iterations"][0]["before"],
+        "loopAfter": loop_receipt["iterations"][-1]["after"],
+        "repository": repository,
+        "scope": scope,
+        "fact": fact,
+        "candidateId": candidate_id,
+        "policy": {
+            "candidateLimit": 1,
+            "constructionMode": "shadow",
+            "candidateGateRequired": True,
+            "independentOracleRequired": True,
+            "wrongVariantCalibrationRequired": True,
+        },
+        "output": "shadow-case-proposal.json",
+    }
+    write_json(args.output, request)
+
+
+def run_agent(args) -> None:
+    request = load(args.request)
+    require(request.get("schema") == "agentlab.case_generation_shadow_request.v1", "bad shadow request")
+    source_root = args.source.resolve(strict=True)
+    head = subprocess.check_output(["git", "-C", str(source_root), "rev-parse", "HEAD"], text=True).strip()
+    require(head == request["repository"]["revision"], "source checkout revision differs")
+    workspace = args.output / "workspace"
+    evidence = args.output / "evidence"
+    workspace.mkdir(parents=True)
+    evidence.mkdir()
+    shutil.copy2(args.request, workspace / "shadow-request.json")
+    source_link = workspace / "source"
+    source_link.symlink_to(source_root, target_is_directory=True)
+    participant_path = Path(__file__).resolve().parents[1] / "real-code-agent" / "participant.py"
+    spec = importlib.util.spec_from_file_location("agentlab_participant", participant_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    participant = module.Participant(
+        evidence, args.output / "participant-state", args.pi, args.gateway, args.model,
+        route=args.provider_route, implementation="pi",
+    )
+    scope = request["scope"]
+    fact = request["fact"]
+    framework = "ohosTest" if any("ohosTest" in path for path in scope.get("testEntrypoints", [])) else "repository-test"
+    prompt = f"""You are constructing one shadow evaluation-case hypothesis, not assessing an Agent.
+Read shadow-request.json and the exact read-only source/ checkout. Use only scope {scope['id']} and semantic fact {fact['id']}.
+Write exactly one JSON object to shadow-case-proposal.json. Do not modify source/ or the request.
+
+The object must have exactly these fields:
+- schema: agentlab.shadow_case_candidate.v1
+- id: exactly {request['candidateId']}
+- repositoryId, sourceRevision, scopeSkillIds and factIds copied exactly from the request
+- title: concise task title
+- mechanism: the concrete state, lifecycle, boundary, or cross-file difficulty being tested
+- stagedDemands: 2 or 3 user-visible requirements whose later stage can expose an earlier design mistake
+- editablePaths: one or more evidence paths inside the selected scope
+- contextPaths: zero or more other evidence paths, disjoint from editablePaths
+- oracleHypothesis: an object with exactly framework, observables, requiredEnvironment, wrongVariants, status
+- limitations: at least two concrete unresolved qualification gaps
+- status: shadow-proposal
+- automaticPromotion: false
+
+Set oracleHypothesis.framework to {framework!r}, status to hypothesis-unqualified, and give at least two observables and two meaningful wrong variants. The Oracle remains operator-owned: do not include a gold patch, claim build/runtime success, or claim approval. Use only paths present in the fact evidence. Prefer a mechanism supported by the semantic interpretation rather than a generic build task.
+"""
+    try:
+        participant.turn("shadow-case-constructor", workspace, prompt=prompt, wall_time_limit_seconds=720)
+    finally:
+        participant.close()
+        source_link.unlink(missing_ok=True)
+    proposal = workspace / "shadow-case-proposal.json"
+    require(proposal.is_file() and not proposal.is_symlink(), "Agent did not produce a shadow proposal")
+    shutil.copy2(proposal, args.output / "shadow-case-proposal.json")
+    status = subprocess.check_output(["git", "-C", str(source_root), "status", "--porcelain"], text=True)
+    (args.output / "source-status.txt").write_text(status, encoding="utf-8")
+    require(not status, "Agent modified the pinned source checkout")
+
+
+def strings(value, name: str, minimum: int = 1, maximum: int | None = None) -> list[str]:
+    require(isinstance(value, list) and len(value) >= minimum, f"{name} is incomplete")
+    require(maximum is None or len(value) <= maximum, f"{name} is too large")
+    require(all(isinstance(item, str) and item.strip() for item in value), f"{name} has invalid values")
+    require(len(value) == len(set(value)), f"{name} contains duplicates")
+    return value
+
+
+def validate_proposal(request: dict, proposal: dict) -> dict:
+    require(proposal.get("schema") == "agentlab.shadow_case_candidate.v1", "bad shadow proposal schema")
+    expected_fields = {
+        "schema", "id", "repositoryId", "sourceRevision", "scopeSkillIds", "factIds", "title",
+        "mechanism", "stagedDemands", "editablePaths", "contextPaths", "oracleHypothesis",
+        "limitations", "status", "automaticPromotion",
+    }
+    require(set(proposal) == expected_fields, "shadow proposal fields differ")
+    require(SAFE_ID.fullmatch(proposal.get("id", "")), "shadow candidate id is invalid")
+    require(proposal["id"] == request["candidateId"], "shadow candidate identity differs")
+    fact = request["fact"]
+    scope = request["scope"]
+    require(proposal["repositoryId"] == fact["repositoryId"], "shadow repository differs")
+    require(proposal["sourceRevision"] == fact["sourceRevision"] and SHA1.fullmatch(proposal["sourceRevision"]),
+            "shadow revision differs")
+    require(proposal["scopeSkillIds"] == fact["scopeSkillIds"] == [scope["id"]], "shadow scope binding differs")
+    require(proposal["factIds"] == [fact["id"]], "shadow fact binding differs")
+    require(isinstance(proposal["title"], str) and 8 <= len(proposal["title"]) <= 180, "shadow title is invalid")
+    require(isinstance(proposal["mechanism"], str) and 80 <= len(proposal["mechanism"]) <= 1600,
+            "shadow mechanism is invalid")
+    strings(proposal["stagedDemands"], "stagedDemands", 2, 3)
+    editable = strings(proposal["editablePaths"], "editablePaths", 1, 8)
+    context = strings(proposal["contextPaths"], "contextPaths", 0, 12)
+    evidence_paths = {row["path"] for row in fact.get("evidence", []) if isinstance(row, dict)}
+    require(set(editable + context).issubset(evidence_paths), "shadow paths are not fact evidence")
+    require(not set(editable).intersection(context), "editable and context paths overlap")
+    require(all(path_is_within(path, scope["pathBoundary"]) for path in editable),
+            "editable path escapes the selected scope")
+    oracle = proposal["oracleHypothesis"]
+    require(isinstance(oracle, dict) and set(oracle) == {
+        "framework", "observables", "requiredEnvironment", "wrongVariants", "status",
+    }, "oracle hypothesis fields differ")
+    expected_framework = "ohosTest" if any("ohosTest" in path for path in scope.get("testEntrypoints", [])) else "repository-test"
+    require(oracle["framework"] == expected_framework, "oracle framework differs")
+    require(oracle["status"] == "hypothesis-unqualified", "oracle status overclaims qualification")
+    strings(oracle["observables"], "oracle observables", 2, 8)
+    strings(oracle["requiredEnvironment"], "oracle requiredEnvironment", 1, 8)
+    strings(oracle["wrongVariants"], "oracle wrongVariants", 2, 8)
+    strings(proposal["limitations"], "limitations", 2, 8)
+    require(proposal["status"] == "shadow-proposal" and proposal["automaticPromotion"] is False,
+            "shadow proposal can promote itself")
+    result = dict(proposal)
+    result.update({
+        "sourceSetSha256": request["sourceSetSha256"],
+        "knowledgeCutSha256": request["knowledgeCutSha256"],
+        "maintainerSkillRefreshRoundId": request["maintainerSkillRefreshRoundId"],
+        "lineage": {"loopReceiptSha256": request["loopReceiptSha256"]},
+    })
+    return result
+
+
+def build_round(request: dict, rounds_before: list[dict], candidate_id: str,
+                retained: bool, rejection_reason: str | None, run_id: str) -> dict:
+    previous = max(rounds_before, key=lambda row: row["roundIndex"])
+    oracle_count = previous_oracle_count(rounds_before)
+    fact = request["fact"]
+    limitations = strings(fact.get("limitations"), "fact limitations", 2)
+    return {
+        "schema": "agentlab.case_generation_round.v1",
+        "id": f"first-four-case-generation-round-{previous['roundIndex'] + 1}-shadow-{run_id}",
+        "roundIndex": previous["roundIndex"] + 1,
+        "parentRoundSha256": value_digest(previous),
+        "sourceSetSha256": request["sourceSetSha256"],
+        "knowledgeCutSha256": request["knowledgeCutSha256"],
+        "maintainerSkillRefreshRoundId": request["maintainerSkillRefreshRoundId"],
+        "objectives": [
+            "sample one newly semantic-ready scope without slowing the knowledge flywheels",
+            "test whether revision-bound Maintainer Skill evidence can produce a grounded case hypothesis",
+            "return construction and Oracle gaps to the next knowledge round",
+        ],
+        "coverage": {
+            "repositoryIds": [request["repository"]["id"]],
+            "scopeSkillCount": 1,
+            "behaviorReadyBefore": request["loopBefore"]["semanticReadyCount"],
+            "behaviorReadyAfter": request["loopAfter"]["semanticReadyCount"],
+            "oracleReadyBefore": oracle_count,
+            "oracleReadyAfter": oracle_count,
+        },
+        "candidates": {
+            "generatedIds": [candidate_id],
+            "retainedIds": [candidate_id] if retained else [],
+            "rejected": [] if retained else [{"candidateId": candidate_id, "reason": rejection_reason}],
+        },
+        "qualification": {
+            "constructedIds": [], "oracleQualifiedIds": [], "calibratedIds": [], "qualifiedCaseIds": [],
+        },
+        "feedback": {
+            "maintainerSkillGaps": [
+                f"bind {candidate_id} through the candidate-stage Maintainer knowledge gate before construction",
+            ],
+            "programAnalysisGaps": limitations[:2],
+            "oracleGaps": [
+                f"independently implement and execute the proposed Oracle for {candidate_id}",
+                f"calibrate at least two meaningful wrong variants for {candidate_id}",
+            ],
+        },
+        "decision": "continue",
+        "decisionEvidence": [
+            "the knowledge flywheel advanced semantic coverage in this exact bounded loop",
+            "the shadow candidate remains non-promoted and has no independent Oracle or calibration receipt",
+        ],
+        "automaticPromotion": False,
+    }
+
+
+def record_success(args) -> None:
+    request = load(args.request)
+    candidate = validate_proposal(request, load(args.proposal))
+    candidate_rows = rows(args.candidates)
+    require(candidate["id"] not in {row["id"] for row in candidate_rows}, "shadow candidate already exists")
+    candidate_rows.append(candidate)
+    candidate_rows.sort(key=lambda row: row["id"])
+    round_rows = rows(args.rounds)
+    require(round_rows, "case generation lineage is empty")
+    round_row = build_round(request, round_rows, candidate["id"], True, None, args.run_id)
+    write_jsonl(args.candidates, candidate_rows)
+    write_jsonl(args.rounds, round_rows + [round_row])
+    write_json(args.receipt, {
+        "schema": "agentlab.case_generation_shadow_receipt.v1",
+        "status": "retained-shadow-proposal",
+        "candidateId": candidate["id"],
+        "candidateSha256": value_digest(candidate),
+        "roundId": round_row["id"],
+        "roundSha256": value_digest(round_row),
+        "automaticPromotion": False,
+    })
+
+
+def record_failure(args) -> None:
+    request = load(args.request)
+    round_rows = rows(args.rounds)
+    require(round_rows, "case generation lineage is empty")
+    candidate_id = request["candidateId"]
+    require(SAFE_ID.fullmatch(candidate_id), "derived shadow attempt id is invalid")
+    round_row = build_round(request, round_rows, candidate_id, False, args.reason, args.run_id)
+    write_jsonl(args.rounds, round_rows + [round_row])
+    write_json(args.receipt, {
+        "schema": "agentlab.case_generation_shadow_receipt.v1",
+        "status": "rejected-shadow-attempt",
+        "candidateId": candidate_id,
+        "reason": args.reason,
+        "roundId": round_row["id"],
+        "roundSha256": value_digest(round_row),
+        "automaticPromotion": False,
+    })
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    commands = parser.add_subparsers(dest="command", required=True)
+    command = commands.add_parser("prepare")
+    command.add_argument("--knowledge", type=Path, required=True)
+    command.add_argument("--loop-receipt", type=Path, required=True)
+    command.add_argument("--output", type=Path, required=True)
+    command.set_defaults(handler=prepare)
+    command = commands.add_parser("run-agent")
+    command.add_argument("--request", type=Path, required=True)
+    command.add_argument("--source", type=Path, required=True)
+    command.add_argument("--output", type=Path, required=True)
+    command.add_argument("--pi", type=Path, required=True)
+    command.add_argument("--gateway", required=True)
+    command.add_argument("--model", required=True)
+    command.add_argument("--provider-route", required=True)
+    command.set_defaults(handler=run_agent)
+    command = commands.add_parser("record-success")
+    command.add_argument("--request", type=Path, required=True)
+    command.add_argument("--proposal", type=Path, required=True)
+    command.add_argument("--rounds", type=Path, required=True)
+    command.add_argument("--candidates", type=Path, required=True)
+    command.add_argument("--receipt", type=Path, required=True)
+    command.add_argument("--run-id", required=True)
+    command.set_defaults(handler=record_success)
+    command = commands.add_parser("record-failure")
+    command.add_argument("--request", type=Path, required=True)
+    command.add_argument("--rounds", type=Path, required=True)
+    command.add_argument("--receipt", type=Path, required=True)
+    command.add_argument("--run-id", required=True)
+    command.add_argument("--reason", choices=["shadow-construction-agent-failed", "shadow-proposal-hard-gate-rejected"], required=True)
+    command.set_defaults(handler=record_failure)
+    args = parser.parse_args()
+    args.handler(args)
+
+
+if __name__ == "__main__":
+    main()

@@ -118,6 +118,19 @@ Blob mismatch, zero/multiple-scope gain, attempted L3 promotion, or exhaustion
 of reachable L1 scopes. The hard maximum of three iterations limits model cost
 and the size of one atomic authority transaction.
 
+After the exact TableGit revision has been exported, each successful bounded
+knowledge loop samples at most one newly semantic-ready scope into the third
+flywheel. The construction Agent receives only the selected scope Skill, its
+new exact-revision semantic fact, and the pinned source checkout. A successful
+proposal is retained in `case_generation_candidates.jsonl` as a
+`shadow-proposal`; it is not an evaluation case. A failed or hard-gate-rejected
+proposal still appends a case-generation round with its rejection reason and
+feedback gaps. Shadow generation therefore measures whether better repository
+knowledge can be converted into a grounded staged task and Oracle hypothesis,
+without blocking the first two knowledge flywheels or granting automatic
+promotion. Candidate-stage binding, independent Oracle execution, wrong-variant
+calibration and freeze remain separate mandatory gates.
+
 TableGit authoring and Git remote publication are intentionally separate
 authority lanes. The public Action needs `table.write`; it does not receive or
 attempt to bypass `mcp.publish`. An authenticated operator may separately run
