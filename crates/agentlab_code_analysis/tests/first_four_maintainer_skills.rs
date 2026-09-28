@@ -327,7 +327,10 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     let mut ordered_generation_rounds = generation_rounds.values().collect::<Vec<_>>();
     ordered_generation_rounds.sort_by_key(|row| row["roundIndex"].as_u64().unwrap());
     assert_eq!(ordered_generation_rounds[0]["roundIndex"], 1);
-    assert_eq!(ordered_generation_rounds[0]["parentRoundSha256"], Value::Null);
+    assert_eq!(
+        ordered_generation_rounds[0]["parentRoundSha256"],
+        Value::Null
+    );
     for row in &ordered_generation_rounds {
         assert_eq!(
             row["automaticPromotion"], false,
