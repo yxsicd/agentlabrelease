@@ -225,6 +225,22 @@ class CaseGenerationShadowTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "physical device"):
             MODULE.validate_proposal(request, proposal)
 
+    def test_validator_understands_explicitly_negated_hardware_requirements(self):
+        request = self.request()
+        proposal = self.proposal(request)
+        proposal["oracleHypothesis"]["requiredEnvironment"] = [
+            "HarmonyOS emulator (no physical device, no USB/serial/external hardware)",
+            "无需真机，不依赖外接设备的 API 24 模拟器镜像",
+        ]
+        validated = MODULE.validate_proposal(request, proposal)
+        self.assertEqual(validated["id"], proposal["id"])
+
+        proposal["oracleHypothesis"]["requiredEnvironment"] = [
+            "HarmonyOS emulator without a physical device, but an attached UART is required",
+        ]
+        with self.assertRaisesRegex(ValueError, "requires external hardware"):
+            MODULE.validate_proposal(request, proposal)
+
     def test_serial_scope_is_blocked_before_the_construction_agent_runs(self):
         scopes = {row["id"]: row for row in MODULE.rows(KNOWLEDGE / "maintainer_scope_skills.jsonl")}
         facts = {row["id"]: row for row in MODULE.rows(KNOWLEDGE / "program_facts.jsonl")}
