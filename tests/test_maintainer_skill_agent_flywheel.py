@@ -15,6 +15,13 @@ SPEC.loader.exec_module(MODULE)
 
 
 class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
+    def test_workflow_defaults_to_the_code_workshop_focus_repository(self):
+        workflow = (ROOT / ".github/workflows/maintainer-skill-agent-flywheel.yml").read_text()
+        repository_input = workflow.split("      repository:\n", 1)[1].split(
+            "      iterations:\n", 1
+        )[0]
+        self.assertIn("        default: code-workshop\n", repository_input)
+
     def test_scope_checkout_materializes_only_exact_requested_boundary(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -105,6 +112,26 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
     def test_compare_requires_one_l2_gain_without_l3_promotion(self):
         before = {
             "totals": {"scopeSkillCount": 5, "structuralReadyCount": 5, "programBoundCount": 1,
+                       "semanticReadyCount": 1, "maintenanceReadyCount": 0}
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            before_path = root / "before.json"
+            before_path.write_text(json.dumps(before) + "\n")
+            after = {
+                "parentAssessmentSha256": MODULE.digest(before_path),
+                "totals": {"scopeSkillCount": 5, "structuralReadyCount": 5, "programBoundCount": 2,
+                           "semanticReadyCount": 2, "maintenanceReadyCount": 0},
+            }
+            after_path = root / "after.json"
+            after_path.write_text(json.dumps(after) + "\n")
+            output = root / "result.json"
+            MODULE.compare(type("Args", (), {"before": before_path, "after": after_path, "output": output}))
+            self.assertEqual(json.loads(output.read_text())["decision"], "review-proposed-knowledge")
+
+    def test_compare_accepts_semantic_gain_for_an_already_bound_scope(self):
+        before = {
+            "totals": {"scopeSkillCount": 5, "structuralReadyCount": 5, "programBoundCount": 2,
                        "semanticReadyCount": 1, "maintenanceReadyCount": 0}
         }
         with tempfile.TemporaryDirectory() as directory:

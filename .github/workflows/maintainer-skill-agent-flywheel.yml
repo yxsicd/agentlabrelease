@@ -13,7 +13,7 @@ on:
         required: true
         type: choice
         options: [auto, code-workshop, guide-snippets, harmony-iap-client, hms-cordova-iap]
-        default: auto
+        default: code-workshop
       iterations:
         description: Bounded hard-gated iterations committed atomically to TableGit
         required: true
