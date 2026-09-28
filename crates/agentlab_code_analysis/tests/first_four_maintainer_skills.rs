@@ -89,8 +89,8 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     let refresh_rounds = rows(&baseline.join("maintainer_skill_refresh_rounds.jsonl"));
     let generation_rounds = rows(&baseline.join("case_generation_rounds.jsonl"));
     assert_eq!(skills.len(), 12);
-    assert_eq!(facts.len(), 24);
-    assert_eq!(refresh_rounds.len(), 5);
+    assert!(facts.len() >= 24);
+    assert!(refresh_rounds.len() >= 5);
     assert_eq!(generation_rounds.len(), 1);
     assert!(
         fs::read_to_string(baseline.join("evaluation_cases.jsonl"))
@@ -227,17 +227,36 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
         fifth["assessment"]["sha256"],
         digest(&fs::read(baseline.join(fifth["assessment"]["path"].as_str().unwrap())).unwrap())
     );
+    let mut ordered_rounds = refresh_rounds.values().collect::<Vec<_>>();
+    ordered_rounds.sort_by_key(|row| row["roundIndex"].as_u64().unwrap());
+    for pair in ordered_rounds.windows(2) {
+        assert_eq!(
+            pair[1]["parentRoundSha256"],
+            digest(&serde_json::to_vec(pair[0]).unwrap()),
+            "refresh-round lineage differs"
+        );
+        assert_eq!(
+            pair[1]["roundIndex"].as_u64().unwrap(),
+            pair[0]["roundIndex"].as_u64().unwrap() + 1,
+            "refresh-round indices are not contiguous"
+        );
+    }
+    let latest = ordered_rounds.last().unwrap();
     assert_eq!(
-        fifth["tables"]["processSkillsSha256"],
+        latest["tables"]["processSkillsSha256"],
         digest(&fs::read(baseline.join("maintainer_skills.jsonl")).unwrap())
     );
     assert_eq!(
-        fifth["tables"]["scopeSkillsSha256"],
+        latest["tables"]["scopeSkillsSha256"],
         digest(&fs::read(baseline.join("maintainer_scope_skills.jsonl")).unwrap())
     );
     assert_eq!(
-        fifth["tables"]["programFactsSha256"],
+        latest["tables"]["programFactsSha256"],
         digest(&fs::read(baseline.join("program_facts.jsonl")).unwrap())
+    );
+    assert_eq!(
+        latest["assessment"]["sha256"],
+        digest(&fs::read(baseline.join(latest["assessment"]["path"].as_str().unwrap())).unwrap())
     );
 
     let assessment_root = baseline.join("assessments");

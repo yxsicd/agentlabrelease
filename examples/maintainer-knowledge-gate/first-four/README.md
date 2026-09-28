@@ -86,9 +86,24 @@ must bind the exact Skills, facts, analyses, editable/context paths, and an
 independent Oracle through the executable Maintainer knowledge gate.
 
 `source-set.txt` is the canonical source identity input; its SHA-256 is the
-`sourceSetSha256` in `maintainer-knowledge-cut.json`. Table hashes make the staging cut
-tamper-evident. The cut does **not** claim to be a persistent MCPGit authority:
-it is ready to import once the long-lived development instance is selected.
+`sourceSetSha256` in `maintainer-knowledge-cut.json`. Table hashes make the
+staging cut tamper-evident.
+
+The long-lived `agentlabtablegit` TableGit repository is the editable authority.
+The Maintainer Skill Agent workflow first passes the proposal through the Rust
+hard gate, then inserts the complete business documents through revision-fenced,
+idempotent TableGit transactions. It reads every table back from the resulting
+exact committed revision, verifies the configured GitHub mirror reached the
+same repository revision, and opens a Release pull request containing the
+sorted JSONL export. `tableGitAuthority.revision` in the cut binds that export.
+The pull request remains a review boundary and `automaticPromotion` stays false.
+
+Tables use a typed `id`/routing/digest envelope around the complete business
+document. The envelope keeps the immutable TableGit definition stable while
+new schema versions add fields; export verifies the payload digest and unwraps
+the original document without loss. A later workflow run fails closed if live
+Maintainer rows are absent from or conflict with its staged Release cut, so an
+unreviewed earlier run cannot be overwritten by a stale `main` checkout.
 
 Validate it with:
 
