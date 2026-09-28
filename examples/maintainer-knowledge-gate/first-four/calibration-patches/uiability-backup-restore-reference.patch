@@ -1,0 +1,141 @@
+diff --git a/Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets b/Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets
+index 2e29fbdd..c95af79e 100644
+--- a/Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets
++++ b/Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets
+@@ -24,6 +24,8 @@ import { window } from '@kit.ArkUI';
+ // [EndExclude onCreate]
+ 
+ const DOMAIN = 0x0000;
++const STATE_KEY = 'myData';
++const DEFAULT_MESSAGE = 'Hello World';
+ 
+ export default class EntryAbility extends UIAbility {
+   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+@@ -34,9 +36,14 @@ export default class EntryAbility extends UIAbility {
+       hilog.error(DOMAIN, 'EntryAbility', 'Failed to set restore enabled: %{public}s', JSON.stringify(error));
+     }
+     // [StartExclude onCreate]
+-    if (want && want.parameters) {
+-      let recoveryMyData = want.parameters['myData'];
++    let initialMessage = DEFAULT_MESSAGE;
++    if (launchParam.launchReason === AbilityConstant.LaunchReason.APP_RECOVERY && want && want.parameters) {
++      const recoveryMyData = want.parameters[STATE_KEY];
++      if (typeof recoveryMyData === 'string') {
++        initialMessage = recoveryMyData;
++      }
+     }
++    AppStorage.setOrCreate<string>(STATE_KEY, initialMessage);
+     // [EndExclude onCreate]
+   }
+ 
+@@ -44,7 +51,7 @@ export default class EntryAbility extends UIAbility {
+   onSaveState(reason: AbilityConstant.StateType, wantParam: Record<string, Object>): AbilityConstant.OnSaveResult {
+     // 保存应用数据。
+     hilog.info(DOMAIN, 'EntryAbility', '[Demo] EntryAbility onSaveState');
+-    wantParam['myData'] = 'my1234567';
++    wantParam[STATE_KEY] = AppStorage.get<string>(STATE_KEY) ?? DEFAULT_MESSAGE;
+     return AbilityConstant.OnSaveResult.ALL_AGREE;
+   }
+ 
+@@ -84,4 +91,4 @@ export default class EntryAbility extends UIAbility {
+   // [EndExclude onCreate]
+ }
+ // [End onSaveState]
+-// [End onCreate]
+\ No newline at end of file
++// [End onCreate]
+diff --git a/Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets b/Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets
+index 0f481f69..ddff1d8a 100644
+--- a/Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets
++++ b/Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets
+@@ -16,7 +16,7 @@
+ @Entry
+ @Component
+ struct Index {
+-  @State message: string = 'Hello World';
++  @StorageLink('myData') message: string = 'Hello World';
+ 
+   build() {
+     RelativeContainer() {
+@@ -29,10 +29,16 @@ struct Index {
+           middle: { anchor: '__container__', align: HorizontalAlign.Center }
+         })
+         .onClick(() => {
+-          this.message = 'Welcome';
++          if (this.message === 'Hello World') {
++            this.message = 'Welcome';
++          } else if (this.message === 'Welcome') {
++            this.message = 'Recovered Twice';
++          } else {
++            this.message = 'Hello World';
++          }
+         })
+     }
+     .height('100%')
+     .width('100%')
+   }
+-}
+\ No newline at end of file
++}
+diff --git a/Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets b/Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets
+index f111bae8..731740a4 100644
+--- a/Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets
++++ b/Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets
+@@ -15,13 +15,28 @@
+ 
+ import { describe, beforeAll, beforeEach, afterEach, afterAll, it, expect } from '@ohos/hypium';
+ import { Want } from '@kit.AbilityKit';
+-import { abilityDelegatorRegistry, Driver, ON } from '@kit.TestKit';
++import { abilityDelegatorRegistry, Component, Driver, ON } from '@kit.TestKit';
+ 
+ const delegator = abilityDelegatorRegistry.getAbilityDelegator();
+ const bundleName = abilityDelegatorRegistry.getArguments().bundleName;
+ 
+ export default function abilityTest() {
+   let driver = Driver.create();
++  async function startAndFindMessage(): Promise<Component> {
++    const want: Want = {
++      bundleName: bundleName,
++      abilityName: 'EntryAbility'
++    };
++    await delegator.startAbility(want);
++    await driver.delayMs(1000);
++    return driver.findComponent(ON.id('HelloWorld'));
++  }
++
++  async function assertVisibleMessage(expected: string): Promise<void> {
++    const message = await startAndFindMessage();
++    expect(await message.getText()).assertEqual(expected);
++  }
++
+   describe('ActsAbilityTest', () => {
+     // Defines a test suite. Two parameters are supported: test suite name and test suite function.
+     beforeAll(() => {
+@@ -53,5 +68,25 @@ export default function abilityTest() {
+       expect(entryAbility.context.abilityInfo.name).assertEqual('EntryAbility');
+       done();
+     })
++    it('AgentLab_Cold_Default', 0, async (done: Function) => {
++      await assertVisibleMessage('Hello World');
++      done();
++    })
++    it('AgentLab_Seed_Dynamic', 0, async (done: Function) => {
++      const message = await startAndFindMessage();
++      await message.click();
++      await message.click();
++      await driver.delayMs(200);
++      expect(await message.getText()).assertEqual('Recovered Twice');
++      done();
++    })
++    it('AgentLab_Recovery_RestoresLatest', 0, async (done: Function) => {
++      await assertVisibleMessage('Recovered Twice');
++      done();
++    })
++    it('AgentLab_NormalExit_ColdDefault', 0, async (done: Function) => {
++      await assertVisibleMessage('Hello World');
++      done();
++    })
+   })
+-}
+\ No newline at end of file
++}

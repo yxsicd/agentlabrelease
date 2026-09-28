@@ -46,6 +46,7 @@ const BINARIES: &[&str] = &[
     "agentlab-purchase-data-unseen-agent-cohort-contract",
     "agentlab-purchase-data-unseen-agent-readiness",
     "agentlab-source-probe",
+    "agentlab-uiability-recovery-oracle-plan",
 ];
 
 struct Binary {

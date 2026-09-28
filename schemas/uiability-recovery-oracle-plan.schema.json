@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/uiability-recovery-oracle-plan.schema.json",
+  "title": "AgentLab UIAbility recovery Oracle plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "candidate",
+    "constructionPlan",
+    "source",
+    "oracle",
+    "referenceContract",
+    "wrongVariants",
+    "qualification",
+    "allowsCaseContract",
+    "automaticPromotion"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.uiability_recovery_oracle_plan.v1"},
+    "status": {"const": "oracle-and-calibration-planned-trigger-probe-required"},
+    "candidate": {
+      "type": "object",
+      "required": ["id", "sha256"],
+      "properties": {
+        "id": {"const": "shadow-case-uiability-backup-restore-state-recovery"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "constructionPlan": {
+      "type": "object",
+      "required": ["sha256", "candidateSha256"],
+      "properties": {
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "candidateSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": ["repositoryId", "revision", "treeOid", "bindings"],
+      "properties": {
+        "repositoryId": {"const": "guide-snippets"},
+        "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "treeOid": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "bindings": {"type": "array", "minItems": 3, "maxItems": 3}
+      }
+    },
+    "oracle": {"type": "object"},
+    "referenceContract": {"type": "object"},
+    "wrongVariants": {"type": "array", "minItems": 2},
+    "qualification": {
+      "type": "object",
+      "required": [
+        "api22EmulatorBuildDeploy",
+        "abnormalStopRecoveryCycle",
+        "independentOracleExecuted",
+        "wrongVariantsBuilt",
+        "wrongVariantsExecuted",
+        "requiredWrongVariants",
+        "triggerProbeCompleted"
+      ]
+    },
+    "allowsCaseContract": {"const": false},
+    "automaticPromotion": {"const": false}
+  }
+}

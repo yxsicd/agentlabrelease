@@ -1,0 +1,149 @@
+{
+  "allowsCaseContract": false,
+  "automaticPromotion": false,
+  "candidate": {
+    "id": "shadow-case-uiability-backup-restore-state-recovery",
+    "sha256": "fa20f6b28fa9b44457f74d9eb15e3208d36eb8fabece852027bd40160283a200"
+  },
+  "constructionPlan": {
+    "candidateSha256": "fa20f6b28fa9b44457f74d9eb15e3208d36eb8fabece852027bd40160283a200",
+    "sha256": "bee634845101a630128f956669c5e9a7f86f485f12ff479393b37a6743ed9c81"
+  },
+  "oracle": {
+    "authority": "supervisor-owned-multi-process-orchestration",
+    "framework": "instrument-test-ohosTest-hypium",
+    "phases": [
+      {
+        "expectedVisibleText": "Hello World",
+        "id": "fresh-cold-launch",
+        "precondition": "fresh-install-or-cleared-application-state",
+        "testFilter": "ActsAbilityTest#AgentLab_Cold_Default"
+      },
+      {
+        "action": "click-HelloWorld-twice-and-background",
+        "expectedVisibleText": "Recovered Twice",
+        "id": "seed-dynamic-state",
+        "testFilter": "ActsAbilityTest#AgentLab_Seed_Dynamic"
+      },
+      {
+        "allowedProbeCandidates": [
+          "background-process-sigkill",
+          "platform-recovery-fault-injection"
+        ],
+        "id": "abnormal-termination",
+        "owner": "host-supervisor",
+        "rejectedShortcut": "kill-the-bundle-from-inside-its-own-ohosTest-process",
+        "selectedTrigger": null,
+        "status": "exact-image-probe-required"
+      },
+      {
+        "expectedVisibleText": "Recovered Twice",
+        "id": "recovery-assertion",
+        "requiresLaunchReason": "APP_RECOVERY",
+        "testFilter": "ActsAbilityTest#AgentLab_Recovery_RestoresLatest"
+      },
+      {
+        "expectedVisibleText": "Hello World",
+        "id": "normal-exit-negative-control",
+        "proves": "recovery-is-not-unconditional-persistence",
+        "testFilter": "ActsAbilityTest#AgentLab_NormalExit_ColdDefault"
+      }
+    ],
+    "testSourcePath": "Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets"
+  },
+  "qualification": {
+    "abnormalStopRecoveryCycle": false,
+    "api22EmulatorBuildDeploy": false,
+    "independentOracleExecuted": false,
+    "requiredWrongVariants": 2,
+    "triggerProbeCompleted": false,
+    "wrongVariantsBuilt": 0,
+    "wrongVariantsExecuted": 0
+  },
+  "referenceContract": {
+    "patch": {
+      "byteLength": 5574,
+      "changedPaths": [
+        "Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets",
+        "Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets",
+        "Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets"
+      ],
+      "sha256": "319fe184ad826a51741bb65a2e031e206236661fbbff4ca215555995c6597c42"
+    },
+    "requiredSourceAnchors": [
+      {
+        "anchor": "let recoveryMyData = want.parameters['myData'];",
+        "path": "Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets"
+      },
+      {
+        "anchor": "wantParam['myData'] = 'my1234567';",
+        "path": "Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets"
+      },
+      {
+        "anchor": "@State message: string = 'Hello World';",
+        "path": "Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets"
+      },
+      {
+        "anchor": "this.message = 'Welcome';",
+        "path": "Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets"
+      },
+      {
+        "anchor": "it('UIAbility_Recover_01'",
+        "path": "Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets"
+      }
+    ],
+    "restoreOnlyWhen": "launchParam.launchReason == AbilityConstant.LaunchReason.APP_RECOVERY",
+    "saveValue": "latest-visible-interaction-state-not-a-constant",
+    "stateOwner": "AppStorage-myData-bound-to-Index"
+  },
+  "schema": "agentlab.uiability_recovery_oracle_plan.v1",
+  "source": {
+    "bindings": [
+      {
+        "byteLength": 3070,
+        "gitBlobOid": "2e29fbdd76d0e67a0fd785cae3a76bf3fd927d14",
+        "path": "Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets",
+        "sha256": "bce3999d4a8a8c7acde6a5da8dcc5d2c03f9dd14afdd9beb7dec9e22fa496b86"
+      },
+      {
+        "byteLength": 1174,
+        "gitBlobOid": "0f481f696485b8c840d49ad9e7d7dff7f6b71241",
+        "path": "Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets",
+        "sha256": "b619ea93d1af6fa44083f7e32b0fbd50b291fdc2edbd28c4bc16a9f9f2253df7"
+      },
+      {
+        "byteLength": 2400,
+        "gitBlobOid": "f111bae87244153c838f726427c46a02fcfac2a6",
+        "path": "Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets",
+        "sha256": "f4b92cbb1e48f427e588b503c98ea34052586ab60fa196b153aa0639f5e0b7b4"
+      }
+    ],
+    "repositoryId": "guide-snippets",
+    "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+    "treeOid": "20bc24c3933662e0f7a55022bf918015407a94b2"
+  },
+  "status": "oracle-and-calibration-planned-trigger-probe-required",
+  "wrongVariants": [
+    {
+      "expectedKilledBy": [
+        "recovery-assertion"
+      ],
+      "fault": "restore always substitutes Welcome instead of consuming the latest saved value",
+      "id": "hardcoded-recovered-value"
+    },
+    {
+      "expectedKilledBy": [
+        "normal-exit-negative-control"
+      ],
+      "fault": "ordinary persistence restores state after normal exit instead of APP_RECOVERY only",
+      "id": "unconditional-persistent-state"
+    },
+    {
+      "expectedKilledBy": [
+        "recovery-assertion"
+      ],
+      "fault": "setRestoreEnabled or the backup metadata chain is removed",
+      "id": "restore-wiring-disabled"
+    }
+  ]
+}
