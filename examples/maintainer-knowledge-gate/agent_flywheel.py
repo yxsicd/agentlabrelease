@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from fractions import Fraction
 import hashlib
 import importlib.util
 import json
@@ -58,7 +59,7 @@ def scope_has_reachable_evidence(scope):
     )
 
 
-def select_scope(scope_rows, assessment, repository_id):
+def eligible_scopes(scope_rows, assessment, repository_id):
     states = {row["skillId"]: row for row in assessment["skills"]}
     eligible = []
     for scope in scope_rows:
@@ -79,6 +80,11 @@ def select_scope(scope_rows, assessment, repository_id):
         if not scope_has_reachable_evidence(scope):
             continue
         eligible.append(scope)
+    return eligible
+
+
+def select_scope(scope_rows, assessment, repository_id):
+    eligible = eligible_scopes(scope_rows, assessment, repository_id)
     require(eligible, f"no bounded L1 source scope is eligible in {repository_id}")
     eligible.sort(
         key=lambda row: (
@@ -90,15 +96,41 @@ def select_scope(scope_rows, assessment, repository_id):
     return eligible[0]
 
 
+def select_repository(scope_rows, assessment, repository_ids):
+    states = {row["skillId"]: row for row in assessment["skills"]}
+    candidates = []
+    for repository_id in repository_ids:
+        repository_scopes = [
+            row for row in scope_rows if row.get("repositoryId") == repository_id
+        ]
+        eligible = eligible_scopes(scope_rows, assessment, repository_id)
+        if not repository_scopes or not eligible:
+            continue
+        advanced = sum(
+            states.get(row.get("id"), {}).get("maturity") != "L1-structural-ready"
+            for row in repository_scopes
+        )
+        candidates.append(
+            (Fraction(advanced, len(repository_scopes)), advanced, repository_id)
+        )
+    require(candidates, "no repository has a reachable bounded L1 source scope")
+    return min(candidates)[2]
+
+
 def prepare(args):
     cut = load(args.knowledge / "maintainer-knowledge-cut.json")
     assessment = load(args.assessment)
     scope_rows = rows(args.knowledge / "maintainer_scope_skills.jsonl")
+    repository_id = args.repository
+    if repository_id == "auto":
+        repository_id = select_repository(
+            scope_rows, assessment, [row["id"] for row in cut["repositories"]]
+        )
     source = next(
-        (row for row in cut["repositories"] if row["id"] == args.repository), None
+        (row for row in cut["repositories"] if row["id"] == repository_id), None
     )
     require(source is not None, "repository is absent from the knowledge cut")
-    scope = select_scope(scope_rows, assessment, args.repository)
+    scope = select_scope(scope_rows, assessment, repository_id)
     packet = {
         "schema": "agentlab.maintainer_skill_agent_request.v1",
         "automaticPromotion": False,

@@ -40,6 +40,25 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         ]}
         self.assertEqual(MODULE.select_scope(scopes, assessment, "r")["id"], "reachable")
 
+    def test_auto_repository_selection_prefers_lowest_normalized_coverage(self):
+        scopes = [
+            {"id": "a1", "repositoryId": "a", "pathBoundary": "a1", "sourceFileCount": 1,
+             "testFileCount": 0, "evidence": [{"path": "a1/main.ets"}]},
+            {"id": "a2", "repositoryId": "a", "pathBoundary": "a2", "sourceFileCount": 1,
+             "testFileCount": 0, "evidence": [{"path": "a2/main.ets"}]},
+            {"id": "b1", "repositoryId": "b", "pathBoundary": "b1", "sourceFileCount": 1,
+             "testFileCount": 0, "evidence": [{"path": "b1/main.ets"}]},
+            {"id": "b2", "repositoryId": "b", "pathBoundary": "b2", "sourceFileCount": 1,
+             "testFileCount": 0, "evidence": [{"path": "b2/main.ets"}]},
+        ]
+        assessment = {"skills": [
+            {"skillId": "a1", "maturity": "L2-semantic-ready"},
+            {"skillId": "a2", "maturity": "L1-structural-ready"},
+            {"skillId": "b1", "maturity": "L1-structural-ready"},
+            {"skillId": "b2", "maturity": "L1-structural-ready"},
+        ]}
+        self.assertEqual(MODULE.select_repository(scopes, assessment, ["a", "b"]), "b")
+
     def test_compare_requires_one_l2_gain_without_l3_promotion(self):
         before = {
             "totals": {"scopeSkillCount": 5, "structuralReadyCount": 5, "programBoundCount": 1,

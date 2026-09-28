@@ -3,11 +3,17 @@ on:
   workflow_dispatch:
     inputs:
       repository:
-        description: First-four repository whose next bounded L1 gap should be analyzed
+        description: Repository selection; auto balances normalized semantic coverage
         required: true
         type: choice
-        options: [code-workshop, guide-snippets, harmony-iap-client, hms-cordova-iap]
-        default: code-workshop
+        options: [auto, code-workshop, guide-snippets, harmony-iap-client, hms-cordova-iap]
+        default: auto
+      iterations:
+        description: Bounded hard-gated iterations committed atomically to TableGit
+        required: true
+        type: choice
+        options: ['1', '2', '3']
+        default: '1'
       model:
         description: Model exposed by the LM Gateway
         required: true
@@ -31,11 +37,12 @@ jobs:
   propose-and-gate:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 50
     env:
       AGENTLAB_ROOT: /tmp/maintainer-skill-agent-flywheel
       KNOWLEDGE: examples/maintainer-knowledge-gate/first-four
-      REPOSITORY_ID: ${{ inputs.repository }}
+      REPOSITORY_SELECTOR: ${{ inputs.repository }}
+      ITERATIONS: ${{ inputs.iterations }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_MODEL: ${{ inputs.model }}
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
@@ -48,82 +55,28 @@ jobs:
           set -euo pipefail
           python3 -m unittest tests.test_maintainer_skill_agent_flywheel tests.test_maintainer_skill_tablegit
           cargo build --locked -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
-      - name: Freeze the next gap and exact source revision
-        id: freeze
-        run: |
-          set -euo pipefail
-          mkdir -p "$AGENTLAB_ROOT/source" "$AGENTLAB_ROOT/run"
-          assessment=$(find "$KNOWLEDGE/assessments" -maxdepth 1 -type f -name '*.json' -print0 |
-            xargs -0 jq -r '[.roundIndex,input_filename] | @tsv' | sort -n | tail -1 | cut -f2-)
-          python3 examples/maintainer-knowledge-gate/agent_flywheel.py prepare \
-            --knowledge "$KNOWLEDGE" --assessment "$assessment" \
-            --repository "$REPOSITORY_ID" --output "$AGENTLAB_ROOT/run/flywheel-request.json"
-          mapfile -t source < <(jq -r --arg id "$REPOSITORY_ID" \
-            '.repositories[] | select(.id==$id) | .repository,.revision' \
-            "$KNOWLEDGE/maintainer-knowledge-cut.json")
-          [[ ${#source[@]} -eq 2 && "${source[1]}" =~ ^[0-9a-f]{40}$ ]]
-          git clone --filter=blob:none --no-checkout "${source[0]}" "$AGENTLAB_ROOT/source/repository"
-          git -C "$AGENTLAB_ROOT/source/repository" fetch --depth 1 origin "${source[1]}"
-          git -C "$AGENTLAB_ROOT/source/repository" checkout --detach FETCH_HEAD
-          echo "assessment=$assessment" >> "$GITHUB_OUTPUT"
       - name: Install the separately contained Pi runtime
         run: |
           mkdir -p "$RUNNER_TEMP/pi-runtime"
           cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
           npm ci --prefix "$RUNNER_TEMP/pi-runtime"
           "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" --version
-      - name: Ask the real Agent to propose one scope-bound semantic fact
+      - name: Run the bounded hard-gated Maintainer Skill loop
+        id: loop
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
         run: |
           set -euo pipefail
-          python3 examples/maintainer-knowledge-gate/agent_flywheel.py run-agent \
-            --request "$AGENTLAB_ROOT/run/flywheel-request.json" \
-            --source "$AGENTLAB_ROOT/source/repository" \
-            --output "$AGENTLAB_ROOT/run/agent" \
-            --pi "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" \
-            --gateway "$AGENTLAB_LM_GATEWAY_URL" \
-            --model "$AGENTLAB_MODEL" --provider-route "$AGENTLAB_PROVIDER_ROUTE"
-      - name: Verify source blobs and apply the Rust maturity gate
-        run: |
-          set -euo pipefail
-          python3 examples/maintainer-knowledge-gate/agent_flywheel.py validate \
-            --request "$AGENTLAB_ROOT/run/flywheel-request.json" \
-            --proposal "$AGENTLAB_ROOT/run/agent/program-fact-proposal.json" \
-            --source "$AGENTLAB_ROOT/source/repository" \
-            --program-facts "$KNOWLEDGE/program_facts.jsonl" \
-            --output "$AGENTLAB_ROOT/run/candidate-program-facts.jsonl" \
-            --receipt "$AGENTLAB_ROOT/run/proposal-receipt.json"
-          parent=$(sha256sum '${{ steps.freeze.outputs.assessment }}' | cut -d' ' -f1)
-          round=$(jq -r '.roundIndex + 1' '${{ steps.freeze.outputs.assessment }}')
-          target/debug/agentlab-maintainer-skill-flywheel \
-            --scope-skills "$KNOWLEDGE/maintainer_scope_skills.jsonl" \
-            --program-facts "$AGENTLAB_ROOT/run/candidate-program-facts.jsonl" \
-            --round-index "$round" --parent-assessment-sha256 "$parent" \
-            --output "$AGENTLAB_ROOT/run/candidate-assessment.json"
-          python3 examples/maintainer-knowledge-gate/agent_flywheel.py compare \
-            --before '${{ steps.freeze.outputs.assessment }}' \
-            --after "$AGENTLAB_ROOT/run/candidate-assessment.json" \
-            --output "$AGENTLAB_ROOT/run/result.json"
-          jq '{decision,before,after,automaticPromotion}' "$AGENTLAB_ROOT/run/result.json" >> "$GITHUB_STEP_SUMMARY"
-      - name: Stage the hard-gated knowledge cut
-        run: |
-          set -euo pipefail
-          python3 scripts/maintainer-skill-tablegit.py stage \
-            --base "$KNOWLEDGE" \
-            --candidate-program-facts "$AGENTLAB_ROOT/run/candidate-program-facts.jsonl" \
-            --candidate-assessment "$AGENTLAB_ROOT/run/candidate-assessment.json" \
-            --result "$AGENTLAB_ROOT/run/result.json" \
-            --receipt "$AGENTLAB_ROOT/run/proposal-receipt.json" \
-            --run-id "$GITHUB_RUN_ID" --github-repository "$GITHUB_REPOSITORY" \
-            --output "$AGENTLAB_ROOT/run/tablegit-stage"
+          scripts/run-maintainer-skill-agent-loop.sh \
+            "$KNOWLEDGE" "$AGENTLAB_ROOT/run" "$REPOSITORY_SELECTOR" "$ITERATIONS" \
+            "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi"
       - name: Persist in TableGit and export the exact committed revision
         run: |
           set -euo pipefail
           test -n "$AGENTLAB_TABLEGIT_MCP_URL"
           test -n "$AGENTLAB_TABLEGIT_PERSON_ID"
           python3 scripts/maintainer-skill-tablegit.py sync \
-            --base "$KNOWLEDGE" --snapshot "$AGENTLAB_ROOT/run/tablegit-stage" \
+            --base "$KNOWLEDGE" --snapshot '${{ steps.loop.outputs.snapshot }}' \
             --export "$KNOWLEDGE" --receipt "$AGENTLAB_ROOT/run/tablegit-sync-receipt.json" \
             --run-id "$GITHUB_RUN_ID" --github-repository "$GITHUB_REPOSITORY"
           jq '{repo,revision,authorityVerified,mirror,tables}' \
@@ -147,7 +100,7 @@ jobs:
           url=$(gh pr create \
             --base main --head "$branch" \
             --title "Export Maintainer Skill flywheel $GITHUB_RUN_ID" \
-            --body "Exports the hard-gated Maintainer Skill candidate from the exact committed TableGit revision recorded in maintainer-knowledge-cut.json. Automatic promotion remains disabled. Source run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
+            --body "Exports $ITERATIONS hard-gated Maintainer Skill iteration(s) from the exact committed TableGit revision recorded in maintainer-knowledge-cut.json. Every iteration advanced exactly one scope to L2; automatic promotion remains disabled. Source run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
           echo "Release export PR: $url" >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve the proposal, gateway capture and hard-gate result
         if: always()

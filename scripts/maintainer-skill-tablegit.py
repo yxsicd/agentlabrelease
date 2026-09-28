@@ -175,6 +175,16 @@ def build_refresh_round(base: Path, candidate_facts: Path, assessment_path: Path
 
 def command_stage(args) -> None:
     args.output.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(
+        args.base / "maintainer-knowledge-cut.json",
+        args.output / "maintainer-knowledge-cut.json",
+    )
+    assessments = args.output / "assessments"
+    assessments.mkdir(exist_ok=True)
+    base_assessments = args.base / "assessments"
+    if base_assessments.is_dir():
+        for source in base_assessments.glob("*.json"):
+            shutil.copy2(source, assessments / source.name)
     for table, filename in TABLE_FILES.items():
         source = args.base / filename
         target = args.output / filename
@@ -191,12 +201,13 @@ def command_stage(args) -> None:
         write_jsonl(target, table_rows)
     assessment = load(args.candidate_assessment)
     assessment_name = f"round-{assessment['roundIndex']}-agent-{args.run_id}.json"
-    shutil.copy2(args.candidate_assessment, args.output / assessment_name)
+    assessment_path = Path("assessments") / assessment_name
+    shutil.copy2(args.candidate_assessment, args.output / assessment_path)
     write_json(args.output / "stage-manifest.json", {
         "schema": "agentlab.maintainer_skill_tablegit_stage.v1",
         "automaticPromotion": False,
         "runId": args.run_id,
-        "assessment": assessment_name,
+        "assessment": str(assessment_path),
         "tables": {
             table: {"path": filename, "sha256": file_sha256(args.output / filename)}
             for table, filename in TABLE_FILES.items()
