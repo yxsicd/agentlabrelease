@@ -65,6 +65,68 @@ class MaintainerSkillTableGitTest(unittest.TestCase):
             MODULE.operation_chunks("maintainer_skills", rows, "123", max_bytes=20_000)[0][0]["operation_id"],
         )
 
+    def test_existing_row_uses_full_digest_bound_upsert(self):
+        row = {"id": "fact-one", "body": "refreshed"}
+        operation = MODULE.operation_chunks(
+            "program_facts", [row], "123", row_versions={"fact-one": 7}
+        )[0][0]
+        self.assertEqual(operation["op"], "upsert")
+        self.assertEqual(operation["expected_row_version"], 7)
+        self.assertEqual(operation["row"], MODULE.envelope(row))
+
+    def test_persist_accepts_base_to_snapshot_update_and_fences_remote_drift(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = root / "base"
+            snapshot = root / "snapshot"
+            base.mkdir(); snapshot.mkdir()
+            base_rows = {}
+            snapshot_rows = {}
+            remote_items = {}
+            for table, filename in MODULE.TABLE_FILES.items():
+                row = {"id": f"{table}-row", "value": "base"}
+                desired = dict(row)
+                if table == "program_facts":
+                    desired["value"] = "refreshed"
+                base_rows[table] = row
+                snapshot_rows[table] = desired
+                MODULE.write_jsonl(base / filename, [row])
+                MODULE.write_jsonl(snapshot / filename, [desired])
+                remote_items[table] = [{
+                    "key": row["id"], "row": MODULE.envelope(row),
+                    "row_version": 3, "deleted": False,
+                }]
+
+            transactions = []
+            def query(_client, _repo, table, _revision):
+                return remote_items[table]
+            def apply(_client, _repo, _revision, tables, *_args):
+                transactions.append(tables)
+                return "b" * 40
+
+            with mock.patch.object(MODULE, "query_all", side_effect=query), \
+                    mock.patch.object(MODULE, "apply_transaction", side_effect=apply):
+                revision = MODULE.persist_snapshot(
+                    object(), "repo", "a" * 40, base, snapshot, "run", "owner/repo"
+                )
+            self.assertEqual(revision, "b" * 40)
+            operations = transactions[0][0]["operations"]
+            self.assertEqual(len(operations), 1)
+            self.assertEqual(operations[0]["op"], "upsert")
+            self.assertEqual(operations[0]["expected_row_version"], 3)
+
+            remote_items["program_facts"][0] = {
+                "key": "program_facts-row",
+                "row": MODULE.envelope({"id": "program_facts-row", "value": "concurrent"}),
+                "row_version": 4,
+                "deleted": False,
+            }
+            with mock.patch.object(MODULE, "query_all", side_effect=query):
+                with self.assertRaisesRegex(RuntimeError, "conflicts with the Release snapshot"):
+                    MODULE.persist_snapshot(
+                        object(), "repo", "c" * 40, base, snapshot, "run-2", "owner/repo"
+                    )
+
     def test_missing_row_chunks_do_not_reuse_a_completed_chunk_receipt(self):
         rows = [{"id": f"row-{index:03d}", "body": "x" * 4000} for index in range(12)]
         chunks = MODULE.operation_chunks("program_facts", rows, "123", max_bytes=20_000)
