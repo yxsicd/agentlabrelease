@@ -171,12 +171,12 @@ The object must have exactly these fields:
 - stagedDemands: 2 or 3 user-visible requirements whose later stage can expose an earlier design mistake
 - editablePaths: one or more evidence paths inside the selected scope
 - contextPaths: zero or more other evidence paths, disjoint from editablePaths
-- oracleHypothesis: an object with exactly framework, observables, requiredEnvironment, wrongVariants, status
+- oracleHypothesis: exactly {{"framework": {framework!r}, "observables": ["observable one", "observable two"], "requiredEnvironment": ["environment requirement"], "wrongVariants": ["wrong variant one", "wrong variant two"], "status": "hypothesis-unqualified"}}; observables, requiredEnvironment, and wrongVariants must each be JSON arrays of strings, never a single string
 - limitations: at least two concrete unresolved qualification gaps
 - status: shadow-proposal
 - automaticPromotion: false
 
-Set oracleHypothesis.framework to {framework!r}, status to hypothesis-unqualified, and give at least two observables and two meaningful wrong variants. The Oracle remains operator-owned: do not include a gold patch, claim build/runtime success, or claim approval. Use only paths present in the fact evidence. Prefer a mechanism supported by the semantic interpretation rather than a generic build task.
+Give at least two observables and two meaningful wrong variants, validate every field type against the exact shape above, and parse the completed JSON once before finishing. The Oracle remains operator-owned: do not include a gold patch, claim build/runtime success, or claim approval. Use only paths present in the fact evidence. Prefer a mechanism supported by the semantic interpretation rather than a generic build task.
 """
     try:
         participant.turn("shadow-case-constructor", workspace, prompt=prompt, wall_time_limit_seconds=720)

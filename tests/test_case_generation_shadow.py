@@ -197,6 +197,13 @@ class CaseGenerationShadowTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "escapes"):
             MODULE.validate_proposal(request, proposal)
 
+    def test_validator_rejects_scalar_environment_contract(self):
+        request = self.request()
+        proposal = self.proposal(request)
+        proposal["oracleHypothesis"]["requiredEnvironment"] = "one environment"
+        with self.assertRaisesRegex(ValueError, "requiredEnvironment is incomplete"):
+            MODULE.validate_proposal(request, proposal)
+
 
 if __name__ == "__main__":
     unittest.main()
