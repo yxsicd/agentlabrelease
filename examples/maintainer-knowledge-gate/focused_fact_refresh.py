@@ -249,6 +249,81 @@ def validate(args) -> None:
     })
 
 
+def rebind_candidate(args) -> None:
+    knowledge = args.knowledge
+    candidates_path = knowledge / "case_generation_candidates.jsonl"
+    facts = {row["id"]: row for row in READINESS.rows(knowledge / "program_facts.jsonl")}
+    candidates = READINESS.rows(candidates_path)
+    matches = [row for row in candidates if row["id"] == args.candidate_id]
+    BASE.require(len(matches) == 1, "focused candidate is absent or duplicated")
+    before = matches[0]
+    refresh = BASE.load(args.focused_receipt)
+    fact_id = refresh.get("acceptedFactId")
+    BASE.require(refresh.get("changeKind") == "updated" and fact_id in facts,
+                 "focused receipt does not identify an updated fact")
+    fact = facts[fact_id]
+    BASE.require(before.get("factIds") == [fact_id], "candidate fact binding differs")
+    BASE.require(before.get("scopeSkillIds") == fact.get("scopeSkillIds"),
+                 "candidate scope binding differs")
+    BASE.require(before.get("repositoryId") == fact.get("repositoryId")
+                 and before.get("sourceRevision") == fact.get("sourceRevision"),
+                 "candidate source binding differs")
+    plan = BASE.load(args.plan)
+    BASE.require(plan.get("candidateId") == args.candidate_id, "construction plan candidate differs")
+    evidence_paths = {row["path"] for row in fact.get("evidence", [])}
+    implementation_paths = [row["path"] for row in plan["requiredImplementationPaths"]]
+    oracle_paths = [row["path"] for row in plan["requiredOraclePaths"]]
+    BASE.require(set(implementation_paths + oracle_paths).issubset(evidence_paths),
+                 "refreshed fact still omits construction paths")
+
+    editable = list(dict.fromkeys([*before["editablePaths"], *implementation_paths]))
+    context = [
+        path for path in dict.fromkeys([*before.get("contextPaths", []), *oracle_paths])
+        if path not in editable
+    ]
+    BASE.require(set(editable + context).issubset(evidence_paths),
+                 "candidate rebind exposes paths outside refreshed fact evidence")
+    limitations = fact.get("limitations")
+    BASE.require(isinstance(limitations, list) and len(limitations) >= 2,
+                 "refreshed fact has insufficient limitations")
+    rounds = READINESS.rows(knowledge / "maintainer_skill_refresh_rounds.jsonl")
+    latest = max(rounds, key=lambda row: row["roundIndex"])
+    lineage = dict(before.get("lineage") or {})
+    lineage["focusedRefreshReceiptSha256"] = BASE.digest(args.focused_receipt)
+    after = {
+        **before,
+        "editablePaths": editable,
+        "contextPaths": context,
+        "limitations": limitations,
+        "knowledgeCutSha256": BASE.digest(knowledge / "maintainer-knowledge-cut.json"),
+        "maintainerSkillRefreshRoundId": latest["id"],
+        "lineage": lineage,
+    }
+    replaced = [after if row["id"] == args.candidate_id else row for row in candidates]
+    candidates_path.write_bytes(b"".join(
+        READINESS.canonical(row) + b"\n" for row in sorted(replaced, key=lambda row: row["id"])
+    ))
+    plan["candidateSha256"] = READINESS.value_digest(after)
+    BASE.write(args.plan, plan)
+    readiness = READINESS.assess(knowledge, args.candidate_id, args.plan, args.evidence_root)
+    BASE.require(readiness["decision"] == "blocked-qualification",
+                 "candidate rebind did not clear only the knowledge blockers")
+    BASE.write(args.output, {
+        "schema": "agentlab.focused_candidate_rebind_receipt.v1",
+        "automaticPromotion": False,
+        "candidateId": args.candidate_id,
+        "beforeSha256": READINESS.value_digest(before),
+        "afterSha256": READINESS.value_digest(after),
+        "focusedRefreshReceiptSha256": BASE.digest(args.focused_receipt),
+        "knowledgeCutSha256": after["knowledgeCutSha256"],
+        "maintainerSkillRefreshRoundId": latest["id"],
+        "addedEditablePaths": sorted(set(editable) - set(before["editablePaths"])),
+        "addedContextPaths": sorted(set(context) - set(before.get("contextPaths", []))),
+        "readinessDecision": readiness["decision"],
+        "nextGate": readiness["nextGate"],
+    })
+
+
 def compare(args) -> None:
     before = BASE.load(args.before)
     after = BASE.load(args.after)
@@ -288,6 +363,11 @@ def main() -> None:
     p.add_argument("--source", type=Path, required=True); p.add_argument("--program-facts", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True); p.add_argument("--receipt", type=Path, required=True)
     p.set_defaults(handler=validate)
+    p = commands.add_parser("rebind-candidate")
+    p.add_argument("--knowledge", type=Path, required=True); p.add_argument("--candidate-id", required=True)
+    p.add_argument("--plan", type=Path, required=True); p.add_argument("--focused-receipt", type=Path, required=True)
+    p.add_argument("--evidence-root", type=Path, required=True); p.add_argument("--output", type=Path, required=True)
+    p.set_defaults(handler=rebind_candidate)
     p = commands.add_parser("compare")
     p.add_argument("--before", type=Path, required=True); p.add_argument("--after", type=Path, required=True)
     p.add_argument("--scope-id", required=True); p.add_argument("--output", type=Path, required=True)

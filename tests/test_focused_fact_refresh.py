@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest import mock
+import shutil
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -177,6 +178,49 @@ class FocusedFactRefreshTest(unittest.TestCase):
             result = json.loads(output.read_text())
             self.assertEqual(result["decision"], "review-proposed-knowledge-refresh")
             self.assertEqual(result["before"], result["after"])
+
+    def test_rebind_candidate_advances_only_to_qualification_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            knowledge = root / "knowledge"
+            shutil.copytree(KNOWLEDGE, knowledge)
+            facts_path = knowledge / "program_facts.jsonl"
+            facts = MODULE.READINESS.rows(facts_path)
+            fact = next(row for row in facts if row["id"] == "agent-analysis-uiability-backup-restore-state-recovery")
+            existing_paths = {row["path"] for row in fact["evidence"]}
+            for path in (
+                "Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets",
+                "Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets",
+            ):
+                if path not in existing_paths:
+                    fact["evidence"].append({"path": path, "gitBlobOid": "1" * 40})
+            facts_path.write_bytes(b"".join(
+                MODULE.READINESS.canonical(row) + b"\n" for row in sorted(facts, key=lambda row: row["id"])
+            ))
+            cut_path = knowledge / "maintainer-knowledge-cut.json"
+            cut = json.loads(cut_path.read_text())
+            cut["tableGitAuthority"]["revision"] = "f" * 40
+            cut_path.write_text(json.dumps(cut, sort_keys=True) + "\n")
+            receipt = root / "focused-receipt.json"
+            receipt.write_text(json.dumps({
+                "acceptedFactId": fact["id"], "changeKind": "updated",
+            }) + "\n")
+            output = root / "rebind-receipt.json"
+            plan = knowledge / "construction-plans/uiability-backup-restore.json"
+            MODULE.rebind_candidate(type("Args", (), {
+                "knowledge": knowledge, "candidate_id": CANDIDATE_ID,
+                "plan": plan, "focused_receipt": receipt,
+                "evidence_root": ROOT, "output": output,
+            }))
+            result = json.loads(output.read_text())
+            self.assertEqual(result["readinessDecision"], "blocked-qualification")
+            self.assertEqual(result["nextGate"], "implement-and-calibrate-independent-oracle")
+            self.assertEqual(result["addedEditablePaths"], [
+                "Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets",
+            ])
+            self.assertEqual(result["addedContextPaths"], [
+                "Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets",
+            ])
 
 
 if __name__ == "__main__":

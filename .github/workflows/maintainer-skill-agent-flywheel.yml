@@ -116,6 +116,18 @@ jobs:
             --run-id "$GITHUB_RUN_ID" --github-repository "$GITHUB_REPOSITORY"
           jq '{repo,revision,authorityVerified,mirror,tables}' \
             "$AGENTLAB_ROOT/run/tablegit-sync-receipt.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Rebind the focused candidate to the refreshed knowledge cut
+        if: inputs.mode == 'focused-refresh'
+        run: |
+          set -euo pipefail
+          python3 examples/maintainer-knowledge-gate/focused_fact_refresh.py rebind-candidate \
+            --knowledge "$KNOWLEDGE" --candidate-id "$FOCUSED_CANDIDATE_ID" \
+            --plan "$FOCUSED_CONSTRUCTION_PLAN" \
+            --focused-receipt "$AGENTLAB_ROOT/run/focused-refresh/proposal-receipt.json" \
+            --evidence-root . \
+            --output "$AGENTLAB_ROOT/run/focused-refresh/candidate-rebind-receipt.json"
+          jq '{candidateId,readinessDecision,nextGate,addedEditablePaths,addedContextPaths}' \
+            "$AGENTLAB_ROOT/run/focused-refresh/candidate-rebind-receipt.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Sample one non-promoted shadow case from the knowledge gain
         if: inputs.mode == 'expand'
         env:
