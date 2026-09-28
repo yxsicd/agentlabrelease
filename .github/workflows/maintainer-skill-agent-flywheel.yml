@@ -1,0 +1,113 @@
+name: Maintainer Skill Agent flywheel
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: First-four repository whose next bounded L1 gap should be analyzed
+        required: true
+        type: choice
+        options: [code-workshop, guide-snippets, harmony-iap-client, hms-cordova-iap]
+        default: code-workshop
+      model:
+        description: Model exposed by the LM Gateway
+        required: true
+        default: glm-5.3-flash
+        type: string
+      provider_route:
+        description: Explicit LM Gateway provider route
+        required: true
+        default: glm
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: maintainer-skill-agent-flywheel
+  cancel-in-progress: false
+
+jobs:
+  propose-and-gate:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      AGENTLAB_ROOT: ${{ runner.temp }}/maintainer-skill-agent-flywheel
+      KNOWLEDGE: examples/maintainer-knowledge-gate/first-four
+      REPOSITORY_ID: ${{ inputs.repository }}
+      AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
+      AGENTLAB_MODEL: ${{ inputs.model }}
+      AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Validate orchestration and build the Rust hard gate
+        run: |
+          set -euo pipefail
+          python3 -m unittest tests.test_maintainer_skill_agent_flywheel
+          cargo build --locked -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
+      - name: Freeze the next gap and exact source revision
+        id: freeze
+        run: |
+          set -euo pipefail
+          mkdir -p "$AGENTLAB_ROOT/source" "$AGENTLAB_ROOT/run"
+          assessment=$(find "$KNOWLEDGE/assessments" -maxdepth 1 -type f -name '*.json' -print0 |
+            xargs -0 jq -r '[.roundIndex,input_filename] | @tsv' | sort -n | tail -1 | cut -f2-)
+          python3 examples/maintainer-knowledge-gate/agent_flywheel.py prepare \
+            --knowledge "$KNOWLEDGE" --assessment "$assessment" \
+            --repository "$REPOSITORY_ID" --output "$AGENTLAB_ROOT/run/flywheel-request.json"
+          mapfile -t source < <(jq -r --arg id "$REPOSITORY_ID" \
+            '.repositories[] | select(.id==$id) | .repository,.revision' \
+            "$KNOWLEDGE/maintainer-knowledge-cut.json")
+          [[ ${#source[@]} -eq 2 && "${source[1]}" =~ ^[0-9a-f]{40}$ ]]
+          git clone --filter=blob:none --no-checkout "${source[0]}" "$AGENTLAB_ROOT/source/repository"
+          git -C "$AGENTLAB_ROOT/source/repository" fetch --depth 1 origin "${source[1]}"
+          git -C "$AGENTLAB_ROOT/source/repository" checkout --detach FETCH_HEAD
+          echo "assessment=$assessment" >> "$GITHUB_OUTPUT"
+      - name: Install the separately contained Pi runtime
+        run: |
+          mkdir -p "$RUNNER_TEMP/pi-runtime"
+          cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
+          npm ci --prefix "$RUNNER_TEMP/pi-runtime"
+          "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" --version
+      - name: Ask the real Agent to propose one scope-bound semantic fact
+        env:
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+        run: |
+          set -euo pipefail
+          python3 examples/maintainer-knowledge-gate/agent_flywheel.py run-agent \
+            --request "$AGENTLAB_ROOT/run/flywheel-request.json" \
+            --source "$AGENTLAB_ROOT/source/repository" \
+            --output "$AGENTLAB_ROOT/run/agent" \
+            --pi "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" \
+            --gateway "$AGENTLAB_LM_GATEWAY_URL" \
+            --model "$AGENTLAB_MODEL" --provider-route "$AGENTLAB_PROVIDER_ROUTE"
+      - name: Verify source blobs and apply the Rust maturity gate
+        run: |
+          set -euo pipefail
+          python3 examples/maintainer-knowledge-gate/agent_flywheel.py validate \
+            --request "$AGENTLAB_ROOT/run/flywheel-request.json" \
+            --proposal "$AGENTLAB_ROOT/run/agent/program-fact-proposal.json" \
+            --source "$AGENTLAB_ROOT/source/repository" \
+            --program-facts "$KNOWLEDGE/program_facts.jsonl" \
+            --output "$AGENTLAB_ROOT/run/candidate-program-facts.jsonl" \
+            --receipt "$AGENTLAB_ROOT/run/proposal-receipt.json"
+          parent=$(sha256sum '${{ steps.freeze.outputs.assessment }}' | cut -d' ' -f1)
+          round=$(jq -r '.roundIndex + 1' '${{ steps.freeze.outputs.assessment }}')
+          target/debug/agentlab-maintainer-skill-flywheel \
+            --scope-skills "$KNOWLEDGE/maintainer_scope_skills.jsonl" \
+            --program-facts "$AGENTLAB_ROOT/run/candidate-program-facts.jsonl" \
+            --round-index "$round" --parent-assessment-sha256 "$parent" \
+            --output "$AGENTLAB_ROOT/run/candidate-assessment.json"
+          python3 examples/maintainer-knowledge-gate/agent_flywheel.py compare \
+            --before '${{ steps.freeze.outputs.assessment }}' \
+            --after "$AGENTLAB_ROOT/run/candidate-assessment.json" \
+            --output "$AGENTLAB_ROOT/run/result.json"
+          jq '{decision,before,after,automaticPromotion}' "$AGENTLAB_ROOT/run/result.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve the proposal, gateway capture and hard-gate result
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: maintainer-skill-agent-flywheel-${{ github.run_id }}
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.AGENTLAB_ROOT }}/run/
