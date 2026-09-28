@@ -118,6 +118,10 @@ name = "agentlab-case-state"
 path = "src/case_state.rs"
 
 [[bin]]
+name = "agentlab-uiability-recovery-oracle-plan"
+path = "src/uiability_recovery_oracle_plan.rs"
+
+[[bin]]
 name = "agentlab-maintainer-knowledge-gate"
 path = "src/maintainer_knowledge_gate.rs"
 

@@ -141,14 +141,32 @@ either a knowledge refresh, qualification, or the construction gate. It never
 promotes a candidate.
 
 The first retained UIAbility recovery plan demonstrates the intended feedback
-loop. Its reproducible decision is `blocked-knowledge-refresh`: `Index.ets` and
-the existing `Ability.test.ets` are required by the stated demand and Oracle,
-but are absent from the candidate's bound fact evidence and editable/context
-surface. The decision separately preserves the still-unqualified API 22
-emulator build/deploy, abnormal-stop recovery cycle, independent Oracle and two
-wrong variants. The next loop must first deepen the revision-bound program fact
-and refresh the shadow candidate; emulator execution is not yet the next valid
-gate.
+loop. Round 18 refreshed the stable program fact and rebound `Index.ets` plus
+the existing `Ability.test.ets` into the candidate's exact editable/context
+surface. Its reproducible decision is now `blocked-qualification`: the
+knowledge blockers are empty, while API 22 emulator build/deploy, the
+abnormal-stop recovery cycle, independent Oracle execution and at least two
+wrong variants remain unqualified. The candidate is not automatically promoted.
+
+The Rust-native `agentlab-uiability-recovery-oracle-plan` command freezes that
+next gate in
+[`qualification-plans/uiability-backup-restore-oracle.json`](qualification-plans/uiability-backup-restore-oracle.json).
+It binds the exact candidate and construction-plan digests, the source commit,
+Tree and three Git Blobs, and the evaluator-owned
+[`uiability-backup-restore-reference.patch`](calibration-patches/uiability-backup-restore-reference.patch).
+The reference patch is calibration material, not an Agent answer or an approved
+upstream change. It extends the existing `ohosTest` lane with cold-default,
+dynamic-state seeding, recovery and normal-exit negative assertions and declares
+three meaningful wrong variants.
+
+The abnormal termination remains an explicit exact-image probe rather than a
+guessed command. The supervisor must select and retain a trigger that actually
+produces `APP_RECOVERY` on the pinned Linux x86/API 22 image. Killing the bundle
+from inside its own `ohosTest` process is rejected because it can kill the
+Oracle itself. Until that probe, reference build/run and wrong-variant execution
+complete, the plan remains
+`oracle-and-calibration-planned-trigger-probe-required`, grants no case contract,
+and keeps `automaticPromotion=false`.
 
 The Maintainer Skill Agent Action has two explicit transaction modes. `expand`
 retains the existing balanced selection of previously unbound L1 scopes and may
