@@ -24,6 +24,15 @@ EXTERNAL_HARDWARE_PATTERNS = {
         re.IGNORECASE,
     ),
 }
+NEGATED_HARDWARE_CLAUSE = re.compile(
+    r"(?:\b(?:no|without)\b|无需|不依赖|不使用|不需要)"
+    r"[^,;:。\n)]*"
+    r"(?:\b(?:physical[- ]device|serial(?: port)?|uart|usb)\b|"
+    r"\b(?:attached|external) (?:hardware|peripheral|device)\b|"
+    r"真机|串口|外接(?:硬件|外设|设备))"
+    r"[^,;:。\n)]*",
+    re.IGNORECASE,
+)
 
 
 def canonical(value) -> bytes:
@@ -83,17 +92,21 @@ def external_hardware_blockers(scope: dict, fact: dict) -> list[str]:
         scope.get("responsibility"), fact.get("id"), fact.get("interpretation"),
         *(fact.get("limitations") or []), *(scope.get("externalDependencies") or []),
     ]
-    text = "\n".join(value for value in text_values if isinstance(value, str))
+    text = NEGATED_HARDWARE_CLAUSE.sub(
+        "", "\n".join(value for value in text_values if isinstance(value, str))
+    )
     return [name for name, pattern in EXTERNAL_HARDWARE_PATTERNS.items() if pattern.search(text)]
 
 
 def require_emulator_environment(values: list[str]) -> None:
     text = "\n".join(values)
+    positive_requirements = NEGATED_HARDWARE_CLAUSE.sub("", text)
     blockers = [
-        name for name, pattern in EXTERNAL_HARDWARE_PATTERNS.items() if pattern.search(text)
+        name for name, pattern in EXTERNAL_HARDWARE_PATTERNS.items()
+        if pattern.search(positive_requirements)
     ]
     require(not blockers, f"shadow environment requires external hardware: {','.join(blockers)}")
-    require(not re.search(r"\bphysical device\b|真机", text, re.IGNORECASE),
+    require(not re.search(r"\bphysical device\b|真机", positive_requirements, re.IGNORECASE),
             "shadow environment requires a physical device")
     require(any(marker in text.lower() for marker in EMULATOR_MARKERS),
             "shadow environment does not require a HarmonyOS emulator")
