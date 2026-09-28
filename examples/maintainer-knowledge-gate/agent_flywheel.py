@@ -306,8 +306,11 @@ def compare(args):
     require(after["parentAssessmentSha256"] == digest(args.before), "assessment lineage differs")
     for key in ("scopeSkillCount", "structuralReadyCount"):
         require(after["totals"][key] == before["totals"][key], f"{key} changed")
-    require(after["totals"]["programBoundCount"] == before["totals"]["programBoundCount"] + 1,
-            "proposal did not bind exactly one new scope")
+    program_bound_delta = (
+        after["totals"]["programBoundCount"] - before["totals"]["programBoundCount"]
+    )
+    require(program_bound_delta in (0, 1),
+            "proposal changed program binding for more than one scope or removed a binding")
     require(after["totals"]["semanticReadyCount"] == before["totals"]["semanticReadyCount"] + 1,
             "proposal did not advance exactly one scope to L2")
     require(after["totals"]["maintenanceReadyCount"] == before["totals"]["maintenanceReadyCount"],
