@@ -1,0 +1,50 @@
+{
+  "schema": "agentlab.shadow_case_construction_plan.v1",
+  "candidateId": "shadow-case-uiability-backup-restore-state-recovery",
+  "candidateSha256": "6a43c35b8f69c63914a25faa41f7ee1ddf067e0dd715783f3a1818363c744890",
+  "requiredImplementationPaths": [
+    {
+      "path": "Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets",
+      "reason": "Consume the restored Want parameter only on APP_RECOVERY and transfer it into initial application state."
+    },
+    {
+      "path": "Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets",
+      "reason": "Expose the restored value as visible page state and save the latest user interaction rather than a fixed constant."
+    }
+  ],
+  "requiredOraclePaths": [
+    {
+      "path": "Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets",
+      "reason": "Extend the existing upstream ohosTest entrypoint with cold-launch, abnormal-stop and recovery assertions."
+    },
+    {
+      "path": "Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets",
+      "reason": "Bind the UI Oracle to the exact visible state owner instead of accepting generic text from another page."
+    }
+  ],
+  "runtimeRequirements": [
+    {
+      "id": "api22-emulator-build-deploy",
+      "description": "Build, install and launch the pinned source on a HarmonyOS 6.0.2 API 22 phone emulator without physical-device fallback.",
+      "status": "unqualified",
+      "evidence": []
+    },
+    {
+      "id": "abnormal-stop-recovery-cycle",
+      "description": "Prove that the selected emulator triggers onSaveState, APP_RECOVERY and restored Want delivery across a bounded abnormal stop and relaunch.",
+      "status": "unqualified",
+      "evidence": []
+    }
+  ],
+  "oracleExecution": {
+    "status": "unqualified",
+    "evidence": []
+  },
+  "wrongVariantCalibration": {
+    "status": "unqualified",
+    "evidence": [],
+    "requiredCount": 2,
+    "executedCount": 0
+  },
+  "automaticPromotion": false
+}

@@ -131,6 +131,25 @@ without blocking the first two knowledge flywheels or granting automatic
 promotion. Candidate-stage binding, independent Oracle execution, wrong-variant
 calibration and freeze remain separate mandatory gates.
 
+Retained shadow proposals now also pass through an explicit construction-
+readiness plan before the system spends emulator or Oracle capacity. The plan
+names every implementation and Oracle source path, runtime capability, Oracle
+execution receipt and wrong-variant calibration receipt. The generic
+`shadow_construction_readiness.py` evaluator binds the exact candidate and
+knowledge-cut digests, rejects unbound evidence bytes, and routes the result to
+either a knowledge refresh, qualification, or the construction gate. It never
+promotes a candidate.
+
+The first retained UIAbility recovery plan demonstrates the intended feedback
+loop. Its reproducible decision is `blocked-knowledge-refresh`: `Index.ets` and
+the existing `Ability.test.ets` are required by the stated demand and Oracle,
+but are absent from the candidate's bound fact evidence and editable/context
+surface. The decision separately preserves the still-unqualified API 22
+emulator build/deploy, abnormal-stop recovery cycle, independent Oracle and two
+wrong variants. The next loop must first deepen the revision-bound program fact
+and refresh the shadow candidate; emulator execution is not yet the next valid
+gate.
+
 The unattended third flywheel is emulator-first. Before spending a construction
 Agent turn, it rejects a newly analyzed scope whose revision-bound structural
 or semantic evidence requires a serial, USB, or other attached peripheral. A
