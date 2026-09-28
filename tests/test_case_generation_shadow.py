@@ -229,7 +229,7 @@ class CaseGenerationShadowTest(unittest.TestCase):
         request = self.request()
         proposal = self.proposal(request)
         proposal["oracleHypothesis"]["requiredEnvironment"] = [
-            "HarmonyOS emulator (no physical device, no USB/serial/external hardware)",
+            "HarmonyOS emulator: no physical device and no USB, serial, or other external hardware.",
             "无需真机，不依赖外接设备的 API 24 模拟器镜像",
         ]
         validated = MODULE.validate_proposal(request, proposal)

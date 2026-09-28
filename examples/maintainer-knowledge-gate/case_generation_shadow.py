@@ -24,13 +24,19 @@ EXTERNAL_HARDWARE_PATTERNS = {
         re.IGNORECASE,
     ),
 }
-NEGATED_HARDWARE_CLAUSE = re.compile(
-    r"(?:\b(?:no|without)\b|无需|不依赖|不使用|不需要)"
-    r"[^,;:。\n)]*"
-    r"(?:\b(?:physical[- ]device|serial(?: port)?|uart|usb)\b|"
+HARDWARE_TERM = re.compile(
+    r"\b(?:physical[- ]device|serial(?: port)?|uart|usb)\b|"
     r"\b(?:attached|external) (?:hardware|peripheral|device)\b|"
-    r"真机|串口|外接(?:硬件|外设|设备))"
-    r"[^,;:。\n)]*",
+    r"真机|串口|外接(?:硬件|外设|设备)",
+    re.IGNORECASE,
+)
+HARDWARE_NEGATION = re.compile(
+    r"\b(?:no|without|does not require|doesn't require|not require|not use)\b|"
+    r"无需|不依赖|不使用|不需要",
+    re.IGNORECASE,
+)
+NEGATION_BOUNDARY = re.compile(
+    r"(\b(?:but|however|except)\b|但是|但|却|[.;:。；：\n])",
     re.IGNORECASE,
 )
 
@@ -85,6 +91,17 @@ def previous_oracle_count(rounds: list[dict]) -> int:
     })
 
 
+def positive_hardware_requirements(text: str) -> str:
+    """Remove negated hardware lists while preserving later contrastive requirements."""
+    parts = NEGATION_BOUNDARY.split(text)
+    for index in range(0, len(parts), 2):
+        part = parts[index]
+        negation = HARDWARE_NEGATION.search(part)
+        if negation and HARDWARE_TERM.search(part, negation.end()):
+            parts[index] = part[:negation.start()]
+    return "".join(parts)
+
+
 def external_hardware_blockers(scope: dict, fact: dict) -> list[str]:
     """Return generic external-hardware signals without repository-specific rules."""
     text_values = [
@@ -92,15 +109,15 @@ def external_hardware_blockers(scope: dict, fact: dict) -> list[str]:
         scope.get("responsibility"), fact.get("id"), fact.get("interpretation"),
         *(fact.get("limitations") or []), *(scope.get("externalDependencies") or []),
     ]
-    text = NEGATED_HARDWARE_CLAUSE.sub(
-        "", "\n".join(value for value in text_values if isinstance(value, str))
+    text = positive_hardware_requirements(
+        "\n".join(value for value in text_values if isinstance(value, str))
     )
     return [name for name, pattern in EXTERNAL_HARDWARE_PATTERNS.items() if pattern.search(text)]
 
 
 def require_emulator_environment(values: list[str]) -> None:
     text = "\n".join(values)
-    positive_requirements = NEGATED_HARDWARE_CLAUSE.sub("", text)
+    positive_requirements = positive_hardware_requirements(text)
     blockers = [
         name for name, pattern in EXTERNAL_HARDWARE_PATTERNS.items()
         if pattern.search(positive_requirements)
