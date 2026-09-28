@@ -18,7 +18,8 @@ if [[ ! $iterations =~ ^[1-3]$ ]]; then
 fi
 
 loop_root="$run_root/loop"
-mkdir -p "$loop_root/sources"
+source_root="$run_root/../sources"
+mkdir -p "$loop_root" "$source_root"
 working_knowledge=$knowledge
 
 for ((iteration = 1; iteration <= iterations; iteration++)); do
@@ -38,7 +39,9 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
   scope_id=$(jq -r '.scope.id' "$iteration_root/flywheel-request.json")
   [[ ${#source[@]} -eq 2 && "${source[1]}" =~ ^[0-9a-f]{40}$ ]]
 
-  source_dir="$loop_root/sources/$repository_id-${source[1]}"
+  # Source checkouts are execution inputs, not evidence artifacts. Keep them
+  # beside run_root so the workflow's run/ upload cannot retain whole repos.
+  source_dir="$source_root/$repository_id-${source[1]}"
   if [[ ! -d "$source_dir/.git" ]]; then
     git clone --filter=blob:none --no-checkout "${source[0]}" "$source_dir"
     git -C "$source_dir" fetch --depth 1 origin "${source[1]}"

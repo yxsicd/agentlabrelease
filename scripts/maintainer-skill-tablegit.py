@@ -511,9 +511,16 @@ def command_sync(args) -> None:
         raise RuntimeError("exact export requires a staged or explicitly selected assessment")
     assessments = args.export / "assessments"
     assessments.mkdir(exist_ok=True)
-    assessment_target = assessments / assessment.name
-    if assessment.resolve() != assessment_target.resolve():
-        shutil.copy2(assessment, assessment_target)
+    snapshot_assessments = args.snapshot / "assessments"
+    if snapshot_assessments.is_dir():
+        for source in snapshot_assessments.glob("*.json"):
+            target = assessments / source.name
+            if source.resolve() != target.resolve():
+                shutil.copy2(source, target)
+    else:
+        assessment_target = assessments / assessment.name
+        if assessment.resolve() != assessment_target.resolve():
+            shutil.copy2(assessment, assessment_target)
     update_cut(args.export, args.base, revision, args.repo, args.run_id, args.github_repository)
 
     mirror = {"requested": False, "verified": False}
