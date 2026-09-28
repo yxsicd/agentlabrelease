@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      AGENTLAB_ROOT: ${{ runner.temp }}/maintainer-skill-agent-flywheel
+      AGENTLAB_ROOT: /tmp/maintainer-skill-agent-flywheel
       KNOWLEDGE: examples/maintainer-knowledge-gate/first-four
       REPOSITORY_ID: ${{ inputs.repository }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
