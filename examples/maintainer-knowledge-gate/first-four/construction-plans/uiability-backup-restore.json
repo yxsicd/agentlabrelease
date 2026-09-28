@@ -1,7 +1,11 @@
 {
-  "schema": "agentlab.shadow_case_construction_plan.v1",
+  "automaticPromotion": false,
   "candidateId": "shadow-case-uiability-backup-restore-state-recovery",
-  "candidateSha256": "6a43c35b8f69c63914a25faa41f7ee1ddf067e0dd715783f3a1818363c744890",
+  "candidateSha256": "fa20f6b28fa9b44457f74d9eb15e3208d36eb8fabece852027bd40160283a200",
+  "oracleExecution": {
+    "evidence": [],
+    "status": "unqualified"
+  },
   "requiredImplementationPaths": [
     {
       "path": "Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets",
@@ -24,27 +28,23 @@
   ],
   "runtimeRequirements": [
     {
-      "id": "api22-emulator-build-deploy",
       "description": "Build, install and launch the pinned source on a HarmonyOS 6.0.2 API 22 phone emulator without physical-device fallback.",
-      "status": "unqualified",
-      "evidence": []
+      "evidence": [],
+      "id": "api22-emulator-build-deploy",
+      "status": "unqualified"
     },
     {
-      "id": "abnormal-stop-recovery-cycle",
       "description": "Prove that the selected emulator triggers onSaveState, APP_RECOVERY and restored Want delivery across a bounded abnormal stop and relaunch.",
-      "status": "unqualified",
-      "evidence": []
+      "evidence": [],
+      "id": "abnormal-stop-recovery-cycle",
+      "status": "unqualified"
     }
   ],
-  "oracleExecution": {
-    "status": "unqualified",
-    "evidence": []
-  },
+  "schema": "agentlab.shadow_case_construction_plan.v1",
   "wrongVariantCalibration": {
-    "status": "unqualified",
     "evidence": [],
+    "executedCount": 0,
     "requiredCount": 2,
-    "executedCount": 0
-  },
-  "automaticPromotion": false
+    "status": "unqualified"
+  }
 }
