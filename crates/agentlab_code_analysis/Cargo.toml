@@ -125,6 +125,10 @@ path = "src/maintainer_knowledge_gate.rs"
 name = "agentlab-maintainer-skill-catalog"
 path = "src/maintainer_skill_catalog.rs"
 
+[[bin]]
+name = "agentlab-maintainer-skill-flywheel"
+path = "src/maintainer_skill_flywheel_cli.rs"
+
 [dependencies]
 tree-sitter = "=0.27.0"
 tree-sitter-language = "=0.1.8"

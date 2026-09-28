@@ -1223,6 +1223,10 @@ fn schemas_are_strict_and_match_tool_outputs() {
             "agentlab.case_generation_round.v1",
         ),
         (
+            "schemas/maintainer-skill-assessment.schema.json",
+            "agentlab.maintainer_skill_assessment.v1",
+        ),
+        (
             "schemas/case-execution-state.schema.json",
             "agentlab.case_execution_state.v1",
         ),

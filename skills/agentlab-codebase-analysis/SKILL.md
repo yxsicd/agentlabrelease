@@ -23,6 +23,14 @@ no candidate may enter semantic review without a passing candidate-stage receipt
 
 Every claim needs a source location or analysis record. Distinguish observed behavior from inferred intent. Use program facts to support the semantic model; do not manufacture dependency edges from prose. Preserve unresolved questions as gaps.
 
+Build knowledge through repeated evidence rounds, not a single repository read.
+First freeze the structural scope catalog, then bind revision-matched program
+facts, assess universal evidence dimensions, and use the resulting gap queue to
+drive the next targeted analysis and Skill refresh. Only an independent
+assessment may advance a scope from structural to semantic or maintenance
+readiness. Follow [the Maintainer Skill evidence flywheel](references/maintainer-skill-flywheel.md)
+and retain every parent assessment digest.
+
 Use [program analysis](../agentlab-program-analysis/SKILL.md) for structure and [seed extraction](../agentlab-seed-extraction/SKILL.md) to turn grounded knowledge into tasks. Archive searches and generic TableGit analysis requests, exact input cuts and complete results in `program_facts`.
 
 Develop in TableGit. Export a fixed cut with the existing [three-table workflow](../../examples/knowledge-seed/README.md), one stable JSONL per table. Release files are publication snapshots, not a second live authority.
