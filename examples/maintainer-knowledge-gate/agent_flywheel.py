@@ -40,6 +40,24 @@ def require(condition, message):
         raise ValueError(message)
 
 
+def path_is_within(path, boundary):
+    boundary = boundary.rstrip("/")
+    return path == boundary or path.startswith(boundary + "/")
+
+
+def scope_has_reachable_evidence(scope):
+    boundary = scope.get("pathBoundary")
+    evidence = scope.get("evidence")
+    if not isinstance(boundary, str) or not boundary or not isinstance(evidence, list):
+        return False
+    return any(
+        isinstance(row, dict)
+        and isinstance(row.get("path"), str)
+        and path_is_within(row["path"], boundary)
+        for row in evidence
+    )
+
+
 def select_scope(scope_rows, assessment, repository_id):
     states = {row["skillId"]: row for row in assessment["skills"]}
     eligible = []
@@ -53,6 +71,12 @@ def select_scope(scope_rows, assessment, repository_id):
         if not isinstance(source_count, int) or source_count < 1 or source_count > 80:
             continue
         if scope.get("pathBoundary") == ".":
+            continue
+        # A proposal must cite at least one blob inside its selected boundary.
+        # Do not send an Agent a generated scope whose own inventory evidence
+        # cannot satisfy that invariant (for example, entry/_build whose
+        # evidence only names files directly under entry/).
+        if not scope_has_reachable_evidence(scope):
             continue
         eligible.append(scope)
     require(eligible, f"no bounded L1 source scope is eligible in {repository_id}")
@@ -202,7 +226,7 @@ def validate_proposal(request, proposal, source_root):
             capture_output=True, text=True,
         )
         require(actual.returncode == 0 and actual.stdout.strip() == oid, f"evidence blob differs: {path}")
-        inside = inside or path == boundary or path.startswith(boundary + "/")
+        inside = inside or path_is_within(path, boundary)
         clean_evidence.append({"path": path, "gitBlobOid": oid})
     require(inside, "no evidence path is inside the selected scope")
     return {
