@@ -120,13 +120,26 @@ class MaintainerSkillTableGitTest(unittest.TestCase):
                 "output": output,
             }))
             rounds = MODULE.load_jsonl(output / "maintainer_skill_refresh_rounds.jsonl")
-            self.assertEqual(rounds[-1]["roundIndex"], 6)
-            self.assertFalse(rounds[-1]["automaticPromotion"])
-            self.assertEqual(rounds[-1]["producer"]["runId"], "42")
-            self.assertEqual(rounds[-1]["parentRoundSha256"], MODULE.value_sha256(
-                max(MODULE.load_jsonl(source / "maintainer_skill_refresh_rounds.jsonl"), key=lambda row: row["roundIndex"])
+            latest = max(rounds, key=lambda row: row["roundIndex"])
+            previous = max(
+                MODULE.load_jsonl(source / "maintainer_skill_refresh_rounds.jsonl"),
+                key=lambda row: row["roundIndex"],
+            )
+            self.assertEqual(latest["roundIndex"], previous["roundIndex"] + 1)
+            self.assertFalse(latest["automaticPromotion"])
+            self.assertEqual(latest["producer"]["runId"], "42")
+            self.assertEqual(latest["parentRoundSha256"], MODULE.value_sha256(
+                previous
             ))
-            self.assertEqual(rounds[-1]["assessment"]["sha256"], MODULE.file_sha256(assessment))
+            self.assertEqual(latest["assessment"]["sha256"], MODULE.file_sha256(assessment))
+            self.assertEqual(
+                latest["tables"]["processSkillsSha256"],
+                MODULE.file_sha256(output / "maintainer_skills.jsonl"),
+            )
+            self.assertEqual(
+                latest["tables"]["programFactsSha256"],
+                MODULE.file_sha256(output / "program_facts.jsonl"),
+            )
             self.assertEqual(MODULE.load(output / "stage-manifest.json")["assessment"], "round-5-agent-42.json")
 
 

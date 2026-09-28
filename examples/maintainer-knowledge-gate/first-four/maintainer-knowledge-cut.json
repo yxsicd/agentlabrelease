@@ -1,6 +1,11 @@
 {
-  "schema": "agentlab.maintainer_knowledge_cut.v1",
-  "sourceSetSha256": "88310ecd6a5ace0c7393c7981b8f9ba9103afff41133b71d0b84e951e95f24a6",
+  "automaticPromotion": false,
+  "policy": {
+    "candidateBindingsRequired": true,
+    "programAnalysisBound": true,
+    "semanticCoverageRequired": true,
+    "wholeRepositoryInventoryRequired": true
+  },
   "repositories": [
     {
       "id": "code-workshop",
@@ -23,10 +28,22 @@
       "revision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9"
     }
   ],
+  "schema": "agentlab.maintainer_knowledge_cut.v1",
+  "sourceSetSha256": "88310ecd6a5ace0c7393c7981b8f9ba9103afff41133b71d0b84e951e95f24a6",
+  "tableGitAuthority": {
+    "exportedBy": {
+      "kind": "github-action",
+      "repository": "yxsicd/agentlabrelease",
+      "runId": "36375738317",
+      "runUrl": "https://github.com/yxsicd/agentlabrelease/actions/runs/36375738317"
+    },
+    "repo": "agentlabtablegit",
+    "revision": "e1f1e7e0c0965c65cd2dd25acddce0598cede861"
+  },
   "tables": {
-    "maintainerSkills": {
-      "path": "maintainer_skills.jsonl",
-      "sha256": "b75522b766e10ee537af25ebe6cb45314866b5b03bd31106e7358e41bf6a4b55"
+    "evaluationCases": {
+      "path": "evaluation_cases.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "maintainerScopeSkills": {
       "path": "maintainer_scope_skills.jsonl",
@@ -34,22 +51,15 @@
     },
     "maintainerSkillRefreshRounds": {
       "path": "maintainer_skill_refresh_rounds.jsonl",
-      "sha256": "c055a2a4fd5812f892107592724c426e643177c7f5302baf0756b9efa68a9332"
+      "sha256": "1bab2c3c8921c1729050d19a5bb8ead156712d765b186b9dbb3a990785ea6a44"
+    },
+    "maintainerSkills": {
+      "path": "maintainer_skills.jsonl",
+      "sha256": "a7f6affb37e60c7009870feafa86325ba4b7cdabf0ff2b0fd88364fa667ff6d7"
     },
     "programFacts": {
       "path": "program_facts.jsonl",
-      "sha256": "6dd40814146ff4e17a3615540059bfd6cc888ef14e5b910b07290525618e3b24"
-    },
-    "evaluationCases": {
-      "path": "evaluation_cases.jsonl",
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "sha256": "cce688f0f189dcf6ea6fae77aecf099105d5c175c55e0f4d1f05671f769134c9"
     }
-  },
-  "policy": {
-    "wholeRepositoryInventoryRequired": true,
-    "semanticCoverageRequired": true,
-    "programAnalysisBound": true,
-    "candidateBindingsRequired": true
-  },
-  "automaticPromotion": false
+  }
 }
