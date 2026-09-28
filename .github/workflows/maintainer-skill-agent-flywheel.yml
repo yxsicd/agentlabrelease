@@ -53,7 +53,10 @@ jobs:
       - name: Validate orchestration and build the Rust hard gate
         run: |
           set -euo pipefail
-          python3 -m unittest tests.test_maintainer_skill_agent_flywheel tests.test_maintainer_skill_tablegit
+          python3 -m unittest \
+            tests.test_maintainer_skill_agent_flywheel \
+            tests.test_maintainer_skill_tablegit \
+            tests.test_case_generation_shadow
           cargo build --locked -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
       - name: Install the separately contained Pi runtime
         run: |
@@ -81,6 +84,14 @@ jobs:
             --run-id "$GITHUB_RUN_ID" --github-repository "$GITHUB_REPOSITORY"
           jq '{repo,revision,authorityVerified,mirror,tables}' \
             "$AGENTLAB_ROOT/run/tablegit-sync-receipt.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Sample one non-promoted shadow case from the knowledge gain
+        env:
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+        run: |
+          set -euo pipefail
+          scripts/run-case-generation-shadow.sh \
+            "$KNOWLEDGE" "$AGENTLAB_ROOT/run" \
+            "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi"
       - name: Propose the fixed-revision Release export
         env:
           GH_TOKEN: ${{ github.token }}
@@ -100,7 +111,7 @@ jobs:
           url=$(gh pr create \
             --base main --head "$branch" \
             --title "Export Maintainer Skill flywheel $GITHUB_RUN_ID" \
-            --body "Exports $ITERATIONS hard-gated Maintainer Skill iteration(s) from the exact committed TableGit revision recorded in maintainer-knowledge-cut.json. Every iteration advanced exactly one scope to L2; automatic promotion remains disabled. Source run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
+            --body "Exports $ITERATIONS hard-gated Maintainer Skill iteration(s) from the exact committed TableGit revision recorded in maintainer-knowledge-cut.json. Every iteration advanced exactly one scope to L2. The downstream shadow generation round sampled at most one non-promoted case hypothesis and retained failure feedback when construction was rejected; automatic promotion remains disabled. Source run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
           echo "Release export PR: $url" >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve the proposal, gateway capture and hard-gate result
         if: always()
