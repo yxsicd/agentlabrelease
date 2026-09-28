@@ -20,7 +20,8 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
 
 concurrency:
   group: maintainer-skill-agent-flywheel
@@ -38,12 +39,14 @@ jobs:
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_MODEL: ${{ inputs.model }}
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
+      AGENTLAB_TABLEGIT_MCP_URL: ${{ vars.AGENTLAB_TABLEGIT_MCP_URL }}
+      AGENTLAB_TABLEGIT_PERSON_ID: ${{ vars.AGENTLAB_TABLEGIT_PERSON_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Validate orchestration and build the Rust hard gate
         run: |
           set -euo pipefail
-          python3 -m unittest tests.test_maintainer_skill_agent_flywheel
+          python3 -m unittest tests.test_maintainer_skill_agent_flywheel tests.test_maintainer_skill_tablegit
           cargo build --locked -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
       - name: Freeze the next gap and exact source revision
         id: freeze
@@ -103,6 +106,49 @@ jobs:
             --after "$AGENTLAB_ROOT/run/candidate-assessment.json" \
             --output "$AGENTLAB_ROOT/run/result.json"
           jq '{decision,before,after,automaticPromotion}' "$AGENTLAB_ROOT/run/result.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Stage the hard-gated knowledge cut
+        run: |
+          set -euo pipefail
+          python3 scripts/maintainer-skill-tablegit.py stage \
+            --base "$KNOWLEDGE" \
+            --candidate-program-facts "$AGENTLAB_ROOT/run/candidate-program-facts.jsonl" \
+            --candidate-assessment "$AGENTLAB_ROOT/run/candidate-assessment.json" \
+            --result "$AGENTLAB_ROOT/run/result.json" \
+            --receipt "$AGENTLAB_ROOT/run/proposal-receipt.json" \
+            --run-id "$GITHUB_RUN_ID" --github-repository "$GITHUB_REPOSITORY" \
+            --output "$AGENTLAB_ROOT/run/tablegit-stage"
+      - name: Persist in TableGit, export the exact revision, and verify its GitHub mirror
+        run: |
+          set -euo pipefail
+          test -n "$AGENTLAB_TABLEGIT_MCP_URL"
+          test -n "$AGENTLAB_TABLEGIT_PERSON_ID"
+          python3 scripts/maintainer-skill-tablegit.py sync \
+            --base "$KNOWLEDGE" --snapshot "$AGENTLAB_ROOT/run/tablegit-stage" \
+            --export "$KNOWLEDGE" --receipt "$AGENTLAB_ROOT/run/tablegit-sync-receipt.json" \
+            --run-id "$GITHUB_RUN_ID" --github-repository "$GITHUB_REPOSITORY"
+          jq '{repo,revision,remoteRevision,replicationOutcome,verified,tables}' \
+            "$AGENTLAB_ROOT/run/tablegit-sync-receipt.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Propose the fixed-revision Release export
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch="automation/maintainer-skill-flywheel-$GITHUB_RUN_ID"
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git switch -c "$branch"
+          git add "$KNOWLEDGE"
+          git diff --cached --exit-code && {
+            echo "The exact TableGit export already matches Release." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          }
+          git commit -m "export maintainer skill flywheel $GITHUB_RUN_ID"
+          git push origin "HEAD:refs/heads/$branch"
+          url=$(gh pr create \
+            --base main --head "$branch" \
+            --title "Export Maintainer Skill flywheel $GITHUB_RUN_ID" \
+            --body "Exports the hard-gated Maintainer Skill candidate from the exact committed TableGit revision recorded in maintainer-knowledge-cut.json. Automatic promotion remains disabled. Source run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
+          echo "Release export PR: $url" >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve the proposal, gateway capture and hard-gate result
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
