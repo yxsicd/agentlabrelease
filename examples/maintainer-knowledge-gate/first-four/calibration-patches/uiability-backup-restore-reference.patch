@@ -1,17 +1,28 @@
 diff --git a/Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets b/Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets
-index 2e29fbdd..c95af79e 100644
+index 2e29fbdd..35ede572 100644
 --- a/Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets
 +++ b/Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets
-@@ -24,6 +24,8 @@ import { window } from '@kit.ArkUI';
+@@ -15,7 +15,7 @@
+ 
+ // [Start onCreate]
+ // [Start onSaveState]
+-import { AbilityConstant, UIAbility, Want } from '@kit.AbilityKit';
++import { AbilityConstant, appRecovery, UIAbility, Want } from '@kit.AbilityKit';
+ import { hilog } from '@kit.PerformanceAnalysisKit';
+ // [StartExclude onCreate]
+ // [StartExclude onSaveState]
+@@ -24,6 +24,10 @@ import { window } from '@kit.ArkUI';
  // [EndExclude onCreate]
  
  const DOMAIN = 0x0000;
 +const STATE_KEY = 'myData';
++const LAUNCH_REASON_KEY = 'agentLabLaunchReason';
 +const DEFAULT_MESSAGE = 'Hello World';
++appRecovery.enableAppRecovery();
  
  export default class EntryAbility extends UIAbility {
    onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
-@@ -34,9 +36,14 @@ export default class EntryAbility extends UIAbility {
+@@ -34,9 +38,18 @@ export default class EntryAbility extends UIAbility {
        hilog.error(DOMAIN, 'EntryAbility', 'Failed to set restore enabled: %{public}s', JSON.stringify(error));
      }
      // [StartExclude onCreate]
@@ -25,10 +36,14 @@ index 2e29fbdd..c95af79e 100644
 +      }
      }
 +    AppStorage.setOrCreate<string>(STATE_KEY, initialMessage);
++    AppStorage.setOrCreate<string>(
++      LAUNCH_REASON_KEY,
++      launchParam.launchReason === AbilityConstant.LaunchReason.APP_RECOVERY ? 'APP_RECOVERY' : 'NORMAL'
++    );
      // [EndExclude onCreate]
    }
  
-@@ -44,7 +51,7 @@ export default class EntryAbility extends UIAbility {
+@@ -44,7 +57,7 @@ export default class EntryAbility extends UIAbility {
    onSaveState(reason: AbilityConstant.StateType, wantParam: Record<string, Object>): AbilityConstant.OnSaveResult {
      // 保存应用数据。
      hilog.info(DOMAIN, 'EntryAbility', '[Demo] EntryAbility onSaveState');
@@ -37,7 +52,7 @@ index 2e29fbdd..c95af79e 100644
      return AbilityConstant.OnSaveResult.ALL_AGREE;
    }
  
-@@ -84,4 +91,4 @@ export default class EntryAbility extends UIAbility {
+@@ -84,4 +97,4 @@ export default class EntryAbility extends UIAbility {
    // [EndExclude onCreate]
  }
  // [End onSaveState]
@@ -45,19 +60,25 @@ index 2e29fbdd..c95af79e 100644
 \ No newline at end of file
 +// [End onCreate]
 diff --git a/Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets b/Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets
-index 0f481f69..ddff1d8a 100644
+index 0f481f69..ae57cbab 100644
 --- a/Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets
 +++ b/Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets
-@@ -16,7 +16,7 @@
+@@ -13,10 +13,13 @@
+  * limitations under the License.
+  */
+ 
++import { appRecovery } from '@kit.AbilityKit';
++
  @Entry
  @Component
  struct Index {
 -  @State message: string = 'Hello World';
 +  @StorageLink('myData') message: string = 'Hello World';
++  @StorageLink('agentLabLaunchReason') launchReason: string = 'NORMAL';
  
    build() {
      RelativeContainer() {
-@@ -29,10 +29,16 @@ struct Index {
+@@ -29,10 +32,38 @@ struct Index {
            middle: { anchor: '__container__', align: HorizontalAlign.Center }
          })
          .onClick(() => {
@@ -69,6 +90,28 @@ index 0f481f69..ddff1d8a 100644
 +          } else {
 +            this.message = 'Hello World';
 +          }
++        })
++      Text(this.launchReason)
++        .id('AgentLabLaunchReason')
++        .fontSize(1)
++        .opacity(0.01)
++        .alignRules({
++          top: { anchor: '__container__', align: VerticalAlign.Top },
++          start: { anchor: '__container__', align: HorizontalAlign.Start }
++        })
++      Button('Trigger Recovery')
++        .id('AgentLabRecoveryTrigger')
++        .fontSize(1)
++        .width(80)
++        .height(40)
++        .opacity(0.01)
++        .alignRules({
++          bottom: { anchor: '__container__', align: VerticalAlign.Bottom },
++          end: { anchor: '__container__', align: HorizontalAlign.End }
++        })
++        .onClick(() => {
++          appRecovery.saveAppState();
++          appRecovery.restartApp();
          })
      }
      .height('100%')
@@ -78,10 +121,10 @@ index 0f481f69..ddff1d8a 100644
 \ No newline at end of file
 +}
 diff --git a/Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets b/Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets
-index f111bae8..731740a4 100644
+index f111bae8..b1f29f56 100644
 --- a/Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets
 +++ b/Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets
-@@ -15,13 +15,28 @@
+@@ -15,13 +15,33 @@
  
  import { describe, beforeAll, beforeEach, afterEach, afterAll, it, expect } from '@ohos/hypium';
  import { Want } from '@kit.AbilityKit';
@@ -90,33 +133,40 @@ index f111bae8..731740a4 100644
  
  const delegator = abilityDelegatorRegistry.getAbilityDelegator();
  const bundleName = abilityDelegatorRegistry.getArguments().bundleName;
++const driver = Driver.create();
++
++async function startAndFindMessage(): Promise<Component> {
++  const want: Want = {
++    bundleName: bundleName,
++    abilityName: 'EntryAbility'
++  };
++  await delegator.startAbility(want);
++  await driver.delayMs(1000);
++  return driver.findComponent(ON.id('HelloWorld'));
++}
++
++async function assertVisibleMessage(expected: string): Promise<void> {
++  const message = await startAndFindMessage();
++  expect(await message.getText()).assertEqual(expected);
++}
++
++async function assertLaunchReason(expected: string): Promise<void> {
++  const launchReason = await driver.findComponent(ON.id('AgentLabLaunchReason'));
++  expect(await launchReason.getText()).assertEqual(expected);
++}
  
  export default function abilityTest() {
-   let driver = Driver.create();
-+  async function startAndFindMessage(): Promise<Component> {
-+    const want: Want = {
-+      bundleName: bundleName,
-+      abilityName: 'EntryAbility'
-+    };
-+    await delegator.startAbility(want);
-+    await driver.delayMs(1000);
-+    return driver.findComponent(ON.id('HelloWorld'));
-+  }
-+
-+  async function assertVisibleMessage(expected: string): Promise<void> {
-+    const message = await startAndFindMessage();
-+    expect(await message.getText()).assertEqual(expected);
-+  }
-+
+-  let driver = Driver.create();
    describe('ActsAbilityTest', () => {
      // Defines a test suite. Two parameters are supported: test suite name and test suite function.
      beforeAll(() => {
-@@ -53,5 +68,25 @@ export default function abilityTest() {
+@@ -53,5 +73,30 @@ export default function abilityTest() {
        expect(entryAbility.context.abilityInfo.name).assertEqual('EntryAbility');
        done();
      })
 +    it('AgentLab_Cold_Default', 0, async (done: Function) => {
 +      await assertVisibleMessage('Hello World');
++      await assertLaunchReason('NORMAL');
 +      done();
 +    })
 +    it('AgentLab_Seed_Dynamic', 0, async (done: Function) => {
@@ -125,14 +175,18 @@ index f111bae8..731740a4 100644
 +      await message.click();
 +      await driver.delayMs(200);
 +      expect(await message.getText()).assertEqual('Recovered Twice');
++      await assertLaunchReason('NORMAL');
++      await driver.pressHome();
 +      done();
 +    })
 +    it('AgentLab_Recovery_RestoresLatest', 0, async (done: Function) => {
 +      await assertVisibleMessage('Recovered Twice');
++      await assertLaunchReason('APP_RECOVERY');
 +      done();
 +    })
 +    it('AgentLab_NormalExit_ColdDefault', 0, async (done: Function) => {
 +      await assertVisibleMessage('Hello World');
++      await assertLaunchReason('NORMAL');
 +      done();
 +    })
    })

@@ -160,14 +160,17 @@ fn plans_supervisor_owned_multiphase_oracle_and_wrong_variants() {
     let value = load(&temp.join("oracle.json"));
     assert_eq!(
         value["status"],
-        "oracle-and-calibration-planned-trigger-probe-required"
+        "reference-positive-control-calibrated-wrong-variants-required"
     );
     assert_eq!(
         value["oracle"]["authority"],
         "supervisor-owned-multi-process-orchestration"
     );
     assert_eq!(value["oracle"]["phases"].as_array().unwrap().len(), 5);
-    assert!(value["oracle"]["phases"][2]["selectedTrigger"].is_null());
+    assert_eq!(
+        value["oracle"]["phases"][2]["selectedTrigger"],
+        "click-AgentLabRecoveryTrigger-appRecovery-saveAppState-restartApp"
+    );
     assert_eq!(value["wrongVariants"].as_array().unwrap().len(), 3);
     assert_eq!(
         value["referenceContract"]["patch"]["changedPaths"]
@@ -177,6 +180,9 @@ fn plans_supervisor_owned_multiphase_oracle_and_wrong_variants() {
         3
     );
     assert_eq!(value["qualification"]["requiredWrongVariants"], 2);
+    assert_eq!(value["qualification"]["selectedTriggerCalibrated"], true);
+    assert_eq!(value["qualification"]["runtimeReceiptRequired"], true);
+    assert_eq!(value["qualification"]["triggerProbeCompleted"], false);
     assert_eq!(value["qualification"]["independentOracleExecuted"], false);
     assert_eq!(value["allowsCaseContract"], false);
     assert_eq!(value["automaticPromotion"], false);
@@ -199,6 +205,34 @@ fn rejects_source_drift_and_candidate_digest_drift() {
     let result = run(&temp, &source, &candidate, &plan, &patch, "digest.json");
     assert!(!result.status.success());
     assert!(String::from_utf8_lossy(&result.stderr).contains("candidate digest differs"));
+    fs::remove_dir_all(temp).unwrap();
+}
+
+#[test]
+fn selects_the_bound_candidate_from_jsonl() {
+    let temp = root();
+    let (source, candidate, plan, patch) = fixture(&temp);
+    let selected = load(&candidate);
+    let unrelated = json!({"id": "unrelated", "schema": "agentlab.shadow_case_candidate.v1"});
+    write(
+        &candidate,
+        format!(
+            "{}\n{}\n",
+            serde_json::to_string(&unrelated).unwrap(),
+            serde_json::to_string(&selected).unwrap()
+        )
+        .as_bytes(),
+    );
+    let result = run(&temp, &source, &candidate, &plan, &patch, "jsonl.json");
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert_eq!(
+        load(&temp.join("jsonl.json"))["candidate"]["id"],
+        "shadow-case-uiability-backup-restore-state-recovery"
+    );
     fs::remove_dir_all(temp).unwrap();
 }
 
@@ -236,4 +270,40 @@ fn public_schema_matches_generated_contract() {
     );
     assert_eq!(schema["properties"]["automaticPromotion"]["const"], false);
     assert_eq!(schema["properties"]["allowsCaseContract"]["const"], false);
+
+    let receipt =
+        load(&repository().join("schemas/uiability-recovery-runtime-receipt.schema.json"));
+    assert_eq!(
+        receipt["properties"]["schema"]["const"],
+        "agentlab.uiability_recovery_runtime_receipt.v1"
+    );
+    assert_eq!(receipt["properties"]["automaticPromotion"]["const"], false);
+}
+
+#[test]
+fn retained_runtime_receipt_binds_plan_patch_and_fail_closed_result() {
+    let repository = repository();
+    let plan_path = repository.join(
+        "examples/maintainer-knowledge-gate/first-four/qualification-plans/uiability-backup-restore-oracle.json",
+    );
+    let patch_path = repository.join(
+        "examples/maintainer-knowledge-gate/first-four/calibration-patches/uiability-backup-restore-reference.patch",
+    );
+    let receipt = load(&repository.join(
+        "examples/maintainer-knowledge-gate/first-four/qualification-receipts/uiability-backup-restore-reference-runtime.json",
+    ));
+    assert_eq!(receipt["planSha256"], digest(&fs::read(plan_path).unwrap()));
+    assert_eq!(
+        receipt["referencePatch"]["sha256"],
+        digest(&fs::read(&patch_path).unwrap())
+    );
+    assert_eq!(
+        receipt["referencePatch"]["byteLength"],
+        fs::metadata(patch_path).unwrap().len()
+    );
+    assert_eq!(receipt["evidence"]["before"]["launchReason"], "NORMAL");
+    assert_eq!(receipt["evidence"]["after"]["launchReason"], "APP_RECOVERY");
+    assert_eq!(receipt["result"]["wrongVariantsQualified"], 0);
+    assert_eq!(receipt["result"]["caseContractAllowed"], false);
+    assert_eq!(receipt["automaticPromotion"], false);
 }

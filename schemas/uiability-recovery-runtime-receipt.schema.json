@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/uiability-recovery-runtime-receipt.schema.json",
+  "title": "AgentLab UIAbility recovery runtime receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "planSha256",
+    "source",
+    "referencePatch",
+    "environment",
+    "artifacts",
+    "orchestration",
+    "evidence",
+    "result",
+    "automaticPromotion"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.uiability_recovery_runtime_receipt.v1"},
+    "planSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repositoryId", "revision", "treeOid"],
+      "properties": {
+        "repositoryId": {"const": "guide-snippets"},
+        "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "treeOid": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "referencePatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "byteLength"],
+      "properties": {
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "byteLength": {"type": "integer", "minimum": 1}
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["host", "emulator", "runtime", "architecture", "buildTargetApi"],
+      "properties": {
+        "host": {"type": "string", "minLength": 1},
+        "emulator": {"type": "string", "minLength": 1},
+        "runtime": {"type": "string", "minLength": 1},
+        "architecture": {"type": "string", "minLength": 1},
+        "buildTargetApi": {"type": "integer", "minimum": 1}
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applicationHapSha256", "testHapSha256"],
+      "properties": {
+        "applicationHapSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "testHapSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "orchestration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "trigger", "operationId", "routeDecision", "targetPeerId"],
+      "properties": {
+        "owner": {"const": "host-supervisor"},
+        "trigger": {"const": "click-AgentLabRecoveryTrigger-appRecovery-saveAppState-restartApp"},
+        "operationId": {"type": "string", "minLength": 1},
+        "routeDecision": {"const": "peer_direct"},
+        "targetPeerId": {"type": "string", "minLength": 1}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["beforeLayoutSha256", "afterLayoutSha256", "before", "after"],
+      "properties": {
+        "beforeLayoutSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "afterLayoutSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "before": {
+          "const": {"visibleText": "Recovered Twice", "launchReason": "NORMAL"}
+        },
+        "after": {
+          "const": {"visibleText": "Recovered Twice", "launchReason": "APP_RECOVERY"}
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["referencePositiveControl", "wrongVariantsQualified", "caseContractAllowed"],
+      "properties": {
+        "referencePositiveControl": {"const": "passed"},
+        "wrongVariantsQualified": {"const": 0},
+        "caseContractAllowed": {"const": false}
+      }
+    },
+    "automaticPromotion": {"const": false}
+  }
+}
