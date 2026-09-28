@@ -91,7 +91,7 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     assert_eq!(skills.len(), 12);
     assert!(facts.len() >= 24);
     assert!(refresh_rounds.len() >= 5);
-    assert_eq!(generation_rounds.len(), 1);
+    assert!(!generation_rounds.is_empty());
     assert!(
         fs::read_to_string(baseline.join("evaluation_cases.jsonl"))
             .unwrap()
@@ -323,4 +323,30 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
         .as_array()
         .unwrap()
         .is_empty());
+
+    let mut ordered_generation_rounds = generation_rounds.values().collect::<Vec<_>>();
+    ordered_generation_rounds.sort_by_key(|row| row["roundIndex"].as_u64().unwrap());
+    assert_eq!(ordered_generation_rounds[0]["roundIndex"], 1);
+    assert_eq!(
+        ordered_generation_rounds[0]["parentRoundSha256"],
+        Value::Null
+    );
+    for row in &ordered_generation_rounds {
+        assert_eq!(
+            row["automaticPromotion"], false,
+            "case-generation rounds must never promote candidates automatically"
+        );
+    }
+    for pair in ordered_generation_rounds.windows(2) {
+        assert_eq!(
+            pair[1]["parentRoundSha256"],
+            digest(&serde_json::to_vec(pair[0]).unwrap()),
+            "case-generation round lineage differs"
+        );
+        assert_eq!(
+            pair[1]["roundIndex"].as_u64().unwrap(),
+            pair[0]["roundIndex"].as_u64().unwrap() + 1,
+            "case-generation round indices are not contiguous"
+        );
+    }
 }
