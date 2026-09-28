@@ -147,6 +147,34 @@ class MaintainerSkillTableGitTest(unittest.TestCase):
             self.assertTrue((output / "maintainer-knowledge-cut.json").is_file())
             self.assertTrue((output / "assessments/round-5-agent-42.json").is_file())
 
+    def test_focused_refresh_is_recorded_as_an_update_not_a_new_fact(self):
+        source = ROOT / "examples/maintainer-knowledge-gate/first-four"
+        with tempfile.TemporaryDirectory() as directory:
+            assessment = Path(directory) / "assessment.json"
+            assessment.write_text(json.dumps({
+                "roundIndex": 16,
+                "nextRoundObjectives": ["re-run candidate construction readiness"],
+            }) + "\n")
+            fact_id = "agent-analysis-uiability-backup-restore-state-recovery"
+            row = MODULE.build_refresh_round(
+                source,
+                source / "program_facts.jsonl",
+                assessment,
+                {
+                    "decision": "review-proposed-knowledge-refresh",
+                    "after": {
+                        "scopeSkillCount": 480, "programBoundCount": 24,
+                        "semanticReadyCount": 17, "maintenanceReadyCount": 2,
+                    },
+                },
+                {"acceptedFactId": fact_id, "changeKind": "updated"},
+                "43",
+                "owner/repo",
+            )
+            self.assertEqual(row["changes"]["added"], [])
+            self.assertIn(f"semantic program fact {fact_id}", row["changes"]["updated"])
+            self.assertEqual(row["decision"], "review-proposed-knowledge-refresh")
+
 
 if __name__ == "__main__":
     unittest.main()

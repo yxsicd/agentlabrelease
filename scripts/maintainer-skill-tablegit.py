@@ -133,8 +133,15 @@ def build_refresh_round(base: Path, candidate_facts: Path, assessment_path: Path
         "ownershipPlane": "target-operations",
         "decision": result["decision"],
         "changes": {
-            "added": [f"semantic program fact {receipt['acceptedFactId']}"],
+            "added": (
+                [f"semantic program fact {receipt['acceptedFactId']}"]
+                if receipt.get("changeKind", "added") == "added" else []
+            ),
             "updated": [
+                *(
+                    [f"semantic program fact {receipt['acceptedFactId']}"]
+                    if receipt.get("changeKind") == "updated" else []
+                ),
                 f"{after['programBoundCount']} scopes program-bound",
                 f"{after['semanticReadyCount']} scopes semantic-ready",
             ],
