@@ -93,10 +93,16 @@ The long-lived `agentlabtablegit` TableGit repository is the editable authority.
 The Maintainer Skill Agent workflow first passes the proposal through the Rust
 hard gate, then inserts the complete business documents through revision-fenced,
 idempotent TableGit transactions. It reads every table back from the resulting
-exact committed revision, verifies the configured GitHub mirror reached the
-same repository revision, and opens a Release pull request containing the
-sorted JSONL export. `tableGitAuthority.revision` in the cut binds that export.
-The pull request remains a review boundary and `automaticPromotion` stays false.
+exact committed revision and opens a Release pull request containing the sorted
+JSONL export. `tableGitAuthority.revision` in the cut binds that export. The pull
+request remains a review boundary and `automaticPromotion` stays false.
+
+TableGit authoring and Git remote publication are intentionally separate
+authority lanes. The public Action needs `table.write`; it does not receive or
+attempt to bypass `mcp.publish`. An authenticated operator may separately run
+the same sync command with `--replicate`, which revision-fences the configured
+remote push and verifies remote convergence. Mirror lag never changes which
+TableGit revision is the knowledge authority or the source of a Release export.
 
 Tables use a typed `id`/routing/digest envelope around the complete business
 document. The envelope keeps the immutable TableGit definition stable while

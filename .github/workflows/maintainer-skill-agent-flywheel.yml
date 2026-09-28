@@ -117,7 +117,7 @@ jobs:
             --receipt "$AGENTLAB_ROOT/run/proposal-receipt.json" \
             --run-id "$GITHUB_RUN_ID" --github-repository "$GITHUB_REPOSITORY" \
             --output "$AGENTLAB_ROOT/run/tablegit-stage"
-      - name: Persist in TableGit, export the exact revision, and verify its GitHub mirror
+      - name: Persist in TableGit and export the exact committed revision
         run: |
           set -euo pipefail
           test -n "$AGENTLAB_TABLEGIT_MCP_URL"
@@ -126,7 +126,7 @@ jobs:
             --base "$KNOWLEDGE" --snapshot "$AGENTLAB_ROOT/run/tablegit-stage" \
             --export "$KNOWLEDGE" --receipt "$AGENTLAB_ROOT/run/tablegit-sync-receipt.json" \
             --run-id "$GITHUB_RUN_ID" --github-repository "$GITHUB_REPOSITORY"
-          jq '{repo,revision,remoteRevision,replicationOutcome,verified,tables}' \
+          jq '{repo,revision,authorityVerified,mirror,tables}' \
             "$AGENTLAB_ROOT/run/tablegit-sync-receipt.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Propose the fixed-revision Release export
         env:

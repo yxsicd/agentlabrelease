@@ -296,8 +296,8 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
         467
     );
     assert_eq!(
-        assessment_four["inputs"]["programFactsSha256"],
-        digest(&fs::read(baseline.join("program_facts.jsonl")).unwrap())
+        assessment_four["inputs"]["programFactsSha256"], fifth["tables"]["programFactsSha256"],
+        "historical assessment must retain its own program-fact cut"
     );
 
     let generation = &generation_rounds["first-four-case-generation-round-1-readiness-baseline"];

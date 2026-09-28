@@ -68,9 +68,15 @@ def write_json(path: Path, value) -> None:
 
 def write_jsonl(path: Path, rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w") as stream:
-        for row in sorted(rows, key=lambda item: item["id"]):
-            stream.write(canonical(row).decode() + "\n")
+    path.write_bytes(jsonl_bytes(rows))
+
+
+def jsonl_bytes(rows: list[dict]) -> bytes:
+    return b"".join(canonical(row) + b"\n" for row in sorted(rows, key=lambda item: item["id"]))
+
+
+def jsonl_sha256(rows: list[dict]) -> str:
+    return hashlib.sha256(jsonl_bytes(rows)).hexdigest()
 
 
 def envelope(row: dict) -> dict:
@@ -150,9 +156,9 @@ def build_refresh_round(base: Path, candidate_facts: Path, assessment_path: Path
         ],
         "residualGaps": assessment["nextRoundObjectives"],
         "tables": {
-            "processSkillsSha256": file_sha256(base / TABLE_FILES["maintainer_skills"]),
-            "scopeSkillsSha256": file_sha256(base / TABLE_FILES["maintainer_scope_skills"]),
-            "programFactsSha256": file_sha256(candidate_facts),
+            "processSkillsSha256": jsonl_sha256(load_jsonl(base / TABLE_FILES["maintainer_skills"])),
+            "scopeSkillsSha256": jsonl_sha256(load_jsonl(base / TABLE_FILES["maintainer_scope_skills"])),
+            "programFactsSha256": jsonl_sha256(load_jsonl(candidate_facts)),
         },
         "producer": {
             "kind": "github-action",
@@ -173,16 +179,16 @@ def command_stage(args) -> None:
         source = args.base / filename
         target = args.output / filename
         if table == "program_facts":
-            shutil.copy2(args.candidate_program_facts, target)
+            table_rows = load_jsonl(args.candidate_program_facts)
         elif table == "maintainer_skill_refresh_rounds":
-            rows = load_jsonl(source)
-            rows.append(build_refresh_round(
+            table_rows = load_jsonl(source)
+            table_rows.append(build_refresh_round(
                 args.base, args.candidate_program_facts, args.candidate_assessment,
                 load(args.result), load(args.receipt), args.run_id, args.github_repository,
             ))
-            write_jsonl(target, rows)
         else:
-            shutil.copy2(source, target)
+            table_rows = load_jsonl(source)
+        write_jsonl(target, table_rows)
     assessment = load(args.candidate_assessment)
     assessment_name = f"round-{assessment['roundIndex']}-agent-{args.run_id}.json"
     shutil.copy2(args.candidate_assessment, args.output / assessment_name)
@@ -485,31 +491,45 @@ def command_sync(args) -> None:
         ]:
             raise RuntimeError(f"{table} exact-revision export differs from the staged cut")
 
-    manifest = load(args.snapshot / "stage-manifest.json")
-    assessment = args.snapshot / manifest["assessment"]
+    manifest_path = args.snapshot / "stage-manifest.json"
+    if manifest_path.is_file():
+        assessment = args.snapshot / load(manifest_path)["assessment"]
+    elif args.assessment:
+        assessment = args.assessment
+    else:
+        raise RuntimeError("exact export requires a staged or explicitly selected assessment")
     assessments = args.export / "assessments"
     assessments.mkdir(exist_ok=True)
-    shutil.copy2(assessment, assessments / assessment.name)
+    assessment_target = assessments / assessment.name
+    if assessment.resolve() != assessment_target.resolve():
+        shutil.copy2(assessment, assessment_target)
     update_cut(args.export, args.base, revision, args.repo, args.run_id, args.github_repository)
 
-    replicated = client.call("skill_run_publish", "replication", "repo_remote_replicate", {
-        "repo": args.repo, "alias": args.remote, "expected_revision": revision,
-    })
-    if not replicated.get("verified") or replicated.get("conflicts"):
-        raise RuntimeError(f"remote replication was not verified: {replicated}")
-    remote = client.call("skill_run_publish", "replication", "repo_remote_status", {
-        "repo": args.repo, "alias": args.remote, "fetch": True,
-    })
-    if remote.get("remote_revision") != remote.get("local_revision") or remote.get("behind") not in (0, None):
-        raise RuntimeError(f"remote mirror did not converge: {remote}")
+    mirror = {"requested": False, "verified": False}
+    if args.replicate:
+        replicated = client.call("skill_run_publish", "replication", "repo_remote_replicate", {
+            "repo": args.repo, "alias": args.remote, "expected_revision": revision,
+        })
+        if not replicated.get("verified") or replicated.get("conflicts"):
+            raise RuntimeError(f"remote replication was not verified: {replicated}")
+        remote = client.call("skill_run_publish", "replication", "repo_remote_status", {
+            "repo": args.repo, "alias": args.remote, "fetch": True,
+        })
+        if remote.get("remote_revision") != remote.get("local_revision") or remote.get("behind") not in (0, None):
+            raise RuntimeError(f"remote mirror did not converge: {remote}")
+        mirror = {
+            "requested": True,
+            "verified": True,
+            "alias": args.remote,
+            "revision": remote["remote_revision"],
+            "outcome": replicated["outcome"],
+        }
     write_json(args.receipt, {
         "schema": "agentlab.maintainer_skill_tablegit_sync_receipt.v1",
         "repo": args.repo,
         "revision": revision,
-        "remote": args.remote,
-        "remoteRevision": remote["remote_revision"],
-        "replicationOutcome": replicated["outcome"],
-        "verified": True,
+        "authorityVerified": True,
+        "mirror": mirror,
         "runId": args.run_id,
         "tables": {
             table: {"rowCount": len(exact_rows[table]), "sha256": file_sha256(args.export / filename)}
@@ -536,12 +556,20 @@ def main() -> None:
     sync.add_argument("--base", type=Path, required=True)
     sync.add_argument("--snapshot", type=Path, required=True)
     sync.add_argument("--export", type=Path, required=True)
+    sync.add_argument(
+        "--assessment", type=Path,
+        help="explicit assessment for a recovery export when the snapshot has no stage manifest",
+    )
     sync.add_argument("--receipt", type=Path, required=True)
     sync.add_argument("--endpoint", default=os.environ.get("AGENTLAB_TABLEGIT_MCP_URL"))
     sync.add_argument("--person-id", default=os.environ.get("AGENTLAB_TABLEGIT_PERSON_ID"))
     sync.add_argument("--repo", default="agentlabtablegit")
     sync.add_argument("--anchor-table", default="capability_profiles")
     sync.add_argument("--remote", default="origin")
+    sync.add_argument(
+        "--replicate", action="store_true",
+        help="also use the separately authorized MCP publish lane to mirror the committed revision",
+    )
     sync.add_argument("--run-id", required=True)
     sync.add_argument("--github-repository", required=True)
     sync.set_defaults(handler=command_sync)
