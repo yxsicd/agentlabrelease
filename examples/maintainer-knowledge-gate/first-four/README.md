@@ -188,7 +188,12 @@ implementation/Oracle path by exact Git Blob. The independent maturity
 assessment must keep all counts and the selected scope's L2 status unchanged.
 The refreshed fact is committed once to TableGit and exported through a review
 PR; it does not rewrite the candidate or run the emulator. A later generation
-round must rebind the candidate to the new knowledge cut before qualification.
+round may explicitly rebind the candidate when its own fact changes. Unrelated
+knowledge-cut advances do not rewrite a retained candidate, construction plan,
+or calibration evidence: readiness keeps the candidate's historical cut digest,
+requires its refresh-round lineage to remain present, and revalidates every
+referenced scope, fact, source revision and evidence path against the current
+compatible cut.
 
 The unattended third flywheel is emulator-first. Before spending a construction
 Agent turn, it rejects a newly analyzed scope whose revision-bound structural

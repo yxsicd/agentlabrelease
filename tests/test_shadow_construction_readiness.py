@@ -44,6 +44,40 @@ def make_blocked_knowledge(target: Path) -> Path:
 
 
 class ShadowConstructionReadinessTest(unittest.TestCase):
+    def test_historical_candidate_cut_remains_valid_after_compatible_cut_advances(self):
+        with tempfile.TemporaryDirectory() as directory:
+            knowledge = Path(directory) / "knowledge"
+            shutil.copytree(KNOWLEDGE, knowledge)
+            cut_path = knowledge / "maintainer-knowledge-cut.json"
+            cut_path.write_text(cut_path.read_text() + "\n")
+            plan = knowledge / "construction-plans/uiability-backup-restore.json"
+            receipt = MODULE.assess(knowledge, CANDIDATE_ID, plan, ROOT)
+            candidate = next(
+                row for row in MODULE.rows(knowledge / "case_generation_candidates.jsonl")
+                if row["id"] == CANDIDATE_ID
+            )
+            self.assertEqual(receipt["knowledgeCutSha256"], candidate["knowledgeCutSha256"])
+            self.assertEqual(receipt["currentKnowledgeCutSha256"], MODULE.file_digest(cut_path))
+            self.assertNotEqual(receipt["knowledgeCutSha256"], receipt["currentKnowledgeCutSha256"])
+
+    def test_candidate_requires_a_retained_refresh_round(self):
+        with tempfile.TemporaryDirectory() as directory:
+            knowledge = Path(directory) / "knowledge"
+            shutil.copytree(KNOWLEDGE, knowledge)
+            candidates_path = knowledge / "case_generation_candidates.jsonl"
+            candidates = MODULE.rows(candidates_path)
+            candidate = next(row for row in candidates if row["id"] == CANDIDATE_ID)
+            candidate["maintainerSkillRefreshRoundId"] = "missing-round"
+            candidates_path.write_bytes(b"".join(
+                MODULE.canonical(row) + b"\n" for row in sorted(candidates, key=lambda row: row["id"])
+            ))
+            plan = json.loads((knowledge / "construction-plans/uiability-backup-restore.json").read_text())
+            plan["candidateSha256"] = MODULE.value_digest(candidate)
+            plan_path = knowledge / "construction-plans/test-plan.json"
+            plan_path.write_text(json.dumps(plan))
+            with self.assertRaisesRegex(ValueError, "refresh round is absent"):
+                MODULE.assess(knowledge, CANDIDATE_ID, plan_path, ROOT)
+
     def test_uiability_candidate_returns_exact_knowledge_feedback(self):
         with tempfile.TemporaryDirectory() as directory:
             knowledge = make_blocked_knowledge(Path(directory) / "knowledge")
