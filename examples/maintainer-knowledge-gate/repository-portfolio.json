@@ -1,0 +1,71 @@
+{
+  "schema": "agentlab.repository_portfolio.v1",
+  "authority": "repository evidence already pinned by this Release checkout",
+  "repositories": [
+    {
+      "id": "code-workshop",
+      "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+      "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+      "role": "primary-whole-repository-maintainer-skill-sample",
+      "currentEvidence": "first-four revision-bound repository/program/seed Skills, whole ArkTS syntax inventory, selected-path semantic Skills, facts, cases, whole-phone builds, and assessed runs",
+      "remainingGap": "expand maintainer semantic coverage beyond the selected scenario paths and import the staging cut into a selected persistent development authority"
+    },
+    {
+      "id": "guide-snippets",
+      "repository": "https://gitcode.com/HarmonyOS_Samples/guide-snippets.git",
+      "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+      "role": "large-corpus-recall-and-noise-control-sample",
+      "currentEvidence": "first-four revision-bound Skills plus a 355-root project-boundary and corpus-noise baseline",
+      "remainingGap": "deepen representative per-project semantic coverage; shared SDK imports remain routing evidence rather than cases"
+    },
+    {
+      "id": "harmony-iap-client",
+      "repository": "https://gitcode.com/HarmonyOS_Samples/iapkit-sample-clientdemo-arkts.git",
+      "revision": "59260e2b0f9663be2d35288f4f339b8ce60ae5a3",
+      "role": "cross-repository-Harmony-contract-sample",
+      "currentEvidence": "first-four revision-bound Skills plus purchase-data source, build, ohosTest, emulator, and performance evidence",
+      "remainingGap": "diversify semantic mining beyond purchaseData and import the staging cut into a selected persistent development authority"
+    },
+    {
+      "id": "hms-cordova-iap",
+      "repository": "https://github.com/HMS-Core/hms-cordova-plugin.git",
+      "revision": "8c51815f27f2cb2dea925a6a25db7f522a6e79b9",
+      "role": "cross-language-cross-repository-contract-sample",
+      "currentEvidence": "first-four revision-bound Skills plus purchase-data Cordova-side source and bounded-flow evidence",
+      "remainingGap": "repair the upstream build/test contract and obtain live vendor-IAP execution"
+    },
+    {
+      "id": "asrelease",
+      "repository": "https://github.com/yxsorg/asrelease.git",
+      "revision": "374ab3cf2bdd3c31418997adfdd1aaa13ac8f550",
+      "role": "Harmony-toolchain-and-Web2Atomic-integration-sample",
+      "currentEvidence": "source pointer and extracted Harmony operation boundaries",
+      "remainingGap": "not yet onboarded as a mined evaluation-case knowledge cut"
+    }
+  ],
+  "externalControlBenchmarks": [
+    {
+      "repository": "https://github.com/psf/requests.git",
+      "caseCount": 1,
+      "role": "SWE-bench control; not an AgentLab-mined Harmony case"
+    },
+    {
+      "repository": "https://github.com/django/django.git",
+      "caseCount": 2,
+      "role": "SWE-bench control; not an AgentLab-mined Harmony case"
+    },
+    {
+      "repository": "https://github.com/sympy/sympy.git",
+      "caseCount": 1,
+      "role": "SWE-bench control; not an AgentLab-mined Harmony case"
+    }
+  ],
+  "selectionPolicy": {
+    "primaryImplementationSample": "code-workshop",
+    "crossRepositorySampleSet": ["harmony-iap-client", "hms-cordova-iap"],
+    "noiseAndScaleSample": "guide-snippets",
+    "toolchainIntegrationSample": "asrelease",
+    "minimumStructurallyDistinctCandidatesPerRound": 3,
+    "automaticPromotion": false
+  }
+}

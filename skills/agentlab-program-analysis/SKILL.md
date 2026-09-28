@@ -5,11 +5,18 @@ metadata:
   agentlab-layer: method
   agentlab-role: maintenance
   agentlab-stage: program-analysis
+  agentlab-ownership-plane: repository-native
 ---
 
 # Program analysis maintenance
 
 Analyze the same source commit as semantic knowledge. Record symbols, imports, call candidates, module dependencies, configuration/resource references and available test/build entrypoints as typed `program_facts` rows. Use stable source-derived IDs.
+
+Program analysis MUST NOT form an independent shortcut around maintainer Skills.
+Every candidate binding names revision-matched repository-analysis,
+program-analysis and seed-extraction instance Skills plus the exact supporting
+facts and archived analysis rows. Missing coverage fails closed under
+[the maintainer knowledge gate](../../docs/maintainer-skill-gated-case-pipeline.md).
 
 Prefer a language-aware parser/compiler when available. A lexical extractor or name join is useful but must retain its method and unresolved status; a same-name candidate is not resolved dispatch. Record source path/span, analyzer identity and source revision. Keep semantic Skill links explicit.
 

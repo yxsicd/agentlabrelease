@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.dev/schemas/case-generation-round.schema.json",
+  "title": "Iterative Case Generation Round",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "roundIndex", "parentRoundSha256", "sourceSetSha256", "knowledgeCutSha256", "maintainerSkillRefreshRoundId", "objectives", "coverage", "candidates", "qualification", "feedback", "decision", "decisionEvidence", "automaticPromotion"],
+  "properties": {
+    "schema": { "const": "agentlab.case_generation_round.v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "roundIndex": { "type": "integer", "minimum": 1 },
+    "parentRoundSha256": {
+      "oneOf": [
+        { "$ref": "#/$defs/sha256" },
+        { "type": "null" }
+      ]
+    },
+    "sourceSetSha256": { "$ref": "#/$defs/sha256" },
+    "knowledgeCutSha256": { "$ref": "#/$defs/sha256" },
+    "maintainerSkillRefreshRoundId": { "type": "string", "minLength": 1 },
+    "objectives": { "$ref": "#/$defs/nonEmptyStrings" },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repositoryIds", "scopeSkillCount", "behaviorReadyBefore", "behaviorReadyAfter", "oracleReadyBefore", "oracleReadyAfter"],
+      "properties": {
+        "repositoryIds": { "$ref": "#/$defs/nonEmptyStrings" },
+        "scopeSkillCount": { "type": "integer", "minimum": 1 },
+        "behaviorReadyBefore": { "type": "integer", "minimum": 0 },
+        "behaviorReadyAfter": { "type": "integer", "minimum": 0 },
+        "oracleReadyBefore": { "type": "integer", "minimum": 0 },
+        "oracleReadyAfter": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "candidates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generatedIds", "retainedIds", "rejected"],
+      "properties": {
+        "generatedIds": { "$ref": "#/$defs/strings" },
+        "retainedIds": { "$ref": "#/$defs/strings" },
+        "rejected": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["candidateId", "reason"],
+            "properties": {
+              "candidateId": { "type": "string", "minLength": 1 },
+              "reason": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "qualification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["constructedIds", "oracleQualifiedIds", "calibratedIds", "qualifiedCaseIds"],
+      "properties": {
+        "constructedIds": { "$ref": "#/$defs/strings" },
+        "oracleQualifiedIds": { "$ref": "#/$defs/strings" },
+        "calibratedIds": { "$ref": "#/$defs/strings" },
+        "qualifiedCaseIds": { "$ref": "#/$defs/strings" }
+      }
+    },
+    "feedback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maintainerSkillGaps", "programAnalysisGaps", "oracleGaps"],
+      "properties": {
+        "maintainerSkillGaps": { "$ref": "#/$defs/strings" },
+        "programAnalysisGaps": { "$ref": "#/$defs/strings" },
+        "oracleGaps": { "$ref": "#/$defs/strings" }
+      }
+    },
+    "decision": { "enum": ["continue", "converged", "blocked"] },
+    "decisionEvidence": { "$ref": "#/$defs/nonEmptyStrings" },
+    "automaticPromotion": { "const": false }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "strings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

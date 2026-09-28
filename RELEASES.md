@@ -1,5 +1,22 @@
 # Releases
 
+## v0.1.0-alpha.15 candidate
+
+Advances only the independently released Linux x64 MCPGit Program to source
+revision `19f92d4aea35378ef7665b22df7d2b2fcb15ccd4`. The aggregate continues to
+reuse 15 components and 26 payload/descriptor assets with zero binary rebuilds
+and zero binary uploads; the other 14 component selections are unchanged.
+
+The release-closure composer now distinguishes an intentional component
+replacement, identified by a new immutable component reference, from asset
+drift under an unchanged reference. The latter remains fail-closed. All 26
+selected assets have been re-observed on their immutable GitHub Releases, and
+the new MCPGit archive has also passed an independent AW Linux download,
+digest, configuration, sessionless MCP 2026-07-28 discovery, Skill discovery
+and repository-read smoke. Exact-tag clean-runner qualification remains
+required before publication. Linux Harmony emulator execution is not
+requalified for this cut, and automatic promotion remains disabled.
+
 ## v0.1.0-alpha.14 developer preview
 
 Promotes the long-horizon case model and the independently published Linux x64

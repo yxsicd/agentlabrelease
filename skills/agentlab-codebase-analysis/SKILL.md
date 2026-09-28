@@ -5,6 +5,7 @@ metadata:
   agentlab-layer: method
   agentlab-role: maintenance
   agentlab-stage: repository-analysis
+  agentlab-ownership-plane: repository-native
 ---
 
 # Codebase analysis maintenance
@@ -13,7 +14,22 @@ Read the pinned source and its existing maintainer guidance. Identify project bo
 
 Maintain stable `maintainer_skills` rows containing Markdown guidance and explicit source/fact references. They describe how to maintain the target codebase, not how to administer AgentLab. Revisit the same row when knowledge changes so Git history retains the semantic delta.
 
+This is a hard prerequisite for real-source case mining. Every pinned repository
+MUST have revision-matched instance Skills that cover architecture, build/test
+entrypoints, behavior contracts, state transitions, cross-file responsibilities
+and known gaps. Whole-source parser success alone is not semantic coverage. Use
+the executable gate in [the normative pipeline](../../docs/maintainer-skill-gated-case-pipeline.md);
+no candidate may enter semantic review without a passing candidate-stage receipt.
+
 Every claim needs a source location or analysis record. Distinguish observed behavior from inferred intent. Use program facts to support the semantic model; do not manufacture dependency edges from prose. Preserve unresolved questions as gaps.
+
+Build knowledge through repeated evidence rounds, not a single repository read.
+First freeze the structural scope catalog, then bind revision-matched program
+facts, assess universal evidence dimensions, and use the resulting gap queue to
+drive the next targeted analysis and Skill refresh. Only an independent
+assessment may advance a scope from structural to semantic or maintenance
+readiness. Follow [the Maintainer Skill evidence flywheel](references/maintainer-skill-flywheel.md)
+and retain every parent assessment digest.
 
 Use [program analysis](../agentlab-program-analysis/SKILL.md) for structure and [seed extraction](../agentlab-seed-extraction/SKILL.md) to turn grounded knowledge into tasks. Archive searches and generic TableGit analysis requests, exact input cuts and complete results in `program_facts`.
 

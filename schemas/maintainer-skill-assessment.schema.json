@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.dev/schemas/maintainer-skill-assessment.schema.json",
+  "title": "Maintainer Skill Flywheel Assessment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "assessmentId", "roundIndex", "parentAssessmentSha256", "inputs", "standard", "totals", "repositories", "gapCounts", "nextRoundObjectives", "decision", "skills", "automaticPromotion"],
+  "properties": {
+    "schema": { "const": "agentlab.maintainer_skill_assessment.v1" },
+    "assessmentId": { "type": "string", "pattern": "^maintainer-skill-assessment-[0-9a-f]{20}$" },
+    "roundIndex": { "type": "integer", "minimum": 1 },
+    "parentAssessmentSha256": {
+      "oneOf": [
+        { "$ref": "#/$defs/sha256" },
+        { "type": "null" }
+      ]
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scopeSkillsSha256", "programFactsSha256"],
+      "properties": {
+        "scopeSkillsSha256": { "$ref": "#/$defs/sha256" },
+        "programFactsSha256": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "standard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["semanticDimensions", "sourceScopeAdditionalDimensions", "maintenanceAdditionalDimensions", "repositoryReadyRule"],
+      "properties": {
+        "semanticDimensions": { "$ref": "#/$defs/nonEmptyStrings" },
+        "sourceScopeAdditionalDimensions": { "$ref": "#/$defs/nonEmptyStrings" },
+        "maintenanceAdditionalDimensions": { "$ref": "#/$defs/nonEmptyStrings" },
+        "repositoryReadyRule": { "type": "string", "minLength": 1 }
+      }
+    },
+    "totals": { "$ref": "#/$defs/readinessCounts" },
+    "repositories": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["repositoryId", "scopeSkillCount", "structuralReadyCount", "programBoundCount", "semanticReadyCount", "maintenanceReadyCount", "readyForCaseGeneration"],
+        "properties": {
+          "repositoryId": { "type": "string", "minLength": 1 },
+          "scopeSkillCount": { "type": "integer", "minimum": 1 },
+          "structuralReadyCount": { "type": "integer", "minimum": 0 },
+          "programBoundCount": { "type": "integer", "minimum": 0 },
+          "semanticReadyCount": { "type": "integer", "minimum": 0 },
+          "maintenanceReadyCount": { "type": "integer", "minimum": 0 },
+          "readyForCaseGeneration": { "type": "boolean" }
+        }
+      }
+    },
+    "gapCounts": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 1 }
+    },
+    "nextRoundObjectives": { "$ref": "#/$defs/strings" },
+    "decision": { "enum": ["continue", "ready"] },
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["skillId", "repositoryId", "sourceRevision", "capabilities", "maturity", "checks", "evidenceBindings", "provenDimensions", "requiredSemanticDimensions", "gaps"],
+        "properties": {
+          "skillId": { "type": "string", "minLength": 1 },
+          "repositoryId": { "type": "string", "minLength": 1 },
+          "sourceRevision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+          "capabilities": { "$ref": "#/$defs/nonEmptyStrings" },
+          "maturity": { "enum": ["L0-discovered", "L1-structural-ready", "L2-semantic-ready", "L3-maintenance-ready"] },
+          "checks": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["identityReady", "structuralReady", "programEvidenceBound", "semanticReady", "maintenanceReady"],
+            "properties": {
+              "identityReady": { "type": "boolean" },
+              "structuralReady": { "type": "boolean" },
+              "programEvidenceBound": { "type": "boolean" },
+              "semanticReady": { "type": "boolean" },
+              "maintenanceReady": { "type": "boolean" }
+            }
+          },
+          "evidenceBindings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["factId", "bindingMode", "dimensions"],
+              "properties": {
+                "factId": { "type": "string", "minLength": 1 },
+                "bindingMode": { "enum": ["explicit-scope-id", "exact-path-boundary", "inherited-evidence-fact", "unknown"] },
+                "dimensions": { "$ref": "#/$defs/strings" }
+              }
+            }
+          },
+          "provenDimensions": { "$ref": "#/$defs/strings" },
+          "requiredSemanticDimensions": { "$ref": "#/$defs/nonEmptyStrings" },
+          "gaps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["code", "dimension", "severity", "message"],
+              "properties": {
+                "code": { "type": "string", "pattern": "^MS-[A-Z0-9-]+$" },
+                "dimension": { "type": "string", "minLength": 1 },
+                "severity": { "enum": ["P0", "P1", "P2"] },
+                "message": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "automaticPromotion": { "const": false }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "strings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "readinessCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scopeSkillCount", "structuralReadyCount", "programBoundCount", "semanticReadyCount", "maintenanceReadyCount"],
+      "properties": {
+        "scopeSkillCount": { "type": "integer", "minimum": 1 },
+        "structuralReadyCount": { "type": "integer", "minimum": 0 },
+        "programBoundCount": { "type": "integer", "minimum": 0 },
+        "semanticReadyCount": { "type": "integer", "minimum": 0 },
+        "maintenanceReadyCount": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

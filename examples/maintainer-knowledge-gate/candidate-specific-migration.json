@@ -1,0 +1,50 @@
+{
+  "schema": "agentlab.candidate_specific_migration.v1",
+  "candidateId": "difficulty-c75c82b3a697d8053e74bb37",
+  "candidateLabel": "purchase-data",
+  "classification": "retained-evidence-adapters-not-generic-case-architecture",
+  "policy": {
+    "historicalEvidenceMutable": false,
+    "newCandidateSpecificStagesAllowed": false,
+    "genericKnowledgeGateRequiredForProgression": true,
+    "automaticPromotion": false
+  },
+  "retainedRustAdapters": [
+    "agentlab-purchase-data-runtime-plan",
+    "agentlab-purchase-data-ohostest-proposal",
+    "agentlab-purchase-data-ohostest-reference-qualification",
+    "agentlab-purchase-data-ohostest-candidate-qualification",
+    "agentlab-purchase-data-ohostest-review-packet",
+    "agentlab-purchase-data-ohostest-review",
+    "agentlab-purchase-data-ohostest-mutation-plan",
+    "agentlab-purchase-data-ohostest-mutation-qualification",
+    "agentlab-purchase-data-runtime-oracle-bridge",
+    "agentlab-purchase-data-ohostest-profile-qualification",
+    "agentlab-purchase-data-ohostest-performance-detector-qualification",
+    "agentlab-purchase-data-integrated-review-packet",
+    "agentlab-purchase-data-integrated-review",
+    "agentlab-purchase-data-case-performance-plan",
+    "agentlab-purchase-data-case-performance-qualification",
+    "agentlab-purchase-data-unseen-agent-cohort-contract",
+    "agentlab-purchase-data-unseen-agent-readiness",
+    "agentlab-purchase-data-exact-patch-publication",
+    "agentlab-purchase-data-published-revision-reexecution",
+    "agentlab-purchase-data-trusted-case-freeze"
+  ],
+  "blockedWorkflows": {
+    "construction": [
+      "purchase-data-behavior-oracle-review.yml",
+      "purchase-data-ohostest-source-review.yml"
+    ],
+    "calibration": [
+      "purchase-data-integrated-semantic-review.yml",
+      "purchase-data-integrated-oracle-review.yml",
+      "purchase-data-exact-patch-publication.yml",
+      "purchase-data-published-revision-reexecution.yml"
+    ],
+    "freeze": [
+      "purchase-data-trusted-case-freeze.yml"
+    ]
+  },
+  "removalCondition": "Replace an adapter only after the generic case manifest and runner express the same boundary and its historical evidence remains reproducible."
+}

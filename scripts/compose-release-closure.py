@@ -91,22 +91,33 @@ def compose(
         and str(component.get("status", "")).startswith("selected")
     ]
     require(selected_components, "component registry has no selected components")
-    registered_by_url = {
-        asset["url"]: (component, asset)
-        for component in selected_components
-        for asset in component.get("assets", [])
-        if isinstance(asset, dict) and isinstance(asset.get("url"), str)
-    }
+    selected_by_id = {component.get("id"): component for component in selected_components}
+    base_assets_by_component: dict[str, list[dict[str, Any]]] = {}
     for retained in base.get("assets", []):
-        registered = registered_by_url.get(retained.get("url"))
-        require(registered is not None, "base asset is absent from the new registry")
-        component, asset = registered
+        component_id = retained.get("registryComponent")
         require(
-            retained.get("registryComponent") == component.get("id")
-            and retained.get("sha256") == asset.get("sha256")
-            and retained.get("bytes") == asset.get("bytes"),
-            "base asset identity differs from the new registry",
+            isinstance(component_id, str) and component_id in selected_by_id,
+            "base component is absent from the new registry selection",
         )
+        base_assets_by_component.setdefault(component_id, []).append(retained)
+    for component_id, retained_assets in base_assets_by_component.items():
+        component = selected_by_id[component_id]
+        current_assets = component.get("assets") or []
+        retained_refs = {asset.get("immutableRef") for asset in retained_assets}
+        if retained_refs == {component.get("immutableRef")}:
+            retained_by_url = {asset.get("url"): asset for asset in retained_assets}
+            current_by_url = {asset.get("url"): asset for asset in current_assets}
+            require(
+                set(retained_by_url) <= set(current_by_url),
+                f"unchanged component dropped a retained asset: {component_id}",
+            )
+            for url, retained in retained_by_url.items():
+                asset = current_by_url[url]
+                require(
+                    retained.get("sha256") == asset.get("sha256")
+                    and retained.get("bytes") == asset.get("bytes"),
+                    f"unchanged component asset identity differs: {component_id}",
+                )
     assets = []
     asset_ids: set[str] = set()
     asset_urls: set[str] = set()

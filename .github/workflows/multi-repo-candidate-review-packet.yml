@@ -14,6 +14,18 @@ on:
         description: API-call-specific member of the reviewed cohort
         required: true
         type: string
+      knowledge_run_id:
+        description: Successful trusted-main run containing the exact maintainer knowledge bundle
+        required: true
+        type: string
+      knowledge_artifact:
+        description: Artifact name containing maintainer-knowledge-cut.json, candidate-knowledge-binding.json and its three JSONL tables
+        required: true
+        type: string
+      expected_knowledge_cut_sha256:
+        description: Exact maintainer knowledge cut digest inspected before candidate review
+        required: true
+        type: string
 
 permissions:
   actions: read
@@ -29,6 +41,9 @@ jobs:
       SOURCE_RUN_ID: ${{ inputs.cohort_review_run_id }}
       EXPECTED_COHORT_SHA256: ${{ inputs.expected_cohort_sha256 }}
       CANDIDATE_ID: ${{ inputs.candidate_id }}
+      KNOWLEDGE_RUN_ID: ${{ inputs.knowledge_run_id }}
+      KNOWLEDGE_ARTIFACT: ${{ inputs.knowledge_artifact }}
+      EXPECTED_KNOWLEDGE_CUT_SHA256: ${{ inputs.expected_knowledge_cut_sha256 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Recover the exact reviewed cohort and analyzer evidence
@@ -69,6 +84,37 @@ jobs:
           assert cohort["proposalMethodRevision"] == proposal_run["head_sha"]
           assert cohort["methodRevision"] == analysis_run["methodRevision"]
           PY
+      - name: Recover and enforce the maintainer knowledge cut
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$KNOWLEDGE_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_KNOWLEDGE_CUT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          mkdir -p "$AGENTLAB_ROOT/knowledge"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$KNOWLEDGE_RUN_ID" \
+            > "$AGENTLAB_ROOT/knowledge-run.json"
+          python3 - <<'PY'
+          import json, os
+          value=json.load(open(os.environ['AGENTLAB_ROOT']+'/knowledge-run.json'))
+          assert value['head_branch']=='main' and value['conclusion']=='success'
+          assert value['path']=='.github/workflows/maintainer-knowledge-cut.yml'
+          PY
+          gh run download "$KNOWLEDGE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name "$KNOWLEDGE_ARTIFACT" --dir "$AGENTLAB_ROOT/knowledge"
+          mapfile -t cuts < <(find "$AGENTLAB_ROOT/knowledge" -type f -name maintainer-knowledge-cut.json)
+          mapfile -t bindings < <(find "$AGENTLAB_ROOT/knowledge" -type f -name candidate-knowledge-binding.json)
+          [[ "${#cuts[@]}" -eq 1 && "${#bindings[@]}" -eq 1 ]]
+          printf '%s  %s\n' "$EXPECTED_KNOWLEDGE_CUT_SHA256" "${cuts[0]}" | sha256sum -c -
+          cargo build --locked -p agentlab_code_analysis --bin agentlab-maintainer-knowledge-gate
+          target/debug/agentlab-maintainer-knowledge-gate \
+            --stage candidate \
+            --source-spec "$AGENTLAB_ROOT/source/source/analysis-source/source/manifest.json" \
+            --difficulty "$AGENTLAB_ROOT/source/source/analysis-source/source/analysis/difficulty_candidates.json" \
+            --knowledge-cut "${cuts[0]}" \
+            --binding "${bindings[0]}" \
+            --candidate-id "$CANDIDATE_ID" \
+            --output "$AGENTLAB_ROOT/output/maintainer-knowledge-gate-receipt.json"
       - name: Select one exact reviewed candidate
         run: |
           python3 scripts/select-multi-repo-cohort-candidate.py \
@@ -93,6 +139,7 @@ jobs:
             --context-method-revision "$(python3 -c 'import json,os; print(json.load(open(os.environ["AGENTLAB_ROOT"] + "/source/source/analysis-source/source/analysis-run.json"))["methodRevision"])')" \
             --output "$AGENTLAB_ROOT/output/packet.json"
           sha256sum "$AGENTLAB_ROOT/output/selection.json" \
+            "$AGENTLAB_ROOT/output/maintainer-knowledge-gate-receipt.json" \
             "$AGENTLAB_ROOT/output/packet.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve the exact selection and review packet
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

@@ -195,9 +195,25 @@ fn freezes_blocked_unseen_agent_execution_contract_without_promoting_case() {
     assert_eq!(value["currentReadiness"]["readyToDispatch"], false);
     assert_eq!(value["allowsCaseContract"], false);
     assert_eq!(value["automaticPromotion"], false);
-    assert_eq!(
+    let current = value;
+    let historical_path = root.join("purchase-data-unseen-agent-cohort-contract.json");
+    let mut historical = read(&historical_path);
+    assert_ne!(
         fs::read(&output).unwrap(),
-        fs::read(root.join("purchase-data-unseen-agent-cohort-contract.json")).unwrap()
+        fs::read(&historical_path).unwrap(),
+        "the Alpha.13 contract must stay immutable when advancing workflows change"
+    );
+    for key in [
+        "exactPatchPublicationWorkflow",
+        "publishedRevisionReexecutionWorkflow",
+        "trustedCaseFreezeWorkflow",
+    ] {
+        historical["implementationBindings"][key]["sha256"] =
+            current["implementationBindings"][key]["sha256"].clone();
+    }
+    assert_eq!(
+        current, historical,
+        "current contract may differ from Alpha.13 only at the three fail-closed workflow bindings"
     );
     fs::remove_dir_all(temp).unwrap();
 }

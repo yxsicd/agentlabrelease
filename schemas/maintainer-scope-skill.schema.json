@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.dev/schemas/maintainer-scope-skill.schema.json",
+  "title": "AgentLab Maintainer Scope Skill",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "skillLayer",
+    "stage",
+    "ownershipPlane",
+    "assetClass",
+    "status",
+    "repositoryId",
+    "repository",
+    "sourceRevision",
+    "sourceTreeOid",
+    "strategy",
+    "kind",
+    "pathBoundary",
+    "responsibility",
+    "documentedTitle",
+    "documentedPurpose",
+    "trackedFileCount",
+    "sourceFileCount",
+    "codeLineCount",
+    "testFileCount",
+    "languages",
+    "externalDependencyCount",
+    "externalDependencies",
+    "buildEntrypoints",
+    "testEntrypoints",
+    "evidence",
+    "coverage",
+    "automaticPromotion"
+  ],
+  "properties": {
+    "schema": { "const": "agentlab.maintainer_scope_skill.v1" },
+    "id": { "type": "string", "pattern": "^skill-scope-[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "skillLayer": { "const": "instance" },
+    "stage": { "const": "repository-scope" },
+    "ownershipPlane": { "const": "target-operations" },
+    "assetClass": { "const": "reusable-knowledge" },
+    "status": { "const": "source-supported" },
+    "repositoryId": { "type": "string", "minLength": 1 },
+    "repository": { "type": "string", "minLength": 1 },
+    "sourceRevision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sourceTreeOid": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "strategy": { "type": "string", "minLength": 1 },
+    "kind": { "type": "string", "minLength": 1 },
+    "pathBoundary": { "type": "string", "minLength": 1 },
+    "responsibility": { "type": "string", "minLength": 1 },
+    "documentedTitle": { "type": ["string", "null"] },
+    "documentedPurpose": { "type": ["string", "null"] },
+    "trackedFileCount": { "type": "integer", "minimum": 1 },
+    "sourceFileCount": { "type": "integer", "minimum": 0 },
+    "codeLineCount": { "type": "integer", "minimum": 0 },
+    "testFileCount": { "type": "integer", "minimum": 0 },
+    "languages": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "integer", "minimum": 1 }
+    },
+    "externalDependencyCount": { "type": "integer", "minimum": 0 },
+    "externalDependencies": { "$ref": "#/$defs/strings" },
+    "buildEntrypoints": { "$ref": "#/$defs/strings" },
+    "testEntrypoints": { "$ref": "#/$defs/strings" },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "gitBlobOid"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "gitBlobOid": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+        }
+      }
+    },
+    "coverage": { "const": "all tracked files under this leaf boundary are assigned exactly once" },
+    "automaticPromotion": { "const": false }
+  },
+  "$defs": {
+    "strings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

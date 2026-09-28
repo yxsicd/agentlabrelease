@@ -191,21 +191,21 @@
       "kind": "mcpgit",
       "platform": "linux-x64",
       "status": "selected",
-      "immutableRef": "mcpgit-git-c0c3a53fe68904e017de7505bf47436d068938e5-linux-amd64",
+      "immutableRef": "mcpgit-git-19f92d4aea35378ef7665b22df7d2b2fcb15ccd4-linux-amd64",
       "source": {
         "repository": "https://github.com/yxsicd/MCPGit",
-        "revision": "c0c3a53fe68904e017de7505bf47436d068938e5"
+        "revision": "19f92d4aea35378ef7665b22df7d2b2fcb15ccd4"
       },
       "inputIdentity": {
         "mode": "legacy-published-v1",
-        "effectiveInputDigest": "a07e46e837c25c36c2887169253fe57931eae40a28e27b5de49205a5a76eba7c"
+        "effectiveInputDigest": "fb39a38380dfdd269274b53d344d6a0c081d9b3adc88ba4ed7f2434e83ac9063"
       },
       "assets": [
         {
           "id": "mcpgit-program-archive",
-          "url": "https://github.com/yxsicd/mcpgitrelease/releases/download/mcpgit-git-c0c3a53fe68904e017de7505bf47436d068938e5-linux-amd64/mcpgit-program-git-c0c3a53fe68904e017de7505bf47436d068938e5-x86_64-unknown-linux-musl.tar.gz",
-          "bytes": 33039121,
-          "sha256": "382e3bbf97350b7e61f331095fd20b0ca71dd749c9f9712474b11cd03f597eee"
+          "url": "https://github.com/yxsicd/mcpgitrelease/releases/download/mcpgit-git-19f92d4aea35378ef7665b22df7d2b2fcb15ccd4-linux-amd64/mcpgit-program-git-19f92d4aea35378ef7665b22df7d2b2fcb15ccd4-x86_64-unknown-linux-musl.tar.gz",
+          "bytes": 45164399,
+          "sha256": "d1dcfbf3cd604a5854cb747e9b4cbc562b16917c73467c3a4212dde84f4e8746"
         }
       ]
     },

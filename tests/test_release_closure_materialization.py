@@ -27,7 +27,7 @@ class ReleaseClosureMaterializationTests(unittest.TestCase):
     def fixture(self):
         registry_bytes = (ROOT / "release/components/registry.json").read_bytes()
         registry = json.loads(registry_bytes)
-        closure_bytes = (ROOT / "release/closures/v0.1.0-alpha.14.json").read_bytes()
+        closure_bytes = (ROOT / "release/closures/v0.1.0-alpha.15.json").read_bytes()
         closure = json.loads(closure_bytes)
         by_kind = {asset["kind"]: asset for asset in closure["assets"]}
         lock = {
@@ -124,11 +124,11 @@ class ReleaseClosureMaterializationTests(unittest.TestCase):
                     pathlib.Path(raw) / "materialized",
                 )
 
-    def test_public_ci_installs_current_alpha14_from_the_closure(self) -> None:
+    def test_public_ci_installs_current_alpha15_from_the_closure(self) -> None:
         workflow = (ROOT / ".github/workflows/release-validation.yml").read_text()
         smoke = (ROOT / "scripts/ci-public-install-deploy-smoke.sh").read_text()
         self.assertIn("target: release-closure", workflow)
-        self.assertIn("closure: release/closures/v0.1.0-alpha.14.json", workflow)
+        self.assertIn("closure: release/closures/v0.1.0-alpha.15.json", workflow)
         self.assertIn('--git-root "$GITHUB_WORKSPACE"', workflow)
         self.assertIn("AGENTLAB_RELEASE_CLOSURE: ${{ matrix.closure }}", workflow)
         self.assertIn('release_closure="${AGENTLAB_RELEASE_CLOSURE:-}"', smoke)

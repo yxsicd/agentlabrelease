@@ -95,6 +95,39 @@ class ReleaseGraphTests(unittest.TestCase):
             "4f24f9a7eb1de98cbb0b695f02cf01da03ae26fb",
         )
 
+    def test_alpha15_reuses_unchanged_components_and_rebinds_latest_mcpgit(self) -> None:
+        closure_path = ROOT / "release/closures/v0.1.0-alpha.15.json"
+        closure_value = json.loads(closure_path.read_text())
+        registry_path = ROOT / "release/components/registry.json"
+        registry_bytes = registry_path.read_bytes()
+        registry = json.loads(registry_bytes)
+        MODULE.validate_closure(closure_value, registry, registry_bytes)
+        MODULE.validate_release_source_git(closure_value, ROOT)
+        mcpgit = next(
+            asset for asset in closure_value["assets"] if asset["kind"] == "mcpgit"
+        )
+        self.assertIn(
+            "19f92d4aea35378ef7665b22df7d2b2fcb15ccd4",
+            mcpgit["immutableRef"],
+        )
+        self.assertEqual(closure_value["reuse"]["selectedComponentCount"], 15)
+        self.assertEqual(closure_value["reuse"]["reusedAssetCount"], 26)
+        self.assertEqual(closure_value["reuse"]["newBinaryBuildCount"], 0)
+        self.assertEqual(closure_value["reuse"]["newBinaryUploadCount"], 0)
+        receipt = json.loads(
+            (
+                ROOT
+                / "release/qualifications/alpha15-immutable-assets/summary.json"
+            ).read_text()
+        )
+        self.assertTrue(receipt["remote"])
+        self.assertEqual(receipt["registrySha256"], hashlib.sha256(registry_bytes).hexdigest())
+        self.assertEqual(
+            receipt["closures"][0]["sha256"],
+            hashlib.sha256(closure_path.read_bytes()).hexdigest(),
+        )
+        self.assertEqual(len(receipt["closures"][0]["remoteAssets"]), 26)
+
     def test_unresolvable_release_source_is_rejected_by_git_validation(self) -> None:
         value = json.loads(
             (ROOT / "release/closures/v0.1.0-alpha.13.json").read_text()
@@ -209,7 +242,7 @@ class ReleaseGraphTests(unittest.TestCase):
 
     def test_current_registry_asset_drift_is_rejected(self) -> None:
         closure_value = json.loads(
-            (ROOT / "release/closures/v0.1.0-alpha.14.json").read_text()
+            (ROOT / "release/closures/v0.1.0-alpha.15.json").read_text()
         )
         registry_path = ROOT / "release/components/registry.json"
         registry_bytes = registry_path.read_bytes()
@@ -238,7 +271,7 @@ class ReleaseGraphTests(unittest.TestCase):
         registry_bytes = registry_path.read_bytes()
         registry = json.loads(registry_bytes)
         value = json.loads(
-            (ROOT / "release/closures/v0.1.0-alpha.14.json").read_text()
+            (ROOT / "release/closures/v0.1.0-alpha.15.json").read_text()
         )
         value.pop("developerPreviewScope")
         with self.assertRaisesRegex(ValueError, "scope"):

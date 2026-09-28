@@ -44,6 +44,18 @@ on:
         description: Evidence-based rationale for this exact verdict
         required: true
         type: string
+      knowledge_gate_run_id:
+        description: Trusted maintainer-knowledge qualification run
+        required: true
+        type: string
+      knowledge_gate_artifact:
+        description: Exact qualified maintainer-knowledge artifact name
+        required: true
+        type: string
+      expected_knowledge_gate_receipt_sha256:
+        description: Exact construction-stage-or-later gate receipt digest
+        required: true
+        type: string
 
 permissions:
   actions: read
@@ -63,6 +75,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+      - uses: ./.github/actions/require-maintainer-knowledge-gate
+        with:
+          run_id: ${{ inputs.knowledge_gate_run_id }}
+          artifact: ${{ inputs.knowledge_gate_artifact }}
+          expected_receipt_sha256: ${{ inputs.expected_knowledge_gate_receipt_sha256 }}
+          candidate_id: difficulty-c75c82b3a697d8053e74bb37
+          minimum_stage: construction
+          github_token: ${{ github.token }}
       - name: Resolve exact retained plan and calibration
         id: evidence
         run: |
