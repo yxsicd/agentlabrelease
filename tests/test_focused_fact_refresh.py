@@ -19,21 +19,50 @@ CANDIDATE_ID = "shadow-case-uiability-backup-restore-state-recovery"
 PLAN = KNOWLEDGE / "construction-plans/uiability-backup-restore.json"
 
 
-def latest_assessment():
+IMPLEMENTATION_PATH = "Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets"
+ORACLE_PATH = "Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets"
+
+
+def latest_assessment(knowledge=KNOWLEDGE):
     values = []
-    for path in (KNOWLEDGE / "assessments").glob("*.json"):
+    for path in (knowledge / "assessments").glob("*.json"):
         value = json.loads(path.read_text())
         values.append((value["roundIndex"], path))
     return max(values)[1]
 
 
+def make_blocked_knowledge(target: Path) -> Path:
+    """Create the pre-refresh state without depending on the live flywheel cut."""
+    shutil.copytree(KNOWLEDGE, target)
+    facts_path = target / "program_facts.jsonl"
+    facts = MODULE.READINESS.rows(facts_path)
+    fact = next(row for row in facts if row["id"] == "agent-analysis-uiability-backup-restore-state-recovery")
+    fact["evidence"] = [row for row in fact["evidence"] if row["path"] not in {IMPLEMENTATION_PATH, ORACLE_PATH}]
+    facts_path.write_bytes(b"".join(
+        MODULE.READINESS.canonical(row) + b"\n" for row in sorted(facts, key=lambda row: row["id"])
+    ))
+    candidates_path = target / "case_generation_candidates.jsonl"
+    candidates = MODULE.READINESS.rows(candidates_path)
+    candidate = next(row for row in candidates if row["id"] == CANDIDATE_ID)
+    candidate["editablePaths"] = [path for path in candidate["editablePaths"] if path != IMPLEMENTATION_PATH]
+    candidate["contextPaths"] = [path for path in candidate["contextPaths"] if path != ORACLE_PATH]
+    candidates_path.write_bytes(b"".join(
+        MODULE.READINESS.canonical(row) + b"\n" for row in sorted(candidates, key=lambda row: row["id"])
+    ))
+    plan_path = target / "construction-plans/uiability-backup-restore.json"
+    plan = json.loads(plan_path.read_text())
+    plan["candidateSha256"] = MODULE.READINESS.value_digest(candidate)
+    plan_path.write_text(json.dumps(plan, indent=2, sort_keys=True) + "\n")
+    return target
+
+
 class FocusedFactRefreshTest(unittest.TestCase):
-    def prepare_request(self, output: Path):
+    def prepare_request(self, output: Path, knowledge=KNOWLEDGE):
         MODULE.prepare(type("Args", (), {
-            "knowledge": KNOWLEDGE,
-            "assessment": latest_assessment(),
+            "knowledge": knowledge,
+            "assessment": latest_assessment(knowledge),
             "candidate_id": CANDIDATE_ID,
-            "plan": PLAN,
+            "plan": knowledge / "construction-plans/uiability-backup-restore.json",
             "evidence_root": ROOT,
             "output": output,
         }))
@@ -41,8 +70,10 @@ class FocusedFactRefreshTest(unittest.TestCase):
 
     def test_prepare_consumes_exact_blocked_candidate_feedback(self):
         with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory) / "request.json"
-            request = self.prepare_request(output)
+            root = Path(directory)
+            knowledge = make_blocked_knowledge(root / "knowledge")
+            output = root / "request.json"
+            request = self.prepare_request(output, knowledge)
             self.assertEqual(request["readinessDecision"], "blocked-knowledge-refresh")
             self.assertEqual(request["existingFact"]["id"], "agent-analysis-uiability-backup-restore-state-recovery")
             self.assertEqual(request["scope"]["id"], "skill-scope-guide-snippets-ability-uiabilityrecover")
@@ -120,8 +151,9 @@ class FocusedFactRefreshTest(unittest.TestCase):
     def test_validate_replaces_one_fact_and_requires_every_feedback_path(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            knowledge = make_blocked_knowledge(root / "knowledge")
             request_path = root / "request.json"
-            request = self.prepare_request(request_path)
+            request = self.prepare_request(request_path, knowledge)
             refreshed = dict(request["existingFact"])
             refreshed["interpretation"] = refreshed["interpretation"] + " The refreshed evidence binds page and test owners."
             evidence = list(refreshed["evidence"])
@@ -141,7 +173,7 @@ class FocusedFactRefreshTest(unittest.TestCase):
             with mock.patch.object(MODULE.BASE, "validate_proposal", return_value=refreshed):
                 MODULE.validate(type("Args", (), {
                     "request": request_path, "proposal": proposal, "source": source,
-                    "program_facts": KNOWLEDGE / "program_facts.jsonl",
+                    "program_facts": knowledge / "program_facts.jsonl",
                     "output": output, "receipt": receipt,
                 }))
             result = json.loads(receipt.read_text())
@@ -182,15 +214,14 @@ class FocusedFactRefreshTest(unittest.TestCase):
     def test_rebind_candidate_advances_only_to_qualification_gate(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            knowledge = root / "knowledge"
-            shutil.copytree(KNOWLEDGE, knowledge)
+            knowledge = make_blocked_knowledge(root / "knowledge")
             facts_path = knowledge / "program_facts.jsonl"
             facts = MODULE.READINESS.rows(facts_path)
             fact = next(row for row in facts if row["id"] == "agent-analysis-uiability-backup-restore-state-recovery")
             existing_paths = {row["path"] for row in fact["evidence"]}
             for path in (
-                "Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets",
-                "Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets",
+                IMPLEMENTATION_PATH,
+                ORACLE_PATH,
             ):
                 if path not in existing_paths:
                     fact["evidence"].append({"path": path, "gitBlobOid": "1" * 40})
@@ -216,10 +247,10 @@ class FocusedFactRefreshTest(unittest.TestCase):
             self.assertEqual(result["readinessDecision"], "blocked-qualification")
             self.assertEqual(result["nextGate"], "implement-and-calibrate-independent-oracle")
             self.assertEqual(result["addedEditablePaths"], [
-                "Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets",
+                IMPLEMENTATION_PATH,
             ])
             self.assertEqual(result["addedContextPaths"], [
-                "Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets",
+                ORACLE_PATH,
             ])
 
 

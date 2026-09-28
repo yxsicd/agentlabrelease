@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import shutil
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,24 +16,50 @@ SPEC.loader.exec_module(MODULE)
 KNOWLEDGE = ROOT / "examples/maintainer-knowledge-gate/first-four"
 CANDIDATE_ID = "shadow-case-uiability-backup-restore-state-recovery"
 PLAN = KNOWLEDGE / "construction-plans/uiability-backup-restore.json"
+IMPLEMENTATION_PATH = "Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets"
+ORACLE_PATH = "Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets"
+
+
+def make_blocked_knowledge(target: Path) -> Path:
+    """Create the pre-refresh state without depending on the live flywheel cut."""
+    shutil.copytree(KNOWLEDGE, target)
+    facts_path = target / "program_facts.jsonl"
+    facts = MODULE.rows(facts_path)
+    fact = next(row for row in facts if row["id"] == "agent-analysis-uiability-backup-restore-state-recovery")
+    fact["evidence"] = [row for row in fact["evidence"] if row["path"] not in {IMPLEMENTATION_PATH, ORACLE_PATH}]
+    facts_path.write_bytes(b"".join(MODULE.canonical(row) + b"\n" for row in sorted(facts, key=lambda row: row["id"])))
+    candidates_path = target / "case_generation_candidates.jsonl"
+    candidates = MODULE.rows(candidates_path)
+    candidate = next(row for row in candidates if row["id"] == CANDIDATE_ID)
+    candidate["editablePaths"] = [path for path in candidate["editablePaths"] if path != IMPLEMENTATION_PATH]
+    candidate["contextPaths"] = [path for path in candidate["contextPaths"] if path != ORACLE_PATH]
+    candidates_path.write_bytes(b"".join(
+        MODULE.canonical(row) + b"\n" for row in sorted(candidates, key=lambda row: row["id"])
+    ))
+    plan_path = target / "construction-plans/uiability-backup-restore.json"
+    plan = json.loads(plan_path.read_text())
+    plan["candidateSha256"] = MODULE.value_digest(candidate)
+    plan_path.write_text(json.dumps(plan, indent=2, sort_keys=True) + "\n")
+    return target
 
 
 class ShadowConstructionReadinessTest(unittest.TestCase):
     def test_uiability_candidate_returns_exact_knowledge_feedback(self):
-        receipt = MODULE.assess(KNOWLEDGE, CANDIDATE_ID, PLAN, ROOT)
-        self.assertEqual(receipt["decision"], "blocked-knowledge-refresh")
-        self.assertEqual(receipt["nextGate"], "refresh-program-facts-and-shadow-candidate")
-        self.assertIn(
-            "implementation path is absent from bound fact evidence: "
-            "Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets",
-            receipt["knowledgeBlockers"],
-        )
-        self.assertIn(
-            "Oracle path is absent from bound fact evidence: "
-            "Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets",
-            receipt["knowledgeBlockers"],
-        )
-        self.assertFalse(receipt["automaticPromotion"])
+        with tempfile.TemporaryDirectory() as directory:
+            knowledge = make_blocked_knowledge(Path(directory) / "knowledge")
+            plan = knowledge / "construction-plans/uiability-backup-restore.json"
+            receipt = MODULE.assess(knowledge, CANDIDATE_ID, plan, ROOT)
+            self.assertEqual(receipt["decision"], "blocked-knowledge-refresh")
+            self.assertEqual(receipt["nextGate"], "refresh-program-facts-and-shadow-candidate")
+            self.assertIn(
+                f"implementation path is absent from bound fact evidence: {IMPLEMENTATION_PATH}",
+                receipt["knowledgeBlockers"],
+            )
+            self.assertIn(
+                f"Oracle path is absent from bound fact evidence: {ORACLE_PATH}",
+                receipt["knowledgeBlockers"],
+            )
+            self.assertFalse(receipt["automaticPromotion"])
 
     def test_candidate_digest_drift_fails_closed(self):
         plan = json.loads(PLAN.read_text())
