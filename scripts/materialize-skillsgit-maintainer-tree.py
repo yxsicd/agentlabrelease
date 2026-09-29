@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 
 
 CORE_SKILLS = (
@@ -249,7 +250,7 @@ def main():
     subprocess.run([
         str(args.skillsgit_root / "scripts/apply-pack.sh"), str(args.output),
         "--profile", "minimal",
-    ], cwd=args.skillsgit_root, check=True)
+    ], cwd=args.skillsgit_root, check=True, stdout=sys.stderr, stderr=sys.stderr)
 
     for skill_id in CORE_SKILLS:
         source = args.skillsgit_root / ".agents/skills" / skill_id
@@ -351,7 +352,10 @@ sed -n '1,220p' .agents/HANDOFF.md
         f"  revision: {source['revision']}\n"
         f"  repository_id: {args.repository}\n"
     )
-    subprocess.run(["./scripts/validate-mst.sh"], cwd=args.output, check=True)
+    subprocess.run(
+        ["./scripts/validate-mst.sh"], cwd=args.output, check=True,
+        stdout=sys.stderr, stderr=sys.stderr,
+    )
 
     files = []
     for path in sorted(item for item in args.output.rglob("*") if item.is_file()):
