@@ -148,6 +148,11 @@ coverage verification; the common ancestor is only a navigation anchor. The
 reviewed replacement is first written as a new immutable candidate catalog.
 The original parent remains authoritative until a separate TableGit transaction
 imports that candidate, so validation failure cannot leave a partial catalog.
+That transaction retires every reviewed parent and inserts every replacement
+with one revision fence; delete operations also carry exact row versions. An
+independent assessment generated from the candidate catalog belongs to the same
+staged cut. The exact committed revision, not the pre-transaction candidate, is
+the only Release export source.
 
 ## Migration rule for existing evidence
 

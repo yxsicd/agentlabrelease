@@ -241,6 +241,161 @@ def command_stage(args) -> None:
     })
 
 
+def latest_assessment_path(base: Path) -> Path:
+    paths = list((base / "assessments").glob("*.json"))
+    if not paths:
+        raise ValueError("knowledge cut has no assessment")
+    return max(paths, key=lambda path: load(path)["roundIndex"])
+
+
+def command_stage_scope_rewrite(args) -> None:
+    base_scopes = load_jsonl(args.base / TABLE_FILES["maintainer_scope_skills"])
+    candidate_scopes = load_jsonl(args.candidate_scope_skills)
+    base_by_id = {row["id"]: row for row in base_scopes}
+    candidate_by_id = {row["id"]: row for row in candidate_scopes}
+    if len(base_by_id) != len(base_scopes) or len(candidate_by_id) != len(candidate_scopes):
+        raise ValueError("scope catalog contains duplicate ids")
+    removed = sorted(set(base_by_id) - set(candidate_by_id))
+    added = sorted(set(candidate_by_id) - set(base_by_id))
+    if not removed or not added:
+        raise ValueError("scope rewrite must replace parents with reviewed responsibilities")
+    changed = [
+        key for key in sorted(set(base_by_id) & set(candidate_by_id))
+        if value_sha256(base_by_id[key]) != value_sha256(candidate_by_id[key])
+    ]
+    if changed:
+        raise ValueError(f"scope rewrite changes retained rows: {changed}")
+
+    receipts = [load(path) for path in args.rewrite_receipt]
+    receipt_parents = sorted(row["parentScopeSkillId"] for row in receipts)
+    receipt_children = sorted(
+        child for row in receipts for child in row["replacementScopeSkillIds"]
+    )
+    if receipt_parents != removed or receipt_children != added:
+        raise ValueError("scope rewrite differs from reviewed replacement receipts")
+    if any(
+        row.get("schema") != "agentlab.maintainer_scope_catalog_rewrite_receipt.v1"
+        or row.get("automaticAuthorityMutation") is not False
+        or row.get("complete") is not True
+        or row.get("nonOverlapping") is not True
+        or row.get("decision") != "candidate-catalog-ready-for-authoritative-transaction"
+        or row.get("replacedTrackedFileCount") != row.get("replacementTrackedFileCount")
+        or row.get("replacedSourceFileCount") != row.get("replacementSourceFileCount")
+        for row in receipts
+    ):
+        raise ValueError("scope rewrite receipt is not complete and parity preserving")
+    expected_count = len(base_scopes)
+    for row in receipts:
+        if row.get("catalogScopeCountBefore") != expected_count:
+            raise ValueError("scope rewrite receipt chain does not start at the retained catalog")
+        expected_count = row.get("catalogScopeCountAfter")
+    if expected_count != len(candidate_scopes):
+        raise ValueError("scope rewrite receipt chain does not end at the candidate catalog")
+
+    assessment = load(args.candidate_assessment)
+    previous_assessment_path = latest_assessment_path(args.base)
+    previous_assessment = load(previous_assessment_path)
+    if assessment.get("parentAssessmentSha256") != file_sha256(previous_assessment_path):
+        raise ValueError("candidate assessment parent differs from latest retained assessment")
+    if assessment.get("roundIndex") != previous_assessment["roundIndex"] + 1:
+        raise ValueError("candidate assessment round is not the next round")
+    if assessment.get("totals", {}).get("scopeSkillCount") != len(candidate_scopes):
+        raise ValueError("candidate assessment scope total differs from rewritten catalog")
+    totals = assessment["totals"]
+    previous_totals = previous_assessment["totals"]
+    if totals.get("structuralReadyCount") != len(candidate_scopes):
+        raise ValueError("candidate assessment contains structurally invalid replacement scopes")
+    for field in ("programBoundCount", "semanticReadyCount", "maintenanceReadyCount"):
+        if totals.get(field, -1) < previous_totals.get(field, 0):
+            raise ValueError(f"candidate assessment regresses {field}")
+
+    args.output.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(
+        args.base / "maintainer-knowledge-cut.json",
+        args.output / "maintainer-knowledge-cut.json",
+    )
+    assessments = args.output / "assessments"
+    assessments.mkdir(exist_ok=True)
+    for source in (args.base / "assessments").glob("*.json"):
+        shutil.copy2(source, assessments / source.name)
+    assessment_name = f"round-{assessment['roundIndex']}-scope-rewrite-{args.run_id}.json"
+    shutil.copy2(args.candidate_assessment, assessments / assessment_name)
+
+    for table, filename in TABLE_FILES.items():
+        if table == "maintainer_scope_skills":
+            rows = candidate_scopes
+        elif table == "maintainer_skill_refresh_rounds":
+            rows = load_jsonl(args.base / filename)
+            previous = max(rows, key=lambda row: row["roundIndex"])
+            rows.append({
+                "id": f"first-four-round-{previous['roundIndex'] + 1}-scope-rewrite-{args.run_id}",
+                "schema": "agentlab.maintainer_skill_refresh_round.v1",
+                "roundIndex": previous["roundIndex"] + 1,
+                "parentRoundSha256": value_sha256(previous),
+                "automaticPromotion": False,
+                "ownershipPlane": "target-operations",
+                "decision": assessment["decision"],
+                "changes": {
+                    "added": [f"scope skill {key}" for key in added],
+                    "updated": [
+                        f"{totals['programBoundCount']} scopes program-bound",
+                        f"{totals['semanticReadyCount']} scopes semantic-ready",
+                        "independent assessment rebound to the reviewed scope catalog",
+                    ],
+                    "retired": [f"scope skill {key}" for key in removed],
+                },
+                "coverage": {
+                    "processSkillCount": len(load_jsonl(args.base / TABLE_FILES["maintainer_skills"])),
+                    "repositoryCount": len({row["repositoryId"] for row in candidate_scopes}),
+                    "scopeSkillCount": totals["scopeSkillCount"],
+                    "programBoundScopeCount": totals["programBoundCount"],
+                    "semanticReadyScopeCount": totals["semanticReadyCount"],
+                    "maintenanceReadyScopeCount": totals["maintenanceReadyCount"],
+                    "trackedFileCount": previous["coverage"]["trackedFileCount"],
+                },
+                "focus": [
+                    "atomically replace reviewed aggregate scopes with exact composite responsibilities",
+                    "rebind independent maturity assessment to the rewritten catalog",
+                    "export one exact committed TableGit revision",
+                ],
+                "residualGaps": assessment["nextRoundObjectives"],
+                "tables": {
+                    "processSkillsSha256": jsonl_sha256(load_jsonl(args.base / TABLE_FILES["maintainer_skills"])),
+                    "scopeSkillsSha256": jsonl_sha256(candidate_scopes),
+                    "programFactsSha256": jsonl_sha256(load_jsonl(args.base / TABLE_FILES["program_facts"])),
+                },
+                "producer": producer_record(
+                    args.producer_kind, args.github_repository, args.run_id,
+                    args.producer_url, args.producer_host,
+                ),
+                "assessment": {
+                    "path": f"assessments/{assessment_name}",
+                    "sha256": file_sha256(args.candidate_assessment),
+                },
+            })
+        else:
+            rows = load_jsonl(args.base / filename)
+        write_jsonl(args.output / filename, rows)
+    write_json(args.output / "stage-manifest.json", {
+        "schema": "agentlab.maintainer_skill_tablegit_stage.v1",
+        "automaticPromotion": False,
+        "runId": args.run_id,
+        "assessment": f"assessments/{assessment_name}",
+        "scopeRewrite": {
+            "removedScopeSkillIds": removed,
+            "addedScopeSkillIds": added,
+            "receipts": [
+                {"path": str(path), "sha256": file_sha256(path)}
+                for path in args.rewrite_receipt
+            ],
+        },
+        "tables": {
+            table: {"path": filename, "sha256": file_sha256(args.output / filename)}
+            for table, filename in TABLE_FILES.items()
+        },
+    })
+
+
 class Inspector:
     def __init__(self, endpoint: str, person_id: str):
         self.endpoint = endpoint
@@ -342,6 +497,22 @@ def operation_chunks(table: str, rows: list[dict], run_id: str,
     if current:
         chunks.append(current)
     return chunks
+
+
+def deletion_operations(table: str, keys: list[str], run_id: str,
+                        row_versions: dict[str, int]) -> list[dict]:
+    operations = []
+    for key in keys:
+        version = row_versions.get(key)
+        if not isinstance(version, int) or version < 1:
+            raise ValueError(f"cannot delete {table} row without an exact row version: {key}")
+        operations.append({
+            "op": "delete",
+            "operation_id": stable_uuid(run_id, table, key, f"delete-{version}"),
+            "key": key,
+            "expected_row_version": version,
+        })
+    return operations
 
 
 def query_all(client: Inspector, repo: str, table: str, revision: str) -> list[dict]:
@@ -476,7 +647,9 @@ def persist_snapshot(client: Inspector, repo: str, revision: str, base: Path,
             raise RuntimeError(f"{table} snapshot contains duplicate ids")
         for key, row in remote.items():
             if key not in desired_by_id:
-                raise RuntimeError(f"{table} remote authority contains unexported row {key}")
+                if key not in base_by_id or value_sha256(row) != value_sha256(base_by_id[key]):
+                    raise RuntimeError(f"{table} remote row {key} cannot be safely retired")
+                continue
             remote_digest = value_sha256(row)
             desired_digest = value_sha256(desired_by_id[key])
             if remote_digest == desired_digest:
@@ -524,6 +697,12 @@ def persist_snapshot(client: Inspector, repo: str, revision: str, base: Path,
             )
             for operation in chunk
         ]
+        operations.extend(deletion_operations(
+            table,
+            sorted(set(remote_by_table[table]) - set(desired_by_table[table])),
+            run_id,
+            remote_versions_by_table[table],
+        ))
         if operations:
             delta_tables.append({"path": table, "operations": operations})
     if len(canonical(delta_tables)) > 70_000:
@@ -658,6 +837,19 @@ def main() -> None:
     stage.add_argument("--producer-host")
     stage.add_argument("--output", type=Path, required=True)
     stage.set_defaults(handler=command_stage)
+
+    rewrite = commands.add_parser("stage-scope-rewrite")
+    rewrite.add_argument("--base", type=Path, required=True)
+    rewrite.add_argument("--candidate-scope-skills", type=Path, required=True)
+    rewrite.add_argument("--candidate-assessment", type=Path, required=True)
+    rewrite.add_argument("--rewrite-receipt", type=Path, action="append", required=True)
+    rewrite.add_argument("--run-id", required=True)
+    rewrite.add_argument("--github-repository", required=True)
+    rewrite.add_argument("--producer-kind", default="github-action")
+    rewrite.add_argument("--producer-url")
+    rewrite.add_argument("--producer-host")
+    rewrite.add_argument("--output", type=Path, required=True)
+    rewrite.set_defaults(handler=command_stage_scope_rewrite)
 
     sync = commands.add_parser("sync")
     sync.add_argument("--base", type=Path, required=True)

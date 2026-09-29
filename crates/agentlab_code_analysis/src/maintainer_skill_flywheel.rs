@@ -123,6 +123,12 @@ fn valid_scope_ownership(skill: &Value) -> bool {
         })
 }
 
+fn evidence_path_is_owned(skill: &Value, path: &str) -> bool {
+    skill["ownershipSelectors"]
+        .as_array()
+        .map_or(true, |_| scope_specificity(skill, path).is_some())
+}
+
 fn fact_dimensions(fact: &Value) -> BTreeSet<String> {
     let explicit = strings(&fact["dimensions"]);
     if !explicit.is_empty() {
@@ -319,7 +325,7 @@ pub fn assess(
                         valid_hex(&row["gitBlobOid"], 40)
                             && row["path"]
                                 .as_str()
-                                .is_some_and(|path| scope_specificity(skill, path).is_some())
+                                .is_some_and(|path| evidence_path_is_owned(skill, path))
                     })
             });
         let structural_ready = identity_ready

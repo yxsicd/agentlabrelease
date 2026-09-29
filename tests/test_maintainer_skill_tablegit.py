@@ -74,6 +74,19 @@ class MaintainerSkillTableGitTest(unittest.TestCase):
         self.assertEqual(operation["expected_row_version"], 7)
         self.assertEqual(operation["row"], MODULE.envelope(row))
 
+    def test_delete_is_row_version_fenced_and_stable(self):
+        operation = MODULE.deletion_operations(
+            "maintainer_scope_skills", ["scope-parent"], "run", {"scope-parent": 9}
+        )[0]
+        self.assertEqual(operation["op"], "delete")
+        self.assertEqual(operation["expected_row_version"], 9)
+        self.assertEqual(
+            operation,
+            MODULE.deletion_operations(
+                "maintainer_scope_skills", ["scope-parent"], "run", {"scope-parent": 9}
+            )[0],
+        )
+
     def test_persist_accepts_base_to_snapshot_update_and_fences_remote_drift(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -126,6 +139,53 @@ class MaintainerSkillTableGitTest(unittest.TestCase):
                     MODULE.persist_snapshot(
                         object(), "repo", "c" * 40, base, snapshot, "run-2", "owner/repo"
                     )
+
+    def test_persist_replaces_parent_with_children_in_one_atomic_delta(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = root / "base"
+            snapshot = root / "snapshot"
+            base.mkdir(); snapshot.mkdir()
+            remote_items = {}
+            for table, filename in MODULE.TABLE_FILES.items():
+                parent = {"id": f"{table}-parent", "value": "base"}
+                desired = [parent]
+                if table == "maintainer_scope_skills":
+                    desired = [
+                        {"id": "scope-child-a", "value": "reviewed"},
+                        {"id": "scope-child-b", "value": "reviewed"},
+                    ]
+                MODULE.write_jsonl(base / filename, [parent])
+                MODULE.write_jsonl(snapshot / filename, desired)
+                remote_items[table] = [{
+                    "key": parent["id"], "row": MODULE.envelope(parent),
+                    "row_version": 4, "deleted": False,
+                }]
+
+            transactions = []
+            def query(_client, _repo, table, _revision):
+                return remote_items[table]
+            def apply(_client, _repo, _revision, tables, *_args):
+                transactions.append(tables)
+                return "b" * 40
+
+            with mock.patch.object(MODULE, "query_all", side_effect=query), \
+                    mock.patch.object(MODULE, "apply_transaction", side_effect=apply):
+                MODULE.persist_snapshot(
+                    object(), "repo", "a" * 40, base, snapshot, "run", "owner/repo"
+                )
+            self.assertEqual(len(transactions), 1)
+            scope_delta = next(
+                row for row in transactions[0] if row["path"] == "maintainer_scope_skills"
+            )
+            self.assertEqual(
+                sorted(operation["op"] for operation in scope_delta["operations"]),
+                ["delete", "insert", "insert"],
+            )
+            deletion = next(
+                operation for operation in scope_delta["operations"] if operation["op"] == "delete"
+            )
+            self.assertEqual(deletion["expected_row_version"], 4)
 
     def test_missing_row_chunks_do_not_reuse_a_completed_chunk_receipt(self):
         rows = [{"id": f"row-{index:03d}", "body": "x" * 4000} for index in range(12)]
@@ -247,6 +307,76 @@ class MaintainerSkillTableGitTest(unittest.TestCase):
             "runId": "local-42",
             "host": "hwlinux",
         })
+
+    def test_scope_rewrite_stage_binds_receipts_and_new_assessment(self):
+        source = ROOT / "examples/maintainer-knowledge-gate/first-four"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scopes = MODULE.load_jsonl(source / "maintainer_scope_skills.jsonl")
+            parent = scopes.pop(0)
+            children = []
+            for suffix in ("a", "b"):
+                child = dict(parent)
+                child["id"] = f"skill-scope-arbitrary-{suffix}"
+                children.append(child)
+            candidate_scopes = root / "candidate-scopes.jsonl"
+            MODULE.write_jsonl(candidate_scopes, scopes + children)
+
+            previous_path = MODULE.latest_assessment_path(source)
+            previous = MODULE.load(previous_path)
+            assessment = root / "assessment.json"
+            assessment.write_text(json.dumps({
+                "roundIndex": previous["roundIndex"] + 1,
+                "parentAssessmentSha256": MODULE.file_sha256(previous_path),
+                "decision": "continue",
+                "totals": {
+                    "scopeSkillCount": len(scopes) + len(children),
+                    "structuralReadyCount": len(scopes) + len(children),
+                    "programBoundCount": previous["totals"]["programBoundCount"],
+                    "semanticReadyCount": previous["totals"]["semanticReadyCount"],
+                    "maintenanceReadyCount": previous["totals"]["maintenanceReadyCount"],
+                },
+                "nextRoundObjectives": ["continue exact evidence closure"],
+            }) + "\n")
+            receipt = root / "receipt.json"
+            receipt.write_text(json.dumps({
+                "schema": "agentlab.maintainer_scope_catalog_rewrite_receipt.v1",
+                "automaticAuthorityMutation": False,
+                "parentScopeSkillId": parent["id"],
+                "replacementScopeSkillIds": [child["id"] for child in children],
+                "catalogScopeCountBefore": len(scopes) + 1,
+                "catalogScopeCountAfter": len(scopes) + len(children),
+                "replacedTrackedFileCount": parent["trackedFileCount"],
+                "replacementTrackedFileCount": parent["trackedFileCount"],
+                "replacedSourceFileCount": parent["sourceFileCount"],
+                "replacementSourceFileCount": parent["sourceFileCount"],
+                "complete": True,
+                "nonOverlapping": True,
+                "decision": "candidate-catalog-ready-for-authoritative-transaction",
+            }) + "\n")
+            output = root / "stage"
+            MODULE.command_stage_scope_rewrite(type("Args", (), {
+                "base": source,
+                "candidate_scope_skills": candidate_scopes,
+                "candidate_assessment": assessment,
+                "rewrite_receipt": [receipt],
+                "run_id": "rewrite-42",
+                "github_repository": "owner/repo",
+                "producer_kind": "github-action",
+                "producer_url": None,
+                "producer_host": None,
+                "output": output,
+            }))
+            manifest = MODULE.load(output / "stage-manifest.json")
+            self.assertEqual(manifest["scopeRewrite"]["removedScopeSkillIds"], [parent["id"]])
+            self.assertEqual(
+                manifest["scopeRewrite"]["addedScopeSkillIds"],
+                sorted(child["id"] for child in children),
+            )
+            staged_rounds = MODULE.load_jsonl(output / "maintainer_skill_refresh_rounds.jsonl")
+            latest = max(staged_rounds, key=lambda row: row["roundIndex"])
+            self.assertIn(f"scope skill {parent['id']}", latest["changes"]["retired"])
+            self.assertEqual(latest["coverage"]["scopeSkillCount"], len(scopes) + len(children))
 
 
 if __name__ == "__main__":

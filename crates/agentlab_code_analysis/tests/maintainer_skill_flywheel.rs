@@ -173,6 +173,22 @@ fn composite_selectors_bind_exact_owned_paths_and_reject_shared_anchor_siblings(
 }
 
 #[test]
+fn legacy_virtual_boundaries_retain_v1_identity_compatibility() {
+    let root = temp_root();
+    let scopes = root.join("scopes.jsonl");
+    let mut legacy = scope("skill-scope-arbitrary-support", "arbitrary");
+    legacy["pathBoundary"] = json!("src/_support");
+    legacy["evidence"] = json!([{
+        "path":"src/build-profile.json5", "gitBlobOid":"3".repeat(40)
+    }]);
+    jsonl(&scopes, &[legacy]);
+    let assessment = assess(&scopes, None, 1, None).unwrap();
+    assert_eq!(assessment["totals"]["structuralReadyCount"], 1);
+    assert_eq!(assessment["skills"][0]["checks"]["identityReady"], true);
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn explicit_fact_binding_cannot_name_a_missing_or_cross_repository_scope() {
     let root = temp_root();
     let scopes = root.join("scopes.jsonl");
