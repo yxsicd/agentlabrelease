@@ -35,10 +35,10 @@
       "host": "huawei-ThinkCentre-M920t",
       "kind": "hwlinux-local",
       "repository": "yxsicd/agentlabrelease",
-      "runId": "hwlinux-20260929-abilitycommon-01"
+      "runId": "hwlinux-20260929-code-workshop-converge-04"
     },
     "repo": "agentlabtablegit",
-    "revision": "551175a39362642ca24295153a54019126da347f"
+    "revision": "eba1ac1eb6e3cddafa3e9df37f382f3b0303a493"
   },
   "tables": {
     "evaluationCases": {
@@ -51,7 +51,7 @@
     },
     "maintainerSkillRefreshRounds": {
       "path": "maintainer_skill_refresh_rounds.jsonl",
-      "sha256": "57c1f6af70a28983d62f0ec9cc725a17e1f45fe3b063267c210d79eded628d13"
+      "sha256": "60124f6c9d4e249aa52afcccfa68878966a7a00d3c2e68aa1e06387257ca3d81"
     },
     "maintainerSkills": {
       "path": "maintainer_skills.jsonl",
@@ -59,7 +59,7 @@
     },
     "programFacts": {
       "path": "program_facts.jsonl",
-      "sha256": "7bb5cc7a032bc6c657b1ac586b40c120baae5c18a9e1c9d41245444e9d0cd162"
+      "sha256": "e7d338eb5ac0fad94ec16c1dc22881d5cf559301386ed3476513c3233c79228c"
     }
   }
 }
