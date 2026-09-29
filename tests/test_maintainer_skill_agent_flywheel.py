@@ -14,6 +14,16 @@ SPEC.loader.exec_module(MODULE)
 
 
 class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
+    def test_agent_proposal_is_parsed_only_from_an_exact_json_object(self):
+        proposal = {"schema": "agentlab.maintainer_skill_fact_proposal.v1"}
+        self.assertEqual(MODULE.parse_agent_proposal(json.dumps(proposal)), proposal)
+        with self.assertRaisesRegex(ValueError, "exactly one JSON proposal"):
+            MODULE.parse_agent_proposal("```json\n{}\n```")
+        with self.assertRaisesRegex(ValueError, "exactly one JSON proposal"):
+            MODULE.parse_agent_proposal("proposal follows: {}")
+        with self.assertRaisesRegex(ValueError, "JSON object"):
+            MODULE.parse_agent_proposal("[]")
+
     def test_workflow_defaults_to_the_code_workshop_focus_repository(self):
         workflow = (ROOT / ".github/workflows/maintainer-skill-agent-flywheel.yml").read_text()
         repository_input = workflow.split("      repository:\n", 1)[1].split(
@@ -429,9 +439,12 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
 
     def test_agent_prompt_has_a_bounded_exploration_budget(self):
         source = (ROOT / "examples/maintainer-knowledge-gate/agent_flywheel.py").read_text()
-        self.assertIn("Use at most 24 shell tool calls", source)
+        self.assertIn("Budget at most 18 shell tool calls", source)
+        self.assertIn("operator enforces a hard\nlimit of 24", source)
         self.assertIn("do not enumerate or read the whole repository", source)
-        self.assertIn("Reserve the final two tool calls", source)
+        self.assertIn("operator owns proposal serialization", source)
+        self.assertIn("final assistant response must consist solely", source)
+        self.assertIn("stop exploring and return the exact JSON response", source)
         self.assertIn("tool_call_limit=24", source)
         self.assertIn("wall_time_limit_seconds=360", source)
         self.assertIn("transport_retry_limit=0", source)
