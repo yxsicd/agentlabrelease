@@ -39,6 +39,15 @@ independent assessment proves the exact aggregate delta, and the resulting
 facts can enter the same atomic TableGit transaction. A partial batch writes no
 authority rows.
 
+Retain successful independent scope proposals when one peer in a batch fails.
+Retry only the failed scopes once, preserve both attempts as evidence, then run
+the aggregate hard gate over the successful outputs. If any isolated retry
+still fails, stop before the assessment and TableGit transaction; never rerun
+successful scopes merely to recover one model or transport tail.
+Keep each attempt under a bounded semantic-analysis wall time. The operator
+retry replaces any nested transport retry so one unhealthy request cannot
+silently consume multiple full time budgets before its peers are released.
+
 Spend Agent turns on semantic judgment, not deterministic repository plumbing.
 Before each construction turn, the operator must verify the exact HEAD and
 provide a complete scope-owned tracked-file inventory with Git Blob identities

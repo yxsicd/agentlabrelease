@@ -72,45 +72,75 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
   mkdir -p "$iteration_root/requests" "$iteration_root/agents" \
     "$iteration_root/receipts" "$iteration_root/facts"
   pids=()
+  agent_outputs=()
   for ((scope_index = 0; scope_index < scope_count; scope_index++)); do
     request="$iteration_root/requests/scope-$scope_index.json"
     jq ".requests[$scope_index]" "$iteration_root/flywheel-batch-request.json" > "$request"
+    agent_outputs[$scope_index]="$iteration_root/agents/scope-$scope_index"
     python3 examples/maintainer-knowledge-gate/agent_flywheel.py run-agent \
       --request "$request" --source "$source_dir" \
-      --output "$iteration_root/agents/scope-$scope_index" --pi "$pi" \
+      --output "${agent_outputs[$scope_index]}" --pi "$pi" \
       --gateway "$AGENTLAB_LM_GATEWAY_URL" --model "$AGENTLAB_MODEL" \
       --provider-route "$AGENTLAB_PROVIDER_ROUTE" &
     pids+=("$!")
   done
-  agent_failed=false
-  for pid in "${pids[@]}"; do
-    if ! wait "$pid"; then
-      agent_failed=true
+  failed_scopes=()
+  for ((scope_index = 0; scope_index < scope_count; scope_index++)); do
+    if ! wait "${pids[$scope_index]}"; then
+      failed_scopes+=("$scope_index")
     fi
   done
+
+  # Preserve every successful proposal. Retry only failed independent scopes,
+  # once and in parallel, before the aggregate hard gate or TableGit mutation.
+  retried_scopes=("${failed_scopes[@]}")
+  if (( ${#failed_scopes[@]} )); then
+    mkdir -p "$iteration_root/agent-retries"
+    retry_pids=()
+    for scope_index in "${failed_scopes[@]}"; do
+      agent_outputs[$scope_index]="$iteration_root/agent-retries/scope-$scope_index"
+      python3 examples/maintainer-knowledge-gate/agent_flywheel.py run-agent \
+        --request "$iteration_root/requests/scope-$scope_index.json" --source "$source_dir" \
+        --output "${agent_outputs[$scope_index]}" --pi "$pi" \
+        --gateway "$AGENTLAB_LM_GATEWAY_URL" --model "$AGENTLAB_MODEL" \
+        --provider-route "$AGENTLAB_PROVIDER_ROUTE" &
+      retry_pids+=("$!")
+    done
+    agent_failed=false
+    for retry_index in "${!failed_scopes[@]}"; do
+      if ! wait "${retry_pids[$retry_index]}"; then
+        agent_failed=true
+      fi
+    done
+  else
+    agent_failed=false
+  fi
   [[ $agent_failed == false ]] || {
-    echo "one or more bounded Maintainer Skill Agents failed" >&2
+    echo "one or more bounded Maintainer Skill Agents failed after one isolated retry" >&2
     exit 1
   }
 
   candidate_facts="$working_knowledge/program_facts.jsonl"
   receipt_args=()
+  lifecycle_args=()
   for ((scope_index = 0; scope_index < scope_count; scope_index++)); do
     next_facts="$iteration_root/facts/scope-$scope_index.jsonl"
     receipt="$iteration_root/receipts/scope-$scope_index.json"
     python3 examples/maintainer-knowledge-gate/agent_flywheel.py validate \
       --request "$iteration_root/requests/scope-$scope_index.json" \
-      --proposal "$iteration_root/agents/scope-$scope_index/program-fact-proposal.json" \
+      --proposal "${agent_outputs[$scope_index]}/program-fact-proposal.json" \
       --source "$source_dir" --program-facts "$candidate_facts" \
       --output "$next_facts" --receipt "$receipt"
     candidate_facts=$next_facts
     receipt_args+=(--receipt "$receipt")
+    lifecycle_args+=("${agent_outputs[$scope_index]}/evidence/maintainer-skill-author-lifecycle.json")
   done
   cp "$candidate_facts" "$iteration_root/candidate-program-facts.jsonl"
   jq -s '.' "$iteration_root"/receipts/scope-*.json \
     > "$iteration_root/proposal-receipts.json"
-  jq -s '.' "$iteration_root"/agents/scope-*/evidence/maintainer-skill-author-lifecycle.json \
-    > "$iteration_root/agent-lifecycles.json"
+  jq -s '.' "${lifecycle_args[@]}" > "$iteration_root/agent-lifecycles.json"
+  printf '%s\n' "${retried_scopes[@]}" | jq -s 'map(tonumber)' \
+    > "$iteration_root/retried-scope-indices.json"
 
   parent=$(sha256sum "$assessment" | cut -d' ' -f1)
   round=$(jq -r '.roundIndex + 1' "$assessment")
@@ -140,6 +170,7 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
     --slurpfile result "$iteration_root/result.json" \
     --slurpfile receipts "$iteration_root/proposal-receipts.json" \
     --slurpfile lifecycle "$iteration_root/agent-lifecycles.json" \
+    --slurpfile retried "$iteration_root/retried-scope-indices.json" \
     --slurpfile plan "$iteration_root/convergence-plan.json" \
     '{iteration:$iteration,repository:$repository,
       scopeIds:[$batch[0].requests[].scope.id],
@@ -149,6 +180,7 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
       selectionPlan:{decision:$plan[0].decision,summary:$plan[0].summary,
         sourceAssessmentSha256:$plan[0].sourceAssessmentSha256},
       execution:{parallel:true,agentCount:($lifecycle[0]|length),
+        retriedScopeIndices:$retried[0],retryCount:($retried[0]|length),
         maxToolCalls:([$lifecycle[0][].maxToolCalls]|add),
         startedToolCalls:([$lifecycle[0][].startedToolCalls]|add),
         completedToolCalls:([$lifecycle[0][].completedToolCalls]|add),
