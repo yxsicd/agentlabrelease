@@ -151,9 +151,12 @@ jobs:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
         run: |
           set -euo pipefail
-          scripts/run-case-generation-shadow.sh \
-            "$KNOWLEDGE" "$AGENTLAB_ROOT/run" \
-            "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi"
+          if ! scripts/run-case-generation-shadow.sh \
+              "$KNOWLEDGE" "$AGENTLAB_ROOT/run" \
+              "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi"; then
+            echo "::warning::Shadow case sampling failed after the knowledge transaction; preserving the exact TableGit export."
+            echo "Shadow case sampling failed and did not block the first two Maintainer Skill flywheels." >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Propose the fixed-revision Release export
         env:
           GH_TOKEN: ${{ github.token }}

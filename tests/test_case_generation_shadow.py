@@ -135,6 +135,45 @@ class CaseGenerationShadowTest(unittest.TestCase):
             self.assertFalse(prepared["automaticPromotion"])
             self.assertEqual(prepared["policy"]["runtimeTarget"], "harmony-emulator")
 
+    def test_prepare_samples_one_exact_fact_from_a_parallel_scope_batch(self):
+        request_fixture = self.request()
+        selected_fact = request_fixture["fact"]
+        selected_scope = selected_fact["scopeSkillIds"][0]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            loop_path = root / "loop-receipt.json"
+            output = root / "request.json"
+            MODULE.write_json(loop_path, {
+                "schema": "agentlab.maintainer_skill_bounded_loop_receipt.v1",
+                "requestedIterations": 1,
+                "completedIterations": 1,
+                "automaticPromotion": False,
+                "iterations": [{
+                    "iteration": 1,
+                    "repository": selected_fact["repositoryId"],
+                    "scopeIds": [selected_scope],
+                    "acceptedFactIds": [selected_fact["id"]],
+                    "batchSize": 1,
+                    "before": request_fixture["loopBefore"],
+                    "after": request_fixture["loopAfter"],
+                    "automaticPromotion": False,
+                }],
+            })
+            MODULE.prepare(type("Args", (), {
+                "knowledge": KNOWLEDGE, "loop_receipt": loop_path, "output": output,
+            }))
+            prepared = MODULE.load(output)
+            self.assertEqual(prepared["fact"]["id"], selected_fact["id"])
+            self.assertEqual(prepared["scope"]["id"], selected_scope)
+
+    def test_workflow_does_not_block_exact_export_when_shadow_sampling_fails(self):
+        workflow = (ROOT / ".github/workflows/maintainer-skill-agent-flywheel.yml").read_text()
+        shadow_step = workflow.split(
+            "      - name: Sample one non-promoted shadow case from the knowledge gain\n", 1
+        )[1].split("      - name: Propose the fixed-revision Release export\n", 1)[0]
+        self.assertIn("if ! scripts/run-case-generation-shadow.sh", shadow_step)
+        self.assertIn("preserving the exact TableGit export", shadow_step)
+
     def test_retained_shadow_candidate_and_round_are_exactly_bound(self):
         request = self.request()
         proposal = self.proposal(request)
