@@ -32,13 +32,13 @@
   "sourceSetSha256": "88310ecd6a5ace0c7393c7981b8f9ba9103afff41133b71d0b84e951e95f24a6",
   "tableGitAuthority": {
     "exportedBy": {
-      "host": "huawei-ThinkCentre-M920t",
-      "kind": "hwlinux-local",
+      "kind": "github-action",
       "repository": "yxsicd/agentlabrelease",
-      "runId": "hwlinux-20260929-code-workshop-converge-04"
+      "runId": "36536561655",
+      "runUrl": "https://github.com/yxsicd/agentlabrelease/actions/runs/36536561655"
     },
     "repo": "agentlabtablegit",
-    "revision": "eba1ac1eb6e3cddafa3e9df37f382f3b0303a493"
+    "revision": "613f8b778701b46b63d29f72c85a3a887c71bc62"
   },
   "tables": {
     "evaluationCases": {
@@ -51,7 +51,7 @@
     },
     "maintainerSkillRefreshRounds": {
       "path": "maintainer_skill_refresh_rounds.jsonl",
-      "sha256": "60124f6c9d4e249aa52afcccfa68878966a7a00d3c2e68aa1e06387257ca3d81"
+      "sha256": "2ca6a485d342b31e0cccc1732b79beddd99354c2b3d3f81c1ef5b8a69301e230"
     },
     "maintainerSkills": {
       "path": "maintainer_skills.jsonl",
@@ -59,7 +59,7 @@
     },
     "programFacts": {
       "path": "program_facts.jsonl",
-      "sha256": "e7d338eb5ac0fad94ec16c1dc22881d5cf559301386ed3476513c3233c79228c"
+      "sha256": "94233c936f2029cd609e9a1936e9b90601136bdb466e77e7715e3d99409c3ae6"
     }
   }
 }
