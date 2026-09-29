@@ -170,6 +170,30 @@ class GatewayCaptureTests(unittest.TestCase):
             errors=json.loads((evidence/'banner-native-parse-errors.json').read_text())
             self.assertEqual(len(errors),1)
 
+    def test_native_tool_call_budget_is_enforced_by_the_operator(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ,
+                {'AGENTLAB_LM_GATEWAY_KEY':'synthetic-key'}):
+            root=Path(tmp);evidence=root/'evidence';evidence.mkdir();lifecycle={}
+            participant=MODULE.Participant(evidence,root/'state',sys.executable,
+                'http://127.0.0.1:1','test-model')
+            program = (
+                "import json,time\n"
+                "for i in range(4):\n"
+                " print(json.dumps({'type':'tool_execution_start','toolCallId':str(i)}),flush=True)\n"
+                " print(json.dumps({'type':'tool_execution_end','toolCallId':str(i)}),flush=True)\n"
+                " time.sleep(.2)\n"
+                "time.sleep(30)\n"
+            )
+            try:
+                with self.assertRaisesRegex(RuntimeError,'exceeded tool-call limit 2'):
+                    participant._run_turn([sys.executable,'-c',program],root,
+                        {'PATH':os.environ['PATH']},'budget',lifecycle,
+                        timeout_seconds=10,tool_call_limit=2)
+            finally:participant.close()
+            self.assertTrue(lifecycle['toolCallBudgetExceeded'])
+            self.assertGreater(lifecycle['startedToolCalls'],2)
+            self.assertIsNotNone(lifecycle['exitCode'])
+
     def test_native_final_assistant_message_is_returned_and_digest_bound(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict(
             os.environ, {"AGENTLAB_LM_GATEWAY_KEY": "synthetic-key"}

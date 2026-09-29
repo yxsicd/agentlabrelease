@@ -4,6 +4,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
+    process::Command,
 };
 
 fn repository_root() -> PathBuf {
@@ -40,6 +41,25 @@ fn ids(value: &Value, field: &str) -> Vec<String> {
 
 fn json(path: &Path) -> Value {
     serde_json::from_slice(&fs::read(path).unwrap()).unwrap()
+}
+
+fn method_at_revision(root: &Path, revision: &str, path: &str) -> Vec<u8> {
+    assert_eq!(revision.len(), 40, "method revision must be exact");
+    assert!(revision.bytes().all(|byte| byte.is_ascii_hexdigit()));
+    let output = Command::new("git")
+        .args([
+            "-C",
+            root.to_str().unwrap(),
+            "show",
+            &format!("{revision}:{path}"),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "method revision must resolve its Skill bytes"
+    );
+    output.stdout
 }
 
 #[test]
@@ -112,25 +132,27 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
             .insert(skill["stage"].as_str().unwrap().to_owned());
 
         if skill["stage"] == "seed-extraction" {
+            let revision = skill["methodRevision"].as_str().unwrap();
             assert_eq!(
                 skill["methodDigest"],
-                digest(&fs::read(root.join("skills/agentlab-seed-extraction/SKILL.md")).unwrap()),
-                "{skill_id} does not bind the current iterative generation method"
-            );
-            assert_eq!(
-                skill["methodRevision"], "59216bbc5bca6de2cb0d87bd29f8f154db9d4946",
-                "{skill_id} does not bind the method-defining revision"
+                digest(&method_at_revision(
+                    &root,
+                    revision,
+                    "skills/agentlab-seed-extraction/SKILL.md",
+                )),
+                "{skill_id} does not bind its exact iterative generation method revision"
             );
         }
         if skill["stage"] == "repository-analysis" {
+            let revision = skill["methodRevision"].as_str().unwrap();
             assert_eq!(
                 skill["methodDigest"],
-                digest(&fs::read(root.join("skills/agentlab-codebase-analysis/SKILL.md")).unwrap()),
-                "{skill_id} does not bind the current evidence-flywheel method"
-            );
-            assert_eq!(
-                skill["methodRevision"], "f697ba31f0c6197a097e252b86ea3ed8e29ba551",
-                "{skill_id} does not bind the method-defining revision"
+                digest(&method_at_revision(
+                    &root,
+                    revision,
+                    "skills/agentlab-codebase-analysis/SKILL.md",
+                )),
+                "{skill_id} does not bind its exact evidence-flywheel method revision"
             );
         }
 

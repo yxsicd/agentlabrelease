@@ -31,6 +31,14 @@ assessment may advance a scope from structural to semantic or maintenance
 readiness. Follow [the Maintainer Skill evidence flywheel](references/maintainer-skill-flywheel.md)
 and retain every parent assessment digest.
 
+Use a deep target repository to discover failure modes, then normalize each
+verified lesson into the repository-independent method before reusing it. Never
+add target repository names, paths, framework commands or special-case scoring
+to this method Skill. Require a complete convergence plan, execution-enforced
+Agent budgets and an atomic no-write-on-failure boundary as defined by the
+flywheel reference. `No eligible scope` is a blocker report, not proof that the
+repository is understood.
+
 Use [program analysis](../agentlab-program-analysis/SKILL.md) for structure and [seed extraction](../agentlab-seed-extraction/SKILL.md) to turn grounded knowledge into tasks. Archive searches and generic TableGit analysis requests, exact input cuts and complete results in `program_facts`.
 
 Develop in TableGit. Export a fixed cut with the existing [three-table workflow](../../examples/knowledge-seed/README.md), one stable JSONL per table. Release files are publication snapshots, not a second live authority.

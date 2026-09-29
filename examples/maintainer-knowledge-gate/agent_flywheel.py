@@ -59,28 +59,78 @@ def scope_has_reachable_evidence(scope):
     )
 
 
+def classify_scope(scope, state, max_source_files=80):
+    maturity = state.get("maturity", "unknown")
+    base = {
+        "skillId": scope.get("id"),
+        "pathBoundary": scope.get("pathBoundary"),
+        "maturity": maturity,
+        "sourceFileCount": scope.get("sourceFileCount"),
+        "testFileCount": scope.get("testFileCount"),
+    }
+    if maturity in ("L2-semantic-ready", "L3-maintenance-ready"):
+        return {**base, "disposition": "already-advanced", "nextAction": "preserve-and-refresh-on-new-evidence"}
+    if maturity != "L1-structural-ready":
+        return {**base, "disposition": "blocked", "blockerCode": "MS-STRUCTURE-NOT-READY",
+                "nextAction": "repair-structural-inventory"}
+    source_count = scope.get("sourceFileCount")
+    if not isinstance(source_count, int) or source_count < 0:
+        return {**base, "disposition": "blocked", "blockerCode": "MS-SOURCE-COUNT-INVALID",
+                "nextAction": "repair-structural-inventory"}
+    if source_count == 0:
+        return {**base, "disposition": "blocked", "blockerCode": "MS-NON-SOURCE-SCOPE",
+                "nextAction": "run-configuration-or-asset-scope-analysis"}
+    if source_count > max_source_files:
+        return {**base, "disposition": "blocked", "blockerCode": "MS-SCOPE-DECOMPOSITION-REQUIRED",
+                "nextAction": "decompose-scope-by-owned-behavior-boundary"}
+    if scope.get("pathBoundary") == ".":
+        return {**base, "disposition": "blocked", "blockerCode": "MS-ROOT-SCOPE-SPECIALIST-REQUIRED",
+                "nextAction": "run-repository-contract-analysis"}
+    if not scope_has_reachable_evidence(scope):
+        return {**base, "disposition": "blocked", "blockerCode": "MS-INVENTORY-EVIDENCE-UNREACHABLE",
+                "nextAction": "repair-scope-evidence-paths"}
+    return {**base, "disposition": "eligible", "nextAction": "run-bounded-semantic-analysis"}
+
+
+def repository_plan(scope_rows, assessment, repository_id, revision=None):
+    states = {row["skillId"]: row for row in assessment["skills"]}
+    planned = [
+        classify_scope(scope, states.get(scope.get("id"), {}))
+        for scope in scope_rows
+        if scope.get("repositoryId") == repository_id
+    ]
+    require(planned, f"repository has no scope Skills: {repository_id}")
+    eligible = sum(row["disposition"] == "eligible" for row in planned)
+    blocked = sum(row["disposition"] == "blocked" for row in planned)
+    advanced = sum(row["disposition"] == "already-advanced" for row in planned)
+    return {
+        "schema": "agentlab.maintainer_skill_convergence_plan.v1",
+        "repositoryId": repository_id,
+        "sourceRevision": revision,
+        "sourceAssessmentSha256": None,
+        "selectionPolicy": {
+            "maxSourceFilesPerAgentRound": 80,
+            "requiresNonRootBoundary": True,
+            "requiresReachableBlobEvidence": True,
+            "repositorySpecificBranches": False,
+        },
+        "summary": {"scopeCount": len(planned), "eligible": eligible, "blocked": blocked,
+                    "alreadyAdvanced": advanced},
+        "decision": "advance-eligible-scopes" if eligible else (
+            "blocked" if blocked else "semantic-expansion-complete"
+        ),
+        "scopes": planned,
+        "automaticPromotion": False,
+    }
+
+
 def eligible_scopes(scope_rows, assessment, repository_id):
     states = {row["skillId"]: row for row in assessment["skills"]}
-    eligible = []
-    for scope in scope_rows:
-        if scope.get("repositoryId") != repository_id:
-            continue
-        state = states.get(scope.get("id"), {})
-        if state.get("maturity") != "L1-structural-ready":
-            continue
-        source_count = scope.get("sourceFileCount", 0)
-        if not isinstance(source_count, int) or source_count < 1 or source_count > 80:
-            continue
-        if scope.get("pathBoundary") == ".":
-            continue
-        # A proposal must cite at least one blob inside its selected boundary.
-        # Do not send an Agent a generated scope whose own inventory evidence
-        # cannot satisfy that invariant (for example, entry/_build whose
-        # evidence only names files directly under entry/).
-        if not scope_has_reachable_evidence(scope):
-            continue
-        eligible.append(scope)
-    return eligible
+    return [
+        scope for scope in scope_rows
+        if scope.get("repositoryId") == repository_id
+        and classify_scope(scope, states.get(scope.get("id"), {}))["disposition"] == "eligible"
+    ]
 
 
 def select_scope(scope_rows, assessment, repository_id):
@@ -160,6 +210,18 @@ def eligible_count(args):
     print(len(eligible_scopes(scope_rows, assessment, args.repository)))
 
 
+def plan(args):
+    cut = load(args.knowledge / "maintainer-knowledge-cut.json")
+    assessment = load(args.assessment)
+    scope_rows = rows(args.knowledge / "maintainer_scope_skills.jsonl")
+    source = next((row for row in cut["repositories"] if row["id"] == args.repository), None)
+    require(source is not None, "repository is absent from the knowledge cut")
+    value = repository_plan(scope_rows, assessment, args.repository, source["revision"])
+    value["sourceAssessmentSha256"] = digest(args.assessment)
+    write(args.output, value)
+    print(json.dumps(value["summary"], separators=(",", ":"), sort_keys=True))
+
+
 def run_agent(args):
     packet = load(args.request)
     require(packet.get("schema") == "agentlab.maintainer_skill_agent_request.v1", "bad request")
@@ -222,6 +284,7 @@ write program-fact-proposal.json and parse it once before finishing.
             workspace,
             prompt=prompt,
             wall_time_limit_seconds=720,
+            tool_call_limit=24,
         )
     finally:
         participant.close()
@@ -358,6 +421,12 @@ def main():
     p.add_argument("--assessment", type=Path, required=True)
     p.add_argument("--repository", required=True)
     p.set_defaults(handler=eligible_count)
+    p = commands.add_parser("plan")
+    p.add_argument("--knowledge", type=Path, required=True)
+    p.add_argument("--assessment", type=Path, required=True)
+    p.add_argument("--repository", required=True)
+    p.add_argument("--output", type=Path, required=True)
+    p.set_defaults(handler=plan)
     p = commands.add_parser("run-agent")
     p.add_argument("--request", type=Path, required=True)
     p.add_argument("--source", type=Path, required=True)

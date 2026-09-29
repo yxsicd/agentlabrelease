@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.invalid/schemas/maintainer-skill-convergence-plan.schema.json",
+  "title": "Maintainer Skill convergence plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "repositoryId", "sourceRevision", "sourceAssessmentSha256",
+    "selectionPolicy", "summary", "decision", "scopes", "automaticPromotion"
+  ],
+  "properties": {
+    "schema": {"const": "agentlab.maintainer_skill_convergence_plan.v1"},
+    "repositoryId": {"type": "string", "minLength": 1},
+    "sourceRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "sourceAssessmentSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "selectionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxSourceFilesPerAgentRound", "requiresNonRootBoundary",
+        "requiresReachableBlobEvidence", "repositorySpecificBranches"
+      ],
+      "properties": {
+        "maxSourceFilesPerAgentRound": {"type": "integer", "minimum": 1},
+        "requiresNonRootBoundary": {"const": true},
+        "requiresReachableBlobEvidence": {"const": true},
+        "repositorySpecificBranches": {"const": false}
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scopeCount", "eligible", "blocked", "alreadyAdvanced"],
+      "properties": {
+        "scopeCount": {"type": "integer", "minimum": 1},
+        "eligible": {"type": "integer", "minimum": 0},
+        "blocked": {"type": "integer", "minimum": 0},
+        "alreadyAdvanced": {"type": "integer", "minimum": 0}
+      }
+    },
+    "decision": {"enum": ["advance-eligible-scopes", "blocked", "semantic-expansion-complete"]},
+    "scopes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "skillId", "pathBoundary", "maturity", "sourceFileCount",
+          "testFileCount", "disposition", "nextAction"
+        ],
+        "properties": {
+          "skillId": {"type": "string", "minLength": 1},
+          "pathBoundary": {"type": "string", "minLength": 1},
+          "maturity": {"type": "string", "minLength": 1},
+          "sourceFileCount": {"type": "integer", "minimum": 0},
+          "testFileCount": {"type": "integer", "minimum": 0},
+          "disposition": {"enum": ["eligible", "blocked", "already-advanced"]},
+          "blockerCode": {"type": "string", "pattern": "^MS-[A-Z0-9-]+$"},
+          "nextAction": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "automaticPromotion": {"const": false}
+  }
+}

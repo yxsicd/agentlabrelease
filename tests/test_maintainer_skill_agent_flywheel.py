@@ -5,7 +5,6 @@ import subprocess
 import tempfile
 import unittest
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location(
     "agent_flywheel", ROOT / "examples/maintainer-knowledge-gate/agent_flywheel.py"
@@ -90,6 +89,35 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         ]}
         self.assertEqual(MODULE.select_scope(scopes, assessment, "r")["id"], "reachable")
 
+    def test_convergence_plan_explains_every_scope_without_repository_branches(self):
+        scopes = [
+            {"id": "ready", "repositoryId": "arbitrary-repository", "pathBoundary": "src", "sourceFileCount": 3,
+             "testFileCount": 1, "evidence": [{"path": "src/main.rs"}]},
+            {"id": "large", "repositoryId": "arbitrary-repository", "pathBoundary": "library", "sourceFileCount": 81,
+             "testFileCount": 0, "evidence": [{"path": "library/lib.rs"}]},
+            {"id": "config", "repositoryId": "arbitrary-repository", "pathBoundary": "config", "sourceFileCount": 0,
+             "testFileCount": 0, "evidence": [{"path": "config/app.json"}]},
+            {"id": "done", "repositoryId": "arbitrary-repository", "pathBoundary": "done", "sourceFileCount": 2,
+             "testFileCount": 0, "evidence": [{"path": "done/mod.rs"}]},
+        ]
+        assessment = {"skills": [
+            {"skillId": "ready", "maturity": "L1-structural-ready"},
+            {"skillId": "large", "maturity": "L1-structural-ready"},
+            {"skillId": "config", "maturity": "L1-structural-ready"},
+            {"skillId": "done", "maturity": "L2-semantic-ready"},
+        ]}
+        plan = MODULE.repository_plan(scopes, assessment, "arbitrary-repository", "a" * 40)
+        plan["sourceAssessmentSha256"] = "b" * 64
+        schema = json.loads((ROOT / "schemas/maintainer-skill-convergence-plan.schema.json").read_text())
+        self.assertEqual(schema["properties"]["schema"]["const"], plan["schema"])
+        self.assertEqual(set(schema["required"]), set(plan))
+        self.assertEqual(plan["summary"], {"scopeCount": 4, "eligible": 1, "blocked": 2, "alreadyAdvanced": 1})
+        self.assertEqual(plan["decision"], "advance-eligible-scopes")
+        blockers = {row["skillId"]: row.get("blockerCode") for row in plan["scopes"]}
+        self.assertEqual(blockers["large"], "MS-SCOPE-DECOMPOSITION-REQUIRED")
+        self.assertEqual(blockers["config"], "MS-NON-SOURCE-SCOPE")
+        self.assertFalse(plan["selectionPolicy"]["repositorySpecificBranches"])
+
     def test_auto_repository_selection_prefers_lowest_normalized_coverage(self):
         scopes = [
             {"id": "a1", "repositoryId": "a", "pathBoundary": "a1", "sourceFileCount": 1,
@@ -113,7 +141,9 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         script = (ROOT / "scripts/run-maintainer-skill-local-flywheel.sh").read_text()
         loop = (ROOT / "scripts/run-maintainer-skill-agent-loop.sh").read_text()
         self.assertIn("iterations == converge", script)
-        self.assertIn("eligible-count", script)
+        self.assertIn("convergence-plan.json", script)
+        self.assertIn("convergence-report.json", script)
+        self.assertIn(".summary.eligible", script)
         self.assertIn("AGENTLAB_MAX_ITERATIONS=64", script)
         self.assertIn("max_iterations=${AGENTLAB_MAX_ITERATIONS:-3}", loop)
 
@@ -128,6 +158,7 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         self.assertIn("Use at most 24 shell tool calls", source)
         self.assertIn("do not enumerate or read the whole repository", source)
         self.assertIn("Reserve the final two tool calls", source)
+        self.assertIn("tool_call_limit=24", source)
 
     def test_compare_requires_one_l2_gain_without_l3_promotion(self):
         before = {

@@ -200,6 +200,7 @@ class Participant:
 
     def turn(self, label, project, marker=None, repair=False, prompt=None, container=None, requirement=None,
              reasoning_effort=None, step_limit=None, wall_time_limit_seconds=None,
+             tool_call_limit=None,
              _transport_retry=0):
         self.active_reasoning_effort = reasoning_effort if reasoning_effort is not None else self.reasoning_effort
         prompt = prompt or (f'Work in the current Harmony ArkTS project. Read the page source and '
@@ -247,6 +248,10 @@ class Participant:
         lifecycle = {'label': label, 'startedAt': datetime.now(timezone.utc).isoformat(),
                      'captureAuthority': 'operator', 'exitCode': None, 'timedOut': False,
                      'providerReasoningEffort': self.active_reasoning_effort}
+        if tool_call_limit is not None:
+            if not isinstance(tool_call_limit, int) or tool_call_limit < 1:
+                raise ValueError('tool_call_limit must be a positive integer')
+            lifecycle.update(maxToolCalls=tool_call_limit, toolCallBudgetExceeded=False)
         if self.implementation == 'mini-swe-agent':
             lifecycle.update(stepLimit=step_limit or 30,
                              wallTimeLimitSeconds=wall_time_limit_seconds or 360)
@@ -258,6 +263,8 @@ class Participant:
             if wall_time_limit_seconds is not None:
                 run_options['timeout_seconds'] = max(420, wall_time_limit_seconds + 60)
                 lifecycle['supervisorTimeoutSeconds'] = run_options['timeout_seconds']
+            if tool_call_limit is not None:
+                run_options['tool_call_limit'] = tool_call_limit
             turn_result = self._run_turn(command, project, env, label, lifecycle, **run_options)
         except RuntimeError as error:
             turn_error = error
@@ -302,6 +309,7 @@ class Participant:
                                  requirement=requirement, reasoning_effort=reasoning_effort,
                                  step_limit=step_limit,
                                  wall_time_limit_seconds=wall_time_limit_seconds,
+                                 tool_call_limit=tool_call_limit,
                                  _transport_retry=1)
             raise turn_error
         source = project / 'entry/src/main/ets/pages/Index.ets'
@@ -310,24 +318,50 @@ class Participant:
         print(f'{label}: real {self.implementation} turn completed', flush=True)
         return turn_result
 
-    def _run_turn(self, command, project, env, label, lifecycle, timeout_seconds=420):
+    def _run_turn(self, command, project, env, label, lifecycle, timeout_seconds=420,
+                  tool_call_limit=None):
+        def terminate(process):
+            import signal
+            os.killpg(process.pid, signal.SIGTERM)
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait()
+
+        events_path = self.evidence / f'{label}-events.jsonl'
         with (self.evidence / f'{label}-events.jsonl').open('wb') as out, \
              (self.evidence / f'{label}-stderr.log').open('wb') as err:
             process = subprocess.Popen(command, cwd=project, env=env, stdout=out, stderr=err,
                                        stdin=subprocess.DEVNULL, start_new_session=True)
-            try:
-                code = process.wait(timeout=timeout_seconds)
-            except subprocess.TimeoutExpired:
-                lifecycle['timedOut'] = True
-                import signal
-                os.killpg(process.pid, signal.SIGTERM)
-                try:
-                    process.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    os.killpg(process.pid, signal.SIGKILL)
-                    process.wait()
-                lifecycle['exitCode'] = process.returncode
-                raise RuntimeError(f'{label}: participant timeout; partial events retained')
+            deadline = time.monotonic() + timeout_seconds
+            while True:
+                started_tools = 0
+                if tool_call_limit is not None and events_path.is_file():
+                    for line in events_path.read_bytes().splitlines():
+                        try:
+                            event = json.loads(line)
+                        except (ValueError, UnicodeDecodeError):
+                            continue
+                        started_tools += event.get('type') == 'tool_execution_start'
+                    lifecycle['startedToolCalls'] = started_tools
+                    if started_tools > tool_call_limit:
+                        lifecycle['toolCallBudgetExceeded'] = True
+                        terminate(process)
+                        lifecycle['exitCode'] = process.returncode
+                        raise RuntimeError(
+                            f'{label}: participant exceeded tool-call limit '
+                            f'{tool_call_limit}; partial events retained'
+                        )
+                code = process.poll()
+                if code is not None:
+                    break
+                if time.monotonic() >= deadline:
+                    lifecycle['timedOut'] = True
+                    terminate(process)
+                    lifecycle['exitCode'] = process.returncode
+                    raise RuntimeError(f'{label}: participant timeout; partial events retained')
+                time.sleep(0.1)
         lifecycle['exitCode'] = code
         if code:
             raise RuntimeError(f'{label}: {"Pi" if self.implementation=="pi" else self.implementation} exited {code}; inspect participant evidence')
