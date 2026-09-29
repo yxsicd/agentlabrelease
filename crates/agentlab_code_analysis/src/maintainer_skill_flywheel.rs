@@ -96,7 +96,9 @@ fn valid_selector(selector: &Value) -> bool {
             .is_some_and(|path| !path.is_empty()),
         Some("files") => selector["paths"].as_array().is_some_and(|paths| {
             !paths.is_empty()
-                && paths.iter().all(|path| path.as_str().is_some_and(|path| !path.is_empty()))
+                && paths
+                    .iter()
+                    .all(|path| path.as_str().is_some_and(|path| !path.is_empty()))
         }),
         _ => false,
     }
@@ -114,9 +116,11 @@ fn scope_specificity(skill: &Value, path: &str) -> Option<usize> {
 }
 
 fn valid_scope_ownership(skill: &Value) -> bool {
-    skill["ownershipSelectors"].as_array().map_or(true, |selectors| {
-        !selectors.is_empty() && selectors.iter().all(valid_selector)
-    })
+    skill["ownershipSelectors"]
+        .as_array()
+        .map_or(true, |selectors| {
+            !selectors.is_empty() && selectors.iter().all(valid_selector)
+        })
 }
 
 fn fact_dimensions(fact: &Value) -> BTreeSet<String> {
@@ -310,12 +314,13 @@ pub fn assess(
                 .as_str()
                 .is_some_and(|value| !value.is_empty())
             && skill["evidence"].as_array().is_some_and(|rows| {
-                !rows.is_empty() && rows.iter().all(|row| {
-                    valid_hex(&row["gitBlobOid"], 40)
-                        && row["path"]
-                            .as_str()
-                            .is_some_and(|path| scope_specificity(skill, path).is_some())
-                })
+                !rows.is_empty()
+                    && rows.iter().all(|row| {
+                        valid_hex(&row["gitBlobOid"], 40)
+                            && row["path"]
+                                .as_str()
+                                .is_some_and(|path| scope_specificity(skill, path).is_some())
+                    })
             });
         let structural_ready = identity_ready
             && skill["trackedFileCount"]
