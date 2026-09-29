@@ -25,6 +25,21 @@ export GITHUB_REPOSITORY=${AGENTLAB_SOURCE_REPOSITORY:-yxsicd/agentlabrelease}
 export AGENTLAB_PRODUCER_KIND=${AGENTLAB_PRODUCER_KIND:-hwlinux-local}
 export AGENTLAB_PRODUCER_HOST=${AGENTLAB_PRODUCER_HOST:-$(hostname)}
 
+converging=false
+if [[ $iterations == converge ]]; then
+  converging=true
+  assessment=$(find "$knowledge/assessments" -maxdepth 1 -type f -name '*.json' -print0 |
+    xargs -0 jq -r '[.roundIndex,input_filename] | @tsv' | sort -n | tail -1 | cut -f2-)
+  test -n "$assessment"
+  iterations=$(python3 examples/maintainer-knowledge-gate/agent_flywheel.py eligible-count \
+    --knowledge "$knowledge" --assessment "$assessment" --repository "$repository")
+  if [[ $iterations -eq 0 ]]; then
+    echo "repository has no eligible L1 scope to advance" >&2
+    exit 3
+  fi
+  export AGENTLAB_MAX_ITERATIONS=64
+fi
+
 scripts/run-maintainer-skill-agent-loop.sh \
   "$knowledge" "$run_root" "$repository" "$iterations" "$pi"
 
@@ -47,10 +62,27 @@ python3 scripts/maintainer-skill-tablegit.py sync \
 
 scripts/run-case-generation-shadow.sh "$knowledge" "$run_root" "$pi"
 
+materialization_file="$run_root/materialization.json"
+printf '{}\n' > "$materialization_file"
+if [[ -n ${AGENTLAB_SKILLSGIT_ROOT:-} ]]; then
+  : "${AGENTLAB_SKILLSGIT_REVISION:?required when AGENTLAB_SKILLSGIT_ROOT is set}"
+  python3 scripts/materialize-skillsgit-maintainer-tree.py \
+    --knowledge "$knowledge" --repository "$repository" \
+    --skillsgit-root "$AGENTLAB_SKILLSGIT_ROOT" \
+    --skillsgit-revision "$AGENTLAB_SKILLSGIT_REVISION" \
+    --output "$run_root/materialized-maintainer-tree" \
+    > "$materialization_file"
+elif [[ $converging == true ]]; then
+  echo "converge mode requires AGENTLAB_SKILLSGIT_ROOT and AGENTLAB_SKILLSGIT_REVISION" >&2
+  exit 4
+fi
+
 jq -n \
   --slurpfile loop "$run_root/loop/loop-receipt.json" \
   --slurpfile tablegit "$run_root/tablegit-sync-receipt.json" \
   --slurpfile shadow "$run_root/shadow-case-generation/shadow-receipt.json" \
+  --slurpfile materialization "$materialization_file" \
   '{schema:"agentlab.maintainer_skill_local_flywheel_receipt.v1",
-    loop:$loop[0],tableGit:$tablegit[0],shadow:$shadow[0]}' \
+    loop:$loop[0],tableGit:$tablegit[0],shadow:$shadow[0],
+    materialization:$materialization[0]}' \
   > "$run_root/local-flywheel-receipt.json"

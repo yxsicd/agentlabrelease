@@ -109,6 +109,14 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         ]}
         self.assertEqual(MODULE.select_repository(scopes, assessment, ["a", "b"]), "b")
 
+    def test_local_entrypoint_can_converge_all_current_eligible_scopes(self):
+        script = (ROOT / "scripts/run-maintainer-skill-local-flywheel.sh").read_text()
+        loop = (ROOT / "scripts/run-maintainer-skill-agent-loop.sh").read_text()
+        self.assertIn("iterations == converge", script)
+        self.assertIn("eligible-count", script)
+        self.assertIn("AGENTLAB_MAX_ITERATIONS=64", script)
+        self.assertIn("max_iterations=${AGENTLAB_MAX_ITERATIONS:-3}", loop)
+
     def test_compare_requires_one_l2_gain_without_l3_promotion(self):
         before = {
             "totals": {"scopeSkillCount": 5, "structuralReadyCount": 5, "programBoundCount": 1,

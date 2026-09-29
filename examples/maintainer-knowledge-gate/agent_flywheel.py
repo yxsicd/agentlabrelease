@@ -149,6 +149,17 @@ def prepare(args):
     print(scope["id"])
 
 
+def eligible_count(args):
+    cut = load(args.knowledge / "maintainer-knowledge-cut.json")
+    assessment = load(args.assessment)
+    scope_rows = rows(args.knowledge / "maintainer_scope_skills.jsonl")
+    require(
+        any(row["id"] == args.repository for row in cut["repositories"]),
+        "repository is absent from the knowledge cut",
+    )
+    print(len(eligible_scopes(scope_rows, assessment, args.repository)))
+
+
 def run_agent(args):
     packet = load(args.request)
     require(packet.get("schema") == "agentlab.maintainer_skill_agent_request.v1", "bad request")
@@ -334,6 +345,11 @@ def main():
     p.add_argument("--repository", required=True)
     p.add_argument("--output", type=Path, required=True)
     p.set_defaults(handler=prepare)
+    p = commands.add_parser("eligible-count")
+    p.add_argument("--knowledge", type=Path, required=True)
+    p.add_argument("--assessment", type=Path, required=True)
+    p.add_argument("--repository", required=True)
+    p.set_defaults(handler=eligible_count)
     p = commands.add_parser("run-agent")
     p.add_argument("--request", type=Path, required=True)
     p.add_argument("--source", type=Path, required=True)
