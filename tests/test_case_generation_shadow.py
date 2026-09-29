@@ -210,6 +210,29 @@ class CaseGenerationShadowTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "requiredEnvironment is incomplete"):
             MODULE.validate_proposal(request, proposal)
 
+    def test_agent_prompt_and_gate_share_shadow_text_limits(self):
+        contract = MODULE.proposal_field_constraints()
+        self.assertIn(
+            f"{MODULE.TITLE_MIN_LENGTH}-{MODULE.TITLE_MAX_LENGTH} characters",
+            contract,
+        )
+        for label, limits in (
+            ("stagedDemands", MODULE.STAGED_DEMANDS_LIMITS),
+            ("editablePaths", MODULE.EDITABLE_PATHS_LIMITS),
+            ("contextPaths", MODULE.CONTEXT_PATHS_LIMITS),
+        ):
+            self.assertIn(f"{label}: {limits[0]}-{limits[1]}", contract)
+        self.assertIn(
+            f"{MODULE.MECHANISM_MIN_LENGTH}-{MODULE.MECHANISM_MAX_LENGTH} characters",
+            contract,
+        )
+
+        request = self.request()
+        proposal = self.proposal(request)
+        proposal["mechanism"] = "x" * (MODULE.MECHANISM_MAX_LENGTH + 1)
+        with self.assertRaisesRegex(ValueError, "shadow mechanism is invalid"):
+            MODULE.validate_proposal(request, proposal)
+
     def test_validator_rejects_physical_or_external_hardware_environment(self):
         request = self.request()
         proposal = self.proposal(request)

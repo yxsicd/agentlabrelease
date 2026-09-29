@@ -15,6 +15,17 @@ import subprocess
 SAFE_ID = re.compile(r"shadow-case-[a-z0-9-]{8,140}")
 SHA1 = re.compile(r"[0-9a-f]{40}")
 SHA256 = re.compile(r"[0-9a-f]{64}")
+TITLE_MIN_LENGTH = 8
+TITLE_MAX_LENGTH = 180
+MECHANISM_MIN_LENGTH = 80
+MECHANISM_MAX_LENGTH = 1600
+STAGED_DEMANDS_LIMITS = (2, 3)
+EDITABLE_PATHS_LIMITS = (1, 8)
+CONTEXT_PATHS_LIMITS = (0, 12)
+OBSERVABLES_LIMITS = (2, 8)
+ENVIRONMENT_LIMITS = (1, 8)
+WRONG_VARIANTS_LIMITS = (2, 8)
+LIMITATIONS_LIMITS = (2, 8)
 EMULATOR_MARKERS = ("emulator", "模拟器")
 EXTERNAL_HARDWARE_PATTERNS = {
     "serial-peripheral": re.compile(r"\b(?:serial(?: port)?|uart)\b|串口", re.IGNORECASE),
@@ -76,6 +87,21 @@ def write_jsonl(path: Path, values: list[dict]) -> None:
 def require(condition, message):
     if not condition:
         raise ValueError(message)
+
+
+def proposal_field_constraints() -> str:
+    """Render the same size limits enforced by the shadow proposal gate."""
+    return (
+        f"- title: concise task title ({TITLE_MIN_LENGTH}-{TITLE_MAX_LENGTH} characters)\n"
+        "- mechanism: the concrete state, lifecycle, boundary, or cross-file difficulty "
+        f"being tested ({MECHANISM_MIN_LENGTH}-{MECHANISM_MAX_LENGTH} characters)\n"
+        f"- stagedDemands: {STAGED_DEMANDS_LIMITS[0]}-{STAGED_DEMANDS_LIMITS[1]} "
+        "user-visible requirements whose later stage can expose an earlier design mistake\n"
+        f"- editablePaths: {EDITABLE_PATHS_LIMITS[0]}-{EDITABLE_PATHS_LIMITS[1]} evidence "
+        "paths inside the selected scope\n"
+        f"- contextPaths: {CONTEXT_PATHS_LIMITS[0]}-{CONTEXT_PATHS_LIMITS[1]} other evidence "
+        "paths, disjoint from editablePaths"
+    )
 
 
 def path_is_within(path: str, boundary: str) -> bool:
@@ -235,13 +261,9 @@ The object must have exactly these fields:
 - schema: agentlab.shadow_case_candidate.v1
 - id: exactly {request['candidateId']}
 - repositoryId, sourceRevision, scopeSkillIds and factIds copied exactly from the request
-- title: concise task title
-- mechanism: the concrete state, lifecycle, boundary, or cross-file difficulty being tested
-- stagedDemands: 2 or 3 user-visible requirements whose later stage can expose an earlier design mistake
-- editablePaths: one or more evidence paths inside the selected scope
-- contextPaths: zero or more other evidence paths, disjoint from editablePaths
-- oracleHypothesis: exactly {{"framework": {framework!r}, "observables": ["observable one", "observable two"], "requiredEnvironment": ["environment requirement"], "wrongVariants": ["wrong variant one", "wrong variant two"], "status": "hypothesis-unqualified"}}; observables, requiredEnvironment, and wrongVariants must each be JSON arrays of strings, never a single string
-- limitations: at least two concrete unresolved qualification gaps
+{proposal_field_constraints()}
+- oracleHypothesis: exactly {{"framework": {framework!r}, "observables": ["observable one", "observable two"], "requiredEnvironment": ["environment requirement"], "wrongVariants": ["wrong variant one", "wrong variant two"], "status": "hypothesis-unqualified"}}; observables, requiredEnvironment, and wrongVariants must each be JSON arrays of strings, never a single string; use {OBSERVABLES_LIMITS[0]}-{OBSERVABLES_LIMITS[1]} observables, {ENVIRONMENT_LIMITS[0]}-{ENVIRONMENT_LIMITS[1]} environment requirements, and {WRONG_VARIANTS_LIMITS[0]}-{WRONG_VARIANTS_LIMITS[1]} wrong variants
+- limitations: {LIMITATIONS_LIMITS[0]}-{LIMITATIONS_LIMITS[1]} concrete unresolved qualification gaps
 - status: shadow-proposal
 - automaticPromotion: false
 
@@ -285,12 +307,15 @@ def validate_proposal(request: dict, proposal: dict) -> dict:
             "shadow revision differs")
     require(proposal["scopeSkillIds"] == fact["scopeSkillIds"] == [scope["id"]], "shadow scope binding differs")
     require(proposal["factIds"] == [fact["id"]], "shadow fact binding differs")
-    require(isinstance(proposal["title"], str) and 8 <= len(proposal["title"]) <= 180, "shadow title is invalid")
-    require(isinstance(proposal["mechanism"], str) and 80 <= len(proposal["mechanism"]) <= 1600,
+    require(isinstance(proposal["title"], str)
+            and TITLE_MIN_LENGTH <= len(proposal["title"]) <= TITLE_MAX_LENGTH,
+            "shadow title is invalid")
+    require(isinstance(proposal["mechanism"], str)
+            and MECHANISM_MIN_LENGTH <= len(proposal["mechanism"]) <= MECHANISM_MAX_LENGTH,
             "shadow mechanism is invalid")
-    strings(proposal["stagedDemands"], "stagedDemands", 2, 3)
-    editable = strings(proposal["editablePaths"], "editablePaths", 1, 8)
-    context = strings(proposal["contextPaths"], "contextPaths", 0, 12)
+    strings(proposal["stagedDemands"], "stagedDemands", *STAGED_DEMANDS_LIMITS)
+    editable = strings(proposal["editablePaths"], "editablePaths", *EDITABLE_PATHS_LIMITS)
+    context = strings(proposal["contextPaths"], "contextPaths", *CONTEXT_PATHS_LIMITS)
     evidence_paths = {row["path"] for row in fact.get("evidence", []) if isinstance(row, dict)}
     require(set(editable + context).issubset(evidence_paths), "shadow paths are not fact evidence")
     require(not set(editable).intersection(context), "editable and context paths overlap")
@@ -303,8 +328,8 @@ def validate_proposal(request: dict, proposal: dict) -> dict:
     expected_framework = "ohosTest" if any("ohosTest" in path for path in scope.get("testEntrypoints", [])) else "repository-test"
     require(oracle["framework"] == expected_framework, "oracle framework differs")
     require(oracle["status"] == "hypothesis-unqualified", "oracle status overclaims qualification")
-    strings(oracle["observables"], "oracle observables", 2, 8)
-    environment = strings(oracle["requiredEnvironment"], "oracle requiredEnvironment", 1, 8)
+    strings(oracle["observables"], "oracle observables", *OBSERVABLES_LIMITS)
+    environment = strings(oracle["requiredEnvironment"], "oracle requiredEnvironment", *ENVIRONMENT_LIMITS)
     require(request["policy"].get("runtimeTarget") == "harmony-emulator",
             "shadow request runtime target differs")
     require(request["policy"].get("externalHardwareAllowed") is False,
@@ -312,8 +337,8 @@ def validate_proposal(request: dict, proposal: dict) -> dict:
     require(request["policy"].get("physicalDeviceFallbackAllowed") is False,
             "shadow request permits physical-device fallback")
     require_emulator_environment(environment)
-    strings(oracle["wrongVariants"], "oracle wrongVariants", 2, 8)
-    strings(proposal["limitations"], "limitations", 2, 8)
+    strings(oracle["wrongVariants"], "oracle wrongVariants", *WRONG_VARIANTS_LIMITS)
+    strings(proposal["limitations"], "limitations", *LIMITATIONS_LIMITS)
     require(proposal["status"] == "shadow-proposal" and proposal["automaticPromotion"] is False,
             "shadow proposal can promote itself")
     result = dict(proposal)
