@@ -71,6 +71,42 @@ def scope_selector_summary(scope):
     )
 
 
+def scope_source_inventory(scope, source_root):
+    """Build an operator-verified inventory without spending Agent tool turns."""
+    output = subprocess.check_output(
+        ["git", "-C", str(source_root), "ls-tree", "-r", "-l", "-z", "HEAD"]
+    )
+    entries = []
+    for record in output.split(b"\0"):
+        if not record:
+            continue
+        metadata, encoded_path = record.split(b"\t", 1)
+        mode, object_type, oid, byte_count = metadata.decode("ascii").split()
+        path = encoded_path.decode("utf-8")
+        owns = scope_owns_path(scope, path)
+        if scope.get("pathBoundary") == "." and not scope.get("ownershipSelectors"):
+            owns = "/" not in path
+        if not owns:
+            continue
+        require(object_type == "blob" and mode != "160000" and SHA1.fullmatch(oid),
+                "source inventory tree entry is not a regular blob")
+        require(byte_count.isdigit(), "source inventory blob size is invalid")
+        materialized = source_root / path
+        require(materialized.is_file() and not materialized.is_symlink(),
+                f"owned source blob is not a materialized regular file: {path}")
+        entries.append({
+            "path": path,
+            "gitBlobOid": oid,
+            "byteCount": int(byte_count),
+        })
+    entries.sort(key=lambda row: row["path"])
+    expected = scope.get("trackedFileCount")
+    if isinstance(expected, int):
+        require(len(entries) == expected, "source inventory differs from scope tracked-file count")
+    require(entries, "source inventory is empty")
+    return entries
+
+
 def scope_has_reachable_evidence(scope):
     evidence = scope.get("evidence")
     if not isinstance(scope.get("pathBoundary"), str) or not isinstance(evidence, list):
@@ -479,6 +515,11 @@ def run_agent(args):
         implementation="pi",
     )
     scope = packet["scope"]
+    source_inventory = scope_source_inventory(scope, source_root)
+    inventory_text = "\n".join(
+        f"- {row['gitBlobOid']} {row['byteCount']}B {row['path']}"
+        for row in source_inventory
+    )
     dimensions = packet["requiredDimensions"]
     dimensions_text = ", ".join(dimensions)
     mode_guidance = {
@@ -491,6 +532,14 @@ def run_agent(args):
 Read flywheel-request.json and inspect the exact Git checkout under source/.
 Analyze only scope {scope['id']} with ownership selectors {scope_selector_summary(scope)}.
 Analysis mode is {packet['analysisMode']}. {mode_guidance[packet['analysisMode']]}
+The operator has already verified HEAD and generated this complete in-scope
+tracked-file inventory. Each line is exact Git Blob OID, byte count and path:
+{inventory_text}
+
+Use this inventory for in-scope discovery and Blob identities. Do not spend
+tool calls on ls, find, git ls-files or git rev-parse for paths listed above.
+Use Git only when following one direct cross-boundary dependency absent from
+the inventory.
 Write exactly one JSON object to program-fact-proposal.json and do not modify source/ or flywheel-request.json.
 
 The object must have exactly these fields:
@@ -500,13 +549,19 @@ The object must have exactly these fields:
 - scopeSkillIds: an array containing only the selected scope id
 - kind: analysis
 - dimensions: exactly {dimensions_text}
-- interpretation: a concise evidence-backed maintenance contract of 400-1200 Unicode characters
+- interpretation: a concise evidence-backed maintenance contract of 400-1600 Unicode characters
 - evidence: at least two objects with exactly the keys path and gitBlobOid, for example
   {{"path":"relative/file.ets","gitBlobOid":"<exact 40-hex blob>"}}; the key is path,
   never repositoryPath, and no other evidence fields are allowed
 - limitations: at least two concrete unproved claims
 
-Use git rev-parse HEAD:path to obtain every blob identity. Evidence paths may include direct cross-boundary dependencies when needed, but at least one must be inside the selected scope. Do not claim runtime execution, build success, compiler dataflow, device behavior, performance, an approved Oracle, or operation readiness. Do not copy secrets or generated files. Validate the JSON once, then finish.
+Use the supplied inventory for in-scope blob identities and git rev-parse
+HEAD:path only for a direct cross-boundary dependency. Evidence paths may
+include such dependencies when needed, but at least one must be inside the
+selected scope. Do not claim runtime execution, build success, compiler
+dataflow, device behavior, performance, an approved Oracle, or operation
+readiness. Do not copy secrets or generated files. Validate the JSON once,
+then finish.
 
 Use at most 24 shell tool calls. Start from the declared scope evidence and
 entrypoints, inspect only the direct files needed for the required dimensions, and
