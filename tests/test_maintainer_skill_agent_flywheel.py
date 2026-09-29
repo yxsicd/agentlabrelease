@@ -390,6 +390,13 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         self.assertIn("never repositoryPath", source)
         self.assertIn("no other evidence fields are allowed", source)
 
+    def test_workflow_removes_transient_source_links_before_evidence_upload(self):
+        workflow = (ROOT / ".github/workflows/maintainer-skill-agent-flywheel.yml").read_text()
+        cleanup = workflow.index("Remove transient source checkout links from retained evidence")
+        upload = workflow.index("Preserve the proposal, gateway capture and hard-gate result")
+        self.assertLess(cleanup, upload)
+        self.assertIn("-path '*/workspace/source' -type l -delete", workflow)
+
     def test_agent_prompt_has_a_bounded_exploration_budget(self):
         source = (ROOT / "examples/maintainer-knowledge-gate/agent_flywheel.py").read_text()
         self.assertIn("Use at most 24 shell tool calls", source)

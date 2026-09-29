@@ -47,6 +47,10 @@ successful scopes merely to recover one model or transport tail.
 Keep each attempt under a bounded semantic-analysis wall time. The operator
 retry replaces any nested transport retry so one unhealthy request cannot
 silently consume multiple full time budgets before its peers are released.
+Before retaining failed or cancelled run evidence, remove transient links to
+source checkouts. Preserve prompts, native events, lifecycle receipts and
+proposals, but never let an interrupted cleanup cause the artifact uploader to
+traverse and package a whole repository.
 
 Spend Agent turns on semantic judgment, not deterministic repository plumbing.
 Before each construction turn, the operator must verify the exact HEAD and
