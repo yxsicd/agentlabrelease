@@ -187,6 +187,66 @@ class MaintainerSkillTableGitTest(unittest.TestCase):
             )
             self.assertEqual(deletion["expected_row_version"], 4)
 
+    def test_exact_export_rebinds_catalog_summary_without_changing_coverage(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = root / "base"
+            export = root / "export"
+            base.mkdir(); export.mkdir()
+            summary = {
+                "schema": "agentlab.maintainer_skill_catalog_summary.v1",
+                "catalogSha256": "stale",
+                "repositoryCount": 1,
+                "scopeSkillCount": 1,
+                "repositories": [{
+                    "repositoryId": "sample",
+                    "revision": "a" * 40,
+                    "treeOid": "b" * 40,
+                    "strategy": "generic",
+                    "trackedFileCount": 3,
+                    "sourceFileCount": 2,
+                    "codeLineCount": 10,
+                    "testFileCount": 1,
+                    "externalDependencyCount": 4,
+                    "assignedFileCount": 3,
+                    "unassignedFileCount": 0,
+                    "scopeSkillCount": 1,
+                    "sampleProjectRootCount": 0,
+                }],
+                "trackedFilesAssignedExactlyOnce": True,
+                "automaticPromotion": False,
+            }
+            MODULE.write_json(base / "maintainer-skill-summary.json", summary)
+            rows = [
+                {
+                    "id": "scope-a", "repositoryId": "sample",
+                    "sourceRevision": "a" * 40, "sourceTreeOid": "b" * 40,
+                    "strategy": "generic", "trackedFileCount": 1,
+                    "sourceFileCount": 1, "codeLineCount": 4, "testFileCount": 0,
+                },
+                {
+                    "id": "scope-b", "repositoryId": "sample",
+                    "sourceRevision": "a" * 40, "sourceTreeOid": "b" * 40,
+                    "strategy": "generic", "trackedFileCount": 2,
+                    "sourceFileCount": 1, "codeLineCount": 6, "testFileCount": 1,
+                },
+            ]
+            catalog = export / MODULE.TABLE_FILES["maintainer_scope_skills"]
+            MODULE.write_jsonl(catalog, rows)
+
+            MODULE.update_catalog_summary(export, base)
+
+            refreshed = MODULE.load(export / "maintainer-skill-summary.json")
+            self.assertEqual(refreshed["catalogSha256"], MODULE.file_sha256(catalog))
+            self.assertEqual(refreshed["scopeSkillCount"], 2)
+            self.assertEqual(refreshed["repositories"][0]["scopeSkillCount"], 2)
+            self.assertEqual(refreshed["repositories"][0]["externalDependencyCount"], 4)
+
+            rows[0]["trackedFileCount"] = 2
+            MODULE.write_jsonl(catalog, rows)
+            with self.assertRaisesRegex(RuntimeError, "trackedFileCount coverage"):
+                MODULE.update_catalog_summary(export, base)
+
     def test_missing_row_chunks_do_not_reuse_a_completed_chunk_receipt(self):
         rows = [{"id": f"row-{index:03d}", "body": "x" * 4000} for index in range(12)]
         chunks = MODULE.operation_chunks("program_facts", rows, "123", max_bytes=20_000)

@@ -1,6 +1,6 @@
 {
   "automaticPromotion": false,
-  "catalogSha256": "65532f79e008a0e9a2589f966808fc8225e19ab78f96981a3c3eef273e941a28",
+  "catalogSha256": "9faf87778708c0bc9acf6522ac1c0b1358e1845139da4f2949348d7285e51953",
   "repositories": [
     {
       "assignedFileCount": 1512,
@@ -9,7 +9,7 @@
       "repositoryId": "code-workshop",
       "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
       "sampleProjectRootCount": 0,
-      "scopeSkillCount": 16,
+      "scopeSkillCount": 25,
       "sourceFileCount": 614,
       "strategy": "harmony-multi-product-modules",
       "testFileCount": 87,
@@ -65,7 +65,7 @@
   ],
   "repositoryCount": 4,
   "schema": "agentlab.maintainer_skill_catalog_summary.v1",
-  "scopeSkillCount": 480,
+  "scopeSkillCount": 489,
   "sourceSpecSha256": "58c882f60b136ec517fe0b42dae4c2f8b035ec548e144dc36e8b968b703b7911",
   "trackedFilesAssignedExactlyOnce": true
 }
