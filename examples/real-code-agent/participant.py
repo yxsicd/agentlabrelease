@@ -24,7 +24,11 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class Participant:
-    def __init__(self, evidence, state, binary, gateway, model, route='glm', implementation='pi', reasoning_effort=None):
+    def __init__(self, evidence, state, binary, gateway, model, route='glm', implementation='pi', reasoning_effort=None,
+                 gateway_timeout_seconds=180):
+        if (not isinstance(gateway_timeout_seconds, int)
+                or not 30 <= gateway_timeout_seconds <= 180):
+            raise ValueError('gateway_timeout_seconds must be from 30 through 180')
         self.implementation = implementation
         self.evidence = evidence
         self.state = state
@@ -48,6 +52,7 @@ class Participant:
         self.route = route
         self.reasoning_effort = reasoning_effort if reasoning_effort not in (None, '', 'default') else None
         self.active_reasoning_effort = self.reasoning_effort
+        self.gateway_timeout_seconds = gateway_timeout_seconds
         self.key = os.environ['AGENTLAB_LM_GATEWAY_KEY']
         self.runtime_isolated = bool(os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'))
         self.local_proxy_token = (
@@ -128,8 +133,11 @@ class Participant:
                 request = urllib.request.Request(owner.gateway + self.path, data=upstream,
                           headers={'Authorization': 'Bearer ' + owner.key,
                                    'Content-Type': 'application/json'}, method='POST')
+                upstream_deadline = time.monotonic() + owner.gateway_timeout_seconds
                 try:
-                    response = urllib.request.build_opener(NoRedirect).open(request, timeout=180)
+                    response = urllib.request.build_opener(NoRedirect).open(
+                        request, timeout=owner.gateway_timeout_seconds
+                    )
                 except urllib.error.HTTPError as error:
                     response = error
                 with response:
@@ -142,6 +150,12 @@ class Participant:
                         receipt['clientDisconnected'] = True
                     with stem.with_suffix('.response').open('wb') as output:
                         while True:
+                            if time.monotonic() >= upstream_deadline:
+                                receipt.update(
+                                    upstreamDeadlineExceeded=True,
+                                    outcome='upstream_deadline_exceeded',
+                                )
+                                break
                             chunk = response.readline()
                             if not chunk:
                                 receipt.update(upstreamEof=True, outcome=('stream_error' if receipt['streamError'] else 'completed' if receipt['semanticComplete'] or not wire.get('stream') else 'incomplete_stream'))

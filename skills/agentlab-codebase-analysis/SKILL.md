@@ -47,6 +47,12 @@ successful scopes merely to recover one model or transport tail.
 Keep each attempt under a bounded semantic-analysis wall time. The operator
 retry replaces any nested transport retry so one unhealthy request cannot
 silently consume multiple full time budgets before its peers are released.
+Use a shorter operator-proxy request timeout for this bounded semantic lane
+than for general assessed runs. It must still retain the upstream response on
+normal cancellation, but must not add several hidden minutes after the Agent
+supervisor has already terminated an attempt. Enforce both socket-idle timeout
+and an absolute upstream deadline; a provider that drips partial bytes must not
+reset the total request budget indefinitely.
 Before retaining failed or cancelled run evidence, remove transient links to
 source checkouts. Preserve prompts, native events, lifecycle receipts and
 proposals, but never let an interrupted cleanup cause the artifact uploader to
