@@ -42,6 +42,18 @@ def require(condition, message):
         raise ValueError(message)
 
 
+def parse_agent_proposal(content):
+    """Parse the Agent's exact final JSON object without repairing its output."""
+    require(isinstance(content, str) and content.strip(),
+            "Agent final response did not contain a proposal")
+    try:
+        proposal = json.loads(content)
+    except json.JSONDecodeError as error:
+        raise ValueError("Agent final response is not exactly one JSON proposal") from error
+    require(isinstance(proposal, dict), "Agent final response is not a JSON object")
+    return proposal
+
+
 def path_is_within(path, boundary):
     boundary = boundary.rstrip("/")
     if boundary == ".":
@@ -567,7 +579,9 @@ Use this inventory for in-scope discovery and Blob identities. Do not spend
 tool calls on ls, find, git ls-files or git rev-parse for paths listed above.
 Use Git only when following one direct cross-boundary dependency absent from
 the inventory.
-Write exactly one JSON object to program-fact-proposal.json and do not modify source/ or flywheel-request.json.
+Do not create or modify any file. The operator owns proposal serialization and
+validation. Your final assistant response must consist solely of exactly one
+JSON object: no progress message, Markdown fence, or surrounding explanation.
 
 The object must have exactly these fields:
 - schema: agentlab.maintainer_skill_fact_proposal.v1
@@ -587,17 +601,18 @@ HEAD:path only for a direct cross-boundary dependency. Evidence paths may
 include such dependencies when needed, but at least one must be inside the
 selected scope. Do not claim runtime execution, build success, compiler
 dataflow, device behavior, performance, an approved Oracle, or operation
-readiness. Do not copy secrets or generated files. Validate the JSON once,
-then finish.
+readiness. Do not copy secrets or generated files. Return the JSON object
+immediately after the evidence supports the contract.
 
-Use at most 24 shell tool calls. Start from the declared scope evidence and
+Budget at most 18 shell tool calls for reading; the operator enforces a hard
+limit of 24. Start from the declared scope evidence and
 entrypoints, inspect only the direct files needed for the required dimensions, and
 do not enumerate or read the whole repository. Once two or more exact blobs
-support a bounded contract, stop exploring. Reserve the final two tool calls to
-write program-fact-proposal.json and parse it once before finishing.
+support a bounded contract, stop exploring and return the exact JSON response.
 """
+    result = None
     try:
-        participant.turn(
+        result = participant.turn(
             "maintainer-skill-author",
             workspace,
             prompt=prompt,
@@ -612,14 +627,16 @@ write program-fact-proposal.json and parse it once before finishing.
         # The Agent needs a read-only view while it runs, but the evidence
         # artifact must never follow this link and copy the whole repository.
         (workspace / "source").unlink(missing_ok=True)
-    proposal = workspace / "program-fact-proposal.json"
-    require(proposal.is_file() and not proposal.is_symlink(), "Agent did not produce a proposal")
-    shutil.copy2(proposal, args.output / "program-fact-proposal.json")
     status = subprocess.check_output(
         ["git", "-C", str(source_root), "status", "--porcelain"], text=True
     )
     (args.output / "source-status.txt").write_text(status)
     require(not status, "Agent modified the pinned source checkout")
+    proposal = parse_agent_proposal(result.get("content") if result else None)
+    # A malformed or unverifiable response is an attempt failure, allowing the
+    # batch operator to retry only this scope before any aggregate mutation.
+    validate_proposal(packet, proposal, source_root)
+    write(args.output / "program-fact-proposal.json", proposal)
 
 
 def validate_proposal(request, proposal, source_root):

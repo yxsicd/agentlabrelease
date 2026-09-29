@@ -120,6 +120,13 @@ repository and discard out-of-scope rows afterward. Prefix and exact-file
 selectors may be queried together; a root-only repository-contract scope uses
 a non-recursive root tree query. Reconcile the returned files to the scope's
 tracked-file count before dispatch.
+Keep proposal transport deterministic as well. The semantic Agent returns one
+exact JSON object in its final response and does not own filesystem placement;
+the operator parses that response without repair, validates it against the
+pinned request and Blobs, and only then serializes the proposal. Treat prose,
+Markdown fences, arrays, schema drift, or unverifiable evidence as an isolated
+attempt failure eligible for the same single scope retry. This removes file
+write compliance from semantic reasoning without weakening the hard gate.
 
 Use [program analysis](../agentlab-program-analysis/SKILL.md) for structure and [seed extraction](../agentlab-seed-extraction/SKILL.md) to turn grounded knowledge into tasks. Archive searches and generic TableGit analysis requests, exact input cuts and complete results in `program_facts`.
 

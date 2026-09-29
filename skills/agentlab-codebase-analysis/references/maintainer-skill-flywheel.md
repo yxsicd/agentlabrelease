@@ -172,6 +172,16 @@ optimization into object-database contention and can consume the entire Agent
 budget before a prompt is dispatched. Exact tracked-file reconciliation remains
 mandatory for every narrowed query.
 
+Separate semantic authorship from proposal persistence. Require the Agent's
+final response to be exactly one JSON object and forbid Agent-owned file writes.
+The operator parses that response without extracting from prose or repairing
+fences, validates the complete schema and exact revision-bound Blob evidence,
+and only then writes the proposal artifact. Invalid final output fails only that
+scope attempt and may use the one isolated retry; it never reaches the aggregate
+assessment or TableGit. A model thinking through a valid contract but forgetting
+to create a file is an orchestration defect, not a reason to rerun repository
+discovery or loosen the evidence standard.
+
 The durable round receipt binds source and method revisions, parent assessment,
 scope-selection policy, eligible and blocked counts, Agent execution counts,
 hard-gate decision, TableGit transaction, SkillsGit materialization and the
