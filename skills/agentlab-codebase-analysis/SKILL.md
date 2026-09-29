@@ -127,6 +127,11 @@ pinned request and Blobs, and only then serializes the proposal. Treat prose,
 Markdown fences, arrays, schema drift, or unverifiable evidence as an isolated
 attempt failure eligible for the same single scope retry. This removes file
 write compliance from semantic reasoning without weakening the hard gate.
+Bound the proposal itself: one short maintenance contract, three representative
+exact Blob citations and two concrete limitations. The goal is a sufficient
+four-dimension proof packet, not an exhaustive file summary. Enforce those
+cardinalities and text limits before persistence so verbose output cannot turn
+otherwise valid semantic analysis into truncated transport.
 
 Use [program analysis](../agentlab-program-analysis/SKILL.md) for structure and [seed extraction](../agentlab-seed-extraction/SKILL.md) to turn grounded knowledge into tasks. Archive searches and generic TableGit analysis requests, exact input cuts and complete results in `program_facts`.
 

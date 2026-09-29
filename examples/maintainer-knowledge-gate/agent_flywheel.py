@@ -590,11 +590,11 @@ The object must have exactly these fields:
 - scopeSkillIds: an array containing only the selected scope id
 - kind: analysis
 - dimensions: exactly {dimensions_text}
-- interpretation: a concise evidence-backed maintenance contract of 400-1600 Unicode characters
-- evidence: at least two objects with exactly the keys path and gitBlobOid, for example
+- interpretation: a concise evidence-backed maintenance contract of 500-1200 Unicode characters
+- evidence: exactly three objects with exactly the keys path and gitBlobOid, for example
   {{"path":"relative/file.ets","gitBlobOid":"<exact 40-hex blob>"}}; the key is path,
   never repositoryPath, and no other evidence fields are allowed
-- limitations: at least two concrete unproved claims
+- limitations: exactly two concrete unproved claims, each 40-300 Unicode characters
 
 Use the supplied inventory for in-scope blob identities and git rev-parse
 HEAD:path only for a direct cross-boundary dependency. Evidence paths may
@@ -656,13 +656,15 @@ def validate_proposal(request, proposal, source_root):
     require(set(proposal["dimensions"]) == required_dimensions
             and len(proposal["dimensions"]) == len(required_dimensions),
             "semantic dimensions are incomplete or overclaimed")
-    require(isinstance(proposal["interpretation"], str) and 80 <= len(proposal["interpretation"]) <= 1600,
+    require(isinstance(proposal["interpretation"], str) and 80 <= len(proposal["interpretation"]) <= 1200,
             "interpretation length is invalid")
     limitations = proposal["limitations"]
-    require(isinstance(limitations, list) and len(limitations) >= 2 and all(isinstance(x, str) and x.strip() for x in limitations),
+    require(isinstance(limitations, list) and len(limitations) == 2
+            and all(isinstance(x, str) and 40 <= len(x.strip()) <= 300 for x in limitations),
             "limitations are incomplete")
     evidence = proposal["evidence"]
-    require(isinstance(evidence, list) and len(evidence) >= 2, "at least two evidence blobs are required")
+    require(isinstance(evidence, list) and len(evidence) == 3,
+            "exactly three evidence blobs are required")
     inside = False
     seen = set()
     clean_evidence = []

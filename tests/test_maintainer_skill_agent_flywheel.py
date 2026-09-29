@@ -365,8 +365,12 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
             "evidence": [
                 {"path": "config/a.json", "gitBlobOid": "1" * 40},
                 {"path": "config/b.json", "gitBlobOid": "2" * 40},
+                {"path": "config/c.json", "gitBlobOid": "3" * 40},
             ],
-            "limitations": ["Runtime use is not executed.", "Build success is not established."],
+            "limitations": [
+                "Runtime consumption of the declared configuration was not executed or observed.",
+                "Build success and downstream packaging behavior are not established by this analysis.",
+            ],
         }
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory)
@@ -376,6 +380,7 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
             (source / "config").mkdir()
             (source / "config/a.json").write_text("{}\n")
             (source / "config/b.json").write_text("{}\n")
+            (source / "config/c.json").write_text("{}\n")
             subprocess.run(["git", "-C", str(source), "add", "."], check=True)
             subprocess.run(["git", "-C", str(source), "commit", "-qm", "fixture"], check=True)
             revision = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip()
@@ -427,6 +432,8 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
     def test_agent_prompt_names_the_exact_evidence_object_schema(self):
         source = (ROOT / "examples/maintainer-knowledge-gate/agent_flywheel.py").read_text()
         self.assertIn("the keys path and gitBlobOid", source)
+        self.assertIn("exactly three objects", source)
+        self.assertIn("exactly two concrete unproved claims", source)
         self.assertIn("never repositoryPath", source)
         self.assertIn("no other evidence fields are allowed", source)
 

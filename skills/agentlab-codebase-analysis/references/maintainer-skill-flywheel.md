@@ -181,6 +181,12 @@ scope attempt and may use the one isolated retry; it never reaches the aggregate
 assessment or TableGit. A model thinking through a valid contract but forgetting
 to create a file is an orchestration defect, not a reason to rerun repository
 discovery or loosen the evidence standard.
+Keep that JSON packet small enough to finish reliably: require one bounded
+contract, exactly three representative revision-bound Blob citations and exactly
+two concrete limitations. More cited files are not stronger proof once the four
+required dimensions are grounded; they increase truncation risk and confuse
+scope understanding with exhaustive summarization. Apply the same hard text and
+cardinality limits in the validator rather than relying on prompt wording.
 
 The durable round receipt binds source and method revisions, parent assessment,
 scope-selection policy, eligible and blocked counts, Agent execution counts,
