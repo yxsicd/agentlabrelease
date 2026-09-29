@@ -140,6 +140,11 @@ rather than its upper edge, and return the same compact proposal contract.
 Count its wall time and any tool calls in the attempt lifecycle. This is output
 finalization, not a second semantic analysis; a failure still falls through to
 the one isolated scope retry and cannot reach aggregate assessment.
+Derive the interpretation ceiling from the full serialized proposal envelope,
+not an arbitrary prose limit. With fixed three-Blob evidence and two bounded
+limitations, permit up to 1800 Unicode characters when the complete proposal
+remains only a few kilobytes; this retains source-level detail without creating
+a realistic transport-truncation risk.
 
 Treat repository reading as bounded sampling, not a complete source census.
 Begin with the scope's precomputed evidence anchors, inspect only enough direct
