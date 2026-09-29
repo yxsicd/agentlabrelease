@@ -34,11 +34,11 @@
     "exportedBy": {
       "kind": "github-action",
       "repository": "yxsicd/agentlabrelease",
-      "runId": "36500662785",
-      "runUrl": "https://github.com/yxsicd/agentlabrelease/actions/runs/36500662785"
+      "runId": "36501896532",
+      "runUrl": "https://github.com/yxsicd/agentlabrelease/actions/runs/36501896532"
     },
     "repo": "agentlabtablegit",
-    "revision": "8ee8716856f735cfc77754c4af349929256f5f82"
+    "revision": "57a8a4e8204e8b537db3f428981754cda6f7c6c9"
   },
   "tables": {
     "evaluationCases": {
@@ -51,7 +51,7 @@
     },
     "maintainerSkillRefreshRounds": {
       "path": "maintainer_skill_refresh_rounds.jsonl",
-      "sha256": "de70a28afda5791eafe90f2b94fc52e38debab56f039215c08b84a88a3ca801d"
+      "sha256": "2684cb361a4f05e7c9bb53ace6183080e9bf2c12349cb8359d7027a08ab7c0cc"
     },
     "maintainerSkills": {
       "path": "maintainer_skills.jsonl",
@@ -59,7 +59,7 @@
     },
     "programFacts": {
       "path": "program_facts.jsonl",
-      "sha256": "944f2618ee28546a6c5b0ccbb772fa2bc9b92a1361d31ac19355d30ec59083fd"
+      "sha256": "b154f43347c695ff129864b3b4ca087109341e467db35690fed38330caf525e8"
     }
   }
 }
