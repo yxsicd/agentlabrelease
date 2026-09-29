@@ -182,6 +182,36 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "tracked-file count"):
                 MODULE.scope_source_inventory(scope, root)
 
+    def test_source_inventory_query_uses_scope_pathspecs_and_nonrecursive_root(self):
+        recursive, pathspecs = MODULE.scope_inventory_query({
+            "pathBoundary": "src",
+            "ownershipSelectors": [
+                {"type": "prefix", "path": "src/one"},
+                {"type": "files", "paths": ["build.json", "src/root.ts"]},
+            ],
+        })
+        self.assertTrue(recursive)
+        self.assertEqual(pathspecs, ["build.json", "src/one", "src/root.ts"])
+        self.assertEqual(
+            MODULE.scope_inventory_query({"pathBoundary": "."}),
+            (False, []),
+        )
+
+    def test_root_inventory_does_not_recurse_into_child_directories(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.name", "test"], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.email", "test@example.com"], check=True)
+            (root / "build.json").write_text("{}\n")
+            (root / "nested").mkdir()
+            (root / "nested/main.rs").write_text("fn main() {}\n")
+            subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+            subprocess.run(["git", "-C", str(root), "commit", "-qm", "fixture"], check=True)
+            inventory = MODULE.scope_source_inventory(
+                {"pathBoundary": ".", "trackedFileCount": 1}, root)
+            self.assertEqual([row["path"] for row in inventory], ["build.json"])
+
     def test_composite_scope_ownership_excludes_unselected_siblings(self):
         scope = {
             "pathBoundary": "src",
