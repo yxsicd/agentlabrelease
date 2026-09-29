@@ -66,8 +66,9 @@ Select analysis mode from scope capability rather than repository identity:
 - `configuration-asset` proves responsibility, boundary and relations for
   manifests, resources and build metadata without inventing runtime behavior.
 - `repository-contract` proves repository composition and root-level contracts
-  from root authority and direct declarations without recursively reading all
-  child scopes.
+  from a root-only checkout projection and direct declarations without
+  recursively materializing or reading all child scopes. Child source remains
+  available only through a separately selected bounded scope.
 
 All modes use the same revision, Blob, lineage and independent-assessment gates.
 Large source scopes remain blocked until a child partition proves complete,

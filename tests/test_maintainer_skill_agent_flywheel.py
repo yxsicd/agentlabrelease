@@ -33,6 +33,7 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
             (source / "wanted" / "main.ets").write_text("wanted\n")
             (source / "sibling").mkdir()
             (source / "sibling" / "large.bin").write_bytes(b"x" * 4096)
+            (source / "root-contract.json").write_text('{"modules": ["wanted"]}\n')
             subprocess.run(["git", "-C", str(source), "add", "."], check=True)
             subprocess.run(["git", "-C", str(source), "commit", "-qm", "fixture"], check=True)
             revision = subprocess.check_output(
@@ -67,8 +68,9 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
                 str(ROOT / "scripts/checkout-maintainer-scope.sh"),
                 bare.as_uri(), revision, ".", str(root_checkout),
             ], check=True)
-            self.assertTrue((root_checkout / "wanted/main.ets").is_file())
-            self.assertTrue((root_checkout / "sibling/large.bin").is_file())
+            self.assertTrue((root_checkout / "root-contract.json").is_file())
+            self.assertFalse((root_checkout / "wanted").exists())
+            self.assertFalse((root_checkout / "sibling").exists())
 
     def test_selection_prefers_small_tested_unbound_scope(self):
         scopes = [

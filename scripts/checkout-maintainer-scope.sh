@@ -32,10 +32,12 @@ if [[ $(git -C "$destination" remote get-url origin) != "$repository" ]]; then
 fi
 
 # Keep the exact commit and all of its trees available, but materialize only the
-# selected Maintainer Skill boundary. This prevents one small scope in a large
-# corpus from causing a whole-repository lazy Blob download during checkout.
+# selected Maintainer Skill boundary. A repository-contract scope is a bounded
+# projection of root-level declarations, not permission to hydrate every child
+# scope in a large corpus.
 if [[ $scope_path == . ]]; then
-  git -C "$destination" sparse-checkout disable || true
+  git -C "$destination" sparse-checkout init --no-cone
+  printf '/*\n!/*/\n' | git -C "$destination" sparse-checkout set --no-cone --stdin
 else
   git -C "$destination" sparse-checkout init --cone
   git -C "$destination" sparse-checkout set "$scope_path"
