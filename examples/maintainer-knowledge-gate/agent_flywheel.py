@@ -203,7 +203,9 @@ The object must have exactly these fields:
 - kind: analysis
 - dimensions: exactly responsibility, boundary, relations, behavior
 - interpretation: a concise evidence-backed maintenance contract of 400-1200 Unicode characters
-- evidence: at least two objects with repository-relative path and exact 40-hex gitBlobOid
+- evidence: at least two objects with exactly the keys path and gitBlobOid, for example
+  {{"path":"relative/file.ets","gitBlobOid":"<exact 40-hex blob>"}}; the key is path,
+  never repositoryPath, and no other evidence fields are allowed
 - limitations: at least two concrete unproved claims
 
 Use git rev-parse HEAD:path to obtain every blob identity. Evidence paths may include direct cross-boundary dependencies when needed, but at least one must be inside the selected scope. Do not claim runtime execution, build success, compiler dataflow, device behavior, performance, an approved Oracle, or operation readiness. Do not copy secrets or generated files. Validate the JSON once, then finish.
