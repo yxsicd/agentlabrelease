@@ -46,6 +46,9 @@ scope by increasing the Agent context budget. Decompose it into complete,
 non-overlapping child responsibilities with explicit parent lineage first.
 Repository-contract analysis must start from a root-only checkout projection;
 the root boundary does not authorize recursively materializing every child.
+Treat maturity as evidence composition: a newly accepted semantic fact may move
+a scope directly from L1 to L3 when executable operation evidence was already
+bound. This is valid assessment convergence, not automatic case promotion.
 
 Use [program analysis](../agentlab-program-analysis/SKILL.md) for structure and [seed extraction](../agentlab-seed-extraction/SKILL.md) to turn grounded knowledge into tasks. Archive searches and generic TableGit analysis requests, exact input cuts and complete results in `program_facts`.
 
