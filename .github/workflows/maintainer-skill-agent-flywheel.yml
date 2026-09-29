@@ -178,6 +178,13 @@ jobs:
             --title "Export Maintainer Skill flywheel $GITHUB_RUN_ID" \
             --body "Exports the ${{ inputs.mode }} Maintainer Skill transaction from the exact committed TableGit revision recorded in maintainer-knowledge-cut.json. Expand mode advances one bounded L1 scope per iteration; focused-refresh mode updates one existing fact from an exact candidate readiness blocker without changing maturity counts. Automatic promotion remains disabled. Source run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
           echo "Release export PR: $url" >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove transient source checkout links from retained evidence
+        if: always()
+        run: |
+          set -euo pipefail
+          if [[ -d "$AGENTLAB_ROOT/run" ]]; then
+            find "$AGENTLAB_ROOT/run" -path '*/workspace/source' -type l -delete
+          fi
       - name: Preserve the proposal, gateway capture and hard-gate result
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

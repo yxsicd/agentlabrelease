@@ -61,6 +61,12 @@ in the loop receipt so long-tail recovery remains measurable. Bound each
 attempt separately and disable nested participant retries in this lane; the
 operator-level isolated retry is the sole retry authority.
 
+Cancellation must remain evidence-bounded. Immediately before artifact
+retention, delete only the known transient `workspace/source` symlinks under
+the run root. This cleanup runs even after failure or cancellation so an
+uploader cannot follow a live checkout and retain repository contents as Agent
+evidence.
+
 Remove deterministic discovery from the Agent loop. The operator verifies the
 checkout HEAD and supplies every owned tracked path with its exact Blob OID and
 byte count before the turn. The Agent must not spend calls rediscovering that
