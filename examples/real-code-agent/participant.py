@@ -200,8 +200,10 @@ class Participant:
 
     def turn(self, label, project, marker=None, repair=False, prompt=None, container=None, requirement=None,
              reasoning_effort=None, step_limit=None, wall_time_limit_seconds=None,
-             tool_call_limit=None,
+             tool_call_limit=None, transport_retry_limit=1,
              _transport_retry=0):
+        if not isinstance(transport_retry_limit, int) or not 0 <= transport_retry_limit <= 1:
+            raise ValueError('transport_retry_limit must be zero or one')
         self.active_reasoning_effort = reasoning_effort if reasoning_effort is not None else self.reasoning_effort
         prompt = prompt or (f'Work in the current Harmony ArkTS project. Read the page source and '
                   f'{"repair its invalid trailing text, then " if repair else ""}'
@@ -247,7 +249,8 @@ class Participant:
         (self.evidence / f'{label}-command.json').write_text(json.dumps(command, indent=2) + '\n')
         lifecycle = {'label': label, 'startedAt': datetime.now(timezone.utc).isoformat(),
                      'captureAuthority': 'operator', 'exitCode': None, 'timedOut': False,
-                     'providerReasoningEffort': self.active_reasoning_effort}
+                     'providerReasoningEffort': self.active_reasoning_effort,
+                     'transportRetryLimit': transport_retry_limit}
         if tool_call_limit is not None:
             if not isinstance(tool_call_limit, int) or tool_call_limit < 1:
                 raise ValueError('tool_call_limit must be a positive integer')
@@ -295,7 +298,9 @@ class Participant:
             (self.evidence / f'{label}-lifecycle.json').write_text(json.dumps(lifecycle, indent=2)+'\n')
         if turn_error is not None:
             combined = str(turn_error)
-            if _transport_retry == 0 and lifecycle.get('completedToolCalls') == 0 and self._is_transient_transport_error(combined):
+            if (_transport_retry < transport_retry_limit
+                    and lifecycle.get('completedToolCalls') == 0
+                    and self._is_transient_transport_error(combined)):
                 preserved = []
                 for suffix in ('events.jsonl','stderr.log','lifecycle.json','command.json','prompt.txt'):
                     source = self.evidence / f'{label}-{suffix}'
@@ -310,6 +315,7 @@ class Participant:
                                  step_limit=step_limit,
                                  wall_time_limit_seconds=wall_time_limit_seconds,
                                  tool_call_limit=tool_call_limit,
+                                 transport_retry_limit=transport_retry_limit,
                                  _transport_retry=1)
             raise turn_error
         source = project / 'entry/src/main/ets/pages/Index.ets'

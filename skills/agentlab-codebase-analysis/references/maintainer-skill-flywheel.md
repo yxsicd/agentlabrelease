@@ -52,6 +52,15 @@ count. One failure rejects the entire batch before TableGit mutation. Do not
 combine repository-contract root analysis with child scopes, and do not let a
 shared checkout imply shared evidence ownership.
 
+Treat scope execution as independently retryable even though promotion is
+atomic. Keep successful first-attempt proposals, retry only failed scopes once
+in separate evidence directories, and feed the selected successful attempt for
+each scope into the aggregate validator. A surviving failure rejects the whole
+batch before assessment or TableGit mutation. Record the retried scope indices
+in the loop receipt so long-tail recovery remains measurable. Bound each
+attempt separately and disable nested participant retries in this lane; the
+operator-level isolated retry is the sole retry authority.
+
 Remove deterministic discovery from the Agent loop. The operator verifies the
 checkout HEAD and supplies every owned tracked path with its exact Blob OID and
 byte count before the turn. The Agent must not spend calls rediscovering that

@@ -574,8 +574,11 @@ write program-fact-proposal.json and parse it once before finishing.
             "maintainer-skill-author",
             workspace,
             prompt=prompt,
-            wall_time_limit_seconds=720,
+            wall_time_limit_seconds=360,
             tool_call_limit=24,
+            # The batch operator retains successful peers and retries only this
+            # failed scope, so do not hide another full attempt inside the turn.
+            transport_retry_limit=0,
         )
     finally:
         participant.close()

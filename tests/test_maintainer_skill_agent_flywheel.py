@@ -379,6 +379,10 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         self.assertIn("AGENTLAB_SCOPE_BATCH_SIZE", script)
         self.assertIn("prepare-batch", loop)
         self.assertIn("agent_failed", loop)
+        self.assertIn('retried_scopes=("${failed_scopes[@]}")', loop)
+        self.assertIn("agent-retries/scope-$scope_index", loop)
+        self.assertIn("retriedScopeIndices", loop)
+        self.assertIn("one isolated retry", loop)
 
     def test_agent_prompt_names_the_exact_evidence_object_schema(self):
         source = (ROOT / "examples/maintainer-knowledge-gate/agent_flywheel.py").read_text()
@@ -392,6 +396,8 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         self.assertIn("do not enumerate or read the whole repository", source)
         self.assertIn("Reserve the final two tool calls", source)
         self.assertIn("tool_call_limit=24", source)
+        self.assertIn("wall_time_limit_seconds=360", source)
+        self.assertIn("transport_retry_limit=0", source)
         self.assertIn("operator has already verified HEAD", source)
         self.assertIn("Do not spend", source)
         self.assertIn("git ls-files or git rev-parse for paths listed above", source)
