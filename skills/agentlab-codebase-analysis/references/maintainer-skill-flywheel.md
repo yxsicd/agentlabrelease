@@ -190,10 +190,17 @@ cardinality limits in the validator rather than relying on prompt wording.
 When a completed semantic turn leaves only thinking, malformed JSON, or a
 proposal rejected by this validator, permit one format-only continuation in the
 same model session. It receives the exact validation error, may not inspect the
-repository or invoke tools, and must emit the compact JSON directly. Aggregate
-both turns' duration and tool counts into one attempt receipt. Do not rerun
-source discovery for a serialization defect; if finalization still fails, the
-normal single isolated scope retry remains the only semantic retry authority.
+repository or invoke tools, uses no provider reasoning, targets the middle of
+each allowed size range, and must emit the compact JSON directly. Aggregate both
+turns' duration and tool counts into one attempt receipt. Do not rerun source
+discovery for a serialization defect; if finalization still fails, the normal
+single isolated scope retry remains the only semantic retry authority.
+
+The semantic turn is a bounded evidence sample, not a file census. Start from
+the scope's precomputed evidence anchors, add only direct siblings or
+dependencies needed for uncovered dimensions, and batch related reads into one
+tool call. A small prompt budget drives behavior; a larger enforced ceiling is
+only a runaway guard and must not be described as the available budget.
 
 The durable round receipt binds source and method revisions, parent assessment,
 scope-selection policy, eligible and blocked counts, Agent execution counts,

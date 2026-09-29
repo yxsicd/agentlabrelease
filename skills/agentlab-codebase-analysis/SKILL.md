@@ -135,10 +135,17 @@ otherwise valid semantic analysis into truncated transport.
 If the semantic turn completes but its final response is empty, malformed or
 fails only proposal validation, allow one in-session format finalization. It
 must reuse the completed session, forbid repository tools and file inspection,
-and return the same compact proposal contract. Count its wall time and any tool
-calls in the attempt lifecycle. This is output finalization, not a second
-semantic analysis; a failure still falls through to the one isolated scope
-retry and cannot reach aggregate assessment.
+use the provider's no-reasoning mode, target the middle of every size interval
+rather than its upper edge, and return the same compact proposal contract.
+Count its wall time and any tool calls in the attempt lifecycle. This is output
+finalization, not a second semantic analysis; a failure still falls through to
+the one isolated scope retry and cannot reach aggregate assessment.
+
+Treat repository reading as bounded sampling, not a complete source census.
+Begin with the scope's precomputed evidence anchors, inspect only enough direct
+siblings or dependencies to fill missing dimensions, and group related reads
+into one tool call. Prompt for a small call budget while retaining a larger
+operator hard limit only as a runaway guard; the hard limit is never a target.
 
 Use [program analysis](../agentlab-program-analysis/SKILL.md) for structure and [seed extraction](../agentlab-seed-extraction/SKILL.md) to turn grounded knowledge into tasks. Archive searches and generic TableGit analysis requests, exact input cuts and complete results in `program_facts`.
 

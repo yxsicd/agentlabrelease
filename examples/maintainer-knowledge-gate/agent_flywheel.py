@@ -633,11 +633,13 @@ dataflow, device behavior, performance, an approved Oracle, or operation
 readiness. Do not copy secrets or generated files. Return the JSON object
 immediately after the evidence supports the contract.
 
-Budget at most 18 shell tool calls for reading; the operator enforces a hard
-limit of 24. Start from the declared scope evidence and
-entrypoints, inspect only the direct files needed for the required dimensions, and
-do not enumerate or read the whole repository. Once two or more exact blobs
-support a bounded contract, stop exploring and return the exact JSON response.
+This is bounded sampling, not a complete source census. Start with the paths in
+the scope's declared evidence, then inspect at most four direct siblings or
+dependencies needed to cover the missing dimensions. Group related file reads
+into one shell call. Budget at most eight shell tool calls for reading; the
+operator's hard limit of 24 is only a runaway guard, not a target. Once two or
+more exact blobs support a bounded contract, stop exploring and return the
+exact JSON response.
 """
     result = None
     proposal = None
@@ -665,14 +667,16 @@ support a bounded contract, stop exploring and return the exact JSON response.
                 workspace,
                 prompt=f"""Your repository analysis is complete, but the operator rejected the
 final proposal because: {initial_error}
-Do not inspect files or call tools. Using only the analysis already present in
-this session, return exactly one JSON object and nothing else. It must follow
+Do not inspect files, call tools, explain, count characters, or restate the
+analysis. Using only the analysis already present in this session, return
+exactly one JSON object and nothing else. It must follow
 agentlab.maintainer_skill_fact_proposal.v1, bind only scope {scope['id']} at
 revision {repository['revision']}, contain dimensions {dimensions_text}, an
-interpretation of 500-1200 characters, exactly three path/gitBlobOid evidence
+interpretation of 650-900 characters, exactly three path/gitBlobOid evidence
 objects, and exactly two limitations of 40-300 characters. No Markdown fence.
 """,
-                wall_time_limit_seconds=90,
+                reasoning_effort="none",
+                wall_time_limit_seconds=45,
                 tool_call_limit=1,
                 transport_retry_limit=0,
                 require_completed_tool_call=False,
