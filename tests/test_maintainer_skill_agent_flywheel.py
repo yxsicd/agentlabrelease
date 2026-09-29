@@ -117,6 +117,12 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         self.assertIn("AGENTLAB_MAX_ITERATIONS=64", script)
         self.assertIn("max_iterations=${AGENTLAB_MAX_ITERATIONS:-3}", loop)
 
+    def test_agent_prompt_names_the_exact_evidence_object_schema(self):
+        source = (ROOT / "examples/maintainer-knowledge-gate/agent_flywheel.py").read_text()
+        self.assertIn("the keys path and gitBlobOid", source)
+        self.assertIn("never repositoryPath", source)
+        self.assertIn("no other evidence fields are allowed", source)
+
     def test_compare_requires_one_l2_gain_without_l3_promotion(self):
         before = {
             "totals": {"scopeSkillCount": 5, "structuralReadyCount": 5, "programBoundCount": 1,
