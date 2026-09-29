@@ -40,6 +40,10 @@ class SkillsGitMaterializationTest(unittest.TestCase):
         self.assertIn('"tableGitAuthority": cut["tableGitAuthority"]', source)
         self.assertIn('"tableGitRevision": cut["tableGitAuthority"]["revision"]', source)
 
+    def test_materializer_reserves_stdout_for_its_json_result(self):
+        source = (ROOT / "scripts/materialize-skillsgit-maintainer-tree.py").read_text()
+        self.assertEqual(source.count("stdout=sys.stderr, stderr=sys.stderr"), 2)
+
 
 if __name__ == "__main__":
     unittest.main()
