@@ -10,6 +10,15 @@ These are all `target-operations` Skills: they maintain knowledge of test-object
 repositories. The repository-native method Skills under `skills/` maintain
 AgentLab itself and are a separate ownership plane.
 
+The JSONL rows in this directory are the evidence/lineage layer, not the final
+repository-native Skill Tree format. AgentLab materializes semantic-ready scope
+knowledge through the pinned SkillsGit standard into `AGENTS.md`,
+`.agents/HANDOFF.md`, `.agents/skills.registry.yaml`, and bounded
+`.agents/skills/*/SKILL.md` files. `scripts/materialize-skillsgit-maintainer-tree.py`
+records both the target source revision and the exact SkillsGit revision, runs
+SkillsGit structural validation, and leaves every generated scope Skill
+experimental pending repository review.
+
 | Repository | Actual boundary | Current hard fact | Mining implication |
 | --- | --- | --- | --- |
 | `code-workshop` | One multi-product Harmony application | 1,512 tracked files; 556 analyzed source candidates | Expand beyond the six already selected scenario families |
@@ -106,6 +115,13 @@ TableGit receives the successful batch only after every requested iteration has
 passed source-Blob verification and the Rust maturity gate. Therefore a later
 failed iteration cannot leave a partially published loop. The final exact
 TableGit revision is exported in one review PR.
+
+The local hwlinux entrypoint may instead use `iterations=converge`. It computes
+the current number of reachable L1 scopes for one repository, stages all of
+them locally through the same per-scope Agent and Rust gates, commits the whole
+candidate cut to TableGit only after every iteration succeeds, then emits a
+SkillsGit-native materialization and one downstream shadow-case attempt. The
+GitHub workflow retains its one-to-three iteration limit.
 
 `repository=auto` is the standard unattended policy. It considers only bounded
 L1 scopes whose own inventory evidence is reachable inside their declared path

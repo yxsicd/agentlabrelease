@@ -12,8 +12,13 @@ repository_selector=$3
 iterations=$4
 pi=$5
 
-if [[ ! $iterations =~ ^[1-3]$ ]]; then
-  echo "iterations must be an integer from 1 through 3" >&2
+max_iterations=${AGENTLAB_MAX_ITERATIONS:-3}
+if [[ ! $max_iterations =~ ^[1-9][0-9]*$ || $max_iterations -gt 64 ]]; then
+  echo "AGENTLAB_MAX_ITERATIONS must be an integer from 1 through 64" >&2
+  exit 2
+fi
+if [[ ! $iterations =~ ^[1-9][0-9]*$ || $iterations -gt $max_iterations ]]; then
+  echo "iterations must be an integer from 1 through $max_iterations" >&2
   exit 2
 fi
 

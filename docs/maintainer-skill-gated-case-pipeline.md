@@ -51,6 +51,22 @@ hashes, its parent round, coverage, changes, residual gaps, and a
 they do not silently rewrite the prior round. The hard gate accepts only a
 contiguous lineage whose latest round binds the current Skill and fact tables.
 
+## SkillsGit materialization boundary
+
+The target-operations JSONL tables are the evidence and lineage authority; they
+are not, by themselves, a repository-native Maintainer Skill Tree. Final
+materialization follows one pinned SkillsGit revision and produces `AGENTS.md`,
+`.agents/HANDOFF.md`, `.agents/skills.registry.yaml`, and
+`.agents/skills/*/SKILL.md`. A materialized path Skill must contain a trigger,
+purpose, repeatable workflow, exact source authority, residual gaps,
+verification, and governance boundary. Static L2 semantic evidence must not be
+presented as build, emulator, device, performance, or runtime proof.
+
+Materialization is a rebuildable derivative of one exact knowledge cut and one
+exact SkillsGit commit. TableGit remains the mutable authority for facts and
+refresh lineage. The materialization receipt binds both revisions, enumerates
+file digests, records SkillsGit validation, and keeps automatic promotion off.
+
 ## Hard requirements
 
 1. Every repository is pinned by URL and 40-hex Git revision.
@@ -80,6 +96,8 @@ contiguous lineage whose latest round binds the current Skill and fact tables.
    mined cases remain distinct populations.
 11. No gate may infer success from filenames, prose, a running service, or a
     previous source revision.
+12. A target repository Maintainer Skill export must pin the SkillsGit commit
+    used to generate and validate its repository-native tree.
 
 ## Executable gate
 
