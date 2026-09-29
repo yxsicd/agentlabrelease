@@ -1,7 +1,7 @@
 {
   "automaticCatalogApply": false,
-  "blockerCode": "MS-COMPOSITE-SELECTOR-NOT-SUPPORTED",
-  "decision": "blocked-catalog-application",
+  "blockerCode": "MS-ATOMIC-CATALOG-APPLY-REQUIRED",
+  "decision": "ready-for-atomic-catalog-apply",
   "decompositionPlanSha256": "fcd52a129dd257723a140a947e4b5aff0e49f03a59780e2659262646118d1ff9",
   "groups": [
     {
@@ -225,10 +225,17 @@
       "trackedFileCount": 37
     }
   ],
-  "nextAction": "implement-composite-ownership-selectors-and-atomic-catalog-apply",
+  "nextAction": "apply-reviewed-scope-replacement-through-authoritative-transaction",
   "parentScopeSkillId": "skill-scope-code-workshop-common",
   "repositoryId": "code-workshop",
   "schema": "agentlab.maintainer_scope_decomposition_review.v1",
+  "sourceExtensions": [
+    "css",
+    "ets",
+    "html",
+    "js",
+    "ts"
+  ],
   "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
   "sourceTreeOid": "ab156e6aa2fc9c64f400ee119e142fded5573271",
   "verification": {

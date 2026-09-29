@@ -23,8 +23,8 @@ class MaintainerScopeDecompositionReviewTest(unittest.TestCase):
         self.assertEqual(sum(row["verification"]["semanticGroupCount"] for row in reviews), 11)
         self.assertEqual(sum(row["verification"]["assignedFileCount"] for row in reviews), 415)
         for review in reviews:
-            self.assertEqual(review["decision"], "blocked-catalog-application")
-            self.assertEqual(review["blockerCode"], "MS-COMPOSITE-SELECTOR-NOT-SUPPORTED")
+            self.assertEqual(review["decision"], "ready-for-atomic-catalog-apply")
+            self.assertEqual(review["blockerCode"], "MS-ATOMIC-CATALOG-APPLY-REQUIRED")
             self.assertFalse(review["automaticCatalogApply"])
             self.assertTrue(all(group["sourceFileCount"] <= 80 for group in review["groups"]))
             self.assertTrue(all(len(group["evidence"]) >= 2 for group in review["groups"]))
@@ -52,6 +52,7 @@ class MaintainerScopeDecompositionReviewTest(unittest.TestCase):
             plan = {
                 "schema": "agentlab.maintainer_scope_decomposition_plan.v1",
                 "repositoryId": "arbitrary", "sourceRevision": revision, "sourceTreeOid": tree,
+                "sourceExtensions": ["rs"],
                 "maxSourceFilesPerLeaf": 2,
                 "parent": {"scopeSkillId": "skill-scope-arbitrary-large", "pathBoundary": "large",
                            "sourceFileCount": 4},

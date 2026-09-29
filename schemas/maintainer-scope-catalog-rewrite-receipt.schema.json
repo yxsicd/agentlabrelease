@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.dev/schemas/maintainer-scope-catalog-rewrite-receipt.schema.json",
+  "title": "AgentLab Maintainer Scope Catalog Rewrite Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "automaticAuthorityMutation", "repositoryId", "sourceRevision", "sourceTreeOid", "parentScopeSkillId", "replacementScopeSkillIds", "catalogScopeCountBefore", "catalogScopeCountAfter", "replacedTrackedFileCount", "replacementTrackedFileCount", "replacedSourceFileCount", "replacementSourceFileCount", "complete", "nonOverlapping", "decision"],
+  "properties": {
+    "schema": { "const": "agentlab.maintainer_scope_catalog_rewrite_receipt.v1" },
+    "automaticAuthorityMutation": { "const": false },
+    "repositoryId": { "type": "string", "minLength": 1 },
+    "sourceRevision": { "$ref": "#/$defs/sha1" },
+    "sourceTreeOid": { "$ref": "#/$defs/sha1" },
+    "parentScopeSkillId": { "type": "string", "minLength": 1 },
+    "replacementScopeSkillIds": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "catalogScopeCountBefore": { "type": "integer", "minimum": 1 },
+    "catalogScopeCountAfter": { "type": "integer", "minimum": 2 },
+    "replacedTrackedFileCount": { "type": "integer", "minimum": 1 },
+    "replacementTrackedFileCount": { "type": "integer", "minimum": 1 },
+    "replacedSourceFileCount": { "type": "integer", "minimum": 0 },
+    "replacementSourceFileCount": { "type": "integer", "minimum": 0 },
+    "complete": { "const": true },
+    "nonOverlapping": { "const": true },
+    "decision": { "const": "candidate-catalog-ready-for-authoritative-transaction" }
+  },
+  "$defs": {
+    "sha1": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+  }
+}

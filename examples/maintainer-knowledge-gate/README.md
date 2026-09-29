@@ -64,5 +64,12 @@ the command never edits the live scope catalog or promotes a Skill.
 next semantic step. A review must consume every structural leaf exactly once,
 retain bounded source counts, and cite at least two exact Blobs per proposed
 responsibility. Reviews do not mutate the catalog. If a group combines disjoint
-selectors, the result explicitly blocks on composite-selector support rather
-than claiming that a shared ancestor is exact ownership.
+selectors, those selectors are exact ownership and the shared `pathBoundary`
+is only a navigation anchor.
+
+[`apply_scope_decomposition_review.py`](apply_scope_decomposition_review.py)
+rechecks the review against the exact Git revision, Tree and Blobs, proves every
+parent file is assigned exactly once, and writes a complete candidate catalog
+through an exclusive atomic create. It never overwrites a retained candidate or
+changes TableGit. The candidate can enter a separately reviewed authoritative
+transaction only after its receipt reports complete, non-overlapping parity.

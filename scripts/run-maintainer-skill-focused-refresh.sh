@@ -32,7 +32,8 @@ scope_path=$(jq -r '.scope.pathBoundary' "$refresh_root/focused-refresh-request.
 [[ ${#source[@]} -eq 2 && "${source[1]}" =~ ^[0-9a-f]{40}$ ]]
 
 source_dir="$source_root/$repository_id-${source[1]}"
-scripts/checkout-maintainer-scope.sh "${source[0]}" "${source[1]}" "$scope_path" "$source_dir"
+scripts/checkout-maintainer-scope.sh "${source[0]}" "${source[1]}" "$scope_path" "$source_dir" \
+  "$refresh_root/focused-refresh-request.json"
 
 python3 examples/maintainer-knowledge-gate/focused_fact_refresh.py run-agent \
   --request "$refresh_root/focused-refresh-request.json" --source "$source_dir" \

@@ -55,6 +55,17 @@ def within(path: str, boundary: str) -> bool:
     return path == boundary or path.startswith(boundary.rstrip("/") + "/")
 
 
+def scope_owns_path(scope: dict, path: str) -> bool:
+    selectors = scope.get("ownershipSelectors")
+    if not selectors:
+        return within(path, scope["pathBoundary"])
+    return any(
+        (selector.get("type") == "prefix" and within(path, selector.get("path", "")))
+        or (selector.get("type") == "files" and path in selector.get("paths", []))
+        for selector in selectors
+    )
+
+
 def validate_evidence(root: Path, evidence, label: str) -> list[dict]:
     require(isinstance(evidence, list), f"{label} evidence must be an array")
     result = []
@@ -139,7 +150,7 @@ def assess(knowledge: Path, candidate_id: str, plan_path: Path, evidence_root: P
             require(path not in seen, f"{field} duplicates {path}")
             seen.add(path)
             require(isinstance(item.get("reason"), str) and item["reason"].strip(), f"{field} reason is empty")
-            in_scope = any(within(path, scope["pathBoundary"]) for scope in scope_rows)
+            in_scope = any(scope_owns_path(scope, path) for scope in scope_rows)
             checks.append({
                 "path": path,
                 "reason": item["reason"],

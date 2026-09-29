@@ -49,15 +49,36 @@ def path_is_within(path, boundary):
     return path == boundary or path.startswith(boundary + "/")
 
 
+def scope_owns_path(scope, path):
+    selectors = scope.get("ownershipSelectors")
+    if not selectors:
+        return path_is_within(path, scope.get("pathBoundary", ""))
+    return any(
+        (selector.get("type") == "prefix" and path_is_within(path, selector.get("path", "")))
+        or (selector.get("type") == "files" and path in selector.get("paths", []))
+        for selector in selectors
+    )
+
+
+def scope_selector_summary(scope):
+    selectors = scope.get("ownershipSelectors")
+    if not selectors:
+        return f"prefix:{scope['pathBoundary']}"
+    return ", ".join(
+        f"prefix:{selector['path']}" if selector["type"] == "prefix"
+        else "files:" + "|".join(selector["paths"])
+        for selector in selectors
+    )
+
+
 def scope_has_reachable_evidence(scope):
-    boundary = scope.get("pathBoundary")
     evidence = scope.get("evidence")
-    if not isinstance(boundary, str) or not boundary or not isinstance(evidence, list):
+    if not isinstance(scope.get("pathBoundary"), str) or not isinstance(evidence, list):
         return False
     return any(
         isinstance(row, dict)
         and isinstance(row.get("path"), str)
-        and path_is_within(row["path"], boundary)
+        and scope_owns_path(scope, row["path"])
         for row in evidence
     )
 
@@ -118,10 +139,11 @@ def valid_decomposition_review(scope, decomposition, review, max_source_files=80
         and review.get("repositoryId") == scope.get("repositoryId")
         and review.get("sourceRevision") == scope.get("sourceRevision")
         and review.get("sourceTreeOid") == scope.get("sourceTreeOid")
+        and review.get("sourceExtensions") == decomposition["plan"].get("sourceExtensions")
         and review.get("parentScopeSkillId") == scope.get("id")
         and review.get("decompositionPlanSha256") == decomposition.get("sha256")
-        and review.get("blockerCode") == "MS-COMPOSITE-SELECTOR-NOT-SUPPORTED"
-        and review.get("decision") == "blocked-catalog-application"
+        and review.get("blockerCode") == "MS-ATOMIC-CATALOG-APPLY-REQUIRED"
+        and review.get("decision") == "ready-for-atomic-catalog-apply"
         and verification.get("complete") is True
         and verification.get("nonOverlapping") is True
         and verification.get("assignedFileCount") == scope.get("trackedFileCount")
@@ -171,8 +193,8 @@ def classify_scope(scope, state, max_source_files=80, decomposition=None, review
                 return {
                     **base,
                     "disposition": "blocked",
-                    "blockerCode": "MS-COMPOSITE-SELECTOR-NOT-SUPPORTED",
-                    "nextAction": "implement-composite-ownership-selectors-and-atomic-catalog-apply",
+                    "blockerCode": "MS-ATOMIC-CATALOG-APPLY-REQUIRED",
+                    "nextAction": "apply-reviewed-scope-replacement-through-authoritative-transaction",
                     "decompositionPlan": {
                         "path": decomposition["path"],
                         "sha256": decomposition["sha256"],
@@ -413,7 +435,7 @@ def run_agent(args):
     require(packet.get("analysisMode") in mode_guidance, "unsupported analysis mode")
     prompt = f"""You are a Maintainer Skill construction Agent, not an assessed Agent.
 Read flywheel-request.json and inspect the exact Git checkout under source/.
-Analyze only scope {scope['id']} at path boundary {scope['pathBoundary']}.
+Analyze only scope {scope['id']} with ownership selectors {scope_selector_summary(scope)}.
 Analysis mode is {packet['analysisMode']}. {mode_guidance[packet['analysisMode']]}
 Write exactly one JSON object to program-fact-proposal.json and do not modify source/ or flywheel-request.json.
 
@@ -485,7 +507,6 @@ def validate_proposal(request, proposal, source_root):
             "limitations are incomplete")
     evidence = proposal["evidence"]
     require(isinstance(evidence, list) and len(evidence) >= 2, "at least two evidence blobs are required")
-    boundary = request["scope"]["pathBoundary"].rstrip("/")
     inside = False
     seen = set()
     clean_evidence = []
@@ -504,7 +525,7 @@ def validate_proposal(request, proposal, source_root):
             capture_output=True, text=True,
         )
         require(actual.returncode == 0 and actual.stdout.strip() == oid, f"evidence blob differs: {path}")
-        inside = inside or path_is_within(path, boundary)
+        inside = inside or scope_owns_path(request["scope"], path)
         clean_evidence.append({"path": path, "gitBlobOid": oid})
     require(inside, "no evidence path is inside the selected scope")
     return {

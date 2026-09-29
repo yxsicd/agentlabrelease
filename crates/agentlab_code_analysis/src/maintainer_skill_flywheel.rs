@@ -73,6 +73,52 @@ fn boundary_matches(boundary: &str, path: &str) -> bool {
     boundary == "." || path == boundary || path.starts_with(&format!("{boundary}/"))
 }
 
+fn selector_specificity(selector: &Value, path: &str) -> Option<usize> {
+    match selector["type"].as_str()? {
+        "prefix" => {
+            let prefix = selector["path"].as_str()?;
+            boundary_matches(prefix, path).then_some(prefix.len())
+        }
+        "files" => selector["paths"]
+            .as_array()?
+            .iter()
+            .filter_map(Value::as_str)
+            .any(|candidate| candidate == path)
+            .then_some(usize::MAX),
+        _ => None,
+    }
+}
+
+fn valid_selector(selector: &Value) -> bool {
+    match selector["type"].as_str() {
+        Some("prefix") => selector["path"]
+            .as_str()
+            .is_some_and(|path| !path.is_empty()),
+        Some("files") => selector["paths"].as_array().is_some_and(|paths| {
+            !paths.is_empty()
+                && paths.iter().all(|path| path.as_str().is_some_and(|path| !path.is_empty()))
+        }),
+        _ => false,
+    }
+}
+
+fn scope_specificity(skill: &Value, path: &str) -> Option<usize> {
+    if let Some(selectors) = skill["ownershipSelectors"].as_array() {
+        return selectors
+            .iter()
+            .filter_map(|selector| selector_specificity(selector, path))
+            .max();
+    }
+    let boundary = skill["pathBoundary"].as_str()?;
+    boundary_matches(boundary, path).then_some(boundary.len())
+}
+
+fn valid_scope_ownership(skill: &Value) -> bool {
+    skill["ownershipSelectors"].as_array().map_or(true, |selectors| {
+        !selectors.is_empty() && selectors.iter().all(valid_selector)
+    })
+}
+
 fn fact_dimensions(fact: &Value) -> BTreeSet<String> {
     let explicit = strings(&fact["dimensions"]);
     if !explicit.is_empty() {
@@ -204,9 +250,9 @@ pub fn assess(
                     .flatten()
                     .filter_map(|index| {
                         let skill = &scopes[*index];
-                        let boundary = skill["pathBoundary"].as_str()?;
-                        boundary_matches(boundary, path)
-                            .then_some((boundary.len(), skill["id"].as_str()?.to_owned()))
+                        let skill_id = skill["id"].as_str()?;
+                        scope_specificity(skill, path)
+                            .map(|specificity| (specificity, skill_id.to_owned()))
                     })
                     .collect::<Vec<_>>();
                 matches.sort_by(|left, right| right.0.cmp(&left.0).then(left.1.cmp(&right.1)));
@@ -259,11 +305,17 @@ pub fn assess(
         let repository_id = skill["repositoryId"].as_str().unwrap_or_default();
         let identity_ready = valid_hex(&skill["sourceRevision"], 40)
             && valid_hex(&skill["sourceTreeOid"], 40)
+            && valid_scope_ownership(skill)
             && skill["repository"]
                 .as_str()
                 .is_some_and(|value| !value.is_empty())
             && skill["evidence"].as_array().is_some_and(|rows| {
-                !rows.is_empty() && rows.iter().all(|row| valid_hex(&row["gitBlobOid"], 40))
+                !rows.is_empty() && rows.iter().all(|row| {
+                    valid_hex(&row["gitBlobOid"], 40)
+                        && row["path"]
+                            .as_str()
+                            .is_some_and(|path| scope_specificity(skill, path).is_some())
+                })
             });
         let structural_ready = identity_ready
             && skill["trackedFileCount"]

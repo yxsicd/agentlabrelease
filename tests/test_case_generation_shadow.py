@@ -64,7 +64,7 @@ class CaseGenerationShadowTest(unittest.TestCase):
         scope = request["scope"]
         inside = [
             row["path"] for row in fact["evidence"]
-            if MODULE.path_is_within(row["path"], scope["pathBoundary"])
+            if MODULE.scope_owns_path(scope, row["path"])
         ]
         outside = [row["path"] for row in fact["evidence"] if row["path"] not in inside]
         framework = "ohosTest" if any("ohosTest" in path for path in scope.get("testEntrypoints", [])) else "repository-test"

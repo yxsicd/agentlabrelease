@@ -124,6 +124,46 @@ fn generic_evidence_rounds_advance_arbitrary_repositories_without_name_rules() {
 }
 
 #[test]
+fn composite_selectors_bind_exact_owned_paths_and_reject_shared_anchor_siblings() {
+    let root = temp_root();
+    let scopes = root.join("scopes.jsonl");
+    let facts = root.join("facts.jsonl");
+    let mut one = scope("skill-scope-arbitrary-one", "arbitrary");
+    one["ownershipSelectors"] = json!([
+        {"type":"prefix","path":"src/one"},
+        {"type":"files","paths":["src/root.generic"]}
+    ]);
+    one["evidence"] = json!([{"path":"src/one/main.generic","gitBlobOid":"3".repeat(40)}]);
+    let mut two = scope("skill-scope-arbitrary-two", "arbitrary");
+    two["ownershipSelectors"] = json!([{"type":"prefix","path":"src/two"}]);
+    two["evidence"] = json!([{"path":"src/two/main.generic","gitBlobOid":"4".repeat(40)}]);
+    jsonl(&scopes, &[one, two]);
+    jsonl(&facts, &[
+        json!({
+            "id":"fact-one", "kind":"semantic-contract", "repositoryId":"arbitrary",
+            "sourceRevision":"1".repeat(40), "scopeSkillIds":[],
+            "dimensions":["responsibility","boundary","relations","behavior"],
+            "evidence":[{"path":"src/root.generic","gitBlobOid":"5".repeat(40)}]
+        }),
+        json!({
+            "id":"fact-two", "kind":"semantic-contract", "repositoryId":"arbitrary",
+            "sourceRevision":"1".repeat(40), "scopeSkillIds":[],
+            "dimensions":["responsibility","boundary","relations","behavior"],
+            "evidence":[{"path":"src/two/main.generic","gitBlobOid":"4".repeat(40)}]
+        }),
+    ]);
+    let assessment = assess(&scopes, Some(&facts), 1, None).unwrap();
+    let rows = assessment["skills"].as_array().unwrap();
+    let first = rows.iter().find(|row| row["skillId"] == "skill-scope-arbitrary-one").unwrap();
+    let second = rows.iter().find(|row| row["skillId"] == "skill-scope-arbitrary-two").unwrap();
+    assert_eq!(first["checks"]["programEvidenceBound"], true);
+    assert_eq!(second["checks"]["programEvidenceBound"], true);
+    assert_eq!(first["evidenceBindings"][0]["factId"], "fact-one");
+    assert_eq!(second["evidenceBindings"][0]["factId"], "fact-two");
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn explicit_fact_binding_cannot_name_a_missing_or_cross_repository_scope() {
     let root = temp_root();
     let scopes = root.join("scopes.jsonl");
