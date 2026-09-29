@@ -9,6 +9,7 @@ future versions of the business documents without silently dropping fields.
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import os
@@ -548,6 +549,16 @@ def query_all(client: Inspector, repo: str, table: str, revision: str) -> list[d
     return result["rows"]
 
 
+def query_tables(client: Inspector, repo: str, revision: str) -> dict[str, list[dict]]:
+    """Read independent tables concurrently while retaining one revision fence."""
+    with ThreadPoolExecutor(max_workers=len(TABLE_FILES)) as executor:
+        futures = {
+            table: executor.submit(query_all, client, repo, table, revision)
+            for table in TABLE_FILES
+        }
+        return {table: futures[table].result() for table in TABLE_FILES}
+
+
 def unwrap_rows(table: str, rows: list[dict]) -> list[dict]:
     result = []
     for item in rows:
@@ -645,10 +656,11 @@ def persist_snapshot(client: Inspector, repo: str, revision: str, base: Path,
     remote_versions_by_table = {}
     base_by_table = {}
     desired_by_table = {}
+    remote_items_by_table = query_tables(client, repo, revision)
     for table, filename in TABLE_FILES.items():
         base_rows = load_jsonl(base / filename)
         desired = load_jsonl(snapshot / filename)
-        remote_items = query_all(client, repo, table, revision)
+        remote_items = remote_items_by_table[table]
         remote = {row["id"]: row for row in unwrap_rows(table, remote_items)}
         remote_versions = {
             item["key"]: item.get("row_version")
@@ -819,9 +831,10 @@ def command_sync(args) -> None:
         client, args.repo, revision, args.base, args.snapshot, args.run_id, args.github_repository,
         args.producer_kind, args.producer_url, args.producer_host,
     )
-    exact_rows = {}
-    for table in TABLE_FILES:
-        exact_rows[table] = unwrap_rows(table, query_all(client, args.repo, table, revision))
+    exact_items = query_tables(client, args.repo, revision)
+    exact_rows = {
+        table: unwrap_rows(table, exact_items[table]) for table in TABLE_FILES
+    }
 
     args.export.mkdir(parents=True, exist_ok=True)
     for table, filename in TABLE_FILES.items():

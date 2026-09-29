@@ -2,6 +2,7 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+import threading
 import unittest
 from unittest import mock
 
@@ -15,6 +16,22 @@ SPEC.loader.exec_module(MODULE)
 
 
 class MaintainerSkillTableGitTest(unittest.TestCase):
+    def test_exact_revision_table_reads_are_bounded_and_parallel(self):
+        barrier = threading.Barrier(len(MODULE.TABLE_FILES))
+
+        def query(_client, _repo, table, revision):
+            self.assertEqual(revision, "a" * 40)
+            barrier.wait(timeout=2)
+            return [{"table": table}]
+
+        with mock.patch.object(MODULE, "query_all", side_effect=query):
+            result = MODULE.query_tables(object(), "repo", "a" * 40)
+        self.assertEqual(list(result), list(MODULE.TABLE_FILES))
+        self.assertEqual(
+            {table: rows[0]["table"] for table, rows in result.items()},
+            {table: table for table in MODULE.TABLE_FILES},
+        )
+
     def test_expected_mcp_tool_error_is_parsed_even_when_inspector_exits_nonzero(self):
         structured = {
             "outcome": "error",

@@ -52,6 +52,16 @@ count. One failure rejects the entire batch before TableGit mutation. Do not
 combine repository-contract root analysis with child scopes, and do not let a
 shared checkout imply shared evidence ownership.
 
+Remove deterministic discovery from the Agent loop. The operator verifies the
+checkout HEAD and supplies every owned tracked path with its exact Blob OID and
+byte count before the turn. The Agent must not spend calls rediscovering that
+inventory and uses Git only for a direct dependency outside the scope packet.
+This packet is an acceleration input, not semantic evidence by itself: accepted
+claims still require proposal validation against the exact checkout. Read-only
+TableGit projections for different tables may run concurrently only when every
+query carries the same immutable revision; transactions remain single and
+revision-fenced.
+
 ## Repository transfer contract
 
 Treat one deeply analyzed repository as a calibration specimen, never as a

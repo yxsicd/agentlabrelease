@@ -154,6 +154,34 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
             ["root"],
         )
 
+    def test_operator_source_inventory_is_complete_scope_bound_and_blob_exact(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.name", "test"], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.email", "test@example.com"], check=True)
+            (root / "owned").mkdir()
+            (root / "owned/main.rs").write_text("fn main() {}\n")
+            (root / "sibling.rs").write_text("pub fn sibling() {}\n")
+            subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+            subprocess.run(["git", "-C", str(root), "commit", "-qm", "fixture"], check=True)
+            scope = {
+                "pathBoundary": "owned", "trackedFileCount": 1,
+                "ownershipSelectors": [{"type": "prefix", "path": "owned"}],
+            }
+            inventory = MODULE.scope_source_inventory(scope, root)
+            self.assertEqual([row["path"] for row in inventory], ["owned/main.rs"])
+            self.assertEqual(
+                inventory[0]["gitBlobOid"],
+                subprocess.check_output(
+                    ["git", "-C", str(root), "rev-parse", "HEAD:owned/main.rs"], text=True
+                ).strip(),
+            )
+            self.assertEqual(inventory[0]["byteCount"], len("fn main() {}\n"))
+            scope["trackedFileCount"] = 2
+            with self.assertRaisesRegex(ValueError, "tracked-file count"):
+                MODULE.scope_source_inventory(scope, root)
+
     def test_composite_scope_ownership_excludes_unselected_siblings(self):
         scope = {
             "pathBoundary": "src",
@@ -364,6 +392,9 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         self.assertIn("do not enumerate or read the whole repository", source)
         self.assertIn("Reserve the final two tool calls", source)
         self.assertIn("tool_call_limit=24", source)
+        self.assertIn("operator has already verified HEAD", source)
+        self.assertIn("Do not spend", source)
+        self.assertIn("git ls-files or git rev-parse for paths listed above", source)
 
     def test_compare_accepts_one_l2_gain_without_prebound_operation_evidence(self):
         before = {

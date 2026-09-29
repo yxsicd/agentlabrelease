@@ -39,6 +39,14 @@ independent assessment proves the exact aggregate delta, and the resulting
 facts can enter the same atomic TableGit transaction. A partial batch writes no
 authority rows.
 
+Spend Agent turns on semantic judgment, not deterministic repository plumbing.
+Before each construction turn, the operator must verify the exact HEAD and
+provide a complete scope-owned tracked-file inventory with Git Blob identities
+and byte counts. The Agent uses that inventory for in-scope discovery and only
+invokes Git for a necessary direct cross-boundary relation. Independent tables
+at one immutable TableGit revision may be read concurrently; writes, revision
+fences, validation and authority promotion remain serialized and atomic.
+
 Use a deep target repository to discover failure modes, then normalize each
 verified lesson into the repository-independent method before reusing it. Never
 add target repository names, paths, framework commands or special-case scoring
