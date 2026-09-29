@@ -32,13 +32,13 @@
   "sourceSetSha256": "88310ecd6a5ace0c7393c7981b8f9ba9103afff41133b71d0b84e951e95f24a6",
   "tableGitAuthority": {
     "exportedBy": {
-      "kind": "github-action",
+      "host": "huawei-ThinkCentre-M920t",
+      "kind": "hwlinux-local",
       "repository": "yxsicd/agentlabrelease",
-      "runId": "36503663798",
-      "runUrl": "https://github.com/yxsicd/agentlabrelease/actions/runs/36503663798"
+      "runId": "hwlinux-20260929-abilitycommon-01"
     },
     "repo": "agentlabtablegit",
-    "revision": "6b3286cdfec989ff516c25ab7aa555cfc645694f"
+    "revision": "551175a39362642ca24295153a54019126da347f"
   },
   "tables": {
     "evaluationCases": {
@@ -51,7 +51,7 @@
     },
     "maintainerSkillRefreshRounds": {
       "path": "maintainer_skill_refresh_rounds.jsonl",
-      "sha256": "9118192841a21a6b2b46597019fe2b725fed238ffb650b05092a3da6461cf171"
+      "sha256": "57c1f6af70a28983d62f0ec9cc725a17e1f45fe3b063267c210d79eded628d13"
     },
     "maintainerSkills": {
       "path": "maintainer_skills.jsonl",
@@ -59,7 +59,7 @@
     },
     "programFacts": {
       "path": "program_facts.jsonl",
-      "sha256": "5f6fef7ad58f71b35e41ea2c0f8803334d1542072881a82716348f6e6a02aacd"
+      "sha256": "7bb5cc7a032bc6c657b1ac586b40c120baae5c18a9e1c9d41245444e9d0cd162"
     }
   }
 }
