@@ -15,8 +15,8 @@ if [[ ! $revision =~ ^[0-9a-f]{40}$ ]]; then
   echo "revision must be an exact 40-hex commit" >&2
   exit 2
 fi
-if [[ -z $scope_path || $scope_path == . || $scope_path == /* || $scope_path == *\\* ||
-      /$scope_path/ == */../* || /$scope_path/ == */./* || $scope_path == *//* ]]; then
+if [[ -z $scope_path || $scope_path == /* || $scope_path == *\\* || $scope_path == *//* ]] ||
+   [[ $scope_path != . && ( /$scope_path/ == */../* || /$scope_path/ == */./* ) ]]; then
   echo "scope path must be a safe repository-relative directory" >&2
   exit 2
 fi
@@ -32,10 +32,16 @@ if [[ $(git -C "$destination" remote get-url origin) != "$repository" ]]; then
 fi
 
 # Keep the exact commit and all of its trees available, but materialize only the
-# selected Maintainer Skill boundary. This prevents one small scope in a large
-# corpus from causing a whole-repository lazy Blob download during checkout.
-git -C "$destination" sparse-checkout init --cone
-git -C "$destination" sparse-checkout set "$scope_path"
+# selected Maintainer Skill boundary. A repository-contract scope is a bounded
+# projection of root-level declarations, not permission to hydrate every child
+# scope in a large corpus.
+if [[ $scope_path == . ]]; then
+  git -C "$destination" sparse-checkout init --no-cone
+  printf '/*\n!/*/\n' | git -C "$destination" sparse-checkout set --no-cone --stdin
+else
+  git -C "$destination" sparse-checkout init --cone
+  git -C "$destination" sparse-checkout set "$scope_path"
+fi
 
 attempts=3
 for ((attempt = 1; attempt <= attempts; attempt++)); do
@@ -44,7 +50,7 @@ for ((attempt = 1; attempt <= attempts; attempt++)); do
       fetch --no-tags --depth=1 --filter=blob:none origin "$revision" &&
      git -C "$destination" checkout --force --detach FETCH_HEAD &&
      [[ $(git -C "$destination" rev-parse HEAD) == "$revision" ]] &&
-     [[ -d "$destination/$scope_path" ]]; then
+     { [[ $scope_path == . ]] || [[ -d "$destination/$scope_path" ]]; }; then
     exit 0
   fi
   if ((attempt < attempts)); then

@@ -15,6 +15,7 @@ import subprocess
 
 
 SEMANTIC_DIMENSIONS = {"responsibility", "boundary", "relations", "behavior"}
+CORE_DIMENSIONS = {"responsibility", "boundary", "relations"}
 SHA1 = re.compile(r"[0-9a-f]{40}")
 SAFE_ID = re.compile(r"agent-analysis-[a-z0-9-]{8,120}")
 
@@ -43,6 +44,8 @@ def require(condition, message):
 
 def path_is_within(path, boundary):
     boundary = boundary.rstrip("/")
+    if boundary == ".":
+        return True
     return path == boundary or path.startswith(boundary + "/")
 
 
@@ -59,14 +62,26 @@ def scope_has_reachable_evidence(scope):
     )
 
 
+def analysis_profile(scope):
+    source_count = scope.get("sourceFileCount")
+    if scope.get("pathBoundary") == ".":
+        dimensions = SEMANTIC_DIMENSIONS if isinstance(source_count, int) and source_count > 0 else CORE_DIMENSIONS
+        return "repository-contract", dimensions
+    if source_count == 0:
+        return "configuration-asset", CORE_DIMENSIONS
+    return "source-behavior", SEMANTIC_DIMENSIONS
+
+
 def classify_scope(scope, state, max_source_files=80):
     maturity = state.get("maturity", "unknown")
+    analysis_mode, _ = analysis_profile(scope)
     base = {
         "skillId": scope.get("id"),
         "pathBoundary": scope.get("pathBoundary"),
         "maturity": maturity,
         "sourceFileCount": scope.get("sourceFileCount"),
         "testFileCount": scope.get("testFileCount"),
+        "analysisMode": analysis_mode,
     }
     if maturity in ("L2-semantic-ready", "L3-maintenance-ready"):
         return {**base, "disposition": "already-advanced", "nextAction": "preserve-and-refresh-on-new-evidence"}
@@ -77,19 +92,13 @@ def classify_scope(scope, state, max_source_files=80):
     if not isinstance(source_count, int) or source_count < 0:
         return {**base, "disposition": "blocked", "blockerCode": "MS-SOURCE-COUNT-INVALID",
                 "nextAction": "repair-structural-inventory"}
-    if source_count == 0:
-        return {**base, "disposition": "blocked", "blockerCode": "MS-NON-SOURCE-SCOPE",
-                "nextAction": "run-configuration-or-asset-scope-analysis"}
     if source_count > max_source_files:
         return {**base, "disposition": "blocked", "blockerCode": "MS-SCOPE-DECOMPOSITION-REQUIRED",
                 "nextAction": "decompose-scope-by-owned-behavior-boundary"}
-    if scope.get("pathBoundary") == ".":
-        return {**base, "disposition": "blocked", "blockerCode": "MS-ROOT-SCOPE-SPECIALIST-REQUIRED",
-                "nextAction": "run-repository-contract-analysis"}
     if not scope_has_reachable_evidence(scope):
         return {**base, "disposition": "blocked", "blockerCode": "MS-INVENTORY-EVIDENCE-UNREACHABLE",
                 "nextAction": "repair-scope-evidence-paths"}
-    return {**base, "disposition": "eligible", "nextAction": "run-bounded-semantic-analysis"}
+    return {**base, "disposition": "eligible", "nextAction": f"run-{analysis_mode}-analysis"}
 
 
 def repository_plan(scope_rows, assessment, repository_id, revision=None):
@@ -104,13 +113,14 @@ def repository_plan(scope_rows, assessment, repository_id, revision=None):
     blocked = sum(row["disposition"] == "blocked" for row in planned)
     advanced = sum(row["disposition"] == "already-advanced" for row in planned)
     return {
-        "schema": "agentlab.maintainer_skill_convergence_plan.v1",
+        "schema": "agentlab.maintainer_skill_convergence_plan.v2",
         "repositoryId": repository_id,
         "sourceRevision": revision,
         "sourceAssessmentSha256": None,
         "selectionPolicy": {
             "maxSourceFilesPerAgentRound": 80,
-            "requiresNonRootBoundary": True,
+            "analysisModes": ["configuration-asset", "repository-contract", "source-behavior"],
+            "rootScopeRequiresSpecialistMode": True,
             "requiresReachableBlobEvidence": True,
             "repositorySpecificBranches": False,
         },
@@ -181,6 +191,7 @@ def prepare(args):
     )
     require(source is not None, "repository is absent from the knowledge cut")
     scope = select_scope(scope_rows, assessment, repository_id)
+    analysis_mode, required_dimensions = analysis_profile(scope)
     packet = {
         "schema": "agentlab.maintainer_skill_agent_request.v1",
         "automaticPromotion": False,
@@ -191,7 +202,8 @@ def prepare(args):
         },
         "repository": source,
         "scope": scope,
-        "requiredDimensions": sorted(SEMANTIC_DIMENSIONS),
+        "analysisMode": analysis_mode,
+        "requiredDimensions": sorted(required_dimensions),
         "forbiddenDimensions": ["operation"],
         "output": "program-fact-proposal.json",
     }
@@ -252,9 +264,18 @@ def run_agent(args):
         implementation="pi",
     )
     scope = packet["scope"]
+    dimensions = packet["requiredDimensions"]
+    dimensions_text = ", ".join(dimensions)
+    mode_guidance = {
+        "source-behavior": "Trace the bounded source responsibility, public boundary, direct relations and observable behavior contract.",
+        "configuration-asset": "Inspect configuration, resources or build metadata and their declared consumers. Do not invent runtime behavior for a non-source scope.",
+        "repository-contract": "Inspect root manifests, maintainer guidance and declared module/build entrypoints only. Describe repository-wide composition without recursively reading every module.",
+    }
+    require(packet.get("analysisMode") in mode_guidance, "unsupported analysis mode")
     prompt = f"""You are a Maintainer Skill construction Agent, not an assessed Agent.
 Read flywheel-request.json and inspect the exact Git checkout under source/.
 Analyze only scope {scope['id']} at path boundary {scope['pathBoundary']}.
+Analysis mode is {packet['analysisMode']}. {mode_guidance[packet['analysisMode']]}
 Write exactly one JSON object to program-fact-proposal.json and do not modify source/ or flywheel-request.json.
 
 The object must have exactly these fields:
@@ -263,7 +284,7 @@ The object must have exactly these fields:
 - repositoryId and sourceRevision exactly from the request
 - scopeSkillIds: an array containing only the selected scope id
 - kind: analysis
-- dimensions: exactly responsibility, boundary, relations, behavior
+- dimensions: exactly {dimensions_text}
 - interpretation: a concise evidence-backed maintenance contract of 400-1200 Unicode characters
 - evidence: at least two objects with exactly the keys path and gitBlobOid, for example
   {{"path":"relative/file.ets","gitBlobOid":"<exact 40-hex blob>"}}; the key is path,
@@ -273,7 +294,7 @@ The object must have exactly these fields:
 Use git rev-parse HEAD:path to obtain every blob identity. Evidence paths may include direct cross-boundary dependencies when needed, but at least one must be inside the selected scope. Do not claim runtime execution, build success, compiler dataflow, device behavior, performance, an approved Oracle, or operation readiness. Do not copy secrets or generated files. Validate the JSON once, then finish.
 
 Use at most 24 shell tool calls. Start from the declared scope evidence and
-entrypoints, inspect only the direct files needed for the four dimensions, and
+entrypoints, inspect only the direct files needed for the required dimensions, and
 do not enumerate or read the whole repository. Once two or more exact blobs
 support a bounded contract, stop exploring. Reserve the final two tool calls to
 write program-fact-proposal.json and parse it once before finishing.
@@ -312,7 +333,11 @@ def validate_proposal(request, proposal, source_root):
     require(proposal["sourceRevision"] == request["repository"]["revision"], "revision differs")
     require(proposal["scopeSkillIds"] == [request["scope"]["id"]], "scope binding differs")
     require(proposal["kind"] == "analysis", "only analysis proposals are accepted")
-    require(set(proposal["dimensions"]) == SEMANTIC_DIMENSIONS and len(proposal["dimensions"]) == 4,
+    required_dimensions = set(request.get("requiredDimensions", []))
+    require(required_dimensions.issubset(SEMANTIC_DIMENSIONS) and len(required_dimensions) in (3, 4),
+            "request semantic dimensions are invalid")
+    require(set(proposal["dimensions"]) == required_dimensions
+            and len(proposal["dimensions"]) == len(required_dimensions),
             "semantic dimensions are incomplete or overclaimed")
     require(isinstance(proposal["interpretation"], str) and 80 <= len(proposal["interpretation"]) <= 1600,
             "interpretation length is invalid")
@@ -349,7 +374,7 @@ def validate_proposal(request, proposal, source_root):
         "repositoryId": proposal["repositoryId"],
         "sourceRevision": proposal["sourceRevision"],
         "scopeSkillIds": proposal["scopeSkillIds"],
-        "dimensions": sorted(SEMANTIC_DIMENSIONS),
+        "dimensions": sorted(required_dimensions),
         "interpretation": proposal["interpretation"],
         "limitations": limitations,
         "evidence": clean_evidence,
