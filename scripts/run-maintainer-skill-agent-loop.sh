@@ -133,7 +133,7 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
       --output "$next_facts" --receipt "$receipt"
     candidate_facts=$next_facts
     receipt_args+=(--receipt "$receipt")
-    lifecycle_args+=("${agent_outputs[$scope_index]}/evidence/maintainer-skill-author-lifecycle.json")
+    lifecycle_args+=("${agent_outputs[$scope_index]}/evidence/maintainer-skill-author-attempt-lifecycle.json")
   done
   cp "$candidate_facts" "$iteration_root/candidate-program-facts.jsonl"
   jq -s '.' "$iteration_root"/receipts/scope-*.json \

@@ -187,6 +187,13 @@ two concrete limitations. More cited files are not stronger proof once the four
 required dimensions are grounded; they increase truncation risk and confuse
 scope understanding with exhaustive summarization. Apply the same hard text and
 cardinality limits in the validator rather than relying on prompt wording.
+When a completed semantic turn leaves only thinking, malformed JSON, or a
+proposal rejected by this validator, permit one format-only continuation in the
+same model session. It receives the exact validation error, may not inspect the
+repository or invoke tools, and must emit the compact JSON directly. Aggregate
+both turns' duration and tool counts into one attempt receipt. Do not rerun
+source discovery for a serialization defect; if finalization still fails, the
+normal single isolated scope retry remains the only semantic retry authority.
 
 The durable round receipt binds source and method revisions, parent assessment,
 scope-selection policy, eligible and blocked counts, Agent execution counts,

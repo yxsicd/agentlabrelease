@@ -132,6 +132,13 @@ exact Blob citations and two concrete limitations. The goal is a sufficient
 four-dimension proof packet, not an exhaustive file summary. Enforce those
 cardinalities and text limits before persistence so verbose output cannot turn
 otherwise valid semantic analysis into truncated transport.
+If the semantic turn completes but its final response is empty, malformed or
+fails only proposal validation, allow one in-session format finalization. It
+must reuse the completed session, forbid repository tools and file inspection,
+and return the same compact proposal contract. Count its wall time and any tool
+calls in the attempt lifecycle. This is output finalization, not a second
+semantic analysis; a failure still falls through to the one isolated scope
+retry and cannot reach aggregate assessment.
 
 Use [program analysis](../agentlab-program-analysis/SKILL.md) for structure and [seed extraction](../agentlab-seed-extraction/SKILL.md) to turn grounded knowledge into tasks. Archive searches and generic TableGit analysis requests, exact input cuts and complete results in `program_facts`.
 
