@@ -85,6 +85,12 @@ hard-gate decision, TableGit transaction, SkillsGit materialization and the
 downstream shadow outcome. TableGit updates remain atomic; a failed Agent,
 budget breach, invalid schema or failed hard gate writes no knowledge rows.
 
+Maturity dimensions compose regardless of arrival order. If operation evidence
+is already bound to an L1 scope, closing its semantic dimensions may make the
+same independent assessment report it as L3. Accept at most one such L3 delta
+for the selected scope; do not reject it as automatic promotion. Case
+publication and benchmark promotion remain separate downstream decisions.
+
 Do not treat a higher number of prose fields as progress. A round advances only
 when a missing evidence dimension closes, a stale or contradictory binding is
 removed, or a scope advances maturity with revision-bound evidence.

@@ -420,14 +420,18 @@ def compare(args):
             "proposal changed program binding for more than one scope or removed a binding")
     require(after["totals"]["semanticReadyCount"] == before["totals"]["semanticReadyCount"] + 1,
             "proposal did not advance exactly one scope to L2")
-    require(after["totals"]["maintenanceReadyCount"] == before["totals"]["maintenanceReadyCount"],
-            "semantic proposal must not grant operation readiness")
+    maintenance_ready_delta = (
+        after["totals"]["maintenanceReadyCount"] - before["totals"]["maintenanceReadyCount"]
+    )
+    require(maintenance_ready_delta in (0, 1),
+            "proposal changed operation readiness for more than the selected scope or removed readiness")
     write(args.output, {
         "schema": "agentlab.maintainer_skill_agent_flywheel_result.v1",
         "automaticPromotion": False,
         "decision": "review-proposed-knowledge",
         "before": before["totals"],
         "after": after["totals"],
+        "maintenanceReadyDelta": maintenance_ready_delta,
         "assessmentSha256": digest(args.after),
     })
 

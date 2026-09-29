@@ -220,7 +220,7 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         self.assertIn("Reserve the final two tool calls", source)
         self.assertIn("tool_call_limit=24", source)
 
-    def test_compare_requires_one_l2_gain_without_l3_promotion(self):
+    def test_compare_accepts_one_l2_gain_without_prebound_operation_evidence(self):
         before = {
             "totals": {"scopeSkillCount": 5, "structuralReadyCount": 5, "programBoundCount": 1,
                        "semanticReadyCount": 1, "maintenanceReadyCount": 0}
@@ -239,6 +239,26 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
             output = root / "result.json"
             MODULE.compare(type("Args", (), {"before": before_path, "after": after_path, "output": output}))
             self.assertEqual(json.loads(output.read_text())["decision"], "review-proposed-knowledge")
+
+    def test_compare_accepts_l3_when_semantic_closure_meets_prebound_operation_evidence(self):
+        before = {
+            "totals": {"scopeSkillCount": 5, "structuralReadyCount": 5, "programBoundCount": 1,
+                       "semanticReadyCount": 1, "maintenanceReadyCount": 0}
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            before_path = root / "before.json"
+            before_path.write_text(json.dumps(before) + "\n")
+            after = {
+                "parentAssessmentSha256": MODULE.digest(before_path),
+                "totals": {"scopeSkillCount": 5, "structuralReadyCount": 5, "programBoundCount": 2,
+                           "semanticReadyCount": 2, "maintenanceReadyCount": 1},
+            }
+            after_path = root / "after.json"
+            after_path.write_text(json.dumps(after) + "\n")
+            output = root / "result.json"
+            MODULE.compare(type("Args", (), {"before": before_path, "after": after_path, "output": output}))
+            self.assertEqual(json.loads(output.read_text())["maintenanceReadyDelta"], 1)
 
     def test_compare_accepts_semantic_gain_for_an_already_bound_scope(self):
         before = {
