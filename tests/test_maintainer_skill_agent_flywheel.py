@@ -24,6 +24,33 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "JSON object"):
             MODULE.parse_agent_proposal("[]")
 
+    def test_agent_attempt_lifecycle_aggregates_one_format_finalization(self):
+        with tempfile.TemporaryDirectory() as directory:
+            evidence = Path(directory)
+            initial = {
+                "startedAt": "2026-01-01T00:00:00Z", "endedAt": "2026-01-01T00:01:00Z",
+                "durationMs": 60000, "maxToolCalls": 24, "startedToolCalls": 8,
+                "completedToolCalls": 8, "toolCallBudgetExceeded": False,
+                "timedOut": False, "exitCode": 0, "finalAssistantTextPresent": False,
+            }
+            finalizer = {
+                "startedAt": "2026-01-01T00:01:00Z", "endedAt": "2026-01-01T00:01:05Z",
+                "durationMs": 5000, "maxToolCalls": 1, "startedToolCalls": 0,
+                "completedToolCalls": 0, "toolCallBudgetExceeded": False,
+                "timedOut": False, "exitCode": 0, "finalAssistantTextPresent": True,
+            }
+            (evidence / "maintainer-skill-author-lifecycle.json").write_text(
+                json.dumps(initial))
+            (evidence / "maintainer-skill-author-finalize-lifecycle.json").write_text(
+                json.dumps(finalizer))
+            result = MODULE.write_agent_attempt_lifecycle(
+                evidence, True, "Agent final response did not contain a proposal")
+            self.assertEqual(result["durationMs"], 65000)
+            self.assertEqual(result["maxToolCalls"], 25)
+            self.assertEqual(result["startedToolCalls"], 8)
+            self.assertTrue(result["finalizationUsed"])
+            self.assertTrue(result["finalAssistantTextPresent"])
+
     def test_workflow_defaults_to_the_code_workshop_focus_repository(self):
         workflow = (ROOT / ".github/workflows/maintainer-skill-agent-flywheel.yml").read_text()
         repository_input = workflow.split("      repository:\n", 1)[1].split(
@@ -455,6 +482,9 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         self.assertIn("tool_call_limit=24", source)
         self.assertIn("wall_time_limit_seconds=360", source)
         self.assertIn("transport_retry_limit=0", source)
+        self.assertIn("maintainer-skill-author-finalize", source)
+        self.assertIn("Do not inspect files or call tools", source)
+        self.assertIn("require_completed_tool_call=False", source)
         self.assertIn("gateway_timeout_seconds=60", source)
         participant = (ROOT / "examples/real-code-agent/participant.py").read_text()
         self.assertIn("upstream_deadline = time.monotonic()", participant)

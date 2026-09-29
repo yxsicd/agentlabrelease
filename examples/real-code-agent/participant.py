@@ -269,6 +269,7 @@ class Participant:
     def turn(self, label, project, marker=None, repair=False, prompt=None, container=None, requirement=None,
              reasoning_effort=None, step_limit=None, wall_time_limit_seconds=None,
              tool_call_limit=None, transport_retry_limit=1,
+             require_completed_tool_call=True,
              _transport_retry=0):
         if not isinstance(transport_retry_limit, int) or not 0 <= transport_retry_limit <= 1:
             raise ValueError('transport_retry_limit must be zero or one')
@@ -318,7 +319,8 @@ class Participant:
         lifecycle = {'label': label, 'startedAt': datetime.now(timezone.utc).isoformat(),
                      'captureAuthority': 'operator', 'exitCode': None, 'timedOut': False,
                      'providerReasoningEffort': self.active_reasoning_effort,
-                     'transportRetryLimit': transport_retry_limit}
+                     'transportRetryLimit': transport_retry_limit,
+                     'requireCompletedToolCall': require_completed_tool_call}
         if tool_call_limit is not None:
             if not isinstance(tool_call_limit, int) or tool_call_limit < 1:
                 raise ValueError('tool_call_limit must be a positive integer')
@@ -336,6 +338,8 @@ class Participant:
                 lifecycle['supervisorTimeoutSeconds'] = run_options['timeout_seconds']
             if tool_call_limit is not None:
                 run_options['tool_call_limit'] = tool_call_limit
+            if not require_completed_tool_call:
+                run_options['require_completed_tool_call'] = False
             turn_result = self._run_turn(command, project, env, label, lifecycle, **run_options)
         except RuntimeError as error:
             turn_error = error
@@ -384,6 +388,7 @@ class Participant:
                                  wall_time_limit_seconds=wall_time_limit_seconds,
                                  tool_call_limit=tool_call_limit,
                                  transport_retry_limit=transport_retry_limit,
+                                 require_completed_tool_call=require_completed_tool_call,
                                  _transport_retry=1)
             raise turn_error
         source = project / 'entry/src/main/ets/pages/Index.ets'
@@ -393,7 +398,7 @@ class Participant:
         return turn_result
 
     def _run_turn(self, command, project, env, label, lifecycle, timeout_seconds=420,
-                  tool_call_limit=None):
+                  tool_call_limit=None, require_completed_tool_call=True):
         def terminate(process):
             import signal
             os.killpg(process.pid, signal.SIGTERM)
@@ -454,7 +459,8 @@ class Participant:
                   if e.get('type') == 'message_end' and e.get('message', {}).get('stopReason') == 'error']
         if errors:
             raise RuntimeError(f'{label}: ' + '; '.join(errors))
-        if not any(e.get('type') == 'tool_execution_end' for e in events):
+        if (require_completed_tool_call
+                and not any(e.get('type') == 'tool_execution_end' for e in events)):
             raise RuntimeError(f'{label}: no completed native tool call')
         final_messages = [
             e['message'] for e in events

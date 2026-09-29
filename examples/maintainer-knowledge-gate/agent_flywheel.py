@@ -54,6 +54,35 @@ def parse_agent_proposal(content):
     return proposal
 
 
+def write_agent_attempt_lifecycle(evidence, finalization_used, initial_error=None):
+    labels = ["maintainer-skill-author"]
+    if finalization_used:
+        labels.append("maintainer-skill-author-finalize")
+    attempts = [load(evidence / f"{label}-lifecycle.json") for label in labels]
+    final = attempts[-1]
+    value = {
+        "schema": "agentlab.maintainer_skill_agent_attempt_lifecycle.v1",
+        "label": "maintainer-skill-author-attempt",
+        "startedAt": attempts[0]["startedAt"],
+        "endedAt": final["endedAt"],
+        "durationMs": sum(row.get("durationMs", 0) for row in attempts),
+        "maxToolCalls": sum(row.get("maxToolCalls", 0) for row in attempts),
+        "startedToolCalls": sum(row.get("startedToolCalls", 0) for row in attempts),
+        "completedToolCalls": sum(row.get("completedToolCalls", 0) for row in attempts),
+        "toolCallBudgetExceeded": any(
+            row.get("toolCallBudgetExceeded", False) for row in attempts
+        ),
+        "timedOut": any(row.get("timedOut", False) for row in attempts),
+        "exitCode": final.get("exitCode"),
+        "finalAssistantTextPresent": final.get("finalAssistantTextPresent", False),
+        "finalizationUsed": finalization_used,
+        "initialProposalError": initial_error,
+        "attemptLabels": labels,
+    }
+    write(evidence / "maintainer-skill-author-attempt-lifecycle.json", value)
+    return value
+
+
 def path_is_within(path, boundary):
     boundary = boundary.rstrip("/")
     if boundary == ".":
@@ -611,6 +640,9 @@ do not enumerate or read the whole repository. Once two or more exact blobs
 support a bounded contract, stop exploring and return the exact JSON response.
 """
     result = None
+    proposal = None
+    finalization_used = False
+    initial_error = None
     try:
         result = participant.turn(
             "maintainer-skill-author",
@@ -622,6 +654,31 @@ support a bounded contract, stop exploring and return the exact JSON response.
             # failed scope, so do not hide another full attempt inside the turn.
             transport_retry_limit=0,
         )
+        try:
+            proposal = parse_agent_proposal(result.get("content") if result else None)
+            validate_proposal(packet, proposal, source_root)
+        except ValueError as error:
+            initial_error = str(error)
+            finalization_used = True
+            result = participant.turn(
+                "maintainer-skill-author-finalize",
+                workspace,
+                prompt=f"""Your repository analysis is complete, but the operator rejected the
+final proposal because: {initial_error}
+Do not inspect files or call tools. Using only the analysis already present in
+this session, return exactly one JSON object and nothing else. It must follow
+agentlab.maintainer_skill_fact_proposal.v1, bind only scope {scope['id']} at
+revision {repository['revision']}, contain dimensions {dimensions_text}, an
+interpretation of 500-1200 characters, exactly three path/gitBlobOid evidence
+objects, and exactly two limitations of 40-300 characters. No Markdown fence.
+""",
+                wall_time_limit_seconds=90,
+                tool_call_limit=1,
+                transport_retry_limit=0,
+                require_completed_tool_call=False,
+            )
+            proposal = parse_agent_proposal(result.get("content") if result else None)
+            validate_proposal(packet, proposal, source_root)
     finally:
         participant.close()
         # The Agent needs a read-only view while it runs, but the evidence
@@ -632,10 +689,7 @@ support a bounded contract, stop exploring and return the exact JSON response.
     )
     (args.output / "source-status.txt").write_text(status)
     require(not status, "Agent modified the pinned source checkout")
-    proposal = parse_agent_proposal(result.get("content") if result else None)
-    # A malformed or unverifiable response is an attempt failure, allowing the
-    # batch operator to retry only this scope before any aggregate mutation.
-    validate_proposal(packet, proposal, source_root)
+    write_agent_attempt_lifecycle(evidence, finalization_used, initial_error)
     write(args.output / "program-fact-proposal.json", proposal)
 
 
