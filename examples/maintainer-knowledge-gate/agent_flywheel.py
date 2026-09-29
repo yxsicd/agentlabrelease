@@ -513,6 +513,9 @@ def run_agent(args):
         args.model,
         route=args.provider_route,
         implementation="pi",
+        # Bound the operator proxy tail after a participant is terminated.
+        # Other assessed lanes retain the conservative 180-second default.
+        gateway_timeout_seconds=60,
     )
     scope = packet["scope"]
     source_inventory = scope_source_inventory(scope, source_root)

@@ -60,6 +60,12 @@ batch before assessment or TableGit mutation. Record the retried scope indices
 in the loop receipt so long-tail recovery remains measurable. Bound each
 attempt separately and disable nested participant retries in this lane; the
 operator-level isolated retry is the sole retry authority.
+Bound the lane-specific operator-proxy request below the general harness
+default as well as bounding the Agent process. Otherwise a terminated Agent can
+remain hidden behind the proxy's upstream-response retention window and defeat
+the visible attempt budget. A socket timeout alone is insufficient because
+partial streaming bytes reset its idle clock; retain an absolute monotonic
+deadline for the whole upstream exchange.
 
 Cancellation must remain evidence-bounded. Immediately before artifact
 retention, delete only the known transient `workspace/source` symlinks under
