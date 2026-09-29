@@ -72,6 +72,23 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
             self.assertFalse((root_checkout / "wanted").exists())
             self.assertFalse((root_checkout / "sibling").exists())
 
+            request = root / "scope-request.json"
+            request.write_text(json.dumps({"scope": {
+                "pathBoundary": "wanted",
+                "ownershipSelectors": [
+                    {"type": "prefix", "path": "wanted"},
+                    {"type": "files", "paths": ["root-contract.json"]},
+                ],
+            }}))
+            composite_checkout = root / "composite-checkout"
+            subprocess.run([
+                str(ROOT / "scripts/checkout-maintainer-scope.sh"),
+                bare.as_uri(), revision, "wanted", str(composite_checkout), str(request),
+            ], check=True)
+            self.assertTrue((composite_checkout / "wanted/main.ets").is_file())
+            self.assertTrue((composite_checkout / "root-contract.json").is_file())
+            self.assertFalse((composite_checkout / "sibling").exists())
+
     def test_selection_prefers_small_tested_unbound_scope(self):
         scopes = [
             {"id": "large", "repositoryId": "r", "pathBoundary": "large", "sourceFileCount": 40, "testFileCount": 8, "evidence": [{"path": "large/main.rs"}]},
@@ -84,6 +101,18 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
             {"skillId": "small-tested", "maturity": "L1-structural-ready"},
         ]}
         self.assertEqual(MODULE.select_scope(scopes, assessment, "r")["id"], "small-tested")
+
+    def test_composite_scope_ownership_excludes_unselected_siblings(self):
+        scope = {
+            "pathBoundary": "src",
+            "ownershipSelectors": [
+                {"type": "prefix", "path": "src/one"},
+                {"type": "files", "paths": ["src/root.ts"]},
+            ],
+        }
+        self.assertTrue(MODULE.scope_owns_path(scope, "src/one/main.ts"))
+        self.assertTrue(MODULE.scope_owns_path(scope, "src/root.ts"))
+        self.assertFalse(MODULE.scope_owns_path(scope, "src/two/main.ts"))
 
     def test_selection_skips_scope_whose_inventory_evidence_is_outside_boundary(self):
         scopes = [
@@ -176,8 +205,8 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
                 "unassignedLeafCount": 0, "multiplyAssignedLeafCount": 0,
                 "semanticGroupCount": 2,
             },
-            "blockerCode": "MS-COMPOSITE-SELECTOR-NOT-SUPPORTED",
-            "decision": "blocked-catalog-application",
+            "blockerCode": "MS-ATOMIC-CATALOG-APPLY-REQUIRED",
+            "decision": "ready-for-atomic-catalog-apply",
         }
         result = MODULE.classify_scope(
             scope,
@@ -187,7 +216,7 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
             review={"path": "decomposition-reviews/large.json", "sha256": "d" * 64,
                     "review": review},
         )
-        self.assertEqual(result["blockerCode"], "MS-COMPOSITE-SELECTOR-NOT-SUPPORTED")
+        self.assertEqual(result["blockerCode"], "MS-ATOMIC-CATALOG-APPLY-REQUIRED")
         self.assertEqual(result["decompositionReview"]["semanticGroupCount"], 2)
 
     def test_root_scope_uses_repository_contract_mode_and_root_evidence(self):

@@ -59,7 +59,8 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
   # beside run_root so the workflow's run/ upload cannot retain whole repos.
   source_dir="$source_root/$repository_id-${source[1]}"
   scripts/checkout-maintainer-scope.sh \
-    "${source[0]}" "${source[1]}" "$scope_path" "$source_dir"
+    "${source[0]}" "${source[1]}" "$scope_path" "$source_dir" \
+    "$iteration_root/flywheel-request.json"
 
   python3 examples/maintainer-knowledge-gate/agent_flywheel.py run-agent \
     --request "$iteration_root/flywheel-request.json" \

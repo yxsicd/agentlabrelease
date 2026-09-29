@@ -109,6 +109,17 @@ def path_is_within(path: str, boundary: str) -> bool:
     return path == boundary or path.startswith(boundary + "/")
 
 
+def scope_owns_path(scope: dict, path: str) -> bool:
+    selectors = scope.get("ownershipSelectors")
+    if not selectors:
+        return path_is_within(path, scope["pathBoundary"])
+    return any(
+        (selector.get("type") == "prefix" and path_is_within(path, selector.get("path", "")))
+        or (selector.get("type") == "files" and path in selector.get("paths", []))
+        for selector in selectors
+    )
+
+
 def previous_oracle_count(rounds: list[dict]) -> int:
     return len({
         candidate_id
@@ -319,7 +330,7 @@ def validate_proposal(request: dict, proposal: dict) -> dict:
     evidence_paths = {row["path"] for row in fact.get("evidence", []) if isinstance(row, dict)}
     require(set(editable + context).issubset(evidence_paths), "shadow paths are not fact evidence")
     require(not set(editable).intersection(context), "editable and context paths overlap")
-    require(all(path_is_within(path, scope["pathBoundary"]) for path in editable),
+    require(all(scope_owns_path(scope, path) for path in editable),
             "editable path escapes the selected scope")
     oracle = proposal["oracleHypothesis"]
     require(isinstance(oracle, dict) and set(oracle) == {

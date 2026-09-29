@@ -45,6 +45,19 @@ def slug(value: str):
     return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
 
 
+def ownership_labels(scope: dict) -> list[str]:
+    selectors = scope.get("ownershipSelectors")
+    if not selectors:
+        return [scope["pathBoundary"]]
+    result = []
+    for selector in selectors:
+        if selector["type"] == "prefix":
+            result.append(selector["path"] + "/**")
+        else:
+            result.extend(selector["paths"])
+    return result
+
+
 def latest_assessment(knowledge: Path):
     candidates = [load(path) for path in (knowledge / "assessments").glob("*.json")]
     if not candidates:
@@ -80,7 +93,7 @@ def semantic_scope_material(knowledge: Path, repository: str):
 
 
 def frontmatter_description(scope: dict):
-    path = scope["pathBoundary"]
+    path = ", ".join(ownership_labels(scope)[:3])
     return (
         f"Use when maintaining {path} in the pinned target repository. "
         "Do not use as proof of build, device, or runtime behavior."
@@ -115,7 +128,12 @@ def render_scope_skill(repository: str, scope: dict, state: dict, facts: list[di
     evidence = sorted(set(evidence))
     analysis_evidence = sorted(set(analysis_evidence))
     limitations = list(dict.fromkeys(limitations))
-    skill_id = f"{repository}-{slug(scope['pathBoundary'])}-maintenance"
+    skill_id = (
+        f"{slug(scope['id'].removeprefix('skill-scope-'))}-maintenance"
+        if scope.get("ownershipSelectors")
+        else f"{repository}-{slug(scope['pathBoundary'])}-maintenance"
+    )
+    labels = ownership_labels(scope)
     lines = [
         "---",
         f"name: {skill_id}",
@@ -130,7 +148,8 @@ def render_scope_skill(repository: str, scope: dict, state: dict, facts: list[di
         "",
         "## Trigger",
         "",
-        f"Use this skill for changes under `{scope['pathBoundary']}` or to its declared consumers and dependencies.",
+        "Use this skill for changes owned by any selector below or to their declared consumers and dependencies.",
+        *(f"- `{label}`" for label in labels),
         "",
         "## Evidence-backed contract",
         "",
@@ -149,6 +168,7 @@ def render_scope_skill(repository: str, scope: dict, state: dict, facts: list[di
         f"- Repository id: `{repository}`",
         f"- Revision: `{scope['sourceRevision']}`",
         f"- Boundary: `{scope['pathBoundary']}`",
+        *(["- Ownership selectors:", *(f"  - `{label}`" for label in labels)] if scope.get("ownershipSelectors") else []),
         f"- Maturity: `{state['maturity']}`",
         "",
         "## Build and test entrypoints",
@@ -195,9 +215,10 @@ def write_registry(output: Path, standard_revision: str, generated: list[tuple[s
         skill_file = output / ".agents/skills" / skill_id / "SKILL.md"
         entries.append((skill_id, "stable", "maintainer", "repo", read_description(skill_file), [skill_id]))
     for skill_id, scope in generated:
+        triggers = [*ownership_labels(scope), skill_id]
         entries.append((
             skill_id, "experimental", "maintainer", scope["pathBoundary"],
-            scope["responsibility"], [scope["pathBoundary"], skill_id],
+            scope["responsibility"], triggers,
         ))
     lines = [
         "schema: mst/v1",

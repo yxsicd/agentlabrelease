@@ -93,10 +93,12 @@ leaf to exactly one proposed responsibility, retains the exact selectors and
 file-set digest, cites multiple owned source Blobs, and rechecks the per-Agent
 source budget after grouping. A review may reduce mechanical directory leaves
 into fewer coherent responsibilities. If a reviewed responsibility owns
-multiple disjoint prefixes or exact-file sets, catalog application remains
-blocked until composite selectors are supported end to end by fact binding,
-Agent checkout projection, candidate path validation, materialization and
-coverage verification. A shared ancestor is not an acceptable approximation
+multiple disjoint prefixes or exact-file sets, those selectors are the
+ownership authority for fact binding, Agent checkout projection, candidate
+path validation, materialization and coverage verification. `pathBoundary` is
+only a human navigation anchor. Generate a complete replacement catalog with
+an exclusive atomic write before requesting the separate authoritative
+TableGit transaction. A shared ancestor is not an acceptable approximation
 because it would silently reclaim sibling files.
 
 Agent budgets are execution contracts, not prompt advice. The operator must

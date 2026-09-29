@@ -40,6 +40,30 @@ class SkillsGitMaterializationTest(unittest.TestCase):
         self.assertIn('"tableGitAuthority": cut["tableGitAuthority"]', source)
         self.assertIn('"tableGitRevision": cut["tableGitAuthority"]["revision"]', source)
 
+    def test_composite_scope_materializes_every_selector_without_shared_ancestor_claim(self):
+        scope = {
+            "id": "skill-scope-arbitrary-composite",
+            "pathBoundary": "src",
+            "ownershipSelectors": [
+                {"type": "prefix", "path": "src/one"},
+                {"type": "files", "paths": ["src/root.ts"]},
+            ],
+            "responsibility": "Maintain one composite responsibility.",
+            "sourceRevision": "a" * 40,
+            "buildEntrypoints": [], "testEntrypoints": [],
+        }
+        fact = {
+            "id": "fact", "interpretation": "The exact selectors form one bounded contract.",
+            "evidence": [{"path": "src/one/main.ts", "gitBlobOid": "b" * 40}],
+            "limitations": ["Runtime behavior is unproved.", "Operation evidence is absent."],
+        }
+        skill_id, body = MODULE.render_scope_skill(
+            "arbitrary", scope, {"maturity": "L2-semantic-ready", "gaps": []}, [fact],
+        )
+        self.assertEqual(skill_id, "arbitrary-composite-maintenance")
+        self.assertIn("`src/one/**`", body)
+        self.assertIn("`src/root.ts`", body)
+
     def test_materializer_reserves_stdout_for_its_json_result(self):
         source = (ROOT / "scripts/materialize-skillsgit-maintainer-tree.py").read_text()
         self.assertEqual(source.count("stdout=sys.stderr, stderr=sys.stderr"), 2)

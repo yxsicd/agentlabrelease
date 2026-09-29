@@ -50,6 +50,11 @@
     "strategy": { "type": "string", "minLength": 1 },
     "kind": { "type": "string", "minLength": 1 },
     "pathBoundary": { "type": "string", "minLength": 1 },
+    "ownershipSelectors": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/selector" }
+    },
     "responsibility": { "type": "string", "minLength": 1 },
     "documentedTitle": { "type": ["string", "null"] },
     "documentedPurpose": { "type": ["string", "null"] },
@@ -79,10 +84,21 @@
         }
       }
     },
-    "coverage": { "const": "all tracked files under this leaf boundary are assigned exactly once" },
+    "coverage": {
+      "enum": [
+        "all tracked files under this leaf boundary are assigned exactly once",
+        "all tracked files selected by this scope are assigned exactly once"
+      ]
+    },
     "automaticPromotion": { "const": false }
   },
   "$defs": {
+    "selector": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["type", "path"], "properties": { "type": { "const": "prefix" }, "path": { "type": "string", "minLength": 1 } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "paths"], "properties": { "type": { "const": "files" }, "paths": { "$ref": "#/$defs/strings" } } }
+      ]
+    },
     "strings": {
       "type": "array",
       "uniqueItems": true,

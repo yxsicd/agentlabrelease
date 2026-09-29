@@ -4,11 +4,12 @@
   "title": "AgentLab Maintainer Scope Decomposition Review",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "automaticCatalogApply", "repositoryId", "sourceRevision", "sourceTreeOid", "decompositionPlanSha256", "parentScopeSkillId", "groups", "verification", "blockerCode", "nextAction", "decision"],
+  "required": ["schema", "automaticCatalogApply", "repositoryId", "sourceExtensions", "sourceRevision", "sourceTreeOid", "decompositionPlanSha256", "parentScopeSkillId", "groups", "verification", "blockerCode", "nextAction", "decision"],
   "properties": {
     "schema": { "const": "agentlab.maintainer_scope_decomposition_review.v1" },
     "automaticCatalogApply": { "const": false },
     "repositoryId": { "type": "string", "minLength": 1 },
+    "sourceExtensions": { "$ref": "#/$defs/strings" },
     "sourceRevision": { "$ref": "#/$defs/sha1" },
     "sourceTreeOid": { "$ref": "#/$defs/sha1" },
     "decompositionPlanSha256": { "$ref": "#/$defs/sha256" },
@@ -48,9 +49,9 @@
         "multiplyAssignedLeafCount": { "const": 0 }
       }
     },
-    "blockerCode": { "const": "MS-COMPOSITE-SELECTOR-NOT-SUPPORTED" },
-    "nextAction": { "const": "implement-composite-ownership-selectors-and-atomic-catalog-apply" },
-    "decision": { "const": "blocked-catalog-application" }
+    "blockerCode": { "const": "MS-ATOMIC-CATALOG-APPLY-REQUIRED" },
+    "nextAction": { "const": "apply-reviewed-scope-replacement-through-authoritative-transaction" },
+    "decision": { "const": "ready-for-atomic-catalog-apply" }
   },
   "$defs": {
     "sha1": { "type": "string", "pattern": "^[0-9a-f]{40}$" },

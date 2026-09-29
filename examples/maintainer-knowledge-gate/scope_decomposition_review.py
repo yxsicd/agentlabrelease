@@ -124,6 +124,7 @@ def build_review(plan_path: Path, spec_path: Path, repository: Path) -> dict:
         "schema": "agentlab.maintainer_scope_decomposition_review.v1",
         "automaticCatalogApply": False,
         "repositoryId": plan["repositoryId"],
+        "sourceExtensions": plan["sourceExtensions"],
         "sourceRevision": head,
         "sourceTreeOid": tree,
         "decompositionPlanSha256": digest(plan_path),
@@ -138,9 +139,9 @@ def build_review(plan_path: Path, spec_path: Path, repository: Path) -> dict:
             "unassignedLeafCount": 0,
             "multiplyAssignedLeafCount": 0,
         },
-        "blockerCode": "MS-COMPOSITE-SELECTOR-NOT-SUPPORTED",
-        "nextAction": "implement-composite-ownership-selectors-and-atomic-catalog-apply",
-        "decision": "blocked-catalog-application",
+        "blockerCode": "MS-ATOMIC-CATALOG-APPLY-REQUIRED",
+        "nextAction": "apply-reviewed-scope-replacement-through-authoritative-transaction",
+        "decision": "ready-for-atomic-catalog-apply",
     }
 
 
