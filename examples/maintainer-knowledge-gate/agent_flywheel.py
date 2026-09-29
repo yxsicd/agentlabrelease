@@ -619,7 +619,7 @@ The object must have exactly these fields:
 - scopeSkillIds: an array containing only the selected scope id
 - kind: analysis
 - dimensions: exactly {dimensions_text}
-- interpretation: a concise evidence-backed maintenance contract of 500-1200 Unicode characters
+- interpretation: a concise evidence-backed maintenance contract of 700-1500 Unicode characters
 - evidence: exactly three objects with exactly the keys path and gitBlobOid, for example
   {{"path":"relative/file.ets","gitBlobOid":"<exact 40-hex blob>"}}; the key is path,
   never repositoryPath, and no other evidence fields are allowed
@@ -672,7 +672,7 @@ analysis. Using only the analysis already present in this session, return
 exactly one JSON object and nothing else. It must follow
 agentlab.maintainer_skill_fact_proposal.v1, bind only scope {scope['id']} at
 revision {repository['revision']}, contain dimensions {dimensions_text}, an
-interpretation of 650-900 characters, exactly three path/gitBlobOid evidence
+interpretation of 700-1400 characters, exactly three path/gitBlobOid evidence
 objects, and exactly two limitations of 40-300 characters. No Markdown fence.
 """,
                 reasoning_effort="none",
@@ -714,7 +714,7 @@ def validate_proposal(request, proposal, source_root):
     require(set(proposal["dimensions"]) == required_dimensions
             and len(proposal["dimensions"]) == len(required_dimensions),
             "semantic dimensions are incomplete or overclaimed")
-    require(isinstance(proposal["interpretation"], str) and 80 <= len(proposal["interpretation"]) <= 1200,
+    require(isinstance(proposal["interpretation"], str) and 80 <= len(proposal["interpretation"]) <= 1800,
             "interpretation length is invalid")
     limitations = proposal["limitations"]
     require(isinstance(limitations, list) and len(limitations) == 2

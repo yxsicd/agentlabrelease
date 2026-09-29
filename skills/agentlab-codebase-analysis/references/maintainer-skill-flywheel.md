@@ -195,6 +195,10 @@ each allowed size range, and must emit the compact JSON directly. Aggregate both
 turns' duration and tool counts into one attempt receipt. Do not rerun source
 discovery for a serialization defect; if finalization still fails, the normal
 single isolated scope retry remains the only semantic retry authority.
+Set prose limits from the serialized envelope rather than intuition. With
+exactly three Blob citations and two bounded limitations, an interpretation up
+to 1800 Unicode characters still keeps the proposal in a small transport-safe
+envelope and avoids wasting a semantic retry on harmless compression variance.
 
 The semantic turn is a bounded evidence sample, not a file census. Start from
 the scope's precomputed evidence anchors, add only direct siblings or
