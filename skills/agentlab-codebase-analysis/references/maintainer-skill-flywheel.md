@@ -43,6 +43,33 @@ repository.
    digest, and repeat.
 5. Enter case generation only when the independent assessment says `ready`.
 
+## Repository transfer contract
+
+Treat one deeply analyzed repository as a calibration specimen, never as a
+branch in the method. Promote an observation into this method layer only after
+expressing it as a repository-independent invariant and covering it with a
+fixture whose repository and paths are arbitrary. Keep framework commands,
+module names, directory conventions and target-specific thresholds in the
+instance layer.
+
+Before each run, emit a convergence plan that accounts for every declared
+scope as `eligible`, `already-advanced`, or `blocked`. A blocked scope must
+carry a machine-readable reason and next action. In particular, large scopes
+need decomposition, zero-source configuration/asset scopes need a specialist
+analysis mode, root scopes need repository-contract analysis, and unreachable
+evidence needs inventory repair. Zero eligible scopes is not convergence.
+
+Agent budgets are execution contracts, not prompt advice. The operator must
+enforce wall time and tool-call limits, retain partial native events on breach,
+and bind actual counts and the limit into the round receipt. A proposal created
+outside those limits cannot advance the knowledge cut.
+
+The durable round receipt binds source and method revisions, parent assessment,
+scope-selection policy, eligible and blocked counts, Agent execution counts,
+hard-gate decision, TableGit transaction, SkillsGit materialization and the
+downstream shadow outcome. TableGit updates remain atomic; a failed Agent,
+budget breach, invalid schema or failed hard gate writes no knowledge rows.
+
 Do not treat a higher number of prose fields as progress. A round advances only
 when a missing evidence dimension closes, a stale or contradictory binding is
 removed, or a scope advances maturity with revision-bound evidence.

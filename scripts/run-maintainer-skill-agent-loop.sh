@@ -51,6 +51,9 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
   scope_id=$(jq -r '.scope.id' "$iteration_root/flywheel-request.json")
   scope_path=$(jq -r '.scope.pathBoundary' "$iteration_root/flywheel-request.json")
   [[ ${#source[@]} -eq 2 && "${source[1]}" =~ ^[0-9a-f]{40}$ ]]
+  python3 examples/maintainer-knowledge-gate/agent_flywheel.py plan \
+    --knowledge "$working_knowledge" --assessment "$assessment" \
+    --repository "$repository_id" --output "$iteration_root/convergence-plan.json"
 
   # Source checkouts are execution inputs, not evidence artifacts. Keep them
   # beside run_root so the workflow's run/ upload cannot retain whole repos.
@@ -97,9 +100,19 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
   jq -n --argjson iteration "$iteration" --arg repository "$repository_id" \
     --arg scope "$scope_id" --slurpfile result "$iteration_root/result.json" \
     --slurpfile receipt "$iteration_root/proposal-receipt.json" \
+    --slurpfile lifecycle "$iteration_root/agent/evidence/maintainer-skill-author-lifecycle.json" \
+    --slurpfile plan "$iteration_root/convergence-plan.json" \
     '{iteration:$iteration,repository:$repository,scope:$scope,
       acceptedFactId:$receipt[0].acceptedFactId,before:$result[0].before,
-      after:$result[0].after,automaticPromotion:false}' \
+      after:$result[0].after,
+      selectionPlan:{decision:$plan[0].decision,summary:$plan[0].summary,
+        sourceAssessmentSha256:$plan[0].sourceAssessmentSha256},
+      execution:{maxToolCalls:$lifecycle[0].maxToolCalls,
+        startedToolCalls:$lifecycle[0].startedToolCalls,
+        completedToolCalls:$lifecycle[0].completedToolCalls,
+        toolCallBudgetExceeded:$lifecycle[0].toolCallBudgetExceeded,
+        durationMs:$lifecycle[0].durationMs,timedOut:$lifecycle[0].timedOut},
+      automaticPromotion:false}' \
     > "$iteration_root/loop-result.json"
   if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
     jq '{iteration,repository,scope,acceptedFactId,before,after,automaticPromotion}' \

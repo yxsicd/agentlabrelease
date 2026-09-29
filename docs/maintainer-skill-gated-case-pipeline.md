@@ -127,6 +127,7 @@ The authoritative schemas are
 [`maintainer-knowledge-cut.schema.json`](../schemas/maintainer-knowledge-cut.schema.json),
 [`maintainer-scope-skill.schema.json`](../schemas/maintainer-scope-skill.schema.json),
 [`maintainer-skill-refresh-round.schema.json`](../schemas/maintainer-skill-refresh-round.schema.json),
+[`maintainer-skill-convergence-plan.schema.json`](../schemas/maintainer-skill-convergence-plan.schema.json),
 [`case-generation-round.schema.json`](../schemas/case-generation-round.schema.json), and
 [`candidate-knowledge-binding.schema.json`](../schemas/candidate-knowledge-binding.schema.json).
 
