@@ -237,6 +237,17 @@ class MaintainerSkillTableGitTest(unittest.TestCase):
             self.assertIn(f"semantic program fact {fact_id}", row["changes"]["updated"])
             self.assertEqual(row["decision"], "review-proposed-knowledge-refresh")
 
+    def test_local_producer_has_host_without_fabricated_action_url(self):
+        producer = MODULE.producer_record(
+            "hwlinux-local", "owner/repo", "local-42", host="hwlinux",
+        )
+        self.assertEqual(producer, {
+            "kind": "hwlinux-local",
+            "repository": "owner/repo",
+            "runId": "local-42",
+            "host": "hwlinux",
+        })
+
 
 if __name__ == "__main__":
     unittest.main()

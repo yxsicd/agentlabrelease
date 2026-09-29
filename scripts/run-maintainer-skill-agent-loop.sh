@@ -21,6 +21,13 @@ loop_root="$run_root/loop"
 source_root="$run_root/../sources"
 mkdir -p "$loop_root" "$source_root"
 working_knowledge=$knowledge
+producer_args=(--producer-kind "${AGENTLAB_PRODUCER_KIND:-github-action}")
+if [[ -n ${AGENTLAB_PRODUCER_URL:-} ]]; then
+  producer_args+=(--producer-url "$AGENTLAB_PRODUCER_URL")
+fi
+if [[ -n ${AGENTLAB_PRODUCER_HOST:-} ]]; then
+  producer_args+=(--producer-host "$AGENTLAB_PRODUCER_HOST")
+fi
 
 for ((iteration = 1; iteration <= iterations; iteration++)); do
   iteration_root="$loop_root/iteration-$iteration"
@@ -78,6 +85,7 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
     --result "$iteration_root/result.json" \
     --receipt "$iteration_root/proposal-receipt.json" \
     --run-id "$GITHUB_RUN_ID" --github-repository "$GITHUB_REPOSITORY" \
+    "${producer_args[@]}" \
     --output "$next_knowledge"
   working_knowledge=$next_knowledge
 

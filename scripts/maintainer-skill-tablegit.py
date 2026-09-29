@@ -116,9 +116,28 @@ def table_definition(table: str) -> dict:
     }
 
 
+def producer_record(kind: str, repository: str, run_id: str,
+                    run_url: str | None = None,
+                    host: str | None = None) -> dict:
+    producer = {
+        "kind": kind,
+        "repository": repository,
+        "runId": run_id,
+    }
+    if run_url:
+        producer["runUrl"] = run_url
+    elif kind == "github-action":
+        producer["runUrl"] = f"https://github.com/{repository}/actions/runs/{run_id}"
+    if host:
+        producer["host"] = host
+    return producer
+
+
 def build_refresh_round(base: Path, candidate_facts: Path, assessment_path: Path,
                         result: dict, receipt: dict, run_id: str,
-                        repository: str) -> dict:
+                        repository: str, producer_kind: str = "github-action",
+                        producer_url: str | None = None,
+                        producer_host: str | None = None) -> dict:
     assessment = load(assessment_path)
     rounds_path = base / TABLE_FILES["maintainer_skill_refresh_rounds"]
     rounds = load_jsonl(rounds_path)
@@ -167,12 +186,9 @@ def build_refresh_round(base: Path, candidate_facts: Path, assessment_path: Path
             "scopeSkillsSha256": jsonl_sha256(load_jsonl(base / TABLE_FILES["maintainer_scope_skills"])),
             "programFactsSha256": jsonl_sha256(load_jsonl(candidate_facts)),
         },
-        "producer": {
-            "kind": "github-action",
-            "repository": repository,
-            "runId": run_id,
-            "runUrl": f"https://github.com/{repository}/actions/runs/{run_id}",
-        },
+        "producer": producer_record(
+            producer_kind, repository, run_id, producer_url, producer_host,
+        ),
         "assessment": {
             "path": f"assessments/round-{assessment['roundIndex']}-agent-{run_id}.json",
             "sha256": file_sha256(assessment_path),
@@ -202,6 +218,9 @@ def command_stage(args) -> None:
             table_rows.append(build_refresh_round(
                 args.base, args.candidate_program_facts, args.candidate_assessment,
                 load(args.result), load(args.receipt), args.run_id, args.github_repository,
+                getattr(args, "producer_kind", "github-action"),
+                getattr(args, "producer_url", None),
+                getattr(args, "producer_host", None),
             ))
         else:
             table_rows = load_jsonl(source)
@@ -398,7 +417,10 @@ def create_missing_tables(client: Inspector, repo: str, revision: str) -> str:
 
 
 def apply_transaction(client: Inspector, repo: str, revision: str, tables: list[dict],
-                      run_id: str, github_repository: str, label: str) -> str:
+                      run_id: str, github_repository: str, label: str,
+                      producer_kind: str = "github-action",
+                      producer_url: str | None = None,
+                      producer_host: str | None = None) -> str:
     chunk_digest = hashlib.sha256(canonical(tables)).hexdigest()
     transaction_id = stable_uuid(run_id, label, chunk_digest, "tablegit-v1")
     for attempt in range(5):
@@ -408,7 +430,10 @@ def apply_transaction(client: Inspector, repo: str, revision: str, tables: list[
                 "expected_revision": revision,
                 "transaction_id": transaction_id,
                 "idempotency_key": transaction_id,
-                "actor": {"kind": "github-action", "repository": github_repository, "runId": run_id},
+                "actor": producer_record(
+                    producer_kind, github_repository, run_id,
+                    producer_url, producer_host,
+                ),
                 "tables": tables,
                 "topic_id": "main",
                 "message": f"Persist Maintainer Skill flywheel {run_id} {label}",
@@ -424,7 +449,10 @@ def apply_transaction(client: Inspector, repo: str, revision: str, tables: list[
 
 
 def persist_snapshot(client: Inspector, repo: str, revision: str, base: Path,
-                     snapshot: Path, run_id: str, github_repository: str) -> str:
+                     snapshot: Path, run_id: str, github_repository: str,
+                     producer_kind: str = "github-action",
+                     producer_url: str | None = None,
+                     producer_host: str | None = None) -> str:
     remote_by_table = {}
     remote_versions_by_table = {}
     base_by_table = {}
@@ -470,6 +498,7 @@ def persist_snapshot(client: Inspector, repo: str, revision: str, base: Path,
             revision = apply_transaction(
                 client, repo, revision, [{"path": table, "operations": operations}],
                 run_id, github_repository, f"{table} base part {index}",
+                producer_kind, producer_url, producer_host,
             )
             for operation in operations:
                 remote_by_table[table][operation["key"]] = operation["row"]["payload"]
@@ -502,12 +531,16 @@ def persist_snapshot(client: Inspector, repo: str, revision: str, base: Path,
     if delta_tables:
         revision = apply_transaction(
             client, repo, revision, delta_tables, run_id, github_repository, "candidate delta",
+            producer_kind, producer_url, producer_host,
         )
     return revision
 
 
 def update_cut(export: Path, base: Path, revision: str, repo: str,
-               run_id: str, github_repository: str) -> None:
+               run_id: str, github_repository: str,
+               producer_kind: str = "github-action",
+               producer_url: str | None = None,
+               producer_host: str | None = None) -> None:
     cut = load(base / "maintainer-knowledge-cut.json")
     for table, filename in TABLE_FILES.items():
         entry_name = {
@@ -521,12 +554,10 @@ def update_cut(export: Path, base: Path, revision: str, repo: str,
     cut["tableGitAuthority"] = {
         "repo": repo,
         "revision": revision,
-        "exportedBy": {
-            "kind": "github-action",
-            "repository": github_repository,
-            "runId": run_id,
-            "runUrl": f"https://github.com/{github_repository}/actions/runs/{run_id}",
-        },
+        "exportedBy": producer_record(
+            producer_kind, github_repository, run_id,
+            producer_url, producer_host,
+        ),
     }
     cut["automaticPromotion"] = False
     write_json(export / "maintainer-knowledge-cut.json", cut)
@@ -538,6 +569,7 @@ def command_sync(args) -> None:
     revision = create_missing_tables(client, args.repo, revision)
     revision = persist_snapshot(
         client, args.repo, revision, args.base, args.snapshot, args.run_id, args.github_repository,
+        args.producer_kind, args.producer_url, args.producer_host,
     )
     exact_rows = {}
     for table in TABLE_FILES:
@@ -571,7 +603,11 @@ def command_sync(args) -> None:
         assessment_target = assessments / assessment.name
         if assessment.resolve() != assessment_target.resolve():
             shutil.copy2(assessment, assessment_target)
-    update_cut(args.export, args.base, revision, args.repo, args.run_id, args.github_repository)
+    update_cut(
+        args.export, args.base, revision, args.repo, args.run_id,
+        args.github_repository, args.producer_kind, args.producer_url,
+        args.producer_host,
+    )
 
     mirror = {"requested": False, "verified": False}
     if args.replicate:
@@ -617,6 +653,9 @@ def main() -> None:
     stage.add_argument("--receipt", type=Path, required=True)
     stage.add_argument("--run-id", required=True)
     stage.add_argument("--github-repository", required=True)
+    stage.add_argument("--producer-kind", default="github-action")
+    stage.add_argument("--producer-url")
+    stage.add_argument("--producer-host")
     stage.add_argument("--output", type=Path, required=True)
     stage.set_defaults(handler=command_stage)
 
@@ -640,6 +679,9 @@ def main() -> None:
     )
     sync.add_argument("--run-id", required=True)
     sync.add_argument("--github-repository", required=True)
+    sync.add_argument("--producer-kind", default="github-action")
+    sync.add_argument("--producer-url")
+    sync.add_argument("--producer-host")
     sync.set_defaults(handler=command_sync)
     args = parser.parse_args()
     if args.command == "sync" and (not args.endpoint or not args.person_id):
