@@ -47,10 +47,18 @@ fn method_at_revision(root: &Path, revision: &str, path: &str) -> Vec<u8> {
     assert_eq!(revision.len(), 40, "method revision must be exact");
     assert!(revision.bytes().all(|byte| byte.is_ascii_hexdigit()));
     let output = Command::new("git")
-        .args(["-C", root.to_str().unwrap(), "show", &format!("{revision}:{path}")])
+        .args([
+            "-C",
+            root.to_str().unwrap(),
+            "show",
+            &format!("{revision}:{path}"),
+        ])
         .output()
         .unwrap();
-    assert!(output.status.success(), "method revision must resolve its Skill bytes");
+    assert!(
+        output.status.success(),
+        "method revision must resolve its Skill bytes"
+    );
     output.stdout
 }
 
