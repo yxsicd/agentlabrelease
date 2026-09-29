@@ -134,7 +134,7 @@ def producer_record(kind: str, repository: str, run_id: str,
 
 
 def build_refresh_round(base: Path, candidate_facts: Path, assessment_path: Path,
-                        result: dict, receipt: dict, run_id: str,
+                        result: dict, receipt: dict | list[dict], run_id: str,
                         repository: str, producer_kind: str = "github-action",
                         producer_url: str | None = None,
                         producer_host: str | None = None) -> dict:
@@ -143,6 +143,8 @@ def build_refresh_round(base: Path, candidate_facts: Path, assessment_path: Path
     rounds = load_jsonl(rounds_path)
     previous = max(rounds, key=lambda row: row["roundIndex"])
     after = result["after"]
+    receipts = receipt if isinstance(receipt, list) else [receipt]
+    accepted = [row["acceptedFactId"] for row in receipts]
     return {
         "id": f"first-four-round-{previous['roundIndex'] + 1}-agent-{run_id}",
         "schema": "agentlab.maintainer_skill_refresh_round.v1",
@@ -152,15 +154,15 @@ def build_refresh_round(base: Path, candidate_facts: Path, assessment_path: Path
         "ownershipPlane": "target-operations",
         "decision": result["decision"],
         "changes": {
-            "added": (
-                [f"semantic program fact {receipt['acceptedFactId']}"]
-                if receipt.get("changeKind", "added") == "added" else []
-            ),
+            "added": [
+                f"semantic program fact {row['acceptedFactId']}"
+                for row in receipts if row.get("changeKind", "added") == "added"
+            ],
             "updated": [
-                *(
-                    [f"semantic program fact {receipt['acceptedFactId']}"]
-                    if receipt.get("changeKind") == "updated" else []
-                ),
+                *[
+                    f"semantic program fact {row['acceptedFactId']}"
+                    for row in receipts if row.get("changeKind") == "updated"
+                ],
                 f"{after['programBoundCount']} scopes program-bound",
                 f"{after['semanticReadyCount']} scopes semantic-ready",
             ],
@@ -176,7 +178,7 @@ def build_refresh_round(base: Path, candidate_facts: Path, assessment_path: Path
             "trackedFileCount": previous["coverage"]["trackedFileCount"],
         },
         "focus": [
-            "consume one exact hard-gate gap with source-blob evidence",
+            f"consume {len(accepted)} exact hard-gate gaps with independently validated source-blob evidence",
             "persist accepted knowledge in long-lived TableGit",
             "export a reviewable Release snapshot from one committed revision",
         ],
@@ -208,6 +210,19 @@ def command_stage(args) -> None:
     if base_assessments.is_dir():
         for source in base_assessments.glob("*.json"):
             shutil.copy2(source, assessments / source.name)
+    receipt_paths = args.receipt if isinstance(args.receipt, list) else [args.receipt]
+    receipts = [load(path) for path in receipt_paths]
+    scope_ids = [row.get("scopeSkillId") for row in receipts]
+    if len(receipts) > 1 and any(not scope_id for scope_id in scope_ids):
+        raise ValueError("proposal batch receipts must identify every scope")
+    identified_scope_ids = [scope_id for scope_id in scope_ids if scope_id]
+    if len(set(identified_scope_ids)) != len(identified_scope_ids):
+        raise ValueError("proposal batch contains duplicate scope receipts")
+    assessment_hashes = [row.get("sourceAssessmentSha256") for row in receipts]
+    if len(receipts) > 1 and any(not digest for digest in assessment_hashes):
+        raise ValueError("proposal batch receipts must identify the source assessment")
+    if any(digest != assessment_hashes[0] for digest in assessment_hashes):
+        raise ValueError("proposal batch receipts do not share one source assessment")
     for table, filename in TABLE_FILES.items():
         source = args.base / filename
         target = args.output / filename
@@ -217,7 +232,7 @@ def command_stage(args) -> None:
             table_rows = load_jsonl(source)
             table_rows.append(build_refresh_round(
                 args.base, args.candidate_program_facts, args.candidate_assessment,
-                load(args.result), load(args.receipt), args.run_id, args.github_repository,
+                load(args.result), receipts, args.run_id, args.github_repository,
                 getattr(args, "producer_kind", "github-action"),
                 getattr(args, "producer_url", None),
                 getattr(args, "producer_host", None),
@@ -233,6 +248,8 @@ def command_stage(args) -> None:
         "schema": "agentlab.maintainer_skill_tablegit_stage.v1",
         "automaticPromotion": False,
         "runId": args.run_id,
+        "proposalReceiptCount": len(receipts),
+        "acceptedFactIds": sorted(row["acceptedFactId"] for row in receipts),
         "assessment": str(assessment_path),
         "tables": {
             table: {"path": filename, "sha256": file_sha256(args.output / filename)}
@@ -882,7 +899,7 @@ def main() -> None:
     stage.add_argument("--candidate-program-facts", type=Path, required=True)
     stage.add_argument("--candidate-assessment", type=Path, required=True)
     stage.add_argument("--result", type=Path, required=True)
-    stage.add_argument("--receipt", type=Path, required=True)
+    stage.add_argument("--receipt", type=Path, action="append", required=True)
     stage.add_argument("--run-id", required=True)
     stage.add_argument("--github-repository", required=True)
     stage.add_argument("--producer-kind", default="github-action")

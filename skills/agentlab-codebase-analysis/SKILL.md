@@ -31,6 +31,14 @@ assessment may advance a scope from structural to semantic or maintenance
 readiness. Follow [the Maintainer Skill evidence flywheel](references/maintainer-skill-flywheel.md)
 and retain every parent assessment digest.
 
+Parallelize bounded scopes, not evidence claims. A batch may share one exact
+repository checkout and run up to four scope-isolated construction Agents in
+parallel. Each scope keeps its own request, tool budget, proposal, Blob checks
+and receipt; the batch advances only when every selected scope passes, one
+independent assessment proves the exact aggregate delta, and the resulting
+facts can enter the same atomic TableGit transaction. A partial batch writes no
+authority rows.
+
 Use a deep target repository to discover failure modes, then normalize each
 verified lesson into the repository-independent method before reusing it. Never
 add target repository names, paths, framework commands or special-case scoring

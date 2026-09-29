@@ -20,6 +20,8 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
             "      iterations:\n", 1
         )[0]
         self.assertIn("        default: code-workshop\n", repository_input)
+        self.assertIn("AGENTLAB_SCOPE_BATCH_SIZE: ${{ inputs.scope_batch_size }}", workflow)
+        self.assertIn("        default: '3'\n", workflow.split("      scope_batch_size:\n", 1)[1])
 
     def test_workflow_exposes_reviewed_scope_rewrite_without_agent_runtime(self):
         workflow = (ROOT / ".github/workflows/maintainer-skill-agent-flywheel.yml").read_text()
@@ -96,6 +98,25 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
             self.assertTrue((composite_checkout / "root-contract.json").is_file())
             self.assertFalse((composite_checkout / "sibling").exists())
 
+            batch_request = root / "batch-request.json"
+            batch_request.write_text(json.dumps({
+                "schema": "agentlab.maintainer_skill_agent_batch_request.v1",
+                "requests": [
+                    {"scope": {"pathBoundary": "wanted"}},
+                    {"scope": {"pathBoundary": "root", "ownershipSelectors": [
+                        {"type": "files", "paths": ["root-contract.json"]},
+                    ]}},
+                ],
+            }))
+            batch_checkout = root / "batch-checkout"
+            subprocess.run([
+                str(ROOT / "scripts/checkout-maintainer-scope.sh"),
+                bare.as_uri(), revision, "wanted", str(batch_checkout), str(batch_request),
+            ], check=True)
+            self.assertTrue((batch_checkout / "wanted/main.ets").is_file())
+            self.assertTrue((batch_checkout / "root-contract.json").is_file())
+            self.assertFalse((batch_checkout / "sibling").exists())
+
     def test_selection_prefers_small_tested_unbound_scope(self):
         scopes = [
             {"id": "large", "repositoryId": "r", "pathBoundary": "large", "sourceFileCount": 40, "testFileCount": 8, "evidence": [{"path": "large/main.rs"}]},
@@ -108,6 +129,30 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
             {"skillId": "small-tested", "maturity": "L1-structural-ready"},
         ]}
         self.assertEqual(MODULE.select_scope(scopes, assessment, "r")["id"], "small-tested")
+
+    def test_batch_selection_is_bounded_deterministic_and_keeps_root_isolated(self):
+        scopes = [
+            {"id": "tested-b", "repositoryId": "r", "pathBoundary": "b", "sourceFileCount": 4,
+             "testFileCount": 1, "evidence": [{"path": "b/main.rs"}]},
+            {"id": "tested-a", "repositoryId": "r", "pathBoundary": "a", "sourceFileCount": 3,
+             "testFileCount": 1, "evidence": [{"path": "a/main.rs"}]},
+            {"id": "plain", "repositoryId": "r", "pathBoundary": "plain", "sourceFileCount": 1,
+             "testFileCount": 0, "evidence": [{"path": "plain/main.rs"}]},
+        ]
+        assessment = {"skills": [
+            {"skillId": row["id"], "maturity": "L1-structural-ready"} for row in scopes
+        ]}
+        self.assertEqual(
+            [row["id"] for row in MODULE.select_scope_batch(scopes, assessment, "r", 2)],
+            ["tested-a", "tested-b"],
+        )
+        root = {"id": "root", "repositoryId": "r", "pathBoundary": ".", "sourceFileCount": 1,
+                "testFileCount": 2, "evidence": [{"path": "build.json"}]}
+        assessment["skills"].append({"skillId": "root", "maturity": "L1-structural-ready"})
+        self.assertEqual(
+            [row["id"] for row in MODULE.select_scope_batch(scopes + [root], assessment, "r", 4)],
+            ["root"],
+        )
 
     def test_composite_scope_ownership_excludes_unselected_siblings(self):
         scope = {
@@ -303,6 +348,9 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         self.assertIn(".summary.eligible", script)
         self.assertIn("AGENTLAB_MAX_ITERATIONS=64", script)
         self.assertIn("max_iterations=${AGENTLAB_MAX_ITERATIONS:-3}", loop)
+        self.assertIn("AGENTLAB_SCOPE_BATCH_SIZE", script)
+        self.assertIn("prepare-batch", loop)
+        self.assertIn("agent_failed", loop)
 
     def test_agent_prompt_names_the_exact_evidence_object_schema(self):
         source = (ROOT / "examples/maintainer-knowledge-gate/agent_flywheel.py").read_text()
@@ -376,6 +424,39 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
             output = root / "result.json"
             MODULE.compare(type("Args", (), {"before": before_path, "after": after_path, "output": output}))
             self.assertEqual(json.loads(output.read_text())["decision"], "review-proposed-knowledge")
+
+    def test_compare_accepts_only_an_exact_selected_batch_gain(self):
+        before = {
+            "totals": {"scopeSkillCount": 8, "structuralReadyCount": 8, "programBoundCount": 1,
+                       "semanticReadyCount": 1, "maintenanceReadyCount": 0}
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            before_path = root / "before.json"
+            before_path.write_text(json.dumps(before) + "\n")
+            after = {
+                "parentAssessmentSha256": MODULE.digest(before_path),
+                "totals": {"scopeSkillCount": 8, "structuralReadyCount": 8,
+                           "programBoundCount": 4, "semanticReadyCount": 4,
+                           "maintenanceReadyCount": 1},
+            }
+            after_path = root / "after.json"
+            after_path.write_text(json.dumps(after) + "\n")
+            output = root / "result.json"
+            MODULE.compare(type("Args", (), {
+                "before": before_path, "after": after_path, "output": output,
+                "expected_scopes": 3,
+            }))
+            result = json.loads(output.read_text())
+            self.assertEqual(result["batchScopeCount"], 3)
+            self.assertEqual(result["semanticReadyDelta"], 3)
+            after["totals"]["semanticReadyCount"] = 3
+            after_path.write_text(json.dumps(after) + "\n")
+            with self.assertRaisesRegex(ValueError, "every selected scope"):
+                MODULE.compare(type("Args", (), {
+                    "before": before_path, "after": after_path, "output": output,
+                    "expected_scopes": 3,
+                }))
 
 
 if __name__ == "__main__":

@@ -43,6 +43,15 @@ repository.
    digest, and repeat.
 5. Enter case generation only when the independent assessment says `ready`.
 
+Throughput comes from bounded parallelism. Deterministically select at most
+four eligible scopes from one repository and source revision, materialize the
+union of their exact ownership selectors once, and give each scope an isolated
+Agent request and proposal. Validate every proposal separately, then run one
+aggregate assessment whose semantic-ready delta must equal the selected scope
+count. One failure rejects the entire batch before TableGit mutation. Do not
+combine repository-contract root analysis with child scopes, and do not let a
+shared checkout imply shared evidence ownership.
+
 ## Repository transfer contract
 
 Treat one deeply analyzed repository as a calibration specimen, never as a

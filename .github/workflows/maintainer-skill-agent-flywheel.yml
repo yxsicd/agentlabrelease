@@ -15,11 +15,17 @@ on:
         options: [auto, code-workshop, guide-snippets, harmony-iap-client, hms-cordova-iap]
         default: code-workshop
       iterations:
-        description: Bounded hard-gated iterations committed atomically to TableGit
+        description: Bounded hard-gated batches committed atomically to TableGit
         required: true
         type: choice
         options: ['1', '2', '3']
         default: '1'
+      scope_batch_size:
+        description: Independently validated scopes analyzed in parallel per batch
+        required: true
+        type: choice
+        options: ['1', '2', '3', '4']
+        default: '3'
       candidate_id:
         description: Existing shadow candidate for focused-refresh mode
         required: false
@@ -59,6 +65,7 @@ jobs:
       KNOWLEDGE: examples/maintainer-knowledge-gate/first-four
       REPOSITORY_SELECTOR: ${{ inputs.repository }}
       ITERATIONS: ${{ inputs.iterations }}
+      AGENTLAB_SCOPE_BATCH_SIZE: ${{ inputs.scope_batch_size }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_MODEL: ${{ inputs.model }}
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}

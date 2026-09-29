@@ -103,22 +103,26 @@ exact committed revision and opens a Release pull request containing the sorted
 JSONL export. `tableGitAuthority.revision` in the cut binds that export. The pull
 request remains a review boundary and `automaticPromotion` stays false.
 
-The workflow can run one to three iterations as one bounded loop. Each
-iteration consumes the assessment produced by the immediately preceding
-iteration, adds exactly one previously unbound semantic fact, and must increase
-both `programBoundCount` and `semanticReadyCount` by exactly one without
-increasing `maintenanceReadyCount`. All iterations are staged locally first;
-TableGit receives the successful batch only after every requested iteration has
-passed source-Blob verification and the Rust maturity gate. Therefore a later
-failed iteration cannot leave a partially published loop. The final exact
-TableGit revision is exported in one review PR.
+The workflow can run one to three batches as one bounded loop. A batch selects
+up to four deterministic scopes from one repository revision, materializes the
+union of their exact ownership selectors once, and runs one isolated Agent per
+scope in parallel. Every proposal still has its own request, tool budget,
+source-Blob verification and receipt. One aggregate Rust assessment must
+increase `semanticReadyCount` by exactly the selected scope count. All batches
+are staged locally first; TableGit receives the successful loop only after
+every selected scope and requested batch passes. Therefore one failed Agent or
+proposal cannot leave a partial authority write. The final exact TableGit
+revision is exported in one review PR. `scope_batch_size=1` preserves the
+original serial behavior; the GitHub default is three and the hard maximum is
+four.
 
 The local hwlinux entrypoint may instead use `iterations=converge`. It computes
-the current number of reachable L1 scopes for one repository, stages all of
-them locally through the same per-scope Agent and Rust gates, commits the whole
-candidate cut to TableGit only after every iteration succeeds, then emits a
-SkillsGit-native materialization and one downstream shadow-case attempt. The
-GitHub workflow retains its one-to-three iteration limit.
+the current number of reachable L1 scopes for one repository, converts that
+count into the required number of bounded batches, stages all scopes locally
+through the same isolated Agent and Rust gates, commits the whole candidate cut
+to TableGit only after every batch succeeds, then emits a SkillsGit-native
+materialization and one downstream shadow-case attempt. The GitHub workflow
+retains its one-to-three batch limit.
 
 The two remaining oversized CodeWorkshop scopes now have revision-bound
 candidate partitions under [`decomposition-plans/`](decomposition-plans/).
@@ -145,9 +149,10 @@ coverage. This prevents a large repository from monopolizing the loop and
 prevents impossible generated scopes from consuming an Agent turn. Explicit
 repository selection remains available for diagnosis. A loop stops without a
 TableGit write on an invalid proposal, duplicate fact id, source revision or
-Blob mismatch, zero/multiple-scope gain, attempted L3 promotion, or exhaustion
-of reachable L1 scopes. The hard maximum of three iterations limits model cost
-and the size of one atomic authority transaction.
+Blob mismatch, an aggregate gain different from the selected batch, attempted
+L3 promotion, or exhaustion of reachable L1 scopes. The hard maximum of three
+batches and four scopes per batch limits model cost and the size of one atomic
+authority transaction.
 
 After the exact TableGit revision has been exported, each successful bounded
 knowledge loop samples at most one newly semantic-ready scope into the third
@@ -212,7 +217,7 @@ contract, and keeps `automaticPromotion=false`.
 
 The Maintainer Skill Agent Action has two explicit transaction modes. `expand`
 retains the existing balanced selection of previously unbound L1 scopes and may
-run one to three atomic iterations. `focused-refresh` consumes one retained
+run one to three atomic batches. `focused-refresh` consumes one retained
 candidate plus its repository-owned construction plan, updates exactly one
 existing fact, retains all prior evidence, and requires every missing
 implementation/Oracle path by exact Git Blob. The independent maturity
