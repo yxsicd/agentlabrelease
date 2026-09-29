@@ -1,0 +1,243 @@
+{
+  "automaticCatalogApply": false,
+  "blockerCode": "MS-COMPOSITE-SELECTOR-NOT-SUPPORTED",
+  "decision": "blocked-catalog-application",
+  "decompositionPlanSha256": "fcd52a129dd257723a140a947e4b5aff0e49f03a59780e2659262646118d1ff9",
+  "groups": [
+    {
+      "evidence": [
+        {
+          "gitBlobOid": "dbab7a474c0529701f9a585bc171ddf6f931675f",
+          "path": "common/Index.ets"
+        },
+        {
+          "gitBlobOid": "64f0e8fb3ff50240a2968537f1552ff35c092863",
+          "path": "common/src/main/module.json5"
+        }
+      ],
+      "fileSetSha256": "a043a2615e2c7020c241f4cbd19b5de39202a6b443518c40414996d15afc5bbd",
+      "id": "skill-scope-code-workshop-common-module-contract",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-common-root-files-1",
+        "skill-scope-code-workshop-common-src-main-files-1",
+        "skill-scope-code-workshop-common-src-main-resources"
+      ],
+      "ownershipSelectors": [
+        {
+          "paths": [
+            "common/.gitignore",
+            "common/Index.ets",
+            "common/build-profile.json5",
+            "common/consumer-rules.txt",
+            "common/hvigorfile.ts",
+            "common/obfuscation-rules.txt",
+            "common/oh-package.json5"
+          ],
+          "type": "files"
+        },
+        {
+          "paths": [
+            "common/src/main/module.json5"
+          ],
+          "type": "files"
+        },
+        {
+          "path": "common/src/main/resources",
+          "type": "prefix"
+        }
+      ],
+      "rationale": "The package entrypoint and module manifest jointly expose the shared library while the resource tree supplies its localized and media assets; they change as one module-level contract rather than as runtime behavior units.",
+      "responsibility": "Maintain the common module packaging contract, exported entrypoint, resources, and module declaration.",
+      "reviewStatus": "semantic-responsibility-proposed",
+      "sourceFileCount": 2,
+      "trackedFileCount": 44
+    },
+    {
+      "evidence": [
+        {
+          "gitBlobOid": "df695e0e45bbabc6d207d9105a4fd1e16a232feb",
+          "path": "common/src/main/ets/component/WebSheet.ets"
+        },
+        {
+          "gitBlobOid": "c790c21f09d3cf38c9872378baf50dc174f159be",
+          "path": "common/src/main/ets/viewmodel/BaseVM.ets"
+        }
+      ],
+      "fileSetSha256": "78d88745e2cab4d3dbd99d0e694c4b170d629b688c44938008f98eaac9987a7b",
+      "id": "skill-scope-code-workshop-common-ui-state-contracts",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-common-src-main-ets-component",
+        "skill-scope-code-workshop-common-src-main-ets-constant",
+        "skill-scope-code-workshop-common-src-main-ets-model",
+        "skill-scope-code-workshop-common-src-main-ets-routermanager",
+        "skill-scope-code-workshop-common-src-main-ets-view",
+        "skill-scope-code-workshop-common-src-main-ets-viewmodel",
+        "skill-scope-code-workshop-common-src-main-ets-widget"
+      ],
+      "ownershipSelectors": [
+        {
+          "path": "common/src/main/ets/component",
+          "type": "prefix"
+        },
+        {
+          "path": "common/src/main/ets/constant",
+          "type": "prefix"
+        },
+        {
+          "path": "common/src/main/ets/model",
+          "type": "prefix"
+        },
+        {
+          "path": "common/src/main/ets/routermanager",
+          "type": "prefix"
+        },
+        {
+          "path": "common/src/main/ets/view",
+          "type": "prefix"
+        },
+        {
+          "path": "common/src/main/ets/viewmodel",
+          "type": "prefix"
+        },
+        {
+          "path": "common/src/main/ets/widget",
+          "type": "prefix"
+        }
+      ],
+      "rationale": "Component and view implementations import the shared constants, models, responsive utilities, and view-model state directly; their observable contract is presentation and navigation state rather than storage or platform service ownership.",
+      "responsibility": "Maintain shared UI components, loading views, navigation state, view models, domain models, constants, and widget actions.",
+      "reviewStatus": "semantic-responsibility-proposed",
+      "sourceFileCount": 39,
+      "trackedFileCount": 39
+    },
+    {
+      "evidence": [
+        {
+          "gitBlobOid": "f08fe1b07eeacf265e9ba446190e337a76a529fd",
+          "path": "common/src/main/ets/trackmanager/TrackManager.ets"
+        },
+        {
+          "gitBlobOid": "6efc1a886b442fcb8e2a99140e73c02e3e5b6ce2",
+          "path": "common/src/main/ets/storagemanager/rdb/TrackTable.ets"
+        }
+      ],
+      "fileSetSha256": "e9b8104b4ab74e672a4c2271d115d8a3ca32ee9155d51b2bab4995d01cd79458",
+      "id": "skill-scope-code-workshop-common-persistence-telemetry",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-common-src-main-ets-database",
+        "skill-scope-code-workshop-common-src-main-ets-storagemanager",
+        "skill-scope-code-workshop-common-src-main-ets-trackmanager"
+      ],
+      "ownershipSelectors": [
+        {
+          "path": "common/src/main/ets/database",
+          "type": "prefix"
+        },
+        {
+          "path": "common/src/main/ets/storagemanager",
+          "type": "prefix"
+        },
+        {
+          "path": "common/src/main/ets/trackmanager",
+          "type": "prefix"
+        }
+      ],
+      "rationale": "The telemetry manager persists track records through the storage RDB layer and shares model and logging contracts with database helpers; the direct imports make persistence and telemetry one bounded data-lifecycle responsibility.",
+      "responsibility": "Maintain relational and preference persistence together with the telemetry records and upload flow that consume stored state.",
+      "reviewStatus": "semantic-responsibility-proposed",
+      "sourceFileCount": 10,
+      "trackedFileCount": 10
+    },
+    {
+      "evidence": [
+        {
+          "gitBlobOid": "7030f39b70c0f00a616f9530b73def8625c755c3",
+          "path": "common/src/main/ets/accountservice/AccountService.ets"
+        },
+        {
+          "gitBlobOid": "d0de20ca7f7cbff89e8b1cd2efcf4ad61c4bc2e7",
+          "path": "common/src/main/ets/util/Logger.ets"
+        }
+      ],
+      "fileSetSha256": "e5b587da15896beadc484ffc83e5deccbb5e7fde165cad417ac8c46a46ab645d",
+      "id": "skill-scope-code-workshop-common-platform-services",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-common-src-main-ets-accountservice",
+        "skill-scope-code-workshop-common-src-main-ets-pushservice",
+        "skill-scope-code-workshop-common-src-main-ets-updateservice",
+        "skill-scope-code-workshop-common-src-main-ets-util"
+      ],
+      "ownershipSelectors": [
+        {
+          "path": "common/src/main/ets/accountservice",
+          "type": "prefix"
+        },
+        {
+          "path": "common/src/main/ets/pushservice",
+          "type": "prefix"
+        },
+        {
+          "path": "common/src/main/ets/updateservice",
+          "type": "prefix"
+        },
+        {
+          "path": "common/src/main/ets/util",
+          "type": "prefix"
+        }
+      ],
+      "rationale": "Account, push, and update services adapt Harmony platform kits and consistently depend on common utility facilities such as logging, context, validation, and device helpers; they form the module's platform-integration responsibility.",
+      "responsibility": "Maintain account, push, application-update, and reusable platform utility adapters exposed by the common module.",
+      "reviewStatus": "semantic-responsibility-proposed",
+      "sourceFileCount": 39,
+      "trackedFileCount": 39
+    },
+    {
+      "evidence": [
+        {
+          "gitBlobOid": "85c78f67579d6e31b5f5aeea463e216b9b141048",
+          "path": "common/src/ohosTest/ets/test/Ability.test.ets"
+        },
+        {
+          "gitBlobOid": "165fc1615ee8618b4cb6a622f144a9a707eee99f",
+          "path": "common/src/test/LocalUnit.test.ets"
+        }
+      ],
+      "fileSetSha256": "57d6d67ec75c2afd3b0e7ce781101bf006530533fc331e95e92da9c2b4bb06d2",
+      "id": "skill-scope-code-workshop-common-verification",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-common-src-ohostest",
+        "skill-scope-code-workshop-common-src-test"
+      ],
+      "ownershipSelectors": [
+        {
+          "path": "common/src/ohosTest",
+          "type": "prefix"
+        },
+        {
+          "path": "common/src/test",
+          "type": "prefix"
+        }
+      ],
+      "rationale": "The ohosTest and local test trees are the module-owned verification surface: they exercise common utilities and provide the Ability and List suite entrypoints without owning production behavior themselves.",
+      "responsibility": "Maintain the common module's ohosTest integration suite and local unit-test entrypoints as its executable verification surface.",
+      "reviewStatus": "semantic-responsibility-proposed",
+      "sourceFileCount": 36,
+      "trackedFileCount": 37
+    }
+  ],
+  "nextAction": "implement-composite-ownership-selectors-and-atomic-catalog-apply",
+  "parentScopeSkillId": "skill-scope-code-workshop-common",
+  "repositoryId": "code-workshop",
+  "schema": "agentlab.maintainer_scope_decomposition_review.v1",
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "sourceTreeOid": "ab156e6aa2fc9c64f400ee119e142fded5573271",
+  "verification": {
+    "assignedFileCount": 169,
+    "complete": true,
+    "multiplyAssignedLeafCount": 0,
+    "nonOverlapping": true,
+    "semanticGroupCount": 5,
+    "structuralLeafCount": 19,
+    "unassignedLeafCount": 0
+  }
+}

@@ -88,6 +88,17 @@ must rerun the same completeness and overlap checks. Until that review and
 atomic rewrite finish, the parent remains blocked and no generated leaf is a
 published Maintainer Skill.
 
+A semantic review is itself machine-verifiable. It assigns every structural
+leaf to exactly one proposed responsibility, retains the exact selectors and
+file-set digest, cites multiple owned source Blobs, and rechecks the per-Agent
+source budget after grouping. A review may reduce mechanical directory leaves
+into fewer coherent responsibilities. If a reviewed responsibility owns
+multiple disjoint prefixes or exact-file sets, catalog application remains
+blocked until composite selectors are supported end to end by fact binding,
+Agent checkout projection, candidate path validation, materialization and
+coverage verification. A shared ancestor is not an acceptable approximation
+because it would silently reclaim sibling files.
+
 Agent budgets are execution contracts, not prompt advice. The operator must
 enforce wall time and tool-call limits, retain partial native events on breach,
 and bind actual counts and the limit into the round receipt. A proposal created

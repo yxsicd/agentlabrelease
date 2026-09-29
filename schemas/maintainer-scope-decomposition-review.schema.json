@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.dev/schemas/maintainer-scope-decomposition-review.schema.json",
+  "title": "AgentLab Maintainer Scope Decomposition Review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "automaticCatalogApply", "repositoryId", "sourceRevision", "sourceTreeOid", "decompositionPlanSha256", "parentScopeSkillId", "groups", "verification", "blockerCode", "nextAction", "decision"],
+  "properties": {
+    "schema": { "const": "agentlab.maintainer_scope_decomposition_review.v1" },
+    "automaticCatalogApply": { "const": false },
+    "repositoryId": { "type": "string", "minLength": 1 },
+    "sourceRevision": { "$ref": "#/$defs/sha1" },
+    "sourceTreeOid": { "$ref": "#/$defs/sha1" },
+    "decompositionPlanSha256": { "$ref": "#/$defs/sha256" },
+    "parentScopeSkillId": { "type": "string", "minLength": 1 },
+    "groups": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "responsibility", "rationale", "memberLeafIds", "ownershipSelectors", "trackedFileCount", "sourceFileCount", "fileSetSha256", "evidence", "reviewStatus"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^skill-scope-[a-z0-9]+(?:-[a-z0-9]+)*$" },
+          "responsibility": { "type": "string", "minLength": 40 },
+          "rationale": { "type": "string", "minLength": 80 },
+          "memberLeafIds": { "$ref": "#/$defs/strings" },
+          "ownershipSelectors": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/selector" } },
+          "trackedFileCount": { "type": "integer", "minimum": 1 },
+          "sourceFileCount": { "type": "integer", "minimum": 0 },
+          "fileSetSha256": { "$ref": "#/$defs/sha256" },
+          "evidence": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/evidence" } },
+          "reviewStatus": { "const": "semantic-responsibility-proposed" }
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["complete", "nonOverlapping", "structuralLeafCount", "semanticGroupCount", "assignedFileCount", "unassignedLeafCount", "multiplyAssignedLeafCount"],
+      "properties": {
+        "complete": { "const": true },
+        "nonOverlapping": { "const": true },
+        "structuralLeafCount": { "type": "integer", "minimum": 2 },
+        "semanticGroupCount": { "type": "integer", "minimum": 2 },
+        "assignedFileCount": { "type": "integer", "minimum": 1 },
+        "unassignedLeafCount": { "const": 0 },
+        "multiplyAssignedLeafCount": { "const": 0 }
+      }
+    },
+    "blockerCode": { "const": "MS-COMPOSITE-SELECTOR-NOT-SUPPORTED" },
+    "nextAction": { "const": "implement-composite-ownership-selectors-and-atomic-catalog-apply" },
+    "decision": { "const": "blocked-catalog-application" }
+  },
+  "$defs": {
+    "sha1": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "strings": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "selector": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["type", "path"], "properties": { "type": { "const": "prefix" }, "path": { "type": "string", "minLength": 1 } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "paths"], "properties": { "type": { "const": "files" }, "paths": { "$ref": "#/$defs/strings" } } }
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "gitBlobOid"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "gitBlobOid": { "$ref": "#/$defs/sha1" }
+      }
+    }
+  }
+}

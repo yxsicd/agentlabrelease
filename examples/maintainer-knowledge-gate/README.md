@@ -59,3 +59,10 @@ emits a complete, non-overlapping bounded candidate partition conforming to
 [`maintainer-scope-decomposition-plan.schema.json`](../../schemas/maintainer-scope-decomposition-plan.schema.json).
 Generated leaves require a later evidence review and atomic catalog rewrite;
 the command never edits the live scope catalog or promotes a Skill.
+
+[`scope_decomposition_review.py`](scope_decomposition_review.py) validates the
+next semantic step. A review must consume every structural leaf exactly once,
+retain bounded source counts, and cite at least two exact Blobs per proposed
+responsibility. Reviews do not mutate the catalog. If a group combines disjoint
+selectors, the result explicitly blocks on composite-selector support rather
+than claiming that a shared ancestor is exact ownership.

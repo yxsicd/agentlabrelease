@@ -1,0 +1,65 @@
+{
+  "schema": "agentlab.maintainer_scope_decomposition_review_spec.v1",
+  "parentScopeSkillId": "skill-scope-code-workshop-common",
+  "groups": [
+    {
+      "id": "skill-scope-code-workshop-common-module-contract",
+      "responsibility": "Maintain the common module packaging contract, exported entrypoint, resources, and module declaration.",
+      "rationale": "The package entrypoint and module manifest jointly expose the shared library while the resource tree supplies its localized and media assets; they change as one module-level contract rather than as runtime behavior units.",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-common-root-files-1",
+        "skill-scope-code-workshop-common-src-main-files-1",
+        "skill-scope-code-workshop-common-src-main-resources"
+      ],
+      "evidencePaths": ["common/Index.ets", "common/src/main/module.json5"]
+    },
+    {
+      "id": "skill-scope-code-workshop-common-ui-state-contracts",
+      "responsibility": "Maintain shared UI components, loading views, navigation state, view models, domain models, constants, and widget actions.",
+      "rationale": "Component and view implementations import the shared constants, models, responsive utilities, and view-model state directly; their observable contract is presentation and navigation state rather than storage or platform service ownership.",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-common-src-main-ets-component",
+        "skill-scope-code-workshop-common-src-main-ets-constant",
+        "skill-scope-code-workshop-common-src-main-ets-model",
+        "skill-scope-code-workshop-common-src-main-ets-routermanager",
+        "skill-scope-code-workshop-common-src-main-ets-view",
+        "skill-scope-code-workshop-common-src-main-ets-viewmodel",
+        "skill-scope-code-workshop-common-src-main-ets-widget"
+      ],
+      "evidencePaths": ["common/src/main/ets/component/WebSheet.ets", "common/src/main/ets/viewmodel/BaseVM.ets"]
+    },
+    {
+      "id": "skill-scope-code-workshop-common-persistence-telemetry",
+      "responsibility": "Maintain relational and preference persistence together with the telemetry records and upload flow that consume stored state.",
+      "rationale": "The telemetry manager persists track records through the storage RDB layer and shares model and logging contracts with database helpers; the direct imports make persistence and telemetry one bounded data-lifecycle responsibility.",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-common-src-main-ets-database",
+        "skill-scope-code-workshop-common-src-main-ets-storagemanager",
+        "skill-scope-code-workshop-common-src-main-ets-trackmanager"
+      ],
+      "evidencePaths": ["common/src/main/ets/trackmanager/TrackManager.ets", "common/src/main/ets/storagemanager/rdb/TrackTable.ets"]
+    },
+    {
+      "id": "skill-scope-code-workshop-common-platform-services",
+      "responsibility": "Maintain account, push, application-update, and reusable platform utility adapters exposed by the common module.",
+      "rationale": "Account, push, and update services adapt Harmony platform kits and consistently depend on common utility facilities such as logging, context, validation, and device helpers; they form the module's platform-integration responsibility.",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-common-src-main-ets-accountservice",
+        "skill-scope-code-workshop-common-src-main-ets-pushservice",
+        "skill-scope-code-workshop-common-src-main-ets-updateservice",
+        "skill-scope-code-workshop-common-src-main-ets-util"
+      ],
+      "evidencePaths": ["common/src/main/ets/accountservice/AccountService.ets", "common/src/main/ets/util/Logger.ets"]
+    },
+    {
+      "id": "skill-scope-code-workshop-common-verification",
+      "responsibility": "Maintain the common module's ohosTest integration suite and local unit-test entrypoints as its executable verification surface.",
+      "rationale": "The ohosTest and local test trees are the module-owned verification surface: they exercise common utilities and provide the Ability and List suite entrypoints without owning production behavior themselves.",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-common-src-ohostest",
+        "skill-scope-code-workshop-common-src-test"
+      ],
+      "evidencePaths": ["common/src/ohosTest/ets/test/Ability.test.ets", "common/src/test/LocalUnit.test.ets"]
+    }
+  ]
+}

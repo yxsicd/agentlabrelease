@@ -107,7 +107,41 @@ def valid_decomposition_plan(scope, plan, max_source_files=80):
     )
 
 
-def classify_scope(scope, state, max_source_files=80, decomposition=None):
+def valid_decomposition_review(scope, decomposition, review, max_source_files=80):
+    if not isinstance(review, dict) or not decomposition:
+        return False
+    groups = review.get("groups", [])
+    verification = review.get("verification", {})
+    return (
+        review.get("schema") == "agentlab.maintainer_scope_decomposition_review.v1"
+        and review.get("automaticCatalogApply") is False
+        and review.get("repositoryId") == scope.get("repositoryId")
+        and review.get("sourceRevision") == scope.get("sourceRevision")
+        and review.get("sourceTreeOid") == scope.get("sourceTreeOid")
+        and review.get("parentScopeSkillId") == scope.get("id")
+        and review.get("decompositionPlanSha256") == decomposition.get("sha256")
+        and review.get("blockerCode") == "MS-COMPOSITE-SELECTOR-NOT-SUPPORTED"
+        and review.get("decision") == "blocked-catalog-application"
+        and verification.get("complete") is True
+        and verification.get("nonOverlapping") is True
+        and verification.get("assignedFileCount") == scope.get("trackedFileCount")
+        and verification.get("unassignedLeafCount") == 0
+        and verification.get("multiplyAssignedLeafCount") == 0
+        and verification.get("semanticGroupCount") == len(groups)
+        and len(groups) >= 2
+        and all(
+            isinstance(group.get("trackedFileCount"), int)
+            and group["trackedFileCount"] >= 1
+            and isinstance(group.get("sourceFileCount"), int)
+            and 0 <= group["sourceFileCount"] <= max_source_files
+            for group in groups
+        )
+        and sum(group["trackedFileCount"] for group in groups) == scope.get("trackedFileCount")
+        and sum(group["sourceFileCount"] for group in groups) == scope.get("sourceFileCount")
+    )
+
+
+def classify_scope(scope, state, max_source_files=80, decomposition=None, review=None):
     maturity = state.get("maturity", "unknown")
     analysis_mode, _ = analysis_profile(scope)
     base = {
@@ -130,6 +164,28 @@ def classify_scope(scope, state, max_source_files=80, decomposition=None):
     if source_count > max_source_files:
         if decomposition and valid_decomposition_plan(scope, decomposition["plan"], max_source_files):
             plan = decomposition["plan"]
+            if review and valid_decomposition_review(
+                scope, decomposition, review["review"], max_source_files
+            ):
+                reviewed = review["review"]
+                return {
+                    **base,
+                    "disposition": "blocked",
+                    "blockerCode": "MS-COMPOSITE-SELECTOR-NOT-SUPPORTED",
+                    "nextAction": "implement-composite-ownership-selectors-and-atomic-catalog-apply",
+                    "decompositionPlan": {
+                        "path": decomposition["path"],
+                        "sha256": decomposition["sha256"],
+                        "leafCount": len(plan["leaves"]),
+                        "status": "complete-non-overlapping-candidate",
+                    },
+                    "decompositionReview": {
+                        "path": review["path"],
+                        "sha256": review["sha256"],
+                        "semanticGroupCount": len(reviewed["groups"]),
+                        "status": "complete-non-overlapping-semantic-proposal",
+                    },
+                }
             return {
                 **base,
                 "disposition": "blocked",
@@ -150,14 +206,17 @@ def classify_scope(scope, state, max_source_files=80, decomposition=None):
     return {**base, "disposition": "eligible", "nextAction": f"run-{analysis_mode}-analysis"}
 
 
-def repository_plan(scope_rows, assessment, repository_id, revision=None, decompositions=None):
+def repository_plan(scope_rows, assessment, repository_id, revision=None,
+                    decompositions=None, reviews=None):
     states = {row["skillId"]: row for row in assessment["skills"]}
     decompositions = decompositions or {}
+    reviews = reviews or {}
     planned = [
         classify_scope(
             scope,
             states.get(scope.get("id"), {}),
             decomposition=decompositions.get(scope.get("id")),
+            review=reviews.get(scope.get("id")),
         )
         for scope in scope_rows
         if scope.get("repositoryId") == repository_id
@@ -294,8 +353,20 @@ def plan(args):
                 "sha256": digest(path),
                 "plan": candidate,
             }
+    reviews = {}
+    review_root = args.knowledge / "decomposition-reviews"
+    if review_root.is_dir():
+        for path in sorted(review_root.glob("*.json")):
+            candidate = load(path)
+            parent_id = candidate.get("parentScopeSkillId")
+            require(parent_id not in reviews, f"duplicate decomposition review: {parent_id}")
+            reviews[parent_id] = {
+                "path": str(path.relative_to(args.knowledge)),
+                "sha256": digest(path),
+                "review": candidate,
+            }
     value = repository_plan(
-        scope_rows, assessment, args.repository, source["revision"], decompositions
+        scope_rows, assessment, args.repository, source["revision"], decompositions, reviews
     )
     value["sourceAssessmentSha256"] = digest(args.assessment)
     write(args.output, value)

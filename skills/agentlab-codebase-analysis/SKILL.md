@@ -52,6 +52,12 @@ directory leaves as structural candidates: merge or rename them only after an
 evidence round proves one coherent responsibility. A complete plan changes the
 blocker from decomposition work to catalog review; it never promotes the parent
 or creates published Maintainer Skills automatically.
+The semantic review must assign every structural leaf exactly once, keep each
+reviewed responsibility within the same enforced budget, and cite at least two
+exact owned Blobs for its responsibility rationale. When one responsibility
+combines disjoint selectors, fail closed until the scope model and every path-
+ownership consumer understand composite selectors; never fake the merge with a
+common ancestor `pathBoundary`.
 Repository-contract analysis must start from a root-only checkout projection;
 the root boundary does not authorize recursively materializing every child.
 Treat maturity as evidence composition: a newly accepted semantic fact may move

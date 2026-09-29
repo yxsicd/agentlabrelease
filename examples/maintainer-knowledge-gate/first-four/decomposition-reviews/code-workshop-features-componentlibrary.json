@@ -1,0 +1,398 @@
+{
+  "automaticCatalogApply": false,
+  "blockerCode": "MS-COMPOSITE-SELECTOR-NOT-SUPPORTED",
+  "decision": "blocked-catalog-application",
+  "decompositionPlanSha256": "ba18f461baf360652e2237e97f1a08b65490a48ca474f261907512c18d6a5c70",
+  "groups": [
+    {
+      "evidence": [
+        {
+          "gitBlobOid": "5fb9f2d8a5bd2692817e99bdb8013ed8d39bf1af",
+          "path": "features/componentlibrary/src/main/ets/view/ComponentDetailView.ets"
+        },
+        {
+          "gitBlobOid": "19e7c71d75db2a5e39e874312b64072dda2e08c8",
+          "path": "features/componentlibrary/src/main/ets/viewmodel/ComponentDetailManager.ets"
+        }
+      ],
+      "fileSetSha256": "1aaa1c68b640fa3ae003a4023e5a7864edc4fb20e916ba2116d65cdca145e9c0",
+      "id": "skill-scope-code-workshop-componentlibrary-framework",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-features-componentlibrary-root-files-1",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-files-1",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-component",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-files-1",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-common",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-constant",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-model",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-service",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-util",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-view",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-viewmodel",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-resources"
+      ],
+      "ownershipSelectors": [
+        {
+          "paths": [
+            "features/componentlibrary/.gitignore",
+            "features/componentlibrary/Index.ets",
+            "features/componentlibrary/build-profile.json5",
+            "features/componentlibrary/consumer-rules.txt",
+            "features/componentlibrary/hvigorfile.ts",
+            "features/componentlibrary/obfuscation-rules.txt",
+            "features/componentlibrary/oh-package.json5"
+          ],
+          "type": "files"
+        },
+        {
+          "paths": [
+            "features/componentlibrary/src/main/module.json5"
+          ],
+          "type": "files"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/component",
+          "type": "prefix"
+        },
+        {
+          "paths": [
+            "features/componentlibrary/src/main/ets/componentdetailview/ComponentDetailConfig.ets"
+          ],
+          "type": "files"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/common",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/constant",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/model",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/service",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/util",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/view",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/viewmodel",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/resources",
+          "type": "prefix"
+        }
+      ],
+      "rationale": "The home and detail views route through shared service, model, and view-model contracts, while reusable component chrome and the common detail mapping machinery supply every specialized component example.",
+      "responsibility": "Maintain component-library packaging, navigation, shared component chrome, models, view models, resources, and common detail machinery.",
+      "reviewStatus": "semantic-responsibility-proposed",
+      "sourceFileCount": 58,
+      "trackedFileCount": 88
+    },
+    {
+      "evidence": [
+        {
+          "gitBlobOid": "6e937d9b422732ad1f205bf33a7bece6680aa737",
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/actionsheetview/component/ActionSheetBuilder.ets"
+        },
+        {
+          "gitBlobOid": "c21626a7c1954feba198b724ff6e2dc516050f7d",
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/popup/viewmodel/PopupDescriptor.ets"
+        }
+      ],
+      "fileSetSha256": "316de151d21996f6e300b0b6d0c873014d9a2db8ca54f4370e86177b7e5b8c11",
+      "id": "skill-scope-code-workshop-componentlibrary-dialog-overlays",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-actionsheetview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-alertdialogview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-customdialog",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-popup",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-textpickerdialogview"
+      ],
+      "ownershipSelectors": [
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/actionsheetview",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/alertdialogview",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/customdialog",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/popup",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/textpickerdialogview",
+          "type": "prefix"
+        }
+      ],
+      "rationale": "These examples share an overlay lifecycle and builder-descriptor-code-generator pattern, exposing modal interaction and dismissal behavior distinct from layout, media, and text-input component families.",
+      "responsibility": "Maintain action-sheet, alert-dialog, custom-dialog, popup, and text-picker-dialog interactive overlay examples.",
+      "reviewStatus": "semantic-responsibility-proposed",
+      "sourceFileCount": 21,
+      "trackedFileCount": 21
+    },
+    {
+      "evidence": [
+        {
+          "gitBlobOid": "bbbb8d3e209d3d805a62fa1e734c82c16ad4a031",
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/grid/viewmodel/GridCodeGenerator.ets"
+        },
+        {
+          "gitBlobOid": "8494195d303838cb18049ebc7e1baeb431c3b90e",
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/rowview/viewmodel/RowAttributeModifier.ets"
+        }
+      ],
+      "fileSetSha256": "ae24c548cec4ba72c454cb3057fadc73638f8446e3971389b50836e2be35c1d8",
+      "id": "skill-scope-code-workshop-componentlibrary-layout-collections",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-columnview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-flex",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-grid",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-list",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-rowview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-stackview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-swiperview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-tabview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-waterflow"
+      ],
+      "ownershipSelectors": [
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/columnview",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/flex",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/grid",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/list",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/rowview",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/stackview",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/swiperView",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/tabview",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/waterflow",
+          "type": "prefix"
+        }
+      ],
+      "rationale": "Each family implements the same builder, attribute mapping, modifier, descriptor, and code-generation contract for spatial layout or collection behavior, with shared common mapping dependencies across the group.",
+      "responsibility": "Maintain layout and collection demonstrations for column, flex, grid, list, row, stack, swiper, tabs, and water-flow components.",
+      "reviewStatus": "semantic-responsibility-proposed",
+      "sourceFileCount": 52,
+      "trackedFileCount": 52
+    },
+    {
+      "evidence": [
+        {
+          "gitBlobOid": "6f96cf4f26d8beaeabef56967f213c050d126d5e",
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/picker/calendarPicker/viewmodel/CalendarPickerAttributeModifier.ets"
+        },
+        {
+          "gitBlobOid": "d7c00dfba71c599fcb3d144146e5bb65236d73bf",
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/toggleview/viewmodel/ToggleCodeGenerator.ets"
+        }
+      ],
+      "fileSetSha256": "fea5496015d6fcc3a2e0ec6457cc45ca73cb01edb7aa541b96f957e1dbffda8a",
+      "id": "skill-scope-code-workshop-componentlibrary-input-display",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-buttonview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-picker",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-rating",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-styletext",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-textarea",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-textinput",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-textview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-toggleview"
+      ],
+      "ownershipSelectors": [
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/buttonview",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/picker",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/rating",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/styletext",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/textarea",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/textinput",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/textview",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/toggleview",
+          "type": "prefix"
+        }
+      ],
+      "rationale": "These component families center on editable or display attributes and convert descriptor state into generated ArkUI code through the same modifier and mapping architecture, forming one input-and-display responsibility.",
+      "responsibility": "Maintain button, picker, rating, styled-text, text-area, text-input, text, and toggle component demonstrations.",
+      "reviewStatus": "semantic-responsibility-proposed",
+      "sourceFileCount": 49,
+      "trackedFileCount": 49
+    },
+    {
+      "evidence": [
+        {
+          "gitBlobOid": "147625366aa277155fb737e94c441bcc7a8efe8e",
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/photopicker/component/PhotoViewPickerBuilder.ets"
+        },
+        {
+          "gitBlobOid": "5660e48d2180ec279a20631c04993e4c1cd2b2fc",
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/texttospeech/component/TextToSpeechBuilder.ets"
+        }
+      ],
+      "fileSetSha256": "a0611eac4f410454c887cef3f4213b9d5d9d68c22c49ea19806b48054618a488",
+      "id": "skill-scope-code-workshop-componentlibrary-media-platform",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-image",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-aicaption",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-applinking",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-documentviewpicker",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-imageaianalyzer",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-penkit",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-photopicker",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-progress",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-texttospeech"
+      ],
+      "ownershipSelectors": [
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/Image",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/aicaption",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/applinking",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/documentviewpicker",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/imageaianalyzer",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/penkit",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/photopicker",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/progress",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/main/ets/componentdetailview/texttospeech",
+          "type": "prefix"
+        }
+      ],
+      "rationale": "These examples are adapters around media, AI, linking, picker, pen, speech, or progress platform capabilities and preserve their permission, result, error, and generated-code boundaries separately from core layout controls.",
+      "responsibility": "Maintain image, caption, app-linking, document, AI-image, pen, photo-picker, progress, and text-to-speech platform examples.",
+      "reviewStatus": "semantic-responsibility-proposed",
+      "sourceFileCount": 31,
+      "trackedFileCount": 31
+    },
+    {
+      "evidence": [
+        {
+          "gitBlobOid": "85c78f67579d6e31b5f5aeea463e216b9b141048",
+          "path": "features/componentlibrary/src/ohosTest/ets/test/Ability.test.ets"
+        },
+        {
+          "gitBlobOid": "165fc1615ee8618b4cb6a622f144a9a707eee99f",
+          "path": "features/componentlibrary/src/test/LocalUnit.test.ets"
+        }
+      ],
+      "fileSetSha256": "10219e1638d9f4130072a1fed8dfb70c666f0114daeb1fa52d59afa6d24fa1cb",
+      "id": "skill-scope-code-workshop-componentlibrary-verification",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-features-componentlibrary-src-ohostest",
+        "skill-scope-code-workshop-features-componentlibrary-src-test"
+      ],
+      "ownershipSelectors": [
+        {
+          "path": "features/componentlibrary/src/ohosTest",
+          "type": "prefix"
+        },
+        {
+          "path": "features/componentlibrary/src/test",
+          "type": "prefix"
+        }
+      ],
+      "rationale": "The ohosTest and local test trees are the module-owned verification surface and contain the Ability, List, and local suite entrypoints; they verify the module without owning its production component behavior.",
+      "responsibility": "Maintain the component-library ohosTest integration suite and local unit-test entrypoints as its executable verification surface.",
+      "reviewStatus": "semantic-responsibility-proposed",
+      "sourceFileCount": 4,
+      "trackedFileCount": 5
+    }
+  ],
+  "nextAction": "implement-composite-ownership-selectors-and-atomic-catalog-apply",
+  "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+  "repositoryId": "code-workshop",
+  "schema": "agentlab.maintainer_scope_decomposition_review.v1",
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "sourceTreeOid": "ab156e6aa2fc9c64f400ee119e142fded5573271",
+  "verification": {
+    "assignedFileCount": 246,
+    "complete": true,
+    "multiplyAssignedLeafCount": 0,
+    "nonOverlapping": true,
+    "semanticGroupCount": 6,
+    "structuralLeafCount": 45,
+    "unassignedLeafCount": 0
+  }
+}
