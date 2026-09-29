@@ -1,0 +1,790 @@
+{
+  "automaticPromotion": false,
+  "decision": "ready-for-scope-catalog-review",
+  "leaves": [
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "ccec4804ae3573621ea26fa53e6ce2f65d2efae67dcb83514ebea5f325073679",
+      "id": "skill-scope-code-workshop-features-componentlibrary-root-files-1",
+      "languages": {
+        "ets": 1,
+        "json5": 2,
+        "no-extension": 1,
+        "ts": 1,
+        "txt": 2
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "paths": [
+          "features/componentlibrary/.gitignore",
+          "features/componentlibrary/Index.ets",
+          "features/componentlibrary/build-profile.json5",
+          "features/componentlibrary/consumer-rules.txt",
+          "features/componentlibrary/hvigorfile.ts",
+          "features/componentlibrary/obfuscation-rules.txt",
+          "features/componentlibrary/oh-package.json5"
+        ],
+        "type": "files"
+      },
+      "sourceFileCount": 2,
+      "trackedFileCount": 7
+    },
+    {
+      "analysisMode": "configuration-asset",
+      "fileSetSha256": "97d83b0237297f9a14719333d3dcb19ebdbb0ebe85744a06c883d29bce7927aa",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-files-1",
+      "languages": {
+        "json5": 1
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "paths": [
+          "features/componentlibrary/src/main/module.json5"
+        ],
+        "type": "files"
+      },
+      "sourceFileCount": 0,
+      "trackedFileCount": 1
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "fe2ac271e6b033c5f75a80f0b732f0b110ddb26c8e2cb3fa3d5bc46cf8bfad08",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-component",
+      "languages": {
+        "ets": 16
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/component",
+        "type": "prefix"
+      },
+      "sourceFileCount": 16,
+      "trackedFileCount": 16
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "e603a895d2e15aed3292d9c7db208eaff0964665c915b222c3b0457c13c4dc4a",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-files-1",
+      "languages": {
+        "ets": 1
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "paths": [
+          "features/componentlibrary/src/main/ets/componentdetailview/ComponentDetailConfig.ets"
+        ],
+        "type": "files"
+      },
+      "sourceFileCount": 1,
+      "trackedFileCount": 1
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "9a7bd30d31c8bcc594f11a21b106ed950e2a3c0c5e2e54b7eac8abbdc6ae4f2d",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-image",
+      "languages": {
+        "ets": 6
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/Image",
+        "type": "prefix"
+      },
+      "sourceFileCount": 6,
+      "trackedFileCount": 6
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "f55f422af8c822626e5aa03ec40ea03571265df9da10db050bdefc137104b282",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-actionsheetview",
+      "languages": {
+        "ets": 4
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/actionsheetview",
+        "type": "prefix"
+      },
+      "sourceFileCount": 4,
+      "trackedFileCount": 4
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "1a74ab76f33ac734a6607e026051a2ae24dd353d77a38fdcb4fdf58ad700f435",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-aicaption",
+      "languages": {
+        "ets": 2
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/aicaption",
+        "type": "prefix"
+      },
+      "sourceFileCount": 2,
+      "trackedFileCount": 2
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "befa3d90d35acd21b7e13560c74d3e1577300a2d8e088a26cf84b66bd38a2e67",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-alertdialogview",
+      "languages": {
+        "ets": 4
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/alertdialogview",
+        "type": "prefix"
+      },
+      "sourceFileCount": 4,
+      "trackedFileCount": 4
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "098a07cc23433688e88bcbea8c0dbd555f70a36767267a2ccec2925a07c674c4",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-applinking",
+      "languages": {
+        "ets": 4
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/applinking",
+        "type": "prefix"
+      },
+      "sourceFileCount": 4,
+      "trackedFileCount": 4
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "003ea6af12f84976dd30a225db47cbd8792c2401cda341244d3a1a5050fd256d",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-buttonview",
+      "languages": {
+        "ets": 6
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/buttonview",
+        "type": "prefix"
+      },
+      "sourceFileCount": 6,
+      "trackedFileCount": 6
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "b992ab7f49a36e30e25b65e436d71995ab293830e812b68ba9c569be59e7c399",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-columnview",
+      "languages": {
+        "ets": 6
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/columnview",
+        "type": "prefix"
+      },
+      "sourceFileCount": 6,
+      "trackedFileCount": 6
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "b967228bd39d76814ecb3ff00f848256582a71397fd079e8a5f9f9e1a04aab68",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-common",
+      "languages": {
+        "ets": 2
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/common",
+        "type": "prefix"
+      },
+      "sourceFileCount": 2,
+      "trackedFileCount": 2
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "1644a380e568c6fa2d0f338814317108fcb1889412ce83fa0f7a678bbb0be73e",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-customdialog",
+      "languages": {
+        "ets": 5
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/customdialog",
+        "type": "prefix"
+      },
+      "sourceFileCount": 5,
+      "trackedFileCount": 5
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "6d3f969d71c559716f0c468ee2ba88d95bca0f198c690b12024ea0fd476d0451",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-documentviewpicker",
+      "languages": {
+        "ets": 2
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/documentviewpicker",
+        "type": "prefix"
+      },
+      "sourceFileCount": 2,
+      "trackedFileCount": 2
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "23d86c070b465a979304d5ea1c76b71f45f706d90705207676dca16b55040e41",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-flex",
+      "languages": {
+        "ets": 5
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/flex",
+        "type": "prefix"
+      },
+      "sourceFileCount": 5,
+      "trackedFileCount": 5
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "40395f6a2a95c42d7c544c83d8b940b192b9f19833e1278ea9f2b162d12f0c6d",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-grid",
+      "languages": {
+        "ets": 6
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/grid",
+        "type": "prefix"
+      },
+      "sourceFileCount": 6,
+      "trackedFileCount": 6
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "593153c7bfff35c06256b3c61dffd6c577b6fa05369594317ff9dbb0b3c4cec8",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-imageaianalyzer",
+      "languages": {
+        "ets": 3
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/imageaianalyzer",
+        "type": "prefix"
+      },
+      "sourceFileCount": 3,
+      "trackedFileCount": 3
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "bc7d31c2ba8354172cd99e84d4cec36734f4ac28ef6379d27d35f93c5de5af41",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-list",
+      "languages": {
+        "ets": 6
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/list",
+        "type": "prefix"
+      },
+      "sourceFileCount": 6,
+      "trackedFileCount": 6
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "856f63638ea818eae35dcf4d125afd27a34ff748431f59a848fafa89a26a7719",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-penkit",
+      "languages": {
+        "ets": 3
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/penkit",
+        "type": "prefix"
+      },
+      "sourceFileCount": 3,
+      "trackedFileCount": 3
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "0ef8ee4a302e56b09b2a24531d26e84b86eff42555a13f1f00d1747684cd53ee",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-photopicker",
+      "languages": {
+        "ets": 2
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/photopicker",
+        "type": "prefix"
+      },
+      "sourceFileCount": 2,
+      "trackedFileCount": 2
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "16a53e69e69dcc0f6df03c7fe6b987b216e1c97eaf28c2e7f67e398ecc0615a3",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-picker",
+      "languages": {
+        "ets": 14
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/picker",
+        "type": "prefix"
+      },
+      "sourceFileCount": 14,
+      "trackedFileCount": 14
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "15f56c9bf59a59a94bc4f6d6bdf45f48fa2485f95520ba6f27fbf63ccac0739e",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-popup",
+      "languages": {
+        "ets": 4
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/popup",
+        "type": "prefix"
+      },
+      "sourceFileCount": 4,
+      "trackedFileCount": 4
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "2e734a77145c3dc218c132e23ca9357212fe597c3463d502aa917e7f59d87295",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-progress",
+      "languages": {
+        "ets": 6
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/progress",
+        "type": "prefix"
+      },
+      "sourceFileCount": 6,
+      "trackedFileCount": 6
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "58440a15729758351252db584cf6f1db5e13ef33621772ecbedbdf258ab287bf",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-rating",
+      "languages": {
+        "ets": 6
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/rating",
+        "type": "prefix"
+      },
+      "sourceFileCount": 6,
+      "trackedFileCount": 6
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "7e107f704eb68e74dcd4d0a20882febeb2cb40043cb40c10a42798c0d1cdac4d",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-rowview",
+      "languages": {
+        "ets": 6
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/rowview",
+        "type": "prefix"
+      },
+      "sourceFileCount": 6,
+      "trackedFileCount": 6
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "29db43c5a5ae10cfe32373bc891e5e99767763d2059e6a35fea85906d383c415",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-stackview",
+      "languages": {
+        "ets": 6
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/stackview",
+        "type": "prefix"
+      },
+      "sourceFileCount": 6,
+      "trackedFileCount": 6
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "9fc3d8c323e56eaf8a7d53d20cf618b54b2809c0e748494689807c3c9e84c08b",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-styletext",
+      "languages": {
+        "ets": 3
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/styletext",
+        "type": "prefix"
+      },
+      "sourceFileCount": 3,
+      "trackedFileCount": 3
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "4bc36b754da0a0c4db3fbc891da55b1ac858273fc0b64897c447cb3cde2a4cd0",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-swiperview",
+      "languages": {
+        "ets": 5
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/swiperView",
+        "type": "prefix"
+      },
+      "sourceFileCount": 5,
+      "trackedFileCount": 5
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "6918016fa1cd3a21da7524d808862b74ad88fe6e1dfb729d55abb774a6a9d0c8",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-tabview",
+      "languages": {
+        "ets": 6
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/tabview",
+        "type": "prefix"
+      },
+      "sourceFileCount": 6,
+      "trackedFileCount": 6
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "9e2dddcab0e5fead1d6b42497d8a7cfd92cbb461ef27d023860d70f1fcd2da0e",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-textarea",
+      "languages": {
+        "ets": 5
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/textarea",
+        "type": "prefix"
+      },
+      "sourceFileCount": 5,
+      "trackedFileCount": 5
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "3175538204752ec40103b8dc0f8172beebe7c98c600a3e6c829e6988f6a4ac92",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-textinput",
+      "languages": {
+        "ets": 5
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/textinput",
+        "type": "prefix"
+      },
+      "sourceFileCount": 5,
+      "trackedFileCount": 5
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "c440ffab8fd657cce0ae3c7971e7cf60414f5e576e28d571f0909a1f2a27dcec",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-textpickerdialogview",
+      "languages": {
+        "ets": 4
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/textpickerdialogview",
+        "type": "prefix"
+      },
+      "sourceFileCount": 4,
+      "trackedFileCount": 4
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "39c5b0c4f18d4ff537160d9a6f0783cfad20c3d9437c9dc7cb46cfd9d88f0ebd",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-texttospeech",
+      "languages": {
+        "ets": 3
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/texttospeech",
+        "type": "prefix"
+      },
+      "sourceFileCount": 3,
+      "trackedFileCount": 3
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "bc6f8686765c12bbd8ae99b4ce9c50cd9be958a474a49eab63f02884c8b0081b",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-textview",
+      "languages": {
+        "ets": 5
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/textview",
+        "type": "prefix"
+      },
+      "sourceFileCount": 5,
+      "trackedFileCount": 5
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "aacb727e507c348a3d0cf7ad08194304615de79dc35e4b69602910f681785966",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-toggleview",
+      "languages": {
+        "ets": 5
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/toggleview",
+        "type": "prefix"
+      },
+      "sourceFileCount": 5,
+      "trackedFileCount": 5
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "885c31bf214cf84a4f46544021c3cb1bf08c4576350727f9c2eba9241c3395a0",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-waterflow",
+      "languages": {
+        "ets": 6
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/componentdetailview/waterflow",
+        "type": "prefix"
+      },
+      "sourceFileCount": 6,
+      "trackedFileCount": 6
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "0c63b668da9255ece5fed11b8eb93b7bf009190462f672bd0cb254cc94e58589",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-constant",
+      "languages": {
+        "ets": 1
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/constant",
+        "type": "prefix"
+      },
+      "sourceFileCount": 1,
+      "trackedFileCount": 1
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "855d927a271a0662bc7829ff88e6c7aa3c041ff4fbb4f03878a5352c7e4914c2",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-model",
+      "languages": {
+        "ets": 5
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/model",
+        "type": "prefix"
+      },
+      "sourceFileCount": 5,
+      "trackedFileCount": 5
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "a7556a5e2aa4474a8e32acd8e77bd325ae2e66cc454ebde47b256cf3ca5b34fc",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-service",
+      "languages": {
+        "ets": 1
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/service",
+        "type": "prefix"
+      },
+      "sourceFileCount": 1,
+      "trackedFileCount": 1
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "5e47de7a77739e226d058ee7e6eb5fc4be769eefb64a3bfc4a512869e8f7478f",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-util",
+      "languages": {
+        "ets": 2
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/util",
+        "type": "prefix"
+      },
+      "sourceFileCount": 2,
+      "trackedFileCount": 2
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "3e42fed0f8592e844a67d5b3af1b2df2c265546ea14a585fade41479d0511bef",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-view",
+      "languages": {
+        "ets": 5
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/view",
+        "type": "prefix"
+      },
+      "sourceFileCount": 5,
+      "trackedFileCount": 5
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "18cec34e60060bb3a4452206c4bbbe687dd5aa5c09da35638dfeadf4d9850f15",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-ets-viewmodel",
+      "languages": {
+        "ets": 15
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/ets/viewmodel",
+        "type": "prefix"
+      },
+      "sourceFileCount": 15,
+      "trackedFileCount": 15
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "7473f27c131e2ce787e93b4b517d90788b467f4d1db2782519e0c036b911bbf6",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-main-resources",
+      "languages": {
+        "css": 3,
+        "html": 1,
+        "js": 4,
+        "json": 11,
+        "pcm": 1,
+        "png": 11,
+        "ttf": 1
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/main/resources",
+        "type": "prefix"
+      },
+      "sourceFileCount": 8,
+      "trackedFileCount": 32
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "c69e2aca9cd55ad5323d8b6ae3f3fbb72103809adef8ed436fb8e834eedf0bb8",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-ohostest",
+      "languages": {
+        "ets": 2,
+        "json5": 1
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/ohosTest",
+        "type": "prefix"
+      },
+      "sourceFileCount": 2,
+      "trackedFileCount": 3
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "ba25878bc059f2d8607d9ec37ceb02596fbc2ca0524fb0ce6fa79c208d161516",
+      "id": "skill-scope-code-workshop-features-componentlibrary-src-test",
+      "languages": {
+        "ets": 2
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "features/componentlibrary/src/test",
+        "type": "prefix"
+      },
+      "sourceFileCount": 2,
+      "trackedFileCount": 2
+    }
+  ],
+  "maxSourceFilesPerLeaf": 80,
+  "parent": {
+    "fileSetSha256": "ae5c973212abd3fa15ca76e149283da81a7612b77688e787b3ff3df630fd0b5d",
+    "languages": {
+      "css": 3,
+      "ets": 206,
+      "html": 1,
+      "js": 4,
+      "json": 11,
+      "json5": 4,
+      "no-extension": 1,
+      "pcm": 1,
+      "png": 11,
+      "ts": 1,
+      "ttf": 1,
+      "txt": 2
+    },
+    "pathBoundary": "features/componentlibrary",
+    "scopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+    "sourceFileCount": 215,
+    "trackedFileCount": 246
+  },
+  "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+  "repositoryId": "code-workshop",
+  "schema": "agentlab.maintainer_scope_decomposition_plan.v1",
+  "sourceExtensions": [
+    "css",
+    "ets",
+    "html",
+    "js",
+    "ts"
+  ],
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "sourceTreeOid": "ab156e6aa2fc9c64f400ee119e142fded5573271",
+  "verification": {
+    "assignedFileCount": 246,
+    "complete": true,
+    "multiplyAssignedFileCount": 0,
+    "nonOverlapping": true,
+    "unassignedFileCount": 0
+  }
+}

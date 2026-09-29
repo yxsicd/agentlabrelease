@@ -72,7 +72,42 @@ def analysis_profile(scope):
     return "source-behavior", SEMANTIC_DIMENSIONS
 
 
-def classify_scope(scope, state, max_source_files=80):
+def valid_decomposition_plan(scope, plan, max_source_files=80):
+    if not isinstance(plan, dict):
+        return False
+    parent = plan.get("parent", {})
+    verification = plan.get("verification", {})
+    leaves = plan.get("leaves", [])
+    return (
+        plan.get("schema") == "agentlab.maintainer_scope_decomposition_plan.v1"
+        and plan.get("automaticPromotion") is False
+        and plan.get("repositoryId") == scope.get("repositoryId")
+        and plan.get("sourceRevision") == scope.get("sourceRevision")
+        and plan.get("sourceTreeOid") == scope.get("sourceTreeOid")
+        and plan.get("maxSourceFilesPerLeaf") == max_source_files
+        and parent.get("scopeSkillId") == scope.get("id")
+        and parent.get("pathBoundary") == scope.get("pathBoundary")
+        and parent.get("trackedFileCount") == scope.get("trackedFileCount")
+        and parent.get("sourceFileCount") == scope.get("sourceFileCount")
+        and verification.get("complete") is True
+        and verification.get("nonOverlapping") is True
+        and verification.get("unassignedFileCount") == 0
+        and verification.get("multiplyAssignedFileCount") == 0
+        and len(leaves) >= 2
+        and verification.get("assignedFileCount") == scope.get("trackedFileCount")
+        and sum(leaf.get("trackedFileCount", -1) for leaf in leaves) == scope.get("trackedFileCount")
+        and sum(leaf.get("sourceFileCount", -1) for leaf in leaves) == scope.get("sourceFileCount")
+        and all(
+            isinstance(leaf.get("trackedFileCount"), int)
+            and leaf["trackedFileCount"] >= 1
+            and isinstance(leaf.get("sourceFileCount"), int)
+            and 0 <= leaf["sourceFileCount"] <= max_source_files
+            for leaf in leaves
+        )
+    )
+
+
+def classify_scope(scope, state, max_source_files=80, decomposition=None):
     maturity = state.get("maturity", "unknown")
     analysis_mode, _ = analysis_profile(scope)
     base = {
@@ -93,6 +128,20 @@ def classify_scope(scope, state, max_source_files=80):
         return {**base, "disposition": "blocked", "blockerCode": "MS-SOURCE-COUNT-INVALID",
                 "nextAction": "repair-structural-inventory"}
     if source_count > max_source_files:
+        if decomposition and valid_decomposition_plan(scope, decomposition["plan"], max_source_files):
+            plan = decomposition["plan"]
+            return {
+                **base,
+                "disposition": "blocked",
+                "blockerCode": "MS-SCOPE-DECOMPOSITION-REVIEW-REQUIRED",
+                "nextAction": "review-and-apply-scope-decomposition",
+                "decompositionPlan": {
+                    "path": decomposition["path"],
+                    "sha256": decomposition["sha256"],
+                    "leafCount": len(plan["leaves"]),
+                    "status": "complete-non-overlapping-candidate",
+                },
+            }
         return {**base, "disposition": "blocked", "blockerCode": "MS-SCOPE-DECOMPOSITION-REQUIRED",
                 "nextAction": "decompose-scope-by-owned-behavior-boundary"}
     if not scope_has_reachable_evidence(scope):
@@ -101,10 +150,15 @@ def classify_scope(scope, state, max_source_files=80):
     return {**base, "disposition": "eligible", "nextAction": f"run-{analysis_mode}-analysis"}
 
 
-def repository_plan(scope_rows, assessment, repository_id, revision=None):
+def repository_plan(scope_rows, assessment, repository_id, revision=None, decompositions=None):
     states = {row["skillId"]: row for row in assessment["skills"]}
+    decompositions = decompositions or {}
     planned = [
-        classify_scope(scope, states.get(scope.get("id"), {}))
+        classify_scope(
+            scope,
+            states.get(scope.get("id"), {}),
+            decomposition=decompositions.get(scope.get("id")),
+        )
         for scope in scope_rows
         if scope.get("repositoryId") == repository_id
     ]
@@ -228,7 +282,21 @@ def plan(args):
     scope_rows = rows(args.knowledge / "maintainer_scope_skills.jsonl")
     source = next((row for row in cut["repositories"] if row["id"] == args.repository), None)
     require(source is not None, "repository is absent from the knowledge cut")
-    value = repository_plan(scope_rows, assessment, args.repository, source["revision"])
+    decompositions = {}
+    decomposition_root = args.knowledge / "decomposition-plans"
+    if decomposition_root.is_dir():
+        for path in sorted(decomposition_root.glob("*.json")):
+            candidate = load(path)
+            parent_id = candidate.get("parent", {}).get("scopeSkillId")
+            require(parent_id not in decompositions, f"duplicate decomposition plan: {parent_id}")
+            decompositions[parent_id] = {
+                "path": str(path.relative_to(args.knowledge)),
+                "sha256": digest(path),
+                "plan": candidate,
+            }
+    value = repository_plan(
+        scope_rows, assessment, args.repository, source["revision"], decompositions
+    )
     value["sourceAssessmentSha256"] = digest(args.assessment)
     write(args.output, value)
     print(json.dumps(value["summary"], separators=(",", ":"), sort_keys=True))

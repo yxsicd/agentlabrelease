@@ -129,6 +129,38 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         self.assertEqual(modes["ready"], "source-behavior")
         self.assertFalse(plan["selectionPolicy"]["repositorySpecificBranches"])
 
+    def test_complete_decomposition_plan_changes_blocker_to_review_not_promotion(self):
+        scope = {
+            "id": "large", "repositoryId": "arbitrary-repository", "pathBoundary": "library",
+            "sourceRevision": "a" * 40, "sourceTreeOid": "c" * 40,
+            "sourceFileCount": 81, "trackedFileCount": 90,
+            "testFileCount": 0, "evidence": [{"path": "library/lib.rs"}],
+        }
+        candidate = {
+            "schema": "agentlab.maintainer_scope_decomposition_plan.v1",
+            "automaticPromotion": False,
+            "repositoryId": "arbitrary-repository", "sourceRevision": "a" * 40,
+            "sourceTreeOid": "c" * 40, "maxSourceFilesPerLeaf": 80,
+            "parent": {"scopeSkillId": "large", "pathBoundary": "library",
+                       "sourceFileCount": 81, "trackedFileCount": 90},
+            "leaves": [
+                {"sourceFileCount": 40, "trackedFileCount": 44},
+                {"sourceFileCount": 41, "trackedFileCount": 46},
+            ],
+            "verification": {"complete": True, "nonOverlapping": True,
+                             "assignedFileCount": 90, "unassignedFileCount": 0,
+                             "multiplyAssignedFileCount": 0},
+        }
+        result = MODULE.classify_scope(
+            scope,
+            {"maturity": "L1-structural-ready"},
+            decomposition={"path": "decomposition-plans/large.json", "sha256": "b" * 64,
+                           "plan": candidate},
+        )
+        self.assertEqual(result["disposition"], "blocked")
+        self.assertEqual(result["blockerCode"], "MS-SCOPE-DECOMPOSITION-REVIEW-REQUIRED")
+        self.assertEqual(result["decompositionPlan"]["leafCount"], 2)
+
     def test_root_scope_uses_repository_contract_mode_and_root_evidence(self):
         scope = {"id": "root", "repositoryId": "r", "pathBoundary": ".", "sourceFileCount": 1,
                  "testFileCount": 0, "evidence": [{"path": "build.json"}]}

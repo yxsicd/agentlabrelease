@@ -123,6 +123,16 @@ candidate cut to TableGit only after every iteration succeeds, then emits a
 SkillsGit-native materialization and one downstream shadow-case attempt. The
 GitHub workflow retains its one-to-three iteration limit.
 
+The two remaining oversized CodeWorkshop scopes now have revision-bound
+candidate partitions under [`decomposition-plans/`](decomposition-plans/).
+`common` is covered by 19 candidates and `features/componentlibrary` by 45;
+together they account for all 415 tracked files with zero omission or overlap,
+and no leaf exceeds the 80-source-file Agent budget. These are structural
+candidates, not 64 automatically published Skills. Evidence review may combine
+directories that form one coherent responsibility, after which the catalog
+must be replaced atomically and reassessed before the flywheel can select the
+new leaves.
+
 `repository=auto` is the standard unattended policy. It considers only bounded
 L1 scopes whose own inventory evidence is reachable inside their declared path
 boundary, then chooses the repository with the lowest normalized semantic

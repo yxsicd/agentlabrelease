@@ -74,6 +74,20 @@ All modes use the same revision, Blob, lineage and independent-assessment gates.
 Large source scopes remain blocked until a child partition proves complete,
 non-overlapping coverage and stable parent/child responsibility lineage.
 
+Build that partition in two phases. First generate a reviewable plan against
+one exact source revision and Tree OID. It must reproduce the parent's tracked
+and source counts, cover every tracked path exactly once, report zero overlap,
+and keep every leaf within the enforced source-file budget. Prefix selectors
+cover directory-owned responsibilities; explicit file selectors preserve root
+manifests and other files that do not belong to a child directory. Second, run
+evidence rounds over the candidates to establish responsibility boundaries and
+only then replace the aggregate parent in one atomic catalog update. Directory
+shape is a safe structural partition, not semantic proof: reviewers may merge
+candidate leaves when exact evidence proves one bounded responsibility, but
+must rerun the same completeness and overlap checks. Until that review and
+atomic rewrite finish, the parent remains blocked and no generated leaf is a
+published Maintainer Skill.
+
 Agent budgets are execution contracts, not prompt advice. The operator must
 enforce wall time and tool-call limits, retain partial native events on breach,
 and bind actual counts and the limit into the round receipt. A proposal created

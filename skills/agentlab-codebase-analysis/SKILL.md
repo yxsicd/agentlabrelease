@@ -44,6 +44,14 @@ repository contract. Require only evidence dimensions that the mode can prove;
 never fabricate behavior for a non-source scope. Do not solve an oversized
 scope by increasing the Agent context budget. Decompose it into complete,
 non-overlapping child responsibilities with explicit parent lineage first.
+Generate a revision-bound decomposition plan before changing the authoritative
+scope catalog. The plan must reconcile the parent's exact Git Tree and source
+inventory, assign every tracked file exactly once, cap every candidate leaf,
+and retain direct root files through explicit file selectors. Treat generated
+directory leaves as structural candidates: merge or rename them only after an
+evidence round proves one coherent responsibility. A complete plan changes the
+blocker from decomposition work to catalog review; it never promotes the parent
+or creates published Maintainer Skills automatically.
 Repository-contract analysis must start from a root-only checkout projection;
 the root boundary does not authorize recursively materializing every child.
 Treat maturity as evidence composition: a newly accepted semantic fact may move

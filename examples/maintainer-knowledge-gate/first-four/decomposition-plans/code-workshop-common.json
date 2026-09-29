@@ -1,0 +1,364 @@
+{
+  "automaticPromotion": false,
+  "decision": "ready-for-scope-catalog-review",
+  "leaves": [
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "ee636d364b293b6cd8269e78eeecc634113967c6eaa32605965c3d3c39038795",
+      "id": "skill-scope-code-workshop-common-root-files-1",
+      "languages": {
+        "ets": 1,
+        "json5": 2,
+        "no-extension": 1,
+        "ts": 1,
+        "txt": 2
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "paths": [
+          "common/.gitignore",
+          "common/Index.ets",
+          "common/build-profile.json5",
+          "common/consumer-rules.txt",
+          "common/hvigorfile.ts",
+          "common/obfuscation-rules.txt",
+          "common/oh-package.json5"
+        ],
+        "type": "files"
+      },
+      "sourceFileCount": 2,
+      "trackedFileCount": 7
+    },
+    {
+      "analysisMode": "configuration-asset",
+      "fileSetSha256": "86f2012a687bc2e12e882ec9ce22a96b9f12f54507153ad5c64e90071d4dff08",
+      "id": "skill-scope-code-workshop-common-src-main-files-1",
+      "languages": {
+        "json5": 1
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "paths": [
+          "common/src/main/module.json5"
+        ],
+        "type": "files"
+      },
+      "sourceFileCount": 0,
+      "trackedFileCount": 1
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "8931712382159e1adc7f224efa5d7ab213e233ca084ecc36411e8c14fbf74d59",
+      "id": "skill-scope-code-workshop-common-src-main-ets-accountservice",
+      "languages": {
+        "ets": 4
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "common/src/main/ets/accountservice",
+        "type": "prefix"
+      },
+      "sourceFileCount": 4,
+      "trackedFileCount": 4
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "316dad3f26db378f02f24f578eb86536887cb8390bcf07a804e8ff4d2e83ed14",
+      "id": "skill-scope-code-workshop-common-src-main-ets-component",
+      "languages": {
+        "ets": 11
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "common/src/main/ets/component",
+        "type": "prefix"
+      },
+      "sourceFileCount": 11,
+      "trackedFileCount": 11
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "f836744340f566fddd86ca688686afbfe7afa361364120f75b8fe34df04bbea7",
+      "id": "skill-scope-code-workshop-common-src-main-ets-constant",
+      "languages": {
+        "ets": 6
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "common/src/main/ets/constant",
+        "type": "prefix"
+      },
+      "sourceFileCount": 6,
+      "trackedFileCount": 6
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "6fe3487faf60603c8bb924bdf6a15e664a9256779749b0a772dbb6d119f040b4",
+      "id": "skill-scope-code-workshop-common-src-main-ets-database",
+      "languages": {
+        "ets": 2
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "common/src/main/ets/database",
+        "type": "prefix"
+      },
+      "sourceFileCount": 2,
+      "trackedFileCount": 2
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "166b598ce787c4bf226e39b53d1b3d63f34b34a11e6bcb4630d26610939c4d25",
+      "id": "skill-scope-code-workshop-common-src-main-ets-model",
+      "languages": {
+        "ets": 10
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "common/src/main/ets/model",
+        "type": "prefix"
+      },
+      "sourceFileCount": 10,
+      "trackedFileCount": 10
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "4da3ba9ee73d32089b29b4b17f863a92ec7d15d2b5a7b98e5ae856302442e5cf",
+      "id": "skill-scope-code-workshop-common-src-main-ets-pushservice",
+      "languages": {
+        "ets": 2
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "common/src/main/ets/pushservice",
+        "type": "prefix"
+      },
+      "sourceFileCount": 2,
+      "trackedFileCount": 2
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "4d418b466ae4d5b8c337684d7651498cc294a474eb94ad27a052bd02c98694c0",
+      "id": "skill-scope-code-workshop-common-src-main-ets-routermanager",
+      "languages": {
+        "ets": 1
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "common/src/main/ets/routermanager",
+        "type": "prefix"
+      },
+      "sourceFileCount": 1,
+      "trackedFileCount": 1
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "cb13f728e503c0b75a5841a92f9cf70b374fd327210b06a074e1c9e6ab7a7c7f",
+      "id": "skill-scope-code-workshop-common-src-main-ets-storagemanager",
+      "languages": {
+        "ets": 6
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "common/src/main/ets/storagemanager",
+        "type": "prefix"
+      },
+      "sourceFileCount": 6,
+      "trackedFileCount": 6
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "a31010e53dbca16b775383a9f1cd7d5a2ed78c2a6b6560a23cd816cde6fc4c16",
+      "id": "skill-scope-code-workshop-common-src-main-ets-trackmanager",
+      "languages": {
+        "ets": 2
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "common/src/main/ets/trackmanager",
+        "type": "prefix"
+      },
+      "sourceFileCount": 2,
+      "trackedFileCount": 2
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "d7fcf38a06d823d0981f42efb91a3584bbfdec80995ac70013fd3851ba1366c4",
+      "id": "skill-scope-code-workshop-common-src-main-ets-updateservice",
+      "languages": {
+        "ets": 1
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "common/src/main/ets/updateservice",
+        "type": "prefix"
+      },
+      "sourceFileCount": 1,
+      "trackedFileCount": 1
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "f7bdc0a6a7ab91eaa17f73031663eebcdf7cec05e9eb2434a0eec6ee78be2be2",
+      "id": "skill-scope-code-workshop-common-src-main-ets-util",
+      "languages": {
+        "ets": 32
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "common/src/main/ets/util",
+        "type": "prefix"
+      },
+      "sourceFileCount": 32,
+      "trackedFileCount": 32
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "71eef17e9965957a4f13256b951278178c41a4c25019f276d599ef43207306d3",
+      "id": "skill-scope-code-workshop-common-src-main-ets-view",
+      "languages": {
+        "ets": 6
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "common/src/main/ets/view",
+        "type": "prefix"
+      },
+      "sourceFileCount": 6,
+      "trackedFileCount": 6
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "87464c3f9f2088b955fda19eb99fcbbbc6ebe8ac3c93e25e8773491e32111571",
+      "id": "skill-scope-code-workshop-common-src-main-ets-viewmodel",
+      "languages": {
+        "ets": 4
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "common/src/main/ets/viewmodel",
+        "type": "prefix"
+      },
+      "sourceFileCount": 4,
+      "trackedFileCount": 4
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "21c3ed5444967b18821f36c2d08b27fab9ed77e28f60aa87666af6caaecc49fb",
+      "id": "skill-scope-code-workshop-common-src-main-ets-widget",
+      "languages": {
+        "ets": 1
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "common/src/main/ets/widget",
+        "type": "prefix"
+      },
+      "sourceFileCount": 1,
+      "trackedFileCount": 1
+    },
+    {
+      "analysisMode": "configuration-asset",
+      "fileSetSha256": "5c4d730d6a85060c094de1ba37d1b3ac71e5a2f7e92a8c9181da3cb5a1ec297f",
+      "id": "skill-scope-code-workshop-common-src-main-resources",
+      "languages": {
+        "json": 31,
+        "png": 4,
+        "svg": 1
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "common/src/main/resources",
+        "type": "prefix"
+      },
+      "sourceFileCount": 0,
+      "trackedFileCount": 36
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "55220b45226f8f1caf19c2cad48013b93f1d1dc6aaf182124c187a657238d860",
+      "id": "skill-scope-code-workshop-common-src-ohostest",
+      "languages": {
+        "ets": 34,
+        "json5": 1
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "common/src/ohosTest",
+        "type": "prefix"
+      },
+      "sourceFileCount": 34,
+      "trackedFileCount": 35
+    },
+    {
+      "analysisMode": "source-behavior",
+      "fileSetSha256": "2680c3f8b56a61aa63ab1d5c52b6f2e75a0afe9ddd139ce1a92d8d21f59d09c2",
+      "id": "skill-scope-code-workshop-common-src-test",
+      "languages": {
+        "ets": 2
+      },
+      "parentScopeSkillId": "skill-scope-code-workshop-common",
+      "responsibilityStatus": "requires-evidence-round",
+      "selector": {
+        "path": "common/src/test",
+        "type": "prefix"
+      },
+      "sourceFileCount": 2,
+      "trackedFileCount": 2
+    }
+  ],
+  "maxSourceFilesPerLeaf": 80,
+  "parent": {
+    "fileSetSha256": "4417976c6a456f731fc7ca5f008e91d6acfc57759cb99c2e710eb71f026b4f94",
+    "languages": {
+      "ets": 125,
+      "json": 31,
+      "json5": 4,
+      "no-extension": 1,
+      "png": 4,
+      "svg": 1,
+      "ts": 1,
+      "txt": 2
+    },
+    "pathBoundary": "common",
+    "scopeSkillId": "skill-scope-code-workshop-common",
+    "sourceFileCount": 126,
+    "trackedFileCount": 169
+  },
+  "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+  "repositoryId": "code-workshop",
+  "schema": "agentlab.maintainer_scope_decomposition_plan.v1",
+  "sourceExtensions": [
+    "css",
+    "ets",
+    "html",
+    "js",
+    "ts"
+  ],
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "sourceTreeOid": "ab156e6aa2fc9c64f400ee119e142fded5573271",
+  "verification": {
+    "assignedFileCount": 169,
+    "complete": true,
+    "multiplyAssignedFileCount": 0,
+    "nonOverlapping": true,
+    "unassignedFileCount": 0
+  }
+}

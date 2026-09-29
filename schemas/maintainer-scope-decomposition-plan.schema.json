@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentlab.dev/schemas/maintainer-scope-decomposition-plan.schema.json",
+  "title": "AgentLab Maintainer Scope Decomposition Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "automaticPromotion", "repositoryId", "repository", "sourceRevision", "sourceTreeOid", "sourceExtensions", "maxSourceFilesPerLeaf", "parent", "leaves", "verification", "decision"],
+  "properties": {
+    "schema": { "const": "agentlab.maintainer_scope_decomposition_plan.v1" },
+    "automaticPromotion": { "const": false },
+    "repositoryId": { "type": "string", "minLength": 1 },
+    "repository": { "type": "string", "minLength": 1 },
+    "sourceRevision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sourceTreeOid": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sourceExtensions": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9+]+$" } },
+    "maxSourceFilesPerLeaf": { "type": "integer", "minimum": 1 },
+    "parent": { "$ref": "#/$defs/summary" },
+    "leaves": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "parentScopeSkillId", "selector", "analysisMode", "responsibilityStatus", "trackedFileCount", "sourceFileCount", "languages", "fileSetSha256"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^skill-scope-[a-z0-9]+(?:-[a-z0-9]+)*$" },
+          "parentScopeSkillId": { "type": "string", "pattern": "^skill-scope-[a-z0-9]+(?:-[a-z0-9]+)*$" },
+          "selector": {
+            "oneOf": [
+              { "type": "object", "additionalProperties": false, "required": ["type", "path"], "properties": { "type": { "const": "prefix" }, "path": { "type": "string", "minLength": 1 } } },
+              { "type": "object", "additionalProperties": false, "required": ["type", "paths"], "properties": { "type": { "const": "files" }, "paths": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } } } }
+            ]
+          },
+          "analysisMode": { "enum": ["configuration-asset", "source-behavior"] },
+          "responsibilityStatus": { "const": "requires-evidence-round" },
+          "trackedFileCount": { "type": "integer", "minimum": 1 },
+          "sourceFileCount": { "type": "integer", "minimum": 0 },
+          "languages": { "type": "object", "minProperties": 1, "additionalProperties": { "type": "integer", "minimum": 1 } },
+          "fileSetSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["complete", "nonOverlapping", "assignedFileCount", "unassignedFileCount", "multiplyAssignedFileCount"],
+      "properties": {
+        "complete": { "const": true },
+        "nonOverlapping": { "const": true },
+        "assignedFileCount": { "type": "integer", "minimum": 1 },
+        "unassignedFileCount": { "const": 0 },
+        "multiplyAssignedFileCount": { "const": 0 }
+      }
+    },
+    "decision": { "const": "ready-for-scope-catalog-review" }
+  },
+  "$defs": {
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scopeSkillId", "pathBoundary", "trackedFileCount", "sourceFileCount", "languages", "fileSetSha256"],
+      "properties": {
+        "scopeSkillId": { "type": "string", "minLength": 1 },
+        "pathBoundary": { "type": "string", "minLength": 1 },
+        "trackedFileCount": { "type": "integer", "minimum": 1 },
+        "sourceFileCount": { "type": "integer", "minimum": 0 },
+        "languages": { "type": "object", "minProperties": 1, "additionalProperties": { "type": "integer", "minimum": 1 } },
+        "fileSetSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  }
+}

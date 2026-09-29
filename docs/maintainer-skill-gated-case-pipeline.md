@@ -128,8 +128,16 @@ The authoritative schemas are
 [`maintainer-scope-skill.schema.json`](../schemas/maintainer-scope-skill.schema.json),
 [`maintainer-skill-refresh-round.schema.json`](../schemas/maintainer-skill-refresh-round.schema.json),
 [`maintainer-skill-convergence-plan.schema.json`](../schemas/maintainer-skill-convergence-plan.schema.json),
+[`maintainer-scope-decomposition-plan.schema.json`](../schemas/maintainer-scope-decomposition-plan.schema.json),
 [`case-generation-round.schema.json`](../schemas/case-generation-round.schema.json), and
 [`candidate-knowledge-binding.schema.json`](../schemas/candidate-knowledge-binding.schema.json).
+
+An oversized structural scope remains blocked. Its decomposition plan is a
+revision-bound review artifact, not a catalog row: it must prove exact parent
+inventory, complete and non-overlapping file assignment, and bounded candidate
+leaves. The convergence plan distinguishes a missing decomposition from a
+complete candidate awaiting semantic review. Only an atomic catalog rewrite
+may replace the aggregate parent with reviewed child responsibilities.
 
 ## Migration rule for existing evidence
 
