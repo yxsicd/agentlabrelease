@@ -209,6 +209,12 @@ The object must have exactly these fields:
 - limitations: at least two concrete unproved claims
 
 Use git rev-parse HEAD:path to obtain every blob identity. Evidence paths may include direct cross-boundary dependencies when needed, but at least one must be inside the selected scope. Do not claim runtime execution, build success, compiler dataflow, device behavior, performance, an approved Oracle, or operation readiness. Do not copy secrets or generated files. Validate the JSON once, then finish.
+
+Use at most 24 shell tool calls. Start from the declared scope evidence and
+entrypoints, inspect only the direct files needed for the four dimensions, and
+do not enumerate or read the whole repository. Once two or more exact blobs
+support a bounded contract, stop exploring. Reserve the final two tool calls to
+write program-fact-proposal.json and parse it once before finishing.
 """
     try:
         participant.turn(

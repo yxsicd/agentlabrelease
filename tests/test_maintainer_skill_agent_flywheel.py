@@ -123,6 +123,12 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         self.assertIn("never repositoryPath", source)
         self.assertIn("no other evidence fields are allowed", source)
 
+    def test_agent_prompt_has_a_bounded_exploration_budget(self):
+        source = (ROOT / "examples/maintainer-knowledge-gate/agent_flywheel.py").read_text()
+        self.assertIn("Use at most 24 shell tool calls", source)
+        self.assertIn("do not enumerate or read the whole repository", source)
+        self.assertIn("Reserve the final two tool calls", source)
+
     def test_compare_requires_one_l2_gain_without_l3_promotion(self):
         before = {
             "totals": {"scopeSkillCount": 5, "structuralReadyCount": 5, "programBoundCount": 1,
