@@ -176,14 +176,30 @@ def select_iteration(loop_receipt: dict, facts: dict[str, dict], existing: list[
             repository_counts[repository_id] = repository_counts.get(repository_id, 0) + 1
     eligible = []
     for offset, iteration in enumerate(iterations):
-        fact = facts.get(iteration.get("acceptedFactId"))
-        if not fact:
-            continue
-        require(fact.get("scopeSkillIds") == [iteration.get("scope")], "loop scope and fact binding differ")
-        require(fact.get("repositoryId") == iteration.get("repository"), "loop repository and fact binding differ")
-        eligible.append((repository_counts.get(fact["repositoryId"], 0), offset, iteration, fact))
+        fact_ids = iteration.get("acceptedFactIds")
+        scope_ids = iteration.get("scopeIds")
+        if fact_ids is None and scope_ids is None:
+            fact_ids = [iteration.get("acceptedFactId")]
+            scope_ids = [iteration.get("scope")]
+        require(isinstance(fact_ids, list) and fact_ids,
+                "loop iteration has no accepted facts")
+        require(isinstance(scope_ids, list) and len(scope_ids) == len(fact_ids),
+                "loop scope and fact batch sizes differ")
+        for batch_offset, (fact_id, scope_id) in enumerate(zip(fact_ids, scope_ids)):
+            fact = facts.get(fact_id)
+            if not fact:
+                continue
+            require(fact.get("scopeSkillIds") == [scope_id],
+                    "loop scope and fact binding differ")
+            require(fact.get("repositoryId") == iteration.get("repository"),
+                    "loop repository and fact binding differ")
+            selected = dict(iteration)
+            selected["scope"] = scope_id
+            selected["acceptedFactId"] = fact_id
+            eligible.append((repository_counts.get(fact["repositoryId"], 0), offset,
+                             batch_offset, selected, fact))
     require(eligible, "bounded loop has no exported accepted fact")
-    _, _, iteration, fact = min(eligible, key=lambda item: (item[0], item[1]))
+    _, _, _, iteration, fact = min(eligible, key=lambda item: item[:3])
     return iteration, fact
 
 
