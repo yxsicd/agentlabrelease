@@ -37,12 +37,25 @@ fi
 # projection of root-level declarations, not permission to hydrate every child
 # scope in a large corpus.
 selector_count=0
+request_selectors() {
+  jq -c '
+    def selected_scopes:
+      if .schema == "agentlab.maintainer_skill_agent_batch_request.v1"
+      then .requests[].scope else .scope end;
+    selected_scopes
+    | select(.pathBoundary != ".")
+    | if ((.ownershipSelectors // []) | length) > 0
+      then .ownershipSelectors[]
+      else {type:"prefix", path:.pathBoundary}
+      end
+  ' "$scope_request"
+}
 if [[ -n $scope_request ]]; then
   [[ -f $scope_request && ! -L $scope_request ]] || {
     echo "scope request must be a regular file" >&2
     exit 2
   }
-  selector_count=$(jq -r '(.scope.ownershipSelectors // []) | length' "$scope_request")
+  selector_count=$(request_selectors | wc -l | tr -d ' ')
 fi
 if ((selector_count > 0)); then
   git -C "$destination" sparse-checkout init --no-cone
@@ -63,7 +76,7 @@ if ((selector_count > 0)); then
         exit 2
       fi
     done <<<"$paths"
-  done < <(jq -c '.scope.ownershipSelectors[]' "$scope_request")
+  done < <(request_selectors)
   {
     while IFS= read -r selector; do
       type=$(jq -r '.type' <<<"$selector")
@@ -72,7 +85,7 @@ if ((selector_count > 0)); then
       else
         jq -r '.paths[] | "/" + .' <<<"$selector"
       fi
-    done < <(jq -c '.scope.ownershipSelectors[]' "$scope_request")
+    done < <(request_selectors)
   } | git -C "$destination" sparse-checkout set --no-cone --stdin
 elif [[ $scope_path == . ]]; then
   git -C "$destination" sparse-checkout init --no-cone
@@ -96,7 +109,7 @@ for ((attempt = 1; attempt <= attempts; attempt++)); do
           echo "ownership selector did not materialize: $selected_path" >&2
           exit 1
         }
-      done < <(jq -r '.scope.ownershipSelectors[] | if .type == "prefix" then .path else .paths[] end' "$scope_request")
+      done < <(request_selectors | jq -r 'if .type == "prefix" then .path else .paths[] end')
     fi
     exit 0
   fi

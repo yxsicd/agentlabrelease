@@ -34,13 +34,20 @@ python3 examples/maintainer-knowledge-gate/agent_flywheel.py plan \
   --output "$run_root/convergence-plan.json"
 
 converging=false
+scope_batch_size=${AGENTLAB_SCOPE_BATCH_SIZE:-4}
+if [[ ! $scope_batch_size =~ ^[1-4]$ ]]; then
+  echo "AGENTLAB_SCOPE_BATCH_SIZE must be an integer from 1 through 4" >&2
+  exit 2
+fi
+export AGENTLAB_SCOPE_BATCH_SIZE=$scope_batch_size
 if [[ $iterations == converge ]]; then
   converging=true
-  iterations=$(jq -r '.summary.eligible' "$run_root/convergence-plan.json")
-  if [[ $iterations -eq 0 ]]; then
+  eligible=$(jq -r '.summary.eligible' "$run_root/convergence-plan.json")
+  if [[ $eligible -eq 0 ]]; then
     echo "repository has no eligible L1 scope to advance" >&2
     exit 3
   fi
+  iterations=$(((eligible + scope_batch_size - 1) / scope_batch_size))
   export AGENTLAB_MAX_ITERATIONS=64
 fi
 

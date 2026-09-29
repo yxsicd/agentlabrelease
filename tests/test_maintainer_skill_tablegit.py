@@ -329,6 +329,60 @@ class MaintainerSkillTableGitTest(unittest.TestCase):
             self.assertTrue((output / "maintainer-knowledge-cut.json").is_file())
             self.assertTrue((output / "assessments/round-5-agent-42.json").is_file())
 
+    def test_stage_records_one_atomic_round_for_multiple_scope_receipts(self):
+        source = ROOT / "examples/maintainer-knowledge-gate/first-four"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            assessment = root / "assessment.json"
+            assessment.write_text(json.dumps({
+                "roundIndex": 31,
+                "nextRoundObjectives": ["continue exact evidence closure"],
+            }) + "\n")
+            result = root / "result.json"
+            result.write_text(json.dumps({
+                "decision": "review-proposed-knowledge",
+                "after": {
+                    "scopeSkillCount": 489, "programBoundCount": 36,
+                    "semanticReadyCount": 31, "maintenanceReadyCount": 3,
+                },
+            }) + "\n")
+            receipts = []
+            for index in range(2):
+                receipt = root / f"receipt-{index}.json"
+                receipt.write_text(json.dumps({
+                    "acceptedFactId": f"agent-analysis-batch-{index}",
+                    "scopeSkillId": f"scope-{index}",
+                    "sourceAssessmentSha256": "a" * 64,
+                }) + "\n")
+                receipts.append(receipt)
+            output = root / "stage"
+            MODULE.command_stage(type("Args", (), {
+                "base": source,
+                "candidate_program_facts": source / "program_facts.jsonl",
+                "candidate_assessment": assessment,
+                "result": result,
+                "receipt": receipts,
+                "run_id": "batch-42",
+                "github_repository": "owner/repo",
+                "producer_kind": "github-action",
+                "producer_url": None,
+                "producer_host": None,
+                "output": output,
+            }))
+            latest = max(
+                MODULE.load_jsonl(output / "maintainer_skill_refresh_rounds.jsonl"),
+                key=lambda row: row["roundIndex"],
+            )
+            self.assertEqual(latest["changes"]["added"], [
+                "semantic program fact agent-analysis-batch-0",
+                "semantic program fact agent-analysis-batch-1",
+            ])
+            manifest = MODULE.load(output / "stage-manifest.json")
+            self.assertEqual(manifest["proposalReceiptCount"], 2)
+            self.assertEqual(manifest["acceptedFactIds"], [
+                "agent-analysis-batch-0", "agent-analysis-batch-1",
+            ])
+
     def test_focused_refresh_is_recorded_as_an_update_not_a_new_fact(self):
         source = ROOT / "examples/maintainer-knowledge-gate/first-four"
         with tempfile.TemporaryDirectory() as directory:

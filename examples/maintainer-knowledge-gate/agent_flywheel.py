@@ -279,6 +279,12 @@ def eligible_scopes(scope_rows, assessment, repository_id):
 
 
 def select_scope(scope_rows, assessment, repository_id):
+    return select_scope_batch(scope_rows, assessment, repository_id, 1)[0]
+
+
+def select_scope_batch(scope_rows, assessment, repository_id, max_scopes):
+    require(isinstance(max_scopes, int) and 1 <= max_scopes <= 4,
+            "scope batch size must be from 1 through 4")
     eligible = eligible_scopes(scope_rows, assessment, repository_id)
     require(eligible, f"no bounded L1 source scope is eligible in {repository_id}")
     eligible.sort(
@@ -288,7 +294,11 @@ def select_scope(scope_rows, assessment, repository_id):
             row["id"],
         )
     )
-    return eligible[0]
+    # Repository-contract analysis owns a root-only projection. Never widen it
+    # by batching it with recursively owned child scopes.
+    if analysis_profile(eligible[0])[0] == "repository-contract":
+        return eligible[:1]
+    return eligible[:max_scopes]
 
 
 def select_repository(scope_rows, assessment, repository_ids):
@@ -312,6 +322,25 @@ def select_repository(scope_rows, assessment, repository_ids):
     return min(candidates)[2]
 
 
+def request_for_scope(source, assessment_path, assessment, scope):
+    analysis_mode, required_dimensions = analysis_profile(scope)
+    return {
+        "schema": "agentlab.maintainer_skill_agent_request.v1",
+        "automaticPromotion": False,
+        "sourceAssessment": {
+            "path": str(assessment_path),
+            "sha256": digest(assessment_path),
+            "roundIndex": assessment["roundIndex"],
+        },
+        "repository": source,
+        "scope": scope,
+        "analysisMode": analysis_mode,
+        "requiredDimensions": sorted(required_dimensions),
+        "forbiddenDimensions": ["operation"],
+        "output": "program-fact-proposal.json",
+    }
+
+
 def prepare(args):
     cut = load(args.knowledge / "maintainer-knowledge-cut.json")
     assessment = load(args.assessment)
@@ -326,24 +355,49 @@ def prepare(args):
     )
     require(source is not None, "repository is absent from the knowledge cut")
     scope = select_scope(scope_rows, assessment, repository_id)
-    analysis_mode, required_dimensions = analysis_profile(scope)
-    packet = {
-        "schema": "agentlab.maintainer_skill_agent_request.v1",
-        "automaticPromotion": False,
-        "sourceAssessment": {
-            "path": str(args.assessment),
-            "sha256": digest(args.assessment),
-            "roundIndex": assessment["roundIndex"],
-        },
-        "repository": source,
-        "scope": scope,
-        "analysisMode": analysis_mode,
-        "requiredDimensions": sorted(required_dimensions),
-        "forbiddenDimensions": ["operation"],
-        "output": "program-fact-proposal.json",
-    }
+    packet = request_for_scope(source, args.assessment, assessment, scope)
     write(args.output, packet)
     print(scope["id"])
+
+
+def prepare_batch(args):
+    cut = load(args.knowledge / "maintainer-knowledge-cut.json")
+    assessment = load(args.assessment)
+    scope_rows = rows(args.knowledge / "maintainer_scope_skills.jsonl")
+    repository_id = args.repository
+    if repository_id == "auto":
+        repository_id = select_repository(
+            scope_rows, assessment, [row["id"] for row in cut["repositories"]]
+        )
+    source = next(
+        (row for row in cut["repositories"] if row["id"] == repository_id), None
+    )
+    require(source is not None, "repository is absent from the knowledge cut")
+    selected = select_scope_batch(
+        scope_rows, assessment, repository_id, args.batch_size
+    )
+    requests = [
+        request_for_scope(source, args.assessment, assessment, scope)
+        for scope in selected
+    ]
+    packet = {
+        "schema": "agentlab.maintainer_skill_agent_batch_request.v1",
+        "automaticPromotion": False,
+        "repository": source,
+        "sourceAssessment": requests[0]["sourceAssessment"],
+        "maxParallelScopes": args.batch_size,
+        "selectedScopeCount": len(requests),
+        "selectedSourceFileCount": sum(
+            request["scope"].get("sourceFileCount", 0) for request in requests
+        ),
+        "requests": requests,
+    }
+    write(args.output, packet)
+    print(json.dumps(
+        {"repositoryId": repository_id,
+         "scopeIds": [request["scope"]["id"] for request in requests]},
+        separators=(",", ":"), sort_keys=True,
+    ))
 
 
 def eligible_count(args):
@@ -576,21 +630,28 @@ def compare(args):
     program_bound_delta = (
         after["totals"]["programBoundCount"] - before["totals"]["programBoundCount"]
     )
-    require(program_bound_delta in (0, 1),
-            "proposal changed program binding for more than one scope or removed a binding")
-    require(after["totals"]["semanticReadyCount"] == before["totals"]["semanticReadyCount"] + 1,
-            "proposal did not advance exactly one scope to L2")
+    expected_scopes = getattr(args, "expected_scopes", 1)
+    require(1 <= expected_scopes <= 4, "expected scope count must be from 1 through 4")
+    require(0 <= program_bound_delta <= expected_scopes,
+            "proposal batch changed program binding outside the selected scopes")
+    semantic_ready_delta = (
+        after["totals"]["semanticReadyCount"] - before["totals"]["semanticReadyCount"]
+    )
+    require(semantic_ready_delta == expected_scopes,
+            "proposal batch did not advance every selected scope to L2")
     maintenance_ready_delta = (
         after["totals"]["maintenanceReadyCount"] - before["totals"]["maintenanceReadyCount"]
     )
-    require(maintenance_ready_delta in (0, 1),
-            "proposal changed operation readiness for more than the selected scope or removed readiness")
+    require(0 <= maintenance_ready_delta <= expected_scopes,
+            "proposal batch changed operation readiness outside the selected scopes")
     write(args.output, {
         "schema": "agentlab.maintainer_skill_agent_flywheel_result.v1",
         "automaticPromotion": False,
         "decision": "review-proposed-knowledge",
         "before": before["totals"],
         "after": after["totals"],
+        "batchScopeCount": expected_scopes,
+        "semanticReadyDelta": semantic_ready_delta,
         "maintenanceReadyDelta": maintenance_ready_delta,
         "assessmentSha256": digest(args.after),
     })
@@ -605,6 +666,13 @@ def main():
     p.add_argument("--repository", required=True)
     p.add_argument("--output", type=Path, required=True)
     p.set_defaults(handler=prepare)
+    p = commands.add_parser("prepare-batch")
+    p.add_argument("--knowledge", type=Path, required=True)
+    p.add_argument("--assessment", type=Path, required=True)
+    p.add_argument("--repository", required=True)
+    p.add_argument("--batch-size", type=int, required=True)
+    p.add_argument("--output", type=Path, required=True)
+    p.set_defaults(handler=prepare_batch)
     p = commands.add_parser("eligible-count")
     p.add_argument("--knowledge", type=Path, required=True)
     p.add_argument("--assessment", type=Path, required=True)
@@ -637,6 +705,7 @@ def main():
     p.add_argument("--before", type=Path, required=True)
     p.add_argument("--after", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
+    p.add_argument("--expected-scopes", type=int, default=1)
     p.set_defaults(handler=compare)
     args = parser.parse_args()
     args.handler(args)
