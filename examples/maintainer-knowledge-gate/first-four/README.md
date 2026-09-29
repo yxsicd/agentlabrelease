@@ -27,12 +27,12 @@ experimental pending repository review.
 | `hms-cordova-iap` | IAP is a 104-file subtree in a 24-plugin monorepo | TypeScript-to-Cordova-to-Java bridge; upstream package build exits 1 | Mine cross-language bridge contracts only after repairing the build/test contract |
 
 The complete [`maintainer_scope_skills.jsonl`](maintainer_scope_skills.jsonl)
-catalog is the maintainable-unit Skill map, not a candidate list. Its 480
+catalog is the maintainable-unit Skill map, not a candidate list. Its 489
 scope-level Maintainer Skills partition every tracked file exactly once:
 
 | Repository | Scope Skill count | Partition rule |
 | --- | ---: | --- |
-| `code-workshop` | 16 | shared module, seven feature modules, four product modules, build/support boundaries |
+| `code-workshop` | 25 | reviewed common/component-library responsibilities plus the remaining feature, product, build, and support boundaries |
 | `guide-snippets` | 416 | 410 independent sample projects plus domain/repository support boundaries |
 | `harmony-iap-client` | 14 | nine ArkTS source-owner units plus application, resources, build, documentation, and repository support |
 | `hms-cordova-iap` | 34 | 23 non-IAP plugin packages, nine detailed IAP layers, and repository support |
@@ -71,14 +71,11 @@ real flywheel passes over all four repositories:
 | Explicit universal dimensions and scope bindings | 480 | 11 | 4 | 0 |
 | Targeted semantic and executable operation evidence | 480 | 13 | 6 | 2 |
 
-The guide `ArkWeb/SetBasicAttrsEvts` sample and the Harmony IAP consumable page
-are now L3 maintenance-ready. Both have complete bounded semantic dimensions
-and executable emulator evidence, but neither is automatically an approved
-evaluation case: independent Oracle review and case promotion remain separate
-gates. The code-workshop `features/devpractices` scope is newly L2 based on
-cache/image contracts; the Cordova IAP Ionic, TypeScript and Java bridge layers
-remain L2 because their build/runtime contract is still unresolved. The latest
-gap queue retains 467 unbound scopes and drives the next targeted round.
+The latest independent assessment covers all 489 structural scopes: 33 are
+program-bound, 28 are semantic-ready, and 3 are maintenance-ready. Maintenance
+readiness still does not automatically approve an evaluation case: independent
+Oracle review and case promotion remain separate gates. The current gap queue
+retains 456 program-unbound scopes and drives the next targeted round.
 
 [`case_generation_rounds.jsonl`](case_generation_rounds.jsonl) starts the
 separate downstream generation lineage. Round 1 is intentionally an honest

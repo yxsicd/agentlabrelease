@@ -28,12 +28,12 @@ fn first_four_catalog_partitions_every_tracked_file_into_maintainer_scope_skills
     );
     assert_eq!(summary["catalogSha256"], digest(&catalog_bytes));
     assert_eq!(summary["repositoryCount"], 4);
-    assert_eq!(summary["scopeSkillCount"], 480);
+    assert_eq!(summary["scopeSkillCount"], 489);
     assert_eq!(summary["trackedFilesAssignedExactlyOnce"], true);
     assert_eq!(summary["automaticPromotion"], false);
 
     let expected = BTreeMap::from([
-        ("code-workshop", (1512u64, 16u64)),
+        ("code-workshop", (1512u64, 25u64)),
         ("guide-snippets", (39298, 416)),
         ("harmony-iap-client", (44, 14)),
         ("hms-cordova-iap", (3713, 34)),
@@ -88,7 +88,7 @@ fn first_four_catalog_partitions_every_tracked_file_into_maintainer_scope_skills
             .or_default() += 1;
         row_count += 1;
     }
-    assert_eq!(row_count, 480);
+    assert_eq!(row_count, 489);
     for (repository, (files, _)) in expected {
         assert_eq!(file_totals[repository], files);
     }

@@ -742,6 +742,58 @@ def update_cut(export: Path, base: Path, revision: str, repo: str,
     write_json(export / "maintainer-knowledge-cut.json", cut)
 
 
+def update_catalog_summary(export: Path, base: Path) -> None:
+    """Rebind the derived catalog summary to the exact TableGit export."""
+    summary_path = base / "maintainer-skill-summary.json"
+    if not summary_path.is_file():
+        return
+    summary = load(summary_path)
+    rows = load_jsonl(export / TABLE_FILES["maintainer_scope_skills"])
+    by_repository: dict[str, list[dict]] = {}
+    for row in rows:
+        by_repository.setdefault(row["repositoryId"], []).append(row)
+
+    retained = {row["repositoryId"]: row for row in summary["repositories"]}
+    if set(retained) != set(by_repository):
+        raise RuntimeError("exact scope export changes the catalog repository set")
+    for repository_id, repository_rows in by_repository.items():
+        repository = retained[repository_id]
+        stable_fields = {
+            "revision": "sourceRevision",
+            "treeOid": "sourceTreeOid",
+            "strategy": "strategy",
+        }
+        for summary_field, row_field in stable_fields.items():
+            values = {row[row_field] for row in repository_rows}
+            if values != {repository[summary_field]}:
+                raise RuntimeError(
+                    f"exact scope export changes {repository_id} {summary_field}"
+                )
+        aggregate_fields = {
+            "trackedFileCount": "trackedFileCount",
+            "sourceFileCount": "sourceFileCount",
+            "codeLineCount": "codeLineCount",
+            "testFileCount": "testFileCount",
+        }
+        for summary_field, row_field in aggregate_fields.items():
+            total = sum(row[row_field] for row in repository_rows)
+            if total != repository[summary_field]:
+                raise RuntimeError(
+                    f"exact scope export changes {repository_id} {summary_field} coverage"
+                )
+        repository["assignedFileCount"] = repository["trackedFileCount"]
+        repository["unassignedFileCount"] = 0
+        repository["scopeSkillCount"] = len(repository_rows)
+
+    summary["catalogSha256"] = file_sha256(
+        export / TABLE_FILES["maintainer_scope_skills"]
+    )
+    summary["scopeSkillCount"] = len(rows)
+    summary["trackedFilesAssignedExactlyOnce"] = True
+    summary["automaticPromotion"] = False
+    write_json(export / "maintainer-skill-summary.json", summary)
+
+
 def command_sync(args) -> None:
     client = Inspector(args.endpoint, args.person_id)
     revision = current_revision(client, args.repo, args.anchor_table)
@@ -762,6 +814,7 @@ def command_sync(args) -> None:
             (row["id"], value_sha256(row)) for row in sorted(expected, key=lambda item: item["id"])
         ]:
             raise RuntimeError(f"{table} exact-revision export differs from the staged cut")
+    update_catalog_summary(args.export, args.base)
 
     manifest_path = args.snapshot / "stage-manifest.json"
     if manifest_path.is_file():

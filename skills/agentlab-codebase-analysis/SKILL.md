@@ -74,7 +74,7 @@ bound. This is valid assessment convergence, not automatic case promotion.
 
 Use [program analysis](../agentlab-program-analysis/SKILL.md) for structure and [seed extraction](../agentlab-seed-extraction/SKILL.md) to turn grounded knowledge into tasks. Archive searches and generic TableGit analysis requests, exact input cuts and complete results in `program_facts`.
 
-Develop in TableGit. Export a fixed cut with the existing [three-table workflow](../../examples/knowledge-seed/README.md), one stable JSONL per table. Release files are publication snapshots, not a second live authority.
+Develop in TableGit. Export a fixed cut with the existing [three-table workflow](../../examples/knowledge-seed/README.md), one stable JSONL per table. Rebuild every non-authoritative catalog summary from that exact export and fail if its repository identity or coverage totals drift; never publish a summary hash carried from the pre-transaction snapshot. Release files are publication snapshots, not a second live authority.
 
 Produce target-instance guidance for this stage as TableGit Skill rows,
 separate from the structured facts/tasks/results. Follow
