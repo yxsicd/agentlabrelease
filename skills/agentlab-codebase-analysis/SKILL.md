@@ -114,6 +114,12 @@ an idle socket timeout is not a total deadline when partial header bytes keep
 arriving. Preserve the raw bytes unchanged, parse semantic stream lines from a
 separate incremental buffer, and prove both incomplete-header and no-newline
 body cases with real gateway regression tests.
+Build the operator-supplied Blob inventory with the scope's ownership selectors
+as Git pathspecs. Never make every parallel Agent recursively size the complete
+repository and discard out-of-scope rows afterward. Prefix and exact-file
+selectors may be queried together; a root-only repository-contract scope uses
+a non-recursive root tree query. Reconcile the returned files to the scope's
+tracked-file count before dispatch.
 
 Use [program analysis](../agentlab-program-analysis/SKILL.md) for structure and [seed extraction](../agentlab-seed-extraction/SKILL.md) to turn grounded knowledge into tasks. Archive searches and generic TableGit analysis requests, exact input cuts and complete results in `program_facts`.
 

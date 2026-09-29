@@ -163,6 +163,15 @@ header bytes or one unterminated body line can stay alive indefinitely. Test
 both failure modes directly and retain a receipt that distinguishes the expiry
 phase from EOF and semantic completion.
 
+Precomputed source context must be bounded before it is computed, not merely
+filtered afterward. Derive Git pathspecs from each scope's prefix and exact-file
+ownership selectors and query only those paths. For a root-only repository
+contract query the root tree non-recursively. Running a recursive, size-bearing
+whole-tree inventory independently for every parallel Agent converts context
+optimization into object-database contention and can consume the entire Agent
+budget before a prompt is dispatched. Exact tracked-file reconciliation remains
+mandatory for every narrowed query.
+
 The durable round receipt binds source and method revisions, parent assessment,
 scope-selection policy, eligible and blocked counts, Agent execution counts,
 hard-gate decision, TableGit transaction, SkillsGit materialization and the

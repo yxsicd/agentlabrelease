@@ -71,11 +71,33 @@ def scope_selector_summary(scope):
     )
 
 
+def scope_inventory_query(scope):
+    """Return whether to recurse and the narrow Git pathspecs for one scope."""
+    selectors = scope.get("ownershipSelectors")
+    if selectors:
+        pathspecs = []
+        for selector in selectors:
+            if selector.get("type") == "prefix":
+                pathspecs.append(selector["path"])
+            elif selector.get("type") == "files":
+                pathspecs.extend(selector["paths"])
+        return True, sorted(set(pathspecs))
+    boundary = scope.get("pathBoundary", "")
+    if boundary == ".":
+        return False, []
+    return True, [boundary]
+
+
 def scope_source_inventory(scope, source_root):
     """Build an operator-verified inventory without spending Agent tool turns."""
-    output = subprocess.check_output(
-        ["git", "-C", str(source_root), "ls-tree", "-r", "-l", "-z", "HEAD"]
-    )
+    recursive, pathspecs = scope_inventory_query(scope)
+    command = ["git", "-C", str(source_root), "ls-tree"]
+    if recursive:
+        command.append("-r")
+    command += ["-l", "-z", "HEAD"]
+    if pathspecs:
+        command += ["--", *pathspecs]
+    output = subprocess.check_output(command)
     entries = []
     for record in output.split(b"\0"):
         if not record:
@@ -83,6 +105,8 @@ def scope_source_inventory(scope, source_root):
         metadata, encoded_path = record.split(b"\t", 1)
         mode, object_type, oid, byte_count = metadata.decode("ascii").split()
         path = encoded_path.decode("utf-8")
+        if object_type == "tree":
+            continue
         owns = scope_owns_path(scope, path)
         if scope.get("pathBoundary") == "." and not scope.get("ownershipSelectors"):
             owns = "/" not in path
