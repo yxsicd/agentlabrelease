@@ -153,6 +153,16 @@ enforce wall time and tool-call limits, retain partial native events on breach,
 and bind actual counts and the limit into the round receipt. A proposal created
 outside those limits cannot advance the knowledge cut.
 
+The operator-owned model gateway must also enforce an absolute upstream
+deadline independently of HTTP header and SSE framing. Bound response-header
+acquisition as total elapsed time, then read and forward the body in available
+chunks while checking the same deadline between chunks; accumulate a separate
+buffer to recognize complete semantic lines. Idle socket timeouts and
+line-oriented reads do not satisfy this contract because periodic partial
+header bytes or one unterminated body line can stay alive indefinitely. Test
+both failure modes directly and retain a receipt that distinguishes the expiry
+phase from EOF and semantic completion.
+
 The durable round receipt binds source and method revisions, parent assessment,
 scope-selection policy, eligible and blocked counts, Agent execution counts,
 hard-gate decision, TableGit transaction, SkillsGit materialization and the

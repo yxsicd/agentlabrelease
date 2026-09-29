@@ -5,14 +5,17 @@ import json
 import os
 import shutil
 import socket
+import socketserver
 import struct
 import subprocess
 import sys
+import time
 from pathlib import Path
 import tempfile
 import threading
 import unittest
 import urllib.request
+import urllib.error
 from unittest.mock import patch
 
 
@@ -321,6 +324,122 @@ class GatewayCaptureTests(unittest.TestCase):
                     if path.is_file():
                         self.assertNotIn(b'synthetic-external-key', path.read_bytes())
         finally:
+            server.shutdown()
+            server.server_close()
+            thread.join()
+
+    def test_absolute_deadline_stops_no_newline_drip_stream(self):
+        stopped = threading.Event()
+
+        class Upstream(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *args):
+                pass
+
+            def do_POST(self):
+                self.rfile.read(int(self.headers['Content-Length']))
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/event-stream')
+                self.end_headers()
+                try:
+                    while not stopped.is_set():
+                        self.wfile.write(b'x')
+                        self.wfile.flush()
+                        time.sleep(0.01)
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+
+        server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Upstream)
+        server.daemon_threads = True
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with tempfile.TemporaryDirectory() as directory, patch.dict(
+                    os.environ, {'AGENTLAB_LM_GATEWAY_KEY': 'synthetic-external-key'}):
+                root = Path(directory)
+                evidence = root / 'evidence'
+                evidence.mkdir()
+                participant = MODULE.Participant(
+                    evidence, root / 'state', '/bin/true',
+                    f'http://127.0.0.1:{server.server_port}', 'test-model')
+                participant.gateway_timeout_seconds = 0.15
+                started = time.monotonic()
+                try:
+                    body = json.dumps({'stream': True, 'messages': []}).encode()
+                    request = urllib.request.Request(
+                        f'http://127.0.0.1:{participant.server.server_port}/v1/chat/completions',
+                        data=body, headers={'Authorization': 'Bearer harmless-local-token'})
+                    with urllib.request.urlopen(request, timeout=2) as result:
+                        result.read()
+                finally:
+                    participant.close()
+                elapsed = time.monotonic() - started
+                receipt = json.loads(
+                    (evidence / 'gateway/0001.status.json').read_text())
+                self.assertLess(elapsed, 1.5)
+                self.assertTrue(receipt['upstreamDeadlineExceeded'])
+                self.assertEqual(receipt['upstreamDeadlinePhase'], 'response_body')
+                self.assertEqual(receipt['outcome'], 'upstream_deadline_exceeded')
+                self.assertFalse(receipt['upstreamEof'])
+                self.assertGreater(receipt['responseBytes'], 0)
+        finally:
+            stopped.set()
+            server.shutdown()
+            server.server_close()
+            thread.join()
+
+    def test_absolute_deadline_stops_incomplete_header_drip(self):
+        stopped = threading.Event()
+
+        class Upstream(socketserver.BaseRequestHandler):
+            def handle(self):
+                self.request.recv(65536)
+                partial_header = b'HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\n'
+                try:
+                    offset = 0
+                    while not stopped.is_set():
+                        self.request.sendall(partial_header[offset:offset + 1])
+                        offset = (offset + 1) % len(partial_header)
+                        time.sleep(0.01)
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+
+        server = socketserver.ThreadingTCPServer(('127.0.0.1', 0), Upstream)
+        server.daemon_threads = True
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with tempfile.TemporaryDirectory() as directory, patch.dict(
+                    os.environ, {'AGENTLAB_LM_GATEWAY_KEY': 'synthetic-external-key'}):
+                root = Path(directory)
+                evidence = root / 'evidence'
+                evidence.mkdir()
+                participant = MODULE.Participant(
+                    evidence, root / 'state', '/bin/true',
+                    f'http://127.0.0.1:{server.server_address[1]}', 'test-model')
+                participant.gateway_timeout_seconds = 0.15
+                started = time.monotonic()
+                try:
+                    body = json.dumps({'stream': True, 'messages': []}).encode()
+                    request = urllib.request.Request(
+                        f'http://127.0.0.1:{participant.server.server_port}/v1/chat/completions',
+                        data=body, headers={'Authorization': 'Bearer harmless-local-token'})
+                    with self.assertRaises(urllib.error.HTTPError) as raised:
+                        urllib.request.urlopen(request, timeout=2)
+                    self.assertEqual(raised.exception.code, 504)
+                    raised.exception.close()
+                finally:
+                    participant.close()
+                elapsed = time.monotonic() - started
+                receipt = json.loads(
+                    (evidence / 'gateway/0001.status.json').read_text())
+                self.assertLess(elapsed, 1.5)
+                self.assertTrue(receipt['upstreamDeadlineExceeded'])
+                self.assertEqual(receipt['upstreamDeadlinePhase'], 'response_headers')
+                self.assertEqual(receipt['outcome'], 'upstream_deadline_exceeded')
+                self.assertFalse(receipt['upstreamEof'])
+                self.assertEqual(receipt['responseBytes'], 0)
+        finally:
+            stopped.set()
             server.shutdown()
             server.server_close()
             thread.join()

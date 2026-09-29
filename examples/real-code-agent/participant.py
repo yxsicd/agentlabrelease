@@ -1,6 +1,7 @@
 """Operator-owned gateway capture and a replaceable Pi participant launcher."""
 import http.server
 import base64
+import concurrent.futures
 import hashlib
 import json
 import os
@@ -134,12 +135,47 @@ class Participant:
                           headers={'Authorization': 'Bearer ' + owner.key,
                                    'Content-Type': 'application/json'}, method='POST')
                 upstream_deadline = time.monotonic() + owner.gateway_timeout_seconds
+                opened = concurrent.futures.Future()
+
+                def open_upstream():
+                    try:
+                        try:
+                            result = urllib.request.build_opener(NoRedirect).open(
+                                request, timeout=owner.gateway_timeout_seconds
+                            )
+                        except urllib.error.HTTPError as error:
+                            result = error
+                        opened.set_result(result)
+                    except Exception as error:
+                        opened.set_exception(error)
+
+                opener_thread = threading.Thread(
+                    target=open_upstream,
+                    name=f'agentlab-upstream-open-{receipt["exchangeId"]}',
+                    daemon=True,
+                )
+                opener_thread.start()
                 try:
-                    response = urllib.request.build_opener(NoRedirect).open(
-                        request, timeout=owner.gateway_timeout_seconds
+                    response = opened.result(timeout=max(
+                        0, upstream_deadline - time.monotonic()))
+                except concurrent.futures.TimeoutError:
+                    def close_late_response(future):
+                        try:
+                            future.result().close()
+                        except Exception:
+                            pass
+
+                    opened.add_done_callback(close_late_response)
+                    receipt.update(
+                        upstreamDeadlineExceeded=True,
+                        upstreamDeadlinePhase='response_headers',
+                        outcome='upstream_deadline_exceeded',
                     )
-                except urllib.error.HTTPError as error:
-                    response = error
+                    try:
+                        self.send_error(504, 'Upstream response deadline exceeded')
+                    except OSError:
+                        receipt['clientDisconnected'] = True
+                    return
                 with response:
                     receipt['status'] = response.status
                     try:
@@ -149,30 +185,48 @@ class Participant:
                     except OSError:
                         receipt['clientDisconnected'] = True
                     with stem.with_suffix('.response').open('wb') as output:
+                        semantic_buffer = b''
+
+                        def observe_semantic_line(line):
+                            if not wire.get('stream') or not line.startswith(b'data:'):
+                                return
+                            data = line[5:].strip()
+                            if data == b'[DONE]':
+                                receipt['semanticComplete'] = True
+                                return
+                            try:
+                                event = json.loads(data)
+                                if event.get('error'):
+                                    receipt['streamError'] = event['error']
+                                if any(isinstance(c.get('finish_reason'), str)
+                                       for c in event.get('choices', [])):
+                                    receipt['semanticComplete'] = True
+                            except (ValueError, TypeError):
+                                pass
+
                         while True:
                             if time.monotonic() >= upstream_deadline:
                                 receipt.update(
                                     upstreamDeadlineExceeded=True,
+                                    upstreamDeadlinePhase='response_body',
                                     outcome='upstream_deadline_exceeded',
                                 )
                                 break
-                            chunk = response.readline()
+                            # readline() can wait forever when an upstream drips bytes
+                            # without a newline. read1() returns the bytes currently
+                            # available, so the absolute deadline is checked even for
+                            # a malformed or adversarial streaming response.
+                            chunk = response.read1(65536)
                             if not chunk:
+                                if semantic_buffer:
+                                    observe_semantic_line(semantic_buffer)
                                 receipt.update(upstreamEof=True, outcome=('stream_error' if receipt['streamError'] else 'completed' if receipt['semanticComplete'] or not wire.get('stream') else 'incomplete_stream'))
                                 break
-                            if wire.get('stream') and chunk.startswith(b'data:'):
-                                data = chunk[5:].strip()
-                                if data == b'[DONE]':
-                                    receipt['semanticComplete'] = True
-                                else:
-                                    try:
-                                        event = json.loads(data)
-                                        if event.get('error'):
-                                            receipt['streamError'] = event['error']
-                                        if any(isinstance(c.get('finish_reason'), str) for c in event.get('choices', [])):
-                                            receipt['semanticComplete'] = True
-                                    except (ValueError, TypeError):
-                                        pass
+                            semantic_buffer += chunk
+                            lines = semantic_buffer.split(b'\n')
+                            semantic_buffer = lines.pop()
+                            for line in lines:
+                                observe_semantic_line(line)
                             output.write(chunk)
                             output.flush()
                             receipt['responseBytes'] += len(chunk)
