@@ -21,6 +21,13 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         )[0]
         self.assertIn("        default: code-workshop\n", repository_input)
 
+    def test_workflow_exposes_reviewed_scope_rewrite_without_agent_runtime(self):
+        workflow = (ROOT / ".github/workflows/maintainer-skill-agent-flywheel.yml").read_text()
+        self.assertIn("options: [expand, focused-refresh, scope-rewrite]", workflow)
+        self.assertIn("if: inputs.mode != 'scope-rewrite'", workflow)
+        self.assertIn("scripts/run-maintainer-scope-catalog-rewrite.sh", workflow)
+        self.assertIn("steps.rewrite.outputs.snapshot", workflow)
+
     def test_scope_checkout_materializes_only_exact_requested_boundary(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

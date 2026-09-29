@@ -3,10 +3,10 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Expand an unbound scope or refresh one fact from candidate feedback
+        description: Expand, refresh, or atomically apply reviewed scope replacements
         required: true
         type: choice
-        options: [expand, focused-refresh]
+        options: [expand, focused-refresh, scope-rewrite]
         default: expand
       repository:
         description: Repository selection; auto balances normalized semantic coverage
@@ -74,11 +74,14 @@ jobs:
           python3 -m unittest \
             tests.test_maintainer_skill_agent_flywheel \
             tests.test_maintainer_skill_tablegit \
+            tests.test_apply_scope_decomposition_review \
+            tests.test_maintainer_scope_decomposition_review \
             tests.test_case_generation_shadow \
             tests.test_shadow_construction_readiness \
             tests.test_focused_fact_refresh
           cargo build --locked -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
       - name: Install the separately contained Pi runtime
+        if: inputs.mode != 'scope-rewrite'
         run: |
           mkdir -p "$RUNNER_TEMP/pi-runtime"
           cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
@@ -105,13 +108,20 @@ jobs:
             "$KNOWLEDGE" "$AGENTLAB_ROOT/run" \
             "$FOCUSED_CANDIDATE_ID" "$FOCUSED_CONSTRUCTION_PLAN" \
             "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi"
+      - name: Stage the reviewed scope catalog rewrite
+        id: rewrite
+        if: inputs.mode == 'scope-rewrite'
+        run: |
+          set -euo pipefail
+          scripts/run-maintainer-scope-catalog-rewrite.sh \
+            "$KNOWLEDGE" "$AGENTLAB_ROOT/scope-rewrite"
       - name: Persist in TableGit and export the exact committed revision
         run: |
           set -euo pipefail
           test -n "$AGENTLAB_TABLEGIT_MCP_URL"
           test -n "$AGENTLAB_TABLEGIT_PERSON_ID"
           python3 scripts/maintainer-skill-tablegit.py sync \
-            --base "$KNOWLEDGE" --snapshot '${{ steps.loop.outputs.snapshot || steps.focused.outputs.snapshot }}' \
+            --base "$KNOWLEDGE" --snapshot '${{ steps.loop.outputs.snapshot || steps.focused.outputs.snapshot || steps.rewrite.outputs.snapshot }}' \
             --export "$KNOWLEDGE" --receipt "$AGENTLAB_ROOT/run/tablegit-sync-receipt.json" \
             --run-id "$GITHUB_RUN_ID" --github-repository "$GITHUB_REPOSITORY"
           jq '{repo,revision,authorityVerified,mirror,tables}' \

@@ -61,7 +61,11 @@ checkout, candidate path check, materialized Skill and coverage check must use
 those selectors; never fake the merge with a common ancestor. Apply a reviewed
 replacement first to a new exclusive candidate catalog. Only after exact
 revision, Tree, Blob, file-set, count, completeness and overlap checks pass may
-an authoritative TableGit transaction replace the parent.
+an authoritative TableGit transaction replace the parent. Retire every parent
+and insert every reviewed child in the same revision-fenced batch, using exact
+row versions for deletion. Recompute the independent assessment against the
+candidate catalog before that batch; an assessment of the old parent catalog
+cannot certify the replacement.
 Repository-contract analysis must start from a root-only checkout projection;
 the root boundary does not authorize recursively materializing every child.
 Treat maturity as evidence composition: a newly accepted semantic fact may move

@@ -98,7 +98,10 @@ ownership authority for fact binding, Agent checkout projection, candidate
 path validation, materialization and coverage verification. `pathBoundary` is
 only a human navigation anchor. Generate a complete replacement catalog with
 an exclusive atomic write before requesting the separate authoritative
-TableGit transaction. A shared ancestor is not an acceptable approximation
+TableGit transaction. The transaction must combine row-version-fenced parent
+deletes and reviewed child inserts, then export the exact committed revision.
+Regenerate the independent assessment from the candidate catalog first; never
+carry forward the aggregate parents' maturity by assumption. A shared ancestor is not an acceptable approximation
 because it would silently reclaim sibling files.
 
 Agent budgets are execution contracts, not prompt advice. The operator must

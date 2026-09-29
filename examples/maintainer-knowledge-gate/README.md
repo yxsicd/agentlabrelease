@@ -73,3 +73,7 @@ parent file is assigned exactly once, and writes a complete candidate catalog
 through an exclusive atomic create. It never overwrites a retained candidate or
 changes TableGit. The candidate can enter a separately reviewed authoritative
 transaction only after its receipt reports complete, non-overlapping parity.
+The `scope-rewrite` mode of the Maintainer Skill Agent flywheel regenerates an
+independent assessment from that candidate, stages row-version-fenced parent
+deletes together with all child inserts, commits one TableGit batch, and exports
+only the exact committed revision. It does not invoke the construction Agent.
