@@ -51,3 +51,11 @@ claim must reference regular evidence files by exact SHA-256.
 
 Do not copy the portfolio into mutable runtime state. TableGit remains the live
 knowledge authority; this file is a Release-pinned sampling plan.
+
+Oversized scope remediation starts with
+[`scope_decomposition.py`](scope_decomposition.py). It reads one scope row and
+an exact checkout, verifies the revision, Tree OID and parent inventory, then
+emits a complete, non-overlapping bounded candidate partition conforming to
+[`maintainer-scope-decomposition-plan.schema.json`](../../schemas/maintainer-scope-decomposition-plan.schema.json).
+Generated leaves require a later evidence review and atomic catalog rewrite;
+the command never edits the live scope catalog or promotes a Skill.
