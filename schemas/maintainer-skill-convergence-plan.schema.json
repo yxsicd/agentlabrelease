@@ -9,7 +9,7 @@
     "selectionPolicy", "summary", "decision", "scopes", "automaticPromotion"
   ],
   "properties": {
-    "schema": {"const": "agentlab.maintainer_skill_convergence_plan.v1"},
+    "schema": {"const": "agentlab.maintainer_skill_convergence_plan.v2"},
     "repositoryId": {"type": "string", "minLength": 1},
     "sourceRevision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
     "sourceAssessmentSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
@@ -17,12 +17,21 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "maxSourceFilesPerAgentRound", "requiresNonRootBoundary",
+        "maxSourceFilesPerAgentRound", "analysisModes", "rootScopeRequiresSpecialistMode",
         "requiresReachableBlobEvidence", "repositorySpecificBranches"
       ],
       "properties": {
         "maxSourceFilesPerAgentRound": {"type": "integer", "minimum": 1},
-        "requiresNonRootBoundary": {"const": true},
+        "analysisModes": {
+          "type": "array",
+          "prefixItems": [
+            {"const": "configuration-asset"},
+            {"const": "repository-contract"},
+            {"const": "source-behavior"}
+          ],
+          "items": false
+        },
+        "rootScopeRequiresSpecialistMode": {"const": true},
         "requiresReachableBlobEvidence": {"const": true},
         "repositorySpecificBranches": {"const": false}
       }
@@ -46,7 +55,7 @@
         "type": "object",
         "required": [
           "skillId", "pathBoundary", "maturity", "sourceFileCount",
-          "testFileCount", "disposition", "nextAction"
+          "testFileCount", "analysisMode", "disposition", "nextAction"
         ],
         "properties": {
           "skillId": {"type": "string", "minLength": 1},
@@ -54,6 +63,7 @@
           "maturity": {"type": "string", "minLength": 1},
           "sourceFileCount": {"type": "integer", "minimum": 0},
           "testFileCount": {"type": "integer", "minimum": 0},
+          "analysisMode": {"enum": ["configuration-asset", "repository-contract", "source-behavior"]},
           "disposition": {"enum": ["eligible", "blocked", "already-advanced"]},
           "blockerCode": {"type": "string", "pattern": "^MS-[A-Z0-9-]+$"},
           "nextAction": {"type": "string", "minLength": 1}

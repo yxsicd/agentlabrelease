@@ -62,6 +62,13 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
                 ),
                 "",
             )
+            root_checkout = root / "root-checkout"
+            subprocess.run([
+                str(ROOT / "scripts/checkout-maintainer-scope.sh"),
+                bare.as_uri(), revision, ".", str(root_checkout),
+            ], check=True)
+            self.assertTrue((root_checkout / "wanted/main.ets").is_file())
+            self.assertTrue((root_checkout / "sibling/large.bin").is_file())
 
     def test_selection_prefers_small_tested_unbound_scope(self):
         scopes = [
@@ -111,12 +118,63 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         schema = json.loads((ROOT / "schemas/maintainer-skill-convergence-plan.schema.json").read_text())
         self.assertEqual(schema["properties"]["schema"]["const"], plan["schema"])
         self.assertEqual(set(schema["required"]), set(plan))
-        self.assertEqual(plan["summary"], {"scopeCount": 4, "eligible": 1, "blocked": 2, "alreadyAdvanced": 1})
+        self.assertEqual(plan["summary"], {"scopeCount": 4, "eligible": 2, "blocked": 1, "alreadyAdvanced": 1})
         self.assertEqual(plan["decision"], "advance-eligible-scopes")
         blockers = {row["skillId"]: row.get("blockerCode") for row in plan["scopes"]}
         self.assertEqual(blockers["large"], "MS-SCOPE-DECOMPOSITION-REQUIRED")
-        self.assertEqual(blockers["config"], "MS-NON-SOURCE-SCOPE")
+        modes = {row["skillId"]: row["analysisMode"] for row in plan["scopes"]}
+        self.assertEqual(modes["config"], "configuration-asset")
+        self.assertEqual(modes["ready"], "source-behavior")
         self.assertFalse(plan["selectionPolicy"]["repositorySpecificBranches"])
+
+    def test_root_scope_uses_repository_contract_mode_and_root_evidence(self):
+        scope = {"id": "root", "repositoryId": "r", "pathBoundary": ".", "sourceFileCount": 1,
+                 "testFileCount": 0, "evidence": [{"path": "build.json"}]}
+        state = {"maturity": "L1-structural-ready"}
+        result = MODULE.classify_scope(scope, state)
+        self.assertEqual(result["disposition"], "eligible")
+        self.assertEqual(result["analysisMode"], "repository-contract")
+        self.assertTrue(MODULE.path_is_within("any/nested/file", "."))
+
+    def test_configuration_proposal_uses_only_required_dimensions(self):
+        request = {
+            "repository": {"id": "r", "revision": "a" * 40},
+            "scope": {"id": "config", "pathBoundary": "config"},
+            "requiredDimensions": ["boundary", "relations", "responsibility"],
+            "sourceAssessment": {"sha256": "b" * 64},
+        }
+        proposal = {
+            "schema": "agentlab.maintainer_skill_fact_proposal.v1",
+            "id": "agent-analysis-generic-config-contract",
+            "repositoryId": "r", "sourceRevision": "a" * 40,
+            "scopeSkillIds": ["config"], "kind": "analysis",
+            "dimensions": ["responsibility", "boundary", "relations"],
+            "interpretation": "Configuration owns a declared application boundary and relates its inputs to direct consumers. " * 2,
+            "evidence": [
+                {"path": "config/a.json", "gitBlobOid": "1" * 40},
+                {"path": "config/b.json", "gitBlobOid": "2" * 40},
+            ],
+            "limitations": ["Runtime use is not executed.", "Build success is not established."],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            subprocess.run(["git", "init", "-q", str(source)], check=True)
+            subprocess.run(["git", "-C", str(source), "config", "user.name", "test"], check=True)
+            subprocess.run(["git", "-C", str(source), "config", "user.email", "test@example.com"], check=True)
+            (source / "config").mkdir()
+            (source / "config/a.json").write_text("{}\n")
+            (source / "config/b.json").write_text("{}\n")
+            subprocess.run(["git", "-C", str(source), "add", "."], check=True)
+            subprocess.run(["git", "-C", str(source), "commit", "-qm", "fixture"], check=True)
+            revision = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip()
+            request["repository"]["revision"] = revision
+            proposal["sourceRevision"] = revision
+            for evidence in proposal["evidence"]:
+                evidence["gitBlobOid"] = subprocess.check_output(
+                    ["git", "-C", str(source), "rev-parse", f"HEAD:{evidence['path']}"], text=True
+                ).strip()
+            fact = MODULE.validate_proposal(request, proposal, source)
+        self.assertEqual(fact["dimensions"], ["boundary", "relations", "responsibility"])
 
     def test_auto_repository_selection_prefers_lowest_normalized_coverage(self):
         scopes = [

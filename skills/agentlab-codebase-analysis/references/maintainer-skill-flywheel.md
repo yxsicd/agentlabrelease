@@ -59,6 +59,20 @@ need decomposition, zero-source configuration/asset scopes need a specialist
 analysis mode, root scopes need repository-contract analysis, and unreachable
 evidence needs inventory repair. Zero eligible scopes is not convergence.
 
+Select analysis mode from scope capability rather than repository identity:
+
+- `source-behavior` proves responsibility, boundary, relations and behavior
+  for a bounded source-bearing scope.
+- `configuration-asset` proves responsibility, boundary and relations for
+  manifests, resources and build metadata without inventing runtime behavior.
+- `repository-contract` proves repository composition and root-level contracts
+  from root authority and direct declarations without recursively reading all
+  child scopes.
+
+All modes use the same revision, Blob, lineage and independent-assessment gates.
+Large source scopes remain blocked until a child partition proves complete,
+non-overlapping coverage and stable parent/child responsibility lineage.
+
 Agent budgets are execution contracts, not prompt advice. The operator must
 enforce wall time and tool-call limits, retain partial native events on breach,
 and bind actual counts and the limit into the round receipt. A proposal created

@@ -39,6 +39,12 @@ Agent budgets and an atomic no-write-on-failure boundary as defined by the
 flywheel reference. `No eligible scope` is a blocker report, not proof that the
 repository is understood.
 
+Route bounded work by capability: source behavior, configuration/asset, or
+repository contract. Require only evidence dimensions that the mode can prove;
+never fabricate behavior for a non-source scope. Do not solve an oversized
+scope by increasing the Agent context budget. Decompose it into complete,
+non-overlapping child responsibilities with explicit parent lineage first.
+
 Use [program analysis](../agentlab-program-analysis/SKILL.md) for structure and [seed extraction](../agentlab-seed-extraction/SKILL.md) to turn grounded knowledge into tasks. Archive searches and generic TableGit analysis requests, exact input cuts and complete results in `program_facts`.
 
 Develop in TableGit. Export a fixed cut with the existing [three-table workflow](../../examples/knowledge-seed/README.md), one stable JSONL per table. Release files are publication snapshots, not a second live authority.
