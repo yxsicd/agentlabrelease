@@ -1,0 +1,99 @@
+{
+  "schema": "agentlab.maintainer_scope_decomposition_review_spec.v1",
+  "parentScopeSkillId": "skill-scope-code-workshop-features-componentlibrary",
+  "groups": [
+    {
+      "id": "skill-scope-code-workshop-componentlibrary-framework",
+      "responsibility": "Maintain component-library packaging, navigation, shared component chrome, models, view models, resources, and common detail machinery.",
+      "rationale": "The home and detail views route through shared service, model, and view-model contracts, while reusable component chrome and the common detail mapping machinery supply every specialized component example.",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-features-componentlibrary-root-files-1",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-files-1",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-component",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-files-1",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-common",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-constant",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-model",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-service",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-util",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-view",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-viewmodel",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-resources"
+      ],
+      "evidencePaths": ["features/componentlibrary/src/main/ets/view/ComponentDetailView.ets", "features/componentlibrary/src/main/ets/viewmodel/ComponentDetailManager.ets"]
+    },
+    {
+      "id": "skill-scope-code-workshop-componentlibrary-dialog-overlays",
+      "responsibility": "Maintain action-sheet, alert-dialog, custom-dialog, popup, and text-picker-dialog interactive overlay examples.",
+      "rationale": "These examples share an overlay lifecycle and builder-descriptor-code-generator pattern, exposing modal interaction and dismissal behavior distinct from layout, media, and text-input component families.",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-actionsheetview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-alertdialogview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-customdialog",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-popup",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-textpickerdialogview"
+      ],
+      "evidencePaths": ["features/componentlibrary/src/main/ets/componentdetailview/actionsheetview/component/ActionSheetBuilder.ets", "features/componentlibrary/src/main/ets/componentdetailview/popup/viewmodel/PopupDescriptor.ets"]
+    },
+    {
+      "id": "skill-scope-code-workshop-componentlibrary-layout-collections",
+      "responsibility": "Maintain layout and collection demonstrations for column, flex, grid, list, row, stack, swiper, tabs, and water-flow components.",
+      "rationale": "Each family implements the same builder, attribute mapping, modifier, descriptor, and code-generation contract for spatial layout or collection behavior, with shared common mapping dependencies across the group.",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-columnview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-flex",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-grid",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-list",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-rowview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-stackview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-swiperview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-tabview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-waterflow"
+      ],
+      "evidencePaths": ["features/componentlibrary/src/main/ets/componentdetailview/grid/viewmodel/GridCodeGenerator.ets", "features/componentlibrary/src/main/ets/componentdetailview/rowview/viewmodel/RowAttributeModifier.ets"]
+    },
+    {
+      "id": "skill-scope-code-workshop-componentlibrary-input-display",
+      "responsibility": "Maintain button, picker, rating, styled-text, text-area, text-input, text, and toggle component demonstrations.",
+      "rationale": "These component families center on editable or display attributes and convert descriptor state into generated ArkUI code through the same modifier and mapping architecture, forming one input-and-display responsibility.",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-buttonview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-picker",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-rating",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-styletext",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-textarea",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-textinput",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-textview",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-toggleview"
+      ],
+      "evidencePaths": ["features/componentlibrary/src/main/ets/componentdetailview/picker/calendarPicker/viewmodel/CalendarPickerAttributeModifier.ets", "features/componentlibrary/src/main/ets/componentdetailview/toggleview/viewmodel/ToggleCodeGenerator.ets"]
+    },
+    {
+      "id": "skill-scope-code-workshop-componentlibrary-media-platform",
+      "responsibility": "Maintain image, caption, app-linking, document, AI-image, pen, photo-picker, progress, and text-to-speech platform examples.",
+      "rationale": "These examples are adapters around media, AI, linking, picker, pen, speech, or progress platform capabilities and preserve their permission, result, error, and generated-code boundaries separately from core layout controls.",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-image",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-aicaption",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-applinking",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-documentviewpicker",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-imageaianalyzer",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-penkit",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-photopicker",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-progress",
+        "skill-scope-code-workshop-features-componentlibrary-src-main-ets-componentdetailview-texttospeech"
+      ],
+      "evidencePaths": ["features/componentlibrary/src/main/ets/componentdetailview/photopicker/component/PhotoViewPickerBuilder.ets", "features/componentlibrary/src/main/ets/componentdetailview/texttospeech/component/TextToSpeechBuilder.ets"]
+    },
+    {
+      "id": "skill-scope-code-workshop-componentlibrary-verification",
+      "responsibility": "Maintain the component-library ohosTest integration suite and local unit-test entrypoints as its executable verification surface.",
+      "rationale": "The ohosTest and local test trees are the module-owned verification surface and contain the Ability, List, and local suite entrypoints; they verify the module without owning its production component behavior.",
+      "memberLeafIds": [
+        "skill-scope-code-workshop-features-componentlibrary-src-ohostest",
+        "skill-scope-code-workshop-features-componentlibrary-src-test"
+      ],
+      "evidencePaths": ["features/componentlibrary/src/ohosTest/ets/test/Ability.test.ets", "features/componentlibrary/src/test/LocalUnit.test.ets"]
+    }
+  ]
+}

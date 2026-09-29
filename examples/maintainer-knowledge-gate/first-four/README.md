@@ -133,6 +133,14 @@ directories that form one coherent responsibility, after which the catalog
 must be replaced atomically and reassessed before the flywheel can select the
 new leaves.
 
+The evidence review under [`decomposition-reviews/`](decomposition-reviews/)
+reduces those 64 structural candidates to 11 proposed semantic
+responsibilities: five for `common` and six for `componentlibrary`. All 415
+files remain assigned once, every group has multiple exact Blob citations, and
+the largest group has 58 source files. Catalog application deliberately remains
+blocked because these responsibilities combine disjoint selectors and the v1
+scope model currently exposes only one `pathBoundary`.
+
 `repository=auto` is the standard unattended policy. It considers only bounded
 L1 scopes whose own inventory evidence is reachable inside their declared path
 boundary, then chooses the repository with the lowest normalized semantic

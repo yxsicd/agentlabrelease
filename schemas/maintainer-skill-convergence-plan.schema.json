@@ -78,6 +78,17 @@
               "status": {"const": "complete-non-overlapping-candidate"}
             }
           },
+          "decompositionReview": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "sha256", "semanticGroupCount", "status"],
+            "properties": {
+              "path": {"type": "string", "minLength": 1},
+              "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+              "semanticGroupCount": {"type": "integer", "minimum": 2},
+              "status": {"const": "complete-non-overlapping-semantic-proposal"}
+            }
+          },
           "nextAction": {"type": "string", "minLength": 1}
         }
       }

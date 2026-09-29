@@ -129,6 +129,7 @@ The authoritative schemas are
 [`maintainer-skill-refresh-round.schema.json`](../schemas/maintainer-skill-refresh-round.schema.json),
 [`maintainer-skill-convergence-plan.schema.json`](../schemas/maintainer-skill-convergence-plan.schema.json),
 [`maintainer-scope-decomposition-plan.schema.json`](../schemas/maintainer-scope-decomposition-plan.schema.json),
+[`maintainer-scope-decomposition-review.schema.json`](../schemas/maintainer-scope-decomposition-review.schema.json),
 [`case-generation-round.schema.json`](../schemas/case-generation-round.schema.json), and
 [`candidate-knowledge-binding.schema.json`](../schemas/candidate-knowledge-binding.schema.json).
 
@@ -138,6 +139,11 @@ inventory, complete and non-overlapping file assignment, and bounded candidate
 leaves. The convergence plan distinguishes a missing decomposition from a
 complete candidate awaiting semantic review. Only an atomic catalog rewrite
 may replace the aggregate parent with reviewed child responsibilities.
+Semantic review assigns every structural leaf exactly once and binds each
+proposed responsibility to exact owned Blobs. A responsibility spanning
+disjoint selectors must remain blocked until every ownership consumer supports
+the composite selector; using their common ancestor would violate the exact
+partition requirement.
 
 ## Migration rule for existing evidence
 

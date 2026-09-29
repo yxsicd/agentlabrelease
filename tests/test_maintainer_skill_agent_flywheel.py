@@ -161,6 +161,35 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         self.assertEqual(result["blockerCode"], "MS-SCOPE-DECOMPOSITION-REVIEW-REQUIRED")
         self.assertEqual(result["decompositionPlan"]["leafCount"], 2)
 
+        review = {
+            "schema": "agentlab.maintainer_scope_decomposition_review.v1",
+            "automaticCatalogApply": False,
+            "repositoryId": "arbitrary-repository", "sourceRevision": "a" * 40,
+            "sourceTreeOid": "c" * 40, "decompositionPlanSha256": "b" * 64,
+            "parentScopeSkillId": "large",
+            "groups": [
+                {"trackedFileCount": 44, "sourceFileCount": 40},
+                {"trackedFileCount": 46, "sourceFileCount": 41},
+            ],
+            "verification": {
+                "complete": True, "nonOverlapping": True, "assignedFileCount": 90,
+                "unassignedLeafCount": 0, "multiplyAssignedLeafCount": 0,
+                "semanticGroupCount": 2,
+            },
+            "blockerCode": "MS-COMPOSITE-SELECTOR-NOT-SUPPORTED",
+            "decision": "blocked-catalog-application",
+        }
+        result = MODULE.classify_scope(
+            scope,
+            {"maturity": "L1-structural-ready"},
+            decomposition={"path": "decomposition-plans/large.json", "sha256": "b" * 64,
+                           "plan": candidate},
+            review={"path": "decomposition-reviews/large.json", "sha256": "d" * 64,
+                    "review": review},
+        )
+        self.assertEqual(result["blockerCode"], "MS-COMPOSITE-SELECTOR-NOT-SUPPORTED")
+        self.assertEqual(result["decompositionReview"]["semanticGroupCount"], 2)
+
     def test_root_scope_uses_repository_contract_mode_and_root_evidence(self):
         scope = {"id": "root", "repositoryId": "r", "pathBoundary": ".", "sourceFileCount": 1,
                  "testFileCount": 0, "evidence": [{"path": "build.json"}]}
