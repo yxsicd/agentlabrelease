@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Receipt-qualified operation knowledge refresh round",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "roundIndex", "parentRoundSha256", "automaticPromotion", "ownershipPlane", "decision", "changes", "coverage", "focus", "residualGaps", "tables", "assessment", "producer", "operationRoundResultSha256", "baselineReassessment"],
+  "properties": {
+    "schema": {"const": "agentlab.maintainer_operation_refresh_round.v1"},
+    "id": {"type": "string", "minLength": 1},
+    "roundIndex": {"type": "integer", "minimum": 1},
+    "parentRoundSha256": {"$ref": "#/$defs/hash"},
+    "automaticPromotion": {"const": false},
+    "ownershipPlane": {"const": "target-operations"},
+    "decision": {"const": "continue"},
+    "changes": {
+      "type": "object", "additionalProperties": false, "required": ["added", "updated", "retired"],
+      "properties": {"added": {"$ref": "#/$defs/strings", "minItems": 1, "maxItems": 4}, "updated": {"const": []}, "retired": {"const": []}}
+    },
+    "coverage": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "focus": {"$ref": "#/$defs/strings", "minItems": 1},
+    "residualGaps": {"type": "array", "items": {"type": "object"}},
+    "tables": {
+      "type": "object", "additionalProperties": false,
+      "required": ["processSkillsSha256", "scopeSkillsSha256", "programFactsSha256"],
+      "properties": {"processSkillsSha256": {"$ref": "#/$defs/hash"}, "scopeSkillsSha256": {"$ref": "#/$defs/hash"}, "programFactsSha256": {"$ref": "#/$defs/hash"}}
+    },
+    "assessment": {
+      "type": "object", "additionalProperties": false, "required": ["path", "sha256"],
+      "properties": {"path": {"type": "string", "pattern": "^assessments/round-[0-9]+-operation-[A-Za-z0-9_-]+\\.json$"}, "sha256": {"$ref": "#/$defs/hash"}}
+    },
+    "producer": {
+      "type": "object", "additionalProperties": false, "required": ["kind", "runId"],
+      "properties": {"kind": {"const": "operation-receipt-stager"}, "runId": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,100}$"}}
+    },
+    "operationRoundResultSha256": {"$ref": "#/$defs/hash"},
+    "baselineReassessment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["performed", "priorAssessmentSha256", "strictBaselineSha256", "countsAsMaturityGain"],
+      "properties": {"performed": {"type": "boolean"}, "priorAssessmentSha256": {"$ref": "#/$defs/hash"}, "strictBaselineSha256": {"$ref": "#/$defs/hash"}, "countsAsMaturityGain": {"const": false}}
+    }
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "strings": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+  }
+}

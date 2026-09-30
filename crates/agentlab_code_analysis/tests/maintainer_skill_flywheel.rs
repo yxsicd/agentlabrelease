@@ -177,6 +177,130 @@ fn strict_cli_prepares_repeatable_candidate_cut_and_advances_one_scope() {
     .unwrap();
     assert_eq!(result["decision"], "review-proposed-operation-knowledge");
     assert_eq!(result["maintenanceReadyDelta"], 1);
+    let base = root.join("base");
+    fs::create_dir(&base).unwrap();
+    fs::create_dir(base.join("assessments")).unwrap();
+    fs::copy(&scopes, base.join("maintainer_scope_skills.jsonl")).unwrap();
+    fs::copy(&facts, base.join("program_facts.jsonl")).unwrap();
+    jsonl(
+        &base.join("maintainer_skills.jsonl"),
+        &[json!({"id":"process"})],
+    );
+    jsonl(&base.join("evaluation_cases.jsonl"), &[]);
+    jsonl(
+        &base.join("maintainer_skill_refresh_rounds.jsonl"),
+        &[json!({
+            "id":"parent", "roundIndex":4, "coverage":{"trackedFileCount":2},
+            "assessment":{"path":"assessments/parent.json","sha256":digest(&before_bytes)}
+        })],
+    );
+    fs::write(base.join("maintainer-knowledge-cut.json"), b"{}\n").unwrap();
+    fs::write(base.join("assessments/parent.json"), &before_bytes).unwrap();
+    let before_file = root.join("before.json");
+    let after_file = root.join("after.json");
+    fs::write(&before_file, &before_bytes).unwrap();
+    fs::write(&after_file, &after_bytes).unwrap();
+    let stage = |output: &Path, candidate: &Path, after: &Path| {
+        std::process::Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .args([
+                "--stage-operation-round",
+                "--base",
+                base.to_str().unwrap(),
+                "--program-facts",
+                candidate.to_str().unwrap(),
+                "--before",
+                before_file.to_str().unwrap(),
+                "--after",
+                after.to_str().unwrap(),
+                "--operation-receipts-root",
+                root.to_str().unwrap(),
+                "--selected-scope",
+                "scope",
+                "--run-id",
+                "generic-run",
+                "--output",
+                output.to_str().unwrap(),
+            ])
+            .output()
+            .unwrap()
+    };
+    let staged = root.join("stage");
+    let response = stage(&staged, &candidate, &after_file);
+    assert!(
+        response.status.success(),
+        "{}",
+        String::from_utf8_lossy(&response.stderr)
+    );
+    assert_eq!(
+        fs::read(staged.join("program_facts.jsonl")).unwrap(),
+        fs::read(&candidate).unwrap()
+    );
+    for table in [
+        "maintainer_skills",
+        "maintainer_scope_skills",
+        "evaluation_cases",
+    ] {
+        assert_eq!(
+            fs::read(staged.join(format!("{table}.jsonl"))).unwrap(),
+            fs::read(base.join(format!("{table}.jsonl"))).unwrap()
+        );
+    }
+    let rounds = rows_from_file(&staged.join("maintainer_skill_refresh_rounds.jsonl"));
+    assert_eq!(rounds.len(), 2);
+    assert_eq!(
+        rounds.iter().find(|r| r["roundIndex"] == 5).unwrap()["automaticPromotion"],
+        false
+    );
+    assert!(!stage(&staged, &candidate, &after_file).status.success());
+    let forged = root.join("forged.json");
+    let mut forged_report = after.clone();
+    forged_report["nextRoundObjectives"] = json!([]);
+    fs::write(&forged, serde_json::to_vec(&forged_report).unwrap()).unwrap();
+    let rejected_stage = root.join("rejected-stage");
+    assert!(!stage(&rejected_stage, &candidate, &forged).status.success());
+    assert!(!rejected_stage.exists());
+    let mut legacy_parent = before.clone();
+    legacy_parent["standard"]["operationEvidencePolicy"] = json!("legacy-explicit-claim");
+    let legacy_bytes = serde_json::to_vec(&legacy_parent).unwrap();
+    fs::write(base.join("assessments/parent.json"), &legacy_bytes).unwrap();
+    let mut parent_rows = rows_from_file(&base.join("maintainer_skill_refresh_rounds.jsonl"));
+    parent_rows[0]["assessment"]["sha256"] = json!(digest(&legacy_bytes));
+    jsonl(
+        &base.join("maintainer_skill_refresh_rounds.jsonl"),
+        &parent_rows,
+    );
+    assert!(!stage(&rejected_stage, &candidate, &after_file)
+        .status
+        .success());
+    assert!(!rejected_stage.exists());
+    agentlab_code_analysis::maintainer_operation_stage::stage(
+        &base,
+        &candidate,
+        &before_file,
+        &after_file,
+        &root,
+        &selected,
+        "explicit-rebaseline",
+        true,
+        &rejected_stage,
+    )
+    .unwrap();
+    let migrated = rows_from_file(&rejected_stage.join("maintainer_skill_refresh_rounds.jsonl"));
+    let latest = migrated.iter().find(|row| row["roundIndex"] == 5).unwrap();
+    assert_eq!(latest["baselineReassessment"]["performed"], true);
+    assert_eq!(
+        latest["baselineReassessment"]["countsAsMaturityGain"],
+        false
+    );
+    let changed_facts = root.join("changed-facts.jsonl");
+    let mut changed = rows_from_file(&candidate);
+    let semantic = changed.iter_mut().find(|r| r["id"] == "semantic").unwrap();
+    semantic["interpretation"] = json!("unrelated semantic mutation");
+    jsonl(&changed_facts, &changed);
+    assert!(!stage(&rejected_stage, &changed_facts, &after_file)
+        .status
+        .success());
+    assert_eq!(fs::read(&facts).unwrap(), original);
     for (pointer, value) in [
         ("/parentAssessmentSha256", json!("0".repeat(64))),
         ("/roundIndex", json!(7)),

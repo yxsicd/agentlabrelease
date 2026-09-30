@@ -81,13 +81,45 @@ transitions for every selected scope, and no changes to unselected scopes.
 A no-change replay must preserve the fact cut and yields `no-change`, not
 convergence. Mixed policies, partial batches and unrelated changes reject the
 result before output. The result retains next-round gaps and never writes
-TableGit. A separate operation-stage importer is still required before durable
-promotion; do not send this result to the semantic-only stage as if it were a
-new semantic Agent proposal.
+TableGit. Do not send this result to the semantic-only stage as if it were a
+new semantic Agent proposal. Prepare a compatible local snapshot with the Rust
+operation stager instead:
+
+```sh
+agentlab-maintainer-skill-flywheel --stage-operation-round \
+  --base EXACT_EXPORTED_CUT --program-facts CANDIDATE_FACTS \
+  --before STRICT_BASELINE --after CHILD_ASSESSMENT \
+  --operation-receipts-root ROOT --selected-scope SCOPE_ID \
+  --run-id SAFE_RUN_ID --output NEW_STAGE_DIRECTORY
+```
+
+The stager independently recomputes both assessments, verifies the latest
+durable assessment reference and all input digests, preserves existing facts,
+and requires exactly one deterministic receipt-qualified fact per selected
+scope. A changed semantic fact, forged report, missing receipt, duplicate ID or
+no-change round fails before output creation. Preserve the distinct counters:
+refresh-round history and assessment history need not have identical indices.
+Append one parent-bound refresh round and retain baseline, child and comparison
+reports. Method Skills, scope catalog and evaluation cases remain unchanged.
+
+This produces the five-table snapshot and stage manifest consumed by the
+existing `scripts/maintainer-skill-tablegit.py sync` path. That separately
+authorized step owns revision-fenced atomic persistence, exact committed-cut
+readback/export and optional replication. Local staging has no network client
+and proves none of those remote postconditions. Review the snapshot and producer
+identity before sync; it is not an automatically promoted knowledge cut.
+If the recorded assessment predates the exported facts or uses the legacy
+operation policy, default staging rejects the changed baseline. Only an explicit
+`--allow-baseline-reassessment` permits independently reassessing the current
+exact cut; retain both assessment digests and mark that migration as no maturity
+gain. The subsequent operation transition still uses two strict assessments.
+Operation lineage uses `agentlab.maintainer_operation_refresh_round.v1` in the
+existing refresh-round table, preserving historical semantic round formats.
 
 `scripts/run-maintainer-operation-receipt-smoke.sh` runs baseline, preparation,
 child assessment, operation comparison and unchanged replay using the same
-Rust binary locally and in the Rust contract Action. CI uses immutable public
+Rust binary locally and in the Rust contract Action, including snapshot staging
+and rejection of no-change staging. CI uses immutable public
 sample cuts and retains complete experiment outputs. This proves a repeatable
 receipt-consumption path, not three productive full-system flywheel rounds,
 fresh target execution or durable authority ingestion.

@@ -5,6 +5,7 @@ use tree_sitter::{Node, Parser};
 
 pub mod knowledge_gate;
 pub mod maintainer_operation_evidence;
+pub mod maintainer_operation_stage;
 pub mod maintainer_skill_flywheel;
 extern "C" {
     fn tree_sitter_agentlab_arkts() -> *const ();

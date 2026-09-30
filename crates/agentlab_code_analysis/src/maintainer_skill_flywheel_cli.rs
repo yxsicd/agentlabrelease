@@ -23,6 +23,32 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|arg| arg == "--stage-operation-round") {
+        let selected = args
+            .iter()
+            .enumerate()
+            .filter(|(_, arg)| arg.as_str() == "--selected-scope")
+            .map(|(i, _)| {
+                args.get(i + 1)
+                    .cloned()
+                    .ok_or("selected scope value missing")
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let manifest = agentlab_code_analysis::maintainer_operation_stage::stage(
+            &PathBuf::from(value(&args, "--base")?),
+            &PathBuf::from(value(&args, "--program-facts")?),
+            &PathBuf::from(value(&args, "--before")?),
+            &PathBuf::from(value(&args, "--after")?),
+            &PathBuf::from(value(&args, "--operation-receipts-root")?),
+            &selected,
+            &value(&args, "--run-id")?,
+            args.iter()
+                .any(|arg| arg == "--allow-baseline-reassessment"),
+            &output,
+        )?;
+        println!("{}", serde_json::to_string(&manifest)?);
+        return Ok(());
+    }
     if args.iter().any(|arg| arg == "--compare-operation-round") {
         let before = fs::read(value(&args, "--before")?)?;
         let after = fs::read(value(&args, "--after")?)?;
