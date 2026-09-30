@@ -18,7 +18,7 @@
     },
     "coverage": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
     "focus": {"$ref": "#/$defs/strings", "minItems": 1},
-    "residualGaps": {"type": "array", "items": {"type": "object"}},
+    "residualGaps": {"$ref": "#/$defs/strings"},
     "tables": {
       "type": "object", "additionalProperties": false,
       "required": ["processSkillsSha256", "scopeSkillsSha256", "programFactsSha256"],
