@@ -184,7 +184,7 @@ fn operation_maturity_requires_explicit_revision_bound_dimension() {
         "evidence":[{"path":"qualified-runtime.json","sha256":"5".repeat(64)}]
     }));
     jsonl(&facts, &rows);
-    let qualified = assess(&scopes, Some(&facts), 2, None).unwrap();
+    let qualified = assess(&scopes, Some(&facts), 1, None).unwrap();
     assert_eq!(qualified["totals"]["maintenanceReadyCount"], 1);
     assert_eq!(qualified["skills"][0]["maturity"], "L3-maintenance-ready");
     fs::remove_dir_all(root).unwrap();
