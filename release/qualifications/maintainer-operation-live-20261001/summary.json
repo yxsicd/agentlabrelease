@@ -1,0 +1,76 @@
+{
+  "schema": "agentlab.maintainer_operation_live_qualification.v1",
+  "date": "2026-10-01",
+  "codeRevision": "5e199e8ce0878657c4b4a8e408a0ce557b3f7744",
+  "ciRunUrl": "https://github.com/yxsicd/agentlabrelease/actions/runs/36782463373",
+  "authority": {
+    "endpoint": "https://cbgroom-tpc.ru.yxsbase.win/mcp",
+    "instanceId": "cbgroomtpc",
+    "repo": "agentlabtablegit",
+    "beforeRevision": "0c388ef1714ad7730659d9a9eaa56364087e7a88",
+    "committedRevision": "15e976790cc7a508c234a966b1bdf0585f0d6374",
+    "repeatRevision": "15e976790cc7a508c234a966b1bdf0585f0d6374",
+    "postcheckHead": "15e976790cc7a508c234a966b1bdf0585f0d6374",
+    "postcheckDirty": false,
+    "transactionId": "ad32588f-e5cb-5f3b-8513-37b745bea2c8",
+    "atomicOperations": 2
+  },
+  "tables": {
+    "evaluation_cases": {
+      "rowCount": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "maintainer_scope_skills": {
+      "rowCount": 489,
+      "sha256": "9faf87778708c0bc9acf6522ac1c0b1358e1845139da4f2949348d7285e51953"
+    },
+    "maintainer_skill_refresh_rounds": {
+      "rowCount": 34,
+      "sha256": "71207a402696d98a2854bbfa1da18e60de61068980e691e762dbc1cf7a284d68"
+    },
+    "maintainer_skills": {
+      "rowCount": 12,
+      "sha256": "a7f6affb37e60c7009870feafa86325ba4b7cdabf0ff2b0fd88364fa667ff6d7"
+    },
+    "program_facts": {
+      "rowCount": 58,
+      "sha256": "8ae23e768f912dfea7fb4f948959a60d3bb8dca1741c22c30a1423bfdcf4778c"
+    }
+  },
+  "scopeId": "skill-scope-code-workshop-componentlibrary-framework",
+  "acceptedFactId": "operation-build-ba2fd5204b013e40b09f63c6f360fd0750aefabbe7e56eefad180ba43361814f",
+  "refreshRoundId": "operation-round-34-live-20261001-fwbuild-01",
+  "strictAssessment": {
+    "beforeMaintenanceReadyCount": 0,
+    "afterMaintenanceReadyCount": 1,
+    "scopeCount": 489,
+    "programBoundCount": 44,
+    "semanticReadyCount": 39,
+    "assessmentSha256": "c653f3ba120a780f141a9df49b295003f371cce1a02149c2039c925979567d31",
+    "baselineReassessmentCountsAsGain": false
+  },
+  "verified": {
+    "exactRevisionReadback": true,
+    "repeatImportRevisionUnchanged": true,
+    "exportedPortableReassessmentByteIdentical": true,
+    "receiptBytesSha256": "de1f82800dd7680242948d77d6c2416c5d97319f72d2d876cbca194a82ddeba7"
+  },
+  "boundaries": {
+    "automaticPromotion": false,
+    "rawLogsOrArtifactsIndependentlyRead": false,
+    "freshBuildExecuted": false,
+    "runtimeQualified": false,
+    "performanceQualified": false,
+    "receiptAuthorshipVerified": false,
+    "threeProductiveRoundsQualified": false,
+    "remoteReplicationRequested": false,
+    "fullFlywheelMaturityQualified": false
+  },
+  "retainedFiles": [
+    "accepted-fact.json",
+    "refresh-round.json",
+    "build-qualification.json",
+    "sync-receipt.json"
+  ],
+  "exportWorkspace": "/tmp/agentlab-operation-live-20261001-export"
+}

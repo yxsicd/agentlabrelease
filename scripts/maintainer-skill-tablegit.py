@@ -862,6 +862,12 @@ def operation_evidence_files(snapshot: Path) -> dict[str, bytes]:
     files = {"operation-stage-manifest.json": read("stage-manifest.json"),
              "operation-baseline.json": read("operation-baseline.json"),
              "operation-result.json": read("operation-result.json")}
+    result = json.loads(files["operation-result.json"])
+    child = read(manifest["assessment"])
+    if (result.get("decision") != "review-proposed-operation-knowledge"
+            or result.get("beforeAssessmentSha256") != hashlib.sha256(files["operation-baseline.json"]).hexdigest()
+            or result.get("afterAssessmentSha256") != hashlib.sha256(child).hexdigest()):
+        raise RuntimeError("operation stage report digest mismatch")
     for receipt in receipts:
         if not receipt["path"].startswith("operation-evidence/") or not re.fullmatch(r"[0-9a-f]{64}", receipt["sha256"]):
             raise RuntimeError("operation receipt reference invalid")

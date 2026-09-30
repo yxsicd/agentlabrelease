@@ -28,7 +28,13 @@ class MaintainerSkillTableGitTest(unittest.TestCase):
                 MODULE.write_jsonl(root / filename, [fact] if table == "program_facts" else [])
             for filename in ("operation-baseline.json", "operation-result.json"):
                 MODULE.write_json(root / filename, {})
+            MODULE.write_json(root / "assessments/after.json", {})
+            MODULE.write_json(root / "operation-result.json", {
+                "decision": "review-proposed-operation-knowledge",
+                "beforeAssessmentSha256": MODULE.file_sha256(root / "operation-baseline.json"),
+                "afterAssessmentSha256": MODULE.file_sha256(root / "assessments/after.json")})
             manifest = {"stageKind": "verified-operation", "acceptedFactIds": ["operation"],
+                "assessment": "assessments/after.json",
                 "tables": {table: {"path": filename, "sha256": MODULE.file_sha256(root / filename)}
                            for table, filename in MODULE.TABLE_FILES.items()},
                 "operationEvidence": {"receiptRoot": "operation-evidence",
