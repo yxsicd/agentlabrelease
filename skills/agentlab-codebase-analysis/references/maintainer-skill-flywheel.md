@@ -116,6 +116,20 @@ gain. The subsequent operation transition still uses two strict assessments.
 Operation lineage uses `agentlab.maintainer_operation_refresh_round.v1` in the
 existing refresh-round table, preserving historical semantic round formats.
 
+Carry exact original receipt bytes with accepted operation facts. The stager
+records their digests and relative paths under `operation-evidence`; never depend
+on the originating machine's checkout or mutable filesystem path. Portable
+coverage is explicitly limited to accepted facts, not every historical receipt.
+Before any TableGit mutation, the sync writer checks table digests and portable
+receipt bindings; after exact committed-cut export it preserves receipt bytes,
+baseline, comparison and the original stage manifest as evidence sidecars.
+Verify an accepted fact without its original receipt directory, and reject
+tampering. Missing evidence stops ingestion before any authority write.
+Remote HEAD equality, exact business-row readback and unchanged repeat import
+must be measured independently; a local bundle or a mirrored branch is not proof
+of these postconditions. Preserve unrelated remote rows and never bootstrap an
+old cut over a newer authority merely to make a smoke run succeed.
+
 `scripts/run-maintainer-operation-receipt-smoke.sh` runs baseline, preparation,
 child assessment, operation comparison and unchanged replay using the same
 Rust binary locally and in the Rust contract Action, including snapshot staging

@@ -823,7 +823,59 @@ def update_catalog_summary(export: Path, base: Path) -> None:
     write_json(export / "maintainer-skill-summary.json", summary)
 
 
+def operation_evidence_files(snapshot: Path) -> dict[str, bytes]:
+    """Validate and retain portable sidecars before any authority mutation."""
+    manifest_path = snapshot / "stage-manifest.json"
+    if not manifest_path.is_file():
+        return {}
+    manifest = load(manifest_path)
+    if manifest.get("stageKind") != "verified-operation":
+        return {}
+
+    def read(relative: str, expected: str | None = None) -> bytes:
+        path = Path(relative)
+        if path.is_absolute() or not path.parts or any(part in (".", "..") for part in path.parts):
+            raise RuntimeError("operation evidence must be contained and relative")
+        current = snapshot
+        for part in path.parts:
+            current = current / part
+            if current.is_symlink():
+                raise RuntimeError("operation evidence cannot traverse a symlink")
+        if not current.is_file() or current.stat().st_size > 2 * 1024 * 1024:
+            raise RuntimeError("operation evidence missing or exceeds budget")
+        data = current.read_bytes()
+        if expected and hashlib.sha256(data).hexdigest() != expected:
+            raise RuntimeError("operation evidence digest mismatch")
+        return data
+
+    evidence = manifest.get("operationEvidence", {})
+    for table, filename in TABLE_FILES.items():
+        entry = manifest.get("tables", {}).get(table, {})
+        if entry.get("path") != filename or not re.fullmatch(r"[0-9a-f]{64}", entry.get("sha256", "")):
+            raise RuntimeError("operation stage table manifest invalid")
+        read(filename, entry["sha256"])
+    receipts = evidence.get("receipts", [])
+    if evidence.get("receiptRoot") != "operation-evidence" or evidence.get("coverage") != "accepted-operation-facts-only":
+        raise RuntimeError("operation stage has no portable evidence contract")
+    if not 1 <= len(receipts) <= 4 or sorted(row["factId"] for row in receipts) != sorted(manifest["acceptedFactIds"]):
+        raise RuntimeError("operation receipt coverage differs from accepted facts")
+    files = {"operation-stage-manifest.json": read("stage-manifest.json"),
+             "operation-baseline.json": read("operation-baseline.json"),
+             "operation-result.json": read("operation-result.json")}
+    for receipt in receipts:
+        if not receipt["path"].startswith("operation-evidence/") or not re.fullmatch(r"[0-9a-f]{64}", receipt["sha256"]):
+            raise RuntimeError("operation receipt reference invalid")
+        files[receipt["path"]] = read(receipt["path"], receipt["sha256"])
+    facts = {row["id"]: row for row in load_jsonl(snapshot / TABLE_FILES["program_facts"])}
+    for receipt in receipts:
+        reference = facts.get(receipt["factId"], {}).get("operationEvidence", {})
+        if receipt["path"] != "operation-evidence/" + reference.get("path", "") or receipt["sha256"] != reference.get("sha256"):
+            raise RuntimeError("portable receipt differs from accepted fact")
+    return files
+
+
 def command_sync(args) -> None:
+    portable_evidence = operation_evidence_files(args.snapshot)
     client = Inspector(args.endpoint, args.person_id)
     revision = current_revision(client, args.repo, args.anchor_table)
     revision = create_missing_tables(client, args.repo, revision)
@@ -870,6 +922,10 @@ def command_sync(args) -> None:
         args.github_repository, args.producer_kind, args.producer_url,
         args.producer_host,
     )
+    for relative, data in portable_evidence.items():
+        target = args.export / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
 
     mirror = {"requested": False, "verified": False}
     if args.replicate:

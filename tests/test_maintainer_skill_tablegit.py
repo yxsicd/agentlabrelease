@@ -16,6 +16,35 @@ SPEC.loader.exec_module(MODULE)
 
 
 class MaintainerSkillTableGitTest(unittest.TestCase):
+    def test_operation_evidence_is_portable_and_rejected_before_connect_on_drift(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            receipt = root / "operation-evidence" / "receipt.json"
+            receipt.parent.mkdir()
+            receipt.write_bytes(b'{"recorded":"exact"}\n')
+            fact = {"id": "operation", "operationEvidence": {
+                "path": "receipt.json", "sha256": MODULE.file_sha256(receipt)}}
+            for table, filename in MODULE.TABLE_FILES.items():
+                MODULE.write_jsonl(root / filename, [fact] if table == "program_facts" else [])
+            for filename in ("operation-baseline.json", "operation-result.json"):
+                MODULE.write_json(root / filename, {})
+            manifest = {"stageKind": "verified-operation", "acceptedFactIds": ["operation"],
+                "tables": {table: {"path": filename, "sha256": MODULE.file_sha256(root / filename)}
+                           for table, filename in MODULE.TABLE_FILES.items()},
+                "operationEvidence": {"receiptRoot": "operation-evidence",
+                    "coverage": "accepted-operation-facts-only", "receipts": [{
+                        "factId": "operation", "path": "operation-evidence/receipt.json",
+                        "sha256": MODULE.file_sha256(receipt)}]}}
+            MODULE.write_json(root / "stage-manifest.json", manifest)
+            retained = MODULE.operation_evidence_files(root)
+            self.assertEqual(retained["operation-evidence/receipt.json"], receipt.read_bytes())
+            self.assertIn("operation-stage-manifest.json", retained)
+            receipt.write_bytes(b'tampered')
+            with mock.patch.object(MODULE, "Inspector") as connect:
+                with self.assertRaisesRegex(RuntimeError, "digest mismatch"):
+                    MODULE.command_sync(type("Args", (), {"snapshot": root}))
+                connect.assert_not_called()
+
     def test_exact_revision_table_reads_are_bounded_and_parallel(self):
         barrier = threading.Barrier(len(MODULE.TABLE_FILES))
 

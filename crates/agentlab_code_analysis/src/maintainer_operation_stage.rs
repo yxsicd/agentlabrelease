@@ -141,6 +141,7 @@ pub fn stage(
         return Err("operation stage requires one new fact per selected scope".into());
     }
     let mut accepted = BTreeMap::new();
+    let mut portable_receipts = Vec::new();
     for (id, fact) in added {
         let ids = fact["scopeSkillIds"]
             .as_array()
@@ -161,6 +162,20 @@ pub fn stage(
         )?;
         if &expected != fact {
             return Err("stage fact differs from verified operation candidate".into());
+        }
+        let relative = fact["operationEvidence"]["path"]
+            .as_str()
+            .ok_or("stage receipt path missing")?;
+        let bytes = regular(&receipt_root.join(relative))?;
+        if fact["operationEvidence"]["sha256"].as_str() != Some(digest(&bytes).as_str()) {
+            return Err("stage receipt changed during capture".into());
+        }
+        let path = format!("operation-evidence/{relative}");
+        portable_receipts.push(json!({"factId":id,"path":path,"sha256":digest(&bytes)}));
+        if let Some(existing) = files.insert(path, bytes.clone()) {
+            if existing != bytes {
+                return Err("stage portable receipt path collision".into());
+            }
         }
     }
     let mut rounds = rows(&files["maintainer_skill_refresh_rounds.jsonl"])?;
@@ -270,6 +285,7 @@ pub fn stage(
     let manifest = json!({"schema":"agentlab.maintainer_skill_tablegit_stage.v1","automaticPromotion":false,
         "runId":run_id,"proposalReceiptCount":0,"acceptedFactIds":accepted.values().collect::<Vec<_>>(),
         "assessment":assessment_path,"stageKind":"verified-operation","authorityWritePerformed":false,
+        "operationEvidence":{"receiptRoot":"operation-evidence","coverage":"accepted-operation-facts-only","receipts":portable_receipts},
         "tables":TABLES.iter().map(|table|{let path=format!("{table}.jsonl");((*table).to_owned(),json!({"path":path,"sha256":digest(&files[&path])}))}).collect::<BTreeMap<_,_>>()});
     files.insert("stage-manifest.json".into(), pretty(&manifest)?);
     // All semantic and receipt checks precede filesystem mutation. Refuse reuse.
@@ -277,7 +293,11 @@ pub fn stage(
     let written = (|| -> Result<(), String> {
         fs::create_dir(output.join("assessments")).map_err(|e| e.to_string())?;
         for (path, bytes) in files {
-            fs::write(output.join(path), bytes).map_err(|e| e.to_string())?;
+            let path = output.join(path);
+            if let Some(parent) = path.parent() {
+                fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            }
+            fs::write(path, bytes).map_err(|e| e.to_string())?;
         }
         Ok(())
     })();

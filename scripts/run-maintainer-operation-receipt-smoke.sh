@@ -45,6 +45,11 @@ file_sha() {
   --before "$out/before.json" --after "$out/after.json" \
   --operation-receipts-root "$receipt_root" --selected-scope "$scope_id" \
   --run-id receipt-replay --allow-baseline-reassessment --output "$out/stage"
+"$gate" --scope-skills "$out/stage/maintainer_scope_skills.jsonl" \
+  --program-facts "$out/stage/program_facts.jsonl" \
+  --operation-receipts-root "$out/stage/operation-evidence" --round-index "$((round + 1))" \
+  --parent-assessment-sha256 "$(file_sha "$out/before.json")" --output "$out/portable-reassessment.json"
+cmp "$out/after.json" "$out/portable-reassessment.json"
 # A replay must preserve candidate bytes and yield no new scope maturity.
 "$gate" --scope-skills "$scopes" --program-facts "$out/candidate-facts.jsonl" \
   --prepare-operation-fact "$scope_id" --operation-receipts-root "$receipt_root" \

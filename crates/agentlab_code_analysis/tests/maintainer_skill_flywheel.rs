@@ -252,6 +252,35 @@ fn strict_cli_prepares_repeatable_candidate_cut_and_advances_one_scope() {
         false
     );
     assert!(!stage(&staged, &candidate, &after_file).status.success());
+    let operation = rows_from_file(&candidate)
+        .into_iter()
+        .find(|row| row["dimensions"] == json!(["operation"]))
+        .unwrap();
+    let portable_root = staged.join("operation-evidence");
+    assert_eq!(
+        fs::read(portable_root.join("build.json")).unwrap(),
+        receipt_bytes
+    );
+    fs::remove_file(root.join("build.json")).unwrap();
+    assert!(
+        agentlab_code_analysis::maintainer_operation_evidence::verify(
+            &operation,
+            &scope("scope", "arbitrary"),
+            &portable_root
+        )
+        .is_ok()
+    );
+    fs::write(portable_root.join("build.json"), b"tampered").unwrap();
+    assert!(
+        agentlab_code_analysis::maintainer_operation_evidence::verify(
+            &operation,
+            &scope("scope", "arbitrary"),
+            &portable_root
+        )
+        .is_err()
+    );
+    fs::write(portable_root.join("build.json"), &receipt_bytes).unwrap();
+    fs::write(root.join("build.json"), &receipt_bytes).unwrap();
     let forged = root.join("forged.json");
     let mut forged_report = after.clone();
     forged_report["nextRoundObjectives"] = json!([]);
