@@ -55,6 +55,27 @@ raw log/artifact bytes, or a fresh build. Report no-type-check builds as not
 type-check-qualified. Runtime/test/performance receipts need their own adapters;
 never relabel them as build receipts to bypass an unsupported format.
 
+Before fresh execution, recover the actual build toolchain from revision-bound
+project configuration and verify its executable versions. An emulator tool
+directory is not proof that the application-build SDK is selected. Treat these
+as independently qualified capabilities and keep platform-specific paths in
+the instance evidence rather than the general scheduler.
+
+Use the terminal operation status as well as the target command verdict.
+If a compound command prints success but its outer operation fails, retain the
+ambiguous capture and do not promote it as successful execution proof. Resolve
+the invocation boundary and capture a distinct direct command before proceeding.
+Persist the first terminal response immediately, including failures; transient
+operation handles may expire and a later not-found response cannot reconstruct
+the original result. Never restart a completed operation solely to restore a
+missing capture.
+Preserve complete build warning streams separately from the packaging verdict.
+Canonical archive comparisons must declare their algorithm and member model:
+all-member versus regular-file-only counts or different path/content encodings
+are not directly comparable. Repeated successful packaging of an already-ready
+scope is freshness evidence, not another productive scope transition or full
+flywheel round.
+
 Prepare a deterministic operation fact or combined candidate fact cut without
 writing TableGit:
 

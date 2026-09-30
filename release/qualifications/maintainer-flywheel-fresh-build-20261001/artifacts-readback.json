@@ -1,0 +1,67 @@
+{
+  "cancelTool": "operation_cancel",
+  "channel": "control",
+  "fallbackUsed": false,
+  "gatewayInstanceId": "agentweb-ai-rgw-01",
+  "idempotencyKey": "awmcp-exec-v1-dc43bdd2dbd551f8a83ad78edf8f056b",
+  "logicalGatewayId": "agentweb-ai",
+  "ok": true,
+  "operationId": "exec-00000000000001af",
+  "operationKind": "exec",
+  "pollTool": "operation_get",
+  "requestDeadlineMs": 10000,
+  "result": {
+    "execId": "exec-00000000000001af",
+    "lane": "process",
+    "ok": true,
+    "record": {
+      "args": [
+        "-lc",
+        "set -euo pipefail; test -z \"$(git status --porcelain)\"; git rev-parse HEAD; test ! -e /home/huawei/.agentlab/flywheel/fresh-operation-20261001/attempt-2.har; cp features/componentlibrary/build/default/outputs/default/componentlibrary.har /home/huawei/.agentlab/flywheel/fresh-operation-20261001/attempt-2.har; python3 -c 'import pathlib,tarfile,hashlib,json; root=pathlib.Path(\"/home/huawei/.agentlab/flywheel/fresh-operation-20261001\"); results=[]\nfor p in [root/\"attempt-1.har\",root/\"attempt-2.har\"]:\n rows=[]\n with tarfile.open(p) as t:\n  for m in t.getmembers():\n   data=t.extractfile(m).read() if m.isfile() else b\"\"\n   rows.append([m.name,m.type.hex(),m.size,hashlib.sha256(data).hexdigest(),m.linkname])\n rows.sort(); results.append({\"artifact\":str(p),\"artifactBytes\":p.stat().st_size,\"artifactSha256\":hashlib.sha256(p.read_bytes()).hexdigest(),\"memberCount\":len(rows),\"canonicalMemberSha256\":hashlib.sha256(json.dumps(rows,separators=(\",\",\":\"),ensure_ascii=False).encode()).hexdigest()})\nprint(json.dumps({\"algorithm\":\"sha256-json-member-tuples-v1\",\"canonicalContentReproducible\":results[0][\"canonicalMemberSha256\"]==results[1][\"canonicalMemberSha256\"],\"attempts\":results}))'"
+      ],
+      "cancelled": false,
+      "command": "bash",
+      "cwd": "/home/huawei/code/.worktrees/sample-in-harmonyos/flywheel-operation-20261001",
+      "durationMs": 599,
+      "error": null,
+      "exitCode": 0,
+      "id": "exec-00000000000001af",
+      "lane": "process",
+      "state": "completed",
+      "stderr": "",
+      "stdout": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6\n{\"algorithm\": \"sha256-json-member-tuples-v1\", \"canonicalContentReproducible\": true, \"attempts\": [{\"artifact\": \"/home/huawei/.agentlab/flywheel/fresh-operation-20261001/attempt-1.har\", \"artifactBytes\": 9787705, \"artifactSha256\": \"c7e4733965c5dee26f7188059dcc534fc33c861e81662bebe6693e69302b7979\", \"memberCount\": 398, \"canonicalMemberSha256\": \"ab264d217f81522c7f2141f3eef4b4b34262a6c3d8fb30640a82640784df1218\"}, {\"artifact\": \"/home/huawei/.agentlab/flywheel/fresh-operation-20261001/attempt-2.har\", \"artifactBytes\": 9787709, \"artifactSha256\": \"70f4a767cce26fa36b73242074d4e1006cd97711862045b086d6b880ec5b0988\", \"memberCount\": 398, \"canonicalMemberSha256\": \"ab264d217f81522c7f2141f3eef4b4b34262a6c3d8fb30640a82640784df1218\"}]}\n",
+      "timedOut": false
+    },
+    "running": false,
+    "state": "completed"
+  },
+  "rgwHttp": "https://agentweb-ai.ru.yxsbase.win",
+  "rgwRouting": {
+    "attemptErrors": [],
+    "strategy": "peer-hot3-with-command-retry"
+  },
+  "routeDecision": "peer_direct",
+  "sessionId": null,
+  "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+  "targetRole": "upstream",
+  "timings": {
+    "awmcp": {
+      "attemptCount": 1,
+      "rgwRequestMs": 1089,
+      "rgwResponseDecodeMs": 0,
+      "rgwResponseHeadersMs": 1089,
+      "routeCacheHit": true,
+      "routeLookupMode": "command-cache",
+      "routeLookupMs": 0,
+      "totalMs": 1089
+    },
+    "rgw": {
+      "dispatchMs": 0,
+      "journalMs": 0,
+      "peerRoundTripMs": 680,
+      "routeLookupMs": 0,
+      "totalMs": 680
+    }
+  },
+  "traceId": "ac609dbe-6f55-47e2-a38a-8ed4be294052"
+}
