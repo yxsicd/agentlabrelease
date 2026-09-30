@@ -2,10 +2,209 @@
 use crate::digest;
 use serde_json::{json, Value};
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     fs,
     path::{Component, Path},
 };
+
+/// Check a pure operation round. No source execution, case promotion or writes.
+pub fn compare_round(
+    before_bytes: &[u8],
+    after_bytes: &[u8],
+    selected: &[String],
+) -> Result<Value, String> {
+    let before: Value = serde_json::from_slice(before_bytes).map_err(|e| e.to_string())?;
+    let after: Value = serde_json::from_slice(after_bytes).map_err(|e| e.to_string())?;
+    let ids = selected.iter().collect::<BTreeSet<_>>();
+    require(
+        !ids.is_empty() && ids.len() <= 4 && ids.len() == selected.len(),
+        "select one to four unique operation scopes",
+    )?;
+    for report in [&before, &after] {
+        require(
+            report["schema"] == "agentlab.maintainer_skill_assessment.v1"
+                && report["automaticPromotion"] == false,
+            "operation round assessment contract invalid",
+        )?;
+        require(
+            report["standard"]["operationEvidencePolicy"] == "verified-receipt-content",
+            "operation round requires strict same-policy assessments",
+        )?;
+        require(
+            positive(&report["roundIndex"])
+                && sha(&report["inputs"]["scopeSkillsSha256"])
+                && sha(&report["inputs"]["programFactsSha256"]),
+            "operation round input identity missing",
+        )?;
+    }
+    require(
+        after["parentAssessmentSha256"].as_str() == Some(digest(before_bytes).as_str()),
+        "operation round parent digest mismatch",
+    )?;
+    require(
+        before["roundIndex"].as_u64().and_then(|n| n.checked_add(1))
+            == after["roundIndex"].as_u64(),
+        "operation round is not contiguous",
+    )?;
+    require(
+        before["inputs"]["scopeSkillsSha256"] == after["inputs"]["scopeSkillsSha256"],
+        "operation round changed scope catalog",
+    )?;
+    for key in [
+        "scopeSkillCount",
+        "structuralReadyCount",
+        "programBoundCount",
+        "semanticReadyCount",
+    ] {
+        require(
+            before["totals"][key].as_u64().is_some()
+                && before["totals"][key] == after["totals"][key],
+            "operation round changed non-operation totals",
+        )?;
+    }
+    let index = |report: &Value| -> Result<BTreeMap<String, Value>, String> {
+        let rows = report["skills"]
+            .as_array()
+            .ok_or("operation round scope rows missing")?;
+        let mut result = BTreeMap::new();
+        for row in rows {
+            let id = row["skillId"]
+                .as_str()
+                .ok_or("operation round scope identity missing")?;
+            require(
+                result.insert(id.to_owned(), row.clone()).is_none(),
+                "operation round duplicate scope",
+            )?;
+        }
+        Ok(result)
+    };
+    let old = index(&before)?;
+    let new = index(&after)?;
+    require(
+        before["totals"]["scopeSkillCount"].as_u64() == Some(old.len() as u64),
+        "operation round scope count differs from rows",
+    )?;
+    require(
+        old.keys().eq(new.keys()),
+        "operation round changed scope identities",
+    )?;
+    require(
+        ids.iter().all(|id| old.contains_key(id.as_str())),
+        "selected operation scope missing",
+    )?;
+    let mut advanced = Vec::new();
+    for (id, original) in &old {
+        let updated = &new[id];
+        if !ids.contains(id) {
+            require(
+                original == updated,
+                "operation round changed an unselected scope",
+            )?;
+            continue;
+        }
+        for key in [
+            "repositoryId",
+            "sourceRevision",
+            "capabilities",
+            "requiredSemanticDimensions",
+            "rejectedEvidenceBindings",
+        ] {
+            require(
+                original[key] == updated[key],
+                "operation round changed selected scope identity or semantic contract",
+            )?;
+        }
+        require(
+            original["checks"]["semanticReady"] == true
+                && updated["checks"]["semanticReady"] == true,
+            "operation scope is not semantic-ready",
+        )?;
+        for key in [
+            "identityReady",
+            "structuralReady",
+            "programEvidenceBound",
+            "semanticReady",
+        ] {
+            require(
+                original["checks"][key] == true && updated["checks"][key] == true,
+                "operation round changed prerequisite readiness",
+            )?;
+        }
+        let semantic_bindings = |row: &Value| -> BTreeMap<String, Value> {
+            row["evidenceBindings"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|binding| {
+                    let dimensions = binding["dimensions"]
+                        .as_array()?
+                        .iter()
+                        .filter(|dim| *dim != "operation")
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    if dimensions.is_empty() {
+                        return None;
+                    }
+                    Some((
+                        binding["factId"].as_str()?.to_owned(),
+                        json!({"bindingMode":binding["bindingMode"], "dimensions":dimensions}),
+                    ))
+                })
+                .collect()
+        };
+        require(
+            semantic_bindings(original) == semantic_bindings(updated),
+            "operation round changed semantic evidence",
+        )?;
+        if original == updated {
+            continue;
+        }
+        require(
+            original["maturity"] == "L2-semantic-ready"
+                && updated["maturity"] == "L3-maintenance-ready",
+            "operation round requires L2 to L3 transition",
+        )?;
+        require(
+            original["checks"]["maintenanceReady"] == false
+                && updated["checks"]["maintenanceReady"] == true,
+            "operation round readiness transition invalid",
+        )?;
+        require(
+            updated["operationEvidenceChecks"]
+                .as_object()
+                .is_some_and(|checks| checks.values().any(|check| check["status"] == "verified")),
+            "operation round lacks verified receipt",
+        )?;
+        advanced.push(id.clone());
+    }
+    let old_count = before["totals"]["maintenanceReadyCount"]
+        .as_u64()
+        .ok_or("operation baseline maintenance count missing")?;
+    require(
+        old_count.checked_add(advanced.len() as u64)
+            == after["totals"]["maintenanceReadyCount"].as_u64(),
+        "operation round aggregate delta differs",
+    )?;
+    if advanced.is_empty() {
+        require(
+            before["inputs"]["programFactsSha256"] == after["inputs"]["programFactsSha256"],
+            "no-change round changed fact cut",
+        )?;
+    } else {
+        require(advanced.len() == ids.len(), "operation batch is partial")?;
+        require(
+            before["inputs"]["programFactsSha256"] != after["inputs"]["programFactsSha256"],
+            "operation gain has unchanged fact cut",
+        )?;
+    }
+    Ok(json!({
+        "schema":"agentlab.maintainer_operation_round_result.v1", "automaticPromotion":false,
+        "decision":if advanced.is_empty() {"no-change"} else {"review-proposed-operation-knowledge"},
+        "beforeAssessmentSha256":digest(before_bytes), "afterAssessmentSha256":digest(after_bytes),
+        "selectedScopeIds":selected, "advancedScopeIds":advanced, "maintenanceReadyDelta":advanced.len(),
+        "nextRoundObjectives":after["nextRoundObjectives"], "authorityWritePerformed":false
+    }))
+}
 
 fn require(ok: bool, message: &str) -> Result<(), String> {
     if ok {

@@ -22,8 +22,33 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let scopes = PathBuf::from(value(&args, "--scope-skills")?);
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|arg| arg == "--compare-operation-round") {
+        let before = fs::read(value(&args, "--before")?)?;
+        let after = fs::read(value(&args, "--after")?)?;
+        let selected = args
+            .iter()
+            .enumerate()
+            .filter(|(_, arg)| arg.as_str() == "--selected-scope")
+            .map(|(i, _)| {
+                args.get(i + 1)
+                    .cloned()
+                    .ok_or("selected scope value missing")
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let result = agentlab_code_analysis::maintainer_operation_evidence::compare_round(
+            &before, &after, &selected,
+        )?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        file.write_all(&serde_json::to_vec_pretty(&result)?)?;
+        file.write_all(b"\n")?;
+        println!("{}", serde_json::to_string(&result)?);
+        return Ok(());
+    }
+    let scopes = PathBuf::from(value(&args, "--scope-skills")?);
     let receipts = if args.iter().any(|arg| arg == "--operation-receipts-root") {
         Some(PathBuf::from(value(&args, "--operation-receipts-root")?))
     } else {

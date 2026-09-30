@@ -115,7 +115,13 @@ fn strict_cli_prepares_repeatable_candidate_cut_and_advances_one_scope() {
     let root = temp_root();
     let scopes = root.join("scopes.jsonl");
     let facts = root.join("facts.jsonl");
-    jsonl(&scopes, &[scope("scope", "arbitrary")]);
+    jsonl(
+        &scopes,
+        &[
+            scope("scope", "arbitrary"),
+            scope("unselected", "arbitrary"),
+        ],
+    );
     let mut semantic = complete_fact("semantic", "arbitrary", "scope");
     semantic["dimensions"] = json!(["responsibility", "boundary", "relations", "behavior"]);
     jsonl(&facts, &[semantic]);
@@ -160,6 +166,58 @@ fn strict_cli_prepares_repeatable_candidate_cut_and_advances_one_scope() {
     assert_eq!(after["totals"]["semanticReadyCount"], 1);
     assert_eq!(after["totals"]["maintenanceReadyCount"], 1);
     assert_eq!(after["automaticPromotion"], false);
+    let selected = vec!["scope".to_owned()];
+    let before_bytes = serde_json::to_vec(&before).unwrap();
+    let after_bytes = serde_json::to_vec(&after).unwrap();
+    let result = agentlab_code_analysis::maintainer_operation_evidence::compare_round(
+        &before_bytes,
+        &after_bytes,
+        &selected,
+    )
+    .unwrap();
+    assert_eq!(result["decision"], "review-proposed-operation-knowledge");
+    assert_eq!(result["maintenanceReadyDelta"], 1);
+    for (pointer, value) in [
+        ("/parentAssessmentSha256", json!("0".repeat(64))),
+        ("/roundIndex", json!(7)),
+        (
+            "/standard/operationEvidencePolicy",
+            json!("legacy-explicit-claim"),
+        ),
+        ("/totals/semanticReadyCount", json!(2)),
+        ("/totals/maintenanceReadyCount", json!(2)),
+        ("/inputs/scopeSkillsSha256", json!("0".repeat(64))),
+        ("/skills/0/sourceRevision", json!("9".repeat(40))),
+        ("/skills/1/maturity", json!("L3-maintenance-ready")),
+    ] {
+        let mut invalid = after.clone();
+        *invalid.pointer_mut(pointer).unwrap() = value;
+        assert!(
+            agentlab_code_analysis::maintainer_operation_evidence::compare_round(
+                &before_bytes,
+                &serde_json::to_vec(&invalid).unwrap(),
+                &selected
+            )
+            .is_err(),
+            "{pointer}"
+        );
+    }
+    let no_change = assess_with_receipts(
+        &scopes,
+        Some(&candidate),
+        3,
+        Some(&digest(&after_bytes)),
+        Some(&root),
+    )
+    .unwrap();
+    let replay_result = agentlab_code_analysis::maintainer_operation_evidence::compare_round(
+        &after_bytes,
+        &serde_json::to_vec(&no_change).unwrap(),
+        &selected,
+    )
+    .unwrap();
+    assert_eq!(replay_result["decision"], "no-change");
+    assert_eq!(replay_result["maintenanceReadyDelta"], 0);
     let replay = root.join("replay.jsonl");
     assert!(prepare(&replay, &digest(&receipt_bytes)).status.success());
     assert_eq!(fs::read(&candidate).unwrap(), fs::read(&replay).unwrap());

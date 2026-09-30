@@ -73,6 +73,25 @@ Reassess the candidate with the same receipt root and bind its parent digest.
 This produces a proposed knowledge cut only; exact TableGit CAS/import/readback
 and case publication remain separate steps.
 
+Pure operation rounds use `--compare-operation-round --before BEFORE --after
+AFTER --selected-scope SCOPE_ID --output RESULT` (repeat selected scope for a
+batch of up to four). This gate requires contiguous digest-bound strict
+assessments, unchanged source catalog and semantic evidence, verified L2-to-L3
+transitions for every selected scope, and no changes to unselected scopes.
+A no-change replay must preserve the fact cut and yields `no-change`, not
+convergence. Mixed policies, partial batches and unrelated changes reject the
+result before output. The result retains next-round gaps and never writes
+TableGit. A separate operation-stage importer is still required before durable
+promotion; do not send this result to the semantic-only stage as if it were a
+new semantic Agent proposal.
+
+`scripts/run-maintainer-operation-receipt-smoke.sh` runs baseline, preparation,
+child assessment, operation comparison and unchanged replay using the same
+Rust binary locally and in the Rust contract Action. CI uses immutable public
+sample cuts and retains complete experiment outputs. This proves a repeatable
+receipt-consumption path, not three productive full-system flywheel rounds,
+fresh target execution or durable authority ingestion.
+
 For compatibility, assessment without a receipt root retains historical
 explicit-claim scoring and labels it `legacy-explicit-claim`. Strict assessment
 labels `verified-receipt-content`. Do not compare their maturity counts as a
