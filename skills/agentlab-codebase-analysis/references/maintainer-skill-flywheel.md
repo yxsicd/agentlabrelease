@@ -151,9 +151,12 @@ fresh target execution or durable authority ingestion.
 For compatibility, assessment without a receipt root retains historical
 explicit-claim scoring and labels it `legacy-explicit-claim`. Strict assessment
 labels `verified-receipt-content`. Do not compare their maturity counts as a
-quality gain or regression. The existing semantic-refresh Action is not yet
-migrated to strict receipt scoring: first establish a strict baseline and adapt
-its existing operation facts, then change the producer and consumer together.
+quality gain or regression. The semantic execution loop preserves its input
+policy: strict cuts supply their portable `operation-evidence` root to the Rust
+assessor and carry child-verified operation bytes through semantic staging and
+sync export. This is not automatic migration of a legacy cut: first establish a
+strict baseline and adapt its existing operation facts, then change the producer
+and consumer together. Legacy gains prove no receipt-content qualification.
 
 ## Closed-loop maturity qualification
 
@@ -196,6 +199,38 @@ but it must remain capability-based and revision-bound rather than naming a
 repository.
 
 ## Loop
+
+### Scope-exact semantic round gate
+
+Use `--compare-semantic-round --before BEFORE --after AFTER --selected-scope ID
+--output RESULT`, repeating selected scope for one to four distinct scopes.
+The existing construction loop uses this Rust gate instead of treating equal
+aggregate deltas as proof that the requested scopes advanced. A sibling gain
+cannot substitute for a selected failure. Require exact parent SHA, contiguous
+rounds, unchanged scope catalog and policy, totals reconciled to scope rows,
+unchanged unselected rows, and complete selected L1-to-L2 closure. A scope may
+reach L3 only by composing its unchanged prebound operation evidence with new
+semantic dimensions; semantic rounds cannot introduce or replace operation
+checks. Mixed source revisions, partial batches and forged totals reject before
+result creation. Unchanged replay yields no-change, not a fresh authority round.
+
+This gate compares independently produced assessments; it does not discover
+semantic truth, authenticate Agent authorship or re-execute the target. Source
+Blob validation, bounded Agent lifecycle and operator-owned candidate validation
+must precede it. Legacy-policy results remain labeled legacy and must not be
+presented as strict operation qualification.
+
+Strict semantic stages use `stageKind: verified-semantic`, a mandatory
+`inheritedReceipts` list and `verified-child-operation-facts-only` coverage.
+Preserve the exact assessed scope/fact bytes, bind proposal scope IDs to the
+gate's selected and advanced scopes, and retain baseline/result plus every
+child-verified operation receipt. The existing writer validates portable hashes
+and complete inherited coverage before connecting to TableGit. An unsupported
+strict stage without this contract fails closed instead of discarding evidence.
+Test mixed operation -> semantic -> operation cuts with arbitrary scope names,
+then remove all earlier receipt/cut directories and independently reassess the
+final portable cut. This verifies inter-ring continuity, not fresh Agent or
+emulator execution or downstream case qualification.
 
 ### Evidence-driven next-round proposals
 

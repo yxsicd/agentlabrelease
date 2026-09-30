@@ -39,6 +39,13 @@ independent assessment proves the exact aggregate delta, and the resulting
 facts can enter the same atomic TableGit transaction. A partial batch writes no
 authority rows.
 
+Check gains per selected scope, not only aggregate counts: require unchanged
+unselected assessment rows and complete selected transitions through the Rust
+semantic round gate. Preserve strict operation evidence when switching between
+semantic and operation rounds; a semantic refresh must not erase previously
+verified receipts or silently change the evidence policy. Treat unchanged replay
+as no-change, never as another productive round.
+
 Retain successful independent scope proposals when one peer in a batch fails.
 Retry only the failed scopes once, preserve both attempts as evidence, then run
 the aggregate hard gate over the successful outputs. If any isolated retry

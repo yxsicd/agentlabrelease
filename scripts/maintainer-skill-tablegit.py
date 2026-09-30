@@ -200,17 +200,29 @@ def build_refresh_round(base: Path, candidate_facts: Path, assessment_path: Path
 
 
 def command_stage(args) -> None:
-    args.output.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(
-        args.base / "maintainer-knowledge-cut.json",
-        args.output / "maintainer-knowledge-cut.json",
-    )
-    assessments = args.output / "assessments"
-    assessments.mkdir(exist_ok=True)
-    base_assessments = args.base / "assessments"
-    if base_assessments.is_dir():
-        for source in base_assessments.glob("*.json"):
-            shutil.copy2(source, assessments / source.name)
+    assessment = load(args.candidate_assessment)
+    strict = assessment.get("standard", {}).get("operationEvidencePolicy") == "verified-receipt-content"
+    portable, inherited = {}, []
+    if strict:
+        before_path = latest_assessment_path(args.base)
+        before = load(before_path)
+        result = load(args.result)
+        if (before.get("standard") != assessment.get("standard")
+                or assessment.get("parentAssessmentSha256") != file_sha256(before_path)
+                or assessment.get("roundIndex") != before.get("roundIndex", 0) + 1
+                or result.get("decision") != "review-proposed-knowledge"
+                or result.get("strictOperationEvidencePolicy") is not True
+                or result.get("beforeAssessmentSha256") != file_sha256(before_path)
+                or result.get("assessmentSha256") != file_sha256(args.candidate_assessment)):
+            raise RuntimeError("strict semantic stage has no scope-exact same-policy result")
+        if (assessment.get("inputs", {}).get("scopeSkillsSha256") != file_sha256(args.base / TABLE_FILES["maintainer_scope_skills"])
+                or assessment.get("inputs", {}).get("programFactsSha256") != file_sha256(args.candidate_program_facts)):
+            raise RuntimeError("strict semantic stage assessment input mismatch")
+        portable, inherited = inherited_operation_files(args.base, args.candidate_program_facts, assessment)
+        portable["operation-baseline.json"] = before_path.read_bytes()
+        portable["operation-result.json"] = args.result.read_bytes()
+        if args.output.exists():
+            raise RuntimeError("refusing strict semantic stage output reuse")
     receipt_paths = args.receipt if isinstance(args.receipt, list) else [args.receipt]
     receipts = [load(path) for path in receipt_paths]
     scope_ids = [row.get("scopeSkillId") for row in receipts]
@@ -224,6 +236,19 @@ def command_stage(args) -> None:
         raise ValueError("proposal batch receipts must identify the source assessment")
     if any(digest != assessment_hashes[0] for digest in assessment_hashes):
         raise ValueError("proposal batch receipts do not share one source assessment")
+    if strict and (sorted(identified_scope_ids) != sorted(result.get("selectedScopeIds", []))
+            or sorted(identified_scope_ids) != sorted(result.get("advancedScopeIds", []))
+            or not 1 <= len(receipts) <= 4
+            or any(value != file_sha256(before_path) for value in assessment_hashes)):
+        raise RuntimeError("strict semantic proposal receipts differ from selected batch")
+    args.output.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(args.base / "maintainer-knowledge-cut.json", args.output / "maintainer-knowledge-cut.json")
+    assessments = args.output / "assessments"
+    assessments.mkdir(exist_ok=True)
+    base_assessments = args.base / "assessments"
+    if base_assessments.is_dir():
+        for source in base_assessments.glob("*.json"):
+            shutil.copy2(source, assessments / source.name)
     for table, filename in TABLE_FILES.items():
         source = args.base / filename
         target = args.output / filename
@@ -240,7 +265,10 @@ def command_stage(args) -> None:
             ))
         else:
             table_rows = load_jsonl(source)
-        write_jsonl(target, table_rows)
+        if strict and table in ("maintainer_scope_skills", "program_facts"):
+            target.write_bytes((args.candidate_program_facts if table == "program_facts" else source).read_bytes())
+        else:
+            write_jsonl(target, table_rows)
     assessment = load(args.candidate_assessment)
     assessment_name = f"round-{assessment['roundIndex']}-agent-{args.run_id}.json"
     assessment_path = Path("assessments") / assessment_name
@@ -252,11 +280,18 @@ def command_stage(args) -> None:
         "proposalReceiptCount": len(receipts),
         "acceptedFactIds": sorted(row["acceptedFactId"] for row in receipts),
         "assessment": str(assessment_path),
+        **({"stageKind": "verified-semantic", "operationEvidence": {
+            "receiptRoot": "operation-evidence", "coverage": "verified-child-operation-facts-only",
+            "receipts": [], "inheritedReceipts": inherited}} if strict else {}),
         "tables": {
             table: {"path": filename, "sha256": file_sha256(args.output / filename)}
             for table, filename in TABLE_FILES.items()
         },
     })
+    for relative, data in portable.items():
+        target = args.output / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
 
 
 def latest_assessment_path(base: Path) -> Path:
@@ -823,30 +858,58 @@ def update_catalog_summary(export: Path, base: Path) -> None:
     write_json(export / "maintainer-skill-summary.json", summary)
 
 
+def read_operation_sidecar(snapshot: Path, relative: str, expected: str | None = None) -> bytes:
+    path = Path(relative)
+    if path.is_absolute() or not path.parts or any(part in (".", "..") for part in path.parts):
+        raise RuntimeError("operation evidence must be contained and relative")
+    current = snapshot
+    for part in path.parts:
+        current = current / part
+        if current.is_symlink():
+            raise RuntimeError("operation evidence cannot traverse a symlink")
+    if not current.is_file() or current.stat().st_size > 2 * 1024 * 1024:
+        raise RuntimeError("operation evidence missing or exceeds budget")
+    data = current.read_bytes()
+    if expected and hashlib.sha256(data).hexdigest() != expected:
+        raise RuntimeError("operation evidence digest mismatch")
+    return data
+
+
+def inherited_operation_files(base: Path, facts_path: Path, assessment: dict):
+    """Retain child-verified original bytes; the Rust assessor owns content checks."""
+    facts = {row["id"]: row for row in load_jsonl(facts_path)}
+    files, entries = {}, {}
+    for skill in assessment.get("skills", []):
+        for fact_id, check in skill.get("operationEvidenceChecks", {}).items():
+            if check.get("status") != "verified":
+                continue
+            reference = facts.get(fact_id, {}).get("operationEvidence", {})
+            if (check.get("receiptPath") != reference.get("path")
+                    or check.get("receiptSha256") != reference.get("sha256")
+                    or not re.fullmatch(r"[0-9a-f]{64}", reference.get("sha256", ""))):
+                raise RuntimeError("inherited operation check differs from candidate fact")
+            path = "operation-evidence/" + reference["path"]
+            files[path] = read_operation_sidecar(base, path, reference["sha256"])
+            entries[fact_id] = {"factId": fact_id, "path": path, "sha256": reference["sha256"]}
+    if sum(map(len, files.values())) > 16 * 1024 * 1024:
+        raise RuntimeError("operation portable receipt budget exceeded")
+    return files, [entries[key] for key in sorted(entries)]
+
+
 def operation_evidence_files(snapshot: Path) -> dict[str, bytes]:
     """Validate and retain portable sidecars before any authority mutation."""
     manifest_path = snapshot / "stage-manifest.json"
     if not manifest_path.is_file():
         return {}
     manifest = load(manifest_path)
-    if manifest.get("stageKind") != "verified-operation":
+    kind = manifest.get("stageKind")
+    if kind not in ("verified-operation", "verified-semantic"):
+        if load(snapshot / manifest["assessment"]).get("standard", {}).get("operationEvidencePolicy") == "verified-receipt-content":
+            raise RuntimeError("strict stage has no portable operation evidence contract")
         return {}
 
     def read(relative: str, expected: str | None = None) -> bytes:
-        path = Path(relative)
-        if path.is_absolute() or not path.parts or any(part in (".", "..") for part in path.parts):
-            raise RuntimeError("operation evidence must be contained and relative")
-        current = snapshot
-        for part in path.parts:
-            current = current / part
-            if current.is_symlink():
-                raise RuntimeError("operation evidence cannot traverse a symlink")
-        if not current.is_file() or current.stat().st_size > 2 * 1024 * 1024:
-            raise RuntimeError("operation evidence missing or exceeds budget")
-        data = current.read_bytes()
-        if expected and hashlib.sha256(data).hexdigest() != expected:
-            raise RuntimeError("operation evidence digest mismatch")
-        return data
+        return read_operation_sidecar(snapshot, relative, expected)
 
     evidence = manifest.get("operationEvidence", {})
     for table, filename in TABLE_FILES.items():
@@ -855,10 +918,15 @@ def operation_evidence_files(snapshot: Path) -> dict[str, bytes]:
             raise RuntimeError("operation stage table manifest invalid")
         read(filename, entry["sha256"])
     receipts = evidence.get("receipts", [])
-    if evidence.get("receiptRoot") != "operation-evidence" or evidence.get("coverage") != "accepted-operation-facts-only":
+    coverage = "accepted-operation-facts-only" if kind == "verified-operation" else "verified-child-operation-facts-only"
+    if evidence.get("receiptRoot") != "operation-evidence" or evidence.get("coverage") != coverage:
         raise RuntimeError("operation stage has no portable evidence contract")
-    if not 1 <= len(receipts) <= 4 or sorted(row["factId"] for row in receipts) != sorted(manifest["acceptedFactIds"]):
+    if kind == "verified-operation" and (not 1 <= len(receipts) <= 4 or sorted(row["factId"] for row in receipts) != sorted(manifest["acceptedFactIds"])):
         raise RuntimeError("operation receipt coverage differs from accepted facts")
+    if kind == "verified-semantic" and receipts:
+        raise RuntimeError("semantic stage cannot introduce operation receipts")
+    if kind == "verified-semantic" and "inheritedReceipts" not in evidence:
+        raise RuntimeError("semantic stage lacks inherited operation receipt coverage")
     inherited = evidence.get("inheritedReceipts", [])
     all_receipts = receipts + inherited
     if len({row["factId"] for row in all_receipts}) != len(all_receipts):
@@ -867,10 +935,14 @@ def operation_evidence_files(snapshot: Path) -> dict[str, bytes]:
              "operation-baseline.json": read("operation-baseline.json"),
              "operation-result.json": read("operation-result.json")}
     result = json.loads(files["operation-result.json"])
+    if kind == "verified-semantic" and result.get("strictOperationEvidencePolicy") is not True:
+        raise RuntimeError("semantic stage result is not strict receipt policy")
     child = read(manifest["assessment"])
-    if (result.get("decision") != "review-proposed-operation-knowledge"
+    decision = "review-proposed-operation-knowledge" if kind == "verified-operation" else "review-proposed-knowledge"
+    after_hash = result.get("afterAssessmentSha256") if kind == "verified-operation" else result.get("assessmentSha256")
+    if (result.get("decision") != decision
             or result.get("beforeAssessmentSha256") != hashlib.sha256(files["operation-baseline.json"]).hexdigest()
-            or result.get("afterAssessmentSha256") != hashlib.sha256(child).hexdigest()):
+            or after_hash != hashlib.sha256(child).hexdigest()):
         raise RuntimeError("operation stage report digest mismatch")
     for receipt in all_receipts:
         if not receipt["path"].startswith("operation-evidence/") or not re.fullmatch(r"[0-9a-f]{64}", receipt["sha256"]):

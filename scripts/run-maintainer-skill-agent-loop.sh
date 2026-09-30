@@ -144,14 +144,24 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
 
   parent=$(sha256sum "$assessment" | cut -d' ' -f1)
   round=$(jq -r '.roundIndex + 1' "$assessment")
+  operation_receipt_args=()
+  if [[ $(jq -r '.standard.operationEvidencePolicy' "$assessment") == verified-receipt-content ]]; then
+    test -d "$working_knowledge/operation-evidence"
+    operation_receipt_args=(--operation-receipts-root "$working_knowledge/operation-evidence")
+  fi
   target/debug/agentlab-maintainer-skill-flywheel \
     --scope-skills "$working_knowledge/maintainer_scope_skills.jsonl" \
     --program-facts "$iteration_root/candidate-program-facts.jsonl" \
-    --round-index "$round" --parent-assessment-sha256 "$parent" \
+    --round-index "$round" --parent-assessment-sha256 "$parent" "${operation_receipt_args[@]}" \
     --output "$iteration_root/candidate-assessment.json"
-  python3 examples/maintainer-knowledge-gate/agent_flywheel.py compare \
+  selected_args=()
+  while IFS= read -r selected_scope; do
+    selected_args+=(--selected-scope "$selected_scope")
+  done < <(jq -r '.requests[].scope.id' "$iteration_root/flywheel-batch-request.json")
+  target/debug/agentlab-maintainer-skill-flywheel --compare-semantic-round \
     --before "$assessment" --after "$iteration_root/candidate-assessment.json" \
-    --expected-scopes "$scope_count" --output "$iteration_root/result.json"
+    "${selected_args[@]}" --output "$iteration_root/result.json"
+  jq -e '.decision == "review-proposed-knowledge"' "$iteration_root/result.json"
 
   next_knowledge="$loop_root/knowledge-$iteration"
   python3 scripts/maintainer-skill-tablegit.py stage \

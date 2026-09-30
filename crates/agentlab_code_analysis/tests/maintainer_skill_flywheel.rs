@@ -111,6 +111,187 @@ fn build_receipt() -> Value {
 }
 
 #[test]
+fn semantic_round_gate_rejects_borrowed_gains_and_partial_batches() {
+    use agentlab_code_analysis::maintainer_semantic_round::compare;
+    let root = temp_root();
+    let scopes = root.join("scopes.jsonl");
+    let facts = root.join("facts.jsonl");
+    jsonl(
+        &scopes,
+        &[
+            scope("selected", "arbitrary"),
+            scope("sibling", "arbitrary"),
+        ],
+    );
+    jsonl(&facts, &[]);
+    let before = assess_with_receipts(&scopes, Some(&facts), 1, None, Some(&root)).unwrap();
+    let before_bytes = serde_json::to_vec(&before).unwrap();
+    let semantic = |id: &str| {
+        let mut fact = complete_fact(&format!("semantic-{id}"), "arbitrary", id);
+        fact["dimensions"] = json!(["responsibility", "boundary", "relations", "behavior"]);
+        fact
+    };
+    let evaluate = || {
+        assess_with_receipts(
+            &scopes,
+            Some(&facts),
+            2,
+            Some(&digest(&before_bytes)),
+            Some(&root),
+        )
+        .unwrap()
+    };
+    jsonl(&facts, &[semantic("sibling")]);
+    let borrowed = evaluate();
+    assert_eq!(borrowed["totals"]["semanticReadyCount"], 1);
+    assert!(compare(
+        &before_bytes,
+        &serde_json::to_vec(&borrowed).unwrap(),
+        &["selected".into()]
+    )
+    .unwrap_err()
+    .contains("unselected"));
+    jsonl(&facts, &[semantic("selected")]);
+    let after = evaluate();
+    let after_bytes = serde_json::to_vec(&after).unwrap();
+    let result = compare(&before_bytes, &after_bytes, &["selected".into()]).unwrap();
+    assert_eq!(result["decision"], "review-proposed-knowledge");
+    assert_eq!(result["advancedScopeIds"], json!(["selected"]));
+    assert_eq!(result["semanticReadyDelta"], 1);
+    assert_eq!(result["maintenanceReadyDelta"], 0);
+    assert!(compare(
+        &before_bytes,
+        &after_bytes,
+        &["selected".into(), "sibling".into()]
+    )
+    .unwrap_err()
+    .contains("partial"));
+    for (pointer, value) in [
+        ("/roundIndex", json!(3)),
+        ("/parentAssessmentSha256", json!("a".repeat(64))),
+        ("/inputs/scopeSkillsSha256", json!("b".repeat(64))),
+        ("/totals/semanticReadyCount", json!(2)),
+        (
+            "/standard/operationEvidencePolicy",
+            json!("legacy-explicit-claim"),
+        ),
+    ] {
+        let mut forged = after.clone();
+        *forged.pointer_mut(pointer).unwrap() = value;
+        assert!(
+            compare(
+                &before_bytes,
+                &serde_json::to_vec(&forged).unwrap(),
+                &["selected".into()]
+            )
+            .is_err(),
+            "{pointer}"
+        );
+    }
+    let replay = assess_with_receipts(
+        &scopes,
+        Some(&facts),
+        3,
+        Some(&digest(&after_bytes)),
+        Some(&root),
+    )
+    .unwrap();
+    let replay_result = compare(
+        &after_bytes,
+        &serde_json::to_vec(&replay).unwrap(),
+        &["selected".into()],
+    )
+    .unwrap();
+    assert_eq!(replay_result["decision"], "no-change");
+    assert_eq!(replay_result["semanticReadyDelta"], 0);
+    let before_path = root.join("before.json");
+    let after_path = root.join("after.json");
+    fs::write(&before_path, before_bytes).unwrap();
+    fs::write(&after_path, after_bytes).unwrap();
+    let output = root.join("result.json");
+    let command = || {
+        std::process::Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .args([
+                "--compare-semantic-round",
+                "--before",
+                before_path.to_str().unwrap(),
+                "--after",
+                after_path.to_str().unwrap(),
+                "--selected-scope",
+                "selected",
+                "--output",
+                output.to_str().unwrap(),
+            ])
+            .output()
+            .unwrap()
+    };
+    assert!(command().status.success());
+    assert_eq!(
+        serde_json::from_slice::<Value>(&fs::read(&output).unwrap()).unwrap(),
+        result
+    );
+    fs::write(&after_path, serde_json::to_vec(&borrowed).unwrap()).unwrap();
+    fs::remove_file(&output).unwrap();
+    assert!(!command().status.success());
+    assert!(!output.exists());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn semantic_closure_preserves_preverified_operation_evidence() {
+    use agentlab_code_analysis::maintainer_semantic_round::compare;
+    let root = temp_root();
+    let scopes = root.join("scopes.jsonl");
+    let facts = root.join("facts.jsonl");
+    jsonl(&scopes, &[scope("scope", "arbitrary")]);
+    let bytes = serde_json::to_vec(&build_receipt()).unwrap();
+    fs::write(root.join("build.json"), &bytes).unwrap();
+    let mut operation = complete_fact("operation", "arbitrary", "scope");
+    operation["dimensions"] = json!(["operation"]);
+    operation["operationEvidence"] = json!({"path":"build.json","sha256":digest(&bytes)});
+    jsonl(&facts, &[operation.clone()]);
+    let before = assess_with_receipts(&scopes, Some(&facts), 1, None, Some(&root)).unwrap();
+    let before_bytes = serde_json::to_vec(&before).unwrap();
+    let mut semantic = complete_fact("semantic", "arbitrary", "scope");
+    semantic["dimensions"] = json!(["responsibility", "boundary", "relations", "behavior"]);
+    jsonl(&facts, &[operation, semantic]);
+    let after = assess_with_receipts(
+        &scopes,
+        Some(&facts),
+        2,
+        Some(&digest(&before_bytes)),
+        Some(&root),
+    )
+    .unwrap();
+    let result = compare(
+        &before_bytes,
+        &serde_json::to_vec(&after).unwrap(),
+        &["scope".into()],
+    )
+    .unwrap();
+    assert_eq!(result["semanticReadyDelta"], 1);
+    assert_eq!(result["maintenanceReadyDelta"], 1);
+    assert_eq!(result["strictOperationEvidencePolicy"], true);
+    fs::write(root.join("build.json"), b"tampered").unwrap();
+    let invalid = assess_with_receipts(
+        &scopes,
+        Some(&facts),
+        2,
+        Some(&digest(&before_bytes)),
+        Some(&root),
+    )
+    .unwrap();
+    assert!(compare(
+        &before_bytes,
+        &serde_json::to_vec(&invalid).unwrap(),
+        &["scope".into()]
+    )
+    .unwrap_err()
+    .contains("operation evidence"));
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn next_round_planner_routes_gaps_without_claiming_closed_loop() {
     use agentlab_code_analysis::maintainer_flywheel_plan::plan;
     let root = temp_root();
@@ -260,6 +441,208 @@ fn next_round_plan_accounts_for_every_scope_and_isolates_batches() {
     assert_eq!(different["selectedScopeIds"], json!(["alpha"]));
     assert!(plan(&scopes, None, &root, 1, None, &available, 0, 80).is_err());
     assert!(plan(&scopes, None, &root, 1, None, &available, 4, 0).is_err());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn mixed_semantic_and_operation_rounds_preserve_portable_cut() {
+    use agentlab_code_analysis::{
+        maintainer_operation_evidence::prepare_fact, maintainer_operation_stage::stage,
+        maintainer_semantic_round::compare,
+    };
+    let root = temp_root();
+    let base = root.join("base");
+    fs::create_dir_all(base.join("assessments")).unwrap();
+    jsonl(
+        &base.join("maintainer_scope_skills.jsonl"),
+        &[scope("alpha", "arbitrary"), scope("beta", "arbitrary")],
+    );
+    let mut semantic_alpha = complete_fact("semantic-alpha", "arbitrary", "alpha");
+    semantic_alpha["dimensions"] = json!(["responsibility", "boundary", "relations", "behavior"]);
+    jsonl(&base.join("program_facts.jsonl"), &[semantic_alpha.clone()]);
+    jsonl(&base.join("maintainer_skills.jsonl"), &[]);
+    jsonl(&base.join("evaluation_cases.jsonl"), &[]);
+    fs::write(base.join("maintainer-knowledge-cut.json"), b"{}\n").unwrap();
+    let original = root.join("original-machine");
+    fs::create_dir(&original).unwrap();
+    let mut receipt = build_receipt();
+    receipt["scope"]["scopeSkillIds"] = json!(["alpha"]);
+    let receipt_bytes = serde_json::to_vec(&receipt).unwrap();
+    fs::write(original.join("alpha.json"), &receipt_bytes).unwrap();
+    let before = assess_with_receipts(
+        &base.join("maintainer_scope_skills.jsonl"),
+        Some(&base.join("program_facts.jsonl")),
+        1,
+        None,
+        Some(&original),
+    )
+    .unwrap();
+    let before_bytes = serde_json::to_vec(&before).unwrap();
+    fs::write(base.join("assessments/parent.json"), &before_bytes).unwrap();
+    jsonl(
+        &base.join("maintainer_skill_refresh_rounds.jsonl"),
+        &[json!({
+            "id":"parent", "roundIndex":1, "coverage":{"trackedFileCount":2},
+            "assessment":{"path":"assessments/parent.json","sha256":digest(&before_bytes)}
+        })],
+    );
+    let operation_alpha = prepare_fact(
+        &scope("alpha", "arbitrary"),
+        json!({"path":"alpha.json","sha256":digest(&receipt_bytes)}),
+        &original,
+    )
+    .unwrap();
+    let candidate = root.join("candidate.jsonl");
+    jsonl(&candidate, &[semantic_alpha, operation_alpha]);
+    let after = assess_with_receipts(
+        &base.join("maintainer_scope_skills.jsonl"),
+        Some(&candidate),
+        2,
+        Some(&digest(&before_bytes)),
+        Some(&original),
+    )
+    .unwrap();
+    let after_bytes = serde_json::to_vec(&after).unwrap();
+    let before_path = root.join("before.json");
+    let after_path = root.join("after.json");
+    fs::write(&before_path, &before_bytes).unwrap();
+    fs::write(&after_path, &after_bytes).unwrap();
+    let operation_cut = root.join("operation-cut");
+    stage(
+        &base,
+        &candidate,
+        &before_path,
+        &after_path,
+        &original,
+        &["alpha".into()],
+        "alpha",
+        false,
+        &operation_cut,
+    )
+    .unwrap();
+    fs::remove_dir_all(&original).unwrap();
+    let mut semantic_beta = complete_fact("semantic-beta", "arbitrary", "beta");
+    semantic_beta["dimensions"] = json!(["responsibility", "boundary", "relations", "behavior"]);
+    let mut facts = rows_from_file(&operation_cut.join("program_facts.jsonl"));
+    facts.push(semantic_beta);
+    jsonl(&candidate, &facts);
+    let child = assess_with_receipts(
+        &operation_cut.join("maintainer_scope_skills.jsonl"),
+        Some(&candidate),
+        3,
+        Some(&digest(&after_bytes)),
+        Some(&operation_cut.join("operation-evidence")),
+    )
+    .unwrap();
+    let child_bytes = serde_json::to_vec(&child).unwrap();
+    fs::write(&after_path, &child_bytes).unwrap();
+    let result = compare(&after_bytes, &child_bytes, &["beta".into()]).unwrap();
+    let result_path = root.join("semantic-result.json");
+    fs::write(&result_path, serde_json::to_vec(&result).unwrap()).unwrap();
+    let proposal_receipt = root.join("proposal-receipt.json");
+    fs::write(&proposal_receipt, serde_json::to_vec(&json!({"acceptedFactId":"semantic-beta","scopeSkillId":"beta","sourceAssessmentSha256":digest(&after_bytes)})).unwrap()).unwrap();
+    let semantic_cut = root.join("semantic-cut");
+    let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+    let response = std::process::Command::new("python3")
+        .current_dir(repo_root)
+        .args([
+            "scripts/maintainer-skill-tablegit.py",
+            "stage",
+            "--base",
+            operation_cut.to_str().unwrap(),
+            "--candidate-program-facts",
+            candidate.to_str().unwrap(),
+            "--candidate-assessment",
+            after_path.to_str().unwrap(),
+            "--result",
+            result_path.to_str().unwrap(),
+            "--receipt",
+            proposal_receipt.to_str().unwrap(),
+            "--run-id",
+            "beta",
+            "--github-repository",
+            "example/arbitrary",
+            "--output",
+            semantic_cut.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        response.status.success(),
+        "{}",
+        String::from_utf8_lossy(&response.stderr)
+    );
+    let portable = assess_with_receipts(
+        &semantic_cut.join("maintainer_scope_skills.jsonl"),
+        Some(&semantic_cut.join("program_facts.jsonl")),
+        3,
+        Some(&digest(&after_bytes)),
+        Some(&semantic_cut.join("operation-evidence")),
+    )
+    .unwrap();
+    assert_eq!(portable, child);
+    // Exercise the real writer preflight without creating any network client.
+    let preflight = std::process::Command::new("python3").current_dir(repo_root)
+        .args(["-c", "import importlib.util,sys; from pathlib import Path; s=importlib.util.spec_from_file_location('writer','scripts/maintainer-skill-tablegit.py'); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); files=m.operation_evidence_files(Path(sys.argv[1])); assert 'operation-evidence/alpha.json' in files", semantic_cut.to_str().unwrap()])
+        .output().unwrap();
+    assert!(
+        preflight.status.success(),
+        "{}",
+        String::from_utf8_lossy(&preflight.stderr)
+    );
+    receipt["scope"]["scopeSkillIds"] = json!(["beta"]);
+    let beta_bytes = serde_json::to_vec(&receipt).unwrap();
+    let receipt_root = semantic_cut.join("operation-evidence");
+    fs::write(receipt_root.join("beta.json"), &beta_bytes).unwrap();
+    facts = rows_from_file(&semantic_cut.join("program_facts.jsonl"));
+    facts.push(
+        prepare_fact(
+            &scope("beta", "arbitrary"),
+            json!({"path":"beta.json","sha256":digest(&beta_bytes)}),
+            &receipt_root,
+        )
+        .unwrap(),
+    );
+    jsonl(&candidate, &facts);
+    let final_report = assess_with_receipts(
+        &semantic_cut.join("maintainer_scope_skills.jsonl"),
+        Some(&candidate),
+        4,
+        Some(&digest(&child_bytes)),
+        Some(&receipt_root),
+    )
+    .unwrap();
+    fs::write(&before_path, &child_bytes).unwrap();
+    fs::write(&after_path, serde_json::to_vec(&final_report).unwrap()).unwrap();
+    let final_cut = root.join("final-cut");
+    stage(
+        &semantic_cut,
+        &candidate,
+        &before_path,
+        &after_path,
+        &receipt_root,
+        &["beta".into()],
+        "beta-operation",
+        false,
+        &final_cut,
+    )
+    .unwrap();
+    fs::remove_dir_all(&operation_cut).unwrap();
+    fs::remove_dir_all(&semantic_cut).unwrap();
+    let final_portable = assess_with_receipts(
+        &final_cut.join("maintainer_scope_skills.jsonl"),
+        Some(&final_cut.join("program_facts.jsonl")),
+        4,
+        Some(&digest(&child_bytes)),
+        Some(&final_cut.join("operation-evidence")),
+    )
+    .unwrap();
+    assert_eq!(final_portable, final_report);
+    assert_eq!(final_portable["totals"]["maintenanceReadyCount"], 2);
     fs::remove_dir_all(root).unwrap();
 }
 

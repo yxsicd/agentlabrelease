@@ -76,6 +76,24 @@ class MaintainerSkillTableGitTest(unittest.TestCase):
                     MODULE.command_sync(type("Args", (), {"snapshot": root}))
                 connect.assert_not_called()
             old_receipt.write_bytes(b'{"recorded":"prior"}\n')
+            manifest["stageKind"] = "verified-semantic"
+            manifest["operationEvidence"]["coverage"] = "verified-child-operation-facts-only"
+            manifest["operationEvidence"]["inheritedReceipts"] += manifest["operationEvidence"]["receipts"]
+            manifest["operationEvidence"]["receipts"] = []
+            result["decision"] = "review-proposed-knowledge"
+            result["strictOperationEvidencePolicy"] = True
+            result["assessmentSha256"] = result.pop("afterAssessmentSha256")
+            MODULE.write_json(root / "operation-result.json", result)
+            MODULE.write_json(root / "stage-manifest.json", manifest)
+            self.assertIn("operation-evidence/prior.json", MODULE.operation_evidence_files(root))
+            inherited = manifest["operationEvidence"].pop("inheritedReceipts")
+            MODULE.write_json(root / "stage-manifest.json", manifest)
+            with mock.patch.object(MODULE, "Inspector") as connect:
+                with self.assertRaisesRegex(RuntimeError, "inherited operation receipt coverage"):
+                    MODULE.command_sync(type("Args", (), {"snapshot": root}))
+                connect.assert_not_called()
+            manifest["operationEvidence"]["inheritedReceipts"] = inherited
+            MODULE.write_json(root / "stage-manifest.json", manifest)
             receipt.write_bytes(b'tampered')
             with mock.patch.object(MODULE, "Inspector") as connect:
                 with self.assertRaisesRegex(RuntimeError, "digest mismatch"):

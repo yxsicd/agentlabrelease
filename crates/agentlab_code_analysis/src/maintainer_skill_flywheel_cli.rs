@@ -49,7 +49,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("{}", serde_json::to_string(&manifest)?);
         return Ok(());
     }
-    if args.iter().any(|arg| arg == "--compare-operation-round") {
+    if args
+        .iter()
+        .any(|arg| arg == "--compare-operation-round" || arg == "--compare-semantic-round")
+    {
         let before = fs::read(value(&args, "--before")?)?;
         let after = fs::read(value(&args, "--after")?)?;
         let selected = args
@@ -62,9 +65,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .ok_or("selected scope value missing")
             })
             .collect::<Result<Vec<_>, _>>()?;
-        let result = agentlab_code_analysis::maintainer_operation_evidence::compare_round(
-            &before, &after, &selected,
-        )?;
+        let result = if args.iter().any(|arg| arg == "--compare-semantic-round") {
+            agentlab_code_analysis::maintainer_semantic_round::compare(&before, &after, &selected)?
+        } else {
+            agentlab_code_analysis::maintainer_operation_evidence::compare_round(
+                &before, &after, &selected,
+            )?
+        };
         let mut file = OpenOptions::new()
             .write(true)
             .create_new(true)
