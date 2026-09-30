@@ -219,6 +219,68 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "tracked-file count"):
                 MODULE.scope_source_inventory(scope, root)
 
+    def test_operator_evidence_packet_prefers_declared_exact_blobs_and_skips_binary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.name", "test"], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.email", "test@example.com"], check=True)
+            (root / "owned").mkdir()
+            (root / "owned/module.json5").write_text('{"module":{"name":"entry"}}\n')
+            (root / "owned/main.ets").write_text("export function main() { return 1 }\n")
+            (root / "owned/helper.ts").write_text("export const helper = 2\n")
+            (root / "owned/README.md").write_text("# contract\n")
+            (root / "owned/image.bin").write_bytes(b"png\0binary")
+            subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+            subprocess.run(["git", "-C", str(root), "commit", "-qm", "fixture"], check=True)
+            revision = subprocess.check_output(
+                ["git", "-C", str(root), "rev-parse", "HEAD"], text=True
+            ).strip()
+            scope = {
+                "id": "scope-owned", "pathBoundary": "owned", "trackedFileCount": 5,
+                "sourceRevision": revision,
+                "evidence": [{"path": "owned/module.json5"}],
+            }
+            inventory = MODULE.scope_source_inventory(scope, root)
+            packet = MODULE.build_operator_evidence_packet(scope, root, inventory)
+            self.assertEqual(packet["schema"], "agentlab.maintainer_skill_operator_evidence.v1")
+            self.assertEqual(packet["sourceRevision"], revision)
+            self.assertEqual(packet["files"][0]["path"], "owned/module.json5")
+            self.assertTrue(packet["files"][0]["declaredEvidence"])
+            self.assertNotIn("owned/image.bin", [row["path"] for row in packet["files"]])
+            for row in packet["files"]:
+                self.assertEqual(
+                    row["gitBlobOid"],
+                    subprocess.check_output(
+                        ["git", "-C", str(root), "rev-parse", f"HEAD:{row['path']}"], text=True
+                    ).strip(),
+                )
+
+    def test_operator_evidence_packet_bounds_large_text_with_auditable_head_tail(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.name", "test"], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.email", "test@example.com"], check=True)
+            (root / "owned").mkdir()
+            text = "A" * 5000 + "MIDDLE" + "Z" * 5000
+            (root / "owned/main.ets").write_text(text)
+            subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+            subprocess.run(["git", "-C", str(root), "commit", "-qm", "fixture"], check=True)
+            scope = {
+                "id": "scope-large", "pathBoundary": "owned", "trackedFileCount": 1,
+                "evidence": [{"path": "owned/main.ets"}],
+            }
+            packet = MODULE.build_operator_evidence_packet(
+                scope, root, MODULE.scope_source_inventory(scope, root),
+                max_files=1, max_characters_per_file=2000,
+            )
+            excerpt = packet["files"][0]["excerpt"]
+            self.assertEqual(excerpt["kind"], "head-tail")
+            self.assertEqual(len(excerpt["head"]) + len(excerpt["tail"]), 2000)
+            self.assertEqual(excerpt["characterCount"], len(text))
+            self.assertEqual(excerpt["omittedCharacterCount"], len(text) - 2000)
+
     def test_source_inventory_query_uses_scope_pathspecs_and_nonrecursive_root(self):
         recursive, pathspecs = MODULE.scope_inventory_query({
             "pathBoundary": "src",
@@ -473,14 +535,14 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
 
     def test_agent_prompt_has_a_bounded_exploration_budget(self):
         source = (ROOT / "examples/maintainer-knowledge-gate/agent_flywheel.py").read_text()
-        self.assertIn("Budget at most eight shell tool calls", source)
-        self.assertIn("hard limit of 24 is only a runaway guard", source)
-        self.assertIn("bounded sampling, not a complete source census", source)
+        self.assertIn("Budget at most four supplemental shell tool calls", source)
+        self.assertIn("hard limit of 12 is only a runaway guard", source)
+        self.assertIn("bounded synthesis over an operator-owned evidence cut", source)
         self.assertIn("operator owns proposal serialization", source)
         self.assertIn("final assistant response must consist solely", source)
         self.assertIn("stop exploring and return the\nexact JSON response", source)
-        self.assertIn("tool_call_limit=24", source)
-        self.assertIn("wall_time_limit_seconds=360", source)
+        self.assertIn("tool_call_limit=12", source)
+        self.assertIn("wall_time_limit_seconds=240", source)
         self.assertIn("transport_retry_limit=0", source)
         self.assertIn("maintainer-skill-author-finalize", source)
         self.assertIn("Do not inspect files, call tools, explain, count characters", source)
@@ -495,6 +557,8 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         self.assertIn("operator has already verified HEAD", source)
         self.assertIn("Do not spend", source)
         self.assertIn("git ls-files or git rev-parse for paths listed above", source)
+        self.assertIn("operator-evidence-packet.json", source)
+        self.assertIn("use zero repository tool calls", source)
 
     def test_compare_accepts_one_l2_gain_without_prebound_operation_evidence(self):
         before = {
