@@ -111,6 +111,159 @@ fn build_receipt() -> Value {
 }
 
 #[test]
+fn next_round_planner_routes_gaps_without_claiming_closed_loop() {
+    use agentlab_code_analysis::maintainer_flywheel_plan::plan;
+    let root = temp_root();
+    let scopes = root.join("scopes.jsonl");
+    let facts = root.join("facts.jsonl");
+    let skill = scope("scope", "arbitrary");
+    jsonl(&scopes, &[skill.clone()]);
+    jsonl(&facts, &[]);
+    let run = |lanes: &[&str]| {
+        plan(
+            &scopes,
+            Some(&facts),
+            &root,
+            1,
+            None,
+            &lanes.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+            4,
+            80,
+        )
+        .unwrap()
+    };
+    let blocked = run(&[]);
+    assert_eq!(blocked["decision"], "capability-blocked");
+    assert_eq!(blocked["summary"]["capabilityBlocked"], 1);
+    assert_eq!(blocked["scopes"][0]["capabilityGap"], "semantic-refresh");
+    let semantic = run(&["semantic-refresh"]);
+    assert_eq!(semantic["nextLane"], "semantic-refresh");
+    assert_eq!(semantic["selectedScopeIds"], json!(["scope"]));
+    let mut fact = complete_fact("semantic", "arbitrary", "scope");
+    fact["dimensions"] = json!(["responsibility", "boundary", "relations", "behavior"]);
+    jsonl(&facts, &[fact.clone()]);
+    let operation = run(&["semantic-refresh", "operation-verification"]);
+    assert_eq!(operation["nextLane"], "operation-verification");
+    assert_eq!(operation["scopes"][0]["maturity"], "L2-semantic-ready");
+    // A legacy operation claim or a missing receipt cannot skip this lane.
+    fact["dimensions"] = json!([
+        "responsibility",
+        "boundary",
+        "relations",
+        "behavior",
+        "operation"
+    ]);
+    jsonl(&facts, &[fact.clone()]);
+    assert_eq!(
+        run(&["operation-verification"])["nextLane"],
+        "operation-verification"
+    );
+    let bytes = serde_json::to_vec(&build_receipt()).unwrap();
+    fs::write(root.join("build.json"), &bytes).unwrap();
+    fact["operationEvidence"] = json!({"path":"build.json","sha256":digest(&bytes)});
+    jsonl(&facts, &[fact]);
+    let ready = run(&["operation-verification"]);
+    assert_eq!(ready["summary"]["knowledgeReady"], 1);
+    assert_eq!(ready["decision"], "downstream-validation-required");
+    assert_eq!(ready["closedLoopQualified"], false);
+    assert_eq!(ready["automaticPromotion"], false);
+    assert_eq!(ready["authorityWritePerformed"], false);
+    assert_eq!(ready, run(&["operation-verification"]));
+    let output = root.join("next-plan.json");
+    let command = || {
+        std::process::Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .args([
+                "--plan-next-round",
+                "--scope-skills",
+                scopes.to_str().unwrap(),
+                "--program-facts",
+                facts.to_str().unwrap(),
+                "--operation-receipts-root",
+                root.to_str().unwrap(),
+                "--round-index",
+                "1",
+                "--available-lane",
+                "operation-verification",
+                "--batch-size",
+                "4",
+                "--output",
+                output.to_str().unwrap(),
+            ])
+            .output()
+            .unwrap()
+    };
+    assert!(command().status.success());
+    let bytes = fs::read(&output).unwrap();
+    assert_eq!(serde_json::from_slice::<Value>(&bytes).unwrap(), ready);
+    assert!(!command().status.success());
+    assert_eq!(fs::read(&output).unwrap(), bytes);
+    fs::write(root.join("build.json"), b"tampered").unwrap();
+    assert_eq!(
+        run(&["operation-verification"])["nextLane"],
+        "operation-verification"
+    );
+    for lanes in [
+        vec!["unknown".into()],
+        vec!["semantic-refresh".into(), "semantic-refresh".into()],
+    ] {
+        assert!(plan(&scopes, Some(&facts), &root, 1, None, &lanes, 1, 80).is_err());
+    }
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn next_round_plan_accounts_for_every_scope_and_isolates_batches() {
+    use agentlab_code_analysis::maintainer_flywheel_plan::plan;
+    let root = temp_root();
+    let scopes = root.join("scopes.jsonl");
+    let mut rows = vec![
+        scope("zeta", "arbitrary"),
+        scope("alpha", "arbitrary"),
+        scope("foreign", "other"),
+    ];
+    let mut large = scope("large", "arbitrary");
+    large["sourceFileCount"] = json!(81);
+    large["trackedFileCount"] = json!(81);
+    rows.push(large);
+    let mut root_scope = scope("root", "arbitrary");
+    root_scope["pathBoundary"] = json!(".");
+    rows.push(root_scope);
+    let mut stale = scope("repair", "arbitrary");
+    stale["sourceRevision"] = Value::Null;
+    rows.push(stale);
+    jsonl(&scopes, &rows);
+    let available = vec!["semantic-refresh".into()];
+    let report = plan(&scopes, None, &root, 1, None, &available, 4, 80).unwrap();
+    assert_eq!(report["summary"]["scopeCount"], 6);
+    assert_eq!(report["summary"]["capabilityBlocked"], 2);
+    assert_eq!(report["selectedScopeIds"], json!(["alpha", "zeta"]));
+    assert_eq!(report["nextLane"], "semantic-refresh");
+    let items = report["scopes"].as_array().unwrap();
+    assert_eq!(
+        items.iter().find(|row| row["skillId"] == "large").unwrap()["nextLane"],
+        "scope-decomposition"
+    );
+    assert_eq!(
+        items.iter().find(|row| row["skillId"] == "repair").unwrap()["nextLane"],
+        "inventory-repair"
+    );
+    rows.reverse();
+    jsonl(&scopes, &rows);
+    let reordered = plan(&scopes, None, &root, 1, None, &available, 4, 80).unwrap();
+    assert_eq!(reordered["scopes"], report["scopes"]);
+    assert_eq!(reordered["selectedScopeIds"], report["selectedScopeIds"]);
+    // Even same repository/lane cannot batch a different source revision.
+    rows.iter_mut().find(|row| row["id"] == "zeta").unwrap()["sourceRevision"] =
+        json!("9".repeat(40));
+    jsonl(&scopes, &rows);
+    let different = plan(&scopes, None, &root, 1, None, &available, 4, 80).unwrap();
+    assert_eq!(different["selectedScopeIds"], json!(["alpha"]));
+    assert!(plan(&scopes, None, &root, 1, None, &available, 0, 80).is_err());
+    assert!(plan(&scopes, None, &root, 1, None, &available, 4, 0).is_err());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn productive_rounds_retain_inherited_receipts_without_original_machine() {
     use agentlab_code_analysis::{
         maintainer_operation_evidence::prepare_fact, maintainer_operation_stage::stage,

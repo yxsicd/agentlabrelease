@@ -147,6 +147,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let facts = optional(&args, "--program-facts").map(PathBuf::from);
     let round_index = value(&args, "--round-index")?.parse::<u64>()?;
     let parent = optional(&args, "--parent-assessment-sha256");
+    if args.iter().any(|arg| arg == "--plan-next-round") {
+        let available = args
+            .iter()
+            .enumerate()
+            .filter(|(_, arg)| arg.as_str() == "--available-lane")
+            .map(|(i, _)| {
+                args.get(i + 1)
+                    .cloned()
+                    .ok_or("available lane value missing")
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let report = agentlab_code_analysis::maintainer_flywheel_plan::plan(
+            &scopes,
+            facts.as_deref(),
+            receipts
+                .as_deref()
+                .ok_or("plan requires --operation-receipts-root")?,
+            round_index,
+            parent.as_deref(),
+            &available,
+            optional(&args, "--batch-size")
+                .unwrap_or_else(|| "1".into())
+                .parse()?,
+            optional(&args, "--max-source-files")
+                .unwrap_or_else(|| "80".into())
+                .parse()?,
+        )?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        file.write_all(&serde_json::to_vec_pretty(&report)?)?;
+        file.write_all(b"\n")?;
+        println!("{}", serde_json::to_string(&report["summary"])?);
+        return Ok(());
+    }
     let assessment = assess_with_receipts(
         &scopes,
         facts.as_deref(),

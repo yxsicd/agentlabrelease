@@ -197,6 +197,42 @@ repository.
 
 ## Loop
 
+### Evidence-driven next-round proposals
+
+Use the Rust `--plan-next-round` mode to reassess exact scope/fact bytes with an
+explicit receipt root before proposing the next bounded batch. Do not feed a
+caller-authored ready verdict or legacy operation claims into scheduling.
+
+```sh
+agentlab-maintainer-skill-flywheel --plan-next-round \
+  --scope-skills scopes.jsonl --program-facts facts.jsonl \
+  --operation-receipts-root operation-evidence --round-index 1 \
+  --available-lane semantic-refresh --available-lane operation-verification \
+  --batch-size 4 --max-source-files 80 --output next-round-plan.json
+```
+
+For later assessment rounds supply their original parent assessment SHA. This
+mode plans from the same cut; it does not append a round or count as a gain.
+The report embeds the independent assessment and its canonical JSON-value SHA,
+which is not the SHA of an independently formatted assessment file.
+Every scope is accounted for as eligible, capability-blocked or knowledge-ready.
+Structural gaps route to inventory repair, oversized pre-semantic scopes to
+decomposition, missing semantic evidence to refresh, and missing or rejected
+strict operation evidence to operation verification. Selection is deterministic
+and bounded to one repository URL/ID, source revision, lane and analysis mode;
+root contract and child source projections cannot share a batch.
+
+Available lanes are explicit operator capability declarations, not proof that
+an adapter has executed or an Agent has passed. No declarations means no
+executable proposal, not convergence. A selected proposal still needs the
+existing isolated execution, exact candidate validation, aggregate assessment
+and revision-fenced persistence gates. Planning performs none of those writes.
+When all scopes are knowledge-ready, require downstream calibrated cases,
+execution, feedback into the next cut and cross-repository transfer. The plan
+always reports `closedLoopQualified: false`: scope readiness alone cannot
+certify the five-ring flywheel. Unsupported downstream evidence must remain an
+explicit requirement, not be fabricated as a successful run.
+
 1. Assess the structural catalog without program facts to freeze the baseline.
 2. Bind revision-matched program facts and reassess.
 3. Use the emitted gap codes as the next analysis objectives.

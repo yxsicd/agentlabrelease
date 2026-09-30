@@ -50,6 +50,19 @@ file_sha() {
   --operation-receipts-root "$out/stage/operation-evidence" --round-index "$((round + 1))" \
   --parent-assessment-sha256 "$(file_sha "$out/before.json")" --output "$out/portable-reassessment.json"
 cmp "$out/after.json" "$out/portable-reassessment.json"
+# Feed the actual portable child into a repository-independent next-round
+# proposal. Declared lanes are scheduling inputs, never execution proof.
+"$gate" --plan-next-round --scope-skills "$out/stage/maintainer_scope_skills.jsonl" \
+  --program-facts "$out/stage/program_facts.jsonl" \
+  --operation-receipts-root "$out/stage/operation-evidence" --round-index "$((round + 1))" \
+  --parent-assessment-sha256 "$(file_sha "$out/before.json")" \
+  --available-lane semantic-refresh --available-lane operation-verification \
+  --batch-size 4 --output "$out/next-round-plan.json"
+jq -e --slurpfile child "$out/after.json" \
+  '.assessment == $child[0] and .closedLoopQualified == false and .authorityWritePerformed == false
+   and .automaticPromotion == false and .summary.scopeCount == (.scopes | length)
+   and .summary.scopeCount == (.summary.eligible + .summary.capabilityBlocked + .summary.knowledgeReady)
+   and .summary.selected <= 4' "$out/next-round-plan.json"
 # A replay must preserve candidate bytes and yield no new scope maturity.
 "$gate" --scope-skills "$scopes" --program-facts "$out/candidate-facts.jsonl" \
   --prepare-operation-fact "$scope_id" --operation-receipts-root "$receipt_root" \
