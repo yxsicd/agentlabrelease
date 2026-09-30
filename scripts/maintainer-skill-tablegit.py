@@ -640,6 +640,68 @@ def current_revision(client: Inspector, repo: str, anchor: str) -> str:
     return revision
 
 
+def command_preflight(args) -> None:
+    """Read-only admission check before spending an Agent/model budget."""
+    if args.receipt.exists() or args.receipt.is_symlink():
+        raise RuntimeError("preflight receipt already exists")
+    cut_path = args.base / "maintainer-knowledge-cut.json"
+    cut_bytes = cut_path.read_bytes()
+    cut = json.loads(cut_bytes)
+    authority = cut.get("tableGitAuthority", {})
+    expected = authority.get("revision")
+    if (cut.get("schema") != "agentlab.maintainer_knowledge_cut.v1"
+            or authority.get("repo") != args.repo
+            or not isinstance(expected, str) or not REVISION.fullmatch(expected)):
+        raise RuntimeError("preflight requires an exact authority-bound knowledge cut")
+    local = {}
+    digests = {}
+    names = ("maintainerSkills", "maintainerScopeSkills", "programFacts",
+             "maintainerSkillRefreshRounds", "evaluationCases")
+    for (table, filename), name in zip(TABLE_FILES.items(), names):
+        reference = cut.get("tables", {}).get(name, {})
+        path = args.base / filename
+        digest = file_sha256(path)
+        if reference != {"path": filename, "sha256": digest}:
+            raise RuntimeError(f"{table} preflight input digest or path mismatch")
+        rows = load_jsonl(path)
+        by_id = {row["id"]: row for row in rows}
+        if len(by_id) != len(rows):
+            raise RuntimeError(f"{table} preflight input contains duplicate ids")
+        local[table] = by_id
+        digests[table] = digest
+    client = Inspector(args.endpoint, args.person_id)
+    observed = current_revision(client, args.repo, args.anchor_table)
+    checks = {}
+    if observed == expected:
+        items = query_tables(client, args.repo, observed)
+        for table in TABLE_FILES:
+            rows = unwrap_rows(table, items[table])
+            remote = {row["id"]: row for row in rows}
+            checks[table] = (len(remote) == len(rows) and remote == local[table])
+    after = current_revision(client, args.repo, args.anchor_table)
+    unchanged = cut_path.read_bytes() == cut_bytes and all(
+        file_sha256(args.base / filename) == digests[table]
+        for table, filename in TABLE_FILES.items())
+    admitted = observed == expected == after and unchanged and (
+        len(checks) == len(TABLE_FILES) and all(checks.values()))
+    receipt = {
+        "schema": "agentlab.maintainer_skill_tablegit_preflight.v1",
+        "repo": args.repo, "expectedRevision": expected,
+        "observedRevision": observed, "afterRevision": after,
+        "inputCutSha256": hashlib.sha256(cut_bytes).hexdigest(),
+        "inputTablesSha256": digests, "inputUnchanged": unchanged,
+        "tablesMatched": checks, "admitted": admitted,
+        "readOnly": True, "automaticPromotion": False,
+        "decision": "run-admitted" if admitted else "refresh-authority-input-before-run",
+        "limitations": ["point-in-time admission only; commit-time revision and row fences remain required"],
+    }
+    args.receipt.parent.mkdir(parents=True, exist_ok=True)
+    with args.receipt.open("x") as output:
+        output.write(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+    if not admitted:
+        raise RuntimeError("TableGit preflight rejected stale, changed, or mismatched inputs; refresh the exact export before running the Agent")
+
+
 def create_missing_tables(client: Inspector, repo: str, revision: str) -> str:
     for table in TABLE_FILES:
         status = client.call("skill_run_read", "table.query", "table_status", {
@@ -1075,6 +1137,14 @@ def command_sync(args) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     commands = parser.add_subparsers(dest="command", required=True)
+    preflight = commands.add_parser("preflight")
+    preflight.add_argument("--base", type=Path, required=True)
+    preflight.add_argument("--receipt", type=Path, required=True)
+    preflight.add_argument("--endpoint", default=os.environ.get("AGENTLAB_TABLEGIT_MCP_URL"))
+    preflight.add_argument("--person-id", default=os.environ.get("AGENTLAB_TABLEGIT_PERSON_ID"))
+    preflight.add_argument("--repo", default="agentlabtablegit")
+    preflight.add_argument("--anchor-table", default="maintainer_skill_refresh_rounds")
+    preflight.set_defaults(handler=command_preflight)
     stage = commands.add_parser("stage")
     stage.add_argument("--base", type=Path, required=True)
     stage.add_argument("--candidate-program-facts", type=Path, required=True)
@@ -1127,8 +1197,8 @@ def main() -> None:
     sync.add_argument("--producer-host")
     sync.set_defaults(handler=command_sync)
     args = parser.parse_args()
-    if args.command == "sync" and (not args.endpoint or not args.person_id):
-        parser.error("sync requires the TableGit MCP endpoint and Person id")
+    if args.command in ("sync", "preflight") and (not args.endpoint or not args.person_id):
+        parser.error(f"{args.command} requires the TableGit MCP endpoint and Person id")
     args.handler(args)
 
 

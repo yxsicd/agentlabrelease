@@ -16,6 +16,71 @@ SPEC.loader.exec_module(MODULE)
 
 
 class MaintainerSkillTableGitTest(unittest.TestCase):
+    def test_action_preflight_precedes_build_runtime_and_agent(self):
+        workflow = (ROOT / ".github/workflows/maintainer-skill-agent-flywheel.yml").read_text()
+        admission = workflow.index("python3 scripts/maintainer-skill-tablegit.py preflight")
+        for step in ("cargo build --locked", "npm ci --prefix", "scripts/run-maintainer-skill-agent-loop.sh",
+                     "scripts/run-maintainer-skill-focused-refresh.sh", "scripts/run-maintainer-scope-catalog-rewrite.sh"):
+            self.assertLess(admission, workflow.index(step))
+        self.assertIn("github.ref == 'refs/heads/main'", workflow)
+        self.assertIn('path: ${{ env.AGENTLAB_ROOT }}/run/', workflow)
+
+    def test_preflight_is_read_only_exact_and_fails_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            names = ("maintainerSkills", "maintainerScopeSkills", "programFacts",
+                     "maintainerSkillRefreshRounds", "evaluationCases")
+            references = {}
+            items = {}
+            for (table, filename), name in zip(MODULE.TABLE_FILES.items(), names):
+                row = {"id": table, "value": "original"}
+                MODULE.write_jsonl(root / filename, [row])
+                references[name] = {"path": filename, "sha256": MODULE.file_sha256(root / filename)}
+                items[table] = [{"key": table, "row": MODULE.envelope(row), "deleted": False}]
+            MODULE.write_json(root / "maintainer-knowledge-cut.json", {
+                "schema": "agentlab.maintainer_knowledge_cut.v1", "tables": references,
+                "tableGitAuthority": {"repo": "repo", "revision": "a" * 40}})
+            args = type("Args", (), {"base": root, "receipt": root / "receipt.json",
+                "repo": "repo", "endpoint": "https://example.invalid", "person_id": "person",
+                "anchor_table": "maintainer_skill_refresh_rounds"})
+            for scenario in ("exact", "stale", "concurrent", "payload", "local-drift"):
+                args.receipt = root / (scenario + ".json")
+                revisions = ["a" * 40, "a" * 40]
+                if scenario == "stale":
+                    revisions = ["b" * 40, "b" * 40]
+                if scenario == "concurrent":
+                    revisions[1] = "b" * 40
+                def query(*_args):
+                    if scenario == "local-drift":
+                        (root / "program_facts.jsonl").write_text("[]\n")
+                    if scenario == "payload":
+                        return dict(items, program_facts=[])
+                    return items
+                with mock.patch.object(MODULE, "Inspector") as connect, \
+                        mock.patch.object(MODULE, "current_revision", side_effect=revisions), \
+                        mock.patch.object(MODULE, "query_tables", side_effect=query) as reads:
+                    if scenario == "exact":
+                        MODULE.command_preflight(args)
+                    else:
+                        with self.assertRaisesRegex(RuntimeError, "preflight rejected"):
+                            MODULE.command_preflight(args)
+                    # Network effects are reads only, never initialization or a transaction.
+                    connect.return_value.call.assert_not_called()
+                    if scenario == "stale":
+                        reads.assert_not_called()
+                receipt = MODULE.load(args.receipt)
+                self.assertEqual(receipt["admitted"], scenario == "exact")
+                self.assertTrue(receipt["readOnly"])
+                with mock.patch.object(MODULE, "Inspector") as connect:
+                    with self.assertRaisesRegex(RuntimeError, "already exists"):
+                        MODULE.command_preflight(args)
+                    connect.assert_not_called()
+            args.receipt = root / "bad-local.json"
+            with mock.patch.object(MODULE, "Inspector") as connect:
+                with self.assertRaisesRegex(RuntimeError, "digest or path mismatch"):
+                    MODULE.command_preflight(args)
+                connect.assert_not_called()
+
     def test_operation_evidence_is_portable_and_rejected_before_connect_on_drift(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

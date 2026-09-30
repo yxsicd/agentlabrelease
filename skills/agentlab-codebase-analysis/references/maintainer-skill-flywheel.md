@@ -551,3 +551,15 @@ publication and benchmark promotion remain separate downstream decisions.
 Do not treat a higher number of prose fields as progress. A round advances only
 when a missing evidence dimension closes, a stale or contradictory binding is
 removed, or a scope advances maturity with revision-bound evidence.
+
+Before spending an Agent budget, run a read-only authority admission check on
+the exact published input cut. Validate its declared table paths, original byte
+digests and unique row IDs locally before contacting the service. Require the
+declared authority revision to match clean committed HEAD, compare all knowledge
+table payloads at that immutable revision, then recheck HEAD and local bytes.
+Persist an exclusive admission receipt; stale inputs must stop before runtime
+installation or model calls. Refresh through an exact authority export and its
+review path, not by rebasing a proposal onto newer data or auto-merging source.
+Admission is point-in-time evidence, not a lock: transaction-time revision and
+row-version fences remain mandatory. A stale-input refusal prevents wasted work
+but does not count as a productive round or overall maturity gain.

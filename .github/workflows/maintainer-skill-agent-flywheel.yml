@@ -75,6 +75,12 @@ jobs:
       AGENTLAB_TABLEGIT_PERSON_ID: ${{ vars.AGENTLAB_TABLEGIT_PERSON_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Admit only an exact current TableGit input before Agent execution
+        run: |
+          set -euo pipefail
+          python3 scripts/maintainer-skill-tablegit.py preflight \
+            --base "$KNOWLEDGE" \
+            --receipt "$AGENTLAB_ROOT/run/tablegit-preflight-receipt.json"
       - name: Validate orchestration and build the Rust hard gate
         run: |
           set -euo pipefail
