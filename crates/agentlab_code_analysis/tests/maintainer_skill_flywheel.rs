@@ -111,6 +111,179 @@ fn build_receipt() -> Value {
 }
 
 #[test]
+fn productive_rounds_retain_inherited_receipts_without_original_machine() {
+    use agentlab_code_analysis::{
+        maintainer_operation_evidence::prepare_fact, maintainer_operation_stage::stage,
+    };
+    let root = temp_root();
+    let mut base = root.join("base");
+    fs::create_dir_all(base.join("assessments")).unwrap();
+    let scope_rows = [
+        scope("alpha", "arbitrary"),
+        scope("beta", "arbitrary"),
+        scope("gamma", "arbitrary"),
+    ];
+    jsonl(&base.join("maintainer_scope_skills.jsonl"), &scope_rows);
+    let mut facts = scope_rows
+        .iter()
+        .map(|skill| {
+            let id = skill["id"].as_str().unwrap();
+            let mut fact = complete_fact(&format!("semantic-{id}"), "arbitrary", id);
+            fact["dimensions"] = json!(["responsibility", "boundary", "relations", "behavior"]);
+            fact
+        })
+        .collect::<Vec<_>>();
+    jsonl(&base.join("program_facts.jsonl"), &facts);
+    jsonl(&base.join("maintainer_skills.jsonl"), &[]);
+    jsonl(&base.join("evaluation_cases.jsonl"), &[]);
+    fs::write(base.join("maintainer-knowledge-cut.json"), b"{}\n").unwrap();
+    let mut receipts = root.join("original-machine");
+    fs::create_dir(&receipts).unwrap();
+    let mut before = assess_with_receipts(
+        &base.join("maintainer_scope_skills.jsonl"),
+        Some(&base.join("program_facts.jsonl")),
+        1,
+        None,
+        Some(&receipts),
+    )
+    .unwrap();
+    let bytes = serde_json::to_vec(&before).unwrap();
+    fs::write(base.join("assessments/parent.json"), &bytes).unwrap();
+    jsonl(
+        &base.join("maintainer_skill_refresh_rounds.jsonl"),
+        &[json!({
+            "id":"parent", "roundIndex":1, "coverage":{},
+            "assessment":{"path":"assessments/parent.json","sha256":digest(&bytes)}
+        })],
+    );
+    for (index, skill) in scope_rows.iter().enumerate() {
+        let id = skill["id"].as_str().unwrap();
+        let mut receipt = build_receipt();
+        receipt["scope"]["scopeSkillIds"] = json!([id]);
+        let receipt_bytes = serde_json::to_vec(&receipt).unwrap();
+        let name = format!("{id}.json");
+        fs::write(receipts.join(&name), &receipt_bytes).unwrap();
+        facts.push(
+            prepare_fact(
+                skill,
+                json!({"path":name,"sha256":digest(&receipt_bytes)}),
+                &receipts,
+            )
+            .unwrap(),
+        );
+        let candidate = root.join(format!("candidate-{index}.jsonl"));
+        jsonl(&candidate, &facts);
+        let before_bytes = serde_json::to_vec(&before).unwrap();
+        let after = assess_with_receipts(
+            &base.join("maintainer_scope_skills.jsonl"),
+            Some(&candidate),
+            index as u64 + 2,
+            Some(&digest(&before_bytes)),
+            Some(&receipts),
+        )
+        .unwrap();
+        let before_path = root.join("before.json");
+        let after_path = root.join("after.json");
+        fs::write(&before_path, &before_bytes).unwrap();
+        fs::write(&after_path, serde_json::to_vec(&after).unwrap()).unwrap();
+        let output = root.join(format!("stage-{index}"));
+        let manifest = stage(
+            &base,
+            &candidate,
+            &before_path,
+            &after_path,
+            &receipts,
+            &[id.to_owned()],
+            &format!("round-{index}"),
+            false,
+            &output,
+        )
+        .unwrap();
+        assert_eq!(
+            manifest["operationEvidence"]["receipts"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(
+            manifest["operationEvidence"]["inheritedReceipts"]
+                .as_array()
+                .unwrap()
+                .len(),
+            index
+        );
+        assert_eq!(manifest["automaticPromotion"], false);
+        let portable = assess_with_receipts(
+            &output.join("maintainer_scope_skills.jsonl"),
+            Some(&output.join("program_facts.jsonl")),
+            index as u64 + 2,
+            Some(&digest(&before_bytes)),
+            Some(&output.join("operation-evidence")),
+        )
+        .unwrap();
+        assert_eq!(portable, after);
+        assert_eq!(portable["totals"]["maintenanceReadyCount"], index + 1);
+        if index > 0 {
+            let saved = fs::read(receipts.join("alpha.json")).unwrap();
+            fs::write(receipts.join("alpha.json"), b"tampered").unwrap();
+            let rejected = root.join(format!("rejected-{index}"));
+            assert!(stage(
+                &base,
+                &candidate,
+                &before_path,
+                &after_path,
+                &receipts,
+                &[id.to_owned()],
+                &format!("bad-{index}"),
+                false,
+                &rejected
+            )
+            .is_err());
+            assert!(!rejected.exists());
+            fs::write(receipts.join("alpha.json"), saved).unwrap();
+        }
+        // The next worker receives only the portable bundle plus its new
+        // receipt; the previous worker's receipt directory no longer exists.
+        let next_receipts = root.join(format!("worker-{}", index + 1));
+        fs::create_dir(&next_receipts).unwrap();
+        for row in manifest["operationEvidence"]["receipts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .chain(
+                manifest["operationEvidence"]["inheritedReceipts"]
+                    .as_array()
+                    .unwrap(),
+            )
+        {
+            let path = row["path"].as_str().unwrap();
+            fs::copy(
+                output.join(path),
+                next_receipts.join(path.strip_prefix("operation-evidence/").unwrap()),
+            )
+            .unwrap();
+        }
+        fs::remove_dir_all(&receipts).unwrap();
+        receipts = next_receipts;
+        base = output;
+        before = after;
+    }
+    fs::remove_dir_all(&receipts).unwrap();
+    let report = assess_with_receipts(
+        &base.join("maintainer_scope_skills.jsonl"),
+        Some(&base.join("program_facts.jsonl")),
+        4,
+        before["parentAssessmentSha256"].as_str(),
+        Some(&base.join("operation-evidence")),
+    )
+    .unwrap();
+    assert_eq!(report, before);
+    assert_eq!(report["totals"]["maintenanceReadyCount"], 3);
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn strict_cli_prepares_repeatable_candidate_cut_and_advances_one_scope() {
     let root = temp_root();
     let scopes = root.join("scopes.jsonl");

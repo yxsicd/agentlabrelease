@@ -118,13 +118,23 @@ existing refresh-round table, preserving historical semantic round formats.
 
 Carry exact original receipt bytes with accepted operation facts. The stager
 records their digests and relative paths under `operation-evidence`; never depend
-on the originating machine's checkout or mutable filesystem path. Portable
-coverage is explicitly limited to accepted facts, not every historical receipt.
+on the originating machine's checkout or mutable filesystem path.
+The `receipts` list covers newly accepted facts; `inheritedReceipts` separately
+retains existing facts whose operation checks are verified in the child report.
+Reverify inherited bindings and preserve original bytes and SHA before staging.
+Rejected or unsupported historical claims are not portable proof. The combined
+unique receipt payload is bounded to 16 MiB. Older manifests without the
+optional inherited list retain their accepted-only compatibility contract.
 Before any TableGit mutation, the sync writer checks table digests and portable
 receipt bindings; after exact committed-cut export it preserves receipt bytes,
 baseline, comparison and the original stage manifest as evidence sidecars.
 Verify an accepted fact without its original receipt directory, and reject
 tampering. Missing evidence stops ingestion before any authority write.
+Regression must cover successive productive fixture rounds on distinct scopes:
+use the previous staged cut as the next base, verify cumulative readiness from
+each portable bundle, and remove the originating receipt directory before the
+final reassessment. This proves transport continuity, not fresh execution or
+three productive real-world flywheel rounds.
 Remote HEAD equality, exact business-row readback and unchanged repeat import
 must be measured independently; a local bundle or a mirrored branch is not proof
 of these postconditions. Preserve unrelated remote rows and never bootstrap an

@@ -178,6 +178,53 @@ pub fn stage(
             }
         }
     }
+    // A child cut must retain verified evidence used by unchanged scopes, not
+    // merely the facts accepted in this round. Rejected history stays excluded.
+    let mut inherited_receipts = BTreeMap::new();
+    for skill in after["skills"].as_array().ok_or("stage skills missing")? {
+        let scope_id = skill["skillId"].as_str().ok_or("stage skill id missing")?;
+        if let Some(checks) = skill["operationEvidenceChecks"].as_object() {
+            for (id, check) in checks {
+                if check["status"] != "verified" || !old_facts.contains_key(id) {
+                    continue;
+                }
+                let fact = &old_facts[id];
+                maintainer_operation_evidence::verify(
+                    fact,
+                    scopes
+                        .get(scope_id)
+                        .ok_or("stage inherited scope missing")?,
+                    receipt_root,
+                )?;
+                let relative = fact["operationEvidence"]["path"]
+                    .as_str()
+                    .ok_or("stage inherited receipt path missing")?;
+                let bytes = regular(&receipt_root.join(relative))?;
+                if fact["operationEvidence"]["sha256"].as_str() != Some(digest(&bytes).as_str()) {
+                    return Err("stage inherited receipt changed during capture".into());
+                }
+                let path = format!("operation-evidence/{relative}");
+                inherited_receipts.insert(
+                    id.clone(),
+                    json!({"factId":id,"path":path,"sha256":digest(&bytes)}),
+                );
+                if let Some(existing) = files.insert(path, bytes.clone()) {
+                    if existing != bytes {
+                        return Err("stage portable receipt path collision".into());
+                    }
+                }
+            }
+        }
+    }
+    if files
+        .iter()
+        .filter(|(path, _)| path.starts_with("operation-evidence/"))
+        .map(|(_, bytes)| bytes.len())
+        .sum::<usize>()
+        > 16 * 1024 * 1024
+    {
+        return Err("stage portable receipt budget exceeded".into());
+    }
     let mut rounds = rows(&files["maintainer_skill_refresh_rounds.jsonl"])?;
     let previous = rounds
         .values()
@@ -285,7 +332,8 @@ pub fn stage(
     let manifest = json!({"schema":"agentlab.maintainer_skill_tablegit_stage.v1","automaticPromotion":false,
         "runId":run_id,"proposalReceiptCount":0,"acceptedFactIds":accepted.values().collect::<Vec<_>>(),
         "assessment":assessment_path,"stageKind":"verified-operation","authorityWritePerformed":false,
-        "operationEvidence":{"receiptRoot":"operation-evidence","coverage":"accepted-operation-facts-only","receipts":portable_receipts},
+        "operationEvidence":{"receiptRoot":"operation-evidence","coverage":"accepted-operation-facts-only","receipts":portable_receipts,
+            "inheritedReceipts":inherited_receipts.values().collect::<Vec<_>>()},
         "tables":TABLES.iter().map(|table|{let path=format!("{table}.jsonl");((*table).to_owned(),json!({"path":path,"sha256":digest(&files[&path])}))}).collect::<BTreeMap<_,_>>()});
     files.insert("stage-manifest.json".into(), pretty(&manifest)?);
     // All semantic and receipt checks precede filesystem mutation. Refuse reuse.

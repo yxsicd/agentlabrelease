@@ -45,6 +45,37 @@ class MaintainerSkillTableGitTest(unittest.TestCase):
             retained = MODULE.operation_evidence_files(root)
             self.assertEqual(retained["operation-evidence/receipt.json"], receipt.read_bytes())
             self.assertIn("operation-stage-manifest.json", retained)
+            old_receipt = receipt.parent / "prior.json"
+            old_receipt.write_bytes(b'{"recorded":"prior"}\n')
+            old_fact = {"id": "prior-operation", "operationEvidence": {
+                "path": "prior.json", "sha256": MODULE.file_sha256(old_receipt)}}
+            MODULE.write_jsonl(root / "program_facts.jsonl", [fact, old_fact])
+            manifest["tables"]["program_facts"]["sha256"] = MODULE.file_sha256(root / "program_facts.jsonl")
+            inherited = {"factId": "prior-operation", "path": "operation-evidence/prior.json",
+                         "sha256": MODULE.file_sha256(old_receipt)}
+            manifest["operationEvidence"]["inheritedReceipts"] = [inherited]
+            MODULE.write_json(root / "assessments/after.json", {"skills": [{"operationEvidenceChecks": {
+                "operation": {"status": "verified"}, "prior-operation": {"status": "verified"}}}]})
+            result = MODULE.load(root / "operation-result.json")
+            result["afterAssessmentSha256"] = MODULE.file_sha256(root / "assessments/after.json")
+            MODULE.write_json(root / "operation-result.json", result)
+            MODULE.write_json(root / "stage-manifest.json", manifest)
+            self.assertEqual(MODULE.operation_evidence_files(root)[inherited["path"]], old_receipt.read_bytes())
+            for invalid in ([], [inherited, inherited], [dict(inherited, factId="operation")]):
+                manifest["operationEvidence"]["inheritedReceipts"] = invalid
+                MODULE.write_json(root / "stage-manifest.json", manifest)
+                with mock.patch.object(MODULE, "Inspector") as connect:
+                    with self.assertRaises(RuntimeError):
+                        MODULE.command_sync(type("Args", (), {"snapshot": root}))
+                    connect.assert_not_called()
+            manifest["operationEvidence"]["inheritedReceipts"] = [inherited]
+            MODULE.write_json(root / "stage-manifest.json", manifest)
+            old_receipt.write_bytes(b'tampered history')
+            with mock.patch.object(MODULE, "Inspector") as connect:
+                with self.assertRaisesRegex(RuntimeError, "digest mismatch"):
+                    MODULE.command_sync(type("Args", (), {"snapshot": root}))
+                connect.assert_not_called()
+            old_receipt.write_bytes(b'{"recorded":"prior"}\n')
             receipt.write_bytes(b'tampered')
             with mock.patch.object(MODULE, "Inspector") as connect:
                 with self.assertRaisesRegex(RuntimeError, "digest mismatch"):

@@ -859,6 +859,10 @@ def operation_evidence_files(snapshot: Path) -> dict[str, bytes]:
         raise RuntimeError("operation stage has no portable evidence contract")
     if not 1 <= len(receipts) <= 4 or sorted(row["factId"] for row in receipts) != sorted(manifest["acceptedFactIds"]):
         raise RuntimeError("operation receipt coverage differs from accepted facts")
+    inherited = evidence.get("inheritedReceipts", [])
+    all_receipts = receipts + inherited
+    if len({row["factId"] for row in all_receipts}) != len(all_receipts):
+        raise RuntimeError("operation receipt fact ids duplicated or overlap")
     files = {"operation-stage-manifest.json": read("stage-manifest.json"),
              "operation-baseline.json": read("operation-baseline.json"),
              "operation-result.json": read("operation-result.json")}
@@ -868,15 +872,25 @@ def operation_evidence_files(snapshot: Path) -> dict[str, bytes]:
             or result.get("beforeAssessmentSha256") != hashlib.sha256(files["operation-baseline.json"]).hexdigest()
             or result.get("afterAssessmentSha256") != hashlib.sha256(child).hexdigest()):
         raise RuntimeError("operation stage report digest mismatch")
-    for receipt in receipts:
+    for receipt in all_receipts:
         if not receipt["path"].startswith("operation-evidence/") or not re.fullmatch(r"[0-9a-f]{64}", receipt["sha256"]):
             raise RuntimeError("operation receipt reference invalid")
         files[receipt["path"]] = read(receipt["path"], receipt["sha256"])
+    if sum(len(data) for path, data in files.items() if path.startswith("operation-evidence/")) > 16 * 1024 * 1024:
+        raise RuntimeError("operation portable receipt budget exceeded")
     facts = {row["id"]: row for row in load_jsonl(snapshot / TABLE_FILES["program_facts"])}
-    for receipt in receipts:
+    for receipt in all_receipts:
         reference = facts.get(receipt["factId"], {}).get("operationEvidence", {})
         if receipt["path"] != "operation-evidence/" + reference.get("path", "") or receipt["sha256"] != reference.get("sha256"):
-            raise RuntimeError("portable receipt differs from accepted fact")
+            raise RuntimeError("portable receipt differs from candidate fact")
+    child_report = json.loads(child)
+    verified = {fact_id for skill in child_report.get("skills", [])
+                for fact_id, check in skill.get("operationEvidenceChecks", {}).items()
+                if check.get("status") == "verified"}
+    if any(receipt["factId"] not in verified for receipt in inherited):
+        raise RuntimeError("inherited receipt has no verified child assessment binding")
+    if "inheritedReceipts" in evidence and verified != {row["factId"] for row in all_receipts}:
+        raise RuntimeError("portable receipts do not cover verified child assessment")
     return files
 
 
