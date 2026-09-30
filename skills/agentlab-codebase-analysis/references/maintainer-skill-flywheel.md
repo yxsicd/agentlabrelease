@@ -200,6 +200,27 @@ repository.
 
 ## Loop
 
+### Remote execution preflight
+
+Resolve and verify the exact execution peer before preparing an isolated,
+revision-pinned workspace. Do not update an old primary checkout merely to run
+the next experiment. Fetch each immutable external input explicitly: fetching
+the method branch does not imply that unrelated qualification commits exist in
+the remote object database. Verify source and input identities before dispatch.
+
+Resolve tool executables in the actual executor environment. An interactive
+login shell's PATH is not evidence that a direct remote executor can spawn the
+same command; use the verified absolute executable when those environments
+differ. Preserve a failed spawn as infrastructure evidence, then correct the
+invocation rather than count it as a target or Agent failure.
+
+Check model configuration and credential presence without printing values.
+A cached participant that starts, a successfully compiled gate, and receipt
+replay do not prove model access or a productive Agent round. Keep preparation,
+recorded-evidence replay, fresh target execution and feedback qualification
+separate. Missing model configuration blocks Agent dispatch, not safe offline
+qualification or implementation of the generic scheduler.
+
 ### Scope-exact semantic round gate
 
 Use `--compare-semantic-round --before BEFORE --after AFTER --selected-scope ID

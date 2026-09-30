@@ -1,0 +1,59 @@
+{
+  "schema": "agentlab.maintainer_flywheel_host_preflight_audit.v1",
+  "date": "2026-10-01",
+  "methodRevision": "fed1627988b387cffd16ac07792ae13eda723b8d",
+  "automaticPromotion": false,
+  "authorityWritePerformed": false,
+  "maturity": {
+    "overallPercent": 42,
+    "previousPercent": 42,
+    "basis": "Engineering estimate, not a measured benchmark.",
+    "changeReason": "Host preparation and recorded-evidence replay do not qualify productive real Agent feedback rounds."
+  },
+  "host": {
+    "topologyPath": "hwlinux/ma",
+    "peerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+    "routeDecision": "peer_direct",
+    "workspace": "/home/huawei/code/.worktrees/agentlabrelease/flywheel-maturity-fed1627",
+    "workspaceClean": true,
+    "gateSha256": "e635a8a4b18c70e6d1000ee7cbd02d1dee7459c91062f84d4224fa42b7186b69",
+    "participantVersion": "0.73.1",
+    "participantStartupOnly": true
+  },
+  "operations": {
+    "build": {"id": "exec-0000000000000197", "terminal": true, "exitCode": 0},
+    "rustContracts": {"id": "exec-0000000000000198", "terminal": true, "exitCode": 0, "passed": 18},
+    "recordedReceiptReplay": {"id": "exec-000000000000019b", "terminal": true, "exitCode": 0},
+    "readback": {"id": "exec-000000000000019c", "terminal": true, "exitCode": 0}
+  },
+  "replay": {
+    "knowledgeRevision": "d656442d286c8f8646d312ee4d78143985eeda6c",
+    "receiptRevision": "993c88e6d4a68559ee161543a9a618074c49229a",
+    "evidenceDirectory": "/home/huawei/.agentlab/flywheel/fed1627-operation-replay-20261001",
+    "portableReassessmentEqual": true,
+    "unchangedReplayDecision": "no-change",
+    "noChangeStagingRejected": true,
+    "operationResultSha256": "6f60727196088586c8f6a366203bec5f286543758814a6ff662b926dfd1d22c0",
+    "replayResultSha256": "c9ea9662338719fe0e516ec739421494c0058eb211a0ed97b15156b62b7b106a",
+    "nextPlanSha256": "44856e34e330bd5f9d8a2390e16e336f84d67ef52f5dcdb64ebdff93487da9d1",
+    "frozenInputSummary": {"scopeCount": 489, "eligible": 441, "capabilityBlocked": 47, "knowledgeReady": 1, "selected": 4},
+    "closedLoopQualified": false
+  },
+  "observedInfrastructureFailures": [
+    "Direct executor could not spawn cargo through its PATH; verified absolute cargo invocation succeeded.",
+    "Unrelated pinned input commits were absent after method-branch fetch; explicit immutable input fetch succeeded."
+  ],
+  "remainingRequirements": [
+    "Restore a verified model entrypoint and operator-owned opaque credential configuration before real Agent dispatch.",
+    "Connect strict gap-plan selection to isolated executable requests without silently falling back to a different scheduler.",
+    "Refresh live TableGit input authority before any new transaction; frozen public input counts are not current authority counts.",
+    "Retain three productive rounds with calibrated case execution and feedback changing the next cut or analysis objectives.",
+    "Repeat on a structurally different repository without target-specific acceptance branches."
+  ],
+  "limitations": [
+    "No new construction Agent invocation, target build, emulator run or model request in this qualification.",
+    "Model configuration was absent in the inspected executor environment; this does not establish that no credential exists elsewhere on the host.",
+    "No live knowledge ingestion, remote main update, release activation or formal release.",
+    "The gate is a dev-profile Linux build, not a published production component."
+  ]
+}
