@@ -295,10 +295,29 @@ def command_stage(args) -> None:
 
 
 def latest_assessment_path(base: Path) -> Path:
-    paths = list((base / "assessments").glob("*.json"))
-    if not paths:
-        raise ValueError("knowledge cut has no assessment")
-    return max(paths, key=lambda path: load(path)["roundIndex"])
+    rounds = load_jsonl(base / TABLE_FILES["maintainer_skill_refresh_rounds"])
+    indices = [row.get("roundIndex") for row in rounds]
+    ids = [row.get("id") for row in rounds]
+    if (not rounds or any(type(index) is not int or index <= 0 for index in indices)
+            or any(not isinstance(id_, str) or not id_ for id_ in ids)
+            or len(set(indices)) != len(indices) or len(set(ids)) != len(ids)):
+        raise ValueError("durable refresh history invalid or ambiguous")
+    previous = max(rounds, key=lambda row: row["roundIndex"])
+    reference = previous.get("assessment", {})
+    relative = reference.get("path")
+    if not isinstance(relative, str) or not relative.startswith("assessments/"):
+        raise ValueError("durable assessment reference missing or outside namespace")
+    expected = reference.get("sha256")
+    if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
+        raise ValueError("durable assessment digest missing or invalid")
+    # Reuse contained-path, no-symlink and original-byte integrity checks.
+    data = read_operation_sidecar(base, relative, expected, max_bytes=16 * 1024 * 1024)
+    report = json.loads(data)
+    if (report.get("schema") != "agentlab.maintainer_skill_assessment.v1"
+            or report.get("automaticPromotion") is not False
+            or type(report.get("roundIndex")) is not int or report["roundIndex"] <= 0):
+        raise ValueError("durable assessment report invalid")
+    return base / relative
 
 
 def command_stage_scope_rewrite(args) -> None:
@@ -858,7 +877,8 @@ def update_catalog_summary(export: Path, base: Path) -> None:
     write_json(export / "maintainer-skill-summary.json", summary)
 
 
-def read_operation_sidecar(snapshot: Path, relative: str, expected: str | None = None) -> bytes:
+def read_operation_sidecar(snapshot: Path, relative: str, expected: str | None = None,
+                           max_bytes: int = 2 * 1024 * 1024) -> bytes:
     path = Path(relative)
     if path.is_absolute() or not path.parts or any(part in (".", "..") for part in path.parts):
         raise RuntimeError("operation evidence must be contained and relative")
@@ -867,7 +887,7 @@ def read_operation_sidecar(snapshot: Path, relative: str, expected: str | None =
         current = current / part
         if current.is_symlink():
             raise RuntimeError("operation evidence cannot traverse a symlink")
-    if not current.is_file() or current.stat().st_size > 2 * 1024 * 1024:
+    if not current.is_file() or current.stat().st_size > max_bytes:
         raise RuntimeError("operation evidence missing or exceeds budget")
     data = current.read_bytes()
     if expected and hashlib.sha256(data).hexdigest() != expected:

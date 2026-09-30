@@ -200,6 +200,32 @@ repository.
 
 ## Loop
 
+### Durable latest-assessment reference
+
+Resolve the latest baseline through `maintainer_skill_refresh_rounds`, never by
+the largest assessment filename or report index found in a directory:
+
+```sh
+agentlab-maintainer-skill-flywheel --resolve-latest-assessment \
+  --base exported-cut --output new-durable-reference.json
+```
+
+Require unique positive refresh indices and stable row IDs. Select the newest
+durable row, follow its contained assessment reference, verify the exact original
+byte SHA and supported report identity, and reject missing files, symlinks,
+traversal or ambiguous history before execution or staging. Retain the reference
+receipt's table SHA and both round indices. Refresh and assessment indices are
+independent counters; unequal indices are not corruption by themselves.
+An unreferenced report remains a diagnostic artifact even when its index is
+greater. The existing local and Agent loops use this Rust resolver; the TableGit
+staging adapter applies the same durable-reference checks, and operation staging
+also verifies that its refresh table did not change during resolution.
+
+This proves local exported-cut lineage, not that the export is the latest live
+TableGit authority. Refresh that remote revision separately before writes. The
+resolver does not recompute scope semantics; strict dispatch still independently
+reassesses the resolved baseline and candidate acceptance remains separate.
+
 ### Remote execution preflight
 
 Resolve and verify the exact execution peer before preparing an isolated,
@@ -316,8 +342,8 @@ The existing execution loop chooses this adapter for strict receipt-content
 baselines only. Legacy baselines retain the labeled historical path; migration
 remains explicit. Request preparation proves scheduling continuity, not model
 access, successful Agent execution, durable latest-round authority or feedback.
-The execution loop's historical assessment-file discovery still needs a
-durable-pointer refresh before full unattended qualification.
+Durable reference resolution precedes dispatch; full unattended qualification
+still requires current remote authority and productive execution/feedback.
 
 1. Assess the structural catalog without program facts to freeze the baseline.
 2. Bind revision-matched program facts and reassess.

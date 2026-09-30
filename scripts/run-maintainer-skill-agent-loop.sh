@@ -42,8 +42,9 @@ fi
 for ((iteration = 1; iteration <= iterations; iteration++)); do
   iteration_root="$loop_root/iteration-$iteration"
   mkdir -p "$iteration_root"
-  assessment=$(find "$working_knowledge/assessments" -maxdepth 1 -type f -name '*.json' -print0 |
-    xargs -0 jq -r '[.roundIndex,input_filename] | @tsv' | sort -n | tail -1 | cut -f2-)
+  target/debug/agentlab-maintainer-skill-flywheel --resolve-latest-assessment \
+    --base "$working_knowledge" --output "$iteration_root/durable-assessment-reference.json"
+  assessment=$(jq -r '.assessmentPath' "$iteration_root/durable-assessment-reference.json")
   test -n "$assessment"
 
   if [[ $(jq -r '.standard.operationEvidencePolicy' "$assessment") == verified-receipt-content ]]; then

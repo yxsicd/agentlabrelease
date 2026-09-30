@@ -226,6 +226,12 @@ pub fn stage(
         return Err("stage portable receipt budget exceeded".into());
     }
     let mut rounds = rows(&files["maintainer_skill_refresh_rounds.jsonl"])?;
+    let durable = crate::maintainer_flywheel_plan::latest_assessment(base)?;
+    if durable["refreshTableSha256"].as_str()
+        != Some(digest(&files["maintainer_skill_refresh_rounds.jsonl"]).as_str())
+    {
+        return Err("stage durable refresh table changed during verification".into());
+    }
     let previous = rounds
         .values()
         .max_by_key(|row| row["roundIndex"].as_u64().unwrap_or(0))

@@ -27,6 +27,113 @@ fn temp_root() -> PathBuf {
 }
 
 #[test]
+fn durable_assessment_resolution_ignores_orphans_and_rejects_broken_lineage() {
+    use agentlab_code_analysis::maintainer_flywheel_plan::latest_assessment;
+    let root = temp_root();
+    fs::create_dir(root.join("assessments")).unwrap();
+    let scopes = root.join("scopes.jsonl");
+    jsonl(&scopes, &[scope("scope-alpha", "alpha")]);
+    let baseline = serde_json::to_vec_pretty(&assess(&scopes, None, 1, None).unwrap()).unwrap();
+    let relative = "assessments/current.json";
+    fs::write(root.join(relative), &baseline).unwrap();
+    fs::write(
+        root.join("assessments/orphan.json"),
+        b"{\"roundIndex\":999}",
+    )
+    .unwrap();
+    let table = root.join("maintainer_skill_refresh_rounds.jsonl");
+    let round = json!({"id":"durable-seven","roundIndex":7,
+        "assessment":{"path":relative,"sha256":digest(&baseline)}});
+    jsonl(&table, &[round.clone()]);
+    let resolved = latest_assessment(&root).unwrap();
+    assert_eq!(resolved["refreshRoundIndex"], 7);
+    assert_eq!(resolved["assessmentRoundIndex"], 1);
+    assert_eq!(resolved["assessmentSha256"], digest(&baseline));
+    let project = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+    let python = |expect_ok: bool| {
+        let result = std::process::Command::new("python3").args(["-c",
+            "import importlib.util, pathlib, sys; s=importlib.util.spec_from_file_location('writer',sys.argv[1]); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); print(m.latest_assessment_path(pathlib.Path(sys.argv[2])))"])
+            .arg(project.join("scripts/maintainer-skill-tablegit.py")).arg(&root).output().unwrap();
+        assert_eq!(
+            result.status.success(),
+            expect_ok,
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        if expect_ok {
+            assert_eq!(
+                String::from_utf8(result.stdout).unwrap().trim(),
+                root.join(relative).to_str().unwrap()
+            );
+        }
+    };
+    python(true);
+    #[cfg(unix)]
+    {
+        fs::write(root.join("original.json"), &baseline).unwrap();
+        fs::remove_file(root.join(relative)).unwrap();
+        std::os::unix::fs::symlink(root.join("original.json"), root.join(relative)).unwrap();
+        assert!(latest_assessment(&root).is_err());
+        python(false);
+        fs::remove_file(root.join(relative)).unwrap();
+        fs::write(root.join(relative), &baseline).unwrap();
+    }
+    let pointer = root.join("resolved.json");
+    let invoke = || {
+        std::process::Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .args(["--resolve-latest-assessment", "--base"])
+            .arg(&root)
+            .arg("--output")
+            .arg(&pointer)
+            .output()
+            .unwrap()
+    };
+    assert!(invoke().status.success());
+    assert_eq!(
+        serde_json::from_slice::<Value>(&fs::read(&pointer).unwrap()).unwrap(),
+        resolved
+    );
+    assert!(!invoke().status.success());
+    fs::remove_file(&pointer).unwrap();
+    jsonl(
+        &table,
+        &[
+            round.clone(),
+            json!({"id":"conflict","roundIndex":7,"assessment":round["assessment"]}),
+        ],
+    );
+    assert!(latest_assessment(&root).is_err());
+    python(false);
+    jsonl(&table, &[round.clone()]);
+    fs::write(root.join(relative), b"tampered").unwrap();
+    assert!(latest_assessment(&root).is_err());
+    python(false);
+    assert!(!invoke().status.success());
+    assert!(!pointer.exists());
+    fs::write(root.join(relative), &baseline).unwrap();
+    for path in [
+        "../outside.json",
+        "assessments/../scopes.jsonl",
+        "/absolute.json",
+    ] {
+        let mut invalid = round.clone();
+        invalid["assessment"]["path"] = json!(path);
+        jsonl(&table, &[invalid]);
+        assert!(latest_assessment(&root).is_err());
+        python(false);
+    }
+    jsonl(&table, &[round]);
+    fs::remove_file(root.join(relative)).unwrap();
+    assert!(latest_assessment(&root).is_err());
+    python(false);
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn strict_semantic_dispatch_uses_exact_plan_and_rejects_drift() {
     use agentlab_code_analysis::maintainer_flywheel_plan::{plan_for_repository, semantic_batch};
     let root = temp_root();
@@ -229,6 +336,13 @@ fn strict_execution_loop_stops_before_agent_when_source_cut_drifted() {
         serde_json::to_vec(&baseline).unwrap(),
     )
     .unwrap();
+    jsonl(
+        &knowledge.join("maintainer_skill_refresh_rounds.jsonl"),
+        &[json!({
+            "id":"round-one","roundIndex":1,"assessment":{"path":"assessments/baseline.json",
+            "sha256":digest(&serde_json::to_vec(&baseline).unwrap())}
+        })],
+    );
     fs::write(knowledge.join("maintainer-knowledge-cut.json"), serde_json::to_vec(&json!({
         "repositories":[{"id":"alpha","repository":"https://example.invalid/alpha.git","revision":"9".repeat(40)}]
     })).unwrap()).unwrap();

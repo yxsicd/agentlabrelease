@@ -14,6 +14,84 @@ const LANES: [&str; 4] = [
     "operation-verification",
 ];
 
+/// Resolve the latest durable refresh row, never the largest report filename.
+pub fn latest_assessment(base: &Path) -> Result<Value, String> {
+    use std::path::Component;
+    fn read(base: &Path, relative: &str) -> Result<Vec<u8>, String> {
+        let path = Path::new(relative);
+        if !path.components().all(|c| matches!(c, Component::Normal(_))) || relative.is_empty() {
+            return Err("durable assessment path escapes cut".into());
+        }
+        let mut current = base.to_path_buf();
+        for part in path.components() {
+            current.push(part);
+            if fs::symlink_metadata(&current)
+                .map_err(|e| e.to_string())?
+                .file_type()
+                .is_symlink()
+            {
+                return Err("durable assessment path contains symlink".into());
+            }
+        }
+        let metadata = fs::metadata(&current).map_err(|e| e.to_string())?;
+        if !metadata.is_file() || metadata.len() > 16 * 1024 * 1024 {
+            return Err("durable assessment input is not a bounded regular file".into());
+        }
+        fs::read(current).map_err(|e| e.to_string())
+    }
+    let table_bytes = read(base, "maintainer_skill_refresh_rounds.jsonl")?;
+    let mut ids = BTreeSet::new();
+    let mut indices = BTreeSet::new();
+    let mut latest: Option<(u64, Value)> = None;
+    for line in std::str::from_utf8(&table_bytes)
+        .map_err(|e| e.to_string())?
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+    {
+        let row: Value = serde_json::from_str(line).map_err(|e| e.to_string())?;
+        let id = row["id"]
+            .as_str()
+            .filter(|s| !s.is_empty())
+            .ok_or("durable round id missing")?;
+        let index = row["roundIndex"]
+            .as_u64()
+            .filter(|i| *i > 0)
+            .ok_or("durable round index invalid")?;
+        if !ids.insert(id.to_owned()) || !indices.insert(index) {
+            return Err("durable round identity or index duplicated".into());
+        }
+        if latest.as_ref().is_none_or(|(old, _)| index > *old) {
+            latest = Some((index, row));
+        }
+    }
+    let (index, row) = latest.ok_or("durable refresh history empty")?;
+    let relative = row["assessment"]["path"]
+        .as_str()
+        .ok_or("durable assessment reference missing")?;
+    if !relative.starts_with("assessments/") {
+        return Err("durable assessment reference outside assessment namespace".into());
+    }
+    let bytes = read(base, relative)?;
+    let sha = digest(&bytes);
+    if row["assessment"]["sha256"].as_str() != Some(sha.as_str()) {
+        return Err("durable assessment digest mismatch".into());
+    }
+    let report: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    if report["schema"] != "agentlab.maintainer_skill_assessment.v1"
+        || report["automaticPromotion"] != false
+        || report["roundIndex"].as_u64().filter(|i| *i > 0).is_none()
+    {
+        return Err("durable assessment report invalid".into());
+    }
+    Ok(
+        json!({"schema":"agentlab.maintainer_durable_assessment_reference.v1",
+        "refreshRoundId":row["id"],"refreshRoundIndex":index,
+        "refreshTableSha256":digest(&table_bytes),"assessmentRoundIndex":report["roundIndex"],
+        "assessmentPath":base.join(relative).to_string_lossy(),"assessmentRelativePath":relative,
+        "assessmentSha256":sha,"authorityWritePerformed":false,"automaticPromotion":false}),
+    )
+}
+
 /// Convert a reverified strict plan into the existing isolated Agent contract.
 /// This prepares requests only: it neither executes an Agent nor writes authority.
 #[allow(clippy::too_many_arguments)]
