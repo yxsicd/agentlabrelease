@@ -82,6 +82,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
     let scopes = PathBuf::from(value(&args, "--scope-skills")?);
+    if args.iter().any(|arg| arg == "--prepare-semantic-batch") {
+        let assessment_path = PathBuf::from(value(&args, "--before")?);
+        let report = agentlab_code_analysis::maintainer_flywheel_plan::semantic_batch(
+            &scopes,
+            &PathBuf::from(value(&args, "--program-facts")?),
+            &PathBuf::from(value(&args, "--operation-receipts-root")?),
+            &fs::read(value(&args, "--next-round-plan")?)?,
+            &fs::read(&assessment_path)?,
+            &assessment_path,
+            &fs::read(value(&args, "--knowledge-cut")?)?,
+            &optional(&args, "--repository").unwrap_or_else(|| "auto".into()),
+        )?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        file.write_all(&serde_json::to_vec_pretty(&report)?)?;
+        file.write_all(b"\n")?;
+        println!(
+            "{}",
+            serde_json::json!({"selectedScopeCount":report["selectedScopeCount"],
+            "selectionPolicy":report["selectionPolicy"]})
+        );
+        return Ok(());
+    }
     let receipts = if args.iter().any(|arg| arg == "--operation-receipts-root") {
         Some(PathBuf::from(value(&args, "--operation-receipts-root")?))
     } else {
@@ -165,7 +190,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .ok_or("available lane value missing")
             })
             .collect::<Result<Vec<_>, _>>()?;
-        let report = agentlab_code_analysis::maintainer_flywheel_plan::plan(
+        let report = agentlab_code_analysis::maintainer_flywheel_plan::plan_for_repository(
             &scopes,
             facts.as_deref(),
             receipts
@@ -180,6 +205,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             optional(&args, "--max-source-files")
                 .unwrap_or_else(|| "80".into())
                 .parse()?,
+            optional(&args, "--repository").as_deref(),
         )?;
         let mut file = OpenOptions::new()
             .write(true)

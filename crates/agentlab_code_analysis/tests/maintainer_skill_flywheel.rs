@@ -26,6 +26,244 @@ fn temp_root() -> PathBuf {
     root
 }
 
+#[test]
+fn strict_semantic_dispatch_uses_exact_plan_and_rejects_drift() {
+    use agentlab_code_analysis::maintainer_flywheel_plan::{plan_for_repository, semantic_batch};
+    let root = temp_root();
+    let scopes = root.join("scopes.jsonl");
+    let facts = root.join("facts.jsonl");
+    let baseline_path = root.join("baseline.json");
+    jsonl(
+        &scopes,
+        &[scope("scope-alpha", "alpha"), scope("scope-beta", "beta")],
+    );
+    jsonl(&facts, &[]);
+    let next = plan_for_repository(
+        &scopes,
+        Some(&facts),
+        &root,
+        1,
+        None,
+        &["semantic-refresh".into()],
+        4,
+        80,
+        Some("beta"),
+    )
+    .unwrap();
+    assert_eq!(next["summary"]["scopeCount"], 2);
+    assert_eq!(next["selectedScopeIds"], json!(["scope-beta"]));
+    let baseline = serde_json::to_vec_pretty(&next["assessment"]).unwrap();
+    let plan_bytes = serde_json::to_vec_pretty(&next).unwrap();
+    let cut = serde_json::to_vec(&json!({"repositories":[
+        {"id":"alpha","repository":"https://example.invalid/alpha.git","revision":"1".repeat(40)},
+        {"id":"beta","repository":"https://example.invalid/beta.git","revision":"1".repeat(40)}
+    ]}))
+    .unwrap();
+    let batch = semantic_batch(
+        &scopes,
+        &facts,
+        &root,
+        &plan_bytes,
+        &baseline,
+        &baseline_path,
+        &cut,
+        "beta",
+    )
+    .unwrap();
+    assert_eq!(batch["requests"][0]["scope"]["id"], "scope-beta");
+    assert_eq!(
+        batch["requests"][0]["requiredDimensions"],
+        json!(["behavior", "boundary", "relations", "responsibility"])
+    );
+    assert_eq!(batch["sourceAssessment"]["sha256"], digest(&baseline));
+    assert_eq!(batch["selectionPlanSha256"], digest(&plan_bytes));
+    assert_eq!(batch["authorityWritePerformed"], false);
+    assert!(semantic_batch(
+        &scopes,
+        &facts,
+        &root,
+        &plan_bytes,
+        &baseline,
+        &baseline_path,
+        &cut,
+        "alpha"
+    )
+    .is_err());
+    let mut forged = next.clone();
+    forged["selectedScopeIds"] = json!(["scope-alpha"]);
+    assert!(semantic_batch(
+        &scopes,
+        &facts,
+        &root,
+        &serde_json::to_vec(&forged).unwrap(),
+        &baseline,
+        &baseline_path,
+        &cut,
+        "auto"
+    )
+    .is_err());
+    let mut forged_baseline = next["assessment"].clone();
+    forged_baseline["totals"]["semanticReadyCount"] = json!(2);
+    assert!(semantic_batch(
+        &scopes,
+        &facts,
+        &root,
+        &plan_bytes,
+        &serde_json::to_vec(&forged_baseline).unwrap(),
+        &baseline_path,
+        &cut,
+        "auto"
+    )
+    .is_err());
+    let mut bad_cut: Value = serde_json::from_slice(&cut).unwrap();
+    bad_cut["repositories"][1]["revision"] = json!("9".repeat(40));
+    assert!(semantic_batch(
+        &scopes,
+        &facts,
+        &root,
+        &plan_bytes,
+        &baseline,
+        &baseline_path,
+        &serde_json::to_vec(&bad_cut).unwrap(),
+        "auto"
+    )
+    .is_err());
+    fs::write(&baseline_path, &baseline).unwrap();
+    fs::write(root.join("plan.json"), &plan_bytes).unwrap();
+    fs::write(root.join("cut.json"), &cut).unwrap();
+    let output = root.join("batch.json");
+    let invoke = || {
+        std::process::Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .args(["--prepare-semantic-batch", "--scope-skills"])
+            .arg(&scopes)
+            .arg("--program-facts")
+            .arg(&facts)
+            .arg("--operation-receipts-root")
+            .arg(&root)
+            .arg("--before")
+            .arg(&baseline_path)
+            .arg("--next-round-plan")
+            .arg(root.join("plan.json"))
+            .arg("--knowledge-cut")
+            .arg(root.join("cut.json"))
+            .args(["--repository", "beta", "--output"])
+            .arg(&output)
+            .output()
+            .unwrap()
+    };
+    assert!(invoke().status.success());
+    assert_eq!(
+        serde_json::from_slice::<Value>(&fs::read(&output).unwrap()).unwrap(),
+        batch
+    );
+    assert!(!invoke().status.success()); // no overwrite
+    fs::remove_file(&output).unwrap();
+    jsonl(&facts, &[complete_fact("drift", "beta", "scope-beta")]);
+    assert!(!invoke().status.success());
+    assert!(!output.exists());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn semantic_dispatch_refuses_nonsemantic_or_unavailable_lanes() {
+    use agentlab_code_analysis::maintainer_flywheel_plan::{plan, semantic_batch};
+    let root = temp_root();
+    let scopes = root.join("scopes.jsonl");
+    let facts = root.join("facts.jsonl");
+    jsonl(&scopes, &[scope("scope-alpha", "alpha")]);
+    jsonl(&facts, &[]);
+    let cut = serde_json::to_vec(&json!({"repositories":[
+        {"id":"alpha","repository":"https://example.invalid/alpha.git","revision":"1".repeat(40)}
+    ]}))
+    .unwrap();
+    let check = |next: Value| {
+        semantic_batch(
+            &scopes,
+            &facts,
+            &root,
+            &serde_json::to_vec(&next).unwrap(),
+            &serde_json::to_vec(&next["assessment"]).unwrap(),
+            &root.join("baseline.json"),
+            &cut,
+            "auto",
+        )
+    };
+    assert!(check(plan(&scopes, Some(&facts), &root, 1, None, &[], 1, 80).unwrap()).is_err());
+    jsonl(&facts, &[complete_fact("semantic", "alpha", "scope-alpha")]);
+    let operation = plan(
+        &scopes,
+        Some(&facts),
+        &root,
+        1,
+        None,
+        &["operation-verification".into()],
+        1,
+        80,
+    )
+    .unwrap();
+    assert_eq!(operation["nextLane"], "operation-verification");
+    assert!(check(operation).is_err());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn strict_execution_loop_stops_before_agent_when_source_cut_drifted() {
+    let root = temp_root();
+    let knowledge = root.join("knowledge");
+    fs::create_dir_all(knowledge.join("assessments")).unwrap();
+    fs::create_dir_all(knowledge.join("operation-evidence")).unwrap();
+    let scopes = knowledge.join("maintainer_scope_skills.jsonl");
+    let facts = knowledge.join("program_facts.jsonl");
+    jsonl(&scopes, &[scope("scope-alpha", "alpha")]);
+    jsonl(&facts, &[]);
+    let baseline = assess_with_receipts(
+        &scopes,
+        Some(&facts),
+        1,
+        None,
+        Some(&knowledge.join("operation-evidence")),
+    )
+    .unwrap();
+    fs::write(
+        knowledge.join("assessments/baseline.json"),
+        serde_json::to_vec(&baseline).unwrap(),
+    )
+    .unwrap();
+    fs::write(knowledge.join("maintainer-knowledge-cut.json"), serde_json::to_vec(&json!({
+        "repositories":[{"id":"alpha","repository":"https://example.invalid/alpha.git","revision":"9".repeat(40)}]
+    })).unwrap()).unwrap();
+    let run = root.join("run");
+    let project = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+    let output = std::process::Command::new("bash")
+        .arg(project.join("scripts/run-maintainer-skill-agent-loop.sh"))
+        .arg(&knowledge)
+        .arg(&run)
+        .args(["auto", "1", "/absent/participant"])
+        .current_dir(project)
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("dispatch repository cut identity differs"),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(run
+        .join("loop/iteration-1/strict-next-round-plan.json")
+        .exists());
+    assert!(!run
+        .join("loop/iteration-1/flywheel-batch-request.json")
+        .exists());
+    assert!(!run.join("loop/iteration-1/agents").exists());
+    assert!(!run.join("loop/knowledge-1").exists());
+    fs::remove_dir_all(root).unwrap();
+}
+
 fn jsonl(path: &Path, rows: &[Value]) {
     let text = rows
         .iter()

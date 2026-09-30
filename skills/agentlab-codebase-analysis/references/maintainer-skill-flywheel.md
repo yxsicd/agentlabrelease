@@ -289,6 +289,36 @@ always reports `closedLoopQualified: false`: scope readiness alone cannot
 certify the five-ring flywheel. Unsupported downstream evidence must remain an
 explicit requirement, not be fabricated as a successful run.
 
+Strict semantic execution consumes this plan through the Rust
+`--prepare-semantic-batch` adapter, not a second independent scope selector:
+
+```sh
+agentlab-maintainer-skill-flywheel --prepare-semantic-batch \
+  --scope-skills scopes.jsonl --program-facts facts.jsonl \
+  --operation-receipts-root operation-evidence --before baseline.json \
+  --next-round-plan next-round-plan.json --knowledge-cut maintainer-knowledge-cut.json \
+  --repository auto --output new-batch-request.json
+```
+
+The adapter independently regenerates the complete plan from its declared
+capabilities and exact inputs, requires equality with the strict baseline, and
+converts only its exact selected semantic scopes into the existing isolated
+Agent requests. Bind the original baseline and plan byte digests in the request
+and loop receipt. A fixed repository selector also belongs in the planning
+policy; it may narrow selection but must not hide other repositories' gaps.
+Verify the selected repository URL and revision against the knowledge cut.
+Reject drift, forged selections, unsupported lanes, oversized executor budgets
+and output reuse before request publication. No eligible semantic batch is a
+stop/report condition, not permission to silently fall back to the historical
+selector or call operation verification a semantic run.
+
+The existing execution loop chooses this adapter for strict receipt-content
+baselines only. Legacy baselines retain the labeled historical path; migration
+remains explicit. Request preparation proves scheduling continuity, not model
+access, successful Agent execution, durable latest-round authority or feedback.
+The execution loop's historical assessment-file discovery still needs a
+durable-pointer refresh before full unattended qualification.
+
 1. Assess the structural catalog without program facts to freeze the baseline.
 2. Bind revision-matched program facts and reassess.
 3. Use the emitted gap codes as the next analysis objectives.

@@ -46,10 +46,33 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
     xargs -0 jq -r '[.roundIndex,input_filename] | @tsv' | sort -n | tail -1 | cut -f2-)
   test -n "$assessment"
 
-  python3 examples/maintainer-knowledge-gate/agent_flywheel.py prepare-batch \
-    --knowledge "$working_knowledge" --assessment "$assessment" \
-    --repository "$repository_selector" --batch-size "$scope_batch_size" \
-    --output "$iteration_root/flywheel-batch-request.json"
+  if [[ $(jq -r '.standard.operationEvidencePolicy' "$assessment") == verified-receipt-content ]]; then
+    test -d "$working_knowledge/operation-evidence"
+    plan_parent=()
+    if [[ $(jq -r '.roundIndex' "$assessment") -gt 1 ]]; then
+      plan_parent=(--parent-assessment-sha256 "$(jq -r '.parentAssessmentSha256' "$assessment")")
+    fi
+    target/debug/agentlab-maintainer-skill-flywheel --plan-next-round \
+      --scope-skills "$working_knowledge/maintainer_scope_skills.jsonl" \
+      --program-facts "$working_knowledge/program_facts.jsonl" \
+      --operation-receipts-root "$working_knowledge/operation-evidence" \
+      --round-index "$(jq -r '.roundIndex' "$assessment")" ${plan_parent[@]+"${plan_parent[@]}"} \
+      --available-lane semantic-refresh --batch-size "$scope_batch_size" \
+      --repository "$repository_selector" --output "$iteration_root/strict-next-round-plan.json"
+    target/debug/agentlab-maintainer-skill-flywheel --prepare-semantic-batch \
+      --scope-skills "$working_knowledge/maintainer_scope_skills.jsonl" \
+      --program-facts "$working_knowledge/program_facts.jsonl" \
+      --operation-receipts-root "$working_knowledge/operation-evidence" \
+      --next-round-plan "$iteration_root/strict-next-round-plan.json" --before "$assessment" \
+      --knowledge-cut "$working_knowledge/maintainer-knowledge-cut.json" \
+      --repository "$repository_selector" --output "$iteration_root/flywheel-batch-request.json"
+  else
+    # Historical policy remains explicit; never silently migrate it to strict.
+    python3 examples/maintainer-knowledge-gate/agent_flywheel.py prepare-batch \
+      --knowledge "$working_knowledge" --assessment "$assessment" \
+      --repository "$repository_selector" --batch-size "$scope_batch_size" \
+      --output "$iteration_root/flywheel-batch-request.json"
+  fi
 
   mapfile -t source < <(jq -r '.repository.repository,.repository.revision' \
     "$iteration_root/flywheel-batch-request.json")
@@ -175,20 +198,26 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
     --output "$next_knowledge"
   working_knowledge=$next_knowledge
 
+  execution_plan="$iteration_root/convergence-plan.json"
+  if [[ -f "$iteration_root/strict-next-round-plan.json" ]]; then
+    execution_plan="$iteration_root/strict-next-round-plan.json"
+  fi
   jq -n --argjson iteration "$iteration" --arg repository "$repository_id" \
     --slurpfile batch "$iteration_root/flywheel-batch-request.json" \
     --slurpfile result "$iteration_root/result.json" \
     --slurpfile receipts "$iteration_root/proposal-receipts.json" \
     --slurpfile lifecycle "$iteration_root/agent-lifecycles.json" \
     --slurpfile retried "$iteration_root/retried-scope-indices.json" \
-    --slurpfile plan "$iteration_root/convergence-plan.json" \
+    --slurpfile plan "$execution_plan" \
     '{iteration:$iteration,repository:$repository,
       scopeIds:[$batch[0].requests[].scope.id],
       acceptedFactIds:[$receipts[0][].acceptedFactId],
       batchSize:$batch[0].selectedScopeCount,before:$result[0].before,
       after:$result[0].after,
       selectionPlan:{decision:$plan[0].decision,summary:$plan[0].summary,
-        sourceAssessmentSha256:$plan[0].sourceAssessmentSha256},
+        policy:($batch[0].selectionPolicy // "legacy-semantic-selector"),
+        planSha256:$batch[0].selectionPlanSha256,
+        sourceAssessmentSha256:$batch[0].sourceAssessment.sha256},
       execution:{parallel:true,agentCount:($lifecycle[0]|length),
         retriedScopeIndices:$retried[0],retryCount:($retried[0]|length),
         maxToolCalls:([$lifecycle[0][].maxToolCalls]|add),

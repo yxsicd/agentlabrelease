@@ -1,0 +1,51 @@
+{
+  "schema": "agentlab.maintainer_flywheel_semantic_dispatch_audit.v1",
+  "date": "2026-10-01",
+  "automaticPromotion": false,
+  "authorityWritePerformed": false,
+  "maturity": {
+    "overallPercent": 42,
+    "previousPercent": 42,
+    "basis": "Engineering estimate, not a measured benchmark.",
+    "changeReason": "Scheduling continuity improved but no productive real Agent feedback round was newly qualified."
+  },
+  "capabilities": [
+    "Rust revalidates strict gap plans and converts their exact selected semantic scopes into the existing isolated request contract.",
+    "Fixed repository selection is declared in the plan policy without removing other scopes from gap accounting.",
+    "The actual strict execution loop consumes the Rust adapter and retains original plan and baseline byte digests.",
+    "Unsupported lanes or stale source/cut/policy/assessment inputs stop before Agent dispatch; no fallback scheduler is invoked."
+  ],
+  "regressions": [
+    "strict_semantic_dispatch_uses_exact_plan_and_rejects_drift",
+    "semantic_dispatch_refuses_nonsemantic_or_unavailable_lanes",
+    "strict_execution_loop_stops_before_agent_when_source_cut_drifted"
+  ],
+  "localValidation": {
+    "rustSuiteNoDefaultFeaturesPassed": true,
+    "rustFlywheelTestsPassed": 21,
+    "existingConstructionTestsPassed": 29,
+    "existingTableGitTestsPassed": 16,
+    "shellSyntaxPassed": true,
+    "releaseValidationPassed": true
+  },
+  "pinnedPublicInputExperiment": {
+    "knowledgeRevision": "d656442d286c8f8646d312ee4d78143985eeda6c",
+    "receiptRevision": "993c88e6d4a68559ee161543a9a618074c49229a",
+    "evidenceDirectory": "/tmp/agentlab-semantic-dispatch-pNupU6",
+    "automaticBatchScopeCount": 4,
+    "automaticBatchSha256": "cda1eb9cb07738498e273467add2d663fa50e8f21ecbedcb958d6b678a1dd121",
+    "automaticBatchPlanSha256": "3cb89a18fc935e8965a26c208668130a1fb5c53ed5c5f252b65c60c633405790",
+    "fixedRepository": "code-workshop",
+    "fixedRepositorySemanticSelectionCount": 0,
+    "fixedRepositoryPlanSha256": "34ae0e69066a52432b6d4df5cee723369304804a48c35cd188f1824ff33aa45e",
+    "fixedRepositoryDispatchRejected": true,
+    "interpretation": "The fixed input requires operation verification rather than another semantic-only iteration; these are not live authority counts."
+  },
+  "limitations": [
+    "Controlled fixtures and CLI/script invocation, not a fresh model request or Agent execution.",
+    "Legacy cuts preserve their explicit historical selector; no automatic evidence-policy migration.",
+    "The loop still discovers assessment files by round number rather than validating the latest durable pointer.",
+    "No new live TableGit write, target build, calibrated case execution, feedback promotion or cross-repository closed-loop qualification.",
+    "Missing remote model configuration remains to be resolved before fresh HW Linux Agent execution."
+  ]
+}
