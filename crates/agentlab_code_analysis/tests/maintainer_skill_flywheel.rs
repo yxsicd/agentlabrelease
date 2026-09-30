@@ -137,10 +137,7 @@ fn operation_maturity_requires_explicit_revision_bound_dimension() {
     let root = temp_root();
     let scopes = root.join("scopes.jsonl");
     let facts = root.join("facts.jsonl");
-    jsonl(
-        &scopes,
-        &[scope("skill-scope-alpha-src", "alpha-library")],
-    );
+    jsonl(&scopes, &[scope("skill-scope-alpha-src", "alpha-library")]);
     jsonl(
         &facts,
         &[
