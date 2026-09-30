@@ -27,6 +27,236 @@ fn temp_root() -> PathBuf {
 }
 
 #[test]
+#[cfg(unix)]
+fn operation_executor_runs_exact_plan_and_retains_failures_without_promotion() {
+    use agentlab_code_analysis::{
+        maintainer_flywheel_plan::plan, maintainer_operation_exec::execute,
+    };
+    use std::process::Command;
+    let root = temp_root();
+    let source = root.join("source");
+    fs::create_dir(&source).unwrap();
+    fs::write(
+        source.join("build.sh"),
+        "printf 'artifact\\n' > result.bin\nprintf 'built\\n'\nprintf 'warning\\n' >&2\n",
+    )
+    .unwrap();
+    fs::write(source.join(".gitignore"), "result.bin\n").unwrap();
+    let git = |args: &[&str]| {
+        let output = Command::new("git")
+            .args(args)
+            .current_dir(&source)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        String::from_utf8(output.stdout).unwrap().trim().to_owned()
+    };
+    git(&["init"]);
+    git(&["config", "user.name", "Fixture"]);
+    git(&["config", "user.email", "fixture@example.invalid"]);
+    git(&[
+        "remote",
+        "add",
+        "origin",
+        "https://example.invalid/arbitrary.git",
+    ]);
+    git(&["add", "build.sh", ".gitignore"]);
+    git(&["commit", "-m", "fixture"]);
+    let revision = git(&["rev-parse", "HEAD"]);
+    let scopes = root.join("scopes.jsonl");
+    let facts = root.join("facts.jsonl");
+    let mut skill = scope("bounded-scope", "arbitrary");
+    skill["sourceRevision"] = json!(revision);
+    let mut semantic = complete_fact("semantic", "arbitrary", "bounded-scope");
+    semantic["sourceRevision"] = json!(revision);
+    semantic["dimensions"] = json!(["responsibility", "boundary", "relations", "behavior"]);
+    jsonl(&scopes, &[skill]);
+    jsonl(&facts, &[semantic]);
+    let next = plan(
+        &scopes,
+        Some(&facts),
+        &root,
+        1,
+        None,
+        &["operation-verification".into()],
+        1,
+        80,
+    )
+    .unwrap();
+    let plan_bytes = serde_json::to_vec(&next).unwrap();
+    let before_bytes = serde_json::to_vec(&next["assessment"]).unwrap();
+    let command = |args: Value| {
+        json!({"program":"/bin/sh", "programSha256":digest(&fs::read("/bin/sh").unwrap()),
+        "args":args, "cwd":".", "timeoutMs":1000})
+    };
+    let recipe = json!({"schema":"agentlab.maintainer_build_operation_recipe.v1", "automaticPromotion":false,
+        "source":{"repositoryId":"arbitrary", "repository":"https://example.invalid/arbitrary.git", "revision":revision},
+        "scopeSkillId":"bounded-scope", "lane":"build-only", "cleanBuild":true,
+        "probes":[command(json!(["-c", "printf 'toolchain-version\\n'"]))],
+        "dependencyPreparation":command(json!(["-c", "printf 'dependencies\\n'"])),
+        "build":command(json!(["./build.sh"])), "artifact":"result.bin"});
+    let run = |recipe: &Value, bytes: &[u8], name: &str| {
+        execute(
+            &scopes,
+            &facts,
+            &root,
+            bytes,
+            &before_bytes,
+            &serde_json::to_vec(recipe).unwrap(),
+            &source,
+            &root.join(name),
+        )
+    };
+    let result = run(&recipe, &plan_bytes, "successful").unwrap();
+    assert_eq!(result["status"], "successful");
+    assert_eq!(result["qualified"], false);
+    assert_eq!(result["authorityWritePerformed"], false);
+    assert_eq!(result["captures"].as_array().unwrap().len(), 4);
+    assert_eq!(result["artifacts"].as_array().unwrap().len(), 2);
+    assert_eq!(
+        result["artifacts"][0]["sha256"],
+        result["artifacts"][1]["sha256"]
+    );
+    assert_eq!(
+        fs::read(root.join("successful/attempt-1.artifact")).unwrap(),
+        b"artifact\n"
+    );
+    assert_eq!(
+        fs::read_to_string(root.join("successful/build-1.stderr")).unwrap(),
+        "warning\n"
+    );
+    assert!(run(&recipe, &plan_bytes, "successful").is_err());
+    let mut forged = next.clone();
+    forged["selectedScopeIds"] = json!(["another-scope"]);
+    assert!(run(&recipe, &serde_json::to_vec(&forged).unwrap(), "forged").is_err());
+    assert!(!root.join("forged").exists());
+    for (key, value) in [
+        ("scopeSkillId", json!("another-scope")),
+        ("artifact", json!("../escape")),
+    ] {
+        let mut invalid = recipe.clone();
+        invalid[key] = value;
+        assert!(run(&invalid, &plan_bytes, key).is_err());
+        assert!(!root.join(key).exists());
+    }
+    let mut invalid = recipe.clone();
+    invalid["build"]["programSha256"] = json!("0".repeat(64));
+    assert!(run(&invalid, &plan_bytes, "executable-drift").is_err());
+    assert!(!root.join("executable-drift").exists());
+    for (name, args, timeout) in [
+        (
+            "build-failed",
+            json!(["-c", "printf 'failed\\n' >&2; exit 7"]),
+            1000,
+        ),
+        (
+            "timeout",
+            json!([
+                "-c",
+                "(sleep 0.3; printf late > \"$1\") & wait",
+                "fixture",
+                root.join("late-marker")
+            ]),
+            40,
+        ),
+    ] {
+        let mut invalid = recipe.clone();
+        invalid["build"]["args"] = args;
+        invalid["build"]["timeoutMs"] = json!(timeout);
+        assert!(run(&invalid, &plan_bytes, name).is_err());
+        let receipt: Value = serde_json::from_slice(
+            &fs::read(root.join(name).join("execution-receipt.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(receipt["status"], "failed");
+        assert_eq!(receipt["qualified"], false);
+        assert_eq!(receipt["captures"].as_array().unwrap().len(), 3);
+        assert!(receipt["artifacts"].as_array().unwrap().is_empty());
+        if name == "timeout" {
+            assert_eq!(receipt["captures"][2]["termination"], "deadline-exceeded");
+            assert!(receipt["captures"][2]["durationMs"].as_u64().unwrap() < 2000);
+            std::thread::sleep(std::time::Duration::from_millis(400));
+            assert!(
+                !root.join("late-marker").exists(),
+                "timed-out descendant remained alive"
+            );
+        } else {
+            assert_eq!(receipt["captures"][2]["exitCode"], 7);
+            assert_eq!(
+                fs::read_to_string(root.join(name).join("build-1.stderr")).unwrap(),
+                "failed\n"
+            );
+        }
+    }
+    let denied_program = root.join("denied-program");
+    fs::copy("/bin/sh", &denied_program).unwrap();
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(&denied_program, fs::Permissions::from_mode(0o600)).unwrap();
+    let mut denied = recipe.clone();
+    denied["dependencyPreparation"]["program"] = json!(denied_program);
+    denied["dependencyPreparation"]["programSha256"] =
+        json!(digest(&fs::read(&denied_program).unwrap()));
+    assert!(run(&denied, &plan_bytes, "spawn-failed").is_err());
+    let spawn: Value =
+        serde_json::from_slice(&fs::read(root.join("spawn-failed/dependency.json")).unwrap())
+            .unwrap();
+    assert_eq!(spawn["status"], "spawn-failed");
+    assert!(root.join("spawn-failed/execution-receipt.json").is_file());
+    for (name, bytes) in [
+        ("next.json", plan_bytes.as_slice()),
+        ("before.json", before_bytes.as_slice()),
+        (
+            "recipe.json",
+            serde_json::to_vec(&recipe).unwrap().as_slice(),
+        ),
+    ] {
+        fs::write(root.join(name), bytes).unwrap();
+    }
+    let cli = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+        .arg("--execute-operation")
+        .arg("--scope-skills")
+        .arg(&scopes)
+        .arg("--program-facts")
+        .arg(&facts)
+        .arg("--operation-receipts-root")
+        .arg(&root)
+        .arg("--next-round-plan")
+        .arg(root.join("next.json"))
+        .arg("--before")
+        .arg(root.join("before.json"))
+        .arg("--operation-recipe")
+        .arg(root.join("recipe.json"))
+        .arg("--source-worktree")
+        .arg(&source)
+        .arg("--output")
+        .arg(root.join("cli-run"))
+        .output()
+        .unwrap();
+    assert!(
+        cli.status.success(),
+        "{}",
+        String::from_utf8_lossy(&cli.stderr)
+    );
+    let cli_receipt: Value =
+        serde_json::from_slice(&fs::read(root.join("cli-run/execution-receipt.json")).unwrap())
+            .unwrap();
+    assert_eq!(cli_receipt["status"], "successful");
+    assert_eq!(cli_receipt["qualified"], false);
+    fs::write(source.join("dirty.txt"), "user-owned").unwrap();
+    assert!(run(&recipe, &plan_bytes, "dirty").is_err());
+    assert!(!root.join("dirty").exists());
+    assert_eq!(
+        fs::read_to_string(source.join("dirty.txt")).unwrap(),
+        "user-owned"
+    );
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn durable_assessment_resolution_ignores_orphans_and_rejects_broken_lineage() {
     use agentlab_code_analysis::maintainer_flywheel_plan::latest_assessment;
     let root = temp_root();

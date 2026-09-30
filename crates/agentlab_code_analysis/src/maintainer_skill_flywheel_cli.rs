@@ -23,6 +23,23 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|arg| arg == "--execute-operation") {
+        let report = agentlab_code_analysis::maintainer_operation_exec::execute(
+            &PathBuf::from(value(&args, "--scope-skills")?),
+            &PathBuf::from(value(&args, "--program-facts")?),
+            &PathBuf::from(value(&args, "--operation-receipts-root")?),
+            &fs::read(value(&args, "--next-round-plan")?)?,
+            &fs::read(value(&args, "--before")?)?,
+            &fs::read(value(&args, "--operation-recipe")?)?,
+            &PathBuf::from(value(&args, "--source-worktree")?),
+            &output,
+        )?;
+        println!(
+            "{}",
+            serde_json::json!({"status":report["status"],"qualified":false,"authorityWritePerformed":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|arg| arg == "--resolve-latest-assessment") {
         let report = agentlab_code_analysis::maintainer_flywheel_plan::latest_assessment(
             &PathBuf::from(value(&args, "--base")?),

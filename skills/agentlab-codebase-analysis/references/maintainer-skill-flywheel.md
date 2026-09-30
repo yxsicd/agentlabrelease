@@ -76,6 +76,59 @@ are not directly comparable. Repeated successful packaging of an already-ready
 scope is freshness evidence, not another productive scope transition or full
 flywheel round.
 
+### Explicit operation execution
+
+The Rust `--execute-operation` mode consumes an independently reverified strict
+gap plan and an explicit instance recipe, rather than executing prose from a
+Skill or accepting a caller's selected-ready assertion:
+
+```sh
+agentlab-maintainer-skill-flywheel --execute-operation \
+  --scope-skills scopes.jsonl --program-facts facts.jsonl \
+  --operation-receipts-root retained-receipts --before strict-before.json \
+  --next-round-plan next-plan.json --operation-recipe reviewed-recipe.json \
+  --source-worktree isolated-source --output new-private-run-directory
+```
+
+The current executor supports one exact selected build-only scope on Unix;
+multi-scope selections and other lanes fail instead of silently narrowing work.
+An `agentlab.maintainer_build_operation_recipe.v1` binds `source` (repositoryId,
+repository URL and exact revision), `scopeSkillId`, `lane: build-only`,
+`cleanBuild: true`, `automaticPromotion: false`, and a relative `artifact` path.
+It supplies one to four `probes`, a `dependencyPreparation` command and a `build`
+command. Each command specifies an absolute `program`, exact `programSha256`,
+argument array, contained `cwd` or `.`, and `timeoutMs` (at most 180 seconds).
+The sum of all probe, dependency and two build deadlines is at most ten minutes;
+source identity queries and filesystem operations are not included in that
+command budget. Command arguments and toolchain/framework choices belong in the
+instance layer, never scheduler branches keyed by repository names.
+
+Review the exact recipe before invoking it. Executable pins and process groups
+are not a sandbox, a signed reviewer identity, or permission to execute arbitrary
+Agent-produced commands. Only reviewed trusted operations may use this local
+adapter. Model credentials are not injected; commands receive a minimal cleared
+environment with the host HOME for existing dependency cache configuration.
+The adapter performs no remote persistence or publication.
+
+Require matching source HEAD and origin URL, clean source before dependencies
+and after every build, unchanged executable digests before each spawn, a fresh
+private output directory outside the checkout, and contained non-symlink artifact
+paths. Preserve original plan, assessment and recipe bytes, complete available
+stdout/stderr, terminal status/duration, failures and both raw artifact copies.
+On deadline or capture-budget breach terminate only the invocation's process
+group and stop; do not retry successful commands to reconstruct evidence.
+Artifact copies are bounded and independently hashed before the next build.
+
+The resulting `agentlab.maintainer_operation_execution.v1` always records
+`qualified: false`. Two clean command successes and retained bytes are execution
+evidence, not independently authenticated toolchain versions, semantic scope
+coverage, canonical archive reproduction, runtime/test/performance qualification,
+or an L3 transition. A format-specific qualification adapter must establish
+those applicable claims before fact preparation, reassessment, atomic persistence
+and next-cut feedback. Raw execution output remains private experiment evidence;
+never publish source artifacts or captured sessions by copying its run directory
+into the release repository.
+
 Prepare a deterministic operation fact or combined candidate fact cut without
 writing TableGit:
 

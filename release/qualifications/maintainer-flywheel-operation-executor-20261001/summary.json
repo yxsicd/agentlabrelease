@@ -1,0 +1,32 @@
+{
+  "schema": "agentlab.maintainer_flywheel_operation_executor_audit.v1",
+  "maturity": {"overallPercent": 42, "previousPercent": 42, "delta": 0, "kind": "engineering-estimate-not-measured-benchmark"},
+  "capability": "independently reverified gap plan to explicit bounded local build-operation execution",
+  "implementation": "Rust, no new dependencies or Python producer",
+  "supportedExecution": {"platform": "Unix process groups", "selectedScopes": 1, "lane": "build-only", "buildAttempts": 2},
+  "observedValidation": {
+    "rustFlywheelIntegrationTestsPassed": 23,
+    "executorRegressionPassed": true,
+    "actualFixtureProcessesExecuted": true,
+    "actualCliExecuted": true,
+    "twoRawArtifactCopiesMatched": true,
+    "completeStdoutAndWarningStderrRetained": true,
+    "failedBuildExitCodeRetained": 7,
+    "deadlineTerminatedSameGroupDescendant": true,
+    "spawnFailureRetained": true,
+    "forgedSelectionRejectedBeforeOutput": true,
+    "wrongScopeRejectedBeforeOutput": true,
+    "executableDriftRejectedBeforeOutput": true,
+    "artifactTraversalRejectedBeforeOutput": true,
+    "dirtySourcePreservedAndRejected": true,
+    "outputReuseRejected": true
+  },
+  "qualification": {"qualified": false, "authorityWritePerformed": false, "closedLoopQualified": false},
+  "limitations": [
+    "Execution tests use a controlled arbitrary-repository fixture, not a fresh Harmony target or Agent evaluation.",
+    "Raw artifact capture is not independent toolchain or scope coverage qualification and does not prove canonical archive member reproducibility.",
+    "The per-command budget excludes source identity queries and filesystem operations; process groups and reviewed commands are not a sandbox.",
+    "No operation fact, L3 transition, TableGit write, case publication, or release activation is inferred from this result."
+  ],
+  "nextStep": "Verify on HW Linux, then connect a format-specific independent qualification adapter and the existing staged reassessment/atomic persistence path."
+}
