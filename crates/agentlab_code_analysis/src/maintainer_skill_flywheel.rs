@@ -149,6 +149,16 @@ fn fact_dimensions(fact: &Value) -> BTreeSet<String> {
     }
 }
 
+fn scope_fact_dimensions(fact: &Value, skill_id: &str) -> BTreeSet<String> {
+    let mut dimensions = fact_dimensions(fact);
+    // A dependency's successful operation does not qualify its consumers.
+    // Operation coverage must name the assessed scope explicitly.
+    if !strings(&fact["scopeSkillIds"]).contains(skill_id) {
+        dimensions.remove("operation");
+    }
+    dimensions
+}
+
 fn capability_tags(skill: &Value) -> Vec<String> {
     let source_count = skill["sourceFileCount"].as_u64().unwrap_or(0);
     let test_count = skill["testFileCount"].as_u64().unwrap_or(0);
@@ -339,17 +349,44 @@ pub fn assess(
             && skill["responsibility"]
                 .as_str()
                 .is_some_and(|value| !value.trim().is_empty());
-        let bound_fact_ids = fact_bindings
+        let candidate_fact_ids = fact_bindings
             .iter()
             .filter(|(_, skills)| skills.contains(skill_id))
             .map(|(id, _)| id.clone())
+            .collect::<BTreeSet<_>>();
+        let mut rejected_bindings = Vec::new();
+        let bound_fact_ids = candidate_fact_ids
+            .into_iter()
+            .filter(|id| {
+                let fact = fact_by_id[id.as_str()];
+                let reason = if fact["repositoryId"] != skill["repositoryId"] {
+                    Some("repository-mismatch")
+                } else if !valid_hex(&fact["sourceRevision"], 40)
+                    || fact["sourceRevision"] != skill["sourceRevision"]
+                {
+                    Some("source-revision-mismatch")
+                } else {
+                    None
+                };
+                if let Some(reason) = reason {
+                    rejected_bindings.push(json!({
+                        "factId":id,
+                        "reason":reason,
+                        "repositoryId":fact["repositoryId"],
+                        "sourceRevision":fact["sourceRevision"]
+                    }));
+                    false
+                } else {
+                    true
+                }
+            })
             .collect::<BTreeSet<_>>();
         let dimensions = bound_fact_ids
             .iter()
             .flat_map(|id| {
                 fact_by_id
                     .get(id.as_str())
-                    .map_or_else(BTreeSet::new, |fact| fact_dimensions(fact))
+                    .map_or_else(BTreeSet::new, |fact| scope_fact_dimensions(fact, skill_id))
             })
             .filter(|dimension| DIMENSIONS.contains(&dimension.as_str()))
             .collect::<BTreeSet<_>>();
@@ -382,6 +419,14 @@ pub fn assess(
             "L0-discovered"
         };
         let mut gaps = Vec::new();
+        if !rejected_bindings.is_empty() {
+            gaps.push(gap(
+                "MS-EVIDENCE-IDENTITY-MISMATCH",
+                "identity",
+                "P1",
+                format!("{} candidate fact bindings do not match this repository and source revision; refresh or explicitly revalidate them", rejected_bindings.len()),
+            ));
+        }
         if !identity_ready {
             gaps.push(gap(
                 "MS-IDENTITY-INVALID",
@@ -435,7 +480,7 @@ pub fn assess(
                 json!({
                     "factId":fact_id,
                     "bindingMode":binding_modes.get(&(fact_id.clone(), skill_id.to_owned())).cloned().unwrap_or_else(|| "unknown".to_owned()),
-                    "dimensions":fact_by_id.get(fact_id.as_str()).map_or_else(Vec::new, |fact| fact_dimensions(fact).into_iter().collect())
+                    "dimensions":fact_by_id.get(fact_id.as_str()).map_or_else(Vec::new, |fact| scope_fact_dimensions(fact, skill_id).into_iter().collect())
                 })
             })
             .collect::<Vec<Value>>();
@@ -453,6 +498,7 @@ pub fn assess(
                 "maintenanceReady":maintenance_ready
             },
             "evidenceBindings":bindings,
+            "rejectedEvidenceBindings":rejected_bindings,
             "provenDimensions":dimensions,
             "requiredSemanticDimensions":required_semantic,
             "gaps":gaps

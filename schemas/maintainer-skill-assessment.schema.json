@@ -103,6 +103,21 @@
               }
             }
           },
+          "rejectedEvidenceBindings": {
+            "description": "Rejected candidate bindings retained for audit and targeted refresh. Optional for historical v1 reports.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["factId", "reason", "repositoryId", "sourceRevision"],
+              "properties": {
+                "factId": { "type": "string", "minLength": 1 },
+                "reason": { "enum": ["repository-mismatch", "source-revision-mismatch"] },
+                "repositoryId": {},
+                "sourceRevision": {}
+              }
+            }
+          },
           "provenDimensions": { "$ref": "#/$defs/strings" },
           "requiredSemanticDimensions": { "$ref": "#/$defs/nonEmptyStrings" },
           "gaps": {

@@ -87,6 +87,112 @@ fn complete_fact(id: &str, repository_id: &str, skill_id: &str) -> Value {
 }
 
 #[test]
+fn stale_or_missing_source_identity_cannot_advance_any_dimension() {
+    let root = temp_root();
+    let scopes = root.join("scopes.jsonl");
+    let facts = root.join("facts.jsonl");
+    jsonl(&scopes, &[scope("scope", "arbitrary-repository")]);
+    for revision in [json!("9".repeat(40)), Value::Null, json!("main")] {
+        let mut fact = complete_fact("fact", "arbitrary-repository", "scope");
+        fact["sourceRevision"] = revision;
+        jsonl(&facts, &[fact]);
+        let report = assess(&scopes, Some(&facts), 1, None).unwrap();
+        assert_eq!(report["totals"]["programBoundCount"], 0);
+        assert_eq!(report["totals"]["semanticReadyCount"], 0);
+        assert_eq!(report["totals"]["maintenanceReadyCount"], 0);
+        assert_eq!(report["skills"][0]["provenDimensions"], json!([]));
+        assert_eq!(
+            report["skills"][0]["rejectedEvidenceBindings"][0]["reason"],
+            "source-revision-mismatch"
+        );
+        assert_eq!(report["gapCounts"]["MS-EVIDENCE-IDENTITY-MISMATCH"], 1);
+    }
+    jsonl(
+        &facts,
+        &[complete_fact("fact", "arbitrary-repository", "scope")],
+    );
+    let refreshed = assess(&scopes, Some(&facts), 1, None).unwrap();
+    assert_eq!(refreshed["decision"], "ready");
+    assert_eq!(
+        refreshed["skills"][0]["rejectedEvidenceBindings"],
+        json!([])
+    );
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn inherited_cross_repository_or_stale_facts_are_not_semantic_proof() {
+    let root = temp_root();
+    let scopes = root.join("scopes.jsonl");
+    let facts = root.join("facts.jsonl");
+    jsonl(&scopes, &[scope("scope", "arbitrary-repository")]);
+    let mut anchor = complete_fact("anchor", "arbitrary-repository", "scope");
+    anchor["dimensions"] = json!(["boundary"]);
+    for (repository, revision) in [
+        ("different-repository", "1".repeat(40)),
+        ("arbitrary-repository", "9".repeat(40)),
+    ] {
+        let mut inherited = complete_fact("inherited", repository, "scope");
+        inherited["sourceRevision"] = json!(revision);
+        inherited["scopeSkillIds"] = json!([]);
+        inherited["evidence"] = json!([]);
+        inherited["evidenceFactIds"] = json!(["anchor"]);
+        jsonl(&facts, &[anchor.clone(), inherited]);
+        let report = assess(&scopes, Some(&facts), 1, None).unwrap();
+        assert_eq!(report["totals"]["semanticReadyCount"], 0);
+        assert_eq!(
+            report["skills"][0]["evidenceBindings"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(
+            report["skills"][0]["rejectedEvidenceBindings"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+    }
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn implicit_operation_binding_never_qualifies_a_scope() {
+    let root = temp_root();
+    let scopes = root.join("scopes.jsonl");
+    let facts = root.join("facts.jsonl");
+    jsonl(&scopes, &[scope("scope", "arbitrary-repository")]);
+    let mut semantic = complete_fact("semantic", "arbitrary-repository", "scope");
+    semantic["dimensions"] = json!(["responsibility", "boundary", "relations", "behavior"]);
+    for inherit in [false, true] {
+        let mut operation = complete_fact("operation", "arbitrary-repository", "scope");
+        operation["dimensions"] = json!(["operation"]);
+        operation["scopeSkillIds"] = json!([]);
+        if inherit {
+            operation["evidence"] = json!([]);
+            operation["evidenceFactIds"] = json!(["semantic"]);
+        }
+        jsonl(&facts, &[semantic.clone(), operation.clone()]);
+        let report = assess(&scopes, Some(&facts), 1, None).unwrap();
+        assert_eq!(report["skills"][0]["maturity"], "L2-semantic-ready");
+        let binding = report["skills"][0]["evidenceBindings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["factId"] == "operation")
+            .unwrap();
+        assert_eq!(binding["dimensions"], json!([]));
+        operation["scopeSkillIds"] = json!(["scope"]);
+        jsonl(&facts, &[semantic.clone(), operation]);
+        let qualified = assess(&scopes, Some(&facts), 1, None).unwrap();
+        assert_eq!(qualified["skills"][0]["maturity"], "L3-maintenance-ready");
+    }
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn generic_evidence_rounds_advance_arbitrary_repositories_without_name_rules() {
     let root = temp_root();
     let scopes = root.join("scopes.jsonl");

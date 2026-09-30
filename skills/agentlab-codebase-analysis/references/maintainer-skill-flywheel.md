@@ -18,6 +18,45 @@ binding to the longest matching scope boundary. Release-artifact paths without
 target-source Blob identity never bind implicitly. A filename, import count,
 README statement or repository-wide fact does not prove behavior by itself.
 
+Assessment must check the repository and source revision on every bound fact,
+including facts reached through `evidenceFactIds`. Preserve stale or mismatched
+facts as historical evidence, but exclude their dimensions and report rejected
+bindings for targeted refresh. A matching path or Blob does not override a
+mismatched source revision. Operation coverage requires an explicit target
+`scopeSkillIds` binding: path inference or dependency-fact inheritance may help
+semantic analysis, but a successful dependency build does not qualify its
+consumer automatically.
+
+An explicit operation dimension is still a claim, not independent execution
+proof. Validate the referenced receipt's bytes, qualified verdict, exact source,
+scope coverage, environment and limitations before writing that fact. The
+assessment's identity/dimension checks do not independently execute or inspect
+external receipts; never present its L3 count as end-to-end flywheel maturity.
+
+## Closed-loop maturity qualification
+
+Scope maturity and system maturity are separate axes. Qualify a local flywheel
+with three distinct bounded responsibilities at one pinned repository revision,
+then retain three consecutive rounds. For each round retain the method/source
+cut, parent assessment digest, accepted and rejected evidence, applicable
+operation receipts, calibrated case outcomes, exact TableGit readback/export,
+next-round objectives, wall time and human interventions. New facts or generated
+prose alone do not count as improvement.
+
+Measure whether missing dimensions decrease, meaningful wrong implementations
+are rejected, alternative-valid implementations are accepted, and feedback
+actually changes the next knowledge cut or analysis objectives. A no-change
+replay should not advance authority. Missing tools or telemetry must be reported
+as infrastructure/capability gaps rather than application failures. No eligible
+work, no new facts or a successful Action is not a convergence verdict.
+
+After local closure, repeat on a structurally different repository without
+target-name branches or changes to the core acceptance rules. Keep reference
+and mutation calibration distinct from assessed Agent runs. Do not claim that
+better Skills improve Agent discrimination until a comparable before/after
+cohort demonstrates it. Build-only evidence proves neither runtime behavior nor
+performance; emulator power/thermal limits remain explicit instance facts.
+
 ## Maturity
 
 1. `L0-discovered`: a scope exists but its exact identity or structural receipt
