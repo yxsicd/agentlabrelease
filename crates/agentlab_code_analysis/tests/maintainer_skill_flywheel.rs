@@ -31,6 +31,15 @@ fn jsonl(path: &Path, rows: &[Value]) {
     fs::write(path, text).unwrap();
 }
 
+fn rows_from_file(path: &Path) -> Vec<Value> {
+    fs::read_to_string(path)
+        .unwrap()
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect()
+}
+
 fn scope(id: &str, repository_id: &str) -> Value {
     json!({
         "schema":"agentlab.maintainer_scope_skill.v1",
@@ -120,6 +129,61 @@ fn generic_evidence_rounds_advance_arbitrary_repositories_without_name_rules() {
         .unwrap()
         .iter()
         .all(|repository| repository["readyForCaseGeneration"] == true));
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn operation_maturity_requires_explicit_revision_bound_dimension() {
+    let root = temp_root();
+    let scopes = root.join("scopes.jsonl");
+    let facts = root.join("facts.jsonl");
+    jsonl(&scopes, &[scope("skill-scope-alpha-src", "alpha-library")]);
+    jsonl(
+        &facts,
+        &[
+            json!({
+                "id":"fact-alpha-semantic",
+                "kind":"semantic-contract",
+                "repositoryId":"alpha-library",
+                "sourceRevision":"1".repeat(40),
+                "scopeSkillIds":["skill-scope-alpha-src"],
+                "dimensions":["responsibility","boundary","relations","behavior"],
+                "evidence":[{"path":"src/main.generic","gitBlobOid":"3".repeat(40)}]
+            }),
+            json!({
+                "id":"fact-alpha-blocked-build-preflight",
+                "kind":"build-test-entrypoint",
+                "repositoryId":"alpha-library",
+                "sourceRevision":"1".repeat(40),
+                "scopeSkillIds":["skill-scope-alpha-src"],
+                "evidence":[{"path":"qualification.json","sha256":"4".repeat(64)}]
+            }),
+        ],
+    );
+    let blocked = assess(&scopes, Some(&facts), 1, None).unwrap();
+    assert_eq!(blocked["totals"]["semanticReadyCount"], 1);
+    assert_eq!(blocked["totals"]["maintenanceReadyCount"], 0);
+    assert_eq!(blocked["skills"][0]["maturity"], "L2-semantic-ready");
+    assert!(blocked["skills"][0]["gaps"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|gap| gap["code"] == "MS-OPERATION-EVIDENCE-MISSING"));
+
+    let mut rows = rows_from_file(&facts);
+    rows.push(json!({
+        "id":"verification-alpha-runtime",
+        "kind":"runtime-verification",
+        "repositoryId":"alpha-library",
+        "sourceRevision":"1".repeat(40),
+        "scopeSkillIds":["skill-scope-alpha-src"],
+        "dimensions":["operation"],
+        "evidence":[{"path":"qualified-runtime.json","sha256":"5".repeat(64)}]
+    }));
+    jsonl(&facts, &rows);
+    let qualified = assess(&scopes, Some(&facts), 1, None).unwrap();
+    assert_eq!(qualified["totals"]["maintenanceReadyCount"], 1);
+    assert_eq!(qualified["skills"][0]["maturity"], "L3-maintenance-ready");
     fs::remove_dir_all(root).unwrap();
 }
 
