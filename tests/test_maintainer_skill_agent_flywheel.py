@@ -24,6 +24,45 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "JSON object"):
             MODULE.parse_agent_proposal("[]")
 
+    def test_operator_binds_deterministic_proposal_envelope_from_request(self):
+        request = {
+            "repository": {"id": "code-workshop", "revision": "a" * 40},
+            "scope": {"id": "scope-fixed"},
+            "requiredDimensions": ["behavior", "boundary", "relations", "responsibility"],
+        }
+        draft = {
+            "schema": "wrong",
+            "id": "agent-analysis-stable-mechanism",
+            "repositoryId": "wrong-repository",
+            "sourceRevision": "b" * 40,
+            "scopeSkillIds": ["wrong-scope"],
+            "kind": "wrong",
+            "dimensions": ["behavior"],
+            "interpretation": "evidence-backed semantic contract",
+            "evidence": [
+                {"path": "a", "gitBlobOid": "1" * 40},
+                {"path": "b", "gitBlobOid": "2" * 40},
+                {"path": "c", "gitBlobOid": "3" * 40},
+            ],
+            "limitations": ["first limitation", "second limitation"],
+            "unexpected": "discarded",
+        }
+        proposal = MODULE.bind_operator_proposal_envelope(request, draft)
+        self.assertEqual(proposal["repositoryId"], "code-workshop")
+        self.assertEqual(proposal["sourceRevision"], "a" * 40)
+        self.assertEqual(proposal["scopeSkillIds"], ["scope-fixed"])
+        self.assertEqual(proposal["kind"], "analysis")
+        self.assertEqual(
+            proposal["dimensions"],
+            ["behavior", "boundary", "relations", "responsibility"],
+        )
+        self.assertNotIn("unexpected", proposal)
+        self.assertEqual(proposal["interpretation"], draft["interpretation"])
+        self.assertEqual(proposal["evidence"], draft["evidence"])
+        self.assertEqual(proposal["limitations"], draft["limitations"])
+        with self.assertRaisesRegex(ValueError, "semantic fields are incomplete"):
+            MODULE.bind_operator_proposal_envelope(request, {"id": draft["id"]})
+
     def test_agent_attempt_lifecycle_aggregates_one_format_finalization(self):
         with tempfile.TemporaryDirectory() as directory:
             evidence = Path(directory)
@@ -548,7 +587,11 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         self.assertIn("Do not inspect files, call tools, explain, count characters", source)
         self.assertIn("require_completed_tool_call=False", source)
         self.assertIn('reasoning_effort="none"', source)
-        self.assertIn("interpretation of 700-1400 characters", source)
+        self.assertIn("operator has already bound the request identity", source)
+        self.assertIn("Do not read flywheel-request.json merely to recover or verify", source)
+        self.assertIn("do not call tools merely to count it", source)
+        self.assertIn("will overwrite schema/repositoryId/sourceRevision/scopeSkillIds/kind/dimensions", source)
+        self.assertIn("bind_operator_proposal_envelope(packet, proposal)", source)
         self.assertIn('len(proposal["interpretation"]) <= 1800', source)
         self.assertIn("gateway_timeout_seconds=60", source)
         participant = (ROOT / "examples/real-code-agent/participant.py").read_text()

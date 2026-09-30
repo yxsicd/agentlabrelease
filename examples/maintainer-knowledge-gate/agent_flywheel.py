@@ -54,6 +54,25 @@ def parse_agent_proposal(content):
     return proposal
 
 
+def bind_operator_proposal_envelope(request, proposal):
+    """Bind deterministic request identity in the operator, not in the LLM."""
+    require(isinstance(proposal, dict), "Agent proposal is not a JSON object")
+    semantic_fields = {"id", "interpretation", "evidence", "limitations"}
+    require(semantic_fields.issubset(proposal), "Agent proposal semantic fields are incomplete")
+    return {
+        "schema": "agentlab.maintainer_skill_fact_proposal.v1",
+        "id": proposal["id"],
+        "repositoryId": request["repository"]["id"],
+        "sourceRevision": request["repository"]["revision"],
+        "scopeSkillIds": [request["scope"]["id"]],
+        "kind": "analysis",
+        "dimensions": list(request["requiredDimensions"]),
+        "interpretation": proposal["interpretation"],
+        "evidence": proposal["evidence"],
+        "limitations": proposal["limitations"],
+    }
+
+
 def write_agent_attempt_lifecycle(evidence, finalization_used, initial_error=None):
     labels = ["maintainer-skill-author"]
     if finalization_used:
@@ -700,7 +719,14 @@ def run_agent(args):
     }
     require(packet.get("analysisMode") in mode_guidance, "unsupported analysis mode")
     prompt = f"""You are a Maintainer Skill construction Agent, not an assessed Agent.
-Read flywheel-request.json and inspect the exact Git checkout under source/.
+The operator has already bound the request identity:
+- repositoryId: {repository['id']}
+- sourceRevision: {repository['revision']}
+- scopeSkillId: {scope['id']}
+- dimensions: {dimensions_text}
+Do not read flywheel-request.json merely to recover or verify those fields.
+Inspect the exact Git checkout under source/ only when the supplied evidence
+packet does not support a required semantic dimension.
 Analyze only scope {scope['id']} with ownership selectors {scope_selector_summary(scope)}.
 Analysis mode is {packet['analysisMode']}. {mode_guidance[packet['analysisMode']]}
 The operator has already verified HEAD and generated this complete in-scope
@@ -725,15 +751,17 @@ JSON object: no progress message, Markdown fence, or surrounding explanation.
 The object must have exactly these fields:
 - schema: agentlab.maintainer_skill_fact_proposal.v1
 - id: agent-analysis- followed by a stable lowercase hyphenated mechanism name
-- repositoryId and sourceRevision exactly from the request
+- repositoryId and sourceRevision as shown in the operator binding above
 - scopeSkillIds: an array containing only the selected scope id
 - kind: analysis
 - dimensions: exactly {dimensions_text}
-- interpretation: a concise evidence-backed maintenance contract of 700-1500 Unicode characters
+- interpretation: one compact evidence-backed maintenance contract; target
+  roughly 900-1200 Unicode characters and do not call tools merely to count it
 - evidence: exactly three objects with exactly the keys path and gitBlobOid, for example
   {{"path":"relative/file.ets","gitBlobOid":"<exact 40-hex blob>"}}; the key is path,
   never repositoryPath, and no other evidence fields are allowed
-- limitations: exactly two concrete unproved claims, each 40-300 Unicode characters
+- limitations: exactly two concrete unproved claims; keep them concise and do
+  not call tools merely to count their characters
 
 Use the supplied inventory for in-scope blob identities and git rev-parse
 HEAD:path only for a direct cross-boundary dependency. Evidence paths may
@@ -768,6 +796,7 @@ exact JSON response.
         )
         try:
             proposal = parse_agent_proposal(result.get("content") if result else None)
+            proposal = bind_operator_proposal_envelope(packet, proposal)
             validate_proposal(packet, proposal, source_root)
         except ValueError as error:
             initial_error = str(error)
@@ -780,10 +809,12 @@ final proposal because: {initial_error}
 Do not inspect files, call tools, explain, count characters, or restate the
 analysis. Using only the analysis already present in this session, return
 exactly one JSON object and nothing else. It must follow
-agentlab.maintainer_skill_fact_proposal.v1, bind only scope {scope['id']} at
-revision {repository['revision']}, contain dimensions {dimensions_text}, an
-interpretation of 700-1400 characters, exactly three path/gitBlobOid evidence
-objects, and exactly two limitations of 40-300 characters. No Markdown fence.
+agentlab.maintainer_skill_fact_proposal.v1. The operator, not you, owns and
+will overwrite schema/repositoryId/sourceRevision/scopeSkillIds/kind/dimensions
+from the bound request. Preserve the semantic id, return one compact
+interpretation, exactly three path/gitBlobOid evidence objects, and exactly two
+concise limitations. Do not spend time measuring character counts. No Markdown
+fence.
 """,
                 reasoning_effort="none",
                 wall_time_limit_seconds=45,
@@ -792,6 +823,7 @@ objects, and exactly two limitations of 40-300 characters. No Markdown fence.
                 require_completed_tool_call=False,
             )
             proposal = parse_agent_proposal(result.get("content") if result else None)
+            proposal = bind_operator_proposal_envelope(packet, proposal)
             validate_proposal(packet, proposal, source_root)
     finally:
         participant.close()
