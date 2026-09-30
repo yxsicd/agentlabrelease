@@ -37,6 +37,7 @@
         "semanticDimensions": { "$ref": "#/$defs/nonEmptyStrings" },
         "sourceScopeAdditionalDimensions": { "$ref": "#/$defs/nonEmptyStrings" },
         "maintenanceAdditionalDimensions": { "$ref": "#/$defs/nonEmptyStrings" },
+        "operationEvidencePolicy": { "enum": ["legacy-explicit-claim", "verified-receipt-content"] },
         "repositoryReadyRule": { "type": "string", "minLength": 1 }
       }
     },
@@ -116,6 +117,34 @@
                 "repositoryId": {},
                 "sourceRevision": {}
               }
+            }
+          },
+          "operationEvidenceChecks": {
+            "type": "object",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["status", "reason"],
+                  "properties": { "status": { "const": "rejected" }, "reason": { "type": "string", "minLength": 1 } }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["status", "receiptPath", "receiptSha256", "lane", "qualificationScope", "typeChecking", "limitations", "verificationBoundary"],
+                  "properties": {
+                    "status": { "const": "verified" },
+                    "receiptPath": { "type": "string", "minLength": 1 },
+                    "receiptSha256": { "$ref": "#/$defs/sha256" },
+                    "lane": { "const": "build-only" },
+                    "qualificationScope": { "type": "object" },
+                    "typeChecking": { "enum": ["not-qualified", "not-independently-qualified"] },
+                    "limitations": { "$ref": "#/$defs/nonEmptyStrings" },
+                    "verificationBoundary": { "type": "string", "minLength": 1 }
+                  }
+                }
+              ]
             }
           },
           "provenDimensions": { "$ref": "#/$defs/strings" },

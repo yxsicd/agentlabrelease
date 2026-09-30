@@ -1,4 +1,7 @@
-use agentlab_code_analysis::{digest, maintainer_skill_flywheel::assess};
+use agentlab_code_analysis::{
+    digest,
+    maintainer_skill_flywheel::{assess, assess_with_receipts},
+};
 use serde_json::{json, Value};
 use std::{
     fs,
@@ -84,6 +87,218 @@ fn complete_fact(id: &str, repository_id: &str, skill_id: &str) -> Value {
         "dimensions":["responsibility","boundary","relations","behavior","operation"],
         "evidence":[{"path":"src/main.generic","gitBlobOid":"3".repeat(40)}]
     })
+}
+
+fn build_receipt() -> Value {
+    let attempt = |id: &str| {
+        json!({
+            "cleanBuild":true,"exitCode":0,"durationMs":100,"artifact":"out/library.har",
+            "artifactBytes":123,"artifactSha256":"a".repeat(64),
+            "canonicalMemberSha256":"b".repeat(64),"memberCount":3,"buildLogSha256":"c".repeat(64),
+            "executionAuthority":{"routeDecision":"peer_direct","targetPeerId":"generic-peer","operationId":id}
+        })
+    };
+    json!({
+        "schema":"agentlab.maintainer_scope_build_qualification.v1", "status":"qualified", "automaticPromotion":false,
+        "source":{"repositoryId":"arbitrary","repository":"https://example.invalid/arbitrary.git","revision":"1".repeat(40),"cleanBefore":true,"cleanAfter":true},
+        "scope":{"scopeSkillIds":["scope"],"lane":"build-only","module":"library","target":"default","scopeSpecificBinding":true},
+        "toolchain":{"sdkRelease":"fixture-sdk","hvigorVersion":"fixture-build","ohpmVersion":"fixture-deps"},
+        "dependencyPreparation":{"status":"successful","exitCode":0,"durationMs":100,"lockSha256":"d".repeat(64)},
+        "build":{"status":"successful","task":"assembleHar","command":["builder","--no-type-check","assembleHar"],"canonicalContentReproducible":true,"rawArchiveReproducible":true,"attempts":[attempt("run-one"),attempt("run-two")]},
+        "qualificationScope":{"moduleBuild":true,"runtime":false,"tests":false,"performance":false},
+        "limitations":["Controlled fixture; no real execution or runtime qualification."]
+    })
+}
+
+#[test]
+fn strict_cli_prepares_repeatable_candidate_cut_and_advances_one_scope() {
+    let root = temp_root();
+    let scopes = root.join("scopes.jsonl");
+    let facts = root.join("facts.jsonl");
+    jsonl(&scopes, &[scope("scope", "arbitrary")]);
+    let mut semantic = complete_fact("semantic", "arbitrary", "scope");
+    semantic["dimensions"] = json!(["responsibility", "boundary", "relations", "behavior"]);
+    jsonl(&facts, &[semantic]);
+    let original = fs::read(&facts).unwrap();
+    let receipt_bytes = serde_json::to_vec(&build_receipt()).unwrap();
+    fs::write(root.join("build.json"), &receipt_bytes).unwrap();
+    let before = assess_with_receipts(&scopes, Some(&facts), 1, None, Some(&root)).unwrap();
+    assert_eq!(before["totals"]["maintenanceReadyCount"], 0);
+    let prepare = |output: &Path, receipt_sha: &str| {
+        std::process::Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .args([
+                "--scope-skills",
+                scopes.to_str().unwrap(),
+                "--program-facts",
+                facts.to_str().unwrap(),
+                "--prepare-operation-fact",
+                "scope",
+                "--operation-receipts-root",
+                root.to_str().unwrap(),
+                "--operation-receipt",
+                "build.json",
+                "--operation-receipt-sha256",
+                receipt_sha,
+                "--output",
+                output.to_str().unwrap(),
+            ])
+            .output()
+            .unwrap()
+    };
+    let candidate = root.join("candidate.jsonl");
+    let success = prepare(&candidate, &digest(&receipt_bytes));
+    assert!(
+        success.status.success(),
+        "{}",
+        String::from_utf8_lossy(&success.stderr)
+    );
+    assert_eq!(fs::read(&facts).unwrap(), original);
+    assert_eq!(rows_from_file(&candidate).len(), 2);
+    let parent = digest(&serde_json::to_vec(&before).unwrap());
+    let after =
+        assess_with_receipts(&scopes, Some(&candidate), 2, Some(&parent), Some(&root)).unwrap();
+    assert_eq!(after["totals"]["semanticReadyCount"], 1);
+    assert_eq!(after["totals"]["maintenanceReadyCount"], 1);
+    assert_eq!(after["automaticPromotion"], false);
+    let replay = root.join("replay.jsonl");
+    assert!(prepare(&replay, &digest(&receipt_bytes)).status.success());
+    assert_eq!(fs::read(&candidate).unwrap(), fs::read(&replay).unwrap());
+    assert!(!prepare(&candidate, &digest(&receipt_bytes))
+        .status
+        .success());
+    let rejected = root.join("rejected.jsonl");
+    assert!(!prepare(&rejected, &"0".repeat(64)).status.success());
+    assert!(!rejected.exists());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn strict_operation_receipts_close_only_content_verified_build_gaps() {
+    let root = temp_root();
+    let scopes = root.join("scopes.jsonl");
+    let facts = root.join("facts.jsonl");
+    jsonl(&scopes, &[scope("scope", "arbitrary")]);
+    let mut fact = complete_fact("fact", "arbitrary", "scope");
+    jsonl(&facts, &[fact.clone()]);
+    let unverified = assess_with_receipts(&scopes, Some(&facts), 1, None, Some(&root)).unwrap();
+    assert_eq!(unverified["skills"][0]["maturity"], "L2-semantic-ready");
+    assert_eq!(
+        unverified["gapCounts"]["MS-OPERATION-RECEIPT-UNVERIFIED"],
+        1
+    );
+    let bytes = serde_json::to_vec(&build_receipt()).unwrap();
+    fs::write(root.join("build.json"), &bytes).unwrap();
+    fact["operationEvidence"] = json!({"path":"build.json","sha256":digest(&bytes)});
+    jsonl(&facts, &[fact.clone()]);
+    let verified = assess_with_receipts(&scopes, Some(&facts), 1, None, Some(&root)).unwrap();
+    assert_eq!(verified["skills"][0]["maturity"], "L3-maintenance-ready");
+    assert_eq!(
+        verified["standard"]["operationEvidencePolicy"],
+        "verified-receipt-content"
+    );
+    assert_eq!(
+        verified["skills"][0]["operationEvidenceChecks"]["fact"]["typeChecking"],
+        "not-qualified"
+    );
+    assert_eq!(
+        verified["skills"][0]["operationEvidenceChecks"]["fact"]["qualificationScope"]["runtime"],
+        false
+    );
+    assert_eq!(
+        verified,
+        assess_with_receipts(&scopes, Some(&facts), 1, None, Some(&root)).unwrap()
+    );
+    fact["operationEvidence"]["sha256"] = json!("e".repeat(64));
+    jsonl(&facts, &[fact]);
+    let tampered = assess_with_receipts(&scopes, Some(&facts), 1, None, Some(&root)).unwrap();
+    assert_eq!(tampered["skills"][0]["maturity"], "L2-semantic-ready");
+    assert_eq!(
+        tampered["skills"][0]["operationEvidenceChecks"]["fact"]["reason"],
+        "operation receipt digest mismatch"
+    );
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn strict_receipt_rejects_failed_stale_borrowed_and_overclaimed_operations() {
+    let root = temp_root();
+    let scopes = root.join("scopes.jsonl");
+    let facts = root.join("facts.jsonl");
+    jsonl(&scopes, &[scope("scope", "arbitrary")]);
+    for (pointer, value) in [
+        ("/status", json!("blocked")),
+        ("/schema", json!("unsupported-runtime-schema")),
+        ("/source/revision", json!("9".repeat(40))),
+        ("/source/repositoryId", json!("another-repository")),
+        ("/source/cleanAfter", json!(false)),
+        ("/scope/scopeSkillIds", json!(["sibling"])),
+        ("/scope/lane", json!("runtime")),
+        ("/toolchain/sdkRelease", Value::Null),
+        ("/dependencyPreparation/exitCode", json!(1)),
+        ("/build/attempts/1/exitCode", json!(1)),
+        (
+            "/build/attempts/1/executionAuthority/operationId",
+            json!("run-one"),
+        ),
+        (
+            "/build/attempts/1/canonicalMemberSha256",
+            json!("f".repeat(64)),
+        ),
+        ("/build/rawArchiveReproducible", json!(false)),
+        ("/qualificationScope/runtime", json!(true)),
+        ("/qualificationScope/tests", json!(true)),
+        ("/qualificationScope/performance", json!(true)),
+        ("/limitations", json!([])),
+    ] {
+        let mut receipt = build_receipt();
+        *receipt.pointer_mut(pointer).unwrap() = value;
+        let bytes = serde_json::to_vec(&receipt).unwrap();
+        fs::write(root.join("build.json"), &bytes).unwrap();
+        let mut fact = complete_fact("fact", "arbitrary", "scope");
+        fact["operationEvidence"] = json!({"path":"build.json","sha256":digest(&bytes)});
+        jsonl(&facts, &[fact]);
+        let report = assess_with_receipts(&scopes, Some(&facts), 1, None, Some(&root)).unwrap();
+        assert_eq!(
+            report["skills"][0]["maturity"], "L2-semantic-ready",
+            "{pointer}"
+        );
+        assert_eq!(
+            report["skills"][0]["operationEvidenceChecks"]["fact"]["status"], "rejected",
+            "{pointer}"
+        );
+    }
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn strict_receipt_rejects_traversal_missing_files_and_symlinks() {
+    let root = temp_root();
+    let skill = scope("scope", "arbitrary");
+    for path in ["../outside.json", "/absolute.json", "missing.json"] {
+        let mut fact = complete_fact("fact", "arbitrary", "scope");
+        fact["operationEvidence"] = json!({"path":path,"sha256":"a".repeat(64)});
+        assert!(
+            agentlab_code_analysis::maintainer_operation_evidence::verify(&fact, &skill, &root)
+                .is_err()
+        );
+    }
+    #[cfg(unix)]
+    {
+        fs::write(
+            root.join("real.json"),
+            serde_json::to_vec(&build_receipt()).unwrap(),
+        )
+        .unwrap();
+        std::os::unix::fs::symlink(root.join("real.json"), root.join("link.json")).unwrap();
+        let mut fact = complete_fact("fact", "arbitrary", "scope");
+        fact["operationEvidence"] = json!({"path":"link.json","sha256":"a".repeat(64)});
+        assert!(
+            agentlab_code_analysis::maintainer_operation_evidence::verify(&fact, &skill, &root)
+                .unwrap_err()
+                .contains("symlink")
+        );
+    }
+    fs::remove_dir_all(root).unwrap();
 }
 
 #[test]

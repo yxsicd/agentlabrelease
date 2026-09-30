@@ -1,0 +1,44 @@
+{
+  "schema": "agentlab.maintainer_operation_content_smoke.v1",
+  "status": "passed-local-candidate-assessment",
+  "automaticPromotion": false,
+  "inputs": {
+    "semanticExportCommit": "d656442d286c8f8646d312ee4d78143985eeda6c",
+    "semanticExportPullRequest": 106,
+    "buildReceiptCommit": "993c88e6d4a68559ee161543a9a618074c49229a",
+    "buildReceiptPullRequest": 109,
+    "receiptPath": "release/qualifications/code-workshop-7aa95cac-componentlibrary-build/build-qualification.json",
+    "receiptSha256": "de1f82800dd7680242948d77d6c2416c5d97319f72d2d876cbca194a82ddeba7",
+    "repositoryId": "code-workshop",
+    "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+    "scopeSkillId": "skill-scope-code-workshop-componentlibrary-framework"
+  },
+  "policy": "verified-receipt-content",
+  "before": { "scopeSkillCount": 489, "programBoundCount": 44, "semanticReadyCount": 39, "maintenanceReadyCount": 0 },
+  "after": { "scopeSkillCount": 489, "programBoundCount": 44, "semanticReadyCount": 39, "maintenanceReadyCount": 1 },
+  "outputs": {
+    "baselineAssessmentSha256": "9011763ca59970e29ca22150293307dc8ab96b9240c0b5647c017e2acf9c8e15",
+    "candidateFactsSha256": "8ae23e768f912dfea7fb4f948959a60d3bb8dca1741c22c30a1423bfdcf4778c",
+    "childAssessmentSha256": "a3649bb6c18185c6d6d3fe24d65e39a8deb32675d2914cff7ed39280dd822c02",
+    "factId": "operation-build-ba2fd5204b013e40b09f63c6f360fd0750aefabbe7e56eefad180ba43361814f",
+    "scopeMaturityBefore": "L2-semantic-ready",
+    "scopeMaturityAfter": "L3-maintenance-ready"
+  },
+  "boundary": {
+    "tablegitWritten": false,
+    "inputPullRequestsMerged": false,
+    "buildReplayed": false,
+    "rawLogsAndArtifactsReadBack": false,
+    "runtimeQualified": false,
+    "testsQualified": false,
+    "performanceQualified": false,
+    "typeCheckingQualified": false,
+    "threeRoundClosedLoopQualified": false,
+    "receiptAuthenticityIndependentlyVerified": false
+  },
+  "limitations": [
+    "This combines two immutable pending PR input cuts for a local content-verification experiment, not an authoritative release or TableGit promotion.",
+    "Two historical runtime facts lack supported strict operation references/adapters; their evidence remains intact but contributes no strict operation maturity.",
+    "The build receipt contains --no-type-check and qualifies recorded build-only evidence, not runtime, test, performance or full static type checking."
+  ]
+}

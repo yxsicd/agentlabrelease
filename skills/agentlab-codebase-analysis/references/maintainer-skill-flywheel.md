@@ -30,8 +30,55 @@ consumer automatically.
 An explicit operation dimension is still a claim, not independent execution
 proof. Validate the referenced receipt's bytes, qualified verdict, exact source,
 scope coverage, environment and limitations before writing that fact. The
-assessment's identity/dimension checks do not independently execute or inspect
-external receipts; never present its L3 count as end-to-end flywheel maturity.
+legacy assessment's identity/dimension checks do not independently execute or
+inspect external receipts; never present its L3 count as end-to-end flywheel
+maturity.
+
+### Executable operation receipt verification
+
+Use `agentlab-maintainer-skill-flywheel --operation-receipts-root ROOT` for
+strict receipt-content assessment. Each operation fact must carry
+`operationEvidence: {path, sha256}`. Paths are relative to the explicit root,
+symlinks/traversal are rejected, and the exact original bytes must match before
+parsing. Missing, failed, mismatched or unsupported receipts emit
+`MS-OPERATION-RECEIPT-UNVERIFIED` and cannot contribute operation maturity.
+Keep their semantic dimensions and original evidence; a missing adapter is not
+an application failure.
+
+The first adapter accepts `agentlab.maintainer_scope_build_qualification.v1`:
+exact repository URL/ID/revision and one scope, clean source, pinned toolchain,
+successful dependency preparation, two distinct successful clean build
+executions, consistent canonical content and explicit build-only limitations.
+This is a Harmony HAR receipt-format adapter, not a repository-name rule.
+It validates recorded assertions and content integrity, not receipt authorship,
+raw log/artifact bytes, or a fresh build. Report no-type-check builds as not
+type-check-qualified. Runtime/test/performance receipts need their own adapters;
+never relabel them as build receipts to bypass an unsupported format.
+
+Prepare a deterministic operation fact or combined candidate fact cut without
+writing TableGit:
+
+```sh
+agentlab-maintainer-skill-flywheel \
+  --scope-skills scopes.jsonl --program-facts facts.jsonl \
+  --prepare-operation-fact SCOPE_ID \
+  --operation-receipts-root ROOT --operation-receipt RELATIVE_PATH \
+  --operation-receipt-sha256 EXACT_SHA256 --output candidate-facts.jsonl
+```
+
+Omit `--program-facts` to emit only the new fact. Existing IDs must be unique;
+conflicting operation IDs fail before creating output. Repeated preparation
+into distinct new paths produces identical bytes. Outputs refuse overwrite.
+Reassess the candidate with the same receipt root and bind its parent digest.
+This produces a proposed knowledge cut only; exact TableGit CAS/import/readback
+and case publication remain separate steps.
+
+For compatibility, assessment without a receipt root retains historical
+explicit-claim scoring and labels it `legacy-explicit-claim`. Strict assessment
+labels `verified-receipt-content`. Do not compare their maturity counts as a
+quality gain or regression. The existing semantic-refresh Action is not yet
+migrated to strict receipt scoring: first establish a strict baseline and adapt
+its existing operation facts, then change the producer and consumer together.
 
 ## Closed-loop maturity qualification
 

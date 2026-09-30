@@ -928,6 +928,9 @@ def validate(args):
 def compare(args):
     before = load(args.before)
     after = load(args.after)
+    before_policy = before.get("standard", {}).get("operationEvidencePolicy", "legacy-explicit-claim")
+    after_policy = after.get("standard", {}).get("operationEvidencePolicy", "legacy-explicit-claim")
+    require(before_policy == after_policy, "operation evidence policy changed; establish a same-policy baseline first")
     require(after["parentAssessmentSha256"] == digest(args.before), "assessment lineage differs")
     for key in ("scopeSkillCount", "structuralReadyCount"):
         require(after["totals"][key] == before["totals"][key], f"{key} changed")

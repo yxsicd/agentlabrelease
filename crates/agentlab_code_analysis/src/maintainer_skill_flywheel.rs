@@ -198,7 +198,26 @@ pub fn assess(
     round_index: u64,
     parent_assessment_sha256: Option<&str>,
 ) -> Result<Value, String> {
+    assess_with_receipts(
+        scope_path,
+        program_facts_path,
+        round_index,
+        parent_assessment_sha256,
+        None,
+    )
+}
+
+pub fn assess_with_receipts(
+    scope_path: &Path,
+    program_facts_path: Option<&Path>,
+    round_index: u64,
+    parent_assessment_sha256: Option<&str>,
+    operation_receipts_root: Option<&Path>,
+) -> Result<Value, String> {
     require(round_index >= 1, "round index must be positive")?;
+    if let Some(root) = operation_receipts_root {
+        require(root.is_dir(), "operation receipt root missing")?;
+    }
     if round_index == 1 {
         require(
             parent_assessment_sha256.is_none(),
@@ -381,12 +400,34 @@ pub fn assess(
                 }
             })
             .collect::<BTreeSet<_>>();
+        let mut operation_checks = BTreeMap::new();
         let dimensions = bound_fact_ids
             .iter()
             .flat_map(|id| {
                 fact_by_id
                     .get(id.as_str())
-                    .map_or_else(BTreeSet::new, |fact| scope_fact_dimensions(fact, skill_id))
+                    .map_or_else(BTreeSet::new, |fact| {
+                        let mut dimensions = scope_fact_dimensions(fact, skill_id);
+                        if let Some(root) = operation_receipts_root {
+                            if dimensions.contains("operation") {
+                                match crate::maintainer_operation_evidence::verify(
+                                    fact, skill, root,
+                                ) {
+                                    Ok(check) => {
+                                        operation_checks.insert(id.clone(), check);
+                                    }
+                                    Err(reason) => {
+                                        dimensions.remove("operation");
+                                        operation_checks.insert(
+                                            id.clone(),
+                                            json!({"status":"rejected", "reason":reason}),
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        dimensions
+                    })
             })
             .filter(|dimension| DIMENSIONS.contains(&dimension.as_str()))
             .collect::<BTreeSet<_>>();
@@ -419,6 +460,15 @@ pub fn assess(
             "L0-discovered"
         };
         let mut gaps = Vec::new();
+        if operation_checks
+            .values()
+            .any(|check| check["status"] == "rejected")
+        {
+            gaps.push(gap(
+                "MS-OPERATION-RECEIPT-UNVERIFIED", "operation", "P1",
+                "supply a content-bound qualified receipt or an applicable receipt adapter; operation claims alone do not advance strict maturity".to_owned(),
+            ));
+        }
         if !rejected_bindings.is_empty() {
             gaps.push(gap(
                 "MS-EVIDENCE-IDENTITY-MISMATCH",
@@ -477,10 +527,14 @@ pub fn assess(
         let bindings = bound_fact_ids
             .iter()
             .map(|fact_id| {
+                let mut dimensions = fact_by_id.get(fact_id.as_str()).map_or_else(BTreeSet::new, |fact| scope_fact_dimensions(fact, skill_id));
+                if operation_checks.get(fact_id).is_some_and(|check| check["status"] == "rejected") {
+                    dimensions.remove("operation");
+                }
                 json!({
                     "factId":fact_id,
                     "bindingMode":binding_modes.get(&(fact_id.clone(), skill_id.to_owned())).cloned().unwrap_or_else(|| "unknown".to_owned()),
-                    "dimensions":fact_by_id.get(fact_id.as_str()).map_or_else(Vec::new, |fact| scope_fact_dimensions(fact, skill_id).into_iter().collect())
+                    "dimensions":dimensions
                 })
             })
             .collect::<Vec<Value>>();
@@ -499,6 +553,7 @@ pub fn assess(
             },
             "evidenceBindings":bindings,
             "rejectedEvidenceBindings":rejected_bindings,
+            "operationEvidenceChecks":operation_checks,
             "provenDimensions":dimensions,
             "requiredSemanticDimensions":required_semantic,
             "gaps":gaps
@@ -575,6 +630,7 @@ pub fn assess(
             "semanticDimensions":["responsibility","boundary","relations"],
             "sourceScopeAdditionalDimensions":["behavior"],
             "maintenanceAdditionalDimensions":["operation"],
+            "operationEvidencePolicy":if operation_receipts_root.is_some() {"verified-receipt-content"} else {"legacy-explicit-claim"},
             "repositoryReadyRule":"every scope Skill is L3-maintenance-ready"
         },
         "totals":totals,

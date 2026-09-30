@@ -1,4 +1,4 @@
-use agentlab_code_analysis::maintainer_skill_flywheel::assess;
+use agentlab_code_analysis::maintainer_skill_flywheel::assess_with_receipts;
 use std::{
     fs::{self, OpenOptions},
     io::Write,
@@ -23,11 +23,86 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let scopes = PathBuf::from(value(&args, "--scope-skills")?);
+    let output = PathBuf::from(value(&args, "--output")?);
+    let receipts = if args.iter().any(|arg| arg == "--operation-receipts-root") {
+        Some(PathBuf::from(value(&args, "--operation-receipts-root")?))
+    } else {
+        None
+    };
+    if let Some(id) = optional(&args, "--prepare-operation-fact") {
+        let rows = fs::read_to_string(&scopes)?;
+        let mut selected = None;
+        for line in rows.lines().filter(|line| !line.trim().is_empty()) {
+            let row: serde_json::Value = serde_json::from_str(line)?;
+            if row["id"].as_str() == Some(id.as_str()) {
+                if selected.is_some() {
+                    return Err("duplicate selected scope".into());
+                }
+                selected = Some(row);
+            }
+        }
+        let skill = selected.ok_or("selected scope missing")?;
+        let reference = serde_json::json!({
+            "path":value(&args, "--operation-receipt")?,
+            "sha256":value(&args, "--operation-receipt-sha256")?
+        });
+        let fact = agentlab_code_analysis::maintainer_operation_evidence::prepare_fact(
+            &skill,
+            reference,
+            receipts
+                .as_deref()
+                .ok_or("missing --operation-receipts-root")?,
+        )?;
+        // A proposed cut, not a TableGit write or automatic promotion.
+        let mut candidates = std::collections::BTreeMap::new();
+        if let Some(path) = optional(&args, "--program-facts") {
+            for line in fs::read_to_string(path)?
+                .lines()
+                .filter(|line| !line.trim().is_empty())
+            {
+                let row: serde_json::Value = serde_json::from_str(line)?;
+                let id = row["id"]
+                    .as_str()
+                    .filter(|id| !id.is_empty())
+                    .ok_or("existing fact id missing")?
+                    .to_owned();
+                if candidates.insert(id, row).is_some() {
+                    return Err("existing fact id duplicated".into());
+                }
+            }
+        }
+        let id = fact["id"].as_str().unwrap().to_owned();
+        if candidates
+            .get(&id)
+            .is_some_and(|existing| existing != &fact)
+        {
+            return Err("operation fact identity conflicts with existing row".into());
+        }
+        candidates.insert(id, fact.clone());
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        for row in candidates.values() {
+            file.write_all(&serde_json::to_vec(row)?)?;
+            file.write_all(b"\n")?;
+        }
+        println!(
+            "{}",
+            serde_json::json!({"decision":"prepared-operation-fact", "factId":fact["id"], "automaticPromotion":false})
+        );
+        return Ok(());
+    }
     let facts = optional(&args, "--program-facts").map(PathBuf::from);
     let round_index = value(&args, "--round-index")?.parse::<u64>()?;
     let parent = optional(&args, "--parent-assessment-sha256");
-    let output = PathBuf::from(value(&args, "--output")?);
-    let assessment = assess(&scopes, facts.as_deref(), round_index, parent.as_deref())?;
+    let assessment = assess_with_receipts(
+        &scopes,
+        facts.as_deref(),
+        round_index,
+        parent.as_deref(),
+        receipts.as_deref(),
+    )?;
     if let Some(parent) = output.parent() {
         fs::create_dir_all(parent)?;
     }
