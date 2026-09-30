@@ -141,9 +141,10 @@ fn fact_dimensions(fact: &Value) -> BTreeSet<String> {
         "behavior-contract" | "state-transition" | "invariant" | "error-contract" => {
             BTreeSet::from(["behavior".to_owned()])
         }
-        "build-test-entrypoint" | "runtime-verification" => {
-            BTreeSet::from(["operation".to_owned()])
-        }
+        // Operation evidence is never inferred from a descriptive kind. L3
+        // requires an explicit revision-bound operation dimension so a blocked
+        // preflight or partial build cannot masquerade as maintenance proof.
+        "build-test-entrypoint" | "runtime-verification" => BTreeSet::new(),
         _ => BTreeSet::new(),
     }
 }
