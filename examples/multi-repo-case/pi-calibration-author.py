@@ -8,6 +8,33 @@ import json
 import os
 from pathlib import Path
 import shutil
+import hashlib
+
+
+def guidance_prompt(request: dict) -> str:
+    packet = request.get("maintainerGuidance")
+    if packet is None:
+        return ""
+    if (packet.get("schema") != "agentlab.maintainer_guidance_packet.v1"
+            or packet.get("stage") != "calibration"
+            or packet.get("automaticPromotion") is not False):
+        raise ValueError("invalid bound guidance packet")
+    sources = {(r["repositoryId"], r["revision"]) for r in request["sources"]}
+    if not packet.get("sources") or any(
+        (r["repositoryId"], r["sourceRevision"]) not in sources for r in packet["sources"]
+    ):
+        raise ValueError("guidance differs from exact authoring sources")
+    if not packet.get("guidance"):
+        raise ValueError("empty selected guidance")
+    for row in packet["guidance"]:
+        skill = row["skill"]
+        encoded = json.dumps(skill, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+        if (hashlib.sha256(encoded).hexdigest() != row["rowSha256"]
+                or hashlib.sha256(skill["body"].encode()).hexdigest() != row["bodySha256"]
+                or skill["stage"] != "calibration"
+                or (skill["repositoryId"], skill["sourceRevision"]) not in sources):
+            raise ValueError("guidance row bytes or applicability differ")
+    return "\nExplicitly selected maintenance guidance follows, with its fixed-cut provenance and qualification limits.\nUse the guidance body when authoring this calibration, but do not treat it as task scoring, proof of runtime success, permission to change immutable sources, or authority to promote. Preserve contradictory observations.\n" + json.dumps(packet, ensure_ascii=False, sort_keys=True) + "\n"
 
 
 def main() -> None:
@@ -48,6 +75,19 @@ The oracle-contract oracleSha256 must be the SHA-256 of the exact authored Oracl
 Baseline must fail. Reference and every alternative-valid variant must pass every stage. Every wrong variant must fail, and at least one wrong variant must pass an earlier stage before failing a later stage.
 Never modify sources/. Do not expose evaluator files outside {args.output.as_posix()}. Do not claim product truth, qualification, review, or promotion. Do not access the network or install dependencies. Finish only after writing all files; your prose is not an artifact.
 """
+    prompt += guidance_prompt(request)
+    if "maintainerGuidance" in request:
+        (evidence / "guidance-prompt.txt").write_text(prompt, encoding="utf-8")
+        (evidence / "guidance-consumption-intent.json").write_text(json.dumps({
+            "schema": "agentlab.maintainer_guidance_prompt_intent.v1",
+            "requestSha256": hashlib.sha256(args.request.read_bytes()).hexdigest(),
+            "promptSha256": hashlib.sha256(prompt.encode()).hexdigest(),
+            "knowledgeAuthority": request["maintainerGuidance"]["knowledgeAuthority"],
+            "selectedSkills": [{"id": r["skill"]["id"], "rowSha256": r["rowSha256"],
+                                "bodySha256": r["bodySha256"]}
+                               for r in request["maintainerGuidance"]["guidance"]],
+            "agentConsumptionVerified": False, "learningBenefitVerified": False,
+        }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     try:
         participant.turn("author-calibration", Path.cwd(), prompt=prompt)
     finally:

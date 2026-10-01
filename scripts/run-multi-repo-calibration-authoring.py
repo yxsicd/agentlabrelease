@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import sys
 import time
+import tempfile
 from datetime import datetime, timezone
 from typing import Any
 
@@ -52,6 +53,34 @@ def digest(path: Path) -> str:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             value.update(chunk)
     return value.hexdigest()
+
+
+def bind_guidance(args: argparse.Namespace, rows: list[dict], workspace: Path) -> dict | None:
+    """Use the owned Rust gate; never select guidance by repository name alone."""
+    paths = [getattr(args, name, None) for name in
+             ("guidance_knowledge", "guidance_selection", "flywheel_tool")]
+    if not any(paths):
+        return None
+    require(all(paths), "guidance requires knowledge, selection and the Rust flywheel tool")
+    knowledge, selection, tool = paths
+    selection_value = load(selection, "guidance selection")
+    sources = {(row["repositoryId"], row["revision"]) for row in rows}
+    require(selection_value.get("stage") == "calibration", "authoring guidance must select calibration")
+    selected_sources = selection_value.get("sources") or []
+    require(selected_sources and all((row.get("repositoryId"), row.get("sourceRevision")) in sources
+                                    for row in selected_sources), "guidance is outside authoring source set")
+    retained = workspace / "guidance-knowledge"
+    retained.mkdir()
+    for name in ("maintainer-knowledge-cut.json", "maintainer_skills.jsonl", "program_facts.jsonl",
+                 "maintainer_scope_skills.jsonl", "maintainer_skill_refresh_rounds.jsonl", "evaluation_cases.jsonl"):
+        copy_regular(knowledge / name, retained / name, "guidance knowledge")
+    copy_regular(selection, workspace / "guidance-selection.json", "guidance selection")
+    command = [str(tool.resolve()), "--bind-maintainer-guidance", "--knowledge", str(retained.resolve()),
+               "--guidance-request", str((workspace / "guidance-selection.json").resolve()),
+               "--output", str((workspace / "maintainer-guidance.json").resolve())]
+    process = subprocess.run(command, capture_output=True, timeout=60)
+    require(process.returncode == 0, "Rust guidance binding rejected: " + process.stderr.decode(errors="replace"))
+    return load(workspace / "maintainer-guidance.json", "bound maintainer guidance")
 
 
 def module(name: str, path: Path):
@@ -195,7 +224,7 @@ def authority_paths(root: Path) -> tuple[Path, Path, tuple[Path | None, ...]]:
     return authority / "candidate-selection.json", authority / "difficulty.json", optional
 
 
-def validate_output(root: Path) -> dict[str, Any]:
+def validate_output(root: Path, flywheel_tool: Path | None = None) -> dict[str, Any]:
     receipt_path = root / "authoring-receipt.json"
     receipt = load(receipt_path, "calibration authoring receipt")
     require(receipt.get("schema") == RECEIPT_SCHEMA, "unsupported calibration authoring receipt")
@@ -233,6 +262,24 @@ def validate_output(root: Path) -> dict[str, Any]:
     require(request.get("localization") == proposal.get("localization"), "calibration authoring request localization differs")
     source_files = receipt.get("sourceFiles")
     require(isinstance(source_files, list) and source_files and request.get("sources") == source_files, "calibration authoring request sources differ")
+    if "maintainerGuidance" in request:
+        require(flywheel_tool is not None, "guided authoring validation requires the Rust flywheel tool")
+        workspace = root / "workspace"
+        binding = load(workspace / "maintainer-guidance.json", "retained guidance packet")
+        require(request["maintainerGuidance"] == binding, "authoring guidance packet differs")
+        selection = load(workspace / "guidance-selection.json", "retained guidance selection")
+        sources = {(row["repositoryId"], row["revision"]) for row in source_files}
+        require(selection.get("stage") == "calibration" and selection.get("sources")
+                and all((row.get("repositoryId"), row.get("sourceRevision")) in sources
+                        for row in selection["sources"]), "retained guidance applicability differs")
+        with tempfile.TemporaryDirectory(prefix="agentlab-guidance-rebind-") as temporary:
+            output = Path(temporary) / "packet.json"
+            process = subprocess.run([str(flywheel_tool.resolve()), "--bind-maintainer-guidance",
+                "--knowledge", str((workspace / "guidance-knowledge").resolve()),
+                "--guidance-request", str((workspace / "guidance-selection.json").resolve()),
+                "--output", str(output)], capture_output=True, timeout=60)
+            require(process.returncode == 0, "retained guidance failed independent Rust rebinding")
+            require(load(output, "reconstructed guidance") == binding, "retained guidance reconstruction differs")
     facts_path = root / "workspace/relevant-facts.jsonl"
     require(receipt.get("factsSha256") == digest(facts_path), "calibration authoring facts differ")
     fact_count = sum(1 for line in facts_path.read_text(encoding="utf-8").splitlines() if line.strip())
@@ -306,6 +353,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         ],
         "automaticPromotion": False,
     }
+    guidance = bind_guidance(args, rows, workspace)
+    if guidance is not None:
+        request["maintainerGuidance"] = guidance
     write(workspace / "authoring-request.json", request)
     participant = args.participant.resolve()
     require(participant.is_file() and not participant.is_symlink(), "authoring participant is absent")
@@ -400,7 +450,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "automaticPromotion": False,
     }
     write(args.output / "authoring-receipt.json", receipt)
-    return validate_output(args.output)
+    return validate_output(args.output, getattr(args, "flywheel_tool", None))
 
 
 def add_localization(parser: argparse.ArgumentParser) -> None:
@@ -424,12 +474,16 @@ def main() -> int:
     run_command.add_argument("--participant-id", required=True)
     run_command.add_argument("--method-revision", required=True)
     run_command.add_argument("--output", type=Path, required=True)
+    run_command.add_argument("--guidance-knowledge", type=Path)
+    run_command.add_argument("--guidance-selection", type=Path)
+    run_command.add_argument("--flywheel-tool", type=Path)
     add_localization(run_command)
     validate_command = commands.add_parser("validate")
     validate_command.add_argument("--root", type=Path, required=True)
+    validate_command.add_argument("--flywheel-tool", type=Path)
     args = parser.parse_args()
     try:
-        receipt = run(args) if args.command == "run" else validate_output(args.root)
+        receipt = run(args) if args.command == "run" else validate_output(args.root, args.flywheel_tool)
         print(json.dumps({"ok": True, "status": receipt["status"], "candidateId": receipt["candidateId"]}, sort_keys=True))
     except (AuthoringError, CALIBRATION.BundleError, CONSTRUCTION.ContractError, OSError, ValueError) as error:
         print(f"multi-repository calibration authoring invalid: {error}", file=sys.stderr)

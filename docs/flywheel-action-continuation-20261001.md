@@ -295,3 +295,38 @@ Raw source/readback receipts, candidates, plans and staged snapshots stay outsid
 source Git. Active knowledge admission, fixed-cut guidance consumption and actual
 next-round improvement remain outstanding. No new assessed Agent run, qualified
 case or Release is claimed by persistence and staging.
+
+## Active admission and scoped guidance consumption — 2026-10-02
+
+Maturity remains **51%**. The reviewed real lesson was admitted into active
+agentlabtablegit at `368b17895b23633656a26f9f51cb300cb11fa829`, from the exact
+`38fc28d72870b36405287e048a5e6fce41a44b78` baseline. The existing writer's delta
+computation proposed only three inserts: Skill, fact and refresh round 39.
+All five remote baseline tables were compared exactly before mutation; nine source
+entity tables were read back again at their recorded committed revision. Owned
+Rust staging was reproduced and compared before one atomic transaction. The cold
+export preserved baseline files and five portable operation sidecars. Exact
+committed readback confirmed 13 Skills, 62 facts, 489 scopes, 39 refresh records
+and zero evaluation cases. Two repeat synchronizations attempted no write and
+retained that revision. No readiness or qualification was advanced. The private
+authentication bridge loaded credentials in memory; the generic writer's
+refreshed-revision retry was not used for this admission.
+
+PR133 passed all ten applicable hosted checks and merged as
+`8c344a80b71f238af778e6990accd4844682153d`; immutable publication was skipped.
+
+The next implementation binds explicitly selected lesson guidance to a committed
+export, exact source set, stage, row digest and object applicability. The Rust CLI
+rejects changed cut/table/row/source/stage bindings and carries body, method/lesson
+provenance and unchanged qualifications. The existing multi-repository calibration
+authoring runner retains and independently rebinds inputs; its Pi adapter puts
+the packet in the turn prompt and retains prompt bytes plus a consumption intent.
+Tests with arbitrary fixture identities demonstrate protocol invariants, not
+real cross-repository learning. Guidance is not applied globally by repo name.
+
+Admission/readback/export/repeat receipts and operational bytes remain in the
+external flywheel-action-continuation-20261001 artifact directory. Actual model
+request capture verification, improved next-round results, autonomous multi-round
+continuation, durable remote raw bytes, exact Harmony runtime and real second-repo
+migration remain outstanding. No learning benefit, new assessed Agent run,
+qualified case or Release is claimed by prompt assembly.
