@@ -1,24 +1,28 @@
 {
-  "advancedScopeIds": [
-    "skill-scope-code-workshop-common-module-contract"
-  ],
-  "afterAssessmentSha256": "3a0fe3380583525df6d2734c09722a6954727cacea11b7e23e6c4e1e7694d96e",
-  "authorityWritePerformed": false,
+  "advancedScopeIds": [],
+  "after": {
+    "maintenanceReadyCount": 2,
+    "programBoundCount": 46,
+    "scopeSkillCount": 489,
+    "semanticReadyCount": 41,
+    "structuralReadyCount": 489
+  },
+  "assessmentSha256": "47354f03c2dcd4c4364b3dc7cdec7e30b3ac9d4f81b507120e355a46670f272d",
   "automaticPromotion": false,
-  "beforeAssessmentSha256": "d16d28a6393627ddb9e8b6fc3eb5d22181e9f54fa24e20d043bfe60d8b60c783",
-  "decision": "review-proposed-operation-knowledge",
-  "maintenanceReadyDelta": 1,
-  "nextRoundObjectives": [
-    "close 438 MS-BEHAVIOR-EVIDENCE-MISSING gaps with revision-bound evidence",
-    "close 445 MS-BOUNDARY-EVIDENCE-MISSING gaps with revision-bound evidence",
-    "close 39 MS-OPERATION-EVIDENCE-MISSING gaps with revision-bound evidence",
-    "close 2 MS-OPERATION-RECEIPT-UNVERIFIED gaps with revision-bound evidence",
-    "close 443 MS-PROGRAM-EVIDENCE-UNBOUND gaps with revision-bound evidence",
-    "close 444 MS-RELATIONS-EVIDENCE-MISSING gaps with revision-bound evidence",
-    "close 447 MS-RESPONSIBILITY-EVIDENCE-MISSING gaps with revision-bound evidence"
-  ],
-  "schema": "agentlab.maintainer_operation_round_result.v1",
+  "before": {
+    "maintenanceReadyCount": 2,
+    "programBoundCount": 46,
+    "scopeSkillCount": 489,
+    "semanticReadyCount": 41,
+    "structuralReadyCount": 489
+  },
+  "beforeAssessmentSha256": "3a0fe3380583525df6d2734c09722a6954727cacea11b7e23e6c4e1e7694d96e",
+  "decision": "review-proposed-knowledge-refresh",
+  "maturity": "L2-semantic-ready",
+  "schema": "agentlab.maintainer_skill_agent_flywheel_result.v1",
+  "scopeSkillId": "skill-scope-guide-snippets-ability-abilitystage",
   "selectedScopeIds": [
-    "skill-scope-code-workshop-common-module-contract"
-  ]
+    "skill-scope-guide-snippets-ability-abilitystage"
+  ],
+  "strictOperationEvidencePolicy": true
 }
