@@ -188,3 +188,185 @@ pub fn bind(knowledge: &Path, request_bytes: &[u8]) -> Result<Value, String> {
         "remoteCommitAuthenticated":false,"reviewerAuthenticated":false,
         "agentConsumptionVerified":false,"learningBenefitVerified":false}))
 }
+
+/// Independently check the complete guidance-bearing operator proxy exchange.
+/// This proves recorded transmission/completion, not producer authenticity or benefit.
+pub fn consumption(evidence: &Path, packet_bytes: &[u8]) -> Result<Value, String> {
+    let packet: Value = serde_json::from_slice(packet_bytes).map_err(|e| e.to_string())?;
+    need(
+        packet["schema"] == "agentlab.maintainer_guidance_packet.v1"
+            && packet["automaticPromotion"] == false,
+        "consumption packet invalid",
+    )?;
+    let prompt_bytes = read(evidence, "guidance-prompt.txt")?;
+    let prompt = std::str::from_utf8(&prompt_bytes).map_err(|e| e.to_string())?;
+    let last = prompt
+        .lines()
+        .rev()
+        .find(|l| !l.trim().is_empty())
+        .ok_or("consumption prompt empty")?;
+    let included: Value =
+        serde_json::from_str(last).map_err(|_| "consumption prompt packet absent")?;
+    need(
+        included == packet,
+        "consumption prompt omitted or changed the selected packet",
+    )?;
+    need(
+        read(evidence, "author-calibration-prompt.txt")? == prompt_bytes,
+        "consumption actual turn prompt differs",
+    )?;
+    let intent_bytes = read(evidence, "guidance-consumption-intent.json")?;
+    let intent: Value = serde_json::from_slice(&intent_bytes).map_err(|e| e.to_string())?;
+    need(
+        intent["schema"] == "agentlab.maintainer_guidance_prompt_intent.v1"
+            && intent["promptSha256"] == digest(&prompt_bytes)
+            && intent["knowledgeAuthority"] == packet["knowledgeAuthority"],
+        "consumption intent binding differs",
+    )?;
+    let expected_skills = packet["guidance"]
+        .as_array()
+        .filter(|a| !a.is_empty())
+        .ok_or("consumption selected guidance absent")?;
+    let mut selected = Vec::new();
+    for row in expected_skills {
+        let skill = &row["skill"];
+        need(
+            row["rowSha256"] == digest(&serde_json::to_vec(skill).map_err(|e| e.to_string())?)
+                && row["bodySha256"] == digest(text(skill, "body")?.as_bytes()),
+            "consumption guidance bytes differ",
+        )?;
+        selected.push(
+            json!({"id":skill["id"],"rowSha256":row["rowSha256"],"bodySha256":row["bodySha256"]}),
+        );
+    }
+    need(
+        intent["selectedSkills"] == json!(selected),
+        "consumption selection differs",
+    )?;
+    let lifecycle_bytes = read(evidence, "author-calibration-lifecycle.json")?;
+    let lifecycle: Value = serde_json::from_slice(&lifecycle_bytes).map_err(|e| e.to_string())?;
+    need(
+        lifecycle["label"] == "author-calibration"
+            && lifecycle["captureAuthority"] == "operator"
+            && lifecycle["exitCode"] == 0
+            && lifecycle["timedOut"] == false
+            && lifecycle["finalAssistantMessagePresent"] == true,
+        "consumption participant did not complete",
+    )?;
+    let final_bytes = read(evidence, "author-calibration-final-assistant-message.json")?;
+    let final_message: Value = serde_json::from_slice(&final_bytes).map_err(|e| e.to_string())?;
+    need(
+        lifecycle["finalAssistantMessageSha256"] == digest(&final_bytes)
+            && final_message["role"] == "assistant"
+            && final_message["stopReason"] != "error",
+        "consumption final assistant observation differs",
+    )?;
+    let gateway = evidence.join("gateway");
+    need(
+        fs::symlink_metadata(&gateway)
+            .map_err(|e| e.to_string())?
+            .is_dir(),
+        "consumption gateway directory invalid",
+    )?;
+    let mut completed = Vec::new();
+    for entry in fs::read_dir(&gateway).map_err(|e| e.to_string())? {
+        let name = entry
+            .map_err(|e| e.to_string())?
+            .file_name()
+            .to_string_lossy()
+            .into_owned();
+        let Some(id) = name.strip_suffix(".upstream-request.json") else {
+            continue;
+        };
+        need(
+            !id.is_empty() && id.bytes().all(|b| b.is_ascii_digit()),
+            "consumption exchange identity invalid",
+        )?;
+        let wire_bytes = read(&gateway, &name)?;
+        let wire: Value = serde_json::from_slice(&wire_bytes).map_err(|e| e.to_string())?;
+        let carries_prompt = wire["messages"].as_array().is_some_and(|messages| {
+            messages.iter().any(|m| {
+                m["role"] == "user"
+                    && (m["content"].as_str() == Some(prompt)
+                        || m["content"].as_array().is_some_and(|parts| {
+                            parts.iter().any(|part| {
+                                part["type"] == "text" && part["text"].as_str() == Some(prompt)
+                            })
+                        }))
+            })
+        });
+        if !carries_prompt {
+            continue;
+        }
+        need(
+            wire["model"] == intent["participantIdentity"]["model"]
+                && wire["providerId"] == intent["participantIdentity"]["providerRoute"],
+            "consumption model or route differs",
+        )?;
+        let status_bytes = read(&gateway, &format!("{id}.status.json"))?;
+        let status: Value = serde_json::from_slice(&status_bytes).map_err(|e| e.to_string())?;
+        let response = read(&gateway, &format!("{id}.response"))?;
+        if status["exchangeId"] != id
+            || status["durationMs"].as_u64().unwrap_or(0) == 0
+            || status["status"] != 200
+            || status["upstreamEof"] != true
+            || status["semanticComplete"] != true
+            || status["outcome"] != "completed"
+            || !status["streamError"].is_null()
+            || status["responseBytes"].as_u64() != Some(response.len() as u64)
+        {
+            continue;
+        }
+        let mut terminal = false;
+        let mut error = false;
+        if wire["stream"] == true {
+            for line in std::str::from_utf8(&response)
+                .map_err(|e| e.to_string())?
+                .lines()
+            {
+                let Some(data) = line.strip_prefix("data:") else {
+                    continue;
+                };
+                let data = data.trim();
+                if data == "[DONE]" {
+                    terminal = true;
+                    continue;
+                }
+                let frame: Value = serde_json::from_str(data).map_err(|e| e.to_string())?;
+                error |= frame.get("error").is_some_and(|e| !e.is_null());
+                terminal |= frame["choices"].as_array().is_some_and(|a| {
+                    a.iter()
+                        .any(|c| c["finish_reason"].as_str().is_some_and(|s| !s.is_empty()))
+                });
+            }
+        } else {
+            let frame: Value = serde_json::from_slice(&response).map_err(|e| e.to_string())?;
+            error = frame.get("error").is_some_and(|e| !e.is_null());
+            terminal = frame["choices"].as_array().is_some_and(|a| {
+                a.iter()
+                    .any(|c| c["finish_reason"].as_str().is_some_and(|s| !s.is_empty()))
+            });
+        }
+        need(
+            terminal && !error,
+            "consumption raw response does not establish semantic completion",
+        )?;
+        completed.push(json!({"exchangeId":id,"requestSha256":digest(&wire_bytes),
+            "statusSha256":digest(&status_bytes),"responseSha256":digest(&response),"responseBytes":response.len(),
+            "model":wire["model"],"providerRoute":wire["providerId"]}));
+    }
+    need(
+        !completed.is_empty(),
+        "consumption has no completed full-prompt exchange",
+    )?;
+    completed.sort_by_key(|r| r["exchangeId"].as_str().unwrap().to_owned());
+    Ok(
+        json!({"schema":"agentlab.maintainer_guidance_consumption.v1",
+        "packetSha256":digest(packet_bytes),"promptSha256":digest(&prompt_bytes),
+        "intentSha256":digest(&intent_bytes),"lifecycleSha256":digest(&lifecycle_bytes),
+        "knowledgeAuthority":packet["knowledgeAuthority"],"selectedSkills":selected,
+        "completedGuidanceExchanges":completed,"agentConsumptionVerified":true,
+        "producerAuthenticated":false,"learningBenefitVerified":false,"caseQualified":false,
+        "authorityWritePerformed":false,"automaticPromotion":false}),
+    )
+}

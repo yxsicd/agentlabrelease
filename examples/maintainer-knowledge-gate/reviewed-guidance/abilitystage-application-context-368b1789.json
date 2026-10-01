@@ -1,0 +1,77 @@
+{
+  "agentConsumptionVerified": false,
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "guidance": [
+    {
+      "applicabilityReason": "The next reviewed configuration-lifecycle calibration must bind the selected module entry and observe independent configuration delivery. These controls apply only to the recorded operator-dispatch source seam; they do not establish Harmony framework or emulator qualification.",
+      "bodySha256": "1c7b62a8c99a4a7283fa4e36d877d36e800e5ff844868c30d24c57bfc1f5100b",
+      "facts": [
+        {
+          "id": "lesson-fact-abilitystage-application-context-semantic-controls",
+          "qualification": {
+            "boundary": "independently reconstructed recorded host seam",
+            "caseQualified": false,
+            "harmonyBuildQualified": false,
+            "harmonyRuntimeQualified": false,
+            "producerAuthenticated": false,
+            "uiQualified": false
+          },
+          "rowSha256": "22a86461298cba4231c6613c30e37372270a05aef3f7076aa51e43e08e3a05be"
+        }
+      ],
+      "rowSha256": "480242927976384b8ad3323e53d986db31c117e0c026d5df36cbc749c1f36ff6",
+      "skill": {
+        "assetClass": "reusable-knowledge",
+        "automaticPromotion": false,
+        "body": "For a configuration-lifecycle task, bind the selected module entry and actual stage source. Independently observe creation, application-context environment registration, language change, color-mode change and destruction. Require the accepted source to pass and wrong-entry/wrong-event mutations to fail their declared intended checks. Read raw worker observations rather than trusting startup completion or producer booleans. These verified controls cover only the recorded operator-dispatch source seam; separately calibrate actual framework delivery, ArkTS/HAP, exact emulator API and ohosTest before qualifying the task.",
+        "factIds": [
+          "lesson-fact-abilitystage-application-context-semantic-controls"
+        ],
+        "id": "lesson-skill-abilitystage-application-context-semantic-controls",
+        "lessonSource": {
+          "lessonFileDigest": "f14cf6f505d3eaede540ad02200ea6d14fa2351699185d33ec3f6967f91c3bdd",
+          "lessonId": "lesson-abilitystage-application-context-semantic-controls",
+          "repository": "agentlabstage-48eb54481017",
+          "revision": "3a9d8a4fc7a720e13741da1b70f3bc96c2636568",
+          "tablePrefix": "data/"
+        },
+        "methodDigest": "a70d6d7d7db82589415e8a4019e99cc3454510da6b22a3eaaea0f13af2526c3d",
+        "methodRevision": "bece477a916807ec344a00f5b00f8e0966e3d0e9",
+        "methodSkillId": "agentlab-experiment-learning",
+        "objectId": "lesson-abilitystage-application-context-semantic-controls",
+        "ownershipPlane": "target-operations",
+        "repositoryId": "guide-snippets",
+        "role": "maintenance",
+        "skillLayer": "method",
+        "sourceLessonExportDigest": "f14cf6f505d3eaede540ad02200ea6d14fa2351699185d33ec3f6967f91c3bdd",
+        "sourceLessonId": "lesson-abilitystage-application-context-semantic-controls",
+        "sourceRevision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+        "stage": "calibration",
+        "title": "A startup-only observation does not establish configuration delivery through the selected stage"
+      }
+    }
+  ],
+  "knowledgeAuthority": {
+    "exportedBy": {
+      "kind": "operator-replay",
+      "repository": "yxsicd/agentlabrelease",
+      "runId": "lesson-admission-bece477-real-v2"
+    },
+    "repo": "agentlabtablegit",
+    "revision": "368b17895b23633656a26f9f51cb300cb11fa829"
+  },
+  "knowledgeCutSha256": "a316bdac96d7a6721066ae7350dbd54ec83c3760fca4625268a92d62254db189",
+  "learningBenefitVerified": false,
+  "remoteCommitAuthenticated": false,
+  "reviewerAuthenticated": false,
+  "schema": "agentlab.maintainer_guidance_packet.v1",
+  "selectionSha256": "e38ec38d3b8e4a91d208931d6e6bdfa3a087f79f0b78925b5b8558b73587a530",
+  "sources": [
+    {
+      "repositoryId": "guide-snippets",
+      "sourceRevision": "71bbb3916625c8d9a370b7a1989b3a7f82090525"
+    }
+  ],
+  "stage": "calibration"
+}
