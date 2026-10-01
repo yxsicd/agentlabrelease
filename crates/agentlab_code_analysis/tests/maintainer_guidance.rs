@@ -171,6 +171,35 @@ fn recorded_wire_requires_full_prompt_exact_guidance_and_raw_semantic_completion
     assert_eq!(receipt["learningBenefitVerified"], false);
     assert_eq!(receipt["producerAuthenticated"], false);
     assert_eq!(receipt["caseQualified"], false);
+    fs::write(
+        gateway.join("0002.upstream-request.json"),
+        serde_json::to_vec(&wire).unwrap(),
+    )
+    .unwrap();
+    fs::write(gateway.join("0002.response"), b"data: {\"choices\":[]}\n\n").unwrap();
+    let mut later = status.clone();
+    later["exchangeId"] = json!("0002");
+    later["semanticComplete"] = json!(false);
+    later["upstreamEof"] = json!(false);
+    later["outcome"] = json!("upstream_deadline_exceeded");
+    fs::write(
+        gateway.join("0002.status.json"),
+        serde_json::to_vec(&later).unwrap(),
+    )
+    .unwrap();
+    assert!(
+        consumption(&f.root, &packet_bytes)
+            .unwrap_err()
+            .contains("final exchange"),
+        "completed prefix and exit zero cannot qualify an interrupted final exchange"
+    );
+    for name in [
+        "0002.upstream-request.json",
+        "0002.response",
+        "0002.status.json",
+    ] {
+        fs::remove_file(gateway.join(name)).unwrap();
+    }
     let mut missing = wire.clone();
     missing["messages"][0]["content"][0]["text"] = json!("only the Skill id, not the body");
     fs::write(

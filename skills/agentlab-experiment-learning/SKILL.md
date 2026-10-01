@@ -188,6 +188,17 @@ participant started. Resolve runner-local paths in a step through RUNNER_TEMP an
 GITHUB_ENV. Keep workflow parse/launch failures separate from captured Agent
 outcomes; a missing check in a PR rollup is not evidence that this path passed.
 
+A real guided author run completed source reads, then its final gateway response
+hit the 180-second upstream body deadline without a terminal frame. Pi still
+exited zero and emitted an assistant observation but wrote no draft. Successful
+earlier guidance-bearing exchanges prove transmission only, not a completed
+author round. Require the numerically final captured exchange to be complete and
+still guidance-bound before accepting this consumption gate; reject incomplete
+or compacted-away final context rather than silently inferring continued use.
+Preserve the original weaker receipt and failed raw stream, then replay the
+stronger gate on the same bytes. Do not relabel this as a semantic task failure
+or loosen the deadline merely to obtain a passing outcome.
+
 When promoting against real multi-kind program facts, preserve heterogeneous
 unowned fields as JSON rather than coercing arrays/objects or dropping baseline
 rows. The exchange records observed mixed field types separately. Explicitly

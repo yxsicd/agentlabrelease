@@ -269,6 +269,7 @@ pub fn consumption(evidence: &Path, packet_bytes: &[u8]) -> Result<Value, String
         "consumption gateway directory invalid",
     )?;
     let mut completed = Vec::new();
+    let mut last_exchange: Option<(u64, String)> = None;
     for entry in fs::read_dir(&gateway).map_err(|e| e.to_string())? {
         let name = entry
             .map_err(|e| e.to_string())?
@@ -282,6 +283,12 @@ pub fn consumption(evidence: &Path, packet_bytes: &[u8]) -> Result<Value, String
             !id.is_empty() && id.bytes().all(|b| b.is_ascii_digit()),
             "consumption exchange identity invalid",
         )?;
+        let sequence = id
+            .parse::<u64>()
+            .map_err(|_| "consumption exchange sequence invalid")?;
+        if last_exchange.as_ref().is_none_or(|(n, _)| sequence > *n) {
+            last_exchange = Some((sequence, id.to_owned()));
+        }
         let wire_bytes = read(&gateway, &name)?;
         let wire: Value = serde_json::from_slice(&wire_bytes).map_err(|e| e.to_string())?;
         let carries_prompt = wire["messages"].as_array().is_some_and(|messages| {
@@ -358,6 +365,13 @@ pub fn consumption(evidence: &Path, packet_bytes: &[u8]) -> Result<Value, String
     need(
         !completed.is_empty(),
         "consumption has no completed full-prompt exchange",
+    )?;
+    let last_id = &last_exchange.ok_or("consumption exchanges absent")?.1;
+    need(
+        completed
+            .iter()
+            .any(|r| r["exchangeId"] == last_id.as_str()),
+        "consumption final exchange incomplete or no longer bound to the full guidance prompt",
     )?;
     completed.sort_by_key(|r| r["exchangeId"].as_str().unwrap().to_owned());
     Ok(
