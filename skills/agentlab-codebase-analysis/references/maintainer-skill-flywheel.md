@@ -631,3 +631,9 @@ review path, not by rebasing a proposal onto newer data or auto-merging source.
 Admission is point-in-time evidence, not a lock: transaction-time revision and
 row-version fences remain mandatory. A stale-input refusal prevents wasted work
 but does not count as a productive round or overall maturity gain.
+Resolve the executable in the actual build layout. The semantic loop accepts
+`AGENTLAB_FLYWHEEL_GATE`, otherwise uses `CARGO_TARGET_DIR` (or the historical
+`target`) plus `debug/agentlab-maintainer-skill-flywheel`. Regressions must pass
+the Cargo-provided binary path instead of assuming workspace-local build output;
+an isolated build-directory failure is infrastructure evidence, not an Agent
+failure or a source drift verdict.

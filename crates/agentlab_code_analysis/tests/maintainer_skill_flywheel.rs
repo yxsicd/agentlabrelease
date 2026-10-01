@@ -670,6 +670,7 @@ fn strict_execution_loop_stops_before_agent_when_source_cut_drifted() {
         .arg(&knowledge)
         .arg(&run)
         .args(["auto", "1", "/absent/participant"])
+        .env("AGENTLAB_FLYWHEEL_GATE", env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
         .current_dir(project)
         .output()
         .unwrap();

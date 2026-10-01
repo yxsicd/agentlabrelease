@@ -11,6 +11,11 @@ run_root=$2
 repository_selector=$3
 iterations=$4
 pi=$5
+gate=${AGENTLAB_FLYWHEEL_GATE:-${CARGO_TARGET_DIR:-target}/debug/agentlab-maintainer-skill-flywheel}
+if [[ ! -x "$gate" ]]; then
+  echo "Flywheel gate is not executable: configure AGENTLAB_FLYWHEEL_GATE or CARGO_TARGET_DIR" >&2
+  exit 2
+fi
 
 max_iterations=${AGENTLAB_MAX_ITERATIONS:-3}
 scope_batch_size=${AGENTLAB_SCOPE_BATCH_SIZE:-1}
@@ -42,7 +47,7 @@ fi
 for ((iteration = 1; iteration <= iterations; iteration++)); do
   iteration_root="$loop_root/iteration-$iteration"
   mkdir -p "$iteration_root"
-  target/debug/agentlab-maintainer-skill-flywheel --resolve-latest-assessment \
+  "$gate" --resolve-latest-assessment \
     --base "$working_knowledge" --output "$iteration_root/durable-assessment-reference.json"
   assessment=$(jq -r '.assessmentPath' "$iteration_root/durable-assessment-reference.json")
   test -n "$assessment"
@@ -53,14 +58,14 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
     if [[ $(jq -r '.roundIndex' "$assessment") -gt 1 ]]; then
       plan_parent=(--parent-assessment-sha256 "$(jq -r '.parentAssessmentSha256' "$assessment")")
     fi
-    target/debug/agentlab-maintainer-skill-flywheel --plan-next-round \
+    "$gate" --plan-next-round \
       --scope-skills "$working_knowledge/maintainer_scope_skills.jsonl" \
       --program-facts "$working_knowledge/program_facts.jsonl" \
       --operation-receipts-root "$working_knowledge/operation-evidence" \
       --round-index "$(jq -r '.roundIndex' "$assessment")" ${plan_parent[@]+"${plan_parent[@]}"} \
       --available-lane semantic-refresh --batch-size "$scope_batch_size" \
       --repository "$repository_selector" --output "$iteration_root/strict-next-round-plan.json"
-    target/debug/agentlab-maintainer-skill-flywheel --prepare-semantic-batch \
+    "$gate" --prepare-semantic-batch \
       --scope-skills "$working_knowledge/maintainer_scope_skills.jsonl" \
       --program-facts "$working_knowledge/program_facts.jsonl" \
       --operation-receipts-root "$working_knowledge/operation-evidence" \
@@ -173,7 +178,7 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
     test -d "$working_knowledge/operation-evidence"
     operation_receipt_args=(--operation-receipts-root "$working_knowledge/operation-evidence")
   fi
-  target/debug/agentlab-maintainer-skill-flywheel \
+  "$gate" \
     --scope-skills "$working_knowledge/maintainer_scope_skills.jsonl" \
     --program-facts "$iteration_root/candidate-program-facts.jsonl" \
     --round-index "$round" --parent-assessment-sha256 "$parent" "${operation_receipt_args[@]}" \
@@ -182,7 +187,7 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
   while IFS= read -r selected_scope; do
     selected_args+=(--selected-scope "$selected_scope")
   done < <(jq -r '.requests[].scope.id' "$iteration_root/flywheel-batch-request.json")
-  target/debug/agentlab-maintainer-skill-flywheel --compare-semantic-round \
+  "$gate" --compare-semantic-round \
     --before "$assessment" --after "$iteration_root/candidate-assessment.json" \
     "${selected_args[@]}" --output "$iteration_root/result.json"
   jq -e '.decision == "review-proposed-knowledge"' "$iteration_root/result.json"
