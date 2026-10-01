@@ -131,6 +131,10 @@ jobs:
             --calibration-sha256 "$sha" --previous-feedback-plan "$evidence/stage-next.json" \
             --output "$evidence/stage-repeat.json"
           jq -e '.schedulingAllowed==false and .qualified==false' "$evidence/stage-repeat.json"
+          "$binary" --export-stage-calibration --candidates "$KNOWLEDGE/case_generation_candidates.jsonl" \
+            --candidate-id "$CANDIDATE_ID" --downstream-plan "$evidence/queue/$CANDIDATE_ID/next-actions.json" \
+            --stage-contract "$evidence/stage-contract.json" --stage-calibration "$evidence/stage-calibration.json" \
+            --calibration-sha256 "$sha" --output "$evidence/stage-assets"
       - name: Preserve complete diagnostic evidence including failures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

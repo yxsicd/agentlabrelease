@@ -4,6 +4,108 @@ use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet};
 const METHOD: &[u8] = include_bytes!("../../../scripts/calibrate-harmony-stage-controls.cjs");
 
+/// Queryable operational observations; never reusable knowledge or a qualified case.
+pub fn assets(
+    candidate: &[u8],
+    downstream: &[u8],
+    contract: &[u8],
+    capture: &[u8],
+    capture_sha: &str,
+) -> Result<BTreeMap<String, BTreeMap<String, Value>>, String> {
+    let feedback = plan(candidate, downstream, contract, capture, capture_sha, None)?;
+    let receipt: Value = serde_json::from_slice(capture).map_err(|e| e.to_string())?;
+    let consumer_sha = digest(include_bytes!("maintainer_stage_feedback.rs"));
+    let run_id = format!(
+        "stage-{}",
+        digest(
+            &serde_json::to_vec(&json!([
+                feedback["candidateSha256"],
+                feedback["contractSha256"],
+                capture_sha,
+                feedback["taskSha256"],
+                consumer_sha
+            ]))
+            .map_err(|e| e.to_string())?
+        )
+    );
+    let mut tables: BTreeMap<String, BTreeMap<String, Value>> =
+        ["calibration_controls", "checks", "phase_failures"]
+            .into_iter()
+            .map(|name| (name.to_owned(), BTreeMap::new()))
+            .collect();
+    let mut put = |table: &str, mut row: Value| {
+        row["assetClass"] = json!("evaluation-instance");
+        row["runId"] = json!(run_id);
+        let id = row["id"].as_str().unwrap().to_owned();
+        tables.entry(table.into()).or_default().insert(id, row);
+    };
+    put(
+        "runs",
+        json!({"id":run_id,"kind":"host-seam-calibration",
+        "candidateId":feedback["candidateId"],"candidateSha256":feedback["candidateSha256"],
+        "sourceRevision":feedback["sourceRevision"],"sourceSetSha256":feedback["sourceSetSha256"],
+        "knowledgeCutSha256":feedback["knowledgeCutSha256"],"runtime":receipt["runtime"],
+        "compiler":receipt["compiler"],"calibrationSha256":capture_sha,
+        "status":if receipt["infrastructureFailure"].is_null(){"captured"}else{"infrastructure-failed"},
+        "semanticSeamCalibrationPassed":feedback["semanticSeamCalibrationPassed"],
+        "qualified":false,"automaticPromotion":false,"harmonyRuntimeQualified":false}),
+    );
+    put(
+        "analysis_records",
+        json!({"id":format!("{run_id}-feedback"),"kind":"raw-calibration-reconstruction",
+        "consumerSourceSha256":consumer_sha,
+        "code":"maintainer_stage_feedback::plan", "inputSha256":capture_sha,"result":feedback,
+        "verificationBoundary":"recorded-content host seam; no runtime qualification, authority admission or producer authentication"}),
+    );
+    for control in rows(&receipt, "controls")? {
+        let variant = text(control, "id")?;
+        let control_id = format!("{run_id}-control-{}", digest(variant.as_bytes()));
+        put(
+            "calibration_controls",
+            json!({"id":control_id,"variant":variant,
+            "role":if variant=="baseline"{"accepted"}else{"wrong"},"completed":control["completed"],
+            "expectedVerdict":if variant=="baseline"{"accept"}else{"reject"},
+            "observedVerdict":control["verdict"],"intendedFailureObserved":control["intendedFailureObserved"],
+            "exitCode":control["workerExecution"]["exitCode"],"durationMs":control["workerExecution"]["durationMs"],
+            "capturePath":"stage-calibration.json","captureSha256":capture_sha}),
+        );
+        for check in rows(control, "checks")? {
+            let name = text(check, "id")?;
+            put(
+                "checks",
+                json!({"id":format!("{control_id}-check-{}",digest(name.as_bytes())),
+                "controlId":control_id,"variant":variant,"check":name,"passed":check["passed"],
+                "authority":"independently-reconstructed-host-seam", "capturePath":"stage-calibration.json",
+                "captureSha256":capture_sha}),
+            );
+        }
+    }
+    // Keep the failed worker separate: it is not a completed negative control.
+    if !receipt["infrastructureFailure"].is_null() {
+        put(
+            "phase_failures",
+            json!({"id":format!("{run_id}-infrastructure"),"kind":"calibration-infrastructure",
+            "record":receipt["infrastructureFailure"],"capturePath":"stage-calibration.json","captureSha256":capture_sha}),
+        );
+    }
+    let mut feedback_bytes = serde_json::to_vec_pretty(&feedback).map_err(|e| e.to_string())?;
+    feedback_bytes.push(b'\n');
+    for (path, bytes) in [
+        ("candidate.json", candidate),
+        ("downstream-plan.json", downstream),
+        ("stage-contract.json", contract),
+        ("stage-calibration.json", capture),
+        ("feedback.json", feedback_bytes.as_slice()),
+    ] {
+        put(
+            "evidence_files",
+            json!({"id":format!("{run_id}-file-{}",digest(path.as_bytes())),
+            "path":path,"sha256":digest(bytes),"bytes":bytes.len(),"kind":"retained-raw-input-or-derived-feedback"}),
+        );
+    }
+    Ok(tables)
+}
+
 /// Recover prior owned feedback only after reconstructing its retained capture.
 /// A prior plan hash by itself is not enough to suppress new scheduling.
 #[allow(clippy::too_many_arguments)]

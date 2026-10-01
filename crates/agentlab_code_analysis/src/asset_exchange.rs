@@ -65,6 +65,9 @@ pub fn export(path: &Path, class: &str, tables: &Tables) -> Value {
                 ("result", "object"),
             ],
             "checks" => &[
+                ("runId", "string"),
+                ("controlId", "string"),
+                ("variant", "string"),
                 ("phaseId", "string"),
                 ("check", "string"),
                 ("passed", "boolean"),
@@ -74,6 +77,19 @@ pub fn export(path: &Path, class: &str, tables: &Tables) -> Value {
                 ("buildPassed", "boolean"),
                 ("behaviorPassed", "boolean"),
                 ("sourceCut", "string"),
+            ],
+            "calibration_controls" => &[
+                ("runId", "string"),
+                ("variant", "string"),
+                ("role", "string"),
+                ("completed", "boolean"),
+                ("expectedVerdict", "string"),
+                ("observedVerdict", "string"),
+                ("intendedFailureObserved", "boolean"),
+                ("exitCode", "integer"),
+                ("durationMs", "integer"),
+                ("capturePath", "string"),
+                ("captureSha256", "string"),
             ],
             "lesson_evidence" => &[
                 ("variant", "string"),
@@ -90,9 +106,16 @@ pub fn export(path: &Path, class: &str, tables: &Tables) -> Value {
                 ("observedPass", "boolean"),
                 ("receipt", "object"),
             ],
-            "phase_failures" | "artifact_publications" | "assessments" | "checks" => {
-                &[("phaseId", "string"), ("phaseLabel", "string")]
-            }
+            "phase_failures" => &[
+                ("phaseId", "string"),
+                ("phaseLabel", "string"),
+                ("runId", "string"),
+                ("kind", "string"),
+                ("record", "object"),
+                ("capturePath", "string"),
+                ("captureSha256", "string"),
+            ],
+            "artifact_publications" => &[("phaseId", "string"), ("phaseLabel", "string")],
             "attempts" => &[("parentAttemptId", "string"), ("forkScope", "string")],
             "llm_requests" => &[
                 ("streamError", "object"),
