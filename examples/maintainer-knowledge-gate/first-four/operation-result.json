@@ -1,0 +1,24 @@
+{
+  "advancedScopeIds": [
+    "skill-scope-code-workshop-componentlibrary-framework"
+  ],
+  "afterAssessmentSha256": "c653f3ba120a780f141a9df49b295003f371cce1a02149c2039c925979567d31",
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "beforeAssessmentSha256": "f35a5fc31ddb5c0dcdb40cbc62d613c0d7d36ddf26ec6f829fa84008ebe55246",
+  "decision": "review-proposed-operation-knowledge",
+  "maintenanceReadyDelta": 1,
+  "nextRoundObjectives": [
+    "close 440 MS-BEHAVIOR-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 447 MS-BOUNDARY-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 38 MS-OPERATION-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 2 MS-OPERATION-RECEIPT-UNVERIFIED gaps with revision-bound evidence",
+    "close 445 MS-PROGRAM-EVIDENCE-UNBOUND gaps with revision-bound evidence",
+    "close 446 MS-RELATIONS-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 449 MS-RESPONSIBILITY-EVIDENCE-MISSING gaps with revision-bound evidence"
+  ],
+  "schema": "agentlab.maintainer_operation_round_result.v1",
+  "selectedScopeIds": [
+    "skill-scope-code-workshop-componentlibrary-framework"
+  ]
+}

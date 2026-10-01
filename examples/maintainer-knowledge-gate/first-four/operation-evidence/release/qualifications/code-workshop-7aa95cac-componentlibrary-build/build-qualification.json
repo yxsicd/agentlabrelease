@@ -1,0 +1,106 @@
+{
+  "schema": "agentlab.maintainer_scope_build_qualification.v1",
+  "status": "qualified",
+  "automaticPromotion": false,
+  "source": {
+    "repositoryId": "code-workshop",
+    "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+    "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+    "cleanBefore": true,
+    "cleanAfter": true
+  },
+  "scope": {
+    "scopeSkillIds": [
+      "skill-scope-code-workshop-componentlibrary-framework"
+    ],
+    "lane": "build-only",
+    "module": "componentlibrary",
+    "target": "default",
+    "scopeSpecificBinding": true
+  },
+  "toolchain": {
+    "sdkRelease": "6.1.1.300",
+    "compatibleSdkVersion": "6.1.0(23)",
+    "targetSdkVersion": "6.1.1(24)",
+    "hvigorVersion": "6.24.4",
+    "ohpmVersion": "6.1.2.285"
+  },
+  "dependencyPreparation": {
+    "command": [
+      "ohpm",
+      "install"
+    ],
+    "status": "successful",
+    "exitCode": 0,
+    "durationMs": 10970,
+    "lockSha256": "7517f565b996816a2e2fc3f34b7fa7d55584b58e79eccfffcdb191cf599c0501"
+  },
+  "build": {
+    "status": "successful",
+    "task": "assembleHar",
+    "command": [
+      "hvigorw",
+      "clean",
+      "--no-daemon",
+      "--no-parallel",
+      "--no-type-check",
+      "--analyze=false",
+      "--mode",
+      "module",
+      "-p",
+      "product=default",
+      "-p",
+      "module=componentlibrary@default",
+      "assembleHar"
+    ],
+    "canonicalContentReproducible": true,
+    "rawArchiveReproducible": false,
+    "attempts": [
+      {
+        "cleanBuild": true,
+        "exitCode": 0,
+        "durationMs": 17003,
+        "hvigorReportedMs": 15383,
+        "artifact": "features/componentlibrary/build/default/outputs/default/componentlibrary.har",
+        "artifactBytes": 9787722,
+        "artifactSha256": "006285789455dcaaf27a36289ee089fa970a2015c1c640007277925e17ce8b2b",
+        "canonicalMemberSha256": "b3383cfa53d64281efc6c9d7c075a0c25fc0d0fa0a1c853676c742c2c6ecfa1a",
+        "memberCount": 239,
+        "buildLogSha256": "c9a9fb6cfd4fc73b2e043f41e5d8cf8f84f227ddf8154cad2ebe5b714a2bf9b1",
+        "executionAuthority": {
+          "routeDecision": "peer_direct",
+          "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+          "operationId": "exec-0000000000000178"
+        }
+      },
+      {
+        "cleanBuild": true,
+        "exitCode": 0,
+        "durationMs": 16931,
+        "hvigorReportedMs": 15360,
+        "artifact": "features/componentlibrary/build/default/outputs/default/componentlibrary.har",
+        "artifactBytes": 9787705,
+        "artifactSha256": "d06409faf81ca9abe9362f14bc896d07efd488392affb4de8721172058492540",
+        "canonicalMemberSha256": "b3383cfa53d64281efc6c9d7c075a0c25fc0d0fa0a1c853676c742c2c6ecfa1a",
+        "memberCount": 239,
+        "buildLogSha256": "6f145eccc1f41d0d2dcac0007b2bb941b1cbde024cb7e59c97e84385f5fcc5e0",
+        "executionAuthority": {
+          "routeDecision": "peer_direct",
+          "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+          "operationId": "exec-000000000000017f"
+        }
+      }
+    ]
+  },
+  "qualificationScope": {
+    "moduleBuild": true,
+    "runtime": false,
+    "tests": false,
+    "performance": false
+  },
+  "limitations": [
+    "This receipt proves repeatable source compilation and HAR packaging for componentlibrary@default only; it does not prove runtime UI behavior or device compatibility.",
+    "The build emitted ArkTS/system-capability warnings that are retained in the build-log digests; successful packaging does not convert those warnings into runtime support claims.",
+    "The raw gzip HAR archives differ, while the 239 canonical member paths and bytes are identical; reproducibility is therefore asserted only for member content."
+  ]
+}

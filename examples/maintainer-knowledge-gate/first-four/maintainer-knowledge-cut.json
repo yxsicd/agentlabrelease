@@ -32,13 +32,13 @@
   "sourceSetSha256": "88310ecd6a5ace0c7393c7981b8f9ba9103afff41133b71d0b84e951e95f24a6",
   "tableGitAuthority": {
     "exportedBy": {
-      "kind": "github-action",
+      "host": "m4mac",
+      "kind": "local-operator",
       "repository": "yxsicd/agentlabrelease",
-      "runId": "36620658559",
-      "runUrl": "https://github.com/yxsicd/agentlabrelease/actions/runs/36620658559"
+      "runId": "authority-refresh-20261001"
     },
     "repo": "agentlabtablegit",
-    "revision": "729f726f0985a1789d2e488147be484b7993afe4"
+    "revision": "15e976790cc7a508c234a966b1bdf0585f0d6374"
   },
   "tables": {
     "evaluationCases": {
@@ -51,7 +51,7 @@
     },
     "maintainerSkillRefreshRounds": {
       "path": "maintainer_skill_refresh_rounds.jsonl",
-      "sha256": "2d947123bae3955e2411efce89b01721b0a517b17c4a90a0746c2d6c013aa341"
+      "sha256": "71207a402696d98a2854bbfa1da18e60de61068980e691e762dbc1cf7a284d68"
     },
     "maintainerSkills": {
       "path": "maintainer_skills.jsonl",
@@ -59,7 +59,7 @@
     },
     "programFacts": {
       "path": "program_facts.jsonl",
-      "sha256": "07a8d5a287dd09974c3024613d7692094c92cd817fa98ce89d646e55317d98b4"
+      "sha256": "8ae23e768f912dfea7fb4f948959a60d3bb8dca1741c22c30a1423bfdcf4778c"
     }
   }
 }
