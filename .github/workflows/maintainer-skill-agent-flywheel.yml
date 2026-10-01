@@ -139,7 +139,7 @@ jobs:
             --run-id "$GITHUB_RUN_ID" --github-repository "$GITHUB_REPOSITORY"
           jq '{repo,revision,authorityVerified,mirror,tables}' \
             "$AGENTLAB_ROOT/run/tablegit-sync-receipt.json" >> "$GITHUB_STEP_SUMMARY"
-      - name: Rebind the focused candidate to the refreshed knowledge cut
+      - name: Derive a focused successor without rewriting the parent candidate
         if: inputs.mode == 'focused-refresh'
         run: |
           set -euo pipefail
@@ -149,7 +149,7 @@ jobs:
             --focused-receipt "$AGENTLAB_ROOT/run/focused-refresh/proposal-receipt.json" \
             --evidence-root . \
             --output "$AGENTLAB_ROOT/run/focused-refresh/candidate-rebind-receipt.json"
-          jq '{candidateId,readinessDecision,nextGate,addedEditablePaths,addedContextPaths}' \
+          jq '{candidateId,parentCandidateId,parentPreserved,parentPlanPreserved,successorPlan,readinessDecision,nextGate,addedEditablePaths,addedContextPaths}' \
             "$AGENTLAB_ROOT/run/focused-refresh/candidate-rebind-receipt.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Sample one non-promoted shadow case from the knowledge gain
         if: inputs.mode == 'expand'

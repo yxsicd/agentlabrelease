@@ -51,6 +51,18 @@ New proposals retain the runtime target and canonical request-value SHA in
 lineage so later consumers can distinguish routing cuts without rewriting
 historical candidates. The value digest is not the original request-file SHA.
 
+After focused knowledge refresh, derive a stable successor candidate instead of
+rewriting the original candidate or construction plan. Bind the parent candidate
+ID/value digest, parent knowledge cut, refreshed fact digest and refresh receipt
+digest in lineage. Require the refreshed fact to match the current exported cut.
+Keep the old candidate and plan intact, and create a separate child plan. Clear
+inherited runtime, Oracle and wrong-variant receipts because they bind the parent,
+not the child; a knowledge-only successor remains unqualified. Validate the child
+in an isolated projection before publication, and prove an unchanged repeat does
+not append another candidate or alter any retained parent. The historical
+`focused_fact_refresh.py rebind-candidate` command now performs this additive
+derivation; its returned `candidateId` and `successorPlan` identify the child.
+
 Write stable `evaluation_cases` task rows with source/knowledge cuts and analysis references. Keep assessed-Agent-visible requirements separate from operator-owned reference patches and grading evidence. Do not disclose a gold implementation as part of the task prompt.
 
 Use a strong construction Agent or deterministic generator as appropriate. Capture construction actions as Harness-owned evidence too. Agent-proposed seeds are candidates until independently calibrated; quality of the construction Agent is not the assessed-Agent score.

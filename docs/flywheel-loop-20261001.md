@@ -214,3 +214,35 @@ Validation: full Rust code-analysis suite, both unmocked/retained-evidence focus
 Rust regressions, 55 focused/Agent/shadow Python tests, release checksum validation,
 shell syntax, Rust formatting and diff whitespace checks. Runtime, active authority
 admission and a new Secret-backed Agent loop remain unqualified.
+
+## Additive candidate successor continuation
+
+Overall maturity stays **47%**. The historical focused-refresh command previously
+overwrote the original candidate's knowledge cut and its construction plan, and
+emitted lineage fields absent from the candidate schema. It now derives a stable
+successor with explicit parent candidate/value/cut and refreshed-fact/receipt
+digests. The parent value and plan are preserved. The exported cut must bind the
+current fact table; a private unadmitted proposal cannot masquerade as new authority.
+
+The successor gets a separate plan and clears all borrowed runtime/Oracle/wrong
+variant receipts and counts. Its knowledge-only readiness remains
+`blocked-qualification`. An isolated projection validates readiness before any
+retained candidate input changes. An identical repeat leaves both candidate and
+plan bytes unchanged. The existing Action exports the returned child identity
+and plan; the old CLI name remains compatible but no longer mutates the parent.
+
+The new Rust regression invokes the actual derivation CLI for two arbitrary
+repository identities, preserves parents, clears borrowed qualifications, verifies
+repeat stability and rejects a mismatched accepted-fact receipt. These are
+model/lineage controls, not real cross-repository Agent or emulator qualification.
+
+PR116's first public-validation attempt passed eight applicable jobs and failed
+two install downloads with HTTP 504 after bounded retries. Failed raw logs and
+artifacts remain in run `36868148530`. Only those terminal failed jobs were
+rerun; neither the initial failure nor a pending retry is a passing result.
+No TableGit admission, merge, new Agent dispatch or Release publication occurred.
+
+Validation: full Rust suite, unmocked two-repository successor CLI regression,
+55 focused/Agent/shadow Python tests, release checksums, formatting and whitespace
+checks. The successor regression also recovers an interrupted plan-first append
+without duplicate candidates; input fingerprints are rechecked before publication.

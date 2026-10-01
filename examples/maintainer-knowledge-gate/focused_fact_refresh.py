@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+import copy
+import tempfile
 
 
 HERE = Path(__file__).resolve().parent
@@ -259,18 +261,27 @@ def validate(args) -> None:
 
 
 def rebind_candidate(args) -> None:
+    """Compatibility command: derive a successor, never rewrite its parent."""
     knowledge = args.knowledge
+    BASE.require(not args.output.exists(), "successor receipt already exists")
     candidates_path = knowledge / "case_generation_candidates.jsonl"
+    original_candidates_bytes = candidates_path.read_bytes()
+    original_plan_bytes = args.plan.read_bytes()
     facts = {row["id"]: row for row in READINESS.rows(knowledge / "program_facts.jsonl")}
     candidates = READINESS.rows(candidates_path)
     matches = [row for row in candidates if row["id"] == args.candidate_id]
     BASE.require(len(matches) == 1, "focused candidate is absent or duplicated")
     before = matches[0]
+    BASE.require(before.get("status") == "shadow-proposal" and before.get("automaticPromotion") is False,
+                 "only non-promoted shadow parents can derive a successor")
     refresh = BASE.load(args.focused_receipt)
     fact_id = refresh.get("acceptedFactId")
     BASE.require(refresh.get("changeKind") == "updated" and fact_id in facts,
                  "focused receipt does not identify an updated fact")
     fact = facts[fact_id]
+    BASE.require(refresh.get("candidateId") == before["id"], "refresh receipt candidate differs")
+    BASE.require(refresh.get("acceptedFactSha256") == READINESS.value_digest(fact),
+                 "refresh receipt accepted fact digest differs")
     BASE.require(before.get("factIds") == [fact_id], "candidate fact binding differs")
     BASE.require(before.get("scopeSkillIds") == fact.get("scopeSkillIds"),
                  "candidate scope binding differs")
@@ -279,6 +290,8 @@ def rebind_candidate(args) -> None:
                  "candidate source binding differs")
     plan = BASE.load(args.plan)
     BASE.require(plan.get("candidateId") == args.candidate_id, "construction plan candidate differs")
+    BASE.require(plan.get("candidateSha256") == READINESS.value_digest(before),
+                 "parent construction plan digest differs")
     evidence_paths = {row["path"] for row in fact.get("evidence", [])}
     implementation_paths = [row["path"] for row in plan["requiredImplementationPaths"]]
     oracle_paths = [row["path"] for row in plan["requiredOraclePaths"]]
@@ -297,31 +310,86 @@ def rebind_candidate(args) -> None:
                  "refreshed fact has insufficient limitations")
     rounds = READINESS.rows(knowledge / "maintainer_skill_refresh_rounds.jsonl")
     latest = max(rounds, key=lambda row: row["roundIndex"])
+    cut = BASE.load(knowledge / "maintainer-knowledge-cut.json")
+    BASE.require(before["sourceSetSha256"] == cut["sourceSetSha256"], "source set changed")
+    fact_table = cut.get("tables", {}).get("programFacts", {})
+    BASE.require(fact_table.get("path") == "program_facts.jsonl"
+                 and fact_table.get("sha256") == BASE.digest(knowledge / "program_facts.jsonl"),
+                 "refreshed facts are not bound to the current exported knowledge cut")
+    parent_sha = READINESS.value_digest(before)
+    cut_sha = BASE.digest(knowledge / "maintainer-knowledge-cut.json")
+    fact_sha = READINESS.value_digest(fact)
+    refresh_sha = BASE.digest(args.focused_receipt)
+    successor_id = "shadow-case-refresh-" + READINESS.value_digest(
+        {"parent": parent_sha, "cut": cut_sha, "fact": fact_sha, "refresh": refresh_sha}
+    )[:32]
     lineage = dict(before.get("lineage") or {})
-    lineage["focusedRefreshReceiptSha256"] = BASE.digest(args.focused_receipt)
+    lineage.update({"focusedRefreshReceiptSha256": refresh_sha,
+                    "parentCandidateId": before["id"], "parentCandidateSha256": parent_sha,
+                    "parentKnowledgeCutSha256": before["knowledgeCutSha256"],
+                    "refreshedFactSha256": fact_sha})
     after = {
         **before,
+        "id": successor_id,
         "editablePaths": editable,
         "contextPaths": context,
         "limitations": limitations,
-        "knowledgeCutSha256": BASE.digest(knowledge / "maintainer-knowledge-cut.json"),
+        "knowledgeCutSha256": cut_sha,
         "maintainerSkillRefreshRoundId": latest["id"],
         "lineage": lineage,
     }
-    replaced = [after if row["id"] == args.candidate_id else row for row in candidates]
-    candidates_path.write_bytes(b"".join(
-        READINESS.canonical(row) + b"\n" for row in sorted(replaced, key=lambda row: row["id"])
-    ))
-    plan["candidateSha256"] = READINESS.value_digest(after)
-    BASE.write(args.plan, plan)
-    readiness = READINESS.assess(knowledge, args.candidate_id, args.plan, args.evidence_root)
+    successor_plan = copy.deepcopy(plan)
+    successor_plan["candidateId"] = successor_id
+    successor_plan["candidateSha256"] = READINESS.value_digest(after)
+    # Old receipts bind the parent identity, never the successor.
+    for requirement in successor_plan["runtimeRequirements"]:
+        requirement.update({"status": "unqualified", "evidence": []})
+    for field in ("oracleExecution", "wrongVariantCalibration"):
+        successor_plan[field].update({"status": "unqualified", "evidence": []})
+    successor_plan["wrongVariantCalibration"]["executedCount"] = 0
+    successor_plan_path = knowledge / "construction-plans" / (successor_id + ".json")
+    existing_successors = [row for row in candidates if row["id"] == successor_id]
+    BASE.require(len(existing_successors) <= 1, "successor identity is duplicated")
+    if existing_successors:
+        BASE.require(existing_successors[0] == after and successor_plan_path.is_file()
+                     and BASE.load(successor_plan_path) == successor_plan,
+                     "successor conflicts with retained history")
+    else:
+        BASE.require(not successor_plan_path.exists()
+                     or (successor_plan_path.is_file() and BASE.load(successor_plan_path) == successor_plan),
+                     "successor plan conflicts with interrupted publication")
+    appended = candidates if existing_successors else [*candidates, after]
+    encoded = b"".join(READINESS.canonical(row) + b"\n"
+                       for row in sorted(appended, key=lambda row: row["id"]))
+    # Validate in an isolated projection before changing any retained input.
+    with tempfile.TemporaryDirectory(prefix="agentlab-successor-check-") as directory:
+        trial = Path(directory) / "knowledge"
+        shutil.copytree(knowledge, trial)
+        (trial / candidates_path.name).write_bytes(encoded)
+        trial_plan = trial / "construction-plans" / successor_plan_path.name
+        BASE.write(trial_plan, successor_plan)
+        readiness = READINESS.assess(trial, successor_id, trial_plan, args.evidence_root)
     BASE.require(readiness["decision"] == "blocked-qualification",
-                 "candidate rebind did not clear only the knowledge blockers")
+                 "successor did not clear only the knowledge blockers")
+    BASE.require(candidates_path.read_bytes() == original_candidates_bytes
+                 and args.plan.read_bytes() == original_plan_bytes
+                 and BASE.digest(knowledge / "maintainer-knowledge-cut.json") == cut_sha
+                 and BASE.digest(knowledge / "program_facts.jsonl") == fact_table["sha256"],
+                 "successor inputs changed during validation")
+    if not existing_successors:
+        if not successor_plan_path.exists():
+            BASE.write(successor_plan_path, successor_plan)
+        candidates_path.write_bytes(encoded)
     BASE.write(args.output, {
-        "schema": "agentlab.focused_candidate_rebind_receipt.v1",
+        "schema": "agentlab.focused_candidate_successor_receipt.v1",
         "automaticPromotion": False,
-        "candidateId": args.candidate_id,
-        "beforeSha256": READINESS.value_digest(before),
+        "candidateId": successor_id,
+        "parentCandidateId": args.candidate_id,
+        "parentPreserved": True,
+        "parentPlanPreserved": True,
+        "unchangedRepeat": bool(existing_successors),
+        "successorPlan": str(successor_plan_path.relative_to(knowledge)),
+        "beforeSha256": parent_sha,
         "afterSha256": READINESS.value_digest(after),
         "focusedRefreshReceiptSha256": BASE.digest(args.focused_receipt),
         "knowledgeCutSha256": after["knowledgeCutSha256"],
