@@ -214,6 +214,13 @@ paths against their explicit roots before publishing; when preserving a legacy
 link, carry the same original bytes and digest rather than rewriting the fact
 or weakening the link-completeness gate. A successful live table readback alone
 does not prove that all evidence referenced by the Release export is available.
+New operation facts label their general evidence references with
+`root: operation-receipts`, resolved against the cut's portable
+`operation-evidence` directory. Require exact path and digest equality with
+`operationEvidence`; reject unknown roots or escaping paths. Preserve legacy
+unlabeled publication-relative links rather than silently reinterpreting them.
+Never copy a new receipt to an arbitrary Release repository root merely to
+make an ambiguous relative reference pass publication validation.
 Preserve the exact assessed scope/fact file bytes after immutable row readback.
 Equivalent Unicode escapes or key encodings can still change the input digest
 and break the next strict round. The semantic producer emits canonical UTF-8;

@@ -231,7 +231,8 @@ pub fn prepare_fact(skill: &Value, reference: Value, root: &Path) -> Result<Valu
         "kind":"build-verification", "repositoryId":skill["repositoryId"],
         "sourceRevision":skill["sourceRevision"], "scopeSkillIds":[skill["id"]],
         "dimensions":["operation"], "operationEvidence":reference,
-        "evidence":[reference], "automaticPromotion":false
+        "evidence":[{"root":"operation-receipts", "path":reference["path"], "sha256":reference["sha256"]}],
+        "automaticPromotion":false
     });
     fact["operationEvidenceCheck"] = verify(&fact, skill, root)?;
     fact["interpretation"] = json!("Receipt-content-qualified module build only; runtime, tests, performance and type checking are not independently qualified.");
