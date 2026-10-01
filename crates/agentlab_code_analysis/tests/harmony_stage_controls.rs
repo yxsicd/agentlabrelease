@@ -114,6 +114,55 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
         assert_eq!(first["pendingFormalActions"], downstream["actions"]);
         let repeat = consume(&c, &r, Some(&serde_json::to_vec(&first).unwrap())).unwrap();
         assert_eq!(repeat["schedulingAllowed"], false);
+        let (ok, fresh) = run(&root, &c, "fresh");
+        assert!(ok);
+        let resume = |previous: &Value, capture: &Value| {
+            let current = serde_json::to_vec(&fresh).unwrap();
+            let prior = serde_json::to_vec(capture).unwrap();
+            agentlab_code_analysis::maintainer_stage_feedback::resume(
+                &serde_json::to_vec(&candidate).unwrap(),
+                &serde_json::to_vec(&downstream).unwrap(),
+                &serde_json::to_vec(&c).unwrap(),
+                &current,
+                &agentlab_code_analysis::digest(&current),
+                &serde_json::to_vec(previous).unwrap(),
+                &prior,
+                &agentlab_code_analysis::digest(&prior),
+            )
+        };
+        let resumed = resume(&first, &r).unwrap();
+        assert_eq!(resumed["previousCaptureReconstructed"], true);
+        assert_eq!(resumed["schedulingAllowed"], false);
+        assert_eq!(resumed["pendingFormalActions"], downstream["actions"]);
+        assert_eq!(resumed["qualified"], false);
+        // History owns semantic scheduling, not today's formal requirement queue.
+        let mut current_downstream = downstream.clone();
+        current_downstream["actions"].as_array_mut().unwrap().push(json!({
+            "id":"new-formal-demand","kind":"qualify-independent-oracle","executionAuthorized":false
+        }));
+        let fresh_bytes = serde_json::to_vec(&fresh).unwrap();
+        let prior_bytes = serde_json::to_vec(&r).unwrap();
+        let current_plan = agentlab_code_analysis::maintainer_stage_feedback::resume(
+            &serde_json::to_vec(&candidate).unwrap(),
+            &serde_json::to_vec(&current_downstream).unwrap(),
+            &serde_json::to_vec(&c).unwrap(),
+            &fresh_bytes,
+            &agentlab_code_analysis::digest(&fresh_bytes),
+            &serde_json::to_vec(&first).unwrap(),
+            &prior_bytes,
+            &agentlab_code_analysis::digest(&prior_bytes),
+        )
+        .unwrap();
+        assert_eq!(
+            current_plan["pendingFormalActions"],
+            current_downstream["actions"]
+        );
+        assert_eq!(current_plan["schedulingAllowed"], false);
+        let mut fabricated_plan = first.clone();
+        fabricated_plan["taskSha256"] = json!("d".repeat(64));
+        assert!(resume(&fabricated_plan, &r)
+            .unwrap_err()
+            .contains("contradicts retained capture"));
         let mut tampered = r.clone();
         tampered["controls"][1]["checks"][0]["passed"] = json!(true);
         let mut body = tampered["controls"][1].as_object().unwrap().clone();
@@ -123,6 +172,9 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
         tampered["controls"][1]["workerExecution"]["stdoutSha256"] =
             json!(agentlab_code_analysis::digest(raw.as_bytes()));
         assert!(consume(&c, &tampered, None)
+            .unwrap_err()
+            .contains("raw observations"));
+        assert!(resume(&first, &tampered)
             .unwrap_err()
             .contains("raw observations"));
         let mut missing = r.clone();

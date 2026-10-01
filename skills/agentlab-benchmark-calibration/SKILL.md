@@ -117,6 +117,19 @@ evidence stops repeat scheduling. Historical v1 receipts lack these phase/captur
 fields and are not silently upgraded. Keep them as earlier scoped evidence, not a
 v2 readback. A successful collection Action is not a successful case qualification.
 
+For cross-Action continuation, use `scripts/resume-maintainer-stage-feedback.sh`
+with the current capture and downstream plan. It searches at most ten successful
+main dispatches of the same repository/workflow, requires the same contract bytes,
+and uses `--previous-stage-calibration` plus its digest to reconstruct the prior
+capture before accepting `--previous-feedback-plan`. A plan hash alone is not
+evidence for suppression. Preserve the selected predecessor's capture, contract
+and plan without recursively copying history. Transport failures are collection
+failures, not proof of no history. Incompatible or unavailable artifacts remain
+explicit observations; no compatible predecessor schedules fresh feedback.
+Only unchanged owned semantic work suppresses scheduling: formal requirements
+come from the current downstream plan. This is not execution caching, authority
+admission, automatic repair or completion of the full flywheel.
+
 Define metric denominators and event sources: task success, build success, user rounds versus model/tool turns, monotonic execution time, and evidence-backed behavior scoring. Keep proposed process metrics explicitly unvalidated until agreement and repeatability are measured. Separate Harness malfunction from valid Agent inability.
 
 Use [the knowledge experiment](../../examples/knowledge-seed/README.md) as the runnable fixture calibration/SQL/history/import demo; [SWE](../../examples/swe-bench/README.md) and [Harmony](../../examples/harmony-build/README.md) provide existing campaign examples. Record each demo's actual coverage.
