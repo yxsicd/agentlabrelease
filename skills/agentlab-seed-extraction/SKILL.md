@@ -63,6 +63,22 @@ not append another candidate or alter any retained parent. The historical
 `focused_fact_refresh.py rebind-candidate` command now performs this additive
 derivation; its returned `candidateId` and `successorPlan` identify the child.
 
+After candidate generation or refresh, run
+`bash scripts/plan-maintainer-downstream.sh KNOWLEDGE EVIDENCE_ROOT FRESH_OUTPUT`
+with the built `agentlab-maintainer-skill-flywheel` binary. The bridge independently
+reassesses each retained construction plan, then routes exact gate gaps in Rust:
+knowledge refresh, Oracle implementation/calibration, declared wrong variants,
+or exact runtime requirements. Calibration depends on the independent Oracle;
+construction readiness still requires constructing/freezing an operational case,
+not direct assessed-Agent dispatch. The batch validates parent value digests,
+retains historical audits, schedules only unsuperseded candidates and reports
+candidates missing plans. Consume batch `activeCandidateIds`, not every individual
+historical plan. No authority, execution or qualification is created by routing.
+For bounded local repetitions, pass the previous output directory as argument
+four: unchanged gate evidence stops scheduling even if unrelated knowledge cuts
+or JSON formatting change. Cross-Action history reuse is not yet wired; retaining
+an artifact alone does not prove this guard applies across fresh runners.
+
 When replacing an invalid raw knowledge export with a reviewed snapshot, reconcile
 independently retained candidate and generation-round records too. Verify their
 original value digests and parent-round link before restoring them; keep original

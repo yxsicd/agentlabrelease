@@ -163,7 +163,14 @@ jobs:
             echo "::warning::Shadow case sampling failed after the knowledge transaction; preserving the exact TableGit export."
             echo "Shadow case sampling failed and did not block the first two Maintainer Skill flywheels." >> "$GITHUB_STEP_SUMMARY"
           fi
+      - name: Route downstream gaps without another semantic expansion
+        run: |
+          set -euo pipefail
+          bash scripts/plan-maintainer-downstream.sh \
+            "$KNOWLEDGE" . "$AGENTLAB_ROOT/run/downstream"
+          jq '.' "$AGENTLAB_ROOT/run/downstream/summary.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Propose the fixed-revision Release export
+        # Downstream routing artifacts are separate from the TableGit snapshot.
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
