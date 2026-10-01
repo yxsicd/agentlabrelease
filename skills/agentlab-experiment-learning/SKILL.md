@@ -39,6 +39,18 @@ prose. Distinguish Harness, environment, benchmark and participant problems.
 Add a method lesson only when evidence supports its stated applicability;
 retain contradictory and failed validation in instance history.
 
+Exercise the actual feedback admission path, not a mocked validator. A focused
+semantic refresh preserves the prior fact's dimensions and every prior evidence
+path, adding exactly the frozen implementation/Oracle path union. Independently
+verify all Git Blobs; reject extra paths, missing paths, source drift and a
+concurrently changed baseline fact. Ordinary expansion keeps its own bounded
+sampling contract; do not relax it to accommodate focused refresh. Select the
+prior assessment through the durable refresh record and retain its receipt root
+when reassessing, rather than choosing a report by largest filename. A source
+evidence expansion can improve knowledge without advancing maturity counts or
+qualifying runtime. Operator-reviewed and Agent-generated proposals remain
+distinct observations.
+
 Run [the executable experience demo](../../examples/knowledge-seed/experience/README.md).
 Public main knowledge Action executes calibration, instance import, generic SQL,
 lesson persistence/repeat, committed export and explicit promotion candidate.

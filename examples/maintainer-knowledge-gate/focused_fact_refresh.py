@@ -112,6 +112,7 @@ def prepare(args) -> None:
         "repository": repository,
         "scope": scope,
         "existingFact": fact,
+        "requiredDimensions": fact["dimensions"],
         "requiredImplementationPaths": plan["requiredImplementationPaths"],
         "requiredOraclePaths": plan["requiredOraclePaths"],
         "readinessDecision": receipt["decision"],
@@ -149,7 +150,7 @@ def run_agent(args) -> None:
 Read focused-refresh-request.json and inspect the exact read-only source checkout. Update fact {fact['id']} only.
 Write exactly one JSON object to program-fact-proposal.json. Do not modify source/ or the request.
 
-The object must have exactly these top-level fields and no others: schema, id, repositoryId, sourceRevision, scopeSkillIds, kind, dimensions, interpretation, evidence, limitations. schema must be agentlab.maintainer_skill_fact_proposal.v1. Copy the id, repositoryId, sourceRevision, scopeSkillIds, kind and four semantic dimensions from existingFact, but do not copy its derived agentProposal field. Preserve every existing evidence path and add exact Git Blob evidence for every required path: {json.dumps(required)}. Update interpretation so it accurately covers the complete implementation/Oracle source surface, and retain at least two concrete limitations without claiming build, emulator, Oracle, or operation success. Evidence objects contain only path and exact 40-hex gitBlobOid obtained with git rev-parse HEAD:path. Do not add unrelated paths, secrets, generated files, runtime claims, a gold patch, or automatic-promotion fields. Parse the completed JSON once, then finish.
+The object must have exactly these top-level fields and no others: schema, id, repositoryId, sourceRevision, scopeSkillIds, kind, dimensions, interpretation, evidence, limitations. schema must be agentlab.maintainer_skill_fact_proposal.v1. Copy the id, repositoryId, sourceRevision, scopeSkillIds, kind and requiredDimensions from the request's existingFact, but do not copy its derived agentProposal field. Preserve every existing evidence path and add exact Git Blob evidence for every required path: {json.dumps(required)}. Include exactly the union of those paths, with no extras. Update interpretation so it accurately covers the complete implementation/Oracle source surface, and retain exactly two concrete limitations without claiming build, emulator, Oracle, or operation success. Evidence objects contain only path and exact 40-hex gitBlobOid obtained with git rev-parse HEAD:path. Do not add unrelated paths, secrets, generated files, runtime claims, a gold patch, or automatic-promotion fields. Parse the completed JSON once, then finish.
 
 The interpretation is a bounded maintenance contract: it must contain {INTERPRETATION_TARGET_MIN}-{INTERPRETATION_TARGET_MAX} Unicode characters and must never exceed {INTERPRETATION_MAX}. Put detailed uncertainty in limitations rather than expanding interpretation.
 """
@@ -211,17 +212,25 @@ The final object must contain exactly: {json.dumps(sorted(PROPOSAL_FIELDS))}. Ke
 def validate(args) -> None:
     request = BASE.load(args.request)
     proposal = BASE.load(args.proposal)
-    fact = BASE.validate_proposal(request, proposal, args.source.resolve(strict=True))
     existing = READINESS.rows(args.program_facts)
     old = request["existingFact"]
-    BASE.require(fact["id"] == old["id"], "focused refresh changed fact identity")
     old_paths = {row["path"] for row in old["evidence"]}
-    new_paths = {row["path"] for row in fact["evidence"]}
     required_paths = {
         item["path"]
         for field in ("requiredImplementationPaths", "requiredOraclePaths")
         for item in request[field]
     }
+    BASE.require(request.get("requiredDimensions") == old.get("dimensions"),
+                 "focused request dimensions differ from the existing fact")
+    BASE.require(sum(row["id"] == old["id"] for row in existing) == 1,
+                 "existing fact is absent or duplicated")
+    current = next(row for row in existing if row["id"] == old["id"])
+    BASE.require(READINESS.value_digest(current) == READINESS.value_digest(old),
+                 "focused refresh baseline fact changed after request preparation")
+    fact = BASE.validate_proposal(request, proposal, args.source.resolve(strict=True),
+                                  expected_evidence_paths=old_paths | required_paths)
+    BASE.require(fact["id"] == old["id"], "focused refresh changed fact identity")
+    new_paths = {row["path"] for row in fact["evidence"]}
     BASE.require(old_paths.issubset(new_paths), "focused refresh removed existing evidence")
     BASE.require(required_paths.issubset(new_paths), "focused refresh omitted required readiness paths")
     BASE.require(READINESS.value_digest(old) != READINESS.value_digest(fact),

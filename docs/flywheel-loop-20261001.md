@@ -178,3 +178,39 @@ main-only Agent dispatch or Release publication was performed in this iteration.
 Validation: full `agentlab_code_analysis` suite, both new failure-control Rust
 tests, 11 shadow-construction Python tests, exact original candidate/cut digest
 readback, release checksum validation, Rust formatting and diff whitespace.
+
+## Focused feedback validation continuation
+
+Overall maturity stays **47%**. PR115's ten applicable CI jobs passed; the
+immutable component publication job was skipped, not a Release publication.
+
+The next feedback path had two real contract defects: focused-refresh requests
+omitted `requiredDimensions`, and the shared proposal validator required exactly
+three evidence Blobs even though focused refresh must retain old paths and add
+missing Oracle paths. A mocked validation test hid this incompatibility.
+The focused path now passes the preserved dimensions and requires exactly the
+old-plus-required path union, independently verifying every Blob. It also rejects
+a baseline fact changed after request preparation. Ordinary expansion retains
+its three-Blob rule. The wrapper selects the latest durable assessment and
+supplies portable operation receipts during reassessment.
+
+A new Rust integration test invokes the actual Python CLIs against an arbitrary
+Git fixture. It accepts the five-path focused union and rejects omitted
+dimensions, extra/missing paths, wrong Blobs and stale baselines; ordinary
+expansion still rejects five and accepts three. No validator is mocked.
+
+Actual pinned source review then prepared the original AbilityStage candidate's
+missing-test-source request in a private staging projection. Full validation
+accepted a four-Blob proposed fact, preserving all three old evidence paths and
+adding the exact startup-test Blob. Independent reassessment remained byte-bound
+to the prior assessment and retained all totals: 46 program-bound, 41 semantic,
+2 maintenance-ready out of 489 scopes. This was operator-reviewed source
+knowledge, not a new Agent round or behavior qualification. The original
+candidate digest and original knowledge-cut binding remain untouched; no
+TableGit write or main dispatch occurred. Compact receipts preserve the result
+for later explicit admission, without exporting the private staging projection.
+
+Validation: full Rust code-analysis suite, both unmocked/retained-evidence focused
+Rust regressions, 55 focused/Agent/shadow Python tests, release checksum validation,
+shell syntax, Rust formatting and diff whitespace checks. Runtime, active authority
+admission and a new Secret-backed Agent loop remain unqualified.

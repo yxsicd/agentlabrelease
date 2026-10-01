@@ -839,7 +839,7 @@ fence.
     write(args.output / "program-fact-proposal.json", proposal)
 
 
-def validate_proposal(request, proposal, source_root):
+def validate_proposal(request, proposal, source_root, *, expected_evidence_paths=None):
     require(proposal.get("schema") == "agentlab.maintainer_skill_fact_proposal.v1", "bad proposal schema")
     require(set(proposal) == {
         "schema", "id", "repositoryId", "sourceRevision", "scopeSkillIds",
@@ -863,8 +863,13 @@ def validate_proposal(request, proposal, source_root):
             and all(isinstance(x, str) and 40 <= len(x.strip()) <= 300 for x in limitations),
             "limitations are incomplete")
     evidence = proposal["evidence"]
-    require(isinstance(evidence, list) and len(evidence) == 3,
-            "exactly three evidence blobs are required")
+    if expected_evidence_paths is None:
+        require(isinstance(evidence, list) and len(evidence) == 3,
+                "exactly three evidence blobs are required")
+    else:
+        require(isinstance(expected_evidence_paths, set) and expected_evidence_paths
+                and isinstance(evidence, list) and len(evidence) == len(expected_evidence_paths),
+                "focused evidence count differs from the frozen path union")
     inside = False
     seen = set()
     clean_evidence = []
@@ -886,6 +891,9 @@ def validate_proposal(request, proposal, source_root):
         inside = inside or scope_owns_path(request["scope"], path)
         clean_evidence.append({"path": path, "gitBlobOid": oid})
     require(inside, "no evidence path is inside the selected scope")
+    if expected_evidence_paths is not None:
+        require(seen == expected_evidence_paths,
+                "focused evidence paths differ from the frozen path union")
     return {
         "id": proposal["id"],
         "kind": "analysis",

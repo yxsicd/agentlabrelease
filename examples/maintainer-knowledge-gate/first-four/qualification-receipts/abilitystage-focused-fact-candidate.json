@@ -1,0 +1,43 @@
+{
+  "agentProposal": {
+    "automaticPromotion": false,
+    "schema": "agentlab.maintainer_skill_fact_proposal.v1",
+    "sourceAssessmentSha256": "3a0fe3380583525df6d2734c09722a6954727cacea11b7e23e6c4e1e7694d96e"
+  },
+  "dimensions": [
+    "behavior",
+    "boundary",
+    "relations",
+    "responsibility"
+  ],
+  "evidence": [
+    {
+      "gitBlobOid": "2af410f20ec60e1642bff565d4bb6a49d6e1cdcd",
+      "path": "Ability/AbilityStage/entry/src/main/ets/myabilitystage/MyAbilityStage.ets"
+    },
+    {
+      "gitBlobOid": "1693f30f7d0eeb838b21aedaf51f054dbffb1c3b",
+      "path": "Ability/AbilityStage/entry/src/main/module.json5"
+    },
+    {
+      "gitBlobOid": "9f0a7c97fe0cce514f5626cf249b77b48c53896a",
+      "path": "Ability/AbilityStage/entry/src/main/ets/exampleabilitystage/MyAbilityStage.ets"
+    },
+    {
+      "gitBlobOid": "246bf2e2ed3178ea1932d54a2f34328de403be22",
+      "path": "Ability/AbilityStage/entry/src/ohosTest/ets/test/Ability.test.ets"
+    }
+  ],
+  "id": "agent-analysis-abilitystage-environment-callback-binding",
+  "interpretation": "The entry module srcEntry binds the default MyAbilityStage in myabilitystage, not the alternate exampleabilitystage copy. The active stage registers an EnvironmentCallback through getApplicationContext().on(environment), logs registration and configuration/memory callbacks, and logs onDestroy; guide marker pairs delimit extracted regions. The alternate default-export stage adds onAcceptWant and is not selected by this module profile. The pinned ohosTest AbilityStage__Startup_001 awaits EntryAbility startup but calls done() both after success and after caught rejection, with no assertion. Therefore test completion alone cannot prove startup, stage dispatch or callback delivery. Independent behavior assertions and accepted/wrong runtime calibration are required; a class rename preserving the default export is not automatically invalid.",
+  "kind": "analysis",
+  "limitations": [
+    "The controlled TestKit seam does not qualify ArkTS typing, HAP build, emulator startup or configuration callback delivery.",
+    "Independent hilog behavior assertions and accepted/wrong implementation calibration on the exact required image remain unexecuted."
+  ],
+  "repositoryId": "guide-snippets",
+  "scopeSkillIds": [
+    "skill-scope-guide-snippets-ability-abilitystage"
+  ],
+  "sourceRevision": "71bbb3916625c8d9a370b7a1989b3a7f82090525"
+}

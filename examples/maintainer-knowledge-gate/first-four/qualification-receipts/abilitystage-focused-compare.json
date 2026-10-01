@@ -1,0 +1,22 @@
+{
+  "after": {
+    "maintenanceReadyCount": 2,
+    "programBoundCount": 46,
+    "scopeSkillCount": 489,
+    "semanticReadyCount": 41,
+    "structuralReadyCount": 489
+  },
+  "assessmentSha256": "90adda3683166c9764f574aa9ca4175360f7447a392216726cdc11884f92cf0d",
+  "automaticPromotion": false,
+  "before": {
+    "maintenanceReadyCount": 2,
+    "programBoundCount": 46,
+    "scopeSkillCount": 489,
+    "semanticReadyCount": 41,
+    "structuralReadyCount": 489
+  },
+  "decision": "review-proposed-knowledge-refresh",
+  "maturity": "L2-semantic-ready",
+  "schema": "agentlab.maintainer_skill_agent_flywheel_result.v1",
+  "scopeSkillId": "skill-scope-guide-snippets-ability-abilitystage"
+}

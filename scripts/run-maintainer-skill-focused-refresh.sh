@@ -15,8 +15,9 @@ refresh_root="$run_root/focused-refresh"
 source_root="$run_root/../sources"
 mkdir -p "$refresh_root" "$source_root"
 
-assessment=$(find "$knowledge/assessments" -maxdepth 1 -type f -name '*.json' -print0 |
-  xargs -0 jq -r '[.roundIndex,input_filename] | @tsv' | sort -n | tail -1 | cut -f2-)
+target/debug/agentlab-maintainer-skill-flywheel --resolve-latest-assessment \
+  --base "$knowledge" --output "$refresh_root/durable-assessment-reference.json"
+assessment=$(jq -r '.assessmentPath' "$refresh_root/durable-assessment-reference.json")
 test -n "$assessment"
 
 python3 examples/maintainer-knowledge-gate/focused_fact_refresh.py prepare \
@@ -53,6 +54,7 @@ round=$(jq -r '.roundIndex + 1' "$assessment")
 target/debug/agentlab-maintainer-skill-flywheel \
   --scope-skills "$knowledge/maintainer_scope_skills.jsonl" \
   --program-facts "$refresh_root/candidate-program-facts.jsonl" \
+  --operation-receipts-root "$knowledge/operation-evidence" \
   --round-index "$round" --parent-assessment-sha256 "$parent" \
   --output "$refresh_root/candidate-assessment.json"
 python3 examples/maintainer-knowledge-gate/focused_fact_refresh.py compare \

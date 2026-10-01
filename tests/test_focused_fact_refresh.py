@@ -75,6 +75,7 @@ class FocusedFactRefreshTest(unittest.TestCase):
             output = root / "request.json"
             request = self.prepare_request(output, knowledge)
             self.assertEqual(request["readinessDecision"], "blocked-knowledge-refresh")
+            self.assertEqual(request["requiredDimensions"], request["existingFact"]["dimensions"])
             self.assertEqual(request["existingFact"]["id"], "agent-analysis-uiability-backup-restore-state-recovery")
             self.assertEqual(request["scope"]["id"], "skill-scope-guide-snippets-ability-uiabilityrecover")
             self.assertIn(

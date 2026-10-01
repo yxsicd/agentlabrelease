@@ -1,0 +1,16 @@
+{
+  "acceptedFactId": "agent-analysis-abilitystage-environment-callback-binding",
+  "acceptedFactSha256": "083cbdad6091a48ca778f4591e3592196a1cf1987652685c2bbff20817a4dfdb",
+  "addedEvidencePaths": [
+    "Ability/AbilityStage/entry/src/ohosTest/ets/test/Ability.test.ets"
+  ],
+  "automaticPromotion": false,
+  "candidateId": "shadow-case-abilitystage-environment-callback-binding",
+  "candidateProgramFactsSha256": "dfb504049a9bb5fd6db3e6a9d67ebf99bb0a577d004d553ba5bbd616d26142a6",
+  "changeKind": "updated",
+  "decision": "accepted-focused-refresh-for-hard-gate-assessment",
+  "previousFactSha256": "d25bfc177d27358085c3ca824d421a06ef0f4c9d9299a0530abede69e59c754b",
+  "schema": "agentlab.maintainer_skill_agent_proposal_receipt.v1",
+  "scopeSkillId": "skill-scope-guide-snippets-ability-abilitystage",
+  "sourceAssessmentSha256": "3a0fe3380583525df6d2734c09722a6954727cacea11b7e23e6c4e1e7694d96e"
+}
