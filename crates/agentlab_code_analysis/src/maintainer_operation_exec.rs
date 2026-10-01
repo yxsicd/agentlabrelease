@@ -1,5 +1,8 @@
 //! Explicitly reviewed local operations, not an execution sandbox or promotion oracle.
-use crate::{digest, maintainer_flywheel_plan::plan_for_repository};
+use crate::{
+    digest,
+    maintainer_flywheel_plan::{declared_operation_kinds, plan_for_capabilities},
+};
 use serde_json::{json, Value};
 use std::{
     fs::{self, File, OpenOptions},
@@ -264,7 +267,12 @@ pub fn execute(
                     .ok_or("operation lane invalid")
             })
             .collect::<Result<Vec<_>, _>>()?;
-        let verified = plan_for_repository(
+        let kinds = declared_operation_kinds(policy)?;
+        require(
+            kinds.as_ref().is_some_and(|kinds| kinds == &["build-only"]),
+            "operation executor requires an explicit build-only capability plan",
+        )?;
+        let verified = plan_for_capabilities(
             scopes,
             Some(facts),
             receipts,
@@ -282,6 +290,7 @@ pub fn execute(
                 .as_u64()
                 .ok_or("operation source budget missing")?,
             policy["repositorySelector"].as_str(),
+            kinds.as_deref(),
         )?;
         require(
             proposed == verified && before == verified["assessment"],

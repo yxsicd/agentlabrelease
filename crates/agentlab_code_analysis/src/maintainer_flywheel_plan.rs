@@ -13,6 +13,49 @@ const LANES: [&str; 4] = [
     "semantic-refresh",
     "operation-verification",
 ];
+const OPERATION_KINDS: [&str; 5] = [
+    "build-test",
+    "build-only",
+    "test-only",
+    "source-only",
+    "support-config",
+];
+
+pub fn operation_kind(capabilities: &Value) -> &'static str {
+    let has = |name: &str| {
+        capabilities
+            .as_array()
+            .is_some_and(|a| a.iter().any(|v| v == name))
+    };
+    match (
+        has("build-maintenance"),
+        has("test-maintenance"),
+        has("source-maintenance"),
+    ) {
+        (true, true, _) => "build-test",
+        (true, false, _) => "build-only",
+        (false, true, _) => "test-only",
+        (false, false, true) => "source-only",
+        _ => "support-config",
+    }
+}
+
+pub fn declared_operation_kinds(policy: &Value) -> Result<Option<Vec<String>>, String> {
+    match policy.get("availableOperationKinds") {
+        None => Ok(None),
+        Some(value) => value
+            .as_array()
+            .ok_or("operation capability declaration invalid")?
+            .iter()
+            .map(|kind| {
+                kind.as_str()
+                    .map(str::to_owned)
+                    .ok_or("operation capability kind invalid".into())
+            })
+            .collect::<Result<Vec<_>, String>>()
+            .map(Some),
+    }
+}
 
 /// Resolve the latest durable refresh row, never the largest report filename.
 pub fn latest_assessment(base: &Path) -> Result<Value, String> {
@@ -125,7 +168,8 @@ pub fn semantic_batch(
                 .ok_or("dispatch lane invalid")
         })
         .collect::<Result<Vec<_>, _>>()?;
-    let verified = plan_for_repository(
+    let operation_kinds = declared_operation_kinds(policy)?;
+    let verified = plan_for_capabilities(
         scopes,
         Some(facts),
         receipts,
@@ -143,6 +187,7 @@ pub fn semantic_batch(
             .as_u64()
             .ok_or("dispatch source budget missing")?,
         policy["repositorySelector"].as_str(),
+        operation_kinds.as_deref(),
     )?;
     if proposed != verified || baseline != verified["assessment"] {
         return Err("dispatch plan or baseline differs from independent reassessment".into());
@@ -274,6 +319,41 @@ pub fn plan_for_repository(
     max_source_files: u64,
     repository_selector: Option<&str>,
 ) -> Result<Value, String> {
+    plan_for_capabilities(
+        scopes,
+        facts,
+        receipts,
+        round,
+        parent,
+        available,
+        batch_size,
+        max_source_files,
+        repository_selector,
+        None,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn plan_for_capabilities(
+    scopes: &Path,
+    facts: Option<&Path>,
+    receipts: &Path,
+    round: u64,
+    parent: Option<&str>,
+    available: &[String],
+    batch_size: usize,
+    max_source_files: u64,
+    repository_selector: Option<&str>,
+    available_operation_kinds: Option<&[String]>,
+) -> Result<Value, String> {
+    let kinds = available_operation_kinds
+        .map(|kinds| kinds.iter().map(String::as_str).collect::<BTreeSet<_>>());
+    if let (Some(kinds), Some(original)) = (&kinds, available_operation_kinds) {
+        if kinds.len() != original.len() || kinds.iter().any(|kind| !OPERATION_KINDS.contains(kind))
+        {
+            return Err("plan operation kind duplicated or unsupported".into());
+        }
+    }
     if !(1..=4).contains(&batch_size) || max_source_files == 0 {
         return Err("plan requires batch size 1..4 and positive source budget".into());
     }
@@ -341,7 +421,10 @@ pub fn plan_for_repository(
         } else {
             (None, 4, "knowledge-ready-not-closed-loop")
         };
-        let eligible = lane.is_some_and(|lane| lanes.contains(lane));
+        let kind = operation_kind(&state["capabilities"]);
+        let eligible = lane.is_some_and(|lane| lanes.contains(lane))
+            && (lane != Some("operation-verification")
+                || kinds.as_ref().is_none_or(|kinds| kinds.contains(kind)));
         let disposition = if lane.is_none() {
             "knowledge-ready"
         } else if eligible {
@@ -357,13 +440,21 @@ pub fn plan_for_repository(
         } else {
             "source-behavior"
         };
-        items.push(json!({"skillId":id,"repositoryId":scope["repositoryId"],
+        let mut item = json!({"skillId":id,"repositoryId":scope["repositoryId"],
             "repository":scope["repository"],"sourceRevision":scope["sourceRevision"],
             "pathBoundary":scope["pathBoundary"],"ownershipSelectors":scope["ownershipSelectors"],
             "maturity":state["maturity"],"analysisMode":mode,
             "nextLane":lane,"priority":priority,"reason":reason,
             "disposition":disposition,"selected":false,"gaps":state["gaps"],
-            "capabilityGap":if disposition == "capability-blocked" {lane} else {None}}));
+            "capabilityGap":if disposition == "capability-blocked" {lane} else {None}});
+        if available_operation_kinds.is_some() && lane == Some("operation-verification") {
+            item["operationKind"] = json!(kind);
+            if disposition == "capability-blocked" && lanes.contains("operation-verification") {
+                item["capabilityGap"] =
+                    json!({"lane":"operation-verification","operationKind":kind});
+            }
+        }
+        items.push(item);
     }
     items.sort_by_key(|item| {
         (
@@ -395,6 +486,7 @@ pub fn plan_for_repository(
                 && item["sourceRevision"] == first["sourceRevision"]
                 && item["nextLane"] == first["nextLane"]
                 && item["analysisMode"] == first["analysisMode"]
+                && item["operationKind"] == first["operationKind"]
             {
                 item["selected"] = json!(true);
                 selected.push(item["skillId"].clone());
@@ -416,7 +508,7 @@ pub fn plan_for_repository(
     } else {
         "downstream-validation-required"
     };
-    Ok(json!({"schema":"agentlab.maintainer_flywheel_next_plan.v1",
+    let mut report = json!({"schema":"agentlab.maintainer_flywheel_next_plan.v1",
         "assessment":assessment,"assessmentValueSha256":digest(&serde_json::to_vec(&assessment).map_err(|e|e.to_string())?),
         "policy":{"batchSize":batch_size,"maxSourceFiles":max_source_files,
             "availableLanes":lanes,"operationEvidencePolicy":"verified-receipt-content",
@@ -428,5 +520,9 @@ pub fn plan_for_repository(
         "scopes":items,"closedLoopQualified":false,"automaticPromotion":false,
         "authorityWritePerformed":false,
         "downstreamRequirements":["calibrated-case-generation","case-execution",
-            "evidence-feedback-into-next-cut","cross-repository-transfer"]}))
+            "evidence-feedback-into-next-cut","cross-repository-transfer"]});
+    if let Some(kinds) = kinds {
+        report["policy"]["availableOperationKinds"] = json!(kinds);
+    }
+    Ok(report)
 }

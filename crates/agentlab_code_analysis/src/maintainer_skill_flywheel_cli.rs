@@ -220,7 +220,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .ok_or("available lane value missing")
             })
             .collect::<Result<Vec<_>, _>>()?;
-        let report = agentlab_code_analysis::maintainer_flywheel_plan::plan_for_repository(
+        let operation_kinds = args
+            .iter()
+            .enumerate()
+            .filter(|(_, arg)| arg.as_str() == "--available-operation-kind")
+            .map(|(i, _)| {
+                args.get(i + 1)
+                    .cloned()
+                    .ok_or("available operation kind missing")
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let report = agentlab_code_analysis::maintainer_flywheel_plan::plan_for_capabilities(
             &scopes,
             facts.as_deref(),
             receipts
@@ -236,6 +246,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap_or_else(|| "80".into())
                 .parse()?,
             optional(&args, "--repository").as_deref(),
+            if operation_kinds.is_empty() {
+                None
+            } else {
+                Some(&operation_kinds)
+            },
         )?;
         let mut file = OpenOptions::new()
             .write(true)

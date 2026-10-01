@@ -92,6 +92,9 @@ agentlab-maintainer-skill-flywheel --execute-operation \
 
 The current executor supports one exact selected build-only scope on Unix;
 multi-scope selections and other lanes fail instead of silently narrowing work.
+Its plan must explicitly declare `--available-operation-kind build-only` in
+addition to `--available-lane operation-verification`. An old lane-only plan
+does not prove executor compatibility and is refused before commands run.
 An `agentlab.maintainer_build_operation_recipe.v1` binds `source` (repositoryId,
 repository URL and exact revision), `scopeSkillId`, `lane: build-only`,
 `cleanBuild: true`, `automaticPromotion: false`, and a relative `artifact` path.
@@ -377,6 +380,18 @@ decomposition, missing semantic evidence to refresh, and missing or rejected
 strict operation evidence to operation verification. Selection is deterministic
 and bounded to one repository URL/ID, source revision, lane and analysis mode;
 root contract and child source projections cannot share a batch.
+
+Operation adapters must declare capability kinds separately from the broad
+operation lane: `build-only`, `build-test`, `test-only`, `source-only` and
+`support-config`. Derive the scope's kind from the independent assessment's
+capabilities. A build-only executor cannot consume configuration checks, source
+maintenance or build-plus-test work simply because all need operation evidence.
+Use `--available-operation-kind KIND` for each supported kind; keep unsupported
+scopes in the complete plan with their kind-specific capability gap. Never
+filter them out of coverage totals, borrow a sibling artifact, or narrow a
+selected batch after planning. With explicit kinds, batches share one kind as
+well as source/lane/analysis mode. Kind declarations remain operator claims;
+execution and qualification still need their separate receipts.
 
 Available lanes are explicit operator capability declarations, not proof that
 an adapter has executed or an Agent has passed. No declarations means no

@@ -30,7 +30,7 @@ fn temp_root() -> PathBuf {
 #[cfg(unix)]
 fn operation_executor_runs_exact_plan_and_retains_failures_without_promotion() {
     use agentlab_code_analysis::{
-        maintainer_flywheel_plan::plan, maintainer_operation_exec::execute,
+        maintainer_flywheel_plan::plan_for_capabilities, maintainer_operation_exec::execute,
     };
     use std::process::Command;
     let root = temp_root();
@@ -71,12 +71,13 @@ fn operation_executor_runs_exact_plan_and_retains_failures_without_promotion() {
     let facts = root.join("facts.jsonl");
     let mut skill = scope("bounded-scope", "arbitrary");
     skill["sourceRevision"] = json!(revision);
+    skill["buildEntrypoints"] = json!(["build.sh"]);
     let mut semantic = complete_fact("semantic", "arbitrary", "bounded-scope");
     semantic["sourceRevision"] = json!(revision);
     semantic["dimensions"] = json!(["responsibility", "boundary", "relations", "behavior"]);
     jsonl(&scopes, &[skill]);
     jsonl(&facts, &[semantic]);
-    let next = plan(
+    let next = plan_for_capabilities(
         &scopes,
         Some(&facts),
         &root,
@@ -85,6 +86,8 @@ fn operation_executor_runs_exact_plan_and_retains_failures_without_promotion() {
         &["operation-verification".into()],
         1,
         80,
+        None,
+        Some(&["build-only".into()]),
     )
     .unwrap();
     let plan_bytes = serde_json::to_vec(&next).unwrap();
@@ -253,6 +256,86 @@ fn operation_executor_runs_exact_plan_and_retains_failures_without_promotion() {
         fs::read_to_string(source.join("dirty.txt")).unwrap(),
         "user-owned"
     );
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn operation_capabilities_route_without_hiding_other_scope_gaps() {
+    use agentlab_code_analysis::maintainer_flywheel_plan::{operation_kind, plan_for_capabilities};
+    let root = temp_root();
+    let scopes = root.join("scopes.jsonl");
+    let facts = root.join("facts.jsonl");
+    let mut support = scope("a-config", "arbitrary");
+    support["sourceFileCount"] = json!(0);
+    support["kind"] = json!("configuration");
+    let mut build = scope("b-build", "arbitrary");
+    build["buildEntrypoints"] = json!(["build.sh"]);
+    let mut build_test = scope("c-build-test", "arbitrary");
+    build_test["buildEntrypoints"] = json!(["build.sh"]);
+    build_test["testEntrypoints"] = json!(["test.sh"]);
+    build_test["testFileCount"] = json!(1);
+    jsonl(&scopes, &[support, build, build_test]);
+    let semantic = ["a-config", "b-build", "c-build-test"]
+        .iter()
+        .map(|id| {
+            let mut fact = complete_fact(&format!("fact-{id}"), "arbitrary", id);
+            fact["dimensions"] = json!(["responsibility", "boundary", "relations", "behavior"]);
+            fact
+        })
+        .collect::<Vec<_>>();
+    jsonl(&facts, &semantic);
+    let run = |kinds: Option<&[String]>| {
+        plan_for_capabilities(
+            &scopes,
+            Some(&facts),
+            &root,
+            1,
+            None,
+            &["operation-verification".into()],
+            4,
+            80,
+            None,
+            kinds,
+        )
+    };
+    let legacy = run(None).unwrap();
+    assert_eq!(legacy["selectedScopeIds"][0], "a-config");
+    let bounded = run(Some(&["build-only".into()])).unwrap();
+    assert_eq!(bounded["selectedScopeIds"], json!(["b-build"]));
+    assert_eq!(bounded["summary"]["scopeCount"], 3);
+    assert_eq!(bounded["summary"]["capabilityBlocked"], 2);
+    assert_eq!(bounded["summary"]["eligible"], 1);
+    let config = bounded["scopes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["skillId"] == "a-config")
+        .unwrap();
+    assert_eq!(config["capabilityGap"]["operationKind"], "support-config");
+    let tests = bounded["scopes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["skillId"] == "c-build-test")
+        .unwrap();
+    assert_eq!(tests["capabilityGap"]["operationKind"], "build-test");
+    assert_eq!(bounded["assessment"], legacy["assessment"]);
+    assert_eq!(bounded["closedLoopQualified"], false);
+    assert!(run(Some(&["build-only".into(), "build-only".into()])).is_err());
+    assert!(run(Some(&["made-up".into()])).is_err());
+    assert_eq!(run(Some(&[])).unwrap()["decision"], "capability-blocked");
+    for (caps, kind) in [
+        (json!(["build-maintenance"]), "build-only"),
+        (
+            json!(["build-maintenance", "test-maintenance"]),
+            "build-test",
+        ),
+        (json!(["test-maintenance"]), "test-only"),
+        (json!(["source-maintenance"]), "source-only"),
+        (json!(["support-maintenance"]), "support-config"),
+    ] {
+        assert_eq!(operation_kind(&caps), kind);
+    }
     fs::remove_dir_all(root).unwrap();
 }
 
