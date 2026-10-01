@@ -440,6 +440,8 @@ def compare(args) -> None:
     after_state = next(row for row in after["skills"] if row["skillId"] == args.scope_id)
     BASE.require(before_state["maturity"] == after_state["maturity"] == "L2-semantic-ready",
                  "focused refresh changed scope maturity")
+    BASE.require(before.get("standard") == after.get("standard"),
+                 "focused refresh changed assessment policy")
     BASE.write(args.output, {
         "schema": "agentlab.maintainer_skill_agent_flywheel_result.v1",
         "automaticPromotion": False,
@@ -448,6 +450,10 @@ def compare(args) -> None:
         "after": after["totals"],
         "scopeSkillId": args.scope_id,
         "maturity": after_state["maturity"],
+        "selectedScopeIds": [args.scope_id],
+        "advancedScopeIds": [],
+        "strictOperationEvidencePolicy": before.get("standard", {}).get("operationEvidencePolicy") == "verified-receipt-content",
+        "beforeAssessmentSha256": BASE.digest(args.before),
         "assessmentSha256": BASE.digest(args.after),
     })
 

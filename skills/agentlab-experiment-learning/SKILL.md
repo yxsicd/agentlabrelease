@@ -61,6 +61,18 @@ after bytes and digests, then independently validate the complete proposal.
 Malformed limitations are not a length-repair case. Repair is not acceptance,
 and a failed gate must leave authority and candidate history unchanged.
 
+Validate the full admission-to-persistence chain for focused refresh, not only
+proposal validation. Strict expansion and focused updates are different modes:
+expansion names advanced scopes; focused refresh names one selected L2 scope,
+zero advanced scopes, unchanged totals/policy and one digest-bound existing-fact
+replacement. Carry both assessment digests and all inherited operation sidecars
+into the staged snapshot. The portable-evidence verifier must recognize that
+explicit mode before any TableGit transaction. Replay retained real outputs
+locally without redispatching the model to expose downstream contract gaps;
+that replay remains staging evidence, not a successful authority write or Agent
+rerun. Preserve failed runs and never fabricate coverage advancement to satisfy
+an expansion-only adapter.
+
 Run [the executable experience demo](../../examples/knowledge-seed/experience/README.md).
 Public main knowledge Action executes calibration, instance import, generic SQL,
 lesson persistence/repeat, committed export and explicit promotion candidate.
