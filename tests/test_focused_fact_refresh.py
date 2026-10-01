@@ -115,6 +115,7 @@ class FocusedFactRefreshTest(unittest.TestCase):
         self.assertEqual(plan, {
             "interpretationLength": 1601,
             "extraFields": ["agentProposal"],
+            "limitationIndices": [],
         })
         after = {key: value for key, value in before.items() if key != "agentProposal"}
         after["interpretation"] = "y" * 500
@@ -135,6 +136,25 @@ class FocusedFactRefreshTest(unittest.TestCase):
     def test_missing_required_field_is_not_automatically_repaired(self):
         proposal = {key: key for key in MODULE.PROPOSAL_FIELDS - {"evidence"}}
         self.assertEqual(MODULE.proposal_repair_plan(proposal)["extraFields"], [])
+
+    def test_limitation_length_repair_preserves_valid_sibling_and_source_evidence(self):
+        before = {key: key for key in MODULE.PROPOSAL_FIELDS}
+        before.update(interpretation="x" * 500, limitations=["a" * 314, "b" * 143])
+        plan = MODULE.proposal_repair_plan(before)
+        self.assertEqual(plan["limitationIndices"], [0])
+        after = {**before, "limitations": ["a" * 250, before["limitations"][1]]}
+        self.assertEqual(MODULE.validate_bounded_repair(before, after, plan), 500)
+        for key in ("evidence", "sourceRevision", "dimensions", "interpretation"):
+            with self.assertRaisesRegex(ValueError, "protected field"):
+                MODULE.validate_bounded_repair(before, {**after, key: "changed"}, plan)
+        with self.assertRaisesRegex(ValueError, "protected limitation"):
+            MODULE.validate_bounded_repair(before, {**after, "limitations": ["a" * 250, "c" * 143]}, plan)
+        with self.assertRaisesRegex(ValueError, "length range"):
+            MODULE.validate_bounded_repair(before, {**after, "limitations": ["a" * 301, "b" * 143]}, plan)
+
+    def test_malformed_limitations_are_not_length_repaired(self):
+        for values in (None, ["x"], ["x", 0], ["x", "y", "z"]):
+            self.assertEqual(MODULE.proposal_repair_plan({"limitations": values})["limitationIndices"], [])
 
     def test_extra_only_repair_must_preserve_valid_interpretation(self):
         before = {key: key for key in MODULE.PROPOSAL_FIELDS}
