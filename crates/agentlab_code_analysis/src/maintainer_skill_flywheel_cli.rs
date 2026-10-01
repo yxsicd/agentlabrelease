@@ -24,6 +24,21 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|arg| arg == "--stage-lesson-admission") {
+        let manifest = agentlab_code_analysis::maintainer_lesson_admission::stage(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &PathBuf::from(value(&args, "--proposal")?),
+            &PathBuf::from(value(&args, "--lesson-source")?),
+            &value(&args, "--lesson-id")?,
+            &value(&args, "--expected-knowledge-revision")?,
+            &output,
+        )?;
+        println!(
+            "{}",
+            serde_json::json!({"stageKind":manifest["stageKind"],"authorityWritePerformed":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|arg| arg == "--prepare-lesson-admission") {
         let plan = agentlab_code_analysis::maintainer_lesson_admission::prepare(
             &PathBuf::from(value(&args, "--knowledge")?),

@@ -261,3 +261,37 @@ Verification: full Rust package tests, formatting, release validation, Skill
 validation and diff checks exited zero. The real old-export rejection exited
 one with no admission-plan output. PR131's previous identity repair passed all
 ten applicable hosted checks before merging; immutable publication was skipped.
+
+## Real source persistence and full admission staging — 2026-10-02
+
+Overall maturity stays **51%**. The updated interpretation was persisted in the
+independent bare TableGit repository `agentlabstage-48eb54481017`, committed at
+`3a9d8a4fc7a720e13741da1b70f3bc96c2636568`. Nine typed tables contain 32 rows;
+every key was read back at that exact revision. Repeat import found zero pending
+groups and retained the same revision. The previous interpretation was preserved,
+and active knowledge remained at `38fc28d72870b36405287e048a5e6fce41a44b78`.
+Remote evidence-file rows still contain only hashes and paths, not raw bytes.
+
+Promotion from that read-back cut against the real first-four baseline succeeded
+with method revision `3e289ca9b7866458d71ee758034dd78c3920523f`. The real admission
+plan then succeeded, with exactly one Skill/fact and a refresh insert proposed.
+The unchanged-scope candidate was independently reassessed: program-bound 46,
+semantic-ready 41, maintenance-ready 2, total scopes 489. Its program-facts input
+hash changed, so reusing the original assessment as its evaluator would be wrong.
+
+Rust `--stage-lesson-admission` now independently reproduces the prior strict
+assessment and evaluates the new facts, requires equal totals/policy/scope
+verdicts, preserves baseline files and operation receipts, and binds the new
+assessment and updated table hashes to the refresh history. It produces a fresh
+full staging directory; a partial filesystem failure is retained as failed output,
+never represented as a committed snapshot. The existing writer explicitly
+accepts reviewed-lesson sidecar contracts and rejects readiness overclaims.
+
+The real staging path succeeded and the writer's portable-evidence check verified
+five sidecars including both inherited operation receipts. Rust CLI integration
+tests exercise the same adapter and reject a forged advanced-scope result; fixture
+identities remain fixture evidence, not real cross-repository generalization.
+Raw source/readback receipts, candidates, plans and staged snapshots stay outside
+source Git. Active knowledge admission, fixed-cut guidance consumption and actual
+next-round improvement remain outstanding. No new assessed Agent run, qualified
+case or Release is claimed by persistence and staging.

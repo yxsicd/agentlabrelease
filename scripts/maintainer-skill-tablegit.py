@@ -1010,7 +1010,7 @@ def operation_evidence_files(snapshot: Path) -> dict[str, bytes]:
         return {}
     manifest = load(manifest_path)
     kind = manifest.get("stageKind")
-    if kind not in ("verified-operation", "verified-semantic"):
+    if kind not in ("verified-operation", "verified-semantic", "reviewed-lesson"):
         if load(snapshot / manifest["assessment"]).get("standard", {}).get("operationEvidencePolicy") == "verified-receipt-content":
             raise RuntimeError("strict stage has no portable operation evidence contract")
         return {}
@@ -1030,9 +1030,9 @@ def operation_evidence_files(snapshot: Path) -> dict[str, bytes]:
         raise RuntimeError("operation stage has no portable evidence contract")
     if kind == "verified-operation" and (not 1 <= len(receipts) <= 4 or sorted(row["factId"] for row in receipts) != sorted(manifest["acceptedFactIds"])):
         raise RuntimeError("operation receipt coverage differs from accepted facts")
-    if kind == "verified-semantic" and receipts:
+    if kind in ("verified-semantic", "reviewed-lesson") and receipts:
         raise RuntimeError("semantic stage cannot introduce operation receipts")
-    if kind == "verified-semantic" and "inheritedReceipts" not in evidence:
+    if kind in ("verified-semantic", "reviewed-lesson") and "inheritedReceipts" not in evidence:
         raise RuntimeError("semantic stage lacks inherited operation receipt coverage")
     inherited = evidence.get("inheritedReceipts", [])
     all_receipts = receipts + inherited
@@ -1042,13 +1042,14 @@ def operation_evidence_files(snapshot: Path) -> dict[str, bytes]:
              "operation-baseline.json": read("operation-baseline.json"),
              "operation-result.json": read("operation-result.json")}
     result = json.loads(files["operation-result.json"])
-    if kind == "verified-semantic" and result.get("strictOperationEvidencePolicy") is not True:
+    if kind in ("verified-semantic", "reviewed-lesson") and result.get("strictOperationEvidencePolicy") is not True:
         raise RuntimeError("semantic stage result is not strict receipt policy")
     child = read(manifest["assessment"])
     focused = kind == "verified-semantic" and manifest.get("semanticMode") == "focused-refresh"
     if kind == "verified-semantic" and manifest.get("semanticMode", "expand") not in ("expand", "focused-refresh"):
         raise RuntimeError("unknown semantic stage mode")
     decision = ("review-proposed-operation-knowledge" if kind == "verified-operation"
+                else "review-proposed-lesson-knowledge" if kind == "reviewed-lesson"
                 else "review-proposed-knowledge-refresh" if focused else "review-proposed-knowledge")
     after_hash = result.get("afterAssessmentSha256") if kind == "verified-operation" else result.get("assessmentSha256")
     if (result.get("decision") != decision
@@ -1065,6 +1066,14 @@ def operation_evidence_files(snapshot: Path) -> dict[str, bytes]:
                 or baseline.get("totals") != child_value.get("totals")
                 or baseline.get("standard") != child_value.get("standard")):
             raise RuntimeError("focused portable evidence overclaims maturity or policy")
+    if kind == "reviewed-lesson":
+        baseline, child_value = json.loads(files["operation-baseline.json"]), json.loads(child)
+        if (result.get("advancedScopeIds") != [] or result.get("countsAsMaturityGain") is not False
+                or baseline.get("totals") != child_value.get("totals")
+                or baseline.get("standard") != child_value.get("standard")
+                or baseline.get("skills") != child_value.get("skills")
+                or result.get("before") != baseline.get("totals") or result.get("after") != child_value.get("totals")):
+            raise RuntimeError("lesson portable evidence overclaims scope readiness")
     for receipt in all_receipts:
         if not receipt["path"].startswith("operation-evidence/") or not re.fullmatch(r"[0-9a-f]{64}", receipt["sha256"]):
             raise RuntimeError("operation receipt reference invalid")
