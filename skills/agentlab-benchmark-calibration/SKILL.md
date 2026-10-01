@@ -37,6 +37,26 @@ availability only, not application behavior or complete case calibration.
 
 Use the task's actual expected baseline: a bug-fix case may fail before the patch; an extension case may pass old tests but fail new demand checks. Reference passes and targeted wrong-boundary/lost-history variants should fail the intended checks. Save complete output and exact identities in `evaluation_cases` calibration rows, with analysis evidence in `program_facts`.
 
+Before spending runtime budget on a reused test, inspect its pinned source body,
+assertions and failure branches. A test name, `done()` callback or normal exit
+does not establish the expected behavior. Independently inject success and
+failure at the declared seam and check whether the same test discriminates.
+Use `scripts/probe-hypium-failure-controls.cjs` for the explicitly supported
+single-call TestKit startup seam on trusted sources; pin the Git Blob and any
+TypeScript erasure compiler. This diagnostic is not a security sandbox, ArkTS
+type check, device test or qualification receipt. Preserve partial adapter
+failures separately; never count unsupported imports or timeouts as rejected
+implementations. A sensitive seam still requires runtime calibration against an
+accepted implementation and meaningful wrong variants. A vacuous reused test
+does not invalidate a separate, untested behavior Oracle hypothesis.
+
+Keep diagnostic findings bound to the original candidate digest and knowledge
+cut; feed gaps into a new construction round rather than rewriting history.
+If the Oracle source is missing from admitted fact evidence, first replenish
+that evidence. Keep generic lessons here and concrete candidate findings in
+instance records. Separate harmless refactors from semantic defects: a renamed
+class with the same default export is not automatically a wrong implementation.
+
 Define metric denominators and event sources: task success, build success, user rounds versus model/tool turns, monotonic execution time, and evidence-backed behavior scoring. Keep proposed process metrics explicitly unvalidated until agreement and repeatability are measured. Separate Harness malfunction from valid Agent inability.
 
 Use [the knowledge experiment](../../examples/knowledge-seed/README.md) as the runnable fixture calibration/SQL/history/import demo; [SWE](../../examples/swe-bench/README.md) and [Harmony](../../examples/harmony-build/README.md) provide existing campaign examples. Record each demo's actual coverage.

@@ -316,6 +316,7 @@ The object must have exactly these fields:
 - automaticPromotion: false
 
 Give at least two observables and two meaningful wrong variants. {environment_instruction} Validate every field type against the exact shape above, and parse the completed JSON once before finishing. The Oracle remains operator-owned: do not include a gold patch, claim build/runtime success, or claim approval. Use only paths present in the fact evidence. Prefer a mechanism supported by the semantic interpretation rather than a generic build task.
+An existing test name, done() callback, or successful runner exit is not a behavior assertion. If proposing reuse of an existing test, inspect its actual assertions and error branches at the pinned source; if the necessary test source is not in fact evidence, record that knowledge gap instead of inventing support. Require independently controlled success/failure checks before runtime calibration. A swallowed failure is an Oracle defect, while an unsupported adapter, timeout, or build fault is infrastructure failure, never a killed wrong variant. Define each wrong variant as one meaningful semantic change; do not assume a cosmetic rename is invalid. Record these as unresolved qualification requirements, not completed experiments.
 """
     try:
         participant.turn("shadow-case-constructor", workspace, prompt=prompt, wall_time_limit_seconds=720)
