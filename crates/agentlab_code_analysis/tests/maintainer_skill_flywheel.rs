@@ -1903,6 +1903,15 @@ fn recorded_capture_adapter_advances_only_the_bound_scope_and_preserves_limits()
         );
     }
     write(&receipt);
+    let mut unsupported = skill.clone();
+    unsupported["testFileCount"] = json!(1);
+    assert!(verify(&fact, &unsupported, &root).is_err());
+    unsupported = skill.clone();
+    unsupported["buildEntrypoints"] = json!([]);
+    assert!(verify(&fact, &unsupported, &root).is_err());
+    unsupported = skill.clone();
+    unsupported["ownershipSelectors"] = json!("malformed");
+    assert!(verify(&fact, &unsupported, &root).is_err());
     let mut changed_scope = skill;
     changed_scope["ownershipSelectors"] =
         json!([{"type":"files", "paths":["src/main.generic", "sibling/borrowed.generic"]}]);

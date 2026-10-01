@@ -1,0 +1,45 @@
+{
+  "automaticPromotion": false,
+  "dimensions": [
+    "operation"
+  ],
+  "evidence": [
+    {
+      "path": "common-capture.json",
+      "sha256": "027868459b1691fcceccc1cf70ab69e847cb0c68b130f2073f979d0b638d1b7d"
+    }
+  ],
+  "id": "operation-build-7d4692e7baccc428c6aa94cf8f2a7ea4a9c94813783d2f93d3ccef8e8427a21e",
+  "interpretation": "Receipt-content-qualified module build only; runtime, tests, performance and type checking are not independently qualified.",
+  "kind": "build-verification",
+  "operationEvidence": {
+    "path": "common-capture.json",
+    "sha256": "027868459b1691fcceccc1cf70ab69e847cb0c68b130f2073f979d0b638d1b7d"
+  },
+  "operationEvidenceCheck": {
+    "adapter": "recorded-build-capture-qualification-v1",
+    "lane": "build-only",
+    "limitations": [
+      "Build-only HAR qualification; no runtime, tests, performance, power or thermal claim.",
+      "Retained Unix PIDs are capture identities, not remote AgentWeb operation identities.",
+      "No Skills promotion or live authority write; a separate recorded-receipt adapter and reassessment are still required."
+    ],
+    "qualificationScope": {
+      "moduleBuild": true,
+      "performance": false,
+      "runtime": false,
+      "tests": false,
+      "typeChecking": false
+    },
+    "receiptPath": "common-capture.json",
+    "receiptSha256": "027868459b1691fcceccc1cf70ab69e847cb0c68b130f2073f979d0b638d1b7d",
+    "status": "verified",
+    "typeChecking": "not-qualified",
+    "verificationBoundary": "recorded qualification bytes and assertions only; no original log/artifact readback, execution replay or authorship authentication"
+  },
+  "repositoryId": "code-workshop",
+  "scopeSkillIds": [
+    "skill-scope-code-workshop-common-module-contract"
+  ],
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+}
