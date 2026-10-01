@@ -189,3 +189,36 @@ Local final validation: the full Rust package suite, formatting, release
 validation, Skill validation and diff checks passed. Operational review files,
 captures, committed readback receipts, failed partial output and separate
 promotion candidates remain outside the release source repository.
+
+## Lesson admission identity repair — 2026-10-02
+
+Overall maturity remains **51%**. Active admission and effective next-round
+guidance consumption are still incomplete; this change does not count as a
+learning round. Live inspection found that the candidate Skill omitted the
+target-operations ownership required by the published knowledge gate. The
+existing promoter also replaced colliding IDs silently and allowed an empty
+validation set or a passing validation belonging to a different lesson.
+
+Promotion now emits ownershipPlane=target-operations, automaticPromotion=false
+and sourceRevision on both new rows. Stage lessons retain repositoryId from
+the independently byte-bound candidate and promotion propagates it without
+inventing a target from an operational repository name. Legacy scenario exports
+without a repository retain that explicit absence. Existing target IDs, empty
+validation sets and borrowed validations fail before candidate output creation.
+The actual CLI regression exercises two arbitrary source identities, unchanged
+published baseline rows and these rejection paths. Such fixtures do not prove
+real cross-repository learning.
+
+The original hosted capture c59a9c7c48e1 was independently reconstructed into
+the external stage-lesson-admission-source-v1 export: nine analytical tables,
+qualified=false, with the bound guide-snippets source identity. This is a local
+new interpretation of retained evidence, not a fresh execution or a committed
+replacement of the previously persisted lesson cut.
+
+The next authority transaction still requires a refresh record binding the
+updated Skill/fact hashes and the unchanged scope evidence. Current focused and
+semantic Agent refresh paths do not consume newly promoted guidance bodies.
+Applicability must be explicit rather than inferred from repository name alone;
+active admission, provenance-bound prompt consumption and a measured next-round
+improvement remain the critical next actions. No active knowledge write, Agent
+run, formal case qualification or new Release is claimed by this repair.

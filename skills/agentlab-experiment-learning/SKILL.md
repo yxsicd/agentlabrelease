@@ -108,6 +108,17 @@ for Harmony build/runtime, UI and formal case even when the scoped lesson is
 verified. Candidate guidance is not active knowledge until maintenance admission,
 and neither archival nor proposal export proves the next round improved.
 
+Before admission, require nonempty passing validations belonging to the selected
+lesson, and reject target identities already present in the baseline. Existing
+guidance updates need a separate reviewed delta, never implicit replacement by
+the promotion command. Candidate Skills/facts carry target-operations ownership,
+automaticPromotion=false and the lesson source revision; stage lessons bind their
+repository identity from the byte-bound candidate, not the operational repository
+name. A candidate is still not a complete knowledge cut: append a refresh record
+binding the changed table hashes before publication. Verify that the intended
+downstream Agent actually receives applicable guidance body and provenance;
+hash/count inclusion alone does not establish consumption or learning benefit.
+
 When promoting against real multi-kind program facts, preserve heterogeneous
 unowned fields as JSON rather than coercing arrays/objects or dropping baseline
 rows. The exchange records observed mixed field types separately. Explicitly

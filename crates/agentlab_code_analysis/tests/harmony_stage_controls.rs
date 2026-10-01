@@ -74,7 +74,7 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
             "configurations":[{"id":"initial","language":"en-US","colorMode":0},{"id":"language","language":"zh-CN","colorMode":0},{"id":"color","language":"zh-CN","colorMode":1}],
             "variants":[{"id":"entry","path":"src/module.json5","from":"./owner/Owner.js","to":"./owner/Alternate.js","expectedFailedChecks":["stage-created","language","color"]},
                 {"id":"event","path":"src/owner/Owner.js","from":".on('environment', envCallback)","to":".on('typo', envCallback)","expectedFailedChecks":["application-environment-registration","language","color"]}]});
-        let candidate = json!({"id":repository,"sourceRevision":c["sourceRevision"],
+        let candidate = json!({"id":repository,"repositoryId":repository,"sourceRevision":c["sourceRevision"],
             "contextPaths":["src/module.json5"],"editablePaths":["src/owner/Owner.js"],
             "sourceSetSha256":"a".repeat(64),"knowledgeCutSha256":"b".repeat(64)});
         let candidate_sha =
@@ -316,10 +316,58 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
         assert_eq!(fact["sourceLessonId"], review["id"]);
         assert_eq!(fact["qualification"]["caseQualified"], false);
         assert_eq!(skill["body"], review["body"]);
+        assert_eq!(skill["ownershipPlane"], "target-operations");
+        assert_eq!(skill["automaticPromotion"], false);
+        assert_eq!(skill["sourceRevision"], c["sourceRevision"]);
+        assert_eq!(skill["repositoryId"], candidate["repositoryId"]);
+        assert_eq!(fact["repositoryId"], candidate["repositoryId"]);
         assert_eq!(
             fs::read(promoted.join("evaluation_cases.jsonl")).unwrap(),
             b""
         );
+        // A colliding target cannot silently replace accepted knowledge, even
+        // when its payload happens to match this candidate.
+        let collision_output = root.join("collision-candidate");
+        let result = Command::new(env!("CARGO_BIN_EXE_agentlab-experience"))
+            .arg("promote")
+            .arg(&lesson_output)
+            .arg(&promoted)
+            .arg(&collision_output)
+            .arg(review["id"].as_str().unwrap())
+            .output()
+            .unwrap();
+        assert!(!result.status.success());
+        assert!(!collision_output.exists());
+        assert!(String::from_utf8_lossy(&result.stderr).contains("target already exists"));
+        let lessons_path = lesson_output.join("experiment_lessons.jsonl");
+        let original_lessons = fs::read(&lessons_path).unwrap();
+        let validations_path = lesson_output.join("lesson_validations.jsonl");
+        let original_validations = fs::read(&validations_path).unwrap();
+        for mode in ["empty-validations", "borrowed-validation"] {
+            if mode == "empty-validations" {
+                let mut invalid: Value = serde_json::from_slice(&original_lessons).unwrap();
+                invalid["validationIds"] = json!([]);
+                fs::write(&lessons_path, serde_json::to_vec(&invalid).unwrap()).unwrap();
+            } else {
+                fs::write(&lessons_path, &original_lessons).unwrap();
+                let mut invalid: Value = serde_json::from_slice(&original_validations).unwrap();
+                invalid["lessonId"] = json!("another-lesson");
+                fs::write(&validations_path, serde_json::to_vec(&invalid).unwrap()).unwrap();
+            }
+            let rejected = root.join(mode);
+            let result = Command::new(env!("CARGO_BIN_EXE_agentlab-experience"))
+                .arg("promote")
+                .arg(&lesson_output)
+                .arg(&knowledge)
+                .arg(&rejected)
+                .arg(review["id"].as_str().unwrap())
+                .output()
+                .unwrap();
+            assert!(!result.status.success());
+            assert!(!rejected.exists());
+        }
+        fs::write(&lessons_path, &original_lessons).unwrap();
+        fs::write(&validations_path, &original_validations).unwrap();
         // Real publication rows are heterogeneous; empty fixtures miss this seam.
         let published = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../examples/maintainer-knowledge-gate/first-four");

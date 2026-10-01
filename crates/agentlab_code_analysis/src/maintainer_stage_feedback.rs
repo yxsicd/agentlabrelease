@@ -22,6 +22,12 @@ pub fn lesson_assets(
         "lesson requires accepted control and two intended semantic failures",
     )?;
     let review: Value = serde_json::from_slice(review_bytes).map_err(|e| e.to_string())?;
+    let candidate_value: Value = serde_json::from_slice(candidate).map_err(|e| e.to_string())?;
+    let repository_id = text(&candidate_value, "repositoryId")?;
+    need(
+        !repository_id.trim().is_empty(),
+        "lesson repository identity absent",
+    )?;
     need(
         review["schema"] == "agentlab.stage_lesson_review.v1" && review["reviewed"] == true,
         "explicit scoped lesson review absent",
@@ -82,7 +88,7 @@ pub fn lesson_assets(
             json!({"id":lesson_id,"kind":"calibrated-method-lesson","status":"verified",
             "scope":review["scope"],"phenomenon":review["phenomenon"],"cause":review["cause"],"change":review["change"],
             "attribution":"explicit-reviewed-interpretation-of-reconstructed-controls",
-            "analysisId":format!("{run_id}-feedback"),"sourceRevision":feedback["sourceRevision"],
+            "analysisId":format!("{run_id}-feedback"),"repositoryId":repository_id,"sourceRevision":feedback["sourceRevision"],
             "evidenceIds":[evidence_id],"validationIds":[validation_id],"targetIds":[review["factId"],review["skillId"]],
             "reviewerId":review["reviewerId"],"reviewSha256":review_sha,"promotionContract":promotion,
             "automaticPromotion":false,"qualified":false}),
