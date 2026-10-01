@@ -1,0 +1,82 @@
+{
+  "action": null,
+  "canonicalDownloadUrl": null,
+  "canonicalUrl": null,
+  "dataPlane": null,
+  "downloadUrls": null,
+  "error": null,
+  "found": true,
+  "kind": "exec",
+  "ok": true,
+  "operation": {
+    "channel": "control",
+    "fallbackUsed": false,
+    "gatewayInstanceId": "agentweb-ai-rgw-01",
+    "logicalGatewayId": "agentweb-ai",
+    "ok": true,
+    "result": {
+      "found": true,
+      "lane": "job",
+      "ok": true,
+      "record": {
+        "args": [
+          "install"
+        ],
+        "cancelled": false,
+        "command": "/home/huawei/.local/share/asrelease-node/toolchains/harmony/6.1.1.300/bin/ohpm",
+        "cwd": "/home/huawei/code/.worktrees/sample-in-harmonyos/flywheel-operation-20261001",
+        "durationMs": 1376,
+        "error": null,
+        "exitCode": 0,
+        "id": "exec-00000000000001ab",
+        "lane": "job",
+        "state": "completed",
+        "stderr": "",
+        "stdout": "\u001b[32minstall completed in 0s 255ms\u001b[39m\n",
+        "timedOut": false
+      },
+      "state": "completed"
+    },
+    "rgwHttp": "https://agentweb-ai.ru.yxsbase.win",
+    "rgwRouting": {
+      "attemptErrors": [],
+      "strategy": "peer-hot3-with-command-retry"
+    },
+    "routeDecision": "peer_direct",
+    "sessionId": null,
+    "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+    "targetRole": "upstream",
+    "timings": {
+      "awmcp": {
+        "attemptCount": 1,
+        "rgwRequestMs": 488,
+        "rgwResponseDecodeMs": 0,
+        "rgwResponseHeadersMs": 488,
+        "routeCacheHit": true,
+        "routeLookupMode": "command-cache",
+        "routeLookupMs": 0,
+        "totalMs": 488
+      },
+      "rgw": {
+        "dispatchMs": 0,
+        "journalMs": 0,
+        "peerRoundTripMs": 141,
+        "routeLookupMs": 0,
+        "totalMs": 141
+      }
+    },
+    "traceId": "7c9d08ed-f524-4e9b-85c4-78feb4afc421"
+  },
+  "operationId": "exec-00000000000001ab",
+  "phase": "completed",
+  "previewUrls": null,
+  "progress": null,
+  "publicUrl": null,
+  "publicationId": null,
+  "result": null,
+  "retryable": false,
+  "schema": "agentweb.operation/v1",
+  "status": "completed",
+  "succeeded": true,
+  "terminal": true
+}

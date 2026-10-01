@@ -1,0 +1,40 @@
+{
+  "schema": "agentlab.maintainer_flywheel_next_plan_audit.v1",
+  "date": "2026-10-01",
+  "automaticPromotion": false,
+  "authorityWritePerformed": false,
+  "maturity": {
+    "overallPercent": 42,
+    "previousPercent": 42,
+    "basis": "Engineering estimate; scheduling proposals alone do not prove a productive executed loop.",
+    "changeReason": "No increase until the newly implemented generic scheduling capability is exercised through real execution and feedback."
+  },
+  "implementation": {
+    "command": "agentlab-maintainer-skill-flywheel --plan-next-round",
+    "strictIndependentReassessment": true,
+    "everyScopeAccountedFor": true,
+    "unsupportedCapabilitiesAreExplicitBlockers": true,
+    "batchBound": 4,
+    "batchIsolatesRepositoryUrlIdRevisionLaneMode": true,
+    "knowledgeReadinessNeverClaimsClosedLoop": true
+  },
+  "pinnedExperiment": {
+    "semanticInputReleaseCommit": "d656442d286c8f8646d312ee4d78143985eeda6c",
+    "operationReceiptReleaseCommit": "993c88e6d4a68559ee161543a9a618074c49229a",
+    "scopeCount": 489,
+    "eligible": 441,
+    "capabilityBlocked": 47,
+    "knowledgeReady": 1,
+    "selected": 4,
+    "nextLane": "semantic-refresh",
+    "embeddedAssessmentEqualsPortableChild": true,
+    "unchangedReplayHasZeroGain": true,
+    "closedLoopQualified": false
+  },
+  "limitations": [
+    "This is pinned public receipt replay, not a fresh live authority snapshot or Agent execution.",
+    "Available lanes are operator declarations, not execution attestations.",
+    "The planner does not execute proposals or write TableGit; existing gates still own execution and persistence.",
+    "Calibrated cases, execution, feedback into the next knowledge cut and cross-repository transfer remain explicit downstream requirements."
+  ]
+}

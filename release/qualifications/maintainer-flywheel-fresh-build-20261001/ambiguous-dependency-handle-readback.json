@@ -1,0 +1,68 @@
+{
+  "action": "verify_operation_id",
+  "canonicalDownloadUrl": null,
+  "canonicalUrl": null,
+  "dataPlane": null,
+  "downloadUrls": null,
+  "error": {
+    "action": "verify_operation_id",
+    "code": "operation_not_found",
+    "message": "operation id was not found on the selected peer or storage backend",
+    "retryable": false
+  },
+  "found": false,
+  "kind": "exec",
+  "ok": false,
+  "operation": {
+    "channel": "control",
+    "fallbackUsed": false,
+    "gatewayInstanceId": "agentweb-ai-rgw-01",
+    "logicalGatewayId": "agentweb-ai",
+    "ok": true,
+    "result": {
+      "found": false,
+      "ok": true
+    },
+    "rgwHttp": "https://agentweb-ai.ru.yxsbase.win",
+    "rgwRouting": {
+      "attemptErrors": [],
+      "strategy": "peer-hot3-with-command-retry"
+    },
+    "routeDecision": "peer_direct",
+    "sessionId": null,
+    "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+    "targetRole": "upstream",
+    "timings": {
+      "awmcp": {
+        "attemptCount": 1,
+        "rgwRequestMs": 483,
+        "rgwResponseDecodeMs": 0,
+        "rgwResponseHeadersMs": 483,
+        "routeCacheHit": false,
+        "routeLookupMode": "topology-direct-hot3",
+        "routeLookupMs": 5002,
+        "totalMs": 5485
+      },
+      "rgw": {
+        "dispatchMs": 0,
+        "journalMs": 0,
+        "peerRoundTripMs": 141,
+        "routeLookupMs": 0,
+        "totalMs": 141
+      }
+    },
+    "traceId": "acaa51ef-f2e3-40fb-b7d9-31fd72de9c87"
+  },
+  "operationId": "exec-00000000000001a9",
+  "phase": "not_found",
+  "previewUrls": null,
+  "progress": null,
+  "publicUrl": null,
+  "publicationId": null,
+  "result": null,
+  "retryable": false,
+  "schema": "agentweb.operation/v1",
+  "status": "not_found",
+  "succeeded": false,
+  "terminal": true
+}

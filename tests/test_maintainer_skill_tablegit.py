@@ -16,6 +16,155 @@ SPEC.loader.exec_module(MODULE)
 
 
 class MaintainerSkillTableGitTest(unittest.TestCase):
+    def test_action_preflight_precedes_build_runtime_and_agent(self):
+        workflow = (ROOT / ".github/workflows/maintainer-skill-agent-flywheel.yml").read_text()
+        admission = workflow.index("python3 scripts/maintainer-skill-tablegit.py preflight")
+        for step in ("cargo build --locked", "npm ci --prefix", "scripts/run-maintainer-skill-agent-loop.sh",
+                     "scripts/run-maintainer-skill-focused-refresh.sh", "scripts/run-maintainer-scope-catalog-rewrite.sh"):
+            self.assertLess(admission, workflow.index(step))
+        self.assertIn("github.ref == 'refs/heads/main'", workflow)
+        self.assertIn('path: ${{ env.AGENTLAB_ROOT }}/run/', workflow)
+
+    def test_preflight_is_read_only_exact_and_fails_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            names = ("maintainerSkills", "maintainerScopeSkills", "programFacts",
+                     "maintainerSkillRefreshRounds", "evaluationCases")
+            references = {}
+            items = {}
+            for (table, filename), name in zip(MODULE.TABLE_FILES.items(), names):
+                row = {"id": table, "value": "original"}
+                MODULE.write_jsonl(root / filename, [row])
+                references[name] = {"path": filename, "sha256": MODULE.file_sha256(root / filename)}
+                items[table] = [{"key": table, "row": MODULE.envelope(row), "deleted": False}]
+            MODULE.write_json(root / "maintainer-knowledge-cut.json", {
+                "schema": "agentlab.maintainer_knowledge_cut.v1", "tables": references,
+                "tableGitAuthority": {"repo": "repo", "revision": "a" * 40}})
+            args = type("Args", (), {"base": root, "receipt": root / "receipt.json",
+                "repo": "repo", "endpoint": "https://example.invalid", "person_id": "person",
+                "anchor_table": "maintainer_skill_refresh_rounds"})
+            for scenario in ("exact", "stale", "concurrent", "payload", "local-drift"):
+                args.receipt = root / (scenario + ".json")
+                revisions = ["a" * 40, "a" * 40]
+                if scenario == "stale":
+                    revisions = ["b" * 40, "b" * 40]
+                if scenario == "concurrent":
+                    revisions[1] = "b" * 40
+                def query(*_args):
+                    if scenario == "local-drift":
+                        (root / "program_facts.jsonl").write_text("[]\n")
+                    if scenario == "payload":
+                        return dict(items, program_facts=[])
+                    return items
+                with mock.patch.object(MODULE, "Inspector") as connect, \
+                        mock.patch.object(MODULE, "current_revision", side_effect=revisions), \
+                        mock.patch.object(MODULE, "query_tables", side_effect=query) as reads:
+                    if scenario == "exact":
+                        MODULE.command_preflight(args)
+                    else:
+                        with self.assertRaisesRegex(RuntimeError, "preflight rejected"):
+                            MODULE.command_preflight(args)
+                    # Network effects are reads only, never initialization or a transaction.
+                    connect.return_value.call.assert_not_called()
+                    if scenario == "stale":
+                        reads.assert_not_called()
+                receipt = MODULE.load(args.receipt)
+                self.assertEqual(receipt["admitted"], scenario == "exact")
+                self.assertTrue(receipt["readOnly"])
+                with mock.patch.object(MODULE, "Inspector") as connect:
+                    with self.assertRaisesRegex(RuntimeError, "already exists"):
+                        MODULE.command_preflight(args)
+                    connect.assert_not_called()
+            args.receipt = root / "bad-local.json"
+            with mock.patch.object(MODULE, "Inspector") as connect:
+                with self.assertRaisesRegex(RuntimeError, "digest or path mismatch"):
+                    MODULE.command_preflight(args)
+                connect.assert_not_called()
+
+    def test_operation_evidence_is_portable_and_rejected_before_connect_on_drift(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            receipt = root / "operation-evidence" / "receipt.json"
+            receipt.parent.mkdir()
+            receipt.write_bytes(b'{"recorded":"exact"}\n')
+            fact = {"id": "operation", "operationEvidence": {
+                "path": "receipt.json", "sha256": MODULE.file_sha256(receipt)}}
+            for table, filename in MODULE.TABLE_FILES.items():
+                MODULE.write_jsonl(root / filename, [fact] if table == "program_facts" else [])
+            for filename in ("operation-baseline.json", "operation-result.json"):
+                MODULE.write_json(root / filename, {})
+            MODULE.write_json(root / "assessments/after.json", {})
+            MODULE.write_json(root / "operation-result.json", {
+                "decision": "review-proposed-operation-knowledge",
+                "beforeAssessmentSha256": MODULE.file_sha256(root / "operation-baseline.json"),
+                "afterAssessmentSha256": MODULE.file_sha256(root / "assessments/after.json")})
+            manifest = {"stageKind": "verified-operation", "acceptedFactIds": ["operation"],
+                "assessment": "assessments/after.json",
+                "tables": {table: {"path": filename, "sha256": MODULE.file_sha256(root / filename)}
+                           for table, filename in MODULE.TABLE_FILES.items()},
+                "operationEvidence": {"receiptRoot": "operation-evidence",
+                    "coverage": "accepted-operation-facts-only", "receipts": [{
+                        "factId": "operation", "path": "operation-evidence/receipt.json",
+                        "sha256": MODULE.file_sha256(receipt)}]}}
+            MODULE.write_json(root / "stage-manifest.json", manifest)
+            retained = MODULE.operation_evidence_files(root)
+            self.assertEqual(retained["operation-evidence/receipt.json"], receipt.read_bytes())
+            self.assertIn("operation-stage-manifest.json", retained)
+            old_receipt = receipt.parent / "prior.json"
+            old_receipt.write_bytes(b'{"recorded":"prior"}\n')
+            old_fact = {"id": "prior-operation", "operationEvidence": {
+                "path": "prior.json", "sha256": MODULE.file_sha256(old_receipt)}}
+            MODULE.write_jsonl(root / "program_facts.jsonl", [fact, old_fact])
+            manifest["tables"]["program_facts"]["sha256"] = MODULE.file_sha256(root / "program_facts.jsonl")
+            inherited = {"factId": "prior-operation", "path": "operation-evidence/prior.json",
+                         "sha256": MODULE.file_sha256(old_receipt)}
+            manifest["operationEvidence"]["inheritedReceipts"] = [inherited]
+            MODULE.write_json(root / "assessments/after.json", {"skills": [{"operationEvidenceChecks": {
+                "operation": {"status": "verified"}, "prior-operation": {"status": "verified"}}}]})
+            result = MODULE.load(root / "operation-result.json")
+            result["afterAssessmentSha256"] = MODULE.file_sha256(root / "assessments/after.json")
+            MODULE.write_json(root / "operation-result.json", result)
+            MODULE.write_json(root / "stage-manifest.json", manifest)
+            self.assertEqual(MODULE.operation_evidence_files(root)[inherited["path"]], old_receipt.read_bytes())
+            for invalid in ([], [inherited, inherited], [dict(inherited, factId="operation")]):
+                manifest["operationEvidence"]["inheritedReceipts"] = invalid
+                MODULE.write_json(root / "stage-manifest.json", manifest)
+                with mock.patch.object(MODULE, "Inspector") as connect:
+                    with self.assertRaises(RuntimeError):
+                        MODULE.command_sync(type("Args", (), {"snapshot": root}))
+                    connect.assert_not_called()
+            manifest["operationEvidence"]["inheritedReceipts"] = [inherited]
+            MODULE.write_json(root / "stage-manifest.json", manifest)
+            old_receipt.write_bytes(b'tampered history')
+            with mock.patch.object(MODULE, "Inspector") as connect:
+                with self.assertRaisesRegex(RuntimeError, "digest mismatch"):
+                    MODULE.command_sync(type("Args", (), {"snapshot": root}))
+                connect.assert_not_called()
+            old_receipt.write_bytes(b'{"recorded":"prior"}\n')
+            manifest["stageKind"] = "verified-semantic"
+            manifest["operationEvidence"]["coverage"] = "verified-child-operation-facts-only"
+            manifest["operationEvidence"]["inheritedReceipts"] += manifest["operationEvidence"]["receipts"]
+            manifest["operationEvidence"]["receipts"] = []
+            result["decision"] = "review-proposed-knowledge"
+            result["strictOperationEvidencePolicy"] = True
+            result["assessmentSha256"] = result.pop("afterAssessmentSha256")
+            MODULE.write_json(root / "operation-result.json", result)
+            MODULE.write_json(root / "stage-manifest.json", manifest)
+            self.assertIn("operation-evidence/prior.json", MODULE.operation_evidence_files(root))
+            inherited = manifest["operationEvidence"].pop("inheritedReceipts")
+            MODULE.write_json(root / "stage-manifest.json", manifest)
+            with mock.patch.object(MODULE, "Inspector") as connect:
+                with self.assertRaisesRegex(RuntimeError, "inherited operation receipt coverage"):
+                    MODULE.command_sync(type("Args", (), {"snapshot": root}))
+                connect.assert_not_called()
+            manifest["operationEvidence"]["inheritedReceipts"] = inherited
+            MODULE.write_json(root / "stage-manifest.json", manifest)
+            receipt.write_bytes(b'tampered')
+            with mock.patch.object(MODULE, "Inspector") as connect:
+                with self.assertRaisesRegex(RuntimeError, "digest mismatch"):
+                    MODULE.command_sync(type("Args", (), {"snapshot": root}))
+                connect.assert_not_called()
+
     def test_exact_revision_table_reads_are_bounded_and_parallel(self):
         barrier = threading.Barrier(len(MODULE.TABLE_FILES))
 

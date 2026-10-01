@@ -1,0 +1,83 @@
+{
+  "action": null,
+  "canonicalDownloadUrl": null,
+  "canonicalUrl": null,
+  "dataPlane": null,
+  "downloadUrls": null,
+  "error": "exit code",
+  "found": true,
+  "kind": "exec",
+  "ok": false,
+  "operation": {
+    "channel": "control",
+    "fallbackUsed": false,
+    "gatewayInstanceId": "agentweb-ai-rgw-01",
+    "logicalGatewayId": "agentweb-ai",
+    "ok": true,
+    "result": {
+      "found": true,
+      "lane": "job",
+      "ok": true,
+      "record": {
+        "args": [
+          "-c",
+          "set -euo pipefail\n/usr/bin/git fetch origin 0824ec31176d581e80dbf82f43eda8c79b3959b6\n/usr/bin/git worktree add --detach /home/huawei/code/.worktrees/agentlabrelease/flywheel-operation-capabilities-0824ec3 0824ec31176d581e80dbf82f43eda8c79b3959b6\ncd /home/huawei/code/.worktrees/agentlabrelease/flywheel-operation-capabilities-0824ec3\n/home/huawei/.cargo/bin/cargo test --locked -p agentlab_code_analysis --test maintainer_skill_flywheel"
+        ],
+        "cancelled": false,
+        "command": "/bin/bash",
+        "cwd": "/home/huawei/code/.worktrees/agentlabrelease/flywheel-operation-exec-1073a5c",
+        "durationMs": 12582,
+        "error": "exit code",
+        "exitCode": 101,
+        "id": "exec-00000000000001b6",
+        "lane": "job",
+        "state": "completed",
+        "stderr": "From https://github.com/yxsicd/agentlabrelease\n * branch              0824ec31176d581e80dbf82f43eda8c79b3959b6 -> FETCH_HEAD\n   Compiling agentlab_code_analysis v0.1.0 (/home/huawei/code/.worktrees/agentlabrelease/flywheel-operation-capabilities-0824ec3/crates/agentlab_code_analysis)\nwarning: unreachable pattern\n  --> crates/agentlab_code_analysis/src/asset_exchange.rs:93:58\n   |\n72 |             \"assessments\" => &[\n   |             ------------- matches all the relevant values\n...\n93 |             \"phase_failures\" | \"artifact_publications\" | \"assessments\" | \"checks\" => {\n   |                                                          ^^^^^^^^^^^^^ no value can reach this\n   |\n   = note: `#[warn(unreachable_patterns)]` (part of `#[warn(unused)]`) on by default\n\nwarning: unreachable pattern\n  --> crates/agentlab_code_analysis/src/asset_exchange.rs:93:74\n   |\n67 |             \"checks\" => &[\n   |             -------- matches all the relevant values\n...\n93 |             \"phase_failures\" | \"artifact_publications\" | \"assessments\" | \"checks\" => {\n   |                                                                          ^^^^^^^^ no value can reach this\n\nwarning: `agentlab_code_analysis` (bin \"agentlab-asset-model\") generated 2 warnings\nwarning: `agentlab_code_analysis` (bin \"agentlab-experience\") generated 2 warnings (2 duplicates)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.21s\n     Running tests/maintainer_skill_flywheel.rs (/home/huawei/.agentlab/flywheel/operation-exec-1073-build-target/debug/deps/maintainer_skill_flywheel-2ea166461b56889e)\nerror: test failed, to rerun pass `-p agentlab_code_analysis --test maintainer_skill_flywheel`\n",
+        "stdout": "Preparing worktree (detached HEAD 0824ec31)\nHEAD is now at 0824ec31 Route operation plans by independently assessed adapter capabilities\n\nrunning 24 tests\ntest explicit_fact_binding_cannot_name_a_missing_or_cross_repository_scope ... ok\ntest legacy_virtual_boundaries_retain_v1_identity_compatibility ... ok\ntest composite_selectors_bind_exact_owned_paths_and_reject_shared_anchor_siblings ... ok\ntest inherited_cross_repository_or_stale_facts_are_not_semantic_proof ... ok\ntest generic_evidence_rounds_advance_arbitrary_repositories_without_name_rules ... ok\ntest operation_maturity_requires_explicit_revision_bound_dimension ... ok\ntest implicit_operation_binding_never_qualifies_a_scope ... ok\ntest semantic_closure_preserves_preverified_operation_evidence ... ok\ntest operation_capabilities_route_without_hiding_other_scope_gaps ... ok\ntest stale_or_missing_source_identity_cannot_advance_any_dimension ... ok\ntest semantic_dispatch_refuses_nonsemantic_or_unavailable_lanes ... ok\ntest strict_receipt_rejects_traversal_missing_files_and_symlinks ... ok\ntest strict_operation_receipts_close_only_content_verified_build_gaps ... ok\ntest strict_execution_loop_stops_before_agent_when_source_cut_drifted ... FAILED\ntest next_round_plan_accounts_for_every_scope_and_isolates_batches ... ok\ntest next_round_planner_routes_gaps_without_claiming_closed_loop ... ok\ntest semantic_round_gate_rejects_borrowed_gains_and_partial_batches ... ok\ntest strict_receipt_rejects_failed_stale_borrowed_and_overclaimed_operations ... ok\ntest strict_semantic_dispatch_uses_exact_plan_and_rejects_drift ... ok\ntest productive_rounds_retain_inherited_receipts_without_original_machine ... ok\ntest strict_cli_prepares_repeatable_candidate_cut_and_advances_one_scope ... ok\ntest mixed_semantic_and_operation_rounds_preserve_portable_cut ... ok\ntest durable_assessment_resolution_ignores_orphans_and_rejects_broken_lineage ... ok\ntest operation_executor_runs_exact_plan_and_retains_failures_without_promotion ... ok\n\nfailures:\n\n---- strict_execution_loop_stops_before_agent_when_source_cut_drifted stdout ----\n\nthread 'strict_execution_loop_stops_before_agent_when_source_cut_drifted' (3719452) panicked at crates/agentlab_code_analysis/tests/maintainer_skill_flywheel.rs:677:5:\n/home/huawei/code/.worktrees/agentlabrelease/flywheel-operation-capabilities-0824ec3/scripts/run-maintainer-skill-agent-loop.sh: line 45: target/debug/agentlab-maintainer-skill-flywheel: No such file or directory\n\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    strict_execution_loop_stops_before_agent_when_source_cut_drifted\n\ntest result: FAILED. 23 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.32s\n\n",
+        "timedOut": false
+      },
+      "state": "completed"
+    },
+    "rgwHttp": "https://agentweb-ai.ru.yxsbase.win",
+    "rgwRouting": {
+      "attemptErrors": [],
+      "strategy": "peer-hot3-with-command-retry"
+    },
+    "routeDecision": "peer_direct",
+    "sessionId": null,
+    "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+    "targetRole": "upstream",
+    "timings": {
+      "awmcp": {
+        "attemptCount": 1,
+        "rgwRequestMs": 489,
+        "rgwResponseDecodeMs": 0,
+        "rgwResponseHeadersMs": 489,
+        "routeCacheHit": true,
+        "routeLookupMode": "command-cache",
+        "routeLookupMs": 0,
+        "totalMs": 489
+      },
+      "rgw": {
+        "dispatchMs": 0,
+        "journalMs": 0,
+        "peerRoundTripMs": 142,
+        "routeLookupMs": 0,
+        "totalMs": 142
+      }
+    },
+    "traceId": "961c6abe-84e3-420c-8ce7-3f756d8e2690"
+  },
+  "operationId": "exec-00000000000001b6",
+  "phase": "completed",
+  "previewUrls": null,
+  "progress": null,
+  "publicUrl": null,
+  "publicationId": null,
+  "result": null,
+  "retryable": false,
+  "schema": "agentweb.operation/v1",
+  "status": "completed",
+  "succeeded": false,
+  "terminal": true
+}

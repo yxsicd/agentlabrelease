@@ -1,0 +1,32 @@
+{
+  "schema": "agentlab.maintainer_flywheel_capture_feedback_audit.v1",
+  "methodRevision": "f22fc933ff995062bb20343d9bbbd8161fbb1d5d",
+  "overallMaturityPercent": 45,
+  "previousOverallMaturityPercent": 44,
+  "maturityMeasurement": "Engineering estimate, not a calibrated benchmark",
+  "inputCut": "Existing frozen portable replay cut; not asserted current live TableGit",
+  "beforeAssessmentSha256": "c653f3ba120a780f141a9df49b295003f371cce1a02149c2039c925979567d31",
+  "afterAssessmentSha256": "15cdc00d669c4564e0b8eef9e9845245e3f411d7a36f20624ff592ba16f18112",
+  "scopeCount": 489,
+  "maintenanceReadyBefore": 1,
+  "maintenanceReadyAfter": 2,
+  "selectedScopeId": "skill-scope-code-workshop-common-module-contract",
+  "unselectedRowsUnchanged": true,
+  "portableReassessmentByteIdentical": true,
+  "nextSelectedScopeId": "skill-scope-code-workshop-hmosword-build",
+  "nextSelectedExecuted": false,
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "closedLoopQualified": false,
+  "boundaries": [
+    "Recorded qualification-content adapter; raw bytes were independently checked in the preceding retained-capture qualification",
+    "Local candidate only; no live authority write or replication claim",
+    "No runtime, tests, type-check, performance, power or thermal claim",
+    "No Agent dispatch or fresh target build this round"
+  ],
+  "remainingGaps": [
+    "Current authority admission and productive Agent multi-round execution",
+    "Calibrated cases generated from updated knowledge, executed and fed back",
+    "Structurally different repository transfer"
+  ]
+}

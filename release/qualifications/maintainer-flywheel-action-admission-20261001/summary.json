@@ -1,0 +1,47 @@
+{
+  "schema": "agentlab.maintainer_flywheel_action_admission_audit.v1",
+  "maturity": {
+    "overallPercent": 42,
+    "previousPercent": 42,
+    "delta": 0,
+    "kind": "engineering-estimate-not-measured-benchmark"
+  },
+  "mainRevision": "229d876bdf12e093c2806a19f1bfa3be461effe4",
+  "workflow": "maintainer-skill-agent-flywheel.yml",
+  "livePreflight": {
+    "admitted": false,
+    "afterRevision": "15e976790cc7a508c234a966b1bdf0585f0d6374",
+    "automaticPromotion": false,
+    "decision": "refresh-authority-input-before-run",
+    "expectedRevision": "729f726f0985a1789d2e488147be484b7993afe4",
+    "inputCutSha256": "186602289cdcccedb24ff5ac6b264fed4161b397e782317faafac6ec8a581207",
+    "inputTablesSha256": {
+      "evaluation_cases": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "maintainer_scope_skills": "9faf87778708c0bc9acf6522ac1c0b1358e1845139da4f2949348d7285e51953",
+      "maintainer_skill_refresh_rounds": "2d947123bae3955e2411efce89b01721b0a517b17c4a90a0746c2d6c013aa341",
+      "maintainer_skills": "a7f6affb37e60c7009870feafa86325ba4b7cdabf0ff2b0fd88364fa667ff6d7",
+      "program_facts": "07a8d5a287dd09974c3024613d7692094c92cd817fa98ce89d646e55317d98b4"
+    },
+    "inputUnchanged": true,
+    "limitations": [
+      "point-in-time admission only; commit-time revision and row fences remain required"
+    ],
+    "observedRevision": "15e976790cc7a508c234a966b1bdf0585f0d6374",
+    "readOnly": true,
+    "repo": "agentlabtablegit",
+    "schema": "agentlab.maintainer_skill_tablegit_preflight.v1",
+    "tablesMatched": {}
+  },
+  "controlledOperations": [
+    "table_status",
+    "table_status"
+  ],
+  "agentRunDispatched": false,
+  "authorityWrites": 0,
+  "limitations": [
+    "Patched preflight is on the review branch, not deployed main.",
+    "Live result qualifies stale-input refusal only; the admitted path was tested with controlled fixtures.",
+    "No model call, productive new semantic round, calibrated case execution, feedback promotion, or release activation occurred."
+  ],
+  "nextStep": "Review and integrate the exact current TableGit export and orchestration changes before a bounded trusted-main Agent run."
+}

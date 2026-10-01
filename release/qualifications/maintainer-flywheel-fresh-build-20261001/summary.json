@@ -1,0 +1,48 @@
+{
+  "schema": "agentlab.maintainer_flywheel_fresh_build_audit.v1",
+  "date": "2026-10-01",
+  "automaticPromotion": false,
+  "authorityWritePerformed": false,
+  "maturity": {"overallPercent": 42, "previousPercent": 42,
+    "basis": "Engineering estimate, not a measured benchmark.",
+    "changeReason": "Fresh repeat execution of an already-qualified build lane is not a new scope transition or complete feedback round."},
+  "source": {"repositoryId": "code-workshop",
+    "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+    "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+    "workspace": "/home/huawei/code/.worktrees/sample-in-harmonyos/flywheel-operation-20261001",
+    "cleanBefore": true, "cleanAfter": true},
+  "host": {"peerId": "lgw_60b9b37d14c4447f919196105a1a8b8a", "routeDecision": "peer_direct"},
+  "toolchain": {"sdkRelease": "6.1.1.300", "ohpmVersion": "6.1.2.285", "hvigorVersion": "6.24.4"},
+  "dependencyPreparation": {"operationId": "exec-00000000000001ab", "exitCode": 0,
+    "durationMs": 1376, "lockSha256": "7517f565b996816a2e2fc3f34b7fa7d55584b58e79eccfffcdb191cf599c0501"},
+  "build": {"module": "componentlibrary", "target": "default", "task": "assembleHar",
+    "noTypeCheck": true, "runtimeQualified": false, "testsQualified": false, "performanceQualified": false,
+    "attempts": [
+      {"operationId": "exec-00000000000001ac", "exitCode": 0, "durationMs": 17370,
+       "artifactBytes": 9787705, "artifactSha256": "c7e4733965c5dee26f7188059dcc534fc33c861e81662bebe6693e69302b7979",
+       "capture": "attempt-1-operation.json", "captureSha256": "ec81fb187df357807592a2f347b429cdc11ae67c7eb27f24ecbaa4a887d30603"},
+      {"operationId": "exec-00000000000001ae", "exitCode": 0, "durationMs": 16881,
+       "artifactBytes": 9787709, "artifactSha256": "70f4a767cce26fa36b73242074d4e1006cd97711862045b086d6b880ec5b0988",
+       "capture": "attempt-2-operation.json", "captureSha256": "4fc035b439aebded2e44e34542929ee460efb9ab4df02e0278b613155b412f00"}
+    ],
+    "canonicalContentReproducible": true, "rawArchiveReproducible": false,
+    "canonicalAlgorithm": "sha256-json-member-tuples-v1",
+    "canonicalDefinition": "SHA256 of compact UTF-8 JSON of sorted [name, type-hex, size, content-SHA256, linkname] tuples; content is empty for non-regular members; all members including directories count.",
+    "memberCount": 398,
+    "canonicalMemberSha256": "ab264d217f81522c7f2141f3eef4b4b34262a6c3d8fb30640a82640784df1218",
+    "artifactReadbackOperationId": "exec-00000000000001af",
+    "artifactDirectory": "/home/huawei/.agentlab/flywheel/fresh-operation-20261001"},
+  "observations": [
+    "The simulator commandline-tools directory was not the application-build SDK. The actual SDK path was recovered from recorded project configuration and its executable versions were verified.",
+    "The initial compound dependency command (exec-00000000000001a9) reported dependency exit 0 but outer operation exit 1. That ambiguous operation was not used as successful execution proof; a distinct direct executable capture succeeded.",
+    "Build warnings remain in complete captured stdout/stderr strings; packaging success does not imply device/API compatibility."
+  ],
+  "limitations": [
+    "Operator-driven execution, not an automated gap-plan operation dispatcher or construction Agent run.",
+    "No new semantic scope closure, TableGit transaction, calibrated case execution, emulator run or feedback promotion.",
+    "The member comparison algorithm includes directories and differs from historical regular-file-only counts; historical canonical hashes are not directly comparable.",
+    "Captured command JSON and host readback are inspectable evidence, not an independent cryptographic host attestation.",
+    "The initial ambiguous compound operation's handle later returned not_found; that readback is retained separately and does not reconstruct its original result. Successful direct dependency and both build captures were preserved immediately.",
+    "Model configuration was not located in the inspected credential/startup locations; this does not prove it is absent everywhere."
+  ]
+}

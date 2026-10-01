@@ -11,6 +11,11 @@ run_root=$2
 repository_selector=$3
 iterations=$4
 pi=$5
+gate=${AGENTLAB_FLYWHEEL_GATE:-${CARGO_TARGET_DIR:-target}/debug/agentlab-maintainer-skill-flywheel}
+if [[ ! -x "$gate" ]]; then
+  echo "Flywheel gate is not executable: configure AGENTLAB_FLYWHEEL_GATE or CARGO_TARGET_DIR" >&2
+  exit 2
+fi
 
 max_iterations=${AGENTLAB_MAX_ITERATIONS:-3}
 scope_batch_size=${AGENTLAB_SCOPE_BATCH_SIZE:-1}
@@ -42,14 +47,38 @@ fi
 for ((iteration = 1; iteration <= iterations; iteration++)); do
   iteration_root="$loop_root/iteration-$iteration"
   mkdir -p "$iteration_root"
-  assessment=$(find "$working_knowledge/assessments" -maxdepth 1 -type f -name '*.json' -print0 |
-    xargs -0 jq -r '[.roundIndex,input_filename] | @tsv' | sort -n | tail -1 | cut -f2-)
+  "$gate" --resolve-latest-assessment \
+    --base "$working_knowledge" --output "$iteration_root/durable-assessment-reference.json"
+  assessment=$(jq -r '.assessmentPath' "$iteration_root/durable-assessment-reference.json")
   test -n "$assessment"
 
-  python3 examples/maintainer-knowledge-gate/agent_flywheel.py prepare-batch \
-    --knowledge "$working_knowledge" --assessment "$assessment" \
-    --repository "$repository_selector" --batch-size "$scope_batch_size" \
-    --output "$iteration_root/flywheel-batch-request.json"
+  if [[ $(jq -r '.standard.operationEvidencePolicy' "$assessment") == verified-receipt-content ]]; then
+    test -d "$working_knowledge/operation-evidence"
+    plan_parent=()
+    if [[ $(jq -r '.roundIndex' "$assessment") -gt 1 ]]; then
+      plan_parent=(--parent-assessment-sha256 "$(jq -r '.parentAssessmentSha256' "$assessment")")
+    fi
+    "$gate" --plan-next-round \
+      --scope-skills "$working_knowledge/maintainer_scope_skills.jsonl" \
+      --program-facts "$working_knowledge/program_facts.jsonl" \
+      --operation-receipts-root "$working_knowledge/operation-evidence" \
+      --round-index "$(jq -r '.roundIndex' "$assessment")" ${plan_parent[@]+"${plan_parent[@]}"} \
+      --available-lane semantic-refresh --batch-size "$scope_batch_size" \
+      --repository "$repository_selector" --output "$iteration_root/strict-next-round-plan.json"
+    "$gate" --prepare-semantic-batch \
+      --scope-skills "$working_knowledge/maintainer_scope_skills.jsonl" \
+      --program-facts "$working_knowledge/program_facts.jsonl" \
+      --operation-receipts-root "$working_knowledge/operation-evidence" \
+      --next-round-plan "$iteration_root/strict-next-round-plan.json" --before "$assessment" \
+      --knowledge-cut "$working_knowledge/maintainer-knowledge-cut.json" \
+      --repository "$repository_selector" --output "$iteration_root/flywheel-batch-request.json"
+  else
+    # Historical policy remains explicit; never silently migrate it to strict.
+    python3 examples/maintainer-knowledge-gate/agent_flywheel.py prepare-batch \
+      --knowledge "$working_knowledge" --assessment "$assessment" \
+      --repository "$repository_selector" --batch-size "$scope_batch_size" \
+      --output "$iteration_root/flywheel-batch-request.json"
+  fi
 
   mapfile -t source < <(jq -r '.repository.repository,.repository.revision' \
     "$iteration_root/flywheel-batch-request.json")
@@ -144,14 +173,24 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
 
   parent=$(sha256sum "$assessment" | cut -d' ' -f1)
   round=$(jq -r '.roundIndex + 1' "$assessment")
-  target/debug/agentlab-maintainer-skill-flywheel \
+  operation_receipt_args=()
+  if [[ $(jq -r '.standard.operationEvidencePolicy' "$assessment") == verified-receipt-content ]]; then
+    test -d "$working_knowledge/operation-evidence"
+    operation_receipt_args=(--operation-receipts-root "$working_knowledge/operation-evidence")
+  fi
+  "$gate" \
     --scope-skills "$working_knowledge/maintainer_scope_skills.jsonl" \
     --program-facts "$iteration_root/candidate-program-facts.jsonl" \
-    --round-index "$round" --parent-assessment-sha256 "$parent" \
+    --round-index "$round" --parent-assessment-sha256 "$parent" "${operation_receipt_args[@]}" \
     --output "$iteration_root/candidate-assessment.json"
-  python3 examples/maintainer-knowledge-gate/agent_flywheel.py compare \
+  selected_args=()
+  while IFS= read -r selected_scope; do
+    selected_args+=(--selected-scope "$selected_scope")
+  done < <(jq -r '.requests[].scope.id' "$iteration_root/flywheel-batch-request.json")
+  "$gate" --compare-semantic-round \
     --before "$assessment" --after "$iteration_root/candidate-assessment.json" \
-    --expected-scopes "$scope_count" --output "$iteration_root/result.json"
+    "${selected_args[@]}" --output "$iteration_root/result.json"
+  jq -e '.decision == "review-proposed-knowledge"' "$iteration_root/result.json"
 
   next_knowledge="$loop_root/knowledge-$iteration"
   python3 scripts/maintainer-skill-tablegit.py stage \
@@ -165,20 +204,26 @@ for ((iteration = 1; iteration <= iterations; iteration++)); do
     --output "$next_knowledge"
   working_knowledge=$next_knowledge
 
+  execution_plan="$iteration_root/convergence-plan.json"
+  if [[ -f "$iteration_root/strict-next-round-plan.json" ]]; then
+    execution_plan="$iteration_root/strict-next-round-plan.json"
+  fi
   jq -n --argjson iteration "$iteration" --arg repository "$repository_id" \
     --slurpfile batch "$iteration_root/flywheel-batch-request.json" \
     --slurpfile result "$iteration_root/result.json" \
     --slurpfile receipts "$iteration_root/proposal-receipts.json" \
     --slurpfile lifecycle "$iteration_root/agent-lifecycles.json" \
     --slurpfile retried "$iteration_root/retried-scope-indices.json" \
-    --slurpfile plan "$iteration_root/convergence-plan.json" \
+    --slurpfile plan "$execution_plan" \
     '{iteration:$iteration,repository:$repository,
       scopeIds:[$batch[0].requests[].scope.id],
       acceptedFactIds:[$receipts[0][].acceptedFactId],
       batchSize:$batch[0].selectedScopeCount,before:$result[0].before,
       after:$result[0].after,
       selectionPlan:{decision:$plan[0].decision,summary:$plan[0].summary,
-        sourceAssessmentSha256:$plan[0].sourceAssessmentSha256},
+        policy:($batch[0].selectionPolicy // "legacy-semantic-selector"),
+        planSha256:$batch[0].selectionPlanSha256,
+        sourceAssessmentSha256:$batch[0].sourceAssessment.sha256},
       execution:{parallel:true,agentCount:($lifecycle[0]|length),
         retriedScopeIndices:$retried[0],retryCount:($retried[0]|length),
         maxToolCalls:([$lifecycle[0][].maxToolCalls]|add),

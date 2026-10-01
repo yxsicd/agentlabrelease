@@ -26,8 +26,9 @@ export AGENTLAB_PRODUCER_KIND=${AGENTLAB_PRODUCER_KIND:-hwlinux-local}
 export AGENTLAB_PRODUCER_HOST=${AGENTLAB_PRODUCER_HOST:-$(hostname)}
 
 mkdir -p "$run_root"
-assessment=$(find "$knowledge/assessments" -maxdepth 1 -type f -name '*.json' -print0 |
-  xargs -0 jq -r '[.roundIndex,input_filename] | @tsv' | sort -n | tail -1 | cut -f2-)
+target/debug/agentlab-maintainer-skill-flywheel --resolve-latest-assessment \
+  --base "$knowledge" --output "$run_root/durable-initial-assessment.json"
+assessment=$(jq -r '.assessmentPath' "$run_root/durable-initial-assessment.json")
 test -n "$assessment"
 python3 examples/maintainer-knowledge-gate/agent_flywheel.py plan \
   --knowledge "$knowledge" --assessment "$assessment" --repository "$repository" \
@@ -56,8 +57,9 @@ scripts/run-maintainer-skill-agent-loop.sh \
 
 snapshot="$run_root/loop/knowledge-$iterations"
 test -f "$snapshot/stage-manifest.json"
-final_assessment=$(find "$snapshot/assessments" -maxdepth 1 -type f -name '*.json' -print0 |
-  xargs -0 jq -r '[.roundIndex,input_filename] | @tsv' | sort -n | tail -1 | cut -f2-)
+target/debug/agentlab-maintainer-skill-flywheel --resolve-latest-assessment \
+  --base "$snapshot" --output "$run_root/durable-final-assessment.json"
+final_assessment=$(jq -r '.assessmentPath' "$run_root/durable-final-assessment.json")
 test -n "$final_assessment"
 python3 examples/maintainer-knowledge-gate/agent_flywheel.py plan \
   --knowledge "$snapshot" --assessment "$final_assessment" --repository "$repository" \

@@ -40,6 +40,35 @@ jobs:
           cd crates/agentlab_code_analysis/grammar
           NODE_PATH="$RUNNER_TEMP/parser-tools/node_modules" "$RUNNER_TEMP/parser-tools/node_modules/.bin/tree-sitter" generate
           git diff --exit-code -- src
+      - name: Read pinned public semantic export for operation replay
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: d656442d286c8f8646d312ee4d78143985eeda6c
+          path: .operation-inputs/knowledge
+          persist-credentials: false
+      - name: Read pinned public build receipt for operation replay
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 993c88e6d4a68559ee161543a9a618074c49229a
+          path: .operation-inputs/receipts
+          persist-credentials: false
+      - name: Qualify strict operation transition and unchanged replay
+        run: |
+          bash scripts/run-maintainer-operation-receipt-smoke.sh \
+            .operation-inputs/knowledge/examples/maintainer-knowledge-gate/first-four/maintainer_scope_skills.jsonl \
+            .operation-inputs/knowledge/examples/maintainer-knowledge-gate/first-four/program_facts.jsonl \
+            .operation-inputs/receipts \
+            release/qualifications/code-workshop-7aa95cac-componentlibrary-build/build-qualification.json \
+            de1f82800dd7680242948d77d6c2416c5d97319f72d2d876cbca194a82ddeba7 \
+            skill-scope-code-workshop-componentlibrary-framework \
+            "$RUNNER_TEMP/operation-round-evidence"
+      - name: Preserve operation round and replay evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: maintainer-operation-round-evidence
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/operation-round-evidence/
   pinned-harmony-syntax-coverage:
     needs: rust-local-contract
     runs-on: ubuntu-latest

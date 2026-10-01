@@ -1,0 +1,36 @@
+{
+  "schema": "agentlab.maintainer_flywheel_durable_reference_audit.v1",
+  "date": "2026-10-01",
+  "automaticPromotion": false,
+  "authorityWritePerformed": false,
+  "maturity": {
+    "overallPercent": 42,
+    "previousPercent": 42,
+    "basis": "Engineering estimate, not a measured benchmark.",
+    "changeReason": "Exported-cut lineage hardened; no new productive real Agent feedback round qualified."
+  },
+  "capabilities": [
+    "Rust resolves the newest durable refresh-row assessment reference instead of selecting orphan reports by maximum assessment index.",
+    "Local and Agent execution loops resolve baseline and final reports through that pointer.",
+    "The existing Python staging adapter checks original-byte integrity, contained paths and unique durable round identity.",
+    "Operation staging reuses the Rust resolver and checks refresh-table byte stability."
+  ],
+  "validation": {
+    "rustFlywheelTestsPassed": 22,
+    "existingConstructionTestsPassed": 29,
+    "regression": "durable_assessment_resolution_ignores_orphans_and_rejects_broken_lineage",
+    "coveredRejections": ["orphan report selection", "duplicate refresh indices", "tampered assessment", "symlink", "path traversal", "missing assessment", "output overwrite"],
+    "pinnedPublicStage": {
+      "refreshRoundIndex": 34,
+      "assessmentRoundIndex": 32,
+      "assessmentSha256": "c653f3ba120a780f141a9df49b295003f371cce1a02149c2039c925979567d31",
+      "refreshTableSha256": "57806a5d91de79369227aa3fc7cdc81dce990c48f4430186e9a8cd1d95e847bd"
+    }
+  },
+  "limitations": [
+    "A durable reference proves only the inspected export's lineage, not current live TableGit HEAD.",
+    "The resolver checks identity and integrity; strict independent reassessment remains a separate dispatch prerequisite.",
+    "No fresh model request, target operation, calibrated case execution or feedback promotion.",
+    "Remote model configuration and full operation-lane orchestration remain open."
+  ]
+}

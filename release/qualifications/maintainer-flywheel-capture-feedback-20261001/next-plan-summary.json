@@ -1,0 +1,30 @@
+{
+  "schema": "agentlab.maintainer_flywheel_next_plan.v1",
+  "decision": "propose-next-batch",
+  "nextLane": "operation-verification",
+  "selectedScopeIds": [
+    "skill-scope-code-workshop-hmosword-build"
+  ],
+  "summary": {
+    "capabilityBlocked": 484,
+    "eligible": 3,
+    "knowledgeReady": 2,
+    "scopeCount": 489,
+    "selected": 1
+  },
+  "policy": {
+    "availableLanes": [
+      "operation-verification"
+    ],
+    "availableOperationKinds": [
+      "build-only"
+    ],
+    "batchSize": 1,
+    "maxSourceFiles": 80,
+    "operationEvidencePolicy": "verified-receipt-content",
+    "repositorySelector": "code-workshop"
+  },
+  "closedLoopQualified": false,
+  "authorityWritePerformed": false,
+  "automaticPromotion": false
+}

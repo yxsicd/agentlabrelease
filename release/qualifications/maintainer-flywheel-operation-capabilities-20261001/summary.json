@@ -1,0 +1,40 @@
+{
+  "schema": "agentlab.maintainer_flywheel_operation_capabilities_audit.v1",
+  "maturity": {
+    "overallPercent": 42,
+    "previousPercent": 42,
+    "delta": 0,
+    "kind": "engineering-estimate-not-measured-benchmark"
+  },
+  "linuxExecutorRegression": {
+    "sourceRevision": "1073a5cfd6195cbbde97e1f60ed283f70097af3f",
+    "peerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+    "operationId": "exec-00000000000001b4",
+    "exitCode": 0,
+    "durationMs": 13903,
+    "routeDecision": "peer_direct",
+    "boundary": "Controlled generic fixture, before operation-kind routing was implemented."
+  },
+  "currentRouting": {
+    "input": "fixed exported-cut revision 15e976790cc7a508c234a966b1bdf0585f0d6374; not refreshed live authority",
+    "scopes": 489,
+    "legacySelectedScope": "skill-scope-code-workshop-appscope",
+    "legacySelectedOperationKind": "support-config",
+    "declaredKinds": [
+      "build-only"
+    ],
+    "selectedScope": "skill-scope-code-workshop-common-module-contract",
+    "eligible": 4,
+    "capabilityBlocked": 484,
+    "knowledgeReady": 1,
+    "selected": 1
+  },
+  "localRustTestsPassed": 24,
+  "authorityWrites": 0,
+  "qualified": false,
+  "limitations": [
+    "Routing admits an adapter capability, not execution success or independent build qualification.",
+    "No new target operation, scope transition, Agent round, calibrated case, or live TableGit transaction is asserted by this audit."
+  ],
+  "nextStep": "Execute the explicitly routed common-module build on pinned HW Linux source, independently qualify its captured artifacts, and feed the exact verdict into the existing stage/assessment path."
+}

@@ -1,0 +1,29 @@
+{
+  "schema": "agentlab.maintainer_operation_continuity_audit.v1",
+  "date": "2026-10-01",
+  "automaticPromotion": false,
+  "authorityWritePerformed": false,
+  "maturity": {
+    "overallPercent": 42,
+    "previousPercent": 40,
+    "basis": "Engineering estimate, not a measured benchmark or scope-readiness percentage.",
+    "changeReason": "Verified cumulative operation evidence survives successive portable cuts; inherited receipt drift blocks ingestion before connection."
+  },
+  "verification": {
+    "rustRegression": "productive_rounds_retain_inherited_receipts_without_original_machine",
+    "fixtureProductiveRounds": 3,
+    "fixtureDistinctScopes": 3,
+    "fixtureCumulativeMaintenanceReady": [1, 2, 3],
+    "previousCutUsedAsNextBase": true,
+    "previousWorkerReceiptDirectoryRemovedBetweenRounds": true,
+    "finalPortableReassessmentEqualsOriginal": true,
+    "tamperedInheritedEvidenceCreatesNoStage": true,
+    "writerRegression": "test_operation_evidence_is_portable_and_rejected_before_connect_on_drift"
+  },
+  "limitations": [
+    "Controlled receipt fixtures, not fresh target executions or three real productive flywheel rounds.",
+    "No new live TableGit transaction, remote replication, release tag or case promotion in this iteration.",
+    "Receipt content integrity does not establish authorship or independently verify referenced logs and artifacts.",
+    "Runtime, functional case feedback, emulator performance and cross-repository transfer remain separate qualification gaps."
+  ]
+}

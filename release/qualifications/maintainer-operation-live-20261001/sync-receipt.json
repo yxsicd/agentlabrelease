@@ -1,0 +1,33 @@
+{
+  "authorityVerified": true,
+  "mirror": {
+    "requested": false,
+    "verified": false
+  },
+  "repo": "agentlabtablegit",
+  "revision": "15e976790cc7a508c234a966b1bdf0585f0d6374",
+  "runId": "live-20261001-fwbuild-01",
+  "schema": "agentlab.maintainer_skill_tablegit_sync_receipt.v1",
+  "tables": {
+    "evaluation_cases": {
+      "rowCount": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "maintainer_scope_skills": {
+      "rowCount": 489,
+      "sha256": "9faf87778708c0bc9acf6522ac1c0b1358e1845139da4f2949348d7285e51953"
+    },
+    "maintainer_skill_refresh_rounds": {
+      "rowCount": 34,
+      "sha256": "71207a402696d98a2854bbfa1da18e60de61068980e691e762dbc1cf7a284d68"
+    },
+    "maintainer_skills": {
+      "rowCount": 12,
+      "sha256": "a7f6affb37e60c7009870feafa86325ba4b7cdabf0ff2b0fd88364fa667ff6d7"
+    },
+    "program_facts": {
+      "rowCount": 58,
+      "sha256": "8ae23e768f912dfea7fb4f948959a60d3bb8dca1741c22c30a1423bfdcf4778c"
+    }
+  }
+}

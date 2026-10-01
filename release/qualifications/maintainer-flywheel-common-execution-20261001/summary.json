@@ -1,0 +1,157 @@
+{
+  "schema": "agentlab.maintainer_flywheel_common_execution_audit.v1",
+  "maturity": {
+    "overallPercent": 43,
+    "previousPercent": 42,
+    "delta": 1,
+    "kind": "engineering-estimate-not-measured-benchmark",
+    "basis": "First verified generic capability-filtered gap-plan to fresh new-scope target execution and independent evidence readback; not a scope readiness gain or completed feedback loop."
+  },
+  "executorSourceRevision": "0824ec31176d581e80dbf82f43eda8c79b3959b6",
+  "regressionSourceRevision": "74f519560e029d0a49fe8f53e894739d318ef575",
+  "source": {
+    "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+    "repositoryId": "code-workshop",
+    "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+  },
+  "scopeSkillId": "skill-scope-code-workshop-common-module-contract",
+  "executionRoot": "/home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run",
+  "outerOperation": {
+    "id": "exec-00000000000001b9",
+    "peerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+    "routeDecision": "peer_direct",
+    "exitCode": 0,
+    "durationMs": 34552
+  },
+  "input": {
+    "kind": "strict local portable replay cut, not live authority",
+    "assessmentSha256": "c653f3ba120a780f141a9df49b295003f371cce1a02149c2039c925979567d31",
+    "selectionPlanSha256": "93a44481bf36d92b23ac01e291e15a63d704311b299f0a812490c94369080cec",
+    "recipeSha256": "a3f62017f2539fc5502c65974648ba2511ce79384c17573bba99c228a204d0a9"
+  },
+  "captures": [
+    {
+      "label": "probe-0",
+      "status": "successful",
+      "exitCode": 0,
+      "durationMs": 1046,
+      "stdout": {
+        "bytes": 10,
+        "complete": true,
+        "path": "probe-0.stdout",
+        "sha256": "2d24acbdb9b2e5b4e330dbc4ce307e3a3ef5daedba76e82db493cb3219f7814f"
+      },
+      "stderr": {
+        "bytes": 0,
+        "complete": true,
+        "path": "probe-0.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "label": "probe-1",
+      "status": "successful",
+      "exitCode": 0,
+      "durationMs": 122,
+      "stdout": {
+        "bytes": 7,
+        "complete": true,
+        "path": "probe-1.stdout",
+        "sha256": "a38dbeb36574f858bc2a7792f444279c0f0129f221d5eb64499b469c405527d4"
+      },
+      "stderr": {
+        "bytes": 0,
+        "complete": true,
+        "path": "probe-1.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "label": "dependency",
+      "status": "successful",
+      "exitCode": 0,
+      "durationMs": 4190,
+      "stdout": {
+        "bytes": 945,
+        "complete": true,
+        "path": "dependency.stdout",
+        "sha256": "73fde6d0c36f5eb768eea03c5be4ee3df7374d55adbf93b319a007c09330fa2f"
+      },
+      "stderr": {
+        "bytes": 0,
+        "complete": true,
+        "path": "dependency.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "label": "build-1",
+      "status": "successful",
+      "exitCode": 0,
+      "durationMs": 12487,
+      "stdout": {
+        "bytes": 2337,
+        "complete": true,
+        "path": "build-1.stdout",
+        "sha256": "f248b7851a46b51679bf3e8071e76c1053d3cc5600df02d598cbbfb8a542e682"
+      },
+      "stderr": {
+        "bytes": 38432,
+        "complete": true,
+        "path": "build-1.stderr",
+        "sha256": "caeb47d6b084188dcec6aeaf4db72326245fcd7e7a44cb1fe81ff300a8aad5a3"
+      }
+    },
+    {
+      "label": "build-2",
+      "status": "successful",
+      "exitCode": 0,
+      "durationMs": 12315,
+      "stdout": {
+        "bytes": 2320,
+        "complete": true,
+        "path": "build-2.stdout",
+        "sha256": "93323d240a98822de6e57211a8c8bbb73f87f84036f64bf45471263506d6ec49"
+      },
+      "stderr": {
+        "bytes": 38432,
+        "complete": true,
+        "path": "build-2.stderr",
+        "sha256": "caeb47d6b084188dcec6aeaf4db72326245fcd7e7a44cb1fe81ff300a8aad5a3"
+      }
+    }
+  ],
+  "artifacts": [
+    {
+      "attempt": 1,
+      "bytes": 486128,
+      "retainedPath": "attempt-1.artifact",
+      "sha256": "c1e8b642f2284dff73fda8392cf8f39df2ffeb72a2da95475eccb86a29293cdb",
+      "sourcePath": "common/build/default/outputs/default/common.har"
+    },
+    {
+      "attempt": 2,
+      "bytes": 486160,
+      "retainedPath": "attempt-2.artifact",
+      "sha256": "005af13e04fa7e9c57ba342194d3cfc1c5a8f882c041044f52a2399c6ef1ef0e",
+      "sourcePath": "common/build/default/outputs/default/common.har"
+    }
+  ],
+  "executionReceiptSha256": "7579c43d92c6925d2aa9bae21d0b769e45d0dd1ab4a859bcbbe27f72a4749680",
+  "independentArtifactLogAndInputDigestsMatched": true,
+  "sourceCleanAfterIndependentlyVerified": true,
+  "linuxRustTestsPassed": 24,
+  "localRustTestsPassed": 24,
+  "existingOrchestrationTestsPassed": 29,
+  "maintenanceReadyDelta": 0,
+  "authorityWrites": 0,
+  "qualified": false,
+  "closedLoopQualified": false,
+  "limitations": [
+    "Both HAR raw archives differ; canonical member reproducibility was not yet evaluated.",
+    "No-type-check builds do not qualify type checking, runtime, tests, performance, power or thermal behavior.",
+    "No new operation fact, L3 transition, live TableGit transaction, Agent round, case publication or release activation occurred.",
+    "Human prepared the explicit instance recipe; unattended recipe discovery/qualification and closed-loop feedback remain incomplete."
+  ],
+  "nextStep": "Implement independent capture-backed HAR qualification for the new local execution format, then assess/stage the exact selected scope before any revision-fenced TableGit write."
+}

@@ -166,6 +166,20 @@ def require_emulator_environment(values: list[str]) -> None:
             "shadow environment does not require a HarmonyOS emulator")
 
 
+def runtime_target(policy: dict, scope: dict) -> str:
+    target = policy.get("runtimeTarget")
+    require(target in ("harmony-emulator", "repository-test"),
+            "shadow request runtime target differs")
+    require(target == "harmony-emulator" or not any(
+        "ohosTest" in path for path in scope.get("testEntrypoints", [])),
+        "ohosTest scope requires the Harmony emulator runtime")
+    require(policy.get("externalHardwareAllowed") is False,
+            "shadow request permits external hardware")
+    require(policy.get("physicalDeviceFallbackAllowed") is False,
+            "shadow request permits physical-device fallback")
+    return target
+
+
 def select_iteration(loop_receipt: dict, facts: dict[str, dict], existing: list[dict]) -> tuple[dict, dict]:
     iterations = loop_receipt.get("iterations")
     require(isinstance(iterations, list) and iterations, "bounded loop has no completed iterations")
@@ -243,7 +257,7 @@ def prepare(args) -> None:
             "candidateGateRequired": True,
             "independentOracleRequired": True,
             "wrongVariantCalibrationRequired": True,
-            "runtimeTarget": "harmony-emulator",
+            "runtimeTarget": getattr(args, "runtime_target", "harmony-emulator"),
             "externalHardwareAllowed": False,
             "physicalDeviceFallbackAllowed": False,
             "shadowEligible": not external_hardware_blockers(scope, fact),
@@ -251,6 +265,7 @@ def prepare(args) -> None:
         },
         "output": "shadow-case-proposal.json",
     }
+    runtime_target(request["policy"], scope)
     write_json(args.output, request)
 
 
@@ -258,7 +273,8 @@ def run_agent(args) -> None:
     request = load(args.request)
     require(request.get("schema") == "agentlab.case_generation_shadow_request.v1", "bad shadow request")
     require(request["policy"].get("shadowEligible") is True,
-            "shadow input is not eligible for emulator-only construction")
+            "shadow input is not eligible for the declared runtime")
+    target = runtime_target(request["policy"], request["scope"])
     source_root = args.source.resolve(strict=True)
     head = subprocess.check_output(["git", "-C", str(source_root), "rev-parse", "HEAD"], text=True).strip()
     require(head == request["repository"]["revision"], "source checkout revision differs")
@@ -280,6 +296,11 @@ def run_agent(args) -> None:
     scope = request["scope"]
     fact = request["fact"]
     framework = "ohosTest" if any("ohosTest" in path for path in scope.get("testEntrypoints", [])) else "repository-test"
+    environment_instruction = (
+        "The complete functional Oracle must be executable on a HarmonyOS emulator with no physical-device fallback and no attached USB, serial, or other external hardware; name the emulator image/device type in requiredEnvironment."
+        if target == "harmony-emulator" else
+        "The complete functional Oracle must use the pinned repository's test runner in a controlled host or container, without external hardware or physical-device fallback; name the required runner and environment in requiredEnvironment."
+    )
     prompt = f"""You are constructing one shadow evaluation-case hypothesis, not assessing an Agent.
 Read shadow-request.json and the exact read-only source/ checkout. Use only scope {scope['id']} and semantic fact {fact['id']}.
 Write exactly one JSON object to shadow-case-proposal.json. Do not modify source/ or the request.
@@ -294,7 +315,7 @@ The object must have exactly these fields:
 - status: shadow-proposal
 - automaticPromotion: false
 
-Give at least two observables and two meaningful wrong variants. The complete functional Oracle must be executable on a HarmonyOS emulator with no physical-device fallback and no attached USB, serial, or other external hardware; name the emulator image/device type in requiredEnvironment. Validate every field type against the exact shape above, and parse the completed JSON once before finishing. The Oracle remains operator-owned: do not include a gold patch, claim build/runtime success, or claim approval. Use only paths present in the fact evidence. Prefer a mechanism supported by the semantic interpretation rather than a generic build task.
+Give at least two observables and two meaningful wrong variants. {environment_instruction} Validate every field type against the exact shape above, and parse the completed JSON once before finishing. The Oracle remains operator-owned: do not include a gold patch, claim build/runtime success, or claim approval. Use only paths present in the fact evidence. Prefer a mechanism supported by the semantic interpretation rather than a generic build task.
 """
     try:
         participant.turn("shadow-case-constructor", workspace, prompt=prompt, wall_time_limit_seconds=720)
@@ -357,13 +378,15 @@ def validate_proposal(request: dict, proposal: dict) -> dict:
     require(oracle["status"] == "hypothesis-unqualified", "oracle status overclaims qualification")
     strings(oracle["observables"], "oracle observables", *OBSERVABLES_LIMITS)
     environment = strings(oracle["requiredEnvironment"], "oracle requiredEnvironment", *ENVIRONMENT_LIMITS)
-    require(request["policy"].get("runtimeTarget") == "harmony-emulator",
-            "shadow request runtime target differs")
-    require(request["policy"].get("externalHardwareAllowed") is False,
-            "shadow request permits external hardware")
-    require(request["policy"].get("physicalDeviceFallbackAllowed") is False,
-            "shadow request permits physical-device fallback")
-    require_emulator_environment(environment)
+    target = runtime_target(request["policy"], scope)
+    if target == "harmony-emulator":
+        require_emulator_environment(environment)
+    else:
+        positive_requirements = positive_hardware_requirements("\n".join(environment))
+        require(not any(pattern.search(positive_requirements)
+                        for pattern in EXTERNAL_HARDWARE_PATTERNS.values())
+                and not re.search(r"\bphysical device\b|真机", positive_requirements, re.IGNORECASE),
+                "repository-test environment requires external hardware")
     strings(oracle["wrongVariants"], "oracle wrongVariants", *WRONG_VARIANTS_LIMITS)
     strings(proposal["limitations"], "limitations", *LIMITATIONS_LIMITS)
     require(proposal["status"] == "shadow-proposal" and proposal["automaticPromotion"] is False,
@@ -373,7 +396,9 @@ def validate_proposal(request: dict, proposal: dict) -> dict:
         "sourceSetSha256": request["sourceSetSha256"],
         "knowledgeCutSha256": request["knowledgeCutSha256"],
         "maintainerSkillRefreshRoundId": request["maintainerSkillRefreshRoundId"],
-        "lineage": {"loopReceiptSha256": request["loopReceiptSha256"]},
+        "lineage": {"loopReceiptSha256": request["loopReceiptSha256"],
+                    "shadowRequestValueSha256": value_digest(request),
+                    "runtimeTarget": target},
     })
     return result
 
@@ -480,6 +505,8 @@ def main() -> None:
     command = commands.add_parser("prepare")
     command.add_argument("--knowledge", type=Path, required=True)
     command.add_argument("--loop-receipt", type=Path, required=True)
+    command.add_argument("--runtime-target", choices=["harmony-emulator", "repository-test"],
+                         default="harmony-emulator")
     command.add_argument("--output", type=Path, required=True)
     command.set_defaults(handler=prepare)
     command = commands.add_parser("run-agent")
@@ -504,7 +531,7 @@ def main() -> None:
     command.add_argument("--rounds", type=Path, required=True)
     command.add_argument("--receipt", type=Path, required=True)
     command.add_argument("--run-id", required=True)
-    command.add_argument("--reason", choices=["shadow-construction-agent-failed", "shadow-proposal-hard-gate-rejected"], required=True)
+    command.add_argument("--reason", choices=["shadow-construction-agent-failed", "shadow-proposal-hard-gate-rejected", "shadow-input-requires-external-hardware"], required=True)
     command.set_defaults(handler=record_failure)
     args = parser.parse_args()
     args.handler(args)

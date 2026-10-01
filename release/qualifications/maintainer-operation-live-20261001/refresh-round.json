@@ -1,0 +1,57 @@
+{
+  "assessment": {
+    "path": "assessments/round-32-operation-live-20261001-fwbuild-01.json",
+    "sha256": "c653f3ba120a780f141a9df49b295003f371cce1a02149c2039c925979567d31"
+  },
+  "automaticPromotion": false,
+  "baselineReassessment": {
+    "countsAsMaturityGain": false,
+    "performed": true,
+    "priorAssessmentSha256": "8ee0a41088fe10d3b1c595e9dc9cfad15305efea6552584ec1858b941d46dea5",
+    "strictBaselineSha256": "f35a5fc31ddb5c0dcdb40cbc62d613c0d7d36ddf26ec6f829fa84008ebe55246"
+  },
+  "changes": {
+    "added": [
+      "verified operation fact operation-build-ba2fd5204b013e40b09f63c6f360fd0750aefabbe7e56eefad180ba43361814f"
+    ],
+    "retired": [],
+    "updated": []
+  },
+  "coverage": {
+    "maintenanceReadyScopeCount": 1,
+    "processSkillCount": 12,
+    "programBoundScopeCount": 44,
+    "repositoryCount": 4,
+    "scopeSkillCount": 489,
+    "semanticReadyScopeCount": 39,
+    "trackedFileCount": 44567
+  },
+  "decision": "continue",
+  "focus": [
+    "consume exact-source operation receipts without changing semantic knowledge"
+  ],
+  "id": "operation-round-34-live-20261001-fwbuild-01",
+  "operationRoundResultSha256": "7dc7c285f3a1503b6c501ef9b6e41ebe708a03a9ba68e4e896e960b57032e276",
+  "ownershipPlane": "target-operations",
+  "parentRoundSha256": "2a79099ab8ab09f26abc3e4877a1a7571e755ed0bc11730aff2726db0d5a6b59",
+  "producer": {
+    "kind": "operation-receipt-stager",
+    "runId": "live-20261001-fwbuild-01"
+  },
+  "residualGaps": [
+    "close 440 MS-BEHAVIOR-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 447 MS-BOUNDARY-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 38 MS-OPERATION-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 2 MS-OPERATION-RECEIPT-UNVERIFIED gaps with revision-bound evidence",
+    "close 445 MS-PROGRAM-EVIDENCE-UNBOUND gaps with revision-bound evidence",
+    "close 446 MS-RELATIONS-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 449 MS-RESPONSIBILITY-EVIDENCE-MISSING gaps with revision-bound evidence"
+  ],
+  "roundIndex": 34,
+  "schema": "agentlab.maintainer_operation_refresh_round.v1",
+  "tables": {
+    "processSkillsSha256": "a7f6affb37e60c7009870feafa86325ba4b7cdabf0ff2b0fd88364fa667ff6d7",
+    "programFactsSha256": "8ae23e768f912dfea7fb4f948959a60d3bb8dca1741c22c30a1423bfdcf4778c",
+    "scopeSkillsSha256": "9faf87778708c0bc9acf6522ac1c0b1358e1845139da4f2949348d7285e51953"
+  }
+}

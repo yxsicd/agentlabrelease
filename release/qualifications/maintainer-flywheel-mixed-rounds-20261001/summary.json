@@ -1,0 +1,29 @@
+{
+  "schema": "agentlab.maintainer_flywheel_mixed_round_audit.v1",
+  "date": "2026-10-01",
+  "automaticPromotion": false,
+  "authorityWritePerformed": false,
+  "maturity": {
+    "overallPercent": 42,
+    "previousPercent": 42,
+    "basis": "Engineering estimate, not a measured benchmark.",
+    "changeReason": "No increase for controlled regression alone; real Agent execution, feedback-driven cut changes and transfer remain unqualified."
+  },
+  "capabilities": [
+    "Existing construction loop now gates exact selected semantic scopes in Rust instead of aggregate-count-only comparison.",
+    "Strict cuts retain their receipt-content policy and portable operation evidence across semantic staging.",
+    "Strict semantic writer preflight rejects absent inherited coverage or drift before creating a network client."
+  ],
+  "regressions": {
+    "semantic_round_gate_rejects_borrowed_gains_and_partial_batches": "Selected failure cannot borrow sibling gain; parent, round, source catalog, policy, totals and unchanged replay are checked.",
+    "semantic_closure_preserves_preverified_operation_evidence": "Unchanged prior verified operation evidence composes with semantic closure; tampering rejects.",
+    "mixed_semantic_and_operation_rounds_preserve_portable_cut": "Operation -> semantic -> operation passes through Rust and the existing Python TableGit staging adapter; final reassessment equals the original report after all prior directories are removed."
+  },
+  "limitations": [
+    "Controlled fixture facts and recorded receipts, not newly executed construction Agents or target builds.",
+    "The semantic gate compares independently produced assessments; exact Blob validation and bounded Agent capture remain separate prerequisites.",
+    "Legacy input policies remain explicitly labeled legacy; this change does not automatically migrate published knowledge.",
+    "No new live TableGit transaction, release activation, calibrated case execution or emulator qualification.",
+    "Full gap-plan dispatch, productive real feedback rounds and structurally different repository transfer remain required."
+  ]
+}

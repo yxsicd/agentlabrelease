@@ -74,19 +74,99 @@ def validate_evidence(root: Path, evidence, label: str) -> list[dict]:
                 f"{label} evidence {offset} fields differ")
         relative = safe_path(item["path"], f"{label} evidence path")
         path = root / relative
+        cursor = root
+        require(root.is_dir() and not root.is_symlink(), f"{label} evidence root is invalid")
+        for part in PurePosixPath(relative).parts:
+            cursor = cursor / part
+            require(not cursor.is_symlink(), f"{label} evidence symlink rejected")
         require(path.is_file() and not path.is_symlink(), f"{label} evidence is not a regular file: {relative}")
+        require(path.stat().st_size <= 2 * 1024 * 1024, f"{label} evidence exceeds budget")
         require(SHA256.fullmatch(item["sha256"]) is not None, f"{label} evidence digest is invalid")
         require(file_digest(path) == item["sha256"], f"{label} evidence digest differs: {relative}")
         result.append(item)
     return result
 
 
-def validate_qualification(root: Path, value, label: str) -> dict:
+def validate_qualification(root: Path, value, label: str, candidate: dict,
+                           kind: str, requirement_id: str | None = None) -> dict:
     require(isinstance(value, dict), f"{label} must be an object")
     require(value.get("status") in ("qualified", "unqualified"), f"{label} status is invalid")
     evidence = validate_evidence(root, value.get("evidence"), label)
     require(value["status"] != "qualified" or evidence, f"{label} has no qualifying evidence")
-    return {"status": value["status"], "evidence": evidence}
+    rejected_variants = set()
+    accepted_variants = set()
+    if value["status"] == "qualified":
+        for ref in evidence:
+            original = (root / ref["path"]).read_bytes()
+            require(len(original) <= 2 * 1024 * 1024
+                    and hashlib.sha256(original).hexdigest() == ref["sha256"],
+                    f"{label} qualification receipt changed during validation")
+            receipt = json.loads(original)
+            require(isinstance(receipt, dict)
+                    and receipt.get("schema") == "agentlab.shadow_case_qualification.v1",
+                    f"{label} qualification receipt adapter unavailable")
+            require(receipt.get("kind") == kind and receipt.get("status") == "qualified"
+                    and receipt.get("automaticPromotion") is False,
+                    f"{label} qualification receipt failed or overclaimed")
+            for key, expected in {
+                "candidateId": candidate["id"], "candidateSha256": value_digest(candidate),
+                "sourceRevision": candidate["sourceRevision"],
+                "sourceSetSha256": candidate["sourceSetSha256"],
+                "knowledgeCutSha256": candidate["knowledgeCutSha256"],
+            }.items():
+                require(receipt.get(key) == expected, f"{label} qualification {key} differs")
+            execution = receipt.get("execution") or {}
+            require(execution.get("status") == "completed"
+                    and type(execution.get("exitCode")) is int and execution["exitCode"] == 0
+                    and type(execution.get("durationMs")) is int and execution["durationMs"] > 0,
+                    f"{label} qualification execution is incomplete")
+            if kind == "runtime-requirement":
+                require(receipt.get("requirementId") == requirement_id,
+                        f"{label} qualification requirement differs")
+            checks = receipt.get("checks")
+            require(isinstance(checks, list) and checks, f"{label} has no observed checks")
+            require(all(isinstance(check, dict) and isinstance(check.get("id"), str)
+                        and check["id"] and check.get("passed") is True for check in checks)
+                    and len({check["id"] for check in checks}) == len(checks),
+                    f"{label} observed checks failed or duplicated")
+            if kind == "wrong-variant-calibration":
+                variants = receipt.get("variants")
+                require(isinstance(variants, list) and variants, f"{label} variants missing")
+                for variant in variants:
+                    require(isinstance(variant, dict) and isinstance(variant.get("id"), str)
+                            and variant["id"] and variant.get("completed") is True,
+                            f"{label} variant did not complete")
+                    variant_checks = variant.get("checks")
+                    require(isinstance(variant_checks, list) and variant_checks
+                            and all(isinstance(c, dict) and isinstance(c.get("id"), str)
+                                    and c["id"] and type(c.get("passed")) is bool
+                                    and isinstance(c.get("observable"), str) for c in variant_checks)
+                            and len({c["id"] for c in variant_checks}) == len(variant_checks)
+                            and {c["observable"] for c in variant_checks}
+                            == set(candidate["oracleHypothesis"]["observables"]),
+                            f"{label} variant checks missing or duplicated")
+                    role = variant.get("role")
+                    if role == "accepted":
+                        require(variant.get("expectedVerdict") == variant.get("observedVerdict") == "accept"
+                                and all(c["passed"] for c in variant_checks),
+                                f"{label} valid variant was not accepted")
+                        require(variant["id"] not in accepted_variants | rejected_variants,
+                                f"{label} duplicate variant")
+                        accepted_variants.add(variant["id"])
+                    else:
+                        require(role == "wrong" and variant.get("expectedVerdict")
+                                == variant.get("observedVerdict") == "reject"
+                                and any(not c["passed"] for c in variant_checks)
+                                and variant["id"] in candidate["oracleHypothesis"]["wrongVariants"],
+                                f"{label} wrong variant did not discriminate the declared behavior")
+                        require(variant["id"] not in accepted_variants | rejected_variants,
+                                f"{label} duplicate variant")
+                        rejected_variants.add(variant["id"])
+        if kind == "wrong-variant-calibration":
+            require(accepted_variants and len(rejected_variants) == value["executedCount"],
+                    f"{label} observed variants differ from declared count")
+    return {"status": value["status"], "evidence": evidence,
+            "verificationBoundary": "recorded receipt content only; no execution replay or producer authentication"}
 
 
 def assess(knowledge: Path, candidate_id: str, plan_path: Path, evidence_root: Path) -> dict:
@@ -175,17 +255,20 @@ def assess(knowledge: Path, candidate_id: str, plan_path: Path, evidence_root: P
         runtime_ids.add(item["id"])
         require(isinstance(item["description"], str) and item["description"].strip(),
                 "runtime requirement description is empty")
-        qualification = validate_qualification(evidence_root, item, f"runtime requirement {item['id']}")
+        qualification = validate_qualification(evidence_root, item, f"runtime requirement {item['id']}",
+                                               candidate, "runtime-requirement", item["id"])
         runtime_checks.append({"id": item["id"], "description": item["description"], **qualification})
 
-    oracle = validate_qualification(evidence_root, plan.get("oracleExecution"), "oracleExecution")
+    oracle = validate_qualification(evidence_root, plan.get("oracleExecution"), "oracleExecution",
+                                    candidate, "oracle-execution")
     variants = plan.get("wrongVariantCalibration")
     require(isinstance(variants, dict) and set(variants) == {"status", "evidence", "requiredCount", "executedCount"},
             "wrongVariantCalibration fields differ")
-    variant_qualification = validate_qualification(evidence_root, variants, "wrongVariantCalibration")
-    require(isinstance(variants["requiredCount"], int) and variants["requiredCount"] >= 2,
+    variant_qualification = validate_qualification(evidence_root, variants, "wrongVariantCalibration",
+                                                   candidate, "wrong-variant-calibration")
+    require(type(variants["requiredCount"]) is int and variants["requiredCount"] >= 2,
             "wrongVariantCalibration requiredCount is invalid")
-    require(isinstance(variants["executedCount"], int) and variants["executedCount"] >= 0,
+    require(type(variants["executedCount"]) is int and variants["executedCount"] >= 0,
             "wrongVariantCalibration executedCount is invalid")
     require(variants["executedCount"] <= len(candidate["oracleHypothesis"]["wrongVariants"]),
             "wrongVariantCalibration executedCount exceeds the candidate variants")

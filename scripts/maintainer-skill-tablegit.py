@@ -200,17 +200,29 @@ def build_refresh_round(base: Path, candidate_facts: Path, assessment_path: Path
 
 
 def command_stage(args) -> None:
-    args.output.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(
-        args.base / "maintainer-knowledge-cut.json",
-        args.output / "maintainer-knowledge-cut.json",
-    )
-    assessments = args.output / "assessments"
-    assessments.mkdir(exist_ok=True)
-    base_assessments = args.base / "assessments"
-    if base_assessments.is_dir():
-        for source in base_assessments.glob("*.json"):
-            shutil.copy2(source, assessments / source.name)
+    assessment = load(args.candidate_assessment)
+    strict = assessment.get("standard", {}).get("operationEvidencePolicy") == "verified-receipt-content"
+    portable, inherited = {}, []
+    if strict:
+        before_path = latest_assessment_path(args.base)
+        before = load(before_path)
+        result = load(args.result)
+        if (before.get("standard") != assessment.get("standard")
+                or assessment.get("parentAssessmentSha256") != file_sha256(before_path)
+                or assessment.get("roundIndex") != before.get("roundIndex", 0) + 1
+                or result.get("decision") != "review-proposed-knowledge"
+                or result.get("strictOperationEvidencePolicy") is not True
+                or result.get("beforeAssessmentSha256") != file_sha256(before_path)
+                or result.get("assessmentSha256") != file_sha256(args.candidate_assessment)):
+            raise RuntimeError("strict semantic stage has no scope-exact same-policy result")
+        if (assessment.get("inputs", {}).get("scopeSkillsSha256") != file_sha256(args.base / TABLE_FILES["maintainer_scope_skills"])
+                or assessment.get("inputs", {}).get("programFactsSha256") != file_sha256(args.candidate_program_facts)):
+            raise RuntimeError("strict semantic stage assessment input mismatch")
+        portable, inherited = inherited_operation_files(args.base, args.candidate_program_facts, assessment)
+        portable["operation-baseline.json"] = before_path.read_bytes()
+        portable["operation-result.json"] = args.result.read_bytes()
+        if args.output.exists():
+            raise RuntimeError("refusing strict semantic stage output reuse")
     receipt_paths = args.receipt if isinstance(args.receipt, list) else [args.receipt]
     receipts = [load(path) for path in receipt_paths]
     scope_ids = [row.get("scopeSkillId") for row in receipts]
@@ -224,6 +236,19 @@ def command_stage(args) -> None:
         raise ValueError("proposal batch receipts must identify the source assessment")
     if any(digest != assessment_hashes[0] for digest in assessment_hashes):
         raise ValueError("proposal batch receipts do not share one source assessment")
+    if strict and (sorted(identified_scope_ids) != sorted(result.get("selectedScopeIds", []))
+            or sorted(identified_scope_ids) != sorted(result.get("advancedScopeIds", []))
+            or not 1 <= len(receipts) <= 4
+            or any(value != file_sha256(before_path) for value in assessment_hashes)):
+        raise RuntimeError("strict semantic proposal receipts differ from selected batch")
+    args.output.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(args.base / "maintainer-knowledge-cut.json", args.output / "maintainer-knowledge-cut.json")
+    assessments = args.output / "assessments"
+    assessments.mkdir(exist_ok=True)
+    base_assessments = args.base / "assessments"
+    if base_assessments.is_dir():
+        for source in base_assessments.glob("*.json"):
+            shutil.copy2(source, assessments / source.name)
     for table, filename in TABLE_FILES.items():
         source = args.base / filename
         target = args.output / filename
@@ -240,7 +265,10 @@ def command_stage(args) -> None:
             ))
         else:
             table_rows = load_jsonl(source)
-        write_jsonl(target, table_rows)
+        if strict and table in ("maintainer_scope_skills", "program_facts"):
+            target.write_bytes((args.candidate_program_facts if table == "program_facts" else source).read_bytes())
+        else:
+            write_jsonl(target, table_rows)
     assessment = load(args.candidate_assessment)
     assessment_name = f"round-{assessment['roundIndex']}-agent-{args.run_id}.json"
     assessment_path = Path("assessments") / assessment_name
@@ -252,18 +280,44 @@ def command_stage(args) -> None:
         "proposalReceiptCount": len(receipts),
         "acceptedFactIds": sorted(row["acceptedFactId"] for row in receipts),
         "assessment": str(assessment_path),
+        **({"stageKind": "verified-semantic", "operationEvidence": {
+            "receiptRoot": "operation-evidence", "coverage": "verified-child-operation-facts-only",
+            "receipts": [], "inheritedReceipts": inherited}} if strict else {}),
         "tables": {
             table: {"path": filename, "sha256": file_sha256(args.output / filename)}
             for table, filename in TABLE_FILES.items()
         },
     })
+    for relative, data in portable.items():
+        target = args.output / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
 
 
 def latest_assessment_path(base: Path) -> Path:
-    paths = list((base / "assessments").glob("*.json"))
-    if not paths:
-        raise ValueError("knowledge cut has no assessment")
-    return max(paths, key=lambda path: load(path)["roundIndex"])
+    rounds = load_jsonl(base / TABLE_FILES["maintainer_skill_refresh_rounds"])
+    indices = [row.get("roundIndex") for row in rounds]
+    ids = [row.get("id") for row in rounds]
+    if (not rounds or any(type(index) is not int or index <= 0 for index in indices)
+            or any(not isinstance(id_, str) or not id_ for id_ in ids)
+            or len(set(indices)) != len(indices) or len(set(ids)) != len(ids)):
+        raise ValueError("durable refresh history invalid or ambiguous")
+    previous = max(rounds, key=lambda row: row["roundIndex"])
+    reference = previous.get("assessment", {})
+    relative = reference.get("path")
+    if not isinstance(relative, str) or not relative.startswith("assessments/"):
+        raise ValueError("durable assessment reference missing or outside namespace")
+    expected = reference.get("sha256")
+    if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
+        raise ValueError("durable assessment digest missing or invalid")
+    # Reuse contained-path, no-symlink and original-byte integrity checks.
+    data = read_operation_sidecar(base, relative, expected, max_bytes=16 * 1024 * 1024)
+    report = json.loads(data)
+    if (report.get("schema") != "agentlab.maintainer_skill_assessment.v1"
+            or report.get("automaticPromotion") is not False
+            or type(report.get("roundIndex")) is not int or report["roundIndex"] <= 0):
+        raise ValueError("durable assessment report invalid")
+    return base / relative
 
 
 def command_stage_scope_rewrite(args) -> None:
@@ -586,6 +640,68 @@ def current_revision(client: Inspector, repo: str, anchor: str) -> str:
     return revision
 
 
+def command_preflight(args) -> None:
+    """Read-only admission check before spending an Agent/model budget."""
+    if args.receipt.exists() or args.receipt.is_symlink():
+        raise RuntimeError("preflight receipt already exists")
+    cut_path = args.base / "maintainer-knowledge-cut.json"
+    cut_bytes = cut_path.read_bytes()
+    cut = json.loads(cut_bytes)
+    authority = cut.get("tableGitAuthority", {})
+    expected = authority.get("revision")
+    if (cut.get("schema") != "agentlab.maintainer_knowledge_cut.v1"
+            or authority.get("repo") != args.repo
+            or not isinstance(expected, str) or not REVISION.fullmatch(expected)):
+        raise RuntimeError("preflight requires an exact authority-bound knowledge cut")
+    local = {}
+    digests = {}
+    names = ("maintainerSkills", "maintainerScopeSkills", "programFacts",
+             "maintainerSkillRefreshRounds", "evaluationCases")
+    for (table, filename), name in zip(TABLE_FILES.items(), names):
+        reference = cut.get("tables", {}).get(name, {})
+        path = args.base / filename
+        digest = file_sha256(path)
+        if reference != {"path": filename, "sha256": digest}:
+            raise RuntimeError(f"{table} preflight input digest or path mismatch")
+        rows = load_jsonl(path)
+        by_id = {row["id"]: row for row in rows}
+        if len(by_id) != len(rows):
+            raise RuntimeError(f"{table} preflight input contains duplicate ids")
+        local[table] = by_id
+        digests[table] = digest
+    client = Inspector(args.endpoint, args.person_id)
+    observed = current_revision(client, args.repo, args.anchor_table)
+    checks = {}
+    if observed == expected:
+        items = query_tables(client, args.repo, observed)
+        for table in TABLE_FILES:
+            rows = unwrap_rows(table, items[table])
+            remote = {row["id"]: row for row in rows}
+            checks[table] = (len(remote) == len(rows) and remote == local[table])
+    after = current_revision(client, args.repo, args.anchor_table)
+    unchanged = cut_path.read_bytes() == cut_bytes and all(
+        file_sha256(args.base / filename) == digests[table]
+        for table, filename in TABLE_FILES.items())
+    admitted = observed == expected == after and unchanged and (
+        len(checks) == len(TABLE_FILES) and all(checks.values()))
+    receipt = {
+        "schema": "agentlab.maintainer_skill_tablegit_preflight.v1",
+        "repo": args.repo, "expectedRevision": expected,
+        "observedRevision": observed, "afterRevision": after,
+        "inputCutSha256": hashlib.sha256(cut_bytes).hexdigest(),
+        "inputTablesSha256": digests, "inputUnchanged": unchanged,
+        "tablesMatched": checks, "admitted": admitted,
+        "readOnly": True, "automaticPromotion": False,
+        "decision": "run-admitted" if admitted else "refresh-authority-input-before-run",
+        "limitations": ["point-in-time admission only; commit-time revision and row fences remain required"],
+    }
+    args.receipt.parent.mkdir(parents=True, exist_ok=True)
+    with args.receipt.open("x") as output:
+        output.write(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+    if not admitted:
+        raise RuntimeError("TableGit preflight rejected stale, changed, or mismatched inputs; refresh the exact export before running the Agent")
+
+
 def create_missing_tables(client: Inspector, repo: str, revision: str) -> str:
     for table in TABLE_FILES:
         status = client.call("skill_run_read", "table.query", "table_status", {
@@ -823,7 +939,117 @@ def update_catalog_summary(export: Path, base: Path) -> None:
     write_json(export / "maintainer-skill-summary.json", summary)
 
 
+def read_operation_sidecar(snapshot: Path, relative: str, expected: str | None = None,
+                           max_bytes: int = 2 * 1024 * 1024) -> bytes:
+    path = Path(relative)
+    if path.is_absolute() or not path.parts or any(part in (".", "..") for part in path.parts):
+        raise RuntimeError("operation evidence must be contained and relative")
+    current = snapshot
+    for part in path.parts:
+        current = current / part
+        if current.is_symlink():
+            raise RuntimeError("operation evidence cannot traverse a symlink")
+    if not current.is_file() or current.stat().st_size > max_bytes:
+        raise RuntimeError("operation evidence missing or exceeds budget")
+    data = current.read_bytes()
+    if expected and hashlib.sha256(data).hexdigest() != expected:
+        raise RuntimeError("operation evidence digest mismatch")
+    return data
+
+
+def inherited_operation_files(base: Path, facts_path: Path, assessment: dict):
+    """Retain child-verified original bytes; the Rust assessor owns content checks."""
+    facts = {row["id"]: row for row in load_jsonl(facts_path)}
+    files, entries = {}, {}
+    for skill in assessment.get("skills", []):
+        for fact_id, check in skill.get("operationEvidenceChecks", {}).items():
+            if check.get("status") != "verified":
+                continue
+            reference = facts.get(fact_id, {}).get("operationEvidence", {})
+            if (check.get("receiptPath") != reference.get("path")
+                    or check.get("receiptSha256") != reference.get("sha256")
+                    or not re.fullmatch(r"[0-9a-f]{64}", reference.get("sha256", ""))):
+                raise RuntimeError("inherited operation check differs from candidate fact")
+            path = "operation-evidence/" + reference["path"]
+            files[path] = read_operation_sidecar(base, path, reference["sha256"])
+            entries[fact_id] = {"factId": fact_id, "path": path, "sha256": reference["sha256"]}
+    if sum(map(len, files.values())) > 16 * 1024 * 1024:
+        raise RuntimeError("operation portable receipt budget exceeded")
+    return files, [entries[key] for key in sorted(entries)]
+
+
+def operation_evidence_files(snapshot: Path) -> dict[str, bytes]:
+    """Validate and retain portable sidecars before any authority mutation."""
+    manifest_path = snapshot / "stage-manifest.json"
+    if not manifest_path.is_file():
+        return {}
+    manifest = load(manifest_path)
+    kind = manifest.get("stageKind")
+    if kind not in ("verified-operation", "verified-semantic"):
+        if load(snapshot / manifest["assessment"]).get("standard", {}).get("operationEvidencePolicy") == "verified-receipt-content":
+            raise RuntimeError("strict stage has no portable operation evidence contract")
+        return {}
+
+    def read(relative: str, expected: str | None = None) -> bytes:
+        return read_operation_sidecar(snapshot, relative, expected)
+
+    evidence = manifest.get("operationEvidence", {})
+    for table, filename in TABLE_FILES.items():
+        entry = manifest.get("tables", {}).get(table, {})
+        if entry.get("path") != filename or not re.fullmatch(r"[0-9a-f]{64}", entry.get("sha256", "")):
+            raise RuntimeError("operation stage table manifest invalid")
+        read(filename, entry["sha256"])
+    receipts = evidence.get("receipts", [])
+    coverage = "accepted-operation-facts-only" if kind == "verified-operation" else "verified-child-operation-facts-only"
+    if evidence.get("receiptRoot") != "operation-evidence" or evidence.get("coverage") != coverage:
+        raise RuntimeError("operation stage has no portable evidence contract")
+    if kind == "verified-operation" and (not 1 <= len(receipts) <= 4 or sorted(row["factId"] for row in receipts) != sorted(manifest["acceptedFactIds"])):
+        raise RuntimeError("operation receipt coverage differs from accepted facts")
+    if kind == "verified-semantic" and receipts:
+        raise RuntimeError("semantic stage cannot introduce operation receipts")
+    if kind == "verified-semantic" and "inheritedReceipts" not in evidence:
+        raise RuntimeError("semantic stage lacks inherited operation receipt coverage")
+    inherited = evidence.get("inheritedReceipts", [])
+    all_receipts = receipts + inherited
+    if len({row["factId"] for row in all_receipts}) != len(all_receipts):
+        raise RuntimeError("operation receipt fact ids duplicated or overlap")
+    files = {"operation-stage-manifest.json": read("stage-manifest.json"),
+             "operation-baseline.json": read("operation-baseline.json"),
+             "operation-result.json": read("operation-result.json")}
+    result = json.loads(files["operation-result.json"])
+    if kind == "verified-semantic" and result.get("strictOperationEvidencePolicy") is not True:
+        raise RuntimeError("semantic stage result is not strict receipt policy")
+    child = read(manifest["assessment"])
+    decision = "review-proposed-operation-knowledge" if kind == "verified-operation" else "review-proposed-knowledge"
+    after_hash = result.get("afterAssessmentSha256") if kind == "verified-operation" else result.get("assessmentSha256")
+    if (result.get("decision") != decision
+            or result.get("beforeAssessmentSha256") != hashlib.sha256(files["operation-baseline.json"]).hexdigest()
+            or after_hash != hashlib.sha256(child).hexdigest()):
+        raise RuntimeError("operation stage report digest mismatch")
+    for receipt in all_receipts:
+        if not receipt["path"].startswith("operation-evidence/") or not re.fullmatch(r"[0-9a-f]{64}", receipt["sha256"]):
+            raise RuntimeError("operation receipt reference invalid")
+        files[receipt["path"]] = read(receipt["path"], receipt["sha256"])
+    if sum(len(data) for path, data in files.items() if path.startswith("operation-evidence/")) > 16 * 1024 * 1024:
+        raise RuntimeError("operation portable receipt budget exceeded")
+    facts = {row["id"]: row for row in load_jsonl(snapshot / TABLE_FILES["program_facts"])}
+    for receipt in all_receipts:
+        reference = facts.get(receipt["factId"], {}).get("operationEvidence", {})
+        if receipt["path"] != "operation-evidence/" + reference.get("path", "") or receipt["sha256"] != reference.get("sha256"):
+            raise RuntimeError("portable receipt differs from candidate fact")
+    child_report = json.loads(child)
+    verified = {fact_id for skill in child_report.get("skills", [])
+                for fact_id, check in skill.get("operationEvidenceChecks", {}).items()
+                if check.get("status") == "verified"}
+    if any(receipt["factId"] not in verified for receipt in inherited):
+        raise RuntimeError("inherited receipt has no verified child assessment binding")
+    if "inheritedReceipts" in evidence and verified != {row["factId"] for row in all_receipts}:
+        raise RuntimeError("portable receipts do not cover verified child assessment")
+    return files
+
+
 def command_sync(args) -> None:
+    portable_evidence = operation_evidence_files(args.snapshot)
     client = Inspector(args.endpoint, args.person_id)
     revision = current_revision(client, args.repo, args.anchor_table)
     revision = create_missing_tables(client, args.repo, revision)
@@ -870,6 +1096,10 @@ def command_sync(args) -> None:
         args.github_repository, args.producer_kind, args.producer_url,
         args.producer_host,
     )
+    for relative, data in portable_evidence.items():
+        target = args.export / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
 
     mirror = {"requested": False, "verified": False}
     if args.replicate:
@@ -907,6 +1137,14 @@ def command_sync(args) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     commands = parser.add_subparsers(dest="command", required=True)
+    preflight = commands.add_parser("preflight")
+    preflight.add_argument("--base", type=Path, required=True)
+    preflight.add_argument("--receipt", type=Path, required=True)
+    preflight.add_argument("--endpoint", default=os.environ.get("AGENTLAB_TABLEGIT_MCP_URL"))
+    preflight.add_argument("--person-id", default=os.environ.get("AGENTLAB_TABLEGIT_PERSON_ID"))
+    preflight.add_argument("--repo", default="agentlabtablegit")
+    preflight.add_argument("--anchor-table", default="maintainer_skill_refresh_rounds")
+    preflight.set_defaults(handler=command_preflight)
     stage = commands.add_parser("stage")
     stage.add_argument("--base", type=Path, required=True)
     stage.add_argument("--candidate-program-facts", type=Path, required=True)
@@ -959,8 +1197,8 @@ def main() -> None:
     sync.add_argument("--producer-host")
     sync.set_defaults(handler=command_sync)
     args = parser.parse_args()
-    if args.command == "sync" and (not args.endpoint or not args.person_id):
-        parser.error("sync requires the TableGit MCP endpoint and Person id")
+    if args.command in ("sync", "preflight") and (not args.endpoint or not args.person_id):
+        parser.error(f"{args.command} requires the TableGit MCP endpoint and Person id")
     args.handler(args)
 
 

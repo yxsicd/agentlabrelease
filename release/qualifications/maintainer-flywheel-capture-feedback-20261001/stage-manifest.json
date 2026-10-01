@@ -1,0 +1,52 @@
+{
+  "acceptedFactIds": [
+    "operation-build-7d4692e7baccc428c6aa94cf8f2a7ea4a9c94813783d2f93d3ccef8e8427a21e"
+  ],
+  "assessment": "assessments/round-33-operation-common-capture-feedback.json",
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "operationEvidence": {
+    "coverage": "accepted-operation-facts-only",
+    "inheritedReceipts": [
+      {
+        "factId": "operation-build-ba2fd5204b013e40b09f63c6f360fd0750aefabbe7e56eefad180ba43361814f",
+        "path": "operation-evidence/release/qualifications/code-workshop-7aa95cac-componentlibrary-build/build-qualification.json",
+        "sha256": "de1f82800dd7680242948d77d6c2416c5d97319f72d2d876cbca194a82ddeba7"
+      }
+    ],
+    "receiptRoot": "operation-evidence",
+    "receipts": [
+      {
+        "factId": "operation-build-7d4692e7baccc428c6aa94cf8f2a7ea4a9c94813783d2f93d3ccef8e8427a21e",
+        "path": "operation-evidence/common-capture.json",
+        "sha256": "027868459b1691fcceccc1cf70ab69e847cb0c68b130f2073f979d0b638d1b7d"
+      }
+    ]
+  },
+  "proposalReceiptCount": 0,
+  "runId": "common-capture-feedback",
+  "schema": "agentlab.maintainer_skill_tablegit_stage.v1",
+  "stageKind": "verified-operation",
+  "tables": {
+    "evaluation_cases": {
+      "path": "evaluation_cases.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "maintainer_scope_skills": {
+      "path": "maintainer_scope_skills.jsonl",
+      "sha256": "9faf87778708c0bc9acf6522ac1c0b1358e1845139da4f2949348d7285e51953"
+    },
+    "maintainer_skill_refresh_rounds": {
+      "path": "maintainer_skill_refresh_rounds.jsonl",
+      "sha256": "ec2d36b430550bc63ec6b86ae0d0dd5e0be9e8753d87bd7231f001051fa6bc74"
+    },
+    "maintainer_skills": {
+      "path": "maintainer_skills.jsonl",
+      "sha256": "a7f6affb37e60c7009870feafa86325ba4b7cdabf0ff2b0fd88364fa667ff6d7"
+    },
+    "program_facts": {
+      "path": "program_facts.jsonl",
+      "sha256": "b422fa4db310e05f933ddadc87b4705e96aa1a12690505b520ad8f8af0dc1c72"
+    }
+  }
+}

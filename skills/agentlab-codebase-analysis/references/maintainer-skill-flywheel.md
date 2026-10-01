@@ -18,6 +18,247 @@ binding to the longest matching scope boundary. Release-artifact paths without
 target-source Blob identity never bind implicitly. A filename, import count,
 README statement or repository-wide fact does not prove behavior by itself.
 
+Assessment must check the repository and source revision on every bound fact,
+including facts reached through `evidenceFactIds`. Preserve stale or mismatched
+facts as historical evidence, but exclude their dimensions and report rejected
+bindings for targeted refresh. A matching path or Blob does not override a
+mismatched source revision. Operation coverage requires an explicit target
+`scopeSkillIds` binding: path inference or dependency-fact inheritance may help
+semantic analysis, but a successful dependency build does not qualify its
+consumer automatically.
+
+An explicit operation dimension is still a claim, not independent execution
+proof. Validate the referenced receipt's bytes, qualified verdict, exact source,
+scope coverage, environment and limitations before writing that fact. The
+legacy assessment's identity/dimension checks do not independently execute or
+inspect external receipts; never present its L3 count as end-to-end flywheel
+maturity.
+
+### Executable operation receipt verification
+
+Use `agentlab-maintainer-skill-flywheel --operation-receipts-root ROOT` for
+strict receipt-content assessment. Each operation fact must carry
+`operationEvidence: {path, sha256}`. Paths are relative to the explicit root,
+symlinks/traversal are rejected, and the exact original bytes must match before
+parsing. Missing, failed, mismatched or unsupported receipts emit
+`MS-OPERATION-RECEIPT-UNVERIFIED` and cannot contribute operation maturity.
+Keep their semantic dimensions and original evidence; a missing adapter is not
+an application failure.
+
+The first adapter accepts `agentlab.maintainer_scope_build_qualification.v1`:
+exact repository URL/ID/revision and one scope, clean source, pinned toolchain,
+successful dependency preparation, two distinct successful clean build
+executions, consistent canonical content and explicit build-only limitations.
+This is a Harmony HAR receipt-format adapter, not a repository-name rule.
+It validates recorded assertions and content integrity, not receipt authorship,
+raw log/artifact bytes, or a fresh build. Report no-type-check builds as not
+type-check-qualified. Runtime/test/performance receipts need their own adapters;
+never relabel them as build receipts to bypass an unsupported format.
+
+Before fresh execution, recover the actual build toolchain from revision-bound
+project configuration and verify its executable versions. An emulator tool
+directory is not proof that the application-build SDK is selected. Treat these
+as independently qualified capabilities and keep platform-specific paths in
+the instance evidence rather than the general scheduler.
+
+Use the terminal operation status as well as the target command verdict.
+If a compound command prints success but its outer operation fails, retain the
+ambiguous capture and do not promote it as successful execution proof. Resolve
+the invocation boundary and capture a distinct direct command before proceeding.
+Persist the first terminal response immediately, including failures; transient
+operation handles may expire and a later not-found response cannot reconstruct
+the original result. Never restart a completed operation solely to restore a
+missing capture.
+Preserve complete build warning streams separately from the packaging verdict.
+Canonical archive comparisons must declare their algorithm and member model:
+all-member versus regular-file-only counts or different path/content encodings
+are not directly comparable. Repeated successful packaging of an already-ready
+scope is freshness evidence, not another productive scope transition or full
+flywheel round.
+
+### Explicit operation execution
+
+The Rust `--execute-operation` mode consumes an independently reverified strict
+gap plan and an explicit instance recipe, rather than executing prose from a
+Skill or accepting a caller's selected-ready assertion:
+
+```sh
+agentlab-maintainer-skill-flywheel --execute-operation \
+  --scope-skills scopes.jsonl --program-facts facts.jsonl \
+  --operation-receipts-root retained-receipts --before strict-before.json \
+  --next-round-plan next-plan.json --operation-recipe reviewed-recipe.json \
+  --source-worktree isolated-source --output new-private-run-directory
+```
+
+The current executor supports one exact selected build-only scope on Unix;
+multi-scope selections and other lanes fail instead of silently narrowing work.
+Its plan must explicitly declare `--available-operation-kind build-only` in
+addition to `--available-lane operation-verification`. An old lane-only plan
+does not prove executor compatibility and is refused before commands run.
+An `agentlab.maintainer_build_operation_recipe.v1` binds `source` (repositoryId,
+repository URL and exact revision), `scopeSkillId`, `lane: build-only`,
+`cleanBuild: true`, `automaticPromotion: false`, and a relative `artifact` path.
+It supplies one to four `probes`, a `dependencyPreparation` command and a `build`
+command. Each command specifies an absolute `program`, exact `programSha256`,
+argument array, contained `cwd` or `.`, and `timeoutMs` (at most 180 seconds).
+The sum of all probe, dependency and two build deadlines is at most ten minutes;
+source identity queries and filesystem operations are not included in that
+command budget. Command arguments and toolchain/framework choices belong in the
+instance layer, never scheduler branches keyed by repository names.
+
+Review the exact recipe before invoking it. Executable pins and process groups
+are not a sandbox, a signed reviewer identity, or permission to execute arbitrary
+Agent-produced commands. Only reviewed trusted operations may use this local
+adapter. Model credentials are not injected; commands receive a minimal cleared
+environment with the host HOME for existing dependency cache configuration.
+The adapter performs no remote persistence or publication.
+
+Require matching source HEAD and origin URL, clean source before dependencies
+and after every build, unchanged executable digests before each spawn, a fresh
+private output directory outside the checkout, and contained non-symlink artifact
+paths. Preserve original plan, assessment and recipe bytes, complete available
+stdout/stderr, terminal status/duration, failures and both raw artifact copies.
+On deadline or capture-budget breach terminate only the invocation's process
+group and stop; do not retry successful commands to reconstruct evidence.
+Artifact copies are bounded and independently hashed before the next build.
+
+The resulting `agentlab.maintainer_operation_execution.v1` always records
+`qualified: false`. Two clean command successes and retained bytes are execution
+evidence, not independently authenticated toolchain versions, semantic scope
+coverage, canonical archive reproduction, runtime/test/performance qualification,
+or an L3 transition. A format-specific qualification adapter must establish
+those applicable claims before fact preparation, reassessment, atomic persistence
+and next-cut feedback. Raw execution output remains private experiment evidence;
+never publish source artifacts or captured sessions by copying its run directory
+into the release repository.
+
+Prepare a deterministic operation fact or combined candidate fact cut without
+writing TableGit:
+
+```sh
+agentlab-maintainer-skill-flywheel \
+  --scope-skills scopes.jsonl --program-facts facts.jsonl \
+  --prepare-operation-fact SCOPE_ID \
+  --operation-receipts-root ROOT --operation-receipt RELATIVE_PATH \
+  --operation-receipt-sha256 EXACT_SHA256 --output candidate-facts.jsonl
+```
+
+Omit `--program-facts` to emit only the new fact. Existing IDs must be unique;
+conflicting operation IDs fail before creating output. Repeated preparation
+into distinct new paths produces identical bytes. Outputs refuse overwrite.
+Reassess the candidate with the same receipt root and bind its parent digest.
+This produces a proposed knowledge cut only; exact TableGit CAS/import/readback
+and case publication remain separate steps.
+
+Pure operation rounds use `--compare-operation-round --before BEFORE --after
+AFTER --selected-scope SCOPE_ID --output RESULT` (repeat selected scope for a
+batch of up to four). This gate requires contiguous digest-bound strict
+assessments, unchanged source catalog and semantic evidence, verified L2-to-L3
+transitions for every selected scope, and no changes to unselected scopes.
+A no-change replay must preserve the fact cut and yields `no-change`, not
+convergence. Mixed policies, partial batches and unrelated changes reject the
+result before output. The result retains next-round gaps and never writes
+TableGit. Do not send this result to the semantic-only stage as if it were a
+new semantic Agent proposal. Prepare a compatible local snapshot with the Rust
+operation stager instead:
+
+```sh
+agentlab-maintainer-skill-flywheel --stage-operation-round \
+  --base EXACT_EXPORTED_CUT --program-facts CANDIDATE_FACTS \
+  --before STRICT_BASELINE --after CHILD_ASSESSMENT \
+  --operation-receipts-root ROOT --selected-scope SCOPE_ID \
+  --run-id SAFE_RUN_ID --output NEW_STAGE_DIRECTORY
+```
+
+The stager independently recomputes both assessments, verifies the latest
+durable assessment reference and all input digests, preserves existing facts,
+and requires exactly one deterministic receipt-qualified fact per selected
+scope. A changed semantic fact, forged report, missing receipt, duplicate ID or
+no-change round fails before output creation. Preserve the distinct counters:
+refresh-round history and assessment history need not have identical indices.
+Append one parent-bound refresh round and retain baseline, child and comparison
+reports. Method Skills, scope catalog and evaluation cases remain unchanged.
+
+This produces the five-table snapshot and stage manifest consumed by the
+existing `scripts/maintainer-skill-tablegit.py sync` path. That separately
+authorized step owns revision-fenced atomic persistence, exact committed-cut
+readback/export and optional replication. Local staging has no network client
+and proves none of those remote postconditions. Review the snapshot and producer
+identity before sync; it is not an automatically promoted knowledge cut.
+If the recorded assessment predates the exported facts or uses the legacy
+operation policy, default staging rejects the changed baseline. Only an explicit
+`--allow-baseline-reassessment` permits independently reassessing the current
+exact cut; retain both assessment digests and mark that migration as no maturity
+gain. The subsequent operation transition still uses two strict assessments.
+Operation lineage uses `agentlab.maintainer_operation_refresh_round.v1` in the
+existing refresh-round table, preserving historical semantic round formats.
+
+Carry exact original receipt bytes with accepted operation facts. The stager
+records their digests and relative paths under `operation-evidence`; never depend
+on the originating machine's checkout or mutable filesystem path.
+The `receipts` list covers newly accepted facts; `inheritedReceipts` separately
+retains existing facts whose operation checks are verified in the child report.
+Reverify inherited bindings and preserve original bytes and SHA before staging.
+Rejected or unsupported historical claims are not portable proof. The combined
+unique receipt payload is bounded to 16 MiB. Older manifests without the
+optional inherited list retain their accepted-only compatibility contract.
+Before any TableGit mutation, the sync writer checks table digests and portable
+receipt bindings; after exact committed-cut export it preserves receipt bytes,
+baseline, comparison and the original stage manifest as evidence sidecars.
+Verify an accepted fact without its original receipt directory, and reject
+tampering. Missing evidence stops ingestion before any authority write.
+Regression must cover successive productive fixture rounds on distinct scopes:
+use the previous staged cut as the next base, verify cumulative readiness from
+each portable bundle, and remove the originating receipt directory before the
+final reassessment. This proves transport continuity, not fresh execution or
+three productive real-world flywheel rounds.
+Remote HEAD equality, exact business-row readback and unchanged repeat import
+must be measured independently; a local bundle or a mirrored branch is not proof
+of these postconditions. Preserve unrelated remote rows and never bootstrap an
+old cut over a newer authority merely to make a smoke run succeed.
+
+`scripts/run-maintainer-operation-receipt-smoke.sh` runs baseline, preparation,
+child assessment, operation comparison and unchanged replay using the same
+Rust binary locally and in the Rust contract Action, including snapshot staging
+and rejection of no-change staging. CI uses immutable public
+sample cuts and retains complete experiment outputs. This proves a repeatable
+receipt-consumption path, not three productive full-system flywheel rounds,
+fresh target execution or durable authority ingestion.
+
+For compatibility, assessment without a receipt root retains historical
+explicit-claim scoring and labels it `legacy-explicit-claim`. Strict assessment
+labels `verified-receipt-content`. Do not compare their maturity counts as a
+quality gain or regression. The semantic execution loop preserves its input
+policy: strict cuts supply their portable `operation-evidence` root to the Rust
+assessor and carry child-verified operation bytes through semantic staging and
+sync export. This is not automatic migration of a legacy cut: first establish a
+strict baseline and adapt its existing operation facts, then change the producer
+and consumer together. Legacy gains prove no receipt-content qualification.
+
+## Closed-loop maturity qualification
+
+Scope maturity and system maturity are separate axes. Qualify a local flywheel
+with three distinct bounded responsibilities at one pinned repository revision,
+then retain three consecutive rounds. For each round retain the method/source
+cut, parent assessment digest, accepted and rejected evidence, applicable
+operation receipts, calibrated case outcomes, exact TableGit readback/export,
+next-round objectives, wall time and human interventions. New facts or generated
+prose alone do not count as improvement.
+
+Measure whether missing dimensions decrease, meaningful wrong implementations
+are rejected, alternative-valid implementations are accepted, and feedback
+actually changes the next knowledge cut or analysis objectives. A no-change
+replay should not advance authority. Missing tools or telemetry must be reported
+as infrastructure/capability gaps rather than application failures. No eligible
+work, no new facts or a successful Action is not a convergence verdict.
+
+After local closure, repeat on a structurally different repository without
+target-name branches or changes to the core acceptance rules. Keep reference
+and mutation calibration distinct from assessed Agent runs. Do not claim that
+better Skills improve Agent discrimination until a comparable before/after
+cohort demonstrates it. Build-only evidence proves neither runtime behavior nor
+performance; emulator power/thermal limits remain explicit instance facts.
+
 ## Maturity
 
 1. `L0-discovered`: a scope exists but its exact identity or structural receipt
@@ -35,6 +276,163 @@ but it must remain capability-based and revision-bound rather than naming a
 repository.
 
 ## Loop
+
+### Durable latest-assessment reference
+
+Resolve the latest baseline through `maintainer_skill_refresh_rounds`, never by
+the largest assessment filename or report index found in a directory:
+
+```sh
+agentlab-maintainer-skill-flywheel --resolve-latest-assessment \
+  --base exported-cut --output new-durable-reference.json
+```
+
+Require unique positive refresh indices and stable row IDs. Select the newest
+durable row, follow its contained assessment reference, verify the exact original
+byte SHA and supported report identity, and reject missing files, symlinks,
+traversal or ambiguous history before execution or staging. Retain the reference
+receipt's table SHA and both round indices. Refresh and assessment indices are
+independent counters; unequal indices are not corruption by themselves.
+An unreferenced report remains a diagnostic artifact even when its index is
+greater. The existing local and Agent loops use this Rust resolver; the TableGit
+staging adapter applies the same durable-reference checks, and operation staging
+also verifies that its refresh table did not change during resolution.
+
+This proves local exported-cut lineage, not that the export is the latest live
+TableGit authority. Refresh that remote revision separately before writes. The
+resolver does not recompute scope semantics; strict dispatch still independently
+reassesses the resolved baseline and candidate acceptance remains separate.
+
+### Remote execution preflight
+
+Resolve and verify the exact execution peer before preparing an isolated,
+revision-pinned workspace. Do not update an old primary checkout merely to run
+the next experiment. Fetch each immutable external input explicitly: fetching
+the method branch does not imply that unrelated qualification commits exist in
+the remote object database. Verify source and input identities before dispatch.
+
+Resolve tool executables in the actual executor environment. An interactive
+login shell's PATH is not evidence that a direct remote executor can spawn the
+same command; use the verified absolute executable when those environments
+differ. Preserve a failed spawn as infrastructure evidence, then correct the
+invocation rather than count it as a target or Agent failure.
+
+Check model configuration and credential presence without printing values.
+A cached participant that starts, a successfully compiled gate, and receipt
+replay do not prove model access or a productive Agent round. Keep preparation,
+recorded-evidence replay, fresh target execution and feedback qualification
+separate. Missing model configuration blocks Agent dispatch, not safe offline
+qualification or implementation of the generic scheduler.
+
+### Scope-exact semantic round gate
+
+Use `--compare-semantic-round --before BEFORE --after AFTER --selected-scope ID
+--output RESULT`, repeating selected scope for one to four distinct scopes.
+The existing construction loop uses this Rust gate instead of treating equal
+aggregate deltas as proof that the requested scopes advanced. A sibling gain
+cannot substitute for a selected failure. Require exact parent SHA, contiguous
+rounds, unchanged scope catalog and policy, totals reconciled to scope rows,
+unchanged unselected rows, and complete selected L1-to-L2 closure. A scope may
+reach L3 only by composing its unchanged prebound operation evidence with new
+semantic dimensions; semantic rounds cannot introduce or replace operation
+checks. Mixed source revisions, partial batches and forged totals reject before
+result creation. Unchanged replay yields no-change, not a fresh authority round.
+
+This gate compares independently produced assessments; it does not discover
+semantic truth, authenticate Agent authorship or re-execute the target. Source
+Blob validation, bounded Agent lifecycle and operator-owned candidate validation
+must precede it. Legacy-policy results remain labeled legacy and must not be
+presented as strict operation qualification.
+
+Strict semantic stages use `stageKind: verified-semantic`, a mandatory
+`inheritedReceipts` list and `verified-child-operation-facts-only` coverage.
+Preserve the exact assessed scope/fact bytes, bind proposal scope IDs to the
+gate's selected and advanced scopes, and retain baseline/result plus every
+child-verified operation receipt. The existing writer validates portable hashes
+and complete inherited coverage before connecting to TableGit. An unsupported
+strict stage without this contract fails closed instead of discarding evidence.
+Test mixed operation -> semantic -> operation cuts with arbitrary scope names,
+then remove all earlier receipt/cut directories and independently reassess the
+final portable cut. This verifies inter-ring continuity, not fresh Agent or
+emulator execution or downstream case qualification.
+
+### Evidence-driven next-round proposals
+
+Use the Rust `--plan-next-round` mode to reassess exact scope/fact bytes with an
+explicit receipt root before proposing the next bounded batch. Do not feed a
+caller-authored ready verdict or legacy operation claims into scheduling.
+
+```sh
+agentlab-maintainer-skill-flywheel --plan-next-round \
+  --scope-skills scopes.jsonl --program-facts facts.jsonl \
+  --operation-receipts-root operation-evidence --round-index 1 \
+  --available-lane semantic-refresh --available-lane operation-verification \
+  --batch-size 4 --max-source-files 80 --output next-round-plan.json
+```
+
+For later assessment rounds supply their original parent assessment SHA. This
+mode plans from the same cut; it does not append a round or count as a gain.
+The report embeds the independent assessment and its canonical JSON-value SHA,
+which is not the SHA of an independently formatted assessment file.
+Every scope is accounted for as eligible, capability-blocked or knowledge-ready.
+Structural gaps route to inventory repair, oversized pre-semantic scopes to
+decomposition, missing semantic evidence to refresh, and missing or rejected
+strict operation evidence to operation verification. Selection is deterministic
+and bounded to one repository URL/ID, source revision, lane and analysis mode;
+root contract and child source projections cannot share a batch.
+
+Operation adapters must declare capability kinds separately from the broad
+operation lane: `build-only`, `build-test`, `test-only`, `source-only` and
+`support-config`. Derive the scope's kind from the independent assessment's
+capabilities. A build-only executor cannot consume configuration checks, source
+maintenance or build-plus-test work simply because all need operation evidence.
+Use `--available-operation-kind KIND` for each supported kind; keep unsupported
+scopes in the complete plan with their kind-specific capability gap. Never
+filter them out of coverage totals, borrow a sibling artifact, or narrow a
+selected batch after planning. With explicit kinds, batches share one kind as
+well as source/lane/analysis mode. Kind declarations remain operator claims;
+execution and qualification still need their separate receipts.
+
+Available lanes are explicit operator capability declarations, not proof that
+an adapter has executed or an Agent has passed. No declarations means no
+executable proposal, not convergence. A selected proposal still needs the
+existing isolated execution, exact candidate validation, aggregate assessment
+and revision-fenced persistence gates. Planning performs none of those writes.
+When all scopes are knowledge-ready, require downstream calibrated cases,
+execution, feedback into the next cut and cross-repository transfer. The plan
+always reports `closedLoopQualified: false`: scope readiness alone cannot
+certify the five-ring flywheel. Unsupported downstream evidence must remain an
+explicit requirement, not be fabricated as a successful run.
+
+Strict semantic execution consumes this plan through the Rust
+`--prepare-semantic-batch` adapter, not a second independent scope selector:
+
+```sh
+agentlab-maintainer-skill-flywheel --prepare-semantic-batch \
+  --scope-skills scopes.jsonl --program-facts facts.jsonl \
+  --operation-receipts-root operation-evidence --before baseline.json \
+  --next-round-plan next-round-plan.json --knowledge-cut maintainer-knowledge-cut.json \
+  --repository auto --output new-batch-request.json
+```
+
+The adapter independently regenerates the complete plan from its declared
+capabilities and exact inputs, requires equality with the strict baseline, and
+converts only its exact selected semantic scopes into the existing isolated
+Agent requests. Bind the original baseline and plan byte digests in the request
+and loop receipt. A fixed repository selector also belongs in the planning
+policy; it may narrow selection but must not hide other repositories' gaps.
+Verify the selected repository URL and revision against the knowledge cut.
+Reject drift, forged selections, unsupported lanes, oversized executor budgets
+and output reuse before request publication. No eligible semantic batch is a
+stop/report condition, not permission to silently fall back to the historical
+selector or call operation verification a semantic run.
+
+The existing execution loop chooses this adapter for strict receipt-content
+baselines only. Legacy baselines retain the labeled historical path; migration
+remains explicit. Request preparation proves scheduling continuity, not model
+access, successful Agent execution, durable latest-round authority or feedback.
+Durable reference resolution precedes dispatch; full unattended qualification
+still requires current remote authority and productive execution/feedback.
 
 1. Assess the structural catalog without program facts to freeze the baseline.
 2. Bind revision-matched program facts and reassess.
@@ -221,3 +619,54 @@ publication and benchmark promotion remain separate downstream decisions.
 Do not treat a higher number of prose fields as progress. A round advances only
 when a missing evidence dimension closes, a stale or contradictory binding is
 removed, or a scope advances maturity with revision-bound evidence.
+
+Before spending an Agent budget, run a read-only authority admission check on
+the exact published input cut. Validate its declared table paths, original byte
+digests and unique row IDs locally before contacting the service. Require the
+declared authority revision to match clean committed HEAD, compare all knowledge
+table payloads at that immutable revision, then recheck HEAD and local bytes.
+Persist an exclusive admission receipt; stale inputs must stop before runtime
+installation or model calls. Refresh through an exact authority export and its
+review path, not by rebasing a proposal onto newer data or auto-merging source.
+Admission is point-in-time evidence, not a lock: transaction-time revision and
+row-version fences remain mandatory. A stale-input refusal prevents wasted work
+but does not count as a productive round or overall maturity gain.
+Resolve the executable in the actual build layout. The semantic loop accepts
+`AGENTLAB_FLYWHEEL_GATE`, otherwise uses `CARGO_TARGET_DIR` (or the historical
+`target`) plus `debug/agentlab-maintainer-skill-flywheel`. Regressions must pass
+the Cargo-provided binary path instead of assuming workspace-local build output;
+an isolated build-directory failure is infrastructure evidence, not an Agent
+failure or a source drift verdict.
+
+Separate execution capture from independent qualification. A successful
+`agentlab.maintainer_operation_execution.v1` receipt is explicitly unqualified.
+Use `--qualify-operation-capture --execution-root ROOT
+--execution-receipt-sha256 SHA --module-root REL --output NEW_FILE` to re-read
+the original plan, assessment, recipe, every complete process log and both
+retained HAR archives. Bind the selected scope to the declared module ownership;
+never borrow a sibling module's successful build. Reject failed or repeated
+process identities, changed byte digests, unsafe archive members, duplicate
+members, trailing payloads and exceeded resource budgets. Compare all canonical
+members, not just compressed archive bytes, which can differ across clean builds.
+
+The resulting `agentlab.maintainer_scope_build_capture_qualification.v1`
+proves only captured-byte consistency and build reproducibility within that
+explicit module. It is not a runtime, test, performance or type-check verdict.
+Process IDs are capture identities, not remote peer or operation identities.
+Source cleanliness, command authorship and the reviewed module mapping remain
+producer/operator assertions, not authenticated proof. Do not relabel this
+format as the older peer-qualified receipt. A separately reviewed recorded-fact
+adapter and strict reassessment are required before any L3 or authority gain.
+
+The recorded-fact adapter accepts that distinct capture-qualification schema
+through the existing `--prepare-operation-fact` and strict assessment paths.
+It rechecks original qualification bytes, source identity, current scope
+ownership, build-only capability, lineage digests, canonical member equality,
+complete log-reference sets and explicit qualification limits. It does not
+re-read private archives, authenticate the producer or execute the target.
+Keep its recorded-content boundary in every assessment. Transport the original
+qualification JSON with the proposed fact; do not require private raw binaries
+in a public snapshot. Use the operation round gate to prove exactly the selected
+L2-to-L3 transition with unchanged siblings, then stage a portable candidate and
+reassess from that candidate alone. These are local proposed knowledge gains,
+not a live TableGit write, calibrated case, or completed five-ring loop.

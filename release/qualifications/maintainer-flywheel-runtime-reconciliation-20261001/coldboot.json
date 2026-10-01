@@ -1,0 +1,83 @@
+{
+  "action": null,
+  "canonicalDownloadUrl": null,
+  "canonicalUrl": null,
+  "dataPlane": null,
+  "downloadUrls": null,
+  "error": null,
+  "found": true,
+  "kind": "exec",
+  "ok": true,
+  "operation": {
+    "channel": "control",
+    "fallbackUsed": false,
+    "gatewayInstanceId": "agentweb-ai-rgw-01",
+    "logicalGatewayId": "agentweb-ai",
+    "ok": true,
+    "result": {
+      "found": true,
+      "lane": "job",
+      "ok": true,
+      "record": {
+        "args": [
+          "-c",
+          "set -euo pipefail\nemulator=/home/huawei/commandline-tools-26.0.0.821/bin/Emulator\nhdc=/home/huawei/commandline-tools-26.0.0.821/sdk/default/openharmony/toolchains/hdc\ninstance_path=/home/huawei/HarmonyOS-Emulator/instances\ntarget=127.0.0.1:10100\nlauncher=\ncleanup() {\n  /usr/bin/timeout --kill-after=2s 20s \"$emulator\" -stop codex_phone_7 -instancePath \"$instance_path\"\n  if [ -n \"$launcher\" ]; then wait \"$launcher\" || true; fi\n}\ntrap cleanup EXIT\n\"$emulator\" -start codex_phone_7 -instancePath \"$instance_path\" -imageRoot /home/huawei/HarmonyOS-Emulator/images -bootMode coldboot -noWindow -hdcPort 10100 &\nlauncher=$!\nconnected=false\ndeadline=$((SECONDS + 180))\nwhile [ \"$SECONDS\" -lt \"$deadline\" ]; do\n  /usr/bin/timeout --kill-after=2s 5s \"$hdc\" tconn \"$target\" || true\n  if /usr/bin/timeout --kill-after=2s 5s \"$hdc\" list targets | awk -v target=\"$target\" '$1 == target {found=1} END {exit(!found)}'; then connected=true; break; fi\n  sleep 2\ndone\n[ \"$connected\" = true ]\n/usr/bin/timeout --kill-after=2s 10s \"$hdc\" -t \"$target\" shell param get const.product.name\n/usr/bin/timeout --kill-after=2s 10s \"$hdc\" -t \"$target\" shell param get const.ohos.fullname\n/usr/bin/timeout --kill-after=2s 10s \"$hdc\" list targets"
+        ],
+        "cancelled": false,
+        "command": "/bin/bash",
+        "cwd": "/home/huawei/code/.worktrees/agentlabrelease/flywheel-capture-qualification-78c489c",
+        "durationMs": 13234,
+        "error": null,
+        "exitCode": 0,
+        "id": "exec-00000000000001cd",
+        "lane": "job",
+        "state": "completed",
+        "stderr": "KVM is supported and accessible\naudio: Could not init `pa' audio driver\naudio: warning: Using timer based audio emulation\n",
+        "stdout": "[Fail]Connect failed\r\n[Fail]Connect failed\r\n[Fail]Connect failed\r\n[Fail]Connect failed\r\n[Fail]Connect failed\r\n[Fail]Connect failed\r\nConnect OK\r\nemulator \nOpenHarmony-7.0.0.105 \n127.0.0.1:10100\nStop emulator codex_phone_7 successfully\n",
+        "timedOut": false
+      },
+      "state": "completed"
+    },
+    "rgwHttp": "https://agentweb-ai.ru.yxsbase.win",
+    "rgwRouting": {
+      "attemptErrors": [],
+      "strategy": "peer-hot3-with-command-retry"
+    },
+    "routeDecision": "peer_direct",
+    "sessionId": null,
+    "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+    "targetRole": "upstream",
+    "timings": {
+      "awmcp": {
+        "attemptCount": 1,
+        "rgwRequestMs": 491,
+        "rgwResponseDecodeMs": 0,
+        "rgwResponseHeadersMs": 490,
+        "routeCacheHit": true,
+        "routeLookupMode": "command-cache",
+        "routeLookupMs": 0,
+        "totalMs": 491
+      },
+      "rgw": {
+        "dispatchMs": 0,
+        "journalMs": 0,
+        "peerRoundTripMs": 150,
+        "routeLookupMs": 0,
+        "totalMs": 150
+      }
+    },
+    "traceId": "32ad9e40-089e-4063-9fa3-391b2f33e000"
+  },
+  "operationId": "exec-00000000000001cd",
+  "phase": "completed",
+  "previewUrls": null,
+  "progress": null,
+  "publicUrl": null,
+  "publicationId": null,
+  "result": null,
+  "retryable": false,
+  "schema": "agentweb.operation/v1",
+  "status": "completed",
+  "succeeded": true,
+  "terminal": true
+}

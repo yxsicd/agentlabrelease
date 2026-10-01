@@ -1,0 +1,33 @@
+{
+  "schema": "agentlab.maintainer_flywheel_shadow_runtime_routing_audit.v1",
+  "overallMaturityPercent": 45,
+  "maturityDelta": 0,
+  "maturityMeasurement": "Engineering estimate, not a calibrated benchmark",
+  "change": "Explicit instance runtime routing separates generic repository tests from the legacy Harmony emulator path",
+  "routes": ["harmony-emulator", "repository-test"],
+  "legacyDefault": "harmony-emulator",
+  "wrapperVariable": "AGENTLAB_SHADOW_RUNTIME_TARGET",
+  "regressionPopulation": "Controlled arbitrary-repository fixture, not real cross-repository closure",
+  "passedRustTests": 2,
+  "passedLegacyPythonTests": 17,
+  "negativeCoverage": [
+    "Unknown runtime declaration",
+    "External hardware or physical-device fallback permission",
+    "External hardware requirement in repository-test proposal",
+    "ohosTest scope downgraded to repository-test",
+    "Harmony route missing emulator environment"
+  ],
+  "lineage": {
+    "runtimeTargetRetained": true,
+    "canonicalShadowRequestValueSha256Retained": true,
+    "historicalCandidatesRewritten": false
+  },
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "closedLoopQualified": false,
+  "remainingGaps": [
+    "Current-authority productive Agent multi-round execution",
+    "Actual calibrated repository-test case execution and feedback",
+    "Structurally different real repository transfer"
+  ]
+}

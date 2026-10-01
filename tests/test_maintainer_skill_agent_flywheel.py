@@ -623,6 +623,18 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
             MODULE.compare(type("Args", (), {"before": before_path, "after": after_path, "output": output}))
             self.assertEqual(json.loads(output.read_text())["decision"], "review-proposed-knowledge")
 
+    def test_compare_rejects_mixed_operation_evidence_policies_before_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            before_path = root / "before.json"
+            before_path.write_text(json.dumps({"standard": {"operationEvidencePolicy": "legacy-explicit-claim"}}))
+            after_path = root / "after.json"
+            after_path.write_text(json.dumps({"standard": {"operationEvidencePolicy": "verified-receipt-content"}}))
+            output = root / "result.json"
+            with self.assertRaisesRegex(ValueError, "operation evidence policy changed"):
+                MODULE.compare(type("Args", (), {"before": before_path, "after": after_path, "output": output}))
+            self.assertFalse(output.exists())
+
     def test_compare_accepts_l3_when_semantic_closure_meets_prebound_operation_evidence(self):
         before = {
             "totals": {"scopeSkillCount": 5, "structuralReadyCount": 5, "programBoundCount": 1,

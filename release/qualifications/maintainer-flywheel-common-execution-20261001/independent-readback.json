@@ -1,0 +1,80 @@
+{
+  "cancelTool": "operation_cancel",
+  "channel": "control",
+  "fallbackUsed": false,
+  "gatewayInstanceId": "agentweb-ai-rgw-01",
+  "idempotencyKey": "awmcp-exec-v1-e47da069227b51a19c8322a2b6b11648",
+  "logicalGatewayId": "agentweb-ai",
+  "ok": true,
+  "operationId": "exec-00000000000001ba",
+  "operationKind": "exec",
+  "pollTool": "operation_get",
+  "requestDeadlineMs": 10000,
+  "result": {
+    "execId": "exec-00000000000001ba",
+    "lane": "process",
+    "ok": true,
+    "record": {
+      "args": [
+        "/home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/execution-receipt.json",
+        "/home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/attempt-1.artifact",
+        "/home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/attempt-2.artifact",
+        "/home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/build-1.stdout",
+        "/home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/build-1.stderr",
+        "/home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/build-2.stdout",
+        "/home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/build-2.stderr",
+        "/home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/probe-0.stdout",
+        "/home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/probe-1.stdout",
+        "/home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/input-plan.json",
+        "/home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/input-before.json",
+        "/home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/input-recipe.json"
+      ],
+      "cancelled": false,
+      "command": "/usr/bin/sha256sum",
+      "cwd": null,
+      "durationMs": 19,
+      "error": null,
+      "exitCode": 0,
+      "id": "exec-00000000000001ba",
+      "lane": "process",
+      "state": "completed",
+      "stderr": "",
+      "stdout": "7579c43d92c6925d2aa9bae21d0b769e45d0dd1ab4a859bcbbe27f72a4749680  /home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/execution-receipt.json\nc1e8b642f2284dff73fda8392cf8f39df2ffeb72a2da95475eccb86a29293cdb  /home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/attempt-1.artifact\n005af13e04fa7e9c57ba342194d3cfc1c5a8f882c041044f52a2399c6ef1ef0e  /home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/attempt-2.artifact\nf248b7851a46b51679bf3e8071e76c1053d3cc5600df02d598cbbfb8a542e682  /home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/build-1.stdout\ncaeb47d6b084188dcec6aeaf4db72326245fcd7e7a44cb1fe81ff300a8aad5a3  /home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/build-1.stderr\n93323d240a98822de6e57211a8c8bbb73f87f84036f64bf45471263506d6ec49  /home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/build-2.stdout\ncaeb47d6b084188dcec6aeaf4db72326245fcd7e7a44cb1fe81ff300a8aad5a3  /home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/build-2.stderr\n2d24acbdb9b2e5b4e330dbc4ce307e3a3ef5daedba76e82db493cb3219f7814f  /home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/probe-0.stdout\na38dbeb36574f858bc2a7792f444279c0f0129f221d5eb64499b469c405527d4  /home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/probe-1.stdout\n93a44481bf36d92b23ac01e291e15a63d704311b299f0a812490c94369080cec  /home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/input-plan.json\nc653f3ba120a780f141a9df49b295003f371cce1a02149c2039c925979567d31  /home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/input-before.json\na3f62017f2539fc5502c65974648ba2511ce79384c17573bba99c228a204d0a9  /home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run/input-recipe.json\n",
+      "timedOut": false
+    },
+    "running": false,
+    "state": "completed"
+  },
+  "rgwHttp": "https://agentweb-ai.ru.yxsbase.win",
+  "rgwRouting": {
+    "attemptErrors": [],
+    "strategy": "peer-hot3-with-command-retry"
+  },
+  "routeDecision": "peer_direct",
+  "routeSelectionMode": "client-force-direct",
+  "selectedLogicalGatewayId": "agentweb-ai",
+  "selectedRgw": "https://agentweb-ai.ru.yxsbase.win",
+  "sessionId": null,
+  "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+  "targetRole": "upstream",
+  "timings": {
+    "awmcp": {
+      "attemptCount": 1,
+      "rgwRequestMs": 513,
+      "rgwResponseDecodeMs": 5,
+      "rgwResponseHeadersMs": 508,
+      "routeCacheHit": false,
+      "routeLookupMode": "client-force-direct",
+      "routeLookupMs": 4001,
+      "totalMs": 4514
+    },
+    "rgw": {
+      "dispatchMs": 0,
+      "journalMs": 0,
+      "peerRoundTripMs": 161,
+      "routeLookupMs": 0,
+      "totalMs": 162
+    }
+  },
+  "traceId": "9676612a-37e1-41d6-a76d-4bdff63e4e6d"
+}
