@@ -1,0 +1,45 @@
+{
+  "channel": "file",
+  "fallbackUsed": false,
+  "gatewayInstanceId": "agentweb-ai-rgw-01",
+  "logicalGatewayId": "agentweb-ai",
+  "ok": true,
+  "result": {
+    "content": "{\n  \"artifacts\": [\n    {\n      \"artifactBytes\": 486128,\n      \"attempt\": 1,\n      \"canonical\": {\n        \"algorithm\": \"sha256-json-member-tuples-v1\",\n        \"memberCount\": 167,\n        \"sha256\": \"7b012f4d36eceb5c217fdaba28076e0672d55bfeb604f8ed968771ae1724c051\"\n      },\n      \"rawSha256\": \"c1e8b642f2284dff73fda8392cf8f39df2ffeb72a2da95475eccb86a29293cdb\"\n    },\n    {\n      \"artifactBytes\": 486160,\n      \"attempt\": 2,\n      \"canonical\": {\n        \"algorithm\": \"sha256-json-member-tuples-v1\",\n        \"memberCount\": 167,\n        \"sha256\": \"7b012f4d36eceb5c217fdaba28076e0672d55bfeb604f8ed968771ae1724c051\"\n      },\n      \"rawSha256\": \"005af13e04fa7e9c57ba342194d3cfc1c5a8f882c041044f52a2399c6ef1ef0e\"\n    }\n  ],\n  \"authorityWritePerformed\": false,\n  \"automaticPromotion\": false,\n  \"executionReceiptSha256\": \"7579c43d92c6925d2aa9bae21d0b769e45d0dd1ab4a859bcbbe27f72a4749680\",\n  \"limitations\": [\n    \"Build-only HAR qualification; no runtime, tests, performance, power or thermal claim.\",\n    \"Retained Unix PIDs are capture identities, not remote AgentWeb operation identities.\",\n    \"No Skills promotion or live authority write; a separate recorded-receipt adapter and reassessment are still required.\"\n  ],\n  \"logs\": [\n    {\n      \"bytes\": 10,\n      \"path\": \"probe-0.stdout\",\n      \"sha256\": \"2d24acbdb9b2e5b4e330dbc4ce307e3a3ef5daedba76e82db493cb3219f7814f\"\n    },\n    {\n      \"bytes\": 0,\n      \"path\": \"probe-0.stderr\",\n      \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n    },\n    {\n      \"bytes\": 7,\n      \"path\": \"probe-1.stdout\",\n      \"sha256\": \"a38dbeb36574f858bc2a7792f444279c0f0129f221d5eb64499b469c405527d4\"\n    },\n    {\n      \"bytes\": 0,\n      \"path\": \"probe-1.stderr\",\n      \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n    },\n    {\n      \"bytes\": 945,\n      \"path\": \"dependency.stdout\",\n      \"sha256\": \"73fde6d0c36f5eb768eea03c5be4ee3df7374d55adbf93b319a007c09330fa2f\"\n    },\n    {\n      \"bytes\": 0,\n      \"path\": \"dependency.stderr\",\n      \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n    },\n    {\n      \"bytes\": 2337,\n      \"path\": \"build-1.stdout\",\n      \"sha256\": \"f248b7851a46b51679bf3e8071e76c1053d3cc5600df02d598cbbfb8a542e682\"\n    },\n    {\n      \"bytes\": 38432,\n      \"path\": \"build-1.stderr\",\n      \"sha256\": \"caeb47d6b084188dcec6aeaf4db72326245fcd7e7a44cb1fe81ff300a8aad5a3\"\n    },\n    {\n      \"bytes\": 2320,\n      \"path\": \"build-2.stdout\",\n      \"sha256\": \"93323d240a98822de6e57211a8c8bbb73f87f84036f64bf45471263506d6ec49\"\n    },\n    {\n      \"bytes\": 38432,\n      \"path\": \"build-2.stderr\",\n      \"sha256\": \"caeb47d6b084188dcec6aeaf4db72326245fcd7e7a44cb1fe81ff300a8aad5a3\"\n    }\n  ],\n  \"moduleRoot\": \"common\",\n  \"qualificationScope\": {\n    \"moduleBuild\": true,\n    \"performance\": false,\n    \"runtime\": false,\n    \"tests\": false,\n    \"typeChecking\": false\n  },\n  \"rawArchiveReproducible\": false,\n  \"recipeSha256\": \"a3f62017f2539fc5502c65974648ba2511ce79384c17573bba99c228a204d0a9\",\n  \"schema\": \"agentlab.maintainer_scope_build_capture_qualification.v1\",\n  \"scopeSkillId\": \"skill-scope-code-workshop-common-module-contract\",\n  \"selectionPlanSha256\": \"93a44481bf36d92b23ac01e291e15a63d704311b299f0a812490c94369080cec\",\n  \"source\": {\n    \"repository\": \"https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git\",\n    \"repositoryId\": \"code-workshop\",\n    \"revision\": \"7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6\"\n  },\n  \"status\": \"qualified\",\n  \"verificationBoundary\": \"Independent retained log/artifact byte readback; source cleanliness, module mapping and command authorship remain producer/operator assertions, not authenticated proof.\"\n}\n",
+    "ok": true,
+    "path": "/home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/qualification-78c489c.json",
+    "size": 3664
+  },
+  "rgwHttp": "https://agentweb-ai.ru.yxsbase.win",
+  "rgwRouting": {
+    "attemptErrors": [],
+    "strategy": "peer-hot3-with-command-retry"
+  },
+  "routeDecision": "peer_direct",
+  "routeSelectionMode": "client-force-direct",
+  "selectedLogicalGatewayId": "agentweb-ai",
+  "selectedRgw": "https://agentweb-ai.ru.yxsbase.win",
+  "sessionId": null,
+  "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+  "targetRole": "upstream",
+  "timings": {
+    "awmcp": {
+      "attemptCount": 1,
+      "rgwRequestMs": 497,
+      "rgwResponseDecodeMs": 2,
+      "rgwResponseHeadersMs": 494,
+      "routeCacheHit": false,
+      "routeLookupMode": "client-force-direct",
+      "routeLookupMs": 4001,
+      "totalMs": 4498
+    },
+    "rgw": {
+      "dispatchMs": 0,
+      "journalMs": 0,
+      "peerRoundTripMs": 146,
+      "routeLookupMs": 0,
+      "totalMs": 146
+    }
+  },
+  "traceId": "339a667a-8713-4c60-bd0e-bb5ede91906b"
+}

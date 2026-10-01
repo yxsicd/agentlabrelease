@@ -1,0 +1,77 @@
+{
+  "cancelTool": "operation_cancel",
+  "channel": "control",
+  "fallbackUsed": false,
+  "gatewayInstanceId": "agentweb-ai-rgw-01",
+  "idempotencyKey": "flywheel-common-capture-qualify-78c489c-20261001",
+  "logicalGatewayId": "agentweb-ai",
+  "ok": true,
+  "operationId": "exec-00000000000001c1",
+  "operationKind": "exec",
+  "pollTool": "operation_get",
+  "requestDeadlineMs": 10000,
+  "result": {
+    "execId": "exec-00000000000001c1",
+    "lane": "process",
+    "ok": true,
+    "record": {
+      "args": [
+        "--qualify-operation-capture",
+        "--execution-root",
+        "/home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/run",
+        "--execution-receipt-sha256",
+        "7579c43d92c6925d2aa9bae21d0b769e45d0dd1ab4a859bcbbe27f72a4749680",
+        "--module-root",
+        "common",
+        "--output",
+        "/home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001/qualification-78c489c.json"
+      ],
+      "cancelled": false,
+      "command": "/home/huawei/.agentlab/flywheel/operation-exec-1073-build-target/debug/agentlab-maintainer-skill-flywheel",
+      "cwd": "/home/huawei/code/.worktrees/agentlabrelease/flywheel-capture-qualification-78c489c",
+      "durationMs": 609,
+      "error": null,
+      "exitCode": 0,
+      "id": "exec-00000000000001c1",
+      "lane": "process",
+      "state": "completed",
+      "stderr": "",
+      "stdout": "{\"authorityWritePerformed\":false,\"qualificationScope\":{\"moduleBuild\":true,\"performance\":false,\"runtime\":false,\"tests\":false,\"typeChecking\":false},\"status\":\"qualified\"}\n",
+      "timedOut": false
+    },
+    "running": false,
+    "state": "completed"
+  },
+  "rgwHttp": "https://agentweb-ai.ru.yxsbase.win",
+  "rgwRouting": {
+    "attemptErrors": [],
+    "strategy": "peer-hot3-with-command-retry"
+  },
+  "routeDecision": "peer_direct",
+  "routeSelectionMode": "client-force-direct",
+  "selectedLogicalGatewayId": "agentweb-ai",
+  "selectedRgw": "https://agentweb-ai.ru.yxsbase.win",
+  "sessionId": null,
+  "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+  "targetRole": "upstream",
+  "timings": {
+    "awmcp": {
+      "attemptCount": 1,
+      "rgwRequestMs": 1093,
+      "rgwResponseDecodeMs": 0,
+      "rgwResponseHeadersMs": 1093,
+      "routeCacheHit": false,
+      "routeLookupMode": "client-force-direct",
+      "routeLookupMs": 4001,
+      "totalMs": 5095
+    },
+    "rgw": {
+      "dispatchMs": 0,
+      "journalMs": 0,
+      "peerRoundTripMs": 745,
+      "routeLookupMs": 0,
+      "totalMs": 745
+    }
+  },
+  "traceId": "a8e25ba0-3ceb-4e75-a63f-69e8735828c9"
+}

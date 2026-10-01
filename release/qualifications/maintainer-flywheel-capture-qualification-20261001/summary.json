@@ -1,0 +1,27 @@
+{
+  "schema": "agentlab.maintainer_flywheel_capture_qualification_audit.v1",
+  "methodRevision": "78c489c5959b8352b76d2a87d3c2e7472ac28a52",
+  "overallMaturityPercent": 44,
+  "previousOverallMaturityPercent": 43,
+  "maturityMeasurement": "Engineering estimate, not a calibrated benchmark",
+  "newCapability": "Independent original-byte log and HAR member verification on a real plan-selected build capture",
+  "canonicalMemberCount": 167,
+  "canonicalSha256": "7b012f4d36eceb5c217fdaba28076e0672d55bfeb604f8ed968771ae1724c051",
+  "rawArchivesIdentical": false,
+  "linuxRegressionPassed": 25,
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "l3ScopeDelta": 0,
+  "closedLoopQualified": false,
+  "remainingGaps": [
+    "Recorded-fact adapter and strict reassessment for capture qualification",
+    "Real Agent productive multi-round execution with current authoritative cut",
+    "Verified downstream test-case execution and feedback",
+    "Cross-repository real transfer qualification"
+  ],
+  "boundaries": [
+    "Module build only; no runtime, tests, performance, power, thermal or type-check claim",
+    "Producer/operator assertions are not authenticated proof",
+    "Unix process capture identities are not AgentWeb remote operation identities"
+  ]
+}

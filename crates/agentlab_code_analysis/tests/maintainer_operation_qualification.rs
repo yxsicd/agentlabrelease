@@ -100,6 +100,32 @@ fn capture_qualification_reads_original_bytes_and_rejects_borrowed_or_changed_ev
     assert_eq!(result["rawArchiveReproducible"], false);
     assert_eq!(result["artifacts"][0]["canonical"]["memberCount"], 2);
     assert_eq!(result["qualificationScope"]["runtime"], false);
+    let output_path = root.join("qualified.json");
+    let invoke = || {
+        std::process::Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .args([
+                "--qualify-operation-capture",
+                "--execution-root",
+                root.to_str().unwrap(),
+                "--execution-receipt-sha256",
+                &sha,
+                "--module-root",
+                "arbitrary-module",
+                "--output",
+                output_path.to_str().unwrap(),
+            ])
+            .output()
+            .unwrap()
+    };
+    let first = invoke();
+    assert!(first.status.success(), "{:?}", first);
+    let qualified_bytes = fs::read(&output_path).unwrap();
+    assert_eq!(
+        serde_json::from_slice::<Value>(&qualified_bytes).unwrap(),
+        result
+    );
+    assert!(!invoke().status.success());
+    assert_eq!(fs::read(&output_path).unwrap(), qualified_bytes);
     assert!(qualify(&root, &sha, "sibling-module").is_err());
     assert!(qualify(&root, &"0".repeat(64), "arbitrary-module").is_err());
     fs::write(root.join("build-1.stderr"), "tampered").unwrap();
