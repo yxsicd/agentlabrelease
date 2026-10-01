@@ -214,3 +214,74 @@ Validation: full Rust code-analysis suite, both unmocked/retained-evidence focus
 Rust regressions, 55 focused/Agent/shadow Python tests, release checksum validation,
 shell syntax, Rust formatting and diff whitespace checks. Runtime, active authority
 admission and a new Secret-backed Agent loop remain unqualified.
+
+## Additive candidate successor continuation
+
+Overall maturity stays **47%**. The historical focused-refresh command previously
+overwrote the original candidate's knowledge cut and its construction plan, and
+emitted lineage fields absent from the candidate schema. It now derives a stable
+successor with explicit parent candidate/value/cut and refreshed-fact/receipt
+digests. The parent value and plan are preserved. The exported cut must bind the
+current fact table; a private unadmitted proposal cannot masquerade as new authority.
+
+The successor gets a separate plan and clears all borrowed runtime/Oracle/wrong
+variant receipts and counts. Its knowledge-only readiness remains
+`blocked-qualification`. An isolated projection validates readiness before any
+retained candidate input changes. An identical repeat leaves both candidate and
+plan bytes unchanged. The existing Action exports the returned child identity
+and plan; the old CLI name remains compatible but no longer mutates the parent.
+
+The new Rust regression invokes the actual derivation CLI for two arbitrary
+repository identities, preserves parents, clears borrowed qualifications, verifies
+repeat stability and rejects a mismatched accepted-fact receipt. These are
+model/lineage controls, not real cross-repository Agent or emulator qualification.
+
+PR116's first public-validation attempt passed eight applicable jobs and failed
+two install downloads with HTTP 504 after bounded retries. Failed raw logs and
+artifacts remain in run `36868148530`. Only those terminal failed jobs were
+rerun; neither the initial failure nor a pending retry is a passing result.
+No TableGit admission, merge, new Agent dispatch or Release publication occurred.
+
+Validation: full Rust suite, unmocked two-repository successor CLI regression,
+55 focused/Agent/shadow Python tests, release checksums, formatting and whitespace
+checks. The successor regression also recovers an interrupted plan-first append
+without duplicate candidates; input fingerprints are rechecked before publication.
+
+## Restored real shadow input continuation
+
+Overall maturity remains **47%**. PR117's initial HEAD `a2704b1` passed all ten
+applicable checks; publication was skipped. This continuation restores missing
+inputs in the same PR, so those checks do not certify its later HEAD.
+
+The reviewed authority repair omitted an independently retained candidate and
+generation round from the raw Action export. All existing eight candidate and
+fifteen round values were compared with the original export and matched. The
+missing AbilityStage candidate and round16 are restored at their original value
+digests (`67525cc6...` and `17500e53...`); the parent-round link is independently
+verified. The original knowledge-cut digest remains `ccd9d953...`, distinct from
+the current cut. Neither candidate history nor authority tables were rewritten;
+the rejected raw export PR112 remains unsuitable for wholesale merge.
+
+The separate construction plan binds the active stage/module and both the startup
+test body and suite-dispatch source. Readiness reports two missing Oracle-source
+bindings, with runtime/Oracle/wrong-variant qualification still absent. Preparing
+the actual focused-refresh request succeeded with preserved semantic dimensions
+and both required Oracle paths. This is input preparation, not an Agent run.
+The retained readiness receipt is `qualification-receipts/abilitystage-restored-readiness.json`.
+
+The new Rust regression checks original candidate/round digests, round ancestry,
+unqualified status and original-cut retention, resolves the durable assessment,
+then invokes actual focused preparation. It verifies every authority-table, cut
+and candidate-history byte remains unchanged. Restoration contributes no new
+semantic coverage, qualified cases or maturity gain.
+
+After approved integration and fresh live authority admission, the intended
+main-only dispatch inputs are `mode=focused-refresh`,
+`candidate_id=shadow-case-abilitystage-environment-callback-binding` and
+`construction_plan=examples/maintainer-knowledge-gate/first-four/construction-plans/abilitystage-environment-callback.json`.
+Do not treat this recipe or cached authority identity as permission to dispatch.
+
+Validation: complete Rust code-analysis suite, real restored-input preparation
+regression, 55 focused/Agent/shadow Python tests, release validation, formatting
+and whitespace checks. The two missing source bindings are the next refresh
+objective, not closed gaps in this restored snapshot.

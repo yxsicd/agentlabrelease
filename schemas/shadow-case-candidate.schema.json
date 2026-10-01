@@ -37,8 +37,16 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["loopReceiptSha256"],
+      "dependentRequired": {
+        "parentCandidateId": ["parentCandidateSha256", "parentKnowledgeCutSha256", "refreshedFactSha256", "focusedRefreshReceiptSha256"]
+      },
       "properties": {
         "loopReceiptSha256": { "$ref": "#/$defs/sha256" },
+        "focusedRefreshReceiptSha256": { "$ref": "#/$defs/sha256" },
+        "parentCandidateId": { "type": "string", "pattern": "^shadow-case-[a-z0-9-]{8,140}$" },
+        "parentCandidateSha256": { "$ref": "#/$defs/sha256" },
+        "parentKnowledgeCutSha256": { "$ref": "#/$defs/sha256" },
+        "refreshedFactSha256": { "$ref": "#/$defs/sha256" },
         "shadowRequestValueSha256": { "$ref": "#/$defs/sha256" },
         "runtimeTarget": { "enum": ["harmony-emulator", "repository-test"] }
       }

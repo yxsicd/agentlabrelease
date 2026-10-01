@@ -232,10 +232,13 @@ class FocusedFactRefreshTest(unittest.TestCase):
             cut_path = knowledge / "maintainer-knowledge-cut.json"
             cut = json.loads(cut_path.read_text())
             cut["tableGitAuthority"]["revision"] = "f" * 40
+            cut["tables"]["programFacts"]["sha256"] = MODULE.BASE.digest(facts_path)
             cut_path.write_text(json.dumps(cut, sort_keys=True) + "\n")
             receipt = root / "focused-receipt.json"
             receipt.write_text(json.dumps({
                 "acceptedFactId": fact["id"], "changeKind": "updated",
+                "candidateId": CANDIDATE_ID,
+                "acceptedFactSha256": MODULE.READINESS.value_digest(fact),
             }) + "\n")
             output = root / "rebind-receipt.json"
             plan = knowledge / "construction-plans/uiability-backup-restore.json"

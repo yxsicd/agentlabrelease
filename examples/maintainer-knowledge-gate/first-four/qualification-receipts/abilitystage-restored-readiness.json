@@ -1,0 +1,87 @@
+{
+  "automaticPromotion": false,
+  "candidateId": "shadow-case-abilitystage-environment-callback-binding",
+  "candidateSha256": "67525cc61d7d22f3eae2f66df5dbfded19ac1864e6f3f0dc0069e048c0abb23e",
+  "checks": {
+    "implementationPaths": [
+      {
+        "editable": true,
+        "factEvidenceBound": true,
+        "inCandidateScope": true,
+        "path": "Ability/AbilityStage/entry/src/main/ets/myabilitystage/MyAbilityStage.ets",
+        "reason": "Bind the selected stage registration, callback, lifecycle and log owners."
+      },
+      {
+        "editable": true,
+        "factEvidenceBound": true,
+        "inCandidateScope": true,
+        "path": "Ability/AbilityStage/entry/src/main/module.json5",
+        "reason": "Bind the default stage srcEntry and EntryAbility identity to the proposed task."
+      }
+    ],
+    "oracleExecution": {
+      "evidence": [],
+      "status": "unqualified",
+      "verificationBoundary": "recorded receipt content only; no execution replay or producer authentication"
+    },
+    "oraclePaths": [
+      {
+        "candidateVisible": false,
+        "factEvidenceBound": false,
+        "inCandidateScope": true,
+        "path": "Ability/AbilityStage/entry/src/ohosTest/ets/test/Ability.test.ets",
+        "reason": "Inspect the reused startup test's actual assertions and swallowed failure; test completion is not startup proof."
+      },
+      {
+        "candidateVisible": false,
+        "factEvidenceBound": false,
+        "inCandidateScope": true,
+        "path": "Ability/AbilityStage/entry/src/ohosTest/ets/test/List.test.ets",
+        "reason": "Bind the suite entrypoint and dispatch to the exact startup-test body."
+      }
+    ],
+    "runtimeRequirements": [
+      {
+        "description": "Build, install and launch the exact source and ohosTest packages on the originally required HarmonyOS 6.0.2 API 22 emulator. API 26 availability does not satisfy this requirement; no physical-device fallback.",
+        "evidence": [],
+        "id": "api22-emulator-build-install",
+        "status": "unqualified",
+        "verificationBoundary": "recorded receipt content only; no execution replay or producer authentication"
+      },
+      {
+        "description": "Independently verify bounded language/colorMode changes, stage destruction and callback/log correlation on the same emulator and application instance.",
+        "evidence": [],
+        "id": "configuration-and-stage-lifecycle",
+        "status": "unqualified",
+        "verificationBoundary": "recorded receipt content only; no execution replay or producer authentication"
+      }
+    ],
+    "wrongVariantCalibration": {
+      "evidence": [],
+      "executedCount": 0,
+      "requiredCount": 2,
+      "status": "unqualified",
+      "verificationBoundary": "recorded receipt content only; no execution replay or producer authentication"
+    }
+  },
+  "currentKnowledgeCutSha256": "3fa0d50f3dfcf533eea14948aa02e0e0f9280a6b88410d9f9d4404336d1fc974",
+  "decision": "blocked-knowledge-refresh",
+  "knowledgeBlockers": [
+    "Oracle path is absent from bound fact evidence: Ability/AbilityStage/entry/src/ohosTest/ets/test/Ability.test.ets",
+    "Oracle path is absent from candidate editable/context paths: Ability/AbilityStage/entry/src/ohosTest/ets/test/Ability.test.ets",
+    "Oracle path is absent from bound fact evidence: Ability/AbilityStage/entry/src/ohosTest/ets/test/List.test.ets",
+    "Oracle path is absent from candidate editable/context paths: Ability/AbilityStage/entry/src/ohosTest/ets/test/List.test.ets"
+  ],
+  "knowledgeCutSha256": "ccd9d953b926b5647de7572dcdc7065cbbc9fd91ba46c5c01a3278ddd170e70e",
+  "nextGate": "refresh-program-facts-and-shadow-candidate",
+  "planSha256": "ad1842e25112915e2249d97be77697c5ce25cdeb8d3506a8e3949641f67869e3",
+  "qualificationBlockers": [
+    "runtime requirement is unqualified: api22-emulator-build-install",
+    "runtime requirement is unqualified: configuration-and-stage-lifecycle",
+    "independent Oracle has not executed successfully",
+    "wrong-variant calibration is incomplete: 0/2"
+  ],
+  "schema": "agentlab.shadow_case_construction_readiness_receipt.v1",
+  "sourceRevision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+  "sourceSetSha256": "88310ecd6a5ace0c7393c7981b8f9ba9103afff41133b71d0b84e951e95f24a6"
+}
