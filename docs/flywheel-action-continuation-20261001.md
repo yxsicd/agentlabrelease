@@ -116,3 +116,30 @@ Final local verification: `cargo test -p agentlab_code_analysis --quiet`,
 Skill validator and `git diff --check` all exited zero. Raw run evidence remains
 outside the source repository; only code, method guidance and this evidence
 summary are included in the source change.
+
+## Real TableGit persistence and continuation — 2026-10-02
+
+PR128 passed all ten applicable checks and merged as
+`995a9216075f3d7603bd163a3c6264893a0172ab`; immutable publishing was skipped.
+Maturity stays **51%** until feedback improves a subsequent knowledge/case cut.
+
+Live discovery confirmed the configured MCP destination is
+`https://cbgroom-tpc.ru.yxsbase.win/mcp` and its table contracts are version 2.3.0.
+The retained real capture was imported into the new independent bare TableGit
+repository `agentlabstage-a802d6f38150`. Six typed tables were created with exact
+revision fences; one atomic batch inserted 28 analytical rows. Every imported
+key was read back at committed revision
+`72536b552f030580b5748775de1829829c2b7fe5` and compared with the source export.
+Repeat import found zero pending groups, verified the same 28 rows and retained
+the identical revision. The existing knowledge repository `agentlabtablegit`
+remained at `38fc28d72870b36405287e048a5e6fce41a44b78`, with dirty=false.
+
+The committed analysis feedback was restored through table_rows_get and consumed
+by the Rust controller with independently reconstructed retained raw capture.
+It returned schedulingAllowed=false, qualified=false and the scoped-domain
+review action. This is operator-driven replay of a retained actual Linux run,
+not a fresh execution, an assessed Agent run or autonomous learning. Original
+raw files remain in local/GitHub artifacts: the new TableGit evidence_files rows
+are hashes and paths, not remote byte preservation. A separately durable bundle,
+explicit lesson admission and changed next-round knowledge remain outstanding.
+Non-secret operation/readback receipts stay in the external local artifact area.
