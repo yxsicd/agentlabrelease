@@ -22,6 +22,11 @@ on:
         required: true
         type: string
         default: AbilityStage__Startup_001
+      stage_contract:
+        description: Optional committed contract for independent AbilityStage semantic controls
+        required: false
+        type: string
+        default: examples/maintainer-knowledge-gate/first-four/diagnostic-contracts/abilitystage-lifecycle.json
 permissions:
   contents: read
 concurrency:
@@ -37,6 +42,7 @@ jobs:
       TEST_PATH: ${{ inputs.test_path }}
       SUITE_EXPORT: ${{ inputs.suite_export }}
       TEST_ID: ${{ inputs.test_id }}
+      STAGE_CONTRACT: ${{ inputs.stage_contract }}
       KNOWLEDGE: examples/maintainer-knowledge-gate/first-four
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -90,6 +96,22 @@ jobs:
             --output "$evidence/repeat.json"
           jq -e '.schedulingAllowed==false and .qualified==false' "$evidence/repeat.json"
           jq '{candidateId,nextAction,status,qualified,feedback}' "$evidence/next.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Calibrate declared lifecycle controls separately from startup completion
+        if: success() && inputs.stage_contract != ''
+        run: |
+          set -euo pipefail
+          git ls-files --error-unmatch -- "$STAGE_CONTRACT"
+          candidate_sha=$(jq -scS --arg id "$CANDIDATE_ID" '.[]|select(.id==$id)' "$KNOWLEDGE/case_generation_candidates.jsonl" | tr -d '\n' | sha256sum | cut -d' ' -f1)
+          revision=$(git -C "$RUNNER_TEMP/downstream/source" rev-parse HEAD)
+          jq -e --arg id "$CANDIDATE_ID" --arg sha "$candidate_sha" --arg revision "$revision" \
+            '.candidateId==$id and .candidateSha256==$sha and .sourceRevision==$revision' "$STAGE_CONTRACT"
+          compiler="$RUNNER_TEMP/downstream/compiler/node_modules/typescript/lib/typescript.js"
+          compiler_sha=$(sha256sum "$compiler" | cut -d' ' -f1)
+          cp "$STAGE_CONTRACT" "$RUNNER_TEMP/downstream/evidence/stage-contract.json"
+          node scripts/calibrate-harmony-stage-controls.cjs --contract "$STAGE_CONTRACT" \
+            --source-repo "$RUNNER_TEMP/downstream/source" --typescript "$compiler" \
+            --typescript-sha256 "$compiler_sha" --output "$RUNNER_TEMP/downstream/evidence/stage-calibration.json"
+          jq -e '.semanticSeamCalibrationPassed==true and .qualified==false' "$RUNNER_TEMP/downstream/evidence/stage-calibration.json"
       - name: Preserve complete diagnostic evidence including failures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

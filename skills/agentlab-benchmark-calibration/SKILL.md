@@ -88,6 +88,22 @@ that evidence. Keep generic lessons here and concrete candidate findings in
 instance records. Separate harmless refactors from semantic defects: a renamed
 class with the same default export is not automatically a wrong implementation.
 
+Calibrate the actual demanded behavior, not merely a prerequisite such as startup.
+For the explicitly supported trusted AbilityStage/ApplicationContext seam, use
+`scripts/calibrate-harmony-stage-controls.cjs` with a reviewed, byte-pinned
+contract. Paths, log predicates, input configurations and exact-match semantic
+mutations belong to that instance contract, not the runner. Execute the selected
+module's real type-erased default-export body; keep independent baseline and
+negative controls on the same checks. Change language and colorMode separately.
+Retain original and transformed sources and failed intended check IDs. Cosmetic
+variants surviving the oracle invalidate that calibration; missing/ambiguous
+mutations, unsupported loaders and worker deadlines are infrastructure failures.
+This operator dispatch seam does not qualify actual framework delivery, ArkTS,
+HAP, API-specific emulator execution or the whole candidate. The main-only
+diagnostic Action binds the contract to the selected candidate value and source;
+its semantic controls stay separate from the original startup feedback and from
+formal construction-plan qualification. See [the lifecycle evidence](../../docs/flywheel-lifecycle-calibration-20261001.md).
+
 Define metric denominators and event sources: task success, build success, user rounds versus model/tool turns, monotonic execution time, and evidence-backed behavior scoring. Keep proposed process metrics explicitly unvalidated until agreement and repeatability are measured. Separate Harness malfunction from valid Agent inability.
 
 Use [the knowledge experiment](../../examples/knowledge-seed/README.md) as the runnable fixture calibration/SQL/history/import demo; [SWE](../../examples/swe-bench/README.md) and [Harmony](../../examples/harmony-build/README.md) provide existing campaign examples. Record each demo's actual coverage.
