@@ -24,6 +24,23 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|arg| arg == "--bind-maintainer-guidance") {
+        let packet = agentlab_code_analysis::maintainer_guidance::bind(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &fs::read(value(&args, "--guidance-request")?)?,
+        )?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        file.write_all(&serde_json::to_vec_pretty(&packet)?)?;
+        file.write_all(b"\n")?;
+        println!(
+            "{}",
+            serde_json::json!({"guidanceCount":packet["guidance"].as_array().unwrap().len(),"agentConsumptionVerified":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|arg| arg == "--stage-lesson-admission") {
         let manifest = agentlab_code_analysis::maintainer_lesson_admission::stage(
             &PathBuf::from(value(&args, "--knowledge")?),

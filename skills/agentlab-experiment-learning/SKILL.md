@@ -140,6 +140,26 @@ readiness advancement false. The writer recognizes reviewed-lesson stages and
 rejects claimed scope advancement before any authority mutation. Stage success
 is not a committed knowledge cut or downstream learning evidence.
 
+For reviewed lesson guidance, use `--bind-maintainer-guidance --knowledge CUT
+--guidance-request SELECTION --output NEW_FILE`. The selection uses
+agentlab.maintainer_guidance_selection.v1, automaticPromotion=false, exact
+knowledgeCutSha256/knowledgeRevision, stage, sources (repositoryId/sourceRevision)
+and explicit skills (id/rowSha256/objectId/applicabilityReason). Applicability is
+a maintained decision, not inferred from matching repository names. The Rust
+gate binds all five tables and selected body/fact/method/lesson lineage.
+Calibration guidance must not leak into unrelated semantic analysis.
+
+The multi-repository calibration authoring runner accepts --guidance-knowledge,
+--guidance-selection and --flywheel-tool together. It retains the original cut
+and selection, invokes the Rust gate and passes the complete packet to the Pi
+author. Output validation independently rebinds those retained inputs. The author
+includes body, provenance and qualification limits in its prompt and retains prompt
+bytes plus a consumption intent. This proves assembly only: verify actual model
+request capture and measure the next outcome before claiming consumption or
+learning benefit. Knowledge admission uses one fixed-baseline atomic delta; on
+authority drift, stop and reassess rather than adopting a newer revision through
+a generic retry path.
+
 When promoting against real multi-kind program facts, preserve heterogeneous
 unowned fields as JSON rather than coercing arrays/objects or dropping baseline
 rows. The exchange records observed mixed field types separately. Explicitly

@@ -7,6 +7,7 @@ pub mod knowledge_gate;
 pub mod maintainer_downstream;
 pub mod maintainer_downstream_exec;
 pub mod maintainer_flywheel_plan;
+pub mod maintainer_guidance;
 pub mod maintainer_lesson_admission;
 pub mod maintainer_operation_evidence;
 pub mod maintainer_operation_exec;
