@@ -129,6 +129,12 @@ explicit observations; no compatible predecessor schedules fresh feedback.
 Only unchanged owned semantic work suppresses scheduling: formal requirements
 come from the current downstream plan. This is not execution caching, authority
 admission, automatic repair or completion of the full flywheel.
+Include the recorded Node runtime identity in the owned semantic-work digest;
+equal checks under a different declared runtime must replan. Require that identity
+in reconstructed prior plans. Older feedback omitting it stays preserved but is
+incompatible with this consumer; collect fresh feedback rather than rewriting it.
+Runtime version strings are observations, not binary attestation or a complete
+environment lock. Raw timing changes alone do not reset owned semantic work.
 
 Define metric denominators and event sources: task success, build success, user rounds versus model/tool turns, monotonic execution time, and evidence-backed behavior scoring. Keep proposed process metrics explicitly unvalidated until agreement and repeatability are measured. Separate Harness malfunction from valid Agent inability.
 

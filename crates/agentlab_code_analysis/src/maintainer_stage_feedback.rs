@@ -36,6 +36,7 @@ pub fn resume(
         "contractSha256",
         "calibrationSha256",
         "taskSha256",
+        "runtime",
         "nextAction",
         "semanticSeamCalibrationPassed",
         "acceptedControlPassed",
@@ -105,6 +106,7 @@ pub fn plan(
     let downstream = parse(downstream_bytes)?;
     let contract = parse(contract_bytes)?;
     let receipt = parse(receipt_bytes)?;
+    let runtime = text(&receipt, "runtime")?;
     let candidate_sha = digest(&serde_json::to_vec(&candidate).map_err(|e| e.to_string())?);
     need(
         contract["schema"] == "agentlab.harmony_stage_control_contract.v1"
@@ -410,7 +412,7 @@ pub fn plan(
     } else {
         "repair-domain-oracle-or-controls"
     };
-    let task_sha=digest(&serde_json::to_vec(&json!({"candidateSha256":candidate_sha,"contractSha256":digest(contract_bytes),"methodSha256":receipt["methodSha256"],"compiler":receipt["compiler"],"controls":projection,"infrastructureFailure":receipt["infrastructureFailure"],"decision":decision})).map_err(|e|e.to_string())?);
+    let task_sha=digest(&serde_json::to_vec(&json!({"schema":"agentlab.stage_semantic_work.v2","candidateSha256":candidate_sha,"contractSha256":digest(contract_bytes),"methodSha256":receipt["methodSha256"],"runtime":runtime,"compiler":receipt["compiler"],"controls":projection,"infrastructureFailure":receipt["infrastructureFailure"],"decision":decision})).map_err(|e|e.to_string())?);
     let mut unchanged = false;
     if let Some(bytes) = previous {
         let p = parse(bytes)?;
@@ -426,7 +428,7 @@ pub fn plan(
     Ok(
         json!({"schema":"agentlab.maintainer_stage_feedback_plan.v1","candidateId":candidate["id"],"candidateSha256":candidate_sha,
         "sourceRevision":candidate["sourceRevision"],"sourceSetSha256":candidate["sourceSetSha256"],"knowledgeCutSha256":candidate["knowledgeCutSha256"],
-        "contractSha256":digest(contract_bytes),"calibrationSha256":expected_sha,"taskSha256":task_sha,"nextAction":decision,
+        "contractSha256":digest(contract_bytes),"calibrationSha256":expected_sha,"taskSha256":task_sha,"runtime":runtime,"nextAction":decision,
         "semanticSeamCalibrationPassed":calibrated,"acceptedControlPassed":accepted,"killedSemanticVariantCount":killed,
         "pendingFormalActions":downstream["actions"],"schedulingAllowed":!unchanged,"status":if unchanged {"awaiting-new-evidence"} else {"domain-feedback-selected-next-action"},
         "qualified":false,"automaticPromotion":false,"authorityWritePerformed":false,"agentExecutionPerformed":false,
