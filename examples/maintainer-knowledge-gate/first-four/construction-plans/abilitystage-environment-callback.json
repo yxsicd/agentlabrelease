@@ -1,0 +1,50 @@
+{
+  "schema": "agentlab.shadow_case_construction_plan.v1",
+  "candidateId": "shadow-case-abilitystage-environment-callback-binding",
+  "candidateSha256": "67525cc61d7d22f3eae2f66df5dbfded19ac1864e6f3f0dc0069e048c0abb23e",
+  "requiredImplementationPaths": [
+    {
+      "path": "Ability/AbilityStage/entry/src/main/ets/myabilitystage/MyAbilityStage.ets",
+      "reason": "Bind the selected stage registration, callback, lifecycle and log owners."
+    },
+    {
+      "path": "Ability/AbilityStage/entry/src/main/module.json5",
+      "reason": "Bind the default stage srcEntry and EntryAbility identity to the proposed task."
+    }
+  ],
+  "requiredOraclePaths": [
+    {
+      "path": "Ability/AbilityStage/entry/src/ohosTest/ets/test/Ability.test.ets",
+      "reason": "Inspect the reused startup test's actual assertions and swallowed failure; test completion is not startup proof."
+    },
+    {
+      "path": "Ability/AbilityStage/entry/src/ohosTest/ets/test/List.test.ets",
+      "reason": "Bind the suite entrypoint and dispatch to the exact startup-test body."
+    }
+  ],
+  "runtimeRequirements": [
+    {
+      "id": "api22-emulator-build-install",
+      "description": "Build, install and launch the exact source and ohosTest packages on the originally required HarmonyOS 6.0.2 API 22 emulator. API 26 availability does not satisfy this requirement; no physical-device fallback.",
+      "status": "unqualified",
+      "evidence": []
+    },
+    {
+      "id": "configuration-and-stage-lifecycle",
+      "description": "Independently verify bounded language/colorMode changes, stage destruction and callback/log correlation on the same emulator and application instance.",
+      "status": "unqualified",
+      "evidence": []
+    }
+  ],
+  "oracleExecution": {
+    "status": "unqualified",
+    "evidence": []
+  },
+  "wrongVariantCalibration": {
+    "status": "unqualified",
+    "evidence": [],
+    "requiredCount": 2,
+    "executedCount": 0
+  },
+  "automaticPromotion": false
+}

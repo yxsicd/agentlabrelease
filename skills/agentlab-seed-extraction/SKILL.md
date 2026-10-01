@@ -63,6 +63,14 @@ not append another candidate or alter any retained parent. The historical
 `focused_fact_refresh.py rebind-candidate` command now performs this additive
 derivation; its returned `candidateId` and `successorPlan` identify the child.
 
+When replacing an invalid raw knowledge export with a reviewed snapshot, reconcile
+independently retained candidate and generation-round records too. Verify their
+original value digests and parent-round link before restoring them; keep original
+knowledge-cut bindings and unqualified status. Restoring a historical proposal is
+not new knowledge coverage, a new Agent run, or permission to merge the invalid
+authority export. Prove the restored input can prepare the next gated refresh
+without changing any authority table.
+
 Write stable `evaluation_cases` task rows with source/knowledge cuts and analysis references. Keep assessed-Agent-visible requirements separate from operator-owned reference patches and grading evidence. Do not disclose a gold implementation as part of the task prompt.
 
 Use a strong construction Agent or deterministic generator as appropriate. Capture construction actions as Harness-owned evidence too. Agent-proposed seeds are candidates until independently calibrated; quality of the construction Agent is not the assessed-Agent score.
