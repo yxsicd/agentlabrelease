@@ -154,6 +154,81 @@ fn changed_source_plan_path_runtime_and_review_fail_before_execution() {
 }
 
 #[test]
+fn oracle_only_successor_preserves_demand_and_proves_changed_controls() {
+    use agentlab_code_analysis::maintainer_downstream_exec::{
+        compare_oracle_repair, recipe as prepare,
+    };
+    for (name, body, improved) in [
+        ("repair-sensitive", "async()=>{await registry.getAbilityDelegator().startAbility({});}", true),
+        ("repair-still-vacuous", "async(done)=>{try{await registry.getAbilityDelegator().startAbility({});done();}catch(error){done();}}", false),
+    ] {
+        let (root, old, mut plan, recipe) = fixture(name,
+            "async(done)=>{try{await registry.getAbilityDelegator().startAbility({});done();}catch(e){done();}}");
+        let before = run(&root, &old, &plan, &recipe, "before").unwrap();
+        let before_sha = digest(&fs::read(root.join("before/execution.json")).unwrap());
+        fs::write(root.join("source/startup.js"), format!("const {{describe,it}}=require('@ohos/hypium');const {{default:registry}}=require('@ohos.app.ability.abilityDelegatorRegistry');exports.suite=()=>describe('arbitrary',()=>it('probe',0,{body}));")).unwrap();
+        git(&root.join("source"), &["add", "startup.js"]);
+        git(&root.join("source"), &["commit", "-m", "Oracle-only repair"]);
+        let mut child = old.clone();
+        child["id"] = json!(format!("{name}-child"));
+        child["sourceRevision"] = json!(git(&root.join("source"), &["rev-parse", "HEAD"]));
+        child["oracleRepairParent"] = json!({"candidateId":old["id"],"candidateSha256":before["candidateSha256"],"executionSha256":before_sha});
+        plan["candidateId"] = child["id"].clone();
+        plan["sourceRevision"] = child["sourceRevision"].clone();
+        plan["candidateSha256"] = json!(digest(&serde_json::to_vec(&child).unwrap()));
+        let make_recipe = |plan: &Value| prepare(&serde_json::to_vec(plan).unwrap(), &root.join("source"),
+            Path::new(recipe["node"].as_str().unwrap()), Path::new(recipe["probeScript"].as_str().unwrap()),
+            "startup.js", "suite", "probe", None).unwrap();
+        let mut new_recipe = make_recipe(&plan);
+        new_recipe["timeoutMs"] = recipe["timeoutMs"].clone();
+        run(&root, &child, &plan, &new_recipe, "after").unwrap();
+        let after_sha = digest(&fs::read(root.join("after/execution.json")).unwrap());
+        let compare = || compare_oracle_repair(&root.join("before"), &before_sha,
+            &root.join("after"), &after_sha, &root.join("source"));
+        let report = compare().unwrap();
+        assert_eq!(report["controlsImproved"], improved);
+        assert_eq!(report["implementationUnchanged"], true);
+        assert_eq!(report["qualified"], false);
+        // Valid capture but changed demand must never count as Oracle repair.
+        let mut changed = child.clone();
+        changed["demand"] = json!("different contract");
+        let mut changed_plan = plan.clone();
+        changed_plan["candidateSha256"] = json!(digest(&serde_json::to_vec(&changed).unwrap()));
+        let mut changed_recipe = make_recipe(&changed_plan);
+        changed_recipe["timeoutMs"] = recipe["timeoutMs"].clone();
+        run(&root, &changed, &changed_plan, &changed_recipe, "changed-demand").unwrap();
+        let changed_sha = digest(&fs::read(root.join("changed-demand/execution.json")).unwrap());
+        assert!(compare_oracle_repair(&root.join("before"), &before_sha, &root.join("changed-demand"),
+            &changed_sha, &root.join("source")).unwrap_err().contains("demand"));
+        let mut budget_recipe = new_recipe.clone();
+        budget_recipe["timeoutMs"] = json!(10_001);
+        run(&root, &child, &plan, &budget_recipe, "changed-budget").unwrap();
+        let budget_sha = digest(&fs::read(root.join("changed-budget/execution.json")).unwrap());
+        assert!(compare_oracle_repair(&root.join("before"), &before_sha,
+            &root.join("changed-budget"), &budget_sha, &root.join("source"))
+            .unwrap_err().contains("runtime"));
+        fs::write(root.join("source/unrelated"), "dirty").unwrap();
+        assert!(compare().unwrap_err().contains("dirty"));
+        // Even successful controls cannot hide implementation changes.
+        git(&root.join("source"), &["add", "unrelated"]);
+        git(&root.join("source"), &["commit", "--amend", "--no-edit"]);
+        let mut extra = child.clone();
+        extra["sourceRevision"] = json!(git(&root.join("source"), &["rev-parse", "HEAD"]));
+        let mut extra_plan = plan.clone();
+        extra_plan["sourceRevision"] = extra["sourceRevision"].clone();
+        extra_plan["candidateSha256"] = json!(digest(&serde_json::to_vec(&extra).unwrap()));
+        let mut extra_recipe = make_recipe(&extra_plan);
+        extra_recipe["timeoutMs"] = recipe["timeoutMs"].clone();
+        run(&root, &extra, &extra_plan, &extra_recipe, "extra-source").unwrap();
+        let extra_sha = digest(&fs::read(root.join("extra-source/execution.json")).unwrap());
+        assert!(compare_oracle_repair(&root.join("before"), &before_sha,
+            &root.join("extra-source"), &extra_sha, &root.join("source"))
+            .unwrap_err().contains("implementation"));
+        fs::remove_dir_all(root).unwrap();
+    }
+}
+
+#[test]
 fn recipe_preparation_and_failed_spawn_preserve_terminal_feedback() {
     let (root, candidate, plan, original) = fixture(
         "spawn-failure",
