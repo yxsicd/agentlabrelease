@@ -44,9 +44,10 @@ jobs:
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_MODEL: ${{ inputs.model }}
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
-      EVIDENCE_ROOT: ${{ runner.temp }}/maintainer-guidance/output
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Resolve runner-local evidence path after job allocation
+        run: echo "EVIDENCE_ROOT=$RUNNER_TEMP/maintainer-guidance/output" >> "$GITHUB_ENV"
       - name: Build the independent recorded-exchange verifier
         run: cargo build --locked -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
       - name: Freeze guidance and materialize source bytes without evaluator answers
