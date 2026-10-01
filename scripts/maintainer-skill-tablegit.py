@@ -1048,6 +1048,22 @@ def operation_evidence_files(snapshot: Path) -> dict[str, bytes]:
     return files
 
 
+def write_exact_export_table(export: Path, snapshot: Path, table: str,
+                             exact_rows: list[dict], preserve_assessed_bytes: bool) -> None:
+    filename = TABLE_FILES[table]
+    expected = load_jsonl(snapshot / filename)
+    if (len({row["id"] for row in expected}) != len(expected)
+            or len({row["id"] for row in exact_rows}) != len(exact_rows)
+            or sorted(exact_rows, key=lambda row: row["id"]) != sorted(expected, key=lambda row: row["id"])):
+        raise RuntimeError(f"{table} exact-revision export differs from the staged cut")
+    if preserve_assessed_bytes and table in ("maintainer_scope_skills", "program_facts"):
+        # Original assessed bytes, not merely equivalent decoded rows, bind the
+        # durable report and the next strict dispatch. Keep Unicode/key encoding.
+        (export / filename).write_bytes((snapshot / filename).read_bytes())
+    else:
+        write_jsonl(export / filename, exact_rows)
+
+
 def command_sync(args) -> None:
     portable_evidence = operation_evidence_files(args.snapshot)
     client = Inspector(args.endpoint, args.person_id)
@@ -1064,12 +1080,8 @@ def command_sync(args) -> None:
 
     args.export.mkdir(parents=True, exist_ok=True)
     for table, filename in TABLE_FILES.items():
-        write_jsonl(args.export / filename, exact_rows[table])
-        expected = load_jsonl(args.snapshot / filename)
-        if [(row["id"], value_sha256(row)) for row in exact_rows[table]] != [
-            (row["id"], value_sha256(row)) for row in sorted(expected, key=lambda item: item["id"])
-        ]:
-            raise RuntimeError(f"{table} exact-revision export differs from the staged cut")
+        write_exact_export_table(args.export, args.snapshot, table, exact_rows[table],
+                                preserve_assessed_bytes=bool(portable_evidence))
     update_catalog_summary(args.export, args.base)
 
     manifest_path = args.snapshot / "stage-manifest.json"

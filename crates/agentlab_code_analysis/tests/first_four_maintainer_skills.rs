@@ -39,6 +39,15 @@ fn ids(value: &Value, field: &str) -> Vec<String> {
         .collect()
 }
 
+fn canonical_table_digest(path: &Path) -> String {
+    let mut bytes = Vec::new();
+    for row in rows(path).values() {
+        bytes.extend(serde_json::to_vec(row).unwrap());
+        bytes.push(b'\n');
+    }
+    digest(&bytes)
+}
+
 fn json(path: &Path) -> Value {
     serde_json::from_slice(&fs::read(path).unwrap()).unwrap()
 }
@@ -266,20 +275,32 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     let latest = ordered_rounds.last().unwrap();
     assert_eq!(
         latest["tables"]["processSkillsSha256"],
-        digest(&fs::read(baseline.join("maintainer_skills.jsonl")).unwrap())
+        canonical_table_digest(&baseline.join("maintainer_skills.jsonl"))
     );
     assert_eq!(
         latest["tables"]["scopeSkillsSha256"],
-        digest(&fs::read(baseline.join("maintainer_scope_skills.jsonl")).unwrap())
+        canonical_table_digest(&baseline.join("maintainer_scope_skills.jsonl"))
     );
     assert_eq!(
         latest["tables"]["programFactsSha256"],
-        digest(&fs::read(baseline.join("program_facts.jsonl")).unwrap())
+        canonical_table_digest(&baseline.join("program_facts.jsonl"))
     );
     assert_eq!(
         latest["assessment"]["sha256"],
         digest(&fs::read(baseline.join(latest["assessment"]["path"].as_str().unwrap())).unwrap())
     );
+    // TableGit tables bind canonical row values; strict assessments separately
+    // bind original raw input bytes. Neither identity substitutes for the other.
+    let latest_report = json(&baseline.join(latest["assessment"]["path"].as_str().unwrap()));
+    for (key, name) in [
+        ("scopeSkillsSha256", "maintainer_scope_skills.jsonl"),
+        ("programFactsSha256", "program_facts.jsonl"),
+    ] {
+        assert_eq!(
+            latest_report["inputs"][key],
+            digest(&fs::read(baseline.join(name)).unwrap())
+        );
+    }
 
     let assessment_root = baseline.join("assessments");
     let assessment_one = json(&assessment_root.join("round-1-structural.json"));

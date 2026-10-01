@@ -913,7 +913,7 @@ def validate(args):
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("w") as target:
         for row in existing + [fact]:
-            target.write(json.dumps(row, separators=(",", ":"), sort_keys=True) + "\n")
+            target.write(json.dumps(row, ensure_ascii=False, separators=(",", ":"), sort_keys=True) + "\n")
     write(args.receipt, {
         "schema": "agentlab.maintainer_skill_agent_proposal_receipt.v1",
         "automaticPromotion": False,

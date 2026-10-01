@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import re
@@ -59,25 +60,28 @@ def ownership_labels(scope: dict) -> list[str]:
 
 
 def latest_assessment(knowledge: Path):
-    candidates = [load(path) for path in (knowledge / "assessments").glob("*.json")]
-    if not candidates:
-        raise ValueError("knowledge cut has no assessment")
-    return max(candidates, key=lambda row: row["roundIndex"])
+    spec = importlib.util.spec_from_file_location(
+        "tablegit_materialization", Path(__file__).with_name("maintainer-skill-tablegit.py"),
+    )
+    tablegit = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tablegit)
+    report = load(tablegit.latest_assessment_path(knowledge))
+    for key, filename in (("scopeSkillsSha256", "maintainer_scope_skills.jsonl"),
+                          ("programFactsSha256", "program_facts.jsonl")):
+        if report.get("inputs", {}).get(key) != sha256(knowledge / filename):
+            raise ValueError("durable assessment does not bind the materialized input cut")
+    return report
 
 
 def semantic_scope_material(knowledge: Path, repository: str):
     assessment = latest_assessment(knowledge)
     states = {row["skillId"]: row for row in assessment["skills"]}
-    facts_by_scope = {}
-    for fact in rows(knowledge / "program_facts.jsonl"):
-        if fact.get("repositoryId") != repository:
-            continue
-        if set(fact.get("dimensions", [])) != {
-            "responsibility", "boundary", "relations", "behavior",
-        }:
-            continue
-        for scope_id in fact.get("scopeSkillIds", []):
-            facts_by_scope.setdefault(scope_id, []).append(fact)
+    sources = [source for source in load(knowledge / "maintainer-knowledge-cut.json")["repositories"]
+               if source["id"] == repository]
+    if len(sources) != 1:
+        raise ValueError("materialized repository identity is missing or ambiguous")
+    revision = sources[0]["revision"]
+    facts_by_id = {fact["id"]: fact for fact in rows(knowledge / "program_facts.jsonl")}
     selected = []
     for scope in rows(knowledge / "maintainer_scope_skills.jsonl"):
         if scope.get("repositoryId") != repository:
@@ -85,9 +89,33 @@ def semantic_scope_material(knowledge: Path, repository: str):
         state = states.get(scope["id"], {})
         if state.get("maturity") not in ("L2-semantic-ready", "L3-maintenance-ready"):
             continue
-        facts = sorted(facts_by_scope.get(scope["id"], []), key=lambda row: row["id"])
-        if not facts:
-            raise ValueError(f"semantic-ready scope lacks a complete fact: {scope['id']}")
+        if (scope.get("sourceRevision") != revision
+                or state.get("sourceRevision") != revision
+                or state.get("repositoryId") != repository
+                or state.get("checks", {}).get("semanticReady") is not True):
+            raise ValueError("materialized scope differs from its assessed source identity")
+        required = set(state.get("requiredSemanticDimensions", []))
+        if not {"responsibility", "boundary", "relations"}.issubset(required):
+            raise ValueError("materialized semantic dimensions are incomplete")
+        facts, dimensions = {}, set()
+        for binding in state.get("evidenceBindings", []):
+            proven = set(binding.get("dimensions", [])) & required
+            if not proven:
+                continue
+            fact = facts_by_id.get(binding.get("factId"))
+            if (fact is None or fact.get("repositoryId") != repository
+                    or fact.get("sourceRevision") != revision):
+                raise ValueError("assessed semantic binding lacks a revision-matched maintenance contract")
+            # Structural bindings may coexist with the accepted semantic
+            # contracts. Never render them as prose or use them to fill a
+            # missing semantic dimension.
+            if not isinstance(fact.get("interpretation"), str) or not fact["interpretation"].strip():
+                continue
+            dimensions.update(proven)
+            facts[fact["id"]] = fact
+        if not required.issubset(dimensions):
+            raise ValueError(f"semantic-ready scope lacks assessed dimensions: {scope['id']}")
+        facts = [facts[key] for key in sorted(facts)]
         selected.append((scope, state, facts))
     return assessment, selected
 
@@ -268,27 +296,27 @@ def main():
         raise ValueError("SkillsGit checkout revision differs")
     if args.output.exists():
         raise ValueError("output already exists")
+    cut = load(args.knowledge / "maintainer-knowledge-cut.json")
+    source = next((row for row in cut["repositories"] if row["id"] == args.repository), None)
+    if source is None:
+        raise ValueError("repository is absent from knowledge cut")
+    assessment, material = semantic_scope_material(args.knowledge, args.repository)
     subprocess.run([
         str(args.skillsgit_root / "scripts/apply-pack.sh"), str(args.output),
         "--profile", "minimal",
     ], cwd=args.skillsgit_root, check=True, stdout=sys.stderr, stderr=sys.stderr)
 
     for skill_id in CORE_SKILLS:
-        source = args.skillsgit_root / ".agents/skills" / skill_id
+        skill_source = args.skillsgit_root / ".agents/skills" / skill_id
         target = args.output / ".agents/skills" / skill_id
         if target.exists():
             continue
-        shutil.copytree(source, target)
+        shutil.copytree(skill_source, target)
     scripts = args.output / "scripts"
     scripts.mkdir(exist_ok=True)
     shutil.copy2(args.skillsgit_root / "scripts/validate-mst.sh", scripts / "validate-mst.sh")
     (scripts / "validate-mst.sh").chmod(0o755)
 
-    cut = load(args.knowledge / "maintainer-knowledge-cut.json")
-    source = next((row for row in cut["repositories"] if row["id"] == args.repository), None)
-    if source is None:
-        raise ValueError("repository is absent from knowledge cut")
-    assessment, material = semantic_scope_material(args.knowledge, args.repository)
     generated = []
     for scope, state, facts in material:
         skill_id, body = render_scope_skill(args.repository, scope, state, facts)
