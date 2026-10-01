@@ -222,3 +222,42 @@ Applicability must be explicit rather than inferred from repository name alone;
 active admission, provenance-bound prompt consumption and a measured next-round
 improvement remain the critical next actions. No active knowledge write, Agent
 run, formal case qualification or new Release is claimed by this repair.
+
+## Explicit admission plan — 2026-10-02
+
+Overall maturity remains **51%**. The Rust CLI now exposes
+`--prepare-lesson-admission --knowledge BASE --proposal CANDIDATE --lesson-source
+EXPERIENCE --lesson-id ID --expected-knowledge-revision OID --output NEW_FILE`.
+It checks all five baseline table bindings, contiguous refresh history and latest
+hashes, then independently reconstructs stage lesson entities from the retained
+candidate, plan, contract, capture and review. It preserves every baseline row,
+allows exactly one reviewed Skill/fact addition and no evaluation-case change,
+and binds provenance, guidance, qualifications and method identities.
+
+The result proposes three inserts: Skill, fact and a contiguous refresh row with
+updated table hashes, unchanged scope readiness and the reused prior assessment.
+The assessment is explicitly marked reused; neither new semantic/maintenance
+coverage nor runtime qualification is manufactured. Repeat planning is identical,
+and existing outputs are not overwritten. The actual CLI regression also rejects
+wrong knowledge revisions, altered guidance and forged qualification. Two
+arbitrary fixture source identities exercise the producer and planner; their
+declared commit metadata is not evidence of remote persistence or generalization.
+
+The original real committed export at c947cde... fails reconstruction against
+the new source-bound interpretation, before output creation. Its older rows omit
+the repository identity introduced in the previous repair and bind the earlier
+consumer source digest. Preserve that cut;
+re-export and persist the new interpretation separately, with exact committed
+readback, rather than overwriting historical evidence or weakening reconstruction.
+
+The plan itself does not authenticate its declared source commit. Remote source
+readback and full staged knowledge-cut validation remain prerequisites before
+the authority transaction. The current planner does not yet assemble that full
+publication snapshot or invoke the writer. Effective downstream consumption and
+measured next-round benefit remain incomplete; no authority write, new Agent run,
+qualified case or Release is claimed here.
+
+Verification: full Rust package tests, formatting, release validation, Skill
+validation and diff checks exited zero. The real old-export rejection exited
+one with no admission-plan output. PR131's previous identity repair passed all
+ten applicable hosted checks before merging; immutable publication was skipped.

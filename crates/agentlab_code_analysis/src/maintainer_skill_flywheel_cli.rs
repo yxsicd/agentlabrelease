@@ -24,6 +24,26 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|arg| arg == "--prepare-lesson-admission") {
+        let plan = agentlab_code_analysis::maintainer_lesson_admission::prepare(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &PathBuf::from(value(&args, "--proposal")?),
+            &PathBuf::from(value(&args, "--lesson-source")?),
+            &value(&args, "--lesson-id")?,
+            &value(&args, "--expected-knowledge-revision")?,
+        )?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        file.write_all(&serde_json::to_vec_pretty(&plan)?)?;
+        file.write_all(b"\n")?;
+        println!(
+            "{}",
+            serde_json::json!({"decision":plan["decision"],"authorityWritePerformed":false})
+        );
+        return Ok(());
+    }
     let export_lesson = args.iter().any(|arg| arg == "--export-stage-lesson");
     let export_stage = export_lesson || args.iter().any(|arg| arg == "--export-stage-calibration");
     if export_stage || args.iter().any(|arg| arg == "--feedback-stage-calibration") {
