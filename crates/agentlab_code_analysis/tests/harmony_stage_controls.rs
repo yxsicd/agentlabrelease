@@ -114,6 +114,22 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
         assert_eq!(first["pendingFormalActions"], downstream["actions"]);
         let repeat = consume(&c, &r, Some(&serde_json::to_vec(&first).unwrap())).unwrap();
         assert_eq!(repeat["schedulingAllowed"], false);
+        // Recorded runtime identity participates in scheduling even with equal checks.
+        let mut runtime_changed = r.clone();
+        runtime_changed["runtime"] = json!("v1.2.3");
+        let replan = consume(
+            &c,
+            &runtime_changed,
+            Some(&serde_json::to_vec(&first).unwrap()),
+        )
+        .unwrap();
+        assert_eq!(replan["schedulingAllowed"], true);
+        assert_ne!(replan["taskSha256"], first["taskSha256"]);
+        let mut runtime_missing = r.clone();
+        runtime_missing.as_object_mut().unwrap().remove("runtime");
+        assert!(consume(&c, &runtime_missing, None)
+            .unwrap_err()
+            .contains("runtime absent"));
         let (ok, fresh) = run(&root, &c, "fresh");
         assert!(ok);
         let resume = |previous: &Value, capture: &Value| {
@@ -163,6 +179,9 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
         assert!(resume(&fabricated_plan, &r)
             .unwrap_err()
             .contains("contradicts retained capture"));
+        let mut historical_plan = first.clone();
+        historical_plan.as_object_mut().unwrap().remove("runtime");
+        assert!(resume(&historical_plan, &r).is_err());
         let mut tampered = r.clone();
         tampered["controls"][1]["checks"][0]["passed"] = json!(true);
         let mut body = tampered["controls"][1].as_object().unwrap().clone();
