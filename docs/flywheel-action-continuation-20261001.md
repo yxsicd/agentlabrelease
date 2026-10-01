@@ -83,3 +83,36 @@ emulator launch, global absence claim or runtime substitution occurred.
 The next substantive gap remains reviewed domain-contract admission plus exact
 runtime and case freeze/execution. No TableGit write, formal evaluation case,
 assessed Agent or Release is introduced here.
+
+## Operational exchange implementation — 2026-10-02
+
+PR127 merged as `552f94c79745a8333fb43c52f27e1fe8457c3509`.
+Overall maturity stays **51%**: evidence export is not yet effective learning.
+The Rust `--export-stage-calibration` CLI independently reconstructs raw capture
+checks and exports `agentlab.asset_exchange.v1` evaluation-instance tables.
+It preserves five original input/derived feedback files with exact hashes,
+completed controls and individual checks, while keeping infrastructure failures
+separate. No reusable knowledge or formal qualification is updated.
+
+The retained real Linux capture from run 36925772376 successfully exported
+one run, one analysis record, three controls, eighteen checks and five evidence
+files. All JSONL manifest hashes and raw-file hashes/lengths were checked.
+The original capture remains bound to SHA256
+`a802d6f381503a983dd1cfa305d4751e4f6c629557e38539e537f8ff10e3c507`.
+CLI regression checks two byte-identical fresh-directory exports, manifest
+hashes/counts, all raw evidence hashes/lengths, rejection of an existing output
+without overwriting it, and invalid capture rejection before directory creation.
+The source-bound consumer digest distinguishes interpretations of the same
+physical capture; it must not be counted as a fresh execution.
+
+The diagnostic workflow now exports these assets into its existing evidence
+artifact. This workflow change has not yet been executed on a hosted runner.
+TableGit ingestion/readback/repeat, independently durable raw-file publication,
+explicit lesson admission and a changed next knowledge/case cut remain unproven.
+Continue there rather than treating successful archival as a completed loop.
+
+Final local verification: `cargo test -p agentlab_code_analysis --quiet`,
+`cargo fmt --all -- --check`, `python scripts/validate-release.py`, the asset
+Skill validator and `git diff --check` all exited zero. Raw run evidence remains
+outside the source repository; only code, method guidance and this evidence
+summary are included in the source change.

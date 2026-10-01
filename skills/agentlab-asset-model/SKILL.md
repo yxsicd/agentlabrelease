@@ -49,6 +49,21 @@ published HAPs have external asset URI/size/hash records.
 Operational ingestion must not mutate reusable knowledge. Promote a general lesson
 explicitly after examining source-bound evidence; maintain reusable guidance and
 its provenance rather than automatically copying run results into the next seed.
+
+For retained stage calibration, use the Rust flywheel CLI's
+`--export-stage-calibration` mode with the selected candidate, downstream plan,
+contract, original capture and capture SHA256. It independently reconstructs
+observations before exporting typed controls, checks, infrastructure failures and
+analysis records. Keep all five input/feedback files with their exact hashes;
+the exchange manifest describes analytical JSONLs, not a substitute for raw files.
+Use a fresh output directory. Repeat the same inputs into another fresh directory
+and compare bytes; an existing destination or invalid capture must be rejected.
+The normalized run identity includes the consumer source digest: it identifies a
+particular interpretation of retained evidence, not a new physical execution.
+Failed workers remain infrastructure observations, never completed wrong variants.
+This export alone proves neither TableGit persistence nor knowledge promotion,
+Harmony runtime qualification, or a qualified evaluation case.
+
 Test with real SWE/Harmony evidence plus a small public synthetic fixture. Prove
 joins, context changes/history, tool errors, raw-file reconstruction and stable
 repeat import, not only successful archival. Preserve release qualification gates.

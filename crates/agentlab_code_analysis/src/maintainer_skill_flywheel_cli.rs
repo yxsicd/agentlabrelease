@@ -1,4 +1,5 @@
 use agentlab_code_analysis::maintainer_skill_flywheel::assess_with_receipts;
+mod asset_exchange;
 use std::{
     fs::{self, OpenOptions},
     io::Write,
@@ -23,7 +24,8 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
-    if args.iter().any(|arg| arg == "--feedback-stage-calibration") {
+    let export_stage = args.iter().any(|arg| arg == "--export-stage-calibration");
+    if export_stage || args.iter().any(|arg| arg == "--feedback-stage-calibration") {
         let selected = value(&args, "--candidate-id")?;
         let rows = fs::read_to_string(value(&args, "--candidates")?)?
             .lines()
@@ -45,6 +47,47 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let contract_bytes = fs::read(value(&args, "--stage-contract")?)?;
         let calibration_bytes = fs::read(value(&args, "--stage-calibration")?)?;
         let calibration_sha = value(&args, "--calibration-sha256")?;
+        if export_stage {
+            if previous.is_some() || optional(&args, "--previous-stage-calibration").is_some() {
+                return Err(
+                    "operational export reconstructs its own capture, not prior scheduling".into(),
+                );
+            }
+            let tables = agentlab_code_analysis::maintainer_stage_feedback::assets(
+                &candidate_bytes,
+                &downstream_bytes,
+                &contract_bytes,
+                &calibration_bytes,
+                &calibration_sha,
+            )?;
+            let feedback = agentlab_code_analysis::maintainer_stage_feedback::plan(
+                &candidate_bytes,
+                &downstream_bytes,
+                &contract_bytes,
+                &calibration_bytes,
+                &calibration_sha,
+                None,
+            )?;
+            let mut feedback_bytes = serde_json::to_vec_pretty(&feedback)?;
+            feedback_bytes.push(b'\n');
+            fs::create_dir(&output)?;
+            for (name, bytes) in [
+                ("candidate.json", candidate_bytes.as_slice()),
+                ("downstream-plan.json", downstream_bytes.as_slice()),
+                ("stage-contract.json", contract_bytes.as_slice()),
+                ("stage-calibration.json", calibration_bytes.as_slice()),
+                ("feedback.json", feedback_bytes.as_slice()),
+            ] {
+                fs::write(output.join(name), bytes)?;
+            }
+            let manifest = asset_exchange::export(&output, "evaluation-instance", &tables);
+            println!(
+                "{}",
+                serde_json::json!({"assetClass":manifest["assetClass"],
+                "tableCount":tables.len(),"qualified":false})
+            );
+            return Ok(());
+        }
         let prior_capture = optional(&args, "--previous-stage-calibration");
         let report = if let Some(path) = prior_capture {
             agentlab_code_analysis::maintainer_stage_feedback::resume(

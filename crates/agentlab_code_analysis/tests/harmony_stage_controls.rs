@@ -106,6 +106,120 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
             assert_eq!(control["intendedFailureObserved"], true);
         }
         let first = consume(&c, &r, None).unwrap();
+        let make_assets = |contract: &Value, receipt: &Value| {
+            let bytes = serde_json::to_vec(receipt).unwrap();
+            agentlab_code_analysis::maintainer_stage_feedback::assets(
+                &serde_json::to_vec(&candidate).unwrap(),
+                &serde_json::to_vec(&downstream).unwrap(),
+                &serde_json::to_vec(contract).unwrap(),
+                &bytes,
+                &agentlab_code_analysis::digest(&bytes),
+            )
+        };
+        let assets = make_assets(&c, &r).unwrap();
+        assert_eq!(assets, make_assets(&c, &r).unwrap());
+        assert_eq!(assets["calibration_controls"].len(), 3);
+        assert_eq!(assets["evidence_files"].len(), 5);
+        assert_eq!(assets["runs"].values().next().unwrap()["qualified"], false);
+        assert!(assets["phase_failures"].is_empty());
+        // Exercise the public CLI, not only the in-memory normalizer.
+        let candidates_path = root.join("candidates.jsonl");
+        let downstream_path = root.join("downstream.json");
+        fs::write(&candidates_path, serde_json::to_vec(&candidate).unwrap()).unwrap();
+        fs::write(&downstream_path, serde_json::to_vec(&downstream).unwrap()).unwrap();
+        let raw_capture = fs::read(root.join("actual.result.json")).unwrap();
+        let export_cli = |output: &Path, capture: &Path, sha: &str| {
+            Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+                .arg("--export-stage-calibration")
+                .arg("--candidates")
+                .arg(&candidates_path)
+                .arg("--candidate-id")
+                .arg(repository)
+                .arg("--downstream-plan")
+                .arg(&downstream_path)
+                .arg("--stage-contract")
+                .arg(root.join("actual.contract.json"))
+                .arg("--stage-calibration")
+                .arg(capture)
+                .arg("--calibration-sha256")
+                .arg(sha)
+                .arg("--output")
+                .arg(output)
+                .output()
+                .unwrap()
+        };
+        let export_a = root.join("export-a");
+        let export_b = root.join("export-b");
+        let capture_path = root.join("actual.result.json");
+        let raw_sha = agentlab_code_analysis::digest(&raw_capture);
+        for output in [&export_a, &export_b] {
+            let result = export_cli(output, &capture_path, &raw_sha);
+            assert!(
+                result.status.success(),
+                "{}",
+                String::from_utf8_lossy(&result.stderr)
+            );
+            let manifest: Value =
+                serde_json::from_slice(&fs::read(output.join("export.json")).unwrap()).unwrap();
+            assert_eq!(manifest["schema"], "agentlab.asset_exchange.v1");
+            assert_eq!(manifest["assetClass"], "evaluation-instance");
+            assert_eq!(
+                manifest["tables"]["phase_failures"]["definition"]["fields"]["record"]["type"],
+                "object"
+            );
+            assert_eq!(
+                manifest["tables"]["calibration_controls"]["definition"]["fields"]
+                    ["intendedFailureObserved"]["type"],
+                "boolean"
+            );
+            for (name, meta) in manifest["tables"].as_object().unwrap() {
+                let raw = fs::read(output.join(format!("{name}.jsonl"))).unwrap();
+                assert_eq!(agentlab_code_analysis::digest(&raw), meta["sha256"]);
+                assert_eq!(
+                    raw.split(|b| *b == b'\n')
+                        .filter(|line| !line.is_empty())
+                        .count(),
+                    meta["rowCount"].as_u64().unwrap() as usize
+                );
+            }
+            let evidence = fs::read_to_string(output.join("evidence_files.jsonl")).unwrap();
+            for line in evidence.lines() {
+                let row: Value = serde_json::from_str(line).unwrap();
+                let raw = fs::read(output.join(row["path"].as_str().unwrap())).unwrap();
+                assert_eq!(agentlab_code_analysis::digest(&raw), row["sha256"]);
+                assert_eq!(raw.len() as u64, row["bytes"].as_u64().unwrap());
+            }
+            assert_eq!(
+                fs::read(output.join("stage-calibration.json")).unwrap(),
+                raw_capture
+            );
+        }
+        for entry in fs::read_dir(&export_a).unwrap() {
+            let name = entry.unwrap().file_name();
+            assert_eq!(
+                fs::read(export_a.join(&name)).unwrap(),
+                fs::read(export_b.join(&name)).unwrap()
+            );
+        }
+        let before = fs::read(export_a.join("export.json")).unwrap();
+        assert!(!export_cli(&export_a, &capture_path, &raw_sha)
+            .status
+            .success());
+        assert_eq!(before, fs::read(export_a.join("export.json")).unwrap());
+        let rejected = root.join("rejected-export");
+        assert!(!export_cli(&rejected, &capture_path, &"0".repeat(64))
+            .status
+            .success());
+        assert!(!rejected.exists());
+        assert_eq!(
+            assets["checks"].len(),
+            r["controls"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|c| c["checks"].as_array().unwrap().len())
+                .sum::<usize>()
+        );
         assert_eq!(
             first["nextAction"],
             "review-and-admit-scoped-domain-calibration"
@@ -196,6 +310,7 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
         assert!(resume(&first, &tampered)
             .unwrap_err()
             .contains("raw observations"));
+        assert!(make_assets(&c, &tampered).is_err());
         let mut missing = r.clone();
         missing["controls"].as_array_mut().unwrap().pop();
         assert!(consume(&c, &missing, None).is_err());
@@ -226,6 +341,9 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
         assert!(!ok);
         assert_eq!(r["semanticSeamCalibrationPassed"], false);
         assert_eq!(r["infrastructureFailure"]["id"], "event");
+        let failed_assets = make_assets(&unsupported, &r).unwrap();
+        assert_eq!(failed_assets["phase_failures"].len(), 1);
+        assert_eq!(failed_assets["calibration_controls"].len(), 2);
         assert_eq!(
             consume(&unsupported, &r, None).unwrap()["nextAction"],
             "repair-domain-calibration-environment"
