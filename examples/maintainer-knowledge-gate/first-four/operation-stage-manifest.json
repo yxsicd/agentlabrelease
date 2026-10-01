@@ -1,25 +1,25 @@
 {
   "acceptedFactIds": [
-    "operation-build-ba2fd5204b013e40b09f63c6f360fd0750aefabbe7e56eefad180ba43361814f"
+    "agent-analysis-applicationcontext-demo-scope-contract"
   ],
-  "assessment": "assessments/round-32-operation-live-20261001-fwbuild-01.json",
-  "authorityWritePerformed": false,
+  "assessment": "assessments/round-34-agent-36857619983.json",
   "automaticPromotion": false,
   "operationEvidence": {
-    "coverage": "accepted-operation-facts-only",
-    "receiptRoot": "operation-evidence",
-    "receipts": [
+    "coverage": "verified-child-operation-facts-only",
+    "inheritedReceipts": [
       {
         "factId": "operation-build-ba2fd5204b013e40b09f63c6f360fd0750aefabbe7e56eefad180ba43361814f",
         "path": "operation-evidence/release/qualifications/code-workshop-7aa95cac-componentlibrary-build/build-qualification.json",
         "sha256": "de1f82800dd7680242948d77d6c2416c5d97319f72d2d876cbca194a82ddeba7"
       }
-    ]
+    ],
+    "receiptRoot": "operation-evidence",
+    "receipts": []
   },
-  "proposalReceiptCount": 0,
-  "runId": "live-20261001-fwbuild-01",
+  "proposalReceiptCount": 1,
+  "runId": "36857619983",
   "schema": "agentlab.maintainer_skill_tablegit_stage.v1",
-  "stageKind": "verified-operation",
+  "stageKind": "verified-semantic",
   "tables": {
     "evaluation_cases": {
       "path": "evaluation_cases.jsonl",
@@ -31,7 +31,7 @@
     },
     "maintainer_skill_refresh_rounds": {
       "path": "maintainer_skill_refresh_rounds.jsonl",
-      "sha256": "71207a402696d98a2854bbfa1da18e60de61068980e691e762dbc1cf7a284d68"
+      "sha256": "891643fdabb14357de4e2cd5cf7aac1867aec46f90fdda550069490a27cc0472"
     },
     "maintainer_skills": {
       "path": "maintainer_skills.jsonl",
@@ -39,7 +39,7 @@
     },
     "program_facts": {
       "path": "program_facts.jsonl",
-      "sha256": "8ae23e768f912dfea7fb4f948959a60d3bb8dca1741c22c30a1423bfdcf4778c"
+      "sha256": "b9e5309031e4e2a2758d66f283f58476d495d5f9d9982e8d9983f186c814843b"
     }
   }
 }

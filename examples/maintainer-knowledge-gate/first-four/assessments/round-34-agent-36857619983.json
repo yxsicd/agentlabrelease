@@ -1,30 +1,30 @@
 {
-  "assessmentId": "maintainer-skill-assessment-741465c67adca56cad3d",
+  "assessmentId": "maintainer-skill-assessment-b2978f4014d06dbe9b6a",
   "automaticPromotion": false,
   "decision": "continue",
   "gapCounts": {
-    "MS-BEHAVIOR-EVIDENCE-MISSING": 439,
-    "MS-BOUNDARY-EVIDENCE-MISSING": 446,
-    "MS-OPERATION-EVIDENCE-MISSING": 39,
+    "MS-BEHAVIOR-EVIDENCE-MISSING": 438,
+    "MS-BOUNDARY-EVIDENCE-MISSING": 445,
+    "MS-OPERATION-EVIDENCE-MISSING": 40,
     "MS-OPERATION-RECEIPT-UNVERIFIED": 2,
-    "MS-PROGRAM-EVIDENCE-UNBOUND": 444,
-    "MS-RELATIONS-EVIDENCE-MISSING": 445,
-    "MS-RESPONSIBILITY-EVIDENCE-MISSING": 448
+    "MS-PROGRAM-EVIDENCE-UNBOUND": 443,
+    "MS-RELATIONS-EVIDENCE-MISSING": 444,
+    "MS-RESPONSIBILITY-EVIDENCE-MISSING": 447
   },
   "inputs": {
-    "programFactsSha256": "907361548473d1b5dd8114e3ce4286a56f5d4053c5b5238b8b902c0025c9f4bf",
+    "programFactsSha256": "b9e5309031e4e2a2758d66f283f58476d495d5f9d9982e8d9983f186c814843b",
     "scopeSkillsSha256": "9faf87778708c0bc9acf6522ac1c0b1358e1845139da4f2949348d7285e51953"
   },
   "nextRoundObjectives": [
-    "close 439 MS-BEHAVIOR-EVIDENCE-MISSING gaps with revision-bound evidence",
-    "close 446 MS-BOUNDARY-EVIDENCE-MISSING gaps with revision-bound evidence",
-    "close 39 MS-OPERATION-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 438 MS-BEHAVIOR-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 445 MS-BOUNDARY-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 40 MS-OPERATION-EVIDENCE-MISSING gaps with revision-bound evidence",
     "close 2 MS-OPERATION-RECEIPT-UNVERIFIED gaps with revision-bound evidence",
-    "close 444 MS-PROGRAM-EVIDENCE-UNBOUND gaps with revision-bound evidence",
-    "close 445 MS-RELATIONS-EVIDENCE-MISSING gaps with revision-bound evidence",
-    "close 448 MS-RESPONSIBILITY-EVIDENCE-MISSING gaps with revision-bound evidence"
+    "close 443 MS-PROGRAM-EVIDENCE-UNBOUND gaps with revision-bound evidence",
+    "close 444 MS-RELATIONS-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 447 MS-RESPONSIBILITY-EVIDENCE-MISSING gaps with revision-bound evidence"
   ],
-  "parentAssessmentSha256": "c653f3ba120a780f141a9df49b295003f371cce1a02149c2039c925979567d31",
+  "parentAssessmentSha256": "00f1e7d4b6e958fbe212a447077a2b98839e822d939cd39e010a504b0dd93b5d",
   "repositories": [
     {
       "maintenanceReadyCount": 1,
@@ -37,11 +37,11 @@
     },
     {
       "maintenanceReadyCount": 0,
-      "programBoundCount": 12,
+      "programBoundCount": 13,
       "readyForCaseGeneration": false,
       "repositoryId": "guide-snippets",
       "scopeSkillCount": 416,
-      "semanticReadyCount": 10,
+      "semanticReadyCount": 11,
       "structuralReadyCount": 416
     },
     {
@@ -63,7 +63,7 @@
       "structuralReadyCount": 34
     }
   ],
-  "roundIndex": 33,
+  "roundIndex": 34,
   "schema": "agentlab.maintainer_skill_assessment.v1",
   "skills": [
     {
@@ -1536,46 +1536,38 @@
       "checks": {
         "identityReady": true,
         "maintenanceReady": false,
-        "programEvidenceBound": false,
-        "semanticReady": false,
+        "programEvidenceBound": true,
+        "semanticReady": true,
         "structuralReady": true
       },
-      "evidenceBindings": [],
+      "evidenceBindings": [
+        {
+          "bindingMode": "explicit-scope-id",
+          "dimensions": [
+            "behavior",
+            "boundary",
+            "relations",
+            "responsibility"
+          ],
+          "factId": "agent-analysis-applicationcontext-demo-scope-contract"
+        }
+      ],
       "gaps": [
         {
-          "code": "MS-PROGRAM-EVIDENCE-UNBOUND",
-          "dimension": "relations",
-          "message": "no revision-matched program fact is bound to this scope",
-          "severity": "P1"
-        },
-        {
-          "code": "MS-BEHAVIOR-EVIDENCE-MISSING",
-          "dimension": "behavior",
-          "message": "no bound program fact proves the behavior dimension",
-          "severity": "P1"
-        },
-        {
-          "code": "MS-BOUNDARY-EVIDENCE-MISSING",
-          "dimension": "boundary",
-          "message": "no bound program fact proves the boundary dimension",
-          "severity": "P1"
-        },
-        {
-          "code": "MS-RELATIONS-EVIDENCE-MISSING",
-          "dimension": "relations",
-          "message": "no bound program fact proves the relations dimension",
-          "severity": "P1"
-        },
-        {
-          "code": "MS-RESPONSIBILITY-EVIDENCE-MISSING",
-          "dimension": "responsibility",
-          "message": "no bound program fact proves the responsibility dimension",
+          "code": "MS-OPERATION-EVIDENCE-MISSING",
+          "dimension": "operation",
+          "message": "semantic scope lacks executable build, test, runtime, or maintenance evidence",
           "severity": "P1"
         }
       ],
-      "maturity": "L1-structural-ready",
+      "maturity": "L2-semantic-ready",
       "operationEvidenceChecks": {},
-      "provenDimensions": [],
+      "provenDimensions": [
+        "behavior",
+        "boundary",
+        "relations",
+        "responsibility"
+      ],
       "rejectedEvidenceBindings": [],
       "repositoryId": "guide-snippets",
       "requiredSemanticDimensions": [
@@ -29521,9 +29513,9 @@
   },
   "totals": {
     "maintenanceReadyCount": 1,
-    "programBoundCount": 45,
+    "programBoundCount": 46,
     "scopeSkillCount": 489,
-    "semanticReadyCount": 40,
+    "semanticReadyCount": 41,
     "structuralReadyCount": 489
   }
 }
