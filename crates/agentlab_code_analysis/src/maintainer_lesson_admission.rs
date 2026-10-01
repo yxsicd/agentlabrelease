@@ -1,5 +1,5 @@
 //! Explicit, source-bound lesson admission planning. No authority writes.
-use crate::{digest, maintainer_stage_feedback};
+use crate::{digest, maintainer_skill_flywheel::assess_with_receipts, maintainer_stage_feedback};
 use serde_json::{json, Value};
 use std::{collections::BTreeMap, fs, path::Path};
 
@@ -57,6 +57,213 @@ fn oid(value: &Value) -> bool {
             && s.bytes()
                 .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
     })
+}
+
+/// Assemble an independently reassessed snapshot for the existing writer.
+/// Declared source commits still require separate remote readback verification.
+pub fn stage(
+    base: &Path,
+    proposal: &Path,
+    source: &Path,
+    lesson_id: &str,
+    expected_revision: &str,
+    output: &Path,
+) -> Result<Value, String> {
+    let plan = prepare(base, proposal, source, lesson_id, expected_revision)?;
+    let durable = crate::maintainer_flywheel_plan::latest_assessment(base)?;
+    let prior_bytes = read(
+        base,
+        durable["assessmentRelativePath"]
+            .as_str()
+            .ok_or("lesson assessment path absent")?,
+    )?;
+    let prior: Value = serde_json::from_slice(&prior_bytes).map_err(|e| e.to_string())?;
+    let receipt_root = base.join("operation-evidence");
+    let prior_index = prior["roundIndex"]
+        .as_u64()
+        .ok_or("lesson assessment round absent")?;
+    let before = assess_with_receipts(
+        &base.join("maintainer_scope_skills.jsonl"),
+        Some(&base.join("program_facts.jsonl")),
+        prior_index,
+        prior["parentAssessmentSha256"].as_str(),
+        Some(&receipt_root),
+    )?;
+    need(
+        before == prior,
+        "lesson baseline strict reassessment differs",
+    )?;
+    let after = assess_with_receipts(
+        &base.join("maintainer_scope_skills.jsonl"),
+        Some(&proposal.join("program_facts.jsonl")),
+        prior_index
+            .checked_add(1)
+            .ok_or("lesson assessment round overflow")?,
+        Some(&digest(&prior_bytes)),
+        Some(&receipt_root),
+    )?;
+    need(
+        after["totals"] == before["totals"]
+            && after["standard"] == before["standard"]
+            && after["skills"] == before["skills"],
+        "lesson admission unexpectedly changes scope readiness",
+    )?;
+    let mut files = BTreeMap::new();
+    fn collect(
+        root: &Path,
+        at: &Path,
+        files: &mut BTreeMap<String, Vec<u8>>,
+    ) -> Result<(), String> {
+        need(
+            fs::symlink_metadata(at)
+                .map_err(|e| e.to_string())?
+                .is_dir(),
+            "lesson stage directory is not a real directory",
+        )?;
+        for entry in fs::read_dir(at).map_err(|e| e.to_string())? {
+            let path = entry.map_err(|e| e.to_string())?.path();
+            let metadata = fs::symlink_metadata(&path).map_err(|e| e.to_string())?;
+            if metadata.is_dir() {
+                collect(root, &path, files)?;
+            } else {
+                need(
+                    metadata.is_file(),
+                    "lesson stage contains a symlink or special file",
+                )?;
+                let relative = path
+                    .strip_prefix(root)
+                    .map_err(|e| e.to_string())?
+                    .to_str()
+                    .ok_or("lesson stage filename not UTF8")?;
+                files.insert(relative.into(), read(root, relative)?);
+            }
+        }
+        Ok(())
+    }
+    collect(base, base, &mut files)?;
+    need(
+        files.values().map(Vec::len).sum::<usize>() <= 64 * 1024 * 1024,
+        "lesson stage snapshot budget exceeded",
+    )?;
+    for table in ["maintainer_skills", "program_facts", "evaluation_cases"] {
+        files.insert(
+            format!("{table}.jsonl"),
+            jsonl(&rows(&read(proposal, &format!("{table}.jsonl"))?)?)?,
+        );
+    }
+    let after_bytes = serde_json::to_vec_pretty(&after).map_err(|e| e.to_string())?;
+    let mut round = plan["tables"]["maintainer_skill_refresh_rounds"]["row"].clone();
+    let assessment_path = format!(
+        "assessments/lesson-{}.json",
+        round["id"].as_str().ok_or("lesson round identity absent")?
+    );
+    need(
+        !files.contains_key(&assessment_path),
+        "lesson assessment path already exists",
+    )?;
+    round["assessment"] = json!({"path":assessment_path,"sha256":digest(&after_bytes)});
+    round["assessmentReused"] = json!(false);
+    round["priorAssessmentSha256"] = json!(digest(&prior_bytes));
+    round["residualGaps"] = after["nextRoundObjectives"].clone();
+    let mut history = rows(&files["maintainer_skill_refresh_rounds.jsonl"])?;
+    need(
+        history
+            .insert(round["id"].as_str().unwrap().into(), round)
+            .is_none(),
+        "lesson round already exists",
+    )?;
+    files.insert(
+        "maintainer_skill_refresh_rounds.jsonl".into(),
+        jsonl(&history)?,
+    );
+    files.insert(assessment_path.clone(), after_bytes.clone());
+    let mut inherited = BTreeMap::new();
+    let facts = rows(&files["program_facts.jsonl"])?;
+    for skill in after["skills"]
+        .as_array()
+        .ok_or("lesson assessment skills absent")?
+    {
+        for (id, check) in skill["operationEvidenceChecks"]
+            .as_object()
+            .into_iter()
+            .flatten()
+        {
+            if check["status"] != "verified" {
+                continue;
+            }
+            let reference =
+                &facts.get(id).ok_or("lesson operation fact absent")?["operationEvidence"];
+            let path = format!(
+                "operation-evidence/{}",
+                reference["path"]
+                    .as_str()
+                    .ok_or("lesson operation path absent")?
+            );
+            need(
+                files
+                    .get(&path)
+                    .is_some_and(|bytes| reference["sha256"] == digest(bytes)),
+                "lesson inherited operation receipt absent or changed",
+            )?;
+            inherited.insert(
+                id.clone(),
+                json!({"factId":id,"path":path,"sha256":reference["sha256"]}),
+            );
+        }
+    }
+    let result = json!({"schema":"agentlab.maintainer_lesson_stage_result.v1","decision":"review-proposed-lesson-knowledge",
+        "strictOperationEvidencePolicy":true,"beforeAssessmentSha256":digest(&prior_bytes),"assessmentSha256":digest(&after_bytes),
+        "before":before["totals"],"after":after["totals"],"advancedScopeIds":[],"countsAsMaturityGain":false});
+    files.insert("operation-baseline.json".into(), prior_bytes);
+    files.insert(
+        "operation-result.json".into(),
+        serde_json::to_vec_pretty(&result).map_err(|e| e.to_string())?,
+    );
+    files.insert(
+        "lesson-admission-plan.json".into(),
+        serde_json::to_vec_pretty(&plan).map_err(|e| e.to_string())?,
+    );
+    let table_names = [
+        ("maintainerSkills", "maintainer_skills"),
+        ("programFacts", "program_facts"),
+        ("maintainerScopeSkills", "maintainer_scope_skills"),
+        (
+            "maintainerSkillRefreshRounds",
+            "maintainer_skill_refresh_rounds",
+        ),
+        ("evaluationCases", "evaluation_cases"),
+    ];
+    let mut cut: Value = serde_json::from_slice(&files["maintainer-knowledge-cut.json"])
+        .map_err(|e| e.to_string())?;
+    for (key, table) in table_names {
+        cut["tables"][key]["sha256"] = json!(digest(&files[&format!("{table}.jsonl")]));
+    }
+    cut["staging"] = json!({"authorityWritePerformed":false,"baselineRevision":expected_revision,"mode":"reviewed-lesson-admission"});
+    files.insert(
+        "maintainer-knowledge-cut.json".into(),
+        serde_json::to_vec_pretty(&cut).map_err(|e| e.to_string())?,
+    );
+    let manifest = json!({"schema":"agentlab.maintainer_skill_tablegit_stage.v1","stageKind":"reviewed-lesson","automaticPromotion":false,
+        "authorityWritePerformed":false,"assessment":assessment_path,"acceptedFactIds":[plan["tables"]["program_facts"]["key"]],
+        "operationEvidence":{"receiptRoot":"operation-evidence","coverage":"verified-child-operation-facts-only","receipts":[],
+            "inheritedReceipts":inherited.values().collect::<Vec<_>>()},
+        "tables":table_names.iter().map(|(_,table)| { let path=format!("{table}.jsonl");
+            ((*table).to_owned(),json!({"path":path,"sha256":digest(&files[&path])})) }).collect::<BTreeMap<_,_>>()});
+    files.insert(
+        "stage-manifest.json".into(),
+        serde_json::to_vec_pretty(&manifest).map_err(|e| e.to_string())?,
+    );
+    // Every evidence check precedes destination creation; partial I/O remains
+    // visible on failure, never represented as a valid published snapshot.
+    fs::create_dir(output).map_err(|e| format!("refusing lesson stage output reuse: {e}"))?;
+    for (relative, bytes) in files {
+        let path = output.join(relative);
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        fs::write(path, bytes).map_err(|e| e.to_string())?;
+    }
+    Ok(manifest)
 }
 
 /// Propose exactly one Skill, one fact and one refresh row. The result is not a

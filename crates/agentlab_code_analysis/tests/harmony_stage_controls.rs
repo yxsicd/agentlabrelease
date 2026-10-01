@@ -511,6 +511,105 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
         fs::write(&lessons_path, serde_json::to_vec(&false_lesson).unwrap()).unwrap();
         assert!(prepare().is_err());
         fs::write(&lessons_path, &original_lessons).unwrap();
+        // Full staging independently rebinds the assessment input hashes without
+        // increasing readiness. Use a real scope shape, with fixture identities.
+        let publication = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/maintainer-knowledge-gate/first-four");
+        let mut scope: Value = serde_json::from_str(
+            fs::read_to_string(publication.join("maintainer_scope_skills.jsonl"))
+                .unwrap()
+                .lines()
+                .next()
+                .unwrap(),
+        )
+        .unwrap();
+        scope["id"] = json!("fixture-scope");
+        scope["repositoryId"] = candidate["repositoryId"].clone();
+        scope["sourceRevision"] = candidate["sourceRevision"].clone();
+        let scope_bytes = serde_json::to_vec(&scope).unwrap();
+        fs::write(base.join("maintainer_scope_skills.jsonl"), &scope_bytes).unwrap();
+        fs::create_dir(base.join("operation-evidence")).unwrap();
+        fs::create_dir(base.join("assessments")).unwrap();
+        let before = agentlab_code_analysis::maintainer_skill_flywheel::assess_with_receipts(
+            &base.join("maintainer_scope_skills.jsonl"),
+            Some(&base.join("program_facts.jsonl")),
+            1,
+            None,
+            Some(&base.join("operation-evidence")),
+        )
+        .unwrap();
+        let before_bytes = serde_json::to_vec(&before).unwrap();
+        fs::write(base.join("assessments/before.json"), &before_bytes).unwrap();
+        round["assessment"] = json!({"path":"assessments/before.json","sha256":agentlab_code_analysis::digest(&before_bytes)});
+        round["tables"]["scopeSkillsSha256"] = json!(agentlab_code_analysis::digest(&scope_bytes));
+        let round_bytes = serde_json::to_vec(&round).unwrap();
+        fs::write(
+            base.join("maintainer_skill_refresh_rounds.jsonl"),
+            &round_bytes,
+        )
+        .unwrap();
+        cut["tables"]["maintainerScopeSkills"]["sha256"] =
+            json!(agentlab_code_analysis::digest(&scope_bytes));
+        cut["tables"]["maintainerSkillRefreshRounds"]["sha256"] =
+            json!(agentlab_code_analysis::digest(&round_bytes));
+        fs::write(
+            base.join("maintainer-knowledge-cut.json"),
+            serde_json::to_vec(&cut).unwrap(),
+        )
+        .unwrap();
+        let staged = root.join("lesson-stage");
+        let manifest = agentlab_code_analysis::maintainer_lesson_admission::stage(
+            &base,
+            &fenced,
+            &lesson_output,
+            review["id"].as_str().unwrap(),
+            &"a".repeat(40),
+            &staged,
+        )
+        .unwrap();
+        let assessed: Value = serde_json::from_slice(
+            &fs::read(staged.join(manifest["assessment"].as_str().unwrap())).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(assessed["totals"], before["totals"]);
+        assert_eq!(
+            assessed["inputs"]["programFactsSha256"],
+            agentlab_code_analysis::digest(&fs::read(staged.join("program_facts.jsonl")).unwrap())
+        );
+        assert!(agentlab_code_analysis::maintainer_lesson_admission::stage(
+            &base,
+            &fenced,
+            &lesson_output,
+            review["id"].as_str().unwrap(),
+            &"a".repeat(40),
+            &staged
+        )
+        .is_err());
+        let validator = "import importlib.util,pathlib,sys; s=importlib.util.spec_from_file_location('tablegit',sys.argv[1]); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); f=m.operation_evidence_files(pathlib.Path(sys.argv[2])); assert 'operation-baseline.json' in f";
+        let validate = || {
+            Command::new("python3")
+                .arg("-c")
+                .arg(validator)
+                .arg(
+                    Path::new(env!("CARGO_MANIFEST_DIR"))
+                        .join("../../scripts/maintainer-skill-tablegit.py"),
+                )
+                .arg(&staged)
+                .output()
+                .unwrap()
+        };
+        let validated = validate();
+        assert!(
+            validated.status.success(),
+            "{}",
+            String::from_utf8_lossy(&validated.stderr)
+        );
+        let result_path = staged.join("operation-result.json");
+        let mut false_result: Value =
+            serde_json::from_slice(&fs::read(&result_path).unwrap()).unwrap();
+        false_result["advancedScopeIds"] = json!(["fixture-scope"]);
+        fs::write(&result_path, serde_json::to_vec(&false_result).unwrap()).unwrap();
+        assert!(!validate().status.success());
         // Real publication rows are heterogeneous; empty fixtures miss this seam.
         let published = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../examples/maintainer-knowledge-gate/first-four");

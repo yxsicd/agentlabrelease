@@ -130,6 +130,16 @@ cut before applying the transaction. Preserve any reconstruction rejection;
 an older persisted interpretation may need a new, independently read-back
 operational cut rather than silently changing the old rows.
 
+Use `--stage-lesson-admission` with the same inputs and a fresh output directory
+to assemble the full snapshot. A new fact changes the assessment input digest
+even when it advances no scope: independently reproduce the prior strict report,
+reassess the candidate facts and bind a new assessment instead of claiming the
+old report evaluates the new cut. Require unchanged scope verdicts, totals and
+policy, retain all baseline files and verified operation sidecars, and mark
+readiness advancement false. The writer recognizes reviewed-lesson stages and
+rejects claimed scope advancement before any authority mutation. Stage success
+is not a committed knowledge cut or downstream learning evidence.
+
 When promoting against real multi-kind program facts, preserve heterogeneous
 unowned fields as JSON rather than coercing arrays/objects or dropping baseline
 rows. The exchange records observed mixed field types separately. Explicitly
