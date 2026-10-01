@@ -1,0 +1,71 @@
+{
+  "cancelTool": "operation_cancel",
+  "channel": "control",
+  "fallbackUsed": false,
+  "gatewayInstanceId": "agentweb-ai-rgw-01",
+  "idempotencyKey": "awmcp-exec-v1-52d9998c3cdf5261a35dd202e27d24b4",
+  "logicalGatewayId": "agentweb-ai",
+  "ok": true,
+  "operationId": "exec-00000000000001cc",
+  "operationKind": "exec",
+  "pollTool": "operation_get",
+  "requestDeadlineMs": 10000,
+  "result": {
+    "execId": "exec-00000000000001cc",
+    "lane": "process",
+    "ok": true,
+    "record": {
+      "args": [
+        "/home/huawei/commandline-tools-26.0.0.821/bin/Emulator",
+        "/home/huawei/commandline-tools-26.0.0.821/sdk/default/openharmony/toolchains/hdc",
+        "/home/huawei/HarmonyOS-Emulator/images/system-image/HarmonyOS-7.0.0/phone_all_x86/info.json"
+      ],
+      "cancelled": false,
+      "command": "/usr/bin/sha256sum",
+      "cwd": "/home/huawei/code/.worktrees/agentlabrelease/flywheel-capture-qualification-78c489c",
+      "durationMs": 37,
+      "error": null,
+      "exitCode": 0,
+      "id": "exec-00000000000001cc",
+      "lane": "process",
+      "state": "completed",
+      "stderr": "",
+      "stdout": "a03a90c61ecdc2f5a18a4de473a8ceb3f8bbe4dcbc9865581b4accd1a21fabaf  /home/huawei/commandline-tools-26.0.0.821/bin/Emulator\n90c2554a44855a3c541c24bad5cffd46badb7eb7323c5464f6c0fb7160bdf5d0  /home/huawei/commandline-tools-26.0.0.821/sdk/default/openharmony/toolchains/hdc\n436c0eb98710ab305e9a9127d31e0160f18aba854414979861f78f3f4b84f644  /home/huawei/HarmonyOS-Emulator/images/system-image/HarmonyOS-7.0.0/phone_all_x86/info.json\n",
+      "timedOut": false
+    },
+    "running": false,
+    "state": "completed"
+  },
+  "rgwHttp": "https://agentweb-ai.ru.yxsbase.win",
+  "rgwRouting": {
+    "attemptErrors": [],
+    "strategy": "peer-hot3-with-command-retry"
+  },
+  "routeDecision": "peer_direct",
+  "routeSelectionMode": "client-force-direct",
+  "selectedLogicalGatewayId": "agentweb-ai",
+  "selectedRgw": "https://agentweb-ai.ru.yxsbase.win",
+  "sessionId": null,
+  "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+  "targetRole": "upstream",
+  "timings": {
+    "awmcp": {
+      "attemptCount": 1,
+      "rgwRequestMs": 517,
+      "rgwResponseDecodeMs": 0,
+      "rgwResponseHeadersMs": 517,
+      "routeCacheHit": false,
+      "routeLookupMode": "client-force-direct",
+      "routeLookupMs": 1670,
+      "totalMs": 2187
+    },
+    "rgw": {
+      "dispatchMs": 0,
+      "journalMs": 0,
+      "peerRoundTripMs": 178,
+      "routeLookupMs": 0,
+      "totalMs": 178
+    }
+  },
+  "traceId": "30865dea-f4b8-45a9-ad89-19987555d170"
+}

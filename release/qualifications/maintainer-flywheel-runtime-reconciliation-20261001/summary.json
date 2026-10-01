@@ -1,0 +1,41 @@
+{
+  "schema": "agentlab.maintainer_flywheel_runtime_reconciliation.v1",
+  "overallMaturityPercent": 45,
+  "maturityDelta": 0,
+  "maturityMeasurement": "Engineering estimate, not a calibrated benchmark",
+  "status": "environment-available-case-not-qualified",
+  "coldbootOperationId": "exec-00000000000001cd",
+  "coldbootAndShutdownWallMs": 13234,
+  "postconditionOperationId": "exec-00000000000001ce",
+  "routeDecision": "peer_direct",
+  "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+  "guestReportedFullname": "OpenHarmony-7.0.0.105",
+  "imageMetadata": {
+    "apiVersion": 26,
+    "version": "7.0.0.107",
+    "abi": "x86"
+  },
+  "exactApi22Runtime": false,
+  "retainedPartialEvidence": [
+    "examples/maintainer-knowledge-gate/first-four/qualification-receipts/uiability-backup-restore-reference-runtime.json",
+    "examples/maintainer-knowledge-gate/first-four/qualification-receipts/uiability-backup-restore-mutation-qualification.json"
+  ],
+  "actualRemainingGaps": [
+    "Normal-exit negative control on isolated bundle identity",
+    "Exact API 22 runtime requirement",
+    "General consumer admission of revision/plan-bound partial receipts"
+  ],
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "closedLoopQualified": false,
+  "limits": [
+    "No application install or Oracle executed this round",
+    "No new mutation calibration or Agent invocation",
+    "Metadata and guest fullname differ; retain both rather than replacing one",
+    "KVM/GPU and HDC boot are environment capability, not a case verdict"
+  ],
+  "cleanup": {
+    "hdcTargetsEmpty": true,
+    "noEmulatorProcessObserved": true
+  }
+}

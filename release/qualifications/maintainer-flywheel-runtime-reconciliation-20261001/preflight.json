@@ -1,0 +1,70 @@
+{
+  "cancelTool": "operation_cancel",
+  "channel": "control",
+  "fallbackUsed": false,
+  "gatewayInstanceId": "agentweb-ai-rgw-01",
+  "idempotencyKey": "awmcp-exec-v1-36d47779c97655429a470cbc19efe699",
+  "logicalGatewayId": "agentweb-ai",
+  "ok": true,
+  "operationId": "exec-00000000000001c2",
+  "operationKind": "exec",
+  "pollTool": "operation_get",
+  "requestDeadlineMs": 10000,
+  "result": {
+    "execId": "exec-00000000000001c2",
+    "lane": "process",
+    "ok": false,
+    "record": {
+      "args": [
+        "-c",
+        "id\nls -l /dev/kvm\nps -eo pid,comm | awk '$2 ~ /qemu|emulator|hdc/ {print}'\nls -d /home/huawei/.local/share/agentlab/harmony* /home/huawei/.agentlab/harmony* 2>/dev/null"
+      ],
+      "cancelled": false,
+      "command": "/bin/bash",
+      "cwd": "/home/huawei/code/.worktrees/agentlabrelease/flywheel-capture-qualification-78c489c",
+      "durationMs": 71,
+      "error": "exit code",
+      "exitCode": 2,
+      "id": "exec-00000000000001c2",
+      "lane": "process",
+      "state": "completed",
+      "stderr": "",
+      "stdout": "uid=1000(huawei) gid=999(docker) groups=999(docker),4(adm),24(cdrom),27(sudo),30(dip),44(video),46(plugdev),109(kvm),110(render),122(lpadmin),135(lxd),136(sambashare),1000(huawei)\ncrw-rw----+ 1 root kvm 10, 232 сен 28 22:05 /dev/kvm\n3389129 hdc\n",
+      "timedOut": false
+    },
+    "running": false,
+    "state": "completed"
+  },
+  "rgwHttp": "https://agentweb-ai.ru.yxsbase.win",
+  "rgwRouting": {
+    "attemptErrors": [],
+    "strategy": "peer-hot3-with-command-retry"
+  },
+  "routeDecision": "peer_direct",
+  "routeSelectionMode": "client-force-direct",
+  "selectedLogicalGatewayId": "agentweb-ai",
+  "selectedRgw": "https://agentweb-ai.ru.yxsbase.win",
+  "sessionId": null,
+  "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+  "targetRole": "upstream",
+  "timings": {
+    "awmcp": {
+      "attemptCount": 1,
+      "rgwRequestMs": 554,
+      "rgwResponseDecodeMs": 0,
+      "rgwResponseHeadersMs": 554,
+      "routeCacheHit": false,
+      "routeLookupMode": "client-force-direct",
+      "routeLookupMs": 1953,
+      "totalMs": 2508
+    },
+    "rgw": {
+      "dispatchMs": 0,
+      "journalMs": 0,
+      "peerRoundTripMs": 210,
+      "routeLookupMs": 0,
+      "totalMs": 210
+    }
+  },
+  "traceId": "8ef1e574-641f-476e-9a92-6da141fcd12b"
+}

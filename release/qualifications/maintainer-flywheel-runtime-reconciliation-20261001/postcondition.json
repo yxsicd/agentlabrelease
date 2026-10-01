@@ -1,0 +1,70 @@
+{
+  "cancelTool": "operation_cancel",
+  "channel": "control",
+  "fallbackUsed": false,
+  "gatewayInstanceId": "agentweb-ai-rgw-01",
+  "idempotencyKey": "awmcp-exec-v1-74b0beaa1e215e6a9e7e507f5f948cd5",
+  "logicalGatewayId": "agentweb-ai",
+  "ok": true,
+  "operationId": "exec-00000000000001ce",
+  "operationKind": "exec",
+  "pollTool": "operation_get",
+  "requestDeadlineMs": 10000,
+  "result": {
+    "execId": "exec-00000000000001ce",
+    "lane": "process",
+    "ok": true,
+    "record": {
+      "args": [
+        "-c",
+        "set -e\n/home/huawei/commandline-tools-26.0.0.821/sdk/default/openharmony/toolchains/hdc list targets\nps -eo pid,comm | awk '$2 ~ /qemu|emulator/ {print}'"
+      ],
+      "cancelled": false,
+      "command": "/bin/bash",
+      "cwd": "/home/huawei/code/.worktrees/agentlabrelease/flywheel-capture-qualification-78c489c",
+      "durationMs": 85,
+      "error": null,
+      "exitCode": 0,
+      "id": "exec-00000000000001ce",
+      "lane": "process",
+      "state": "completed",
+      "stderr": "",
+      "stdout": "[Empty]\r\n",
+      "timedOut": false
+    },
+    "running": false,
+    "state": "completed"
+  },
+  "rgwHttp": "https://agentweb-ai.ru.yxsbase.win",
+  "rgwRouting": {
+    "attemptErrors": [],
+    "strategy": "peer-hot3-with-command-retry"
+  },
+  "routeDecision": "peer_direct",
+  "routeSelectionMode": "client-force-direct",
+  "selectedLogicalGatewayId": "agentweb-ai",
+  "selectedRgw": "https://agentweb-ai.ru.yxsbase.win",
+  "sessionId": null,
+  "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+  "targetRole": "upstream",
+  "timings": {
+    "awmcp": {
+      "attemptCount": 1,
+      "rgwRequestMs": 566,
+      "rgwResponseDecodeMs": 0,
+      "rgwResponseHeadersMs": 566,
+      "routeCacheHit": false,
+      "routeLookupMode": "client-force-direct",
+      "routeLookupMs": 1731,
+      "totalMs": 2298
+    },
+    "rgw": {
+      "dispatchMs": 0,
+      "journalMs": 0,
+      "peerRoundTripMs": 223,
+      "routeLookupMs": 0,
+      "totalMs": 223
+    }
+  },
+  "traceId": "85298ad5-a462-428a-8ac7-d59da0a4b1a8"
+}

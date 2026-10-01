@@ -24,6 +24,17 @@ gate. This is recorded-content checking, not producer authentication, execution
 replay, full runtime acceptance or a frozen case. Preserve that boundary in the
 readiness result and retain the separate construction/calibration/freeze gates.
 
+Distinguish absent execution from evidence that has not been admitted by a
+consumer adapter. Before scheduling fresh calibration, inspect retained partial
+receipts and reconcile their exact source, plan and environment cuts. A prior
+positive control or killed mutation remains scoped evidence even when a newer
+readiness plan still reports unqualified. Report missing normal-exit controls,
+unsupported receipt formats and incompatible runtime identities separately.
+Build-target API, installed SDK API and observed runtime-image API are different
+axes; none substitutes for an explicitly required exact runtime version. A
+host's device permissions, cold boot and HDC connection qualify environment
+availability only, not application behavior or complete case calibration.
+
 Use the task's actual expected baseline: a bug-fix case may fail before the patch; an extension case may pass old tests but fail new demand checks. Reference passes and targeted wrong-boundary/lost-history variants should fail the intended checks. Save complete output and exact identities in `evaluation_cases` calibration rows, with analysis evidence in `program_facts`.
 
 Define metric denominators and event sources: task success, build success, user rounds versus model/tool turns, monotonic execution time, and evidence-backed behavior scoring. Keep proposed process metrics explicitly unvalidated until agreement and repeatability are measured. Separate Harness malfunction from valid Agent inability.
