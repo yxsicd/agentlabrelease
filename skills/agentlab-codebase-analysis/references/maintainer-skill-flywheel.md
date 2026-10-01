@@ -207,6 +207,27 @@ receipt bindings; after exact committed-cut export it preserves receipt bytes,
 baseline, comparison and the original stage manifest as evidence sidecars.
 Verify an accepted fact without its original receipt directory, and reject
 tampering. Missing evidence stops ingestion before any authority write.
+Publication reference closure is a separate check from portable reassessment.
+An exact exported fact may retain a historical publication-relative evidence
+link as well as its portable receipt-root reference. Validate both declared
+paths against their explicit roots before publishing; when preserving a legacy
+link, carry the same original bytes and digest rather than rewriting the fact
+or weakening the link-completeness gate. A successful live table readback alone
+does not prove that all evidence referenced by the Release export is available.
+Preserve the exact assessed scope/fact file bytes after immutable row readback.
+Equivalent Unicode escapes or key encodings can still change the input digest
+and break the next strict round. The semantic producer emits canonical UTF-8;
+older strict stages keep their original assessed serialization during export.
+Refresh-round `tables` digests identify canonical ID-sorted decoded rows;
+assessment `inputs` identify the original raw scope/fact bytes. Verify both
+identities separately: a canonical table digest is not a raw input digest.
+Recovery must retain the original report and restore its bound input bytes,
+not rewrite historical reports or count serialization repair as a gain.
+Materialized Skills consume the durable latest-round reference and its exact
+input digests, only source-matched accepted assessment bindings, and the
+capability-specific required dimensions. Configuration scopes do not acquire
+invented behavior requirements, and orphan reports or stale facts cannot enter
+generated guidance just because they share a scope identifier.
 Regression must cover successive productive fixture rounds on distinct scopes:
 use the previous staged cut as the next base, verify cumulative readiness from
 each portable bundle, and remove the originating receipt directory before the
