@@ -122,6 +122,44 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
         assert_eq!(assets["evidence_files"].len(), 5);
         assert_eq!(assets["runs"].values().next().unwrap()["qualified"], false);
         assert!(assets["phase_failures"].is_empty());
+        let review = json!({"schema":"agentlab.stage_lesson_review.v1","reviewed":true,
+            "id":format!("lesson-{repository}"),"scope":"recorded-application-context-stage-seam",
+            "reviewerId":"fixture-maintenance-review",
+            "candidateSha256":first["candidateSha256"],"sourceRevision":first["sourceRevision"],
+            "knowledgeCutSha256":first["knowledgeCutSha256"],"contractSha256":first["contractSha256"],
+            "calibrationSha256":first["calibrationSha256"],
+            "phenomenon":"Creation and registration must be separately observed",
+            "cause":"Wrong entry or event severs the modeled configuration delivery path",
+            "change":"Check actual source creation and application-context registration independently",
+            "factId":format!("fact-{repository}"),"skillId":format!("skill-{repository}"),
+            "body":"Execute positive and wrong-entry/wrong-event controls; qualify framework delivery separately."});
+        let lesson_assets = |review: &Value, capture: &Value| {
+            let raw = serde_json::to_vec(capture).unwrap();
+            agentlab_code_analysis::maintainer_stage_feedback::lesson_assets(
+                &serde_json::to_vec(&candidate).unwrap(),
+                &serde_json::to_vec(&downstream).unwrap(),
+                &serde_json::to_vec(&c).unwrap(),
+                &raw,
+                &agentlab_code_analysis::digest(&raw),
+                &serde_json::to_vec(review).unwrap(),
+            )
+        };
+        let lesson = lesson_assets(&review, &r).unwrap();
+        assert_eq!(lesson, lesson_assets(&review, &r).unwrap());
+        let row = lesson["experiment_lessons"].values().next().unwrap();
+        assert_eq!(row["status"], "verified");
+        assert_eq!(row["automaticPromotion"], false);
+        assert_eq!(
+            row["promotionContract"]["qualification"]["harmonyRuntimeQualified"],
+            false
+        );
+        assert_eq!(lesson["evidence_files"].len(), 6);
+        let mut stale = review.clone();
+        stale["contractSha256"] = json!("e".repeat(64));
+        assert!(lesson_assets(&stale, &r).is_err());
+        let mut unreviewed = review.clone();
+        unreviewed["reviewed"] = json!(false);
+        assert!(lesson_assets(&unreviewed, &r).is_err());
         // Exercise the public CLI, not only the in-memory normalizer.
         let candidates_path = root.join("candidates.jsonl");
         let downstream_path = root.join("downstream.json");
@@ -211,6 +249,77 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
             .status
             .success());
         assert!(!rejected.exists());
+        let mut cli_review = review.clone();
+        cli_review["calibrationSha256"] = json!(raw_sha);
+        let review_path = root.join("lesson-review.json");
+        fs::write(&review_path, serde_json::to_vec(&cli_review).unwrap()).unwrap();
+        let lesson_output = root.join("lesson-export");
+        let result = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .arg("--export-stage-lesson")
+            .arg("--candidates")
+            .arg(&candidates_path)
+            .arg("--candidate-id")
+            .arg(repository)
+            .arg("--downstream-plan")
+            .arg(&downstream_path)
+            .arg("--stage-contract")
+            .arg(root.join("actual.contract.json"))
+            .arg("--stage-calibration")
+            .arg(&capture_path)
+            .arg("--calibration-sha256")
+            .arg(&raw_sha)
+            .arg("--lesson-review")
+            .arg(&review_path)
+            .arg("--output")
+            .arg(&lesson_output)
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        assert_eq!(
+            fs::read(lesson_output.join("lesson-review.json")).unwrap(),
+            fs::read(&review_path).unwrap()
+        );
+        let manifest: Value =
+            serde_json::from_slice(&fs::read(lesson_output.join("export.json")).unwrap()).unwrap();
+        assert_eq!(manifest["tables"]["experiment_lessons"]["rowCount"], 1);
+        assert_eq!(manifest["tables"]["evidence_files"]["rowCount"], 6);
+        // The existing experience producer consumes the same lesson entities.
+        let knowledge = root.join("empty-knowledge");
+        fs::create_dir(&knowledge).unwrap();
+        for name in ["maintainer_skills", "program_facts", "evaluation_cases"] {
+            fs::write(knowledge.join(format!("{name}.jsonl")), b"").unwrap();
+        }
+        let promoted = root.join("promotion-candidate");
+        let result = Command::new(env!("CARGO_BIN_EXE_agentlab-experience"))
+            .arg("promote")
+            .arg(&lesson_output)
+            .arg(&knowledge)
+            .arg(&promoted)
+            .arg(review["id"].as_str().unwrap())
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let fact: Value =
+            serde_json::from_slice(&fs::read(promoted.join("program_facts.jsonl")).unwrap())
+                .unwrap();
+        let skill: Value =
+            serde_json::from_slice(&fs::read(promoted.join("maintainer_skills.jsonl")).unwrap())
+                .unwrap();
+        assert_eq!(fact["sourceLessonId"], review["id"]);
+        assert_eq!(fact["qualification"]["caseQualified"], false);
+        assert_eq!(skill["body"], review["body"]);
+        assert_eq!(
+            fs::read(promoted.join("evaluation_cases.jsonl")).unwrap(),
+            b""
+        );
         assert_eq!(
             assets["checks"].len(),
             r["controls"]
@@ -311,6 +420,7 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
             .unwrap_err()
             .contains("raw observations"));
         assert!(make_assets(&c, &tampered).is_err());
+        assert!(lesson_assets(&review, &tampered).is_err());
         let mut missing = r.clone();
         missing["controls"].as_array_mut().unwrap().pop();
         assert!(consume(&c, &missing, None).is_err());

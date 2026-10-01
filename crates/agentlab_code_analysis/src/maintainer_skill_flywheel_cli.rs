@@ -24,7 +24,8 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
-    let export_stage = args.iter().any(|arg| arg == "--export-stage-calibration");
+    let export_lesson = args.iter().any(|arg| arg == "--export-stage-lesson");
+    let export_stage = export_lesson || args.iter().any(|arg| arg == "--export-stage-calibration");
     if export_stage || args.iter().any(|arg| arg == "--feedback-stage-calibration") {
         let selected = value(&args, "--candidate-id")?;
         let rows = fs::read_to_string(value(&args, "--candidates")?)?
@@ -53,13 +54,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "operational export reconstructs its own capture, not prior scheduling".into(),
                 );
             }
-            let tables = agentlab_code_analysis::maintainer_stage_feedback::assets(
-                &candidate_bytes,
-                &downstream_bytes,
-                &contract_bytes,
-                &calibration_bytes,
-                &calibration_sha,
-            )?;
+            let review = if export_lesson {
+                Some(fs::read(value(&args, "--lesson-review")?)?)
+            } else {
+                None
+            };
+            let tables = if let Some(review) = &review {
+                agentlab_code_analysis::maintainer_stage_feedback::lesson_assets(
+                    &candidate_bytes,
+                    &downstream_bytes,
+                    &contract_bytes,
+                    &calibration_bytes,
+                    &calibration_sha,
+                    review,
+                )?
+            } else {
+                agentlab_code_analysis::maintainer_stage_feedback::assets(
+                    &candidate_bytes,
+                    &downstream_bytes,
+                    &contract_bytes,
+                    &calibration_bytes,
+                    &calibration_sha,
+                )?
+            };
             let feedback = agentlab_code_analysis::maintainer_stage_feedback::plan(
                 &candidate_bytes,
                 &downstream_bytes,
@@ -71,6 +88,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut feedback_bytes = serde_json::to_vec_pretty(&feedback)?;
             feedback_bytes.push(b'\n');
             fs::create_dir(&output)?;
+            if let Some(review) = &review {
+                fs::write(output.join("lesson-review.json"), review)?;
+            }
             for (name, bytes) in [
                 ("candidate.json", candidate_bytes.as_slice()),
                 ("downstream-plan.json", downstream_bytes.as_slice()),

@@ -4,6 +4,125 @@ use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet};
 const METHOD: &[u8] = include_bytes!("../../../scripts/calibrate-harmony-stage-controls.cjs");
 
+/// Reviewed interpretation of independently reconstructed controls. Not an admission.
+#[allow(clippy::too_many_arguments)]
+pub fn lesson_assets(
+    candidate: &[u8],
+    downstream: &[u8],
+    contract: &[u8],
+    capture: &[u8],
+    capture_sha: &str,
+    review_bytes: &[u8],
+) -> Result<BTreeMap<String, BTreeMap<String, Value>>, String> {
+    let mut tables = assets(candidate, downstream, contract, capture, capture_sha)?;
+    let feedback = plan(candidate, downstream, contract, capture, capture_sha, None)?;
+    need(
+        feedback["semanticSeamCalibrationPassed"] == true
+            && feedback["killedSemanticVariantCount"].as_u64().unwrap_or(0) >= 2,
+        "lesson requires accepted control and two intended semantic failures",
+    )?;
+    let review: Value = serde_json::from_slice(review_bytes).map_err(|e| e.to_string())?;
+    need(
+        review["schema"] == "agentlab.stage_lesson_review.v1" && review["reviewed"] == true,
+        "explicit scoped lesson review absent",
+    )?;
+    for key in [
+        "candidateSha256",
+        "sourceRevision",
+        "knowledgeCutSha256",
+        "contractSha256",
+        "calibrationSha256",
+    ] {
+        need(
+            review[key] == feedback[key],
+            "lesson review evidence binding differs",
+        )?;
+    }
+    for key in [
+        "id",
+        "scope",
+        "reviewerId",
+        "phenomenon",
+        "cause",
+        "change",
+        "factId",
+        "skillId",
+        "body",
+    ] {
+        need(
+            !text(&review, key)?.trim().is_empty(),
+            "lesson review guidance absent",
+        )?;
+    }
+    need(
+        review["factId"] != review["skillId"],
+        "lesson target identities collide",
+    )?;
+    let run_id = tables["runs"].keys().next().unwrap().clone();
+    let lesson_id = text(&review, "id")?;
+    let review_sha = digest(review_bytes);
+    let evidence_id = format!("{run_id}-lesson-{review_sha}");
+    let validation_id = format!("{evidence_id}-validation");
+    let qualification = json!({"boundary":"independently reconstructed recorded host seam",
+        "harmonyBuildQualified":false,"harmonyRuntimeQualified":false,"uiQualified":false,
+        "caseQualified":false,"producerAuthenticated":false});
+    let mut expected = serde_json::Map::new();
+    for control in tables["calibration_controls"].values() {
+        expected.insert(
+            text(control, "variant")?.into(),
+            json!(control["observedVerdict"] == "accept"),
+        );
+    }
+    let promotion = json!({"id":lesson_id,"scope":review["scope"],"phenomenon":review["phenomenon"],
+        "cause":review["cause"],"change":review["change"],"factId":review["factId"],
+        "skillId":review["skillId"],"body":review["body"],"expected":expected,"qualification":qualification});
+    let rows = [
+        (
+            "experiment_lessons",
+            json!({"id":lesson_id,"kind":"calibrated-method-lesson","status":"verified",
+            "scope":review["scope"],"phenomenon":review["phenomenon"],"cause":review["cause"],"change":review["change"],
+            "attribution":"explicit-reviewed-interpretation-of-reconstructed-controls",
+            "analysisId":format!("{run_id}-feedback"),"sourceRevision":feedback["sourceRevision"],
+            "evidenceIds":[evidence_id],"validationIds":[validation_id],"targetIds":[review["factId"],review["skillId"]],
+            "reviewerId":review["reviewerId"],"reviewSha256":review_sha,"promotionContract":promotion,
+            "automaticPromotion":false,"qualified":false}),
+        ),
+        (
+            "lesson_evidence",
+            json!({"id":evidence_id,"lessonId":lesson_id,"kind":"reconstructed-stage-controls",
+            "analysisId":format!("{run_id}-feedback"),"capturePath":"stage-calibration.json","captureSha256":capture_sha,
+            "reviewPath":"lesson-review.json","reviewSha256":review_sha,
+            "controlIds":tables["calibration_controls"].keys().collect::<Vec<_>>()}),
+        ),
+        (
+            "lesson_validations",
+            json!({"id":validation_id,"lessonId":lesson_id,"kind":"positive-negative-calibration",
+            "passed":true,"scope":review["scope"],"evidenceId":evidence_id,"expected":expected,
+            "acceptedControlCount":1,"killedSemanticVariantCount":feedback["killedSemanticVariantCount"],
+            "qualification":qualification,"reviewSha256":review_sha}),
+        ),
+        (
+            "evidence_files",
+            json!({"id":format!("{evidence_id}-review-file"),"path":"lesson-review.json",
+            "sha256":review_sha,"bytes":review_bytes.len(),"kind":"explicit-scoped-interpretation-review"}),
+        ),
+    ];
+    for (table, mut row) in rows {
+        row["assetClass"] = json!("evaluation-instance");
+        row["runId"] = json!(run_id);
+        let id = text(&row, "id")?.to_owned();
+        need(
+            tables
+                .entry(table.into())
+                .or_default()
+                .insert(id, row)
+                .is_none(),
+            "lesson identity conflict",
+        )?;
+    }
+    Ok(tables)
+}
+
 /// Queryable operational observations; never reusable knowledge or a qualified case.
 pub fn assets(
     candidate: &[u8],
