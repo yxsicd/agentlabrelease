@@ -1,0 +1,82 @@
+{
+  "automaticPromotion": false,
+  "candidateId": "shadow-case-uiability-backup-restore-state-recovery",
+  "candidateSha256": "fa20f6b28fa9b44457f74d9eb15e3208d36eb8fabece852027bd40160283a200",
+  "checks": {
+    "implementationPaths": [
+      {
+        "editable": true,
+        "factEvidenceBound": true,
+        "inCandidateScope": true,
+        "path": "Ability/UIAbilityRecover/entry/src/main/ets/entryability/EntryAbility.ets",
+        "reason": "Consume the restored Want parameter only on APP_RECOVERY and transfer it into initial application state."
+      },
+      {
+        "editable": true,
+        "factEvidenceBound": true,
+        "inCandidateScope": true,
+        "path": "Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets",
+        "reason": "Expose the restored value as visible page state and save the latest user interaction rather than a fixed constant."
+      }
+    ],
+    "oracleExecution": {
+      "evidence": [],
+      "status": "unqualified",
+      "verificationBoundary": "recorded receipt content only; no execution replay or producer authentication"
+    },
+    "oraclePaths": [
+      {
+        "candidateVisible": true,
+        "factEvidenceBound": true,
+        "inCandidateScope": true,
+        "path": "Ability/UIAbilityRecover/entry/src/ohosTest/ets/test/Ability.test.ets",
+        "reason": "Extend the existing upstream ohosTest entrypoint with cold-launch, abnormal-stop and recovery assertions."
+      },
+      {
+        "candidateVisible": true,
+        "factEvidenceBound": true,
+        "inCandidateScope": true,
+        "path": "Ability/UIAbilityRecover/entry/src/main/ets/pages/Index.ets",
+        "reason": "Bind the UI Oracle to the exact visible state owner instead of accepting generic text from another page."
+      }
+    ],
+    "runtimeRequirements": [
+      {
+        "description": "Build, install and launch the pinned source on a HarmonyOS 6.0.2 API 22 phone emulator without physical-device fallback.",
+        "evidence": [],
+        "id": "api22-emulator-build-deploy",
+        "status": "unqualified",
+        "verificationBoundary": "recorded receipt content only; no execution replay or producer authentication"
+      },
+      {
+        "description": "Prove that the selected emulator triggers onSaveState, APP_RECOVERY and restored Want delivery across a bounded abnormal stop and relaunch.",
+        "evidence": [],
+        "id": "abnormal-stop-recovery-cycle",
+        "status": "unqualified",
+        "verificationBoundary": "recorded receipt content only; no execution replay or producer authentication"
+      }
+    ],
+    "wrongVariantCalibration": {
+      "evidence": [],
+      "executedCount": 0,
+      "requiredCount": 2,
+      "status": "unqualified",
+      "verificationBoundary": "recorded receipt content only; no execution replay or producer authentication"
+    }
+  },
+  "currentKnowledgeCutSha256": "186602289cdcccedb24ff5ac6b264fed4161b397e782317faafac6ec8a581207",
+  "decision": "blocked-qualification",
+  "knowledgeBlockers": [],
+  "knowledgeCutSha256": "7ec73d57e86ffea92a59185ac4af505229f59e2363cae2f72ec8a02f4a5182f8",
+  "nextGate": "implement-and-calibrate-independent-oracle",
+  "planSha256": "bee634845101a630128f956669c5e9a7f86f485f12ff479393b37a6743ed9c81",
+  "qualificationBlockers": [
+    "runtime requirement is unqualified: api22-emulator-build-deploy",
+    "runtime requirement is unqualified: abnormal-stop-recovery-cycle",
+    "independent Oracle has not executed successfully",
+    "wrong-variant calibration is incomplete: 0/2"
+  ],
+  "schema": "agentlab.shadow_case_construction_readiness_receipt.v1",
+  "sourceRevision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+  "sourceSetSha256": "88310ecd6a5ace0c7393c7981b8f9ba9103afff41133b71d0b84e951e95f24a6"
+}

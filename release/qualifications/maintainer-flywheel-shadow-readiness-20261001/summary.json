@@ -1,0 +1,22 @@
+{
+  "schema": "agentlab.maintainer_flywheel_shadow_readiness_audit.v1",
+  "overallMaturityPercent": 45,
+  "maturityDelta": 0,
+  "maturityMeasurement": "Engineering estimate, not a calibrated benchmark",
+  "finding": "Digest-bound empty JSON previously satisfied qualified construction requirements",
+  "change": "Recorded-content adapter now requires exact candidate/source/cut bindings, successful completed execution, observed checks and declared accepted/wrong calibration variants",
+  "newRustRegressionCount": 1,
+  "legacyPythonRegressionCount": 17,
+  "actualCandidateDecision": "blocked-qualification",
+  "knowledgeBlockers": [],
+  "remainingQualificationGaps": [
+    "Emulator build, deployment and launch",
+    "Abnormal-stop recovery-cycle observation",
+    "Independent successful Oracle execution",
+    "Two declared wrong variants discriminated against a passing accepted reference"
+  ],
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "closedLoopQualified": false,
+  "verificationBoundary": "Recorded receipt content only; no fresh Agent, runtime, producer authentication or execution replay this round"
+}

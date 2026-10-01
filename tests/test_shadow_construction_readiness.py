@@ -131,14 +131,39 @@ class ShadowConstructionReadinessTest(unittest.TestCase):
         }]
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            evidence = root / "receipt.json"
-            evidence.write_text("{}\n")
-            ref = {"path": "receipt.json", "sha256": MODULE.file_digest(evidence)}
+            def ref(kind, requirement=None):
+                receipt = {
+                    "schema": "agentlab.shadow_case_qualification.v1", "kind": kind,
+                    "status": "qualified", "automaticPromotion": False,
+                    "candidateId": candidate["id"], "candidateSha256": MODULE.value_digest(candidate),
+                    "sourceRevision": candidate["sourceRevision"],
+                    "sourceSetSha256": candidate["sourceSetSha256"],
+                    "knowledgeCutSha256": candidate["knowledgeCutSha256"],
+                    "execution": {"status": "completed", "exitCode": 0, "durationMs": 1},
+                    "checks": [{"id": "controlled-fixture-check", "passed": True}],
+                }
+                if requirement:
+                    receipt["requirementId"] = requirement
+                if kind == "wrong-variant-calibration":
+                    receipt["variants"] = [{
+                        "id": "valid-reference", "role": "accepted", "completed": True,
+                        "expectedVerdict": "accept", "observedVerdict": "accept",
+                        "checks": [{"id": f"check-{index}", "observable": observable, "passed": True}
+                                   for index, observable in enumerate(candidate["oracleHypothesis"]["observables"])],
+                    }] + [{
+                        "id": name, "role": "wrong", "completed": True,
+                        "expectedVerdict": "reject", "observedVerdict": "reject",
+                        "checks": [{"id": f"check-{index}", "observable": observable, "passed": False}
+                                   for index, observable in enumerate(candidate["oracleHypothesis"]["observables"])],
+                    } for name in candidate["oracleHypothesis"]["wrongVariants"][:2]]
+                evidence = root / f"{requirement or kind}.json"
+                evidence.write_text(json.dumps(receipt))
+                return {"path": evidence.name, "sha256": MODULE.file_digest(evidence)}
             for item in plan["runtimeRequirements"]:
-                item.update(status="qualified", evidence=[ref])
-            plan["oracleExecution"] = {"status": "qualified", "evidence": [ref]}
+                item.update(status="qualified", evidence=[ref("runtime-requirement", item["id"])])
+            plan["oracleExecution"] = {"status": "qualified", "evidence": [ref("oracle-execution")]}
             plan["wrongVariantCalibration"] = {
-                "status": "qualified", "evidence": [ref], "requiredCount": 2, "executedCount": 2,
+                "status": "qualified", "evidence": [ref("wrong-variant-calibration")], "requiredCount": 2, "executedCount": 2,
             }
             path = root / "plan.json"
             path.write_text(json.dumps(plan))
