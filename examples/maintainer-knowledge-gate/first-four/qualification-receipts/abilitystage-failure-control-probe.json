@@ -1,0 +1,95 @@
+{
+  "schema": "agentlab.hypium_failure_control_probe.v1",
+  "source": {
+    "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+    "path": "Ability/AbilityStage/entry/src/ohosTest/ets/test/Ability.test.ets",
+    "gitBlobOid": "246bf2e2ed3178ea1932d54a2f34328de403be22",
+    "sha256": "5b389d208ebb6f832abe8e27d9c6a50602b35540aaf9f8d0f1558cacf21363fe"
+  },
+  "testId": "AbilityStage__Startup_001",
+  "suiteExport": "default",
+  "methodSha256": "fd632809c8cbec5dc83785cb4b3243fdeed5a12f1eeacda907a6c5f650206dd5",
+  "runtime": "v26.5.1",
+  "controls": [
+    {
+      "source": {
+        "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+        "path": "Ability/AbilityStage/entry/src/ohosTest/ets/test/Ability.test.ets",
+        "gitBlobOid": "246bf2e2ed3178ea1932d54a2f34328de403be22",
+        "sha256": "5b389d208ebb6f832abe8e27d9c6a50602b35540aaf9f8d0f1558cacf21363fe"
+      },
+      "compiler": {
+        "kind": "typescript-type-erasure-only",
+        "version": "5.9.3",
+        "sha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675"
+      },
+      "control": "resolve",
+      "startCalls": 1,
+      "doneCalls": 1,
+      "verdict": "accept",
+      "rejected": null,
+      "events": [
+        {
+          "log": [
+            63505,
+            "[Sample_AbilityStage]",
+            "AbilityStage_Startup_001 begin"
+          ]
+        },
+        {
+          "operation": "startAbility",
+          "outcome": "resolve"
+        }
+      ]
+    },
+    {
+      "source": {
+        "revision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+        "path": "Ability/AbilityStage/entry/src/ohosTest/ets/test/Ability.test.ets",
+        "gitBlobOid": "246bf2e2ed3178ea1932d54a2f34328de403be22",
+        "sha256": "5b389d208ebb6f832abe8e27d9c6a50602b35540aaf9f8d0f1558cacf21363fe"
+      },
+      "compiler": {
+        "kind": "typescript-type-erasure-only",
+        "version": "5.9.3",
+        "sha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675"
+      },
+      "control": "reject",
+      "startCalls": 1,
+      "doneCalls": 1,
+      "verdict": "accept",
+      "rejected": null,
+      "events": [
+        {
+          "log": [
+            63505,
+            "[Sample_AbilityStage]",
+            "AbilityStage_Startup_001 begin"
+          ]
+        },
+        {
+          "operation": "startAbility",
+          "outcome": "reject"
+        },
+        {
+          "log": [
+            63505,
+            "[Sample_AbilityStage]",
+            "AbilityStage_Startup_001 end {}"
+          ]
+        }
+      ]
+    }
+  ],
+  "failureSensitive": false,
+  "decision": "repair-oracle-before-runtime-calibration",
+  "qualified": false,
+  "automaticPromotion": false,
+  "authorityWritePerformed": false,
+  "limitations": [
+    "Controlled TestKit startAbility resolve/reject seam only; not device or emulator execution.",
+    "TypeScript erasure does not prove ArkTS typing or HAP build.",
+    "Trusted source only; VM and subprocess deadlines are not a security sandbox.",
+    "No assessed Agent, wrong-implementation calibration, benchmark freeze or runtime qualification."
+  ]
+}

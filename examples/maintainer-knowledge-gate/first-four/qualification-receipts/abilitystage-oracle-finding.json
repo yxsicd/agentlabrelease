@@ -1,0 +1,26 @@
+{
+  "schema": "agentlab.shadow_oracle_diagnostic_finding.v1",
+  "candidateId": "shadow-case-abilitystage-environment-callback-binding",
+  "candidateSha256": "67525cc61d7d22f3eae2f66df5dbfded19ac1864e6f3f0dc0069e048c0abb23e",
+  "knowledgeCutSha256": "ccd9d953b926b5647de7572dcdc7065cbbc9fd91ba46c5c01a3278ddd170e70e",
+  "sourceSetSha256": "88310ecd6a5ace0c7393c7981b8f9ba9103afff41133b71d0b84e951e95f24a6",
+  "sourceRevision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+  "originalProducerRunId": "36857619983",
+  "originalExportPr": "https://github.com/yxsicd/agentlabrelease/pull/112",
+  "probe": {
+    "path": "abilitystage-failure-control-probe.json",
+    "sha256": "060f0e1ad725fc29cdcd900a50e5f36497aadf6c7a382fa00c01c1fdc078a669"
+  },
+  "finding": "The original startup test accepts both a resolved and rejected startAbility call: both branches call done() without a behavior assertion.",
+  "scope": "Reused startup-test discrimination only; independent hilog behavior hypotheses remain untested.",
+  "decision": "repair-oracle-before-runtime-calibration",
+  "nextRoundRequirements": [
+    "Admit exact Oracle test-body paths and behavior assertions as source evidence before constructing a replacement candidate.",
+    "Use independently controlled success/failure checks, then accepted and meaningful wrong implementations on the exact required emulator image.",
+    "Separate a harmless class rename retaining a default export from an invalid export or entrypoint change."
+  ],
+  "historicalCandidateRewritten": false,
+  "knowledgeAuthorityWritten": false,
+  "qualified": false,
+  "automaticPromotion": false
+}

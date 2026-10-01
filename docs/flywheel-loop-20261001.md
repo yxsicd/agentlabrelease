@@ -142,3 +142,39 @@ strict next-batch preparation, release validation and whitespace checks.
 The generic five-ring goal is still incomplete: this operation round qualifies
 recorded build content only, not tests, runtime, type checking, performance,
 thermal behavior, a calibrated executable candidate or Agent discrimination.
+
+## Oracle failure-control continuation
+
+Overall maturity estimate remains **47%**. This iteration improves generic
+false-positive detection, but adds no qualified executable case or runtime run.
+
+The retained Action candidate proposed reusing an existing startup test. An
+independent diagnostic executed that original pinned test body with controlled
+TestKit startup success and failure, using type erasure only. Both controls
+were accepted: the test calls `done()` in both branches without an assertion.
+This invalidates using that test's completion as proof of startup, not the
+separate untested hilog Oracle hypothesis. The compact probe and original-cut
+finding are retained under `first-four/qualification-receipts/abilitystage-*`.
+The historical candidate and its knowledge cut were not rebound or rewritten;
+no TableGit authority was changed.
+
+The generic trusted-source adapter reads an exact Git Blob, pins its compiler,
+preserves partial infrastructure failures and refuses receipt overwrite. A Rust
+integration regression uses an arbitrary fixture repository to check vacuous,
+sensitive, unsupported and ambiguous tests. These are adapter controls, not
+meaningful wrong-implementation calibration on a Harmony emulator. VM/process
+deadlines are not a security sandbox. Every diagnostic has `qualified=false`.
+
+The constructor prompt and calibration method now require inspecting actual
+assertions/error branches, exposing missing admitted Oracle source, and keeping
+cosmetic refactors separate from semantic defects. This is reusable across
+repositories; no repository-specific repair enters the generic method.
+
+Next: admit the missing Oracle-source evidence into a new knowledge round,
+construct an independently checkable demand, and calibrate accepted/wrong
+implementations on the exact required runtime. PR113/114 remain unmerged; no
+main-only Agent dispatch or Release publication was performed in this iteration.
+
+Validation: full `agentlab_code_analysis` suite, both new failure-control Rust
+tests, 11 shadow-construction Python tests, exact original candidate/cut digest
+readback, release checksum validation, Rust formatting and diff whitespace.
