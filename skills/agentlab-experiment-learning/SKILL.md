@@ -119,6 +119,17 @@ binding the changed table hashes before publication. Verify that the intended
 downstream Agent actually receives applicable guidance body and provenance;
 hash/count inclusion alone does not establish consumption or learning benefit.
 
+For reconstructed stage lessons, `--prepare-lesson-admission` accepts --knowledge,
+--proposal, --lesson-source, --lesson-id and --expected-knowledge-revision, with a
+fresh --output file. It verifies the baseline table/history bindings, reconstructs
+the declared lesson export from original controls, and proposes only Skill, fact
+and refresh-row inserts. The plan reuses the prior assessment and does not advance
+scope coverage or runtime qualification. Its source commit metadata is not
+authenticated: verify remote committed readback and the full staged knowledge
+cut before applying the transaction. Preserve any reconstruction rejection;
+an older persisted interpretation may need a new, independently read-back
+operational cut rather than silently changing the old rows.
+
 When promoting against real multi-kind program facts, preserve heterogeneous
 unowned fields as JSON rather than coercing arrays/objects or dropping baseline
 rows. The exchange records observed mixed field types separately. Explicitly

@@ -368,6 +368,149 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
         }
         fs::write(&lessons_path, &original_lessons).unwrap();
         fs::write(&validations_path, &original_validations).unwrap();
+        // Admission consumes a committed source export plus a hash-bound baseline.
+        // Commit labels here are fixture metadata, not remote persistence evidence.
+        let mut committed = manifest.clone();
+        committed["repository"] = json!(format!("fixture-instance-{repository}"));
+        committed["revision"] = json!("f".repeat(40));
+        committed["tablePrefix"] = json!("data/");
+        fs::write(
+            lesson_output.join("export.json"),
+            serde_json::to_vec(&committed).unwrap(),
+        )
+        .unwrap();
+        let fenced = root.join("fenced-proposal");
+        assert!(Command::new(env!("CARGO_BIN_EXE_agentlab-experience"))
+            .env("GITHUB_SHA", "e".repeat(40))
+            .arg("promote")
+            .arg(&lesson_output)
+            .arg(&knowledge)
+            .arg(&fenced)
+            .arg(review["id"].as_str().unwrap())
+            .output()
+            .unwrap()
+            .status
+            .success());
+        let base = root.join("admission-baseline");
+        fs::create_dir(&base).unwrap();
+        let mut cut = json!({"schema":"agentlab.maintainer_knowledge_cut.v1",
+            "tableGitAuthority":{"repo":format!("fixture-knowledge-{repository}"),"revision":"a".repeat(40)},"tables":{}});
+        let mut round = json!({"id":"initial","schema":"agentlab.maintainer_skill_refresh_round.v1",
+            "roundIndex":1,"ownershipPlane":"target-operations","automaticPromotion":false,
+            "coverage":{"processSkillCount":0,"semanticReadyScopeCount":0,"maintenanceReadyScopeCount":0},
+            "assessment":{"path":"existing-assessment.json","sha256":"d".repeat(64)},"tables":{}});
+        for (key, table) in [
+            ("maintainerSkills", "maintainer_skills"),
+            ("programFacts", "program_facts"),
+            ("maintainerScopeSkills", "maintainer_scope_skills"),
+            ("evaluationCases", "evaluation_cases"),
+        ] {
+            let bytes = if table == "maintainer_scope_skills" {
+                serde_json::to_vec(&json!({"id":"fixture-scope","repositoryId":candidate["repositoryId"],"sourceRevision":candidate["sourceRevision"]})).unwrap()
+            } else {
+                Vec::new()
+            };
+            let hash = agentlab_code_analysis::digest(&bytes);
+            fs::write(base.join(format!("{table}.jsonl")), &bytes).unwrap();
+            cut["tables"][key] = json!({"path":format!("{table}.jsonl"),"sha256":hash});
+            let field = match table {
+                "maintainer_skills" => "processSkillsSha256",
+                "program_facts" => "programFactsSha256",
+                _ => "scopeSkillsSha256",
+            };
+            if table != "evaluation_cases" {
+                round["tables"][field] = json!(hash);
+            }
+        }
+        let history_bytes = serde_json::to_vec(&round).unwrap();
+        fs::write(
+            base.join("maintainer_skill_refresh_rounds.jsonl"),
+            &history_bytes,
+        )
+        .unwrap();
+        cut["tables"]["maintainerSkillRefreshRounds"] = json!({"path":"maintainer_skill_refresh_rounds.jsonl","sha256":agentlab_code_analysis::digest(&history_bytes)});
+        fs::write(
+            base.join("maintainer-knowledge-cut.json"),
+            serde_json::to_vec(&cut).unwrap(),
+        )
+        .unwrap();
+        let prepare = || {
+            agentlab_code_analysis::maintainer_lesson_admission::prepare(
+                &base,
+                &fenced,
+                &lesson_output,
+                review["id"].as_str().unwrap(),
+                &"a".repeat(40),
+            )
+        };
+        let plan = prepare().unwrap();
+        let plan_output = root.join("admission-plan.json");
+        let admission_cli = || {
+            Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+                .arg("--prepare-lesson-admission")
+                .arg("--knowledge")
+                .arg(&base)
+                .arg("--proposal")
+                .arg(&fenced)
+                .arg("--lesson-source")
+                .arg(&lesson_output)
+                .arg("--lesson-id")
+                .arg(review["id"].as_str().unwrap())
+                .arg("--expected-knowledge-revision")
+                .arg("a".repeat(40))
+                .arg("--output")
+                .arg(&plan_output)
+                .output()
+                .unwrap()
+        };
+        let result = admission_cli();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let plan_bytes = fs::read(&plan_output).unwrap();
+        assert_eq!(serde_json::from_slice::<Value>(&plan_bytes).unwrap(), plan);
+        assert!(!admission_cli().status.success());
+        assert_eq!(fs::read(&plan_output).unwrap(), plan_bytes);
+        assert_eq!(plan, prepare().unwrap());
+        assert_eq!(
+            plan["repository"],
+            format!("fixture-knowledge-{repository}")
+        );
+        assert_eq!(plan["tables"].as_object().unwrap().len(), 3);
+        let refresh = &plan["tables"]["maintainer_skill_refresh_rounds"]["row"];
+        assert_eq!(refresh["roundIndex"], 2);
+        assert_eq!(refresh["assessment"], round["assessment"]);
+        assert_eq!(refresh["coverage"]["maintenanceReadyScopeCount"], 0);
+        assert_eq!(refresh["coverage"]["processSkillCount"], 1);
+        assert_eq!(refresh["countsAsMaturityGain"], false);
+        assert!(
+            agentlab_code_analysis::maintainer_lesson_admission::prepare(
+                &base,
+                &fenced,
+                &lesson_output,
+                review["id"].as_str().unwrap(),
+                &"b".repeat(40)
+            )
+            .is_err()
+        );
+        let proposed_skill_path = fenced.join("maintainer_skills.jsonl");
+        let original_skill = fs::read(&proposed_skill_path).unwrap();
+        let mut bad_skill: Value = serde_json::from_slice(&original_skill).unwrap();
+        bad_skill["body"] = json!("unreviewed guidance");
+        fs::write(
+            &proposed_skill_path,
+            serde_json::to_vec(&bad_skill).unwrap(),
+        )
+        .unwrap();
+        assert!(prepare().is_err());
+        fs::write(&proposed_skill_path, &original_skill).unwrap();
+        let mut false_lesson: Value = serde_json::from_slice(&original_lessons).unwrap();
+        false_lesson["promotionContract"]["qualification"]["caseQualified"] = json!(true);
+        fs::write(&lessons_path, serde_json::to_vec(&false_lesson).unwrap()).unwrap();
+        assert!(prepare().is_err());
+        fs::write(&lessons_path, &original_lessons).unwrap();
         // Real publication rows are heterogeneous; empty fixtures miss this seam.
         let published = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../examples/maintainer-knowledge-gate/first-four");
