@@ -138,7 +138,12 @@ fn validate_command(command: &Value, source: &Path) -> Result<(), String> {
 }
 
 #[cfg(unix)]
-fn capture(command: &Value, source: &Path, out: &Path, label: &str) -> Result<Value, String> {
+pub(crate) fn capture(
+    command: &Value,
+    source: &Path,
+    out: &Path,
+    label: &str,
+) -> Result<Value, String> {
     use std::os::unix::process::CommandExt;
     validate_command(command, source)?; // Revalidate executable immediately before spawning.
     let stdout = out.join(format!("{label}.stdout"));

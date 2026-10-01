@@ -50,6 +50,23 @@ implementations. A sensitive seam still requires runtime calibration against an
 accepted implementation and meaningful wrong variants. A vacuous reused test
 does not invalidate a separate, untested behavior Oracle hypothesis.
 
+Use the bounded Rust downstream bridge when turning this diagnostic into the next
+maintenance action. `agentlab-maintainer-skill-flywheel` supports
+`--prepare-downstream-probe`, `--execute-downstream-probe` and
+`--feedback-downstream-probe`; see
+[the execution recipe](../../docs/flywheel-downstream-execution-20261001.md).
+The supported adapter is an explicitly selected trusted Hypium startup seam,
+not a repository-specific hardcoded task or arbitrary Agent-generated command.
+Bind the reviewed recipe to the candidate/plan, exact test Git Blob, Node and
+optional type-erasure compiler. Capture outside a clean revision-pinned source
+worktree using the existing process-group/deadline/log-budget primitive. Keep
+spawn failures, timeouts and unsupported adapters separate from a vacuous Oracle.
+Reconstruct feedback from all byte-bound raw inputs/results/logs without a new
+execution. A repeated identical feedback plan stops scheduling. Sensitive controls
+only select continued calibration; they never qualify meaningful wrong variants,
+emulator execution or a frozen case. The read-only main-only downstream Action
+can execute this same bridge without a provider Secret or TableGit writes.
+
 Keep diagnostic findings bound to the original candidate digest and knowledge
 cut; feed gaps into a new construction round rather than rewriting history.
 If the Oracle source is missing from admitted fact evidence, first replenish

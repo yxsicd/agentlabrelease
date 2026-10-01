@@ -1,0 +1,99 @@
+name: Maintainer downstream diagnostic feedback
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_id:
+        description: Retained active candidate from the committed knowledge snapshot
+        required: true
+        type: string
+        default: shadow-case-refresh-35a06c03f9d7c77cfa6156add329c2ec
+      test_path:
+        description: Candidate-bound startup test for the supported Hypium seam
+        required: true
+        type: string
+        default: Ability/AbilityStage/entry/src/ohosTest/ets/test/Ability.test.ets
+      suite_export:
+        description: Exact exported suite name
+        required: true
+        type: string
+        default: default
+      test_id:
+        description: Exact test selector
+        required: true
+        type: string
+        default: AbilityStage__Startup_001
+permissions:
+  contents: read
+concurrency:
+  group: maintainer-downstream-probe
+  cancel-in-progress: false
+jobs:
+  execute-and-feedback:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CANDIDATE_ID: ${{ inputs.candidate_id }}
+      TEST_PATH: ${{ inputs.test_path }}
+      SUITE_EXPORT: ${{ inputs.suite_export }}
+      TEST_ID: ${{ inputs.test_id }}
+      KNOWLEDGE: examples/maintainer-knowledge-gate/first-four
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Build the same bounded Rust executor and derive the active queue
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/downstream/evidence"
+          cargo build --locked -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
+          bash scripts/plan-maintainer-downstream.sh "$KNOWLEDGE" . "$RUNNER_TEMP/downstream/evidence/queue"
+          jq -e --arg id "$CANDIDATE_ID" '.activeCandidateIds | index($id) != null' \
+            "$RUNNER_TEMP/downstream/evidence/queue/summary.json"
+      - name: Fetch the exact candidate source from the committed source catalog
+        run: |
+          set -euo pipefail
+          repository_id=$(jq -ser --arg id "$CANDIDATE_ID" '[.[]|select(.id==$id)] | if length==1 then .[0].repositoryId else error("candidate absent or duplicated") end' "$KNOWLEDGE/case_generation_candidates.jsonl")
+          url=$(jq -er --arg id "$repository_id" '.repositories[]|select(.id==$id)|.repository' "$KNOWLEDGE/maintainer-knowledge-cut.json")
+          revision=$(jq -ser --arg id "$CANDIDATE_ID" '.[]|select(.id==$id)|.sourceRevision' "$KNOWLEDGE/case_generation_candidates.jsonl")
+          git init "$RUNNER_TEMP/downstream/source"
+          git -C "$RUNNER_TEMP/downstream/source" remote add origin "$url"
+          git -C "$RUNNER_TEMP/downstream/source" fetch --depth 1 origin "$revision"
+          git -C "$RUNNER_TEMP/downstream/source" checkout --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/downstream/source" rev-parse HEAD)" = "$revision"
+      - name: Prepare the independently pinned type-erasure runtime
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/downstream/compiler"
+          cp examples/knowledge-seed/subject/runtime/package*.json "$RUNNER_TEMP/downstream/compiler/"
+          npm ci --prefix "$RUNNER_TEMP/downstream/compiler" --no-audit --no-fund
+      - name: Execute the diagnostic and reconstruct result-driven feedback
+        run: |
+          set -euo pipefail
+          binary=target/debug/agentlab-maintainer-skill-flywheel
+          evidence="$RUNNER_TEMP/downstream/evidence"
+          "$binary" --prepare-downstream-probe \
+            --downstream-plan "$evidence/queue/$CANDIDATE_ID/next-actions.json" \
+            --source-worktree "$RUNNER_TEMP/downstream/source" --node "$(command -v node)" \
+            --probe-script scripts/probe-hypium-failure-controls.cjs \
+            --test-path "$TEST_PATH" --suite-export "$SUITE_EXPORT" --test-id "$TEST_ID" \
+            --typescript "$RUNNER_TEMP/downstream/compiler/node_modules/typescript/lib/typescript.js" \
+            --output "$evidence/recipe.json"
+          "$binary" --execute-downstream-probe \
+            --downstream-plan "$evidence/queue/$CANDIDATE_ID/next-actions.json" \
+            --candidates "$KNOWLEDGE/case_generation_candidates.jsonl" --candidate-id "$CANDIDATE_ID" \
+            --probe-recipe "$evidence/recipe.json" --source-worktree "$RUNNER_TEMP/downstream/source" \
+            --output "$evidence/execution"
+          sha=$(sha256sum "$evidence/execution/execution.json" | cut -d' ' -f1)
+          "$binary" --feedback-downstream-probe --execution-root "$evidence/execution" \
+            --execution-sha256 "$sha" --output "$evidence/next.json"
+          "$binary" --feedback-downstream-probe --execution-root "$evidence/execution" \
+            --execution-sha256 "$sha" --previous-feedback-plan "$evidence/next.json" \
+            --output "$evidence/repeat.json"
+          jq -e '.schedulingAllowed==false and .qualified==false' "$evidence/repeat.json"
+          jq '{candidateId,nextAction,status,qualified,feedback}' "$evidence/next.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve complete diagnostic evidence including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: maintainer-downstream-probe-${{ github.run_id }}
+          if-no-files-found: error
+          path: ${{ runner.temp }}/downstream/evidence/

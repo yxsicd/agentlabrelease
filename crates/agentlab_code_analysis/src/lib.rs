@@ -5,6 +5,7 @@ use tree_sitter::{Node, Parser};
 
 pub mod knowledge_gate;
 pub mod maintainer_downstream;
+pub mod maintainer_downstream_exec;
 pub mod maintainer_flywheel_plan;
 pub mod maintainer_operation_evidence;
 pub mod maintainer_operation_exec;
