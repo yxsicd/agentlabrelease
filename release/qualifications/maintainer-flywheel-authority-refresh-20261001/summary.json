@@ -1,0 +1,35 @@
+{
+  "schema": "agentlab.maintainer_flywheel_authority_refresh_audit.v1",
+  "methodMergeRevision": "951268c5e79b043f1fec6861ec240e7be5a3124b",
+  "authorityRevision": "15e976790cc7a508c234a966b1bdf0585f0d6374",
+  "authorityRepository": "agentlabtablegit",
+  "readOnly": true,
+  "allFiveTablesMatched": true,
+  "headRechecked": true,
+  "strictPortableReassessmentByteIdentical": true,
+  "rowCounts": {
+    "maintainer_skills": 12,
+    "maintainer_scope_skills": 489,
+    "program_facts": 58,
+    "maintainer_skill_refresh_rounds": 34,
+    "evaluation_cases": 0
+  },
+  "strictAssessment": {
+    "roundIndex": 32,
+    "structuralReadyCount": 489,
+    "programBoundCount": 44,
+    "semanticReadyCount": 39,
+    "maintenanceReadyCount": 1,
+    "portableReceiptCount": 1
+  },
+  "overallMaturityEstimatePercent": 45,
+  "maturityDelta": 0,
+  "agentRoundsExecuted": 0,
+  "automaticPromotion": false,
+  "limitations": [
+    "Point-in-time read-only admission is not a lock; subsequent transactions still require revision fences.",
+    "Refreshing publication snapshots and merging method code are not productive Agent rounds.",
+    "Recorded build receipt qualification does not qualify runtime, tests, performance or receipt authorship.",
+    "No release tag, channel activation or remote authority write was performed."
+  ]
+}
