@@ -1,0 +1,18 @@
+{
+  "schema": "agentlab.focused_refresh_controlled_audit.v1",
+  "producer": "operator-reviewed-source",
+  "candidateId": "shadow-case-abilitystage-environment-callback-binding",
+  "originalCandidateSha256": "67525cc61d7d22f3eae2f66df5dbfded19ac1864e6f3f0dc0069e048c0abb23e",
+  "originalKnowledgeCutSha256": "ccd9d953b926b5647de7572dcdc7065cbbc9fd91ba46c5c01a3278ddd170e70e",
+  "reviewBaseAuthorityRevision": "4e8868dd7418b13a58cc335b35e5652117e88652",
+  "proposedFact": "abilitystage-focused-fact-candidate.json",
+  "proposedFactValueSha256": "083cbdad6091a48ca778f4591e3592196a1cf1987652685c2bbff20817a4dfdb",
+  "proposalReceipt": "abilitystage-focused-proposal-receipt.json",
+  "comparison": "abilitystage-focused-compare.json",
+  "decision": "review-proposed-knowledge-refresh",
+  "historicalCandidateRewritten": false,
+  "authorityWritePerformed": false,
+  "newAgentRun": false,
+  "runtimeQualified": false,
+  "automaticPromotion": false
+}
