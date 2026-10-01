@@ -160,6 +160,28 @@ learning benefit. Knowledge admission uses one fixed-baseline atomic delta; on
 authority drift, stop and reassess rather than adopting a newer revision through
 a generic retry path.
 
+For a single-source stage calibration, use the main-only Maintainer guidance real
+consumption Action rather than adding unrelated repositories to a multi-repo
+experiment. It freezes a committed guidance packet and candidate, fetches exact
+source Blobs, and gives the author source bytes without operator control answers.
+The stage author emits a reviewed=false proposal; a model response does not
+authorize execution or promotion. Gateway credentials belong only to the
+operator participant adapter, never the prompt or published packet.
+
+Run `--verify-guidance-consumption --participant-evidence DIR --guidance-packet
+FILE --output NEW_FILE` on retained original captures. Require the complete prompt
+in an actual upstream request, matching model/route, original terminal response
+bytes and a completed participant lifecycle. HTTP 200, a Skill ID, a prompt hash
+or producer-declared completion alone is insufficient. The resulting receipt
+proves recorded transmission/completion, not provider authenticity or behavioral
+learning. Preserve partial and failed captures even when this gate rejects them.
+To assess benefit, freeze task/source/model/budget and independent checks before
+comparing unguided and guided outcomes. Keep instruction compliance, proposal
+validity, intended negative-control detection and formal runtime qualification
+separate. Feed verified results into a subsequent round and test another repository
+before claiming a generalizable learning loop; do not grow maturity from fixture
+coverage or consumption receipts alone.
+
 When promoting against real multi-kind program facts, preserve heterogeneous
 unowned fields as JSON rather than coercing arrays/objects or dropping baseline
 rows. The exchange records observed mixed field types separately. Explicitly

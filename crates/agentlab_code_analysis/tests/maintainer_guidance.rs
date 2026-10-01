@@ -1,9 +1,13 @@
-use agentlab_code_analysis::{digest, maintainer_guidance::bind};
+use agentlab_code_analysis::{
+    digest,
+    maintainer_guidance::{bind, consumption},
+};
 use serde_json::{json, Value};
 use std::{
     fs,
     path::PathBuf,
     process::Command,
+    sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -11,15 +15,17 @@ struct Fixture {
     root: PathBuf,
     selection: Value,
 }
+static FIXTURE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 impl Fixture {
     fn new(repo: &str) -> Self {
         let root = std::env::temp_dir().join(format!(
-            "agentlab-guidance-{}-{}",
+            "agentlab-guidance-{}-{}-{}",
             std::process::id(),
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
-                .as_nanos()
+                .as_nanos(),
+            FIXTURE_SEQUENCE.fetch_add(1, Ordering::Relaxed)
         ));
         fs::create_dir(&root).unwrap();
         let source = "a".repeat(40);
@@ -85,6 +91,113 @@ impl Drop for Fixture {
     fn drop(&mut self) {
         fs::remove_dir_all(&self.root).unwrap();
     }
+}
+
+#[test]
+fn stage_author_prompt_binds_frozen_context_without_claiming_review_or_runtime() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let status = Command::new("python3")
+        .current_dir(root)
+        .args(["-c", r#"
+import importlib.util,json
+from pathlib import Path
+spec=importlib.util.spec_from_file_location('author','examples/multi-repo-case/pi-calibration-author.py')
+module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+context={'candidateId':'arbitrary-candidate','candidateSha256':'a'*64,'sourceRevision':'b'*40,'modulePath':'arbitrary-module/src/main/module.json5'}
+prompt=module.stage_prompt({'stageContext':context},Path('draft'))
+assert json.dumps(context,sort_keys=True) in prompt
+assert 'reviewed=false' in prompt and 'proposed-stage-contract.json' in prompt
+assert 'not actual Harmony framework' in prompt and 'at least two distinct meaningful wrong variants' in prompt
+assert 'another supplied existing stage' in prompt and 'one dimension per transition' in prompt
+assert 'Do not execute authored code' in prompt
+assert 'source-surface.json' not in prompt
+"#])
+        .status().unwrap();
+    assert!(status.success());
+}
+
+#[test]
+fn recorded_wire_requires_full_prompt_exact_guidance_and_raw_semantic_completion() {
+    let f = Fixture::new("arbitrary-wire-source");
+    let packet = f.bind(&f.selection).unwrap();
+    let packet_bytes = serde_json::to_vec(&packet).unwrap();
+    let prompt = format!("Stage authoring instructions\n{}\n", packet);
+    fs::write(f.root.join("guidance-prompt.txt"), &prompt).unwrap();
+    fs::write(f.root.join("author-calibration-prompt.txt"), &prompt).unwrap();
+    let row = &packet["guidance"][0];
+    let intent = json!({"schema":"agentlab.maintainer_guidance_prompt_intent.v1",
+        "promptSha256":digest(prompt.as_bytes()),"knowledgeAuthority":packet["knowledgeAuthority"],
+        "participantIdentity":{"model":"fixture-model","providerRoute":"fixture-route","implementation":"pi"},
+        "selectedSkills":[{"id":row["skill"]["id"],"rowSha256":row["rowSha256"],"bodySha256":row["bodySha256"]}]});
+    fs::write(
+        f.root.join("guidance-consumption-intent.json"),
+        serde_json::to_vec(&intent).unwrap(),
+    )
+    .unwrap();
+    let final_bytes = serde_json::to_vec(&json!({"role":"assistant","stopReason":"stop","content":[{"type":"text","text":"fixture only"}]})).unwrap();
+    fs::write(
+        f.root
+            .join("author-calibration-final-assistant-message.json"),
+        &final_bytes,
+    )
+    .unwrap();
+    let lifecycle = json!({"label":"author-calibration","captureAuthority":"operator","exitCode":0,"timedOut":false,
+        "finalAssistantMessagePresent":true,"finalAssistantMessageSha256":digest(&final_bytes)});
+    fs::write(
+        f.root.join("author-calibration-lifecycle.json"),
+        serde_json::to_vec(&lifecycle).unwrap(),
+    )
+    .unwrap();
+    let gateway = f.root.join("gateway");
+    fs::create_dir(&gateway).unwrap();
+    let wire = json!({"model":"fixture-model","providerId":"fixture-route","stream":true,
+        "messages":[{"role":"user","content":[{"type":"text","text":prompt}]}]});
+    fs::write(
+        gateway.join("0001.upstream-request.json"),
+        serde_json::to_vec(&wire).unwrap(),
+    )
+    .unwrap();
+    let response = b"data: {\"choices\":[{\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n";
+    fs::write(gateway.join("0001.response"), response).unwrap();
+    let status = json!({"exchangeId":"0001","status":200,"durationMs":1,"upstreamEof":true,"semanticComplete":true,
+        "outcome":"completed","streamError":null,"responseBytes":response.len()});
+    fs::write(
+        gateway.join("0001.status.json"),
+        serde_json::to_vec(&status).unwrap(),
+    )
+    .unwrap();
+    let receipt = consumption(&f.root, &packet_bytes).unwrap();
+    assert_eq!(receipt["agentConsumptionVerified"], true);
+    assert_eq!(receipt["learningBenefitVerified"], false);
+    assert_eq!(receipt["producerAuthenticated"], false);
+    assert_eq!(receipt["caseQualified"], false);
+    let mut missing = wire.clone();
+    missing["messages"][0]["content"][0]["text"] = json!("only the Skill id, not the body");
+    fs::write(
+        gateway.join("0001.upstream-request.json"),
+        serde_json::to_vec(&missing).unwrap(),
+    )
+    .unwrap();
+    assert!(consumption(&f.root, &packet_bytes).is_err());
+    fs::write(
+        gateway.join("0001.upstream-request.json"),
+        serde_json::to_vec(&wire).unwrap(),
+    )
+    .unwrap();
+    let incomplete = b"data: {\"choices\":[{\"delta\":{\"content\":\"partial\"}}]}\n\n";
+    fs::write(gateway.join("0001.response"), incomplete).unwrap();
+    let mut forged = status.clone();
+    forged["responseBytes"] = json!(incomplete.len());
+    fs::write(
+        gateway.join("0001.status.json"),
+        serde_json::to_vec(&forged).unwrap(),
+    )
+    .unwrap();
+    assert!(
+        consumption(&f.root, &packet_bytes).is_err(),
+        "self-rehashed producer completion must not substitute for raw terminal frames"
+    );
+    // The accepted wire above is a fixture; it is not a real model consumption receipt.
 }
 
 #[test]

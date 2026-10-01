@@ -1,0 +1,137 @@
+name: Maintainer guidance real consumption
+on:
+  workflow_dispatch:
+    inputs:
+      guidance_packet:
+        description: Committed reviewed guidance packet; never a mutable external URL
+        required: true
+        type: string
+        default: examples/maintainer-knowledge-gate/reviewed-guidance/abilitystage-application-context-368b1789.json
+      candidate_id:
+        description: Frozen candidate whose exact source is used for the authoring round
+        required: true
+        type: string
+        default: shadow-case-refresh-35a06c03f9d7c77cfa6156add329c2ec
+      module_path:
+        description: Exact repository-relative stage module profile
+        required: true
+        type: string
+        default: Ability/AbilityStage/entry/src/main/module.json5
+      model:
+        description: Model exposed by the existing LM Gateway
+        required: true
+        type: string
+        default: glm-5.3-flash
+      provider_route:
+        description: Existing LM Gateway provider route
+        required: true
+        type: string
+        default: glm
+permissions:
+  contents: read
+concurrency:
+  group: maintainer-guidance-consumption
+  cancel-in-progress: false
+jobs:
+  consume:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GUIDANCE_PACKET: ${{ inputs.guidance_packet }}
+      CANDIDATE_ID: ${{ inputs.candidate_id }}
+      MODULE_PATH: ${{ inputs.module_path }}
+      AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
+      AGENTLAB_MODEL: ${{ inputs.model }}
+      AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
+      EVIDENCE_ROOT: ${{ runner.temp }}/maintainer-guidance/output
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Build the independent recorded-exchange verifier
+        run: cargo build --locked -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
+      - name: Freeze guidance and materialize source bytes without evaluator answers
+        run: |
+          set -euo pipefail
+          git ls-files --error-unmatch -- "$GUIDANCE_PACKET"
+          python3 - <<'PY'
+          import hashlib,json,os,re,subprocess
+          from pathlib import Path
+          output=Path(os.environ['EVIDENCE_ROOT']);workspace=output/'workspace'
+          workspace.mkdir(parents=True)
+          packet_path=Path(os.environ['GUIDANCE_PACKET'])
+          packet=json.loads(packet_path.read_bytes())
+          assert packet['schema']=='agentlab.maintainer_guidance_packet.v1' and packet['stage']=='calibration'
+          assert packet['automaticPromotion'] is False and len(packet['sources'])==1
+          identity=packet['sources'][0]
+          assert re.fullmatch(r'[A-Za-z0-9_.-]+',identity['repositoryId']) and identity['repositoryId'] not in ('.','..')
+          base=Path('examples/maintainer-knowledge-gate/first-four')
+          candidates=[json.loads(l) for l in (base/'case_generation_candidates.jsonl').read_text().splitlines() if l.strip()]
+          selected=[c for c in candidates if c['id']==os.environ['CANDIDATE_ID']]
+          assert len(selected)==1
+          candidate=selected[0]
+          assert candidate['repositoryId']==identity['repositoryId'] and candidate['sourceRevision']==identity['sourceRevision']
+          cut=json.loads((base/'maintainer-knowledge-cut.json').read_bytes())
+          repository=next(r for r in cut['repositories'] if r['id']==identity['repositoryId'])
+          assert repository['revision']==identity['sourceRevision']
+          module=os.environ['MODULE_PATH']
+          assert module and not module.startswith('/') and chr(92) not in module and all(p not in ('','.','..') for p in module.split('/'))
+          assert module.endswith('/module.json5')
+          source=output.parent/'source';source.mkdir()
+          subprocess.run(['git','init',str(source)],check=True)
+          subprocess.run(['git','-C',str(source),'remote','add','origin',repository['repository']],check=True)
+          subprocess.run(['git','-C',str(source),'fetch','--depth','1','origin',identity['sourceRevision']],check=True)
+          revision=identity['sourceRevision']
+          prefix=str(Path(module).parent/'ets')+'/'
+          files=subprocess.check_output(['git','-C',str(source),'ls-tree','-r','--name-only',revision,'--',prefix],text=True).splitlines()
+          paths=sorted({module,*[p for p in files if p.endswith('.ets')]})
+          assert 2 <= len(paths) <= 32
+          rows=[];total=0
+          for path in paths:
+            raw=subprocess.check_output(['git','-C',str(source),'show',revision+':'+path])
+            total+=len(raw);assert total<=4*1024*1024
+            target=workspace/'sources'/identity['repositoryId']/path
+            target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(raw)
+            blob=subprocess.check_output(['git','-C',str(source),'rev-parse',revision+':'+path],text=True).strip()
+            rows.append({'repositoryId':identity['repositoryId'],'revision':revision,'path':path,
+              'workspacePath':target.relative_to(workspace).as_posix(),'gitBlobOid':blob,'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)})
+          request={'schema':'agentlab.stage_calibration_authoring_request.v1','automaticPromotion':False,
+            'stageContext':{'candidateId':candidate['id'],'candidateSha256':hashlib.sha256(json.dumps(candidate,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest(),
+              'sourceRevision':revision,'modulePath':module},'sources':rows,'maintainerGuidance':packet}
+          (workspace/'authoring-request.json').write_text(json.dumps(request,ensure_ascii=False,indent=2,sort_keys=True)+'\n')
+          (output/'guidance-packet.json').write_bytes(packet_path.read_bytes())
+          (output/'source-binding.json').write_text(json.dumps({'methodRevision':os.environ['GITHUB_SHA'],'guidancePacketSha256':hashlib.sha256(packet_path.read_bytes()).hexdigest(),
+            'sources':rows,'sourceOnly':True,'caseQualified':False},indent=2,sort_keys=True)+'\n')
+          PY
+      - name: Install an independently contained pinned Pi runtime
+        run: |
+          mkdir -p "$RUNNER_TEMP/pi-runtime"
+          cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/pi-runtime/"
+          npm ci --prefix "$RUNNER_TEMP/pi-runtime" --no-audit --no-fund
+          "$RUNNER_TEMP/pi-runtime/node_modules/.bin/pi" --version
+      - name: Run the real maintenance author with the existing gateway secret
+        env:
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+          AGENTLAB_PI_BINARY: ${{ runner.temp }}/pi-runtime/node_modules/.bin/pi
+        run: |
+          set -euo pipefail
+          author="$GITHUB_WORKSPACE/examples/multi-repo-case/pi-calibration-author.py"
+          cd "$EVIDENCE_ROOT/workspace"
+          python3 "$author" --request authoring-request.json --output draft
+      - name: Independently verify actual guidance transmission without credentials
+        if: always()
+        run: |
+          set -euo pipefail
+          test -f "$EVIDENCE_ROOT/guidance-packet.json"
+          target/debug/agentlab-maintainer-skill-flywheel --verify-guidance-consumption \
+            --participant-evidence "$EVIDENCE_ROOT/workspace/participant-evidence" \
+            --guidance-packet "$EVIDENCE_ROOT/guidance-packet.json" \
+            --output "$EVIDENCE_ROOT/guidance-consumption.json"
+          cat "$EVIDENCE_ROOT/guidance-consumption.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve original requests, responses, source bytes and failed proposals
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: maintainer-guidance-consumption
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.EVIDENCE_ROOT }}/
