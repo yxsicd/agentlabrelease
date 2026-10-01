@@ -108,6 +108,13 @@ for Harmony build/runtime, UI and formal case even when the scoped lesson is
 verified. Candidate guidance is not active knowledge until maintenance admission,
 and neither archival nor proposal export proves the next round improved.
 
+When promoting against real multi-kind program facts, preserve heterogeneous
+unowned fields as JSON rather than coercing arrays/objects or dropping baseline
+rows. The exchange records observed mixed field types separately. Explicitly
+owned analytical columns remain strict: a non-boolean check cannot be widened
+into JSON to bypass validation. Test the actual published knowledge baseline,
+not only an empty fixture, and retain failed partial exports separately.
+
 `agentlab-experience contract loading|debounce|image-url` emits the owned lesson
 identity, variant expectations, scope, target IDs and reusable guidance. Freeze
 this contract with the independently executed calibration in the runtime instance.

@@ -1,7 +1,7 @@
 //! Stable typed analytical exchange shared by normalization and experience workflows.
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -38,6 +38,7 @@ pub fn export(path: &Path, class: &str, tables: &Tables) -> Value {
     for (name, rows) in tables {
         let mut raw = Vec::new();
         let mut fields = Map::new();
+        let mut observed_types: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
         fields.insert("id".into(), json!({"type":"string","required":true}));
         fields.insert(
             "assetClass".into(),
@@ -143,10 +144,24 @@ pub fn export(path: &Path, class: &str, tables: &Tables) -> Value {
                     Value::Object(_) => "object",
                     _ => "string",
                 };
-                if let Some(old) = fields.get(key) {
-                    assert_eq!(old["type"], ty, "Type conflict {name}.{key}");
-                }
-                fields.insert(key.clone(), json!({"type":ty,"required":key=="id"}));
+                observed_types
+                    .entry(key.clone())
+                    .or_default()
+                    .insert(ty.into());
+                let owned =
+                    key == "id" || key == "assetClass" || contracts.iter().any(|(k, _)| *k == key);
+                let declared = fields.get(key).and_then(|f| f["type"].as_str());
+                let field_type = if owned {
+                    if let Some(old) = declared {
+                        assert_eq!(old, ty, "Type conflict {name}.{key}");
+                    }
+                    ty
+                } else if declared.is_some_and(|old| old != ty) {
+                    "json"
+                } else {
+                    ty
+                };
+                fields.insert(key.clone(), json!({"type":field_type,"required":key=="id"}));
             }
         }
         fs::write(path.join(format!("{name}.jsonl")), &raw).unwrap();
@@ -184,7 +199,11 @@ pub fn export(path: &Path, class: &str, tables: &Tables) -> Value {
         })
         .map(|k| json!({"name":format!("by_{k}"),"field":k}))
         .collect();
-        metas.insert(name.clone(),json!({"rowCount":rows.len(),"sha256":hash(&raw),"definition":{"key_field":"id","fields":fields,"required_fields":["id"],"indexes":indexes,"description":format!("AgentLab {class} analytical {name}")}}));
+        let mixed: BTreeMap<_, _> = observed_types
+            .into_iter()
+            .filter(|(_, types)| types.len() > 1)
+            .collect();
+        metas.insert(name.clone(),json!({"rowCount":rows.len(),"sha256":hash(&raw),"mixedFieldTypes":mixed,"definition":{"key_field":"id","fields":fields,"required_fields":["id"],"indexes":indexes,"description":format!("AgentLab {class} analytical {name}")}}));
     }
     let receipt = json!({"schema":"agentlab.asset_exchange.v1","assetClass":class,"tables":metas});
     fs::write(
@@ -198,6 +217,56 @@ pub fn export(path: &Path, class: &str, tables: &Tables) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn heterogeneous_inferred_fields_preserve_values_but_owned_types_stay_strict() {
+        let path = std::env::temp_dir().join(format!(
+            "al-mixed-schema-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let mut tables = Tables::new();
+        put(
+            &mut tables,
+            "program_facts",
+            json!({"id":"array","modules":["entry"]}),
+        );
+        put(
+            &mut tables,
+            "program_facts",
+            json!({"id":"object","modules":{"entry":"src"}}),
+        );
+        let receipt = export(&path, "reusable-knowledge", &tables);
+        assert_eq!(
+            receipt["tables"]["program_facts"]["definition"]["fields"]["modules"]["type"],
+            "json"
+        );
+        assert_eq!(
+            receipt["tables"]["program_facts"]["mixedFieldTypes"]["modules"],
+            json!(["array", "object"])
+        );
+        let restored = rows(&path.join("program_facts.jsonl"));
+        assert_eq!(
+            restored,
+            tables["program_facts"]
+                .values()
+                .cloned()
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(receipt, export(&path, "reusable-knowledge", &tables));
+        let mut invalid = Tables::new();
+        put(
+            &mut invalid,
+            "checks",
+            json!({"id":"invalid","passed":"true"}),
+        );
+        assert!(
+            std::panic::catch_unwind(|| export(&path, "evaluation-instance", &invalid)).is_err()
+        );
+        fs::remove_dir_all(path).unwrap();
+    }
     #[test]
     fn null_only_references_and_empty_checks_keep_owned_types() {
         let path = std::env::temp_dir().join(format!(
