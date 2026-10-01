@@ -37,7 +37,11 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["loopReceiptSha256"],
-      "properties": { "loopReceiptSha256": { "$ref": "#/$defs/sha256" } }
+      "properties": {
+        "loopReceiptSha256": { "$ref": "#/$defs/sha256" },
+        "shadowRequestValueSha256": { "$ref": "#/$defs/sha256" },
+        "runtimeTarget": { "enum": ["harmony-emulator", "repository-test"] }
+      }
     },
     "status": { "const": "shadow-proposal" },
     "automaticPromotion": { "const": false }

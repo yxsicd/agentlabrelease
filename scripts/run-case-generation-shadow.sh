@@ -16,6 +16,7 @@ mkdir -p "$shadow_root"
 
 python3 examples/maintainer-knowledge-gate/case_generation_shadow.py prepare \
   --knowledge "$knowledge" --loop-receipt "$run_root/loop/loop-receipt.json" \
+  --runtime-target "${AGENTLAB_SHADOW_RUNTIME_TARGET:-harmony-emulator}" \
   --output "$request"
 
 if [[ $(jq -r '.policy.shadowEligible' "$request") != true ]]; then

@@ -35,6 +35,22 @@ create a case directly from shared names, imports or failure prose. Candidate,
 construction, calibration and freeze transitions each require a passing receipt
 from [the maintainer knowledge gate](../../docs/maintainer-skill-gated-case-pipeline.md).
 
+Declare runtime routing independently of repository identity. The shadow
+constructor accepts `--runtime-target harmony-emulator|repository-test`; its
+existing wrapper uses `AGENTLAB_SHADOW_RUNTIME_TARGET` and retains the historical
+Harmony default when unset. The repository-test lane proposes a controlled
+repository runner rather than requiring an unrelated emulator. A scope with an
+`ohosTest` entrypoint still requires the Harmony emulator lane. Both routes keep
+external hardware and physical-device fallback disabled, retain unqualified
+Oracle hypotheses, and require the same source/scope/knowledge and later
+calibration gates. Operator routing declarations are not execution proof. Do
+not infer a platform from a repository name or count a valid proposal as a
+calibrated case. Unsupported or hardware-dependent proposals return explicit
+failure feedback rather than silently falling back to another runtime.
+New proposals retain the runtime target and canonical request-value SHA in
+lineage so later consumers can distinguish routing cuts without rewriting
+historical candidates. The value digest is not the original request-file SHA.
+
 Write stable `evaluation_cases` task rows with source/knowledge cuts and analysis references. Keep assessed-Agent-visible requirements separate from operator-owned reference patches and grading evidence. Do not disclose a gold implementation as part of the task prompt.
 
 Use a strong construction Agent or deterministic generator as appropriate. Capture construction actions as Harness-owned evidence too. Agent-proposed seeds are candidates until independently calibrated; quality of the construction Agent is not the assessed-Agent score.
