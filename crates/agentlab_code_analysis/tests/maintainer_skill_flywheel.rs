@@ -1538,6 +1538,19 @@ fn strict_cli_prepares_repeatable_candidate_cut_and_advances_one_scope() {
     );
     assert_eq!(fs::read(&facts).unwrap(), original);
     assert_eq!(rows_from_file(&candidate).len(), 2);
+    let operation = rows_from_file(&candidate)
+        .into_iter()
+        .find(|row| row["kind"] == "build-verification")
+        .unwrap();
+    assert_eq!(operation["evidence"][0]["root"], "operation-receipts");
+    assert_eq!(
+        operation["evidence"][0]["path"],
+        operation["operationEvidence"]["path"]
+    );
+    assert_eq!(
+        operation["evidence"][0]["sha256"],
+        operation["operationEvidence"]["sha256"]
+    );
     let parent = digest(&serde_json::to_vec(&before).unwrap());
     let after =
         assess_with_receipts(&scopes, Some(&candidate), 2, Some(&parent), Some(&root)).unwrap();

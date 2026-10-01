@@ -1,0 +1,30 @@
+{
+  "admitted": true,
+  "afterRevision": "0bd73efc7def1c4fb05e8c1544465cbfe9d6be95",
+  "automaticPromotion": false,
+  "decision": "run-admitted",
+  "expectedRevision": "0bd73efc7def1c4fb05e8c1544465cbfe9d6be95",
+  "inputCutSha256": "886c181cbcf8eb63a57dc10d73b4a156145815274a07f9eeb3139ff939633239",
+  "inputTablesSha256": {
+    "evaluation_cases": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "maintainer_scope_skills": "9faf87778708c0bc9acf6522ac1c0b1358e1845139da4f2949348d7285e51953",
+    "maintainer_skill_refresh_rounds": "891643fdabb14357de4e2cd5cf7aac1867aec46f90fdda550069490a27cc0472",
+    "maintainer_skills": "a7f6affb37e60c7009870feafa86325ba4b7cdabf0ff2b0fd88364fa667ff6d7",
+    "program_facts": "b9e5309031e4e2a2758d66f283f58476d495d5f9d9982e8d9983f186c814843b"
+  },
+  "inputUnchanged": true,
+  "limitations": [
+    "point-in-time admission only; commit-time revision and row fences remain required"
+  ],
+  "observedRevision": "0bd73efc7def1c4fb05e8c1544465cbfe9d6be95",
+  "readOnly": true,
+  "repo": "agentlabtablegit",
+  "schema": "agentlab.maintainer_skill_tablegit_preflight.v1",
+  "tablesMatched": {
+    "evaluation_cases": true,
+    "maintainer_scope_skills": true,
+    "maintainer_skill_refresh_rounds": true,
+    "maintainer_skills": true,
+    "program_facts": true
+  }
+}

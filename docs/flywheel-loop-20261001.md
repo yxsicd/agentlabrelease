@@ -87,3 +87,58 @@ No release tag or channel was published.
 Validation: full `agentlab_code_analysis` suite; focused first-four publication
 and materialization Rust regression; 47 writer/Agent-loop Python tests and
 four existing materializer tests; release validation and diff whitespace check.
+
+## Operation feedback continuation
+
+Overall maturity estimate: **47%** (previous checkpoint 46%). This increment
+reflects actual operation-evidence persistence and verified portable continuation,
+not a new runtime verdict or a count-based measure of repository completeness.
+
+The reviewed recorded-capture receipt for
+`skill-scope-code-workshop-common-module-contract` was revalidated against the
+latest two-round knowledge cut. Its original qualification bytes retain SHA256
+`027868459b1691fcceccc1cf70ab69e847cb0c68b130f2073f979d0b638d1b7d`.
+The current operation round gate proves only that selected scope advances L2 to
+L3; all unselected states, the source catalog and semantic knowledge remain
+unchanged. Program-bound count stays 46 and semantic-ready count stays 41;
+maintenance-ready count advances 1 to 2. This is reuse and feedback of existing
+build capture, **not a fresh build or emulator run in this continuation**.
+
+A live five-table admission checked the previous authority
+`0bd73efc7def1c4fb05e8c1544465cbfe9d6be95`. A single revision-fenced transaction
+inserted exactly one operation fact and one refresh record, with no deletes or
+updates to existing rows. New authority:
+`4e8868dd7418b13a58cc335b35e5652117e88652`. Exact export and final HEAD readback
+succeeded. Repeat import returned that same revision without another commit.
+Replication and release publication were not requested.
+
+Durable refresh index 37 references assessment index 35, whose original SHA256 is
+`3a0fe3380583525df6d2734c09722a6954727cacea11b7e23e6c4e1e7694d96e`.
+Independent assessment from the published portable cut reproduced those bytes
+exactly. Both the all-capability gap plan and the semantic-only exact next batch
+were prepared successfully; neither proves fresh downstream execution.
+The cut now has 61 facts, 37 refresh records and zero evaluation cases.
+Public admission and sync receipts are retained under the cut's
+`qualification-receipts/common-capture-feedback-{admission,sync}.json`.
+
+This feedback exposed a generic publication defect: new operation facts used a
+relative receipt path without declaring its root. The Rust producer now emits
+`evidence[].root: operation-receipts`, and the publication gate resolves only
+that explicit root against the portable receipt directory, requires equality
+with `operationEvidence`, and rejects unknown/escaping roots. Historical
+unlabeled references keep their original Release-relative semantics; no file is
+copied to an arbitrary repository root to bypass the check. An arbitrary-source
+Rust regression verifies the newly produced root and exact path/digest binding.
+
+The method correction is committed as
+`094449f` on `work/flywheel-operation-feedback-20261001`, stacked on PR113.
+PR113's older authority cut is no longer the latest input for real Agent
+dispatch; integrate both reviewed checkpoints before using main-only dispatch.
+No captured sessions, raw build archives or credentials enter this export.
+
+Validation: full Rust code-analysis suite after the method correction; focused
+publication regression after the new export; byte-identical portable assessment,
+strict next-batch preparation, release validation and whitespace checks.
+The generic five-ring goal is still incomplete: this operation round qualifies
+recorded build content only, not tests, runtime, type checking, performance,
+thermal behavior, a calibrated executable candidate or Agent discrimination.

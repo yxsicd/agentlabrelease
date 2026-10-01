@@ -216,7 +216,25 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
                 if let (Some(path), Some(expected)) =
                     (item["path"].as_str(), item["sha256"].as_str())
                 {
-                    let bytes = fs::read(root.join(path)).unwrap();
+                    let evidence_path = match item["root"].as_str() {
+                        None => root.join(path), // Historical publication-relative links.
+                        Some("operation-receipts") => {
+                            assert_eq!(item["path"], fact["operationEvidence"]["path"]);
+                            assert_eq!(item["sha256"], fact["operationEvidence"]["sha256"]);
+                            assert!(Path::new(path)
+                                .components()
+                                .all(|part| matches!(part, std::path::Component::Normal(_))));
+                            let receipts = baseline.join("operation-evidence");
+                            let target = receipts.join(path);
+                            assert!(target
+                                .canonicalize()
+                                .unwrap()
+                                .starts_with(receipts.canonicalize().unwrap()));
+                            target
+                        }
+                        Some(other) => panic!("unsupported evidence root {other}"),
+                    };
+                    let bytes = fs::read(evidence_path).unwrap();
                     assert_eq!(digest(&bytes), expected, "{fact_id} evidence differs");
                 }
             }

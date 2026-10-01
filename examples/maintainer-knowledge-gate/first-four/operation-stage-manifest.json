@@ -1,11 +1,12 @@
 {
   "acceptedFactIds": [
-    "agent-analysis-applicationcontext-demo-scope-contract"
+    "operation-build-7d4692e7baccc428c6aa94cf8f2a7ea4a9c94813783d2f93d3ccef8e8427a21e"
   ],
-  "assessment": "assessments/round-34-agent-36857619983.json",
+  "assessment": "assessments/round-35-operation-common-capture-portable-after-36857619983.json",
+  "authorityWritePerformed": false,
   "automaticPromotion": false,
   "operationEvidence": {
-    "coverage": "verified-child-operation-facts-only",
+    "coverage": "accepted-operation-facts-only",
     "inheritedReceipts": [
       {
         "factId": "operation-build-ba2fd5204b013e40b09f63c6f360fd0750aefabbe7e56eefad180ba43361814f",
@@ -14,12 +15,18 @@
       }
     ],
     "receiptRoot": "operation-evidence",
-    "receipts": []
+    "receipts": [
+      {
+        "factId": "operation-build-7d4692e7baccc428c6aa94cf8f2a7ea4a9c94813783d2f93d3ccef8e8427a21e",
+        "path": "operation-evidence/common-capture.json",
+        "sha256": "027868459b1691fcceccc1cf70ab69e847cb0c68b130f2073f979d0b638d1b7d"
+      }
+    ]
   },
-  "proposalReceiptCount": 1,
-  "runId": "36857619983",
+  "proposalReceiptCount": 0,
+  "runId": "common-capture-portable-after-36857619983",
   "schema": "agentlab.maintainer_skill_tablegit_stage.v1",
-  "stageKind": "verified-semantic",
+  "stageKind": "verified-operation",
   "tables": {
     "evaluation_cases": {
       "path": "evaluation_cases.jsonl",
@@ -31,7 +38,7 @@
     },
     "maintainer_skill_refresh_rounds": {
       "path": "maintainer_skill_refresh_rounds.jsonl",
-      "sha256": "891643fdabb14357de4e2cd5cf7aac1867aec46f90fdda550069490a27cc0472"
+      "sha256": "146d8b13152644e2543fe560189bd90e17ba2378c045c9d8004e2801b6087c71"
     },
     "maintainer_skills": {
       "path": "maintainer_skills.jsonl",
@@ -39,7 +46,7 @@
     },
     "program_facts": {
       "path": "program_facts.jsonl",
-      "sha256": "b9e5309031e4e2a2758d66f283f58476d495d5f9d9982e8d9983f186c814843b"
+      "sha256": "b9d20ff0e09514ec7665a3f1ca5cecad10678cc0c5464ec13b49797f1bc6f3e8"
     }
   }
 }
