@@ -192,13 +192,17 @@ fn main() {
             "Observation alone cannot become reusable guidance"
         );
         let validations = rows(&source.join("lesson_validations.jsonl"));
+        assert!(
+            !lesson["validationIds"].as_array().unwrap().is_empty(),
+            "Verified lesson needs an explicit passing validation"
+        );
         assert!(lesson["validationIds"]
             .as_array()
             .unwrap()
             .iter()
             .all(|id| validations
                 .iter()
-                .any(|v| v["id"] == *id && v["passed"] == true)));
+                .any(|v| v["id"] == *id && v["lessonId"] == lesson["id"] && v["passed"] == true)));
         for name in ["maintainer_skills", "program_facts", "evaluation_cases"] {
             t.entry(name.into()).or_default();
             for row in rows(&Path::new(&a[3]).join(format!("{name}.jsonl"))) {
@@ -213,8 +217,35 @@ fn main() {
         ));
         let method_revision = std::env::var("GITHUB_SHA").ok();
         let promotion = &lesson["promotionContract"];
-        let fact = json!({"id":promotion["factId"],"assetClass":"reusable-knowledge","kind":"verified-lesson","scope":lesson["scope"],"phenomenon":lesson["phenomenon"],"cause":lesson["cause"],"change":lesson["change"],"sourceRevision":lesson["sourceRevision"],"sourceLessonId":lesson["id"],"sourceLessonExportDigest":provenance,"lessonSource":lineage,"methodSkillId":"agentlab-experiment-learning","methodDigest":method_digest,"methodRevision":method_revision,"validationIds":lesson["validationIds"],"qualification":promotion["qualification"]});
-        let skill = json!({"id":promotion["skillId"],"assetClass":"reusable-knowledge","skillLayer":"method","role":"maintenance","stage":"calibration","objectId":lesson["id"],"title":lesson["phenomenon"],"factIds":[promotion["factId"]],"sourceLessonId":lesson["id"],"sourceLessonExportDigest":provenance,"lessonSource":lineage,"methodSkillId":"agentlab-experiment-learning","methodDigest":method_digest,"methodRevision":method_revision,"body":promotion["body"]});
+        for (table, key) in [
+            ("program_facts", "factId"),
+            ("maintainer_skills", "skillId"),
+        ] {
+            let id = promotion[key]
+                .as_str()
+                .filter(|id| !id.trim().is_empty())
+                .expect("Promotion target must be a nonempty identity");
+            assert!(
+                !t[table].contains_key(id),
+                "Promotion target already exists; review an update separately"
+            );
+        }
+        assert_ne!(
+            promotion["factId"], promotion["skillId"],
+            "Promotion identities collide"
+        );
+        let mut fact = json!({"id":promotion["factId"],"assetClass":"reusable-knowledge","ownershipPlane":"target-operations","automaticPromotion":false,"kind":"verified-lesson","scope":lesson["scope"],"phenomenon":lesson["phenomenon"],"cause":lesson["cause"],"change":lesson["change"],"sourceRevision":lesson["sourceRevision"],"sourceLessonId":lesson["id"],"sourceLessonExportDigest":provenance,"lessonSource":lineage,"methodSkillId":"agentlab-experiment-learning","methodDigest":method_digest,"methodRevision":method_revision,"validationIds":lesson["validationIds"],"qualification":promotion["qualification"]});
+        let mut skill = json!({"id":promotion["skillId"],"assetClass":"reusable-knowledge","ownershipPlane":"target-operations","automaticPromotion":false,"sourceRevision":lesson["sourceRevision"],"skillLayer":"method","role":"maintenance","stage":"calibration","objectId":lesson["id"],"title":lesson["phenomenon"],"factIds":[promotion["factId"]],"sourceLessonId":lesson["id"],"sourceLessonExportDigest":provenance,"lessonSource":lineage,"methodSkillId":"agentlab-experiment-learning","methodDigest":method_digest,"methodRevision":method_revision,"body":promotion["body"]});
+        // Older scenario exports do not declare a repository. Do not invent one
+        // from the operational TableGit name or the target identity.
+        if let Some(repository) = lesson["repositoryId"].as_str() {
+            assert!(
+                !repository.trim().is_empty(),
+                "Lesson repository identity is empty"
+            );
+            fact["repositoryId"] = json!(repository);
+            skill["repositoryId"] = json!(repository);
+        }
         t.get_mut("program_facts")
             .unwrap()
             .insert(fact["id"].as_str().unwrap().into(), fact);
