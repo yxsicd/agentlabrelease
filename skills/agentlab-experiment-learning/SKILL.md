@@ -51,6 +51,16 @@ evidence expansion can improve knowledge without advancing maturity counts or
 qualifying runtime. Operator-reviewed and Agent-generated proposals remain
 distinct observations.
 
+Expose every hard-gate text bound in the Agent prompt. A real focused-refresh
+run produced a valid five-Blob proposal but a 314-character limitation exceeded
+the 300-character limit. Preserve that failed proposal and terminal receipt;
+never loosen validation to accept it. Permit one Agent-owned shape-repair turn
+for exactly identified invalid-length limitation strings, preserving valid
+sibling limitations, source identity, dimensions and evidence. Retain before/
+after bytes and digests, then independently validate the complete proposal.
+Malformed limitations are not a length-repair case. Repair is not acceptance,
+and a failed gate must leave authority and candidate history unchanged.
+
 Run [the executable experience demo](../../examples/knowledge-seed/experience/README.md).
 Public main knowledge Action executes calibration, instance import, generic SQL,
 lesson persistence/repeat, committed export and explicit promotion candidate.

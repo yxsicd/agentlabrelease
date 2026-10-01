@@ -160,6 +160,7 @@ fn focused_refresh_executes_real_validation_without_weakening_expansion() {
         "missing-path",
         "wrong-blob",
         "stale-baseline",
+        "overlong-limitation",
     ] {
         let mut req = request.clone();
         let mut prop = proposal.clone();
@@ -183,6 +184,9 @@ fn focused_refresh_executes_real_validation_without_weakening_expansion() {
             "stale-baseline" => {
                 baseline["interpretation"] = json!("concurrent maintainer update");
             }
+            "overlong-limitation" => {
+                prop["limitations"][0] = json!("x".repeat(314));
+            }
             _ => unreachable!(),
         }
         write("request.json", &req);
@@ -193,7 +197,21 @@ fn focused_refresh_executes_real_validation_without_weakening_expansion() {
             "accepted {label}"
         );
         assert!(!root.join(format!("{label}-facts.jsonl")).exists());
+        assert!(!root.join(format!("{label}-receipt.json")).exists());
     }
+    // The observed 314-character shape failure does not weaken the real gate.
+    // A separate bounded revision may pass while retaining source identities.
+    let mut shortened = proposal.clone();
+    shortened["limitations"][0] =
+        json!("Source-only uncertainty; no runtime verification. ".repeat(4));
+    write("request.json", &request);
+    write("proposal.json", &shortened);
+    write("facts.jsonl", &old);
+    assert!(invoke("focused_fact_refresh.py", "shortened-limitation")
+        .status
+        .success());
+    assert_eq!(shortened["evidence"], proposal["evidence"]);
+    assert_eq!(shortened["limitations"][1], proposal["limitations"][1]);
     // Ordinary expansion still accepts exactly three independently checked blobs.
     write("request.json", &request);
     write("proposal.json", &proposal);

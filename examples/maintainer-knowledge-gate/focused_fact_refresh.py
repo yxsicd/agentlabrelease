@@ -29,6 +29,8 @@ INTERPRETATION_MIN = 80
 INTERPRETATION_MAX = 1600
 INTERPRETATION_TARGET_MIN = 400
 INTERPRETATION_TARGET_MAX = 1500
+LIMITATION_MIN = 40
+LIMITATION_MAX = 300
 PROPOSAL_FIELDS = frozenset({
     "schema", "id", "repositoryId", "sourceRevision", "scopeSkillIds", "kind",
     "dimensions", "interpretation", "evidence", "limitations",
@@ -49,9 +51,17 @@ def interpretation_length_to_repair(proposal: dict) -> int | None:
 def proposal_repair_plan(proposal: dict) -> dict:
     missing = sorted(PROPOSAL_FIELDS - set(proposal))
     extras = sorted(set(proposal) - PROPOSAL_FIELDS) if not missing else []
+    limitations = proposal.get("limitations")
+    limitation_indices = []
+    if isinstance(limitations, list) and len(limitations) == 2 and all(
+        isinstance(value, str) for value in limitations
+    ):
+        limitation_indices = [index for index, value in enumerate(limitations)
+                              if not LIMITATION_MIN <= len(value.strip()) <= LIMITATION_MAX]
     return {
         "interpretationLength": interpretation_length_to_repair(proposal),
         "extraFields": extras,
+        "limitationIndices": limitation_indices,
     }
 
 
@@ -59,9 +69,20 @@ def validate_bounded_repair(before: dict, after: dict, plan: dict) -> int:
     BASE.require(set(after) == PROPOSAL_FIELDS,
                  "bounded repair did not produce the exact proposal fields")
     mutable = {"interpretation"} if plan["interpretationLength"] is not None else set()
+    if plan["limitationIndices"]:
+        mutable.add("limitations")
     for key in PROPOSAL_FIELDS - mutable:
         BASE.require(before[key] == after[key],
                      f"bounded repair changed protected field: {key}")
+    if plan["limitationIndices"]:
+        values = after.get("limitations")
+        BASE.require(isinstance(values, list) and len(values) == 2
+                     and all(isinstance(value, str)
+                             and LIMITATION_MIN <= len(value.strip()) <= LIMITATION_MAX
+                             for value in values), "limitations repair did not satisfy the length range")
+        for index in set(range(2)) - set(plan["limitationIndices"]):
+            BASE.require(values[index] == before["limitations"][index],
+                         "bounded repair changed a protected limitation")
     value = after.get("interpretation")
     BASE.require(isinstance(value, str), "interpretation repair produced a non-string value")
     length = len(value)
@@ -155,6 +176,7 @@ Write exactly one JSON object to program-fact-proposal.json. Do not modify sourc
 The object must have exactly these top-level fields and no others: schema, id, repositoryId, sourceRevision, scopeSkillIds, kind, dimensions, interpretation, evidence, limitations. schema must be agentlab.maintainer_skill_fact_proposal.v1. Copy the id, repositoryId, sourceRevision, scopeSkillIds, kind and requiredDimensions from the request's existingFact, but do not copy its derived agentProposal field. Preserve every existing evidence path and add exact Git Blob evidence for every required path: {json.dumps(required)}. Include exactly the union of those paths, with no extras. Update interpretation so it accurately covers the complete implementation/Oracle source surface, and retain exactly two concrete limitations without claiming build, emulator, Oracle, or operation success. Evidence objects contain only path and exact 40-hex gitBlobOid obtained with git rev-parse HEAD:path. Do not add unrelated paths, secrets, generated files, runtime claims, a gold patch, or automatic-promotion fields. Parse the completed JSON once, then finish.
 
 The interpretation is a bounded maintenance contract: it must contain {INTERPRETATION_TARGET_MIN}-{INTERPRETATION_TARGET_MAX} Unicode characters and must never exceed {INTERPRETATION_MAX}. Put detailed uncertainty in limitations rather than expanding interpretation.
+Each of the exactly two limitations must contain {LIMITATION_MIN}-{LIMITATION_MAX} Unicode characters after trimming whitespace. Keep uncertainty concrete and do not claim unexecuted validation.
 """
     try:
         participant.turn("maintainer-skill-focused-refresh", workspace, prompt=prompt,
@@ -164,7 +186,8 @@ The interpretation is a bounded maintenance contract: it must contain {INTERPRET
                      "Agent did not produce a refresh proposal")
         proposed = BASE.load(proposal)
         repair_plan = proposal_repair_plan(proposed)
-        if repair_plan["interpretationLength"] is not None or repair_plan["extraFields"]:
+        if (repair_plan["interpretationLength"] is not None or repair_plan["extraFields"]
+                or repair_plan["limitationIndices"]):
             before_repair = args.output / "pre-repair-program-fact-proposal.json"
             shutil.copy2(proposal, before_repair)
             length_instruction = (
@@ -177,6 +200,7 @@ The interpretation is a bounded maintenance contract: it must contain {INTERPRET
             repair_prompt = f"""Apply one bounded shape repair to program-fact-proposal.json.
 {length_instruction}
 Remove only these unsupported top-level fields: {json.dumps(repair_plan['extraFields'])}.
+Rewrite only these zero-based limitation indices: {json.dumps(repair_plan['limitationIndices'])}, each to {LIMITATION_MIN}-{LIMITATION_MAX} Unicode characters after trimming whitespace. Preserve their concrete uncertainty and lack of runtime verification; retain exactly two strings. Keep every other limitation byte-for-byte unchanged.
 The final object must contain exactly: {json.dumps(sorted(PROPOSAL_FIELDS))}. Keep every protected field and value exactly unchanged. Parse the JSON once, verify the field names and interpretation length, then finish. Do not inspect or modify source/.
 """
             participant.turn(
@@ -191,7 +215,13 @@ The final object must contain exactly: {json.dumps(sorted(PROPOSAL_FIELDS))}. Ke
                 "schema": "agentlab.maintainer_skill_bounded_repair_receipt.v1",
                 "automaticPromotion": False,
                 "changedFields": (["interpretation"]
-                                  if repair_plan["interpretationLength"] is not None else []),
+                                  if repair_plan["interpretationLength"] is not None else [])
+                                 + (["limitations"] if repair_plan["limitationIndices"] else []),
+                "repairedLimitationIndices": repair_plan["limitationIndices"],
+                "beforeLimitationLengths": ([len(value.strip()) for value in proposed["limitations"]]
+                                            if repair_plan["limitationIndices"] else None),
+                "afterLimitationLengths": ([len(value.strip()) for value in repaired["limitations"]]
+                                           if repair_plan["limitationIndices"] else None),
                 "removedFields": repair_plan["extraFields"],
                 "beforeLength": (len(proposed["interpretation"])
                                  if isinstance(proposed.get("interpretation"), str) else None),
