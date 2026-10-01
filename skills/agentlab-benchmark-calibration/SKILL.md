@@ -104,6 +104,19 @@ diagnostic Action binds the contract to the selected candidate value and source;
 its semantic controls stay separate from the original startup feedback and from
 formal construction-plan qualification. See [the lifecycle evidence](../../docs/flywheel-lifecycle-calibration-20261001.md).
 
+Consume `agentlab.harmony_stage_control_calibration.v2` with the Rust
+`--feedback-stage-calibration` CLI before routing follow-up work. Supply the exact
+candidate, downstream plan, contract, raw receipt digest and optional prior feedback.
+Reconstruct named checks from creation/configuration/destruction log ranges and
+registrations; verify the raw worker stdout and pinned original/mutated sources.
+Do not trust a producer's boolean, normal exit or self-updated digest alone.
+Partial infrastructure failures select environment repair; surviving controls
+select Oracle/control repair. Complete successful semantic controls select scoped
+review/admission, leaving every formal downstream requirement unchanged. Same owned
+evidence stops repeat scheduling. Historical v1 receipts lack these phase/capture
+fields and are not silently upgraded. Keep them as earlier scoped evidence, not a
+v2 readback. A successful collection Action is not a successful case qualification.
+
 Define metric denominators and event sources: task success, build success, user rounds versus model/tool turns, monotonic execution time, and evidence-backed behavior scoring. Keep proposed process metrics explicitly unvalidated until agreement and repeatability are measured. Separate Harness malfunction from valid Agent inability.
 
 Use [the knowledge experiment](../../examples/knowledge-seed/README.md) as the runnable fixture calibration/SQL/history/import demo; [SWE](../../examples/swe-bench/README.md) and [Harmony](../../examples/harmony-build/README.md) provide existing campaign examples. Record each demo's actual coverage.

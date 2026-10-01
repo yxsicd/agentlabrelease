@@ -68,12 +68,34 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
         git(&root, &["config", "user.email", "fixture@example.invalid"]);
         git(&root, &["add", "src"]);
         git(&root, &["commit", "-m", "stage fixture"]);
-        let c = json!({"schema":"agentlab.harmony_stage_control_contract.v1","reviewed":true,
+        let mut c = json!({"schema":"agentlab.harmony_stage_control_contract.v1","reviewed":true,
             "sourceRevision":git(&root,&["rev-parse","HEAD"]),"modulePath":"src/module.json5",
             "createMarker":"created","destroyMarker":"destroyed","registrationMarker":"id: ","configurationPrefix":"config: ","eventName":"environment",
             "configurations":[{"id":"initial","language":"en-US","colorMode":0},{"id":"language","language":"zh-CN","colorMode":0},{"id":"color","language":"zh-CN","colorMode":1}],
             "variants":[{"id":"entry","path":"src/module.json5","from":"./owner/Owner.js","to":"./owner/Alternate.js","expectedFailedChecks":["stage-created","language","color"]},
                 {"id":"event","path":"src/owner/Owner.js","from":".on('environment', envCallback)","to":".on('typo', envCallback)","expectedFailedChecks":["application-environment-registration","language","color"]}]});
+        let candidate = json!({"id":repository,"sourceRevision":c["sourceRevision"],
+            "contextPaths":["src/module.json5"],"editablePaths":["src/owner/Owner.js"],
+            "sourceSetSha256":"a".repeat(64),"knowledgeCutSha256":"b".repeat(64)});
+        let candidate_sha =
+            agentlab_code_analysis::digest(&serde_json::to_vec(&candidate).unwrap());
+        c["candidateId"] = candidate["id"].clone();
+        c["candidateSha256"] = json!(candidate_sha);
+        let downstream = json!({"schema":"agentlab.maintainer_downstream_plan.v1","candidateId":repository,
+            "candidateSha256":candidate_sha,"sourceRevision":candidate["sourceRevision"],"automaticPromotion":false,
+            "sourceSetSha256":candidate["sourceSetSha256"],"knowledgeCutSha256":candidate["knowledgeCutSha256"],
+            "actions":[{"id":"exact-runtime","kind":"qualify-exact-runtime-requirement","executionAuthorized":false}]});
+        let consume = |contract: &Value, receipt: &Value, previous: Option<&[u8]>| {
+            let bytes = serde_json::to_vec(receipt).unwrap();
+            agentlab_code_analysis::maintainer_stage_feedback::plan(
+                &serde_json::to_vec(&candidate).unwrap(),
+                &serde_json::to_vec(&downstream).unwrap(),
+                &serde_json::to_vec(contract).unwrap(),
+                &bytes,
+                &agentlab_code_analysis::digest(&bytes),
+                previous,
+            )
+        };
         let (ok, r) = run(&root, &c, "actual");
         assert!(ok);
         assert_eq!(r["semanticSeamCalibrationPassed"], true);
@@ -83,6 +105,36 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
             assert_eq!(control["verdict"], "reject");
             assert_eq!(control["intendedFailureObserved"], true);
         }
+        let first = consume(&c, &r, None).unwrap();
+        assert_eq!(
+            first["nextAction"],
+            "review-and-admit-scoped-domain-calibration"
+        );
+        assert_eq!(first["killedSemanticVariantCount"], 2);
+        assert_eq!(first["pendingFormalActions"], downstream["actions"]);
+        let repeat = consume(&c, &r, Some(&serde_json::to_vec(&first).unwrap())).unwrap();
+        assert_eq!(repeat["schedulingAllowed"], false);
+        let mut tampered = r.clone();
+        tampered["controls"][1]["checks"][0]["passed"] = json!(true);
+        let mut body = tampered["controls"][1].as_object().unwrap().clone();
+        body.remove("workerExecution");
+        let raw = serde_json::to_string(&Value::Object(body)).unwrap();
+        tampered["controls"][1]["workerExecution"]["stdout"] = json!(raw);
+        tampered["controls"][1]["workerExecution"]["stdoutSha256"] =
+            json!(agentlab_code_analysis::digest(raw.as_bytes()));
+        assert!(consume(&c, &tampered, None)
+            .unwrap_err()
+            .contains("raw observations"));
+        let mut missing = r.clone();
+        missing["controls"].as_array_mut().unwrap().pop();
+        assert!(consume(&c, &missing, None).is_err());
+        let mut duplicate = r.clone();
+        let extra = duplicate["controls"][1].clone();
+        duplicate["controls"].as_array_mut().unwrap().push(extra);
+        assert!(consume(&c, &duplicate, None).is_err());
+        let mut borrowed = c.clone();
+        borrowed["candidateSha256"] = json!("c".repeat(64));
+        assert!(consume(&borrowed, &r, None).is_err());
         // Renaming an internal class while retaining its default export is not a semantic defect.
         let mut cosmetic = c.clone();
         cosmetic["variants"][1]["from"] = json!("class Owner");
@@ -91,6 +143,10 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
         assert!(ok);
         assert_eq!(r["semanticSeamCalibrationPassed"], false);
         assert_eq!(r["controls"][2]["verdict"], "accept");
+        assert_eq!(
+            consume(&cosmetic, &r, None).unwrap()["nextAction"],
+            "repair-domain-oracle-or-controls"
+        );
         // Missing loader support is infrastructure failure, not a killed implementation.
         let mut unsupported = c.clone();
         unsupported["variants"][1]["from"] = json!("require('@kit.AbilityKit')");
@@ -99,6 +155,10 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
         assert!(!ok);
         assert_eq!(r["semanticSeamCalibrationPassed"], false);
         assert_eq!(r["infrastructureFailure"]["id"], "event");
+        assert_eq!(
+            consume(&unsupported, &r, None).unwrap()["nextAction"],
+            "repair-domain-calibration-environment"
+        );
         let mut ambiguous = c.clone();
         ambiguous["variants"][1]["from"] = json!("not-in-source");
         let (ok, r) = run(&root, &ambiguous, "absent");

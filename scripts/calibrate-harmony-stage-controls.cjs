@@ -106,6 +106,7 @@ function worker() {
   // Missing default export is a loader/typing failure, not a killed behavior variant.
   if (typeof context.exports.default !== 'function') throw Error('Unsupported default-export shape');
   vm.runInContext('instance = new exports.default(); instance.onCreate();', context, {timeout: 1000});
+  const createLogEnd = logs.length, configurationRanges = [];
   const check = (id, passed) => ({id, passed});
   const has = marker => logs.some(l => l.level === 'info' && l.text.includes(marker));
   const checks = [check('stage-created', has(c.createMarker)),
@@ -116,12 +117,14 @@ function worker() {
     context.configuration = {language: config.language, colorMode: config.colorMode};
     context.callbacks = registrations.filter(r => r.owner === 'application' && r.event === c.eventName).map(r => r.callback);
     vm.runInContext('for (const callback of callbacks) callback.onConfigurationUpdated(configuration);', context, {timeout: 1000});
+    configurationRanges.push({id: config.id, start, end: logs.length, input: {...context.configuration}});
     const observations = logs.slice(start).filter(l => l.level === 'info' && l.text.startsWith(c.configurationPrefix));
     const observed = observations.map(l => {try {return JSON.parse(l.text.slice(c.configurationPrefix.length));} catch {return null;}});
     checks.push(check(config.id, observations.length === 1 && observed[0]?.language === config.language && observed[0]?.colorMode === config.colorMode));
   }
+  const destroyLogStart = logs.length;
   vm.runInContext('instance.onDestroy();', context, {timeout: 1000});
-  checks.push(check('stage-destroyed', has(c.destroyMarker)));
+  checks.push(check('stage-destroyed', logs.slice(destroyLogStart).some(l => l.level === 'info' && l.text.includes(c.destroyMarker))));
   const expected = variant?.expectedFailedChecks || [];
   if (!expected.every(id => checks.some(check => check.id === id))) throw Error('Unknown intended behavior check');
   return {id, completed: true, contractSha256, sourceRevision: c.sourceRevision, compilerSha256,
@@ -129,6 +132,7 @@ function worker() {
     typeErasedStageSource: transformed.outputText,
     mutation: variant ? {...variant, applied: true} : null,
     checks, verdict: checks.every(c => c.passed) ? 'accept' : 'reject', logs,
+    createLogEnd, destroyLogStart, configurationRanges,
     registrations: registrations.map(({owner, event}) => ({owner, event})),
     intendedFailureObserved: variant ? expected.every(id => checks.some(c => c.id === id && !c.passed)) : null};
 }
@@ -140,14 +144,18 @@ function main() {
   const controls = [];
   let infrastructureFailure = null;
   for (const id of ['baseline', ...c.variants.map(v => v.id)]) {
+    const start = process.hrtime.bigint();
     const r = cp.spawnSync(process.execPath, [__filename, ...args, '--worker', id], {encoding: 'utf8',
       timeout: 5000, maxBuffer: 2 * 1024 * 1024, env: {PATH: process.env.PATH || '/usr/bin:/bin'}});
     if (r.status !== 0 || r.error) {infrastructureFailure = {id, exitCode: r.status, error: r.error?.message || null, stdout: r.stdout, stderr: r.stderr}; break;}
-    controls.push(JSON.parse(r.stdout));
+    const observed = JSON.parse(r.stdout);
+    observed.workerExecution = {exitCode: r.status, durationMs: Number((process.hrtime.bigint() - start) / 1000000n),
+      stdout: r.stdout, stdoutSha256: sha(r.stdout), stderr: r.stderr};
+    controls.push(observed);
   }
   const passed = !infrastructureFailure && controls[0].verdict === 'accept' &&
     controls.slice(1).every(c => c.verdict === 'reject' && c.intendedFailureObserved);
-  const receipt = {schema: 'agentlab.harmony_stage_control_calibration.v1', contractSha256,
+  const receipt = {schema: 'agentlab.harmony_stage_control_calibration.v2', contractSha256,
     sourceRevision: c.sourceRevision, methodSha256: sha(fs.readFileSync(__filename)), runtime: process.version,
     compiler: {kind: compiler ? 'typescript-type-erasure-only' : 'javascript-pass-through', version: compiler?.version || null, sha256: compilerSha256}, controls, infrastructureFailure,
     semanticSeamCalibrationPassed: passed, qualified: false, automaticPromotion: false, authorityWritePerformed: false,
