@@ -143,3 +143,49 @@ raw files remain in local/GitHub artifacts: the new TableGit evidence_files rows
 are hashes and paths, not remote byte preservation. A separately durable bundle,
 explicit lesson admission and changed next-round knowledge remain outstanding.
 Non-secret operation/readback receipts stay in the external local artifact area.
+
+## Scoped experience candidate — 2026-10-02
+
+Hosted run 36929704215 succeeded on PR128's merge revision, including the new
+operational export. Its capture SHA256 is
+`c59a9c7c48e11d38f91911c4509321a21c33cd2a0f3e4a685c5223e6b96af878`.
+PR129 merged as `a60f62d808cc90f971fc0be4065da031789266ef` after seven applicable
+checks passed. Overall maturity remains **51%**: effective next-round learning
+is still unproven, despite this new promotion-candidate path.
+
+Rust `--export-stage-lesson` consumes a byte-bound explicit interpretation review,
+independently reconstructs an accepted control and at least two intended semantic
+failures, and exports the existing experiment_lessons/lesson_evidence/
+lesson_validations entities. It never runs automatic promotion. The review's
+identity is recorded attribution, not authentication; its cause/guidance is an
+explicit maintained interpretation, not automatically established causality.
+
+The real reviewed controls were persisted in independent TableGit repository
+`agentlabstage-c59a9c7c48e1` at
+`c947cde00de38abd68ae01f7aa855da74c318840`. All 32 rows were read back exactly;
+repeat import returned zero pending groups and the same revision. From that
+confirmed cut, the existing experience promotion command produced a separate
+candidate against the actual published first-four baseline. Independent checks
+confirmed all twelve old Skill rows and sixty-one old fact rows unchanged,
+exactly one added Skill and one added fact, committed lesson provenance, false
+formal qualification and no evaluation cases. A second fresh candidate export
+matched byte for byte. The method revision is
+`dc66c9421172d98929caf0dcb58a531bc0d51d33`.
+
+The first real-baseline promotion failed because program_facts.modules contains
+both object and array values. The failed partial export is retained externally.
+The shared exporter now represents heterogeneous inferred fields as JSON and
+records their observed types without coercing values. Explicitly owned columns
+remain strict; tests reject a string-valued boolean check. Tests also exercise
+promotion against the actual first-four rows, not only an empty fixture.
+
+No active knowledge admission, next-round effect, formal case or Release is
+claimed. Next: admit the reviewed candidate at an exact knowledge cut, export it,
+then measure real downstream use and preserved qualification boundaries. Durable
+independent raw-byte publication and cross-repository execution remain separate
+outstanding requirements.
+
+Local final validation: the full Rust package suite, formatting, release
+validation, Skill validation and diff checks passed. Operational review files,
+captures, committed readback receipts, failed partial output and separate
+promotion candidates remain outside the release source repository.

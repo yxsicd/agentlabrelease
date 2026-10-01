@@ -320,6 +320,42 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
             fs::read(promoted.join("evaluation_cases.jsonl")).unwrap(),
             b""
         );
+        // Real publication rows are heterogeneous; empty fixtures miss this seam.
+        let published = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/maintainer-knowledge-gate/first-four");
+        let merged = root.join("published-promotion-candidate");
+        let result = Command::new(env!("CARGO_BIN_EXE_agentlab-experience"))
+            .arg("promote")
+            .arg(&lesson_output)
+            .arg(&published)
+            .arg(&merged)
+            .arg(review["id"].as_str().unwrap())
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        for name in ["maintainer_skills", "program_facts", "evaluation_cases"] {
+            let read = |dir: &Path| -> Vec<Value> {
+                fs::read_to_string(dir.join(format!("{name}.jsonl")))
+                    .unwrap()
+                    .lines()
+                    .filter(|l| !l.is_empty())
+                    .map(|l| serde_json::from_str(l).unwrap())
+                    .collect()
+            };
+            let old = read(&published);
+            let new = read(&merged);
+            assert_eq!(
+                new.len(),
+                old.len() + usize::from(name != "evaluation_cases")
+            );
+            for row in old {
+                assert!(new.contains(&row), "baseline row lost or changed");
+            }
+        }
         assert_eq!(
             assets["checks"].len(),
             r["controls"]
