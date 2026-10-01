@@ -1809,6 +1809,110 @@ fn strict_operation_receipts_close_only_content_verified_build_gaps() {
 }
 
 #[test]
+fn recorded_capture_adapter_advances_only_the_bound_scope_and_preserves_limits() {
+    use agentlab_code_analysis::maintainer_operation_evidence::{
+        compare_round, prepare_fact, verify,
+    };
+    let root = temp_root();
+    let scopes = root.join("scopes.jsonl");
+    let facts = root.join("facts.jsonl");
+    let mut skill = scope("scope", "arbitrary");
+    skill["buildEntrypoints"] = json!(["src/build.config"]);
+    jsonl(&scopes, &[skill.clone(), scope("sibling", "arbitrary")]);
+    let mut semantic = complete_fact("semantic", "arbitrary", "scope");
+    semantic["dimensions"] = json!(["responsibility", "boundary", "relations", "behavior"]);
+    jsonl(&facts, &[semantic.clone()]);
+    let before = assess_with_receipts(&scopes, Some(&facts), 1, None, Some(&root)).unwrap();
+    let logs = ["probe-0", "dependency", "build-1", "build-2"]
+        .into_iter()
+        .flat_map(|label| {
+            ["stdout", "stderr"].map(move |stream| {
+            json!({"path":format!("{label}.{stream}"), "bytes":0, "sha256":digest(b"")})
+        })
+        })
+        .collect::<Vec<_>>();
+    let artifact = |attempt| {
+        json!({"attempt":attempt, "artifactBytes":123,
+        "rawSha256":if attempt == 1 {"a".repeat(64)} else {"b".repeat(64)},
+        "canonical":{"algorithm":"sha256-json-member-tuples-v1", "memberCount":3, "sha256":"c".repeat(64)}})
+    };
+    let receipt = json!({"schema":"agentlab.maintainer_scope_build_capture_qualification.v1",
+        "status":"qualified", "automaticPromotion":false, "authorityWritePerformed":false,
+        "source":{"repositoryId":skill["repositoryId"], "repository":skill["repository"], "revision":skill["sourceRevision"]},
+        "scopeSkillId":skill["id"], "moduleRoot":"src", "executionReceiptSha256":"d".repeat(64),
+        "recipeSha256":"e".repeat(64), "selectionPlanSha256":"f".repeat(64),
+        "artifacts":[artifact(1), artifact(2)], "logs":logs, "rawArchiveReproducible":false,
+        "qualificationScope":{"moduleBuild":true, "runtime":false, "tests":false, "performance":false, "typeChecking":false},
+        "verificationBoundary":"Fixture recorded assertions, not authenticated original bytes.",
+        "limitations":["Build-only; no runtime or raw-artifact re-read by the recorded adapter."]});
+    let write = |value: &Value| {
+        let bytes = serde_json::to_vec(value).unwrap();
+        fs::write(root.join("capture.json"), &bytes).unwrap();
+        json!({"path":"capture.json", "sha256":digest(&bytes)})
+    };
+    let fact = prepare_fact(&skill, write(&receipt), &root).unwrap();
+    assert_eq!(
+        fact["operationEvidenceCheck"]["adapter"],
+        "recorded-build-capture-qualification-v1"
+    );
+    assert_eq!(
+        fact["operationEvidenceCheck"]["qualificationScope"]["tests"],
+        false
+    );
+    jsonl(&facts, &[semantic, fact.clone()]);
+    let before_bytes = serde_json::to_vec(&before).unwrap();
+    let after = assess_with_receipts(
+        &scopes,
+        Some(&facts),
+        2,
+        Some(&digest(&before_bytes)),
+        Some(&root),
+    )
+    .unwrap();
+    let round = compare_round(
+        &before_bytes,
+        &serde_json::to_vec(&after).unwrap(),
+        &["scope".into()],
+    )
+    .unwrap();
+    assert_eq!(round["maintenanceReadyDelta"], 1);
+    assert_eq!(before["skills"][1], after["skills"][1]);
+    for (pointer, value) in [
+        ("/scopeSkillId", json!("sibling")),
+        ("/source/revision", json!("9".repeat(40))),
+        ("/moduleRoot", json!("other")),
+        ("/status", json!("failed")),
+        ("/automaticPromotion", json!(true)),
+        ("/authorityWritePerformed", json!(true)),
+        ("/qualificationScope/runtime", json!(true)),
+        ("/qualificationScope/typeChecking", json!(true)),
+        ("/selectionPlanSha256", Value::Null),
+        ("/logs/0/path", json!("../escape")),
+        ("/logs/1/path", json!("probe-0.stdout")),
+        ("/logs/0/sha256", Value::Null),
+        ("/artifacts/1/attempt", json!(1)),
+        ("/artifacts/0/canonical/memberCount", json!(0)),
+        ("/artifacts/1/canonical/sha256", json!("9".repeat(64))),
+        ("/rawArchiveReproducible", json!(true)),
+    ] {
+        let mut bad = receipt.clone();
+        *bad.pointer_mut(pointer).unwrap() = value;
+        assert!(
+            prepare_fact(&skill, write(&bad), &root).is_err(),
+            "{pointer}"
+        );
+    }
+    write(&receipt);
+    let mut changed_scope = skill;
+    changed_scope["ownershipSelectors"] =
+        json!([{"type":"files", "paths":["src/main.generic", "sibling/borrowed.generic"]}]);
+    assert!(verify(&fact, &changed_scope, &root).is_err());
+    fs::write(root.join("capture.json"), b"changed").unwrap();
+    assert!(verify(&fact, &changed_scope, &root).is_err());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn strict_receipt_rejects_failed_stale_borrowed_and_overclaimed_operations() {
     let root = temp_root();
     let scopes = root.join("scopes.jsonl");

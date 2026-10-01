@@ -657,3 +657,16 @@ Source cleanliness, command authorship and the reviewed module mapping remain
 producer/operator assertions, not authenticated proof. Do not relabel this
 format as the older peer-qualified receipt. A separately reviewed recorded-fact
 adapter and strict reassessment are required before any L3 or authority gain.
+
+The recorded-fact adapter accepts that distinct capture-qualification schema
+through the existing `--prepare-operation-fact` and strict assessment paths.
+It rechecks original qualification bytes, source identity, current scope
+ownership, build-only capability, lineage digests, canonical member equality,
+complete log-reference sets and explicit qualification limits. It does not
+re-read private archives, authenticate the producer or execute the target.
+Keep its recorded-content boundary in every assessment. Transport the original
+qualification JSON with the proposed fact; do not require private raw binaries
+in a public snapshot. Use the operation round gate to prove exactly the selected
+L2-to-L3 transition with unchanged siblings, then stage a portable candidate and
+reassess from that candidate alone. These are local proposed knowledge gains,
+not a live TableGit write, calibrated case, or completed five-ring loop.

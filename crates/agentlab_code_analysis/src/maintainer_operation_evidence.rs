@@ -279,6 +279,9 @@ pub fn verify(fact: &Value, skill: &Value, root: &Path) -> Result<Value, String>
     )?;
     let receipt: Value = serde_json::from_slice(&bytes)
         .map_err(|e| format!("operation receipt JSON invalid: {e}"))?;
+    if receipt["schema"] == "agentlab.maintainer_scope_build_capture_qualification.v1" {
+        return verify_capture_qualification(&receipt, skill, relative, &bytes);
+    }
     require(
         receipt["schema"] == "agentlab.maintainer_scope_build_qualification.v1",
         "operation receipt adapter unavailable",
@@ -409,4 +412,164 @@ pub fn verify(fact: &Value, skill: &Value, root: &Path) -> Result<Value, String>
         "limitations":receipt["limitations"],
         "verificationBoundary":"receipt bytes and recorded assertions; no build replay or raw artifact/log readback"
     }))
+}
+
+/// Recorded qualification-content checks only. Does not re-open capture archives.
+fn verify_capture_qualification(
+    receipt: &Value,
+    skill: &Value,
+    relative: &str,
+    bytes: &[u8],
+) -> Result<Value, String> {
+    require(
+        receipt["status"] == "qualified"
+            && receipt["automaticPromotion"] == false
+            && receipt["authorityWritePerformed"] == false,
+        "capture qualification failed or overclaimed",
+    )?;
+    require(
+        text(&skill["id"])
+            && text(&skill["repositoryId"])
+            && text(&skill["repository"])
+            && skill["sourceRevision"]
+                .as_str()
+                .is_some_and(|s| s.len() == 40 && s.bytes().all(|b| b.is_ascii_hexdigit()))
+            && receipt["scopeSkillId"] == skill["id"]
+            && receipt["source"]["repositoryId"] == skill["repositoryId"]
+            && receipt["source"]["repository"] == skill["repository"]
+            && receipt["source"]["revision"] == skill["sourceRevision"],
+        "capture qualification source or scope mismatch",
+    )?;
+    let module = receipt["moduleRoot"]
+        .as_str()
+        .ok_or("capture module missing")?;
+    let contained = |path: &str| {
+        !path.is_empty()
+            && Path::new(path)
+                .components()
+                .all(|c| matches!(c, Component::Normal(_)))
+            && (path == module || path.starts_with(&format!("{module}/")))
+    };
+    require(contained(module), "capture module invalid")?;
+    require(
+        skill["buildEntrypoints"]
+            .as_array()
+            .is_some_and(|a| !a.is_empty())
+            && skill["testFileCount"].as_u64() == Some(0),
+        "capture build-only adapter does not cover current operation capability",
+    )?;
+    require(
+        skill["ownershipSelectors"].is_null() || skill["ownershipSelectors"].is_array(),
+        "capture scope ownership invalid",
+    )?;
+    if let Some(selectors) = skill["ownershipSelectors"].as_array() {
+        require(!selectors.is_empty(), "capture scope ownership empty")?;
+        for selector in selectors {
+            let valid = match selector["type"].as_str() {
+                Some("prefix") => selector["path"].as_str().is_some_and(contained),
+                Some("files") => selector["paths"].as_array().is_some_and(|paths| {
+                    !paths.is_empty() && paths.iter().all(|p| p.as_str().is_some_and(contained))
+                }),
+                _ => false,
+            };
+            require(valid, "capture module does not cover current scope")?;
+        }
+    } else {
+        require(
+            skill["pathBoundary"].as_str().is_some_and(contained),
+            "capture module does not cover current scope",
+        )?;
+    }
+    require(
+        [
+            "executionReceiptSha256",
+            "recipeSha256",
+            "selectionPlanSha256",
+        ]
+        .iter()
+        .all(|key| sha(&receipt[*key])),
+        "capture qualification lineage missing",
+    )?;
+    let artifacts = receipt["artifacts"]
+        .as_array()
+        .filter(|a| a.len() == 2)
+        .ok_or("capture qualification requires two artifacts")?;
+    for (index, artifact) in artifacts.iter().enumerate() {
+        require(
+            artifact["attempt"] == index + 1
+                && positive(&artifact["artifactBytes"])
+                && artifact["artifactBytes"].as_u64().unwrap() <= 128 * 1024 * 1024
+                && sha(&artifact["rawSha256"])
+                && artifact["canonical"]["algorithm"] == "sha256-json-member-tuples-v1"
+                && positive(&artifact["canonical"]["memberCount"])
+                && artifact["canonical"]["memberCount"].as_u64().unwrap() <= 10000
+                && sha(&artifact["canonical"]["sha256"]),
+            "capture qualification artifact incomplete",
+        )?;
+    }
+    require(
+        artifacts[0]["canonical"] == artifacts[1]["canonical"],
+        "capture canonical mismatch",
+    )?;
+    require(
+        receipt["rawArchiveReproducible"].as_bool()
+            == Some(artifacts[0]["rawSha256"] == artifacts[1]["rawSha256"]),
+        "capture raw reproducibility inconsistent",
+    )?;
+    let logs = receipt["logs"]
+        .as_array()
+        .ok_or("capture qualification logs missing")?;
+    let mut names = BTreeSet::new();
+    for log in logs {
+        let path = log["path"].as_str().ok_or("capture log path missing")?;
+        require(
+            names.insert(path)
+                && sha(&log["sha256"])
+                && log["bytes"].as_u64().is_some_and(|n| n <= 64 * 1024 * 1024),
+            "capture qualification log incomplete or duplicate",
+        )?;
+    }
+    let probes = logs
+        .len()
+        .checked_div(2)
+        .and_then(|n| n.checked_sub(3))
+        .filter(|n| (1..=4).contains(n))
+        .ok_or("capture qualification log count invalid")?;
+    let mut expected = BTreeSet::new();
+    for label in (0..probes)
+        .map(|n| format!("probe-{n}"))
+        .chain(["dependency", "build-1", "build-2"].map(str::to_owned))
+    {
+        for stream in ["stdout", "stderr"] {
+            expected.insert(format!("{label}.{stream}"));
+        }
+    }
+    require(
+        names
+            .iter()
+            .copied()
+            .eq(expected.iter().map(String::as_str)),
+        "capture qualification log set invalid",
+    )?;
+    let coverage = &receipt["qualificationScope"];
+    require(
+        coverage["moduleBuild"] == true
+            && ["runtime", "tests", "performance", "typeChecking"]
+                .iter()
+                .all(|key| coverage[*key] == false),
+        "capture build-only qualification overclaims",
+    )?;
+    require(
+        text(&receipt["verificationBoundary"])
+            && receipt["limitations"]
+                .as_array()
+                .is_some_and(|a| !a.is_empty() && a.iter().all(text)),
+        "capture qualification boundaries missing",
+    )?;
+    Ok(
+        json!({"status":"verified", "receiptPath":relative, "receiptSha256":digest(bytes),
+        "adapter":"recorded-build-capture-qualification-v1", "lane":"build-only",
+        "qualificationScope":coverage, "typeChecking":"not-qualified", "limitations":receipt["limitations"],
+        "verificationBoundary":"recorded qualification bytes and assertions only; no original log/artifact readback, execution replay or authorship authentication"}),
+    )
 }
