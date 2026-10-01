@@ -1,8 +1,8 @@
 //! Explicit bounded diagnostic execution and portable feedback, not runtime
 //! calibration qualification, assessed-Agent execution or a security sandbox.
-use crate::digest;
 #[cfg(unix)]
 use crate::maintainer_operation_exec::capture;
+use crate::{digest, maintainer_operation_exec::executable_sha};
 use serde_json::{json, Value};
 use std::{
     fs::{self, OpenOptions},
@@ -254,7 +254,7 @@ pub fn recipe(
         json!({"schema":"agentlab.maintainer_downstream_probe_recipe.v1","reviewed":true,"adapter":"hypium-startability-controls",
         "planSha256":digest(plan_bytes),"actionId":actions[0]["id"],"testPath":test,"testBlobOid":blob,
         "testSourceSha256":digest(&git(source,&["cat-file","blob",&blob])?),"suiteExport":suite,"testId":test_id,
-        "nodeSha256":digest(&read(&node)?),"node":node,"probeScript":script,"timeoutMs":15_000,"typescript":compiler}),
+        "nodeSha256":executable_sha(&node)?,"node":node,"probeScript":script,"timeoutMs":15_000,"typescript":compiler}),
     )
 }
 
@@ -339,7 +339,7 @@ pub fn execute(
     )?;
     let node = PathBuf::from(text(&recipe, "node")?);
     require(
-        node.is_absolute() && digest(&read(&node)?) == recipe["nodeSha256"],
+        node.is_absolute() && executable_sha(&node)? == recipe["nodeSha256"],
         "downstream Node digest differs",
     )?;
     require(

@@ -9,6 +9,13 @@ The next implementation reuses the existing Rust process-group capture primitive
 No parallel subprocess supervisor, shell-command generator, provider secret or
 physical-device fallback is introduced.
 
+The first Linux CI run `36914161438` failed at the common file-budget check.
+Executable acquisition and raw evidence must not share one size budget: use a
+256 MiB bounded streaming SHA256 for executables, retaining the original 64 MiB
+evidence/log bound. A sparse-file regression checks bytes beyond 64 MiB affect
+the executable digest and rejects files above 256 MiB. This changes transport
+compatibility, not Oracle acceptance or runtime qualification.
+
 ## Shared CLI and Action
 
 1. Run `bash scripts/plan-maintainer-downstream.sh KNOWLEDGE EVIDENCE_ROOT OUTPUT`.

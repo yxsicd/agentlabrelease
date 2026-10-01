@@ -4,6 +4,7 @@ use crate::{
     maintainer_flywheel_plan::{declared_operation_kinds, plan_for_capabilities},
 };
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use std::{
     fs::{self, File, OpenOptions},
     io::{Read, Write},
@@ -61,6 +62,67 @@ fn bytes_sha(path: &Path, max: u64) -> Result<(u64, String), String> {
     )?;
     Ok((bytes.len() as u64, digest(&bytes)))
 }
+/// Executable acquisition is not stdout/stderr capture. Monolithic Linux Node
+/// can exceed 64 MiB; stream its exact bytes under a separate bounded budget.
+pub(crate) fn executable_sha(path: &Path) -> Result<String, String> {
+    const MAX: u64 = 256 * 1024 * 1024;
+    let meta = fs::metadata(path).map_err(|e| e.to_string())?;
+    require(
+        meta.is_file() && meta.len() <= MAX,
+        "operation executable exceeds 256 MiB budget or is not a regular file",
+    )?;
+    let mut input = File::open(path).map_err(|e| e.to_string())?;
+    let mut hash = Sha256::new();
+    let mut buffer = [0u8; 64 * 1024];
+    let mut bytes = 0u64;
+    loop {
+        let n = input.read(&mut buffer).map_err(|e| e.to_string())?;
+        if n == 0 {
+            break;
+        }
+        bytes += n as u64;
+        require(bytes <= MAX, "operation executable grew beyond budget")?;
+        hash.update(&buffer[..n]);
+    }
+    require(
+        bytes == meta.len(),
+        "operation executable changed during hashing",
+    )?;
+    Ok(format!("{:x}", hash.finalize()))
+}
+
+#[cfg(test)]
+mod executable_budget_tests {
+    use super::*;
+    use std::io::{Seek, SeekFrom};
+    #[test]
+    fn executable_stream_hashes_beyond_log_budget_and_rejects_oversize() {
+        let root = std::env::temp_dir().join(format!(
+            "executable-budget-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir(&root).unwrap();
+        let path = root.join("binary");
+        let mut file = File::create(&path).unwrap();
+        file.set_len(64 * 1024 * 1024 + 1).unwrap();
+        let first = executable_sha(&path).unwrap();
+        file.seek(SeekFrom::End(-1)).unwrap();
+        file.write_all(b"x").unwrap();
+        file.flush().unwrap();
+        assert_ne!(
+            first,
+            executable_sha(&path).unwrap(),
+            "executable tail beyond log budget was ignored"
+        );
+        file.set_len(256 * 1024 * 1024 + 1).unwrap();
+        assert!(executable_sha(&path).is_err());
+        fs::remove_dir_all(root).unwrap();
+    }
+}
 fn write(path: &Path, value: &Value) -> Result<(), String> {
     let mut out = OpenOptions::new()
         .write(true)
@@ -113,7 +175,7 @@ fn validate_command(command: &Value, source: &Path) -> Result<(), String> {
         "operation executable must be absolute",
     )?;
     require(
-        bytes_sha(executable, 64 * 1024 * 1024)?.1 == string(command, "programSha256")?,
+        executable_sha(executable)? == string(command, "programSha256")?,
         "operation executable digest mismatch",
     )?;
     require(
