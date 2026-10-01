@@ -3,6 +3,66 @@ use crate::digest;
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet};
 const METHOD: &[u8] = include_bytes!("../../../scripts/calibrate-harmony-stage-controls.cjs");
+
+/// Recover prior owned feedback only after reconstructing its retained capture.
+/// A prior plan hash by itself is not enough to suppress new scheduling.
+#[allow(clippy::too_many_arguments)]
+pub fn resume(
+    candidate: &[u8],
+    downstream: &[u8],
+    contract: &[u8],
+    current: &[u8],
+    current_sha: &str,
+    previous_plan: &[u8],
+    previous_capture: &[u8],
+    previous_sha: &str,
+) -> Result<Value, String> {
+    let reconstructed = plan(
+        candidate,
+        downstream,
+        contract,
+        previous_capture,
+        previous_sha,
+        None,
+    )?;
+    let previous: Value = serde_json::from_slice(previous_plan).map_err(|e| e.to_string())?;
+    for key in [
+        "schema",
+        "candidateId",
+        "candidateSha256",
+        "sourceRevision",
+        "sourceSetSha256",
+        "knowledgeCutSha256",
+        "contractSha256",
+        "calibrationSha256",
+        "taskSha256",
+        "nextAction",
+        "semanticSeamCalibrationPassed",
+        "acceptedControlPassed",
+        "killedSemanticVariantCount",
+        "qualified",
+        "automaticPromotion",
+        "authorityWritePerformed",
+        "agentExecutionPerformed",
+    ] {
+        need(
+            previous[key] == reconstructed[key],
+            "stage previous plan contradicts retained capture",
+        )?;
+    }
+    let mut result = plan(
+        candidate,
+        downstream,
+        contract,
+        current,
+        current_sha,
+        Some(&serde_json::to_vec(&reconstructed).map_err(|e| e.to_string())?),
+    )?;
+    result["previousCalibrationSha256"] = json!(previous_sha);
+    result["previousFeedbackSha256"] = json!(digest(previous_plan));
+    result["previousCaptureReconstructed"] = json!(true);
+    Ok(result)
+}
 fn need(ok: bool, message: &str) -> Result<(), String> {
     if ok {
         Ok(())

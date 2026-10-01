@@ -29,6 +29,7 @@ on:
         default: examples/maintainer-knowledge-gate/first-four/diagnostic-contracts/abilitystage-lifecycle.json
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: maintainer-downstream-probe
   cancel-in-progress: false
@@ -98,6 +99,8 @@ jobs:
           jq '{candidateId,nextAction,status,qualified,feedback}' "$evidence/next.json" >> "$GITHUB_STEP_SUMMARY"
       - name: Calibrate declared lifecycle controls separately from startup completion
         if: success() && inputs.stage_contract != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           git ls-files --error-unmatch -- "$STAGE_CONTRACT"
@@ -119,10 +122,9 @@ jobs:
           evidence="$RUNNER_TEMP/downstream/evidence"
           sha=$(sha256sum "$evidence/stage-calibration.json" | cut -d' ' -f1)
           binary=target/debug/agentlab-maintainer-skill-flywheel
-          "$binary" --feedback-stage-calibration --candidates "$KNOWLEDGE/case_generation_candidates.jsonl" \
-            --candidate-id "$CANDIDATE_ID" --downstream-plan "$evidence/queue/$CANDIDATE_ID/next-actions.json" \
-            --stage-contract "$evidence/stage-contract.json" --stage-calibration "$evidence/stage-calibration.json" \
-            --calibration-sha256 "$sha" --output "$evidence/stage-next.json"
+          bash scripts/resume-maintainer-stage-feedback.sh "$binary" "$KNOWLEDGE" "$evidence" \
+            "$evidence/stage-contract.json" "$CANDIDATE_ID" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" \
+            2>&1 | tee "$evidence/stage-history.log"
           "$binary" --feedback-stage-calibration --candidates "$KNOWLEDGE/case_generation_candidates.jsonl" \
             --candidate-id "$CANDIDATE_ID" --downstream-plan "$evidence/queue/$CANDIDATE_ID/next-actions.json" \
             --stage-contract "$evidence/stage-contract.json" --stage-calibration "$evidence/stage-calibration.json" \

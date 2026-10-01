@@ -40,14 +40,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let previous = optional(&args, "--previous-feedback-plan")
             .map(fs::read)
             .transpose()?;
-        let report = agentlab_code_analysis::maintainer_stage_feedback::plan(
-            &serde_json::to_vec(selected[0])?,
-            &fs::read(value(&args, "--downstream-plan")?)?,
-            &fs::read(value(&args, "--stage-contract")?)?,
-            &fs::read(value(&args, "--stage-calibration")?)?,
-            &value(&args, "--calibration-sha256")?,
-            previous.as_deref(),
-        )?;
+        let candidate_bytes = serde_json::to_vec(selected[0])?;
+        let downstream_bytes = fs::read(value(&args, "--downstream-plan")?)?;
+        let contract_bytes = fs::read(value(&args, "--stage-contract")?)?;
+        let calibration_bytes = fs::read(value(&args, "--stage-calibration")?)?;
+        let calibration_sha = value(&args, "--calibration-sha256")?;
+        let prior_capture = optional(&args, "--previous-stage-calibration");
+        let report = if let Some(path) = prior_capture {
+            agentlab_code_analysis::maintainer_stage_feedback::resume(
+                &candidate_bytes,
+                &downstream_bytes,
+                &contract_bytes,
+                &calibration_bytes,
+                &calibration_sha,
+                previous
+                    .as_deref()
+                    .ok_or("previous capture requires prior feedback")?,
+                &fs::read(path)?,
+                &value(&args, "--previous-calibration-sha256")?,
+            )?
+        } else {
+            agentlab_code_analysis::maintainer_stage_feedback::plan(
+                &candidate_bytes,
+                &downstream_bytes,
+                &contract_bytes,
+                &calibration_bytes,
+                &calibration_sha,
+                previous.as_deref(),
+            )?
+        };
         let mut file = OpenOptions::new()
             .write(true)
             .create_new(true)
