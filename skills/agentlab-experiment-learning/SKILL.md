@@ -92,6 +92,29 @@ appropriate method versus target layer, verify regressions, and leave HANDOFF.
 
 ### Scenario-owned calibration contracts
 
+For independently reconstructed stage controls, the Rust flywheel CLI supports
+`--export-stage-lesson` with the ordinary candidate/plan/contract/capture inputs
+and `--lesson-review`. The review uses `agentlab.stage_lesson_review.v1`,
+reviewed=true, reviewerId, id/scope, phenomenon/cause/change, factId/skillId/body,
+and exact candidateSha256/sourceRevision/knowledgeCutSha256/contractSha256/
+calibrationSha256 bindings. Review text is an explicit maintained interpretation,
+not authenticated reviewer identity or automatically inferred causality. Require
+an accepted control and at least two independently reconstructed intended semantic
+failures. Unreviewed, borrowed and contradictory evidence cannot export lessons.
+Retain the review bytes alongside the raw inputs. The existing experience tables
+and explicit promotion command consume this output; persist/read back a committed
+lesson cut before promoting real evidence. Structured qualifications remain false
+for Harmony build/runtime, UI and formal case even when the scoped lesson is
+verified. Candidate guidance is not active knowledge until maintenance admission,
+and neither archival nor proposal export proves the next round improved.
+
+When promoting against real multi-kind program facts, preserve heterogeneous
+unowned fields as JSON rather than coercing arrays/objects or dropping baseline
+rows. The exchange records observed mixed field types separately. Explicitly
+owned analytical columns remain strict: a non-boolean check cannot be widened
+into JSON to bypass validation. Test the actual published knowledge baseline,
+not only an empty fixture, and retain failed partial exports separately.
+
 `agentlab-experience contract loading|debounce|image-url` emits the owned lesson
 identity, variant expectations, scope, target IDs and reusable guidance. Freeze
 this contract with the independently executed calibration in the runtime instance.
