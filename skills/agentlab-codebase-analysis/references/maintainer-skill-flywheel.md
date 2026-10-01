@@ -637,3 +637,23 @@ Resolve the executable in the actual build layout. The semantic loop accepts
 the Cargo-provided binary path instead of assuming workspace-local build output;
 an isolated build-directory failure is infrastructure evidence, not an Agent
 failure or a source drift verdict.
+
+Separate execution capture from independent qualification. A successful
+`agentlab.maintainer_operation_execution.v1` receipt is explicitly unqualified.
+Use `--qualify-operation-capture --execution-root ROOT
+--execution-receipt-sha256 SHA --module-root REL --output NEW_FILE` to re-read
+the original plan, assessment, recipe, every complete process log and both
+retained HAR archives. Bind the selected scope to the declared module ownership;
+never borrow a sibling module's successful build. Reject failed or repeated
+process identities, changed byte digests, unsafe archive members, duplicate
+members, trailing payloads and exceeded resource budgets. Compare all canonical
+members, not just compressed archive bytes, which can differ across clean builds.
+
+The resulting `agentlab.maintainer_scope_build_capture_qualification.v1`
+proves only captured-byte consistency and build reproducibility within that
+explicit module. It is not a runtime, test, performance or type-check verdict.
+Process IDs are capture identities, not remote peer or operation identities.
+Source cleanliness, command authorship and the reviewed module mapping remain
+producer/operator assertions, not authenticated proof. Do not relabel this
+format as the older peer-qualified receipt. A separately reviewed recorded-fact
+adapter and strict reassessment are required before any L3 or authority gain.
