@@ -182,6 +182,12 @@ separate. Feed verified results into a subsequent round and test another reposit
 before claiming a generalizable learning loop; do not grow maturity from fixture
 coverage or consumption receipts alone.
 
+Validate workflow expressions with GitHub-compatible context rules, not YAML
+syntax alone. A real dispatch rejected `runner.temp` in job-level env before any
+participant started. Resolve runner-local paths in a step through RUNNER_TEMP and
+GITHUB_ENV. Keep workflow parse/launch failures separate from captured Agent
+outcomes; a missing check in a PR rollup is not evidence that this path passed.
+
 When promoting against real multi-kind program facts, preserve heterogeneous
 unowned fields as JSON rather than coercing arrays/objects or dropping baseline
 rows. The exchange records observed mixed field types separately. Explicitly
