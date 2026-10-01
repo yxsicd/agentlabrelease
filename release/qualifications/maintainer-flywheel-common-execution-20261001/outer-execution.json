@@ -1,0 +1,83 @@
+{
+  "action": null,
+  "canonicalDownloadUrl": null,
+  "canonicalUrl": null,
+  "dataPlane": null,
+  "downloadUrls": null,
+  "error": null,
+  "found": true,
+  "kind": "exec",
+  "ok": true,
+  "operation": {
+    "channel": "control",
+    "fallbackUsed": false,
+    "gatewayInstanceId": "agentweb-ai-rgw-01",
+    "logicalGatewayId": "agentweb-ai",
+    "ok": true,
+    "result": {
+      "found": true,
+      "lane": "job",
+      "ok": true,
+      "record": {
+        "args": [
+          "-c",
+          "set -euo pipefail\nbase=/home/huawei/.agentlab/flywheel/fed1627-operation-replay-20261001/stage\nrun_root=/home/huawei/.agentlab/flywheel/common-operation-exec-0824-20261001\ngate=/home/huawei/.agentlab/flywheel/operation-exec-1073-build-target/debug/agentlab-maintainer-skill-flywheel\n\"$gate\" --resolve-latest-assessment --base \"$base\" --output \"$run_root/durable-reference.json\"\nassessment=$(/usr/bin/jq -r '.assessmentPath' \"$run_root/durable-reference.json\")\nround=$(/usr/bin/jq -r '.roundIndex' \"$assessment\")\nparent=$(/usr/bin/jq -r '.parentAssessmentSha256' \"$assessment\")\n\"$gate\" --plan-next-round --scope-skills \"$base/maintainer_scope_skills.jsonl\" --program-facts \"$base/program_facts.jsonl\" --operation-receipts-root \"$base/operation-evidence\" --round-index \"$round\" --parent-assessment-sha256 \"$parent\" --available-lane operation-verification --available-operation-kind build-only --repository code-workshop --batch-size 1 --output \"$run_root/next-plan.json\"\n\"$gate\" --execute-operation --scope-skills \"$base/maintainer_scope_skills.jsonl\" --program-facts \"$base/program_facts.jsonl\" --operation-receipts-root \"$base/operation-evidence\" --before \"$assessment\" --next-round-plan \"$run_root/next-plan.json\" --operation-recipe \"$run_root/recipe.json\" --source-worktree /home/huawei/code/.worktrees/sample-in-harmonyos/flywheel-common-operation-20261001 --output \"$run_root/run\""
+        ],
+        "cancelled": false,
+        "command": "/bin/bash",
+        "cwd": "/home/huawei/code/.worktrees/agentlabrelease/flywheel-operation-capabilities-0824ec3",
+        "durationMs": 34552,
+        "error": null,
+        "exitCode": 0,
+        "id": "exec-00000000000001b9",
+        "lane": "job",
+        "state": "completed",
+        "stderr": "",
+        "stdout": "{\"assessmentPath\":\"/home/huawei/.agentlab/flywheel/fed1627-operation-replay-20261001/stage/assessments/round-32-operation-receipt-replay.json\",\"assessmentRelativePath\":\"assessments/round-32-operation-receipt-replay.json\",\"assessmentRoundIndex\":32,\"assessmentSha256\":\"c653f3ba120a780f141a9df49b295003f371cce1a02149c2039c925979567d31\",\"authorityWritePerformed\":false,\"automaticPromotion\":false,\"refreshRoundId\":\"operation-round-34-receipt-replay\",\"refreshRoundIndex\":34,\"refreshTableSha256\":\"57806a5d91de79369227aa3fc7cdc81dce990c48f4430186e9a8cd1d95e847bd\",\"schema\":\"agentlab.maintainer_durable_assessment_reference.v1\"}\n{\"capabilityBlocked\":484,\"eligible\":4,\"knowledgeReady\":1,\"scopeCount\":489,\"selected\":1}\n{\"authorityWritePerformed\":false,\"qualified\":false,\"status\":\"successful\"}\n",
+        "timedOut": false
+      },
+      "state": "completed"
+    },
+    "rgwHttp": "https://agentweb-ai.ru.yxsbase.win",
+    "rgwRouting": {
+      "attemptErrors": [],
+      "strategy": "peer-hot3-with-command-retry"
+    },
+    "routeDecision": "peer_direct",
+    "sessionId": null,
+    "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+    "targetRole": "upstream",
+    "timings": {
+      "awmcp": {
+        "attemptCount": 1,
+        "rgwRequestMs": 483,
+        "rgwResponseDecodeMs": 0,
+        "rgwResponseHeadersMs": 482,
+        "routeCacheHit": true,
+        "routeLookupMode": "command-cache",
+        "routeLookupMs": 0,
+        "totalMs": 483
+      },
+      "rgw": {
+        "dispatchMs": 0,
+        "journalMs": 0,
+        "peerRoundTripMs": 142,
+        "routeLookupMs": 0,
+        "totalMs": 142
+      }
+    },
+    "traceId": "91c6593c-c939-4205-bb88-e7cf9b3bffce"
+  },
+  "operationId": "exec-00000000000001b9",
+  "phase": "completed",
+  "previewUrls": null,
+  "progress": null,
+  "publicUrl": null,
+  "publicationId": null,
+  "result": null,
+  "retryable": false,
+  "schema": "agentweb.operation/v1",
+  "status": "completed",
+  "succeeded": true,
+  "terminal": true
+}

@@ -1,0 +1,70 @@
+{
+  "cancelTool": "operation_cancel",
+  "channel": "control",
+  "fallbackUsed": false,
+  "gatewayInstanceId": "agentweb-ai-rgw-01",
+  "idempotencyKey": "awmcp-exec-v1-95de1c08c1865bdab916b8000f72e1aa",
+  "logicalGatewayId": "agentweb-ai",
+  "ok": true,
+  "operationId": "exec-00000000000001bc",
+  "operationKind": "exec",
+  "pollTool": "operation_get",
+  "requestDeadlineMs": 10000,
+  "result": {
+    "execId": "exec-00000000000001bc",
+    "lane": "process",
+    "ok": true,
+    "record": {
+      "args": [
+        "-c",
+        "set -euo pipefail\ntest \"$(/usr/bin/git rev-parse HEAD)\" = 7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6\ntest -z \"$(/usr/bin/git status --porcelain=v1 --untracked-files=all)\"\n/usr/bin/git rev-parse HEAD"
+      ],
+      "cancelled": false,
+      "command": "/bin/bash",
+      "cwd": "/home/huawei/code/.worktrees/sample-in-harmonyos/flywheel-common-operation-20261001",
+      "durationMs": 576,
+      "error": null,
+      "exitCode": 0,
+      "id": "exec-00000000000001bc",
+      "lane": "process",
+      "state": "completed",
+      "stderr": "",
+      "stdout": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6\n",
+      "timedOut": false
+    },
+    "running": false,
+    "state": "completed"
+  },
+  "rgwHttp": "https://agentweb-ai.ru.yxsbase.win",
+  "rgwRouting": {
+    "attemptErrors": [],
+    "strategy": "peer-hot3-with-command-retry"
+  },
+  "routeDecision": "peer_direct",
+  "routeSelectionMode": "client-force-direct",
+  "selectedLogicalGatewayId": "agentweb-ai",
+  "selectedRgw": "https://agentweb-ai.ru.yxsbase.win",
+  "sessionId": null,
+  "targetPeerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+  "targetRole": "upstream",
+  "timings": {
+    "awmcp": {
+      "attemptCount": 1,
+      "rgwRequestMs": 1057,
+      "rgwResponseDecodeMs": 0,
+      "rgwResponseHeadersMs": 1057,
+      "routeCacheHit": false,
+      "routeLookupMode": "client-force-direct",
+      "routeLookupMs": 1665,
+      "totalMs": 2722
+    },
+    "rgw": {
+      "dispatchMs": 0,
+      "journalMs": 0,
+      "peerRoundTripMs": 654,
+      "routeLookupMs": 0,
+      "totalMs": 654
+    }
+  },
+  "traceId": "36853b20-6e87-4834-a16b-aa11e8c7dcb8"
+}
