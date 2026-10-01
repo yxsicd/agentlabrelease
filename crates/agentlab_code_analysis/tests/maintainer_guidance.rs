@@ -171,6 +171,44 @@ fn recorded_wire_requires_full_prompt_exact_guidance_and_raw_semantic_completion
     assert_eq!(receipt["learningBenefitVerified"], false);
     assert_eq!(receipt["producerAuthenticated"], false);
     assert_eq!(receipt["caseQualified"], false);
+    let mut unexpected_reasoning = wire.clone();
+    unexpected_reasoning["reasoning_effort"] = json!("high");
+    fs::write(
+        gateway.join("0001.upstream-request.json"),
+        serde_json::to_vec(&unexpected_reasoning).unwrap(),
+    )
+    .unwrap();
+    assert!(consumption(&f.root, &packet_bytes)
+        .unwrap_err()
+        .contains("provider reasoning"));
+    let mut low_intent = intent.clone();
+    low_intent["participantIdentity"]["providerReasoningEffort"] = json!("low");
+    unexpected_reasoning["reasoning_effort"] = json!("low");
+    fs::write(
+        f.root.join("guidance-consumption-intent.json"),
+        serde_json::to_vec(&low_intent).unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        gateway.join("0001.upstream-request.json"),
+        serde_json::to_vec(&unexpected_reasoning).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        consumption(&f.root, &packet_bytes).unwrap()["completedGuidanceExchanges"][0]
+            ["providerReasoningEffort"],
+        "low"
+    );
+    fs::write(
+        f.root.join("guidance-consumption-intent.json"),
+        serde_json::to_vec(&intent).unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        gateway.join("0001.upstream-request.json"),
+        serde_json::to_vec(&wire).unwrap(),
+    )
+    .unwrap();
     fs::write(
         gateway.join("0002.upstream-request.json"),
         serde_json::to_vec(&wire).unwrap(),

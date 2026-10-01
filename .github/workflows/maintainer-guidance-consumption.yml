@@ -27,6 +27,11 @@ on:
         required: true
         type: string
         default: glm
+      reasoning_effort:
+        description: Provider reasoning effort; default leaves upstream behavior unchanged
+        required: true
+        type: string
+        default: default
 permissions:
   contents: read
 concurrency:
@@ -44,6 +49,7 @@ jobs:
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_MODEL: ${{ inputs.model }}
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
+      AGENTLAB_REASONING_EFFORT: ${{ inputs.reasoning_effort }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Resolve runner-local evidence path after job allocation

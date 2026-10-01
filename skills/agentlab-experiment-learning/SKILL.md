@@ -199,6 +199,17 @@ Preserve the original weaker receipt and failed raw stream, then replay the
 stronger gate on the same bytes. Do not relabel this as a semantic task failure
 or loosen the deadline merely to obtain a passing outcome.
 
+Treat participant UI thinking settings and upstream provider reasoning controls
+as different configuration. The guided author Action accepts reasoning_effort;
+default leaves it absent, while an explicit value is sent by the existing
+operator proxy and bound in the consumption intent and raw-request verifier.
+Consult the selected provider/model's current documentation before choosing a
+value; do not infer support from another model. GLM-5.3-FLASH's documented low
+effort is a controlled follow-up to the interrupted default-effort run, not a
+global recipe for every model. Keep task, source, guidance and deadlines fixed
+for that diagnostic comparison. A successful lower-effort run does not prove
+guidance benefit; an unguided/guided comparison must use equal reasoning settings.
+
 When promoting against real multi-kind program facts, preserve heterogeneous
 unowned fields as JSON rather than coercing arrays/objects or dropping baseline
 rows. The exchange records observed mixed field types separately. Explicitly
