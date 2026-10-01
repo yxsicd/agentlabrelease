@@ -23,6 +23,74 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|arg| arg == "--prepare-downstream-probe") {
+        let compiler = optional(&args, "--typescript").map(PathBuf::from);
+        let report = agentlab_code_analysis::maintainer_downstream_exec::recipe(
+            &fs::read(value(&args, "--downstream-plan")?)?,
+            &PathBuf::from(value(&args, "--source-worktree")?),
+            &PathBuf::from(value(&args, "--node")?),
+            &PathBuf::from(value(&args, "--probe-script")?),
+            &value(&args, "--test-path")?,
+            &value(&args, "--suite-export")?,
+            &value(&args, "--test-id")?,
+            compiler.as_deref(),
+        )?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        file.write_all(&serde_json::to_vec_pretty(&report)?)?;
+        file.write_all(b"\n")?;
+        return Ok(());
+    }
+    if args.iter().any(|arg| arg == "--execute-downstream-probe") {
+        let selected = value(&args, "--candidate-id")?;
+        let rows = fs::read_to_string(value(&args, "--candidates")?)?
+            .lines()
+            .filter(|l| !l.trim().is_empty())
+            .map(serde_json::from_str::<serde_json::Value>)
+            .collect::<Result<Vec<_>, _>>()?;
+        let candidates = rows
+            .iter()
+            .filter(|r| r["id"] == selected)
+            .collect::<Vec<_>>();
+        if candidates.len() != 1 {
+            return Err("downstream candidate absent or duplicated".into());
+        }
+        let report = agentlab_code_analysis::maintainer_downstream_exec::execute(
+            &fs::read(value(&args, "--downstream-plan")?)?,
+            &serde_json::to_vec(candidates[0])?,
+            &fs::read(value(&args, "--probe-recipe")?)?,
+            &PathBuf::from(value(&args, "--source-worktree")?),
+            &output,
+        )?;
+        println!(
+            "{}",
+            serde_json::json!({"decision":report["feedback"]["decision"],"qualified":false,"agentExecutionPerformed":false})
+        );
+        return Ok(());
+    }
+    if args.iter().any(|arg| arg == "--feedback-downstream-probe") {
+        let previous = optional(&args, "--previous-feedback-plan")
+            .map(fs::read)
+            .transpose()?;
+        let report = agentlab_code_analysis::maintainer_downstream_exec::next(
+            &PathBuf::from(value(&args, "--execution-root")?),
+            &value(&args, "--execution-sha256")?,
+            previous.as_deref(),
+        )?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        file.write_all(&serde_json::to_vec_pretty(&report)?)?;
+        file.write_all(b"\n")?;
+        println!(
+            "{}",
+            serde_json::json!({"nextAction":report["nextAction"],"schedulingAllowed":report["schedulingAllowed"],"qualified":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|arg| arg == "--summarize-downstream") {
         let report = agentlab_code_analysis::maintainer_downstream::batch(
             &fs::read(value(&args, "--candidates")?)?,
