@@ -559,6 +559,134 @@ pub fn next(
     )
 }
 
+/// Compare an explicitly staged Oracle-only repair, without promoting its source
+/// or knowledge cut. Both captures must independently reconstruct first.
+pub fn compare_oracle_repair(
+    before_root: &Path,
+    before_sha: &str,
+    after_root: &Path,
+    after_sha: &str,
+    source: &Path,
+) -> Result<Value, String> {
+    let before = readback(before_root, before_sha)?;
+    let after = readback(after_root, after_sha)?;
+    require(
+        before["feedback"]["decision"] == "repair-independent-oracle"
+            && before["feedback"]["failureSensitive"] == false,
+        "Oracle repair requires a completed insensitive parent diagnostic",
+    )?;
+    let load = |root: &Path, name: &str| -> Result<Value, String> {
+        serde_json::from_slice(&read(&root.join(name))?).map_err(|e| e.to_string())
+    };
+    let old = load(before_root, "candidate.json")?;
+    let new = load(after_root, "candidate.json")?;
+    require(
+        new["id"] != old["id"]
+            && new["oracleRepairParent"]
+                == json!({
+                "candidateId":old["id"],
+                "candidateSha256":before["feedback"]["candidateSha256"],
+                "executionSha256":before_sha}),
+        "Oracle repair successor lineage differs",
+    )?;
+    let projection = |v: &Value| -> Result<Value, String> {
+        let mut obj = v
+            .as_object()
+            .ok_or("Oracle repair candidate invalid")?
+            .clone();
+        for key in [
+            "id",
+            "sourceRevision",
+            "sourceSetSha256",
+            "knowledgeCutSha256",
+            "oracleRepairParent",
+        ] {
+            obj.remove(key);
+        }
+        Ok(Value::Object(obj))
+    };
+    require(
+        projection(&old)? == projection(&new)?,
+        "Oracle repair changed candidate demand",
+    )?;
+    let previous = load(before_root, "recipe.json")?;
+    let current = load(after_root, "recipe.json")?;
+    for key in [
+        "adapter",
+        "testPath",
+        "testId",
+        "suiteExport",
+        "nodeSha256",
+        "typescript",
+        "timeoutMs",
+    ] {
+        require(
+            previous[key] == current[key],
+            "Oracle repair selector or runtime changed",
+        )?;
+    }
+    let old_revision = text(&old, "sourceRevision")?;
+    let new_revision = text(&new, "sourceRevision")?;
+    require(
+        [old_revision, new_revision]
+            .iter()
+            .all(|r| r.len() == 40 && r.bytes().all(|c| c.is_ascii_hexdigit())),
+        "Oracle repair revision invalid",
+    )?;
+    clean(source, new_revision)?;
+    require(
+        String::from_utf8(git(source, &["rev-parse", &format!("{new_revision}^")])?)
+            .map_err(|e| e.to_string())?
+            .trim()
+            == old_revision,
+        "Oracle repair must be one additive commit on the parent source",
+    )?;
+    let changed = git(
+        source,
+        &[
+            "diff",
+            "--no-renames",
+            "--name-only",
+            "-z",
+            old_revision,
+            new_revision,
+        ],
+    )?;
+    let mut expected = text(&current, "testPath")?.as_bytes().to_vec();
+    expected.push(0);
+    require(
+        changed == expected,
+        "Oracle repair changed implementation or other source paths",
+    )?;
+    for (revision, recipe) in [(old_revision, &previous), (new_revision, &current)] {
+        let spec = format!("{revision}:{}", text(recipe, "testPath")?);
+        require(
+            String::from_utf8(git(source, &["rev-parse", &spec])?)
+                .map_err(|e| e.to_string())?
+                .trim()
+                == text(recipe, "testBlobOid")?
+                && digest(&git(source, &["show", &spec])?) == text(recipe, "testSourceSha256")?,
+            "Oracle repair source Blob differs",
+        )?;
+    }
+    require(
+        previous["testSourceSha256"] != current["testSourceSha256"],
+        "Oracle repair source unchanged",
+    )?;
+    let improved = after["feedback"]["failureSensitive"] == true;
+    Ok(
+        json!({"schema":"agentlab.maintainer_oracle_repair_comparison.v1",
+        "parentExecutionSha256":before_sha,"successorExecutionSha256":after_sha,
+        "parentCandidateId":old["id"],"successorCandidateId":new["id"],
+        "parentSourceRevision":old_revision,"successorSourceRevision":new_revision,
+        "changedPath":current["testPath"],"implementationUnchanged":true,
+        "controlsImproved":improved,"nextAction":after["feedback"]["decision"],
+        "status":if improved {"oracle-repair-diagnostic-validated"} else {"oracle-repair-not-validated"},
+        "qualified":false,"automaticPromotion":false,"authorityWritePerformed":false,"agentExecutionPerformed":false,
+        "verificationBoundary":"staged Oracle-only repair; controlled startup seam, not runtime or wrong-implementation qualification"}),
+    )
+}
+
 #[cfg(not(unix))]
 pub fn execute(
     _plan: &[u8],

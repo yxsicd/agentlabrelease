@@ -67,6 +67,20 @@ only select continued calibration; they never qualify meaningful wrong variants,
 emulator execution or a frozen case. The read-only main-only downstream Action
 can execute this same bridge without a provider Secret or TableGit writes.
 
+For a staged Oracle repair, use `--compare-oracle-repair` with exact before/after
+execution roots and SHA256s plus the clean successor source worktree. Preserve
+the parent failure; give the staged successor an `oracleRepairParent` binding
+the parent candidate ID/value digest and original execution digest. The comparison
+reconstructs both captures, preserves candidate demands, test selector, compiler,
+launcher and deadline, and checks one additive source commit changed only the
+selected test path. It rejects implementation changes and changed controls.
+Only an accepted success control and rejected failure control select continued
+runtime calibration. A still-vacuous or infrastructure-failed repair remains
+unvalidated. This is not semantic proof of an entire test-file edit, wrong-variant
+calibration or authority admission: derived source/knowledge identities must be
+admitted separately before freezing a benchmark. Never publish staging rows as
+active TableGit snapshots. See [the repair evidence](../../docs/flywheel-oracle-repair-20261001.md).
+
 Keep diagnostic findings bound to the original candidate digest and knowledge
 cut; feed gaps into a new construction round rather than rewriting history.
 If the Oracle source is missing from admitted fact evidence, first replenish

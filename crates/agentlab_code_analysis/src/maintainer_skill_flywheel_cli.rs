@@ -23,6 +23,26 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|arg| arg == "--compare-oracle-repair") {
+        let report = agentlab_code_analysis::maintainer_downstream_exec::compare_oracle_repair(
+            &PathBuf::from(value(&args, "--before-execution-root")?),
+            &value(&args, "--before-execution-sha256")?,
+            &PathBuf::from(value(&args, "--after-execution-root")?),
+            &value(&args, "--after-execution-sha256")?,
+            &PathBuf::from(value(&args, "--source-worktree")?),
+        )?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        file.write_all(&serde_json::to_vec_pretty(&report)?)?;
+        file.write_all(b"\n")?;
+        println!(
+            "{}",
+            serde_json::json!({"controlsImproved":report["controlsImproved"],"nextAction":report["nextAction"],"qualified":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|arg| arg == "--prepare-downstream-probe") {
         let compiler = optional(&args, "--typescript").map(PathBuf::from);
         let report = agentlab_code_analysis::maintainer_downstream_exec::recipe(
