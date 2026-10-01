@@ -23,6 +23,39 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|arg| arg == "--summarize-downstream") {
+        let report = agentlab_code_analysis::maintainer_downstream::batch(
+            &fs::read(value(&args, "--candidates")?)?,
+            &fs::read(value(&args, "--plans")?)?,
+        )?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        file.write_all(&serde_json::to_vec_pretty(&report)?)?;
+        file.write_all(b"\n")?;
+        return Ok(());
+    }
+    if args.iter().any(|arg| arg == "--plan-downstream") {
+        let previous = optional(&args, "--previous-plan")
+            .map(fs::read)
+            .transpose()?;
+        let report = agentlab_code_analysis::maintainer_downstream::plan(
+            &fs::read(value(&args, "--readiness")?)?,
+            previous.as_deref(),
+        )?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        file.write_all(&serde_json::to_vec_pretty(&report)?)?;
+        file.write_all(b"\n")?;
+        println!(
+            "{}",
+            serde_json::json!({"candidateId":report["candidateId"],"status":report["status"],"readyActionCount":report["readyActionCount"],"agentExecutionPerformed":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|arg| arg == "--qualify-operation-capture") {
         if output.exists() || output.is_symlink() {
             return Err("qualification output already exists".into());
