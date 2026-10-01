@@ -203,14 +203,16 @@ def command_stage(args) -> None:
     assessment = load(args.candidate_assessment)
     strict = assessment.get("standard", {}).get("operationEvidencePolicy") == "verified-receipt-content"
     portable, inherited = {}, []
+    focused = False
     if strict:
         before_path = latest_assessment_path(args.base)
         before = load(before_path)
         result = load(args.result)
+        focused = result.get("decision") == "review-proposed-knowledge-refresh"
         if (before.get("standard") != assessment.get("standard")
                 or assessment.get("parentAssessmentSha256") != file_sha256(before_path)
                 or assessment.get("roundIndex") != before.get("roundIndex", 0) + 1
-                or result.get("decision") != "review-proposed-knowledge"
+                or result.get("decision") not in ("review-proposed-knowledge", "review-proposed-knowledge-refresh")
                 or result.get("strictOperationEvidencePolicy") is not True
                 or result.get("beforeAssessmentSha256") != file_sha256(before_path)
                 or result.get("assessmentSha256") != file_sha256(args.candidate_assessment)):
@@ -237,10 +239,33 @@ def command_stage(args) -> None:
     if any(digest != assessment_hashes[0] for digest in assessment_hashes):
         raise ValueError("proposal batch receipts do not share one source assessment")
     if strict and (sorted(identified_scope_ids) != sorted(result.get("selectedScopeIds", []))
-            or sorted(identified_scope_ids) != sorted(result.get("advancedScopeIds", []))
+            or (not focused and sorted(identified_scope_ids) != sorted(result.get("advancedScopeIds", [])))
             or not 1 <= len(receipts) <= 4
             or any(value != file_sha256(before_path) for value in assessment_hashes)):
         raise RuntimeError("strict semantic proposal receipts differ from selected batch")
+    if strict and focused:
+        before_facts = {row["id"]: row for row in load_jsonl(args.base / TABLE_FILES["program_facts"])}
+        after_rows = load_jsonl(args.candidate_program_facts)
+        after_facts = {row["id"]: row for row in after_rows}
+        fact_id = receipts[0].get("acceptedFactId")
+        scope_id = receipts[0].get("scopeSkillId")
+        changed = {key for key in before_facts.keys() & after_facts.keys()
+                   if before_facts[key] != after_facts[key]}
+        states = [[row for row in report.get("skills", []) if row.get("skillId") == scope_id]
+                  for report in (before, assessment)]
+        if (len(receipts) != 1 or receipts[0].get("changeKind") != "updated"
+                or before_facts.keys() != after_facts.keys() or len(after_facts) != len(after_rows)
+                or changed != {fact_id}
+                or receipts[0].get("previousFactSha256") != value_sha256(before_facts[fact_id])
+                or receipts[0].get("acceptedFactSha256") != value_sha256(after_facts[fact_id])
+                or receipts[0].get("candidateProgramFactsSha256") != file_sha256(args.candidate_program_facts)
+                or result.get("scopeSkillId") != scope_id
+                or result.get("advancedScopeIds") != []
+                or result.get("before") != before.get("totals")
+                or result.get("after") != assessment.get("totals")
+                or before.get("totals") != assessment.get("totals")
+                or any(len(rows) != 1 or rows[0].get("maturity") != "L2-semantic-ready" for rows in states)):
+            raise RuntimeError("strict focused stage is not one exact non-advancing fact update")
     args.output.mkdir(parents=True, exist_ok=True)
     shutil.copy2(args.base / "maintainer-knowledge-cut.json", args.output / "maintainer-knowledge-cut.json")
     assessments = args.output / "assessments"
@@ -280,7 +305,7 @@ def command_stage(args) -> None:
         "proposalReceiptCount": len(receipts),
         "acceptedFactIds": sorted(row["acceptedFactId"] for row in receipts),
         "assessment": str(assessment_path),
-        **({"stageKind": "verified-semantic", "operationEvidence": {
+        **({"stageKind": "verified-semantic", "semanticMode": "focused-refresh" if focused else "expand", "operationEvidence": {
             "receiptRoot": "operation-evidence", "coverage": "verified-child-operation-facts-only",
             "receipts": [], "inheritedReceipts": inherited}} if strict else {}),
         "tables": {
@@ -1020,12 +1045,26 @@ def operation_evidence_files(snapshot: Path) -> dict[str, bytes]:
     if kind == "verified-semantic" and result.get("strictOperationEvidencePolicy") is not True:
         raise RuntimeError("semantic stage result is not strict receipt policy")
     child = read(manifest["assessment"])
-    decision = "review-proposed-operation-knowledge" if kind == "verified-operation" else "review-proposed-knowledge"
+    focused = kind == "verified-semantic" and manifest.get("semanticMode") == "focused-refresh"
+    if kind == "verified-semantic" and manifest.get("semanticMode", "expand") not in ("expand", "focused-refresh"):
+        raise RuntimeError("unknown semantic stage mode")
+    decision = ("review-proposed-operation-knowledge" if kind == "verified-operation"
+                else "review-proposed-knowledge-refresh" if focused else "review-proposed-knowledge")
     after_hash = result.get("afterAssessmentSha256") if kind == "verified-operation" else result.get("assessmentSha256")
     if (result.get("decision") != decision
             or result.get("beforeAssessmentSha256") != hashlib.sha256(files["operation-baseline.json"]).hexdigest()
             or after_hash != hashlib.sha256(child).hexdigest()):
         raise RuntimeError("operation stage report digest mismatch")
+    if focused:
+        baseline = json.loads(files["operation-baseline.json"])
+        child_value = json.loads(child)
+        if (result.get("advancedScopeIds") != []
+                or len(result.get("selectedScopeIds", [])) != 1
+                or result.get("before") != baseline.get("totals")
+                or result.get("after") != child_value.get("totals")
+                or baseline.get("totals") != child_value.get("totals")
+                or baseline.get("standard") != child_value.get("standard")):
+            raise RuntimeError("focused portable evidence overclaims maturity or policy")
     for receipt in all_receipts:
         if not receipt["path"].startswith("operation-evidence/") or not re.fullmatch(r"[0-9a-f]{64}", receipt["sha256"]):
             raise RuntimeError("operation receipt reference invalid")
