@@ -64,6 +64,19 @@ Failed workers remain infrastructure observations, never completed wrong variant
 This export alone proves neither TableGit persistence nor knowledge promotion,
 Harmony runtime qualification, or a qualified evaluation case.
 
+For MCP ingestion, load the instance's current table-author/query contracts and
+resolve an independent operational destination before writing. Verify exchange
+and raw-file hashes first, create definitions at exact revisions, and insert
+missing analytical rows in a revision-fenced atomic batch. Compare existing rows
+exactly; a differing stable identity is a conflict, not permission to overwrite.
+Read every imported key from the resulting committed revision and repeat import:
+no pending row changes must mean no new transaction or revision. Record the
+knowledge repository's before/after cuts independently. Restore feedback from the
+committed analysis record and let the Rust consumer reconstruct its original raw
+capture before trusting scheduling. This verifies persistence and continuation,
+not learning improvement. Remote hash/path rows do not preserve the referenced
+raw bytes; separately prove the evidence bundle's durable availability.
+
 Test with real SWE/Harmony evidence plus a small public synthetic fixture. Prove
 joins, context changes/history, tool errors, raw-file reconstruction and stable
 repeat import, not only successful archival. Preserve release qualification gates.
