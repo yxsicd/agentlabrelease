@@ -187,7 +187,7 @@ fn actual_first_four_assessor_to_rust_controller_and_repeated_batch() {
             .unwrap()
     };
     let first = run("first", None);
-    assert_eq!(first["planCount"], 4);
+    assert_eq!(first["planCount"], 5);
     assert_eq!(
         first["missingConstructionPlanCandidateIds"]
             .as_array()
@@ -216,8 +216,26 @@ fn actual_first_four_assessor_to_rust_controller_and_repeated_batch() {
         .all(|action| action["executionAuthorized"] == false));
     assert_eq!(
         first["retainedHistoricalCandidateIds"],
-        json!(["shadow-case-abilitystage-environment-callback-binding"])
+        json!([
+            "shadow-case-abilitystage-environment-callback-binding",
+            "shadow-case-rdb-preference-telemetry-pipeline"
+        ])
     );
+    let successor: Value =
+        serde_json::from_slice(
+            &fs::read(out.join(
+                "first/shadow-case-refresh-a864ecaec7c67603cab0e114743c5421/next-actions.json",
+            ))
+            .unwrap(),
+        )
+        .unwrap();
+    assert_eq!(successor["automaticPromotion"], false);
+    assert_eq!(successor["agentExecutionPerformed"], false);
+    assert!(successor["actions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|action| action["executionAuthorized"] == false));
     let second = run("repeat", Some("first"));
     assert_eq!(second["schedulingAllowedPlanCount"], 0);
     assert_eq!(second["agentExecutionPerformed"], false);
