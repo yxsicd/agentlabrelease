@@ -47,6 +47,8 @@ def main():
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--gate', type=Path, required=True)
     p.add_argument('--pi', type=Path, required=True)
+    p.add_argument('--reasoning-effort', choices=('none', 'low', 'medium', 'high', 'max'), default='low')
+    p.add_argument('--gateway-timeout-seconds', type=int, choices=range(30, 181), default=180)
     args = p.parse_args()
     if not os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'):
         raise ValueError('Recipe construction requires the contained participant runtime')
@@ -68,7 +70,7 @@ def main():
     participant = module.Participant(
         evidence, args.output / 'participant-state', args.pi,
         os.environ['AGENTLAB_LM_GATEWAY_URL'], os.environ['AGENTLAB_MODEL'],
-        route=os.environ['AGENTLAB_PROVIDER_ROUTE'], gateway_timeout_seconds=60,
+        route=os.environ['AGENTLAB_PROVIDER_ROUTE'], gateway_timeout_seconds=args.gateway_timeout_seconds,
     )
     context = {key: request[key] for key in (
         'scope', 'source', 'sourceFiles', 'semanticFacts', 'selectedGap')}
@@ -112,7 +114,7 @@ SOURCE CONTEXT:
             'source-recipe-author', workspace, prompt=prompt,
             wall_time_limit_seconds=240, tool_call_limit=1,
             transport_retry_limit=0, require_completed_tool_call=False,
-            reasoning_effort='none',
+            reasoning_effort=args.reasoning_effort,
         )
     finally:
         participant.close()

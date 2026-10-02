@@ -15,6 +15,18 @@ on:
         default: glm
         required: true
         type: string
+      reasoning_effort:
+        description: Provider-supported reasoning setting; not proof that thinking is disabled
+        default: low
+        required: true
+        type: choice
+        options: [none, low, medium, high, max]
+      gateway_timeout_seconds:
+        description: Absolute response budget for executable verifier construction; no transport retries
+        default: '180'
+        required: true
+        type: choice
+        options: ['60', '120', '180']
 permissions:
   contents: read
 concurrency:
@@ -30,6 +42,8 @@ jobs:
       REPOSITORY_SELECTOR: ${{ inputs.repository }}
       AGENTLAB_MODEL: ${{ inputs.model }}
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
+      CONSTRUCTION_REASONING_EFFORT: ${{ inputs.reasoning_effort }}
+      CONSTRUCTION_GATEWAY_TIMEOUT: ${{ inputs.gateway_timeout_seconds }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_TABLEGIT_MCP_URL: ${{ vars.AGENTLAB_TABLEGIT_MCP_URL }}
       AGENTLAB_TABLEGIT_PERSON_ID: ${{ vars.AGENTLAB_TABLEGIT_PERSON_ID }}
@@ -100,7 +114,9 @@ jobs:
         run: |
           python3 scripts/run-source-recipe-author.py --request "$RUNNER_TEMP/recipe-author/request.json" \
             --output "$RUNNER_TEMP/recipe-author/agent" --gate target/debug/agentlab-maintainer-skill-flywheel \
-            --pi "$GITHUB_WORKSPACE/scripts/run-pi-in-docker.py"
+            --pi "$GITHUB_WORKSPACE/scripts/run-pi-in-docker.py" \
+            --reasoning-effort "$CONSTRUCTION_REASONING_EFFORT" \
+            --gateway-timeout-seconds "$CONSTRUCTION_GATEWAY_TIMEOUT"
       - name: Independently validate recorded participant isolation
         if: always() && steps.contain.outcome == 'success'
         run: |

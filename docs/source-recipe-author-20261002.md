@@ -122,3 +122,29 @@ deadline, strict JSON/schema gates and independent semantic review. Runtime
 isolation validation also runs after a failed author step when containment was
 prepared, so model/format failures do not suppress its independent evidence.
 No complete proposal, generated control execution or maturity gain is claimed.
+
+## Constructor budget and provider capability correction
+
+PR #177 merged at `4976cce1a745227fbbd8f01d127582fcc9c8088c` after all
+applicable checks passed. Action `37010428172` transmitted reasoning_effort=none
+but again retained only thinking until the 60,046 ms upstream deadline. The
+completion gate correctly rejected it before serialization, while independent
+runtime isolation validation passed after the failed author step. There was no
+valid proposal or control execution.
+
+The [official provider capability documentation](https://docs.z.ai/guides/capabilities/thinking)
+states GLM-5.3 and GLM-5.3-FLASH cannot disable thinking; API efforts are low,
+high and max, and Coding Plan maps none/minimal to low. The earlier description
+of reasoning_effort=none as an effective no-thinking mode was incorrect for this
+model. An operator-side request field is not proof of upstream behavior.
+
+Executable-verifier synthesis is also materially different from a short semantic
+summary. Its operator now exposes reasoning effort and an absolute 30..180-second
+response budget, with Action choices 60/120/180 and defaults low/180. This uses
+the existing Participant bounds and leaves the semantic-analysis lane unchanged.
+The source constructor keeps its existing native supervisor, zero transport
+retries, bounded source/proposal sizes, complete-stream gate and independent
+review before execution. The deadline increase is explicit experiment policy,
+not another hidden retry or a maturity gain. Fresh completion still requires an
+original complete response, strict proposal staging and independent semantic
+and behavior review; a longer budget alone proves none of those.
