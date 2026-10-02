@@ -235,7 +235,18 @@ pub fn prepare_fact(skill: &Value, reference: Value, root: &Path) -> Result<Valu
         "automaticPromotion":false
     });
     fact["operationEvidenceCheck"] = verify(&fact, skill, root)?;
-    fact["interpretation"] = json!("Receipt-content-qualified module build only; runtime, tests, performance and type checking are not independently qualified.");
+    if fact["operationEvidenceCheck"]["lane"] == "source-only" {
+        fact["id"] = json!(format!(
+            "operation-source-{}",
+            digest(
+                &serde_json::to_vec(&json!([skill["id"], reference])).map_err(|e| e.to_string())?
+            )
+        ));
+        fact["kind"] = json!("source-maintenance-verification");
+        fact["interpretation"] = json!("Reviewed scoped source-maintenance controls; no build, full-scope coverage, framework runtime, formal tests or performance qualification.");
+    } else {
+        fact["interpretation"] = json!("Receipt-content-qualified module build only; runtime, tests, performance and type checking are not independently qualified.");
+    }
     Ok(fact)
 }
 
@@ -280,6 +291,12 @@ pub fn verify(fact: &Value, skill: &Value, root: &Path) -> Result<Value, String>
     )?;
     let receipt: Value = serde_json::from_slice(&bytes)
         .map_err(|e| format!("operation receipt JSON invalid: {e}"))?;
+    if receipt["schema"] == "agentlab.maintainer_scope_source_qualification.v1" {
+        let mut check = crate::maintainer_source_operation::recorded(&receipt, skill)?;
+        check["receiptPath"] = json!(relative);
+        check["receiptSha256"] = json!(digest(&bytes));
+        return Ok(check);
+    }
     if receipt["schema"] == "agentlab.maintainer_scope_build_capture_qualification.v1" {
         return verify_capture_qualification(&receipt, skill, relative, &bytes);
     }

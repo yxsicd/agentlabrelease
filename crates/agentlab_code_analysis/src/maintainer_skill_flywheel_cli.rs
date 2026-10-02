@@ -24,6 +24,32 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|a| a == "--execute-source-operation") {
+        let report = agentlab_code_analysis::maintainer_source_operation::execute(
+            &PathBuf::from(value(&args, "--scope-skills")?),
+            &PathBuf::from(value(&args, "--program-facts")?),
+            &PathBuf::from(value(&args, "--operation-receipts-root")?),
+            &fs::read(value(&args, "--before")?)?,
+            &fs::read(value(&args, "--operation-recipe")?)?,
+            &PathBuf::from(value(&args, "--source-worktree")?),
+            &output,
+        )?;
+        println!("{}", serde_json::to_string(&report)?);
+        return Ok(());
+    }
+    if args.iter().any(|a| a == "--qualify-source-operation") {
+        let report = agentlab_code_analysis::maintainer_source_operation::qualify(
+            &PathBuf::from(value(&args, "--execution-root")?),
+            &value(&args, "--execution-receipt-sha256")?,
+        )?;
+        use std::io::Write;
+        fs::OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&report)?)?;
+        return Ok(());
+    }
     if args.iter().any(|arg| arg == "--prepare-business-cycles") {
         let result = agentlab_code_analysis::maintainer_flywheel_business::prepare(
             &PathBuf::from(value(&args, "--knowledge")?),

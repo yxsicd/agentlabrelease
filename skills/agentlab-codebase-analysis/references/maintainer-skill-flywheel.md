@@ -698,3 +698,18 @@ in a public snapshot. Use the operation round gate to prove exactly the selected
 L2-to-L3 transition with unchanged siblings, then stage a portable candidate and
 reassess from that candidate alone. These are local proposed knowledge gains,
 not a live TableGit write, calibrated case, or completed five-ring loop.
+
+### Source-maintenance controls
+
+For source-only responsibilities without a build/test entrypoint, use the
+[source operation contract](../../../docs/source-maintenance-operations-20261002.md).
+Freeze owned source Blobs, verifier methods, named expectations and positive/
+negative controls before execution. Recompute checks from raw stdout rather than
+accepting a producer pass field. A known-failing original source may be a baseline
+observation when a reviewed reference succeeds and meaningful wrong controls are
+detected; incomplete execution is never such an observation. Preserve original
+source/method bytes and exact process failures. Portable recorded qualification
+is not source replay or producer authentication. This proves one scoped operation,
+not full scope coverage, formal platform tests or a complete flywheel round.
+Keep its distinct source-maintenance fact kind and explicit reviewed selection;
+do not relabel it as a build receipt or claim automatic recipe generation.

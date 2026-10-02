@@ -18,7 +18,7 @@ The same executable runs every stage through `--run-flywheel-business-stage
 |---|---|---|
 | Repository understanding | Source-set binding and existing five-table guidance binder | Validates existing knowledge; no fresh semantic analysis or remote readback |
 | Program analysis | Durable assessment resolution and full strict reassessment | Reproduces stored facts/operation evidence; no newly generated program graph |
-| Maintenance verification | Reviewed build-only executor plus independent original capture qualification | Requires explicit recipe and selection; other operation kinds unsupported |
+| Maintenance verification | Reviewed build-only or source-maintenance execution and independent capture qualification | Requires an applicable explicit recipe; build-test/test-only/support-config remain unsupported |
 | Case execution | Existing captured participant/behavior loop | Needs reviewed inputs; does not generate a new case or qualify full Harmony |
 | Evidence return | Existing raw-evidence lesson reconstruction and admission staging | Needs reviewed committed lesson/proposal; stops before remote atomic admission/readback |
 
@@ -31,12 +31,15 @@ their equality gate rejects. Missing materials return a specific review-required
 gap; gate rejection does not become an inferred Agent behavior failure.
 
 Optional `operationCapture` supplies directory/executionReceiptSha256/moduleRoot.
-Alternatively `operationExecution` supplies reviewed=true, sourceWorktree,
-moduleRoot and digest-bound path/SHA256 references named plan/before/recipe.
-The two inputs are mutually exclusive. Execution independently reselects against
-the fixed scope/fact cut before launching probes, prepares dependencies and runs
-two bounded clean builds. Its raw captures remain in business/operation even when
-execution or qualification fails. Only build-only HAR qualification is supported;
+Alternatively `operationExecution` supplies reviewed=true, sourceWorktree and
+digest-bound path/SHA256 references named before/recipe. Build recipes additionally
+require moduleRoot and plan; source recipes follow the
+[source-maintenance contract](source-maintenance-operations-20261002.md).
+The two inputs are mutually exclusive. Build execution independently reselects
+against the fixed scope/fact cut before launching probes, prepares dependencies
+and runs two bounded clean builds. Source execution independently revalidates
+the strict baseline and selected source-only scope before executing frozen controls.
+Raw captures remain in business/operation even when execution or qualification fails;
 this does not advance the stored assessment or admit new knowledge automatically.
 The default maintenance stage allows 660 seconds around the existing ten-minute
 executor ceiling. Case execution allows 720 seconds without changing inner Agent
