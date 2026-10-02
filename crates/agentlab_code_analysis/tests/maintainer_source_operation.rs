@@ -835,6 +835,27 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
         );
         assert!(!rejected_stage.exists());
     }
+    for (index, control) in [
+        json!({"id":"reference","role":"valid implementation","expectedFailedCheckIds":[]}),
+        json!({"id":"reference","role":"reference","expectedFailedCheckIds":true}),
+        json!({"id":"reference","role":"reference","expectedFailedCheckIds":[1]}),
+        json!({"id":"reference","role":"reference","expectedFailedCheckIds":[],"description":"extra"}),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let mut invalid = proposal.clone();
+        invalid["contract"]["controls"][1] = control;
+        let rejected_stage = dir.join(format!("invalid-control-stage-{index}"));
+        let error = author::stage(
+            &request_bytes,
+            &serde_json::to_vec(&invalid).unwrap(),
+            &rejected_stage,
+        )
+        .unwrap_err();
+        assert!(error.contains("role (baseline/reference/wrong)"), "{error}");
+        assert!(!rejected_stage.exists());
+    }
     let receipt = author::stage(&request_bytes, &proposal_bytes, &stage).unwrap();
     assert_eq!(receipt["executionPerformed"], false);
     let unreviewed = fs::read(stage.join("unreviewed-recipe.json")).unwrap();

@@ -332,3 +332,34 @@ This is wire-level route proof, not a real Pi construction turn or source-verifi
 qualification. The next hosted experiment must select native Responses explicitly
 with the same bounded source context and independent review requirements.
 Maturity remains 63%; formal cases and complete five-stage cycles remain zero.
+
+## Full native Responses construction and rejected control contract
+
+After PR #184 merged as `6f979ebcb66df9d8c4f1c4725ea518e6c50560fc`,
+Action `37027636128` used the pinned contained Pi runtime and explicit native
+Responses with none reasoning and JSON-object mode. The original Gateway capture
+completed in 9729 ms with HTTP 200, semantic completion, clean EOF and no stream
+error. Native stopReason was stop; output was 930 tokens. Strict JSON parsing
+succeeded and the original proposal was serialized. Independent filesystem,
+network and external-credential isolation validation passed. This is full native
+construction transport evidence, not merely the earlier tiny probe.
+
+Rust staging rejected `recipe author alternative-valid control required` because
+the proposal put prose in role fields. The prompt did not state the exact role
+enum; it now explicitly requires baseline/reference/wrong, and early control
+shape validation rejects unknown roles, extra fields and non-string failure
+arrays before creating a stage directory.
+
+Independent source review also rejects the unchanged proposal. Both reference
+IDs fall through to the original source, not distinct valid implementations.
+The wrong disabled-gate replacement expects six spaces where the source has
+four and therefore changes nothing. Both executed scenarios successfully enable
+notifications; neither exercises rejection or disabled enablement, so even a
+matching gate mutation would not be exposed. Shared event expectations read the
+second scenario but use indices associated with a different sequence. These
+defects are not eligible for role-only or format-only repair. No generated code
+was executed or approved, and no authority row was written. Generalized lessons
+are retained in the method reference; the next producer improvement must support
+bounded source-grounded review feedback rather than silently fixing a rejected
+proposal. Overall maturity remains 63%; formal cases and complete business cycles
+remain zero.
