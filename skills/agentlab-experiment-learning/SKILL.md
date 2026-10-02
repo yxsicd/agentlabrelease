@@ -285,6 +285,27 @@ Do not compare a new unguided run against an older guided method/budget cut or
 infer benefit from one passing arm. Independent semantic controls and subsequent
 feedback/cross-repository runs remain necessary.
 
+Include implicit transport retries in a paired experiment's total participant
+budget. The native adapter defaults to one retry, which can launch another full
+process watchdog even before content repair. The calibration author explicitly
+disables this retry; both intents and independent receipts bind transportRetryLimit
+zero to the lifecycle and reject any retry sidecar, including a dangling symlink.
+The attempt manifest bounds total participant-process time to 420 seconds times
+one plus the allowed content repairs, not total workflow wall time. Older captures
+without this policy may prove completion but never disabled-retry qualification.
+If an omitted retry policy is discovered after dispatch, retain the original
+enrollment unchanged and report the pair as exploratory rather than rewriting its
+budget. Pair 36952016876/36952044696 exposed this omission: unguided content passed
+initially, guided content required one repair. Both completed, but neither result
+establishes semantic quality or guidance benefit; use independent execution before
+choosing a knowledge update, and retain contradictory observations.
+Source review of the same retained pair found a mismatched configuration-log
+prefix in the unguided draft and a registration-call expression used as a log
+marker in the guided repaired draft. This is source-review evidence, not executed
+verdicts. Literal edit applicability and schema validity cannot establish baseline
+markers. Execute the unchanged proposed controls independently; do not repair
+their markers as an operator and attribute the resulting success to the Agent.
+
 A full regression run exposed intermittent emulator boot-failure cleanup. A
 deterministic delayed-launcher control reproduced the race: stop ran first,
 then the outstanding launcher completed startup. Quiesce and reap the exact

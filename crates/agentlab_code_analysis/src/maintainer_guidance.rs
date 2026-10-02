@@ -449,6 +449,9 @@ pub fn consumption(evidence: &Path, packet_bytes: &[u8]) -> Result<Value, String
         "packetSha256":digest(packet_bytes),"promptSha256":digest(&prompt_bytes),
         "intentSha256":digest(&intent_bytes),"lifecycleSha256":digest(&lifecycle_bytes),
         "knowledgeAuthority":packet["knowledgeAuthority"],"selectedSkills":selected,
+        "participantBudgetSeconds":intent["participantBudgetSeconds"],
+        "transportRetryLimit":intent["transportRetryLimit"],
+        "implicitTransportRetryDisabledVerified":intent["transportRetryLimit"] == 0,
         "completedGuidanceExchanges":completed,"agentConsumptionVerified":true,
         "producerAuthenticated":false,"learningBenefitVerified":false,"caseQualified":false,
         "authorityWritePerformed":false,"automaticPromotion":false}),
@@ -483,6 +486,8 @@ pub fn completion(evidence: &Path, request_bytes: &[u8]) -> Result<Value, String
         "promptSha256":digest(&prompt_bytes),"intentSha256":digest(&intent_bytes),
         "lifecycleSha256":digest(&lifecycle_bytes),"completedExchanges":completed,
         "participantBudgetSeconds":intent["participantBudgetSeconds"],
+        "transportRetryLimit":intent["transportRetryLimit"],
+        "implicitTransportRetryDisabledVerified":intent["transportRetryLimit"] == 0,
         "authorCompletionVerified":true,"guidanceProvided":false,"guidanceAbsenceVerified":false,
         "producerAuthenticated":false,"learningBenefitVerified":false,"caseQualified":false,
         "authorityWritePerformed":false,"automaticPromotion":false}),
@@ -510,6 +515,16 @@ fn recorded_exchanges(
                 && lifecycle["participantBudgetSeconds"] == *budget
                 && lifecycle["participantBudgetScope"] == "native-process-watchdog",
             "consumption participant budget differs",
+        )?;
+    }
+    if let Some(limit) = intent.get("transportRetryLimit") {
+        let retry_absent = matches!(
+            fs::symlink_metadata(evidence.join("author-calibration-transport-retry.json")),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound
+        );
+        need(
+            *limit == 0 && lifecycle["transportRetryLimit"] == *limit && retry_absent,
+            "consumption implicit transport retry violates total author budget",
         )?;
     }
     need(
