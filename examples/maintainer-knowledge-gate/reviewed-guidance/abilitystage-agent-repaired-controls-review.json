@@ -1,0 +1,31 @@
+{
+  "schema": "agentlab.stage_contract_review.v1",
+  "reviewed": true,
+  "reviewerId": "operator-codex",
+  "reviewerAuthenticated": false,
+  "authorRunUrl": "https://github.com/yxsicd/agentlabrelease/actions/runs/36947829540",
+  "authorMethodRevision": "d47611239142a9d50504c6d6ce1d582feb8a60dc",
+  "originalProposalSha256": "7b94aee6f836c1b809e9388f25f37ae30e57229c16a452ea9998278bf8bc8d5f",
+  "reviewedContractSha256": "b856e88e001bcd5c0395926f69946d78f250a5af38d18990aa898b6348f38ed7",
+  "onlyReviewFlagChanged": true,
+  "candidateId": "shadow-case-refresh-35a06c03f9d7c77cfa6156add329c2ec",
+  "candidateSha256": "a3b0f718650daea79c6e2b99565278bff3485b43396dd04d2a8acad456cec34c",
+  "sourceRevision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+  "knowledgeRevision": "368b17895b23633656a26f9f51cb300cb11fa829",
+  "reviewScope": "Trusted-source host ApplicationContext dispatch calibration, not Harmony runtime execution",
+  "sourceReview": [
+    "The supplied module binds MyAbilityStage; both proposed replacements occur exactly once in original source",
+    "MyAbilityStage logs the declared lifecycle markers and configuration JSON and registers environment callbacks on getApplicationContext()",
+    "The alternate supplied ExampleAbilityStage has no lifecycle log or environment registration, not a missing-file failure",
+    "The memory event mutation leaves lifecycle logs but removes intended environment deliveries under the independent dispatcher",
+    "Configurations vary language and colorMode independently and all intended failure IDs exist"
+  ],
+  "originalArtifact": "maintainer-guidance-consumption/workspace/draft-repair/proposed-stage-contract.json",
+  "agentRepairVerified": true,
+  "executionApprovedWithinReviewScope": true,
+  "semanticExecutionVerified": false,
+  "learningBenefitVerified": false,
+  "caseQualified": false,
+  "harmonyRuntimeQualified": false,
+  "automaticPromotion": false
+}

@@ -241,6 +241,19 @@ both attempts remain available even on failure. Fixture regressions prove adapte
 behavior only. A repaired content-valid draft still requires independent semantic
 controls, review and a subsequent feedback round before any learning claim.
 
+Real run 36947829540 at method d4761123 exercised this bounded repair: the first
+32-second attempt failed check-ID collision, then the 48-second fresh attempt
+received that exact rejection and original draft and passed content validation.
+Independent capture/content replays verified both guidance-bearing completions,
+unchanged six-file source inventory, original rejected bytes and task identity.
+This proves one real content-feedback repair, not semantic control success,
+guidance benefit or cross-repository generalization. The separately reviewed
+[agent-repaired control seed](../../examples/maintainer-knowledge-gate/reviewed-guidance/abilitystage-agent-repaired-controls.json) retains the
+Agent's repaired contract unchanged except reviewed=true after source inspection;
+use it through the ordinary downstream diagnostic Action for independent execution.
+Keep this reviewed seed distinct from the original reviewed=false artifact and
+retain its review provenance. Do not count it as a qualified case before execution.
+
 When promoting against real multi-kind program facts, preserve heterogeneous
 unowned fields as JSON rather than coercing arrays/objects or dropping baseline
 rows. The exchange records observed mixed field types separately. Explicitly
