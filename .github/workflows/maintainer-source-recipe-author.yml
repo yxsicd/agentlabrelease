@@ -16,11 +16,11 @@ on:
         required: true
         type: string
       reasoning_effort:
-        description: Provider-supported reasoning setting; not proof that thinking is disabled
+        description: Provider-supported reasoning setting; default omits the field, none is an explicit value
         default: low
         required: true
         type: choice
-        options: [none, low, medium, high, max]
+        options: [default, none, low, medium, high, max]
       gateway_timeout_seconds:
         description: Absolute response budget for executable verifier construction; no transport retries
         default: '180'

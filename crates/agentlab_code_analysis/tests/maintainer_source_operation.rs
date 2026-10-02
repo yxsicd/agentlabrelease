@@ -156,7 +156,8 @@ with tempfile.TemporaryDirectory() as d:
         scope={'id':'arbitrary-scope'}, source={}, sourceFiles=[], semanticFacts=[],
         selectedGap={}, policy={'methodDependencies':[]})))
     for index, extra, effort, deadline in [(0, [], 'low', 180),
-        (1, ['--reasoning-effort','high','--gateway-timeout-seconds','120'], 'high',120)]:
+        (1, ['--reasoning-effort','high','--gateway-timeout-seconds','120'], 'high',120),
+        (2, ['--reasoning-effort','default'], None,180)]:
         seen = {}
         class FakeParticipant:
             def __init__(self, evidence, state, binary, gateway, model, **options):

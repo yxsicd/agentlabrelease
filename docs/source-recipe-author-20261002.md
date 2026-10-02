@@ -149,6 +149,35 @@ not another hidden retry or a maturity gain. Fresh completion still requires an
 original complete response, strict proposal staging and independent semantic
 and behavior review; a longer budget alone proves none of those.
 
+## Live deployment catalog and optional reasoning policy
+
+An authenticated read of the actual Action Gateway `/v1/models` returned HTTP
+200 and eight admitted text model identities: deepseek-v4.1-flash,
+gpt-5.6-luna, nvidia/nemotron-3-ultra-550b-a55b:free, MiniMax-M3,
+glm-5.3-flash, mimo-v2.6-flash,
+nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free and glm-5.3.
+The authenticated `/v1/health/providers` read independently returned seven
+configured route IDs, including opencode-go and opencode-go-responses. Catalog
+membership is not proof that an arbitrary explicit route accepts a model.
+The advertised gpt-5.6-luna endpoint link returned HTTP 404; its model description
+names OpenCode Go, while the current local container catalog binds it to
+opencode-go-responses. Neither the broken link nor local configuration may be
+presented as successful live endpoint-route admission.
+
+The admitted mimo-v2.6-flash model advertises tools, tool_choice and
+response_format, not reasoning_effort. The constructor previously always sent
+an effort value, which prevented a clean provider-default experiment. It now
+accepts `--reasoning-effort default` and passes None to the existing participant,
+so its proxy omits the field. This differs from the explicit string none and
+does not claim disabled thinking. Existing low default and explicit values
+remain unchanged. The Rust-driven dispatcher regression exercises default
+omission as well as low/high values and unchanged zero-retry policy. No live
+construction success follows from catalog discovery or this option alone.
+The next same-method candidate experiment is mimo-v2.6-flash/opencode-go with
+provider default settings; actual Gateway admission, complete response and
+unreviewed recipe staging remain required. Secrets stayed in the operator;
+no credentials, native sessions or raw captures were committed to source Git.
+
 ## Admitted-model dispatch evidence
 
 PR #178 merged at `2e72a386920fbd22067e60c8e11f1108fa8fa1cb` after all
