@@ -87,3 +87,16 @@ No model, generated verifier, control execution or authority write occurred in
 this request preflight. The arbitrary-source Rust regression also rejects an
 owned but unloaded path, forged context, unreviewed execution, mismatched review
 digest, changed method bytes and output reuse.
+
+## First hosted launch failure
+
+PR #175 merged at `f17d2a53cb5d566485c15ff5178e82f238314c4d` after all
+applicable checks passed. Real Action `37007339317` passed live knowledge
+preflight, source request preparation and runtime containment preparation, then
+failed before Docker/model execution because its operator did not create the
+runtime receipt directory. Original stderr records FileNotFoundError from the
+shared launcher's strict path resolution. The uploaded artifact retains the
+original request and failed participant lifecycle; no model proposal or control
+execution occurred. The construction operator now creates its receipt root
+before dispatch, preserving the shared launcher's strict existence gate. This
+fix does not establish generation quality or raise maturity above 63%.

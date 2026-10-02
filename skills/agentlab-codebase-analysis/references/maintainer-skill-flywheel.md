@@ -755,3 +755,9 @@ use the selected scope and bound facts' owned anchors, retain every other path
 as explicit unloaded inventory, and reject proposals using an unloaded source
 until context is deliberately expanded. Do not turn complete inventory into a
 full-file census or silently substitute another selected gap.
+
+The construction operator must prepare the runtime receipt directory before
+dispatch: the shared contained launcher resolves it strictly. A missing directory
+is a pre-model infrastructure failure, not a failed semantic proposal. Preserve
+that lifecycle and original stderr; repair operator preparation rather than
+weakening runtime gates or retrying an unchanged launch.

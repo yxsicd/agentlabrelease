@@ -21,6 +21,56 @@ fn root() -> PathBuf {
         .canonicalize()
         .unwrap()
 }
+
+#[test]
+fn source_recipe_operator_prepares_strict_runtime_receipt_directory() {
+    let directory = std::env::temp_dir().join(format!(
+        "source-recipe-runtime-root-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    let receipt_root = directory.join("operator/runtime-receipts");
+    let code = r#"
+import importlib.util, os
+from pathlib import Path
+spec = importlib.util.spec_from_file_location('recipe_author', os.environ['AUTHOR_SCRIPT'])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+root = Path(os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'])
+assert not root.exists()
+assert module.prepare_runtime_receipt_root() == root.resolve(strict=True)
+marker = root / 'retained-receipt.json'
+marker.write_bytes(b'original-runtime-receipt')
+assert module.prepare_runtime_receipt_root() == root.resolve(strict=True)
+assert marker.read_bytes() == b'original-runtime-receipt'
+del os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT']
+try:
+    module.prepare_runtime_receipt_root()
+except KeyError:
+    pass
+else:
+    raise AssertionError('missing operator configuration was accepted')
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "AUTHOR_SCRIPT",
+            root().join("scripts/run-source-recipe-author.py"),
+        )
+        .env("AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT", &receipt_root)
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert!(receipt_root.is_dir());
+    fs::remove_dir_all(directory).unwrap();
+}
 fn fixture() -> (PathBuf, Value, Value, Value) {
     static SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let dir = std::env::temp_dir().canonicalize().unwrap().join(format!(

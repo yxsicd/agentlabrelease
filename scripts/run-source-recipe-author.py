@@ -8,6 +8,14 @@ from pathlib import Path
 import subprocess
 
 
+def prepare_runtime_receipt_root():
+    # The shared launcher resolves this directory strictly before Docker starts.
+    # Its operator owns creation; do not weaken the launcher's existence gate.
+    root = Path(os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'])
+    root.mkdir(parents=True, exist_ok=True)
+    return root.resolve(strict=True)
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--request', type=Path, required=True)
@@ -20,6 +28,7 @@ def main():
     request = json.loads(args.request.read_bytes())
     if request.get('schema') != 'agentlab.source_recipe_author_request.v1':
         raise ValueError('Unsupported author request')
+    prepare_runtime_receipt_root()
     args.output.mkdir()
     workspace = args.output / 'workspace'
     evidence = args.output / 'evidence'
