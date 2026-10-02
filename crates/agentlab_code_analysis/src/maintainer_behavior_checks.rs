@@ -4,6 +4,189 @@ use crate::digest;
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet};
 
+/// Explicit reviewed interpretation of reconstructed behavior controls, not admission or learning.
+pub fn lesson_assets(
+    candidate_bytes: &[u8],
+    contract_bytes: &[u8],
+    capture_bytes: &[u8],
+    review_bytes: &[u8],
+) -> Result<BTreeMap<String, BTreeMap<String, Value>>, String> {
+    require(
+        candidate_bytes.len() <= 256 * 1024 && review_bytes.len() <= 128 * 1024,
+        "behavior lesson input budget exceeded",
+    )?;
+    let feedback = verify(contract_bytes, capture_bytes)?;
+    let candidate: Value = serde_json::from_slice(candidate_bytes).map_err(|e| e.to_string())?;
+    let contract: Value = serde_json::from_slice(contract_bytes).map_err(|e| e.to_string())?;
+    let review: Value = serde_json::from_slice(review_bytes).map_err(|e| e.to_string())?;
+    require(
+        candidate["id"] == contract["candidateId"]
+            && candidate["sourceRevision"] == contract["sourceRevision"]
+            && digest(&serde_json::to_vec(&candidate).map_err(|e| e.to_string())?)
+                == contract["candidateSha256"],
+        "behavior lesson candidate binding differs",
+    )?;
+    let repository = text(&candidate, "repositoryId")?;
+    require(
+        review["schema"] == "agentlab.behavior_lesson_review.v1"
+            && review["reviewed"] == true
+            && review["automaticPromotion"] == false
+            && feedback["calibrationRecordedContentPassed"] == true,
+        "behavior lesson requires reviewed calibrated evidence",
+    )?;
+    for (key, actual) in [
+        ("candidateSha256", feedback["candidateSha256"].clone()),
+        ("sourceRevision", feedback["sourceRevision"].clone()),
+        ("contractSha256", json!(digest(contract_bytes))),
+        ("captureSha256", json!(digest(capture_bytes))),
+    ] {
+        require(
+            review[key] == actual,
+            "behavior lesson review binding differs",
+        )?;
+    }
+    for key in [
+        "id",
+        "scope",
+        "reviewerId",
+        "phenomenon",
+        "cause",
+        "change",
+        "factId",
+        "skillId",
+        "body",
+    ] {
+        require(
+            !text(&review, key)?.trim().is_empty(),
+            "behavior lesson review text empty",
+        )?;
+    }
+    require(
+        review["factId"] != review["skillId"],
+        "behavior lesson target identities collide",
+    )?;
+    require(
+        review["skillStage"] == "calibration" || review["skillStage"] == "evaluation",
+        "behavior lesson stage unsupported",
+    )?;
+    let controls = feedback["controls"].as_array().unwrap();
+    require(
+        controls
+            .iter()
+            .filter(|c| {
+                c["role"] == "accepted" && c["failedCheckIds"].as_array().unwrap().is_empty()
+            })
+            .count()
+            >= 2
+            && controls
+                .iter()
+                .filter(|c| {
+                    c["role"] == "wrong" && !c["failedCheckIds"].as_array().unwrap().is_empty()
+                })
+                .count()
+                >= 2,
+        "behavior lesson requires two accepted and two rejected controls",
+    )?;
+    let consumer = digest(include_bytes!("maintainer_behavior_checks.rs"));
+    let run = format!(
+        "behavior-{}",
+        digest(
+            &serde_json::to_vec(&json!([
+                feedback["candidateSha256"],
+                digest(contract_bytes),
+                digest(capture_bytes),
+                consumer
+            ]))
+            .map_err(|e| e.to_string())?
+        )
+    );
+    let evidence = format!("{run}-lesson-{}", digest(review_bytes));
+    let validation = format!("{evidence}-validation");
+    let qualification = json!({"boundary":"independently reconstructed recorded behavior checks","harmonyBuildQualified":false,
+        "harmonyRuntimeQualified":false,"uiQualified":false,"caseQualified":false,"producerAuthenticated":false,"learningBenefitVerified":false});
+    let mut expected = serde_json::Map::new();
+    for control in controls.iter().filter(|c| c["role"] != "agent-attempt") {
+        expected.insert(
+            text(control, "id")?.into(),
+            json!(control["failedCheckIds"].as_array().unwrap().is_empty()),
+        );
+    }
+    let promotion = json!({"id":review["id"],"scope":review["scope"],"phenomenon":review["phenomenon"],"cause":review["cause"],
+        "change":review["change"],"factId":review["factId"],"skillId":review["skillId"],"body":review["body"],
+        "skillStage":review["skillStage"],"expected":expected,"qualification":qualification});
+    let mut tables: BTreeMap<String, BTreeMap<String, Value>> = BTreeMap::new();
+    let mut put = |table: &str, mut row: Value| {
+        row["assetClass"] = json!("evaluation-instance");
+        row["runId"] = json!(run);
+        tables
+            .entry(table.into())
+            .or_default()
+            .insert(row["id"].as_str().unwrap().into(), row);
+    };
+    put(
+        "runs",
+        json!({"id":run,"kind":"recorded-behavior-calibration","candidateId":candidate["id"],"repositoryId":repository,
+        "sourceRevision":candidate["sourceRevision"],"contractSha256":digest(contract_bytes),"captureSha256":digest(capture_bytes),
+        "calibrationRecordedContentPassed":true,"qualified":false,"automaticPromotion":false}),
+    );
+    put(
+        "analysis_records",
+        json!({"id":format!("{run}-feedback"),"kind":"raw-behavior-reconstruction","consumerSourceSha256":consumer,
+        "code":"maintainer_behavior_checks::verify","inputSha256":digest(capture_bytes),"result":feedback}),
+    );
+    let mut control_ids = Vec::new();
+    for control in controls.iter().filter(|c| c["role"] != "agent-attempt") {
+        let id = format!("{run}-control-{}", digest(text(control, "id")?.as_bytes()));
+        control_ids.push(id.clone());
+        put(
+            "calibration_controls",
+            json!({"id":id,"variant":control["id"],"role":control["role"],"completed":true,
+            "observedVerdict":if control["failedCheckIds"].as_array().unwrap().is_empty(){"accept"}else{"reject"},
+            "capturePath":"behavior-capture.json","captureSha256":digest(capture_bytes),"stdoutSha256":control["stdoutSha256"]}),
+        );
+        for check in control["checks"].as_array().unwrap() {
+            put(
+                "checks",
+                json!({"id":format!("{id}-check-{}",digest(text(check,"id")?.as_bytes())),"controlId":id,
+                "variant":control["id"],"check":check["id"],"passed":check["passed"],"capturePath":"behavior-capture.json",
+                "captureSha256":digest(capture_bytes),"authority":"independently-reconstructed-frozen-check"}),
+            );
+        }
+    }
+    put(
+        "experiment_lessons",
+        json!({"id":review["id"],"kind":"calibrated-method-lesson","status":"verified","scope":review["scope"],
+        "phenomenon":review["phenomenon"],"cause":review["cause"],"change":review["change"],"repositoryId":repository,
+        "sourceRevision":candidate["sourceRevision"],"analysisId":format!("{run}-feedback"),"evidenceIds":[evidence],
+        "validationIds":[validation],"targetIds":[review["factId"],review["skillId"]],"promotionContract":promotion,
+        "attribution":"explicit-reviewed-interpretation-of-reconstructed-controls","reviewerId":review["reviewerId"],
+        "reviewSha256":digest(review_bytes),"automaticPromotion":false,"qualified":false}),
+    );
+    put(
+        "lesson_evidence",
+        json!({"id":evidence,"lessonId":review["id"],"kind":"reconstructed-behavior-controls",
+        "capturePath":"behavior-capture.json","captureSha256":digest(capture_bytes),"reviewPath":"lesson-review.json",
+        "reviewSha256":digest(review_bytes),"controlIds":control_ids}),
+    );
+    put(
+        "lesson_validations",
+        json!({"id":validation,"lessonId":review["id"],"kind":"positive-negative-calibration","passed":true,
+        "scope":review["scope"],"evidenceId":evidence,"expected":expected,"qualification":qualification,"reviewSha256":digest(review_bytes)}),
+    );
+    for (name, bytes) in [
+        ("candidate.json", candidate_bytes),
+        ("behavior-contract.json", contract_bytes),
+        ("behavior-capture.json", capture_bytes),
+        ("lesson-review.json", review_bytes),
+    ] {
+        put(
+            "evidence_files",
+            json!({"id":format!("{run}-file-{}-{}",digest(name.as_bytes()),digest(bytes)),"path":name,"sha256":digest(bytes),"bytes":bytes.len()}),
+        );
+    }
+    Ok(tables)
+}
+
 fn require(ok: bool, message: &str) -> Result<(), String> {
     if ok {
         Ok(())

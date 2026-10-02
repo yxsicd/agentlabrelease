@@ -50,6 +50,228 @@ fn reconstructs_mixed_json_checks_without_trusting_producer_boolean_or_expected(
 }
 
 #[test]
+fn behavior_lesson_requires_bound_review_and_independent_positive_negative_controls() {
+    let (mut contract, mut capture) = fixture();
+    let candidate = json!({"id":"generic-task","repositoryId":"unrelated-library","sourceRevision":"b".repeat(40)});
+    let candidate_bytes = serde_json::to_vec(&candidate).unwrap();
+    contract["candidateSha256"] = json!(digest(&candidate_bytes));
+    capture["candidateSha256"] = contract["candidateSha256"].clone();
+    let contract_bytes = serde_json::to_vec(&contract).unwrap();
+    capture["contractSha256"] = json!(digest(&contract_bytes));
+    let capture_bytes = serde_json::to_vec(&capture).unwrap();
+    let review = json!({"schema":"agentlab.behavior_lesson_review.v1","reviewed":true,"automaticPromotion":false,
+        "candidateSha256":digest(&candidate_bytes),"sourceRevision":candidate["sourceRevision"],
+        "contractSha256":digest(&contract_bytes),"captureSha256":digest(&capture_bytes),
+        "id":"reviewed-behavior","scope":"explicit seam","reviewerId":"operator-review",
+        "phenomenon":"Boundary variants distinguish retained state","cause":"A declared outcome changes ownership",
+        "change":"Observe both outcomes independently","factId":"fact-behavior","skillId":"skill-behavior",
+        "body":"Check state transitions independently of startup.","skillStage":"evaluation"});
+    let build = |candidate: &[u8], capture: &[u8], review: &Value| {
+        agentlab_code_analysis::maintainer_behavior_checks::lesson_assets(
+            candidate,
+            &contract_bytes,
+            capture,
+            &serde_json::to_vec(review).unwrap(),
+        )
+    };
+    let tables = build(&candidate_bytes, &capture_bytes, &review).unwrap();
+    let lesson = &tables["experiment_lessons"]["reviewed-behavior"];
+    assert_eq!(lesson["repositoryId"], "unrelated-library");
+    assert_eq!(lesson["promotionContract"]["skillStage"], "evaluation");
+    assert_eq!(
+        lesson["promotionContract"]["qualification"]["learningBenefitVerified"],
+        false
+    );
+    assert_eq!(tables["checks"].len(), 10);
+    assert_eq!(tables["evidence_files"].len(), 4);
+    // Exercise the public export and promotion boundary, not only the library.
+    let root = loop_output_for_adapter();
+    std::fs::create_dir(&root).unwrap();
+    for (name, bytes) in [
+        ("candidates.jsonl", candidate_bytes.clone()),
+        ("contract.json", contract_bytes.clone()),
+        ("capture.json", capture_bytes.clone()),
+        ("review.json", serde_json::to_vec(&review).unwrap()),
+    ] {
+        std::fs::write(root.join(name), bytes).unwrap();
+    }
+    let exported = root.join("exported");
+    let result =
+        std::process::Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .arg("--export-behavior-lesson")
+            .args([
+                "--candidates",
+                root.join("candidates.jsonl").to_str().unwrap(),
+            ])
+            .args(["--candidate-id", "generic-task"])
+            .args(["--contract", root.join("contract.json").to_str().unwrap()])
+            .args(["--capture", root.join("capture.json").to_str().unwrap()])
+            .args([
+                "--lesson-review",
+                root.join("review.json").to_str().unwrap(),
+            ])
+            .args(["--output", exported.to_str().unwrap()])
+            .output()
+            .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert_eq!(
+        std::fs::read(exported.join("behavior-capture.json")).unwrap(),
+        capture_bytes
+    );
+    // Synthetic committed-source metadata tests reconstruction, not remote authority.
+    let export_path = exported.join("export.json");
+    let mut export: Value = serde_json::from_slice(&std::fs::read(&export_path).unwrap()).unwrap();
+    export["repository"] = json!("fixture-behavior-instance");
+    export["revision"] = json!("e".repeat(40));
+    export["tablePrefix"] = json!("data/");
+    std::fs::write(&export_path, serde_json::to_vec(&export).unwrap()).unwrap();
+    let knowledge = root.join("knowledge");
+    std::fs::create_dir(&knowledge).unwrap();
+    for table in ["maintainer_skills", "program_facts", "evaluation_cases"] {
+        std::fs::write(knowledge.join(format!("{table}.jsonl")), "").unwrap();
+    }
+    let promoted = root.join("promoted");
+    let result = std::process::Command::new(env!("CARGO_BIN_EXE_agentlab-experience"))
+        .env("GITHUB_SHA", "e".repeat(40))
+        .arg("promote")
+        .args([&exported, &knowledge, &promoted])
+        .arg("reviewed-behavior")
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let skill: Value = serde_json::from_str(
+        std::fs::read_to_string(promoted.join("maintainer_skills.jsonl"))
+            .unwrap()
+            .trim(),
+    )
+    .unwrap();
+    assert_eq!(skill["stage"], "evaluation");
+    assert_eq!(skill["repositoryId"], "unrelated-library");
+    assert_eq!(skill["body"], review["body"]);
+    assert_eq!(skill["automaticPromotion"], false);
+    assert!(
+        std::fs::read_to_string(promoted.join("evaluation_cases.jsonl"))
+            .unwrap()
+            .is_empty()
+    );
+    let base = root.join("admission-baseline");
+    std::fs::create_dir(&base).unwrap();
+    let mut cut = json!({"schema":"agentlab.maintainer_knowledge_cut.v1",
+        "tableGitAuthority":{"repo":"fixture-knowledge","revision":"a".repeat(40)},"tables":{}});
+    let mut round = json!({"id":"initial","roundIndex":1,"ownershipPlane":"target-operations",
+        "automaticPromotion":false,"coverage":{"processSkillCount":0},"tables":{},
+        "assessment":{"path":"fixture-assessment.json","sha256":"d".repeat(64)}});
+    for (key, table, round_key) in [
+        (
+            "maintainerSkills",
+            "maintainer_skills",
+            "processSkillsSha256",
+        ),
+        ("programFacts", "program_facts", "programFactsSha256"),
+        (
+            "maintainerScopeSkills",
+            "maintainer_scope_skills",
+            "scopeSkillsSha256",
+        ),
+        ("evaluationCases", "evaluation_cases", ""),
+    ] {
+        let bytes = if table == "maintainer_scope_skills" {
+            serde_json::to_vec(&json!({"id":"fixture-scope","repositoryId":candidate["repositoryId"],"sourceRevision":candidate["sourceRevision"]})).unwrap()
+        } else {
+            Vec::new()
+        };
+        std::fs::write(base.join(format!("{table}.jsonl")), &bytes).unwrap();
+        cut["tables"][key] = json!({"path":format!("{table}.jsonl"),"sha256":digest(&bytes)});
+        if !round_key.is_empty() {
+            round["tables"][round_key] = json!(digest(&bytes));
+        }
+    }
+    let history = serde_json::to_vec(&round).unwrap();
+    std::fs::write(base.join("maintainer_skill_refresh_rounds.jsonl"), &history).unwrap();
+    cut["tables"]["maintainerSkillRefreshRounds"] =
+        json!({"path":"maintainer_skill_refresh_rounds.jsonl","sha256":digest(&history)});
+    std::fs::write(
+        base.join("maintainer-knowledge-cut.json"),
+        serde_json::to_vec(&cut).unwrap(),
+    )
+    .unwrap();
+    let prepare = || {
+        agentlab_code_analysis::maintainer_lesson_admission::prepare(
+            &base,
+            &promoted,
+            &exported,
+            "reviewed-behavior",
+            &"a".repeat(40),
+        )
+    };
+    let plan = prepare().unwrap();
+    assert_eq!(plan["authorityWritePerformed"], false);
+    assert_eq!(
+        plan["tables"]["maintainer_skills"]["row"]["stage"],
+        "evaluation"
+    );
+    assert_eq!(plan["tables"].as_object().unwrap().len(), 3);
+    let capture_path = exported.join("behavior-capture.json");
+    let mut tampered = capture.clone();
+    modify(&mut tampered, 3, |raw| {
+        raw["observations"][0]["actual"] = contract["checks"][0]["expected"].clone()
+    });
+    std::fs::write(&capture_path, serde_json::to_vec(&tampered).unwrap()).unwrap();
+    assert!(prepare().is_err());
+    std::fs::write(&capture_path, &capture_bytes).unwrap();
+    let skill_path = promoted.join("maintainer_skills.jsonl");
+    let original_skill = std::fs::read(&skill_path).unwrap();
+    let mut tampered_skill = skill.clone();
+    tampered_skill["stage"] = json!("calibration");
+    std::fs::write(&skill_path, serde_json::to_vec(&tampered_skill).unwrap()).unwrap();
+    assert!(prepare().is_err());
+    std::fs::write(&skill_path, original_skill).unwrap();
+    assert_eq!(prepare().unwrap(), plan);
+    std::fs::remove_dir_all(&root).unwrap();
+    for (key, value) in [
+        ("reviewed", json!(false)),
+        ("automaticPromotion", json!(true)),
+        ("contractSha256", json!("f".repeat(64))),
+        ("captureSha256", json!("f".repeat(64))),
+        ("candidateSha256", json!("f".repeat(64))),
+        ("sourceRevision", json!("f".repeat(40))),
+        ("skillStage", json!("invented")),
+        ("skillId", review["factId"].clone()),
+    ] {
+        let mut bad = review.clone();
+        bad[key] = value;
+        assert!(
+            build(&candidate_bytes, &capture_bytes, &bad).is_err(),
+            "{key}"
+        );
+    }
+    let mut changed = candidate.clone();
+    changed["repositoryId"] = json!("borrowed-library");
+    assert!(build(
+        &serde_json::to_vec(&changed).unwrap(),
+        &capture_bytes,
+        &review
+    )
+    .is_err());
+    let mut surviving = capture.clone();
+    modify(&mut surviving, 3, |raw| {
+        raw["observations"][0]["actual"] = json!([1, "retained"])
+    });
+    let bytes = serde_json::to_vec(&surviving).unwrap();
+    let mut revised = review.clone();
+    revised["captureSha256"] = json!(digest(&bytes));
+    assert!(build(&candidate_bytes, &bytes, &revised).is_err());
+}
+
+#[test]
 fn distinguishes_valid_control_and_surviving_wrong_control_failures() {
     let (contract, mut capture) = fixture();
     modify(&mut capture, 1, |raw| {
