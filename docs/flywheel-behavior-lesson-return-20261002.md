@@ -28,3 +28,46 @@ This local export remains an operational candidate. Remote committed lesson
 readback, full staged-cut validation, atomic admission, new-cut readback and
 next-round Agent consumption remain required. Equal-condition treatment
 comparison and subsequent cross-repository learning are still unproven.
+
+## Real committed admission and next-round enrollment
+
+PR 165 passed eleven applicable hosted checks and merged at
+`67ad95035cd1fb0b06d5caa6fc014ae1733bb609`. Exact source `4c023707abf67e370f6049cd430676b91460ed66`
+also passed the complete local workspace regression.
+
+The retained behavior export was persisted in independent bare TableGit
+`agentlabbehavior-4c02370-20261002` at
+`8f8314b673a02fc259762894f9b821806eb5c5ba`: eight tables and 51 rows were
+read back by exact keys. Active baseline `1aef65558cbbc66b3bfe63b719cfc171b33a28f9`
+was compared across all five knowledge tables. Original lesson reconstruction,
+complete staging reproduction and five portable sidecars passed before one
+atomic three-insert transaction `98ff66dd-1145-5b90-9119-16df43bbe31b`.
+Active revision `4327475966e056b4c2d93f0736062656c182728e` was independently
+read back: 14 process Skills, 63 facts, 489 scopes, 41 refresh records and zero
+formal cases. The published snapshot is byte-identical to that committed export.
+
+The new evaluation-stage subscription-ownership lesson binds successfully through
+the ordinary guidance consumer. This is real evidence admission and packet
+construction, not Agent consumption or learning benefit. Maturity remains 58%.
+
+The next paired dispatch uses the same main commit for both arms, the
+environment-lifecycle-demand profile, first-four candidate corpus, glm-5.3-flash
+via glm, low reasoning effort and maximum_attempts=2. The unguided arm leaves
+guidance inputs empty. The guided arm uses the committed first-four cut and
+`reviewed-guidance/environment-lifecycle-evaluation-selection.json`, stage
+evaluation. Freeze the resolved method SHA before dispatch and reject an arm
+that starts at another SHA. Existing unchanged checks, per-attempt watchdogs
+and zero transport-retry policy apply equally. Do not compare against the older
+successful unguided run as if it used the same method cut. Require independent
+completion/consumption, runtime and behavior replays; report outcome differences
+as scoped observations, not statistical or causal benefit from a single pair.
+
+Publication CI initially rejected this cut because the snapshot regression assumed
+exactly one method Skill and only calibration guidance. Local full regression
+reproduced the same count failure. The corrected test compares admitted method
+Skills with all verified-lesson facts, requires their exact linked identity set,
+and retains source/method/lineage and false-qualification checks for each row.
+Current-assessment resolution now checks the maximum declared refresh index
+instead of a previous fixed round number; historical candidate lineage remains
+unchanged. This repairs snapshot-test assumptions, not evidence verdicts or
+an Agent result. Preserve the original failed CI run 36982209053.

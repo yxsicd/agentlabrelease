@@ -129,9 +129,26 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
             .values()
             .filter(|skill| skill["skillLayer"] == "method")
             .count(),
-        1
+        facts
+            .values()
+            .filter(|fact| fact["kind"] == "verified-lesson")
+            .count()
     );
     assert!(facts.len() >= 24);
+    let method_facts: BTreeSet<_> = skills
+        .values()
+        .filter(|skill| skill["skillLayer"] == "method")
+        .flat_map(|skill| ids(skill, "factIds"))
+        .collect();
+    let verified_facts: BTreeSet<_> = facts
+        .iter()
+        .filter(|(_, fact)| fact["kind"] == "verified-lesson")
+        .map(|(id, _)| id.clone())
+        .collect();
+    assert_eq!(
+        method_facts, verified_facts,
+        "every admitted lesson needs its own linked guidance"
+    );
     assert!(refresh_rounds.len() >= 5);
     assert!(!generation_rounds.is_empty());
     assert!(
@@ -148,7 +165,7 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
         let revision = repositories.get(repository_id).unwrap();
         assert_eq!(skill["sourceRevision"].as_str().unwrap(), revision);
         if skill["skillLayer"] == "method" {
-            assert_eq!(skill["stage"], "calibration");
+            assert!(skill["stage"] == "calibration" || skill["stage"] == "evaluation");
             assert_eq!(skill["automaticPromotion"], false);
             assert_eq!(skill["methodSkillId"], "agentlab-experiment-learning");
             assert_eq!(

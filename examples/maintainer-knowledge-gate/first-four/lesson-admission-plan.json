@@ -2,9 +2,9 @@
   "assessmentReused": true,
   "authorityWritePerformed": false,
   "automaticPromotion": false,
-  "baselineKnowledgeCutSha256": "32391f45b5cfdad90cdf1b4d9f147f6639eacfe16acc3c61f3841ce3afa9b65e",
+  "baselineKnowledgeCutSha256": "89ba54084ef0a037bcddae5ad68b20184709621397a9f7aed93c39b9a2f36bf0",
   "decision": "prepared-reviewed-lesson-admission",
-  "expectedRevision": "38fc28d72870b36405287e048a5e6fce41a44b78",
+  "expectedRevision": "1aef65558cbbc66b3bfe63b719cfc171b33a28f9",
   "qualified": false,
   "repository": "agentlabtablegit",
   "requiredFollowUp": [
@@ -17,21 +17,21 @@
   ],
   "schema": "agentlab.maintainer_lesson_admission_plan.v1",
   "sourceCommitAuthenticated": false,
-  "sourceExportSha256": "a5222adb2582f05b0a7bc28df19dd06b91bdd41b8206028e63e1593cbd64f6db",
+  "sourceExportSha256": "54badafb8702fd256d2dd8749c6d90a37588e70d7ced80db40176eaa36b51c55",
   "tables": {
     "maintainer_skill_refresh_rounds": {
-      "key": "lesson-admission-98c181f1d3c7e9c8c65740655d91d7d9dc1638180ba9da4913c7c7eee59761a6",
+      "key": "lesson-admission-e2a1bc49277d42a44ac76e1085386ade354aaa50e6250f7853a47924a0031bc3",
       "row": {
         "assessment": {
-          "path": "assessments/round-36-agent-36879945533.json",
-          "sha256": "47354f03c2dcd4c4364b3dc7cdec7e30b3ac9d4f81b507120e355a46670f272d"
+          "path": "assessments/round-38-agent-36960519495.json",
+          "sha256": "e2349e92fd320bdc9b75caa42d7cad85f504e10e902ec7fc365933789734d102"
         },
         "assessmentReused": true,
         "automaticPromotion": false,
         "changes": {
           "added": [
-            "lesson-skill-abilitystage-application-context-semantic-controls",
-            "lesson-fact-abilitystage-application-context-semantic-controls"
+            "lesson-skill-abilitystage-owned-environment-subscription",
+            "lesson-fact-abilitystage-owned-environment-subscription"
           ],
           "retired": [],
           "updated": []
@@ -39,7 +39,7 @@
         "countsAsMaturityGain": false,
         "coverage": {
           "maintenanceReadyScopeCount": 2,
-          "processSkillCount": 13,
+          "processSkillCount": 14,
           "programBoundScopeCount": 46,
           "repositoryCount": 4,
           "scopeSkillCount": 489,
@@ -47,98 +47,99 @@
           "trackedFileCount": 44567
         },
         "decision": "continue",
-        "id": "lesson-admission-98c181f1d3c7e9c8c65740655d91d7d9dc1638180ba9da4913c7c7eee59761a6",
+        "id": "lesson-admission-e2a1bc49277d42a44ac76e1085386ade354aaa50e6250f7853a47924a0031bc3",
         "knowledgeChangeMode": "reviewed-lesson-admission",
         "lessonSource": {
-          "lessonFileDigest": "f14cf6f505d3eaede540ad02200ea6d14fa2351699185d33ec3f6967f91c3bdd",
-          "lessonId": "lesson-abilitystage-application-context-semantic-controls",
-          "repository": "agentlabstage-48eb54481017",
-          "revision": "3a9d8a4fc7a720e13741da1b70f3bc96c2636568",
+          "lessonFileDigest": "4c35fb855d324a789cea2dc8965b59f325467580c0cac7dab71cbee80e1e421a",
+          "lessonId": "lesson-abilitystage-owned-environment-subscription",
+          "repository": "agentlabbehavior-4c02370-20261002",
+          "revision": "8f8314b673a02fc259762894f9b821806eb5c5ba",
           "tablePrefix": "data/"
         },
         "ownershipPlane": "target-operations",
-        "parentRoundSha256": "9f82db4babd2b3d4fc2b019f82324dab69b2e0d6a057d477f84a3d9f96753ac6",
+        "parentRoundSha256": "c48591860a7a57ca49843e248013bc80f5b5f2557dca214db20055f4516d1249",
         "producer": {
           "kind": "reviewed-lesson-admission-planner"
         },
-        "reviewSha256": "e544368297e2fe5ed5a0ad95c5dbadb7fa957cdf94c282a11afa43069cebd544",
-        "roundIndex": 39,
+        "reviewSha256": "3134f690300e4d7b5cad9817e3c7b98461981447fdaf6618f9ea799d503546f0",
+        "roundIndex": 41,
         "schema": "agentlab.maintainer_skill_refresh_round.v1",
         "tables": {
-          "processSkillsSha256": "6cfa7218f4f4e7808d908f92b3eca1bbb60801eacb726a3003c71668e32381a9",
-          "programFactsSha256": "9fa612663ca5653e8df61071a005e62ff6630aae6b99a18e518f766170703293",
+          "processSkillsSha256": "07bb6e2db288d636c7951bad249a9ca082005d4f6a92e89cd249b52de5a01bc1",
+          "programFactsSha256": "e71229389cce2c9c65714831c1c543708136ba1cb0406a2fdedcc918353d76e5",
           "scopeSkillsSha256": "9faf87778708c0bc9acf6522ac1c0b1358e1845139da4f2949348d7285e51953"
         }
       }
     },
     "maintainer_skills": {
-      "key": "lesson-skill-abilitystage-application-context-semantic-controls",
+      "key": "lesson-skill-abilitystage-owned-environment-subscription",
       "row": {
         "assetClass": "reusable-knowledge",
         "automaticPromotion": false,
-        "body": "For a configuration-lifecycle task, bind the selected module entry and actual stage source. Independently observe creation, application-context environment registration, language change, color-mode change and destruction. Require the accepted source to pass and wrong-entry/wrong-event mutations to fail their declared intended checks. Read raw worker observations rather than trusting startup completion or producer booleans. These verified controls cover only the recorded operator-dispatch source seam; separately calibrate actual framework delivery, ArkTS/HAP, exact emulator API and ohosTest before qualifying the task.",
+        "body": "When repairing this frozen ApplicationContext subscription extension, track whether a callback is owned independently of callback ID truthiness. The task explicitly permits ID zero; this is not an upstream API guarantee. Acquire local ownership only after registration succeeds, allow retry after failure, and release ownership on destruction so recreation can register again. Repeated creation may retain or replace the owned callback but must not accumulate subscriptions. Destruction before creation and repeated destruction must not cancel an invalid callback. Preserve the original configuration and memory logging and prevent delivery after destruction. Check both accepted retain-owned and replace-owned implementations against zero-ID, stale-owner and duplicate-subscription negative controls. This lesson is supported by reconstructed controlled host-seam observations, not formal ArkTS build, platform lifecycle dispatch, HAP, emulator, ohosTest, authenticated producer identity, or measured learning benefit. It describes a new task extension, not an upstream defect.",
         "factIds": [
-          "lesson-fact-abilitystage-application-context-semantic-controls"
+          "lesson-fact-abilitystage-owned-environment-subscription"
         ],
-        "id": "lesson-skill-abilitystage-application-context-semantic-controls",
+        "id": "lesson-skill-abilitystage-owned-environment-subscription",
         "lessonSource": {
-          "lessonFileDigest": "f14cf6f505d3eaede540ad02200ea6d14fa2351699185d33ec3f6967f91c3bdd",
-          "lessonId": "lesson-abilitystage-application-context-semantic-controls",
-          "repository": "agentlabstage-48eb54481017",
-          "revision": "3a9d8a4fc7a720e13741da1b70f3bc96c2636568",
+          "lessonFileDigest": "4c35fb855d324a789cea2dc8965b59f325467580c0cac7dab71cbee80e1e421a",
+          "lessonId": "lesson-abilitystage-owned-environment-subscription",
+          "repository": "agentlabbehavior-4c02370-20261002",
+          "revision": "8f8314b673a02fc259762894f9b821806eb5c5ba",
           "tablePrefix": "data/"
         },
-        "methodDigest": "a70d6d7d7db82589415e8a4019e99cc3454510da6b22a3eaaea0f13af2526c3d",
-        "methodRevision": "bece477a916807ec344a00f5b00f8e0966e3d0e9",
+        "methodDigest": "c81b35a7ffb1b953687b24b768d3983ce195459881ea9c0e281c7f3033c47775",
+        "methodRevision": "4c023707abf67e370f6049cd430676b91460ed66",
         "methodSkillId": "agentlab-experiment-learning",
-        "objectId": "lesson-abilitystage-application-context-semantic-controls",
+        "objectId": "lesson-abilitystage-owned-environment-subscription",
         "ownershipPlane": "target-operations",
         "repositoryId": "guide-snippets",
         "role": "maintenance",
         "skillLayer": "method",
-        "sourceLessonExportDigest": "f14cf6f505d3eaede540ad02200ea6d14fa2351699185d33ec3f6967f91c3bdd",
-        "sourceLessonId": "lesson-abilitystage-application-context-semantic-controls",
+        "sourceLessonExportDigest": "4c35fb855d324a789cea2dc8965b59f325467580c0cac7dab71cbee80e1e421a",
+        "sourceLessonId": "lesson-abilitystage-owned-environment-subscription",
         "sourceRevision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
-        "stage": "calibration",
-        "title": "A startup-only observation does not establish configuration delivery through the selected stage"
+        "stage": "evaluation",
+        "title": "Repeated creation, destruction, recreation and registration failure distinguish subscription ownership implementations"
       }
     },
     "program_facts": {
-      "key": "lesson-fact-abilitystage-application-context-semantic-controls",
+      "key": "lesson-fact-abilitystage-owned-environment-subscription",
       "row": {
         "assetClass": "reusable-knowledge",
         "automaticPromotion": false,
-        "cause": "At the controlled source seam, wrong module entry or environment event registration prevents the expected creation or configuration observations",
-        "change": "Calibrate creation, application-context registration, independent language/color changes and destruction with separate positive and wrong-entry/wrong-event controls",
-        "id": "lesson-fact-abilitystage-application-context-semantic-controls",
+        "cause": "For the declared task, truthiness checks lose valid callback ID zero, stale local ownership prevents recreation, and repeated registration accumulates subscriptions",
+        "change": "Represent subscription ownership explicitly, acquire it only after successful registration, and release it on destruction while preserving original callbacks",
+        "id": "lesson-fact-abilitystage-owned-environment-subscription",
         "kind": "verified-lesson",
         "lessonSource": {
-          "lessonFileDigest": "f14cf6f505d3eaede540ad02200ea6d14fa2351699185d33ec3f6967f91c3bdd",
-          "lessonId": "lesson-abilitystage-application-context-semantic-controls",
-          "repository": "agentlabstage-48eb54481017",
-          "revision": "3a9d8a4fc7a720e13741da1b70f3bc96c2636568",
+          "lessonFileDigest": "4c35fb855d324a789cea2dc8965b59f325467580c0cac7dab71cbee80e1e421a",
+          "lessonId": "lesson-abilitystage-owned-environment-subscription",
+          "repository": "agentlabbehavior-4c02370-20261002",
+          "revision": "8f8314b673a02fc259762894f9b821806eb5c5ba",
           "tablePrefix": "data/"
         },
-        "methodDigest": "a70d6d7d7db82589415e8a4019e99cc3454510da6b22a3eaaea0f13af2526c3d",
-        "methodRevision": "bece477a916807ec344a00f5b00f8e0966e3d0e9",
+        "methodDigest": "c81b35a7ffb1b953687b24b768d3983ce195459881ea9c0e281c7f3033c47775",
+        "methodRevision": "4c023707abf67e370f6049cd430676b91460ed66",
         "methodSkillId": "agentlab-experiment-learning",
         "ownershipPlane": "target-operations",
-        "phenomenon": "A startup-only observation does not establish configuration delivery through the selected stage",
+        "phenomenon": "Repeated creation, destruction, recreation and registration failure distinguish subscription ownership implementations",
         "qualification": {
-          "boundary": "independently reconstructed recorded host seam",
+          "boundary": "independently reconstructed recorded behavior checks",
           "caseQualified": false,
           "harmonyBuildQualified": false,
           "harmonyRuntimeQualified": false,
+          "learningBenefitVerified": false,
           "producerAuthenticated": false,
           "uiQualified": false
         },
         "repositoryId": "guide-snippets",
-        "scope": "recorded-abilitystage-application-context-source-seam",
-        "sourceLessonExportDigest": "f14cf6f505d3eaede540ad02200ea6d14fa2351699185d33ec3f6967f91c3bdd",
-        "sourceLessonId": "lesson-abilitystage-application-context-semantic-controls",
+        "scope": "Frozen owned ApplicationContext subscription task extension at the declared source cut; controlled host seam only",
+        "sourceLessonExportDigest": "4c35fb855d324a789cea2dc8965b59f325467580c0cac7dab71cbee80e1e421a",
+        "sourceLessonId": "lesson-abilitystage-owned-environment-subscription",
         "sourceRevision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
         "validationIds": [
-          "stage-48eb544810172d462f406829ab67a6a32941a60c1f8fbfbc76dd6cca4f3eb1a2-lesson-e544368297e2fe5ed5a0ad95c5dbadb7fa957cdf94c282a11afa43069cebd544-validation"
+          "behavior-0f7fd70b34b48c06ece1f241a927462ee07c635fa227664cf4e784b5c546c943-lesson-3134f690300e4d7b5cad9817e3c7b98461981447fdaf6618f9ea799d503546f0-validation"
         ]
       }
     }

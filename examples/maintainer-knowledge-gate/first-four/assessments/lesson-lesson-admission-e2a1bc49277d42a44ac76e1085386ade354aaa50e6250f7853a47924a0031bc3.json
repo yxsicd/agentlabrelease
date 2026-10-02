@@ -1,5 +1,5 @@
 {
-  "assessmentId": "maintainer-skill-assessment-1426125c60ac75bdb09a",
+  "assessmentId": "maintainer-skill-assessment-8326f35f12fddc5c65e4",
   "automaticPromotion": false,
   "decision": "continue",
   "gapCounts": {
@@ -12,7 +12,7 @@
     "MS-RESPONSIBILITY-EVIDENCE-MISSING": 447
   },
   "inputs": {
-    "programFactsSha256": "9196a26a9575d940d7c184434a66cf5cc1179b281900c52b6a0091ed661fd941",
+    "programFactsSha256": "e71229389cce2c9c65714831c1c543708136ba1cb0406a2fdedcc918353d76e5",
     "scopeSkillsSha256": "9faf87778708c0bc9acf6522ac1c0b1358e1845139da4f2949348d7285e51953"
   },
   "nextRoundObjectives": [
@@ -24,7 +24,7 @@
     "close 444 MS-RELATIONS-EVIDENCE-MISSING gaps with revision-bound evidence",
     "close 447 MS-RESPONSIBILITY-EVIDENCE-MISSING gaps with revision-bound evidence"
   ],
-  "parentAssessmentSha256": "f255f78aa09a95201309f09c5bd5816369c49df7551bf62fc1366d000929e0b8",
+  "parentAssessmentSha256": "e2349e92fd320bdc9b75caa42d7cad85f504e10e902ec7fc365933789734d102",
   "repositories": [
     {
       "maintenanceReadyCount": 2,
@@ -63,7 +63,7 @@
       "structuralReadyCount": 34
     }
   ],
-  "roundIndex": 38,
+  "roundIndex": 39,
   "schema": "agentlab.maintainer_skill_assessment.v1",
   "skills": [
     {

@@ -1,8 +1,9 @@
 {
   "acceptedFactIds": [
-    "agent-analysis-rdb-preference-telemetry-pipeline"
+    "lesson-fact-abilitystage-owned-environment-subscription"
   ],
-  "assessment": "assessments/round-38-agent-36960519495.json",
+  "assessment": "assessments/lesson-lesson-admission-e2a1bc49277d42a44ac76e1085386ade354aaa50e6250f7853a47924a0031bc3.json",
+  "authorityWritePerformed": false,
   "automaticPromotion": false,
   "operationEvidence": {
     "coverage": "verified-child-operation-facts-only",
@@ -21,11 +22,8 @@
     "receiptRoot": "operation-evidence",
     "receipts": []
   },
-  "proposalReceiptCount": 1,
-  "runId": "36960519495",
   "schema": "agentlab.maintainer_skill_tablegit_stage.v1",
-  "semanticMode": "focused-refresh",
-  "stageKind": "verified-semantic",
+  "stageKind": "reviewed-lesson",
   "tables": {
     "evaluation_cases": {
       "path": "evaluation_cases.jsonl",
@@ -37,15 +35,15 @@
     },
     "maintainer_skill_refresh_rounds": {
       "path": "maintainer_skill_refresh_rounds.jsonl",
-      "sha256": "d96b42cc02cd17a4eb6bf4681f07ddf111a3cbe74e0e9faebefd60d11b3049ab"
+      "sha256": "a1a57e18107a4d03890eb768be58d5e139aaf1fc14633b0cd3d60dff178c188d"
     },
     "maintainer_skills": {
       "path": "maintainer_skills.jsonl",
-      "sha256": "6cfa7218f4f4e7808d908f92b3eca1bbb60801eacb726a3003c71668e32381a9"
+      "sha256": "07bb6e2db288d636c7951bad249a9ca082005d4f6a92e89cd249b52de5a01bc1"
     },
     "program_facts": {
       "path": "program_facts.jsonl",
-      "sha256": "9196a26a9575d940d7c184434a66cf5cc1179b281900c52b6a0091ed661fd941"
+      "sha256": "e71229389cce2c9c65714831c1c543708136ba1cb0406a2fdedcc918353d76e5"
     }
   }
 }
