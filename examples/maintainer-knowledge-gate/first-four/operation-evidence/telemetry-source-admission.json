@@ -1,0 +1,20 @@
+{
+  "authorityWritePerformed": true,
+  "automaticPromotion": false,
+  "captureRecovery": "compiler cache byte-identical by SHA256; all remaining original source/method fragments remotely read",
+  "closedLoopQualified": false,
+  "crossHostRequalification": true,
+  "exactCommittedReadback": true,
+  "portableSidecars": 7,
+  "previousRevision": "131613e12afee0311238e35cf9eee5c604ace2f2",
+  "revision": "ed832d1b7e0e26b040be8cbb54737124027f0a67",
+  "schema": "agentlab.reviewed_source_operation_admission.v1",
+  "tables": {
+    "evaluation_cases": 0,
+    "maintainer_scope_skills": 489,
+    "maintainer_skill_refresh_rounds": 43,
+    "maintainer_skills": 14,
+    "program_facts": 65
+  },
+  "transactionId": "fb177600-0d36-50bd-a30d-f9b8b60e5f0a"
+}

@@ -1,33 +1,33 @@
 {
-  "assessmentId": "maintainer-skill-assessment-036cb01070024a53e6a5",
+  "assessmentId": "maintainer-skill-assessment-88da4fb7d8c98b9cbdaa",
   "automaticPromotion": false,
   "decision": "continue",
   "gapCounts": {
     "MS-BEHAVIOR-EVIDENCE-MISSING": 438,
     "MS-BOUNDARY-EVIDENCE-MISSING": 445,
-    "MS-OPERATION-EVIDENCE-MISSING": 38,
+    "MS-OPERATION-EVIDENCE-MISSING": 37,
     "MS-OPERATION-RECEIPT-UNVERIFIED": 2,
     "MS-PROGRAM-EVIDENCE-UNBOUND": 443,
     "MS-RELATIONS-EVIDENCE-MISSING": 444,
     "MS-RESPONSIBILITY-EVIDENCE-MISSING": 447
   },
   "inputs": {
-    "programFactsSha256": "619fbd7b7145248d7e78a61094aa6c904f8138a8fe0a141e622af323d209a7ba",
+    "programFactsSha256": "683a311ebaf4e87cf87fec56b9d3ea5271dc89def6c6a46e99ffd99a72b7371a",
     "scopeSkillsSha256": "9faf87778708c0bc9acf6522ac1c0b1358e1845139da4f2949348d7285e51953"
   },
   "nextRoundObjectives": [
     "close 438 MS-BEHAVIOR-EVIDENCE-MISSING gaps with revision-bound evidence",
     "close 445 MS-BOUNDARY-EVIDENCE-MISSING gaps with revision-bound evidence",
-    "close 38 MS-OPERATION-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 37 MS-OPERATION-EVIDENCE-MISSING gaps with revision-bound evidence",
     "close 2 MS-OPERATION-RECEIPT-UNVERIFIED gaps with revision-bound evidence",
     "close 443 MS-PROGRAM-EVIDENCE-UNBOUND gaps with revision-bound evidence",
     "close 444 MS-RELATIONS-EVIDENCE-MISSING gaps with revision-bound evidence",
     "close 447 MS-RESPONSIBILITY-EVIDENCE-MISSING gaps with revision-bound evidence"
   ],
-  "parentAssessmentSha256": "2ec3f4d2e82d074200ed5fa499adc767c11fae17c65b1a0ed2439a125e178bbc",
+  "parentAssessmentSha256": "4115f840bcfaf94f63f5b3520de8b2ab30b74a6a9d372aa0329ec1292d561a5a",
   "repositories": [
     {
-      "maintenanceReadyCount": 3,
+      "maintenanceReadyCount": 4,
       "programBoundCount": 25,
       "readyForCaseGeneration": false,
       "repositoryId": "code-workshop",
@@ -63,7 +63,7 @@
       "structuralReadyCount": 34
     }
   ],
-  "roundIndex": 40,
+  "roundIndex": 41,
   "schema": "agentlab.maintainer_skill_assessment.v1",
   "skills": [
     {
@@ -195,7 +195,7 @@
       ],
       "checks": {
         "identityReady": true,
-        "maintenanceReady": false,
+        "maintenanceReady": true,
         "programEvidenceBound": true,
         "semanticReady": true,
         "structuralReady": true
@@ -210,21 +210,83 @@
             "responsibility"
           ],
           "factId": "agent-analysis-rdb-preference-telemetry-pipeline"
-        }
-      ],
-      "gaps": [
+        },
         {
-          "code": "MS-OPERATION-EVIDENCE-MISSING",
-          "dimension": "operation",
-          "message": "semantic scope lacks executable build, test, runtime, or maintenance evidence",
-          "severity": "P1"
+          "bindingMode": "explicit-scope-id",
+          "dimensions": [
+            "operation"
+          ],
+          "factId": "operation-source-59ec37d6a455b3d674aa971f90316b5967297dace95ef17d3655860275be9956"
         }
       ],
-      "maturity": "L2-semantic-ready",
-      "operationEvidenceChecks": {},
+      "gaps": [],
+      "maturity": "L3-maintenance-ready",
+      "operationEvidenceChecks": {
+        "operation-source-59ec37d6a455b3d674aa971f90316b5967297dace95ef17d3655860275be9956": {
+          "adapter": "recorded-source-maintenance-controls-v1",
+          "controls": [
+            {
+              "failedCheckIds": [
+                "fulfilled-false"
+              ],
+              "id": "baseline",
+              "role": "baseline"
+            },
+            {
+              "failedCheckIds": [],
+              "id": "reference",
+              "role": "reference"
+            },
+            {
+              "failedCheckIds": [],
+              "id": "alternative-valid",
+              "role": "reference"
+            },
+            {
+              "failedCheckIds": [
+                "fulfilled-false",
+                "fulfilled-true",
+                "reject-above-limit",
+                "reject-at-limit",
+                "reject-below-limit"
+              ],
+              "id": "delete-before-upload",
+              "role": "wrong"
+            },
+            {
+              "failedCheckIds": [
+                "reject-at-limit",
+                "reject-below-limit"
+              ],
+              "id": "failure-path-overreach",
+              "role": "wrong"
+            },
+            {
+              "failedCheckIds": [
+                "reject-at-limit"
+              ],
+              "id": "inclusive-threshold",
+              "role": "wrong"
+            }
+          ],
+          "lane": "source-only",
+          "qualificationScope": {
+            "build": false,
+            "performance": false,
+            "runtime": false,
+            "sourceMaintenance": true,
+            "tests": false
+          },
+          "receiptPath": "source-f74bf8a6beb80e7002505bd9151cf193809484d8ea3fe69e0849a572ea2049ed.json",
+          "receiptSha256": "f74bf8a6beb80e7002505bd9151cf193809484d8ea3fe69e0849a572ea2049ed",
+          "status": "verified",
+          "verificationBoundary": "Reviewed source-maintenance controls and retained bytes; no authenticated producer, full scope coverage, formal tests, framework runtime or Agent qualification."
+        }
+      },
       "provenDimensions": [
         "behavior",
         "boundary",
+        "operation",
         "relations",
         "responsibility"
       ],
@@ -29576,7 +29638,7 @@
     ]
   },
   "totals": {
-    "maintenanceReadyCount": 3,
+    "maintenanceReadyCount": 4,
     "programBoundCount": 46,
     "scopeSkillCount": 489,
     "semanticReadyCount": 41,

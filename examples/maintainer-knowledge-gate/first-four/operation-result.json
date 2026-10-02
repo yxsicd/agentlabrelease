@@ -1,17 +1,17 @@
 {
   "advancedScopeIds": [
-    "skill-scope-code-workshop-common-ui-state-contracts"
+    "skill-scope-code-workshop-common-persistence-telemetry"
   ],
-  "afterAssessmentSha256": "4115f840bcfaf94f63f5b3520de8b2ab30b74a6a9d372aa0329ec1292d561a5a",
+  "afterAssessmentSha256": "6038430761b4987aa4de3efffe100884a6670e4c2feb410c54c59dd13081a286",
   "authorityWritePerformed": false,
   "automaticPromotion": false,
-  "beforeAssessmentSha256": "2ec3f4d2e82d074200ed5fa499adc767c11fae17c65b1a0ed2439a125e178bbc",
+  "beforeAssessmentSha256": "4115f840bcfaf94f63f5b3520de8b2ab30b74a6a9d372aa0329ec1292d561a5a",
   "decision": "review-proposed-operation-knowledge",
   "maintenanceReadyDelta": 1,
   "nextRoundObjectives": [
     "close 438 MS-BEHAVIOR-EVIDENCE-MISSING gaps with revision-bound evidence",
     "close 445 MS-BOUNDARY-EVIDENCE-MISSING gaps with revision-bound evidence",
-    "close 38 MS-OPERATION-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 37 MS-OPERATION-EVIDENCE-MISSING gaps with revision-bound evidence",
     "close 2 MS-OPERATION-RECEIPT-UNVERIFIED gaps with revision-bound evidence",
     "close 443 MS-PROGRAM-EVIDENCE-UNBOUND gaps with revision-bound evidence",
     "close 444 MS-RELATIONS-EVIDENCE-MISSING gaps with revision-bound evidence",
@@ -19,6 +19,6 @@
   ],
   "schema": "agentlab.maintainer_operation_round_result.v1",
   "selectedScopeIds": [
-    "skill-scope-code-workshop-common-ui-state-contracts"
+    "skill-scope-code-workshop-common-persistence-telemetry"
   ]
 }
