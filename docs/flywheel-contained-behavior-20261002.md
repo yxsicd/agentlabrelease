@@ -2,6 +2,30 @@
 
 ## Push initialization adapter checkpoint
 
+### Reviewed knowledge admission and next-round input
+
+Live exact-cut baseline comparison and source-instance readback preceded the
+ordinary writer's single atomic three-insert delta. `agentlabtablegit` advanced
+from `a9c327c5522292c6dee7d86645b039a84de30cd0` to
+`262b9a819e57abd7d6313c08b18c29c06f79045e`. All five resulting knowledge tables
+were read back and exported against staged bytes: fifteen Skills, 489 scopes,
+67 facts, 45 refresh records and zero formal cases. The knowledge update adds
+the reviewed evaluation Skill, its source-bound lesson fact and refresh lineage;
+it does not advance scope readiness. Replaying transaction
+`3ef5b6b5-6e58-5afe-a165-a12613d8bb12` returned idempotent_replay, applied=false,
+no conflicts and the same revision. Transient preflight fetch failures remain
+read failures, not participant failures or uncertain authority mutations.
+
+External `push-agent-loop-pO1Bz0gH/knowledge-committed-1` retains the complete
+committed cut and inherited sidecars. The ordinary guidance gate selected the
+new evaluation Skill at that exact repository/source cut and produced
+`guidance-packet-1.json`, SHA256
+`1a4c6afaf92126477badf74fa0a5759b0d4972dfe2bc26e10f43720134811270`.
+This is verified next-round input assembly, not actual Agent consumption. No
+new participant, automatic complete cycle, learning benefit, raw-evidence remote
+archive or immutable Release is claimed. Overall maturity remains 64%; the next
+boundary is actual guidance-bearing request capture and new outcome feedback.
+
 ### Committed instance readback and knowledge staging
 
 The live TPC MCPGit metadata/Skill contracts and explicit Person selection were
