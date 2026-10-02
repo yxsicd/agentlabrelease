@@ -305,6 +305,13 @@ marker in the guided repaired draft. This is source-review evidence, not execute
 verdicts. Literal edit applicability and schema validity cannot establish baseline
 markers. Execute the unchanged proposed controls independently; do not repair
 their markers as an operator and attribute the resulting success to the Agent.
+Retained-source execution subsequently confirmed both defects on original draft
+bytes: unguided baseline failed all three configuration checks, guided baseline
+failed registration; both negative variants completed with intended failures.
+Neither baseline was acceptable. This is a real host-seam diagnostic, not formal
+calibration or guidance benefit. Preserve those complete worker observations and
+give them to the next author round; negative controls alone cannot qualify an
+Oracle that rejects the valid baseline.
 
 A full regression run exposed intermittent emulator boot-failure cleanup. A
 deterministic delayed-launcher control reproduced the race: stop ran first,

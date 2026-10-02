@@ -104,6 +104,18 @@ diagnostic Action binds the contract to the selected candidate value and source;
 its semantic controls stay separate from the original startup feedback and from
 formal construction-plan qualification. See [the lifecycle evidence](../../docs/flywheel-lifecycle-calibration-20261001.md).
 
+To avoid refetching an entire repository for retained-source diagnostics, the same
+runner accepts --source-binding FILE and --source-workspace DIR instead of
+--source-repo. Verify every retained inventory row's revision, relative paths,
+byte count, SHA256 and Git Blob OID before any worker; reject symlinks, duplicate
+paths and ambiguous repositories. Blob-byte verification does not authenticate
+commit ancestry: the receipt explicitly keeps revisionAuthenticated=false.
+Use --diagnostic-unreviewed only for operator-selected trusted author drafts with
+reviewed=false, without changing the original contract bytes. Such receipts are
+diagnosticOnly and the Rust reviewed-stage consumer rejects them, even if their
+controls pass. Baseline failures are evidence for Agent-owned repair, not permission
+to change predicates as the operator or admit a case.
+
 Consume `agentlab.harmony_stage_control_calibration.v2` with the Rust
 `--feedback-stage-calibration` CLI before routing follow-up work. Supply the exact
 candidate, downstream plan, contract, raw receipt digest and optional prior feedback.
