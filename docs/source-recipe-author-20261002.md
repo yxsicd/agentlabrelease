@@ -673,3 +673,55 @@ with the pinned TypeScript compiler (9.17 seconds); all 705 public regressions
 pass with one skip (82.339 seconds). Skill validation, formatting and digest
 checks pass. These establish earlier deterministic rejection, not a newly
 accepted Agent verifier or a productive business cycle.
+
+## First repaired Agent verifier with qualified real execution
+
+PR #194 merged as `0bb0b1bf1fc99d6376cd2929050b55b32fec5aaf` after all
+applicable checks passed. Original Action `37055710042` completed four clean
+model exchanges, two bounded design corrections and unreviewed staging.
+Independent operator diagnosis exercised five controls across five frozen
+scenarios: original and both executable references passed, the permission-failure
+mutation matched its single failure, but the inverted upload guard failed all
+five checks rather than its declared two. Static review also rejected fixed
+absence labels and a discarded return value presented as observed undefined.
+The rejected original was not executed as an Agent verifier.
+
+Its sole explicit review child `37056552180` completed two clean exchanges and
+retained qualified construction isolation. Proposal SHA256
+`4a274cbf778bcfd1e1fb077ab50aded870993ffbbb02846dacb607d81668b3e8`
+and design SHA256
+`df5078b7fe882f1b8a4170b67f5a40150d490e812dec2803e96dbd3e0f59d7a0`
+remain unchanged. Independent review found both defects corrected; local host
+rebinding reproduced helper SHA256
+`18aaf92c7a6949fe22939147995193cde7d40eb3db130281f511799dc87bce04`.
+Explicitly reviewed, pinned Node execution ran all five controls successfully:
+baseline and two references failed zero checks; the inverted guard failed five;
+permission failure treated as success failed one. The independent capture
+qualifier recomputed the exact frozen failure sets from retained stdout/stderr.
+Execution SHA256 is
+`ec67a5783bf7e6073d064e6c96cf44a99703fe7edd51224f800d9ab8a84b7ea7`;
+qualification SHA256 is
+`8996264f78328962f8c21a644ec3afa23e37e9627c718da021db53c997a96e0d`.
+Source remained clean. An initial relative-path preflight failed before output
+creation or control execution; its original failure is retained separately and
+the invocation was corrected to exact absolute paths, not treated as an Agent
+semantic failure or a retry of successful controls.
+
+The proposed operation fact is
+`operation-source-1ce5172adaf6d9ad277154a6b3b8175102619cd7869012cd30a1da3a6370d5d7`.
+Strict round 42 independently advances only the selected platform-services
+scope: readiness becomes 489 structural / 46 program-bound / 41 semantic /
+5 strict maintenance-ready. A verified-operation candidate retains the new and
+four inherited receipts; reassessment using only its portable receipt root is
+byte-identical. Its next-round planner selects the dialog-overlays scope instead
+of the newly ready scope. These are local candidate results, not live admission:
+accepted authority remains `ed832d1b7e0e26b040be8cbb54737124027f0a67` with
+four strict-ready scopes, pending exact remote refresh, CAS and readback.
+
+Overall engineering maturity advances 63% to 64% for the first real generated
+verifier repaired through feedback, explicitly reviewed, executed and independently
+capture-qualified. Operator coordination remains; no authenticated reviewer,
+Harmony runtime, build, formal platform test, performance or full-scope claim
+follows. Formal cases and complete five-stage business cycles remain zero.
+Private source, Agent sessions and raw captures are not published with this
+method checkpoint. One success does not establish an improved acceptance rate.

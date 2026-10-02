@@ -962,3 +962,22 @@ still leave retained partial output and must not be advertised as rollback.
 Comments or whitespace alone are not distinct executable reference variants.
 Independent review still establishes reference validity and actual failure sets;
 prompt instructions and text inequality cannot establish them.
+
+Treat absence as an observed property, not a copied prohibition. If stdout carries
+an absent-interface inventory, derive it from the declared interface universe and
+actual call trace, using the same meaning and ordering as the frozen oracle.
+Capture the actual awaited return value before classifying undefined, resolved
+value or rejection. A correct call trace does not make adjacent hardcoded expected
+fields valid observations. Recompute every wrong control's exact failure set over
+the entire scenario matrix: an inverted gate may introduce calls on failure paths
+and skip calls on successful paths, including token-failure scenarios.
+
+A feedback child may change controlled input values or observation shape while
+preserving the source-grounded demand. Review its complete new design and verifier;
+do not transfer the parent's diagnostic verdict automatically. Preserve original
+Agent bytes when rebinding host paths/tools, reproduce the frozen helper digest,
+explicitly review execution policy, then independently qualify the raw capture.
+Prepare a portable candidate with inherited receipts and prove exact reassessment
+before separately fenced authority admission. One repaired real verifier proves
+this bounded construction-feedback path, not unattended convergence, full scope
+coverage, formal case publication or cross-repository generalization.
