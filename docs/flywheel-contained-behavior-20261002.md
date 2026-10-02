@@ -108,3 +108,46 @@ manifest and locked Pi dependency metadata outside participant mounts and invoke
 the existing independent runtime validator on every recorded attempt. This
 live-path validator is not a portable replay consumer. Its added Action step
 still needs fresh main execution; no historical validation result is fabricated.
+
+The next main run at `4470a1acef814624d19d417930bfadcece099b03`,
+[36971643513](https://github.com/yxsicd/agentlabrelease/actions/runs/36971643513),
+completed one real repair in 49,690 ms with four completed exchanges and six
+passing behavior checks. Its independent runtime-validation step passed against
+actual configuration, probes and inspect records. Downloaded source submission
+SHA256 is `e0dc5fba2b0ada28de009ad93eab32456c3b43d43f2db69dfb58ccb716359b15`.
+Local independent behavior and author-completion readback passed again; retained
+configuration SHA256 `9c51dec47ace71edcd9061e3c49cb688ef202e7f2b41c4d9953596b014291bf1`
+and all four raw runtime-record digests matched their bindings. These are two
+successful single-attempt runs, not a measured success rate, guidance improvement
+or a real failed-attempt feedback repair.
+
+## Second repository preparation
+
+The same preparer, contained launcher, Rust consumer/controller and Pi bridge now
+accept the reviewed `environment-lifecycle-demand.json` profile for guide-snippets
+at `71bbb3916625c8d9a370b7a1989b3a7f82090525`, rather than code-workshop.
+Only profile data and an explicitly selected ApplicationContext adapter change;
+the shared controller has no repository-name branch. The new task is a scoped
+extension of the parent candidate, not admission of its full platform demands.
+
+The worker executes actual type-erased default-export source on controlled
+registration/cancellation and configuration/memory delivery seams. Six sequences
+preserve ordinary forwarding and exercise repeated creation, ID zero, release,
+recreation, initial registration failure and idle/repeated destruction. Invalid
+cancellation is an observed count, not SDK error-behavior emulation. The supported
+off signature was checked against the
+[official ApplicationContext API](https://github.com/openharmony/docs/blob/master/en/application-dev/reference/apis-ability-kit/js-apis-inner-application-applicationContext.md).
+This does not execute module.srcEntry, the actual platform event dispatcher,
+ArkTS compilation or an emulator.
+
+Local six-container calibration completed with frozen contract SHA256
+`49f9e100382a523c8fc655e5701ddf4189321f6726f5ccb695853e1dcda15797`
+and capture SHA256
+`b9b0199d82726ecca9f4f12db5299c90c0b0eb5f67260146618746e9f8914270`.
+Baseline failed five demanded lifecycle checks; both retain-owned and replace-owned
+valid controls passed. Zero-ID skipping, stale ownership after destruction and
+duplicate-subscription controls each failed intended checks with normal worker
+exit. Independent Rust readback selected `execute-agent-attempt`. Rust protocol
+regression separately executes JavaScript fixtures, not a compiler qualification.
+Real participant transfer still requires a trusted main Action using this profile;
+overall maturity remains 56% at this calibration checkpoint.

@@ -64,6 +64,12 @@ container receipts, then run the independent runtime consumer against actual
 inspect/probe records before accepting the run. A launcher report alone is not
 independent validation; portable artifact readback and live-path validation are
 separate capabilities.
+For repository transfer, retain the shared controller and grading protocol,
+change reviewed profile data and select an explicit framework adapter. Freeze
+state-transition checks including create, release, recreate and failure retry;
+test boundary identifiers from the task demand and preserve unrelated callbacks.
+Different valid strategies may satisfy the same observable contract. Calibrating
+a second adapter is not yet a real participant transfer or knowledge benefit.
 
 An explicit frozen task demand can define new behavior even when the repository's
 original intent is unknown. Bind that demand before calibration and distinguish
