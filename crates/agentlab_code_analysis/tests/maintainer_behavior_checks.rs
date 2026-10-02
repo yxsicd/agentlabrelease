@@ -872,3 +872,105 @@ exports.default = class extends require('@kit.AbilityKit').AbilityStage {
         }
     }
 }
+
+#[test]
+fn push_worker_preserves_pending_retry_and_rejects_answer_bearing_requests() {
+    let repository = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .canonicalize()
+        .unwrap();
+    let dir = loop_output_for_adapter();
+    std::fs::create_dir(&dir).unwrap();
+    let compiler = dir.join("compiler.cjs");
+    // Executes JS protocol fixtures; real pinned ETS/compiler controls are external.
+    let compiler_bytes = b"module.exports={ModuleKind:{CommonJS:1},ScriptTarget:{ES2020:7},DiagnosticCategory:{Error:1},flattenDiagnosticMessageText(m){return m},transpileModule(source){return{outputText:source,diagnostics:source.includes('SYNTAX_REJECTED')?[{category:1,code:1128,file:{text:source},start:0,length:1,messageText:'Syntax'}]:[]}}};";
+    std::fs::write(&compiler, compiler_bytes).unwrap();
+    std::fs::write(
+        dir.join("support.json"),
+        serde_json::to_vec(&json!({
+            "adapter":"push-initialization-host-seam-v1","compilerSha256":digest(compiler_bytes)
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let valid = r#"
+const notification = require('@kit.NotificationKit').notificationManager;
+const push = require('@kit.PushKit').pushService;
+const service = require('./PushService').PushService;
+exports.PushServiceManager = class {
+  static getInstance() { return this.instance ??= new this(); }
+  initPushServiceManager(context) {
+    if (this.flight) return this.flight;
+    this.flight = this.initialize(context).finally(() => {this.flight = null;});
+    return this.flight;
+  }
+  async initialize(context) {
+    try {
+      if (!notification.isNotificationEnabledSync()) await notification.requestEnableNotification(context);
+      const pushToken = await push.getToken();
+      await service.postPushToken({pushToken});
+    } catch (error) {}
+  }
+};
+"#;
+    for (id, source, expected) in [
+        (
+            "valid",
+            valid.to_owned(),
+            Some(json!({"token":2,"post":2,"settledCalls":3,"unhandled":0})),
+        ),
+        (
+            "sticky",
+            valid.replace(".finally(() => {this.flight = null;})", ""),
+            Some(json!({"token":1,"post":1,"settledCalls":3,"unhandled":0})),
+        ),
+        ("syntax", format!("{valid}// SYNTAX_REJECTED"), None),
+        ("answer", valid.to_owned(), None),
+        ("bad-input", format!("{valid}// SYNTAX_REJECTED"), None),
+    ] {
+        let mut check = json!({"id":"retry","input":{"mode":"retry-success"}});
+        if id == "answer" {
+            check["expected"] = json!({"passed":true});
+        }
+        if id == "bad-input" {
+            check["input"]["mode"] = json!("unknown");
+        }
+        let request = json!({"schema":"agentlab.behavior_executor_request.v1","id":id,
+            "originalSourceSha256":digest(valid.as_bytes()),"submittedSource":source,
+            "submittedSourceSha256":digest(source.as_bytes()),"checks":[check]});
+        let request_path = dir.join(format!("{id}.json"));
+        std::fs::write(&request_path, serde_json::to_vec(&request).unwrap()).unwrap();
+        let result = std::process::Command::new("node")
+            .arg(repository.join("scripts/push-initialization-worker.cjs"))
+            .arg(request_path)
+            .arg(dir.join("support.json"))
+            .arg(&compiler)
+            .output()
+            .unwrap();
+        if id == "answer" || id == "bad-input" {
+            assert!(!result.status.success());
+            assert!(result.stdout.is_empty());
+            assert!(String::from_utf8_lossy(&result.stderr).contains("Unsupported push input"));
+            continue;
+        }
+        assert!(
+            result.status.success(),
+            "{id}: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let actual: Value = serde_json::from_slice(&result.stdout).unwrap();
+        assert_eq!(
+            actual["submittedSourceSha256"],
+            request["submittedSourceSha256"]
+        );
+        assert_eq!(
+            actual["observations"][0]["input"],
+            request["checks"][0]["input"]
+        );
+        if let Some(expected) = expected {
+            assert_eq!(actual["observations"][0]["actual"], expected);
+        } else {
+            assert_eq!(actual["observations"][0]["actual"]["sourceRejected"], true);
+        }
+    }
+}

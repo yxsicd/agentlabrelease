@@ -241,6 +241,13 @@ containment. Retain raw rejected-chain observations without repairing source in
 the observer. New task demands require fresh calibration even when original
 maintenance controls were verified; use the shared frozen-check consumer and
 keep platform, cohort, freeze and assessed-Agent gates separate.
+When promoting a trusted calibration adapter to assessed-source execution, do
+not mount its all-control manifest or frozen expected answers. Reuse the
+contained launcher with a request containing only submitted source and check
+IDs/inputs; retain references and independent comparison outside that container.
+Validate every input before executing source or returning syntax rejection.
+Identical control verdicts across this boundary qualify adapter compatibility,
+not complete Oracle coverage or a new Agent outcome.
 For navigation outcome extensions, validate stack and animation behavior as well
 as success/failure returns. A wrong push-for-replace variant can pass return tests
 while corrupting the stack. Source-verifying a caller is not implementing or

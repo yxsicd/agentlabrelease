@@ -1,5 +1,38 @@
 # Contained behavior execution and real participant Action
 
+## Push initialization adapter checkpoint
+
+`scripts/push-initialization-worker.cjs` accepts the existing executor request
+protocol and the existing network-disabled Docker launcher. It executes the
+submitted PushServiceManager module with explicit permission/token/post seams,
+fresh modules between scenarios and a shared singleton within pending/retry
+phases. Its support input contains only adapter selection and compiler digest;
+check requests contain IDs and inputs, not independent expected answers. The
+trusted all-control runtime manifest from the original local diagnostic is not
+mounted. All scenario inputs are checked before source rejection or execution.
+
+External `source-recipe-action-37056552180-tPc9gy/push-contained-calibration-1`
+retains six normal-exit container captures and nine unchanged checks per control.
+The independent Rust consumer accepted both valid strategies and discriminated
+unawaited post, sticky pending state and permission-denial bypass. Baseline failed
+seven checks. Contract SHA256 is
+`a33e1a0be8fcf0b983584c2affa8d24f7388b8973d1feeb1d4355f4ad9a28f17`,
+capture SHA256 is
+`658117ce6e8de9732a1338d326ffcf60bca3768d4ca217b451d02052843f97c9`,
+and feedback SHA256 is
+`a3079e301c6043df252c8879bd490ee28e92f4beefce1f576d074154dafa0e8e`.
+This is a new method/runtime cut, not a replay or replacement of calibration-0.
+
+Overall maturity remains 64%. No new assessed Agent, case admission, automatic
+authority return or full business cycle is claimed. Oracle coverage still needs
+review: failure logging/status is not scored, token payload validation is not an
+independent named check, and invalid singleton/return/unsupported import behavior
+can stop this diagnostic adapter. These gaps must not become falsely successful
+behavior verdicts. New predicates require a separately frozen successor contract
+and calibration, not editing this retained result. ArkTS compilation, Hypium,
+emulator and performance qualification remain absent. Rust protocol regressions
+use JavaScript/compiler fixtures, not the real platform compiler.
+
 The shared Rust controller remains repository-independent. Reviewed profile data
 owns candidate/source identities, exact text controls, task demand and checks;
 an explicitly selected worker owns framework/host-seam semantics. The current
