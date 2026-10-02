@@ -348,6 +348,17 @@ operator. Check identity before field-set errors so an extra field cannot mask a
 changed authority. Fix all shape errors in the same allowed repair, including
 confounded configuration transitions; do not weaken the accepted schema.
 
+Real run 36957090734 at method e3dec37f then accepted original Agent controls in
+the integrated Action: one 44-second zero-retry attempt, all six baseline checks
+passing and two completed intended negative controls, without operator edits.
+Independent content/wire replays and source/worker-byte audits agreed. This proves
+automatic author-to-diagnostic execution at the host seam; it exercised neither
+shape nor behavior repair and does not prove guidance benefit, framework runtime
+or a formal case. After this scoped success, migrate the same evidence/feedback
+contracts to another repository and mechanism rather than indefinitely tuning
+the successful sample. Review/admission and durable instance persistence remain
+separate from the producer's successful diagnostic.
+
 A full regression run exposed intermittent emulator boot-failure cleanup. A
 deterministic delayed-launcher control reproduced the race: stop ran first,
 then the outstanding launcher completed startup. Quiesce and reap the exact
