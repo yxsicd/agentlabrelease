@@ -155,7 +155,7 @@ fn current_authority_cut_prepares_telemetry_refresh_without_borrowing_runtime_ev
     let cut: Value = serde_json::from_slice(&original[5].1).unwrap();
     assert_eq!(
         cut["tableGitAuthority"]["revision"],
-        "368b17895b23633656a26f9f51cb300cb11fa829"
+        "1aef65558cbbc66b3bfe63b719cfc171b33a28f9"
     );
     let temp = std::env::temp_dir().join(format!(
         "telemetry-feedback-{}-{}",
@@ -180,7 +180,7 @@ fn current_authority_cut_prepares_telemetry_refresh_without_borrowing_runtime_ev
         String::from_utf8_lossy(&resolved.stderr)
     );
     let reference: Value = serde_json::from_slice(&fs::read(reference).unwrap()).unwrap();
-    assert_eq!(reference["refreshRoundIndex"], 39);
+    assert_eq!(reference["refreshRoundIndex"], 40);
     let output = temp.join("request.json");
     let prepared = Command::new("python3")
         .arg(root.join("examples/maintainer-knowledge-gate/focused_fact_refresh.py"))
@@ -216,7 +216,7 @@ fn current_authority_cut_prepares_telemetry_refresh_without_borrowing_runtime_ev
             .as_array()
             .unwrap()
             .len(),
-        3
+        5
     );
     assert_eq!(
         request["requiredImplementationPaths"]
@@ -249,5 +249,99 @@ fn current_authority_cut_prepares_telemetry_refresh_without_borrowing_runtime_ev
             "mutated {name}"
         );
     }
+    fs::remove_dir_all(temp).unwrap();
+}
+
+#[test]
+fn recovered_telemetry_successor_preserves_parent_and_requires_independent_qualification() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let knowledge = root.join("examples/maintainer-knowledge-gate/first-four");
+    let candidates: Vec<Value> =
+        fs::read_to_string(knowledge.join("case_generation_candidates.jsonl"))
+            .unwrap()
+            .lines()
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect();
+    let parent = candidates
+        .iter()
+        .find(|row| row["id"] == "shadow-case-rdb-preference-telemetry-pipeline")
+        .unwrap();
+    assert_eq!(
+        sha(parent),
+        "bc676978abcfb563f8d12616075ba05a8cd727a4cc25f24c2d8271002eef3dd9"
+    );
+    let successor = candidates
+        .iter()
+        .find(|row| row["id"] == "shadow-case-refresh-a864ecaec7c67603cab0e114743c5421")
+        .unwrap();
+    assert_eq!(
+        sha(successor),
+        "3a2f2e8bdd6901776fe4686112528bb3140dc9e1262a91fdd426b65d92d81bd7"
+    );
+    assert_eq!(successor["lineage"]["parentCandidateSha256"], sha(parent));
+    assert_eq!(successor["oracleHypothesis"], parent["oracleHypothesis"]);
+    assert_eq!(successor["automaticPromotion"], false);
+    assert_eq!(
+        successor["maintainerSkillRefreshRoundId"],
+        "first-four-round-40-agent-36960519495"
+    );
+    let temp = std::env::temp_dir().join(format!(
+        "telemetry-successor-{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir_all(&temp).unwrap();
+    let output = temp.join("readiness.json");
+    let result =
+        Command::new("python3")
+            .arg(root.join("examples/maintainer-knowledge-gate/shadow_construction_readiness.py"))
+            .arg("--knowledge")
+            .arg(&knowledge)
+            .arg("--candidate-id")
+            .arg(successor["id"].as_str().unwrap())
+            .arg("--plan")
+            .arg(knowledge.join(
+                "construction-plans/shadow-case-refresh-a864ecaec7c67603cab0e114743c5421.json",
+            ))
+            .arg("--evidence-root")
+            .arg(&root)
+            .arg("--output")
+            .arg(&output)
+            .output()
+            .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let receipt: Value = serde_json::from_slice(&fs::read(output).unwrap()).unwrap();
+    assert_eq!(receipt["decision"], "blocked-qualification");
+    assert!(receipt["knowledgeBlockers"].as_array().unwrap().is_empty());
+    assert_eq!(
+        receipt["qualificationBlockers"].as_array().unwrap().len(),
+        4
+    );
+    assert_eq!(receipt["automaticPromotion"], false);
+    let outside_context = receipt["checks"]["oraclePaths"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["inCandidateScope"] == false)
+        .unwrap();
+    assert_eq!(outside_context["readOnlyContextBound"], true);
+    assert_eq!(
+        outside_context["contextOwnerScopeSkillIds"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    assert!(!successor["editablePaths"]
+        .as_array()
+        .unwrap()
+        .contains(&outside_context["path"]));
     fs::remove_dir_all(temp).unwrap();
 }

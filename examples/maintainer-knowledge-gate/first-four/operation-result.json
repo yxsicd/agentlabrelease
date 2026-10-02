@@ -7,7 +7,8 @@
     "semanticReadyCount": 41,
     "structuralReadyCount": 489
   },
-  "assessmentSha256": "f255f78aa09a95201309f09c5bd5816369c49df7551bf62fc1366d000929e0b8",
+  "assessmentSha256": "e2349e92fd320bdc9b75caa42d7cad85f504e10e902ec7fc365933789734d102",
+  "automaticPromotion": false,
   "before": {
     "maintenanceReadyCount": 2,
     "programBoundCount": 46,
@@ -15,9 +16,13 @@
     "semanticReadyCount": 41,
     "structuralReadyCount": 489
   },
-  "beforeAssessmentSha256": "47354f03c2dcd4c4364b3dc7cdec7e30b3ac9d4f81b507120e355a46670f272d",
-  "countsAsMaturityGain": false,
-  "decision": "review-proposed-lesson-knowledge",
-  "schema": "agentlab.maintainer_lesson_stage_result.v1",
+  "beforeAssessmentSha256": "f255f78aa09a95201309f09c5bd5816369c49df7551bf62fc1366d000929e0b8",
+  "decision": "review-proposed-knowledge-refresh",
+  "maturity": "L2-semantic-ready",
+  "schema": "agentlab.maintainer_skill_agent_flywheel_result.v1",
+  "scopeSkillId": "skill-scope-code-workshop-common-persistence-telemetry",
+  "selectedScopeIds": [
+    "skill-scope-code-workshop-common-persistence-telemetry"
+  ],
   "strictOperationEvidencePolicy": true
 }

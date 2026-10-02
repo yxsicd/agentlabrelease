@@ -151,8 +151,16 @@ and after. The recovered export has cut SHA256
 Replaying only successor derivation on that export preserved the parent candidate
 and plan, producing `shadow-case-refresh-a864ecaec7c67603cab0e114743c5421` with
 `blocked-qualification`; the four independent qualification blockers remain.
-The recovered export/successor is retained externally pending publication. No
-Agent rerun, authority write, formal case promotion or new Release occurred.
+The recovered export/successor was retained externally, then imported byte-exact
+into the publication snapshot. All ten changed/new files match the recovered
+export, including the new durable assessment and successor plan. A fresh normal
+Action preflight admitted all five tables at the committed revision; an earlier
+connection timeout was retained and a single read-only retry succeeded. The Rust
+snapshot regression resolves refresh round40 and verifies the five source
+citations without rewriting candidate history. Downstream routing retains the
+parent, schedules the successor without executing it, and suppresses unchanged
+repeat work. No Agent rerun, authority write, formal case promotion or new
+Release occurred. Source publication remains subject to PR checks.
 
 Overall maturity remains54%. This recovery removes a real downstream mechanical
 blocker; it does not turn the failed Action into an automatic closed-loop pass.
