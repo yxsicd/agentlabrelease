@@ -268,3 +268,167 @@ fn participant_cannot_rewrite_frozen_checks_before_executor_dispatch() {
     assert!(out.join("attempt-0/participant.json").is_file());
     assert!(!out.join("attempt-0/executor.json").exists());
 }
+
+#[test]
+#[cfg(unix)]
+fn nested_gateway_capture_is_retained_and_later_mutation_is_rejected() {
+    let (contract, capture, recipe) = loop_fixture(false, false);
+    let mut recipe: Value = serde_json::from_slice(&recipe).unwrap();
+    let original = recipe["participantCommand"]["args"][1]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    recipe["participantCommand"]["args"][1]=json!(format!("mkdir -p participant-evidence/gateway; printf capture > participant-evidence/gateway/1.capture; {original}"));
+    let out = loop_output("nested");
+    let result = agentlab_code_analysis::maintainer_behavior_loop::execute(
+        &contract,
+        &capture,
+        &serde_json::to_vec(&recipe).unwrap(),
+        &out,
+    )
+    .unwrap();
+    assert_eq!(result["status"], "recorded-attempt-passed");
+    assert_eq!(
+        std::fs::read(out.join("attempt-0/participant-evidence/gateway/1.capture")).unwrap(),
+        b"capture"
+    );
+    recipe["participantCommand"]["args"][1]=json!(format!("mkdir -p participant-evidence/gateway; printf capture > participant-evidence/gateway/1.capture; case \"$1\" in *attempt-1*) printf changed > ../attempt-0/participant-evidence/gateway/1.capture;; esac; {original}"));
+    let out = loop_output("nested-tamper");
+    let error = agentlab_code_analysis::maintainer_behavior_loop::execute(
+        &contract,
+        &capture,
+        &serde_json::to_vec(&recipe).unwrap(),
+        &out,
+    )
+    .unwrap_err();
+    assert!(error.contains("immutable input changed"));
+    assert!(!out.join("attempt-1/executor.json").exists());
+}
+
+#[test]
+#[cfg(unix)]
+fn participant_environment_is_explicit_and_never_inherited_by_executor() {
+    let (contract, capture, recipe) = loop_fixture(false, false);
+    let mut recipe: Value = serde_json::from_slice(&recipe).unwrap();
+    let previous = std::env::var_os("AGENTLAB_MODEL");
+    std::env::set_var("AGENTLAB_MODEL", "controller-test");
+    recipe["participantEnvironmentNames"] = json!(["AGENTLAB_MODEL"]);
+    let participant = recipe["participantCommand"]["args"][1].as_str().unwrap();
+    recipe["participantCommand"]["args"][1] = json!(format!(
+        "test \"$AGENTLAB_MODEL\" = controller-test || exit 44; {participant}"
+    ));
+    let executor = recipe["executorCommand"]["args"][1].as_str().unwrap();
+    recipe["executorCommand"]["args"][1] = json!(format!(
+        "test -z \"${{AGENTLAB_MODEL+x}}\" || exit 43; {executor}"
+    ));
+    let result = agentlab_code_analysis::maintainer_behavior_loop::execute(
+        &contract,
+        &capture,
+        &serde_json::to_vec(&recipe).unwrap(),
+        &loop_output("environment"),
+    );
+    match previous {
+        Some(value) => std::env::set_var("AGENTLAB_MODEL", value),
+        None => std::env::remove_var("AGENTLAB_MODEL"),
+    }
+    assert_eq!(result.unwrap()["status"], "recorded-attempt-passed");
+    recipe["participantEnvironmentNames"] = json!(["UNREVIEWED_SECRET"]);
+    assert!(agentlab_code_analysis::maintainer_behavior_loop::execute(
+        &contract,
+        &capture,
+        &serde_json::to_vec(&recipe).unwrap(),
+        &loop_output("bad-environment")
+    )
+    .unwrap_err()
+    .contains("not allowed"));
+}
+
+#[test]
+#[cfg(unix)]
+fn required_participant_completion_rejects_plain_subprocess_before_behavior_execution() {
+    let (contract, capture, recipe) = loop_fixture(false, false);
+    let mut recipe: Value = serde_json::from_slice(&recipe).unwrap();
+    recipe["participantCompletionRequired"] = json!(true);
+    let out = loop_output("completion");
+    assert!(agentlab_code_analysis::maintainer_behavior_loop::execute(
+        &contract,
+        &capture,
+        &serde_json::to_vec(&recipe).unwrap(),
+        &out
+    )
+    .is_err());
+    assert!(out.join("attempt-0/participant.json").is_file());
+    assert!(!out.join("attempt-0/executor.json").exists());
+}
+
+#[test]
+fn pi_adapter_protocol_fixture_binds_request_capture_submission_and_watchdog() {
+    let out = loop_output_for_adapter();
+    std::fs::create_dir(&out).unwrap();
+    let request = json!({"schema":"agentlab.behavior_participant_request.v1","guidanceMode":"unguided","submittedSource":"baseline","taskDemand":"repair task","automaticPromotion":false});
+    let bytes = serde_json::to_vec(&request).unwrap();
+    std::fs::write(out.join("request.json"), &bytes).unwrap();
+    let adapter = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/real-code-agent/behavior-participant.py");
+    let result=std::process::Command::new("python3").current_dir(&out).args(["-c",r#"
+import importlib.util,importlib.abc,json,sys,hashlib
+from pathlib import Path
+spec=importlib.util.spec_from_file_location('behavior',sys.argv[1]);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+class FakeParticipant:
+ def __init__(self,evidence,state,binary,gateway,model,route,reasoning_effort,gateway_timeout_seconds):
+  assert gateway_timeout_seconds==60
+  self.evidence=evidence;self.model=model;self.route=route;self.implementation='pi';self.reasoning_effort=None
+ def _run_turn(self,*args,**kwargs): assert kwargs['timeout_seconds']==120
+ def turn(self,label,workspace,prompt,tool_call_limit,transport_retry_limit):
+  assert tool_call_limit==12 and transport_retry_limit==0
+  self._run_turn()
+  (workspace/'submitted-source.txt').write_text('valid-a')
+  e=self.evidence;(e/'author-calibration-prompt.txt').write_text(prompt)
+  final=b'{"role":"assistant","content":[]}'
+  (e/'author-calibration-final-assistant-message.json').write_bytes(final)
+  (e/'author-calibration-lifecycle.json').write_text(json.dumps({'label':label,'captureAuthority':'operator','exitCode':0,'timedOut':False,
+   'participantBudgetSeconds':120,'participantBudgetScope':'native-process-watchdog','transportRetryLimit':0,
+   'finalAssistantMessagePresent':True,'finalAssistantMessageSha256':hashlib.sha256(final).hexdigest()}))
+  g=e/'gateway';g.mkdir()
+  (g/'0001.upstream-request.json').write_text(json.dumps({'model':self.model,'providerId':self.route,'stream':True,'messages':[{'role':'user','content':prompt}]}))
+  response=b'data: {"choices":[{"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n'
+  (g/'0001.response').write_bytes(response)
+  (g/'0001.status.json').write_text(json.dumps({'exchangeId':'0001','status':200,'durationMs':1,'upstreamEof':True,'semanticComplete':True,'outcome':'completed','streamError':None,'responseBytes':len(response)}))
+ def close(self):pass
+class Loader(importlib.abc.Loader):
+ def create_module(self,spec):return None
+ def exec_module(self,module):module.Participant=FakeParticipant
+m.importlib.util.spec_from_file_location=lambda name,path:importlib.util.spec_from_loader(name,Loader())
+sys.argv=['adapter','request.json'];m.main()
+"#]).arg(adapter).env("AGENTLAB_PI_BINARY","fixture-pi").env("AGENTLAB_LM_GATEWAY_URL","http://fixture.invalid").env("AGENTLAB_MODEL","fixture-model").env("AGENTLAB_PROVIDER_ROUTE","fixture-route").output().unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let output: Value = serde_json::from_slice(&result.stdout).unwrap();
+    assert_eq!(output["submittedSource"], "valid-a");
+    assert_eq!(
+        std::fs::read(out.join("participant-evidence/behavior-submitted-source.txt")).unwrap(),
+        b"valid-a"
+    );
+    let completion = agentlab_code_analysis::maintainer_guidance::completion(
+        &out.join("participant-evidence"),
+        &bytes,
+    )
+    .unwrap();
+    assert_eq!(completion["authorCompletionVerified"], true);
+    assert_eq!(completion["participantBudgetSeconds"], 120);
+    assert_eq!(completion["producerAuthenticated"], false);
+}
+
+fn loop_output_for_adapter() -> std::path::PathBuf {
+    std::env::temp_dir().join(format!(
+        "agentlab-behavior-adapter-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ))
+}
