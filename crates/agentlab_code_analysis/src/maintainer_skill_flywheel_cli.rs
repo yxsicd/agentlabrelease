@@ -24,6 +24,28 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|arg| arg == "--prepare-business-cycles") {
+        let result = agentlab_code_analysis::maintainer_flywheel_business::prepare(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &PathBuf::from(value(&args, "--guidance-request")?),
+            &std::env::current_exe()?,
+            args.iter().any(|a| a == "--reviewed"),
+            &output,
+        )?;
+        println!("{}", serde_json::to_string(&result)?);
+        return Ok(());
+    }
+    if args
+        .iter()
+        .any(|arg| arg == "--run-flywheel-business-stage")
+    {
+        let result = agentlab_code_analysis::maintainer_flywheel_business::run(
+            &fs::read(value(&args, "--stage-request")?)?,
+            &output,
+        )?;
+        println!("{}", serde_json::to_string(&result)?);
+        return Ok(());
+    }
     if args.iter().any(|arg| arg == "--execute-flywheel-cycles") {
         let result = agentlab_code_analysis::maintainer_flywheel_cycles::execute(
             &fs::read(value(&args, "--recipe")?)?,

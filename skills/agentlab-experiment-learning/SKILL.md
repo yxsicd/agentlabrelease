@@ -242,6 +242,26 @@ retain their names but not values in recipes or receipts. A composite stage may
 contain several separately bounded attempts: declare its outer deadline and total
 cycle budget without changing inner Agent deadlines or transport retry policy.
 Reject missing configuration before executing an earlier business mutation.
+Use the [business gate adapter](../../docs/flywheel-business-gates-20261002.md) to
+revalidate an existing cut before extending it. Distinguish strict reproduction
+of stored knowledge from fresh repository understanding or program analysis;
+report those producer gaps explicitly. Require this round's actual case capture
+when staging its lesson, rather than borrowing an older passing execution.
+Keep pending commit/readback as a stopping boundary, not a producer status that
+silently authorizes the next cut. Scope coverage and overall flywheel maturity
+are different measurements; low semantic/operation coverage should influence
+which real producer is run next.
+
+Route the selected repository's actual next lane, not the global eligible count.
+A semantic-ready repository can have only operation gaps while other repositories
+still have hundreds of semantic candidates. Repeating a semantic-only dispatch
+cannot close those gaps. Derive operation kinds from scope capabilities and declare
+only kinds the executor actually supports; a build-only capture does not qualify
+source maintenance, configuration checks or tests. The business adapter accepts
+reviewed `operationExecution` inputs to run the existing build-only executor and
+independently qualify its retained bytes; other kinds remain explicit gaps.
+Retain a complete failed task as feedback with taskPassed=false rather than skipping
+evidence return. Infrastructure and incomplete capture are not task observations.
 
 Validate workflow expressions with GitHub-compatible context rules, not YAML
 syntax alone. A real dispatch rejected `runner.temp` in job-level env before any

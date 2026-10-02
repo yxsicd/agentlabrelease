@@ -1,0 +1,93 @@
+# Existing business gates in the cycle coordinator
+
+Overall maturity remains 62%. This adapter connects real fixed-cut validators to
+the coordinator; it does not replace missing producers with successful receipts.
+
+Prepare with `--prepare-business-cycles --knowledge ABS_CUT --guidance-request
+ABS_SELECTION --reviewed --output FRESH_ABS_DIRECTORY`, then execute its recipe
+with `--execute-flywheel-cycles --recipe PREPARED/recipe.json --output FRESH_ABS_CAPTURE`.
+The preparer validates explicitly selected source applicability and pins the
+knowledge files, selection and current executable. It leaves operation, behavior
+and admission inputs absent until provided as reviewed state. The generated
+two-round budget is a ceiling, not a promise of two completed rounds.
+
+The same executable runs every stage through `--run-flywheel-business-stage
+--stage-request FILE --output .` in the coordinator's fresh stage directory.
+
+| Stage | Real gate connected | Boundary |
+|---|---|---|
+| Repository understanding | Source-set binding and existing five-table guidance binder | Validates existing knowledge; no fresh semantic analysis or remote readback |
+| Program analysis | Durable assessment resolution and full strict reassessment | Reproduces stored facts/operation evidence; no newly generated program graph |
+| Maintenance verification | Reviewed build-only executor plus independent original capture qualification | Requires explicit recipe and selection; other operation kinds unsupported |
+| Case execution | Existing captured participant/behavior loop | Needs reviewed inputs; does not generate a new case or qualify full Harmony |
+| Evidence return | Existing raw-evidence lesson reconstruction and admission staging | Needs reviewed committed lesson/proposal; stops before remote atomic admission/readback |
+
+State schema is `agentlab.flywheel_business_state.v1`, with
+`automaticPromotion:false`, repositoryId/sourceRevision, `knowledge` containing
+absolute directory/cutSha256/revision, and `guidanceSelection` containing absolute
+path/SHA256. `stageEvidence` records report paths, exact digests and statuses.
+Original declared and recomputed assessment files remain retained even when
+their equality gate rejects. Missing materials return a specific review-required
+gap; gate rejection does not become an inferred Agent behavior failure.
+
+Optional `operationCapture` supplies directory/executionReceiptSha256/moduleRoot.
+Alternatively `operationExecution` supplies reviewed=true, sourceWorktree,
+moduleRoot and digest-bound path/SHA256 references named plan/before/recipe.
+The two inputs are mutually exclusive. Execution independently reselects against
+the fixed scope/fact cut before launching probes, prepares dependencies and runs
+two bounded clean builds. Its raw captures remain in business/operation even when
+execution or qualification fails. Only build-only HAR qualification is supported;
+this does not advance the stored assessment or admit new knowledge automatically.
+The default maintenance stage allows 660 seconds around the existing ten-minute
+executor ceiling. Case execution allows 720 seconds without changing inner Agent
+deadlines; two rounds have a 3600-second total command ceiling.
+Optional `behaviorExecution` supplies digest-bound path/SHA256 references for
+contract/calibrationCapture/recipe plus state.candidateId. Guided recipes must
+bind the same packet as state, not another valid but stale knowledge cut.
+Optional `lessonAdmission` supplies proposalDirectory/lessonSourceDirectory/lessonId.
+Its original behavior contract/capture must exactly match the current completed
+case stage's retained latest attempt, before ordinary admission reconstruction.
+An independently recorded failed task is still a completed observation and can
+return a reviewed lesson; taskPassed stays false. Infrastructure or incomplete
+capture cannot be converted into such an observation.
+A borrowed older execution cannot substitute for this round's evidence return.
+Admission staging never advances active authority or schedules a fabricated new
+knowledge cut. Actual independent commit readback is still a separate integration.
+
+## Local operational checkpoint
+
+External capture `business-gates-local-2539105-v1-capture` ran the built-in public
+adapter against actual published knowledge revision
+`4327475966e056b4c2d93f0736062656c182728e`, cut SHA256
+`a9a8c64f6dda6bc61a9e8d80febdcf352b7c3346626ff55911be0ca1d218535a`.
+This used the pending adapter's exact executable digest, not a claim that the
+adapter already existed in main 2539105. Source/byte identity is in the retained
+recipe and process captures. No model was dispatched and no authority was written.
+
+Knowledge validation and strict assessment reproduction completed. The third
+stage stopped for `revision-bound-maintenance-operation-capture-required`;
+case execution did not start and completedRounds remained zero. All three stage
+process receipts record exit zero; the terminal review-required verdict is a
+business boundary, not a successful entire cycle or an infrastructure failure.
+
+The reproduced all-four-repository assessment contains 489 scope Skills:
+489 structurally ready, 46 program-bound, 41 semantically ready and 2
+maintenance-operation-ready. These are scope-level counts under the strict
+standard, not overall maturity or proof of complete maintainer understanding.
+They motivate real bounded knowledge expansion and operation verification,
+not further protocol-only maturity increments. The retained current cut must
+remain unchanged while a later expansion/lesson candidate is being evaluated.
+
+## Real dispatch routing gap
+
+Action 36992821326 on main 253910559bc7c885a8a036e713c0df042bd5d435 failed
+before model execution. All 25 code-workshop scopes were semantic-ready: 23 need
+operation verification and two are knowledge-ready. The workflow offered only
+semantic-refresh, so zero scopes were selected. Its global 401 eligible scopes
+belong to other repositories, not the selected repository. The 23 operation gaps
+derive into nine build-test, seven source-only, three build-only, two test-only
+and two support-config scopes. This is an executor/routing capability gap, not
+evidence of a participant failure. Preserve the rejected dispatch; do not weaken
+the productive semantic-plan gate or report a different repository's progress as
+selected-repository coverage. The newly connected executor addresses only the
+three build-only scopes once reviewed inputs and the exact toolchain are supplied.
