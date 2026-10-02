@@ -158,7 +158,7 @@ with tempfile.TemporaryDirectory() as d:
     for index, extra, effort, deadline, thinking in [(0, [], 'low', 180, None),
         (1, ['--reasoning-effort','high','--gateway-timeout-seconds','120'], 'high',120,None),
         (2, ['--reasoning-effort','default'], None,180,None),
-        (3, ['--reasoning-effort','default','--thinking-type','disabled'],None,180,'disabled')]:
+        (3, ['--reasoning-effort','default','--thinking-type','disabled','--response-format','json-object'],None,180,'disabled')]:
         seen = {}
         class FakeParticipant:
             def __init__(self, evidence, state, binary, gateway, model, **options):
@@ -187,6 +187,7 @@ with tempfile.TemporaryDirectory() as d:
             module.main()
         assert seen['constructor']['gateway_timeout_seconds'] == deadline
         assert seen['constructor']['thinking_type'] == thinking
+        assert seen['constructor']['response_format'] == ('json_object' if index==3 else None)
         assert seen['turn']['reasoning_effort'] == effort
         assert seen['turn']['transport_retry_limit'] == 0
         assert seen['closed'] is True
@@ -276,7 +277,8 @@ try:
         for index, thinking in enumerate([None,'enabled','disabled']):
             evidence = root/str(index); evidence.mkdir()
             participant = module.Participant(evidence,root/f'state-{index}','/bin/true',
-                f'http://127.0.0.1:{server.server_port}','arbitrary-model',thinking_type=thinking)
+                f'http://127.0.0.1:{server.server_port}','arbitrary-model',thinking_type=thinking,
+                response_format='json_object' if index==2 else None)
             try:
                 request = urllib.request.Request(f'http://127.0.0.1:{participant.server.server_port}/v1/chat/completions',
                     data=json.dumps({'model':'ignored','stream':True}).encode(),
@@ -288,6 +290,8 @@ try:
             assert 'reasoning_effort' not in actual
             if thinking is None: assert 'thinking' not in actual
             else: assert actual['thinking'] == {'type':thinking}
+            if index==2: assert actual['response_format'] == {'type':'json_object'}
+            else: assert 'response_format' not in actual
         try:
             module.Participant(root,root/'invalid','/bin/true','http://localhost','arbitrary',thinking_type='invented')
         except ValueError: pass

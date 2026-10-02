@@ -52,6 +52,8 @@ def main():
     p.add_argument('--gateway-timeout-seconds', type=int, choices=range(30, 181), default=180)
     p.add_argument('--thinking-type', choices=('default', 'enabled', 'disabled'), default='default',
                    help='Explicit provider thinking.type policy; default omits this independent field')
+    p.add_argument('--response-format', choices=('default', 'json-object'), default='default',
+                   help='Explicit provider JSON-object mode; default omits the field')
     args = p.parse_args()
     if not os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'):
         raise ValueError('Recipe construction requires the contained participant runtime')
@@ -75,6 +77,7 @@ def main():
         os.environ['AGENTLAB_LM_GATEWAY_URL'], os.environ['AGENTLAB_MODEL'],
         route=os.environ['AGENTLAB_PROVIDER_ROUTE'], gateway_timeout_seconds=args.gateway_timeout_seconds,
         thinking_type=None if args.thinking_type == 'default' else args.thinking_type,
+        response_format='json_object' if args.response_format == 'json-object' else None,
     )
     context = {key: request[key] for key in (
         'scope', 'source', 'sourceFiles', 'semanticFacts', 'selectedGap')}
@@ -100,6 +103,10 @@ Each check MUST be an object, not a string/check name, for example
 {{"id":"observed-count","pointer":"/count","expected":1}}.
 stdout contains raw state/counts/events; expected values live only in contract.checks.
 controls: 4..8 objects with exactly id, role, expectedFailedCheckIds
+Every control emits the same observation shape and is checked against the same
+frozen contract.checks. Reference controls MUST have expectedFailedCheckIds=[].
+Wrong controls MUST have a nonempty exact subset of those shared check IDs.
+Do not invent per-control or baseline-only checks that force other controls to fail.
 Exactly one baseline uses original source behavior. At least two reference controls
 are distinct valid implementations, and one or more wrong controls embody meaningful
 incorrect behavior, each rejected by named checks. Freeze expectations independently

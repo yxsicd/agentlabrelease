@@ -814,3 +814,12 @@ member names directly against source, and inspect every alternative for genuine
 invariant preservation. Prefer one coherent invariant over an inventory-wide
 verifier census. Keep transpilation and variants in memory: temporary writes are
 still host side effects and do not satisfy read-only construction policy.
+
+For executable code embedded in JSON, consider an explicitly supported provider
+JSON-object output mode rather than relying only on prose formatting instructions.
+Keep it optional, record the actual request, and retain strict parsing/schema and
+semantic review; a provider output mode does not prove a valid oracle. All controls
+must emit one common observation shape against one frozen check set. Valid
+references expect no failures; wrong variants expect an exact nonempty check subset.
+Malformed output with independently detected semantic defects is not eligible
+for format-only repair or operator punctuation correction.

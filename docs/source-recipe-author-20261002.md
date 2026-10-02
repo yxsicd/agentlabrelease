@@ -270,3 +270,29 @@ An early Rust shape check now rejects malformed oracle objects before stage
 directory creation with a useful error; semantic truth still requires review.
 Maturity remains 63%, strict maintenance-ready scopes remain four, formal cases
 and complete five-stage cycles remain zero.
+
+## Normal stop with malformed JSON and invalid reference expectations
+
+Action `37021506945` ran method `1c28f8484d26f883612b1e36a55dc56914e5b51f`
+with the same selected gap and explicit disabled thinking. Its final message had
+stopReason=stop, 4257 output tokens and 16880 text characters, but JSON parsing
+failed at character 16880 because the top-level object was not closed. Original
+text also assigns nonempty expectedFailedCheckIds to reference controls, contrary
+to the shared oracle contract. No punctuation was repaired, code executed or
+authority promoted. Raw native output remains retained outside source Git.
+
+Construction now offers optional --response-format json-object, forwarded as
+response_format.type=json_object by the operator proxy; historical callers omit
+it by default. Explicit provider capability and a fresh live probe precede full
+dispatch. The prompt reinforces common raw observation shape, one frozen check
+set and empty reference failures. Provider JSON mode cannot certify semantic
+correctness. This candidate has semantic defects as well as malformed serialization
+and therefore must not enter format-only repair. Maturity remains 63%; zero
+formal cases and complete five-stage cycles remain unchanged.
+
+A fresh 512-token live probe through the same route explicitly sent disabled
+thinking and JSON-object response mode. The original response parsed directly
+as an object with checks and a quoted-code verifierSource, 255 text characters,
+zero reasoning characters and finish_reason=stop. This confirms the tiny request's
+mode behavior, not schema guarantees or source-verifier quality. No returned code
+was executed; raw request/response/status remain outside the source repository.
