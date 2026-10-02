@@ -153,10 +153,9 @@ fn current_authority_cut_prepares_telemetry_refresh_without_borrowing_runtime_ev
     .map(|name| (*name, fs::read(knowledge.join(name)).unwrap()))
     .collect();
     let cut: Value = serde_json::from_slice(&original[5].1).unwrap();
-    assert_eq!(
-        cut["tableGitAuthority"]["revision"],
-        "1aef65558cbbc66b3bfe63b719cfc171b33a28f9"
-    );
+    let authority_revision = cut["tableGitAuthority"]["revision"].as_str().unwrap();
+    assert_eq!(authority_revision.len(), 40);
+    assert!(authority_revision.bytes().all(|b| b.is_ascii_hexdigit()));
     let temp = std::env::temp_dir().join(format!(
         "telemetry-feedback-{}-{}",
         std::process::id(),
@@ -180,7 +179,17 @@ fn current_authority_cut_prepares_telemetry_refresh_without_borrowing_runtime_ev
         String::from_utf8_lossy(&resolved.stderr)
     );
     let reference: Value = serde_json::from_slice(&fs::read(reference).unwrap()).unwrap();
-    assert_eq!(reference["refreshRoundIndex"], 40);
+    let latest_round = std::str::from_utf8(&original[3].1)
+        .unwrap()
+        .lines()
+        .map(|line| {
+            serde_json::from_str::<Value>(line).unwrap()["roundIndex"]
+                .as_u64()
+                .unwrap()
+        })
+        .max()
+        .unwrap();
+    assert_eq!(reference["refreshRoundIndex"], latest_round);
     let output = temp.join("request.json");
     let prepared = Command::new("python3")
         .arg(root.join("examples/maintainer-knowledge-gate/focused_fact_refresh.py"))

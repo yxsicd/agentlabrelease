@@ -61,3 +61,13 @@ and zero transport-retry policy apply equally. Do not compare against the older
 successful unguided run as if it used the same method cut. Require independent
 completion/consumption, runtime and behavior replays; report outcome differences
 as scoped observations, not statistical or causal benefit from a single pair.
+
+Publication CI initially rejected this cut because the snapshot regression assumed
+exactly one method Skill and only calibration guidance. Local full regression
+reproduced the same count failure. The corrected test compares admitted method
+Skills with all verified-lesson facts, requires their exact linked identity set,
+and retains source/method/lineage and false-qualification checks for each row.
+Current-assessment resolution now checks the maximum declared refresh index
+instead of a previous fixed round number; historical candidate lineage remains
+unchanged. This repairs snapshot-test assumptions, not evidence verdicts or
+an Agent result. Preserve the original failed CI run 36982209053.
