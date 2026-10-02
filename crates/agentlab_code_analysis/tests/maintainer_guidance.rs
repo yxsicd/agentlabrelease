@@ -18,6 +18,118 @@ struct Fixture {
 static FIXTURE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 #[test]
+fn bounded_author_repair_uses_real_gates_and_preserves_rejections() {
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    for mode in [
+        "success",
+        "exhausted",
+        "source-drift",
+        "wire-failure",
+        "prior-drift",
+        "zero",
+        "identity-drift",
+        "review-drift",
+        "request-drift",
+        "guidance-drift",
+    ] {
+        let f = Fixture::new("portable-repair-source");
+        let packet = f.bind(&f.selection).unwrap();
+        fs::write(
+            f.root.join("packet.json"),
+            serde_json::to_vec(&packet).unwrap(),
+        )
+        .unwrap();
+        let mut sources = Vec::new();
+        for (path, raw) in [
+            ("module.json5", "entry=Stage"),
+            ("Stage.ets", "on('environment')"),
+        ] {
+            fs::write(f.root.join(path), raw).unwrap();
+            sources.push(json!({"repositoryId":"portable-repair-source","revision":"a".repeat(40),
+                "path":path,"workspacePath":path,"sha256":digest(raw.as_bytes()),"bytes":raw.len()}));
+        }
+        let request = json!({"schema":"agentlab.stage_calibration_authoring_request.v1","automaticPromotion":false,
+            "stageContext":{"candidateId":"portable-candidate","candidateSha256":"b".repeat(64),"sourceRevision":"a".repeat(40),"modulePath":"module.json5"},
+            "sources":sources,"maintainerGuidance":packet});
+        fs::write(
+            f.root.join("authoring-request.json"),
+            serde_json::to_vec(&request).unwrap(),
+        )
+        .unwrap();
+        let result = Command::new("python3").current_dir(&f.root).args(["-c", r#"
+import importlib.util,json,sys,hashlib,types
+from pathlib import Path
+spec=importlib.util.spec_from_file_location('author',sys.argv[1]);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+mode=sys.argv[2];raw=Path('authoring-request.json').read_bytes();request=json.loads(raw)
+proposal={**request['stageContext'],'schema':'agentlab.harmony_stage_control_contract.v1','reviewed':False,
+ 'createMarker':'created','destroyMarker':'destroyed','registrationMarker':'registered','configurationPrefix':'config: ','eventName':'environment',
+ 'configurations':[{'id':'initial','language':'en','colorMode':0},{'id':'language','language':'zh','colorMode':0},{'id':'color','language':'zh','colorMode':1}],
+ 'variants':[{'id':'entry','path':'module.json5','from':'Stage','to':'Alternate','expectedFailedChecks':['stage-created']},
+ {'id':'event','path':'Stage.ets','from':'environment','to':'wrong','expectedFailedChecks':['application-environment-registration']}]}
+count=0
+class Participant:
+ def __init__(self,evidence,*args,**kwargs):
+  self.evidence=evidence;self.model='fixture-model';self.route='fixture-route';self.implementation='pi';self.reasoning_effort=None
+ def close(self):pass
+ def turn(self,label,workspace,prompt):
+  global count
+  count+=1;out=Path('draft' if count==1 else 'draft-repair');out.mkdir()
+  value=json.loads(json.dumps(proposal))
+  if count==1 or mode=='exhausted':value['configurations'][0]['id']='stage-created'
+  if mode=='identity-drift':value['candidateId']='different-candidate'
+  if mode=='review-drift':value['reviewed']=True
+  (out/'proposed-stage-contract.json').write_text(json.dumps(value))
+  e=self.evidence;(e/'author-calibration-prompt.txt').write_text(prompt)
+  final=b'{"role":"assistant","content":[]}'
+  (e/'author-calibration-final-assistant-message.json').write_bytes(final)
+  (e/'author-calibration-lifecycle.json').write_text(json.dumps({'label':'author-calibration','captureAuthority':'operator','exitCode':0,'timedOut':False,
+   'finalAssistantMessagePresent':True,'finalAssistantMessageSha256':hashlib.sha256(final).hexdigest()}))
+  g=e/'gateway';g.mkdir();(g/'0001.upstream-request.json').write_text(json.dumps({'model':self.model,'providerId':self.route,'stream':True,'messages':[{'role':'user','content':[{'type':'text','text':prompt}]}]}))
+  response=b'data: {"choices":[{"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n'
+  (g/'0001.response').write_bytes(response)
+  (g/'0001.status.json').write_text(json.dumps({'exchangeId':'0001','status':200,'durationMs':1,'upstreamEof':True,'semanticComplete':mode!='wire-failure',
+   'outcome':'completed','streamError':None,'responseBytes':len(response)}))
+  if mode=='source-drift' and count==1:Path('Stage.ets').write_text('changed source')
+  if mode=='request-drift' and count==1:Path('authoring-request.json').write_text('{}')
+  if mode=='guidance-drift' and count==1:Path('packet.json').write_text('{}')
+  if mode=='prior-drift' and count==2:Path('draft/proposed-stage-contract.json').write_text('{}')
+module=types.SimpleNamespace(Participant=Participant)
+prompt=m.stage_prompt(request,Path('draft'))+m.guidance_prompt(request)
+m.run_author(module,'fixture-pi',request,raw,prompt,Path.cwd()/'participant-evidence',Path('state'))
+first=Path('draft/proposed-stage-contract.json').read_bytes()
+try:m.validate_and_repair(module,'fixture-pi',request,raw,Path('authoring-request.json'),Path('draft'))
+except (ValueError,RuntimeError) as error:
+ assert mode!='success',str(error)+' '+str(list(Path('participant-evidence').glob('*stderr.log')) and Path('participant-evidence/consumption-stderr.log').read_text())
+ if mode=='prior-drift':assert 'previous rejected attempt changed' in str(error)
+else:assert mode=='success'
+assert count==(2 if mode in ('success','exhausted','prior-drift') else 1),count
+if mode!='prior-drift':assert Path('draft/proposed-stage-contract.json').read_bytes()==first
+if mode in ('success','exhausted','prior-drift'):
+ assert Path('participant-evidence/rejected-proposal.json').read_bytes()==first
+ assert Path('participant-evidence-repair/gateway/0001.response').exists()
+ manifest=json.loads(Path('authoring-attempts.json').read_bytes())
+ assert manifest['nativeSessionRestored'] is False and manifest['automaticPromotion'] is False
+ assert manifest['latestAttempt']=='repair'
+if mode=='success':
+ assert [a['validatorExitCode'] for a in manifest['attempts']]==[1,0]
+ assert manifest['attempts'][0]['proposalSha256']==hashlib.sha256(first).hexdigest()
+ assert json.loads(Path('participant-evidence-repair/content-validation.json').read_bytes())['semanticExecutionVerified'] is False
+# This is an adapter fixture with actual Rust gates, not real Agent learning evidence.
+"#]).arg(repo.join("examples/multi-repo-case/pi-calibration-author.py")).arg(mode)
+            .env("AGENTLAB_FLYWHEEL_TOOL", env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .env("AGENTLAB_GUIDANCE_PACKET_PATH", f.root.join("packet.json"))
+            .env("AGENTLAB_AUTHOR_REPAIR_LIMIT", if mode == "zero" { "0" } else { "1" })
+            .env("AGENTLAB_LM_GATEWAY_URL", "http://fixture.invalid")
+            .output().unwrap();
+        assert!(
+            result.status.success(),
+            "{mode}: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+    }
+}
+
+#[test]
 fn stage_proposal_binds_real_replacements_and_rejects_string_modes_and_source_drift() {
     let f = Fixture::new("arbitrary-stage-proposal");
     let mut sources = Vec::new();

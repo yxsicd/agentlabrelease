@@ -32,6 +32,14 @@ on:
         required: true
         type: string
         default: default
+      repair_limit:
+        description: Bounded Agent-owned content repair attempts, zero or one
+        required: true
+        type: choice
+        options:
+          - '0'
+          - '1'
+        default: '1'
 permissions:
   contents: read
 concurrency:
@@ -50,6 +58,7 @@ jobs:
       AGENTLAB_MODEL: ${{ inputs.model }}
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
       AGENTLAB_REASONING_EFFORT: ${{ inputs.reasoning_effort }}
+      AGENTLAB_AUTHOR_REPAIR_LIMIT: ${{ inputs.repair_limit }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Resolve runner-local evidence path after job allocation
@@ -122,15 +131,37 @@ jobs:
         run: |
           set -euo pipefail
           author="$GITHUB_WORKSPACE/examples/multi-repo-case/pi-calibration-author.py"
+          export AGENTLAB_FLYWHEEL_TOOL="$GITHUB_WORKSPACE/target/debug/agentlab-maintainer-skill-flywheel"
+          export AGENTLAB_GUIDANCE_PACKET_PATH="$EVIDENCE_ROOT/guidance-packet.json"
           cd "$EVIDENCE_ROOT/workspace"
           python3 "$author" --request authoring-request.json --output draft
+      - name: Select latest bounded attempt without accepting participant-supplied paths
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ['EVIDENCE_ROOT'])/'workspace'
+          manifest=root/'authoring-attempts.json'
+          latest='initial'
+          if manifest.exists():
+            row=json.loads(manifest.read_bytes())
+            assert row['schema']=='agentlab.stage_author_attempts.v1'
+            assert row['automaticPromotion'] is False and row['nativeSessionRestored'] is False
+            latest=row['latestAttempt']
+          paths={'initial':('participant-evidence','draft'),'repair':('participant-evidence-repair','draft-repair')}
+          evidence,draft=paths[latest]
+          with open(os.environ['GITHUB_ENV'],'a') as env:
+            env.write('AUTHOR_EVIDENCE='+str(root/evidence)+'\n')
+            env.write('AUTHOR_PROPOSAL='+str(root/draft/'proposed-stage-contract.json')+'\n')
+          PY
       - name: Independently reject non-executable author proposal content
         if: always()
         run: |
           target/debug/agentlab-maintainer-skill-flywheel --validate-stage-author-proposal \
             --source-workspace "$EVIDENCE_ROOT/workspace" \
             --author-request "$EVIDENCE_ROOT/workspace/authoring-request.json" \
-            --proposal "$EVIDENCE_ROOT/workspace/draft/proposed-stage-contract.json" \
+            --proposal "$AUTHOR_PROPOSAL" \
             --output "$EVIDENCE_ROOT/proposal-content-validation.json"
       - name: Independently verify actual guidance transmission without credentials
         if: always()
@@ -138,7 +169,7 @@ jobs:
           set -euo pipefail
           test -f "$EVIDENCE_ROOT/guidance-packet.json"
           target/debug/agentlab-maintainer-skill-flywheel --verify-guidance-consumption \
-            --participant-evidence "$EVIDENCE_ROOT/workspace/participant-evidence" \
+            --participant-evidence "$AUTHOR_EVIDENCE" \
             --guidance-packet "$EVIDENCE_ROOT/guidance-packet.json" \
             --output "$EVIDENCE_ROOT/guidance-consumption.json"
           cat "$EVIDENCE_ROOT/guidance-consumption.json" >> "$GITHUB_STEP_SUMMARY"
