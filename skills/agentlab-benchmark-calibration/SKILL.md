@@ -55,6 +55,10 @@ uses exact source/Blob and compiler/image identities, preserving frozen checks
 before execution. Pin preparation method bytes before lengthy acquisition and
 reject mid-round changes; hashing the final file alone can misidentify the code
 that actually ran. Preserve acquisition failures separately from subject verdicts.
+Create fresh attempt-owned receipt directories before invoking a runtime that
+strictly resolves them; exercise that setup in adapter regressions, not only the
+non-isolated path. A pre-launch missing directory is a Harness failure, not an
+Agent result.
 
 An explicit frozen task demand can define new behavior even when the repository's
 original intent is unknown. Bind that demand before calibration and distinguish

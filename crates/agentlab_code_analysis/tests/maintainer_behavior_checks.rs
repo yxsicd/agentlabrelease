@@ -371,12 +371,15 @@ fn pi_adapter_protocol_fixture_binds_request_capture_submission_and_watchdog() {
     let adapter = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../examples/real-code-agent/behavior-participant.py");
     let result=std::process::Command::new("python3").current_dir(&out).args(["-c",r#"
-import importlib.util,importlib.abc,json,sys,hashlib
+import importlib.util,importlib.abc,json,sys,hashlib,os
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('behavior',sys.argv[1]);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 class FakeParticipant:
  def __init__(self,evidence,state,binary,gateway,model,route,reasoning_effort,gateway_timeout_seconds):
   assert gateway_timeout_seconds==60
+  receipts=Path(os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT']).resolve(strict=True)
+  assert receipts.is_dir() and receipts== (evidence/'runtime').resolve(strict=True)
+  assert not list(receipts.iterdir())
   self.evidence=evidence;self.model=model;self.route=route;self.implementation='pi';self.reasoning_effort=None
  def _run_turn(self,*args,**kwargs): assert kwargs['timeout_seconds']==120
  def turn(self,label,workspace,prompt,tool_call_limit,transport_retry_limit):
@@ -400,7 +403,7 @@ class Loader(importlib.abc.Loader):
  def exec_module(self,module):module.Participant=FakeParticipant
 m.importlib.util.spec_from_file_location=lambda name,path:importlib.util.spec_from_loader(name,Loader())
 sys.argv=['adapter','request.json'];m.main()
-"#]).arg(adapter).env("AGENTLAB_PI_BINARY","fixture-pi").env("AGENTLAB_LM_GATEWAY_URL","http://fixture.invalid").env("AGENTLAB_MODEL","fixture-model").env("AGENTLAB_PROVIDER_ROUTE","fixture-route").output().unwrap();
+"#]).arg(adapter).env("AGENTLAB_PI_BINARY","fixture-pi").env("AGENTLAB_LM_GATEWAY_URL","http://fixture.invalid").env("AGENTLAB_MODEL","fixture-model").env("AGENTLAB_PROVIDER_ROUTE","fixture-route").env("AGENTLAB_PARTICIPANT_RUNTIME_CONFIG","fixture-runtime-config").output().unwrap();
     assert!(
         result.status.success(),
         "{}",

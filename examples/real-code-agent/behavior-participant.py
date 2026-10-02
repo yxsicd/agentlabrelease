@@ -24,7 +24,9 @@ def main():
     evidence = root / 'participant-evidence'
     evidence.mkdir()
     if os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'):
-        os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'] = str(evidence / 'runtime')
+        runtime_receipts = evidence / 'runtime'
+        runtime_receipts.mkdir()
+        os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'] = str(runtime_receipts)
     spec = importlib.util.spec_from_file_location('agentlab_participant', Path(__file__).with_name('participant.py'))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
