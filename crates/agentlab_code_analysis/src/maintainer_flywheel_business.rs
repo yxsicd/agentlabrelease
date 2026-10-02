@@ -140,18 +140,35 @@ fn execute_operation(base: &Path, state: &Value, out: &Path) -> Result<Value, St
         execution["reviewed"] == true,
         "business operation execution requires review",
     )?;
-    let plan = bound(&execution["plan"])?;
     let before = bound(&execution["before"])?;
     let recipe = bound(&execution["recipe"])?;
     let parsed: Value = serde_json::from_slice(&recipe).map_err(|e| e.to_string())?;
-    // Check applicability before launching even a probe. The existing executor
-    // independently reselects against this exact cut and only accepts build-only.
+    // Check applicability before launching even a probe. Each executor enforces
+    // its own scope/capability; build recipes additionally reselect the gap plan.
     need(
         parsed["source"]["repositoryId"] == state["repositoryId"]
             && parsed["source"]["revision"] == state["sourceRevision"],
         "business operation execution source differs",
     )?;
     let capture = out.join("operation");
+    if parsed["schema"] == "agentlab.maintainer_source_operation_recipe.v1" {
+        crate::maintainer_source_operation::execute(
+            &base.join("maintainer_scope_skills.jsonl"),
+            &base.join("program_facts.jsonl"),
+            &base.join("operation-evidence"),
+            &before,
+            &recipe,
+            &absolute(execution, "sourceWorktree")?,
+            &capture,
+        )?;
+        let receipt = read(&capture.join("execution-receipt.json"))?;
+        let mut report = crate::maintainer_source_operation::qualify(&capture, &digest(&receipt))?;
+        report["freshOperationExecuted"] = json!(true);
+        report["executionCapture"] =
+            json!({"directory":capture,"executionReceiptSha256":digest(&receipt)});
+        return Ok(report);
+    }
+    let plan = bound(&execution["plan"])?;
     maintainer_operation_exec::execute(
         &base.join("maintainer_scope_skills.jsonl"),
         &base.join("program_facts.jsonl"),

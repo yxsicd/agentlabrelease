@@ -162,7 +162,7 @@ fn git(source: &Path, args: &[&str]) -> Result<String, String> {
         .map(|s| s.trim().to_owned())
         .map_err(|e| e.to_string())
 }
-fn clean(source: &Path, expected: &Value) -> Result<(), String> {
+pub(crate) fn clean(source: &Path, expected: &Value) -> Result<(), String> {
     require(
         git(source, &["rev-parse", "HEAD"])? == string(expected, "revision")?,
         "operation source revision drift",
@@ -180,7 +180,7 @@ fn clean(source: &Path, expected: &Value) -> Result<(), String> {
         "operation source is dirty",
     )
 }
-fn validate_command(command: &Value, source: &Path) -> Result<(), String> {
+pub(crate) fn validate_command(command: &Value, source: &Path) -> Result<(), String> {
     validate_command_with_deadline(command, source, 180_000)
 }
 fn validate_command_with_deadline(
