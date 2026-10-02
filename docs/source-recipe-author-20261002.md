@@ -296,3 +296,39 @@ as an object with checks and a quoted-code verifierSource, 255 text characters,
 zero reasoning characters and finish_reason=stop. This confirms the tiny request's
 mode behavior, not schema guarantees or source-verifier quality. No returned code
 was executed; raw request/response/status remain outside the source repository.
+
+## JSON-mode limitations and native protocol capability
+
+Action `37023684774` ran method `0ac5c8739be4c6321a5e3eb18a2385c45b7bbc9f`.
+The wire explicitly carried JSON-object output mode and disabled thinking.
+Transport completed in 40925 ms; native stopReason=stop, 2103 output tokens and
+8241 text characters. Strict parsing refused trailing `<|im_end|>` after the
+object. Diagnostic-only prefix reading did not serialize or approve a proposal.
+Source review also found untranspiled ArkTS passed to JavaScript evaluation,
+invalid array /length pointers and already-cleared initial account fields that
+cannot distinguish missing-clear mutations. Runtime isolation passed; no generated
+controls or authority rows were produced. Provider JSON mode is not a guarantee.
+
+A tiny GPT-5.6-LUNA / opencode-go-responses probe through Chat Completions returned
+400 invalid_model_route: no qualified upstream mapping for OpenAiChatCompletions.
+A distinct native /v1/responses probe reached response.created followed by an
+upstream rate-limit error. Its HTTP 200 is failure evidence, not successful model
+execution. Neither changed shared Gateway routing or retried automatically.
+
+The participant now supports an explicit --api openai-responses option while
+preserving the default openai-completions API. Pi's model configuration selects
+that native API; reasoning uses reasoning.effort and JSON mode uses text.format.
+The isolated proxy permits only the selected protocol path. Responses completion
+requires a completed status event without error/incomplete details and clean EOF;
+DONE alone, response.created, incomplete and rate-limit events cannot qualify.
+The current adapter is Pi-only; mini-swe-agent and thinking.type combinations
+with Responses fail before model dispatch. No protocol is inferred from a model name.
+
+A fresh explicit 512-token probe with the new native proxy reached this actual
+route successfully: HTTP 200, 4037 ms, 102 final-text characters, directly parseable
+checks/verifierSource object, response.completed status=completed, clean EOF and
+no stream error. Raw request/response/status remain private retained evidence.
+This is wire-level route proof, not a real Pi construction turn or source-verifier
+qualification. The next hosted experiment must select native Responses explicitly
+with the same bounded source context and independent review requirements.
+Maturity remains 63%; formal cases and complete five-stage cycles remain zero.

@@ -54,6 +54,7 @@ def main():
                    help='Explicit provider thinking.type policy; default omits this independent field')
     p.add_argument('--response-format', choices=('default', 'json-object'), default='default',
                    help='Explicit provider JSON-object mode; default omits the field')
+    p.add_argument('--api', choices=('openai-completions', 'openai-responses'), default='openai-completions')
     args = p.parse_args()
     if not os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'):
         raise ValueError('Recipe construction requires the contained participant runtime')
@@ -78,6 +79,7 @@ def main():
         route=os.environ['AGENTLAB_PROVIDER_ROUTE'], gateway_timeout_seconds=args.gateway_timeout_seconds,
         thinking_type=None if args.thinking_type == 'default' else args.thinking_type,
         response_format='json_object' if args.response_format == 'json-object' else None,
+        api=args.api,
     )
     context = {key: request[key] for key in (
         'scope', 'source', 'sourceFiles', 'semanticFacts', 'selectedGap')}

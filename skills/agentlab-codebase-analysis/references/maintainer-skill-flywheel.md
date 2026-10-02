@@ -823,3 +823,13 @@ must emit one common observation shape against one frozen check set. Valid
 references expect no failures; wrong variants expect an exact nonempty check subset.
 Malformed output with independently detected semantic defects is not eligible
 for format-only repair or operator punctuation correction.
+
+Treat model identity, route admission and native wire protocol as separate
+capabilities. A catalog model may reject Chat Completions while accepting
+Responses; select the exact supported API without changing shared Gateway policy.
+Use protocol-native reasoning/output fields and permit only the selected API
+path inside the isolated proxy. For Responses, require response.completed with
+completed status, no error/incomplete details and clean EOF; a created event,
+HTTP 200, DONE marker or rate-limit error is not successful generation. Preserve
+the original rate-limit attempt and validate a later explicit bounded probe,
+not hidden retries. Small probe success still does not qualify full construction.

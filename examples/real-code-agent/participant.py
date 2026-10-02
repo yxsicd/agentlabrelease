@@ -26,7 +26,14 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 class Participant:
     def __init__(self, evidence, state, binary, gateway, model, route='glm', implementation='pi', reasoning_effort=None,
-                 gateway_timeout_seconds=180, thinking_type=None, response_format=None):
+                 gateway_timeout_seconds=180, thinking_type=None, response_format=None,
+                 api='openai-completions'):
+        if api not in ('openai-completions', 'openai-responses'):
+            raise ValueError('unsupported participant API')
+        if api == 'openai-responses' and (implementation != 'pi' or thinking_type is not None):
+            raise ValueError('Responses requires Pi and native reasoning policy, not thinking.type')
+        self.api = api
+        self.api_path = '/v1/responses' if api == 'openai-responses' else '/v1/chat/completions'
         if response_format not in (None, 'json_object'):
             raise ValueError('response_format must be omitted or json_object')
         self.response_format = response_format
@@ -99,7 +106,7 @@ class Participant:
                 if not self.locally_authorized():
                     self.send_error(401, 'Invalid participant proxy credential')
                     return
-                if owner.runtime_isolated and self.path != '/v1/chat/completions':
+                if owner.runtime_isolated and self.path != owner.api_path:
                     self.send_error(404, 'Participant proxy path is not allowed')
                     return
                 with owner.lock:
@@ -134,11 +141,17 @@ class Participant:
                 wire['providerId'] = owner.route
                 wire['model'] = owner.model
                 if owner.active_reasoning_effort:
-                    wire['reasoning_effort'] = owner.active_reasoning_effort
+                    if owner.api == 'openai-responses':
+                        wire.setdefault('reasoning', {})['effort'] = owner.active_reasoning_effort
+                    else:
+                        wire['reasoning_effort'] = owner.active_reasoning_effort
                 if owner.thinking_type is not None:
                     wire['thinking'] = {'type': owner.thinking_type}
                 if owner.response_format is not None:
-                    wire['response_format'] = {'type': owner.response_format}
+                    if owner.api == 'openai-responses':
+                        wire.setdefault('text', {})['format'] = {'type': owner.response_format}
+                    else:
+                        wire['response_format'] = {'type': owner.response_format}
                 upstream = json.dumps(wire).encode()
                 stem.with_suffix('.upstream-request.json').write_bytes(upstream)
                 request = urllib.request.Request(owner.gateway + self.path, data=upstream,
@@ -201,15 +214,22 @@ class Participant:
                             if not wire.get('stream') or not line.startswith(b'data:'):
                                 return
                             data = line[5:].strip()
-                            if data == b'[DONE]':
+                            if data == b'[DONE]' and owner.api == 'openai-completions':
                                 receipt['semanticComplete'] = True
                                 return
                             try:
                                 event = json.loads(data)
                                 if event.get('error'):
                                     receipt['streamError'] = event['error']
-                                if any(isinstance(c.get('finish_reason'), str)
-                                       for c in event.get('choices', [])):
+                                if owner.api == 'openai-responses':
+                                    kind = event.get('type')
+                                    result = event.get('response', {})
+                                    if kind == 'response.completed' and result.get('status') == 'completed' and not result.get('error') and not result.get('incomplete_details'):
+                                        receipt['semanticComplete'] = True
+                                    elif kind in ('error', 'response.failed', 'response.incomplete'):
+                                        receipt['streamError'] = result.get('error') or result.get('incomplete_details') or event.get('error') or event
+                                elif any(isinstance(c.get('finish_reason'), str)
+                                         for c in event.get('choices', [])):
                                     receipt['semanticComplete'] = True
                             except (ValueError, TypeError):
                                 pass
@@ -259,7 +279,7 @@ class Participant:
             model_base_url = f'http://agentlab-gateway:{CONTAINER_GATEWAY_PORT}/v1'
         models = {'providers': {'agentlab-ci': {
             'baseUrl': model_base_url,
-            'api': 'openai-completions', 'apiKey': self.local_proxy_token,
+            'api': self.api, 'apiKey': self.local_proxy_token,
             'compat': {'supportsDeveloperRole': False, 'supportsReasoningEffort': False},
             'models': [{'id': model, 'reasoning': False, 'input': ['text'],
                         'contextWindow': 128000, 'maxTokens': 8192}]}}}
@@ -270,6 +290,7 @@ class Participant:
             'reasoningEffort': self.reasoning_effort, 'piThinkingMode': 'off',
             'providerThinkingType': self.thinking_type,
             'providerResponseFormat': self.response_format,
+            'providerApi': self.api,
             'captureAuthority': 'operator-owned local forwarding proxy',
             'externalCredentialInParticipant': False}, indent=2) + '\n')
 

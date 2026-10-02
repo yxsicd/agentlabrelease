@@ -158,7 +158,8 @@ with tempfile.TemporaryDirectory() as d:
     for index, extra, effort, deadline, thinking in [(0, [], 'low', 180, None),
         (1, ['--reasoning-effort','high','--gateway-timeout-seconds','120'], 'high',120,None),
         (2, ['--reasoning-effort','default'], None,180,None),
-        (3, ['--reasoning-effort','default','--thinking-type','disabled','--response-format','json-object'],None,180,'disabled')]:
+        (3, ['--reasoning-effort','default','--thinking-type','disabled','--response-format','json-object'],None,180,'disabled'),
+        (4, ['--api','openai-responses','--reasoning-effort','none','--response-format','json-object'],'none',180,None)]:
         seen = {}
         class FakeParticipant:
             def __init__(self, evidence, state, binary, gateway, model, **options):
@@ -187,7 +188,8 @@ with tempfile.TemporaryDirectory() as d:
             module.main()
         assert seen['constructor']['gateway_timeout_seconds'] == deadline
         assert seen['constructor']['thinking_type'] == thinking
-        assert seen['constructor']['response_format'] == ('json_object' if index==3 else None)
+        assert seen['constructor']['response_format'] == ('json_object' if index in (3,4) else None)
+        assert seen['constructor']['api'] == ('openai-responses' if index==4 else 'openai-completions')
         assert seen['turn']['reasoning_effort'] == effort
         assert seen['turn']['transport_retry_limit'] == 0
         assert seen['closed'] is True
@@ -298,6 +300,85 @@ try:
         else: raise AssertionError('invalid thinking policy accepted')
 finally:
     server.shutdown();server.server_close();thread.join()
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "PARTICIPANT_SCRIPT",
+            root().join("examples/real-code-agent/participant.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn native_responses_preserves_wire_isolation_and_rejects_incomplete_or_rate_limited_streams() {
+    let code = r#"
+import http.server, importlib.util, json, os, tempfile, threading, urllib.request, urllib.error
+from pathlib import Path
+from unittest.mock import patch
+spec=importlib.util.spec_from_file_location('participant',os.environ['PARTICIPANT_SCRIPT'])
+module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+terminal = {}
+received = []
+class Handler(http.server.BaseHTTPRequestHandler):
+    def log_message(self,*args): pass
+    def do_POST(self):
+        received.append((self.path,json.loads(self.rfile.read(int(self.headers['Content-Length'])))))
+        body=('data: '+json.dumps(terminal)+'\n\ndata: [DONE]\n\n').encode()
+        self.send_response(200);self.send_header('Content-Type','text/event-stream')
+        self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
+server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Handler)
+thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+cases=[({'type':'response.completed','response':{'status':'completed'}},True,'completed'),
+       ({'type':'response.incomplete','response':{'status':'incomplete','incomplete_details':{'reason':'max_output_tokens'}}},False,'stream_error'),
+       ({'type':'error','error':{'code':'rate_limit_exceeded'}},False,'stream_error'),
+       ({'type':'response.failed','response':{'status':'failed','error':{'code':'failed'}}},False,'stream_error'),
+       ({'type':'response.created','response':{'status':'in_progress'}},False,'incomplete_stream'),
+       ({'type':'response.completed','response':{'status':'incomplete'}},False,'incomplete_stream')]
+try:
+    with tempfile.TemporaryDirectory() as directory:
+        root=Path(directory)
+        for index,(terminal,complete,outcome) in enumerate(cases):
+            evidence=root/str(index);evidence.mkdir()
+            with patch.dict(os.environ,{'AGENTLAB_LM_GATEWAY_KEY':'synthetic-external-key',
+                'AGENTLAB_PARTICIPANT_RUNTIME_CONFIG':str(root/'config.json')}):
+                p=module.Participant(evidence,root/f'state-{index}','/bin/true',
+                    f'http://127.0.0.1:{server.server_port}','arbitrary',api='openai-responses',
+                    reasoning_effort='none',response_format='json_object')
+            try:
+                headers={'Authorization':'Bearer '+p.local_proxy_token}
+                wrong=urllib.request.Request(f'http://127.0.0.1:{p.server.server_port}/v1/chat/completions',data=b'{}',headers=headers)
+                try: urllib.request.urlopen(wrong,timeout=5)
+                except urllib.error.HTTPError as error:
+                    assert error.code==404;error.close()
+                else: raise AssertionError('cross-protocol isolated route admitted')
+                body={'input':'exact input','stream':True,'reasoning':{'summary':'auto'},'text':{'verbosity':'low'}}
+                request=urllib.request.Request(f'http://127.0.0.1:{p.server.server_port}/v1/responses',data=json.dumps(body).encode(),headers=headers)
+                with urllib.request.urlopen(request,timeout=5) as response: response.read()
+            finally:p.close()
+            assert received[-1][0]=='/v1/responses'
+            wire=received[-1][1]
+            assert wire['input']=='exact input' and wire['reasoning']=={'summary':'auto','effort':'none'}
+            assert wire['text']=={'verbosity':'low','format':{'type':'json_object'}}
+            assert 'reasoning_effort' not in wire and 'response_format' not in wire
+            receipt=json.loads((evidence/'gateway/0001.status.json').read_bytes())
+            assert receipt['upstreamEof'] is True
+            assert receipt['semanticComplete']==complete and receipt['outcome']==outcome,receipt
+            models=json.loads((root/f'state-{index}/models.json').read_bytes())
+            assert models['providers']['agentlab-ci']['api']=='openai-responses'
+            assert models['providers']['agentlab-ci']['apiKey']!='synthetic-external-key'
+        for options in [{'api':'invented'},{'api':'openai-responses','thinking_type':'disabled'},
+                        {'api':'openai-responses','implementation':'mini-swe-agent'}]:
+            try:module.Participant(root,root/'invalid','/bin/true','http://localhost','arbitrary',**options)
+            except ValueError:pass
+            else:raise AssertionError('unsupported API policy accepted')
+finally:server.shutdown();server.server_close();thread.join()
 "#;
     let result = Command::new("python3")
         .args(["-c", code])
