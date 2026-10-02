@@ -62,3 +62,58 @@ Next: resolve the intended persistence contract, prepare a source-bound focused
 knowledge correction or additive candidate successor, and expose this different
 async mechanism through the reusable author/executor/feedback interface. Do not
 substitute a second handwritten diagnostic for autonomous cross-repository closure.
+
+## Current-authority input continuity
+
+PR149 merged as `2300b34b9e5669f6147591ac4329db18c5dad982` after all eight
+applicable checks passed. The published first-four input still referenced
+`38fc28d72870b36405287e048a5e6fce41a44b78`, while active knowledge had already
+advanced to `368b17895b23633656a26f9f51cb300cb11fa829`. The existing Action's
+preflight would therefore refuse to spend an Agent budget on that stale input.
+
+A fresh read-only MCP check selected the configured Person, verified clean HEAD
+before and after, and compared all five tables at the exact committed revision
+with the retained knowledge export: 13 process Skills, 489 scope Skills, 62 facts,
+39 refresh rows and zero evaluation cases. No authority write was attempted.
+This continuation imports that already committed export, not another lesson or
+coverage round. Nine changed/new export files match their original bytes,
+including the portable report/sidecars; missing terminal newlines are preserved
+because original-byte digests bind durable assessment references.
+
+The new `construction-plans/telemetry-persistence.json` binds the unchanged
+candidate value and requests its original three source paths plus TrackService
+and RdbStore. AWMCP exec-01e6 verified the additional RdbStore Blob as
+`e02eaa2d7f427ece6cfecf2ec58f6ec25c7852fd` on the same clean source checkout.
+Reasons direct the next author toward fulfilled/rejected results, exact threshold
+boundaries and snapshot/deletion ordering without asserting a normative answer.
+Both runtime requirements, Oracle execution and wrong-variant calibration remain
+unqualified; the old candidate and every prior generation row remain unchanged.
+
+The actual durable-reference CLI selected refresh round39 and assessment round37,
+whose original SHA256 is
+`f255f78aa09a95201309f09c5bd5816369c49df7551bf62fc1366d000929e0b8`.
+Focused preparation using that assessment succeeded. A Rust regression invokes
+both actual CLIs and checks the original knowledge/candidate/history bytes remain
+unchanged, alongside the historical AbilityStage preparation regression.
+These two repository inputs prove preparation continuity, not real cross-repo
+Agent execution, knowledge correction or an automatic feedback round.
+
+Overall maturity stays **54%**. After integration and another live authority
+preflight, run the existing focused-refresh Action with candidate
+`shadow-case-rdb-preference-telemetry-pipeline` and this construction plan.
+Do not dispatch from an unmerged snapshot, silently adopt a different authority
+revision or count publication repair as new semantic coverage.
+
+The actual Action preflight command also completed with `admitted=true` through
+its normal Inspector transport and Person context, without injecting the private
+maintenance Basic profile. This is live input admission, not a model run. Retain
+its original receipt externally as `code-workshop-telemetry-source/action-path-preflight.json`.
+
+Regression initially rejected the imported thirteenth Skill because the old
+snapshot test treated every Skill as one of twelve repository process instances.
+The check now preserves all twelve instances and independently validates the
+additional calibration-method lesson's exact historical method bytes, bound
+verified fact, source/lesson provenance and false formal qualifications. The
+downstream queue test accounts for the added fourth plan, explicitly checks the
+telemetry route remains non-executing/non-promoting, and preserves unchanged
+repeat suppression. These are snapshot/test corrections, not relaxed admission.

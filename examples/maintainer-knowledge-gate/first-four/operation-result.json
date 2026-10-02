@@ -7,8 +7,7 @@
     "semanticReadyCount": 41,
     "structuralReadyCount": 489
   },
-  "assessmentSha256": "47354f03c2dcd4c4364b3dc7cdec7e30b3ac9d4f81b507120e355a46670f272d",
-  "automaticPromotion": false,
+  "assessmentSha256": "f255f78aa09a95201309f09c5bd5816369c49df7551bf62fc1366d000929e0b8",
   "before": {
     "maintenanceReadyCount": 2,
     "programBoundCount": 46,
@@ -16,13 +15,9 @@
     "semanticReadyCount": 41,
     "structuralReadyCount": 489
   },
-  "beforeAssessmentSha256": "3a0fe3380583525df6d2734c09722a6954727cacea11b7e23e6c4e1e7694d96e",
-  "decision": "review-proposed-knowledge-refresh",
-  "maturity": "L2-semantic-ready",
-  "schema": "agentlab.maintainer_skill_agent_flywheel_result.v1",
-  "scopeSkillId": "skill-scope-guide-snippets-ability-abilitystage",
-  "selectedScopeIds": [
-    "skill-scope-guide-snippets-ability-abilitystage"
-  ],
+  "beforeAssessmentSha256": "47354f03c2dcd4c4364b3dc7cdec7e30b3ac9d4f81b507120e355a46670f272d",
+  "countsAsMaturityGain": false,
+  "decision": "review-proposed-lesson-knowledge",
+  "schema": "agentlab.maintainer_lesson_stage_result.v1",
   "strictOperationEvidencePolicy": true
 }

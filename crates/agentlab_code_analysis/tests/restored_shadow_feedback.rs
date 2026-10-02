@@ -134,3 +134,120 @@ fn original_shadow_history_prepares_feedback_without_rebinding_or_authority_muta
     }
     fs::remove_dir_all(temp).unwrap();
 }
+
+#[test]
+fn current_authority_cut_prepares_telemetry_refresh_without_borrowing_runtime_evidence() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let knowledge = root.join("examples/maintainer-knowledge-gate/first-four");
+    let original: Vec<_> = [
+        "maintainer_skills.jsonl",
+        "maintainer_scope_skills.jsonl",
+        "program_facts.jsonl",
+        "maintainer_skill_refresh_rounds.jsonl",
+        "evaluation_cases.jsonl",
+        "maintainer-knowledge-cut.json",
+        "case_generation_candidates.jsonl",
+        "case_generation_rounds.jsonl",
+    ]
+    .iter()
+    .map(|name| (*name, fs::read(knowledge.join(name)).unwrap()))
+    .collect();
+    let cut: Value = serde_json::from_slice(&original[5].1).unwrap();
+    assert_eq!(
+        cut["tableGitAuthority"]["revision"],
+        "368b17895b23633656a26f9f51cb300cb11fa829"
+    );
+    let temp = std::env::temp_dir().join(format!(
+        "telemetry-feedback-{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir_all(&temp).unwrap();
+    let reference = temp.join("reference.json");
+    let resolved = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+        .args(["--resolve-latest-assessment", "--base"])
+        .arg(&knowledge)
+        .arg("--output")
+        .arg(&reference)
+        .output()
+        .unwrap();
+    assert!(
+        resolved.status.success(),
+        "{}",
+        String::from_utf8_lossy(&resolved.stderr)
+    );
+    let reference: Value = serde_json::from_slice(&fs::read(reference).unwrap()).unwrap();
+    assert_eq!(reference["refreshRoundIndex"], 39);
+    let output = temp.join("request.json");
+    let prepared = Command::new("python3")
+        .arg(root.join("examples/maintainer-knowledge-gate/focused_fact_refresh.py"))
+        .args(["prepare", "--knowledge"])
+        .arg(&knowledge)
+        .arg("--assessment")
+        .arg(reference["assessmentPath"].as_str().unwrap())
+        .args([
+            "--candidate-id",
+            "shadow-case-rdb-preference-telemetry-pipeline",
+            "--plan",
+        ])
+        .arg(knowledge.join("construction-plans/telemetry-persistence.json"))
+        .arg("--evidence-root")
+        .arg(&root)
+        .arg("--output")
+        .arg(&output)
+        .output()
+        .unwrap();
+    assert!(
+        prepared.status.success(),
+        "{}",
+        String::from_utf8_lossy(&prepared.stderr)
+    );
+    let request: Value = serde_json::from_slice(&fs::read(output).unwrap()).unwrap();
+    assert_eq!(request["readinessDecision"], "blocked-knowledge-refresh");
+    assert_eq!(
+        request["sourceAssessment"]["sha256"],
+        reference["assessmentSha256"]
+    );
+    assert_eq!(
+        request["existingFact"]["evidence"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
+    assert_eq!(
+        request["requiredImplementationPaths"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
+    assert_eq!(request["requiredOraclePaths"].as_array().unwrap().len(), 2);
+    assert_eq!(
+        request["requiredDimensions"],
+        request["existingFact"]["dimensions"]
+    );
+    assert_eq!(request["automaticPromotion"], false);
+    let candidate: Value = fs::read_to_string(knowledge.join("case_generation_candidates.jsonl"))
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str::<Value>(line).unwrap())
+        .find(|row| row["id"] == request["candidateId"])
+        .unwrap();
+    assert_eq!(sha(&candidate), request["candidateSha256"]);
+    assert_eq!(
+        candidate["oracleHypothesis"]["status"],
+        "hypothesis-unqualified"
+    );
+    for (name, bytes) in original {
+        assert_eq!(
+            fs::read(knowledge.join(name)).unwrap(),
+            bytes,
+            "mutated {name}"
+        );
+    }
+    fs::remove_dir_all(temp).unwrap();
+}
