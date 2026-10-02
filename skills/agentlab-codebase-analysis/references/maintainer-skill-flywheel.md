@@ -804,3 +804,13 @@ token-cap termination is not completed analysis eligible for format-only repair.
 After changing a provider-specific control, use a small-budget captured live
 probe before dispatching the full construction workflow. Probe success establishes
 only that request's routing/response behavior, not synthesis quality or readiness.
+
+When a complete verifier proposal fails review, preserve its original bytes and
+reject it rather than converting it into an operator-authored success. Require
+explicit id/pointer/expected oracle objects and raw behavioral observations.
+Source identity hashes or spelling checks do not distinguish behavioral repairs;
+checks must observe the selected transformed body. Confirm original ordering and
+member names directly against source, and inspect every alternative for genuine
+invariant preservation. Prefer one coherent invariant over an inventory-wide
+verifier census. Keep transpilation and variants in memory: temporary writes are
+still host side effects and do not satisfy read-only construction policy.

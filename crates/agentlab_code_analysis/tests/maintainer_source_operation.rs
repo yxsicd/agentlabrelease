@@ -727,6 +727,29 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     let request_bytes = serde_json::to_vec(&request).unwrap();
     let proposal_bytes = serde_json::to_vec(&proposal).unwrap();
     let stage = dir.join("author-stage");
+    for (index, checks) in [
+        json!(["value"]),
+        json!([{"id":"value","pointer":"/value"}]),
+        json!([{"id":"value","pointer":"/value","expected":1,"pass":true}]),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let mut invalid = proposal.clone();
+        invalid["contract"]["checks"] = checks;
+        let rejected_stage = dir.join(format!("invalid-check-stage-{index}"));
+        let error = author::stage(
+            &request_bytes,
+            &serde_json::to_vec(&invalid).unwrap(),
+            &rejected_stage,
+        )
+        .unwrap_err();
+        assert!(
+            error.contains("exactly id, pointer and expected"),
+            "{error}"
+        );
+        assert!(!rejected_stage.exists());
+    }
     let receipt = author::stage(&request_bytes, &proposal_bytes, &stage).unwrap();
     assert_eq!(receipt["executionPerformed"], false);
     let unreviewed = fs::read(stage.join("unreviewed-recipe.json")).unwrap();
