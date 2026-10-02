@@ -723,3 +723,12 @@ that committed cut's durable reference. Confirm the planner leaves the accepted
 scope unselected and identifies the remaining gaps. This demonstrates operation
 feedback consumption; it does not prove automatic recipe generation, another
 productive execution, full-scope understanding or a completed business cycle.
+
+Use the [reviewed source-operation loop](../../../docs/reviewed-source-operation-loop-20261002.md)
+to chain bounded selected operations through independently staged cuts. Bind the
+initial cut and reviewed recipe bytes, replan from each durable child assessment,
+and stop with the named selected gap when its recipe is absent; another reviewed
+scope cannot substitute. Candidate operation rounds remain distinct from live
+admission and full business cycles. Keep maintenance plans out of directories
+scanned as case-construction plans. Select a new guidance request for a new cut
+without rewriting the original historical selection or its execution evidence.

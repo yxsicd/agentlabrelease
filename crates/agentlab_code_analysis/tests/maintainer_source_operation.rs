@@ -216,3 +216,235 @@ fn unreviewed_stale_and_failed_controls_never_qualify_or_overwrite() {
     );
     fs::remove_dir_all(dir).unwrap();
 }
+
+fn loop_fixture() -> (PathBuf, Value) {
+    let (dir, mut first, _, mut recipe) = fixture();
+    let source = dir.join("source");
+    fs::create_dir(source.join("other")).unwrap();
+    fs::write(source.join("other/state.json"), b"{\"value\":1}").unwrap();
+    for args in [
+        vec!["add", "other/state.json"],
+        vec!["commit", "-m", "second responsibility"],
+    ] {
+        assert!(Command::new("git")
+            .current_dir(&source)
+            .args(args)
+            .status()
+            .unwrap()
+            .success());
+    }
+    let git = |args: &[&str]| {
+        String::from_utf8(
+            Command::new("git")
+                .current_dir(&source)
+                .args(args)
+                .output()
+                .unwrap()
+                .stdout,
+        )
+        .unwrap()
+        .trim()
+        .to_owned()
+    };
+    let revision = git(&["rev-parse", "HEAD"]);
+    first["sourceRevision"] = json!(revision);
+    first["sourceTreeOid"] = json!(git(&["rev-parse", "HEAD^{tree}"]));
+    let mut second = first.clone();
+    second["id"] = json!("scope-second");
+    second["pathBoundary"] = json!("other");
+    second["evidence"] = json!([{"path":"other/state.json","gitBlobOid":git(&["rev-parse","HEAD:other/state.json"])}]);
+    let knowledge = dir.join("knowledge");
+    fs::create_dir(&knowledge).unwrap();
+    fs::create_dir(knowledge.join("assessments")).unwrap();
+    fs::create_dir(knowledge.join("operation-evidence")).unwrap();
+    fs::write(
+        knowledge.join("maintainer_scope_skills.jsonl"),
+        format!("{}\n{}\n", first, second),
+    )
+    .unwrap();
+    let facts: Vec<Value> = [&first, &second]
+        .iter()
+        .enumerate()
+        .map(|(i, s)| {
+            json!({"id":format!("semantic-{i}"),
+        "repositoryId":"arbitrary","sourceRevision":revision,"scopeSkillIds":[s["id"]],
+        "dimensions":["responsibility","boundary","relations","behavior"],"evidence":s["evidence"]})
+        })
+        .collect();
+    fs::write(
+        knowledge.join("program_facts.jsonl"),
+        format!("{}\n{}\n", facts[0], facts[1]),
+    )
+    .unwrap();
+    for name in ["maintainer_skills", "evaluation_cases"] {
+        fs::write(knowledge.join(format!("{name}.jsonl")), b"").unwrap();
+    }
+    let before = assess_with_receipts(
+        &knowledge.join("maintainer_scope_skills.jsonl"),
+        Some(&knowledge.join("program_facts.jsonl")),
+        1,
+        None,
+        Some(&knowledge.join("operation-evidence")),
+    )
+    .unwrap();
+    assert_eq!(before["totals"]["semanticReadyCount"], 2);
+    let before_bytes = serde_json::to_vec_pretty(&before).unwrap();
+    fs::write(knowledge.join("assessments/before.json"), &before_bytes).unwrap();
+    fs::write(
+        knowledge.join("maintainer_skill_refresh_rounds.jsonl"),
+        serde_json::to_vec(&json!({"id":"baseline","roundIndex":1,
+        "assessment":{"path":"assessments/before.json","sha256":digest(&before_bytes)}}))
+        .unwrap(),
+    )
+    .unwrap();
+    let mut tables = serde_json::Map::new();
+    for (key, name) in [
+        ("maintainerSkills", "maintainer_skills"),
+        ("maintainerScopeSkills", "maintainer_scope_skills"),
+        ("programFacts", "program_facts"),
+        (
+            "maintainerSkillRefreshRounds",
+            "maintainer_skill_refresh_rounds",
+        ),
+        ("evaluationCases", "evaluation_cases"),
+    ] {
+        let filename = format!("{name}.jsonl");
+        tables.insert(
+            key.into(),
+            json!({"path":filename,"sha256":digest(&fs::read(knowledge.join(filename)).unwrap())}),
+        );
+    }
+    let cut = json!({"schema":"agentlab.maintainer_knowledge_cut.v1","tables":tables,
+        "repositories":[{"id":"arbitrary","repository":first["repository"],"revision":revision}],
+        "tableGitAuthority":{"revision":"f".repeat(40)},"automaticPromotion":false});
+    let cut_bytes = serde_json::to_vec_pretty(&cut).unwrap();
+    fs::write(knowledge.join("maintainer-knowledge-cut.json"), &cut_bytes).unwrap();
+    recipe["source"]["revision"] = json!(revision);
+    let mut other = recipe.clone();
+    other["scopeSkillId"] = second["id"].clone();
+    other["sourceInputs"][0]["path"] = json!("other/state.json");
+    for control in other["controls"].as_array_mut().unwrap() {
+        control["command"]["args"][1] = json!("other/state.json");
+    }
+    let mut entries = Vec::new();
+    for (index, r) in [recipe, other].iter().enumerate() {
+        let bytes = serde_json::to_vec_pretty(r).unwrap();
+        let path = dir.join(format!("recipe-{index}.json"));
+        fs::write(&path, &bytes).unwrap();
+        entries.push(
+            json!({"scopeSkillId":r["scopeSkillId"],"sourceWorktree":source,
+            "recipe":{"path":path,"sha256":digest(&bytes)}}),
+        );
+    }
+    (
+        dir,
+        json!({"schema":"agentlab.reviewed_source_operation_catalog.v1","reviewed":true,
+        "automaticPromotion":false,"knowledgeCutSha256":digest(&cut_bytes),"repositorySelector":"arbitrary","entries":entries}),
+    )
+}
+
+#[test]
+fn reviewed_loop_replans_distinct_scopes_and_retains_portable_parent_chain() {
+    let (dir, catalog) = loop_fixture();
+    let output = dir.join("loop");
+    let report = agentlab_code_analysis::maintainer_source_operation_loop::execute(
+        &dir.join("knowledge"),
+        &serde_json::to_vec(&catalog).unwrap(),
+        3,
+        &output,
+    )
+    .unwrap();
+    assert_eq!(report["productiveOperationRounds"], 2);
+    assert_eq!(report["status"], "review-required");
+    assert_ne!(
+        report["rounds"][0]["scopeSkillId"],
+        report["rounds"][1]["scopeSkillId"]
+    );
+    assert_eq!(
+        report["rounds"][1]["beforeAssessmentSha256"],
+        report["rounds"][0]["afterAssessmentSha256"]
+    );
+    assert_eq!(report["rounds"][1]["after"]["maintenanceReadyCount"], 2);
+    assert_eq!(report["authorityWritePerformed"], false);
+    assert_eq!(report["closedLoopQualified"], false);
+    let final_cut = PathBuf::from(report["finalCandidateSnapshot"].as_str().unwrap());
+    let latest =
+        agentlab_code_analysis::maintainer_flywheel_plan::latest_assessment(&final_cut).unwrap();
+    let recorded: Value =
+        serde_json::from_slice(&fs::read(latest["assessmentPath"].as_str().unwrap()).unwrap())
+            .unwrap();
+    fs::remove_dir_all(output.join("iteration-1")).unwrap();
+    fs::remove_dir_all(dir.join("source")).unwrap();
+    let reproduced = assess_with_receipts(
+        &final_cut.join("maintainer_scope_skills.jsonl"),
+        Some(&final_cut.join("program_facts.jsonl")),
+        recorded["roundIndex"].as_u64().unwrap(),
+        recorded["parentAssessmentSha256"].as_str(),
+        Some(&final_cut.join("operation-evidence")),
+    )
+    .unwrap();
+    assert_eq!(recorded, reproduced);
+    fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn reviewed_loop_refuses_drift_and_missing_selected_recipe_without_substitution() {
+    let (dir, mut catalog) = loop_fixture();
+    let original_catalog = catalog.clone();
+    let execute = |catalog: &Value, name: &str| {
+        agentlab_code_analysis::maintainer_source_operation_loop::execute(
+            &dir.join("knowledge"),
+            &serde_json::to_vec(catalog).unwrap(),
+            2,
+            &dir.join(name),
+        )
+    };
+    let mut bad = catalog.clone();
+    bad["reviewed"] = json!(false);
+    assert!(execute(&bad, "unreviewed").is_err());
+    assert!(!dir.join("unreviewed").exists());
+    bad = catalog.clone();
+    bad["knowledgeCutSha256"] = json!("0".repeat(64));
+    assert!(execute(&bad, "stale-cut").is_err());
+    assert!(!dir.join("stale-cut").exists());
+    bad = catalog.clone();
+    bad["entries"][0]["recipe"]["sha256"] = json!("0".repeat(64));
+    assert!(execute(&bad, "stale-recipe").is_err());
+    assert!(!dir.join("stale-recipe").exists());
+    // Even when another scope has a reviewed recipe, it cannot replace the
+    // deterministic selected gap. Keep that scope and missing recipe visible.
+    catalog["entries"] = json!([catalog["entries"][1].clone()]);
+    let stopped = execute(&catalog, "missing").unwrap();
+    assert_eq!(stopped["status"], "review-required");
+    assert_eq!(stopped["productiveOperationRounds"], 0);
+    assert_eq!(
+        stopped["gap"]["code"],
+        "selected-source-operation-recipe-required"
+    );
+    assert!(!dir.join("missing/iteration-1/capture").exists());
+    assert!(execute(&catalog, "missing").is_err());
+    catalog = original_catalog.clone();
+    catalog["entries"] = json!([catalog["entries"][0].clone()]);
+    let partial = execute(&catalog, "partial").unwrap();
+    assert_eq!(partial["productiveOperationRounds"], 1);
+    assert_eq!(partial["status"], "review-required");
+    assert!(!dir.join("partial/iteration-2/capture").exists());
+    assert_eq!(partial["authorityWritePerformed"], false);
+    catalog = original_catalog;
+    let recipe_path = PathBuf::from(catalog["entries"][0]["recipe"]["path"].as_str().unwrap());
+    let mut recipe: Value = serde_json::from_slice(&fs::read(&recipe_path).unwrap()).unwrap();
+    recipe["controls"][1]["command"]["args"][2] = json!("error");
+    let bytes = serde_json::to_vec_pretty(&recipe).unwrap();
+    fs::write(&recipe_path, &bytes).unwrap();
+    catalog["entries"][0]["recipe"]["sha256"] = json!(digest(&bytes));
+    let failed = execute(&catalog, "failed-loop").unwrap();
+    assert_eq!(failed["status"], "failed");
+    assert_eq!(failed["productiveOperationRounds"], 0);
+    assert_eq!(failed["finalCandidateSnapshot"], Value::Null);
+    assert_eq!(
+        fs::read(dir.join("failed-loop/iteration-1/capture/reference.stderr")).unwrap(),
+        b"original-error\n"
+    );
+    assert!(dir.join("failed-loop/loop-receipt.json").is_file());
+    fs::remove_dir_all(dir).unwrap();
+}

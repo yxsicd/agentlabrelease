@@ -24,6 +24,19 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|a| a == "--execute-source-operation-loop") {
+        let report = agentlab_code_analysis::maintainer_source_operation_loop::execute(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &fs::read(value(&args, "--operation-catalog")?)?,
+            value(&args, "--iterations")?.parse()?,
+            &output,
+        )?;
+        println!("{}", serde_json::to_string(&report)?);
+        if report["status"] == "failed" {
+            return Err("source operation loop failed; original capture retained".into());
+        }
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--execute-source-operation") {
         let report = agentlab_code_analysis::maintainer_source_operation::execute(
             &PathBuf::from(value(&args, "--scope-skills")?),
