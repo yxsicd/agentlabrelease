@@ -232,7 +232,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
-    if args.iter().any(|arg| arg == "--export-behavior-lesson") {
+    if args
+        .iter()
+        .any(|arg| arg == "--export-behavior-lesson" || arg == "--export-behavior-observation")
+    {
+        let observation = args
+            .iter()
+            .any(|arg| arg == "--export-behavior-observation");
+        if observation
+            && args
+                .iter()
+                .any(|arg| arg == "--export-behavior-lesson" || arg == "--lesson-review")
+        {
+            return Err("observation export cannot include lesson review or promotion".into());
+        }
         let id = value(&args, "--candidate-id")?;
         let candidates = fs::read_to_string(value(&args, "--candidates")?)?;
         let rows = candidates
@@ -247,6 +260,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let candidate = serde_json::to_vec(selected[0])?;
         let contract = fs::read(value(&args, "--contract")?)?;
         let capture = fs::read(value(&args, "--capture")?)?;
+        if observation {
+            let manifest = agentlab_code_analysis::maintainer_behavior_checks::export_observation(
+                &candidate, &contract, &capture, &output,
+            )?;
+            println!(
+                "{}",
+                serde_json::json!({"assetClass":manifest["assetClass"],"authorityWritePerformed":false,"lessonCreated":false,"qualified":false})
+            );
+            return Ok(());
+        }
         let review = fs::read(value(&args, "--lesson-review")?)?;
         let tables = agentlab_code_analysis::maintainer_behavior_checks::lesson_assets(
             &candidate, &contract, &capture, &review,

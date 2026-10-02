@@ -101,3 +101,45 @@ to any of those three scopes without an actual reviewed operation contract.
 Artifact/task-specific adapters are still required; no new operation-ready scope
 is claimed from this connection. AWMCP direct-route operations 004b and 004c
 retained the exact source identity and inspected configuration at hwlinux/mb.
+
+## Automatic operational observation export
+
+Overall maturity remains 66%. Operational evidence preservation no longer
+requires inventing a reviewed causal lesson first. Add a digest-bound `candidate`
+path/SHA256 to `behaviorExecution`. If lessonAdmission is absent, evidence-return
+independently reconstructs the current case stage's raw contract and capture,
+binds candidate/repository/source and checks the task outcome. The case report's
+round must equal the return request's round; borrowed or legacy unbound reports
+are rejected, not silently treated as current executions.
+
+The stage exports six analytical tables and three unchanged raw files to
+`business/observations`. It emits observationExported=true, lessonCreated=false,
+authorityWritePerformed=false and still stops review-required with gap
+`operational-persistence-and-reviewed-knowledge-delta-required`. Missing candidate
+bytes are an explicit gap. It does not promote knowledge or schedule an unchanged
+sample merely because an observation was exported. Existing reviewed lesson
+admission remains separate and preserves its ordinary gates.
+
+The standalone public interface is:
+
+```sh
+agentlab-maintainer-skill-flywheel --export-behavior-observation \
+  --candidates candidate-corpus.jsonl --candidate-id SELECTED_ID \
+  --contract original-contract.json --capture original-capture.json \
+  --output FRESH_DIRECTORY
+```
+
+No --lesson-review is accepted. Failed calibration is retained with its actual
+false verdict; worker infrastructure, altered or incomplete captures are rejected
+before creating the output. Exports include no reusable knowledge or lesson rows.
+
+The retained real guided Push capture was reconstructed twice into external
+`behavior-observation-return-eDMXCeb8/export-1` and `export-2`; directory comparison
+was byte-identical. Each contains one actual attempt, eight calibration controls,
+108 checks, one run/analysis and three raw-file records. Contract/capture SHA256s
+remain `f763f039703d77d66159564915226b80e7305aaa6f9031577bf472c1842e25d3`
+and `3bf75f099dcbd1911e8ca73bb1b7791d3014a9b1214ac4075ce5d907bef0a555`.
+This is retained-evidence reconstruction, not another model execution, remote
+persistence or a complete automatic business round. Rust regressions exercise
+passing/rejected outcomes, failed calibration, unchanged repeat export and
+cross-round rejection through the existing published knowledge gates.

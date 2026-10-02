@@ -164,3 +164,113 @@ fn explicit_review_and_exact_cut_are_required_without_borrowing_source_applicabi
     assert!(run(&serde_json::to_vec(&request).unwrap(), &directory).is_err());
     fs::remove_dir_all(directory).unwrap();
 }
+
+#[test]
+fn evidence_return_exports_actual_outcomes_without_fabricating_a_reviewed_lesson() {
+    let directory = temp();
+    let (knowledge, selection) = selected(&directory);
+    let prepared = prepare(
+        &knowledge,
+        &selection,
+        Path::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel")),
+        true,
+        &directory.join("prepared"),
+    )
+    .unwrap();
+    let recipe: Value =
+        serde_json::from_slice(&fs::read(prepared["recipePath"].as_str().unwrap()).unwrap())
+            .unwrap();
+    let original_state: Value = serde_json::from_slice(
+        &fs::read(recipe["initialState"]["path"].as_str().unwrap()).unwrap(),
+    )
+    .unwrap();
+    let reference = |path: &Path, value: &Value| {
+        let bytes = serde_json::to_vec(value).unwrap();
+        fs::write(path, &bytes).unwrap();
+        json!({"path":path,"sha256":digest(&bytes)})
+    };
+    for failed in [false, true] {
+        let prefix = if failed { "failed" } else { "passed" };
+        let candidate = json!({"id":"fixture-case","repositoryId":original_state["repositoryId"],"sourceRevision":original_state["sourceRevision"]});
+        let mut contract = json!({"schema":"agentlab.frozen_behavior_checks.v1","candidateId":candidate["id"],
+            "candidateSha256":digest(&serde_json::to_vec(&candidate).unwrap()),"sourceRevision":candidate["sourceRevision"],
+            "originalSourceSha256":digest(b"baseline"),"methodSha256":"c".repeat(64),"compilerSha256":"d".repeat(64),
+            "runtime":"fixture-only","workerDeadlineMs":1000,"automaticPromotion":false,
+            "checks":[{"id":"outcome","input":null,"expected":true}],"controls":[]});
+        let mut controls = Vec::new();
+        let mut workers = Vec::new();
+        for (id, role, actual) in [
+            ("baseline", "baseline", false),
+            ("valid-a", "accepted", true),
+            ("valid-b", "accepted", true),
+            ("wrong-a", "wrong", false),
+            ("wrong-b", "wrong", false),
+            ("attempt", "agent-attempt", !failed),
+        ] {
+            controls.push(json!({"id":id,"role":role,"submittedSourceSha256":digest(id.as_bytes()),
+                "expectedFailedCheckIds":if role=="baseline" || role=="wrong" {vec!["outcome"]} else {vec![]}}));
+            let stdout = serde_json::to_string(&json!({"id":id,"submittedSource":id,"submittedSourceSha256":digest(id.as_bytes()),
+                "originalSourceSha256":digest(b"baseline"),"observations":[{"id":"outcome","input":null,"actual":actual}]})).unwrap();
+            workers.push(json!({"id":id,"execution":{"stdout":stdout,"stdoutSha256":digest(stdout.as_bytes()),"exitCode":0,"timedOut":false,"durationMs":1}}));
+        }
+        contract["controls"] = json!(controls);
+        let capture = json!({"schema":"agentlab.behavior_worker_capture.v1","contractSha256":digest(&serde_json::to_vec(&contract).unwrap()),
+            "candidateId":candidate["id"],"candidateSha256":contract["candidateSha256"],"sourceRevision":candidate["sourceRevision"],
+            "methodSha256":contract["methodSha256"],"compilerSha256":contract["compilerSha256"],"runtime":contract["runtime"],"workers":workers});
+        let candidate_ref = reference(
+            &directory.join(format!("{prefix}-candidate.json")),
+            &candidate,
+        );
+        let contract_ref = reference(
+            &directory.join(format!("{prefix}-contract.json")),
+            &contract,
+        );
+        let capture_ref = reference(&directory.join(format!("{prefix}-capture.json")), &capture);
+        let case = json!({"schema":"agentlab.flywheel_behavior_execution.v1","round":0,"taskPassed":!failed,
+            "latestAttemptEvidence":{"contract":contract_ref,"capture":capture_ref}});
+        let mut case_ref = reference(&directory.join(format!("{prefix}-case.json")), &case);
+        case_ref["status"] = json!("completed");
+        let mut state = original_state.clone();
+        state["candidateId"] = candidate["id"].clone();
+        state["behaviorExecution"] = json!({"candidate":candidate_ref});
+        state["stageEvidence"] = json!({"case-execution":case_ref});
+        let state_ref = reference(&directory.join(format!("{prefix}-state.json")), &state);
+        for round in [0, 1] {
+            let out = directory.join(format!("{prefix}-{round}"));
+            fs::create_dir(&out).unwrap();
+            let request = json!({"schema":"agentlab.flywheel_stage_request.v1","round":round,"stage":"evidence-return",
+                "automaticPromotion":false,"inputState":state_ref});
+            let envelope = run(&serde_json::to_vec(&request).unwrap(), &out).unwrap();
+            assert_eq!(
+                envelope["status"],
+                if round == 0 {
+                    "review-required"
+                } else {
+                    "rejected"
+                }
+            );
+            if round == 1 {
+                assert!(!out.join("business/observations").exists());
+                continue;
+            }
+            let report: Value =
+                serde_json::from_slice(&fs::read(out.join("business/report.json")).unwrap())
+                    .unwrap();
+            assert_eq!(report["observationExported"], true);
+            assert_eq!(report["lessonCreated"], false);
+            assert_eq!(report["authorityWritePerformed"], false);
+            assert_eq!(
+                fs::read(out.join("business/observations/behavior-capture.json")).unwrap(),
+                fs::read(capture_ref["path"].as_str().unwrap()).unwrap()
+            );
+            assert!(!out
+                .join("business/observations/experiment_lessons.jsonl")
+                .exists());
+            let returned: Value =
+                serde_json::from_slice(&fs::read(out.join("business/state.json")).unwrap())
+                    .unwrap();
+            assert_eq!(returned["knowledge"], original_state["knowledge"]);
+        }
+    }
+    fs::remove_dir_all(directory).unwrap();
+}

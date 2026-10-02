@@ -97,3 +97,17 @@ null methodRevision is not admissible. Preserve that rejection and regenerate
 into a fresh destination with verified method identity, rather than patching the
 rejected candidate. Remote analytical readback does not preserve raw evidence
 bytes merely because evidence_files hash/path rows were committed.
+
+Archive operational observations without inventing a reviewed lesson. Use
+`--export-behavior-observation` with the bound candidate corpus/id and original
+contract/capture into a fresh directory. The same Rust reconstruction exports
+runs, controls, attempts, checks, analysis and three exact raw files, without
+lesson/reviewer/knowledge-target rows. Retain failed calibration as failed;
+malformed or incomplete worker captures remain rejected. Review and promotion
+are later independent gates, not prerequisites for preserving valid observations.
+
+When an execution repository contains several runs, distinguish a whole-table
+export from an explicit runId selection at a committed cut. Record the selection
+predicate and compare exactly those rows; a newly appended run's counts cannot
+describe all remote rows. A new consumer digest changes the projection identity,
+not the physical execution count or learning evidence.

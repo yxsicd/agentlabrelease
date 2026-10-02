@@ -50,6 +50,69 @@ fn reconstructs_mixed_json_checks_without_trusting_producer_boolean_or_expected(
 }
 
 #[test]
+fn operational_observations_do_not_invent_review_or_drop_failed_calibration() {
+    let (mut contract, mut capture) = fixture();
+    let candidate = json!({"id":"generic-task","repositoryId":"unrelated-library","sourceRevision":"b".repeat(40)});
+    let candidate_bytes = serde_json::to_vec(&candidate).unwrap();
+    contract["candidateSha256"] = json!(digest(&candidate_bytes));
+    capture["candidateSha256"] = contract["candidateSha256"].clone();
+    // A surviving wrong control is a retained observation, not a verified lesson.
+    modify(&mut capture, 4, |raw| {
+        raw["observations"][1]["actual"] = json!({"cleared":true})
+    });
+    let contract_bytes = serde_json::to_vec(&contract).unwrap();
+    capture["contractSha256"] = json!(digest(&contract_bytes));
+    let capture_bytes = serde_json::to_vec(&capture).unwrap();
+    let build = || {
+        agentlab_code_analysis::maintainer_behavior_checks::observation_assets(
+            &candidate_bytes,
+            &contract_bytes,
+            &capture_bytes,
+        )
+        .unwrap()
+    };
+    let tables = build();
+    assert_eq!(tables, build());
+    for name in [
+        "experiment_lessons",
+        "lesson_evidence",
+        "lesson_validations",
+        "maintainer_skills",
+        "program_facts",
+    ] {
+        assert!(!tables.contains_key(name));
+    }
+    assert_eq!(tables["checks"].len(), 10);
+    assert_eq!(tables["evidence_files"].len(), 3);
+    let run = tables["runs"].values().next().unwrap();
+    assert_eq!(run["calibrationRecordedContentPassed"], false);
+    assert_eq!(run["qualified"], false);
+    let directory = loop_output_for_adapter();
+    agentlab_code_analysis::maintainer_behavior_checks::export_observation(
+        &candidate_bytes,
+        &contract_bytes,
+        &capture_bytes,
+        &directory,
+    )
+    .unwrap();
+    assert_eq!(
+        std::fs::read(directory.join("behavior-capture.json")).unwrap(),
+        capture_bytes
+    );
+    assert!(!directory.join("lesson-review.json").exists());
+    assert!(
+        agentlab_code_analysis::maintainer_behavior_checks::export_observation(
+            &candidate_bytes,
+            &contract_bytes,
+            &capture_bytes,
+            &directory
+        )
+        .is_err()
+    );
+    std::fs::remove_dir_all(directory).unwrap();
+}
+
+#[test]
 fn behavior_lesson_requires_bound_review_and_independent_positive_negative_controls() {
     let (mut contract, mut capture) = fixture();
     let candidate = json!({"id":"generic-task","repositoryId":"unrelated-library","sourceRevision":"b".repeat(40)});
