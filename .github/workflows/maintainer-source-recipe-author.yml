@@ -45,8 +45,19 @@ on:
         required: true
         type: choice
         options: [openai-completions, openai-responses]
+      revision_parent_run:
+        description: Optional completed constructor Action run for one independently reviewed revision
+        default: ''
+        required: false
+        type: string
+      revision_feedback:
+        description: Exact digest-bound review JSON; paired with revision_parent_run, never an approval
+        default: ''
+        required: false
+        type: string
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: maintainer-source-recipe-author
   cancel-in-progress: false
@@ -65,11 +76,24 @@ jobs:
       CONSTRUCTION_THINKING_TYPE: ${{ inputs.thinking_type }}
       CONSTRUCTION_RESPONSE_FORMAT: ${{ inputs.response_format }}
       CONSTRUCTION_API: ${{ inputs.api }}
+      REVISION_PARENT_RUN: ${{ inputs.revision_parent_run }}
+      REVISION_FEEDBACK: ${{ inputs.revision_feedback }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_TABLEGIT_MCP_URL: ${{ vars.AGENTLAB_TABLEGIT_MCP_URL }}
       AGENTLAB_TABLEGIT_PERSON_ID: ${{ vars.AGENTLAB_TABLEGIT_PERSON_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Validate explicit revision input pairing
+        run: |
+          python3 - <<'PY'
+          import json,os
+          run=os.environ['REVISION_PARENT_RUN'];feedback=os.environ['REVISION_FEEDBACK']
+          assert bool(run)==bool(feedback),'Revision parent and review must be supplied together'
+          if run:
+              assert run.isascii() and run.isdigit() and 0<len(run)<=20 and int(run)>0
+              assert len(feedback.encode())<=16384
+              assert isinstance(json.loads(feedback),dict)
+          PY
       - name: Exact live knowledge admission before model budget
         run: |
           python3 scripts/maintainer-skill-tablegit.py preflight --base "$KNOWLEDGE" \
@@ -112,6 +136,28 @@ jobs:
           run('--prepare-source-recipe-author','--knowledge',knowledge,'--source-worktree',source,'--repository',os.environ['REPOSITORY_SELECTOR'],
               '--author-policy',output/'policy.json','--output',output/'request.json')
           PY
+      - name: Bind one reviewed revision to original constructor evidence
+        if: inputs.revision_parent_run != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json,os,subprocess
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP']);output=root/'recipe-author'
+          run=os.environ['REVISION_PARENT_RUN'];repo=os.environ['GITHUB_REPOSITORY']
+          info=json.loads(subprocess.check_output(['gh','run','view',run,'--repo',repo,'--json','workflowName,event,status']))
+          assert info['workflowName']=='Maintainer source recipe construction' and info['event']=='workflow_dispatch' and info['status']=='completed'
+          parent=root/'recipe-parent'
+          subprocess.run(['gh','run','download',run,'--repo',repo,'--name','unreviewed-source-recipe-'+run,'--dir',str(parent)],check=True)
+          assert not (parent/'agent/revision-request.json').exists(),'Only one revision from an original construction is supported'
+          review=output/'review-feedback.json'
+          with review.open('x') as f:f.write(os.environ['REVISION_FEEDBACK'])
+          subprocess.run(['target/debug/agentlab-maintainer-skill-flywheel','--prepare-source-recipe-revision',
+              '--author-request',str(output/'request.json'),'--parent-author-request',str(parent/'request.json'),
+              '--proposal',str(parent/'agent/proposal.json'),'--review-feedback',str(review),
+              '--output',str(output/'revision-request.json')],check=True)
+          PY
       - name: Contain construction Agent without source or host evaluator mounts
         id: contain
         run: |
@@ -133,6 +179,10 @@ jobs:
           AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT: ${{ runner.temp }}/recipe-author/runtime-receipts
           DOCKER_CONFIG: ${{ runner.temp }}/recipe-docker-config
         run: |
+          revision_args=()
+          if test -f "$RUNNER_TEMP/recipe-author/revision-request.json"; then
+            revision_args=(--revision-request "$RUNNER_TEMP/recipe-author/revision-request.json")
+          fi
           python3 scripts/run-source-recipe-author.py --request "$RUNNER_TEMP/recipe-author/request.json" \
             --output "$RUNNER_TEMP/recipe-author/agent" --gate target/debug/agentlab-maintainer-skill-flywheel \
             --pi "$GITHUB_WORKSPACE/scripts/run-pi-in-docker.py" \
@@ -140,7 +190,7 @@ jobs:
             --gateway-timeout-seconds "$CONSTRUCTION_GATEWAY_TIMEOUT" \
             --thinking-type "$CONSTRUCTION_THINKING_TYPE" \
             --response-format "$CONSTRUCTION_RESPONSE_FORMAT" \
-            --api "$CONSTRUCTION_API"
+            --api "$CONSTRUCTION_API" "${revision_args[@]}"
       - name: Independently validate recorded participant isolation
         if: always() && steps.contain.outcome == 'success'
         run: |

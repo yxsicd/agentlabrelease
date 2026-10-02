@@ -24,6 +24,36 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args
+        .iter()
+        .any(|a| a == "--prepare-source-recipe-revision" || a == "--check-source-recipe-revision")
+    {
+        let current = fs::read(value(&args, "--author-request")?)?;
+        let packet = if args.iter().any(|a| a == "--check-source-recipe-revision") {
+            agentlab_code_analysis::maintainer_source_recipe_author::check_revision(
+                &current,
+                &fs::read(value(&args, "--revision-request")?)?,
+            )?
+        } else {
+            agentlab_code_analysis::maintainer_source_recipe_author::revision(
+                &current,
+                &fs::read(value(&args, "--parent-author-request")?)?,
+                &fs::read(value(&args, "--proposal")?)?,
+                &fs::read(value(&args, "--review-feedback")?)?,
+            )?
+        };
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&packet)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"schema":packet["schema"],"revisionIndex":1,
+            "executionPerformed":false,"authorityWritePerformed":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--review-source-recipe-proposal") {
         let receipt = agentlab_code_analysis::maintainer_source_recipe_author::approve(
             &PathBuf::from(value(&args, "--proposal-stage")?),

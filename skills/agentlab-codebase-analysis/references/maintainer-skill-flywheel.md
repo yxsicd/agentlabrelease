@@ -840,3 +840,16 @@ files. A schema correction cannot repair semantic defects: independently verify
 that reference IDs select distinct valid implementations, source transformations
 match their intended body, and input states actually exercise every wrong control.
 An unchanged source or an untriggered mutation cannot prove discrimination.
+
+Use the source recipe revision adapter for explicit source-grounded feedback,
+not operator editing of rejected code. Bind the original request/proposal and
+review bytes, reprepare the current request, and require unchanged knowledge,
+source inventory, loaded context and selected gap. Host paths and tool pins may
+be freshly bound by current instance policy; do not rewrite historical inputs.
+Review findings must cite loaded owned paths and state observed defects plus
+required changes. Keep the reviewer's declared identity as an operator assertion,
+not authenticated authorship. One fresh contained revision is supported from an
+original construction; nested revision packets and revision-parent Actions stop.
+Retain admission and both generations, then independently review the new proposal
+again. This enables bounded feedback consumption, not automatic semantic review,
+multi-round convergence, approved execution or authority promotion.

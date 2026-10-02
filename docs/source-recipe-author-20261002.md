@@ -1,5 +1,40 @@
 # Gap-selected source verifier construction
 
+## Bounded review feedback producer
+
+The Rust `--prepare-source-recipe-revision` mode takes `--author-request` for
+the current independently prepared request, `--parent-author-request` and
+`--proposal` for the exact original generation, and `--review-feedback`.
+It emits an exclusive `--output` packet without executing generated code.
+The current request must reproduce against current source/knowledge/policy;
+the parent must have identical authority, source inventory, loaded content,
+semantic facts and selected gap. Fresh host paths and pinned tool policy are
+not substituted into the original retained bytes.
+
+Feedback schema `agentlab.source_recipe_review_feedback.v1` has exactly eight
+fields: schema, parentRequestSha256, parentProposalSha256, reviewed=true,
+reviewer, verdict=revise, automaticPromotion=false, findings. Each of one to
+eight findings has exactly id, sourcePaths, observed and requiredChange. Paths
+must be loaded owned evidence, and text/input budgets are bounded. Review is
+an operator assertion, not authenticated reviewer identity or approval.
+
+`--check-source-recipe-revision --author-request REQUEST --revision-request
+PACKET --output RECEIPT` reconstructs the exact packet before model dispatch.
+The Python operator's optional `--revision-request` runs this Rust check before
+creating a participant, retains original packet/check logs, and supplies prior
+proposal plus findings to one fresh contained Agent turn. Existing transport,
+generation, proposal and review gates remain unchanged. The packet supports one
+revision from an original author request, not nested revisions or an automatic
+multi-round reviewer. New output remains unreviewed.
+
+The Action's optional revision_parent_run/revision_feedback inputs are paired
+and bounded before model budget. It downloads only a completed constructor
+Action from its own repository using a read-only Actions token, refuses a
+revision parent, and prepares the packet against fresh live-admitted context.
+Invalid hashes, context drift or missing original proposal stop before dispatch.
+This is implemented feedback routing, not yet a successful live revised proposal,
+approved verifier, formal case or complete business cycle. Maturity remains 63%.
+
 Overall maturity remains 63%. This connects the selected operation gap to a
 captured construction Agent and an explicit review boundary. Local arbitrary-source
 regressions exercise proposal -> review -> execution -> independent qualification;

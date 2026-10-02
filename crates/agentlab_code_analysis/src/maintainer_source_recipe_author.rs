@@ -274,6 +274,138 @@ pub fn prepare(
     Ok(request)
 }
 
+/// One explicit source-grounded revision, not automatic approval or a transport retry.
+pub fn revision(
+    current_bytes: &[u8],
+    parent_bytes: &[u8],
+    proposal_bytes: &[u8],
+    review_bytes: &[u8],
+) -> Result<Value, String> {
+    need(
+        current_bytes.len() <= 512 * 1024
+            && parent_bytes.len() <= 512 * 1024
+            && proposal_bytes.len() <= 256 * 1024
+            && review_bytes.len() <= 16 * 1024,
+        "recipe revision input budget",
+    )?;
+    let current: Value = serde_json::from_slice(current_bytes).map_err(|e| e.to_string())?;
+    let parent: Value = serde_json::from_slice(parent_bytes).map_err(|e| e.to_string())?;
+    let proposal: Value = serde_json::from_slice(proposal_bytes).map_err(|e| e.to_string())?;
+    let review: Value = serde_json::from_slice(review_bytes).map_err(|e| e.to_string())?;
+    need(
+        current["schema"] == "agentlab.source_recipe_author_request.v1"
+            && parent["schema"] == current["schema"]
+            && current["reviewed"] == false
+            && parent["reviewed"] == false
+            && current["automaticPromotion"] == false
+            && parent["automaticPromotion"] == false,
+        "recipe revision request identity",
+    )?;
+    need(
+        prepare(
+            Path::new(text(&current, "knowledgeDirectory")?),
+            Path::new(text(&current, "sourceWorktree")?),
+            text(&current, "repositorySelector")?,
+            &serde_json::to_vec(&current["policy"]).map_err(|e| e.to_string())?,
+        )? == current,
+        "recipe revision current request no longer reproduces",
+    )?;
+    for key in [
+        "authorityRevision",
+        "knowledgeCutSha256",
+        "source",
+        "scope",
+        "sourceFiles",
+        "semanticFacts",
+        "selectedGap",
+        "planSha256",
+        "planSummary",
+        "repositorySelector",
+    ] {
+        need(
+            current.get(key).is_some() && current[key] == parent[key],
+            "recipe revision source/knowledge context drift",
+        )?;
+    }
+    need(
+        proposal["schema"] == "agentlab.source_recipe_author_proposal.v1"
+            && proposal["scopeSkillId"] == current["scope"]["id"],
+        "recipe revision parent proposal scope",
+    )?;
+    need(
+        review.as_object().is_some_and(|o| o.len() == 8)
+            && review["schema"] == "agentlab.source_recipe_review_feedback.v1"
+            && review["parentRequestSha256"] == digest(parent_bytes)
+            && review["parentProposalSha256"] == digest(proposal_bytes)
+            && review["reviewed"] == true
+            && review["verdict"] == "revise"
+            && review["automaticPromotion"] == false
+            && text(&review, "reviewer")?.len() <= 128,
+        "recipe revision reviewed feedback binding",
+    )?;
+    let findings = review["findings"]
+        .as_array()
+        .filter(|a| !a.is_empty() && a.len() <= 8)
+        .ok_or("recipe revision findings budget")?;
+    let mut ids = BTreeSet::new();
+    for finding in findings {
+        need(
+            finding.as_object().is_some_and(|o| o.len() == 4)
+                && ids.insert(text(finding, "id")?)
+                && text(finding, "id")?.len() <= 64
+                && text(finding, "observed")?.len() <= 1024
+                && text(finding, "requiredChange")?.len() <= 1024,
+            "recipe revision finding contract",
+        )?;
+        let paths = finding["sourcePaths"]
+            .as_array()
+            .filter(|a| !a.is_empty() && a.len() <= 4)
+            .ok_or("recipe revision finding source paths")?;
+        need(
+            paths.iter().all(|path| {
+                current["sourceFiles"].as_array().is_some_and(|files| {
+                    files
+                        .iter()
+                        .any(|f| path.is_string() && f["path"] == *path && f["content"].is_string())
+                })
+            }),
+            "recipe revision finding requires loaded owned source",
+        )?;
+    }
+    Ok(
+        json!({"schema":"agentlab.source_recipe_revision_request.v1", "revisionIndex":1,
+        "currentRequestSha256":digest(current_bytes),
+        "parentRequestOriginal":std::str::from_utf8(parent_bytes).map_err(|e|e.to_string())?,
+        "parentProposalOriginal":std::str::from_utf8(proposal_bytes).map_err(|e|e.to_string())?,
+        "reviewOriginal":std::str::from_utf8(review_bytes).map_err(|e|e.to_string())?,
+        "reviewSha256":digest(review_bytes), "reviewed":false,
+        "automaticPromotion":false,"executionPerformed":false,"authorityWritePerformed":false}),
+    )
+}
+
+pub fn check_revision(current_bytes: &[u8], packet_bytes: &[u8]) -> Result<Value, String> {
+    need(
+        packet_bytes.len() <= 2 * 1024 * 1024,
+        "recipe revision packet budget",
+    )?;
+    let packet: Value = serde_json::from_slice(packet_bytes).map_err(|e| e.to_string())?;
+    need(
+        revision(
+            current_bytes,
+            text(&packet, "parentRequestOriginal")?.as_bytes(),
+            text(&packet, "parentProposalOriginal")?.as_bytes(),
+            text(&packet, "reviewOriginal")?.as_bytes(),
+        )? == packet,
+        "recipe revision packet differs",
+    )?;
+    Ok(
+        json!({"schema":"agentlab.source_recipe_revision_admission.v1",
+        "revisionPacketSha256":digest(packet_bytes),"currentRequestSha256":digest(current_bytes),
+        "reviewSha256":packet["reviewSha256"],"revisionIndex":1,
+        "automaticPromotion":false,"executionPerformed":false,"authorityWritePerformed":false}),
+    )
+}
+
 /// Serialize a bounded, unreviewed proposal. No executable controls are spawned.
 pub fn stage(request_bytes: &[u8], proposal_bytes: &[u8], output: &Path) -> Result<Value, String> {
     need(
