@@ -307,8 +307,10 @@ pub fn consumption(evidence: &Path, packet_bytes: &[u8]) -> Result<Value, String
         }
         need(
             wire["model"] == intent["participantIdentity"]["model"]
-                && wire["providerId"] == intent["participantIdentity"]["providerRoute"],
-            "consumption model or route differs",
+                && wire["providerId"] == intent["participantIdentity"]["providerRoute"]
+                && wire["reasoning_effort"]
+                    == intent["participantIdentity"]["providerReasoningEffort"],
+            "consumption model, route or provider reasoning differs",
         )?;
         let status_bytes = read(&gateway, &format!("{id}.status.json"))?;
         let status: Value = serde_json::from_slice(&status_bytes).map_err(|e| e.to_string())?;
@@ -360,7 +362,7 @@ pub fn consumption(evidence: &Path, packet_bytes: &[u8]) -> Result<Value, String
         )?;
         completed.push(json!({"exchangeId":id,"requestSha256":digest(&wire_bytes),
             "statusSha256":digest(&status_bytes),"responseSha256":digest(&response),"responseBytes":response.len(),
-            "model":wire["model"],"providerRoute":wire["providerId"]}));
+            "model":wire["model"],"providerRoute":wire["providerId"],"providerReasoningEffort":wire["reasoning_effort"]}));
     }
     need(
         !completed.is_empty(),

@@ -78,6 +78,7 @@ def main() -> None:
         os.environ.get("AGENTLAB_MODEL", "glm-5.3-flash"),
         route=os.environ.get("AGENTLAB_PROVIDER_ROUTE", "glm"),
         implementation="pi",
+        reasoning_effort=os.environ.get("AGENTLAB_REASONING_EFFORT", "default"),
     )
     prompt = f"""You are an independent benchmark evaluator-author, not the assessed Agent and not the task-intent constructor.
 Read authoring-request.json, relevant-facts.jsonl, and every immutable source file under sources/.
@@ -101,7 +102,8 @@ Never modify sources/. Do not expose evaluator files outside {args.output.as_pos
             "promptSha256": hashlib.sha256(prompt.encode()).hexdigest(),
             "knowledgeAuthority": request["maintainerGuidance"]["knowledgeAuthority"],
             "participantIdentity": {"model": participant.model, "providerRoute": participant.route,
-                                    "implementation": participant.implementation},
+                                    "implementation": participant.implementation,
+                                    "providerReasoningEffort": participant.reasoning_effort},
             "selectedSkills": [{"id": r["skill"]["id"], "rowSha256": r["rowSha256"],
                                 "bodySha256": r["bodySha256"]}
                                for r in request["maintainerGuidance"]["guidance"]],
