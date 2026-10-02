@@ -206,6 +206,18 @@ pub(crate) fn capture(
     out: &Path,
     label: &str,
 ) -> Result<Value, String> {
+    capture_with_environment(command, source, out, label, &[])
+}
+
+/// Private operator environment injection; values are never receipt fields.
+#[cfg(unix)]
+pub(crate) fn capture_with_environment(
+    command: &Value,
+    source: &Path,
+    out: &Path,
+    label: &str,
+    environment_names: &[String],
+) -> Result<Value, String> {
     use std::os::unix::process::CommandExt;
     validate_command(command, source)?; // Revalidate executable immediately before spawning.
     let stdout = out.join(format!("{label}.stdout"));
@@ -229,7 +241,8 @@ pub(crate) fn capture(
         .map(|s| s.as_str().unwrap())
         .collect::<Vec<_>>();
     let start = Instant::now();
-    let spawn = Command::new(string(command, "program")?)
+    let mut process = Command::new(string(command, "program")?);
+    process
         .args(&args)
         .current_dir(&cwd)
         .env_clear()
@@ -239,8 +252,13 @@ pub(crate) fn capture(
         .stdin(Stdio::null())
         .stdout(open(&stdout)?)
         .stderr(open(&stderr)?)
-        .process_group(0)
-        .spawn();
+        .process_group(0);
+    for name in environment_names {
+        let value =
+            std::env::var_os(name).ok_or("operation selected private environment absent")?;
+        process.env(name, value);
+    }
+    let spawn = process.spawn();
     let mut child = match spawn {
         Ok(child) => child,
         Err(error) => {

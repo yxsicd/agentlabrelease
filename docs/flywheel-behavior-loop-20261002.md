@@ -22,6 +22,27 @@ added. Script/compiler/source dependency files must be enumerated in
 Participant time is bounded to 180s per attempt; executor time is bounded by
 the frozen worker deadline, at most 60s. There are no transport retries.
 
+For the existing Pi/Gateway adapter, select
+`examples/real-code-agent/behavior-participant.py` as an explicit argument to a
+pinned Python executable and set `participantCompletionRequired:true`. The
+controller independently verifies its recorded prompt, request, native lifecycle,
+final message and raw completed Gateway exchange before behavior execution. It
+also binds the adapter-retained submitted source bytes to the returned proposal.
+This reuses the recorded-exchange consumer; producer authentication remains a
+separate trust assertion. The adapter uses a 120s native-process watchdog, 60s
+Gateway deadline, 12 tool calls, no transport retry, and a fresh state each round.
+Set the outer participant command deadline to 180s for capture/cleanup margin.
+
+`participantEnvironmentNames` may explicitly select only Gateway URL/key, Pi
+binary, model, provider route and reasoning effort under their existing
+`AGENTLAB_*` names. Values are resolved from the operator process at dispatch and
+never included in command receipts. No selected environment is forwarded to the
+behavior executor. The existing Pi launcher strips the upstream key from its
+native child; only its operator proxy receives it. Pin adapter/runtime dependency
+files in `immutableInputs`, not credentials. Nested regular capture directories
+are retained and checked across rounds; symlinks, excessive nesting, oversized
+files and excessive file counts are rejected.
+
 Participant adapters read `agentlab.behavior_participant_request.v1` containing
 the demand, original/current submitted source and previous recomputed feedback.
 Return one stdout JSON object with nonempty `submittedSource` (at most 256KiB).
@@ -53,7 +74,8 @@ untrusted-code security sandbox, formal Harness Session/Fork or authenticated
 Agent lifecycle. The adapter must supply actual platform isolation and existing
 trusted Gateway/participant capture before live assessment. The controller
 clears inherited process environment using the existing capture primitive;
-credentials must remain private to the owning adapter, never in recipe arguments,
+the explicit participant-only selection above is the narrow exception.
+Credentials must remain private to the owning adapter, never in recipe arguments,
 stdout, source Git or released examples. `reviewed:true` records a selection,
 not cryptographic authentication or permission inferred from untrusted content.
 
