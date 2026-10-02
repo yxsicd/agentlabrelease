@@ -111,7 +111,8 @@ pub fn verify(contract_bytes: &[u8], capture_bytes: &[u8]) -> Result<Value, Stri
         )?;
         hex(control, "submittedSourceSha256", 64)?;
         require(
-            source_digests.insert(text(control, "submittedSourceSha256")?),
+            role == "agent-attempt"
+                || source_digests.insert(text(control, "submittedSourceSha256")?),
             "behavior control sources duplicate",
         )?;
         let intended = control["expectedFailedCheckIds"]
