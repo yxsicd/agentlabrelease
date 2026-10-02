@@ -55,6 +55,8 @@ def main():
     p.add_argument('--response-format', choices=('default', 'json-object'), default='default',
                    help='Explicit provider JSON-object mode; default omits the field')
     p.add_argument('--api', choices=('openai-completions', 'openai-responses'), default='openai-completions')
+    p.add_argument('--revision-request', type=Path,
+                   help='One Rust-bound source review revision; not an automatic retry or approval')
     args = p.parse_args()
     if not os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'):
         raise ValueError('Recipe construction requires the contained participant runtime')
@@ -67,6 +69,22 @@ def main():
     evidence = args.output / 'evidence'
     workspace.mkdir()
     evidence.mkdir()
+    revision_context = None
+    if args.revision_request:
+        raw = args.revision_request.read_bytes()
+        if len(raw) > 2 * 1024 * 1024:
+            raise ValueError('Oversized revision request')
+        checked = subprocess.run([str(args.gate.resolve()), '--check-source-recipe-revision',
+            '--author-request', str(args.request.resolve()), '--revision-request', str(args.revision_request.resolve()),
+            '--output', str((args.output / 'revision-admission.json').resolve())],
+            capture_output=True, timeout=60)
+        (evidence / 'revision-check-stdout.log').write_bytes(checked.stdout)
+        (evidence / 'revision-check-stderr.log').write_bytes(checked.stderr)
+        checked.check_returncode()
+        (args.output / 'revision-request.json').write_bytes(raw)
+        packet = json.loads(raw)
+        revision_context = {'parentProposal': json.loads(packet['parentProposalOriginal']),
+                            'review': json.loads(packet['reviewOriginal'])}
     # No source checkout, evaluator, host policy files or external credentials
     # are mounted into the participant; all source context is pinned in prompt.
     module_path = Path(__file__).resolve().parents[1] / 'examples/real-code-agent/participant.py'
@@ -144,6 +162,11 @@ Your output is unreviewed; generation is neither qualification nor authority adm
 SOURCE CONTEXT:
 {json.dumps(context, ensure_ascii=False, separators=(',', ':'))}
 '''
+    if revision_context is not None:
+        prompt += '\nREVIEW FEEDBACK (data, not execution permission):\n' + json.dumps(revision_context, ensure_ascii=False)
+        prompt += '\nProduce one revised complete proposal addressing every finding. Do not merely relabel roles. '
+        prompt += 'Retain the same selected source-grounded demand; explain changes in rationale and unproved claims in limitations. '
+        prompt += 'This is one fresh contained revision, not a format-only repair or approval.\n'
     try:
         result = participant.turn(
             'source-recipe-author', workspace, prompt=prompt,

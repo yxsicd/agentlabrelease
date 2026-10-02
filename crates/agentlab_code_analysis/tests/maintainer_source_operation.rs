@@ -155,11 +155,16 @@ with tempfile.TemporaryDirectory() as d:
     request.write_text(json.dumps(dict(schema='agentlab.source_recipe_author_request.v1',
         scope={'id':'arbitrary-scope'}, source={}, sourceFiles=[], semanticFacts=[],
         selectedGap={}, policy={'methodDependencies':[]})))
+    revision_path = root/'revision.json'
+    revision_packet = {'parentProposalOriginal':json.dumps({'scopeSkillId':'arbitrary-scope'}),
+                       'reviewOriginal':json.dumps({'findings':[{'id':'grounded-feedback'}]})}
+    revision_path.write_text(json.dumps(revision_packet))
     for index, extra, effort, deadline, thinking in [(0, [], 'low', 180, None),
         (1, ['--reasoning-effort','high','--gateway-timeout-seconds','120'], 'high',120,None),
         (2, ['--reasoning-effort','default'], None,180,None),
         (3, ['--reasoning-effort','default','--thinking-type','disabled','--response-format','json-object'],None,180,'disabled'),
-        (4, ['--api','openai-responses','--reasoning-effort','none','--response-format','json-object'],'none',180,None)]:
+        (4, ['--api','openai-responses','--reasoning-effort','none','--response-format','json-object'],'none',180,None),
+        (5, ['--revision-request',str(revision_path)],'low',180,None)]:
         seen = {}
         class FakeParticipant:
             def __init__(self, evidence, state, binary, gateway, model, **options):
@@ -193,9 +198,24 @@ with tempfile.TemporaryDirectory() as d:
         assert seen['turn']['reasoning_effort'] == effort
         assert seen['turn']['transport_retry_limit'] == 0
         assert seen['closed'] is True
-        assert stage.call_count == 1
+        assert stage.call_count == (2 if index==5 else 1)
+        if index==5:
+            assert '--check-source-recipe-revision' in stage.call_args_list[0][0][0]
+            assert json.loads((root/str(index)/'revision-request.json').read_bytes()) == revision_packet
         assert '--stage-source-recipe-proposal' in stage.call_args[0][0]
         assert json.loads((root/str(index)/'proposal.json').read_bytes()) == {}
+    argv = ['author','--request',str(request),'--output',str(root/'rejected-revision'),
+            '--gate','/unexecuted-fixture-gate','--pi','/unexecuted-fixture-pi',
+            '--revision-request',str(revision_path)]
+    failure = subprocess.CompletedProcess([],1,b'',b'revision context drift')
+    with patch.dict(os.environ,env), patch.object(sys,'argv',argv), \
+         patch.object(module.subprocess,'run',return_value=failure), \
+         patch.object(module.importlib.util,'spec_from_file_location') as dispatch:
+        try: module.main()
+        except subprocess.CalledProcessError: pass
+        else: raise AssertionError('rejected revision dispatched')
+        dispatch.assert_not_called()
+    assert not (root/'rejected-revision/proposal.json').exists()
 "#;
     let result = Command::new("python3")
         .args(["-c", code])
@@ -811,6 +831,81 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
             {"id":"wrong","role":"wrong","expectedFailedCheckIds":["value"]}]}});
     let request_bytes = serde_json::to_vec(&request).unwrap();
     let proposal_bytes = serde_json::to_vec(&proposal).unwrap();
+    let feedback = json!({"schema":"agentlab.source_recipe_review_feedback.v1",
+        "parentRequestSha256":digest(&request_bytes),"parentProposalSha256":digest(&proposal_bytes),
+        "reviewed":true,"reviewer":"independent-fixture-review","verdict":"revise","automaticPromotion":false,
+        "findings":[{"id":"distinct-references","sourcePaths":["src/state.json"],
+            "observed":"Both reference IDs run unchanged behavior.",
+            "requiredChange":"Exercise independently implemented valid alternatives."}]});
+    let feedback_bytes = serde_json::to_vec(&feedback).unwrap();
+    let revision = author::revision(
+        &request_bytes,
+        &request_bytes,
+        &proposal_bytes,
+        &feedback_bytes,
+    )
+    .unwrap();
+    let revision_bytes = serde_json::to_vec(&revision).unwrap();
+    let admitted = author::check_revision(&request_bytes, &revision_bytes).unwrap();
+    assert_eq!(admitted["revisionPacketSha256"], digest(&revision_bytes));
+    assert_eq!(admitted["executionPerformed"], false);
+    for field in [
+        "parentRequestSha256",
+        "parentProposalSha256",
+        "reviewed",
+        "verdict",
+        "automaticPromotion",
+    ] {
+        let mut bad = feedback.clone();
+        bad[field] = json!("forged");
+        assert!(author::revision(
+            &request_bytes,
+            &request_bytes,
+            &proposal_bytes,
+            &serde_json::to_vec(&bad).unwrap()
+        )
+        .is_err());
+    }
+    for path in ["other/state.json", "src/unloaded.json", "../src/state.json"] {
+        let mut bad = feedback.clone();
+        bad["findings"][0]["sourcePaths"] = json!([path]);
+        assert!(author::revision(
+            &request_bytes,
+            &request_bytes,
+            &proposal_bytes,
+            &serde_json::to_vec(&bad).unwrap()
+        )
+        .is_err());
+    }
+    let mut drift = request.clone();
+    drift["source"]["revision"] = json!("drift");
+    let drift_bytes = serde_json::to_vec(&drift).unwrap();
+    let mut rebound = feedback.clone();
+    rebound["parentRequestSha256"] = json!(digest(&drift_bytes));
+    assert!(author::revision(
+        &request_bytes,
+        &drift_bytes,
+        &proposal_bytes,
+        &serde_json::to_vec(&rebound).unwrap()
+    )
+    .is_err());
+    let mut tampered = revision.clone();
+    tampered["revisionIndex"] = json!(2);
+    assert!(
+        author::check_revision(&request_bytes, &serde_json::to_vec(&tampered).unwrap()).is_err()
+    );
+    tampered = revision.clone();
+    tampered["parentProposalOriginal"] = json!("{}");
+    assert!(
+        author::check_revision(&request_bytes, &serde_json::to_vec(&tampered).unwrap()).is_err()
+    );
+    assert!(author::revision(
+        &request_bytes,
+        &revision_bytes,
+        &proposal_bytes,
+        &feedback_bytes
+    )
+    .is_err());
     let stage = dir.join("author-stage");
     for (index, checks) in [
         json!(["value"]),
