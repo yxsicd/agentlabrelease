@@ -24,6 +24,24 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|a| a == "--prepare-operation-case-inputs") {
+        let packet = agentlab_code_analysis::maintainer_operation_case::prepare(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &value(&args, "--scope-id")?,
+            &value(&args, "--semantic-fact-id")?,
+            &value(&args, "--operation-fact-id")?,
+        )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&packet)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"id":packet["id"],"formalCaseQualified":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--validate-source-recipe-design") {
         let receipt = agentlab_code_analysis::maintainer_source_recipe_author::design(
             &fs::read(value(&args, "--author-request")?)?,

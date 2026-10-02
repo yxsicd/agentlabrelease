@@ -26,6 +26,38 @@ be reported as semantic, executable or calibrated coverage.
 
 ## Round loop
 
+### Enter from admitted maintenance evidence
+
+Semantic-refresh loop receipts are not the only input to construction. After
+reviewed maintenance results are committed and exported, prepare a scoped input
+packet with the Rust bridge:
+
+```sh
+agentlab-maintainer-skill-flywheel --prepare-operation-case-inputs \
+  --knowledge /absolute/committed-export --scope-id SCOPE \
+  --semantic-fact-id ANALYSIS --operation-fact-id VERIFIED_OPERATION \
+  --output fresh-operation-case-inputs.json
+```
+
+Select both facts explicitly from that cut. The bridge checks all five table
+digests, resolves the durable assessment, independently recomputes maintenance
+readiness and requires a semantic source Blob matching a retained scope anchor.
+Scope anchors are not a complete file inventory; construction must still verify
+every selected source Blob against the pinned source checkout.
+It preserves the semantic analysis separately from maintenance controls; an
+operation receipt alone does not explain a task's responsibility or source paths.
+The packet is construction input, not a shadow candidate, bounded-loop receipt,
+calibration receipt or frozen case. Do not feed it to a consumer requiring one
+of those schemas. Remote commit authenticity and reviewer identity are not
+authenticated by this local byte check.
+
+Use its pinned semantic evidence to derive staged demands and a reviewed cohort
+through the ordinary construction path below. Retain existing control results
+as maintenance evidence, not inherited case calibration: a newly demanded task
+still needs an independent Oracle, meaningful wrong implementations, declared
+runtime qualification and freeze gates. Repeating preparation under unchanged
+inputs yields the same packet and performs no authority writes or executions.
+
 1. Pin the source set, knowledge cut and latest Maintainer Skill refresh round.
 2. Select explicit residual gaps and under-covered scope Skills. Preserve
    diversity across repositories, mechanisms, state/lifecycle boundaries and

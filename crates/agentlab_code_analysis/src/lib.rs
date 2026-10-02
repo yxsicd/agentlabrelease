@@ -13,6 +13,7 @@ pub mod maintainer_flywheel_cycles;
 pub mod maintainer_flywheel_plan;
 pub mod maintainer_guidance;
 pub mod maintainer_lesson_admission;
+pub mod maintainer_operation_case;
 pub mod maintainer_operation_evidence;
 pub mod maintainer_operation_exec;
 pub mod maintainer_operation_qualification;
