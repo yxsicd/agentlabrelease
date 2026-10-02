@@ -15,6 +15,46 @@ KNOWLEDGE = ROOT / "examples/maintainer-knowledge-gate/first-four"
 
 
 class CaseGenerationShadowTest(unittest.TestCase):
+    def test_operation_origin_retains_distinct_lineage_without_semantic_gain(self):
+        request = self.request()
+        request["schema"] = "agentlab.operation_case_shadow_request.v1"
+        request.pop("loopReceiptSha256")
+        request["operationInputsSha256"] = "3" * 64
+        request["policy"]["caseCalibrationInherited"] = False
+        request["knowledgeCoverage"] = request.pop("loopAfter")
+        request.pop("loopBefore")
+        candidate = MODULE.validate_proposal(request, self.proposal(request))
+        self.assertNotIn("loopReceiptSha256", candidate["lineage"])
+        self.assertEqual(candidate["lineage"]["operationInputsSha256"], "3" * 64)
+        round_row = MODULE.build_round(request, [{"id":"parent", "roundIndex":1}], candidate["id"], True, None, "test")
+        self.assertEqual(round_row["coverage"]["behaviorReadyBefore"], round_row["coverage"]["behaviorReadyAfter"])
+        self.assertEqual(round_row["qualification"]["qualifiedCaseIds"], [])
+        self.assertNotIn("advanced semantic coverage", " ".join(round_row["decisionEvidence"]))
+        request["loopReceiptSha256"] = "4" * 64
+        with self.assertRaisesRegex(ValueError, "borrows"):
+            MODULE.request_origin(request)
+
+    def test_fact_source_verifies_git_blobs_and_rejects_dirty_or_borrowed_evidence(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            def git(*args):
+                return subprocess.check_output(["git", "-C", str(source), *args], text=True).strip()
+            git("init", "-q")
+            (source / "unit.ts").write_text("export const value = 1;\n")
+            git("add", "unit.ts")
+            git("-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "fixture")
+            revision = git("rev-parse", "HEAD")
+            request = {"repository":{"revision":revision},"fact":{"evidence":[{
+                "path":"unit.ts","gitBlobOid":git("rev-parse", "HEAD:unit.ts")} ]}}
+            MODULE.verify_fact_source(request, source)
+            request["fact"]["evidence"][0]["gitBlobOid"] = "0" * 40
+            with self.assertRaisesRegex(ValueError, "Blob differs"):
+                MODULE.verify_fact_source(request, source)
+            (source / "unit.ts").write_text("export const value = 2;\n")
+            with self.assertRaisesRegex(ValueError, "dirty"):
+                MODULE.verify_fact_source(request, source)
+
     def request(self):
         cut = MODULE.load(KNOWLEDGE / "maintainer-knowledge-cut.json")
         scopes = {row["id"]: row for row in MODULE.rows(KNOWLEDGE / "maintainer_scope_skills.jsonl")}

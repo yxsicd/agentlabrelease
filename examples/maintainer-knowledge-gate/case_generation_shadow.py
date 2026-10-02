@@ -269,15 +269,59 @@ def prepare(args) -> None:
     write_json(args.output, request)
 
 
+def request_origin(request: dict) -> dict:
+    if request.get("schema") == "agentlab.operation_case_shadow_request.v1":
+        require("loopReceiptSha256" not in request, "operation request borrows semantic loop lineage")
+        digest = request.get("operationInputsSha256", "")
+        require(isinstance(digest, str) and SHA256.fullmatch(digest), "operation inputs digest invalid")
+        require(request.get("policy", {}).get("caseCalibrationInherited") is False,
+                "maintenance proof cannot inherit case calibration")
+        return {"operationInputsSha256": digest}
+    require(request.get("schema") == "agentlab.case_generation_shadow_request.v1", "bad shadow request")
+    require("operationInputsSha256" not in request, "semantic loop request borrows operation lineage")
+    return {"loopReceiptSha256": request["loopReceiptSha256"]}
+
+
+def verify_fact_source(request: dict, source: Path) -> None:
+    """Verify actual fact-referenced bytes before any constructor can launch."""
+    revision = request["repository"]["revision"]
+    require(SHA1.fullmatch(revision), "source revision invalid")
+    require(subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip() == revision,
+            "source checkout revision differs")
+    require(not subprocess.check_output(["git", "-C", str(source), "status", "--porcelain"], text=True),
+            "source checkout is dirty before construction")
+    evidence = request["fact"].get("evidence")
+    require(isinstance(evidence, list) and evidence, "semantic source evidence absent")
+    seen = set()
+    for item in evidence:
+        relative = item.get("path", "")
+        path = Path(relative)
+        require(isinstance(relative, str) and relative and not path.is_absolute()
+                and all(part not in (".", "..") for part in relative.split("/"))
+                and relative not in seen, "semantic evidence path unsafe or duplicated")
+        seen.add(relative)
+        current = source
+        for part in path.parts:
+            current = current / part
+            require(not current.is_symlink(), "semantic source symlink rejected")
+        require(current.is_file() and current.stat().st_size <= 16 * 1024 * 1024,
+                "semantic source is not a bounded file")
+        data = current.read_bytes()
+        blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+        committed = subprocess.check_output(["git", "-C", str(source), "rev-parse", f"{revision}:{relative}"], text=True).strip()
+        require(blob == committed == item.get("gitBlobOid"), "semantic source Blob differs")
+
+
 def run_agent(args) -> None:
     request = load(args.request)
-    require(request.get("schema") == "agentlab.case_generation_shadow_request.v1", "bad shadow request")
+    request_origin(request)
     require(request["policy"].get("shadowEligible") is True,
             "shadow input is not eligible for the declared runtime")
     target = runtime_target(request["policy"], request["scope"])
+    require(not external_hardware_blockers(request["scope"], request["fact"]),
+            "shadow input requires external hardware")
     source_root = args.source.resolve(strict=True)
-    head = subprocess.check_output(["git", "-C", str(source_root), "rev-parse", "HEAD"], text=True).strip()
-    require(head == request["repository"]["revision"], "source checkout revision differs")
+    verify_fact_source(request, source_root)
     workspace = args.output / "workspace"
     evidence = args.output / "evidence"
     workspace.mkdir(parents=True)
@@ -340,6 +384,7 @@ def strings(value, name: str, minimum: int = 1, maximum: int | None = None) -> l
 
 
 def validate_proposal(request: dict, proposal: dict) -> dict:
+    origin = request_origin(request)
     require(proposal.get("schema") == "agentlab.shadow_case_candidate.v1", "bad shadow proposal schema")
     expected_fields = {
         "schema", "id", "repositoryId", "sourceRevision", "scopeSkillIds", "factIds", "title",
@@ -397,7 +442,7 @@ def validate_proposal(request: dict, proposal: dict) -> dict:
         "sourceSetSha256": request["sourceSetSha256"],
         "knowledgeCutSha256": request["knowledgeCutSha256"],
         "maintainerSkillRefreshRoundId": request["maintainerSkillRefreshRoundId"],
-        "lineage": {"loopReceiptSha256": request["loopReceiptSha256"],
+        "lineage": {**origin,
                     "shadowRequestValueSha256": value_digest(request),
                     "runtimeTarget": target},
     })
@@ -410,6 +455,9 @@ def build_round(request: dict, rounds_before: list[dict], candidate_id: str,
     oracle_count = previous_oracle_count(rounds_before)
     fact = request["fact"]
     limitations = strings(fact.get("limitations"), "fact limitations", 2)
+    operation_origin = "operationInputsSha256" in request_origin(request)
+    before = request["knowledgeCoverage"] if operation_origin else request["loopBefore"]
+    after = request["knowledgeCoverage"] if operation_origin else request["loopAfter"]
     return {
         "schema": "agentlab.case_generation_round.v1",
         "id": f"first-four-case-generation-round-{previous['roundIndex'] + 1}-shadow-{run_id}",
@@ -419,15 +467,16 @@ def build_round(request: dict, rounds_before: list[dict], candidate_id: str,
         "knowledgeCutSha256": request["knowledgeCutSha256"],
         "maintainerSkillRefreshRoundId": request["maintainerSkillRefreshRoundId"],
         "objectives": [
-            "sample one newly semantic-ready scope without slowing the knowledge flywheels",
+            ("derive a case hypothesis from admitted maintenance evidence without inheriting calibration"
+             if operation_origin else "sample one newly semantic-ready scope without slowing the knowledge flywheels"),
             "test whether revision-bound Maintainer Skill evidence can produce a grounded case hypothesis",
             "return construction and Oracle gaps to the next knowledge round",
         ],
         "coverage": {
             "repositoryIds": [request["repository"]["id"]],
             "scopeSkillCount": 1,
-            "behaviorReadyBefore": request["loopBefore"]["semanticReadyCount"],
-            "behaviorReadyAfter": request["loopAfter"]["semanticReadyCount"],
+            "behaviorReadyBefore": before["semanticReadyCount"],
+            "behaviorReadyAfter": after["semanticReadyCount"],
             "oracleReadyBefore": oracle_count,
             "oracleReadyAfter": oracle_count,
         },
@@ -442,6 +491,7 @@ def build_round(request: dict, rounds_before: list[dict], candidate_id: str,
         "feedback": {
             "maintainerSkillGaps": [
                 f"bind {candidate_id} through the candidate-stage Maintainer knowledge gate before construction",
+                *(["single maintenance-origin sample does not satisfy the diverse cohort requirement; add distinct contract and lifecycle candidates"] if operation_origin else []),
             ],
             "programAnalysisGaps": limitations[:2],
             "oracleGaps": [
@@ -451,7 +501,8 @@ def build_round(request: dict, rounds_before: list[dict], candidate_id: str,
         },
         "decision": "continue",
         "decisionEvidence": [
-            "the knowledge flywheel advanced semantic coverage in this exact bounded loop",
+            ("case construction consumed admitted maintenance evidence without claiming a new semantic gain"
+             if operation_origin else "the knowledge flywheel advanced semantic coverage in this exact bounded loop"),
             "the shadow candidate remains non-promoted and has no independent Oracle or calibration receipt",
         ],
         "automaticPromotion": False,

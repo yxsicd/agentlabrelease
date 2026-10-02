@@ -1,4 +1,7 @@
-use agentlab_code_analysis::{digest, maintainer_operation_case::prepare};
+use agentlab_code_analysis::{
+    digest,
+    maintainer_operation_case::{prepare, shadow_request},
+};
 use serde_json::{json, Value};
 use std::{
     fs,
@@ -67,6 +70,32 @@ fn admitted_operation_produces_repeatable_unqualified_construction_inputs() {
     assert_eq!(first["operationVerification"]["status"], "verified");
     assert_eq!(first["semanticFact"]["id"], SEMANTIC);
     assert!(first["nextRequirements"].as_array().unwrap().len() >= 6);
+}
+
+#[test]
+fn constructor_translation_reverifies_bytes_and_preserves_operation_origin() {
+    let base = fixture();
+    let packet = prepare(&base, SCOPE, SEMANTIC, OPERATION).unwrap();
+    let bytes = serde_json::to_vec(&packet).unwrap();
+    let request = shadow_request(&base, &bytes, "harmony-emulator").unwrap();
+    assert_eq!(request["operationInputsSha256"], digest(&bytes));
+    assert!(request.get("loopReceiptSha256").is_none());
+    assert_eq!(request["fact"], packet["semanticFact"]);
+    assert_eq!(request["policy"]["caseCalibrationInherited"], false);
+    assert_eq!(
+        request,
+        shadow_request(&base, &bytes, "harmony-emulator").unwrap()
+    );
+    assert!(shadow_request(&base, &bytes, "physical-device").is_err());
+    let mut forged = packet.clone();
+    forged["operationVerification"]["status"] = json!("unverified");
+    assert!(shadow_request(
+        &base,
+        &serde_json::to_vec(&forged).unwrap(),
+        "harmony-emulator"
+    )
+    .unwrap_err()
+    .contains("differ"));
 }
 #[test]
 fn staging_or_changed_table_is_not_admitted_knowledge() {

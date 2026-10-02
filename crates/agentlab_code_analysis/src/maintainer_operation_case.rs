@@ -204,3 +204,62 @@ pub fn prepare(
         "verificationBoundary":"Verifies fixed exported bytes and maintenance receipt content, not remote commit authenticity, reviewer identity, formal case calibration or runtime qualification."}),
     )
 }
+
+/// Reverify an input packet before translating it into the shadow constructor's
+/// semantic fields. Maintenance proof retains its own lineage, not a fake loop.
+pub fn shadow_request(base: &Path, inputs: &[u8], runtime: &str) -> Result<Value, String> {
+    let packet: Value = serde_json::from_slice(inputs).map_err(|e| e.to_string())?;
+    need(
+        packet["schema"] == "agentlab.maintainer_operation_case_inputs.v1",
+        "operation case input schema differs",
+    )?;
+    let id = |v: &Value| {
+        v["id"]
+            .as_str()
+            .map(str::to_owned)
+            .ok_or("operation case input id absent")
+    };
+    let checked = prepare(
+        base,
+        &id(&packet["scope"])?,
+        &id(&packet["semanticFact"])?,
+        &id(&packet["operationFact"])?,
+    )?;
+    need(
+        packet == checked,
+        "operation case inputs differ from current committed evidence",
+    )?;
+    need(
+        matches!(runtime, "harmony-emulator" | "repository-test"),
+        "operation case runtime unsupported",
+    )?;
+    need(
+        runtime == "harmony-emulator"
+            || !packet["scope"]["testEntrypoints"]
+                .as_array()
+                .is_some_and(|a| {
+                    a.iter()
+                        .any(|p| p.as_str().is_some_and(|s| s.contains("ohosTest")))
+                }),
+        "ohosTest requires Harmony emulator",
+    )?;
+    let durable = maintainer_flywheel_plan::latest_assessment(base)?;
+    let assessment: Value = serde_json::from_slice(&read(Path::new(
+        durable["assessmentPath"]
+            .as_str()
+            .ok_or("case assessment absent")?,
+    ))?)
+    .map_err(|e| e.to_string())?;
+    Ok(json!({"schema":"agentlab.operation_case_shadow_request.v1",
+        "automaticPromotion":false,"sourceSetSha256":packet["sourceSetSha256"],
+        "knowledgeCutSha256":packet["knowledgeCutSha256"],"maintainerSkillRefreshRoundId":packet["maintainerSkillRefreshRoundId"],
+        "operationInputsSha256":digest(inputs),"maintenanceEvidence":packet["operationVerification"],
+        "knowledgeCoverage":assessment["totals"],"repository":packet["repository"],
+        "scope":packet["scope"],"fact":packet["semanticFact"],
+        "candidateId":format!("shadow-case-operation-{}",digest(inputs)),
+        "policy":{"candidateLimit":1,"constructionMode":"shadow","candidateGateRequired":true,
+            "independentOracleRequired":true,"wrongVariantCalibrationRequired":true,
+            "runtimeTarget":runtime,"externalHardwareAllowed":false,"physicalDeviceFallbackAllowed":false,
+            "shadowEligible":true,"blockers":[],"caseCalibrationInherited":false},
+        "output":"shadow-case-proposal.json"}))
+}

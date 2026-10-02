@@ -36,12 +36,13 @@
     "lineage": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["loopReceiptSha256"],
+      "oneOf": [{"required": ["loopReceiptSha256"]}, {"required": ["operationInputsSha256"]}],
       "dependentRequired": {
         "parentCandidateId": ["parentCandidateSha256", "parentKnowledgeCutSha256", "refreshedFactSha256", "focusedRefreshReceiptSha256"]
       },
       "properties": {
         "loopReceiptSha256": { "$ref": "#/$defs/sha256" },
+        "operationInputsSha256": { "$ref": "#/$defs/sha256" },
         "focusedRefreshReceiptSha256": { "$ref": "#/$defs/sha256" },
         "parentCandidateId": { "type": "string", "pattern": "^shadow-case-[a-z0-9-]{8,140}$" },
         "parentCandidateSha256": { "$ref": "#/$defs/sha256" },

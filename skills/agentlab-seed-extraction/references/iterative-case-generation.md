@@ -58,6 +58,20 @@ still needs an independent Oracle, meaningful wrong implementations, declared
 runtime qualification and freeze gates. Repeating preparation under unchanged
 inputs yields the same packet and performs no authority writes or executions.
 
+Translate the packet for the existing shadow constructor with
+`--prepare-operation-case-shadow --knowledge /absolute/committed-export
+--operation-inputs fresh-operation-case-inputs.json --runtime-target
+harmony-emulator --output fresh-shadow-request.json`. This Rust entrypoint
+reverifies the entire packet against the current exported cut. The request uses
+`agentlab.operation_case_shadow_request.v1`; the existing constructor and
+proposal recorder accept that origin explicitly. Candidate lineage retains
+`operationInputsSha256`, never a fabricated semantic `loopReceiptSha256`.
+Round coverage remains unchanged until new knowledge actually advances.
+The constructor checks clean pinned source and every referenced semantic Blob
+before launching a participant. This preflight is not process containment.
+Retain maintainer-authored drafts separately from captured Agent generation;
+neither one sampled draft nor unchanged coverage satisfies cohort breadth.
+
 1. Pin the source set, knowledge cut and latest Maintainer Skill refresh round.
 2. Select explicit residual gaps and under-covered scope Skills. Preserve
    diversity across repositories, mechanisms, state/lifecycle boundaries and
