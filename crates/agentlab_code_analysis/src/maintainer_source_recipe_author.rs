@@ -345,6 +345,19 @@ pub fn stage(request_bytes: &[u8], proposal_bytes: &[u8], output: &Path) -> Resu
         .filter(|o| o.len() == 2)
         .ok_or("recipe author contract")?;
     let _ = spec;
+    let checks = p["contract"]["checks"]
+        .as_array()
+        .filter(|a| !a.is_empty() && a.len() <= 64)
+        .ok_or("recipe author checks must be 1..64 id/pointer/expected objects")?;
+    for check in checks {
+        need(
+            check.as_object().is_some_and(|o| o.len() == 3)
+                && check.get("id").is_some_and(Value::is_string)
+                && check.get("pointer").is_some_and(Value::is_string)
+                && check.get("expected").is_some(),
+            "recipe author check must contain exactly id, pointer and expected; check names or computed pass flags are not an oracle",
+        )?;
+    }
     let controls = p["contract"]["controls"]
         .as_array()
         .filter(|a| (4..=8).contains(&a.len()))

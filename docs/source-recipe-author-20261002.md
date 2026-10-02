@@ -246,3 +246,27 @@ this route accepted the switch and produced final text for the tiny probe, not
 that source-verifier synthesis will succeed or that all future thinking is absent.
 The next full construction experiment must use the unchanged selected source gap,
 original bounded context and independent review/execution requirements.
+
+## First complete proposal and independent rejection
+
+Action `37019616832` ran exact method `55976d785e8b43aea64c82e354a0e7a01070de20`
+with explicit thinking.type=disabled. Its original Gateway capture completed in
+94296 ms; native stopReason=stop, 7019 output tokens and 25579 final-text characters
+passed both completion checks. The operator serialized the original proposal,
+then Rust staging rejected `source operation id missing`: checks were strings,
+not frozen id/pointer/expected objects. Independent runtime validation passed.
+This is the first complete real proposal, not an approved verifier or formal case.
+
+Independent source review also rejected the semantics and execution policy:
+the rationale reverses original subscription ordering; reference controls remove
+or duplicate required subscription; some transformations do not match original
+declarations; many spelling checks read unchanged source rather than variants;
+the verifier writes and deletes temporary compiler files. No generated code ran.
+Original proposal, request, logs and response remain outside source Git; they
+were not repaired or relabeled as reviewed. The next construction prompt gives
+an exact oracle-object example, raw observation rules, direct source ordering,
+invariant-preserving alternatives and explicit in-memory-only execution policy.
+An early Rust shape check now rejects malformed oracle objects before stage
+directory creation with a useful error; semantic truth still requires review.
+Maturity remains 63%, strict maintenance-ready scopes remain four, formal cases
+and complete five-stage cycles remain zero.
