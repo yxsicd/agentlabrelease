@@ -777,3 +777,10 @@ Give executable-verifier synthesis its own explicit bounded response budget,
 separate from compact semantic summaries. Retain deadline failures, require a
 fresh complete response, and never count a policy adjustment as a productive
 knowledge round or silently add transport retries.
+
+Distinguish omission of a provider-specific parameter from an explicit value
+such as none. When an admitted model does not advertise reasoning-effort support,
+allow provider-default construction without injecting that field. Preserve the
+selected model/route and actual request capture; catalog membership, advertised
+links or local configuration alone do not prove live route admission. A broken
+endpoint link is a retained discovery gap, not permission to invent a route.
