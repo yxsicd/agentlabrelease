@@ -233,6 +233,7 @@ Each check MUST be an object, not a string/check name, for example
 {{"id":"observed-count","pointer":"/count","expected":1}}.
 stdout contains raw state/counts/events; expected values live only in contract.checks.
 controls: 4..8 objects with exactly id, role, expectedFailedCheckIds
+Control IDs are 1..64 ASCII alphanumeric/hyphen characters only; no underscores.
 role is exactly one of "baseline", "reference", "wrong", never descriptive prose.
 For example {{"id":"valid-alternative","role":"reference","expectedFailedCheckIds":[]}}.
 Every control emits the same observation shape and is checked against the same
@@ -251,7 +252,8 @@ operation or duplicating a side effect is not a valid reference merely because
 it has a reference label. Ensure each in-memory transformation actually matches
 the supplied source and every observation executes that transformed source body.
 Every reference ID must select a distinct valid implementation, not silently reuse
-the baseline. Every wrong ID must select an actual behavioral change. Reject a
+the baseline. Comments or whitespace alone do not supply a different executable
+implementation. Every wrong ID must select an actual behavioral change. Reject a
 transformation that matches zero locations rather than falling back to unchanged
 source. Exercise the input/state that exposes each wrong control: a disabled-state
 mutation cannot be distinguished by running only successful enablement scenarios.
@@ -304,9 +306,11 @@ such a check in the expected failure set merely because it is an error scenario.
 checks: 1..64 exact id/pointer/expected objects. JSON pointers resolve into an
 object mapping scenario ID to its expectedObservations. All controls share this oracle.
 controls: 4..8 objects with exactly id, role, expectedFailedCheckIds, edits
+Control IDs are 1..64 ASCII alphanumeric/hyphen characters only; no underscores.
 role is baseline/reference/wrong. Exactly one baseline has edits=[]. At least two
 references have distinct nonempty edits and no failed checks; at least one wrong
 has nonempty edits and a named nonempty failed-check subset.
+References must have distinct executable implementations, not only comments or whitespace.
 edits: 0..4 exact path/before/after objects, sequential in-memory substitutions.
 Paths must be loaded owned source. Copy exact original substrings including whitespace:
 each before must match exactly once at that edit step. No regex, no zero-match

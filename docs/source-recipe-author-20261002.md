@@ -637,3 +637,39 @@ The helper computes no expected counts or pass flags. Full source semantics,
 actual seam use, reference validity and exact failure sets still need independent
 review/execution. Controlled seams establish no Harmony runtime or full scope proof.
 Overall maturity remains 63%; formal cases and complete business cycles remain zero.
+
+## Early producer/executor contract admission
+
+Action `37051573318`, at method `009cd5632518339cdfb20e7f517616aaf159caae`,
+completed three model exchanges with clean generation stops and no native retry.
+One design correction passed static admission; decoded 3159-byte verifier code
+passed syntax checking. Staging nevertheless failed at `source operation control
+id`: the producer had accepted underscores forbidden by the executor. Its partial
+stage has no accepted stage receipt. Independent source review also rejected a
+comment-only reference and an incorrect failure set that confused upload and
+permission-request branches. No generated verifier was approved or executed.
+
+The one explicit feedback revision, Action `37052521001`, failed on its first
+design call: HTTP 200 carried a stream error with `rate_limit_exceeded` and no
+semantic completion. It generated no new design/proposal, so feedback correction
+effectiveness remains unmeasured. Preserve that child and the revision-chain
+limit; do not reset it as an original generation to obtain another revision.
+
+Design and proposal validation now share the executor's control-ID grammar;
+proposal IDs must also be unique. The fully bound recipe's static contract is
+checked before creating the stage directory, including check uniqueness and
+declared failure-set membership/uniqueness. The private static review flag is
+never saved or treated as approval. Subsequent original filesystem/hash preflight
+remains: its failures can still leave partial evidence. Regression uses arbitrary
+repository/path identities and keeps scenario/check IDs independent of control
+grammar. These changes prevent late deterministic rejection, not semantic oracle
+defects. Maturity remains 63%, strict maintenance readiness 4, formal cases zero
+and complete business cycles zero.
+
+Local replay of the unchanged real Action design now exits 1 with `recipe design
+control contract`; direct proposal replay also exits 1 before creating its stage
+directory. No generated code ran. Eighteen Rust source-operation regressions pass
+with the pinned TypeScript compiler (9.17 seconds); all 705 public regressions
+pass with one skip (82.339 seconds). Skill validation, formatting and digest
+checks pass. These establish earlier deterministic rejection, not a newly
+accepted Agent verifier or a productive business cycle.

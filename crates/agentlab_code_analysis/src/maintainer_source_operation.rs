@@ -90,7 +90,11 @@ fn save(out: &Path, name: &str, bytes: &[u8]) -> Result<(), String> {
         .write_all(bytes)
         .map_err(|e| e.to_string())
 }
-fn recipe_gate(recipe: &Value, skill: &Value) -> Result<(), String> {
+pub(crate) fn valid_control_id(id: &str) -> bool {
+    !id.is_empty() && id.len() <= 64 && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-')
+}
+
+pub(crate) fn recipe_gate(recipe: &Value, skill: &Value) -> Result<(), String> {
     need(
         skill["ownershipSelectors"].is_null()
             || skill["ownershipSelectors"]
@@ -177,9 +181,7 @@ fn recipe_gate(recipe: &Value, skill: &Value) -> Result<(), String> {
     for control in controls {
         let id = text(control, "id")?;
         need(
-            id.len() <= 64
-                && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-')
-                && names.insert(id),
+            valid_control_id(id) && names.insert(id),
             "source operation control id",
         )?;
         let failures = control["expectedFailedCheckIds"]

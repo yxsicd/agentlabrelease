@@ -949,3 +949,16 @@ Independently establish each wrong variant's branch reachability and exact failu
 set. An earlier exception can bypass a changed branch entirely. Typed seam inputs
 remove ambiguity, but neither their validator nor the helper proves that a generated
 verifier uses them faithfully or that the declared failure set is semantically valid.
+
+Share deterministic identifier and bound-recipe rules with the executor rather
+than maintaining a weaker producer contract. Control IDs use 1..64 ASCII
+alphanumeric/hyphen characters; this restriction does not apply to scenario or
+check IDs. Reject malformed/duplicate control IDs during design and proposal
+validation, and validate the bound static recipe before creating staging files.
+Keep the later filesystem/digest preflight: early structure admission does not
+prove unchanged files, semantic validity, reviewer approval or execution safety.
+Static rejection leaves no staging directory; a later filesystem failure may
+still leave retained partial output and must not be advertised as rollback.
+Comments or whitespace alone are not distinct executable reference variants.
+Independent review still establishes reference validity and actual failure sets;
+prompt instructions and text inequality cannot establish them.
