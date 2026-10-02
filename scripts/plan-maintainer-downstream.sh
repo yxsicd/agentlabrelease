@@ -14,6 +14,7 @@ test ! -e "$output"
 test ! -L "$output"
 mkdir -p "$output"
 count=0
+partial_plans=()
 while IFS= read -r plan; do
   id=$(jq -er '.candidateId' "$plan")
   # Never let a business identifier become a directory traversal.
@@ -28,6 +29,20 @@ while IFS= read -r plan; do
     command+=(--previous-plan "$previous/$id/next-actions.json")
   fi
   "${command[@]}"
+  # Opt-in retained-observation lane. Its actions never replace formal gates.
+  if [[ -n "${AGENTLAB_PARTIAL_CALIBRATION_ROOT:-}" ]]; then
+    partial_profile="$AGENTLAB_PARTIAL_CALIBRATION_ROOT/profiles/$id.json"
+    if [[ -f "$partial_profile" ]]; then
+      partial_command=("$router" --feedback-partial-calibration --readiness "$output/$id/readiness.json"
+        --partial-profile "$partial_profile" --capture-root "$AGENTLAB_PARTIAL_CALIBRATION_ROOT"
+        --output "$output/$id/scoped-next-actions.json")
+      if [[ -n "$previous" && -f "$previous/$id/scoped-next-actions.json" ]]; then
+        partial_command+=(--previous-feedback-plan "$previous/$id/scoped-next-actions.json")
+      fi
+      "${partial_command[@]}"
+      partial_plans+=("$output/$id/scoped-next-actions.json")
+    fi
+  fi
   count=$((count + 1))
 done < <(find "$knowledge/construction-plans" -type f -name '*.json' | LC_ALL=C sort)
 test "$count" -gt 0
@@ -36,3 +51,11 @@ test "$count" -gt 0
 jq -s '.' "$output"/*/next-actions.json > "$output/plans.json"
 "$router" --summarize-downstream --candidates "$knowledge/case_generation_candidates.jsonl" \
   --plans "$output/plans.json" --output "$output/summary.json"
+if [[ ${#partial_plans[@]} -gt 0 ]]; then
+  jq -s --slurpfile formal "$output/summary.json" '
+    {schema:"agentlab.partial_calibration_batch.v1",planCount:length,
+     activeCandidateIds:[.[] | select(.schedulingAllowed == true) | .candidateId as $id |
+       select(($formal[0].retainedHistoricalCandidateIds | index($id)) == null) | $id],
+     qualified:false,automaticPromotion:false,agentExecutionPerformed:false,authorityWritePerformed:false}' \
+    "${partial_plans[@]}" > "$output/partial-summary.json"
+fi

@@ -35,6 +35,27 @@ axes; none substitutes for an explicitly required exact runtime version. A
 host's device permissions, cold boot and HDC connection qualify environment
 availability only, not application behavior or complete case calibration.
 
+An operation ID is a transient execution handle, not a durable evidence archive.
+If historical operation lookup is unavailable, recover retained raw files through
+the exact target peer, compare their original byte lengths/digests, and reconstruct
+the observations before scheduling repeated work. For UI captures, select the
+declared application/page owner and unique observable nodes inside it; an unrelated
+window's matching text cannot satisfy the Oracle. Keep unsupported formats and
+unrecovered build/patch/command captures as explicit gaps. Raw readback does not
+authenticate the historical producer or qualify a new runtime execution. See
+[the retained-evidence audit](../../docs/flywheel-retained-calibration-readback-20261003.md).
+
+Use `--feedback-partial-calibration` to reconstruct reviewed retained observations
+before planning scoped follow-up. Its profile declares source/candidate/plan
+bindings, runtime observations, JSON-pointer or attribute-tree selectors, shared
+checks, accepted/wrong control expectations and missing controls. The consumer
+checks exact peer-directed file envelopes and raw bytes; a missing/ambiguous
+observable is a readback failure, not a killed wrong implementation. It preserves
+formal gate actions separately and never infers build, mutation or runtime
+attestation from observed values. Consume `scopedActions` only within their declared
+runtime; equal owned evidence suppresses duplicate scoped work, not unrelated
+formal qualification. See [the partial consumer](../../docs/flywheel-partial-calibration-consumer-20261003.md).
+
 Use the task's actual expected baseline: a bug-fix case may fail before the patch; an extension case may pass old tests but fail new demand checks. Reference passes and targeted wrong-boundary/lost-history variants should fail the intended checks. Save complete output and exact identities in `evaluation_cases` calibration rows, with analysis evidence in `program_facts`.
 
 For repository-independent diagnostic repair, use the
