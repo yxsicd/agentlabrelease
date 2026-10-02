@@ -158,6 +158,49 @@ with tempfile.TemporaryDirectory() as directory:
 }
 
 #[test]
+fn constructor_native_retry_policy_rejects_drift_and_project_overrides() {
+    let code = r#"
+import importlib.util,json,os,tempfile
+from pathlib import Path
+spec=importlib.util.spec_from_file_location('author',os.environ['AUTHOR_SCRIPT'])
+module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+with tempfile.TemporaryDirectory() as d:
+    root=Path(d);state=root/'state';workspace=root/'workspace';evidence=root/'evidence'
+    workspace.mkdir();evidence.mkdir()
+    raw=module.freeze_pi_retry_policy(state,workspace,evidence)
+    assert json.loads(raw)=={'retry':{'enabled':False,'maxRetries':0,'provider':{'maxRetries':0}}}
+    module.require_pi_retry_policy(state,workspace,raw)
+    def refused():
+        try:module.require_pi_retry_policy(state,workspace,raw)
+        except ValueError:pass
+        else:raise AssertionError('policy override accepted')
+    (state/'settings.json').write_text('{"retry":{"enabled":true}}');refused()
+    (state/'settings.json').write_bytes(raw)
+    (workspace/'.pi').mkdir();override=workspace/'.pi/settings.json'
+    override.write_text('{"retry":{"provider":{"maxRetries":3}}}');refused()
+    override.unlink();override.symlink_to(root/'absent');refused()
+    override.unlink()
+    try:module.freeze_pi_retry_policy(state,workspace,evidence)
+    except FileExistsError:pass
+    else:raise AssertionError('existing configuration overwritten')
+    assert (state/'settings.json').read_bytes()==raw
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "AUTHOR_SCRIPT",
+            root().join("scripts/run-source-recipe-author.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
 fn source_recipe_operator_prepares_strict_runtime_receipt_directory() {
     let directory = std::env::temp_dir().join(format!(
         "source-recipe-runtime-root-{}-{}",
@@ -372,6 +415,9 @@ with tempfile.TemporaryDirectory() as d:
                 seen['constructor'] = options
                 self.evidence = evidence
             def turn(self, label, workspace, **options):
+                policy=json.loads((workspace.parent/'participant-state/settings.json').read_bytes())
+                assert policy['retry']['enabled'] is False
+                assert policy['retry']['maxRetries']==0 and policy['retry']['provider']['maxRetries']==0
                 seen['turn'] = options
                 seen.setdefault('labels',[]).append(label)
                 gateway = self.evidence/'gateway'

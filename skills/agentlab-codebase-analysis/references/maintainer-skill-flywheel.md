@@ -912,3 +912,12 @@ Review embedded code after decoding its string literals or using static syntax
 analysis. JSON display escapes and visually estimated indentation are not proof
 that a source edit fails to match. Preserve and explicitly supersede faulty
 review feedback; do not count its correction as an Agent or maturity gain.
+
+An operator retry limit does not disable a participant's native or provider-SDK
+retries. For the bounded constructor, pin native retry settings in fresh private
+state, refuse project overrides/configuration drift before each turn, and retain
+the settings digest. Inspect actual native retry events and every gateway exchange
+before claiming a single attempt. A successful later response cannot erase an
+earlier rate-limit/incomplete exchange. Configuration validation is not live
+no-retry qualification; verify effective settings in the pinned runtime and then
+retain the next live turn. Do not alter unrelated assessed-Agent retry policy.

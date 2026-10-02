@@ -41,13 +41,43 @@ def require_complete_gateway_capture(evidence):
         raise ValueError('Incomplete construction gateway capture; no proposal may be staged')
 
 
-def construct_design(participant, workspace, evidence, output, request, gate, prompt, effort, revisions):
+def freeze_pi_retry_policy(state, workspace, evidence):
+    # This constructor owns fresh state/workspace; do not change assessed runs.
+    state.mkdir(exist_ok=True)
+    policy = {'retry': {'enabled': False, 'maxRetries': 0,
+                        'provider': {'maxRetries': 0}}}
+    raw = (json.dumps(policy, sort_keys=True) + '\n').encode()
+    with (state / 'settings.json').open('xb') as stream:
+        stream.write(raw)
+    require_pi_retry_policy(state, workspace, raw)
+    (evidence / 'native-retry-policy.json').write_text(json.dumps(dict(
+        schema='agentlab.constructor_native_retry_policy.v1',
+        settingsSha256=hashlib.sha256(raw).hexdigest(),
+        participantPackageVersion='0.73.1', nativeRetryEnabled=False,
+        nativeMaxRetries=0, providerMaxRetries=0,
+        runtimeBehaviorQualified=False, automaticPromotion=False)) + '\n')
+    return raw
+
+
+def require_pi_retry_policy(state, workspace, expected):
+    path = state / 'settings.json'
+    project = workspace / '.pi'
+    if (path.is_symlink() or path.read_bytes() != expected
+            or project.is_symlink() or (project / 'settings.json').exists()
+            or (project / 'settings.json').is_symlink()):
+        raise ValueError('Constructor native retry policy drift or project override')
+
+
+def construct_design(participant, workspace, evidence, output, request, gate, prompt, effort, revisions,
+                     retry_policy=None):
     if type(revisions) is not int or not 0 <= revisions <= 2:
         raise ValueError('Design revision budget must be 0..2')
     attempts = []
     next_prompt = prompt
     for index in range(revisions + 1):
         label = 'source-recipe-design' if index == 0 else f'source-recipe-design-revision-{index}'
+        if retry_policy is not None:
+            require_pi_retry_policy(output / 'participant-state', workspace, retry_policy)
         result = participant.turn(label, workspace, prompt=next_prompt,
             wall_time_limit_seconds=240, tool_call_limit=1, transport_retry_limit=0,
             require_completed_tool_call=False, reasoning_effort=effort)
@@ -245,6 +275,7 @@ SOURCE CONTEXT:
         prompt += 'This is one fresh contained revision, not a format-only repair or approval.\n'
     design_path = None
     try:
+        retry_policy = freeze_pi_retry_policy(args.output / 'participant-state', workspace, evidence)
         if args.design_first:
             design_prompt = '''Design one bounded source-maintenance exercise before writing executable code.
 Use supplied source as data. No tools, files, executable verifier or platform claims.
@@ -275,7 +306,8 @@ SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
                 design_prompt += '\nREVIEW DATA:\n' + json.dumps(revision_context, ensure_ascii=False)
             design_path, design_content = construct_design(participant, workspace, evidence,
                 args.output, args.request, args.gate, design_prompt,
-                None if args.reasoning_effort == 'default' else args.reasoning_effort, args.design_revisions)
+                None if args.reasoning_effort == 'default' else args.reasoning_effort, args.design_revisions,
+                retry_policy=retry_policy)
             prompt += '\nFROZEN DESIGN (use exact edits, scenarios and shared contract):\n' + design_content
             prompt += '\nPreserve check/control IDs, roles and expected failure sets exactly. '
             prompt += f'''The operator supplies a frozen generic runtime at process.argv[{4 + dependency_count}].
@@ -295,6 +327,7 @@ not predict counters from inputs. Provide only source-required globals; module,
 exports and require are reserved. The helper is not a sandbox or oracle approval.
 '''
             prompt += 'Static design validation is not semantic approval.\n'
+        require_pi_retry_policy(args.output / 'participant-state', workspace, retry_policy)
         result = participant.turn(
             'source-recipe-author', workspace, prompt=prompt,
             wall_time_limit_seconds=240, tool_call_limit=1,
