@@ -50,6 +50,8 @@ def main():
     p.add_argument('--reasoning-effort', choices=('default', 'none', 'low', 'medium', 'high', 'max'), default='low',
                    help='default omits reasoning_effort; it does not request disabled thinking')
     p.add_argument('--gateway-timeout-seconds', type=int, choices=range(30, 181), default=180)
+    p.add_argument('--thinking-type', choices=('default', 'enabled', 'disabled'), default='default',
+                   help='Explicit provider thinking.type policy; default omits this independent field')
     args = p.parse_args()
     if not os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'):
         raise ValueError('Recipe construction requires the contained participant runtime')
@@ -72,6 +74,7 @@ def main():
         evidence, args.output / 'participant-state', args.pi,
         os.environ['AGENTLAB_LM_GATEWAY_URL'], os.environ['AGENTLAB_MODEL'],
         route=os.environ['AGENTLAB_PROVIDER_ROUTE'], gateway_timeout_seconds=args.gateway_timeout_seconds,
+        thinking_type=None if args.thinking_type == 'default' else args.thinking_type,
     )
     context = {key: request[key] for key in (
         'scope', 'source', 'sourceFiles', 'semanticFacts', 'selectedGap')}
@@ -120,6 +123,7 @@ SOURCE CONTEXT:
     finally:
         participant.close()
     require_complete_gateway_capture(evidence)
+    require_completed_generation(result, evidence)
     content = result.get('content') if result else None
     if not isinstance(content, str) or not content.strip() or len(content.encode()) > 256 * 1024:
         raise ValueError('Missing or oversized proposal response')
@@ -141,6 +145,18 @@ SOURCE CONTEXT:
         'authorityWritePerformed': False, 'automaticPromotion': False}) + '\n')
     completed.check_returncode()
     print(completed.stdout.decode(), end='')
+
+
+def require_completed_generation(result, evidence):
+    message = result.get('message') if isinstance(result, dict) else None
+    stop_reason = message.get('stopReason') if isinstance(message, dict) else None
+    accepted = stop_reason == 'stop'
+    (evidence / 'generation-completion.json').write_text(json.dumps({
+        'schema': 'agentlab.source_recipe_generation_completion.v1',
+        'stopReason': stop_reason, 'complete': accepted,
+        'automaticPromotion': False, 'authorityWritePerformed': False}) + '\n')
+    if not accepted:
+        raise ValueError(f'Incomplete construction generation: stopReason={stop_reason}; no proposal may be staged')
 
 
 if __name__ == '__main__':

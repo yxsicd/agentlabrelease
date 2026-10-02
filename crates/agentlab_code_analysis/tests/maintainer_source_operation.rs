@@ -155,9 +155,10 @@ with tempfile.TemporaryDirectory() as d:
     request.write_text(json.dumps(dict(schema='agentlab.source_recipe_author_request.v1',
         scope={'id':'arbitrary-scope'}, source={}, sourceFiles=[], semanticFacts=[],
         selectedGap={}, policy={'methodDependencies':[]})))
-    for index, extra, effort, deadline in [(0, [], 'low', 180),
-        (1, ['--reasoning-effort','high','--gateway-timeout-seconds','120'], 'high',120),
-        (2, ['--reasoning-effort','default'], None,180)]:
+    for index, extra, effort, deadline, thinking in [(0, [], 'low', 180, None),
+        (1, ['--reasoning-effort','high','--gateway-timeout-seconds','120'], 'high',120,None),
+        (2, ['--reasoning-effort','default'], None,180,None),
+        (3, ['--reasoning-effort','default','--thinking-type','disabled'],None,180,'disabled')]:
         seen = {}
         class FakeParticipant:
             def __init__(self, evidence, state, binary, gateway, model, **options):
@@ -170,7 +171,7 @@ with tempfile.TemporaryDirectory() as d:
                 (gateway/'0001.status.json').write_text(json.dumps(dict(status=200,
                     outcome='completed',semanticComplete=True,upstreamEof=True,
                     streamError=None,clientDisconnected=False)))
-                return {'content':'{}'}
+                return {'content':'{}','message':{'stopReason':'stop'}}
             def close(self): seen['closed'] = True
         fake_spec = SimpleNamespace(loader=SimpleNamespace(exec_module=lambda _:None))
         env = dict(AGENTLAB_PARTICIPANT_RUNTIME_CONFIG=str(root/'config.json'),
@@ -185,6 +186,7 @@ with tempfile.TemporaryDirectory() as d:
              patch.object(module.subprocess,'run',return_value=subprocess.CompletedProcess([],0,b'',b'')) as stage:
             module.main()
         assert seen['constructor']['gateway_timeout_seconds'] == deadline
+        assert seen['constructor']['thinking_type'] == thinking
         assert seen['turn']['reasoning_effort'] == effort
         assert seen['turn']['transport_retry_limit'] == 0
         assert seen['closed'] is True
@@ -197,6 +199,107 @@ with tempfile.TemporaryDirectory() as d:
         .env(
             "AUTHOR_SCRIPT",
             root().join("scripts/run-source-recipe-author.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn source_recipe_rejects_token_truncation_even_after_clean_gateway_eof() {
+    let code = r#"
+import importlib.util, json, os, tempfile
+from pathlib import Path
+spec = importlib.util.spec_from_file_location('recipe_author', os.environ['AUTHOR_SCRIPT'])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+with tempfile.TemporaryDirectory() as directory:
+    root = Path(directory)
+    for stop in [None, 'length', 'toolUse', 'aborted', 'error', 'stop']:
+        result = {'content':'{}', 'message':{'stopReason':stop}}
+        try:
+            module.require_completed_generation(result, root)
+        except ValueError:
+            assert stop != 'stop'
+        else:
+            assert stop == 'stop'
+        report = json.loads((root/'generation-completion.json').read_bytes())
+        assert report['complete'] == (stop == 'stop')
+        assert report['stopReason'] == stop
+        assert report['authorityWritePerformed'] is False
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "AUTHOR_SCRIPT",
+            root().join("scripts/run-source-recipe-author.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn explicit_thinking_policy_reaches_actual_proxy_wire_without_changing_defaults() {
+    let code = r#"
+import http.server, importlib.util, json, os, tempfile, threading, urllib.request
+from pathlib import Path
+from unittest.mock import patch
+spec = importlib.util.spec_from_file_location('participant', os.environ['PARTICIPANT_SCRIPT'])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+received = []
+class Handler(http.server.BaseHTTPRequestHandler):
+    def log_message(self,*args): pass
+    def do_POST(self):
+        received.append(json.loads(self.rfile.read(int(self.headers['Content-Length']))))
+        body = b'data: [DONE]\n\n'
+        self.send_response(200)
+        self.send_header('Content-Type','text/event-stream')
+        self.send_header('Content-Length',str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+server = http.server.ThreadingHTTPServer(('127.0.0.1',0),Handler)
+thread = threading.Thread(target=server.serve_forever,daemon=True)
+thread.start()
+try:
+    with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ,{'AGENTLAB_LM_GATEWAY_KEY':'synthetic-only'}):
+        root = Path(directory)
+        for index, thinking in enumerate([None,'enabled','disabled']):
+            evidence = root/str(index); evidence.mkdir()
+            participant = module.Participant(evidence,root/f'state-{index}','/bin/true',
+                f'http://127.0.0.1:{server.server_port}','arbitrary-model',thinking_type=thinking)
+            try:
+                request = urllib.request.Request(f'http://127.0.0.1:{participant.server.server_port}/v1/chat/completions',
+                    data=json.dumps({'model':'ignored','stream':True}).encode(),
+                    headers={'Authorization':'Bearer '+participant.local_proxy_token})
+                with urllib.request.urlopen(request,timeout=5) as response: response.read()
+            finally: participant.close()
+            actual = json.loads((evidence/'gateway/0001.upstream-request.json').read_bytes())
+            assert actual == received[-1]
+            assert 'reasoning_effort' not in actual
+            if thinking is None: assert 'thinking' not in actual
+            else: assert actual['thinking'] == {'type':thinking}
+        try:
+            module.Participant(root,root/'invalid','/bin/true','http://localhost','arbitrary',thinking_type='invented')
+        except ValueError: pass
+        else: raise AssertionError('invalid thinking policy accepted')
+finally:
+    server.shutdown();server.server_close();thread.join()
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "PARTICIPANT_SCRIPT",
+            root().join("examples/real-code-agent/participant.py"),
         )
         .output()
         .unwrap();
