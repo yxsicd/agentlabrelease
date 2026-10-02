@@ -260,6 +260,10 @@ only kinds the executor actually supports; a build-only capture does not qualify
 source maintenance, configuration checks or tests. The business adapter accepts
 reviewed `operationExecution` inputs to run the existing build-only executor and
 independently qualify its retained bytes; other kinds remain explicit gaps.
+Operation kind is only a routing category: inspect actual task and artifact
+contracts before choosing an adapter. A helper package and an application can
+both be classified build-only without producing HARs; declaration alone does not
+make a HAR validator applicable or establish new operation-ready coverage.
 Retain a complete failed task as feedback with taskPassed=false rather than skipping
 evidence return. Infrastructure and incomplete capture are not task observations.
 

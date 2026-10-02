@@ -89,5 +89,12 @@ derive into nine build-test, seven source-only, three build-only, two test-only
 and two support-config scopes. This is an executor/routing capability gap, not
 evidence of a participant failure. Preserve the rejected dispatch; do not weaken
 the productive semantic-plan gate or report a different repository's progress as
-selected-repository coverage. The newly connected executor addresses only the
-three build-only scopes once reviewed inputs and the exact toolchain are supplied.
+selected-repository coverage. Build-only is a coarse planner category, not proof
+that its scopes produce HAR artifacts. A live HW Linux readback at the clean
+7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6 source found hmosword-build is a JavaScript
+helper package whose only npm script is a failing placeholder test; products/tv
+is an application module. The connected HAR executor cannot be assumed applicable
+to any of those three scopes without an actual reviewed operation contract.
+Artifact/task-specific adapters are still required; no new operation-ready scope
+is claimed from this connection. AWMCP direct-route operations 004b and 004c
+retained the exact source identity and inspected configuration at hwlinux/mb.
