@@ -1,0 +1,127 @@
+name: Maintainer contained behavior loop
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Committed reviewed profile; no external executable recipe
+        default: examples/maintainer-knowledge-gate/reviewed-behavior/telemetry-upload-demand.json
+        required: true
+        type: string
+      maximum_attempts:
+        description: Bounded real participant attempts against unchanged checks
+        default: '2'
+        required: true
+        type: choice
+        options: ['1', '2', '3']
+      candidate_corpus:
+        description: Committed candidate snapshot matching the reviewed profile
+        default: examples/maintainer-knowledge-gate/first-four/case_generation_candidates.jsonl
+        required: true
+        type: string
+      model:
+        default: glm-5.3-flash
+        required: true
+        type: string
+      provider_route:
+        default: glm
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: maintainer-contained-behavior-loop
+  cancel-in-progress: false
+jobs:
+  execute:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PROFILE: ${{ inputs.profile }}
+      MAXIMUM_ATTEMPTS: ${{ inputs.maximum_attempts }}
+      CANDIDATE_CORPUS: ${{ inputs.candidate_corpus }}
+      AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
+      AGENTLAB_MODEL: ${{ inputs.model }}
+      AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
+      AGENTLAB_REASONING_EFFORT: default
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Allocate external evidence root
+        run: echo "EVIDENCE_ROOT=$RUNNER_TEMP/contained-behavior-loop" >> "$GITHUB_ENV"
+      - name: Build independent Rust controller
+        run: cargo build --locked -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
+      - name: Prepare fixed compiler and Pi runtime outside source
+        run: |
+          mkdir -p "$RUNNER_TEMP/behavior-compiler" "$RUNNER_TEMP/behavior-pi"
+          cp examples/knowledge-seed/subject/runtime/package*.json "$RUNNER_TEMP/behavior-compiler/"
+          cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/behavior-pi/"
+          npm ci --prefix "$RUNNER_TEMP/behavior-compiler" --no-audit --no-fund
+          npm ci --prefix "$RUNNER_TEMP/behavior-pi" --no-audit --no-fund
+          docker pull node:24.19.0-bookworm-slim
+          echo "WORKER_IMAGE_ID=$(docker image inspect node:24.19.0-bookworm-slim --format '{{.Id}}')" >> "$GITHUB_ENV"
+      - name: Freeze source and independently execute contained controls
+        run: |
+          set -euo pipefail
+          git ls-files --error-unmatch -- "$PROFILE"
+          git ls-files --error-unmatch -- "$CANDIDATE_CORPUS"
+          node scripts/prepare-contained-behavior-loop.cjs --profile "$PROFILE" \
+            --candidates "$CANDIDATE_CORPUS" \
+            --compiler "$RUNNER_TEMP/behavior-compiler/node_modules/typescript/lib/typescript.js" \
+            --image-id "$WORKER_IMAGE_ID" --python "$(command -v python3)" \
+            --maximum-attempts "$MAXIMUM_ATTEMPTS" --output "$EVIDENCE_ROOT"
+          target/debug/agentlab-maintainer-skill-flywheel --verify-behavior-checks \
+            --contract "$EVIDENCE_ROOT/frozen-checks.json" --capture "$EVIDENCE_ROOT/worker-capture.json" \
+            --output "$EVIDENCE_ROOT/calibration-feedback.json"
+      - name: Isolate participant from references and evaluator state
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/behavior-participant-case" "$RUNNER_TEMP/behavior-docker-config"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])
+          (root/'behavior-participant-case/manifest.json').write_text(json.dumps({'schema':'agentlab.blind_case_participant_bundle.v1','sourceOnly':True,'automaticPromotion':False})+'\n')
+          (root/'behavior-docker-config/config.json').write_text('{"auths":{}}\n')
+          PY
+          python3 scripts/prepare-participant-runtime.py --image "$WORKER_IMAGE_ID" \
+            --pi-runtime "$RUNNER_TEMP/behavior-pi" --case-input "$RUNNER_TEMP/behavior-participant-case" \
+            --forbid "$GITHUB_WORKSPACE" --forbid "$EVIDENCE_ROOT" \
+            --output "$RUNNER_TEMP/behavior-participant-runtime.json"
+          python3 - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP']);repository=Path(os.environ['GITHUB_WORKSPACE'])
+          path=Path(os.environ['EVIDENCE_ROOT'])/'loop-recipe.json'
+          recipe=json.loads(path.read_bytes())
+          recipe['participantEnvironmentNames']+=['AGENTLAB_PARTICIPANT_RUNTIME_CONFIG','DOCKER_CONFIG']
+          for item in [root/'behavior-participant-runtime.json',root/'behavior-participant-case/manifest.json',root/'behavior-pi/package-lock.json',repository/'scripts/run-pi-in-docker.py']:
+              recipe['immutableInputs'].append({'path':str(item),'sha256':hashlib.sha256(item.read_bytes()).hexdigest()})
+          path.write_text(json.dumps(recipe,indent=2)+'\n')
+          PY
+      - name: Execute captured real participant and bounded behavior repair
+        # The existing launcher independently probes forbidden paths/network.
+        env:
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+          AGENTLAB_PI_BINARY: ${{ github.workspace }}/scripts/run-pi-in-docker.py
+          AGENTLAB_PARTICIPANT_RUNTIME_CONFIG: ${{ runner.temp }}/behavior-participant-runtime.json
+          DOCKER_CONFIG: ${{ runner.temp }}/behavior-docker-config
+        run: |
+          set -euo pipefail
+          target/debug/agentlab-maintainer-skill-flywheel --execute-behavior-loop \
+            --contract "$EVIDENCE_ROOT/frozen-checks.json" --capture "$EVIDENCE_ROOT/worker-capture.json" \
+            --recipe "$EVIDENCE_ROOT/loop-recipe.json" --output "$EVIDENCE_ROOT/attempts"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          result=json.loads((Path(os.environ['EVIDENCE_ROOT'])/'attempts/loop-result.json').read_bytes())
+          assert result['status']=='recorded-attempt-passed', result['status']
+          assert result['qualified'] is False and result['automaticPromotion'] is False
+          PY
+      - name: Preserve complete scoped capture including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: contained-behavior-loop
+          if-no-files-found: error
+          include-hidden-files: true
+          path: ${{ env.EVIDENCE_ROOT }}/

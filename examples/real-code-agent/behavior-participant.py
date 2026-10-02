@@ -23,6 +23,8 @@ def main():
     (workspace / 'task-request.json').write_bytes(request_bytes)
     evidence = root / 'participant-evidence'
     evidence.mkdir()
+    if os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'):
+        os.environ['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT'] = str(evidence / 'runtime')
     spec = importlib.util.spec_from_file_location('agentlab_participant', Path(__file__).with_name('participant.py'))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

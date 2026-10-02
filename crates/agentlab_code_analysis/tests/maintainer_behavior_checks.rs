@@ -432,3 +432,52 @@ fn loop_output_for_adapter() -> std::path::PathBuf {
             .as_nanos()
     ))
 }
+
+#[test]
+fn contained_worker_rejects_unreviewed_or_changed_input_before_runtime() {
+    let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../scripts/run-contained-behavior-worker.py");
+    for (label, reviewed, source_sha, image, message) in [
+        (
+            "unreviewed",
+            false,
+            digest(b"source"),
+            "invalid",
+            "not reviewed",
+        ),
+        (
+            "changed",
+            true,
+            "0".repeat(64),
+            "invalid",
+            "submitted source differs",
+        ),
+        (
+            "image",
+            true,
+            digest(b"source"),
+            "invalid",
+            "exact local ID",
+        ),
+    ] {
+        let dir = loop_output_for_adapter();
+        std::fs::create_dir(&dir).unwrap();
+        let dir = dir.canonicalize().unwrap();
+        std::fs::write(dir.join("descriptor.json"),serde_json::to_vec(&json!({"schema":"agentlab.contained_behavior_executor.v1","reviewed":reviewed,"automaticPromotion":false,"imageId":image})).unwrap()).unwrap();
+        std::fs::write(dir.join("request.json"),serde_json::to_vec(&json!({"schema":"agentlab.behavior_executor_request.v1","submittedSource":"source","submittedSourceSha256":source_sha})).unwrap()).unwrap();
+        let result = std::process::Command::new("python3")
+            .arg(&script)
+            .arg(dir.join("descriptor.json"))
+            .arg(dir.join("request.json"))
+            .current_dir(&dir)
+            .output()
+            .unwrap();
+        assert!(!result.status.success(), "{label}");
+        assert!(
+            String::from_utf8_lossy(&result.stderr).contains(message),
+            "{label}: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        assert_eq!(std::fs::read_dir(dir).unwrap().count(), 2);
+    }
+}

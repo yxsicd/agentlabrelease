@@ -219,6 +219,8 @@ pub fn execute(
                         "AGENTLAB_MODEL",
                         "AGENTLAB_PROVIDER_ROUTE",
                         "AGENTLAB_REASONING_EFFORT",
+                        "AGENTLAB_PARTICIPANT_RUNTIME_CONFIG",
+                        "DOCKER_CONFIG",
                     ]
                     .contains(&name),
                     "loop environment name not allowed",
@@ -228,7 +230,7 @@ pub fn execute(
             .collect::<Result<_, String>>()?,
     };
     require(
-        environment_names.len() <= 6,
+        environment_names.len() <= 8,
         "loop environment names excessive",
     )?;
     let completion_required = recipe
