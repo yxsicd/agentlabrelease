@@ -407,6 +407,50 @@ pub fn check_revision(current_bytes: &[u8], packet_bytes: &[u8]) -> Result<Value
 }
 
 /// Static source correction before code generation; this does not establish semantic truth.
+fn frozen_seams(inputs: &Value) -> Result<(), String> {
+    let seams = inputs["seams"]
+        .as_object()
+        .filter(|s| s.len() <= 32)
+        .ok_or("recipe design scenario seam inventory")?;
+    for (id, seam) in seams {
+        need(
+            !id.is_empty() && id.len() <= 128,
+            "recipe design scenario seam id",
+        )?;
+        need(
+            seam.as_object().is_some_and(|s| s.len() == 2) && seam["repeatLast"].is_boolean(),
+            "recipe design scenario seam fields",
+        )?;
+        let outcomes = seam["outcomes"]
+            .as_array()
+            .filter(|s| (1..=16).contains(&s.len()))
+            .ok_or("recipe design scenario seam outcomes")?;
+        for outcome in outcomes {
+            let fields = outcome
+                .as_object()
+                .ok_or("recipe design scenario seam outcome object")?;
+            let kind = outcome["kind"]
+                .as_str()
+                .ok_or("recipe design scenario seam outcome kind")?;
+            let undefined = matches!(kind, "return-undefined" | "resolve-undefined");
+            need(
+                matches!(
+                    kind,
+                    "return"
+                        | "resolve"
+                        | "throw"
+                        | "reject"
+                        | "return-undefined"
+                        | "resolve-undefined"
+                ) && fields.len() == if undefined { 1 } else { 2 }
+                    && (undefined || fields.contains_key("value")),
+                "recipe design scenario seam outcome kind/value",
+            )?;
+        }
+    }
+    Ok(())
+}
+
 pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String> {
     need(
         request_bytes.len() <= 512 * 1024 && design_bytes.len() <= 64 * 1024,
@@ -431,7 +475,10 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
     )?;
     need(
         design.as_object().is_some_and(|o| o.len() == 7)
-            && design["schema"] == "agentlab.source_recipe_design.v1"
+            && matches!(
+                design["schema"].as_str(),
+                Some("agentlab.source_recipe_design.v1" | "agentlab.source_recipe_design.v2")
+            )
             && design["scopeSkillId"] == request["scope"]["id"]
             && text(&design, "invariant")?.len() <= 2048
             && design["limitations"].as_array().is_some_and(|a| {
@@ -458,6 +505,9 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
                 && scenario["expectedObservations"].is_object(),
             "recipe design scenario contract",
         )?;
+        if design["schema"] == "agentlab.source_recipe_design.v2" {
+            frozen_seams(&scenario["inputs"])?;
+        }
         expected.insert(id.into(), scenario["expectedObservations"].clone());
     }
     let expected = Value::Object(expected);
@@ -657,7 +707,8 @@ fn design_runtime(
                 .ok_or("runtime unowned source".to_string())
         })
         .collect::<Result<_, _>>()?;
-    let manifest = json!({"files":files,"controls":design["controls"]});
+    let manifest = json!({"files":files,"controls":design["controls"],
+        "scenarios":if design["schema"] == "agentlab.source_recipe_design.v2" { design["scenarios"].clone() } else { json!([]) }});
     let mut bytes = format!(
         "const manifest = {};\n",
         serde_json::to_string(&manifest).map_err(|e| e.to_string())?

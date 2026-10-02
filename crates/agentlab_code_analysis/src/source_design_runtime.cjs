@@ -63,5 +63,46 @@ module.exports = function createRuntime(sourceRoot, controlId, compiler) {
       {timeout: 1000});
     return module.exports;
   }
-  return Object.freeze({source, loadModule});
+  function createSeams(scenarioId) {
+    const scenario = (manifest.scenarios || []).find(s => s.id === scenarioId);
+    if (!scenario) throw new Error('unknown frozen seam scenario');
+    const clone = value => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+    const calls = [], counts = Object.create(null), violations = new Set();
+    const functions = Object.create(null);
+    for (const [id, seam] of Object.entries(scenario.inputs.seams)) {
+      functions[id] = (...args) => {
+        const index = counts[id] || 0;
+        counts[id] = index + 1;
+        if (calls.length >= 1024) {
+          violations.add('scenario call budget');
+          throw new Error('scenario call budget');
+        }
+        // Snapshot JSON arguments before source code can mutate their objects.
+        try { calls.push({seam:id, args:clone(args)}); }
+        catch (error) {
+          violations.add('non-JSON seam arguments: ' + id);
+          throw error;
+        }
+        const outcome = seam.outcomes[index] || (seam.repeatLast ? seam.outcomes.at(-1) : null);
+        if (!outcome) {
+          violations.add('exhausted seam: ' + id);
+          throw new Error('exhausted frozen seam: ' + id);
+        }
+        const value = clone(outcome.value);
+        switch (outcome.kind) {
+          case 'return': case 'return-undefined': return value;
+          case 'resolve': case 'resolve-undefined': return Promise.resolve(value);
+          case 'throw': throw value;
+          case 'reject': return Promise.reject(value);
+          default: throw new Error('unknown frozen seam outcome');
+        }
+      };
+    }
+    return Object.freeze({functions:Object.freeze(functions),
+      observations:() => clone(calls),
+      assertWithinBudget() {
+        if (violations.size) throw new Error([...violations].join('; '));
+      }});
+  }
+  return Object.freeze({source, loadModule, createSeams});
 };

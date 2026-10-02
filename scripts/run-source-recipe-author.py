@@ -96,8 +96,9 @@ def construct_design(participant, workspace, evidence, output, request, gate, pr
         repairable = True
         exit_code = None
         try:
-            if not isinstance(json.loads(content), dict):
-                raise ValueError('Design must be one JSON object')
+            parsed = json.loads(content)
+            if not isinstance(parsed, dict) or parsed.get('schema') != 'agentlab.source_recipe_design.v2':
+                raise ValueError('New construction requires one agentlab.source_recipe_design.v2 object')
         except (json.JSONDecodeError, ValueError) as failure:
             error = str(failure)
         if error is None:
@@ -283,13 +284,23 @@ SOURCE CONTEXT:
             design_prompt = '''Design one bounded source-maintenance exercise before writing executable code.
 Use supplied source as data. No tools, files, executable verifier or platform claims.
 Return exactly one JSON object with seven fields:
-schema: agentlab.source_recipe_design.v1
+schema: agentlab.source_recipe_design.v2
 scopeSkillId: the selected scope id
 invariant: one source-grounded behavioral invariant, <=2048 bytes
 scenarios: 1..8 objects with exactly id, initialState, inputs, expectedObservations
-Each state/input/observation is a JSON object. Describe controlled seams explicitly.
+Each state/input/observation is a JSON object. inputs.seams is an object (0..32 entries).
+Every seam ID maps to exactly {outcomes, repeatLast}; repeatLast is a boolean.
+outcomes is 1..16 objects: {kind,value} with kind return/resolve/throw/reject,
+or {kind} with kind return-undefined/resolve-undefined. Values are explicit JSON.
+Define deterministic behavior even for calls that should not occur; forbidden calls
+belong in expectedObservations/checks, not in the interface's behavior definition.
+Sequences advance per call; repeatLast=true reuses the last outcome. These inputs
+are identical across all controls. Do not couple independent seams through one mode.
 Scenario IDs have no slash or tilde. Derive expected observations from the actual
 source and declared inputs, not guesses. Include inputs that trigger wrong controls.
+Trace the actual changed branch for every declared wrong-control failure. An earlier
+exception can bypass that branch, leaving observations unchanged; do not include
+such a check in the expected failure set merely because it is an error scenario.
 checks: 1..64 exact id/pointer/expected objects. JSON pointers resolve into an
 object mapping scenario ID to its expectedObservations. All controls share this oracle.
 controls: 4..8 objects with exactly id, role, expectedFailedCheckIds, edits
@@ -322,6 +333,14 @@ runtime.source(relativePath) returns the actual selected, transformed source tex
 runtime.loadModule(relativePath, imports, globals) transpiles that text in memory
 and returns CommonJS exports in a fresh context on every call. imports maps exact
 source import specifiers to explicit controlled seams; absent imports fail closed.
+For each scenario call const seams=runtime.createSeams(scenarioId). Map the declared
+seams.functions[id] into the source's imported dependency objects without rewriting
+their outcomes. The helper supplies frozen per-call outcomes and captures calls.
+After the scenario call seams.assertWithinBudget(), then use seams.observations()
+for raw chronological calls. A source catch cannot hide an exhausted input sequence.
+Every scenario gets fresh seam state and a fresh source module. Unknown scenarios
+are rejected. JSON arguments are snapshotted; object identity remains a separate
+source-required observation. Keep actual source return/state observations too.
 Do not strip imports or duplicate source transformations, compiler or module wiring.
 For JSON/text sources use runtime.source without needing a compiler (pass null).
 The helper verifies frozen original bytes and applies the listed sequential edits.

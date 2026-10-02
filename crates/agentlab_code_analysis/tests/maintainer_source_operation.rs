@@ -333,10 +333,10 @@ class Participant:
         (gateway/f'{len(self.labels):04d}.status.json').write_text(json.dumps(dict(status=200,
             outcome='completed' if self.complete else 'incomplete_stream',semanticComplete=self.complete,
             upstreamEof=self.complete,streamError=None,clientDisconnected=False)))
-        return {'content':'x'*65537 if self.oversized else json.dumps({'schema':'fixture','iteration':len(self.labels)}),'message':{'stopReason':self.stop}}
+        return {'content':'x'*65537 if self.oversized else json.dumps({'schema':'agentlab.source_recipe_design.v1' if scenario=='legacy' else 'agentlab.source_recipe_design.v2','iteration':len(self.labels)}),'message':{'stopReason':self.stop}}
 with tempfile.TemporaryDirectory() as directory:
     root=Path(directory)
-    for scenario in ['recover','exhaust','drift','partial','truncated','oversized']:
+    for scenario in ['recover','exhaust','drift','partial','truncated','oversized','legacy']:
         output=root/scenario;output.mkdir();evidence=output/'evidence';evidence.mkdir()
         participant=Participant(evidence,complete=scenario!='partial',stop='length' if scenario=='truncated' else 'stop',oversized=scenario=='oversized')
         commands=[]
@@ -355,9 +355,9 @@ with tempfile.TemporaryDirectory() as directory:
             else:
                 assert scenario=='recover'
                 assert selected.read_text()==content and json.loads(content)['iteration']==2
-        expected=2 if scenario in ('recover','exhaust') else 1
+        expected=2 if scenario in ('recover','exhaust','legacy') else 1
         assert len(participant.labels)==expected
-        assert len(commands)==(0 if scenario in ('partial','truncated','oversized') else expected)
+        assert len(commands)==(0 if scenario in ('partial','truncated','oversized','legacy') else expected)
         assert not (output/'design.json').exists() or scenario=='recover'
         if scenario not in ('partial','truncated','oversized'):
             report=json.loads((output/'design-attempts.json').read_bytes())
@@ -426,7 +426,8 @@ with tempfile.TemporaryDirectory() as d:
                 (gateway/f'{len(seen["labels"]):04d}.status.json').write_text(json.dumps(dict(status=200,
                     outcome='completed',semanticComplete=True,upstreamEof=True,
                     streamError=None,clientDisconnected=False)))
-                return {'content':'{}','message':{'stopReason':'stop'}}
+                content=json.dumps({'schema':'agentlab.source_recipe_design.v2'}) if label.startswith('source-recipe-design') else '{}'
+                return {'content':content,'message':{'stopReason':'stop'}}
             def close(self): seen['closed'] = True
         fake_spec = SimpleNamespace(loader=SimpleNamespace(exec_module=lambda _:None))
         env = dict(AGENTLAB_PARTICIPANT_RUNTIME_CONFIG=str(root/'config.json'),
@@ -1181,6 +1182,109 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     assert_eq!(checked["semanticQualified"], false);
     assert_eq!(checked["executionPerformed"], false);
     assert_eq!(checked["controls"][1]["edits"][0]["matchCount"], 1);
+    let mut seam_design = design.clone();
+    seam_design["schema"] = json!("agentlab.source_recipe_design.v2");
+    seam_design["scenarios"][0]["inputs"]["seams"] = json!({
+        "independent": {"outcomes":[{"kind":"return","value":{"value":1}},
+            {"kind":"resolve","value":2}],"repeatLast":true},
+        "failure": {"outcomes":[{"kind":"throw","value":{"code":3}},
+            {"kind":"reject","value":{"code":4}}],"repeatLast":false},
+        "undefined": {"outcomes":[{"kind":"return-undefined"},
+            {"kind":"resolve-undefined"}],"repeatLast":true}
+    });
+    let seam_design_bytes = serde_json::to_vec(&seam_design).unwrap();
+    assert!(author::design(&request_bytes, &seam_design_bytes).is_ok());
+    for index in 0..8 {
+        let mut bad = seam_design.clone();
+        match index {
+            0 => bad["scenarios"][0]["inputs"]
+                .as_object_mut()
+                .unwrap()
+                .remove("seams"),
+            1 => Some(std::mem::replace(
+                &mut bad["scenarios"][0]["inputs"]["seams"]["independent"]["repeatLast"],
+                json!(1),
+            )),
+            2 => Some(std::mem::replace(
+                &mut bad["scenarios"][0]["inputs"]["seams"]["independent"]["outcomes"],
+                json!([]),
+            )),
+            3 => Some(std::mem::replace(
+                &mut bad["scenarios"][0]["inputs"]["seams"]["independent"]["outcomes"][0],
+                json!({"kind":"return"}),
+            )),
+            4 => Some(std::mem::replace(
+                &mut bad["scenarios"][0]["inputs"]["seams"]["independent"]["outcomes"][0],
+                json!({"kind":"mustNotBeCalled"}),
+            )),
+            5 => Some(std::mem::replace(
+                &mut bad["scenarios"][0]["inputs"]["seams"]["undefined"]["outcomes"][0],
+                json!({"kind":"return-undefined","value":null}),
+            )),
+            6 => Some(std::mem::replace(
+                &mut bad["schema"],
+                json!("agentlab.source_recipe_design.v3"),
+            )),
+            _ => Some(std::mem::replace(
+                &mut bad["scenarios"][0]["inputs"]["seams"]["independent"],
+                json!({"outcomes":[{"kind":"return","value":null}],"repeatLast":true,"expectedCallCount":0}),
+            )),
+        };
+        assert!(
+            author::design(&request_bytes, &serde_json::to_vec(&bad).unwrap()).is_err(),
+            "accepted ambiguous seam {index}"
+        );
+    }
+    let mut seam_proposal = proposal.clone();
+    seam_proposal["contract"]["checks"] = design["checks"].clone();
+    let seam_stage = dir.join("seam-stage");
+    author::stage_with_design(
+        &request_bytes,
+        &serde_json::to_vec(&seam_proposal).unwrap(),
+        &seam_design_bytes,
+        &seam_stage,
+    )
+    .unwrap();
+    let seam_probe = r#"
+const assert=require('assert');
+const runtime=require(process.argv[1])(process.argv[2],'baseline',null);
+(async()=>{
+  const a=runtime.createSeams('state'), b=runtime.createSeams('state');
+  const input={value:1}; const returned=a.functions.independent(input);
+  returned.value=99; input.value=99;
+  assert.deepStrictEqual(a.observations(),[{seam:'independent',args:[{value:1}]}]);
+  assert.deepStrictEqual(b.functions.independent(),{value:1});
+  assert.strictEqual(await a.functions.independent(),2);
+  assert.strictEqual(await a.functions.independent(),2);
+  assert.throws(()=>a.functions.failure(),e=>e.code===3);
+  await assert.rejects(a.functions.failure(),e=>e.code===4);
+  assert.throws(()=>a.functions.failure(),/exhausted/);
+  assert.throws(()=>a.assertWithinBudget(),/exhausted/);
+  assert.strictEqual(b.functions.undefined(),undefined);
+  assert.strictEqual(await b.functions.undefined(),undefined);
+  b.assertWithinBudget();
+  assert.throws(()=>runtime.createSeams('unknown'),/unknown/);
+  const circular={}; circular.self=circular;
+  assert.throws(()=>b.functions.independent(circular));
+  assert.throws(()=>b.assertWithinBudget(),/non-JSON/);
+  const fresh=runtime.createSeams('state');
+  for(let i=0;i<1024;i++) await fresh.functions.independent();
+  assert.throws(()=>fresh.functions.independent(),/call budget/);
+  assert.throws(()=>fresh.assertWithinBudget(),/call budget/);
+})().catch(e=>{console.error(e);process.exitCode=1});
+"#;
+    let seam_result = Command::new(&node)
+        .arg("-e")
+        .arg(seam_probe)
+        .arg(seam_stage.join("design-runtime.cjs"))
+        .arg(dir.join("source"))
+        .output()
+        .unwrap();
+    assert!(
+        seam_result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&seam_result.stderr)
+    );
     assert_eq!(
         fs::read_to_string(dir.join("source/src/state.json")).unwrap(),
         body
@@ -1499,6 +1603,72 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     assert!(!dir.join("forged-stage").exists());
     assert_eq!(catalog["repositorySelector"], "arbitrary");
     fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn frozen_seams_observe_changed_source_branch_and_unchanged_earlier_exception() {
+    let (dir, _) = loop_fixture();
+    fs::create_dir_all(dir.join("source")).unwrap();
+    let source = "const {first,second}=require('./external');exports.run=async()=>{try{const allowed=first();if(allowed){return await second();}return null;}catch(e){return e.code;}};";
+    fs::write(dir.join("source/body.js"), source).unwrap();
+    let manifest = json!({"files":[{"path":"body.js","content":source,"sha256":digest(source.as_bytes())}],
+        "controls":[{"id":"baseline","edits":[]},
+            {"id":"inverted","edits":[{"path":"body.js","before":"if(allowed)","after":"if(!allowed)"}]}],
+        "scenarios":[
+            {"id":"disabled","inputs":{"seams":{
+                "first":{"outcomes":[{"kind":"return","value":false}],"repeatLast":true},
+                "second":{"outcomes":[{"kind":"resolve","value":3}],"repeatLast":true}}}},
+            {"id":"earlier-exception","inputs":{"seams":{
+                "first":{"outcomes":[{"kind":"throw","value":{"code":17}}],"repeatLast":true},
+                "second":{"outcomes":[{"kind":"resolve","value":3}],"repeatLast":true}}}}]});
+    let helper = dir.join("runtime.cjs");
+    fs::write(
+        &helper,
+        format!(
+            "const manifest = {manifest};\n{}",
+            include_str!("../src/source_design_runtime.cjs")
+        ),
+    )
+    .unwrap();
+    let script = r#"
+const assert=require('assert'),create=require(process.argv[1]);
+// CommonJS fixture needs no translation; this compiler tests module plumbing only.
+const compiler={ScriptTarget:{ES2020:0},ScriptKind:{TS:0},ModuleKind:{CommonJS:0},
+  DiagnosticCategory:{Error:1},createSourceFile(){return {parseDiagnostics:[]}},
+  transpileModule(text){return {outputText:text,diagnostics:[]}}};
+async function observe(control,scenario){
+  const r=create(process.argv[2],control,compiler),s=r.createSeams(scenario);
+  const module=r.loadModule('body.js',{'./external':{first:s.functions.first,second:s.functions.second}});
+  const value=await module.run();s.assertWithinBudget();return {value,calls:s.observations()};
+}
+(async()=>{
+  const baseline=await observe('baseline','disabled');
+  const wrong=await observe('inverted','disabled');
+  assert.strictEqual(baseline.value,null);assert.strictEqual(wrong.value,3);
+  assert.deepStrictEqual(baseline.calls,[{seam:'first',args:[]}]);
+  assert.deepStrictEqual(wrong.calls,[{seam:'first',args:[]},{seam:'second',args:[]}]);
+  const early=await observe('baseline','earlier-exception');
+  const unchanged=await observe('inverted','earlier-exception');
+  assert.deepStrictEqual(early,unchanged);assert.strictEqual(early.value,17);
+  assert.deepStrictEqual(early.calls,[{seam:'first',args:[]}]);
+})().catch(e=>{console.error(e);process.exitCode=1});
+"#;
+    let result = Command::new("node")
+        .arg("-e")
+        .arg(script)
+        .arg(helper)
+        .arg(dir.join("source"))
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert_eq!(
+        fs::read_to_string(dir.join("source/body.js")).unwrap(),
+        source
+    );
 }
 
 #[test]
