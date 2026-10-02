@@ -45,7 +45,7 @@ fn relative(p: &str) -> bool {
             .components()
             .all(|c| matches!(c, Component::Normal(_)))
 }
-fn owned(skill: &Value, p: &str) -> bool {
+pub(crate) fn owned(skill: &Value, p: &str) -> bool {
     if !relative(p) {
         return false;
     }
@@ -274,6 +274,16 @@ fn verify_inputs(recipe: &Value, source: &Path) -> Result<(), String> {
                 )?),
             "source operation method bytes drift",
         )?;
+    }
+    Ok(())
+}
+
+/// Static reviewed-recipe validation; never runs a control or qualifies behavior.
+pub fn preflight(recipe: &Value, skill: &Value, source: &Path) -> Result<(), String> {
+    recipe_gate(recipe, skill)?;
+    verify_inputs(recipe, source)?;
+    for control in recipe["controls"].as_array().unwrap() {
+        exec::validate_command(&control["command"], source)?;
     }
     Ok(())
 }

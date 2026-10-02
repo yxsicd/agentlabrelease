@@ -1,0 +1,89 @@
+# Gap-selected source verifier construction
+
+Overall maturity remains 63%. This connects the selected operation gap to a
+captured construction Agent and an explicit review boundary. Local arbitrary-source
+regressions exercise proposal -> review -> execution -> independent qualification;
+they are not real model-generation evidence or completed business cycles.
+
+The Rust CLI `--prepare-source-recipe-author --knowledge CUT --source-worktree
+SOURCE --repository SELECTOR --author-policy POLICY --output REQUEST` independently
+reassesses the durable strict baseline, selects one source-only operation gap,
+verifies the committed five-table cut and clean Git identity, and supplies the
+selected scope's complete owned inventory with original digests and Blob IDs.
+Full contents are preloaded only for owned evidence anchors from the scope and
+its bound semantic facts; remaining inventory rows explicitly have content=null.
+The packet is bounded to 80 inventory files, 128 KiB preloaded source contents
+and 512 KiB serialized request. A proposed source path without preloaded contents
+requires explicit context expansion and cannot be staged. Oversized evidence
+anchors stop rather than increasing the context budget or selecting another scope.
+The complete plan is represented by its exact digest, summary and
+selected gap; the public Action also retains the original complete plan.
+
+The operator policy `agentlab.source_recipe_author_policy.v1` pins an absolute
+Node executable by SHA256 and zero to seven methodDependencies {path, sha256}.
+Dependency selection and host paths belong to instance policy, not target-name
+branches. This first producer authors CommonJS verifiers; other verifier runtimes
+remain separate capabilities, not claimed universal language support.
+
+`scripts/run-source-recipe-author.py` reuses the existing captured Pi/Gateway
+launcher and requires the contained participant runtime. The construction Agent
+receives pinned source context in its prompt, with no mounted source checkout,
+evaluator or host credentials. It returns one exact JSON proposal and does not
+own file placement. Its bounded turn has zero transport retries; raw events and
+failures remain retained. The tool-call ceiling is a runaway guard, not proof of
+tool-free execution; container policy provides the actual host boundary.
+
+Proposal schema `agentlab.source_recipe_author_proposal.v1` has exactly seven
+fields: schema, scopeSkillId, sourcePaths, verifierSource, rationale, limitations,
+contract. The contract contains checks and controls. At least two reference
+controls are required to represent independently reviewed valid alternatives.
+Declaring roles does not prove distinctness or source-faithful behavior.
+The verifier receives sourceWorktree, control ID, then pinned dependencies as
+arguments. Controlled seams and in-memory variants are explicit limitations;
+the reviewed demand is not proof of an upstream defect.
+
+`--stage-source-recipe-proposal --author-request REQUEST --proposal PROPOSAL
+--output FRESH_ABSOLUTE_DIRECTORY` regenerates the request from its current exact
+inputs, binds only selected owned source files and operator-pinned commands,
+retains original request/proposal/verifier bytes, and checks the existing static
+recipe contract. No control is executed. Its recipe always has reviewed=false;
+the existing executor refuses it. Invalid output may leave partial private
+diagnostic artifacts, never an accepted stage receipt or authority rows.
+
+After independently reading the verifier, demand, expected values, source usage,
+wrong variants, alternative-valid implementations and execution policy, an
+operator can use `--review-source-recipe-proposal --proposal-stage STAGE
+--proposal-sha256 EXACT_PROPOSAL_SHA --reviewed --output NEW_RECIPE`. Review
+rechecks the exact original request, source, method and executable bindings and
+emits a separate reviewed recipe. The explicit flag is an operator assertion,
+not authenticated reviewer identity or an automatic model approval.
+
+Only then may the existing reviewed operation executor run controls. Independent
+qualification must recompute the frozen checks from original captures before
+fact preparation, strict reassessment, portable staging and atomic authority
+admission. Static validation cannot detect a verifier that simply hardcodes
+expected answers: source-grounded semantic review is indispensable. Never wire
+the author Action directly to trusted host execution or authority promotion.
+
+`maintainer-source-recipe-author.yml` offers a main-only, read-only-authority
+workflow using the existing gateway credential. It first admits the exact live
+knowledge cut, selects and checks out only the chosen scope, freezes compiler
+and runtime inputs, and uploads an unreviewed proposal artifact. It does not
+publish cases, execute generated controls, write TableGit or certify the loop.
+Fresh real Action generation and independent review/execution are the next
+acceptance step; no maturity increase follows merely from this workflow existing.
+
+## Real repository request preflight
+
+The native producer prepared the actual next platform-services scope against
+clean source revision `7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6` and committed
+knowledge revision `ed832d1b7e0e26b040be8cbb54737124027f0a67`, with exit zero.
+Its complete inventory has 39 files (140,866 original bytes). Four source-grounded
+evidence anchors preload 15,204 bytes; the original pretty-printed request is
+34,756 bytes. An initial full-content preflight exceeded the same 128 KiB budget;
+the correction separates complete identity inventory from bounded semantic
+context instead of enlarging the Agent budget or changing selected scope.
+No model, generated verifier, control execution or authority write occurred in
+this request preflight. The arbitrary-source Rust regression also rejects an
+owned but unloaded path, forged context, unreviewed execution, mismatched review
+digest, changed method bytes and output reuse.
