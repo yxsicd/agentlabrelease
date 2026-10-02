@@ -28,6 +28,7 @@ def run_author(module, pi, request, request_bytes, prompt, evidence, state):
         "promptSha256": hashlib.sha256(prompt.encode()).hexdigest(),
         "participantIdentity": identity, "guidanceProvided": "maintainerGuidance" in request,
         "participantBudgetSeconds": 420,
+        "transportRetryLimit": 0,
     }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     if "maintainerGuidance" in request:
         (evidence / "guidance-prompt.txt").write_text(prompt, encoding="utf-8")
@@ -38,13 +39,14 @@ def run_author(module, pi, request, request_bytes, prompt, evidence, state):
             "knowledgeAuthority": request["maintainerGuidance"]["knowledgeAuthority"],
             "participantIdentity": identity,
             "participantBudgetSeconds": 420,
+            "transportRetryLimit": 0,
             "selectedSkills": [{"id": r["skill"]["id"], "rowSha256": r["rowSha256"],
                                 "bodySha256": r["bodySha256"]}
                                for r in request["maintainerGuidance"]["guidance"]],
             "agentConsumptionVerified": False, "learningBenefitVerified": False,
         }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     try:
-        participant.turn("author-calibration", Path.cwd(), prompt=prompt)
+        participant.turn("author-calibration", Path.cwd(), prompt=prompt, transport_retry_limit=0)
     finally:
         participant.close()
 
@@ -94,6 +96,7 @@ def validate_and_repair(module, pi, request, request_bytes, request_path, output
         raise ValueError("author repair limit must be zero or one")
     manifest = {"schema": "agentlab.stage_author_attempts.v1", "latestAttempt": "initial",
                 "repairLimit": limit, "nativeSessionRestored": False, "automaticPromotion": False,
+                "maximumParticipantBudgetSeconds": 420 * (limit + 1), "transportRetryLimit": 0,
                 "candidateId": request["stageContext"]["candidateId"], "attempts": []}
     manifest_path = Path.cwd() / "authoring-attempts.json"
     retained = {}

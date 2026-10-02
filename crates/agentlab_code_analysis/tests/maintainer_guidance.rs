@@ -74,6 +74,12 @@ fn bounded_author_repair_uses_real_gates_and_preserves_rejections() {
         "unguided-source-drift",
         "budget-drift",
         "unguided-budget-drift",
+        "transport-budget-drift",
+        "unguided-transport-budget-drift",
+        "transport-retry-sidecar",
+        "unguided-transport-retry-sidecar",
+        "transport-retry-symlink",
+        "unguided-transport-retry-symlink",
     ] {
         let f = Fixture::new("portable-repair-source");
         let packet = f.bind(&f.selection).unwrap();
@@ -121,9 +127,10 @@ class Participant:
  def __init__(self,evidence,*args,**kwargs):
   self.evidence=evidence;self.model='fixture-model';self.route='fixture-route';self.implementation='pi';self.reasoning_effort=None
  def close(self):pass
- def turn(self,label,workspace,prompt):
+ def turn(self,label,workspace,prompt,transport_retry_limit):
   global count
   count+=1;out=Path('draft' if count==1 else 'draft-repair');out.mkdir()
+  assert transport_retry_limit==0
   value=json.loads(json.dumps(proposal))
   if count==1 or mode=='exhausted':value['configurations'][0]['id']='stage-created'
   if mode=='identity-drift':value['candidateId']='different-candidate'
@@ -134,7 +141,10 @@ class Participant:
   (e/'author-calibration-final-assistant-message.json').write_bytes(final)
   (e/'author-calibration-lifecycle.json').write_text(json.dumps({'label':'author-calibration','captureAuthority':'operator','exitCode':0,'timedOut':False,
    'participantBudgetSeconds':419 if mode=='budget-drift' else 420,'participantBudgetScope':'native-process-watchdog',
+   'transportRetryLimit':1 if mode=='transport-budget-drift' else transport_retry_limit,
    'finalAssistantMessagePresent':True,'finalAssistantMessageSha256':hashlib.sha256(final).hexdigest()}))
+  if mode=='transport-retry-sidecar':(e/'author-calibration-transport-retry.json').write_text('{}')
+  if mode=='transport-retry-symlink':(e/'author-calibration-transport-retry.json').symlink_to('missing-retry.json')
   g=e/'gateway';g.mkdir();(g/'0001.upstream-request.json').write_text(json.dumps({'model':self.model,'providerId':self.route,'stream':True,'messages':[{'role':'user','content':[{'type':'text','text':prompt}]}]}))
   response=b'data: {"choices":[{"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n'
   (g/'0001.response').write_bytes(response)
@@ -160,6 +170,7 @@ if mode in ('success','exhausted','prior-drift'):
  assert Path('participant-evidence-repair/gateway/0001.response').exists()
  manifest=json.loads(Path('authoring-attempts.json').read_bytes())
  assert manifest['nativeSessionRestored'] is False and manifest['automaticPromotion'] is False
+ assert manifest['transportRetryLimit']==0 and manifest['maximumParticipantBudgetSeconds']==840
  assert manifest['latestAttempt']=='repair'
 if mode=='success':
  assert [a['validatorExitCode'] for a in manifest['attempts']]==[1,0]
@@ -171,6 +182,7 @@ if mode=='success':
   receipt=json.loads(Path('participant-evidence-repair/completion-validation.json').read_bytes())
   assert receipt['authorCompletionVerified'] is True and receipt['guidanceProvided'] is False
   assert receipt['guidanceAbsenceVerified'] is False and receipt['learningBenefitVerified'] is False
+  assert receipt['implicitTransportRetryDisabledVerified'] is True and receipt['transportRetryLimit']==0
   import os
   for index,change in enumerate(({'guidanceMode':'guided'},{'maintainerGuidance':{}})):
    changed={**request,**change};path=Path('changed-request-'+str(index)+'.json');path.write_text(json.dumps(changed))
