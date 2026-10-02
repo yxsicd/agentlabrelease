@@ -37,6 +37,16 @@ availability only, not application behavior or complete case calibration.
 
 Use the task's actual expected baseline: a bug-fix case may fail before the patch; an extension case may pass old tests but fail new demand checks. Reference passes and targeted wrong-boundary/lost-history variants should fail the intended checks. Save complete output and exact identities in `evaluation_cases` calibration rows, with analysis evidence in `program_facts`.
 
+An explicit frozen task demand can define new behavior even when the repository's
+original intent is unknown. Bind that demand before calibration and distinguish
+task-baseline failure from a claim of a defect in the upstream project. Require
+structurally different valid controls as well as meaningful wrong controls, all
+under unchanged predicates. Keep behavior with no established task expectation
+as unscored characterization; do not silently add it to the Oracle after seeing
+the baseline. Partial host-seam calibration leaves the full task's runtime and
+uncovered observables unqualified until the Agent execution/feedback loop proves
+them separately.
+
 Before spending runtime budget on a reused test, inspect its pinned source body,
 assertions and failure branches. A test name, `done()` callback or normal exit
 does not establish the expected behavior. Independently inject success and
