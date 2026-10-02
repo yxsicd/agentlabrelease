@@ -551,7 +551,9 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
     for control in controls {
         let id = text(control, "id")?;
         need(
-            control.as_object().is_some_and(|o| o.len() == 4) && id.len() <= 64 && names.insert(id),
+            control.as_object().is_some_and(|o| o.len() == 4)
+                && operation::valid_control_id(id)
+                && names.insert(id),
             "recipe design control contract",
         )?;
         let failures = control["expectedFailedCheckIds"]
@@ -810,10 +812,11 @@ fn stage_inner(
         .as_array()
         .filter(|a| (4..=8).contains(&a.len()))
         .ok_or("recipe author controls")?;
+    let mut control_ids = BTreeSet::new();
     for control in controls {
         need(
             control.as_object().is_some_and(|o| o.len() == 3)
-                && control.get("id").is_some_and(Value::is_string)
+                && control["id"].as_str().is_some_and(|id| operation::valid_control_id(id) && control_ids.insert(id))
                 && matches!(control["role"].as_str(), Some("baseline" | "reference" | "wrong"))
                 && control["expectedFailedCheckIds"]
                     .as_array()
@@ -888,6 +891,11 @@ fn stage_inner(
     let recipe = json!({"schema":"agentlab.maintainer_source_operation_recipe.v1","reviewed":false,"automaticPromotion":false,
         "operationKind":"source-only","scopeSkillId":request["scope"]["id"],"source":request["source"],"sourceInputs":source_inputs,
         "methodInputs":methods,"checks":p["contract"]["checks"],"controls":bound_controls});
+    // Validate the bound structure before creating any staging files. This private
+    // reviewed flag only selects the existing static contract; it is not approval.
+    let mut static_recipe = recipe.clone();
+    static_recipe["reviewed"] = json!(true);
+    operation::recipe_gate(&static_recipe, &request["scope"])?;
     fs::create_dir(&output).map_err(|e| e.to_string())?;
     write(&output.join("request.json"), request_bytes)?;
     write(&output.join("proposal.json"), proposal_bytes)?;
@@ -898,8 +906,6 @@ fn stage_inner(
     write(&output.join("unreviewed-recipe.json"), &pretty(&recipe)?)?;
     // A private copy is marked reviewed solely for the existing static gate.
     // It is never persisted or executed; successful validation does not approve it.
-    let mut static_recipe = recipe.clone();
-    static_recipe["reviewed"] = json!(true);
     operation::preflight(
         &static_recipe,
         &request["scope"],

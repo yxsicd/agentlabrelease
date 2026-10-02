@@ -1179,6 +1179,48 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
             {"id":"wrong","role":"wrong","expectedFailedCheckIds":["value"],"edits":[{"path":"src/state.json","before":body,"after":"{\"value\":0}"}]}]});
     let design_bytes = serde_json::to_vec(&design).unwrap();
     let checked = author::design(&request_bytes, &design_bytes).unwrap();
+    // Control IDs share the executor grammar; scenario/check identifiers do not.
+    for id in [
+        "".to_owned(),
+        "ref_bad".into(),
+        "ref/bad".into(),
+        "ref bad".into(),
+        "参考".into(),
+        "a".repeat(65),
+    ] {
+        let mut invalid = design.clone();
+        invalid["controls"][1]["id"] = json!(id);
+        assert!(author::design(&request_bytes, &serde_json::to_vec(&invalid).unwrap()).is_err());
+        let mut invalid = proposal.clone();
+        invalid["contract"]["controls"][1]["id"] = json!(id);
+        let output = dir.join("invalid-id-stage");
+        assert!(author::stage(
+            &request_bytes,
+            &serde_json::to_vec(&invalid).unwrap(),
+            &output
+        )
+        .is_err());
+        assert!(!output.exists());
+    }
+    for id in ["A1-valid".to_owned(), "a".repeat(64)] {
+        let mut valid = design.clone();
+        valid["controls"][1]["id"] = json!(id);
+        assert!(author::design(&request_bytes, &serde_json::to_vec(&valid).unwrap()).is_ok());
+        let mut valid = proposal.clone();
+        valid["contract"]["controls"][1]["id"] = json!(id);
+        author::stage(
+            &request_bytes,
+            &serde_json::to_vec(&valid).unwrap(),
+            &dir.join(format!("valid-id-{id}")),
+        )
+        .unwrap();
+    }
+    let mut flexible = design.clone();
+    flexible["scenarios"][0]["id"] = json!("state_case");
+    flexible["checks"][0]["id"] = json!("value_check");
+    flexible["checks"][0]["pointer"] = json!("/state_case/value");
+    flexible["controls"][3]["expectedFailedCheckIds"] = json!(["value_check"]);
+    assert!(author::design(&request_bytes, &serde_json::to_vec(&flexible).unwrap()).is_ok());
     assert_eq!(checked["semanticQualified"], false);
     assert_eq!(checked["executionPerformed"], false);
     assert_eq!(checked["controls"][1]["edits"][0]["matchCount"], 1);
@@ -1515,6 +1557,34 @@ const runtime=require(process.argv[1])(process.argv[2],'baseline',null);
         .unwrap_err();
         assert!(error.contains("role (baseline/reference/wrong)"), "{error}");
         assert!(!rejected_stage.exists());
+    }
+    for index in 0..5 {
+        let mut invalid = proposal.clone();
+        match index {
+            0 => invalid["contract"]["controls"][1]["id"] = json!("baseline"),
+            1 => invalid["contract"]["controls"][3]["expectedFailedCheckIds"] = json!(["unknown"]),
+            2 => {
+                invalid["contract"]["controls"][3]["expectedFailedCheckIds"] =
+                    json!(["value", "value"])
+            }
+            3 => {
+                invalid["contract"]["checks"] = json!([
+                {"id":"value","pointer":"/value","expected":1},
+                {"id":"value","pointer":"/value","expected":1}])
+            }
+            _ => invalid["contract"]["controls"][1]["expectedFailedCheckIds"] = json!(["value"]),
+        }
+        let output = dir.join(format!("invalid-bound-contract-{index}"));
+        assert!(author::stage(
+            &request_bytes,
+            &serde_json::to_vec(&invalid).unwrap(),
+            &output
+        )
+        .is_err());
+        assert!(
+            !output.exists(),
+            "invalid static contract created staging files: {index}"
+        );
     }
     let receipt = author::stage(&request_bytes, &proposal_bytes, &stage).unwrap();
     assert_eq!(receipt["executionPerformed"], false);
