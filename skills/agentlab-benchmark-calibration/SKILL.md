@@ -82,6 +82,12 @@ which reviewed semantic adapter remained operator-supplied. Passing tasks on two
 adapters does not establish automatic adapter discovery or Skills improvement.
 Measure knowledge treatment with equal task checks, model/policy and budgets;
 do not count separate first-attempt successes as failure-feedback learning.
+The behavior controller can consume an explicitly selected fixed-cut guidance
+packet through its existing knowledge binder. Require exact task-source/stage
+applicability, immutable knowledge/selection bytes and captured completion bound
+to each attempt request. Keep evaluator references outside participant mounts.
+Use equal-budget unguided/guided arms, preserve contradictory outcomes and admit
+new lessons to a later cut only; verified transmission alone is not benefit.
 
 An explicit frozen task demand can define new behavior even when the repository's
 original intent is unknown. Bind that demand before calibration and distinguish

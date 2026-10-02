@@ -387,6 +387,27 @@ impl Drop for Fixture {
 }
 
 #[test]
+fn behavior_guidance_requires_exact_reviewed_source_stage_and_committed_cut() {
+    let f = Fixture::new("independent-subject");
+    let bytes = serde_json::to_vec(&f.selection).unwrap();
+    let bind = |repo: &str, revision: &str, stage: &str| {
+        agentlab_code_analysis::maintainer_behavior_loop::bind_guidance(
+            &f.root, &bytes, repo, revision, stage,
+        )
+    };
+    assert_eq!(
+        bind("independent-subject", &"a".repeat(40), "calibration").unwrap()
+            ["learningBenefitVerified"],
+        false
+    );
+    assert!(bind("other-subject", &"a".repeat(40), "calibration").is_err());
+    assert!(bind("independent-subject", &"b".repeat(40), "calibration").is_err());
+    assert!(bind("independent-subject", &"a".repeat(40), "evaluation").is_err());
+    fs::write(f.root.join("program_facts.jsonl"), b"changed").unwrap();
+    assert!(bind("independent-subject", &"a".repeat(40), "calibration").is_err());
+}
+
+#[test]
 fn stage_author_prompt_binds_frozen_context_without_claiming_review_or_runtime() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
     let status = Command::new("python3")
@@ -464,6 +485,51 @@ fn recorded_wire_requires_full_prompt_exact_guidance_and_raw_semantic_completion
     assert_eq!(receipt["learningBenefitVerified"], false);
     assert_eq!(receipt["producerAuthenticated"], false);
     assert_eq!(receipt["caseQualified"], false);
+    let guided_request =
+        json!({"guidanceMode":"guided","maintainerGuidance":packet,"taskDemand":"unchanged task"});
+    let guided_bytes = serde_json::to_vec(&guided_request).unwrap();
+    let mut bound_intent = intent.clone();
+    bound_intent["requestSha256"] = json!(digest(&guided_bytes));
+    bound_intent["participantBudgetSeconds"] = json!(120);
+    bound_intent["transportRetryLimit"] = json!(0);
+    let mut bound_lifecycle = lifecycle.clone();
+    bound_lifecycle["participantBudgetSeconds"] = json!(120);
+    bound_lifecycle["participantBudgetScope"] = json!("native-process-watchdog");
+    bound_lifecycle["transportRetryLimit"] = json!(0);
+    fs::write(
+        f.root.join("author-calibration-lifecycle.json"),
+        serde_json::to_vec(&bound_lifecycle).unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        f.root.join("guidance-consumption-intent.json"),
+        serde_json::to_vec(&bound_intent).unwrap(),
+    )
+    .unwrap();
+    let bound =
+        agentlab_code_analysis::maintainer_guidance::guided_completion(&f.root, &guided_bytes)
+            .unwrap();
+    assert_eq!(bound["requestSha256"], digest(&guided_bytes));
+    assert_eq!(bound["learningBenefitVerified"], false);
+    let mut borrowed = guided_request.clone();
+    borrowed["taskDemand"] = json!("different task");
+    assert!(
+        agentlab_code_analysis::maintainer_guidance::guided_completion(
+            &f.root,
+            &serde_json::to_vec(&borrowed).unwrap()
+        )
+        .is_err()
+    );
+    fs::write(
+        f.root.join("guidance-consumption-intent.json"),
+        serde_json::to_vec(&intent).unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        f.root.join("author-calibration-lifecycle.json"),
+        serde_json::to_vec(&lifecycle).unwrap(),
+    )
+    .unwrap();
     let mut unexpected_reasoning = wire.clone();
     unexpected_reasoning["reasoning_effort"] = json!("high");
     fs::write(

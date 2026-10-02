@@ -79,6 +79,28 @@ Credentials must remain private to the owning adapter, never in recipe arguments
 stdout, source Git or released examples. `reviewed:true` records a selection,
 not cryptographic authentication or permission inferred from untrusted content.
 
+The recipe optionally accepts `maintainerGuidance` with absolute
+`knowledgeDirectory`, `selectionPath`, exact `selectionSha256`, explicit
+`repositoryId` and `stage`. The existing Rust binder reconstructs the committed
+five-table knowledge cut and selected Skill/fact lineage, requiring exactly the
+declared repository at the frozen contract's source revision and stage. All six
+knowledge files and the selection are pinned across attempts; the assembled
+packet is limited to 128 KiB and retained in operator evidence. Guided execution
+requires captured completion. The request retains the same demand/checks/feedback
+and includes the same packet each attempt. Pi appends the complete packet to its
+prompt, with unchanged 120-second native budget and zero transport retries.
+The independent consumer binds guidance intent to that exact request and verifies
+full-prompt transmission and final raw completion. It does not prove learning,
+provider authenticity or absence of other context in an unguided arm.
+
+The preparer accepts `--guidance-knowledge`, `--guidance-selection` and
+`--guidance-stage` together, retaining an external copy for reconstruction.
+The main-only Action exposes corresponding optional committed-path inputs; empty
+paths preserve the unguided treatment. Applicability is reviewed selection, not
+automatic discovery. Fresh guided/unguided runs must use the same source/checks,
+model/policy, attempts and total budgets before comparing outcomes. These added
+paths have protocol/binding regressions, not a new live guided behavior verdict.
+
 Rust integration tests run real deterministic subprocesses through two attempts:
 behavior failure, delivered feedback, revised source and passing recomputation.
 Additional cases stop executor infrastructure failures, unchanged attempts and

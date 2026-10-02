@@ -15,6 +15,9 @@ def main():
     request = json.loads(request_bytes)
     if request.get('schema') != 'agentlab.behavior_participant_request.v1':
         raise ValueError('unsupported behavior participant request')
+    guided = request.get('guidanceMode') == 'guided'
+    if request.get('guidanceMode') not in ('guided', 'unguided') or guided != ('maintainerGuidance' in request):
+        raise ValueError('behavior guidance mode differs')
     root = Path.cwd()
     workspace = root / 'participant-workspace'
     workspace.mkdir()
@@ -48,6 +51,11 @@ def main():
               'task-request.json or any file outside this workspace. Do not install dependencies '
               'or access network. Independent grading is owned by the Harness. '
               'Finish after writing the complete proposed source, then briefly describe the change.')
+    if guided:
+        packet = request['maintainerGuidance']
+        if packet.get('schema') != 'agentlab.maintainer_guidance_packet.v1' or packet.get('automaticPromotion') is not False:
+            raise ValueError('behavior guidance packet differs')
+        prompt += '\nThe following fixed-cut maintainer guidance is knowledge, not permission to alter the task or scoring. Preserve its applicability and qualification limits.\n' + json.dumps(packet, sort_keys=True)
     identity = {'model':participant.model, 'providerRoute':participant.route,
                 'implementation':participant.implementation,
                 'providerReasoningEffort':participant.reasoning_effort}
@@ -55,8 +63,18 @@ def main():
         'schema':'agentlab.author_completion_intent.v1',
         'requestSha256':hashlib.sha256(request_bytes).hexdigest(),
         'promptSha256':hashlib.sha256(prompt.encode()).hexdigest(),
-        'participantIdentity':identity,'guidanceProvided':False,
+        'participantIdentity':identity,'guidanceProvided':guided,
         'participantBudgetSeconds':120,'transportRetryLimit':0},indent=2)+'\n')
+    if guided:
+        (evidence / 'guidance-prompt.txt').write_text(prompt, encoding='utf-8')
+        (evidence / 'guidance-consumption-intent.json').write_text(json.dumps({
+            'schema':'agentlab.maintainer_guidance_prompt_intent.v1',
+            'requestSha256':hashlib.sha256(request_bytes).hexdigest(),
+            'promptSha256':hashlib.sha256(prompt.encode()).hexdigest(),
+            'knowledgeAuthority':packet['knowledgeAuthority'],'participantIdentity':identity,
+            'participantBudgetSeconds':120,'transportRetryLimit':0,
+            'selectedSkills':[{'id':r['skill']['id'],'rowSha256':r['rowSha256'],'bodySha256':r['bodySha256']} for r in packet['guidance']],
+            'agentConsumptionVerified':False,'learningBenefitVerified':False},indent=2)+'\n')
     try:
         with contextlib.redirect_stdout(sys.stderr):
             participant.turn('author-calibration', workspace, prompt=prompt,

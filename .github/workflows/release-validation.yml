@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Validate the real guidance workflow expression contexts
-        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -shellcheck= -pyflakes= .github/workflows/maintainer-guidance-consumption.yml
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -shellcheck= -pyflakes= .github/workflows/maintainer-guidance-consumption.yml .github/workflows/maintainer-behavior-loop.yml
   service-protocol-demo:
     runs-on: ubuntu-latest
     timeout-minutes: 10
