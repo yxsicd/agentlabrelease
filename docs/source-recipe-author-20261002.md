@@ -1,5 +1,35 @@
 # Gap-selected source verifier construction
 
+## Bounded same-session design correction
+
+The first real design-first Action `37034048478` ran method
+`a669cc67e4ff25b197fc0ad38f4bdddce329ffae`. Its design response completed in
+8913 ms with native stop, clean EOF and valid JSON. Rust rejected
+`recipe design checks differ from scenario observations`: numeric array pointers
+and subset expected objects did not follow the scenario-ID observation map.
+Independent design-turn isolation passed. The code turn never started. Source
+review also found nonmatching indentation and an incorrect request-failure log
+expectation, so correcting pointers alone would not qualify the design.
+
+The operator now accepts `--design-revisions 0..2` (default one). Completed,
+bounded designs rejected by recognized schema/pointer/edit/control checks may
+receive that many same-session corrections with the exact validator error.
+Each correction keeps zero transport retries, the original pinned source and
+contained Participant, and returns one complete design. Transport incompleteness,
+native truncation, missing/oversized responses, source/knowledge drift or unknown
+gate failures stop without correction. Budgets cannot be reset through nested
+transport retry. A rejected design after exhaustion never reaches code generation.
+
+Every original candidate is retained as design-attempt-N.json with a digest-bound
+design-attempts.json ledger; per-attempt Gateway/generation completion and gate
+logs are distinct. Only accepted bytes become design.json and the frozen input
+for the code turn. The Action validates all actual known design/correction/code
+receipt labels. Error diagnostics for source edits identify control, path and
+match count. Same-session correction is source-design work, not format-only
+finalization, semantic qualification or approval. The separate one-proposal
+review revision limit remains unchanged. Local recovery/exhaustion/drift/partial
+transport regressions are not live corrected designs. Maturity remains 63%.
+
 ## Design before verifier code
 
 `--design-first` splits a contained construction into two bounded turns: design,

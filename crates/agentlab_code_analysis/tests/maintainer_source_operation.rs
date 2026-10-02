@@ -139,6 +139,71 @@ check(good, False)
 }
 
 #[test]
+fn bounded_design_correction_retains_failures_and_stops_on_drift_or_partial_transport() {
+    let code = r#"
+import importlib.util,json,os,subprocess,tempfile
+from pathlib import Path
+from unittest.mock import patch
+spec=importlib.util.spec_from_file_location('author',os.environ['AUTHOR_SCRIPT'])
+module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+class Participant:
+    def __init__(self,evidence,complete=True,stop='stop',oversized=False):self.evidence=evidence;self.labels=[];self.complete=complete;self.stop=stop;self.oversized=oversized
+    def turn(self,label,workspace,**options):
+        self.labels.append(label)
+        assert options['transport_retry_limit']==0 and options['tool_call_limit']==1
+        gateway=self.evidence/'gateway';gateway.mkdir(exist_ok=True)
+        (gateway/f'{len(self.labels):04d}.status.json').write_text(json.dumps(dict(status=200,
+            outcome='completed' if self.complete else 'incomplete_stream',semanticComplete=self.complete,
+            upstreamEof=self.complete,streamError=None,clientDisconnected=False)))
+        return {'content':'x'*65537 if self.oversized else json.dumps({'schema':'fixture','iteration':len(self.labels)}),'message':{'stopReason':self.stop}}
+with tempfile.TemporaryDirectory() as directory:
+    root=Path(directory)
+    for scenario in ['recover','exhaust','drift','partial','truncated','oversized']:
+        output=root/scenario;output.mkdir();evidence=output/'evidence';evidence.mkdir()
+        participant=Participant(evidence,complete=scenario!='partial',stop='length' if scenario=='truncated' else 'stop',oversized=scenario=='oversized')
+        commands=[]
+        def gate(command,**kwargs):
+            commands.append(command)
+            if scenario=='recover' and len(commands)==2:
+                Path(command[command.index('--output')+1]).write_text('{"semanticQualified":false}')
+                return subprocess.CompletedProcess(command,0,b'',b'')
+            error='recipe design request no longer reproduces' if scenario=='drift' else 'recipe design edit in control ref at arbitrary/source must match exactly once; observed 0'
+            return subprocess.CompletedProcess(command,1,b'',('Error: '+json.dumps(error)).encode())
+        with patch.object(module.subprocess,'run',side_effect=gate):
+            try:
+                selected,content=module.construct_design(participant,output,evidence,output,root/'request.json',Path('/fixture/gate'),'original bounded prompt','none',1)
+            except ValueError:
+                assert scenario!='recover'
+            else:
+                assert scenario=='recover'
+                assert selected.read_text()==content and json.loads(content)['iteration']==2
+        expected=2 if scenario in ('recover','exhaust') else 1
+        assert len(participant.labels)==expected
+        assert len(commands)==(0 if scenario in ('partial','truncated','oversized') else expected)
+        assert not (output/'design.json').exists() or scenario=='recover'
+        if scenario not in ('partial','truncated','oversized'):
+            report=json.loads((output/'design-attempts.json').read_bytes())
+            assert len(report['attempts'])==expected and report['attempts'][0]['accepted'] is False
+            assert (output/'design-attempt-0.json').exists()
+            if scenario=='recover':assert report['attempts'][1]['accepted'] is True
+        assert 'source-recipe-author' not in participant.labels
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "AUTHOR_SCRIPT",
+            root().join("scripts/run-source-recipe-author.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
 fn source_recipe_dispatch_uses_explicit_constructor_limits_without_retry() {
     let code = r#"
 import importlib.util, json, os, sys, tempfile
@@ -188,10 +253,14 @@ with tempfile.TemporaryDirectory() as d:
             AGENTLAB_PROVIDER_ROUTE='arbitrary')
         argv = ['author','--request',str(request),'--output',str(root/str(index)),
                 '--gate','/unexecuted-fixture-gate','--pi','/unexecuted-fixture-pi',*extra]
+        def successful_gate(command,**_):
+            if '--validate-source-recipe-design' in command:
+                Path(command[command.index('--output')+1]).write_text('{"semanticQualified":false}')
+            return subprocess.CompletedProcess([],0,b'',b'')
         with patch.dict(os.environ,env), patch.object(sys,'argv',argv), \
              patch.object(module.importlib.util,'spec_from_file_location',return_value=fake_spec), \
              patch.object(module.importlib.util,'module_from_spec',return_value=SimpleNamespace(Participant=FakeParticipant)), \
-             patch.object(module.subprocess,'run',return_value=subprocess.CompletedProcess([],0,b'',b'')) as stage:
+             patch.object(module.subprocess,'run',side_effect=successful_gate) as stage:
             module.main()
         assert seen['constructor']['gateway_timeout_seconds'] == deadline
         assert seen['constructor']['thinking_type'] == thinking
@@ -205,7 +274,7 @@ with tempfile.TemporaryDirectory() as d:
             assert seen['labels']==['source-recipe-design','source-recipe-author']
             assert '--validate-source-recipe-design' in stage.call_args_list[0][0][0]
             assert '--design' in stage.call_args[0][0]
-            assert (root/str(index)/'evidence/design-generation-completion.json').exists()
+            assert (root/str(index)/'evidence/design-0-generation-completion.json').exists()
         if index==5:
             assert '--check-source-recipe-revision' in stage.call_args_list[0][0][0]
             assert json.loads((root/str(index)/'revision-request.json').read_bytes()) == revision_packet
@@ -231,7 +300,7 @@ with tempfile.TemporaryDirectory() as d:
          patch.object(module.subprocess,'run',return_value=failure):
         seen={}
         try: module.main()
-        except subprocess.CalledProcessError: pass
+        except (subprocess.CalledProcessError,ValueError): pass
         else: raise AssertionError('rejected design continued')
         assert seen['labels']==['source-recipe-design'] and seen['closed'] is True
     assert not (root/'rejected-design/proposal.json').exists()

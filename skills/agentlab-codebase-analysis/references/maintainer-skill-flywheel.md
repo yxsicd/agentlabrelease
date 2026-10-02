@@ -874,3 +874,14 @@ actual emitted verifier against the design, then execute qualified controls.
 Keep both contained-turn receipts even when the first phase fails; never count
 a design validation, text difference or two-turn launch as a productive scope
 transition, calibrated case or completed business cycle.
+
+Use a bounded same-session design correction only after complete, in-budget
+generation. Return the exact schema/pointer/edit/control error to the existing
+source session, retain every rejected candidate and its digest, and freeze only
+the accepted design for code generation. Scope/source/knowledge drift, incomplete
+transport, token truncation and unknown infrastructure errors must stop, not
+consume a semantic correction or become hidden transport retries. Keep correction
+counts explicit (zero to two), validate every actual contained-turn receipt, and
+stop code generation when exhausted. Correcting one static error does not settle
+other source or oracle defects; independently review the resulting design and
+verifier before execution or knowledge admission.

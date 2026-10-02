@@ -60,6 +60,12 @@ on:
         default: true
         required: true
         type: boolean
+      design_revisions:
+        description: Maximum same-session design corrections; source/knowledge or transport failures never retry
+        default: '1'
+        required: true
+        type: choice
+        options: ['0', '1', '2']
 permissions:
   contents: read
   actions: read
@@ -84,6 +90,7 @@ jobs:
       REVISION_PARENT_RUN: ${{ inputs.revision_parent_run }}
       REVISION_FEEDBACK: ${{ inputs.revision_feedback }}
       CONSTRUCTION_DESIGN_FIRST: ${{ inputs.design_first }}
+      CONSTRUCTION_DESIGN_REVISIONS: ${{ inputs.design_revisions }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_TABLEGIT_MCP_URL: ${{ vars.AGENTLAB_TABLEGIT_MCP_URL }}
       AGENTLAB_TABLEGIT_PERSON_ID: ${{ vars.AGENTLAB_TABLEGIT_PERSON_ID }}
@@ -199,13 +206,13 @@ jobs:
             --gateway-timeout-seconds "$CONSTRUCTION_GATEWAY_TIMEOUT" \
             --thinking-type "$CONSTRUCTION_THINKING_TYPE" \
             --response-format "$CONSTRUCTION_RESPONSE_FORMAT" \
-            --api "$CONSTRUCTION_API" "${revision_args[@]}"
+            --api "$CONSTRUCTION_API" --design-revisions "$CONSTRUCTION_DESIGN_REVISIONS" "${revision_args[@]}"
       - name: Independently validate recorded participant isolation
         if: always() && steps.contain.outcome == 'success'
         run: |
           cmp "$RUNNER_TEMP/recipe-runtime.json" "$RUNNER_TEMP/recipe-author/runtime-inputs/config.json"
           labels=()
-          for label in source-recipe-design source-recipe-author; do
+          for label in source-recipe-design source-recipe-design-revision-1 source-recipe-design-revision-2 source-recipe-author; do
             if test -f "$RUNNER_TEMP/recipe-author/runtime-receipts/$label.json"; then
               labels+=(--label "$label")
             fi
