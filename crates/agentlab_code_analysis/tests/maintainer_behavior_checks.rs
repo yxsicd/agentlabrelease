@@ -363,14 +363,24 @@ fn required_participant_completion_rejects_plain_subprocess_before_behavior_exec
 
 #[test]
 fn pi_adapter_protocol_fixture_binds_request_capture_submission_and_watchdog() {
-    let out = loop_output_for_adapter();
-    std::fs::create_dir(&out).unwrap();
-    let request = json!({"schema":"agentlab.behavior_participant_request.v1","guidanceMode":"unguided","submittedSource":"baseline","taskDemand":"repair task","automaticPromotion":false});
-    let bytes = serde_json::to_vec(&request).unwrap();
-    std::fs::write(out.join("request.json"), &bytes).unwrap();
-    let adapter = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../examples/real-code-agent/behavior-participant.py");
-    let result=std::process::Command::new("python3").current_dir(&out).args(["-c",r#"
+    for guided in [false, true] {
+        let out = loop_output_for_adapter();
+        std::fs::create_dir(&out).unwrap();
+        let mut request = json!({"schema":"agentlab.behavior_participant_request.v1","guidanceMode":"unguided","submittedSource":"baseline","taskDemand":"repair task","automaticPromotion":false});
+        if guided {
+            let skill =
+                json!({"id":"fixture-skill","body":"Retain ownership until the declared release."});
+            request["guidanceMode"] = json!("guided");
+            request["maintainerGuidance"] = json!({"schema":"agentlab.maintainer_guidance_packet.v1",
+            "knowledgeAuthority":{"repo":"fixture-knowledge","revision":"a".repeat(40)},
+            "guidance":[{"skill":skill,"rowSha256":digest(&serde_json::to_vec(&skill).unwrap()),
+                "bodySha256":digest(skill["body"].as_str().unwrap().as_bytes())}],"automaticPromotion":false});
+        }
+        let bytes = serde_json::to_vec(&request).unwrap();
+        std::fs::write(out.join("request.json"), &bytes).unwrap();
+        let adapter = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/real-code-agent/behavior-participant.py");
+        let result=std::process::Command::new("python3").current_dir(&out).args(["-c",r#"
 import importlib.util,importlib.abc,json,sys,hashlib,os
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('behavior',sys.argv[1]);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
@@ -404,25 +414,42 @@ class Loader(importlib.abc.Loader):
 m.importlib.util.spec_from_file_location=lambda name,path:importlib.util.spec_from_loader(name,Loader())
 sys.argv=['adapter','request.json'];m.main()
 "#]).arg(adapter).env("AGENTLAB_PI_BINARY","fixture-pi").env("AGENTLAB_LM_GATEWAY_URL","http://fixture.invalid").env("AGENTLAB_MODEL","fixture-model").env("AGENTLAB_PROVIDER_ROUTE","fixture-route").env("AGENTLAB_PARTICIPANT_RUNTIME_CONFIG","fixture-runtime-config").output().unwrap();
-    assert!(
-        result.status.success(),
-        "{}",
-        String::from_utf8_lossy(&result.stderr)
-    );
-    let output: Value = serde_json::from_slice(&result.stdout).unwrap();
-    assert_eq!(output["submittedSource"], "valid-a");
-    assert_eq!(
-        std::fs::read(out.join("participant-evidence/behavior-submitted-source.txt")).unwrap(),
-        b"valid-a"
-    );
-    let completion = agentlab_code_analysis::maintainer_guidance::completion(
-        &out.join("participant-evidence"),
-        &bytes,
-    )
-    .unwrap();
-    assert_eq!(completion["authorCompletionVerified"], true);
-    assert_eq!(completion["participantBudgetSeconds"], 120);
-    assert_eq!(completion["producerAuthenticated"], false);
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let output: Value = serde_json::from_slice(&result.stdout).unwrap();
+        assert_eq!(output["submittedSource"], "valid-a");
+        assert_eq!(
+            std::fs::read(out.join("participant-evidence/behavior-submitted-source.txt")).unwrap(),
+            b"valid-a"
+        );
+        let completion = if guided {
+            agentlab_code_analysis::maintainer_guidance::guided_completion(
+                &out.join("participant-evidence"),
+                &bytes,
+            )
+        } else {
+            agentlab_code_analysis::maintainer_guidance::completion(
+                &out.join("participant-evidence"),
+                &bytes,
+            )
+        }
+        .unwrap();
+        if guided {
+            assert_eq!(completion["agentConsumptionVerified"], true);
+            assert!(agentlab_code_analysis::maintainer_guidance::completion(
+                &out.join("participant-evidence"),
+                &bytes
+            )
+            .is_err());
+        } else {
+            assert_eq!(completion["authorCompletionVerified"], true);
+        }
+        assert_eq!(completion["participantBudgetSeconds"], 120);
+        assert_eq!(completion["producerAuthenticated"], false);
+    }
 }
 
 fn loop_output_for_adapter() -> std::path::PathBuf {

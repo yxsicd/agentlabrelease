@@ -32,6 +32,18 @@ on:
         required: true
         type: choice
         options: [default, low, medium, high]
+      guidance_knowledge:
+        description: Optional committed knowledge directory; empty is unguided
+        default: ''
+        type: string
+      guidance_selection:
+        description: Explicit committed Skill selection for the guided arm
+        default: ''
+        type: string
+      guidance_stage:
+        description: Explicit applicable stage; must match selected Skills
+        default: evaluation
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -46,6 +58,9 @@ jobs:
       PROFILE: ${{ inputs.profile }}
       MAXIMUM_ATTEMPTS: ${{ inputs.maximum_attempts }}
       CANDIDATE_CORPUS: ${{ inputs.candidate_corpus }}
+      GUIDANCE_KNOWLEDGE: ${{ inputs.guidance_knowledge }}
+      GUIDANCE_SELECTION: ${{ inputs.guidance_selection }}
+      GUIDANCE_STAGE: ${{ inputs.guidance_stage }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_MODEL: ${{ inputs.model }}
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
@@ -70,11 +85,20 @@ jobs:
           set -euo pipefail
           git ls-files --error-unmatch -- "$PROFILE"
           git ls-files --error-unmatch -- "$CANDIDATE_CORPUS"
+          guidance_args=()
+          if [[ -n "$GUIDANCE_KNOWLEDGE" || -n "$GUIDANCE_SELECTION" ]]; then
+            test -n "$GUIDANCE_KNOWLEDGE" && test -n "$GUIDANCE_SELECTION" && test -n "$GUIDANCE_STAGE"
+            git ls-files --error-unmatch -- "$GUIDANCE_SELECTION"
+            for file in maintainer-knowledge-cut.json maintainer_skills.jsonl program_facts.jsonl maintainer_scope_skills.jsonl maintainer_skill_refresh_rounds.jsonl evaluation_cases.jsonl; do
+              git ls-files --error-unmatch -- "$GUIDANCE_KNOWLEDGE/$file"
+            done
+            guidance_args=(--guidance-knowledge "$GUIDANCE_KNOWLEDGE" --guidance-selection "$GUIDANCE_SELECTION" --guidance-stage "$GUIDANCE_STAGE")
+          fi
           node scripts/prepare-contained-behavior-loop.cjs --profile "$PROFILE" \
             --candidates "$CANDIDATE_CORPUS" \
             --compiler "$RUNNER_TEMP/behavior-compiler/node_modules/typescript/lib/typescript.js" \
             --image-id "$WORKER_IMAGE_ID" --python "$(command -v python3)" \
-            --maximum-attempts "$MAXIMUM_ATTEMPTS" --output "$EVIDENCE_ROOT"
+            --maximum-attempts "$MAXIMUM_ATTEMPTS" --output "$EVIDENCE_ROOT" "${guidance_args[@]}"
           target/debug/agentlab-maintainer-skill-flywheel --verify-behavior-checks \
             --contract "$EVIDENCE_ROOT/frozen-checks.json" --capture "$EVIDENCE_ROOT/worker-capture.json" \
             --output "$EVIDENCE_ROOT/calibration-feedback.json"

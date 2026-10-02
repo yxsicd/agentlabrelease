@@ -461,6 +461,38 @@ pub fn consumption(evidence: &Path, packet_bytes: &[u8]) -> Result<Value, String
     )
 }
 
+/// Bind recorded guidance consumption to the exact assessed attempt request.
+pub fn guided_completion(evidence: &Path, request_bytes: &[u8]) -> Result<Value, String> {
+    let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
+    need(
+        request["guidanceMode"] == "guided",
+        "guided request mode differs",
+    )?;
+    let packet = request
+        .get("maintainerGuidance")
+        .ok_or("guided request packet absent")?;
+    let intent: Value =
+        serde_json::from_slice(&read(evidence, "guidance-consumption-intent.json")?)
+            .map_err(|e| e.to_string())?;
+    need(
+        intent["requestSha256"] == digest(request_bytes),
+        "guided request identity differs",
+    )?;
+    need(
+        intent["participantBudgetSeconds"]
+            .as_u64()
+            .is_some_and(|n| n > 0)
+            && intent["transportRetryLimit"] == 0,
+        "guided completion budget policy absent",
+    )?;
+    let mut result = consumption(
+        evidence,
+        &serde_json::to_vec(packet).map_err(|e| e.to_string())?,
+    )?;
+    result["requestSha256"] = json!(digest(request_bytes));
+    Ok(result)
+}
+
 /// Completion of a recorded unguided author, not proof of guidance absence in all context.
 pub fn completion(evidence: &Path, request_bytes: &[u8]) -> Result<Value, String> {
     let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;

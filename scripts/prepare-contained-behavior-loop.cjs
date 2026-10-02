@@ -24,6 +24,22 @@ const candidatesBytes=fs.readFileSync(candidatesPath);
 const candidates=candidatesBytes.toString('utf8').trim().split('\n').map(JSON.parse);
 const selected=candidates.filter(c=>c.id===profile.candidateId);
 requireOk(selected.length===1&&sha(JSON.stringify(canonical(selected[0])))===profile.candidateSha256&&selected[0].sourceRevision===profile.sourceRevision,'Profile candidate differs');
+let guidance=null;
+const guidanceOptions=['--guidance-knowledge','--guidance-selection','--guidance-stage'];
+if(guidanceOptions.some(name=>process.argv.includes(name))){
+ requireOk(guidanceOptions.every(name=>process.argv.includes(name)),'Guidance inputs incomplete');
+ const origin=path.resolve(option('--guidance-knowledge'));
+ const knowledge=path.join(out,'guidance-knowledge');fs.mkdirSync(knowledge);
+ for(const name of ['maintainer-knowledge-cut.json','maintainer_skills.jsonl','program_facts.jsonl','maintainer_scope_skills.jsonl','maintainer_skill_refresh_rounds.jsonl','evaluation_cases.jsonl']){
+  const input=path.join(origin,name);requireOk(fs.lstatSync(input).isFile(),'Guidance input must be regular');
+  fs.copyFileSync(input,path.join(knowledge,name),fs.constants.COPYFILE_EXCL);
+ }
+ const selection=path.join(out,'guidance-selection.json');
+ const input=path.resolve(option('--guidance-selection'));requireOk(fs.lstatSync(input).isFile(),'Guidance selection must be regular');
+ fs.copyFileSync(input,selection,fs.constants.COPYFILE_EXCL);
+ guidance={knowledgeDirectory:knowledge,selectionPath:selection,selectionSha256:sha(fs.readFileSync(selection)),repositoryId:selected[0].repositoryId,stage:option('--guidance-stage')};
+ requireOk(typeof guidance.repositoryId==='string'&&guidance.repositoryId.length>0,'Guidance candidate repository absent');
+}
 const source=path.join(out,'source');fs.mkdirSync(source);
 run('git',['init',source],out);
 run('git',['remote','add','origin',profile.repository],source);
@@ -95,6 +111,7 @@ const recipe={schema:'agentlab.behavior_loop_recipe.v1',reviewed:true,automaticP
  maximumAttempts,participantCompletionRequired:true,
  participantEnvironmentNames:['AGENTLAB_LM_GATEWAY_URL','AGENTLAB_LM_GATEWAY_KEY','AGENTLAB_PI_BINARY','AGENTLAB_MODEL','AGENTLAB_PROVIDER_ROUTE','AGENTLAB_REASONING_EFFORT'],
  immutableInputs:immutable.map(p=>({path:p,sha256:sha(fs.readFileSync(p))})),participantCommand:command([adapter,'{request}']),executorCommand};
+if(guidance)recipe.maintainerGuidance=guidance;
 save(path.join(out,'loop-recipe.json'),recipe);
 requireOk(run('git',['status','--porcelain'],source)==='','Source changed during preparation');
 console.log(JSON.stringify({contractSha256:sha(contractBytes),captureSha256:sha(captureBytes),qualified:false}));
