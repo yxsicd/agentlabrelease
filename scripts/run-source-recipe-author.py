@@ -278,7 +278,22 @@ SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
                 None if args.reasoning_effort == 'default' else args.reasoning_effort, args.design_revisions)
             prompt += '\nFROZEN DESIGN (use exact edits, scenarios and shared contract):\n' + design_content
             prompt += '\nPreserve check/control IDs, roles and expected failure sets exactly. '
-            prompt += 'Implement the listed edits verbatim and execute each declared scenario. '
+            prompt += f'''The operator supplies a frozen generic runtime at process.argv[{4 + dependency_count}].
+Use const createRuntime=require(process.argv[{4 + dependency_count}]);
+const runtime=createRuntime(process.argv[2],process.argv[3],compilerOrNull);
+Set compilerOrNull=require(process.argv[4]) only when a pinned TypeScript compiler
+dependency is present; otherwise pass null and use runtime.source for text/JSON.
+runtime.source(relativePath) returns the actual selected, transformed source text.
+runtime.loadModule(relativePath, imports, globals) transpiles that text in memory
+and returns CommonJS exports in a fresh context on every call. imports maps exact
+source import specifiers to explicit controlled seams; absent imports fail closed.
+Do not strip imports or duplicate source transformations, compiler or module wiring.
+For JSON/text sources use runtime.source without needing a compiler (pass null).
+The helper verifies frozen original bytes and applies the listed sequential edits.
+Agent code must execute every scenario and observe actual seam calls/results,
+not predict counters from inputs. Provide only source-required globals; module,
+exports and require are reserved. The helper is not a sandbox or oracle approval.
+'''
             prompt += 'Static design validation is not semantic approval.\n'
         result = participant.turn(
             'source-recipe-author', workspace, prompt=prompt,

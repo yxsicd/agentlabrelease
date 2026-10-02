@@ -896,3 +896,19 @@ actual next upstream input for source, prior proposal and feedback before claimi
 delivery; local file continuity alone does not prove wire-context delivery. Retain
 the original failed exchange. A provider prompt rejection and a proven history
 loss are separate observations unless further evidence establishes causality.
+
+For design-first source verifiers, reuse the operator-frozen runtime for exact
+source edits, in-memory transpilation and CommonJS loading. Preserve imports and
+supply explicit controlled dependency seams; do not strip declarations and then
+assume a require map provides missing lexical bindings. Bind the helper bytes as
+a method input and recompute them from the original request/design at review.
+Keep scenario state and actual call observations in the Agent's verifier, with
+a fresh module context per scenario. The helper is neither a sandbox nor a
+semantic oracle: reference validity and exact wrong-control failure sets still
+need independent review and actual execution. Reject dependency-budget overflow
+instead of dropping compiler pins to accommodate the helper.
+
+Review embedded code after decoding its string literals or using static syntax
+analysis. JSON display escapes and visually estimated indentation are not proof
+that a source edit fails to match. Preserve and explicitly supersede faulty
+review feedback; do not count its correction as an Agent or maturity gain.

@@ -637,6 +637,36 @@ pub fn stage(request_bytes: &[u8], proposal_bytes: &[u8], output: &Path) -> Resu
     stage_inner(request_bytes, proposal_bytes, output, None)
 }
 
+fn design_runtime(
+    request: &Value,
+    proposal: &Value,
+    design_bytes: &[u8],
+) -> Result<Vec<u8>, String> {
+    let design: Value = serde_json::from_slice(design_bytes).map_err(|e| e.to_string())?;
+    let files: Vec<Value> = proposal["sourcePaths"]
+        .as_array()
+        .ok_or("runtime source paths")?
+        .iter()
+        .map(|path| {
+            request["sourceFiles"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|file| file["path"] == *path)
+                .cloned()
+                .ok_or("runtime unowned source".to_string())
+        })
+        .collect::<Result<_, _>>()?;
+    let manifest = json!({"files":files,"controls":design["controls"]});
+    let mut bytes = format!(
+        "const manifest = {};\n",
+        serde_json::to_string(&manifest).map_err(|e| e.to_string())?
+    )
+    .into_bytes();
+    bytes.extend_from_slice(include_bytes!("source_design_runtime.cjs"));
+    Ok(bytes)
+}
+
 fn stage_inner(
     request_bytes: &[u8],
     proposal_bytes: &[u8],
@@ -761,6 +791,14 @@ fn stage_inner(
     let policy = &request["policy"];
     policy_gate(policy)?;
     let method = output.join("controls.cjs");
+    let runtime = design
+        .map(|(bytes, _)| design_runtime(&request, &p, bytes))
+        .transpose()?;
+    need(
+        runtime.is_none() || policy["methodDependencies"].as_array().unwrap().len() <= 6,
+        "recipe author design runtime needs one method dependency slot",
+    )?;
+    let runtime_path = output.join("design-runtime.cjs");
     let mut methods = vec![json!({"path":method,"sha256":digest(verifier.as_bytes())})];
     methods.extend(
         policy["methodDependencies"]
@@ -769,6 +807,9 @@ fn stage_inner(
             .iter()
             .cloned(),
     );
+    if let Some(bytes) = &runtime {
+        methods.push(json!({"path":runtime_path,"sha256":digest(bytes)}));
+    }
     let mut bound_controls = Vec::new();
     for control in controls {
         need(
@@ -787,6 +828,9 @@ fn stage_inner(
                 .iter()
                 .map(|d| d["path"].clone()),
         );
+        if runtime.is_some() {
+            args.push(json!(runtime_path));
+        }
         bound_controls.push(json!({"id":control["id"],"role":control["role"],"expectedFailedCheckIds":control["expectedFailedCheckIds"],
             "command":{"program":policy["program"],"programSha256":policy["programSha256"],"args":args,"cwd":".","timeoutMs":30_000}}));
     }
@@ -797,6 +841,9 @@ fn stage_inner(
     write(&output.join("request.json"), request_bytes)?;
     write(&output.join("proposal.json"), proposal_bytes)?;
     write(&method, verifier.as_bytes())?;
+    if let Some(bytes) = &runtime {
+        write(&runtime_path, bytes)?;
+    }
     write(&output.join("unreviewed-recipe.json"), &pretty(&recipe)?)?;
     // A private copy is marked reviewed solely for the existing static gate.
     // It is never persisted or executed; successful validation does not approve it.
@@ -816,6 +863,7 @@ fn stage_inner(
         write(&output.join("design-validation.json"), &validation_bytes)?;
         receipt["designSha256"] = json!(digest(bytes));
         receipt["designValidationSha256"] = json!(digest(&validation_bytes));
+        receipt["designRuntimeSha256"] = json!(digest(runtime.as_ref().unwrap()));
     }
     write(&output.join("stage-receipt.json"), &pretty(&receipt)?)?;
     Ok(receipt)
@@ -863,6 +911,17 @@ pub fn approve(
                 && stored == pretty(&validation)?,
             "recipe author reviewed design bytes differ",
         )?;
+        if receipt.get("designRuntimeSha256").is_some() || stage.join("design-runtime.cjs").exists()
+        {
+            let proposal: Value =
+                serde_json::from_slice(&proposal_bytes).map_err(|e| e.to_string())?;
+            let expected = design_runtime(&request, &proposal, &bytes)?;
+            let actual = read(&stage.join("design-runtime.cjs"), 1024 * 1024)?;
+            need(
+                actual == expected && receipt["designRuntimeSha256"] == digest(&expected),
+                "recipe author reviewed runtime bytes differ",
+            )?;
+        }
     }
     let mut recipe: Value = serde_json::from_slice(&recipe_bytes).map_err(|e| e.to_string())?;
     need(
