@@ -853,3 +853,12 @@ original construction; nested revision packets and revision-parent Actions stop.
 Retain admission and both generations, then independently review the new proposal
 again. This enables bounded feedback consumption, not automatic semantic review,
 multi-round convergence, approved execution or authority promotion.
+
+Successful feedback delivery does not prove that findings were corrected. Review
+the changed body and controlled scenario again, not only rationale or stage
+status. In particular, exact-match source changes can still target nonexistent
+indentation, discarding a call's return value does not suppress its side effect,
+and changing a permission outcome does not establish an already-enabled state.
+Keep scenario input, source branch, raw observation and frozen expectation aligned.
+Retain rejected children and report the revision-chain limit explicitly; never
+reset a child to an original generation to bypass that limit.
