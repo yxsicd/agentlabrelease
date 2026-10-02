@@ -8,6 +8,7 @@ pub mod maintainer_behavior_checks;
 pub mod maintainer_behavior_loop;
 pub mod maintainer_downstream;
 pub mod maintainer_downstream_exec;
+pub mod maintainer_flywheel_cycles;
 pub mod maintainer_flywheel_plan;
 pub mod maintainer_guidance;
 pub mod maintainer_lesson_admission;

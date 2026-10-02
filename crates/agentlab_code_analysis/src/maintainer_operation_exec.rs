@@ -96,6 +96,18 @@ mod executable_budget_tests {
     use super::*;
     use std::io::{Seek, SeekFrom};
     #[test]
+    fn composite_ceiling_does_not_relax_ordinary_operation_deadline() {
+        let program = std::env::current_exe().unwrap();
+        let command = json!({"program":program,"programSha256":executable_sha(&program).unwrap(),
+            "args":[],"cwd":".","timeoutMs":240_000});
+        let source = std::env::temp_dir().canonicalize().unwrap();
+        assert!(validate_command(&command, &source)
+            .unwrap_err()
+            .contains("deadline"));
+        assert!(validate_command_with_deadline(&command, &source, 900_000).is_ok());
+        assert!(validate_command_with_deadline(&command, &source, 900_001).is_err());
+    }
+    #[test]
     fn executable_stream_hashes_beyond_log_budget_and_rejects_oversize() {
         let root = std::env::temp_dir().join(format!(
             "executable-budget-{}-{}",
@@ -169,6 +181,17 @@ fn clean(source: &Path, expected: &Value) -> Result<(), String> {
     )
 }
 fn validate_command(command: &Value, source: &Path) -> Result<(), String> {
+    validate_command_with_deadline(command, source, 180_000)
+}
+fn validate_command_with_deadline(
+    command: &Value,
+    source: &Path,
+    limit: u64,
+) -> Result<(), String> {
+    require(
+        (1..=900_000).contains(&limit),
+        "operation deadline ceiling invalid",
+    )?;
     let executable = Path::new(string(command, "program")?);
     require(
         executable.is_absolute(),
@@ -189,7 +212,7 @@ fn validate_command(command: &Value, source: &Path) -> Result<(), String> {
     require(
         command["timeoutMs"]
             .as_u64()
-            .is_some_and(|n| (1..=180_000).contains(&n)),
+            .is_some_and(|n| (1..=limit).contains(&n)),
         "operation deadline invalid",
     )?;
     let cwd = string(command, "cwd")?;
@@ -218,8 +241,22 @@ pub(crate) fn capture_with_environment(
     label: &str,
     environment_names: &[String],
 ) -> Result<Value, String> {
+    capture_with_deadline_limit(command, source, out, label, environment_names, 180_000)
+}
+
+/// Composite-stage ceiling only; ordinary operation/behavior callers retain
+/// their original 180-second ceiling through capture_with_environment.
+#[cfg(unix)]
+pub(crate) fn capture_with_deadline_limit(
+    command: &Value,
+    source: &Path,
+    out: &Path,
+    label: &str,
+    environment_names: &[String],
+    deadline_limit: u64,
+) -> Result<Value, String> {
     use std::os::unix::process::CommandExt;
-    validate_command(command, source)?; // Revalidate executable immediately before spawning.
+    validate_command_with_deadline(command, source, deadline_limit)?; // Revalidate immediately before spawning.
     let stdout = out.join(format!("{label}.stdout"));
     let stderr = out.join(format!("{label}.stderr"));
     let open = |p: &Path| {

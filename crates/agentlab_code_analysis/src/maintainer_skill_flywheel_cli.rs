@@ -24,6 +24,17 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|arg| arg == "--execute-flywheel-cycles") {
+        let result = agentlab_code_analysis::maintainer_flywheel_cycles::execute(
+            &fs::read(value(&args, "--recipe")?)?,
+            &output,
+        )?;
+        println!(
+            "{}",
+            serde_json::json!({"status":result["status"],"completedRounds":result["completedRounds"],"qualified":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|arg| arg == "--export-behavior-lesson") {
         let id = value(&args, "--candidate-id")?;
         let candidates = fs::read_to_string(value(&args, "--candidates")?)?;

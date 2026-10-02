@@ -230,6 +230,19 @@ flywheel rounds are different units; report which boundary actually ran without
 operator coordination. Preserve review and fixed-baseline admission even when a
 coordinator automates transport between those boundaries.
 
+For bounded cross-stage scheduling, the Rust `--execute-flywheel-cycles` command
+uses the [cycle adapter protocol](../../docs/flywheel-bounded-cycles-20261002.md).
+Connect existing independent gates through reviewed, dependency-pinned adapters;
+never replace them with producer `completed` claims. Preserve review-required,
+rejection, authority drift and no-change stops. Returned state bytes may schedule
+the next round, but digest changes alone do not prove knowledge gain. Transport
+fixture rounds are not real Agent rounds or evidence of a closed learning loop.
+Select private environment names per stage, never globally for the pipeline;
+retain their names but not values in recipes or receipts. A composite stage may
+contain several separately bounded attempts: declare its outer deadline and total
+cycle budget without changing inner Agent deadlines or transport retry policy.
+Reject missing configuration before executing an earlier business mutation.
+
 Validate workflow expressions with GitHub-compatible context rules, not YAML
 syntax alone. A real dispatch rejected `runner.temp` in job-level env before any
 participant started. Resolve runner-local paths in a step through RUNNER_TEMP and

@@ -28,7 +28,7 @@ fn save(path: &Path, value: &Value) -> Result<Vec<u8>, String> {
     write(path, &bytes)?;
     Ok(bytes)
 }
-fn pinned_inputs(recipe: &Value) -> Result<Vec<(PathBuf, String)>, String> {
+pub(crate) fn pinned_inputs(recipe: &Value) -> Result<Vec<(PathBuf, String)>, String> {
     let rows = recipe["immutableInputs"]
         .as_array()
         .filter(|r| r.len() <= 128)
@@ -52,7 +52,7 @@ fn pinned_inputs(recipe: &Value) -> Result<Vec<(PathBuf, String)>, String> {
     recheck(&inputs)?;
     Ok(inputs)
 }
-fn recheck(inputs: &[(PathBuf, String)]) -> Result<(), String> {
+pub(crate) fn recheck(inputs: &[(PathBuf, String)]) -> Result<(), String> {
     for (path, sha) in inputs {
         for ancestor in path.ancestors() {
             require(
@@ -124,7 +124,7 @@ fn directory_digest(path: &Path) -> Result<String, String> {
     ))
 }
 
-fn freeze_tree(
+pub(crate) fn freeze_tree(
     root: &Path,
     immutable: &mut Vec<(PathBuf, String)>,
     depth: usize,
@@ -154,12 +154,24 @@ fn freeze_tree(
 }
 
 #[cfg(unix)]
-fn invoke(
+pub(crate) fn invoke(
     command: &Value,
     request: &Path,
     dir: &Path,
     label: &str,
     environment_names: &[String],
+) -> Result<(Value, String), String> {
+    invoke_with_deadline_limit(command, request, dir, label, environment_names, 180_000)
+}
+
+#[cfg(unix)]
+pub(crate) fn invoke_with_deadline_limit(
+    command: &Value,
+    request: &Path,
+    dir: &Path,
+    label: &str,
+    environment_names: &[String],
+    deadline_limit: u64,
 ) -> Result<(Value, String), String> {
     let mut command = command.clone();
     require(command["cwd"] == ".", "loop adapter cwd must be local")?;
@@ -178,12 +190,13 @@ fn invoke(
             *arg = json!(request.to_string_lossy());
         }
     }
-    let receipt = crate::maintainer_operation_exec::capture_with_environment(
+    let receipt = crate::maintainer_operation_exec::capture_with_deadline_limit(
         &command,
         dir,
         dir,
         label,
         environment_names,
+        deadline_limit,
     )?;
     require(
         receipt["status"] == "successful",
