@@ -931,3 +931,21 @@ fields with the API-specific field. Shared participants retain their existing
 default unless the operator explicitly opts in. A larger ceiling is an experiment,
 not proof of provider support or synthesis quality. Keep response-size, execution
 and semantic-review gates unchanged; never finalize or stage an incomplete response.
+
+Freeze interface behavior separately from call assertions. A forbidden-call claim
+is an oracle, not an implementation of what happens when a wrong variant invokes
+that interface. Design v2 requires inputs.seams with explicit per-call outcomes:
+return/resolve/throw/reject carry JSON values; return-undefined/resolve-undefined
+carry no value. Each seam declares whether to repeat its last outcome. Empty seam
+inventories support pure-source scenarios; legacy v1 designs retain their original
+contract, without acquiring v2 input qualification by compatibility.
+Use runtime.createSeams(scenarioId) to map frozen functions into explicit imports,
+retain chronological JSON argument observations and check assertWithinBudget after
+the source returns. Fresh state prevents control/scenario cross-contamination.
+Exhausted sequences and non-JSON argument failures remain visible even when the
+source catches them. Keep object identity and state changes as separate actual
+observations; JSON snapshots do not prove identity or platform behavior.
+Independently establish each wrong variant's branch reachability and exact failure
+set. An earlier exception can bypass a changed branch entirely. Typed seam inputs
+remove ambiguity, but neither their validator nor the helper proves that a generated
+verifier uses them faithfully or that the declared failure set is semantically valid.

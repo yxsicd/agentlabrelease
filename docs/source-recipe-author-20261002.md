@@ -603,3 +603,37 @@ of absent-policy behavior and invalid policy rejection. It does not establish
 deployed provider admission of 16384 or acceptance of a generated verifier.
 All completion, isolation, source, size and independent review gates remain.
 Maturity remains 63%; formal cases and complete business cycles remain zero.
+
+## Frozen interface outcomes in design v2
+
+Independent review of Action `37046727398` found an unsupported failure for
+`wrong-inverted-request-branch`: its edit occurs after a state check, so an
+exception from that earlier check bypasses the changed branch. A separate trusted
+operator diagnostic transpiled the exact pinned source in memory and observed
+identical original/mutated calls, return and logs for that one scenario. Both
+passed the frozen check. No Agent-generated verifier was executed or approved.
+The original design also left forbidden-call interfaces without deterministic
+counterfactual behavior, so mutation execution could depend on invented fallbacks.
+
+New construction requests design schema `agentlab.source_recipe_design.v2`.
+The seven top-level fields and control/check/source gates remain unchanged.
+Each scenario's inputs includes `seams`, an object with at most 32 named entries;
+empty supports scenarios without external interfaces. A seam has exactly
+`outcomes` (one to sixteen outcomes) and boolean `repeatLast`. Outcomes are exactly
+`{kind,value}` for return/resolve/throw/reject or `{kind}` for
+return-undefined/resolve-undefined. JSON values, including null, are explicit.
+Call prohibitions belong in expected observations, not outcome definitions.
+The Rust gate rejects ambiguous kinds, missing values, extra assertion fields and
+invalid sequences. Historical v1 designs remain supported, not silently upgraded.
+
+The frozen runtime carries v2 scenarios and exposes `createSeams(scenarioId)`.
+Its `functions[id]` supplies cloned declared outcomes in call order; source import
+mapping is still Agent-owned and independently reviewed. `observations()` returns
+chronological JSON snapshots of arguments (standard JSON normalization, not object
+identity). State and outcomes are fresh per factory call. `assertWithinBudget()`
+must run after source execution to surface exhausted sequences, non-JSON argument
+capture failures and the 1024-call ceiling even if source code caught their errors.
+The helper computes no expected counts or pass flags. Full source semantics,
+actual seam use, reference validity and exact failure sets still need independent
+review/execution. Controlled seams establish no Harmony runtime or full scope proof.
+Overall maturity remains 63%; formal cases and complete business cycles remain zero.
