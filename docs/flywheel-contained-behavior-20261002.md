@@ -67,3 +67,17 @@ with unchanged method/input bytes before Action dispatch.
 Overall flywheel maturity remains 54% until actual participant repair/feedback
 advances the automatic loop. The scoped calibration is runtime evidence, not a
 substitute for that acceptance or a new full flywheel round.
+
+## First real Action dispatch
+
+Main source `3f8bab21507cd0eb1bdd805e9abfe043bcdf22e6` ran
+[36969755967](https://github.com/yxsicd/agentlabrelease/actions/runs/36969755967).
+Source preparation and six contained controls completed; participant runtime
+preparation passed. Participant launch failed before model execution because the
+adapter selected a fresh runtime receipt directory without creating it, while
+the Docker launcher resolves that directory strictly. The original partial
+capture remains in the Action artifact and the operator external evidence root.
+This is a Harness initialization failure, not participant inability. The adapter
+now creates its own fresh receipt root, and the Rust adapter protocol regression
+checks its existence and ownership before constructing the participant. A new
+trusted main dispatch is still required to validate the complete real path.
