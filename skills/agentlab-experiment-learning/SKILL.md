@@ -92,6 +92,23 @@ appropriate method versus target layer, verify regressions, and leave HANDOFF.
 
 ### Scenario-owned calibration contracts
 
+Before turning a prose behavior summary into an Oracle, distinguish observed
+implementation behavior, the reviewed intended contract and defect hypotheses.
+For asynchronous persistence, characterize empty input, fulfilled success,
+fulfilled negative results, rejection and exact configured boundary values;
+when deletion follows an asynchronous operation, also probe a controlled insert
+between snapshot and completion. Promise fulfillment is not necessarily business
+success, and deleting the whole store is not necessarily deleting only the
+acknowledged snapshot. Keep thresholds, success predicates and retention policy
+in instance contracts, not repository-name branches or universal method rules.
+Execute the unchanged revision-bound source body with declared dependency seams,
+retain complete observations and source/compiler identities, and mark storage or
+framework behavior outside those seams unverified. Characterization expectations
+derived from the current implementation do not independently establish correct
+behavior. If observations contradict the proposed summary, retain the original
+candidate and request a reviewed successor or focused knowledge correction;
+do not silently rewrite its demands or freeze the characterization as scoring.
+
 For independently reconstructed stage controls, the Rust flywheel CLI supports
 `--export-stage-lesson` with the ordinary candidate/plan/contract/capture inputs
 and `--lesson-review`. The review uses `agentlab.stage_lesson_review.v1`,
