@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use tree_sitter::{Node, Parser};
 
 pub mod knowledge_gate;
+pub mod maintainer_behavior_checks;
 pub mod maintainer_downstream;
 pub mod maintainer_downstream_exec;
 pub mod maintainer_flywheel_plan;
