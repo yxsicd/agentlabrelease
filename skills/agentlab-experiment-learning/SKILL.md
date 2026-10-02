@@ -254,6 +254,44 @@ use it through the ordinary downstream diagnostic Action for independent executi
 Keep this reviewed seed distinct from the original reviewed=false artifact and
 retain its review provenance. Do not count it as a qualified case before execution.
 
+Independent downstream run 36949100747 at method 37b89156 subsequently executed
+that unchanged reviewed seed: baseline passed all six checks, wrong entry failed
+six and wrong event failed four, including every declared intended failure.
+All workers completed normally. Retained worker stdout, exact author-source Blob
+bytes and local Rust feedback reconstruction agreed; an unchanged repeat stopped
+scheduling. This verifies Agent-authored controls at the host seam, not Harmony
+runtime, a formal case or guidance benefit. Keep both the content-repair and
+behavior receipts: neither substitutes for the other. The next benefit experiment
+needs an unguided/guided pair with equal reasoning, repair allowance and total
+budget, then feedback-informed reruns and a different repository.
+
+For a prompt-treatment control, the same author Action accepts guidance_mode
+guided|unguided. Freeze the pair before dispatch: exact method/candidate/source,
+selected packet, model/route, reasoning effort, repair_limit and per-attempt/total
+budget. The producer removes maintainerGuidance from the unguided author request;
+it does not replace it with scoring answers or weaker instructions. Both modes
+run the same independent source/content and bounded-repair gates. Unguided turns
+use `--verify-author-completion --participant-evidence DIR --author-request FILE
+--output NEW_FILE`, binding the immutable request and actual prompt/identity to
+the same original terminal-response/lifecycle checks as guided consumption.
+The new intent binds the 420-second process budget to the actual watchdog value
+recorded in the native lifecycle; budget drift rejects before content repair.
+An unguided completion is never a guidance-consumption receipt. The packet is
+still retained outside the author workspace for operator comparison. Completion
+alone does not prove absence from all captured tool/context inputs or filesystem
+isolation: guidanceAbsenceVerified remains false. Audit the complete recorded
+contexts and containment before attributing an outcome difference to guidance.
+Do not compare a new unguided run against an older guided method/budget cut or
+infer benefit from one passing arm. Independent semantic controls and subsequent
+feedback/cross-repository runs remain necessary.
+
+A full regression run exposed intermittent emulator boot-failure cleanup. A
+deterministic delayed-launcher control reproduced the race: stop ran first,
+then the outstanding launcher completed startup. Quiesce and reap the exact
+owned launcher before issuing the scoped instance stop; do not widen this to
+fleet process killing or soften the failure verdict. This verifies cleanup
+ordering in a process fixture, not real emulator or formal-test acceptance.
+
 When promoting against real multi-kind program facts, preserve heterogeneous
 unowned fields as JSON rather than coercing arrays/objects or dropping baseline
 rows. The exchange records observed mixed field types separately. Explicitly

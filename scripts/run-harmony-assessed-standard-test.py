@@ -122,6 +122,14 @@ def start_emulator(config: dict[str, Any], output: Path, hdc: Path) -> dict[str,
     process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT)
     if not wait_target(hdc, target, present=True, timeout=boot_timeout):
         log.close()
+        # Quiesce our launcher first: it must not finish startup after -stop.
+        if process.poll() is None:
+            process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
         stopped = subprocess.run(
             [str(emulator), "-stop", instance, "-instancePath", str(instance_path)],
             text=True, capture_output=True, timeout=30, check=False,
@@ -129,11 +137,6 @@ def start_emulator(config: dict[str, Any], output: Path, hdc: Path) -> dict[str,
         (output / "emulator-start-failure-stop.log").write_text(
             stopped.stdout + stopped.stderr, encoding="utf-8"
         )
-        try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.terminate()
-            process.wait(timeout=5)
         raise StandardGateError("emulator did not expose the standard-test HDC target")
     log.close()
     return {

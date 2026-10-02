@@ -2,6 +2,14 @@ name: Maintainer guidance real consumption
 on:
   workflow_dispatch:
     inputs:
+      guidance_mode:
+        description: Guidance treatment only; completion is independently checked in both modes
+        required: true
+        type: choice
+        options:
+          - guided
+          - unguided
+        default: guided
       guidance_packet:
         description: Committed reviewed guidance packet; never a mutable external URL
         required: true
@@ -52,6 +60,7 @@ jobs:
     timeout-minutes: 20
     env:
       GUIDANCE_PACKET: ${{ inputs.guidance_packet }}
+      GUIDANCE_MODE: ${{ inputs.guidance_mode }}
       CANDIDATE_ID: ${{ inputs.candidate_id }}
       MODULE_PATH: ${{ inputs.module_path }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
@@ -112,7 +121,10 @@ jobs:
               'workspacePath':target.relative_to(workspace).as_posix(),'gitBlobOid':blob,'sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw)})
           request={'schema':'agentlab.stage_calibration_authoring_request.v1','automaticPromotion':False,
             'stageContext':{'candidateId':candidate['id'],'candidateSha256':hashlib.sha256(json.dumps(candidate,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest(),
-              'sourceRevision':revision,'modulePath':module},'sources':rows,'maintainerGuidance':packet}
+              'sourceRevision':revision,'modulePath':module},'sources':rows}
+          mode=os.environ['GUIDANCE_MODE'];assert mode in ('guided','unguided')
+          request['guidanceMode']=mode
+          if mode=='guided':request['maintainerGuidance']=packet
           (workspace/'authoring-request.json').write_text(json.dumps(request,ensure_ascii=False,indent=2,sort_keys=True)+'\n')
           (output/'guidance-packet.json').write_bytes(packet_path.read_bytes())
           (output/'source-binding.json').write_text(json.dumps({'methodRevision':os.environ['GITHUB_SHA'],'guidancePacketSha256':hashlib.sha256(packet_path.read_bytes()).hexdigest(),
@@ -163,16 +175,24 @@ jobs:
             --author-request "$EVIDENCE_ROOT/workspace/authoring-request.json" \
             --proposal "$AUTHOR_PROPOSAL" \
             --output "$EVIDENCE_ROOT/proposal-content-validation.json"
-      - name: Independently verify actual guidance transmission without credentials
+      - name: Independently verify the selected treatment and completed author exchange
         if: always()
         run: |
           set -euo pipefail
           test -f "$EVIDENCE_ROOT/guidance-packet.json"
-          target/debug/agentlab-maintainer-skill-flywheel --verify-guidance-consumption \
-            --participant-evidence "$AUTHOR_EVIDENCE" \
-            --guidance-packet "$EVIDENCE_ROOT/guidance-packet.json" \
-            --output "$EVIDENCE_ROOT/guidance-consumption.json"
-          cat "$EVIDENCE_ROOT/guidance-consumption.json" >> "$GITHUB_STEP_SUMMARY"
+          binary=target/debug/agentlab-maintainer-skill-flywheel
+          case "$GUIDANCE_MODE" in
+            guided)
+              receipt="$EVIDENCE_ROOT/guidance-consumption.json"
+              "$binary" --verify-guidance-consumption --participant-evidence "$AUTHOR_EVIDENCE" \
+                --guidance-packet "$EVIDENCE_ROOT/guidance-packet.json" --output "$receipt" ;;
+            unguided)
+              receipt="$EVIDENCE_ROOT/author-completion.json"
+              "$binary" --verify-author-completion --participant-evidence "$AUTHOR_EVIDENCE" \
+                --author-request "$EVIDENCE_ROOT/workspace/authoring-request.json" --output "$receipt" ;;
+            *) exit 2 ;;
+          esac
+          cat "$receipt" >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve original requests, responses, source bytes and failed proposals
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

@@ -24,6 +24,23 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|arg| arg == "--verify-author-completion") {
+        let receipt = agentlab_code_analysis::maintainer_guidance::completion(
+            &PathBuf::from(value(&args, "--participant-evidence")?),
+            &fs::read(value(&args, "--author-request")?)?,
+        )?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        file.write_all(&serde_json::to_vec_pretty(&receipt)?)?;
+        file.write_all(b"\n")?;
+        println!(
+            "{}",
+            serde_json::json!({"authorCompletionVerified":true,"learningBenefitVerified":false})
+        );
+        return Ok(());
+    }
     if args
         .iter()
         .any(|arg| arg == "--validate-stage-author-proposal")

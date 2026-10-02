@@ -19,6 +19,16 @@ def run_author(module, pi, request, request_bytes, prompt, evidence, state):
         os.environ.get("AGENTLAB_MODEL", "glm-5.3-flash"),
         route=os.environ.get("AGENTLAB_PROVIDER_ROUTE", "glm"), implementation="pi",
         reasoning_effort=os.environ.get("AGENTLAB_REASONING_EFFORT", "default"))
+    identity = {"model": participant.model, "providerRoute": participant.route,
+                "implementation": participant.implementation,
+                "providerReasoningEffort": participant.reasoning_effort}
+    (evidence / "author-completion-intent.json").write_text(json.dumps({
+        "schema": "agentlab.author_completion_intent.v1",
+        "requestSha256": hashlib.sha256(request_bytes).hexdigest(),
+        "promptSha256": hashlib.sha256(prompt.encode()).hexdigest(),
+        "participantIdentity": identity, "guidanceProvided": "maintainerGuidance" in request,
+        "participantBudgetSeconds": 420,
+    }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     if "maintainerGuidance" in request:
         (evidence / "guidance-prompt.txt").write_text(prompt, encoding="utf-8")
         (evidence / "guidance-consumption-intent.json").write_text(json.dumps({
@@ -26,9 +36,8 @@ def run_author(module, pi, request, request_bytes, prompt, evidence, state):
             "requestSha256": hashlib.sha256(request_bytes).hexdigest(),
             "promptSha256": hashlib.sha256(prompt.encode()).hexdigest(),
             "knowledgeAuthority": request["maintainerGuidance"]["knowledgeAuthority"],
-            "participantIdentity": {"model": participant.model, "providerRoute": participant.route,
-                                    "implementation": participant.implementation,
-                                    "providerReasoningEffort": participant.reasoning_effort},
+            "participantIdentity": identity,
+            "participantBudgetSeconds": 420,
             "selectedSkills": [{"id": r["skill"]["id"], "rowSha256": r["rowSha256"],
                                 "bodySha256": r["bodySha256"]}
                                for r in request["maintainerGuidance"]["guidance"]],
@@ -75,9 +84,10 @@ REPAIRABLE = {
 
 def validate_and_repair(module, pi, request, request_bytes, request_path, output):
     tool = Path(os.environ["AGENTLAB_FLYWHEEL_TOOL"]).resolve(strict=True)
-    packet = Path(os.environ["AGENTLAB_GUIDANCE_PACKET_PATH"]).resolve(strict=True)
-    packet_bytes = packet.read_bytes()
-    if json.loads(packet_bytes) != request['maintainerGuidance']:
+    packet = (Path(os.environ["AGENTLAB_GUIDANCE_PACKET_PATH"]).resolve(strict=True)
+              if "maintainerGuidance" in request else None)
+    packet_bytes = packet.read_bytes() if packet else None
+    if packet and json.loads(packet_bytes) != request['maintainerGuidance']:
         raise ValueError('guidance packet differs from immutable author request')
     limit = int(os.environ.get("AGENTLAB_AUTHOR_REPAIR_LIMIT", "0"))
     if limit not in (0, 1):
@@ -93,7 +103,7 @@ def validate_and_repair(module, pi, request, request_bytes, request_path, output
         if request_path.read_bytes() != request_bytes:
             raise ValueError("immutable author request changed; repair forbidden")
         require_immutable_sources(request)
-        if packet.read_bytes() != packet_bytes:
+        if packet and packet.read_bytes() != packet_bytes:
             raise ValueError('immutable guidance changed; repair forbidden')
         evidence = Path.cwd() / ("participant-evidence" if number == 0 else "participant-evidence-repair")
         attempt_output = output if number == 0 else output.with_name(output.name + "-repair")
@@ -115,11 +125,16 @@ def validate_and_repair(module, pi, request, request_bytes, request_path, output
         if request_path.read_bytes() != request_bytes:
             raise ValueError("immutable author request changed; repair forbidden")
         require_immutable_sources(request)
-        wire = gate(tool, evidence, "consumption", ["--verify-guidance-consumption",
-            "--participant-evidence", str(evidence), "--guidance-packet", str(packet),
-            "--output", str(evidence / "consumption-validation.json")])
+        if packet and packet.read_bytes() != packet_bytes:
+            raise ValueError('immutable guidance changed; repair forbidden')
+        wire_args = (["--verify-guidance-consumption", "--guidance-packet", str(packet)] if packet
+                     else ["--verify-author-completion", "--author-request", str(request_path)])
+        wire_kind = "consumption" if packet else "completion"
+        wire = gate(tool, evidence, wire_kind, [*wire_args,
+            "--participant-evidence", str(evidence),
+            "--output", str(evidence / (wire_kind + "-validation.json"))])
         if wire.returncode:
-            raise RuntimeError("incomplete or changed guidance exchange; content repair forbidden")
+            raise RuntimeError("incomplete or changed author exchange; content repair forbidden")
         proposal = attempt_output / "proposed-stage-contract.json"
         original = proposal.read_bytes()
         result = gate(tool, evidence, "content", ["--validate-stage-author-proposal",
