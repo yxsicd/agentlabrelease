@@ -265,12 +265,19 @@ fn unreviewed_stale_and_failed_controls_never_qualify_or_overwrite() {
 }
 
 fn loop_fixture() -> (PathBuf, Value) {
+    loop_fixture_with_extra_source(false)
+}
+
+fn loop_fixture_with_extra_source(extra: bool) -> (PathBuf, Value) {
     let (dir, mut first, _, mut recipe) = fixture();
     let source = dir.join("source");
     fs::create_dir(source.join("other")).unwrap();
     fs::write(source.join("other/state.json"), b"{\"value\":1}").unwrap();
+    if extra {
+        fs::write(source.join("src/unloaded.json"), b"{\"metadata\":true}").unwrap();
+    }
     for args in [
-        vec!["add", "other/state.json"],
+        vec!["add", "other/state.json", "src"],
         vec!["commit", "-m", "second responsibility"],
     ] {
         assert!(Command::new("git")
@@ -296,9 +303,15 @@ fn loop_fixture() -> (PathBuf, Value) {
     let revision = git(&["rev-parse", "HEAD"]);
     first["sourceRevision"] = json!(revision);
     first["sourceTreeOid"] = json!(git(&["rev-parse", "HEAD^{tree}"]));
+    if extra {
+        first["trackedFileCount"] = json!(2);
+        first["sourceFileCount"] = json!(2);
+    }
     let mut second = first.clone();
     second["id"] = json!("scope-second");
     second["pathBoundary"] = json!("other");
+    second["trackedFileCount"] = json!(1);
+    second["sourceFileCount"] = json!(1);
     second["evidence"] = json!([{"path":"other/state.json","gitBlobOid":git(&["rev-parse","HEAD:other/state.json"])}]);
     let knowledge = dir.join("knowledge");
     fs::create_dir(&knowledge).unwrap();
@@ -388,6 +401,131 @@ fn loop_fixture() -> (PathBuf, Value) {
         json!({"schema":"agentlab.reviewed_source_operation_catalog.v1","reviewed":true,
         "automaticPromotion":false,"knowledgeCutSha256":digest(&cut_bytes),"repositorySelector":"arbitrary","entries":entries}),
     )
+}
+
+#[test]
+fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_review() {
+    use agentlab_code_analysis::maintainer_source_recipe_author as author;
+    let (dir, catalog) = loop_fixture_with_extra_source(true);
+    let original: Value =
+        serde_json::from_slice(&fs::read(dir.join("recipe-0.json")).unwrap()).unwrap();
+    let node = fs::canonicalize(
+        original["controls"][0]["command"]["program"]
+            .as_str()
+            .unwrap(),
+    )
+    .unwrap();
+    let policy = json!({"schema":"agentlab.source_recipe_author_policy.v1","automaticPromotion":false,
+        "program":node,"programSha256":digest(&fs::read(&node).unwrap()),"methodDependencies":[]});
+    let request = author::prepare(
+        &dir.join("knowledge"),
+        &dir.join("source"),
+        "arbitrary",
+        &serde_json::to_vec(&policy).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(request["scope"]["id"], "scope-arbitrary");
+    assert_eq!(request["sourceFiles"].as_array().unwrap().len(), 2);
+    assert_eq!(request["sourceFiles"][0]["path"], "src/state.json");
+    assert_eq!(request["sourceFiles"][1]["content"], Value::Null);
+    let proposal = json!({"schema":"agentlab.source_recipe_author_proposal.v1","scopeSkillId":"scope-arbitrary",
+        "sourcePaths":["src/state.json"],"verifierSource":"const fs=require('fs'),path=require('path');const n=JSON.parse(fs.readFileSync(path.join(process.argv[2],'src/state.json'))).value; console.log(JSON.stringify({value:process.argv[3]==='wrong'?0:n}));",
+        "rationale":"Exercise actual source state and independent wrong output.","limitations":["No platform runtime","One scoped contract only"],
+        "contract":{"checks":[{"id":"value","pointer":"/value","expected":1}],"controls":[
+            {"id":"baseline","role":"baseline","expectedFailedCheckIds":[]},
+            {"id":"reference","role":"reference","expectedFailedCheckIds":[]},
+            {"id":"alternative","role":"reference","expectedFailedCheckIds":[]},
+            {"id":"wrong","role":"wrong","expectedFailedCheckIds":["value"]}]}});
+    let request_bytes = serde_json::to_vec(&request).unwrap();
+    let proposal_bytes = serde_json::to_vec(&proposal).unwrap();
+    let stage = dir.join("author-stage");
+    let receipt = author::stage(&request_bytes, &proposal_bytes, &stage).unwrap();
+    assert_eq!(receipt["executionPerformed"], false);
+    let unreviewed = fs::read(stage.join("unreviewed-recipe.json")).unwrap();
+    let before = fs::read(dir.join("knowledge/assessments/before.json")).unwrap();
+    assert!(execute(
+        &dir.join("knowledge/maintainer_scope_skills.jsonl"),
+        &dir.join("knowledge/program_facts.jsonl"),
+        &dir.join("knowledge/operation-evidence"),
+        &before,
+        &unreviewed,
+        &dir.join("source"),
+        &dir.join("untrusted-execution")
+    )
+    .is_err());
+    assert!(!dir.join("untrusted-execution").exists());
+    assert!(author::approve(
+        &stage,
+        &digest(&proposal_bytes),
+        false,
+        &dir.join("not-reviewed.json")
+    )
+    .is_err());
+    assert!(author::approve(
+        &stage,
+        &"0".repeat(64),
+        true,
+        &dir.join("wrong-review.json")
+    )
+    .is_err());
+    author::approve(
+        &stage,
+        &digest(&proposal_bytes),
+        true,
+        &dir.join("reviewed.json"),
+    )
+    .unwrap();
+    let reviewed = fs::read(dir.join("reviewed.json")).unwrap();
+    execute(
+        &dir.join("knowledge/maintainer_scope_skills.jsonl"),
+        &dir.join("knowledge/program_facts.jsonl"),
+        &dir.join("knowledge/operation-evidence"),
+        &before,
+        &reviewed,
+        &dir.join("source"),
+        &dir.join("authored-capture"),
+    )
+    .unwrap();
+    let execution = fs::read(dir.join("authored-capture/execution-receipt.json")).unwrap();
+    qualify(&dir.join("authored-capture"), &digest(&execution)).unwrap();
+    assert!(author::stage(&request_bytes, &proposal_bytes, &stage).is_err());
+    fs::write(stage.join("controls.cjs"), b"tampered").unwrap();
+    assert!(author::approve(
+        &stage,
+        &digest(&proposal_bytes),
+        true,
+        &dir.join("changed-method.json")
+    )
+    .is_err());
+    let mut bad = proposal.clone();
+    bad["sourcePaths"] = json!(["src/unloaded.json"]);
+    assert!(author::stage(
+        &request_bytes,
+        &serde_json::to_vec(&bad).unwrap(),
+        &dir.join("unloaded-stage")
+    )
+    .is_err());
+    assert!(!dir.join("unloaded-stage").exists());
+    bad = proposal.clone();
+    bad["sourcePaths"] = json!(["other/state.json"]);
+    assert!(author::stage(
+        &request_bytes,
+        &serde_json::to_vec(&bad).unwrap(),
+        &dir.join("unowned-stage")
+    )
+    .is_err());
+    assert!(!dir.join("unowned-stage").exists());
+    let mut bad = request.clone();
+    bad["sourceFiles"][0]["content"] = json!("forged");
+    assert!(author::stage(
+        &serde_json::to_vec(&bad).unwrap(),
+        &proposal_bytes,
+        &dir.join("forged-stage")
+    )
+    .is_err());
+    assert!(!dir.join("forged-stage").exists());
+    assert_eq!(catalog["repositorySelector"], "arbitrary");
+    fs::remove_dir_all(dir).unwrap();
 }
 
 #[test]

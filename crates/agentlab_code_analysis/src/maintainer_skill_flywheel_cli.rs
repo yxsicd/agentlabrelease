@@ -24,6 +24,45 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|a| a == "--review-source-recipe-proposal") {
+        let receipt = agentlab_code_analysis::maintainer_source_recipe_author::approve(
+            &PathBuf::from(value(&args, "--proposal-stage")?),
+            &value(&args, "--proposal-sha256")?,
+            args.iter().any(|a| a == "--reviewed"),
+            &output,
+        )?;
+        println!("{}", serde_json::to_string(&receipt)?);
+        return Ok(());
+    }
+    if args.iter().any(|a| a == "--prepare-source-recipe-author") {
+        let request = agentlab_code_analysis::maintainer_source_recipe_author::prepare(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &PathBuf::from(value(&args, "--source-worktree")?),
+            &optional(&args, "--repository").unwrap_or_else(|| "auto".into()),
+            &fs::read(value(&args, "--author-policy")?)?,
+        )?;
+        let mut bytes = serde_json::to_vec_pretty(&request)?;
+        bytes.push(b'\n');
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&bytes)?;
+        println!(
+            "{}",
+            serde_json::json!({"scopeSkillId":request["scope"]["id"],"reviewed":false,"executionPerformed":false})
+        );
+        return Ok(());
+    }
+    if args.iter().any(|a| a == "--stage-source-recipe-proposal") {
+        let receipt = agentlab_code_analysis::maintainer_source_recipe_author::stage(
+            &fs::read(value(&args, "--author-request")?)?,
+            &fs::read(value(&args, "--proposal")?)?,
+            &output,
+        )?;
+        println!("{}", serde_json::to_string(&receipt)?);
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--execute-source-operation-loop") {
         let report = agentlab_code_analysis::maintainer_source_operation_loop::execute(
             &PathBuf::from(value(&args, "--knowledge")?),

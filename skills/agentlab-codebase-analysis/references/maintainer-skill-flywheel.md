@@ -739,3 +739,19 @@ scope cannot substitute. Candidate operation rounds remain distinct from live
 admission and full business cycles. Keep maintenance plans out of directories
 scanned as case-construction plans. Select a new guidance request for a new cut
 without rewriting the original historical selection or its execution evidence.
+
+For a selected source-only gap without a recipe, use the
+[source verifier construction path](../../../docs/source-recipe-author-20261002.md)
+to prepare bounded original-source context and capture an Agent proposal. The
+operator owns executable/dependency bindings and serialization; the construction
+Agent owns only the proposed demand, verifier and control hypotheses. Keep the
+proposal unreviewed until an independent review inspects source-faithful checks,
+meaningful wrong variants, alternative-valid implementations and host execution
+policy. Static format gates and declared control roles cannot establish those
+semantics. Explicit review still precedes trusted execution, and independent
+capture qualification precedes any operation fact or authority transition.
+Separate complete source identity inventory from preloaded evidence content:
+use the selected scope and bound facts' owned anchors, retain every other path
+as explicit unloaded inventory, and reject proposals using an unloaded source
+until context is deliberately expanded. Do not turn complete inventory into a
+full-file census or silently substitute another selected gap.

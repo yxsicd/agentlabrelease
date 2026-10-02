@@ -1,0 +1,118 @@
+name: Maintainer source recipe construction
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: Repository selector; source-only gap selected by strict Rust planner
+        default: code-workshop
+        required: true
+        type: string
+      model:
+        default: glm-5.3-flash
+        required: true
+        type: string
+      provider_route:
+        default: glm
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: maintainer-source-recipe-author
+  cancel-in-progress: false
+jobs:
+  construct:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      KNOWLEDGE: examples/maintainer-knowledge-gate/first-four
+      REPOSITORY_SELECTOR: ${{ inputs.repository }}
+      AGENTLAB_MODEL: ${{ inputs.model }}
+      AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
+      AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
+      AGENTLAB_TABLEGIT_MCP_URL: ${{ vars.AGENTLAB_TABLEGIT_MCP_URL }}
+      AGENTLAB_TABLEGIT_PERSON_ID: ${{ vars.AGENTLAB_TABLEGIT_PERSON_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Exact live knowledge admission before model budget
+        run: |
+          python3 scripts/maintainer-skill-tablegit.py preflight --base "$KNOWLEDGE" \
+            --receipt "$RUNNER_TEMP/recipe-author/authority-preflight.json"
+      - name: Build native producer and isolated runtime
+        run: |
+          cargo build --locked -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
+          mkdir -p "$RUNNER_TEMP/recipe-pi" "$RUNNER_TEMP/recipe-compiler"
+          cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/recipe-pi/"
+          cp examples/knowledge-seed/subject/runtime/package*.json "$RUNNER_TEMP/recipe-compiler/"
+          npm ci --prefix "$RUNNER_TEMP/recipe-pi" --no-audit --no-fund
+          npm ci --prefix "$RUNNER_TEMP/recipe-compiler" --no-audit --no-fund
+          docker pull node:24.19.0-bookworm-slim
+      - name: Select operation gap and prepare bounded original-source request
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,subprocess
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP']);knowledge=Path(os.environ['KNOWLEDGE']).resolve()
+          output=root/'recipe-author';source=root/'recipe-source'
+          gate=Path('target/debug/agentlab-maintainer-skill-flywheel').resolve()
+          def run(*args): subprocess.run([str(gate),*map(str,args)],check=True)
+          run('--resolve-latest-assessment','--base',knowledge,'--output',output/'durable.json')
+          baseline=json.loads(Path(json.loads((output/'durable.json').read_bytes())['assessmentPath']).read_bytes())
+          args=['--plan-next-round','--scope-skills',knowledge/'maintainer_scope_skills.jsonl','--program-facts',knowledge/'program_facts.jsonl',
+                '--operation-receipts-root',knowledge/'operation-evidence','--round-index',baseline['roundIndex'],
+                '--available-lane','operation-verification','--available-operation-kind','source-only','--repository',os.environ['REPOSITORY_SELECTOR'],
+                '--batch-size',1,'--output',output/'plan.json']
+          if baseline.get('parentAssessmentSha256'):args+=['--parent-assessment-sha256',baseline['parentAssessmentSha256']]
+          run(*args)
+          plan=json.loads((output/'plan.json').read_bytes());assert len(plan['selectedScopeIds'])==1
+          scope=next(json.loads(l) for l in (knowledge/'maintainer_scope_skills.jsonl').read_text().splitlines() if json.loads(l)['id']==plan['selectedScopeIds'][0])
+          (output/'checkout-request.json').write_text(json.dumps({'scope':scope})+'\n')
+          subprocess.run(['bash','scripts/checkout-maintainer-scope.sh',scope['repository'],scope['sourceRevision'],scope['pathBoundary'],str(source),str(output/'checkout-request.json')],check=True)
+          node=Path(subprocess.check_output(['which','node'],text=True).strip()).resolve()
+          compiler=root/'recipe-compiler/node_modules/typescript/lib/typescript.js'
+          policy={'schema':'agentlab.source_recipe_author_policy.v1','program':str(node),'programSha256':hashlib.sha256(node.read_bytes()).hexdigest(),
+                  'methodDependencies':[{'path':str(compiler),'sha256':hashlib.sha256(compiler.read_bytes()).hexdigest()}],'automaticPromotion':False}
+          (output/'policy.json').write_text(json.dumps(policy)+'\n')
+          run('--prepare-source-recipe-author','--knowledge',knowledge,'--source-worktree',source,'--repository',os.environ['REPOSITORY_SELECTOR'],
+              '--author-policy',output/'policy.json','--output',output/'request.json')
+          PY
+      - name: Contain construction Agent without source or host evaluator mounts
+        run: |
+          mkdir "$RUNNER_TEMP/recipe-case" "$RUNNER_TEMP/recipe-docker-config"
+          printf '{"schema":"agentlab.blind_case_participant_bundle.v1","sourceOnly":true,"automaticPromotion":false}\n' > "$RUNNER_TEMP/recipe-case/manifest.json"
+          printf '{"auths":{}}\n' > "$RUNNER_TEMP/recipe-docker-config/config.json"
+          image_id=$(docker image inspect node:24.19.0-bookworm-slim --format '{{.Id}}')
+          python3 scripts/prepare-participant-runtime.py --image "$image_id" --pi-runtime "$RUNNER_TEMP/recipe-pi" \
+            --case-input "$RUNNER_TEMP/recipe-case" --forbid "$GITHUB_WORKSPACE" --forbid "$RUNNER_TEMP/recipe-source" \
+            --forbid "$RUNNER_TEMP/recipe-author" --output "$RUNNER_TEMP/recipe-runtime.json"
+          mkdir "$RUNNER_TEMP/recipe-author/runtime-inputs"
+          cp "$RUNNER_TEMP/recipe-runtime.json" "$RUNNER_TEMP/recipe-author/runtime-inputs/config.json"
+          cp "$RUNNER_TEMP/recipe-case/manifest.json" "$RUNNER_TEMP/recipe-author/runtime-inputs/manifest.json"
+          cp "$RUNNER_TEMP/recipe-pi/package-lock.json" "$RUNNER_TEMP/recipe-author/runtime-inputs/package-lock.json"
+      - name: Produce captured unreviewed recipe only
+        env:
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+          AGENTLAB_PARTICIPANT_RUNTIME_CONFIG: ${{ runner.temp }}/recipe-runtime.json
+          AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT: ${{ runner.temp }}/recipe-author/runtime-receipts
+          DOCKER_CONFIG: ${{ runner.temp }}/recipe-docker-config
+        run: |
+          python3 scripts/run-source-recipe-author.py --request "$RUNNER_TEMP/recipe-author/request.json" \
+            --output "$RUNNER_TEMP/recipe-author/agent" --gate target/debug/agentlab-maintainer-skill-flywheel \
+            --pi "$GITHUB_WORKSPACE/scripts/run-pi-in-docker.py"
+      - name: Independently validate recorded participant isolation
+        run: |
+          cmp "$RUNNER_TEMP/recipe-runtime.json" "$RUNNER_TEMP/recipe-author/runtime-inputs/config.json"
+          python3 scripts/validate-participant-runtime.py --config "$RUNNER_TEMP/recipe-author/runtime-inputs/config.json" \
+            --receipt-root "$RUNNER_TEMP/recipe-author/runtime-receipts" \
+            --workspace "$RUNNER_TEMP/recipe-author/agent/workspace" \
+            --participant-state "$RUNNER_TEMP/recipe-author/agent/participant-state" \
+            --label source-recipe-author --output "$RUNNER_TEMP/recipe-author/runtime-validation.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: unreviewed-source-recipe-${{ github.run_id }}
+          path: ${{ runner.temp }}/recipe-author
+          if-no-files-found: error
+          retention-days: 14
+          include-hidden-files: true
