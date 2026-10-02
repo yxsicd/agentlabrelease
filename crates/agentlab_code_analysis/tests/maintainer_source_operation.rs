@@ -23,6 +23,70 @@ fn root() -> PathBuf {
 }
 
 #[test]
+fn frozen_runtime_preserves_module_bindings_and_refuses_implicit_imports() {
+    let (dir, _) = loop_fixture();
+    let recipe: Value =
+        serde_json::from_slice(&fs::read(dir.join("recipe-0.json")).unwrap()).unwrap();
+    let node = recipe["controls"][0]["command"]["program"]
+        .as_str()
+        .unwrap();
+    let source_root = dir.join("runtime-source");
+    fs::create_dir(&source_root).unwrap();
+    let compiler_path = std::env::var("AGENTLAB_RUNTIME_TEST_COMPILER").unwrap_or_default();
+    let source = if compiler_path.is_empty() {
+        "const seam=require('explicit-seam'); let count=0; exports.run=()=>({count:++count, value:seam.fetch()});"
+    } else {
+        "import * as seam from 'explicit-seam'; let count:number=0; export function run(){return {count:++count, value:seam.fetch()};}"
+    };
+    fs::write(source_root.join("unit.ts"), source).unwrap();
+    let manifest = json!({"files":[{"path":"unit.ts","sha256":digest(source.as_bytes()),"content":source}],
+        "controls":[{"id":"baseline","edits":[]},{"id":"wrong","edits":[{"path":"unit.ts","before":"seam.fetch()","after":"'$&'"}]}]});
+    let runtime = dir.join("runtime.cjs");
+    fs::write(
+        &runtime,
+        format!(
+            "const manifest={manifest};\n{}",
+            include_str!("../src/source_design_runtime.cjs")
+        ),
+    )
+    .unwrap();
+    // Identity compiler double isolates CommonJS plumbing; real compiler qualification
+    // is a separate experiment, not inferred from this fixture.
+    let script = r#"
+const assert=require('assert');
+const compiler=process.argv[3] ? require(process.argv[3]) :
+ {ScriptTarget:{ES2020:1},ScriptKind:{TS:1},ModuleKind:{CommonJS:1},DiagnosticCategory:{Error:1},
+ createSourceFile:()=>({parseDiagnostics:[]}),transpileModule:t=>({outputText:t,diagnostics:[]})};
+const runtime=require(process.argv[1])(process.argv[2],'baseline',compiler);
+let calls=0;const seams={'explicit-seam':{fetch(){calls++;return 7}}};
+const a=runtime.loadModule('unit.ts',seams),b=runtime.loadModule('unit.ts',seams);
+assert.equal(a.run().count,1);assert.equal(a.run().count,2);assert.equal(b.run().count,1);assert.equal(calls,3);
+assert.throws(()=>runtime.loadModule('unit.ts',{}),/unbound import/);
+assert.throws(()=>runtime.loadModule('unit.ts',seams,{exports:{}}),/reserved module binding/);
+const wrong=require(process.argv[1])(process.argv[2],'wrong',compiler);
+assert.equal(wrong.loadModule('unit.ts',seams).run().value,'$&');assert.equal(calls,3);
+console.log('module-plumbing-pass');
+"#;
+    let result = Command::new(node)
+        .arg("-e")
+        .arg(script)
+        .arg(&runtime)
+        .arg(&source_root)
+        .arg(&compiler_path)
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&result.stdout).trim(),
+        "module-plumbing-pass"
+    );
+}
+
+#[test]
 fn contained_pi_turns_preserve_history_and_refuse_missing_or_replaced_sessions() {
     let code = r#"
 import importlib.util, json, os, tempfile
@@ -1049,6 +1113,58 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
         fs::read(designed_stage.join("design.json")).unwrap(),
         design_bytes
     );
+    // The generic helper applies the frozen source edits, not Agent-recreated edits.
+    let runtime_path = designed_stage.join("design-runtime.cjs");
+    let runtime_bytes = fs::read(&runtime_path).unwrap();
+    let run_runtime = |control: &str, script: &str| {
+        Command::new(&node)
+            .arg("-e")
+            .arg(script)
+            .arg(&runtime_path)
+            .arg(dir.join("source"))
+            .arg(control)
+            .output()
+            .unwrap()
+    };
+    let observe = "const r=require(process.argv[1])(process.argv[2],process.argv[3],null); console.log(JSON.parse(r.source('src/state.json')).value)";
+    for (control, expected) in [
+        ("baseline", "1"),
+        ("reference", "1"),
+        ("alternative", "1"),
+        ("wrong", "0"),
+    ] {
+        let result = run_runtime(control, observe);
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        assert_eq!(String::from_utf8_lossy(&result.stdout).trim(), expected);
+    }
+    assert!(!run_runtime("unknown", observe).status.success());
+    assert!(!run_runtime("baseline", "require(process.argv[1])(process.argv[2],process.argv[3],null).source('src/unloaded.json')").status.success());
+    assert_eq!(
+        fs::read_to_string(dir.join("source/src/state.json")).unwrap(),
+        body
+    );
+    fs::write(dir.join("source/src/state.json"), "{\"value\":2}").unwrap();
+    assert!(!run_runtime("baseline", observe).status.success());
+    fs::write(dir.join("source/src/state.json"), body).unwrap();
+    fs::write(
+        &runtime_path,
+        b"module.exports=()=>({source:()=>'{\"value\":1}'})",
+    )
+    .unwrap();
+    let tampered_runtime_output = dir.join("tampered-runtime-approval.json");
+    assert!(author::approve(
+        &designed_stage,
+        &digest(&fs::read(designed_stage.join("proposal.json")).unwrap()),
+        true,
+        &tampered_runtime_output
+    )
+    .is_err());
+    assert!(!tampered_runtime_output.exists());
+    fs::write(&runtime_path, &runtime_bytes).unwrap();
     let validation_path = designed_stage.join("design-validation.json");
     let original_validation = fs::read(&validation_path).unwrap();
     let mut changed_validation = original_validation.clone();

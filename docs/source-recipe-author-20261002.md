@@ -106,11 +106,10 @@ passed; independent filesystem, network and external-credential isolation passed
 This proves real feedback delivery and unreviewed proposal production, not
 semantic correction or approved execution.
 
-Independent review rejects the revised verifier. Reference and wrong-gate
-transformations still target six-space indentation where the source uses four;
-the no-upload transformation targets eight spaces where the source uses six.
-They throw before observations rather than exercise the declared controls.
-Moreover, `void this.uploadPushToken()` still calls upload and is not suppression.
+Independent review rejects the revised verifier. The original review's indentation
+mismatch claim was later disproved by static string decoding; it is not a reason
+for rejection (see correction below). However, `void this.uploadPushToken()` still
+calls upload and is not suppression.
 After the denied scenario the state remains disabled; the second scenario only
 changes requestReject=false, so it follows request-success and log-info before
 token/post rather than the claimed already-enabled sequence. Frozen expectations
@@ -513,8 +512,9 @@ arrays before creating a stage directory.
 
 Independent source review also rejects the unchanged proposal. Both reference
 IDs fall through to the original source, not distinct valid implementations.
-The wrong disabled-gate replacement expects six spaces where the source has
-four and therefore changes nothing. Both executed scenarios successfully enable
+An earlier review claimed an indentation mismatch in the disabled-gate replacement;
+later static string decoding disproved that claim (see correction below).
+Both declared scenarios successfully enable
 notifications; neither exercises rejection or disabled enablement, so even a
 matching gate mutation would not be exposed. Shared event expectations read the
 second scenario but use indices associated with a different sequence. These
@@ -524,3 +524,36 @@ are retained in the method reference; the next producer improvement must support
 bounded source-grounded review feedback rather than silently fixing a rejected
 proposal. Overall maturity remains 63%; formal cases and complete business cycles
 remain zero.
+
+## Review correction and deterministic design runtime
+
+Static decoding of generated string literals found that the earlier indentation/
+newline mismatch judgment was incorrect: the gate substring matches the pinned
+source exactly once. Original reviews are retained and superseded, not erased.
+Other independent defects still prevent approval; no generated candidate was
+executed. Regex nonmatches alone also do not establish runtime failure when
+the remaining imports can be faithfully transpiled and explicitly resolved.
+
+After the session-continuity fix merged in PR #189, Action `37039857132` delivered
+original source, previous design and feedback in the same native wire history.
+Two bounded design corrections reached static acceptance. The generated verifier
+still had module export and observation defects. The faulty-feedback experiment
+`37040586228` was explicitly cancelled; corrected feedback was tested separately
+in `37040958017`. That workflow succeeded, and the new proposal corrected shared
+exports and actual call counters, but independent review rejected an unterminated
+string, removed import bindings and unsupported log-failure expectations.
+No approval, authority write, formal case or complete business cycle followed.
+
+Design-first staging now emits `design-runtime.cjs`, bound as a method input.
+It verifies selected original source bytes, applies the frozen sequential edits
+in memory and exposes `source(path)` and `loadModule(path, imports, globals)`.
+Each module call has a fresh context, shared CommonJS exports and an explicit
+import map with no implicit host resolution. A pinned compiler is still required
+for module loading; text/JSON observation can use a null compiler. The helper
+argument follows the policy dependencies. It consumes one of the eight method
+slots, so design-first policy dependencies are limited to six.
+Approval recomputes helper bytes from the request, proposal and frozen design.
+The helper does not force generated code to use it, establish semantic correctness,
+provide an execution sandbox or approve a verifier. This change removes repeated
+plumbing from the generation task; its effect on real Agent acceptance rates is
+not yet measured. Overall maturity remains 63%, formal cases zero, full cycles zero.
