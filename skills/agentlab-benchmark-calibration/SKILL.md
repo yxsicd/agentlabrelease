@@ -232,6 +232,15 @@ For asynchronous submission, independently control deferred resolution/rejection
 check duplicate requests while pending, retained state on failure, observable
 failure, release/retry and success reset. Observe rejected chains without turning
 an unhandled rejection into an apparent pass. Preserve exact operator seams.
+For singleton or module-owned pending state, reload the real source module
+between scenarios, not between concurrent calls or retry phases of one scenario.
+Otherwise fresh instances can hide stale cached work or invalidate deduplication
+checks. Observe held permission and downstream completion separately; a call
+count or normal process exit alone cannot establish awaiting and rejection
+containment. Retain raw rejected-chain observations without repairing source in
+the observer. New task demands require fresh calibration even when original
+maintenance controls were verified; use the shared frozen-check consumer and
+keep platform, cohort, freeze and assessed-Agent gates separate.
 For navigation outcome extensions, validate stack and animation behavior as well
 as success/failure returns. A wrong push-for-replace variant can pass return tests
 while corrupting the stack. Source-verifying a caller is not implementing or
