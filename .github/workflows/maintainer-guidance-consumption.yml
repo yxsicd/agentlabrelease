@@ -41,13 +41,18 @@ on:
         type: string
         default: default
       repair_limit:
-        description: Bounded Agent-owned content repair attempts, zero or one
+        description: Shared bounded Agent-owned content or behavior repair attempts, zero or one
         required: true
         type: choice
         options:
           - '0'
           - '1'
         default: '1'
+      semantic_controls:
+        description: Independently execute unreviewed host-seam controls and feed failures to bounded repair
+        required: true
+        type: boolean
+        default: true
 permissions:
   contents: read
 concurrency:
@@ -68,6 +73,7 @@ jobs:
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
       AGENTLAB_REASONING_EFFORT: ${{ inputs.reasoning_effort }}
       AGENTLAB_AUTHOR_REPAIR_LIMIT: ${{ inputs.repair_limit }}
+      AGENTLAB_AUTHOR_SEMANTIC_CONTROLS: ${{ inputs.semantic_controls }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Resolve runner-local evidence path after job allocation
@@ -145,6 +151,13 @@ jobs:
           author="$GITHUB_WORKSPACE/examples/multi-repo-case/pi-calibration-author.py"
           export AGENTLAB_FLYWHEEL_TOOL="$GITHUB_WORKSPACE/target/debug/agentlab-maintainer-skill-flywheel"
           export AGENTLAB_GUIDANCE_PACKET_PATH="$EVIDENCE_ROOT/guidance-packet.json"
+          if test "$AGENTLAB_AUTHOR_SEMANTIC_CONTROLS" = true; then
+            mkdir -p "$RUNNER_TEMP/stage-compiler"
+            cp examples/knowledge-seed/subject/runtime/package*.json "$RUNNER_TEMP/stage-compiler/"
+            npm ci --prefix "$RUNNER_TEMP/stage-compiler" --no-audit --no-fund
+            export AGENTLAB_STAGE_COMPILER="$RUNNER_TEMP/stage-compiler/node_modules/typescript/lib/typescript.js"
+            export AGENTLAB_STAGE_DIAGNOSTIC_SCRIPT="$GITHUB_WORKSPACE/scripts/calibrate-harmony-stage-controls.cjs"
+          fi
           cd "$EVIDENCE_ROOT/workspace"
           python3 "$author" --request authoring-request.json --output draft
       - name: Select latest bounded attempt without accepting participant-supplied paths
