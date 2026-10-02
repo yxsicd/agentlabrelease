@@ -83,7 +83,7 @@ of the HW Linux original capture and portable strict assessment produced the
 same original bytes. Only one source-maintenance fact and its refresh-round row
 were inserted; five-table committed readback was exact. The retained
 [admission receipt](operation-evidence/source-controls-admission.json) and
-[next-round plan](construction-plans/source-controls-next-plan.json) distinguish
+[next-round plan](flywheel-plans/source-controls-next-plan.json) distinguish
 authority ingestion from candidate staging. The accepted UI-state scope is no
 longer selected; the next reviewed operation gap is persistence/telemetry.
 This is isolated source-maintenance control evidence, not full-scope coverage,
