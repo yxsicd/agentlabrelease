@@ -33,13 +33,24 @@ fn temp() -> PathBuf {
     fs::create_dir(&path).unwrap();
     path
 }
-fn selected() -> (PathBuf, PathBuf) {
-    (root().join("examples/maintainer-knowledge-gate/first-four"),root().join("examples/maintainer-knowledge-gate/reviewed-guidance/environment-lifecycle-evaluation-selection.json"))
+fn selected(directory: &Path) -> (PathBuf, PathBuf) {
+    let knowledge = root().join("examples/maintainer-knowledge-gate/first-four");
+    let original = root().join("examples/maintainer-knowledge-gate/reviewed-guidance/environment-lifecycle-evaluation-selection.json");
+    let mut request: Value = serde_json::from_slice(&fs::read(original).unwrap()).unwrap();
+    let cut_bytes = fs::read(knowledge.join("maintainer-knowledge-cut.json")).unwrap();
+    let cut: Value = serde_json::from_slice(&cut_bytes).unwrap();
+    // This is a newly selected test request, never a rewrite of historical
+    // guidance consumption or a claim that its earlier Agent run used this cut.
+    request["knowledgeCutSha256"] = json!(digest(&cut_bytes));
+    request["knowledgeRevision"] = cut["tableGitAuthority"]["revision"].clone();
+    let selection = directory.join("current-selection.json");
+    fs::write(&selection, serde_json::to_vec_pretty(&request).unwrap()).unwrap();
+    (knowledge, selection)
 }
 #[test]
 fn published_cut_runs_real_business_gates_and_preserves_missing_operation_boundary() {
     let directory = temp();
-    let (knowledge, selection) = selected();
+    let (knowledge, selection) = selected(&directory);
     let cli = env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel");
     let result = Command::new(cli)
         .arg("--prepare-business-cycles")
@@ -89,8 +100,18 @@ fn published_cut_runs_real_business_gates_and_preserves_missing_operation_bounda
 #[test]
 fn explicit_review_and_exact_cut_are_required_without_borrowing_source_applicability() {
     let directory = temp();
-    let (knowledge, selection) = selected();
+    let (knowledge, selection) = selected(&directory);
     let program = Path::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"));
+    let historical = root().join("examples/maintainer-knowledge-gate/reviewed-guidance/environment-lifecycle-evaluation-selection.json");
+    assert!(prepare(
+        &knowledge,
+        &historical,
+        program,
+        true,
+        &directory.join("stale-selection")
+    )
+    .is_err());
+    assert!(!directory.join("stale-selection").exists());
     assert!(prepare(
         &knowledge,
         &selection,

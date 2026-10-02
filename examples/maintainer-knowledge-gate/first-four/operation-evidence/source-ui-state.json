@@ -1,0 +1,249 @@
+{
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "execution": {
+    "authorityWritePerformed": false,
+    "automaticPromotion": false,
+    "beforeAssessmentSha256": "2ec3f4d2e82d074200ed5fa499adc767c11fae17c65b1a0ed2439a125e178bbc",
+    "captures": [
+      {
+        "command": {
+          "args": [
+            "/home/huawei/code/.worktrees/agentlabrelease/source-operations-20261002/examples/knowledge-seed/flywheel/loading.js",
+            "common/src/main/ets/view/DelayedLoadingView.ets",
+            "baseline"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 30000
+        },
+        "durationMs": 42,
+        "exitCode": 0,
+        "label": "baseline",
+        "pid": 135858,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "baseline.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 276,
+          "complete": true,
+          "path": "baseline.stdout",
+          "sha256": "5caecbd850c2ad9f166d18a906174642c576532b0cf521134fd6c62a2d955d80"
+        },
+        "termination": "completed"
+      },
+      {
+        "command": {
+          "args": [
+            "/home/huawei/code/.worktrees/agentlabrelease/source-operations-20261002/examples/knowledge-seed/flywheel/loading.js",
+            "common/src/main/ets/view/DelayedLoadingView.ets",
+            "reference"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 30000
+        },
+        "durationMs": 42,
+        "exitCode": 0,
+        "label": "reference",
+        "pid": 136365,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "reference.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 273,
+          "complete": true,
+          "path": "reference.stdout",
+          "sha256": "f3665ea27aa97ce9aa710699f1c6781b58a91c565f4c6012b967bb5018d18be6"
+        },
+        "termination": "completed"
+      },
+      {
+        "command": {
+          "args": [
+            "/home/huawei/code/.worktrees/agentlabrelease/source-operations-20261002/examples/knowledge-seed/flywheel/loading.js",
+            "common/src/main/ets/view/DelayedLoadingView.ets",
+            "wrong-cancel"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 30000
+        },
+        "durationMs": 41,
+        "exitCode": 0,
+        "label": "wrong-cancel",
+        "pid": 136640,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "wrong-cancel.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 279,
+          "complete": true,
+          "path": "wrong-cancel.stdout",
+          "sha256": "919b666526f5d8020844de31b799043e8623163b633c43c9e38fb881a41a284c"
+        },
+        "termination": "completed"
+      }
+    ],
+    "error": null,
+    "qualified": false,
+    "recipeSha256": "522cc5a8ad1e89ca0873511c6a1e6d4eb03f9cf6ccb2c0c82fa6edf582018ff2",
+    "schema": "agentlab.maintainer_source_operation_execution.v1",
+    "scopeSha256": "a9294dbb15bcd569a51c710914a1c24df4e61467d0ee05c57896785ce42f54df",
+    "scopeSkillId": "skill-scope-code-workshop-common-ui-state-contracts",
+    "source": {
+      "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+      "repositoryId": "code-workshop",
+      "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+    },
+    "status": "successful"
+  },
+  "executionOriginal": "{\n  \"authorityWritePerformed\": false,\n  \"automaticPromotion\": false,\n  \"beforeAssessmentSha256\": \"2ec3f4d2e82d074200ed5fa499adc767c11fae17c65b1a0ed2439a125e178bbc\",\n  \"captures\": [\n    {\n      \"command\": {\n        \"args\": [\n          \"/home/huawei/code/.worktrees/agentlabrelease/source-operations-20261002/examples/knowledge-seed/flywheel/loading.js\",\n          \"common/src/main/ets/view/DelayedLoadingView.ets\",\n          \"baseline\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"timeoutMs\": 30000\n      },\n      \"durationMs\": 42,\n      \"exitCode\": 0,\n      \"label\": \"baseline\",\n      \"pid\": 135858,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"baseline.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 276,\n        \"complete\": true,\n        \"path\": \"baseline.stdout\",\n        \"sha256\": \"5caecbd850c2ad9f166d18a906174642c576532b0cf521134fd6c62a2d955d80\"\n      },\n      \"termination\": \"completed\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/home/huawei/code/.worktrees/agentlabrelease/source-operations-20261002/examples/knowledge-seed/flywheel/loading.js\",\n          \"common/src/main/ets/view/DelayedLoadingView.ets\",\n          \"reference\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"timeoutMs\": 30000\n      },\n      \"durationMs\": 42,\n      \"exitCode\": 0,\n      \"label\": \"reference\",\n      \"pid\": 136365,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"reference.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 273,\n        \"complete\": true,\n        \"path\": \"reference.stdout\",\n        \"sha256\": \"f3665ea27aa97ce9aa710699f1c6781b58a91c565f4c6012b967bb5018d18be6\"\n      },\n      \"termination\": \"completed\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/home/huawei/code/.worktrees/agentlabrelease/source-operations-20261002/examples/knowledge-seed/flywheel/loading.js\",\n          \"common/src/main/ets/view/DelayedLoadingView.ets\",\n          \"wrong-cancel\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"timeoutMs\": 30000\n      },\n      \"durationMs\": 41,\n      \"exitCode\": 0,\n      \"label\": \"wrong-cancel\",\n      \"pid\": 136640,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"wrong-cancel.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 279,\n        \"complete\": true,\n        \"path\": \"wrong-cancel.stdout\",\n        \"sha256\": \"919b666526f5d8020844de31b799043e8623163b633c43c9e38fb881a41a284c\"\n      },\n      \"termination\": \"completed\"\n    }\n  ],\n  \"error\": null,\n  \"qualified\": false,\n  \"recipeSha256\": \"522cc5a8ad1e89ca0873511c6a1e6d4eb03f9cf6ccb2c0c82fa6edf582018ff2\",\n  \"schema\": \"agentlab.maintainer_source_operation_execution.v1\",\n  \"scopeSha256\": \"a9294dbb15bcd569a51c710914a1c24df4e61467d0ee05c57896785ce42f54df\",\n  \"scopeSkillId\": \"skill-scope-code-workshop-common-ui-state-contracts\",\n  \"source\": {\n    \"repository\": \"https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git\",\n    \"repositoryId\": \"code-workshop\",\n    \"revision\": \"7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6\"\n  },\n  \"status\": \"successful\"\n}",
+  "executionReceiptSha256": "bdda9f57b99a3beabf9ec55a4ac611810808c5a3053db885ae8502b19652f618",
+  "qualificationScope": {
+    "build": false,
+    "performance": false,
+    "runtime": false,
+    "sourceMaintenance": true,
+    "tests": false
+  },
+  "recipe": {
+    "automaticPromotion": false,
+    "checks": [
+      {
+        "expected": true,
+        "id": "visibilityReset",
+        "pointer": "/visibilityReset"
+      },
+      {
+        "expected": true,
+        "id": "onePendingTimer",
+        "pointer": "/onePendingTimer"
+      },
+      {
+        "expected": true,
+        "id": "cancelled",
+        "pointer": "/cancelled"
+      }
+    ],
+    "controls": [
+      {
+        "command": {
+          "args": [
+            "/home/huawei/code/.worktrees/agentlabrelease/source-operations-20261002/examples/knowledge-seed/flywheel/loading.js",
+            "common/src/main/ets/view/DelayedLoadingView.ets",
+            "baseline"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 30000
+        },
+        "expectedFailedCheckIds": [
+          "visibilityReset",
+          "onePendingTimer",
+          "cancelled"
+        ],
+        "id": "baseline",
+        "role": "baseline"
+      },
+      {
+        "command": {
+          "args": [
+            "/home/huawei/code/.worktrees/agentlabrelease/source-operations-20261002/examples/knowledge-seed/flywheel/loading.js",
+            "common/src/main/ets/view/DelayedLoadingView.ets",
+            "reference"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 30000
+        },
+        "expectedFailedCheckIds": [],
+        "id": "reference",
+        "role": "reference"
+      },
+      {
+        "command": {
+          "args": [
+            "/home/huawei/code/.worktrees/agentlabrelease/source-operations-20261002/examples/knowledge-seed/flywheel/loading.js",
+            "common/src/main/ets/view/DelayedLoadingView.ets",
+            "wrong-cancel"
+          ],
+          "cwd": ".",
+          "program": "/opt/node-v24.19.0-linux-x64/bin/node",
+          "programSha256": "bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12",
+          "timeoutMs": 30000
+        },
+        "expectedFailedCheckIds": [
+          "onePendingTimer",
+          "cancelled"
+        ],
+        "id": "wrong-cancel",
+        "role": "wrong"
+      }
+    ],
+    "methodInputs": [
+      {
+        "path": "/home/huawei/code/.worktrees/agentlabrelease/source-operations-20261002/examples/knowledge-seed/flywheel/loading.js",
+        "sha256": "54d99837aff7c653ea62147da07cc59c80109e39e0eae19e2b0ca1a00510f501"
+      }
+    ],
+    "operationKind": "source-only",
+    "reviewed": true,
+    "schema": "agentlab.maintainer_source_operation_recipe.v1",
+    "scopeSkillId": "skill-scope-code-workshop-common-ui-state-contracts",
+    "source": {
+      "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+      "repositoryId": "code-workshop",
+      "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+    },
+    "sourceInputs": [
+      {
+        "gitBlobOid": "94ea4b671b5825fc1881cb3f6802a46dfd30133b",
+        "path": "common/src/main/ets/view/DelayedLoadingView.ets",
+        "sha256": "873a0fc8a4e1e6e312828efef3391b155845dcea35a170bb0a39d5cd892dd252"
+      }
+    ]
+  },
+  "recipeOriginal": "{\n  \"schema\": \"agentlab.maintainer_source_operation_recipe.v1\",\n  \"reviewed\": true,\n  \"automaticPromotion\": false,\n  \"operationKind\": \"source-only\",\n  \"scopeSkillId\": \"skill-scope-code-workshop-common-ui-state-contracts\",\n  \"source\": {\n    \"repositoryId\": \"code-workshop\",\n    \"repository\": \"https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git\",\n    \"revision\": \"7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6\"\n  },\n  \"sourceInputs\": [\n    {\n      \"path\": \"common/src/main/ets/view/DelayedLoadingView.ets\",\n      \"sha256\": \"873a0fc8a4e1e6e312828efef3391b155845dcea35a170bb0a39d5cd892dd252\",\n      \"gitBlobOid\": \"94ea4b671b5825fc1881cb3f6802a46dfd30133b\"\n    }\n  ],\n  \"methodInputs\": [\n    {\n      \"path\": \"/home/huawei/code/.worktrees/agentlabrelease/source-operations-20261002/examples/knowledge-seed/flywheel/loading.js\",\n      \"sha256\": \"54d99837aff7c653ea62147da07cc59c80109e39e0eae19e2b0ca1a00510f501\"\n    }\n  ],\n  \"checks\": [\n    {\n      \"id\": \"visibilityReset\",\n      \"pointer\": \"/visibilityReset\",\n      \"expected\": true\n    },\n    {\n      \"id\": \"onePendingTimer\",\n      \"pointer\": \"/onePendingTimer\",\n      \"expected\": true\n    },\n    {\n      \"id\": \"cancelled\",\n      \"pointer\": \"/cancelled\",\n      \"expected\": true\n    }\n  ],\n  \"controls\": [\n    {\n      \"id\": \"baseline\",\n      \"role\": \"baseline\",\n      \"command\": {\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"args\": [\n          \"/home/huawei/code/.worktrees/agentlabrelease/source-operations-20261002/examples/knowledge-seed/flywheel/loading.js\",\n          \"common/src/main/ets/view/DelayedLoadingView.ets\",\n          \"baseline\"\n        ],\n        \"cwd\": \".\",\n        \"timeoutMs\": 30000\n      },\n      \"expectedFailedCheckIds\": [\n        \"visibilityReset\",\n        \"onePendingTimer\",\n        \"cancelled\"\n      ]\n    },\n    {\n      \"id\": \"reference\",\n      \"role\": \"reference\",\n      \"command\": {\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"args\": [\n          \"/home/huawei/code/.worktrees/agentlabrelease/source-operations-20261002/examples/knowledge-seed/flywheel/loading.js\",\n          \"common/src/main/ets/view/DelayedLoadingView.ets\",\n          \"reference\"\n        ],\n        \"cwd\": \".\",\n        \"timeoutMs\": 30000\n      },\n      \"expectedFailedCheckIds\": []\n    },\n    {\n      \"id\": \"wrong-cancel\",\n      \"role\": \"wrong\",\n      \"command\": {\n        \"program\": \"/opt/node-v24.19.0-linux-x64/bin/node\",\n        \"programSha256\": \"bc17c508ffeed0ec622934f9b7fa72f8e78da65350e63c3eceb56fa688aa5e12\",\n        \"args\": [\n          \"/home/huawei/code/.worktrees/agentlabrelease/source-operations-20261002/examples/knowledge-seed/flywheel/loading.js\",\n          \"common/src/main/ets/view/DelayedLoadingView.ets\",\n          \"wrong-cancel\"\n        ],\n        \"cwd\": \".\",\n        \"timeoutMs\": 30000\n      },\n      \"expectedFailedCheckIds\": [\n        \"onePendingTimer\",\n        \"cancelled\"\n      ]\n    }\n  ]\n}",
+  "schema": "agentlab.maintainer_scope_source_qualification.v1",
+  "scopeOriginal": "{\"assetClass\":\"reusable-knowledge\",\"automaticPromotion\":false,\"buildEntrypoints\":[],\"codeLineCount\":2324,\"coverage\":\"all tracked files selected by this scope are assigned exactly once\",\"documentedPurpose\":null,\"documentedTitle\":null,\"evidence\":[{\"gitBlobOid\":\"df695e0e45bbabc6d207d9105a4fd1e16a232feb\",\"path\":\"common/src/main/ets/component/WebSheet.ets\"},{\"gitBlobOid\":\"c790c21f09d3cf38c9872378baf50dc174f159be\",\"path\":\"common/src/main/ets/viewmodel/BaseVM.ets\"}],\"externalDependencies\":[\"@hms.hds.hdsBaseComponent\",\"@kit.AbilityKit\",\"@kit.AccountKit\",\"@kit.AppGalleryKit\",\"@kit.ArkData\",\"@kit.ArkGraphics2D\",\"@kit.ArkTS\",\"@kit.ArkUI\",\"@kit.ArkWeb\",\"@kit.BasicServicesKit\",\"@kit.CoreFileKit\",\"@kit.ImageKit\",\"@kit.NetworkKit\",\"@kit.NotificationKit\",\"@kit.PerformanceAnalysisKit\",\"@kit.PushKit\",\"@kit.SensorServiceKit\",\"@kit.ShareKit\",\"@kit.UIDesignKit\",\"@ohos/hvigor-ohos-plugin\",\"@ohos/hypium\",\"@ohos/imageknife\",\"env.json\"],\"externalDependencyCount\":23,\"id\":\"skill-scope-code-workshop-common-ui-state-contracts\",\"kind\":\"composite-responsibility\",\"languages\":{\"ets\":39},\"ownershipPlane\":\"target-operations\",\"ownershipSelectors\":[{\"path\":\"common/src/main/ets/component\",\"type\":\"prefix\"},{\"path\":\"common/src/main/ets/constant\",\"type\":\"prefix\"},{\"path\":\"common/src/main/ets/model\",\"type\":\"prefix\"},{\"path\":\"common/src/main/ets/routermanager\",\"type\":\"prefix\"},{\"path\":\"common/src/main/ets/view\",\"type\":\"prefix\"},{\"path\":\"common/src/main/ets/viewmodel\",\"type\":\"prefix\"},{\"path\":\"common/src/main/ets/widget\",\"type\":\"prefix\"}],\"pathBoundary\":\"common\",\"repository\":\"https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git\",\"repositoryId\":\"code-workshop\",\"responsibility\":\"Maintain shared UI components, loading views, navigation state, view models, domain models, constants, and widget actions.\",\"schema\":\"agentlab.maintainer_scope_skill.v1\",\"skillLayer\":\"instance\",\"sourceFileCount\":39,\"sourceRevision\":\"7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6\",\"sourceTreeOid\":\"ab156e6aa2fc9c64f400ee119e142fded5573271\",\"stage\":\"repository-scope\",\"status\":\"source-supported\",\"strategy\":\"harmony-multi-product-modules\",\"testEntrypoints\":[],\"testFileCount\":0,\"trackedFileCount\":39}",
+  "scopeSkillId": "skill-scope-code-workshop-common-ui-state-contracts",
+  "source": {
+    "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+    "repositoryId": "code-workshop",
+    "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+  },
+  "status": "qualified",
+  "streams": [
+    {
+      "stderr": "",
+      "stdout": "{\"mode\":\"baseline\",\"smallDelay\":true,\"visibilityReset\":false,\"onePendingTimer\":false,\"cancelled\":false,\"largeDelay\":true,\"pass\":false,\"adapter\":\"original lifecycle bodies; timer scheduler and BreakpointType mapping are operator stubs for sm/lg\",\"harmonyBuildQualified\":false}\n"
+    },
+    {
+      "stderr": "",
+      "stdout": "{\"mode\":\"reference\",\"smallDelay\":true,\"visibilityReset\":true,\"onePendingTimer\":true,\"cancelled\":true,\"largeDelay\":true,\"pass\":true,\"adapter\":\"original lifecycle bodies; timer scheduler and BreakpointType mapping are operator stubs for sm/lg\",\"harmonyBuildQualified\":false}\n"
+    },
+    {
+      "stderr": "",
+      "stdout": "{\"mode\":\"wrong-cancel\",\"smallDelay\":true,\"visibilityReset\":true,\"onePendingTimer\":false,\"cancelled\":false,\"largeDelay\":true,\"pass\":false,\"adapter\":\"original lifecycle bodies; timer scheduler and BreakpointType mapping are operator stubs for sm/lg\",\"harmonyBuildQualified\":false}\n"
+    }
+  ],
+  "verificationBoundary": "Reviewed source-maintenance controls and retained bytes; no authenticated producer, full scope coverage, formal tests, framework runtime or Agent qualification."
+}

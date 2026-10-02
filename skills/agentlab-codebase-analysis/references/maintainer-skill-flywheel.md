@@ -713,3 +713,13 @@ is not source replay or producer authentication. This proves one scoped operatio
 not full scope coverage, formal platform tests or a complete flywheel round.
 Keep its distinct source-maintenance fact kind and explicit reviewed selection;
 do not relabel it as a build receipt or claim automatic recipe generation.
+
+Before treating a remote operation gain as reusable knowledge, independently
+qualify its original capture on the receiving host and reassess its portable
+candidate without the producer's checkout. Compare original receipt/report bytes,
+not just readiness totals. Admit the reviewed fact and its round in one fenced
+transaction, export exact committed rows, and resolve the next baseline through
+that committed cut's durable reference. Confirm the planner leaves the accepted
+scope unselected and identifies the remaining gaps. This demonstrates operation
+feedback consumption; it does not prove automatic recipe generation, another
+productive execution, full-scope understanding or a completed business cycle.

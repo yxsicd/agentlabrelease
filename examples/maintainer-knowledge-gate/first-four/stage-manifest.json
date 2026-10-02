@@ -1,12 +1,12 @@
 {
   "acceptedFactIds": [
-    "lesson-fact-abilitystage-owned-environment-subscription"
+    "operation-source-f1ff4b0290f15e89fe7ee26a8332b179a510ae6769e91869cf9ec00842f98354"
   ],
-  "assessment": "assessments/lesson-lesson-admission-e2a1bc49277d42a44ac76e1085386ade354aaa50e6250f7853a47924a0031bc3.json",
+  "assessment": "assessments/round-40-operation-source-controls-v1.json",
   "authorityWritePerformed": false,
   "automaticPromotion": false,
   "operationEvidence": {
-    "coverage": "verified-child-operation-facts-only",
+    "coverage": "accepted-operation-facts-only",
     "inheritedReceipts": [
       {
         "factId": "operation-build-7d4692e7baccc428c6aa94cf8f2a7ea4a9c94813783d2f93d3ccef8e8427a21e",
@@ -20,10 +20,18 @@
       }
     ],
     "receiptRoot": "operation-evidence",
-    "receipts": []
+    "receipts": [
+      {
+        "factId": "operation-source-f1ff4b0290f15e89fe7ee26a8332b179a510ae6769e91869cf9ec00842f98354",
+        "path": "operation-evidence/source-ui-state.json",
+        "sha256": "17aa31b70e5c310e267c67cd157e00042af4777f017b5fdb690da5691303703f"
+      }
+    ]
   },
+  "proposalReceiptCount": 0,
+  "runId": "source-controls-v1",
   "schema": "agentlab.maintainer_skill_tablegit_stage.v1",
-  "stageKind": "reviewed-lesson",
+  "stageKind": "verified-operation",
   "tables": {
     "evaluation_cases": {
       "path": "evaluation_cases.jsonl",
@@ -35,7 +43,7 @@
     },
     "maintainer_skill_refresh_rounds": {
       "path": "maintainer_skill_refresh_rounds.jsonl",
-      "sha256": "a1a57e18107a4d03890eb768be58d5e139aaf1fc14633b0cd3d60dff178c188d"
+      "sha256": "ef72b914808cc7c8def77da744dba06ad652297e52adad809c2af788958e912d"
     },
     "maintainer_skills": {
       "path": "maintainer_skills.jsonl",
@@ -43,7 +51,7 @@
     },
     "program_facts": {
       "path": "program_facts.jsonl",
-      "sha256": "e71229389cce2c9c65714831c1c543708136ba1cb0406a2fdedcc918353d76e5"
+      "sha256": "619fbd7b7145248d7e78a61094aa6c904f8138a8fe0a141e622af323d209a7ba"
     }
   }
 }

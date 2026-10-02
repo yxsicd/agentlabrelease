@@ -1,23 +1,24 @@
 {
-  "advancedScopeIds": [],
-  "after": {
-    "maintenanceReadyCount": 2,
-    "programBoundCount": 46,
-    "scopeSkillCount": 489,
-    "semanticReadyCount": 41,
-    "structuralReadyCount": 489
-  },
-  "assessmentSha256": "8e9c190eafa4adbb270f3236ff0d50d888839fddfc5feb05b60c7ca3ddd1068e",
-  "before": {
-    "maintenanceReadyCount": 2,
-    "programBoundCount": 46,
-    "scopeSkillCount": 489,
-    "semanticReadyCount": 41,
-    "structuralReadyCount": 489
-  },
-  "beforeAssessmentSha256": "e2349e92fd320bdc9b75caa42d7cad85f504e10e902ec7fc365933789734d102",
-  "countsAsMaturityGain": false,
-  "decision": "review-proposed-lesson-knowledge",
-  "schema": "agentlab.maintainer_lesson_stage_result.v1",
-  "strictOperationEvidencePolicy": true
+  "advancedScopeIds": [
+    "skill-scope-code-workshop-common-ui-state-contracts"
+  ],
+  "afterAssessmentSha256": "4115f840bcfaf94f63f5b3520de8b2ab30b74a6a9d372aa0329ec1292d561a5a",
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "beforeAssessmentSha256": "2ec3f4d2e82d074200ed5fa499adc767c11fae17c65b1a0ed2439a125e178bbc",
+  "decision": "review-proposed-operation-knowledge",
+  "maintenanceReadyDelta": 1,
+  "nextRoundObjectives": [
+    "close 438 MS-BEHAVIOR-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 445 MS-BOUNDARY-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 38 MS-OPERATION-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 2 MS-OPERATION-RECEIPT-UNVERIFIED gaps with revision-bound evidence",
+    "close 443 MS-PROGRAM-EVIDENCE-UNBOUND gaps with revision-bound evidence",
+    "close 444 MS-RELATIONS-EVIDENCE-MISSING gaps with revision-bound evidence",
+    "close 447 MS-RESPONSIBILITY-EVIDENCE-MISSING gaps with revision-bound evidence"
+  ],
+  "schema": "agentlab.maintainer_operation_round_result.v1",
+  "selectedScopeIds": [
+    "skill-scope-code-workshop-common-ui-state-contracts"
+  ]
 }
