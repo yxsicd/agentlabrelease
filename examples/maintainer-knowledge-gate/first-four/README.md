@@ -103,6 +103,15 @@ revision change.
 This is one more reviewed operation-evidence transition, not another completed
 business cycle, automatic recipe generation or formal platform qualification.
 
+The publication now includes committed knowledge cut
+`262b9a819e57abd7d6313c08b18c29c06f79045e`: 15 process/method Skills,
+489 scope Skills, 67 program facts, 45 refresh records and no formal cases.
+This includes the reviewed platform-services operation and Push behavior lesson.
+The latter explicitly does not claim Harmony build/runtime qualification or
+measured learning benefit. Original assessed table bytes and receipt/assessment
+dependencies are retained; historical downstream candidates remain bound to
+their original cuts. Publication does not requalify them automatically.
+
 [`case_generation_rounds.jsonl`](case_generation_rounds.jsonl) starts the
 separate downstream generation lineage. Round 1 is intentionally an honest
 readiness baseline: the structural catalog is complete, but behavior-ready and

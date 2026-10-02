@@ -8,7 +8,8 @@ use std::{
 fn shadow_runtime_policy_is_explicit_generic_and_cannot_downgrade_ohostest() {
     let adapter = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../examples/maintainer-knowledge-gate/case_generation_shadow.py");
-    let request = json!({"candidateId":"shadow-case-arbitrary-behavior",
+    let request = json!({"schema":"agentlab.case_generation_shadow_request.v1",
+        "candidateId":"shadow-case-arbitrary-behavior",
         "sourceSetSha256":"1".repeat(64),"knowledgeCutSha256":"2".repeat(64),
         "maintainerSkillRefreshRoundId":"arbitrary-round", "loopReceiptSha256":"3".repeat(64),
         "scope":{"id":"arbitrary-scope", "pathBoundary":"lib", "testEntrypoints":["tests/contract.rs"]},

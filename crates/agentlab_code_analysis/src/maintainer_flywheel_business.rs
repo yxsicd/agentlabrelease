@@ -134,6 +134,55 @@ fn recorded_outcome(result: &Value) -> Result<bool, String> {
     )?;
     Ok(passed)
 }
+#[cfg(unix)]
+fn persist_observations(
+    config: &Value,
+    packet: &Value,
+    source: &Path,
+    out: &Path,
+) -> Result<Value, String> {
+    need(
+        config["reviewed"] == true
+            && config["destination"]["knowledgeRepository"] == packet["knowledgeAuthority"]["repo"],
+        "business observation persistence review or knowledge binding differs",
+    )?;
+    let request = json!({"schema":"agentlab.observation_store_request.v1","reviewed":true,"automaticPromotion":false,
+        "endpoint":text(config,"endpoint")?,"destination":config["destination"],
+        "sourceDirectory":source,"sourceManifestSha256":digest(&read(&source.join("export.json"))?),
+        "flywheelTool":config["flywheelTool"]["path"],"flywheelToolSha256":config["flywheelTool"]["sha256"],
+        "outputDirectory":out.join("persisted-observations")});
+    let request_path = out.join("persistence-request.json");
+    save(&request_path, &request)?;
+    let command_dir = out.join("persistence-command");
+    fs::create_dir(&command_dir).map_err(|e| e.to_string())?;
+    let (execution, stdout) = maintainer_behavior_loop::invoke(
+        &config["command"],
+        &request_path,
+        &command_dir,
+        "adapter",
+        &[],
+    )?;
+    let reported: Value = serde_json::from_str(&stdout).map_err(|e| e.to_string())?;
+    let capture = out.join("persisted-observations");
+    let mut verified = crate::maintainer_observation_store::verify(
+        source,
+        &read(&capture.join("plan.json"))?,
+        &read(&capture.join("commit-receipt.json"))?,
+        &read(&capture.join("committed.json"))?,
+        &read(&capture.join("baseline.json"))?,
+    )?;
+    need(
+        verified == reported,
+        "business persistence response differs from independent readback reconstruction",
+    )?;
+    verified["adapterExecution"] = execution;
+    verified["captureDirectory"] = json!(capture);
+    Ok(verified)
+}
+#[cfg(not(unix))]
+fn persist_observations(_: &Value, _: &Value, _: &Path, _: &Path) -> Result<Value, String> {
+    Err("business observation persistence command requires Unix containment".into())
+}
 fn execute_operation(base: &Path, state: &Value, out: &Path) -> Result<Value, String> {
     let execution = &state["operationExecution"];
     need(
@@ -190,7 +239,12 @@ fn execute_operation(base: &Path, state: &Value, out: &Path) -> Result<Value, St
         json!({"directory":capture,"executionReceiptSha256":digest(&receipt)});
     Ok(report)
 }
-fn evaluate(stage: &str, state: &Value, out: &Path) -> Result<(&'static str, Value), String> {
+fn evaluate(
+    stage: &str,
+    state: &Value,
+    out: &Path,
+    round: &Value,
+) -> Result<(&'static str, Value), String> {
     let (base, cut, packet) = knowledge(state)?;
     match stage {
         "repository-understanding" => Ok((
@@ -308,18 +362,11 @@ fn evaluate(stage: &str, state: &Value, out: &Path) -> Result<(&'static str, Val
                 "capture":{"path":capture_path,"sha256":digest(&read(&capture_path)?)}});
             Ok((
                 "completed",
-                json!({"schema":"agentlab.flywheel_behavior_execution.v1","execution":result,"latestAttemptEvidence":latest,
+                json!({"schema":"agentlab.flywheel_behavior_execution.v1","round":round,"execution":result,"latestAttemptEvidence":latest,
                 "taskPassed":task_passed,"caseGenerationPerformed":false,"formalCaseQualified":false,"qualified":false}),
             ))
         }
         "evidence-return" => {
-            let Some(admission) = state.get("lessonAdmission") else {
-                return Ok(gap(
-                    "reviewed-committed-lesson-and-admission-proposal-required",
-                ));
-            };
-            let proposal = absolute(admission, "proposalDirectory")?;
-            let source = absolute(admission, "lessonSourceDirectory")?;
             let case_ref = &state["stageEvidence"]["case-execution"];
             if case_ref["status"] != "completed" {
                 return Ok(gap("current-completed-case-execution-evidence-required"));
@@ -327,9 +374,62 @@ fn evaluate(stage: &str, state: &Value, out: &Path) -> Result<(&'static str, Val
             let case_bytes = bound(case_ref)?;
             let case: Value = serde_json::from_slice(&case_bytes).map_err(|e| e.to_string())?;
             need(
-                case["schema"] == "agentlab.flywheel_behavior_execution.v1",
+                case["schema"] == "agentlab.flywheel_behavior_execution.v1"
+                    && case["round"] == *round
+                    && case["taskPassed"].is_boolean(),
                 "business case evidence schema differs",
             )?;
+            let Some(admission) = state.get("lessonAdmission") else {
+                let Some(candidate_ref) = state["behaviorExecution"].get("candidate") else {
+                    return Ok(gap(
+                        "bound-candidate-required-for-operational-observation-export",
+                    ));
+                };
+                let candidate = bound(candidate_ref)?;
+                let declaration: Value =
+                    serde_json::from_slice(&candidate).map_err(|e| e.to_string())?;
+                need(
+                    declaration["repositoryId"] == state["repositoryId"]
+                        && declaration["sourceRevision"] == state["sourceRevision"]
+                        && declaration["id"] == state["candidateId"],
+                    "business observation candidate source differs",
+                )?;
+                let contract = bound(&case["latestAttemptEvidence"]["contract"])?;
+                let capture = bound(&case["latestAttemptEvidence"]["capture"])?;
+                let feedback = crate::maintainer_behavior_checks::verify(&contract, &capture)?;
+                need(
+                    feedback["nextAction"]
+                        == if case["taskPassed"] == true {
+                            "review-agent-outcome"
+                        } else {
+                            "repair-agent-behavior"
+                        },
+                    "business observation outcome differs",
+                )?;
+                let destination = out.join("observations");
+                let manifest = crate::maintainer_behavior_checks::export_observation(
+                    &candidate,
+                    &contract,
+                    &capture,
+                    &destination,
+                )?;
+                let persistence = if let Some(config) = state.get("observationPersistence") {
+                    persist_observations(config, &packet, &destination, out)?
+                } else {
+                    Value::Null
+                };
+                return Ok((
+                    "review-required",
+                    json!({"schema":"agentlab.flywheel_observation_return.v1",
+                    "export":{"directory":destination,"manifestSha256":digest(&read(&destination.join("export.json"))?)},
+                    "tables":manifest["tables"],"observationExported":true,"lessonCreated":false,
+                    "persistence":persistence,
+                    "gap":if persistence.is_null(){"operational-persistence-and-reviewed-knowledge-delta-required"}else{"reviewed-knowledge-delta-required"},
+                    "qualified":false,"authorityWritePerformed":!persistence.is_null() && persistence["noChange"]==false,"automaticPromotion":false}),
+                ));
+            };
+            let proposal = absolute(admission, "proposalDirectory")?;
+            let source = absolute(admission, "lessonSourceDirectory")?;
             for (key, file) in [
                 ("contract", "behavior-contract.json"),
                 ("capture", "behavior-capture.json"),
@@ -387,7 +487,7 @@ pub fn run(request_bytes: &[u8], output: &Path) -> Result<Value, String> {
     let root = output.canonicalize().map_err(|e| e.to_string())?;
     let out = root.join("business");
     fs::create_dir(&out).map_err(|e| e.to_string())?;
-    let (status, report) = match evaluate(stage, &state, &out) {
+    let (status, report) = match evaluate(stage, &state, &out, &request["round"]) {
         Ok(result) => result,
         Err(error) => (
             "rejected",

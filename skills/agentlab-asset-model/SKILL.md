@@ -80,3 +80,60 @@ raw bytes; separately prove the evidence bundle's durable availability.
 Test with real SWE/Harmony evidence plus a small public synthetic fixture. Prove
 joins, context changes/history, tool errors, raw-file reconstruction and stable
 repeat import, not only successful archival. Preserve release qualification gates.
+
+Behavior lesson exports keep actual submissions in `attempts` and link their
+typed checks by attemptId, separately from calibration_controls/controlId. Retain
+both passing and rejected attempts, source/stdout/capture identities and raw bytes;
+do not substitute the calibration verdict map for participant outcomes. Re-export
+retained evidence with a changed consumer into a fresh directory: the new run
+identity is a projection version, not another execution. Behavior-only reconstruction
+does not verify participant completion, authenticate its producer or qualify a case.
+
+Resolve the live transport contract before reusing an ingestion recipe: a legacy
+Service WebSocket client is not an MCP Skill-kernel client. Use the instance's
+discovered read/write operations, explicit Person and revision fences. Bind the
+actual method commit when promoting outside Action; an exported candidate with
+null methodRevision is not admissible. Preserve that rejection and regenerate
+into a fresh destination with verified method identity, rather than patching the
+rejected candidate. Remote analytical readback does not preserve raw evidence
+bytes merely because evidence_files hash/path rows were committed.
+
+Archive operational observations without inventing a reviewed lesson. Use
+`--export-behavior-observation` with the bound candidate corpus/id and original
+contract/capture into a fresh directory. The same Rust reconstruction exports
+runs, controls, attempts, checks, analysis and three exact raw files, without
+lesson/reviewer/knowledge-target rows. Retain failed calibration as failed;
+malformed or incomplete worker captures remain rejected. Review and promotion
+are later independent gates, not prerequisites for preserving valid observations.
+
+When an execution repository contains several runs, distinguish a whole-table
+export from an explicit runId selection at a committed cut. Record the selection
+predicate and compare exactly those rows; a newly appended run's counts cannot
+describe all remote rows. A new consumer digest changes the projection identity,
+not the physical execution count or learning evidence.
+
+Use the Rust observation-store planner and readback verifier through
+[the operator MCP importer](../../scripts/import-behavior-observations.cjs) for
+observation-only persistence. Supply an explicit separate repository, fixed
+revision and transaction UUID; current tables must already exist. The native
+planner reconstructs all rows from original evidence, rejects stable-ID conflicts
+and emits inserts only. The verifier reproduces the plan from the original
+baseline and compares every prior and new row. No missing rows means no transaction
+and no new revision. Authority drift or uncertain writes stop; retain intents and
+reconcile instead of rebasing or retrying with another UUID. Current snapshots are
+bounded to 1000 rows per table; truncation rejects rather than guessing completeness.
+
+Before connecting an exported knowledge cut to the business runner, verify its
+source-set.txt against sourceSetSha256 as well as table and operation sidecars.
+A missing portable sidecar is an export defect, not an Agent task failure. Restore
+only hash-identical bytes into a fresh derived bundle and keep the rejected cut
+unchanged; do not rewrite its manifest or claim another knowledge commit.
+
+Knowledge admission and consumer publication are separate transitions. Before a
+new automated round, compare the consumer branch's published cut with live
+authority and read back all five tables at that exact revision. If publication
+lags, publish the verified portable snapshot, including assessment and operation
+receipt dependencies, before spending another Agent budget. Preserve assessed
+raw bytes and historical candidate bindings; equivalent canonical rows do not
+repair missing sidecars. A pushed branch is not the default-branch consumer:
+confirm the merged cut and its admission check before claiming the loop unblocked.

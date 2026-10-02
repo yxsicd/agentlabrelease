@@ -24,6 +24,73 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args
+        .iter()
+        .any(|a| a == "--plan-observation-import" || a == "--verify-observation-import")
+    {
+        let source = PathBuf::from(value(&args, "--source")?);
+        let remote = fs::read(value(&args, "--remote-snapshot")?)?;
+        let result = if args.iter().any(|a| a == "--plan-observation-import") {
+            agentlab_code_analysis::maintainer_observation_store::plan(
+                &source,
+                &remote,
+                &fs::read(value(&args, "--destination")?)?,
+            )?
+        } else {
+            agentlab_code_analysis::maintainer_observation_store::verify(
+                &source,
+                &fs::read(value(&args, "--plan")?)?,
+                &fs::read(value(&args, "--commit-receipt")?)?,
+                &remote,
+                &fs::read(value(&args, "--baseline-snapshot")?)?,
+            )?
+        };
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&result)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"schema":result["schema"],"insertedRows":result["insertedRows"],"qualified":false})
+        );
+        return Ok(());
+    }
+    if args.iter().any(|a| a == "--prepare-operation-case-shadow") {
+        let request = agentlab_code_analysis::maintainer_operation_case::shadow_request(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &fs::read(value(&args, "--operation-inputs")?)?,
+            &value(&args, "--runtime-target")?,
+        )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&request)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"candidateId":request["candidateId"],"qualified":false})
+        );
+        return Ok(());
+    }
+    if args.iter().any(|a| a == "--prepare-operation-case-inputs") {
+        let packet = agentlab_code_analysis::maintainer_operation_case::prepare(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &value(&args, "--scope-id")?,
+            &value(&args, "--semantic-fact-id")?,
+            &value(&args, "--operation-fact-id")?,
+        )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&packet)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"id":packet["id"],"formalCaseQualified":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--validate-source-recipe-design") {
         let receipt = agentlab_code_analysis::maintainer_source_recipe_author::design(
             &fs::read(value(&args, "--author-request")?)?,
@@ -177,17 +244,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
     if args.iter().any(|arg| arg == "--execute-flywheel-cycles") {
-        let result = agentlab_code_analysis::maintainer_flywheel_cycles::execute(
-            &fs::read(value(&args, "--recipe")?)?,
-            &output,
-        )?;
+        let recipe = fs::read(value(&args, "--recipe")?)?;
+        let result = if args.iter().any(|arg| arg == "--cycle-checkpoint") {
+            agentlab_code_analysis::maintainer_flywheel_cycles::resume(
+                &recipe,
+                &output,
+                &PathBuf::from(value(&args, "--cycle-checkpoint")?),
+                &value(&args, "--cycle-checkpoint-sha256")?,
+            )?
+        } else {
+            if args.iter().any(|arg| arg == "--cycle-checkpoint-sha256") {
+                return Err("checkpoint digest requires checkpoint path".into());
+            }
+            agentlab_code_analysis::maintainer_flywheel_cycles::execute(&recipe, &output)?
+        };
         println!(
             "{}",
             serde_json::json!({"status":result["status"],"completedRounds":result["completedRounds"],"qualified":false})
         );
         return Ok(());
     }
-    if args.iter().any(|arg| arg == "--export-behavior-lesson") {
+    if args
+        .iter()
+        .any(|arg| arg == "--export-behavior-lesson" || arg == "--export-behavior-observation")
+    {
+        let observation = args
+            .iter()
+            .any(|arg| arg == "--export-behavior-observation");
+        if observation
+            && args
+                .iter()
+                .any(|arg| arg == "--export-behavior-lesson" || arg == "--lesson-review")
+        {
+            return Err("observation export cannot include lesson review or promotion".into());
+        }
         let id = value(&args, "--candidate-id")?;
         let candidates = fs::read_to_string(value(&args, "--candidates")?)?;
         let rows = candidates
@@ -202,6 +292,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let candidate = serde_json::to_vec(selected[0])?;
         let contract = fs::read(value(&args, "--contract")?)?;
         let capture = fs::read(value(&args, "--capture")?)?;
+        if observation {
+            let manifest = agentlab_code_analysis::maintainer_behavior_checks::export_observation(
+                &candidate, &contract, &capture, &output,
+            )?;
+            println!(
+                "{}",
+                serde_json::json!({"assetClass":manifest["assetClass"],"authorityWritePerformed":false,"lessonCreated":false,"qualified":false})
+            );
+            return Ok(());
+        }
         let review = fs::read(value(&args, "--lesson-review")?)?;
         let tables = agentlab_code_analysis::maintainer_behavior_checks::lesson_assets(
             &candidate, &contract, &capture, &review,

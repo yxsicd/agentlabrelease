@@ -1,5 +1,177 @@
 # Contained behavior execution and real participant Action
 
+## Push initialization adapter checkpoint
+
+### Actual guided successor consumption and committed outcome return
+
+The successor in external `push-agent-loop-pO1Bz0gH/guided-attempts-1/attempt-0`
+used the admitted knowledge cut `262b9a819e57abd7d6313c08b18c29c06f79045e`
+and the previously bound packet. Independent raw Gateway reconstruction verified
+four completed guidance-bearing exchanges, zero implicit retries and actual
+packet consumption. The first submitted implementation passed all twelve frozen
+checks. Filesystem, network and credential isolation passed independent runtime
+validation. Submitted source SHA256 is
+`ad9e4b80b984012fa7f4c6c0e4016d6fadb15ac5058b02b3a9f8cb68da8a7eb0`.
+
+The typed outcome was appended atomically to `agentlabpush-20261003` at
+`8e3eef2eef952cedcfe61d353ad007d013bb3638`. Exact new-row readback preserves
+the predecessor. `guided-lesson-committed-scoped-1/export.json` explicitly selects
+the new runId; these nine analytical files are not a whole-table export now that
+the repository contains both runs. Active knowledge was not duplicated or changed.
+
+This proves an operator-coordinated knowledge-to-actual-consumption-to-outcome
+return chain. Both unguided and guided submissions passed initially; no learning
+benefit is proved. Raw evidence remains local, formal cases and complete automatic
+business cycles remain zero, and no new immutable Release is claimed. Overall
+maturity is estimated at 66%, up two points for this actual chain, not test counts.
+
+### Reviewed knowledge admission and next-round input
+
+Live exact-cut baseline comparison and source-instance readback preceded the
+ordinary writer's single atomic three-insert delta. `agentlabtablegit` advanced
+from `a9c327c5522292c6dee7d86645b039a84de30cd0` to
+`262b9a819e57abd7d6313c08b18c29c06f79045e`. All five resulting knowledge tables
+were read back and exported against staged bytes: fifteen Skills, 489 scopes,
+67 facts, 45 refresh records and zero formal cases. The knowledge update adds
+the reviewed evaluation Skill, its source-bound lesson fact and refresh lineage;
+it does not advance scope readiness. Replaying transaction
+`3ef5b6b5-6e58-5afe-a165-a12613d8bb12` returned idempotent_replay, applied=false,
+no conflicts and the same revision. Transient preflight fetch failures remain
+read failures, not participant failures or uncertain authority mutations.
+
+External `push-agent-loop-pO1Bz0gH/knowledge-committed-1` retains the complete
+committed cut and inherited sidecars. The ordinary guidance gate selected the
+new evaluation Skill at that exact repository/source cut and produced
+`guidance-packet-1.json`, SHA256
+`1a4c6afaf92126477badf74fa0a5759b0d4972dfe2bc26e10f43720134811270`.
+This is verified next-round input assembly, not actual Agent consumption. No
+new participant, automatic complete cycle, learning benefit, raw-evidence remote
+archive or immutable Release is claimed. Overall maturity remains 64%; the next
+boundary is actual guidance-bearing request capture and new outcome feedback.
+
+### Committed instance readback and knowledge staging
+
+The live TPC MCPGit metadata/Skill contracts and explicit Person selection were
+verified before provisioning independent bare TableGit `agentlabpush-20261003`.
+Nine analytical tables were created with exported definitions; all result rows
+were inserted in one revision-fenced atomic transaction. Committed revision
+`aec6dd02c90fe6a3668d35bddabe60d89fd8ca30` was queried table by table, comparing
+every key and full row to the source projection. Original `agentlabtablegit`
+knowledge remained at `a9c327c5522292c6dee7d86645b039a84de30cd0`.
+External `push-agent-loop-pO1Bz0gH/lesson-committed-1` retains intents, receipts,
+fixed-cut readback and raw local files. Remote evidence_files rows are references,
+not proof of durable raw-byte availability; remote replication is not claimed.
+
+Explicit promotion first exported null methodRevision outside Action; strict
+admission rejected it. The original candidate remains retained. A fresh promotion
+bound actual method commit `ba5e4f91443b2081835f608b4a212402273bf3d6`; strict
+lesson reconstruction and baseline reassessment then staged the complete knowledge
+cut in `lesson-knowledge-stage-2`. Scope verdicts, totals and five inherited
+operation receipts remain unchanged. Staging is not knowledge authority commit,
+publication or next-round consumption. Overall maturity remains 64%.
+
+### Structured actual-attempt feedback
+
+The behavior lesson consumer now exports actual submissions as `attempts`, with
+checks linked by attemptId and null controlId; calibration controls stay separate.
+Passing and rejected attempts retain source/stdout/contract/capture identities.
+Calibration validation expectations do not include participant outcomes. Completion,
+producer authentication and formal qualification remain false at this boundary.
+
+Reconstruction of the retained real `push-agent-loop-pO1Bz0gH/attempts-2/attempt-0`
+into fresh `lesson-assets-attempt-projection-1` produced one attempt and twelve
+passing attempt checks, alongside unchanged eight controls and ninety-six
+calibration checks. All four raw input files are byte-identical to the prior
+export. No participant or worker reran. The consumer digest creates a new
+projection identity, not another physical execution. This closes typed outcome
+loss during export; committed admission and next-cut consumption remain pending.
+Overall maturity remains 64%; no full business cycle is claimed.
+
+### Recorded real source attempt
+
+External `.artifacts/push-agent-loop-pO1Bz0gH/attempts-2` executed the unchanged
+twelve-check successor using the existing Rust controller, Pi/GLM participant,
+operator Gateway capture and contained worker. One unguided `glm-5.3-flash`
+attempt under low reasoning effort passed all checks on its first submission.
+Participant-process duration was 47,610 ms (native turn 47,439 ms); the behavior
+executor took 455 ms. Three completed Gateway exchanges and zero transport
+retries were independently reconstructed. Submitted source SHA256 is
+`03d0d00df6c97e9ce40b93a4468a6964e5f3743be565b44f87a0fc3cade00b02`.
+
+Independent live runtime validation accepted the actual inspect/probe records
+for filesystem, network-egress and external-credential isolation. Author
+completion and behavior readback passed separately. Attempt contract/capture
+SHA256s are respectively
+`76f903e882c20b32f9324d41fd2b0cff4a3d73ee1d06fda1437f4867ef8a1640`
+and `66219ea44ddb71df5e9510a4f4fe245ff7cadc538f07138fe21e0d1370b44ed0`.
+
+The original `attempts` launch failed before inference: the sanitized host PATH
+excluded the Homebrew Docker CLI. It remains retained, not scored as Agent
+inability. The successor used an operator-only adapter pinning Docker executable
+bytes and the existing Colima endpoint; participant mounts/permissions were not
+widened. This host recipe is instance-specific, not automatic adapter discovery.
+
+Overall maturity remains 64%. A first-attempt pass is not evidence of feedback
+learning, guidance benefit or a complete business cycle. The candidate is still
+maintainer-authored and unadmitted. Lesson export is evaluation-instance staging,
+not authority admission, formal Harmony qualification or automatic next-cut
+consumption. No new immutable Release is claimed.
+
+The successor `push-contained-calibration-2` retains all nine previous checks
+and adds independently held token acquisition, post-failure visibility and
+token payload checks. Error logging or a rejected initialization is an explicit
+operator-selected failure channel; a successful retry sequence must not report
+failure. This interpretation remains subject to independent task review. The
+worker records payloads instead of throwing into submitted catch handlers. Eight
+normal-exit containers produced 96 observations: both valid strategies passed,
+and silent failure and incorrect token controls failed named outcome checks.
+Baseline failed ten checks. Independent Rust readback selected
+`execute-agent-attempt`, with `qualified:false`.
+
+Successor contract/capture/feedback SHA256s respectively are
+`5137c1b744c32587f9b748a874ca293e94976ddab68beee31d3a0554a6f40163`,
+`9dd00490f9e746a709396252194e7d70f18fa3e68e51d249938f8f3a085f58a0`,
+and `3de05323b86081d7432cfefb4de5b558487f17a202f1d116c83a9f3d613e83e7`.
+The prior worker bytes remain as `worker-frozen.cjs` in calibration-1, matching
+its original descriptor digest. No historical input or verdict was rewritten.
+Maturity remains 64%: this closes three diagnostic Oracle gaps, not automatic
+case production/admission, an assessed participant or platform qualification.
+Singleton/export/return violations and unsupported imports still need explicit
+task-versus-infrastructure routing review before formal qualification.
+
+### Retained first contained cut
+
+`scripts/push-initialization-worker.cjs` accepts the existing executor request
+protocol and the existing network-disabled Docker launcher. It executes the
+submitted PushServiceManager module with explicit permission/token/post seams,
+fresh modules between scenarios and a shared singleton within pending/retry
+phases. Its support input contains only adapter selection and compiler digest;
+check requests contain IDs and inputs, not independent expected answers. The
+trusted all-control runtime manifest from the original local diagnostic is not
+mounted. All scenario inputs are checked before source rejection or execution.
+
+External `source-recipe-action-37056552180-tPc9gy/push-contained-calibration-1`
+retains six normal-exit container captures and nine unchanged checks per control.
+The independent Rust consumer accepted both valid strategies and discriminated
+unawaited post, sticky pending state and permission-denial bypass. Baseline failed
+seven checks. Contract SHA256 is
+`a33e1a0be8fcf0b983584c2affa8d24f7388b8973d1feeb1d4355f4ad9a28f17`,
+capture SHA256 is
+`658117ce6e8de9732a1338d326ffcf60bca3768d4ca217b451d02052843f97c9`,
+and feedback SHA256 is
+`a3079e301c6043df252c8879bd490ee28e92f4beefce1f576d074154dafa0e8e`.
+This is a new method/runtime cut, not a replay or replacement of calibration-0.
+
+Overall maturity remains 64%. No new assessed Agent, case admission, automatic
+authority return or full business cycle is claimed. Oracle coverage still needs
+review: failure logging/status is not scored, token payload validation is not an
+independent named check, and invalid singleton/return/unsupported import behavior
+can stop this diagnostic adapter. These gaps must not become falsely successful
+behavior verdicts. New predicates require a separately frozen successor contract
+and calibration, not editing this retained result. ArkTS compilation, Hypium,
+emulator and performance qualification remain absent. Rust protocol regressions
+use JavaScript/compiler fixtures, not the real platform compiler.
+
 The shared Rust controller remains repository-independent. Reviewed profile data
 owns candidate/source identities, exact text controls, task demand and checks;
 an explicitly selected worker owns framework/host-seam semantics. The current

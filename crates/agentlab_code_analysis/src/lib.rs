@@ -3,6 +3,7 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use tree_sitter::{Node, Parser};
 
+pub mod asset_exchange;
 pub mod knowledge_gate;
 pub mod maintainer_behavior_checks;
 pub mod maintainer_behavior_loop;
@@ -13,6 +14,8 @@ pub mod maintainer_flywheel_cycles;
 pub mod maintainer_flywheel_plan;
 pub mod maintainer_guidance;
 pub mod maintainer_lesson_admission;
+pub mod maintainer_observation_store;
+pub mod maintainer_operation_case;
 pub mod maintainer_operation_evidence;
 pub mod maintainer_operation_exec;
 pub mod maintainer_operation_qualification;

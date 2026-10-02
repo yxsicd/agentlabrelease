@@ -11,6 +11,54 @@ pub fn lesson_assets(
     capture_bytes: &[u8],
     review_bytes: &[u8],
 ) -> Result<BTreeMap<String, BTreeMap<String, Value>>, String> {
+    assets(
+        candidate_bytes,
+        contract_bytes,
+        capture_bytes,
+        Some(review_bytes),
+    )
+}
+
+/// Operational observations need no invented reviewer, causal lesson or
+/// knowledge targets. Reconstruct all checks before exporting analytical rows.
+pub fn observation_assets(
+    candidate_bytes: &[u8],
+    contract_bytes: &[u8],
+    capture_bytes: &[u8],
+) -> Result<BTreeMap<String, BTreeMap<String, Value>>, String> {
+    assets(candidate_bytes, contract_bytes, capture_bytes, None)
+}
+
+/// A fresh, portable operational export; no review or authority mutation.
+pub fn export_observation(
+    candidate: &[u8],
+    contract: &[u8],
+    capture: &[u8],
+    out: &std::path::Path,
+) -> Result<Value, String> {
+    let tables = observation_assets(candidate, contract, capture)?;
+    std::fs::create_dir(out).map_err(|e| e.to_string())?;
+    for (name, bytes) in [
+        ("candidate.json", candidate),
+        ("behavior-contract.json", contract),
+        ("behavior-capture.json", capture),
+    ] {
+        std::fs::write(out.join(name), bytes).map_err(|e| e.to_string())?;
+    }
+    Ok(crate::asset_exchange::export(
+        out,
+        "evaluation-instance",
+        &tables,
+    ))
+}
+
+fn assets(
+    candidate_bytes: &[u8],
+    contract_bytes: &[u8],
+    capture_bytes: &[u8],
+    reviewed: Option<&[u8]>,
+) -> Result<BTreeMap<String, BTreeMap<String, Value>>, String> {
+    let review_bytes = reviewed.unwrap_or(b"null");
     require(
         candidate_bytes.len() <= 256 * 1024 && review_bytes.len() <= 128 * 1024,
         "behavior lesson input budget exceeded",
@@ -27,66 +75,69 @@ pub fn lesson_assets(
         "behavior lesson candidate binding differs",
     )?;
     let repository = text(&candidate, "repositoryId")?;
-    require(
-        review["schema"] == "agentlab.behavior_lesson_review.v1"
-            && review["reviewed"] == true
-            && review["automaticPromotion"] == false
-            && feedback["calibrationRecordedContentPassed"] == true,
-        "behavior lesson requires reviewed calibrated evidence",
-    )?;
-    for (key, actual) in [
-        ("candidateSha256", feedback["candidateSha256"].clone()),
-        ("sourceRevision", feedback["sourceRevision"].clone()),
-        ("contractSha256", json!(digest(contract_bytes))),
-        ("captureSha256", json!(digest(capture_bytes))),
-    ] {
+    if reviewed.is_some() {
         require(
-            review[key] == actual,
-            "behavior lesson review binding differs",
+            review["schema"] == "agentlab.behavior_lesson_review.v1"
+                && review["reviewed"] == true
+                && review["automaticPromotion"] == false
+                && feedback["calibrationRecordedContentPassed"] == true,
+            "behavior lesson requires reviewed calibrated evidence",
         )?;
-    }
-    for key in [
-        "id",
-        "scope",
-        "reviewerId",
-        "phenomenon",
-        "cause",
-        "change",
-        "factId",
-        "skillId",
-        "body",
-    ] {
+        for (key, actual) in [
+            ("candidateSha256", feedback["candidateSha256"].clone()),
+            ("sourceRevision", feedback["sourceRevision"].clone()),
+            ("contractSha256", json!(digest(contract_bytes))),
+            ("captureSha256", json!(digest(capture_bytes))),
+        ] {
+            require(
+                review[key] == actual,
+                "behavior lesson review binding differs",
+            )?;
+        }
+        for key in [
+            "id",
+            "scope",
+            "reviewerId",
+            "phenomenon",
+            "cause",
+            "change",
+            "factId",
+            "skillId",
+            "body",
+        ] {
+            require(
+                !text(&review, key)?.trim().is_empty(),
+                "behavior lesson review text empty",
+            )?;
+        }
         require(
-            !text(&review, key)?.trim().is_empty(),
-            "behavior lesson review text empty",
+            review["factId"] != review["skillId"],
+            "behavior lesson target identities collide",
         )?;
-    }
-    require(
-        review["factId"] != review["skillId"],
-        "behavior lesson target identities collide",
-    )?;
-    require(
-        review["skillStage"] == "calibration" || review["skillStage"] == "evaluation",
-        "behavior lesson stage unsupported",
-    )?;
-    let controls = feedback["controls"].as_array().unwrap();
-    require(
-        controls
-            .iter()
-            .filter(|c| {
-                c["role"] == "accepted" && c["failedCheckIds"].as_array().unwrap().is_empty()
-            })
-            .count()
-            >= 2
-            && controls
+        require(
+            review["skillStage"] == "calibration" || review["skillStage"] == "evaluation",
+            "behavior lesson stage unsupported",
+        )?;
+        let controls = feedback["controls"].as_array().unwrap();
+        require(
+            controls
                 .iter()
                 .filter(|c| {
-                    c["role"] == "wrong" && !c["failedCheckIds"].as_array().unwrap().is_empty()
+                    c["role"] == "accepted" && c["failedCheckIds"].as_array().unwrap().is_empty()
                 })
                 .count()
-                >= 2,
-        "behavior lesson requires two accepted and two rejected controls",
-    )?;
+                >= 2
+                && controls
+                    .iter()
+                    .filter(|c| {
+                        c["role"] == "wrong" && !c["failedCheckIds"].as_array().unwrap().is_empty()
+                    })
+                    .count()
+                    >= 2,
+            "behavior lesson requires two accepted and two rejected controls",
+        )?;
+    }
+    let controls = feedback["controls"].as_array().unwrap();
     let consumer = digest(include_bytes!("maintainer_behavior_checks.rs"));
     let run = format!(
         "behavior-{}",
@@ -127,7 +178,7 @@ pub fn lesson_assets(
         "runs",
         json!({"id":run,"kind":"recorded-behavior-calibration","candidateId":candidate["id"],"repositoryId":repository,
         "sourceRevision":candidate["sourceRevision"],"contractSha256":digest(contract_bytes),"captureSha256":digest(capture_bytes),
-        "calibrationRecordedContentPassed":true,"qualified":false,"automaticPromotion":false}),
+        "calibrationRecordedContentPassed":feedback["calibrationRecordedContentPassed"],"qualified":false,"automaticPromotion":false}),
     );
     put(
         "analysis_records",
@@ -135,50 +186,84 @@ pub fn lesson_assets(
         "code":"maintainer_behavior_checks::verify","inputSha256":digest(capture_bytes),"result":feedback}),
     );
     let mut control_ids = Vec::new();
-    for control in controls.iter().filter(|c| c["role"] != "agent-attempt") {
-        let id = format!("{run}-control-{}", digest(text(control, "id")?.as_bytes()));
-        control_ids.push(id.clone());
-        put(
-            "calibration_controls",
-            json!({"id":id,"variant":control["id"],"role":control["role"],"completed":true,
+    let mut attempt_ids = Vec::new();
+    for control in controls {
+        let is_attempt = control["role"] == "agent-attempt";
+        let id = format!(
+            "{run}-{}-{}",
+            if is_attempt { "attempt" } else { "control" },
+            digest(text(control, "id")?.as_bytes())
+        );
+        if is_attempt {
+            attempt_ids.push(id.clone());
+            let declaration = contract["controls"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|row| row["id"] == control["id"])
+                .unwrap();
+            put(
+                "attempts",
+                json!({"id":id,"kind":"recorded-behavior-attempt","variant":control["id"],
+                "candidateId":candidate["id"],"repositoryId":repository,"sourceRevision":candidate["sourceRevision"],
+                "submittedSourceSha256":declaration["submittedSourceSha256"],
+                "behaviorPassed":control["failedCheckIds"].as_array().unwrap().is_empty(),
+                "failedCheckIds":control["failedCheckIds"],"capturePath":"behavior-capture.json",
+                "captureSha256":digest(capture_bytes),"contractSha256":digest(contract_bytes),
+                "stdoutSha256":control["stdoutSha256"],"participantCompletionVerified":false,
+                "producerAuthenticated":false,"qualified":false}),
+            );
+        } else {
+            control_ids.push(id.clone());
+            put(
+                "calibration_controls",
+                json!({"id":id,"variant":control["id"],"role":control["role"],"completed":true,
             "observedVerdict":if control["failedCheckIds"].as_array().unwrap().is_empty(){"accept"}else{"reject"},
             "capturePath":"behavior-capture.json","captureSha256":digest(capture_bytes),"stdoutSha256":control["stdoutSha256"]}),
-        );
+            );
+        }
         for check in control["checks"].as_array().unwrap() {
             put(
                 "checks",
-                json!({"id":format!("{id}-check-{}",digest(text(check,"id")?.as_bytes())),"controlId":id,
+                json!({"id":format!("{id}-check-{}",digest(text(check,"id")?.as_bytes())),
+                "controlId":if is_attempt {Value::Null}else{json!(id)},
+                "attemptId":if is_attempt {json!(id)}else{Value::Null},
                 "variant":control["id"],"check":check["id"],"passed":check["passed"],"capturePath":"behavior-capture.json",
                 "captureSha256":digest(capture_bytes),"authority":"independently-reconstructed-frozen-check"}),
             );
         }
     }
-    put(
-        "experiment_lessons",
-        json!({"id":review["id"],"kind":"calibrated-method-lesson","status":"verified","scope":review["scope"],
+    if reviewed.is_some() {
+        put(
+            "experiment_lessons",
+            json!({"id":review["id"],"kind":"calibrated-method-lesson","status":"verified","scope":review["scope"],
         "phenomenon":review["phenomenon"],"cause":review["cause"],"change":review["change"],"repositoryId":repository,
         "sourceRevision":candidate["sourceRevision"],"analysisId":format!("{run}-feedback"),"evidenceIds":[evidence],
         "validationIds":[validation],"targetIds":[review["factId"],review["skillId"]],"promotionContract":promotion,
         "attribution":"explicit-reviewed-interpretation-of-reconstructed-controls","reviewerId":review["reviewerId"],
         "reviewSha256":digest(review_bytes),"automaticPromotion":false,"qualified":false}),
-    );
-    put(
-        "lesson_evidence",
-        json!({"id":evidence,"lessonId":review["id"],"kind":"reconstructed-behavior-controls",
+        );
+        put(
+            "lesson_evidence",
+            json!({"id":evidence,"lessonId":review["id"],"kind":"reconstructed-behavior-controls",
         "capturePath":"behavior-capture.json","captureSha256":digest(capture_bytes),"reviewPath":"lesson-review.json",
-        "reviewSha256":digest(review_bytes),"controlIds":control_ids}),
-    );
-    put(
-        "lesson_validations",
-        json!({"id":validation,"lessonId":review["id"],"kind":"positive-negative-calibration","passed":true,
+        "reviewSha256":digest(review_bytes),"controlIds":control_ids,"attemptIds":attempt_ids}),
+        );
+        put(
+            "lesson_validations",
+            json!({"id":validation,"lessonId":review["id"],"kind":"positive-negative-calibration","passed":true,
         "scope":review["scope"],"evidenceId":evidence,"expected":expected,"qualification":qualification,"reviewSha256":digest(review_bytes)}),
-    );
-    for (name, bytes) in [
+        );
+    }
+    let mut files = vec![
         ("candidate.json", candidate_bytes),
         ("behavior-contract.json", contract_bytes),
         ("behavior-capture.json", capture_bytes),
-        ("lesson-review.json", review_bytes),
-    ] {
+    ];
+    if reviewed.is_some() {
+        files.push(("lesson-review.json", review_bytes));
+    }
+    for (name, bytes) in files {
         put(
             "evidence_files",
             json!({"id":format!("{run}-file-{}-{}",digest(name.as_bytes()),digest(bytes)),"path":name,"sha256":digest(bytes),"bytes":bytes.len()}),

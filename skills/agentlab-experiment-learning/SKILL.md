@@ -252,6 +252,16 @@ silently authorizes the next cut. Scope coverage and overall flywheel maturity
 are different measurements; low semantic/operation coverage should influence
 which real producer is run next.
 
+For chunked cycles, use the coordinator's digest-bound completed checkpoint and
+matching terminal checkpoint-ready capture with the same recipe and a fresh
+capture directory; completed stages
+must not rerun. Its one-time continuation claim prevents duplicate scheduling,
+not exactly-once external writes. A later partial stage or existing claim is an
+uncertain dispatch: reconcile the exact remote transaction independently before
+a reviewed successor. Never remove partial evidence or claims to enable retries.
+Read the cycle protocol's continuation section for the executable flags and
+chunk budget. Count complete five-stage rounds, not invocations or checkpoints.
+
 Route the selected repository's actual next lane, not the global eligible count.
 A semantic-ready repository can have only operation gaps while other repositories
 still have hundreds of semantic candidates. Repeating a semantic-only dispatch

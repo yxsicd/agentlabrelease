@@ -50,6 +50,69 @@ fn reconstructs_mixed_json_checks_without_trusting_producer_boolean_or_expected(
 }
 
 #[test]
+fn operational_observations_do_not_invent_review_or_drop_failed_calibration() {
+    let (mut contract, mut capture) = fixture();
+    let candidate = json!({"id":"generic-task","repositoryId":"unrelated-library","sourceRevision":"b".repeat(40)});
+    let candidate_bytes = serde_json::to_vec(&candidate).unwrap();
+    contract["candidateSha256"] = json!(digest(&candidate_bytes));
+    capture["candidateSha256"] = contract["candidateSha256"].clone();
+    // A surviving wrong control is a retained observation, not a verified lesson.
+    modify(&mut capture, 4, |raw| {
+        raw["observations"][1]["actual"] = json!({"cleared":true})
+    });
+    let contract_bytes = serde_json::to_vec(&contract).unwrap();
+    capture["contractSha256"] = json!(digest(&contract_bytes));
+    let capture_bytes = serde_json::to_vec(&capture).unwrap();
+    let build = || {
+        agentlab_code_analysis::maintainer_behavior_checks::observation_assets(
+            &candidate_bytes,
+            &contract_bytes,
+            &capture_bytes,
+        )
+        .unwrap()
+    };
+    let tables = build();
+    assert_eq!(tables, build());
+    for name in [
+        "experiment_lessons",
+        "lesson_evidence",
+        "lesson_validations",
+        "maintainer_skills",
+        "program_facts",
+    ] {
+        assert!(!tables.contains_key(name));
+    }
+    assert_eq!(tables["checks"].len(), 10);
+    assert_eq!(tables["evidence_files"].len(), 3);
+    let run = tables["runs"].values().next().unwrap();
+    assert_eq!(run["calibrationRecordedContentPassed"], false);
+    assert_eq!(run["qualified"], false);
+    let directory = loop_output_for_adapter();
+    agentlab_code_analysis::maintainer_behavior_checks::export_observation(
+        &candidate_bytes,
+        &contract_bytes,
+        &capture_bytes,
+        &directory,
+    )
+    .unwrap();
+    assert_eq!(
+        std::fs::read(directory.join("behavior-capture.json")).unwrap(),
+        capture_bytes
+    );
+    assert!(!directory.join("lesson-review.json").exists());
+    assert!(
+        agentlab_code_analysis::maintainer_behavior_checks::export_observation(
+            &candidate_bytes,
+            &contract_bytes,
+            &capture_bytes,
+            &directory
+        )
+        .is_err()
+    );
+    std::fs::remove_dir_all(directory).unwrap();
+}
+
+#[test]
 fn behavior_lesson_requires_bound_review_and_independent_positive_negative_controls() {
     let (mut contract, mut capture) = fixture();
     let candidate = json!({"id":"generic-task","repositoryId":"unrelated-library","sourceRevision":"b".repeat(40)});
@@ -342,6 +405,92 @@ fn rejects_changed_contract_identity_and_duplicate_valid_sources() {
         contract["controls"][1]["submittedSourceSha256"].clone();
     capture["contractSha256"] = json!(digest(&serde_json::to_vec(&contract).unwrap()));
     assert!(check(&contract, &capture).is_err());
+}
+
+#[test]
+fn lesson_exports_passing_and_rejected_attempts_without_calibration_or_identity_claims() {
+    let (mut contract, mut capture) = fixture();
+    let candidate = json!({"id":"generic-task","repositoryId":"another-repository","sourceRevision":"b".repeat(40)});
+    let candidate_bytes = serde_json::to_vec(&candidate).unwrap();
+    contract["candidateSha256"] = json!(digest(&candidate_bytes));
+    capture["candidateSha256"] = contract["candidateSha256"].clone();
+    for (name, failing) in [("attempt-pass", false), ("attempt-reject", true)] {
+        contract["controls"].as_array_mut().unwrap().push(json!({"id":name,"role":"agent-attempt","submittedSourceSha256":digest(name.as_bytes()),"expectedFailedCheckIds":[]}));
+        let mut worker = capture["workers"][1].clone();
+        worker["id"] = json!(name);
+        capture["workers"].as_array_mut().unwrap().push(worker);
+        let index = capture["workers"].as_array().unwrap().len() - 1;
+        modify(&mut capture, index, |raw| {
+            raw["id"] = json!(name);
+            raw["submittedSource"] = json!(name);
+            raw["submittedSourceSha256"] = json!(digest(name.as_bytes()));
+            if failing {
+                raw["observations"][1]["actual"] = json!({"cleared":false});
+            }
+        });
+    }
+    let contract_bytes = serde_json::to_vec(&contract).unwrap();
+    capture["contractSha256"] = json!(digest(&contract_bytes));
+    let capture_bytes = serde_json::to_vec(&capture).unwrap();
+    let review = json!({"schema":"agentlab.behavior_lesson_review.v1","reviewed":true,"automaticPromotion":false,
+        "candidateSha256":digest(&candidate_bytes),"sourceRevision":candidate["sourceRevision"],
+        "contractSha256":digest(&contract_bytes),"captureSha256":digest(&capture_bytes),
+        "id":"review","scope":"seam","reviewerId":"operator","phenomenon":"observed",
+        "cause":"reviewed interpretation","change":"retain outcomes","factId":"fact","skillId":"skill",
+        "body":"Preserve rejected outcomes.","skillStage":"evaluation"});
+    let build = || {
+        agentlab_code_analysis::maintainer_behavior_checks::lesson_assets(
+            &candidate_bytes,
+            &contract_bytes,
+            &capture_bytes,
+            &serde_json::to_vec(&review).unwrap(),
+        )
+        .unwrap()
+    };
+    let tables = build();
+    assert_eq!(tables, build());
+    assert_eq!(tables["calibration_controls"].len(), 5);
+    assert_eq!(tables["attempts"].len(), 2);
+    assert_eq!(tables["checks"].len(), 14);
+    for attempt in tables["attempts"].values() {
+        let passing = attempt["variant"] == "attempt-pass";
+        assert_eq!(attempt["behaviorPassed"], passing);
+        assert_eq!(
+            attempt["submittedSourceSha256"],
+            digest(attempt["variant"].as_str().unwrap().as_bytes())
+        );
+        for field in [
+            "participantCompletionVerified",
+            "producerAuthenticated",
+            "qualified",
+        ] {
+            assert_eq!(attempt[field], false);
+        }
+        let checks: Vec<_> = tables["checks"]
+            .values()
+            .filter(|row| row["attemptId"] == attempt["id"])
+            .collect();
+        assert_eq!(checks.len(), 2);
+        assert!(checks.iter().all(|row| row["controlId"].is_null()));
+        assert_eq!(
+            checks.iter().filter(|row| row["passed"] == false).count(),
+            if passing { 0 } else { 1 }
+        );
+    }
+    assert_eq!(
+        tables["experiment_lessons"]["review"]["promotionContract"]["expected"]
+            .as_object()
+            .unwrap()
+            .len(),
+        5
+    );
+    assert_eq!(
+        tables["lesson_evidence"].values().next().unwrap()["attemptIds"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
 }
 
 #[test]
@@ -869,6 +1018,143 @@ exports.default = class extends require('@kit.AbilityKit').AbilityStage {
                 assert_eq!(observed["actual"]["sourceRejected"], true);
                 assert_eq!(observed["actual"]["diagnostics"][0]["code"], 1128);
             }
+        }
+    }
+}
+
+#[test]
+fn push_worker_preserves_pending_retry_and_rejects_answer_bearing_requests() {
+    let repository = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .canonicalize()
+        .unwrap();
+    let dir = loop_output_for_adapter();
+    std::fs::create_dir(&dir).unwrap();
+    let compiler = dir.join("compiler.cjs");
+    // Executes JS protocol fixtures; real pinned ETS/compiler controls are external.
+    let compiler_bytes = b"module.exports={ModuleKind:{CommonJS:1},ScriptTarget:{ES2020:7},DiagnosticCategory:{Error:1},flattenDiagnosticMessageText(m){return m},transpileModule(source){return{outputText:source,diagnostics:source.includes('SYNTAX_REJECTED')?[{category:1,code:1128,file:{text:source},start:0,length:1,messageText:'Syntax'}]:[]}}};";
+    std::fs::write(&compiler, compiler_bytes).unwrap();
+    std::fs::write(
+        dir.join("support.json"),
+        serde_json::to_vec(&json!({
+            "adapter":"push-initialization-host-seam-v1","compilerSha256":digest(compiler_bytes)
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let valid = r#"
+const notification = require('@kit.NotificationKit').notificationManager;
+const push = require('@kit.PushKit').pushService;
+const service = require('./PushService').PushService;
+exports.PushServiceManager = class {
+  static getInstance() { return this.instance ??= new this(); }
+  initPushServiceManager(context) {
+    if (this.flight) return this.flight;
+    this.flight = this.initialize(context).finally(() => {this.flight = null;});
+    return this.flight;
+  }
+  async initialize(context) {
+    try {
+      if (!notification.isNotificationEnabledSync()) await notification.requestEnableNotification(context);
+      const pushToken = await push.getToken();
+      await service.postPushToken({pushToken});
+    } catch (error) { require('../util/Logger').default.error('push', error); }
+  }
+};
+"#;
+    for (id, source, expected) in [
+        (
+            "valid",
+            valid.to_owned(),
+            Some(json!({"token":2,"post":2,"settledCalls":3,"unhandled":0})),
+        ),
+        (
+            "sticky",
+            valid.replace(".finally(() => {this.flight = null;})", ""),
+            Some(json!({"token":1,"post":1,"settledCalls":3,"unhandled":0})),
+        ),
+        ("syntax", format!("{valid}// SYNTAX_REJECTED"), None),
+        ("answer", valid.to_owned(), None),
+        ("bad-input", format!("{valid}// SYNTAX_REJECTED"), None),
+        (
+            "logged-failure",
+            valid.to_owned(),
+            Some(
+                json!({"settledCalls":1,"unhandled":0,"payloads":["token-0"],"failureObserved":true}),
+            ),
+        ),
+        (
+            "silent-failure",
+            valid.replace(".default.error(", ".default.info("),
+            Some(
+                json!({"settledCalls":1,"unhandled":0,"payloads":["token-0"],"failureObserved":false}),
+            ),
+        ),
+        (
+            "wrong-payload",
+            valid.replace("{pushToken}", "{pushToken:'wrong-token'}"),
+            Some(
+                json!({"token":2,"post":2,"settledCalls":3,"unhandled":0,"payloads":["wrong-token","wrong-token"],"failureObserved":false}),
+            ),
+        ),
+        (
+            "token-pending",
+            valid.to_owned(),
+            Some(json!({"token":1,"post":0,"settledCalls":0})),
+        ),
+    ] {
+        let mut check = json!({"id":"retry","input":{"mode":"retry-success"}});
+        if id == "logged-failure" || id == "silent-failure" {
+            check["input"] = json!({"mode":"post-failure","observe":"outcome"});
+        }
+        if id == "wrong-payload" {
+            check["input"]["observe"] = json!("outcome");
+        }
+        if id == "token-pending" {
+            check["input"]["mode"] = json!("token-pending");
+        }
+        if id == "answer" {
+            check["expected"] = json!({"passed":true});
+        }
+        if id == "bad-input" {
+            check["input"]["mode"] = json!("unknown");
+        }
+        let request = json!({"schema":"agentlab.behavior_executor_request.v1","id":id,
+            "originalSourceSha256":digest(valid.as_bytes()),"submittedSource":source,
+            "submittedSourceSha256":digest(source.as_bytes()),"checks":[check]});
+        let request_path = dir.join(format!("{id}.json"));
+        std::fs::write(&request_path, serde_json::to_vec(&request).unwrap()).unwrap();
+        let result = std::process::Command::new("node")
+            .arg(repository.join("scripts/push-initialization-worker.cjs"))
+            .arg(request_path)
+            .arg(dir.join("support.json"))
+            .arg(&compiler)
+            .output()
+            .unwrap();
+        if id == "answer" || id == "bad-input" {
+            assert!(!result.status.success());
+            assert!(result.stdout.is_empty());
+            assert!(String::from_utf8_lossy(&result.stderr).contains("Unsupported push input"));
+            continue;
+        }
+        assert!(
+            result.status.success(),
+            "{id}: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let actual: Value = serde_json::from_slice(&result.stdout).unwrap();
+        assert_eq!(
+            actual["submittedSourceSha256"],
+            request["submittedSourceSha256"]
+        );
+        assert_eq!(
+            actual["observations"][0]["input"],
+            request["checks"][0]["input"]
+        );
+        if let Some(expected) = expected {
+            assert_eq!(actual["observations"][0]["actual"], expected);
+        } else {
+            assert_eq!(actual["observations"][0]["actual"]["sourceRejected"], true);
         }
     }
 }
