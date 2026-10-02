@@ -224,6 +224,23 @@ Passing content validation does not prove markers, intended failures or baseline
 behavior; only independent control execution can do that. Preserve rejected
 original drafts, never silently repair them as an operator-authored success.
 
+The next real author produced integer configurations and actual edits but reused
+a lifecycle check ID as a configuration ID, included an empty-failure baseline
+variant and invented check names. Repeated operator prompt edits are not an
+autonomous feedback loop. The guidance Action now accepts repair_limit=0|1:
+after a completed, guidance-bound exchange, a whitelisted content rejection may
+drive one fresh Agent attempt with the original rejected proposal and exact
+validator error. Preserve separate draft/evidence directories, immutable request,
+guidance and source bytes, and before/after proposal digests. Reject changes to
+the previous attempt. Identity, review, source drift and incomplete transport
+are terminal, not repairable content. This is explicit context reconstruction,
+not native-session restoration. Each attempt retains the existing 420-second
+participant budget; compare guided/unguided outcomes with the same repair limit
+and total budget. The independent post-author gates check the latest attempt;
+both attempts remain available even on failure. Fixture regressions prove adapter
+behavior only. A repaired content-valid draft still requires independent semantic
+controls, review and a subsequent feedback round before any learning claim.
+
 When promoting against real multi-kind program facts, preserve heterogeneous
 unowned fields as JSON rather than coercing arrays/objects or dropping baseline
 rows. The exchange records observed mixed field types separately. Explicitly
