@@ -307,6 +307,11 @@ capture records semanticComplete and streamError independently from native
 Agent stop events. Accept a non-null finish_reason or [DONE]; preserve truncated
 reasoning and classify missing terminal frames as Harness/provider interruption.
 Do not infer Agent inability from these exchanges.
+For repeated deadline-before-mutation results, preserve interrupted captures and
+compare an explicit participant/provider policy in a new cohort under unchanged
+task checks and budgets. Bind the selected policy to actual Gateway requests;
+an operator override or one later success alone does not prove upstream policy
+application, causal improvement or knowledge-guidance benefit.
 
 Reserve the evidence tag at the exact workflow source SHA before a long capture
 so advancing main cannot invalidate late Release publication. Always retain full
