@@ -1,8 +1,8 @@
 {
   "acceptedFactIds": [
-    "operation-source-f1ff4b0290f15e89fe7ee26a8332b179a510ae6769e91869cf9ec00842f98354"
+    "operation-source-59ec37d6a455b3d674aa971f90316b5967297dace95ef17d3655860275be9956"
   ],
-  "assessment": "assessments/round-40-operation-source-controls-v1.json",
+  "assessment": "assessments/round-41-operation-source-loop-1.json",
   "authorityWritePerformed": false,
   "automaticPromotion": false,
   "operationEvidence": {
@@ -17,19 +17,24 @@
         "factId": "operation-build-ba2fd5204b013e40b09f63c6f360fd0750aefabbe7e56eefad180ba43361814f",
         "path": "operation-evidence/release/qualifications/code-workshop-7aa95cac-componentlibrary-build/build-qualification.json",
         "sha256": "de1f82800dd7680242948d77d6c2416c5d97319f72d2d876cbca194a82ddeba7"
-      }
-    ],
-    "receiptRoot": "operation-evidence",
-    "receipts": [
+      },
       {
         "factId": "operation-source-f1ff4b0290f15e89fe7ee26a8332b179a510ae6769e91869cf9ec00842f98354",
         "path": "operation-evidence/source-ui-state.json",
         "sha256": "17aa31b70e5c310e267c67cd157e00042af4777f017b5fdb690da5691303703f"
       }
+    ],
+    "receiptRoot": "operation-evidence",
+    "receipts": [
+      {
+        "factId": "operation-source-59ec37d6a455b3d674aa971f90316b5967297dace95ef17d3655860275be9956",
+        "path": "operation-evidence/source-f74bf8a6beb80e7002505bd9151cf193809484d8ea3fe69e0849a572ea2049ed.json",
+        "sha256": "f74bf8a6beb80e7002505bd9151cf193809484d8ea3fe69e0849a572ea2049ed"
+      }
     ]
   },
   "proposalReceiptCount": 0,
-  "runId": "source-controls-v1",
+  "runId": "source-loop-1",
   "schema": "agentlab.maintainer_skill_tablegit_stage.v1",
   "stageKind": "verified-operation",
   "tables": {
@@ -43,7 +48,7 @@
     },
     "maintainer_skill_refresh_rounds": {
       "path": "maintainer_skill_refresh_rounds.jsonl",
-      "sha256": "ef72b914808cc7c8def77da744dba06ad652297e52adad809c2af788958e912d"
+      "sha256": "aff631ee9ad3370583171fced83cdcafa284546fed70a9ca31b1497ddc436363"
     },
     "maintainer_skills": {
       "path": "maintainer_skills.jsonl",
@@ -51,7 +56,7 @@
     },
     "program_facts": {
       "path": "program_facts.jsonl",
-      "sha256": "619fbd7b7145248d7e78a61094aa6c904f8138a8fe0a141e622af323d209a7ba"
+      "sha256": "683a311ebaf4e87cf87fec56b9d3ea5271dc89def6c6a46e99ffd99a72b7371a"
     }
   }
 }

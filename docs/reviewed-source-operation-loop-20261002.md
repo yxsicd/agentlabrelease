@@ -42,6 +42,30 @@ No assessed Agent, Harmony/RDB runtime, authority transaction or formal case
 was produced. Overall maturity remains 63%; authoritative readiness remains 3
 until the separate reviewed admission and exact committed-cut readback succeed.
 
+## Accepted telemetry feedback
+
+After method PR #173 merged as `660a3fe80efe34f8a3cc079d1be234a1790c15c4`,
+independent macOS qualification matched the HW Linux qualification payload and
+the candidate assessment bytes. Archive transfer timed out; recovery instead
+used remotely read original fragments and an existing compiler cache whose exact
+SHA256 matched the pinned compiler. This is not a successful archive transfer
+or a fresh source execution on macOS.
+
+Reviewed transaction `fb177600-0d36-50bd-a30d-f9b8b60e5f0a` inserted only the
+new operation fact and its refresh-round row, advancing authority to
+`ed832d1b7e0e26b040be8cbb54737124027f0a67`. All five committed tables were
+read back exactly. The durable reference resolves refresh round 43 to assessment
+round 41, whose committed-export reassessment reproduces SHA256
+`6038430761b4987aa4de3efffe100884a6670e4c2feb410c54c59dd13081a286`.
+Strict maintenance readiness is now 4; other readiness totals remain unchanged.
+The fresh planner leaves telemetry unselected and selects platform services.
+An unchanged repeat through the ordinary writer proposed no transaction and
+left the clean committed revision unchanged; it is not another productive round.
+Overall maturity remains 63%: this repeats the reviewed operation-feedback
+capability, not a new full-cycle capability. Complete five-stage cycles remain
+zero; Agent-produced reviewed recipes and fresh linked case execution remain
+the next high-value integration gaps.
+
 Run the Rust CLI with `--execute-source-operation-loop --knowledge ABS_CUT
 --operation-catalog ABS_CATALOG --iterations 1..3 --output FRESH_ABS_DIRECTORY`.
 It first verifies the exact initial knowledge-cut digest and all five table

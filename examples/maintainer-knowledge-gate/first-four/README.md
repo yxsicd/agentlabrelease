@@ -72,7 +72,7 @@ real flywheel passes over all four repositories:
 | Targeted semantic and executable operation evidence | 480 | 13 | 6 | 2 |
 
 The latest strict independent assessment covers all 489 structural scopes: 46 are
-program-bound, 41 are semantic-ready, and 3 are maintenance-ready. Maintenance
+program-bound, 41 are semantic-ready, and 4 are maintenance-ready. Maintenance
 readiness still does not automatically approve an evaluation case: independent
 Oracle review and case promotion remain separate gates. The current gap queue
 retains 443 program-unbound scopes and drives the next targeted round.
@@ -89,6 +89,19 @@ longer selected; the next reviewed operation gap is persistence/telemetry.
 This is isolated source-maintenance control evidence, not full-scope coverage,
 Harmony runtime/ohosTest qualification, automatic recipe generation or a full
 five-stage business cycle.
+
+The subsequent telemetry source round was admitted at TableGit revision
+`ed832d1b7e0e26b040be8cbb54737124027f0a67`. Its
+[admission receipt](operation-evidence/telemetry-source-admission.json) records
+the single atomic two-row insertion and exact five-table committed readback.
+Independent reassessment of that committed export reproduces assessment round
+41 byte-for-byte. The [next plan](flywheel-plans/telemetry-source-next-plan.json)
+leaves the accepted telemetry scope unselected and selects platform services.
+The [feedback receipt](operation-evidence/telemetry-source-feedback.json) also
+records an unchanged repeat import with no attempted authority write and no
+revision change.
+This is one more reviewed operation-evidence transition, not another completed
+business cycle, automatic recipe generation or formal platform qualification.
 
 [`case_generation_rounds.jsonl`](case_generation_rounds.jsonl) starts the
 separate downstream generation lineage. Round 1 is intentionally an honest

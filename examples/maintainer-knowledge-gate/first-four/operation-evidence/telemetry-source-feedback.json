@@ -1,0 +1,13 @@
+{
+  "acceptedScopeUnselected": true,
+  "authorityWritePerformed": false,
+  "closedLoopQualified": false,
+  "exactCommittedAssessmentMatched": true,
+  "nextScopeIds": [
+    "skill-scope-code-workshop-common-platform-services"
+  ],
+  "revision": "ed832d1b7e0e26b040be8cbb54737124027f0a67",
+  "revisionUnchanged": true,
+  "schema": "agentlab.reviewed_operation_feedback_readback.v1",
+  "unchangedImportPerformed": true
+}
