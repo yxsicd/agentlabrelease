@@ -2,6 +2,36 @@
 
 ## Push initialization adapter checkpoint
 
+### Recorded real source attempt
+
+External `.artifacts/push-agent-loop-pO1Bz0gH/attempts-2` executed the unchanged
+twelve-check successor using the existing Rust controller, Pi/GLM participant,
+operator Gateway capture and contained worker. One unguided `glm-5.3-flash`
+attempt under low reasoning effort passed all checks on its first submission.
+Participant-process duration was 47,610 ms (native turn 47,439 ms); the behavior
+executor took 455 ms. Three completed Gateway exchanges and zero transport
+retries were independently reconstructed. Submitted source SHA256 is
+`03d0d00df6c97e9ce40b93a4468a6964e5f3743be565b44f87a0fc3cade00b02`.
+
+Independent live runtime validation accepted the actual inspect/probe records
+for filesystem, network-egress and external-credential isolation. Author
+completion and behavior readback passed separately. Attempt contract/capture
+SHA256s are respectively
+`76f903e882c20b32f9324d41fd2b0cff4a3d73ee1d06fda1437f4867ef8a1640`
+and `66219ea44ddb71df5e9510a4f4fe245ff7cadc538f07138fe21e0d1370b44ed0`.
+
+The original `attempts` launch failed before inference: the sanitized host PATH
+excluded the Homebrew Docker CLI. It remains retained, not scored as Agent
+inability. The successor used an operator-only adapter pinning Docker executable
+bytes and the existing Colima endpoint; participant mounts/permissions were not
+widened. This host recipe is instance-specific, not automatic adapter discovery.
+
+Overall maturity remains 64%. A first-attempt pass is not evidence of feedback
+learning, guidance benefit or a complete business cycle. The candidate is still
+maintainer-authored and unadmitted. Lesson export is evaluation-instance staging,
+not authority admission, formal Harmony qualification or automatic next-cut
+consumption. No new immutable Release is claimed.
+
 The successor `push-contained-calibration-2` retains all nine previous checks
 and adds independently held token acquisition, post-failure visibility and
 token payload checks. Error logging or a rejected initialization is an explicit

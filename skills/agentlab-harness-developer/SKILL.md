@@ -99,6 +99,13 @@ coordinated deployment with independently provisioned AgentLab-owned tables.
   failed final answer.
 - Keep MCPGit and external Code Agent versions independent from AgentLab.
 
+For sanitized host command environments, verify runtime dependencies through
+that exact launcher, not the interactive shell. A non-system Docker CLI or a
+non-default connection context needs an explicitly bound operator adapter
+(executable digest and endpoint), not inherited broad PATH/credentials. Preserve
+pre-inference launch failures separately and repeat with a new execution cut;
+host dependency repair does not qualify participant performance or learning.
+
 ## Minimal qualification order
 
 For the AIWSL preview, use the immutable alpha.9 environment kit and the fixed
