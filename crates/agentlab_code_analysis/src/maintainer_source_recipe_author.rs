@@ -557,10 +557,8 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
             let body = transformed
                 .get_mut(path)
                 .ok_or("recipe design edit requires loaded owned source")?;
-            need(
-                body.matches(before).count() == 1,
-                "recipe design edit must match exactly once",
-            )?;
+            let count = body.matches(before).count();
+            need(count==1,&format!("recipe design edit in control {id} at {path} must match exactly once; observed {count}"))?;
             *body = body.replacen(before, after, 1);
             edit_receipts
                 .push(json!({"path":path,"matchCount":1,"resultSha256":digest(body.as_bytes())}));
