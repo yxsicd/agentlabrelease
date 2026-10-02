@@ -143,3 +143,62 @@ This is retained-evidence reconstruction, not another model execution, remote
 persistence or a complete automatic business round. Rust regressions exercise
 passing/rejected outcomes, failed calibration, unchanged repeat export and
 cross-round rejection through the existing published knowledge gates.
+
+## Revision-fenced observation persistence
+
+The Rust `--plan-observation-import` accepts --source, --remote-snapshot,
+--destination and a fresh --output. Destination schema
+`agentlab.observation_store_destination.v1` requires reviewed=true,
+automaticPromotion=false, repository, different knowledgeRepository, tablePrefix,
+expectedRevision and transactionId. This mode supports existing observation tables
+only. It reconstructs the six-table export from original bytes, validates fixed-cut
+remote snapshots, rejects row conflicts and emits only missing-row inserts.
+No missing rows means transaction=null. Knowledge tables are not accepted.
+
+`--verify-observation-import` accepts --source, --plan, --commit-receipt,
+--remote-snapshot, --baseline-snapshot and a fresh --output. It reproduces the
+original plan from the retained baseline and compares the entire committed table
+contents, including unrelated prior rows. Changed plans, wrong repository/previous
+revision receipts, conflicts, dirty/truncated snapshots or dropped prior rows
+are rejected. Current snapshots are bounded to 1000 rows per table; this is not
+an arbitrary-size streaming ingestion claim or authenticated MCP capture.
+
+`node scripts/import-behavior-observations.cjs --request FILE --credentials
+PRIVATE_OPERATOR_FILE` handles MCP transport, never the business interpretation.
+The reviewed request uses agentlab.observation_store_request.v1 and binds endpoint,
+sourceDirectory/sourceManifestSha256, fresh outputDirectory,
+flywheelTool/flywheelToolSha256 and destination. Optional personShowname selects
+the acting Person; otherwise the private default applies. Discovery loads current
+metadata/Skill contracts before identity-aware reads/writes. Private Basic values
+are never request/receipt fields. Each call has a 30-second deadline, no implicit
+retry; one atomic transaction follows a matching live main revision. Uncertain
+write outcomes stop with the retained transaction intent. No-change skips it.
+
+Business state optionally supplies observationPersistence with reviewed=true,
+endpoint, destination, flywheelTool {path,sha256}, and the existing bounded command
+descriptor. Select the importer through a pinned Node executable, `{request}` and
+the private credential-file path; pin its script dependencies in cycle immutableInputs.
+After export the stage invokes the operator adapter with no inherited environment,
+then independently reruns Rust plan/readback validation. It still stops review-required
+with gap reviewed-knowledge-delta-required. Operational commit is not knowledge
+admission or permission to schedule a duplicate task.
+
+Actual external `behavior-observation-return-eDMXCeb8/mcp-import-1` persisted 122
+rows to agentlabpush-20261003 at `1bbd557e85ded39851e2beef4931552228750e51`.
+Readback matched all new and prior rows. mcp-import-2 produced zero inserts,
+transaction=null and exactly the same revision. The public business stage in
+business-return-replay-2 invoked the same adapter, independently reconstructed
+its readback and stopped for the reviewed knowledge delta. This used retained
+real Agent evidence, not a newly executed participant or complete business cycle.
+No remote raw-byte preservation, new reusable knowledge or immutable Release is
+claimed. The new projection identity is not a third physical Agent execution.
+
+The first business-return-replay rejected a missing source-set.txt in the old
+knowledge export. Original files remain unchanged. knowledge-portable-1 includes
+the hash-identical published inventory bound by that exact cut's sourceSetSha256;
+it is a repaired portable bundle, not a new authority revision. Rust transport
+fixtures also exposed a concurrent temporary-path collision; unique sequence IDs
+fix fixture isolation without altering production evidence or acceptance rules.
+Overall maturity is estimated at 67%, up one point for generic native validation
+and actual persistence/repeat/business-return integration. Complete automatic
+business cycles, formal cases and measured guidance benefit remain unproved.

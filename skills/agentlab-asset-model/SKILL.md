@@ -111,3 +111,20 @@ export from an explicit runId selection at a committed cut. Record the selection
 predicate and compare exactly those rows; a newly appended run's counts cannot
 describe all remote rows. A new consumer digest changes the projection identity,
 not the physical execution count or learning evidence.
+
+Use the Rust observation-store planner and readback verifier through
+[the operator MCP importer](../../scripts/import-behavior-observations.cjs) for
+observation-only persistence. Supply an explicit separate repository, fixed
+revision and transaction UUID; current tables must already exist. The native
+planner reconstructs all rows from original evidence, rejects stable-ID conflicts
+and emits inserts only. The verifier reproduces the plan from the original
+baseline and compares every prior and new row. No missing rows means no transaction
+and no new revision. Authority drift or uncertain writes stop; retain intents and
+reconcile instead of rebasing or retrying with another UUID. Current snapshots are
+bounded to 1000 rows per table; truncation rejects rather than guessing completeness.
+
+Before connecting an exported knowledge cut to the business runner, verify its
+source-set.txt against sourceSetSha256 as well as table and operation sidecars.
+A missing portable sidecar is an export defect, not an Agent task failure. Restore
+only hash-identical bytes into a fresh derived bundle and keep the rejected cut
+unchanged; do not rewrite its manifest or claim another knowledge commit.

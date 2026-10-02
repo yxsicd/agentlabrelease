@@ -24,6 +24,38 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args
+        .iter()
+        .any(|a| a == "--plan-observation-import" || a == "--verify-observation-import")
+    {
+        let source = PathBuf::from(value(&args, "--source")?);
+        let remote = fs::read(value(&args, "--remote-snapshot")?)?;
+        let result = if args.iter().any(|a| a == "--plan-observation-import") {
+            agentlab_code_analysis::maintainer_observation_store::plan(
+                &source,
+                &remote,
+                &fs::read(value(&args, "--destination")?)?,
+            )?
+        } else {
+            agentlab_code_analysis::maintainer_observation_store::verify(
+                &source,
+                &fs::read(value(&args, "--plan")?)?,
+                &fs::read(value(&args, "--commit-receipt")?)?,
+                &remote,
+                &fs::read(value(&args, "--baseline-snapshot")?)?,
+            )?
+        };
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&result)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"schema":result["schema"],"insertedRows":result["insertedRows"],"qualified":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--prepare-operation-case-shadow") {
         let request = agentlab_code_analysis::maintainer_operation_case::shadow_request(
             &PathBuf::from(value(&args, "--knowledge")?),

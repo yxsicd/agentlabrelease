@@ -134,6 +134,55 @@ fn recorded_outcome(result: &Value) -> Result<bool, String> {
     )?;
     Ok(passed)
 }
+#[cfg(unix)]
+fn persist_observations(
+    config: &Value,
+    packet: &Value,
+    source: &Path,
+    out: &Path,
+) -> Result<Value, String> {
+    need(
+        config["reviewed"] == true
+            && config["destination"]["knowledgeRepository"] == packet["knowledgeAuthority"]["repo"],
+        "business observation persistence review or knowledge binding differs",
+    )?;
+    let request = json!({"schema":"agentlab.observation_store_request.v1","reviewed":true,"automaticPromotion":false,
+        "endpoint":text(config,"endpoint")?,"destination":config["destination"],
+        "sourceDirectory":source,"sourceManifestSha256":digest(&read(&source.join("export.json"))?),
+        "flywheelTool":config["flywheelTool"]["path"],"flywheelToolSha256":config["flywheelTool"]["sha256"],
+        "outputDirectory":out.join("persisted-observations")});
+    let request_path = out.join("persistence-request.json");
+    save(&request_path, &request)?;
+    let command_dir = out.join("persistence-command");
+    fs::create_dir(&command_dir).map_err(|e| e.to_string())?;
+    let (execution, stdout) = maintainer_behavior_loop::invoke(
+        &config["command"],
+        &request_path,
+        &command_dir,
+        "adapter",
+        &[],
+    )?;
+    let reported: Value = serde_json::from_str(&stdout).map_err(|e| e.to_string())?;
+    let capture = out.join("persisted-observations");
+    let mut verified = crate::maintainer_observation_store::verify(
+        source,
+        &read(&capture.join("plan.json"))?,
+        &read(&capture.join("commit-receipt.json"))?,
+        &read(&capture.join("committed.json"))?,
+        &read(&capture.join("baseline.json"))?,
+    )?;
+    need(
+        verified == reported,
+        "business persistence response differs from independent readback reconstruction",
+    )?;
+    verified["adapterExecution"] = execution;
+    verified["captureDirectory"] = json!(capture);
+    Ok(verified)
+}
+#[cfg(not(unix))]
+fn persist_observations(_: &Value, _: &Value, _: &Path, _: &Path) -> Result<Value, String> {
+    Err("business observation persistence command requires Unix containment".into())
+}
 fn execute_operation(base: &Path, state: &Value, out: &Path) -> Result<Value, String> {
     let execution = &state["operationExecution"];
     need(
@@ -364,13 +413,19 @@ fn evaluate(
                     &capture,
                     &destination,
                 )?;
+                let persistence = if let Some(config) = state.get("observationPersistence") {
+                    persist_observations(config, &packet, &destination, out)?
+                } else {
+                    Value::Null
+                };
                 return Ok((
                     "review-required",
                     json!({"schema":"agentlab.flywheel_observation_return.v1",
                     "export":{"directory":destination,"manifestSha256":digest(&read(&destination.join("export.json"))?)},
                     "tables":manifest["tables"],"observationExported":true,"lessonCreated":false,
-                    "gap":"operational-persistence-and-reviewed-knowledge-delta-required",
-                    "qualified":false,"authorityWritePerformed":false,"automaticPromotion":false}),
+                    "persistence":persistence,
+                    "gap":if persistence.is_null(){"operational-persistence-and-reviewed-knowledge-delta-required"}else{"reviewed-knowledge-delta-required"},
+                    "qualified":false,"authorityWritePerformed":!persistence.is_null() && persistence["noChange"]==false,"automaticPromotion":false}),
                 ));
             };
             let proposal = absolute(admission, "proposalDirectory")?;
