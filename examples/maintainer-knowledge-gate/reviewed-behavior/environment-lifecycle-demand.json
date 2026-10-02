@@ -1,0 +1,602 @@
+{
+  "schema": "agentlab.reviewed_behavior_profile.v1",
+  "reviewed": true,
+  "automaticPromotion": false,
+  "candidateId": "shadow-case-abilitystage-environment-callback-binding",
+  "candidateSha256": "67525cc61d7d22f3eae2f66df5dbfded19ac1864e6f3f0dc0069e048c0abb23e",
+  "repository": "https://gitcode.com/HarmonyOS_Samples/guide-snippets.git",
+  "sourceRevision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+  "originalSourcePath": "Ability/AbilityStage/entry/src/main/ets/myabilitystage/MyAbilityStage.ets",
+  "sources": [
+    {
+      "path": "Ability/AbilityStage/entry/src/main/ets/myabilitystage/MyAbilityStage.ets",
+      "sha256": "212534f3b3ab4155c94a871900df850174d4fbd6ac338bed945dfbc7f6ed9143",
+      "gitBlobOid": "2af410f20ec60e1642bff565d4bb6a49d6e1cdcd"
+    }
+  ],
+  "taskDemand": "Extend the submitted AbilityStage with an owned ApplicationContext environment subscription lifecycle. After a successful onCreate there must be exactly one active application environment callback; repeated creates may retain or replace that owned callback but must not accumulate subscriptions. A registration failure must allow retry on the next create. Callback ID 0 is valid. onDestroy must unregister only the owned callback through ApplicationContext.off('environment', callbackId), release local ownership, and allow a fresh subsequent create. Destroy before creation and repeated destroy must not attempt invalid cancellation. Active configuration and memory callbacks must preserve the original logging of language/colorMode and memory level, with no callback delivery after destruction. Preserve the original imports, default export and guide marker pair. This is a new frozen task extension, not a claim of an upstream defect; assessment is only controlled ApplicationContext host seams, not platform lifecycle dispatch, SDK errors, module.srcEntry, ArkTS build or full candidate qualification.",
+  "workerPath": "scripts/environment-lifecycle-worker.cjs",
+  "compilerSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675",
+  "workerDeadlineMs": 15000,
+  "supportFields": {
+    "adapter": "application-environment-lifecycle-host-seam-v1",
+    "configurationPrefix": "envCallback onConfigurationUpdated success: ",
+    "memoryPrefix": "onMemoryLevel level: ",
+    "startMarker": "// [Start myAbility_start]",
+    "endMarker": "// [End myAbility_start]"
+  },
+  "supportSources": [],
+  "checks": [
+    {
+      "id": "preserve-configuration",
+      "input": {
+        "firstCallbackId": 41,
+        "failedRegistrations": 0,
+        "actions": [
+          {
+            "op": "create"
+          },
+          {
+            "op": "configuration",
+            "language": "zh_CN",
+            "colorMode": 1
+          },
+          {
+            "op": "configuration",
+            "language": "en_US",
+            "colorMode": 1
+          },
+          {
+            "op": "configuration",
+            "language": "en_US",
+            "colorMode": 0
+          },
+          {
+            "op": "memory",
+            "level": 0
+          },
+          {
+            "op": "memory",
+            "level": 2
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "active": 1,
+            "configuration": [],
+            "memory": []
+          },
+          {
+            "active": 1,
+            "configuration": [
+              [
+                "zh_CN",
+                1
+              ]
+            ],
+            "memory": []
+          },
+          {
+            "active": 1,
+            "configuration": [
+              [
+                "en_US",
+                1
+              ]
+            ],
+            "memory": []
+          },
+          {
+            "active": 1,
+            "configuration": [
+              [
+                "en_US",
+                0
+              ]
+            ],
+            "memory": []
+          },
+          {
+            "active": 1,
+            "configuration": [],
+            "memory": [
+              0
+            ]
+          },
+          {
+            "active": 1,
+            "configuration": [],
+            "memory": [
+              2
+            ]
+          }
+        ],
+        "invalidOffCalls": 0,
+        "markersIntact": true
+      }
+    },
+    {
+      "id": "repeat-create-zero",
+      "input": {
+        "firstCallbackId": 0,
+        "failedRegistrations": 0,
+        "actions": [
+          {
+            "op": "create"
+          },
+          {
+            "op": "create"
+          },
+          {
+            "op": "configuration",
+            "language": "zh_CN",
+            "colorMode": 1
+          },
+          {
+            "op": "destroy"
+          },
+          {
+            "op": "configuration",
+            "language": "en_US",
+            "colorMode": 0
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "active": 1,
+            "configuration": [],
+            "memory": []
+          },
+          {
+            "active": 1,
+            "configuration": [],
+            "memory": []
+          },
+          {
+            "active": 1,
+            "configuration": [
+              [
+                "zh_CN",
+                1
+              ]
+            ],
+            "memory": []
+          },
+          {
+            "active": 0,
+            "configuration": [],
+            "memory": []
+          },
+          {
+            "active": 0,
+            "configuration": [],
+            "memory": []
+          }
+        ],
+        "invalidOffCalls": 0,
+        "markersIntact": true
+      }
+    },
+    {
+      "id": "destroy-zero",
+      "input": {
+        "firstCallbackId": 0,
+        "failedRegistrations": 0,
+        "actions": [
+          {
+            "op": "create"
+          },
+          {
+            "op": "configuration",
+            "language": "zh_CN",
+            "colorMode": 1
+          },
+          {
+            "op": "destroy"
+          },
+          {
+            "op": "configuration",
+            "language": "en_US",
+            "colorMode": 0
+          },
+          {
+            "op": "memory",
+            "level": 1
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "active": 1,
+            "configuration": [],
+            "memory": []
+          },
+          {
+            "active": 1,
+            "configuration": [
+              [
+                "zh_CN",
+                1
+              ]
+            ],
+            "memory": []
+          },
+          {
+            "active": 0,
+            "configuration": [],
+            "memory": []
+          },
+          {
+            "active": 0,
+            "configuration": [],
+            "memory": []
+          },
+          {
+            "active": 0,
+            "configuration": [],
+            "memory": []
+          }
+        ],
+        "invalidOffCalls": 0,
+        "markersIntact": true
+      }
+    },
+    {
+      "id": "recreate-positive",
+      "input": {
+        "firstCallbackId": 41,
+        "failedRegistrations": 0,
+        "actions": [
+          {
+            "op": "create"
+          },
+          {
+            "op": "destroy"
+          },
+          {
+            "op": "create"
+          },
+          {
+            "op": "configuration",
+            "language": "en_US",
+            "colorMode": 0
+          },
+          {
+            "op": "memory",
+            "level": 2
+          },
+          {
+            "op": "destroy"
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "active": 1,
+            "configuration": [],
+            "memory": []
+          },
+          {
+            "active": 0,
+            "configuration": [],
+            "memory": []
+          },
+          {
+            "active": 1,
+            "configuration": [],
+            "memory": []
+          },
+          {
+            "active": 1,
+            "configuration": [
+              [
+                "en_US",
+                0
+              ]
+            ],
+            "memory": []
+          },
+          {
+            "active": 1,
+            "configuration": [],
+            "memory": [
+              2
+            ]
+          },
+          {
+            "active": 0,
+            "configuration": [],
+            "memory": []
+          }
+        ],
+        "invalidOffCalls": 0,
+        "markersIntact": true
+      }
+    },
+    {
+      "id": "registration-retry-zero",
+      "input": {
+        "firstCallbackId": 0,
+        "failedRegistrations": 1,
+        "actions": [
+          {
+            "op": "create"
+          },
+          {
+            "op": "create"
+          },
+          {
+            "op": "configuration",
+            "language": "zh_CN",
+            "colorMode": 1
+          },
+          {
+            "op": "destroy"
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "active": 0,
+            "configuration": [],
+            "memory": []
+          },
+          {
+            "active": 1,
+            "configuration": [],
+            "memory": []
+          },
+          {
+            "active": 1,
+            "configuration": [
+              [
+                "zh_CN",
+                1
+              ]
+            ],
+            "memory": []
+          },
+          {
+            "active": 0,
+            "configuration": [],
+            "memory": []
+          }
+        ],
+        "invalidOffCalls": 0,
+        "markersIntact": true
+      }
+    },
+    {
+      "id": "idle-repeat-destroy",
+      "input": {
+        "firstCallbackId": 0,
+        "failedRegistrations": 0,
+        "actions": [
+          {
+            "op": "destroy"
+          },
+          {
+            "op": "create"
+          },
+          {
+            "op": "destroy"
+          },
+          {
+            "op": "destroy"
+          },
+          {
+            "op": "create"
+          },
+          {
+            "op": "configuration",
+            "language": "en_US",
+            "colorMode": 0
+          },
+          {
+            "op": "destroy"
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "active": 0,
+            "configuration": [],
+            "memory": []
+          },
+          {
+            "active": 1,
+            "configuration": [],
+            "memory": []
+          },
+          {
+            "active": 0,
+            "configuration": [],
+            "memory": []
+          },
+          {
+            "active": 0,
+            "configuration": [],
+            "memory": []
+          },
+          {
+            "active": 1,
+            "configuration": [],
+            "memory": []
+          },
+          {
+            "active": 1,
+            "configuration": [
+              [
+                "en_US",
+                0
+              ]
+            ],
+            "memory": []
+          },
+          {
+            "active": 0,
+            "configuration": [],
+            "memory": []
+          }
+        ],
+        "invalidOffCalls": 0,
+        "markersIntact": true
+      }
+    }
+  ],
+  "controls": [
+    {
+      "id": "baseline",
+      "role": "baseline",
+      "edits": [],
+      "expectedFailedCheckIds": [
+        "repeat-create-zero",
+        "destroy-zero",
+        "recreate-positive",
+        "registration-retry-zero",
+        "idle-repeat-destroy"
+      ]
+    },
+    {
+      "id": "reference",
+      "role": "accepted",
+      "edits": [
+        {
+          "from": "export default class MyAbilityStage extends AbilityStage {",
+          "to": "export default class MyAbilityStage extends AbilityStage {\n  private environmentCallbackId?: number;"
+        },
+        {
+          "from": "  onCreate(): void {\n    console.info('AbilityStage onCreate');",
+          "to": "  onCreate(): void {\n    console.info('AbilityStage onCreate');\n    if (this.environmentCallbackId !== undefined) { return; }"
+        },
+        {
+          "from": "      let callbackId = applicationContext.on('environment', envCallback);",
+          "to": "      let callbackId = applicationContext.on('environment', envCallback);\n      this.environmentCallbackId = callbackId;"
+        },
+        {
+          "from": "    console.info('AbilityStage onDestroy');",
+          "to": "    console.info('AbilityStage onDestroy');\n    if (this.environmentCallbackId !== undefined) {\n      this.context.getApplicationContext().off('environment', this.environmentCallbackId);\n      this.environmentCallbackId = undefined;\n    }"
+        }
+      ],
+      "expectedFailedCheckIds": []
+    },
+    {
+      "id": "alternative-valid",
+      "role": "accepted",
+      "edits": [
+        {
+          "from": "export default class MyAbilityStage extends AbilityStage {",
+          "to": "export default class MyAbilityStage extends AbilityStage {\n  private environmentCallbackId?: number;"
+        },
+        {
+          "from": "  onCreate(): void {\n    console.info('AbilityStage onCreate');",
+          "to": "  onCreate(): void {\n    console.info('AbilityStage onCreate');\n    if (this.environmentCallbackId !== undefined) {\n      this.context.getApplicationContext().off('environment', this.environmentCallbackId);\n      this.environmentCallbackId = undefined;\n    }"
+        },
+        {
+          "from": "      let callbackId = applicationContext.on('environment', envCallback);",
+          "to": "      let callbackId = applicationContext.on('environment', envCallback);\n      this.environmentCallbackId = callbackId;"
+        },
+        {
+          "from": "    console.info('AbilityStage onDestroy');",
+          "to": "    console.info('AbilityStage onDestroy');\n    if (this.environmentCallbackId !== undefined) {\n      this.context.getApplicationContext().off('environment', this.environmentCallbackId);\n      this.environmentCallbackId = undefined;\n    }"
+        }
+      ],
+      "expectedFailedCheckIds": []
+    },
+    {
+      "id": "zero-id-skipped",
+      "role": "wrong",
+      "edits": [
+        {
+          "from": "export default class MyAbilityStage extends AbilityStage {",
+          "to": "export default class MyAbilityStage extends AbilityStage {\n  private environmentCallbackId?: number;"
+        },
+        {
+          "from": "  onCreate(): void {\n    console.info('AbilityStage onCreate');",
+          "to": "  onCreate(): void {\n    console.info('AbilityStage onCreate');\n    if (this.environmentCallbackId !== undefined) { return; }"
+        },
+        {
+          "from": "      let callbackId = applicationContext.on('environment', envCallback);",
+          "to": "      let callbackId = applicationContext.on('environment', envCallback);\n      this.environmentCallbackId = callbackId;"
+        },
+        {
+          "from": "    console.info('AbilityStage onDestroy');",
+          "to": "    console.info('AbilityStage onDestroy');\n    if (this.environmentCallbackId !== undefined) {\n      this.context.getApplicationContext().off('environment', this.environmentCallbackId);\n      this.environmentCallbackId = undefined;\n    }"
+        },
+        {
+          "from": "    if (this.environmentCallbackId !== undefined) {\n      this.context.getApplicationContext().off('environment', this.environmentCallbackId);\n      this.environmentCallbackId = undefined;\n    }",
+          "to": "    if (this.environmentCallbackId > 0) {\n      this.context.getApplicationContext().off('environment', this.environmentCallbackId);\n      this.environmentCallbackId = undefined;\n    }"
+        }
+      ],
+      "expectedFailedCheckIds": [
+        "destroy-zero"
+      ]
+    },
+    {
+      "id": "stale-owner-after-destroy",
+      "role": "wrong",
+      "edits": [
+        {
+          "from": "export default class MyAbilityStage extends AbilityStage {",
+          "to": "export default class MyAbilityStage extends AbilityStage {\n  private environmentCallbackId?: number;"
+        },
+        {
+          "from": "  onCreate(): void {\n    console.info('AbilityStage onCreate');",
+          "to": "  onCreate(): void {\n    console.info('AbilityStage onCreate');\n    if (this.environmentCallbackId !== undefined) { return; }"
+        },
+        {
+          "from": "      let callbackId = applicationContext.on('environment', envCallback);",
+          "to": "      let callbackId = applicationContext.on('environment', envCallback);\n      this.environmentCallbackId = callbackId;"
+        },
+        {
+          "from": "    console.info('AbilityStage onDestroy');",
+          "to": "    console.info('AbilityStage onDestroy');\n    if (this.environmentCallbackId !== undefined) {\n      this.context.getApplicationContext().off('environment', this.environmentCallbackId);\n      this.environmentCallbackId = undefined;\n    }"
+        },
+        {
+          "from": "      this.environmentCallbackId = undefined;",
+          "to": "      // Keep the stale callback identity."
+        }
+      ],
+      "expectedFailedCheckIds": [
+        "recreate-positive"
+      ]
+    },
+    {
+      "id": "duplicate-subscription",
+      "role": "wrong",
+      "edits": [
+        {
+          "from": "export default class MyAbilityStage extends AbilityStage {",
+          "to": "export default class MyAbilityStage extends AbilityStage {\n  private environmentCallbackId?: number;"
+        },
+        {
+          "from": "  onCreate(): void {\n    console.info('AbilityStage onCreate');",
+          "to": "  onCreate(): void {\n    console.info('AbilityStage onCreate');\n    if (this.environmentCallbackId !== undefined) { return; }"
+        },
+        {
+          "from": "      let callbackId = applicationContext.on('environment', envCallback);",
+          "to": "      let callbackId = applicationContext.on('environment', envCallback);\n      this.environmentCallbackId = callbackId;"
+        },
+        {
+          "from": "    console.info('AbilityStage onDestroy');",
+          "to": "    console.info('AbilityStage onDestroy');\n    if (this.environmentCallbackId !== undefined) {\n      this.context.getApplicationContext().off('environment', this.environmentCallbackId);\n      this.environmentCallbackId = undefined;\n    }"
+        },
+        {
+          "from": "    if (this.environmentCallbackId !== undefined) { return; }",
+          "to": "    // Register again without removing the old subscription."
+        }
+      ],
+      "expectedFailedCheckIds": [
+        "repeat-create-zero"
+      ]
+    }
+  ]
+}

@@ -484,3 +484,119 @@ fn contained_worker_rejects_unreviewed_or_changed_input_before_runtime() {
         assert_eq!(std::fs::read_dir(dir).unwrap().count(), 2);
     }
 }
+
+#[test]
+fn lifecycle_worker_executes_owned_zero_id_recreation_and_retry_behavior() {
+    let repository = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .canonicalize()
+        .unwrap();
+    let profile: Value = serde_json::from_slice(&std::fs::read(repository.join(
+        "examples/maintainer-knowledge-gate/reviewed-behavior/environment-lifecycle-demand.json",
+    )).unwrap()).unwrap();
+    let dir = loop_output_for_adapter();
+    std::fs::create_dir(&dir).unwrap();
+    let compiler = dir.join("compiler.cjs");
+    // JavaScript-only protocol fixture, not TypeScript/Harmony qualification.
+    let compiler_bytes = b"module.exports={ModuleKind:{CommonJS:1},ScriptTarget:{ES2022:9},DiagnosticCategory:{Error:1},transpileModule(source){return{outputText:source,diagnostics:[]}}};";
+    std::fs::write(&compiler, compiler_bytes).unwrap();
+    let mut support = profile["supportFields"].clone();
+    support["compilerSha256"] = json!(digest(compiler_bytes));
+    std::fs::write(
+        dir.join("support.json"),
+        serde_json::to_vec(&support).unwrap(),
+    )
+    .unwrap();
+    let valid = r#"// [Start myAbility_start]
+exports.default = class extends require('@kit.AbilityKit').AbilityStage {
+  id;
+  onCreate() {
+    if (this.id !== undefined) return;
+    try {
+      this.id = this.context.getApplicationContext().on('environment', {
+        onConfigurationUpdated(config) { console.info('envCallback onConfigurationUpdated success: '+JSON.stringify(config)); },
+        onMemoryLevel(level) { console.info('onMemoryLevel level: '+level); }
+      });
+    } catch (error) {}
+  }
+  onDestroy() {
+    if (this.id !== undefined) {
+      this.context.getApplicationContext().off('environment', this.id);
+      this.id = undefined;
+    }
+  }
+};
+// [End myAbility_start]
+"#;
+    for (id, source, intended_failure) in [
+        ("valid", valid.to_string(), None),
+        (
+            "zero-skipped",
+            valid.replace("if (this.id !== undefined) {", "if (this.id) {"),
+            Some("destroy-zero"),
+        ),
+        (
+            "stale-owner",
+            valid.replace("this.id = undefined;", "this.id = this.id;"),
+            Some("recreate-positive"),
+        ),
+        (
+            "duplicate",
+            valid.replace(
+                "if (this.id !== undefined) return;",
+                "/* no duplicate guard */",
+            ),
+            Some("repeat-create-zero"),
+        ),
+    ] {
+        let checks: Vec<_> = profile["checks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|check| json!({"id":check["id"],"input":check["input"]}))
+            .collect();
+        let request = json!({"schema":"agentlab.behavior_executor_request.v1","id":id,
+            "originalSourceSha256":digest(valid.as_bytes()),"submittedSource":source,
+            "submittedSourceSha256":digest(source.as_bytes()),"checks":checks});
+        let request_path = dir.join(format!("{id}.json"));
+        std::fs::write(&request_path, serde_json::to_vec(&request).unwrap()).unwrap();
+        let result = std::process::Command::new("node")
+            .arg(repository.join("scripts/environment-lifecycle-worker.cjs"))
+            .arg(request_path)
+            .arg(dir.join("support.json"))
+            .arg(&compiler)
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{id}: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let actual: Value = serde_json::from_slice(&result.stdout).unwrap();
+        assert_eq!(actual["id"], id);
+        assert_eq!(
+            actual["submittedSourceSha256"],
+            request["submittedSourceSha256"]
+        );
+        assert_eq!(
+            actual["observations"].as_array().unwrap().len(),
+            checks.len()
+        );
+        let mut failed = Vec::new();
+        for (expected, observed) in profile["checks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(actual["observations"].as_array().unwrap())
+        {
+            assert_eq!(observed["input"], expected["input"]);
+            if observed["actual"] != expected["expected"] {
+                failed.push(expected["id"].as_str().unwrap());
+            }
+        }
+        match intended_failure {
+            None => assert!(failed.is_empty(), "{failed:?}"),
+            Some(check) => assert!(failed.contains(&check), "{id}: {failed:?}"),
+        }
+    }
+}
