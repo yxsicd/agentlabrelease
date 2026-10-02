@@ -22,7 +22,7 @@ fn main() {
  if args[1]=="exit" {std::process::exit(7);}
  let input=fs::read(r["inputState"]["path"].as_str().unwrap()).unwrap();
  if args[1]=="tamper" {fs::write(r["inputState"]["path"].as_str().unwrap(),b"changed").unwrap();}
- let state=if args[1]=="repeat" {input} else {serde_json::to_vec(&json!({"round":r["round"],"stage":stage})).unwrap()};
+ let state=if args[1]=="repeat" {input} else {serde_json::to_vec(&json!({"round":r["round"],"stage":stage,"hasModelEnvironment":std::env::var_os("AGENTLAB_MODEL").is_some()})).unwrap()};
  fs::write(dir.join("state.json"),&state).unwrap();
  let request_sha=if args[1]=="borrowed" {"wrong".into()} else {sha(&bytes)};
  println!("{}",json!({"schema":"agentlab.flywheel_stage_result.v1","round":r["round"],"stage":stage,
@@ -187,6 +187,69 @@ fn mutation_of_prior_state_is_terminal_not_a_new_round() {
     assert!(root
         .join("tamper/round-0-program-analysis/adapter.stdout")
         .exists());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn private_environment_is_stage_scoped_and_names_are_checked_before_execution() {
+    let (root, mut recipe) = fixture();
+    let old = std::env::var_os("AGENTLAB_MODEL");
+    std::env::set_var("AGENTLAB_MODEL", "private-model-transport-fixture");
+    recipe["stages"][3]["environmentNames"] = json!(["AGENTLAB_MODEL"]);
+    let result = run(&root, &recipe, "environment").unwrap();
+    for stage in result["stages"].as_array().unwrap() {
+        let path = root
+            .join("environment")
+            .join(format!(
+                "round-{}-{}",
+                stage["round"],
+                stage["stage"].as_str().unwrap()
+            ))
+            .join("state.json");
+        let state: Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+        assert_eq!(
+            state["hasModelEnvironment"],
+            stage["stage"] == "case-execution"
+        );
+    }
+    assert!(!serde_json::to_string(&result)
+        .unwrap()
+        .contains("private-model-transport-fixture"));
+    recipe["stages"][0]["environmentNames"] = json!(["PATH"]);
+    assert!(run(&root, &recipe, "forbidden")
+        .unwrap_err()
+        .contains("forbidden"));
+    assert!(!root.join("forbidden").exists());
+    if let Some(value) = old {
+        std::env::set_var("AGENTLAB_MODEL", value);
+    } else {
+        std::env::remove_var("AGENTLAB_MODEL");
+    }
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn composite_stage_budget_is_explicit_and_total_is_bounded() {
+    let (root, mut recipe) = fixture();
+    recipe["stages"][3]["command"]["timeoutMs"] = json!(240_000);
+    let result = run(&root, &recipe, "composite").unwrap();
+    assert_eq!(result["totalCommandBudgetMs"], 504_000);
+    assert_eq!(
+        result["stages"][3]["execution"]["command"]["timeoutMs"],
+        240_000
+    );
+    for stage in recipe["stages"].as_array_mut().unwrap() {
+        stage["command"]["timeoutMs"] = json!(900_000);
+    }
+    assert!(run(&root, &recipe, "excessive")
+        .unwrap_err()
+        .contains("one hour"));
+    assert!(!root.join("excessive").exists());
+    recipe["stages"][0]["command"]["timeoutMs"] = json!(900_001);
+    assert!(run(&root, &recipe, "deadline")
+        .unwrap_err()
+        .contains("deadline"));
+    assert!(!root.join("deadline").exists());
     fs::remove_dir_all(root).unwrap();
 }
 

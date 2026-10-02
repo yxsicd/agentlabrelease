@@ -14,7 +14,10 @@ ordered `stages`: `repository-understanding`, `program-analysis`,
 `maintenance-verification`, `case-execution`, `evidence-return`.
 Each stage selects the existing operation command format: absolute `program`,
 `programSha256`, `args` with exactly one `{request}`, `cwd:"."`, `timeoutMs`
-1 through 180000. Commands execute in their fresh stage evidence directory.
+1 through 900000. The sum of stage command deadlines times maximumRounds must
+not exceed 3600000 ms. This is a composite-stage allowance, not a change to
+existing individual Agent/operation/behavior-attempt deadlines. Commands execute
+in their fresh stage evidence directory.
 Use narrow adapters around existing gates; commands must not reinterpret a zero
 exit code as business success. Pin their script/dependency files explicitly in
 `immutableInputs`. Executable digests do not transitively bind dependencies.
@@ -30,8 +33,13 @@ independent calibration and execution; repeatedly running a fixed reviewed task
 alone cannot qualify the case-generation part of the full flywheel. Evidence
 return must preserve reviewed lesson admission and exact committed cut readback,
 not substitute a JSON status for those existing gates.
-Do not embed credentials in state. No private environment names are forwarded by
-this coordinator; scoped trusted adapters may acquire credentials separately.
+Do not embed credentials in state. Each stage may explicitly select
+`environmentNames` from the existing Gateway/model/Pi/runtime/Docker names plus
+`AGENTLAB_TABLEGIT_MCP_URL` and `AGENTLAB_TABLEGIT_PERSON_ID`. Values come from the
+operator's environment, are never recipe/request/receipt fields, and are forwarded
+only to the selected stage. Duplicate, unknown or absent names fail preflight.
+An empty selection preserves the default of no private environment forwarding.
+Scoped trusted adapters may acquire their own credentials separately.
 This is not an untrusted-code sandbox or credential-access isolation guarantee.
 
 The adapter emits one stdout JSON `agentlab.flywheel_stage_result.v1` containing
@@ -64,6 +72,8 @@ It must preserve the existing review and fixed-baseline drift stops.
 Rust integration tests compile a Rust fixture adapter and execute two rounds,
 checking state lineage, review/rejection/no-change/infrastructure stops,
 borrowed-response rejection, input mutation and fresh-output constraints. These
+also verify stage-only environment forwarding and the aggregate deadline budget;
+a separate regression retains the ordinary operation deadline ceiling. These
 are transport regressions, not Agent runs or full flywheel acceptance. Next work:
 connect the existing semantic/program/operation/case/lesson gates to this envelope,
 exercise real bounded rounds, then transfer the same coordinator to another

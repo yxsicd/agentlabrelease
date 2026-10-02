@@ -2,7 +2,7 @@
 //! Adapter completion is not independent semantic qualification or admission.
 use crate::{
     digest,
-    maintainer_behavior_loop::{freeze_tree, invoke, pinned_inputs, recheck},
+    maintainer_behavior_loop::{freeze_tree, invoke_with_deadline_limit, pinned_inputs, recheck},
 };
 use serde_json::{json, Value};
 use std::{
@@ -19,6 +19,44 @@ const STAGES: [&str; 5] = [
     "case-execution",
     "evidence-return",
 ];
+fn environment_names(stage: &Value) -> Result<Vec<String>, String> {
+    let Some(value) = stage.get("environmentNames") else {
+        return Ok(Vec::new());
+    };
+    let names = value
+        .as_array()
+        .filter(|a| a.len() <= 12)
+        .ok_or("cycle environment names invalid")?;
+    let mut seen = BTreeSet::new();
+    names
+        .iter()
+        .map(|value| {
+            let name = value.as_str().ok_or("cycle environment name invalid")?;
+            require(
+                [
+                    "AGENTLAB_LM_GATEWAY_URL",
+                    "AGENTLAB_LM_GATEWAY_KEY",
+                    "AGENTLAB_PI_BINARY",
+                    "AGENTLAB_MODEL",
+                    "AGENTLAB_PROVIDER_ROUTE",
+                    "AGENTLAB_REASONING_EFFORT",
+                    "AGENTLAB_PARTICIPANT_RUNTIME_CONFIG",
+                    "DOCKER_CONFIG",
+                    "AGENTLAB_TABLEGIT_MCP_URL",
+                    "AGENTLAB_TABLEGIT_PERSON_ID",
+                ]
+                .contains(&name)
+                    && seen.insert(name),
+                "cycle environment name forbidden or duplicate",
+            )?;
+            require(
+                std::env::var_os(name).is_some(),
+                "cycle selected private environment absent",
+            )?;
+            Ok(name.to_owned())
+        })
+        .collect()
+}
 fn require(ok: bool, message: &str) -> Result<(), String> {
     if ok {
         Ok(())
@@ -104,6 +142,11 @@ pub fn execute(recipe_bytes: &[u8], out: &Path) -> Result<Value, String> {
         .as_array()
         .filter(|s| s.len() == STAGES.len())
         .ok_or("cycle stages incomplete")?;
+    let environments = stages
+        .iter()
+        .map(environment_names)
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut round_budget_ms = 0;
     for (stage, name) in stages.iter().zip(STAGES) {
         require(
             stage["stage"] == name && stage["command"]["cwd"] == ".",
@@ -118,9 +161,10 @@ pub fn execute(recipe_bytes: &[u8], out: &Path) -> Result<Value, String> {
         require(
             stage["command"]["timeoutMs"]
                 .as_u64()
-                .is_some_and(|n| (1..=180_000).contains(&n)),
+                .is_some_and(|n| (1..=900_000).contains(&n)),
             "cycle adapter deadline invalid",
         )?;
+        round_budget_ms += stage["command"]["timeoutMs"].as_u64().unwrap();
         let program = Path::new(
             stage["command"]["program"]
                 .as_str()
@@ -133,6 +177,11 @@ pub fn execute(recipe_bytes: &[u8], out: &Path) -> Result<Value, String> {
             "cycle executable digest mismatch",
         )?;
     }
+    let total_command_budget_ms = round_budget_ms * rounds;
+    require(
+        total_command_budget_ms <= 3_600_000,
+        "cycle total command budget exceeds one hour",
+    )?;
     let mut frozen = pinned_inputs(&recipe)?;
     let initial = PathBuf::from(
         recipe["initialState"]["path"]
@@ -186,14 +235,15 @@ pub fn execute(recipe_bytes: &[u8], out: &Path) -> Result<Value, String> {
             save(&request_path, &bytes)?;
             let request_sha = digest(&bytes);
             frozen.push((request_path, request_sha.clone()));
-            // Do not inject credentials into every stage. Trusted adapters may
-            // obtain their own scoped private credentials; never put them in recipes.
-            let outcome = invoke(
+            // Forward only this stage's explicit selection. Values are not
+            // recipe/request/receipt fields and never inherit into other stages.
+            let outcome = invoke_with_deadline_limit(
                 &stage["command"],
                 &dir.join("request.json"),
                 &dir,
                 "adapter",
-                &[],
+                &environments[stage_index],
+                900_000,
             );
             recheck(&frozen)?;
             let (execution, stdout) = match outcome {
@@ -256,7 +306,7 @@ pub fn execute(recipe_bytes: &[u8], out: &Path) -> Result<Value, String> {
     }
     recheck(&frozen)?;
     let result = json!({"schema":"agentlab.flywheel_cycles_capture.v1", "recipeSha256":digest(recipe_bytes),
-        "status":status,"completedRounds":completed,"stages":history,"latestState":{"path":state,"sha256":state_sha},
+        "status":status,"completedRounds":completed,"totalCommandBudgetMs":total_command_budget_ms,"stages":history,"latestState":{"path":state,"sha256":state_sha},
         "adapterClaimsIndependentlyQualified":false,"qualified":false,"automaticPromotion":false,
         "authorityWritesIndependentlyVerified":false,"securitySandboxed":false});
     json_save(&out.join("cycles-result.json"), &result)?;
