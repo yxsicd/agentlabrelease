@@ -202,3 +202,25 @@ fix fixture isolation without altering production evidence or acceptance rules.
 Overall maturity is estimated at 67%, up one point for generic native validation
 and actual persistence/repeat/business-return integration. Complete automatic
 business cycles, formal cases and measured guidance benefit remain unproved.
+
+## Publication bridge checkpoint (2026-10-03)
+
+Read-only live verification found the default-branch publication at
+ed832d1b7e0e26b040be8cbb54737124027f0a67 while committed knowledge HEAD remained
+262b9a819e57abd7d6313c08b18c29c06f79045e. The old cut contains 14 Skills,
+65 facts and 43 refresh records; the new cut contains 15, 67 and 45 respectively.
+All five new-cut decoded tables exactly matched fixed-revision live readback,
+with clean and unchanged authority before/after. The verified portable export
+was copied into the publication branch without altering original raw table bytes,
+historical candidates or knowledge authority. Both cuts contain 489 scopes and
+zero formal cases. Evidence is retained externally in knowledge-publication-xXaPOtDW.
+
+The first publication regression rejected a missing platform-services receipt;
+copying the original operation sidecars restored the complete dependency set.
+The unchanged Rust first-four lineage/evidence regression then passed, along
+with all 18 TableGit transport tests and release validation. No validation was
+weakened. Default-branch merge and actual Action admission remain separate gates;
+a publication-branch push alone does not unblock the main-only producer.
+Overall maturity remains 67% pending that consumer transition and productive
+multi-round execution. No new participant execution, formal case, learning benefit
+or immutable release is claimed by this publication repair.

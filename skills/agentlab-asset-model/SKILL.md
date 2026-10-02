@@ -128,3 +128,12 @@ source-set.txt against sourceSetSha256 as well as table and operation sidecars.
 A missing portable sidecar is an export defect, not an Agent task failure. Restore
 only hash-identical bytes into a fresh derived bundle and keep the rejected cut
 unchanged; do not rewrite its manifest or claim another knowledge commit.
+
+Knowledge admission and consumer publication are separate transitions. Before a
+new automated round, compare the consumer branch's published cut with live
+authority and read back all five tables at that exact revision. If publication
+lags, publish the verified portable snapshot, including assessment and operation
+receipt dependencies, before spending another Agent budget. Preserve assessed
+raw bytes and historical candidate bindings; equivalent canonical rows do not
+repair missing sidecars. A pushed branch is not the default-branch consumer:
+confirm the merged cut and its admission check before claiming the loop unblocked.

@@ -32,13 +32,12 @@
   "sourceSetSha256": "88310ecd6a5ace0c7393c7981b8f9ba9103afff41133b71d0b84e951e95f24a6",
   "tableGitAuthority": {
     "exportedBy": {
-      "host": "hwlinux",
       "kind": "operator-replay",
       "repository": "yxsicd/agentlabrelease",
-      "runId": "telemetry-source-controls-v1"
+      "runId": "push-source-outcome-20261003"
     },
     "repo": "agentlabtablegit",
-    "revision": "ed832d1b7e0e26b040be8cbb54737124027f0a67"
+    "revision": "262b9a819e57abd7d6313c08b18c29c06f79045e"
   },
   "tables": {
     "evaluationCases": {
@@ -51,15 +50,15 @@
     },
     "maintainerSkillRefreshRounds": {
       "path": "maintainer_skill_refresh_rounds.jsonl",
-      "sha256": "aff631ee9ad3370583171fced83cdcafa284546fed70a9ca31b1497ddc436363"
+      "sha256": "da4f64783117eabba43deae627f0d41a4c57c321ad92a2d43754fa07ef157de8"
     },
     "maintainerSkills": {
       "path": "maintainer_skills.jsonl",
-      "sha256": "07bb6e2db288d636c7951bad249a9ca082005d4f6a92e89cd249b52de5a01bc1"
+      "sha256": "8ca945709be5f446639aa811ef15c7d35cb10a94a131fdd2ed19924e32539ba7"
     },
     "programFacts": {
       "path": "program_facts.jsonl",
-      "sha256": "683a311ebaf4e87cf87fec56b9d3ea5271dc89def6c6a46e99ffd99a72b7371a"
+      "sha256": "234832fa8fabc8daa2ce65d27d298393b7e8ce2a42cec6c0cbd128945932d31a"
     }
   }
 }
