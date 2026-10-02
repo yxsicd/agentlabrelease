@@ -100,3 +100,25 @@ original request and failed participant lifecycle; no model proposal or control
 execution occurred. The construction operator now creates its receipt root
 before dispatch, preserving the shared launcher's strict existence gate. This
 fix does not establish generation quality or raise maturity above 63%.
+
+## First model dispatch and incomplete transport
+
+PR #176 merged at `46df79e6eed9788046d827773cb3fb5502d05de5` after all
+applicable checks passed. Action `37008738003` crossed the launch boundary and
+retained a real model response with zero tool calls and zero transport retries.
+Pi exited zero after 61,643 ms, but its final message contained only thinking.
+The original gateway status independently records a 60,033 ms response-body
+deadline, upstreamEof=false, semanticComplete=false and
+outcome=upstream_deadline_exceeded. The subsequent empty-text JSON error is a
+symptom of incomplete transport, not a rejected complete semantic proposal.
+
+Construction now requires every original Gateway status to prove complete
+streaming response and clean EOF before serializing or staging any proposal.
+Missing, incomplete, timed-out or disconnected exchanges reject and retain a
+digest-bound completion report. Pi exit zero cannot override that gate. The
+fixed-context source recipe lane requests provider reasoning_effort=none, as
+already supported by the existing proxy; it still retains the same 60-second
+deadline, strict JSON/schema gates and independent semantic review. Runtime
+isolation validation also runs after a failed author step when containment was
+prepared, so model/format failures do not suppress its independent evidence.
+No complete proposal, generated control execution or maturity gain is claimed.
