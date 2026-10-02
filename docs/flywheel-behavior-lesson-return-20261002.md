@@ -1,5 +1,8 @@
 # Behavior evidence return
 
+Current checkpoint: 62% overall maturity, an engineering estimate, after the
+paired real runs below. Earlier 58% statements describe their historical cuts.
+
 Overall flywheel maturity remains 58%, an engineering estimate. This change
 connects frozen behavior captures to the existing experience and reviewed
 knowledge-admission model. It is not yet a remotely committed feedback round.
@@ -71,3 +74,61 @@ Current-assessment resolution now checks the maximum declared refresh index
 instead of a previous fixed round number; historical candidate lineage remains
 unchanged. This repairs snapshot-test assumptions, not evidence verdicts or
 an Agent result. Preserve the original failed CI run 36982209053.
+
+## Real next-cut consumption and successful feedback repair
+
+PR 166 merged at `2fcef97590aeef4fee0c1679dcbae03fdb8929e8`. The pre-enrolled
+pair ran on that exact source, with the same profile, corpus, model/route,
+low reasoning effort, two-attempt allowance, frozen checks and zero transport
+retries. Both Actions completed successfully:
+
+| Treatment | Run | Observed behavior |
+|---|---|---|
+| Unguided | [36983433734](https://github.com/yxsicd/agentlabrelease/actions/runs/36983433734) | First attempt passed all six checks |
+| Guided | [36983454761](https://github.com/yxsicd/agentlabrelease/actions/runs/36983454761) | First attempt failed five checks; fresh second attempt passed all six |
+
+Native participant durations were 41,352 ms unguided, and 46,697 / 51,576 ms
+guided. These are participant-process durations, not total workflow wall time.
+Unguided submitted source SHA256:
+`00e9528de74321e2af533a920b9f0de5e2b155182d8d80805ee533a2ce387e69`.
+Guided failed / repaired source SHA256:
+`dc017fa8fbcc7b61dd67d063af4685874660227e741790083651a667b93bce4e` /
+`62f37da9f90a5900dc092602c093b7134040b22ac592754405bd05c7dd24e887`.
+
+Independent Rust readback reconstructed each attempt's verdict from its original
+attempt contract/capture, not from Action status. Completion and zero-retry gates
+passed for all three attempts; both guided completions bound the published
+knowledge revision `4327475966e056b4c2d93f0736062656c182728e` and packet SHA256
+`7941fe7fde35d8f7805db293946176e9f7f9dd5f22fc03d421cac0d5c4b16b38`.
+Archived runtime configuration and all four raw inspect-record digests matched
+their receipt bindings for all three attempts. The Action's live runtime validator
+passed; this archived-byte audit is not a local replay of its host-path policy.
+
+The second guided participant request retained exactly the previous source and
+recomputed failure feedback. Captured model tool results contained the complete
+failure-feedback bytes after two paginated reads. The entire task-request tail
+was not read; do not claim whole-file transmission from those two reads. Guidance
+transmission is independently bound through the full prompt. The first source
+retained a callback object but used it as the cancellation argument; the repair
+retained the registration ID and used that ID for cancellation. This is a scoped
+controlled-host behavior observation, not formal SDK or emulator acceptance.
+
+The maturity increase is +2 for real committed knowledge-to-next-run consumption
+and +2 for successful real failed-behavior feedback repair. This pair establishes
+neither statistical nor causal guidance benefit: the unguided arm passed sooner.
+Retain this contradictory observation; do not automatically strengthen or replace
+the operational Skill, loosen checks, or claim full Harmony qualification.
+
+## Remaining automation boundary
+
+The existing Maintainer Skill Action loops bounded semantic expansion and commits
+its knowledge delta. It separately samples a non-promoted candidate and emits
+downstream routing. The behavior Action loops repair attempts for an already
+reviewed fixed task. Neither is a complete multi-round flywheel coordinator.
+Reviewed lesson persistence/admission, knowledge-cut publication and next-round
+selection were still operator-coordinated in this experiment. The next generic
+automation must connect those boundaries with fixed-revision receipts, preserve
+review and authority-drift stops, and measure coverage, outcomes and cost across
+multiple rounds/repositories. An inner repair loop must not count as an entire
+knowledge-generation flywheel round. Formal Harmony compilation, installation,
+emulator/ohosTest and performance qualification remain separate uncompleted gates.

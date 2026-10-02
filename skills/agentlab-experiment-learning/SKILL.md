@@ -216,6 +216,20 @@ separate. Feed verified results into a subsequent round and test another reposit
 before claiming a generalizable learning loop; do not grow maturity from fixture
 coverage or consumption receipts alone.
 
+Keep knowledge consumption, successful feedback repair and guidance benefit as
+three distinct outcomes. A real equal-policy pair passed unguided on its first
+attempt, while guided failed five behavior checks before a fresh repair passed
+all six. That validates the feedback path but does not establish guidance benefit.
+Bind the repair request to the retained rejected source and recomputed feedback;
+inspect captured tool results when feedback exceeds the reader's page limit.
+Complete feedback transmission is not necessarily complete task-file transmission.
+Do not strengthen active guidance from a single success or hide a contradictory
+unguided result. Require repeated task outcomes and costs before attributing benefit.
+Inner task repairs, semantic-expansion batches and complete knowledge-to-next-cut
+flywheel rounds are different units; report which boundary actually ran without
+operator coordination. Preserve review and fixed-baseline admission even when a
+coordinator automates transport between those boundaries.
+
 Validate workflow expressions with GitHub-compatible context rules, not YAML
 syntax alone. A real dispatch rejected `runner.temp` in job-level env before any
 participant started. Resolve runner-local paths in a step through RUNNER_TEMP and
