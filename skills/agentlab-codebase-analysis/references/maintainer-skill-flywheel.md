@@ -777,3 +777,10 @@ Give executable-verifier synthesis its own explicit bounded response budget,
 separate from compact semantic summaries. Retain deadline failures, require a
 fresh complete response, and never count a policy adjustment as a productive
 knowledge round or silently add transport retries.
+
+Provider documentation does not establish deployed model admission. Before a
+replacement-model experiment, discover the authenticated deployment catalog and
+its model endpoint/route evidence; preserve a rejection without changing shared
+Gateway policy. A longer-budget run that still ends with only thinking is evidence
+to change the construction strategy, not grounds to keep increasing deadlines.
+Keep live catalog observations distinct from a local Gateway source contract.
