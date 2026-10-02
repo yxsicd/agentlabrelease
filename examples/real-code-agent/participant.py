@@ -26,7 +26,10 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 class Participant:
     def __init__(self, evidence, state, binary, gateway, model, route='glm', implementation='pi', reasoning_effort=None,
-                 gateway_timeout_seconds=180, thinking_type=None):
+                 gateway_timeout_seconds=180, thinking_type=None, response_format=None):
+        if response_format not in (None, 'json_object'):
+            raise ValueError('response_format must be omitted or json_object')
+        self.response_format = response_format
         if thinking_type not in (None, 'enabled', 'disabled'):
             raise ValueError('thinking_type must be omitted, enabled or disabled')
         self.thinking_type = thinking_type
@@ -134,6 +137,8 @@ class Participant:
                     wire['reasoning_effort'] = owner.active_reasoning_effort
                 if owner.thinking_type is not None:
                     wire['thinking'] = {'type': owner.thinking_type}
+                if owner.response_format is not None:
+                    wire['response_format'] = {'type': owner.response_format}
                 upstream = json.dumps(wire).encode()
                 stem.with_suffix('.upstream-request.json').write_bytes(upstream)
                 request = urllib.request.Request(owner.gateway + self.path, data=upstream,
@@ -264,6 +269,7 @@ class Participant:
             'gateway': gateway, 'providerRoute': route,
             'reasoningEffort': self.reasoning_effort, 'piThinkingMode': 'off',
             'providerThinkingType': self.thinking_type,
+            'providerResponseFormat': self.response_format,
             'captureAuthority': 'operator-owned local forwarding proxy',
             'externalCredentialInParticipant': False}, indent=2) + '\n')
 

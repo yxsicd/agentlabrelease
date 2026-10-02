@@ -33,6 +33,12 @@ on:
         required: true
         type: choice
         options: [default, enabled, disabled]
+      response_format:
+        description: Provider-supported output mode; default omits the field
+        default: default
+        required: true
+        type: choice
+        options: [default, json-object]
 permissions:
   contents: read
 concurrency:
@@ -51,6 +57,7 @@ jobs:
       CONSTRUCTION_REASONING_EFFORT: ${{ inputs.reasoning_effort }}
       CONSTRUCTION_GATEWAY_TIMEOUT: ${{ inputs.gateway_timeout_seconds }}
       CONSTRUCTION_THINKING_TYPE: ${{ inputs.thinking_type }}
+      CONSTRUCTION_RESPONSE_FORMAT: ${{ inputs.response_format }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_TABLEGIT_MCP_URL: ${{ vars.AGENTLAB_TABLEGIT_MCP_URL }}
       AGENTLAB_TABLEGIT_PERSON_ID: ${{ vars.AGENTLAB_TABLEGIT_PERSON_ID }}
@@ -124,7 +131,8 @@ jobs:
             --pi "$GITHUB_WORKSPACE/scripts/run-pi-in-docker.py" \
             --reasoning-effort "$CONSTRUCTION_REASONING_EFFORT" \
             --gateway-timeout-seconds "$CONSTRUCTION_GATEWAY_TIMEOUT" \
-            --thinking-type "$CONSTRUCTION_THINKING_TYPE"
+            --thinking-type "$CONSTRUCTION_THINKING_TYPE" \
+            --response-format "$CONSTRUCTION_RESPONSE_FORMAT"
       - name: Independently validate recorded participant isolation
         if: always() && steps.contain.outcome == 'success'
         run: |
