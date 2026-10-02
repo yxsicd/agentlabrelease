@@ -24,6 +24,41 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|arg| arg == "--export-behavior-lesson") {
+        let id = value(&args, "--candidate-id")?;
+        let candidates = fs::read_to_string(value(&args, "--candidates")?)?;
+        let rows = candidates
+            .lines()
+            .filter(|l| !l.trim().is_empty())
+            .map(serde_json::from_str::<serde_json::Value>)
+            .collect::<Result<Vec<_>, _>>()?;
+        let selected = rows.iter().filter(|r| r["id"] == id).collect::<Vec<_>>();
+        if selected.len() != 1 {
+            return Err("behavior lesson candidate absent or duplicated".into());
+        }
+        let candidate = serde_json::to_vec(selected[0])?;
+        let contract = fs::read(value(&args, "--contract")?)?;
+        let capture = fs::read(value(&args, "--capture")?)?;
+        let review = fs::read(value(&args, "--lesson-review")?)?;
+        let tables = agentlab_code_analysis::maintainer_behavior_checks::lesson_assets(
+            &candidate, &contract, &capture, &review,
+        )?;
+        fs::create_dir(&output)?;
+        for (name, bytes) in [
+            ("candidate.json", candidate),
+            ("behavior-contract.json", contract),
+            ("behavior-capture.json", capture),
+            ("lesson-review.json", review),
+        ] {
+            fs::write(output.join(name), bytes)?;
+        }
+        let manifest = asset_exchange::export(&output, "evaluation-instance", &tables);
+        println!(
+            "{}",
+            serde_json::json!({"assetClass":manifest["assetClass"],"authorityWritePerformed":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|arg| arg == "--execute-behavior-loop") {
         let result = agentlab_code_analysis::maintainer_behavior_loop::execute(
             &fs::read(value(&args, "--contract")?)?,

@@ -125,6 +125,23 @@ for Harmony build/runtime, UI and formal case even when the scoped lesson is
 verified. Candidate guidance is not active knowledge until maintenance admission,
 and neither archival nor proposal export proves the next round improved.
 
+For frozen behavior checks, use `--export-behavior-lesson --candidates FILE
+--candidate-id ID --contract FILE --capture FILE --lesson-review FILE --output
+NEW_DIR`. Do not wrap behavior captures in the older stage-calibration schema.
+The explicit `agentlab.behavior_lesson_review.v1` binds candidate/source,
+contract and capture digests, reviewerId, interpretation and target IDs. It
+requires two independently accepted and two rejected controls. Preserve the
+original capture once and reference its checks rather than duplicating whole
+submitted sources in every analytical row. Review must explicitly select
+skillStage=calibration or evaluation; legacy stage lessons remain calibration.
+The admission gate reconstructs either original format before comparing the
+committed export and proposed knowledge delta. Matching repository identity is
+not enough to reuse an unrelated lesson: bind stage, source and stated task
+applicability. Export, promotion candidate and staged admission are separate
+from committed readback, actual next-round consumption and measured benefit.
+Keep task extensions distinct from upstream defect claims, and controls-only
+calibration distinct from real participant failure/repair evidence.
+
 Before admission, require nonempty passing validations belonging to the selected
 lesson, and reject target identities already present in the baseline. Existing
 guidance updates need a separate reviewed delta, never implicit replacement by

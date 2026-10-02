@@ -217,6 +217,14 @@ fn main() {
         ));
         let method_revision = std::env::var("GITHUB_SHA").ok();
         let promotion = &lesson["promotionContract"];
+        let skill_stage = promotion
+            .get("skillStage")
+            .cloned()
+            .unwrap_or(json!("calibration"));
+        assert!(
+            skill_stage == "calibration" || skill_stage == "evaluation",
+            "Unsupported reviewed lesson stage"
+        );
         for (table, key) in [
             ("program_facts", "factId"),
             ("maintainer_skills", "skillId"),
@@ -236,6 +244,7 @@ fn main() {
         );
         let mut fact = json!({"id":promotion["factId"],"assetClass":"reusable-knowledge","ownershipPlane":"target-operations","automaticPromotion":false,"kind":"verified-lesson","scope":lesson["scope"],"phenomenon":lesson["phenomenon"],"cause":lesson["cause"],"change":lesson["change"],"sourceRevision":lesson["sourceRevision"],"sourceLessonId":lesson["id"],"sourceLessonExportDigest":provenance,"lessonSource":lineage,"methodSkillId":"agentlab-experiment-learning","methodDigest":method_digest,"methodRevision":method_revision,"validationIds":lesson["validationIds"],"qualification":promotion["qualification"]});
         let mut skill = json!({"id":promotion["skillId"],"assetClass":"reusable-knowledge","ownershipPlane":"target-operations","automaticPromotion":false,"sourceRevision":lesson["sourceRevision"],"skillLayer":"method","role":"maintenance","stage":"calibration","objectId":lesson["id"],"title":lesson["phenomenon"],"factIds":[promotion["factId"]],"sourceLessonId":lesson["id"],"sourceLessonExportDigest":provenance,"lessonSource":lineage,"methodSkillId":"agentlab-experiment-learning","methodDigest":method_digest,"methodRevision":method_revision,"body":promotion["body"]});
+        skill["stage"] = skill_stage;
         // Older scenario exports do not declare a repository. Do not invent one
         // from the operational TableGit name or the target identity.
         if let Some(repository) = lesson["repositoryId"].as_str() {

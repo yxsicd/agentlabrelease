@@ -348,16 +348,26 @@ pub fn prepare(
     // rather than trusting a verified status or a rehashed proposal.
     let candidate_bytes = read(source, "candidate.json")?;
     let candidate: Value = serde_json::from_slice(&candidate_bytes).map_err(|e| e.to_string())?;
-    let capture = read(source, "stage-calibration.json")?;
     let review_bytes = read(source, "lesson-review.json")?;
-    let expected = maintainer_stage_feedback::lesson_assets(
-        &candidate_bytes,
-        &read(source, "downstream-plan.json")?,
-        &read(source, "stage-contract.json")?,
-        &capture,
-        &digest(&capture),
-        &review_bytes,
-    )?;
+    let review: Value = serde_json::from_slice(&review_bytes).map_err(|e| e.to_string())?;
+    let expected = if review["schema"] == "agentlab.behavior_lesson_review.v1" {
+        crate::maintainer_behavior_checks::lesson_assets(
+            &candidate_bytes,
+            &read(source, "behavior-contract.json")?,
+            &read(source, "behavior-capture.json")?,
+            &review_bytes,
+        )?
+    } else {
+        let capture = read(source, "stage-calibration.json")?;
+        maintainer_stage_feedback::lesson_assets(
+            &candidate_bytes,
+            &read(source, "downstream-plan.json")?,
+            &read(source, "stage-contract.json")?,
+            &capture,
+            &digest(&capture),
+            &review_bytes,
+        )?
+    };
     let export = load(source, "export.json")?;
     need(
         export["assetClass"] == "evaluation-instance"
@@ -438,7 +448,11 @@ pub fn prepare(
                         && row["factIds"] == json!([review["factId"]])
                         && row["skillLayer"] == "method"
                         && row["role"] == "maintenance"
-                        && row["stage"] == "calibration"
+                        && row["stage"]
+                            == lesson["promotionContract"]
+                                .get("skillStage")
+                                .unwrap_or(&json!("calibration"))
+                                .clone()
                         && row["objectId"] == lesson_id
                         && row["title"] == lesson["phenomenon"]
                         && row.as_object().map(|o| o.len()) == Some(19),
