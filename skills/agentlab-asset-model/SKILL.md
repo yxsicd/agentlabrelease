@@ -88,3 +88,12 @@ do not substitute the calibration verdict map for participant outcomes. Re-expor
 retained evidence with a changed consumer into a fresh directory: the new run
 identity is a projection version, not another execution. Behavior-only reconstruction
 does not verify participant completion, authenticate its producer or qualify a case.
+
+Resolve the live transport contract before reusing an ingestion recipe: a legacy
+Service WebSocket client is not an MCP Skill-kernel client. Use the instance's
+discovered read/write operations, explicit Person and revision fences. Bind the
+actual method commit when promoting outside Action; an exported candidate with
+null methodRevision is not admissible. Preserve that rejection and regenerate
+into a fresh destination with verified method identity, rather than patching the
+rejected candidate. Remote analytical readback does not preserve raw evidence
+bytes merely because evidence_files hash/path rows were committed.

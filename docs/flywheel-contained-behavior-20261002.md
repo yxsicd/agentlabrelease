@@ -2,6 +2,27 @@
 
 ## Push initialization adapter checkpoint
 
+### Committed instance readback and knowledge staging
+
+The live TPC MCPGit metadata/Skill contracts and explicit Person selection were
+verified before provisioning independent bare TableGit `agentlabpush-20261003`.
+Nine analytical tables were created with exported definitions; all result rows
+were inserted in one revision-fenced atomic transaction. Committed revision
+`aec6dd02c90fe6a3668d35bddabe60d89fd8ca30` was queried table by table, comparing
+every key and full row to the source projection. Original `agentlabtablegit`
+knowledge remained at `a9c327c5522292c6dee7d86645b039a84de30cd0`.
+External `push-agent-loop-pO1Bz0gH/lesson-committed-1` retains intents, receipts,
+fixed-cut readback and raw local files. Remote evidence_files rows are references,
+not proof of durable raw-byte availability; remote replication is not claimed.
+
+Explicit promotion first exported null methodRevision outside Action; strict
+admission rejected it. The original candidate remains retained. A fresh promotion
+bound actual method commit `ba5e4f91443b2081835f608b4a212402273bf3d6`; strict
+lesson reconstruction and baseline reassessment then staged the complete knowledge
+cut in `lesson-knowledge-stage-2`. Scope verdicts, totals and five inherited
+operation receipts remain unchanged. Staging is not knowledge authority commit,
+publication or next-round consumption. Overall maturity remains 64%.
+
 ### Structured actual-attempt feedback
 
 The behavior lesson consumer now exports actual submissions as `attempts`, with
