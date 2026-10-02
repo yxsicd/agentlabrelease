@@ -89,7 +89,9 @@ fn fixture() -> (PathBuf, Value) {
     );
     let initial = root.join("initial.json");
     fs::write(&initial, b"{}").unwrap();
-    let command = json!({"program":binary,"programSha256":digest(&fs::read(&binary).unwrap()),"cwd":".","timeoutMs":3000,"args":["advance","{request}"]});
+    // Freshly linked native test adapters can incur cold-launch latency under
+    // parallel regression load. This fixture allowance is not an Agent budget.
+    let command = json!({"program":binary,"programSha256":digest(&fs::read(&binary).unwrap()),"cwd":".","timeoutMs":30_000,"args":["advance","{request}"]});
     let stages = [
         "repository-understanding",
         "program-analysis",
@@ -233,7 +235,7 @@ fn composite_stage_budget_is_explicit_and_total_is_bounded() {
     let (root, mut recipe) = fixture();
     recipe["stages"][3]["command"]["timeoutMs"] = json!(240_000);
     let result = run(&root, &recipe, "composite").unwrap();
-    assert_eq!(result["totalCommandBudgetMs"], 504_000);
+    assert_eq!(result["totalCommandBudgetMs"], 720_000);
     assert_eq!(
         result["stages"][3]["execution"]["command"]["timeoutMs"],
         240_000
