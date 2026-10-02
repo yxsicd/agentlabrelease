@@ -1,0 +1,43 @@
+{
+  "schema": "agentlab.harmony_stage_control_contract.v1",
+  "reviewed": true,
+  "candidateId": "shadow-case-refresh-35a06c03f9d7c77cfa6156add329c2ec",
+  "candidateSha256": "a3b0f718650daea79c6e2b99565278bff3485b43396dd04d2a8acad456cec34c",
+  "sourceRevision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+  "modulePath": "Ability/AbilityStage/entry/src/main/module.json5",
+  "createMarker": "AbilityStage onCreate",
+  "destroyMarker": "AbilityStage onDestroy",
+  "registrationMarker": "callbackId: ",
+  "configurationPrefix": "envCallback onConfigurationUpdated success: ",
+  "eventName": "environment",
+  "configurations": [
+    { "id": "config-initial", "language": "zh_CN", "colorMode": 1 },
+    { "id": "config-language-changed", "language": "en_US", "colorMode": 1 },
+    { "id": "config-colormode-changed", "language": "en_US", "colorMode": 0 }
+  ],
+  "variants": [
+    {
+      "id": "wrong-entry-binding",
+      "path": "Ability/AbilityStage/entry/src/main/module.json5",
+      "from": "\"srcEntry\": \"./ets/myabilitystage/MyAbilityStage.ets\"",
+      "to": "\"srcEntry\": \"./ets/exampleabilitystage/MyAbilityStage.ets\"",
+      "expectedFailedChecks": [
+        "stage-created",
+        "application-environment-registration",
+        "config-language-changed",
+        "config-colormode-changed"
+      ]
+    },
+    {
+      "id": "wrong-environment-registration",
+      "path": "Ability/AbilityStage/entry/src/main/ets/myabilitystage/MyAbilityStage.ets",
+      "from": "applicationContext.on('environment', envCallback)",
+      "to": "applicationContext.on('memory', envCallback)",
+      "expectedFailedChecks": [
+        "application-environment-registration",
+        "config-language-changed",
+        "config-colormode-changed"
+      ]
+    }
+  ]
+}

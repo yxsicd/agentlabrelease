@@ -18,6 +18,43 @@ struct Fixture {
 static FIXTURE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 #[test]
+fn reviewed_real_repair_seed_preserves_original_bytes_and_execution_limits() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/maintainer-knowledge-gate/reviewed-guidance");
+    let bytes = fs::read(root.join("abilitystage-agent-repaired-controls.json")).unwrap();
+    let review: Value = serde_json::from_slice(
+        &fs::read(root.join("abilitystage-agent-repaired-controls-review.json")).unwrap(),
+    )
+    .unwrap();
+    let contract: Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(digest(&bytes), review["reviewedContractSha256"]);
+    let original = String::from_utf8(bytes)
+        .unwrap()
+        .replace("\"reviewed\": true", "\"reviewed\": false");
+    assert_eq!(
+        digest(original.as_bytes()),
+        review["originalProposalSha256"]
+    );
+    assert_eq!(contract["reviewed"], true);
+    assert_eq!(review["onlyReviewFlagChanged"], true);
+    for key in ["candidateId", "candidateSha256", "sourceRevision"] {
+        assert_eq!(contract[key], review[key]);
+    }
+    for key in [
+        "semanticExecutionVerified",
+        "learningBenefitVerified",
+        "caseQualified",
+        "harmonyRuntimeQualified",
+        "automaticPromotion",
+        "reviewerAuthenticated",
+    ] {
+        assert_eq!(review[key], false);
+    }
+    assert_eq!(review["executionApprovedWithinReviewScope"], true);
+    // This checks published review provenance, not the claimed real run or behavior.
+}
+
+#[test]
 fn bounded_author_repair_uses_real_gates_and_preserves_rejections() {
     let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
     for mode in [
