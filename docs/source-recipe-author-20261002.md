@@ -557,3 +557,27 @@ The helper does not force generated code to use it, establish semantic correctne
 provide an execution sandbox or approve a verifier. This change removes repeated
 plumbing from the generation task; its effect on real Agent acceptance rates is
 not yet measured. Overall maturity remains 63%, formal cases zero, full cycles zero.
+
+## First frozen-runtime construction: rate limit and native retry boundary
+
+PR #190 merged as `552207ca1fc5f21529a983ec5af9ae20e3f94f4e` after every
+applicable check passed. Action `37044387539` used that method with native
+Responses, GPT-5.6-LUNA, none reasoning, JSON-object output and at most two design
+corrections. Initial design failed check/observation consistency; revision 1
+passed the static gate, with original design SHA256
+`32377e8d1570ca651feb4360a9e313e4026cfc24450abd6b7df9d2b29cd31a42`.
+
+Code generation then received an HTTP-200 stream carrying rate_limit_exceeded.
+Native events show auto_retry_start attempt=1/maxAttempts=3 followed by a
+successful retry. The operator's transportRetryLimit=0 did not disable Pi's
+internal retry. The existing completion gate still refused the failed exchange;
+no proposal was staged, approved or executed. Isolation validation passed, and
+the complete failed Action artifact remains retained. Neither the failure nor
+the internally recovered response proves improved verifier acceptance.
+
+The constructor now exclusively creates private Pi settings disabling session
+and provider retries, retains their digest, and rechecks unchanged bytes and
+absence of project overrides before each design/code turn. This does not change
+the shared participant or assessed-Agent configuration. Fresh live behavior still
+requires qualification; settings alone cannot certify that no retry occurred.
+Maturity remains 63%, formal cases zero, complete business cycles zero.
