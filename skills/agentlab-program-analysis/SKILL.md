@@ -58,6 +58,16 @@ semantic-ready counts, grant operation readiness, execute the Oracle, or mutate
 the frozen candidate. Persist the enhanced fact as one revision-fenced TableGit
 transaction; regenerate the downstream candidate only from the later cut.
 
+Separate modification ownership from read-only source context. A construction
+Oracle may inspect a path outside its editable responsibility only when the
+candidate explicitly lists it as context, a bound fact cites its exact Blob,
+and exactly one scope in the same repository/source cut owns it. Report that
+owner without expanding the candidate's editable selectors or claiming a
+resolved dependency edge. Missing, conflicting or revision-mismatched context
+bindings remain knowledge blockers; runtime and Oracle qualification stay
+independent. A failure after knowledge persistence must recover the committed
+cut and retained proposal, not rerun the successful Agent or overwrite history.
+
 ### Feedback multi-round instance
 
 Use [the shared subject runner](../../examples/knowledge-seed/subject/README.md)

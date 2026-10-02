@@ -200,6 +200,7 @@ def assess(knowledge: Path, candidate_id: str, plan_path: Path, evidence_root: P
         require(scope.get("sourceRevision") == candidate.get("sourceRevision"), f"scope {scope_id} revision differs")
         scope_rows.append(scope)
     evidence_paths = set()
+    evidence_blobs: dict[str, set[str]] = {}
     for fact_id in strings(candidate.get("factIds"), "candidate factIds"):
         require(fact_id in facts, f"unknown candidate fact {fact_id}")
         fact = facts[fact_id]
@@ -209,6 +210,12 @@ def assess(knowledge: Path, candidate_id: str, plan_path: Path, evidence_root: P
             row["path"] for row in fact.get("evidence", [])
             if isinstance(row, dict) and isinstance(row.get("path"), str)
         )
+        for item in fact.get("evidence", []):
+            if isinstance(item, dict) and isinstance(item.get("path"), str):
+                oid = item.get("gitBlobOid")
+                evidence_blobs.setdefault(item["path"], set()).add(
+                    oid if isinstance(oid, str) else ""
+                )
 
     required_fields = {
         "schema", "candidateId", "candidateSha256", "requiredImplementationPaths",
@@ -231,12 +238,26 @@ def assess(knowledge: Path, candidate_id: str, plan_path: Path, evidence_root: P
             seen.add(path)
             require(isinstance(item.get("reason"), str) and item["reason"].strip(), f"{field} reason is empty")
             in_scope = any(scope_owns_path(scope, path) for scope in scope_rows)
+            owners = sorted(
+                scope["id"] for scope in scopes.values()
+                if scope.get("repositoryId") == candidate.get("repositoryId")
+                and scope.get("sourceRevision") == candidate.get("sourceRevision")
+                and scope_owns_path(scope, path)
+            )
+            readonly_context = (
+                not in_scope and path in context and path not in editable
+                and len(owners) == 1 and len(evidence_blobs.get(path, set())) == 1
+                and all(re.fullmatch(r"[0-9a-f]{40}", oid)
+                        for oid in evidence_blobs.get(path, set()))
+            )
             checks.append({
                 "path": path,
                 "reason": item["reason"],
                 "inCandidateScope": in_scope,
                 "factEvidenceBound": path in evidence_paths,
                 permission_name: path in permitted,
+                "readOnlyContextBound": readonly_context,
+                "contextOwnerScopeSkillIds": owners if readonly_context else [],
             })
         return checks
 
@@ -284,7 +305,7 @@ def assess(knowledge: Path, candidate_id: str, plan_path: Path, evidence_root: P
         if not row["editable"]:
             knowledge_blockers.append(f"implementation path is absent from candidate editablePaths: {row['path']}")
     for row in oracle_paths:
-        if not row["inCandidateScope"]:
+        if not row["inCandidateScope"] and not row["readOnlyContextBound"]:
             knowledge_blockers.append(f"Oracle path escapes candidate scope: {row['path']}")
         if not row["factEvidenceBound"]:
             knowledge_blockers.append(f"Oracle path is absent from bound fact evidence: {row['path']}")

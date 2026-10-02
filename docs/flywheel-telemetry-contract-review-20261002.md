@@ -117,3 +117,42 @@ verified fact, source/lesson provenance and false formal qualifications. The
 downstream queue test accounts for the added fourth plan, explicitly checks the
 telemetry route remains non-executing/non-promoting, and preserves unchanged
 repeat suppression. These are snapshot/test corrections, not relaxed admission.
+
+## Real focused refresh and read-only context recovery
+
+PR150 merged at `f338eeeb8697caffa910fc1726780c70482fd50c` after all eleven
+applicable checks passed. Action36960519495 ran that exact cut, admitted the
+current knowledge and completed the focused Agent proposal in390938ms with
+24 completed tool calls and normal exit0. The retained lifecycle reports a
+780-second native-process watchdog and allows one transport retry; the initial
+enrollment's720-second requested limit was not the actual effective watchdog.
+Do not qualify this as a strict zero-retry or720-second-budget experiment.
+
+The proposal added TrackService/RdbStore Blobs and clarified resolved versus
+rejected upload behavior, the strict greater-than1000 boundary, the true-only
+upload placeholder and swallowed storage failures. It still uses ambiguous
+success-only wording and does not explain concurrent inserted-row deletion.
+This is partial semantic improvement, not independent intended-contract review.
+
+The knowledge transaction succeeded at
+`1aef65558cbbc66b3bfe63b719cfc171b33a28f9`, but successor derivation failed because
+the source-bound model context belonged to another maintained responsibility.
+The corrected generic readiness check distinguishes modification ownership from
+read-only context. Outside-scope context requires an explicit candidate context
+path, no edit permission, one exact bound Blob, and exactly one owner at the same
+repository/source revision. It neither invents a dependency edge nor qualifies
+runtime, Oracle or wrong variants. A Rust regression exercises ten generic
+positive/negative scenarios through the real readiness CLI.
+
+Read-only recovery compared all five exact-revision tables with the retained
+staged snapshot and original sync receipt, checking the current authority before
+and after. The recovered export has cut SHA256
+`89ba54084ef0a037bcddae5ad68b20184709621397a9f7aed93c39b9a2f36bf0`.
+Replaying only successor derivation on that export preserved the parent candidate
+and plan, producing `shadow-case-refresh-a864ecaec7c67603cab0e114743c5421` with
+`blocked-qualification`; the four independent qualification blockers remain.
+The recovered export/successor is retained externally pending publication. No
+Agent rerun, authority write, formal case promotion or new Release occurred.
+
+Overall maturity remains54%. This recovery removes a real downstream mechanical
+blocker; it does not turn the failed Action into an automatic closed-loop pass.
