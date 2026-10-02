@@ -209,3 +209,40 @@ another blind model-name trial or deadline increase. Current local Gateway
 source exposes authenticated `/v1/models` plus advertised model endpoint links;
 that source contract is not proof of the deployed catalog contents or of an
 effective upstream reasoning setting. No live catalog read is claimed here.
+
+## Complete transport but token-truncated generation
+
+PR #180 merged at `ec1ca33ac8967067c0c45b16feb7320615dab716`. Its exact-head
+public validation first failed during release download with repeated HTTP 500,
+before Btrfs installation; failed-only attempt two passed on the same source.
+Action `37017038649` then used MiMo-V2.6-FLASH / opencode-go, provider-default
+reasoning and the unchanged 180-second response budget. Original Gateway capture
+shows HTTP 200, clean EOF, semanticComplete=true, completed outcome and 153032 ms.
+The native final message nevertheless records stopReason=length, output=8192,
+36065 thinking characters and no text. The actual wire has max_completion_tokens
+8192 and neither reasoning_effort nor thinking. Independent runtime isolation
+passed; no proposal, source control, fact or formal case was produced.
+
+The construction gate now separately requires native stopReason=stop before
+proposal staging and retains generation-completion.json. A clean SSE end is
+transport completion, not proof that model synthesis finished. It is not eligible
+for format-only finalization when generation was token-truncated.
+
+An optional --thinking-type default/enabled/disabled independently controls the
+explicit thinking.type field at the operator proxy. Default omits it and keeps
+all historical callers unchanged. No model-name dispatch or shared Gateway
+policy change is introduced. [MiMo's official documentation](https://mimo.mi.com/docs/en-US/quick-start/usage-guide/other/deep-thinking)
+documents this separate enabled/disabled switch; that does not prove the deployed
+OpenCode route honors it. A fresh captured disabled-policy experiment must prove
+actual behavior. Do not raise token/deadline budgets or claim disabled thinking
+from the participant's --thinking off flag alone. Maturity remains 63% and
+complete five-stage cycles remain zero.
+
+A fresh small-budget live proxy probe on the same MiMo/opencode-go route sent
+thinking.type=disabled and max_completion_tokens=512. It returned 14 final-text
+characters, zero reasoning-content characters and finish_reason=stop. Original
+request/response/status bytes are retained outside source Git. This proves that
+this route accepted the switch and produced final text for the tiny probe, not
+that source-verifier synthesis will succeed or that all future thinking is absent.
+The next full construction experiment must use the unchanged selected source gap,
+original bounded context and independent review/execution requirements.

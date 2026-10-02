@@ -791,3 +791,16 @@ its model endpoint/route evidence; preserve a rejection without changing shared
 Gateway policy. A longer-budget run that still ends with only thinking is evidence
 to change the construction strategy, not grounds to keep increasing deadlines.
 Keep live catalog observations distinct from a local Gateway source contract.
+
+Clean transport EOF does not establish completed generation. Inspect the native
+final stop reason independently: token-length termination, tool handoff, abort
+or missing termination cannot enter proposal staging even when the SSE stream
+ends normally. Retain both transport and generation receipts. Distinguish the
+provider's thinking switch from reasoning effort and the participant's local
+thinking UI setting; these are separate controls. Only inject an explicitly
+selected provider-supported switch, omit it by default, and verify actual wire
+bytes and returned behavior before claiming it took effect. A reasoning-only
+token-cap termination is not completed analysis eligible for format-only repair.
+After changing a provider-specific control, use a small-budget captured live
+probe before dispatching the full construction workflow. Probe success establishes
+only that request's routing/response behavior, not synthesis quality or readiness.
