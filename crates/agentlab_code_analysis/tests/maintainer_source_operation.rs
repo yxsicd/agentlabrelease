@@ -408,7 +408,8 @@ with tempfile.TemporaryDirectory() as d:
         (3, ['--reasoning-effort','default','--thinking-type','disabled','--response-format','json-object'],None,180,'disabled'),
         (4, ['--api','openai-responses','--reasoning-effort','none','--response-format','json-object'],'none',180,None),
         (5, ['--revision-request',str(revision_path)],'low',180,None),
-        (6, ['--design-first'],'low',180,None)]:
+        (6, ['--design-first'],'low',180,None),
+        (7, ['--max-output-tokens','8192'],'low',180,None)]:
         seen = {}
         class FakeParticipant:
             def __init__(self, evidence, state, binary, gateway, model, **options):
@@ -444,6 +445,7 @@ with tempfile.TemporaryDirectory() as d:
              patch.object(module.subprocess,'run',side_effect=successful_gate) as stage:
             module.main()
         assert seen['constructor']['gateway_timeout_seconds'] == deadline
+        assert seen['constructor']['max_output_tokens']==(8192 if index==7 else 16384)
         assert seen['constructor']['thinking_type'] == thinking
         assert seen['constructor']['response_format'] == ('json_object' if index in (3,4) else None)
         assert seen['constructor']['api'] == ('openai-responses' if index==4 else 'openai-completions')
@@ -589,6 +591,70 @@ try:
         else: raise AssertionError('invalid thinking policy accepted')
 finally:
     server.shutdown();server.server_close();thread.join()
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "PARTICIPANT_SCRIPT",
+            root().join("examples/real-code-agent/participant.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn explicit_output_budget_reaches_wire_and_preserves_shared_defaults() {
+    let code = r#"
+import http.server, importlib.util, json, os, tempfile, threading, urllib.request
+from pathlib import Path
+from unittest.mock import patch
+spec=importlib.util.spec_from_file_location('participant',os.environ['PARTICIPANT_SCRIPT'])
+module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+received=[]
+class Handler(http.server.BaseHTTPRequestHandler):
+    def log_message(self,*args): pass
+    def do_POST(self):
+        received.append(json.loads(self.rfile.read(int(self.headers['Content-Length']))))
+        body=b'data: [DONE]\n\n'
+        self.send_response(200); self.send_header('Content-Length',str(len(body)))
+        self.end_headers(); self.wfile.write(body)
+server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Handler)
+thread=threading.Thread(target=server.serve_forever,daemon=True); thread.start()
+try:
+    with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ,{'AGENTLAB_LM_GATEWAY_KEY':'synthetic-only'}):
+        root=Path(directory)
+        for api in ('openai-completions','openai-responses'):
+            for limit in (None,8192,16384):
+                evidence=root/f'{api}-{limit}'; evidence.mkdir()
+                p=module.Participant(evidence,evidence/'state','/bin/true',
+                    f'http://127.0.0.1:{server.server_port}','arbitrary-model',api=api,max_output_tokens=limit)
+                try:
+                    models=json.loads((evidence/'state/models.json').read_bytes())
+                    assert models['providers']['agentlab-ci']['models'][0]['maxTokens']==(limit or 8192)
+                    receipt=json.loads((evidence/'participant.json').read_bytes())
+                    assert receipt['providerMaxOutputTokens']==limit
+                    payload={'model':'ignored','stream':True,'max_tokens':11,'max_completion_tokens':12,'max_output_tokens':13}
+                    req=urllib.request.Request(f'http://127.0.0.1:{p.server.server_port}'+p.api_path,
+                        data=json.dumps(payload).encode(),headers={'Authorization':'Bearer '+p.local_proxy_token})
+                    with urllib.request.urlopen(req,timeout=5) as response: response.read()
+                    actual=json.loads((evidence/'gateway/0001.upstream-request.json').read_bytes())
+                    assert actual==received[-1]
+                    fields={k:v for k,v in actual.items() if k in ('max_tokens','max_completion_tokens','max_output_tokens')}
+                    expected={k:v for k,v in payload.items() if k.startswith('max_')} if limit is None else {
+                        'max_output_tokens' if api=='openai-responses' else 'max_tokens':limit}
+                    assert fields==expected,(fields,expected)
+                finally: p.close()
+        for invalid in (True,False,0,8192.0,'16384',8193,32768):
+            try:module.Participant(root,root/'invalid','/bin/true','http://localhost','arbitrary',max_output_tokens=invalid)
+            except ValueError:pass
+            else:raise AssertionError('invalid token policy accepted')
+finally:
+    server.shutdown(); server.server_close(); thread.join()
 "#;
     let result = Command::new("python3")
         .args(["-c", code])

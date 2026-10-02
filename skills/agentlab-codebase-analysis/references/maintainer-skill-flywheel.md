@@ -921,3 +921,13 @@ before claiming a single attempt. A successful later response cannot erase an
 earlier rate-limit/incomplete exchange. Configuration validation is not live
 no-retry qualification; verify effective settings in the pinned runtime and then
 retain the next live turn. Do not alter unrelated assessed-Agent retry policy.
+
+Separate output-token ceilings from upstream wall-time limits. Inspect the actual
+wire request and terminal provider usage before choosing a correction: increasing
+seconds cannot cure max-output-token termination, and reasoning may consume only
+a small part of the ceiling. The source constructor exposes explicit 8192/16384
+token policies, records the selected value and overrides competing native token
+fields with the API-specific field. Shared participants retain their existing
+default unless the operator explicitly opts in. A larger ceiling is an experiment,
+not proof of provider support or synthesis quality. Keep response-size, execution
+and semantic-review gates unchanged; never finalize or stage an incomplete response.

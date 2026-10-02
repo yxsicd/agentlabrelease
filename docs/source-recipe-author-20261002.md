@@ -581,3 +581,25 @@ absence of project overrides before each design/code turn. This does not change
 the shared participant or assessed-Agent configuration. Fresh live behavior still
 requires qualification; settings alone cannot certify that no retry occurred.
 Maturity remains 63%, formal cases zero, complete business cycles zero.
+
+## Explicit construction output-token ceiling
+
+Action `37046727398` used medium reasoning and native Responses. Its first design
+passed static validation, but code synthesis ended with `response.incomplete`,
+reason `max_output_tokens`. Original wire requested 8192 tokens; provider usage
+reported 8192 output tokens including 963 reasoning tokens. Text deltas contained
+29332 characters. The exchange ended after 59925 ms, below the 180-second wall
+limit. No native retry event occurred and no proposal was staged or executed.
+This establishes this exchange's termination cause, not semantic validity.
+
+The constructor CLI and Action now expose `max_output_tokens` independently of
+the gateway wall time, choosing 8192 or 16384 (constructor default 16384).
+The shared participant keeps its historical 8192 model configuration when no
+explicit policy is supplied. Explicit policy pins model configuration and
+participant receipt, and the proxy removes competing token fields before sending
+the selected API's `max_output_tokens` (Responses) or `max_tokens` (Completions).
+Local synthetic HTTP regression covers both APIs, explicit values, preservation
+of absent-policy behavior and invalid policy rejection. It does not establish
+deployed provider admission of 16384 or acceptance of a generated verifier.
+All completion, isolation, source, size and independent review gates remain.
+Maturity remains 63%; formal cases and complete business cycles remain zero.

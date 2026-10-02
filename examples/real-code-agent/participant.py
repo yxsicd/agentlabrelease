@@ -27,7 +27,11 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 class Participant:
     def __init__(self, evidence, state, binary, gateway, model, route='glm', implementation='pi', reasoning_effort=None,
                  gateway_timeout_seconds=180, thinking_type=None, response_format=None,
-                 api='openai-completions'):
+                 api='openai-completions', max_output_tokens=None):
+        if max_output_tokens is not None and (type(max_output_tokens) is not int
+                or max_output_tokens not in (8192, 16384)):
+            raise ValueError('max_output_tokens must be omitted, 8192 or 16384')
+        self.max_output_tokens = max_output_tokens
         if api not in ('openai-completions', 'openai-responses'):
             raise ValueError('unsupported participant API')
         if api == 'openai-responses' and (implementation != 'pi' or thinking_type is not None):
@@ -140,6 +144,11 @@ class Participant:
                 wire = json.loads(raw)
                 wire['providerId'] = owner.route
                 wire['model'] = owner.model
+                if owner.max_output_tokens is not None:
+                    for field in ('max_tokens', 'max_completion_tokens', 'max_output_tokens'):
+                        wire.pop(field, None)
+                    field = 'max_output_tokens' if owner.api == 'openai-responses' else 'max_tokens'
+                    wire[field] = owner.max_output_tokens
                 if owner.active_reasoning_effort:
                     if owner.api == 'openai-responses':
                         wire.setdefault('reasoning', {})['effort'] = owner.active_reasoning_effort
@@ -282,7 +291,7 @@ class Participant:
             'api': self.api, 'apiKey': self.local_proxy_token,
             'compat': {'supportsDeveloperRole': False, 'supportsReasoningEffort': False},
             'models': [{'id': model, 'reasoning': False, 'input': ['text'],
-                        'contextWindow': 128000, 'maxTokens': 8192}]}}}
+                        'contextWindow': 128000, 'maxTokens': self.max_output_tokens or 8192}]}}}
         (state / 'models.json').write_text(json.dumps(models, indent=2) + '\n')
         (evidence / 'participant.json').write_text(json.dumps({
             'implementation': implementation, 'packageVersion': '0.73.1' if implementation=='pi' else '2.4.6', 'model': model,
@@ -291,6 +300,7 @@ class Participant:
             'providerThinkingType': self.thinking_type,
             'providerResponseFormat': self.response_format,
             'providerApi': self.api,
+            'providerMaxOutputTokens': self.max_output_tokens,
             'captureAuthority': 'operator-owned local forwarding proxy',
             'externalCredentialInParticipant': False}, indent=2) + '\n')
 
