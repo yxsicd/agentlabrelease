@@ -71,11 +71,24 @@ real flywheel passes over all four repositories:
 | Explicit universal dimensions and scope bindings | 480 | 11 | 4 | 0 |
 | Targeted semantic and executable operation evidence | 480 | 13 | 6 | 2 |
 
-The latest independent assessment covers all 489 structural scopes: 33 are
-program-bound, 28 are semantic-ready, and 3 are maintenance-ready. Maintenance
+The latest strict independent assessment covers all 489 structural scopes: 46 are
+program-bound, 41 are semantic-ready, and 3 are maintenance-ready. Maintenance
 readiness still does not automatically approve an evaluation case: independent
 Oracle review and case promotion remain separate gates. The current gap queue
-retains 456 program-unbound scopes and drives the next targeted round.
+retains 443 program-unbound scopes and drives the next targeted round.
+
+The source-controls round was admitted at TableGit revision
+`131613e12afee0311238e35cf9eee5c604ace2f2`. Independent macOS qualification
+of the HW Linux original capture and portable strict assessment produced the
+same original bytes. Only one source-maintenance fact and its refresh-round row
+were inserted; five-table committed readback was exact. The retained
+[admission receipt](operation-evidence/source-controls-admission.json) and
+[next-round plan](construction-plans/source-controls-next-plan.json) distinguish
+authority ingestion from candidate staging. The accepted UI-state scope is no
+longer selected; the next reviewed operation gap is persistence/telemetry.
+This is isolated source-maintenance control evidence, not full-scope coverage,
+Harmony runtime/ohosTest qualification, automatic recipe generation or a full
+five-stage business cycle.
 
 [`case_generation_rounds.jsonl`](case_generation_rounds.jsonl) starts the
 separate downstream generation lineage. Round 1 is intentionally an honest

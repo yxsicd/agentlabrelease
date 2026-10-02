@@ -1,0 +1,19 @@
+{
+  "authorityWritePerformed": true,
+  "automaticPromotion": false,
+  "closedLoopQualified": false,
+  "crossHostRequalification": true,
+  "exactCommittedReadback": true,
+  "portableSidecars": 6,
+  "previousRevision": "4327475966e056b4c2d93f0736062656c182728e",
+  "revision": "131613e12afee0311238e35cf9eee5c604ace2f2",
+  "schema": "agentlab.reviewed_source_operation_admission.v1",
+  "tables": {
+    "evaluation_cases": 0,
+    "maintainer_scope_skills": 489,
+    "maintainer_skill_refresh_rounds": 42,
+    "maintainer_skills": 14,
+    "program_facts": 64
+  },
+  "transactionId": "6a374aa6-c3df-5c84-b4c9-cfed3d07fb51"
+}

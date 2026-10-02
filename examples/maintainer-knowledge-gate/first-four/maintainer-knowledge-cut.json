@@ -32,12 +32,13 @@
   "sourceSetSha256": "88310ecd6a5ace0c7393c7981b8f9ba9103afff41133b71d0b84e951e95f24a6",
   "tableGitAuthority": {
     "exportedBy": {
+      "host": "hwlinux",
       "kind": "operator-replay",
       "repository": "yxsicd/agentlabrelease",
-      "runId": "behavior-lesson-4c02370-v1"
+      "runId": "source-controls-v1"
     },
     "repo": "agentlabtablegit",
-    "revision": "4327475966e056b4c2d93f0736062656c182728e"
+    "revision": "131613e12afee0311238e35cf9eee5c604ace2f2"
   },
   "tables": {
     "evaluationCases": {
@@ -50,7 +51,7 @@
     },
     "maintainerSkillRefreshRounds": {
       "path": "maintainer_skill_refresh_rounds.jsonl",
-      "sha256": "a1a57e18107a4d03890eb768be58d5e139aaf1fc14633b0cd3d60dff178c188d"
+      "sha256": "ef72b914808cc7c8def77da744dba06ad652297e52adad809c2af788958e912d"
     },
     "maintainerSkills": {
       "path": "maintainer_skills.jsonl",
@@ -58,7 +59,7 @@
     },
     "programFacts": {
       "path": "program_facts.jsonl",
-      "sha256": "e71229389cce2c9c65714831c1c543708136ba1cb0406a2fdedcc918353d76e5"
+      "sha256": "619fbd7b7145248d7e78a61094aa6c904f8138a8fe0a141e622af323d209a7ba"
     }
   }
 }
