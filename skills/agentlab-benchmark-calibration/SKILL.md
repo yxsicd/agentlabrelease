@@ -59,6 +59,11 @@ Create fresh attempt-owned receipt directories before invoking a runtime that
 strictly resolves them; exercise that setup in adapter regressions, not only the
 non-isolated path. A pre-launch missing directory is a Harness failure, not an
 Agent result.
+Archive the non-secret runtime configuration and manifests whose digests bind
+container receipts, then run the independent runtime consumer against actual
+inspect/probe records before accepting the run. A launcher report alone is not
+independent validation; portable artifact readback and live-path validation are
+separate capabilities.
 
 An explicit frozen task demand can define new behavior even when the repository's
 original intent is unknown. Bind that demand before calibration and distinguish
