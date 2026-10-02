@@ -137,6 +137,74 @@ check(good, False)
     );
     fs::remove_dir_all(directory).unwrap();
 }
+
+#[test]
+fn source_recipe_dispatch_uses_explicit_constructor_limits_without_retry() {
+    let code = r#"
+import importlib.util, json, os, sys, tempfile
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
+import subprocess
+spec = importlib.util.spec_from_file_location('recipe_author', os.environ['AUTHOR_SCRIPT'])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+with tempfile.TemporaryDirectory() as d:
+    root = Path(d)
+    request = root/'request.json'
+    request.write_text(json.dumps(dict(schema='agentlab.source_recipe_author_request.v1',
+        scope={'id':'arbitrary-scope'}, source={}, sourceFiles=[], semanticFacts=[],
+        selectedGap={}, policy={'methodDependencies':[]})))
+    for index, extra, effort, deadline in [(0, [], 'low', 180),
+        (1, ['--reasoning-effort','high','--gateway-timeout-seconds','120'], 'high',120)]:
+        seen = {}
+        class FakeParticipant:
+            def __init__(self, evidence, state, binary, gateway, model, **options):
+                seen['constructor'] = options
+                self.evidence = evidence
+            def turn(self, label, workspace, **options):
+                seen['turn'] = options
+                gateway = self.evidence/'gateway'
+                gateway.mkdir()
+                (gateway/'0001.status.json').write_text(json.dumps(dict(status=200,
+                    outcome='completed',semanticComplete=True,upstreamEof=True,
+                    streamError=None,clientDisconnected=False)))
+                return {'content':'{}'}
+            def close(self): seen['closed'] = True
+        fake_spec = SimpleNamespace(loader=SimpleNamespace(exec_module=lambda _:None))
+        env = dict(AGENTLAB_PARTICIPANT_RUNTIME_CONFIG=str(root/'config.json'),
+            AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT=str(root/'receipts'),
+            AGENTLAB_LM_GATEWAY_URL='https://gateway.invalid',AGENTLAB_MODEL='arbitrary',
+            AGENTLAB_PROVIDER_ROUTE='arbitrary')
+        argv = ['author','--request',str(request),'--output',str(root/str(index)),
+                '--gate','/unexecuted-fixture-gate','--pi','/unexecuted-fixture-pi',*extra]
+        with patch.dict(os.environ,env), patch.object(sys,'argv',argv), \
+             patch.object(module.importlib.util,'spec_from_file_location',return_value=fake_spec), \
+             patch.object(module.importlib.util,'module_from_spec',return_value=SimpleNamespace(Participant=FakeParticipant)), \
+             patch.object(module.subprocess,'run',return_value=subprocess.CompletedProcess([],0,b'',b'')) as stage:
+            module.main()
+        assert seen['constructor']['gateway_timeout_seconds'] == deadline
+        assert seen['turn']['reasoning_effort'] == effort
+        assert seen['turn']['transport_retry_limit'] == 0
+        assert seen['closed'] is True
+        assert stage.call_count == 1
+        assert '--stage-source-recipe-proposal' in stage.call_args[0][0]
+        assert json.loads((root/str(index)/'proposal.json').read_bytes()) == {}
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "AUTHOR_SCRIPT",
+            root().join("scripts/run-source-recipe-author.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
 fn fixture() -> (PathBuf, Value, Value, Value) {
     static SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let dir = std::env::temp_dir().canonicalize().unwrap().join(format!(

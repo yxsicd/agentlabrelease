@@ -769,3 +769,11 @@ thinking; classify that as incomplete transport, not a completed analysis eligib
 for format finalization. Fixed-context construction may use provider no-reasoning
 mode without relaxing source, control or review gates. Validate contained runtime
 receipts even when proposal production fails after containment preparation.
+
+Do not infer provider capability from a generic reasoning-effort name. Verify
+the selected model's supported settings and recorded upstream behavior before
+claiming thinking was disabled; some models always reason and map none to low.
+Give executable-verifier synthesis its own explicit bounded response budget,
+separate from compact semantic summaries. Retain deadline failures, require a
+fresh complete response, and never count a policy adjustment as a productive
+knowledge round or silently add transport retries.
