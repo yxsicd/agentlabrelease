@@ -78,3 +78,46 @@ are transport regressions, not Agent runs or full flywheel acceptance. Next work
 connect the existing semantic/program/operation/case/lesson gates to this envelope,
 exercise real bounded rounds, then transfer the same coordinator to another
 repository while measuring knowledge coverage, task outcomes and cost.
+
+## Completed-boundary continuation
+
+Optional `maximumStagesPerInvocation` (1–40, default 40) bounds dispatches in
+one invocation without changing the recipe's overall round/deadline budget.
+Each completed stage writes a fresh `checkpoint-N.json` binding the exact recipe,
+ordered history, latest state, seen return states and frozen evidence inventory.
+A chunk with remaining stages stops as `checkpoint-ready`; completedRounds counts
+only complete five-stage rounds, including rounds spanning multiple invocations.
+
+Continue with the same recipe and a fresh absolute output directory:
+
+```sh
+agentlab-maintainer-skill-flywheel --execute-flywheel-cycles \
+  --recipe reviewed-recipe.json --cycle-checkpoint /absolute/capture/checkpoint-3.json \
+  --cycle-checkpoint-sha256 VERIFIED_SHA256 --output /absolute/fresh-continuation
+```
+
+The caller explicitly binds the retained checkpoint bytes. The coordinator verifies
+the recipe, prior frozen evidence and state before any dispatch, carries the
+original history forward and starts at the next stage. A create-new
+`continuation-claim.json` in the prior capture permits only one continuation
+claim from that capture, including concurrent requests. Completed stages are not
+rerun; checkpoint hashes or claims are not authenticated producer identities.
+Require the matching final `cycles-result.json` with status `checkpoint-ready`
+and the selected latest checkpoint; intermediate checkpoints in a still-running
+capture are not continuation authority. Unsealed process-crash captures require
+independent reconciliation, not automatic recovery through this entrypoint.
+
+A later `round-*` directory in the checkpoint's capture means dispatch may have
+started, even if no result was retained. Refuse continuation in that case. An
+existing claim, changed recipe/input/evidence, rejected or review-required stage
+must not become an automatic retry. If a process dies after claiming or during
+an external mutation, preserve everything and independently reconcile the exact
+transaction before constructing a reviewed successor. Never delete a claim or
+partial stage to make an uncertain write retryable. This is safe boundary
+continuation, not exactly-once external execution or rollback.
+
+Rust subprocess regressions run two rounds in four chunks, verify CLI binding,
+preserved lineage and single-use claims, and reject drift and a real failed
+dispatch. These tests do not establish real Agent rounds or automatic business
+admission. Overall maturity remains 66% based on the separate actual guided
+consumption and outcome-return evidence, not on these transport regressions.

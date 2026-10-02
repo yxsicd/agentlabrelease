@@ -2,6 +2,29 @@
 
 ## Push initialization adapter checkpoint
 
+### Actual guided successor consumption and committed outcome return
+
+The successor in external `push-agent-loop-pO1Bz0gH/guided-attempts-1/attempt-0`
+used the admitted knowledge cut `262b9a819e57abd7d6313c08b18c29c06f79045e`
+and the previously bound packet. Independent raw Gateway reconstruction verified
+four completed guidance-bearing exchanges, zero implicit retries and actual
+packet consumption. The first submitted implementation passed all twelve frozen
+checks. Filesystem, network and credential isolation passed independent runtime
+validation. Submitted source SHA256 is
+`ad9e4b80b984012fa7f4c6c0e4016d6fadb15ac5058b02b3a9f8cb68da8a7eb0`.
+
+The typed outcome was appended atomically to `agentlabpush-20261003` at
+`8e3eef2eef952cedcfe61d353ad007d013bb3638`. Exact new-row readback preserves
+the predecessor. `guided-lesson-committed-scoped-1/export.json` explicitly selects
+the new runId; these nine analytical files are not a whole-table export now that
+the repository contains both runs. Active knowledge was not duplicated or changed.
+
+This proves an operator-coordinated knowledge-to-actual-consumption-to-outcome
+return chain. Both unguided and guided submissions passed initially; no learning
+benefit is proved. Raw evidence remains local, formal cases and complete automatic
+business cycles remain zero, and no new immutable Release is claimed. Overall
+maturity is estimated at 66%, up two points for this actual chain, not test counts.
+
 ### Reviewed knowledge admission and next-round input
 
 Live exact-cut baseline comparison and source-instance readback preceded the

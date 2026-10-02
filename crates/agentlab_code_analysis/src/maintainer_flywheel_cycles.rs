@@ -126,6 +126,27 @@ fn output_state(dir: &Path, result: &Value) -> Result<(PathBuf, String), String>
 /// converts an adapter claim into qualified knowledge, a case, or a release.
 #[cfg(unix)]
 pub fn execute(recipe_bytes: &[u8], out: &Path) -> Result<Value, String> {
+    execute_from(recipe_bytes, out, None)
+}
+
+/// Continue only an explicitly selected, byte-bound completed boundary. An
+/// uncertain dispatch is never retried and a checkpoint may be claimed once.
+#[cfg(unix)]
+pub fn resume(
+    recipe_bytes: &[u8],
+    out: &Path,
+    checkpoint: &Path,
+    sha: &str,
+) -> Result<Value, String> {
+    execute_from(recipe_bytes, out, Some((checkpoint, sha)))
+}
+
+#[cfg(unix)]
+fn execute_from(
+    recipe_bytes: &[u8],
+    out: &Path,
+    checkpoint: Option<(&Path, &str)>,
+) -> Result<Value, String> {
     require(recipe_bytes.len() <= 1024 * 1024, "cycle recipe excessive")?;
     let recipe: Value = serde_json::from_slice(recipe_bytes).map_err(|e| e.to_string())?;
     require(
@@ -138,6 +159,13 @@ pub fn execute(recipe_bytes: &[u8], out: &Path) -> Result<Value, String> {
         .as_u64()
         .filter(|n| (1..=8).contains(n))
         .ok_or("cycle round budget invalid")?;
+    let invocation_limit = match recipe.get("maximumStagesPerInvocation") {
+        Some(value) => value
+            .as_u64()
+            .filter(|n| (1..=40).contains(n))
+            .ok_or("cycle invocation stage budget invalid")?,
+        None => 40,
+    };
     let stages = recipe["stages"]
         .as_array()
         .filter(|s| s.len() == STAGES.len())
@@ -212,17 +240,109 @@ pub fn execute(recipe_bytes: &[u8], out: &Path) -> Result<Value, String> {
             "cycle output ancestor symlink",
         )?;
     }
-    fs::create_dir(out).map_err(|e| e.to_string())?;
-    save(&out.join("recipe.json"), recipe_bytes)?;
-    frozen.push((out.join("recipe.json"), digest(recipe_bytes)));
     let mut state = initial;
     let mut state_sha = initial_sha;
-    let mut history = Vec::new();
-    let mut status = "round-budget-exhausted";
+    let mut history: Vec<Value> = Vec::new();
     let mut completed = 0;
     let mut seen_states = BTreeSet::from([state_sha.clone()]);
-    'rounds: for round in 0..rounds {
+    let mut start_step = 0usize;
+    if let Some((path, sha)) = checkpoint {
+        require(path.is_absolute(), "cycle checkpoint must be absolute")?;
+        let bytes = regular(path)?;
+        require(digest(&bytes) == sha, "cycle checkpoint digest mismatch")?;
+        let cut: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+        require(
+            cut["schema"] == "agentlab.flywheel_cycle_checkpoint.v1"
+                && cut["recipeSha256"] == digest(recipe_bytes)
+                && cut["automaticPromotion"] == false,
+            "cycle checkpoint identity differs",
+        )?;
+        start_step = cut["nextStep"]
+            .as_u64()
+            .filter(|n| *n > 0 && *n < rounds * 5)
+            .ok_or("cycle checkpoint has no remaining step")? as usize;
+        history = cut["stages"]
+            .as_array()
+            .filter(|h| h.len() == start_step)
+            .ok_or("cycle checkpoint history invalid")?
+            .clone();
+        for (index, item) in history.iter().enumerate() {
+            require(
+                item["round"] == index / 5
+                    && item["stage"] == STAGES[index % 5]
+                    && item["result"]["status"] == "completed",
+                "cycle checkpoint history order invalid",
+            )?;
+        }
+        let retained: Vec<(PathBuf, String)> =
+            serde_json::from_value(cut["frozen"].clone()).map_err(|e| e.to_string())?;
+        require(
+            !retained.is_empty() && retained.len() <= 4096,
+            "cycle checkpoint inventory invalid",
+        )?;
+        recheck(&retained)?;
+        frozen.extend(retained);
+        state = PathBuf::from(
+            cut["latestState"]["path"]
+                .as_str()
+                .ok_or("cycle checkpoint state missing")?,
+        );
+        state_sha = digest(&regular(&state)?);
+        require(
+            cut["latestState"]["sha256"] == state_sha,
+            "cycle checkpoint state differs",
+        )?;
+        seen_states =
+            serde_json::from_value(cut["seenStates"].clone()).map_err(|e| e.to_string())?;
+        completed = start_step / 5;
+        // A later stage directory proves dispatch may have begun. Never infer
+        // absence of an external effect from missing stdout or result files.
+        let prior = path.parent().ok_or("cycle checkpoint parent missing")?;
+        for entry in fs::read_dir(prior).map_err(|e| e.to_string())? {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if name.starts_with("round-") {
+                require(
+                    (0..start_step).any(|i| name == format!("round-{}-{}", i / 5, STAGES[i % 5])),
+                    "cycle checkpoint has uncertain subsequent dispatch",
+                )?;
+            }
+        }
+        let terminal_bytes = regular(&prior.join("cycles-result.json"))
+            .map_err(|_| "cycle continuation requires terminal checkpoint-ready capture")?;
+        let terminal: Value = serde_json::from_slice(&terminal_bytes).map_err(|e| e.to_string())?;
+        require(
+            terminal["status"] == "checkpoint-ready"
+                && terminal["recipeSha256"] == digest(recipe_bytes)
+                && terminal["latestCheckpoint"]["path"] == path.to_string_lossy().as_ref()
+                && terminal["latestCheckpoint"]["sha256"] == sha
+                && terminal["stages"] == cut["stages"],
+            "cycle continuation requires matching terminal checkpoint-ready capture",
+        )?;
+        frozen.push((prior.join("cycles-result.json"), digest(&terminal_bytes)));
+        require(
+            !prior.join("continuation-claim.json").exists(),
+            "cycle checkpoint already claimed",
+        )?;
+    }
+    fs::create_dir(out).map_err(|e| e.to_string())?;
+    if let Some((path, sha)) = checkpoint {
+        json_save(
+            &path.parent().unwrap().join("continuation-claim.json"),
+            &json!({"checkpoint":path,"sha256":sha,"destination":out}),
+        )?;
+        frozen.push((path.to_owned(), sha.to_owned()));
+    }
+    save(&out.join("recipe.json"), recipe_bytes)?;
+    frozen.push((out.join("recipe.json"), digest(recipe_bytes)));
+    let mut status = "round-budget-exhausted";
+    let mut dispatched = 0u64;
+    let mut latest_checkpoint = Value::Null;
+    'rounds: for round in (start_step as u64 / 5)..rounds {
         for (stage_index, stage) in stages.iter().enumerate() {
+            if (round as usize * 5 + stage_index) < start_step {
+                continue;
+            }
             recheck(&frozen)?;
             let name = STAGES[stage_index];
             let dir = out.join(format!("round-{round}-{name}"));
@@ -237,6 +357,7 @@ pub fn execute(recipe_bytes: &[u8], out: &Path) -> Result<Value, String> {
             frozen.push((request_path, request_sha.clone()));
             // Forward only this stage's explicit selection. Values are not
             // recipe/request/receipt fields and never inherit into other stages.
+            dispatched += 1;
             let outcome = invoke_with_deadline_limit(
                 &stage["command"],
                 &dir.join("request.json"),
@@ -301,12 +422,30 @@ pub fn execute(recipe_bytes: &[u8], out: &Path) -> Result<Value, String> {
             state_sha = next_sha;
             freeze_tree(&dir, &mut frozen, 0)?;
             recheck(&frozen)?;
+            let next_step = round * 5 + stage_index as u64 + 1;
+            if stage_index == 4 {
+                completed += 1;
+            }
+            let cut_path = out.join(format!("checkpoint-{next_step}.json"));
+            json_save(
+                &cut_path,
+                &json!({"schema":"agentlab.flywheel_cycle_checkpoint.v1",
+                "recipeSha256":digest(recipe_bytes),"nextStep":next_step,"stages":history,
+                "latestState":{"path":state,"sha256":state_sha},"seenStates":seen_states,
+                "frozen":frozen,"automaticPromotion":false}),
+            )?;
+            latest_checkpoint = json!({"path":cut_path,"sha256":digest(&regular(&cut_path)?)});
+            if dispatched >= invocation_limit && next_step < rounds * 5 {
+                status = "checkpoint-ready";
+                break 'rounds;
+            }
         }
-        completed += 1;
     }
     recheck(&frozen)?;
     let result = json!({"schema":"agentlab.flywheel_cycles_capture.v1", "recipeSha256":digest(recipe_bytes),
         "status":status,"completedRounds":completed,"totalCommandBudgetMs":total_command_budget_ms,"stages":history,"latestState":{"path":state,"sha256":state_sha},
+        "stagesDispatchedThisInvocation":dispatched,"latestCheckpoint":latest_checkpoint,
+        "resumedFrom":checkpoint.map(|(path,sha)| json!({"path":path,"sha256":sha})),
         "adapterClaimsIndependentlyQualified":false,"qualified":false,"automaticPromotion":false,
         "authorityWritesIndependentlyVerified":false,"securitySandboxed":false});
     json_save(&out.join("cycles-result.json"), &result)?;
@@ -315,5 +454,10 @@ pub fn execute(recipe_bytes: &[u8], out: &Path) -> Result<Value, String> {
 
 #[cfg(not(unix))]
 pub fn execute(_: &[u8], _: &Path) -> Result<Value, String> {
+    Err("cycle capture requires Unix process containment".into())
+}
+
+#[cfg(not(unix))]
+pub fn resume(_: &[u8], _: &Path, _: &Path, _: &str) -> Result<Value, String> {
     Err("cycle capture requires Unix process containment".into())
 }

@@ -212,10 +212,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
     if args.iter().any(|arg| arg == "--execute-flywheel-cycles") {
-        let result = agentlab_code_analysis::maintainer_flywheel_cycles::execute(
-            &fs::read(value(&args, "--recipe")?)?,
-            &output,
-        )?;
+        let recipe = fs::read(value(&args, "--recipe")?)?;
+        let result = if args.iter().any(|arg| arg == "--cycle-checkpoint") {
+            agentlab_code_analysis::maintainer_flywheel_cycles::resume(
+                &recipe,
+                &output,
+                &PathBuf::from(value(&args, "--cycle-checkpoint")?),
+                &value(&args, "--cycle-checkpoint-sha256")?,
+            )?
+        } else {
+            if args.iter().any(|arg| arg == "--cycle-checkpoint-sha256") {
+                return Err("checkpoint digest requires checkpoint path".into());
+            }
+            agentlab_code_analysis::maintainer_flywheel_cycles::execute(&recipe, &output)?
+        };
         println!(
             "{}",
             serde_json::json!({"status":result["status"],"completedRounds":result["completedRounds"],"qualified":false})

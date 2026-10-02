@@ -1,5 +1,8 @@
 #![cfg(unix)]
-use agentlab_code_analysis::{digest, maintainer_flywheel_cycles::execute};
+use agentlab_code_analysis::{
+    digest,
+    maintainer_flywheel_cycles::{execute, resume},
+};
 use serde_json::{json, Value};
 use std::{
     fs,
@@ -107,6 +110,155 @@ fn fixture() -> (PathBuf, Value) {
 }
 fn run(root: &Path, recipe: &Value, name: &str) -> Result<Value, String> {
     execute(&serde_json::to_vec(recipe).unwrap(), &root.join(name))
+}
+
+#[test]
+fn bounded_chunks_continue_without_reexecuting_completed_stages() {
+    let (root, mut recipe) = fixture();
+    recipe["maximumStagesPerInvocation"] = json!(3);
+    let bytes = serde_json::to_vec(&recipe).unwrap();
+    let mut previous = run(&root, &recipe, "chunk-0").unwrap();
+    assert_eq!(previous["status"], "checkpoint-ready");
+    for chunk in 1..=3 {
+        let step = previous["stages"].as_array().unwrap().len();
+        let checkpoint = root.join(format!("chunk-{}/checkpoint-{step}.json", chunk - 1));
+        let sha = digest(&fs::read(&checkpoint).unwrap());
+        let out = root.join(format!("chunk-{chunk}"));
+        previous = resume(&bytes, &out, &checkpoint, &sha).unwrap();
+        let dirs = fs::read_dir(&out)
+            .unwrap()
+            .filter(|e| {
+                e.as_ref()
+                    .unwrap()
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with("round-")
+            })
+            .count();
+        assert_eq!(dirs, if chunk == 3 { 1 } else { 3 });
+        assert!(resume(
+            &bytes,
+            &root.join(format!("duplicate-{chunk}")),
+            &checkpoint,
+            &sha
+        )
+        .unwrap_err()
+        .contains("claimed"));
+    }
+    assert_eq!(previous["completedRounds"], 2);
+    assert_eq!(previous["stages"].as_array().unwrap().len(), 10);
+    assert_eq!(previous["status"], "round-budget-exhausted");
+    assert_eq!(previous["qualified"], false);
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn resume_rejects_drift_and_uncertain_dispatch_before_new_commands() {
+    let (root, mut recipe) = fixture();
+    recipe["maximumStagesPerInvocation"] = json!(1);
+    run(&root, &recipe, "first").unwrap();
+    let checkpoint = root.join("first/checkpoint-1.json");
+    let sha = digest(&fs::read(&checkpoint).unwrap());
+    let bytes = serde_json::to_vec(&recipe).unwrap();
+    assert!(resume(&bytes, &root.join("bad-sha"), &checkpoint, "wrong")
+        .unwrap_err()
+        .contains("digest mismatch"));
+    let mut other = recipe.clone();
+    other["maximumRounds"] = json!(3);
+    assert!(resume(
+        &serde_json::to_vec(&other).unwrap(),
+        &root.join("bad-recipe"),
+        &checkpoint,
+        &sha
+    )
+    .unwrap_err()
+    .contains("identity"));
+    let uncertain = root.join("first/round-0-program-analysis");
+    fs::create_dir(&uncertain).unwrap();
+    assert!(resume(&bytes, &root.join("uncertain"), &checkpoint, &sha)
+        .unwrap_err()
+        .contains("uncertain"));
+    assert!(!root.join("uncertain").exists());
+    fs::remove_dir(&uncertain).unwrap();
+    let terminal = root.join("first/cycles-result.json");
+    fs::rename(&terminal, root.join("first/terminal-retained.json")).unwrap();
+    assert!(
+        resume(&bytes, &root.join("unterminated"), &checkpoint, &sha)
+            .unwrap_err()
+            .contains("terminal")
+    );
+    assert!(!root.join("unterminated").exists());
+    fs::rename(root.join("first/terminal-retained.json"), terminal).unwrap();
+    fs::write(
+        root.join("first/round-0-repository-understanding/state.json"),
+        b"changed",
+    )
+    .unwrap();
+    assert!(resume(&bytes, &root.join("changed"), &checkpoint, &sha)
+        .unwrap_err()
+        .contains("changed"));
+    assert!(!root.join("changed").exists());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn cli_continuation_requires_explicit_checkpoint_digest() {
+    let (root, mut recipe) = fixture();
+    recipe["maximumStagesPerInvocation"] = json!(1);
+    run(&root, &recipe, "first").unwrap();
+    let checkpoint = root.join("first/checkpoint-1.json");
+    let recipe_path = root.join("recipe.json");
+    fs::write(&recipe_path, serde_json::to_vec(&recipe).unwrap()).unwrap();
+    let command = |name: &str, sha: Option<String>| {
+        let mut cmd = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"));
+        cmd.arg("--execute-flywheel-cycles")
+            .arg("--recipe")
+            .arg(&recipe_path)
+            .arg("--output")
+            .arg(root.join(name))
+            .arg("--cycle-checkpoint")
+            .arg(&checkpoint);
+        if let Some(sha) = sha {
+            cmd.arg("--cycle-checkpoint-sha256").arg(sha);
+        }
+        cmd.output().unwrap()
+    };
+    assert!(!command("missing", None).status.success());
+    assert!(!root.join("missing").exists());
+    let result = command("continued", Some(digest(&fs::read(&checkpoint).unwrap())));
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert!(root.join("continued/round-0-program-analysis").exists());
+    assert!(!root
+        .join("continued/round-0-repository-understanding")
+        .exists());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn failed_dispatch_preserves_checkpoint_but_cannot_automatically_resume_it() {
+    let (root, mut recipe) = fixture();
+    recipe["stages"][1]["command"]["args"][0] = json!("exit");
+    let result = run(&root, &recipe, "failed").unwrap();
+    assert_eq!(result["status"], "adapter-failed");
+    let checkpoint = root.join("failed/checkpoint-1.json");
+    let sha = digest(&fs::read(&checkpoint).unwrap());
+    assert!(resume(
+        &serde_json::to_vec(&recipe).unwrap(),
+        &root.join("retry"),
+        &checkpoint,
+        &sha
+    )
+    .unwrap_err()
+    .contains("uncertain"));
+    assert!(!root.join("retry").exists());
+    assert!(root
+        .join("failed/round-0-program-analysis/failure.json")
+        .exists());
+    fs::remove_dir_all(root).unwrap();
 }
 
 #[test]
