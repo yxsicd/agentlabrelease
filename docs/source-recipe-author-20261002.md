@@ -177,3 +177,35 @@ The next same-method candidate experiment is mimo-v2.6-flash/opencode-go with
 provider default settings; actual Gateway admission, complete response and
 unreviewed recipe staging remain required. Secrets stayed in the operator;
 no credentials, native sessions or raw captures were committed to source Git.
+
+## Admitted-model dispatch evidence
+
+PR #178 merged at `2e72a386920fbd22067e60c8e11f1108fa8fa1cb` after all
+applicable checks passed. Public validation `37011190812` first failed only the
+alprod installation with a network connection error after composition and
+client checksum admission; its failed-only second attempt passed on the same
+source head. The original failure is retained, not rewritten as first-pass success.
+
+Action `37012567460` used that exact method commit with GLM-5.3-FLASH,
+reasoning_effort=low and the explicit 180-second response budget. Its original
+Gateway receipt records 180,222 ms, responseBytes=1,913,415, upstreamEof=false,
+semanticComplete=false and upstream_deadline_exceeded in response_body. Pi's
+retained final message contains only 37,251 characters of thinking and no text.
+The completion gate rejected it before proposal serialization; independent
+filesystem, network and external-credential isolation validation passed.
+Increasing the response budget therefore did not produce a complete proposal.
+The original artifact is retained outside source Git; its roughly 30 MB size
+reflects captured events, not a valid proposal or new knowledge gain.
+
+A separate same-method experiment `37013702330` requested GLM-5.2 with none/180.
+The operator received `400 model glm-5.2 is not admitted on route glm` before
+model execution. Provider documentation support is not deployment admission.
+No shared Gateway policy was changed, no hidden retry occurred, and neither
+experiment produced generated controls, a formal case or authority rows.
+Maturity remains 63%; complete five-stage cycles remain zero. The next useful
+action is authenticated read-only discovery of the deployment's admitted model
+and route catalog, then a capability-compatible construction strategy, not
+another blind model-name trial or deadline increase. Current local Gateway
+source exposes authenticated `/v1/models` plus advertised model endpoint links;
+that source contract is not proof of the deployed catalog contents or of an
+effective upstream reasoning setting. No live catalog read is claimed here.

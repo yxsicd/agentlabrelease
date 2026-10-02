@@ -784,3 +784,10 @@ allow provider-default construction without injecting that field. Preserve the
 selected model/route and actual request capture; catalog membership, advertised
 links or local configuration alone do not prove live route admission. A broken
 endpoint link is a retained discovery gap, not permission to invent a route.
+
+Provider documentation does not establish deployed model admission. Before a
+replacement-model experiment, discover the authenticated deployment catalog and
+its model endpoint/route evidence; preserve a rejection without changing shared
+Gateway policy. A longer-budget run that still ends with only thinking is evidence
+to change the construction strategy, not grounds to keep increasing deadlines.
+Keep live catalog observations distinct from a local Gateway source contract.
