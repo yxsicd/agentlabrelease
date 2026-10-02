@@ -7,8 +7,7 @@
     "semanticReadyCount": 41,
     "structuralReadyCount": 489
   },
-  "assessmentSha256": "e2349e92fd320bdc9b75caa42d7cad85f504e10e902ec7fc365933789734d102",
-  "automaticPromotion": false,
+  "assessmentSha256": "8e9c190eafa4adbb270f3236ff0d50d888839fddfc5feb05b60c7ca3ddd1068e",
   "before": {
     "maintenanceReadyCount": 2,
     "programBoundCount": 46,
@@ -16,13 +15,9 @@
     "semanticReadyCount": 41,
     "structuralReadyCount": 489
   },
-  "beforeAssessmentSha256": "f255f78aa09a95201309f09c5bd5816369c49df7551bf62fc1366d000929e0b8",
-  "decision": "review-proposed-knowledge-refresh",
-  "maturity": "L2-semantic-ready",
-  "schema": "agentlab.maintainer_skill_agent_flywheel_result.v1",
-  "scopeSkillId": "skill-scope-code-workshop-common-persistence-telemetry",
-  "selectedScopeIds": [
-    "skill-scope-code-workshop-common-persistence-telemetry"
-  ],
+  "beforeAssessmentSha256": "e2349e92fd320bdc9b75caa42d7cad85f504e10e902ec7fc365933789734d102",
+  "countsAsMaturityGain": false,
+  "decision": "review-proposed-lesson-knowledge",
+  "schema": "agentlab.maintainer_lesson_stage_result.v1",
   "strictOperationEvidencePolicy": true
 }

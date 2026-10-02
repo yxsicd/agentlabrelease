@@ -1,0 +1,14 @@
+{
+  "schema": "agentlab.maintainer_guidance_selection.v1",
+  "automaticPromotion": false,
+  "knowledgeCutSha256": "a9a8c64f6dda6bc61a9e8d80febdcf352b7c3346626ff55911be0ca1d218535a",
+  "knowledgeRevision": "4327475966e056b4c2d93f0736062656c182728e",
+  "stage": "evaluation",
+  "sources": [{"repositoryId":"guide-snippets","sourceRevision":"71bbb3916625c8d9a370b7a1989b3a7f82090525"}],
+  "skills": [{
+    "id":"lesson-skill-abilitystage-owned-environment-subscription",
+    "rowSha256":"1f36056887fd3522b127d8015488b41857ffada9568ff9c49b805449e037d97e",
+    "objectId":"lesson-abilitystage-owned-environment-subscription",
+    "applicabilityReason":"The next behavior task uses the same frozen subscription ownership extension and source cut. This guidance covers ownership, retry and recreation, not unrelated stage-calibration markers or formal Harmony qualification."
+  }]
+}
