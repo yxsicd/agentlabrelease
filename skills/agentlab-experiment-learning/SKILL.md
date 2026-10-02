@@ -210,6 +210,20 @@ global recipe for every model. Keep task, source, guidance and deadlines fixed
 for that diagnostic comparison. A successful lower-effort run does not prove
 guidance benefit; an unguided/guided comparison must use equal reasoning settings.
 
+The controlled low-effort follow-up completed in approximately 83 seconds with
+the same source inventory, prompt and guidance packet. Its written proposal was
+still invalid: string colorMode values and identity from/to replacements. Keep
+transport completion, artifact existence and executable content as separate gates.
+Use `--validate-stage-author-proposal --source-workspace DIR --author-request
+FILE --proposal FILE --output NEW_FILE` before review or execution. This Rust
+gate checks unreviewed identity, integer configuration dimensions, both independent
+transitions, original source-byte bindings, unique one-occurrence nonidentity
+replacements and nonempty known failed checks. The baseline is implicit, not a
+wrong variant. Expose these serialization/edit constraints in the author prompt.
+Passing content validation does not prove markers, intended failures or baseline
+behavior; only independent control execution can do that. Preserve rejected
+original drafts, never silently repair them as an operator-authored success.
+
 When promoting against real multi-kind program facts, preserve heterogeneous
 unowned fields as JSON rather than coercing arrays/objects or dropping baseline
 rows. The exchange records observed mixed field types separately. Explicitly

@@ -124,6 +124,14 @@ jobs:
           author="$GITHUB_WORKSPACE/examples/multi-repo-case/pi-calibration-author.py"
           cd "$EVIDENCE_ROOT/workspace"
           python3 "$author" --request authoring-request.json --output draft
+      - name: Independently reject non-executable author proposal content
+        if: always()
+        run: |
+          target/debug/agentlab-maintainer-skill-flywheel --validate-stage-author-proposal \
+            --source-workspace "$EVIDENCE_ROOT/workspace" \
+            --author-request "$EVIDENCE_ROOT/workspace/authoring-request.json" \
+            --proposal "$EVIDENCE_ROOT/workspace/draft/proposed-stage-contract.json" \
+            --output "$EVIDENCE_ROOT/proposal-content-validation.json"
       - name: Independently verify actual guidance transmission without credentials
         if: always()
         run: |

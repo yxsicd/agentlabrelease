@@ -1,6 +1,6 @@
 use agentlab_code_analysis::{
     digest,
-    maintainer_guidance::{bind, consumption},
+    maintainer_guidance::{bind, consumption, stage_proposal},
 };
 use serde_json::{json, Value};
 use std::{
@@ -16,6 +16,51 @@ struct Fixture {
     selection: Value,
 }
 static FIXTURE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+#[test]
+fn stage_proposal_binds_real_replacements_and_rejects_string_modes_and_source_drift() {
+    let f = Fixture::new("arbitrary-stage-proposal");
+    let mut sources = Vec::new();
+    for (path, raw) in [
+        ("module.json5", "{\"module\":{\"srcEntry\":\"./Stage.js\"}}"),
+        ("Stage.js", "owner.on('environment', callback);"),
+        ("Alternate.js", "alternate stage"),
+    ] {
+        fs::write(f.root.join(path), raw).unwrap();
+        sources.push(json!({"path":path,"workspacePath":path,"revision":"a".repeat(40),"sha256":digest(raw.as_bytes()),"bytes":raw.len()}));
+    }
+    let context = json!({"candidateId":"arbitrary-candidate","candidateSha256":"b".repeat(64),"sourceRevision":"a".repeat(40),"modulePath":"module.json5"});
+    let request = json!({"schema":"agentlab.stage_calibration_authoring_request.v1","automaticPromotion":false,"stageContext":context,"sources":sources});
+    let request_bytes = serde_json::to_vec(&request).unwrap();
+    let proposal = json!({"schema":"agentlab.harmony_stage_control_contract.v1","reviewed":false,
+        "candidateId":"arbitrary-candidate","candidateSha256":"b".repeat(64),"sourceRevision":"a".repeat(40),"modulePath":"module.json5",
+        "createMarker":"created","destroyMarker":"destroyed","registrationMarker":"registered","configurationPrefix":"config: ","eventName":"environment",
+        "configurations":[{"id":"initial","language":"en","colorMode":0},{"id":"language","language":"zh","colorMode":0},{"id":"color","language":"zh","colorMode":1}],
+        "variants":[{"id":"entry","path":"module.json5","from":"./Stage.js","to":"./Alternate.js","expectedFailedChecks":["stage-created"]},
+            {"id":"event","path":"Stage.js","from":"'environment'","to":"'wrong'","expectedFailedChecks":["application-environment-registration"]}]});
+    let validate =
+        |p: &Value| stage_proposal(&f.root, &request_bytes, &serde_json::to_vec(p).unwrap());
+    let receipt = validate(&proposal).unwrap();
+    assert_eq!(receipt["proposalContentValid"], true);
+    assert_eq!(receipt["semanticExecutionVerified"], false);
+    for (pointer, value) in [
+        ("/configurations/0/colorMode", json!("light")),
+        ("/variants/0/to", json!("./Stage.js")),
+        ("/variants/1/from", json!("Stage.js")),
+        ("/variants/1/expectedFailedChecks", json!([])),
+        ("/reviewed", json!(true)),
+        ("/candidateId", json!("other")),
+    ] {
+        let mut changed = proposal.clone();
+        *changed.pointer_mut(pointer).unwrap() = value;
+        assert!(validate(&changed).is_err(), "must reject {pointer}");
+    }
+    fs::write(f.root.join("Stage.js"), "changed source").unwrap();
+    assert!(validate(&proposal)
+        .unwrap_err()
+        .contains("source bytes changed"));
+}
+
 impl Fixture {
     fn new(repo: &str) -> Self {
         let root = std::env::temp_dir().join(format!(
