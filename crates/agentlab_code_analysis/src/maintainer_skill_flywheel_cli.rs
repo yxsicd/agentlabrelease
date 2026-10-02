@@ -24,6 +24,27 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|a| a == "--feedback-partial-calibration") {
+        let previous = optional(&args, "--previous-feedback-plan")
+            .map(fs::read)
+            .transpose()?;
+        let report = agentlab_code_analysis::maintainer_partial_calibration::plan(
+            &fs::read(value(&args, "--readiness")?)?,
+            &fs::read(value(&args, "--partial-profile")?)?,
+            &PathBuf::from(value(&args, "--capture-root")?),
+            previous.as_deref(),
+        )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&report)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"status":report["status"],"schedulingAllowed":report["schedulingAllowed"],"qualified":false})
+        );
+        return Ok(());
+    }
     if args
         .iter()
         .any(|a| a == "--plan-observation-import" || a == "--verify-observation-import")

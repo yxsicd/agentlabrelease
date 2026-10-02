@@ -20,6 +20,7 @@ pub mod maintainer_operation_evidence;
 pub mod maintainer_operation_exec;
 pub mod maintainer_operation_qualification;
 pub mod maintainer_operation_stage;
+pub mod maintainer_partial_calibration;
 pub mod maintainer_semantic_round;
 pub mod maintainer_skill_flywheel;
 pub mod maintainer_source_operation;

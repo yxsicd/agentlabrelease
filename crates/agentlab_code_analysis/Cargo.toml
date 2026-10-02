@@ -138,6 +138,7 @@ name = "agentlab-maintainer-skill-flywheel"
 path = "src/maintainer_skill_flywheel_cli.rs"
 
 [dependencies]
+serde = { version = "1", features = ["derive"] }
 tree-sitter = "=0.27.0"
 tree-sitter-language = "=0.1.8"
 serde_json = "1"

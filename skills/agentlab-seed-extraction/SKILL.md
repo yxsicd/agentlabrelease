@@ -79,6 +79,15 @@ four: unchanged gate evidence stops scheduling even if unrelated knowledge cuts
 or JSON formatting change. Cross-Action history reuse is not yet wired; retaining
 an artifact alone does not prove this guard applies across fresh runners.
 
+For retained partial captures, the same bridge optionally reads profiles from
+`AGENTLAB_PARTIAL_CALIBRATION_ROOT/profiles/<candidateId>.json` and emits a separate
+`scoped-next-actions.json`. Keep raw envelopes under that root. This lane does not
+replace `next-actions.json`, change the candidate or qualify the construction
+plan. Unsupported profiles/readback failures stop the batch explicitly. Missing
+profiles retain the normal formal route; never interpret their absence as proof
+that no historical experiment exists. Follow the calibration Skill to consume
+and scope that evidence before spending another diagnostic turn.
+
 When replacing an invalid raw knowledge export with a reviewed snapshot, reconcile
 independently retained candidate and generation-round records too. Verify their
 original value digests and parent-round link before restoring them; keep original
