@@ -26,6 +26,12 @@ on:
         default: glm
         required: true
         type: string
+      reasoning_effort:
+        description: Explicit provider policy; default preserves upstream behavior
+        default: default
+        required: true
+        type: choice
+        options: [default, low, medium, high]
 permissions:
   contents: read
 concurrency:
@@ -43,7 +49,7 @@ jobs:
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_MODEL: ${{ inputs.model }}
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
-      AGENTLAB_REASONING_EFFORT: default
+      AGENTLAB_REASONING_EFFORT: ${{ inputs.reasoning_effort }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Allocate external evidence root

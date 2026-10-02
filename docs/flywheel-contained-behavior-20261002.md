@@ -151,3 +151,25 @@ exit. Independent Rust readback selected `execute-agent-attempt`. Rust protocol
 regression separately executes JavaScript fixtures, not a compiler qualification.
 Real participant transfer still requires a trusted main Action using this profile;
 overall maturity remains 56% at this calibration checkpoint.
+
+## Real transfer interruption and controlled policy comparison
+
+The first guide-snippets main run
+[36972566345](https://github.com/yxsicd/agentlabrelease/actions/runs/36972566345)
+and one new same-cut run
+[36973018411](https://github.com/yxsicd/agentlabrelease/actions/runs/36973018411)
+both used `3e4b14ad1d57ff7d5f39dbcf778eb7db7be20b38`, the same profile and
+default provider policy. Their final exchanges retained HTTP 200 and the full
+prompt, but hit the operator's 60-second upstream response-body deadline without
+EOF or semantic completion. Both left submitted source unchanged. Pi exited
+normally, which the independent completion consumer correctly refused to accept.
+First-run downloaded completion readback reproduced that refusal. Neither run
+reached a valid Agent behavior verdict or qualifies cross-repository transfer.
+
+Do not continue unchanged transport retries or weaken the frozen lifecycle checks.
+The Action now exposes the existing participant's provider reasoning-policy axis,
+preserving `default` and all task/source/check/budget identities. A separately
+selected low-policy run will record that request value in trusted Gateway capture
+and completion intent. Its provider support/effect and outcome still require
+actual execution; no improvement is inferred from the configuration change.
+Overall maturity remains 56% until new valid transfer evidence is obtained.
