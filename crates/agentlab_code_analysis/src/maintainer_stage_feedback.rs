@@ -333,6 +333,10 @@ pub fn plan(
     let downstream = parse(downstream_bytes)?;
     let contract = parse(contract_bytes)?;
     let receipt = parse(receipt_bytes)?;
+    need(
+        receipt["diagnosticOnly"] != true,
+        "unreviewed draft diagnostic cannot enter reviewed stage feedback",
+    )?;
     let runtime = text(&receipt, "runtime")?;
     let candidate_sha = digest(&serde_json::to_vec(&candidate).map_err(|e| e.to_string())?);
     need(

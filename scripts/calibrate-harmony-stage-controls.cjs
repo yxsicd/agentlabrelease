@@ -16,10 +16,50 @@ function safe(p) {
     throw Error('Unsafe source path');
   return p;
 }
+function retainedSources(c) {
+  const retained = args.includes('--source-binding');
+  if (!retained) {
+    if (args.includes('--source-workspace')) throw Error('Workspace without source binding');
+    return null;
+  }
+  if (args.includes('--source-repo')) throw Error('Ambiguous source authority');
+  const bytes = fs.readFileSync(arg('--source-binding'));
+  const binding = JSON.parse(bytes);
+  if (!Array.isArray(binding.sources) || !binding.sources.length) throw Error('Missing retained sources');
+  const requestedRoot = path.resolve(arg('--source-workspace'));
+  if (fs.lstatSync(requestedRoot).isSymbolicLink()) throw Error('Unsafe source workspace');
+  const root = fs.realpathSync(requestedRoot);
+  const rows = new Map();
+  const repositories = new Set();
+  for (const row of binding.sources) {
+    safe(row.path); safe(row.workspacePath);
+    if (!row.repositoryId || row.revision !== c.sourceRevision || rows.has(row.path) ||
+        !/^[a-f0-9]{64}$/.test(row.sha256) || !/^[a-f0-9]{40}$/.test(row.gitBlobOid) ||
+        !Number.isSafeInteger(row.bytes) || row.bytes < 0) throw Error('Invalid retained source identity');
+    repositories.add(row.repositoryId);
+    let file = root;
+    for (const part of row.workspacePath.split('/')) {
+      file = path.join(file, part);
+      if (fs.lstatSync(file).isSymbolicLink()) throw Error('Retained source symlink');
+    }
+    if (!fs.lstatSync(file).isFile()) throw Error('Retained source is not a file');
+    const original = fs.readFileSync(file);
+    const oid = crypto.createHash('sha1').update(Buffer.from(`blob ${original.length}\0`)).update(original).digest('hex');
+    if (original.length !== row.bytes || sha(original) !== row.sha256 || oid !== row.gitBlobOid)
+      throw Error('Retained source bytes differ');
+    rows.set(row.path, {text: original.toString(), identity: {path: row.path, gitBlobOid: oid, sha256: sha(original)}});
+  }
+  if (repositories.size !== 1) throw Error('Ambiguous retained repository');
+  return {rows, authority: {kind: 'retained-source-binding', bindingSha256: sha(bytes),
+    repositoryId: [...repositories][0], sourceRevision: c.sourceRevision, verifiedFiles: rows.size,
+    revisionAuthenticated: false}};
+}
 function load() {
   const bytes = fs.readFileSync(arg('--contract'));
   const c = JSON.parse(bytes);
-  if (c.schema !== 'agentlab.harmony_stage_control_contract.v1' || c.reviewed !== true ||
+  const diagnostic = args.includes('--diagnostic-unreviewed');
+  if (c.schema !== 'agentlab.harmony_stage_control_contract.v1' ||
+      (diagnostic ? c.reviewed !== false : c.reviewed !== true) ||
       !/^[a-f0-9]{40}$/.test(c.sourceRevision) || !Array.isArray(c.variants) || c.variants.length < 2 ||
       !Array.isArray(c.configurations) || c.configurations.length < 3)
     throw Error('Invalid reviewed stage contract');
@@ -48,16 +88,21 @@ function load() {
   if (!unique(c.variants.map(v => JSON.stringify([v.path, v.from, v.to])))) throw Error('Duplicate mutations');
   if (!args.includes('--typescript')) {
     if (args.includes('--typescript-sha256')) throw Error('Compiler pin without compiler');
-    return {c, contractSha256: sha(bytes), compiler: null, compilerSha256: null};
+    return {c, contractSha256: sha(bytes), retained: retainedSources(c), compiler: null, compilerSha256: null};
   }
   const compilerPath = arg('--typescript');
   if (!path.isAbsolute(compilerPath) || fs.lstatSync(compilerPath).isSymbolicLink()) throw Error('Unsafe compiler');
   const compilerSha256 = sha(fs.readFileSync(compilerPath));
   if (compilerSha256 !== arg('--typescript-sha256')) throw Error('Compiler digest differs');
-  return {c, contractSha256: sha(bytes), compiler: require(compilerPath), compilerSha256};
+  return {c, contractSha256: sha(bytes), retained: retainedSources(c), compiler: require(compilerPath), compilerSha256};
 }
-function blob(c, file) {
+function blob(c, file, retained) {
   safe(file);
+  if (retained) {
+    const row = retained.rows.get(file);
+    if (!row) throw Error('Executed path absent from retained source binding');
+    return row;
+  }
   const git = tail => cp.execFileSync('git', ['-C', arg('--source-repo'), ...tail], {timeout: 5000, maxBuffer: 2 * 1024 * 1024});
   const spec = c.sourceRevision + ':' + file;
   const oid = git(['rev-parse', spec]).toString().trim();
@@ -66,14 +111,14 @@ function blob(c, file) {
   return {text: bytes.toString(), identity: {path: file, gitBlobOid: oid, sha256: sha(bytes)}};
 }
 function worker() {
-  const {c, compiler: ts, contractSha256, compilerSha256} = load();
+  const {c, compiler: ts, contractSha256, compilerSha256, retained} = load();
   const id = arg('--worker');
   const variant = id === 'baseline' ? null : c.variants.find(v => v.id === id);
   if (id !== 'baseline' && !variant) throw Error('Unknown variant');
   let applied = false;
   const sources = [];
   function source(file) {
-    const b = blob(c, file);
+    const b = blob(c, file, retained);
     sources.push({...b.identity, originalSource: b.text});
     if (!variant || variant.path !== file) return b.text;
     if (b.text.split(variant.from).length !== 2) throw Error('Mutation is absent or ambiguous');
@@ -140,7 +185,7 @@ function main() {
   if (args.includes('--worker')) {console.log(JSON.stringify(worker())); return;}
   const output = arg('--output');
   if (fs.existsSync(output)) throw Error('Output already exists');
-  const {c, contractSha256, compiler, compilerSha256} = load();
+  const {c, contractSha256, compiler, compilerSha256, retained} = load();
   const controls = [];
   let infrastructureFailure = null;
   for (const id of ['baseline', ...c.variants.map(v => v.id)]) {
@@ -156,6 +201,8 @@ function main() {
   const passed = !infrastructureFailure && controls[0].verdict === 'accept' &&
     controls.slice(1).every(c => c.verdict === 'reject' && c.intendedFailureObserved);
   const receipt = {schema: 'agentlab.harmony_stage_control_calibration.v2', contractSha256,
+    contractReviewed: c.reviewed, diagnosticOnly: args.includes('--diagnostic-unreviewed'),
+    sourceAuthority: retained?.authority || {kind: 'git-object-read', revisionAuthenticated: false},
     sourceRevision: c.sourceRevision, methodSha256: sha(fs.readFileSync(__filename)), runtime: process.version,
     compiler: {kind: compiler ? 'typescript-type-erasure-only' : 'javascript-pass-through', version: compiler?.version || null, sha256: compilerSha256}, controls, infrastructureFailure,
     semanticSeamCalibrationPassed: passed, qualified: false, automaticPromotion: false, authorityWritePerformed: false,

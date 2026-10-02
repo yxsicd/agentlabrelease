@@ -106,6 +106,94 @@ fn actual_stage_methods_discriminate_semantic_mutations_without_repository_const
             assert_eq!(control["intendedFailureObserved"], true);
         }
         let first = consume(&c, &r, None).unwrap();
+        // Retained-source replay uses the same bytes, without a Git fetch or a
+        // rewritten commit identity. Unreviewed diagnostics cannot be admitted.
+        let mut inventory = json!({"sources":[]});
+        for file in [
+            "src/module.json5",
+            "src/owner/Owner.js",
+            "src/owner/Alternate.js",
+        ] {
+            let bytes = fs::read(root.join(file)).unwrap();
+            inventory["sources"].as_array_mut().unwrap().push(json!({
+                "repositoryId":repository,"revision":c["sourceRevision"],"path":file,
+                "workspacePath":file,"bytes":bytes.len(),
+                "sha256":agentlab_code_analysis::digest(&bytes),
+                "gitBlobOid":git(&root,&["hash-object",file])}));
+        }
+        let draft_path = root.join("diagnostic-draft.json");
+        let mut draft = c.clone();
+        draft["reviewed"] = json!(false);
+        fs::write(&draft_path, serde_json::to_vec(&draft).unwrap()).unwrap();
+        let binding_path = root.join("source-binding.json");
+        let replay = |binding: &Value, label: &str, diagnostic: bool| {
+            fs::write(&binding_path, serde_json::to_vec(binding).unwrap()).unwrap();
+            let output = root.join(format!("{label}.replay.json"));
+            let mut cmd = Command::new("node");
+            cmd.arg(
+                Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../scripts/calibrate-harmony-stage-controls.cjs"),
+            )
+            .arg("--contract")
+            .arg(&draft_path)
+            .arg("--source-binding")
+            .arg(&binding_path)
+            .arg("--source-workspace")
+            .arg(&root)
+            .arg("--output")
+            .arg(&output);
+            if diagnostic {
+                cmd.arg("--diagnostic-unreviewed");
+            }
+            let status = cmd.output().unwrap();
+            let receipt = fs::read(&output)
+                .ok()
+                .map(|b| serde_json::from_slice::<Value>(&b).unwrap());
+            (status.status.success(), receipt)
+        };
+        let (ok, diagnostic) = replay(&inventory, "retained", true);
+        assert!(ok);
+        let diagnostic = diagnostic.unwrap();
+        assert_eq!(diagnostic["semanticSeamCalibrationPassed"], true);
+        assert_eq!(diagnostic["diagnosticOnly"], true);
+        assert_eq!(diagnostic["contractReviewed"], false);
+        assert_eq!(diagnostic["sourceAuthority"]["verifiedFiles"], 3);
+        assert_eq!(
+            diagnostic["sourceAuthority"]["revisionAuthenticated"],
+            false
+        );
+        assert!(consume(&draft, &diagnostic, None).is_err());
+        let mut disguised = r.clone();
+        disguised["diagnosticOnly"] = json!(true);
+        assert!(consume(&c, &disguised, None)
+            .unwrap_err()
+            .contains("diagnostic cannot enter"));
+        assert!(!replay(&inventory, "no-explicit-diagnostic", false).0);
+        for (index, pointer, value) in [
+            (0, "/sources/0/revision", json!("0".repeat(40))),
+            (1, "/sources/0/sha256", json!("0".repeat(64))),
+            (2, "/sources/0/gitBlobOid", json!("0".repeat(40))),
+            (3, "/sources/0/bytes", json!(1)),
+            (4, "/sources/0/workspacePath", json!("../outside")),
+        ] {
+            let mut changed = inventory.clone();
+            *changed.pointer_mut(pointer).unwrap() = value;
+            assert!(!replay(&changed, &format!("binding-drift-{index}"), true).0);
+        }
+        let mut duplicate_inventory = inventory.clone();
+        duplicate_inventory["sources"]
+            .as_array_mut()
+            .unwrap()
+            .push(inventory["sources"][0].clone());
+        assert!(!replay(&duplicate_inventory, "duplicate-binding", true).0);
+        std::os::unix::fs::symlink(
+            root.join("src/module.json5"),
+            root.join("source-link.json5"),
+        )
+        .unwrap();
+        let mut symlink_inventory = inventory.clone();
+        symlink_inventory["sources"][0]["workspacePath"] = json!("source-link.json5");
+        assert!(!replay(&symlink_inventory, "symlink-binding", true).0);
         let make_assets = |contract: &Value, receipt: &Value| {
             let bytes = serde_json::to_vec(receipt).unwrap();
             agentlab_code_analysis::maintainer_stage_feedback::assets(
