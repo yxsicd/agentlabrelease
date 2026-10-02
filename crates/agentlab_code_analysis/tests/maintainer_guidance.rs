@@ -87,6 +87,8 @@ fn bounded_author_repair_uses_real_gates_and_preserves_rejections() {
         "semantic-infrastructure",
         "semantic-zero",
         "unguided-semantic-zero",
+        "extra-fields",
+        "unguided-extra-fields",
     ] {
         let f = Fixture::new("portable-repair-source");
         let packet = f.bind(&f.selection).unwrap();
@@ -142,6 +144,7 @@ from pathlib import Path
 spec=importlib.util.spec_from_file_location('author',sys.argv[1]);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 mode=sys.argv[2].removeprefix('unguided-');raw=Path('authoring-request.json').read_bytes();request=json.loads(raw)
 semantic=mode.startswith('semantic-');mode=mode.removeprefix('semantic-')
+extra_fields=mode=='extra-fields';mode='success' if extra_fields else mode
 proposal={**request['stageContext'],'schema':'agentlab.harmony_stage_control_contract.v1','reviewed':False,
  'createMarker':'created','destroyMarker':'destroyed','registrationMarker':'registered','configurationPrefix':'config: ','eventName':'environment',
  'configurations':[{'id':'initial','language':'en','colorMode':0},{'id':'language','language':'zh','colorMode':0},{'id':'color','language':'zh','colorMode':1}],
@@ -157,7 +160,10 @@ class Participant:
   count+=1;out=Path('draft' if count==1 else 'draft-repair');out.mkdir()
   assert transport_retry_limit==0
   value=json.loads(json.dumps(proposal))
-  if not semantic and (count==1 or mode=='exhausted'):value['configurations'][0]['id']='stage-created'
+  if not semantic and not extra_fields and (count==1 or mode=='exhausted'):value['configurations'][0]['id']='stage-created'
+  if extra_fields and count==1:
+   value['notes']={'untrusted':'extra author explanation'}
+   value['configurations'][-1]['language']=value['configurations'][0]['language']
   if semantic and (count==1 or mode=='exhausted'):value['configurationPrefix']='wrong-prefix: '
   if semantic and mode=='infrastructure':value['variants'][1]['to']="environment';throw Error('unsupported')//"
   if semantic and count==2:
@@ -187,7 +193,9 @@ module=types.SimpleNamespace(Participant=Participant)
 prompt=m.stage_prompt(request,Path('draft'))+m.guidance_prompt(request)
 m.run_author(module,'fixture-pi',request,raw,prompt,Path.cwd()/'participant-evidence',Path('state'))
 first=Path('draft/proposed-stage-contract.json').read_bytes()
-try:m.validate_and_repair(module,'fixture-pi',request,raw,Path('authoring-request.json'),Path('draft'))
+try:
+ m.require_stage_identity(json.loads(first),request['stageContext'])
+ m.validate_and_repair(module,'fixture-pi',request,raw,Path('authoring-request.json'),Path('draft'))
 except (ValueError,RuntimeError) as error:
  assert mode!='success',str(error)+' '+''.join(p.read_text() for p in Path('participant-evidence').glob('*stderr.log'))
  if mode=='prior-drift':assert 'previous rejected attempt changed' in str(error)
@@ -267,6 +275,22 @@ fn stage_proposal_binds_real_replacements_and_rejects_string_modes_and_source_dr
     let receipt = validate(&proposal).unwrap();
     assert_eq!(receipt["proposalContentValid"], true);
     assert_eq!(receipt["semanticExecutionVerified"], false);
+    let mut extra = proposal.clone();
+    extra["notes"] = json!({"explanation":"untrusted extra field"});
+    assert_eq!(
+        validate(&extra).unwrap_err(),
+        "stage proposal fields differ"
+    );
+    extra["candidateId"] = json!("other");
+    assert_eq!(
+        validate(&extra).unwrap_err(),
+        "stage proposal identity differs"
+    );
+    extra["reviewed"] = json!(true);
+    assert_eq!(
+        validate(&extra).unwrap_err(),
+        "stage proposal schema or review boundary differs"
+    );
     for (pointer, value) in [
         ("/configurations/0/colorMode", json!("light")),
         ("/variants/0/to", json!("./Stage.js")),

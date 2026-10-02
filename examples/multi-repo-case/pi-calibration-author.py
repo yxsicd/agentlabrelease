@@ -75,6 +75,7 @@ def require_immutable_sources(request):
 
 
 REPAIRABLE = {
+    "stage proposal fields differ",
     "stage proposal configurations absent", "stage proposal colorMode must be integer",
     "stage proposal check IDs collide", "stage proposal transitions must change one dimension",
     "stage proposal must vary both configuration dimensions", "stage proposal requires two wrong variants",
@@ -82,6 +83,15 @@ REPAIRABLE = {
     "stage proposal replacement must match source exactly once", "stage proposal intended failures absent",
     "stage proposal failure check unknown or duplicate",
 }
+
+
+def require_stage_identity(proposed, context):
+    if (not isinstance(proposed, dict)
+            or proposed.get('schema') != 'agentlab.harmony_stage_control_contract.v1'
+            or proposed.get('reviewed') is not False
+            or any(proposed.get(k) != context[k] for k in (
+                'candidateId', 'candidateSha256', 'sourceRevision', 'modulePath'))):
+        raise ValueError('stage contract proposal changed identity, schema or review boundary')
 
 
 def diagnose_controls(evidence, request_path, proposal):
@@ -323,12 +333,11 @@ Never modify sources/. Do not expose evaluator files outside {args.output.as_pos
         context = request["stageContext"]
         allowed = {"schema", "reviewed", "candidateId", "candidateSha256", "sourceRevision", "modulePath",
                    "createMarker", "destroyMarker", "registrationMarker", "configurationPrefix", "eventName", "configurations", "variants"}
-        if (set(proposed) != allowed or proposed.get("schema") != "agentlab.harmony_stage_control_contract.v1"
-                or proposed.get("reviewed") is not False
-                or any(proposed.get(k) != context[k] for k in ("candidateId", "candidateSha256", "sourceRevision", "modulePath"))):
-            raise ValueError("stage contract proposal changed identity, schema or review boundary")
+        require_stage_identity(proposed, context)
         if os.environ.get("AGENTLAB_FLYWHEEL_TOOL"):
             validate_and_repair(module, pi, request, request_bytes, args.request, args.output)
+        elif set(proposed) != allowed:
+            raise ValueError('stage proposal fields differ; no repair validator configured')
 
 
 if __name__ == "__main__":

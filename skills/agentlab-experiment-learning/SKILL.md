@@ -338,6 +338,16 @@ not source call expressions), and tell repair authors to resolve observed behavi
 failures as well as shape errors. Keep that generic contract separate from
 instance-specific correct marker values; do not operator-repair the failed draft.
 
+Separate shape rejection from immutable identity/review rejection before repair
+routing. Real run 36956005285 completed but added a notes field; the early Python
+guard classified the field-set mismatch as identity drift and never reached repair.
+Keep schema, review status and candidate/source bindings terminal. Route additional
+or missing nonidentity fields through the strict Rust content gate and one bounded
+Agent repair, preserving the rejected original rather than stripping fields as the
+operator. Check identity before field-set errors so an extra field cannot mask a
+changed authority. Fix all shape errors in the same allowed repair, including
+confounded configuration transitions; do not weaken the accepted schema.
+
 A full regression run exposed intermittent emulator boot-failure cleanup. A
 deterministic delayed-launcher control reproduced the race: stop ran first,
 then the outstanding launcher completed startup. Quiesce and reap the exact

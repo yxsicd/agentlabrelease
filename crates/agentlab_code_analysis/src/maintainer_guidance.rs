@@ -220,10 +220,7 @@ pub fn stage_proposal(
     .into_iter()
     .collect();
     need(
-        proposal
-            .as_object()
-            .is_some_and(|o| o.keys().map(String::as_str).collect::<BTreeSet<_>>() == keys)
-            && proposal["schema"] == "agentlab.harmony_stage_control_contract.v1"
+        proposal["schema"] == "agentlab.harmony_stage_control_contract.v1"
             && proposal["reviewed"] == false,
         "stage proposal schema or review boundary differs",
     )?;
@@ -239,6 +236,12 @@ pub fn stage_proposal(
             "stage proposal identity differs",
         )?;
     }
+    need(
+        proposal
+            .as_object()
+            .is_some_and(|o| o.keys().map(String::as_str).collect::<BTreeSet<_>>() == keys),
+        "stage proposal fields differ",
+    )?;
     need(
         hex(text(&proposal, "sourceRevision")?, 40) && hex(text(&proposal, "candidateSha256")?, 64),
         "stage proposal revision invalid",
