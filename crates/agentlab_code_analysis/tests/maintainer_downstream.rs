@@ -187,15 +187,33 @@ fn actual_first_four_assessor_to_rust_controller_and_repeated_batch() {
             .unwrap()
     };
     let first = run("first", None);
-    assert_eq!(first["planCount"], 3);
+    assert_eq!(first["planCount"], 4);
     assert_eq!(
         first["missingConstructionPlanCandidateIds"]
             .as_array()
             .unwrap()
             .len(),
-        7
+        6
     );
-    assert_eq!(first["schedulingAllowedPlanCount"], 2);
+    assert_eq!(first["schedulingAllowedPlanCount"], 3);
+    let telemetry: Value = serde_json::from_slice(
+        &fs::read(
+            out.join("first/shadow-case-rdb-preference-telemetry-pipeline/next-actions.json"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        telemetry["candidateId"],
+        "shadow-case-rdb-preference-telemetry-pipeline"
+    );
+    assert_eq!(telemetry["automaticPromotion"], false);
+    assert_eq!(telemetry["agentExecutionPerformed"], false);
+    assert!(telemetry["actions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|action| action["executionAuthorized"] == false));
     assert_eq!(
         first["retainedHistoricalCandidateIds"],
         json!(["shadow-case-abilitystage-environment-callback-binding"])

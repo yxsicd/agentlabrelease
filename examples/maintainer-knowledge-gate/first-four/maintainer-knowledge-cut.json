@@ -32,13 +32,12 @@
   "sourceSetSha256": "88310ecd6a5ace0c7393c7981b8f9ba9103afff41133b71d0b84e951e95f24a6",
   "tableGitAuthority": {
     "exportedBy": {
-      "kind": "github-action",
+      "kind": "operator-replay",
       "repository": "yxsicd/agentlabrelease",
-      "runId": "36879945533",
-      "runUrl": "https://github.com/yxsicd/agentlabrelease/actions/runs/36879945533"
+      "runId": "lesson-admission-bece477-real-v2"
     },
     "repo": "agentlabtablegit",
-    "revision": "38fc28d72870b36405287e048a5e6fce41a44b78"
+    "revision": "368b17895b23633656a26f9f51cb300cb11fa829"
   },
   "tables": {
     "evaluationCases": {
@@ -51,15 +50,15 @@
     },
     "maintainerSkillRefreshRounds": {
       "path": "maintainer_skill_refresh_rounds.jsonl",
-      "sha256": "29b108f7f5f00f8b75f579e2dcf8276db57a877ac264639f7c091d323f0ea2e1"
+      "sha256": "bb7bb149cd323640a2d2f2b6bb33145dd2d36d80c005e557126f312c460d5d65"
     },
     "maintainerSkills": {
       "path": "maintainer_skills.jsonl",
-      "sha256": "a7f6affb37e60c7009870feafa86325ba4b7cdabf0ff2b0fd88364fa667ff6d7"
+      "sha256": "6cfa7218f4f4e7808d908f92b3eca1bbb60801eacb726a3003c71668e32381a9"
     },
     "programFacts": {
       "path": "program_facts.jsonl",
-      "sha256": "5a3891dd8e25d82e4024a108137d1c10900ad1c43b46ce16f4913d4535254298"
+      "sha256": "9fa612663ca5653e8df61071a005e62ff6630aae6b99a18e518f766170703293"
     }
   }
 }

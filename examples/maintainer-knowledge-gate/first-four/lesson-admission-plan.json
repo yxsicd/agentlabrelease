@@ -1,0 +1,146 @@
+{
+  "assessmentReused": true,
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "baselineKnowledgeCutSha256": "32391f45b5cfdad90cdf1b4d9f147f6639eacfe16acc3c61f3841ce3afa9b65e",
+  "decision": "prepared-reviewed-lesson-admission",
+  "expectedRevision": "38fc28d72870b36405287e048a5e6fce41a44b78",
+  "qualified": false,
+  "repository": "agentlabtablegit",
+  "requiredFollowUp": [
+    "verify declared source cut through committed remote readback",
+    "validate staged full knowledge cut before authority transaction",
+    "atomic committed readback",
+    "export and independently validate new knowledge cut",
+    "verify downstream guidance consumption",
+    "measure next-round benefit"
+  ],
+  "schema": "agentlab.maintainer_lesson_admission_plan.v1",
+  "sourceCommitAuthenticated": false,
+  "sourceExportSha256": "a5222adb2582f05b0a7bc28df19dd06b91bdd41b8206028e63e1593cbd64f6db",
+  "tables": {
+    "maintainer_skill_refresh_rounds": {
+      "key": "lesson-admission-98c181f1d3c7e9c8c65740655d91d7d9dc1638180ba9da4913c7c7eee59761a6",
+      "row": {
+        "assessment": {
+          "path": "assessments/round-36-agent-36879945533.json",
+          "sha256": "47354f03c2dcd4c4364b3dc7cdec7e30b3ac9d4f81b507120e355a46670f272d"
+        },
+        "assessmentReused": true,
+        "automaticPromotion": false,
+        "changes": {
+          "added": [
+            "lesson-skill-abilitystage-application-context-semantic-controls",
+            "lesson-fact-abilitystage-application-context-semantic-controls"
+          ],
+          "retired": [],
+          "updated": []
+        },
+        "countsAsMaturityGain": false,
+        "coverage": {
+          "maintenanceReadyScopeCount": 2,
+          "processSkillCount": 13,
+          "programBoundScopeCount": 46,
+          "repositoryCount": 4,
+          "scopeSkillCount": 489,
+          "semanticReadyScopeCount": 41,
+          "trackedFileCount": 44567
+        },
+        "decision": "continue",
+        "id": "lesson-admission-98c181f1d3c7e9c8c65740655d91d7d9dc1638180ba9da4913c7c7eee59761a6",
+        "knowledgeChangeMode": "reviewed-lesson-admission",
+        "lessonSource": {
+          "lessonFileDigest": "f14cf6f505d3eaede540ad02200ea6d14fa2351699185d33ec3f6967f91c3bdd",
+          "lessonId": "lesson-abilitystage-application-context-semantic-controls",
+          "repository": "agentlabstage-48eb54481017",
+          "revision": "3a9d8a4fc7a720e13741da1b70f3bc96c2636568",
+          "tablePrefix": "data/"
+        },
+        "ownershipPlane": "target-operations",
+        "parentRoundSha256": "9f82db4babd2b3d4fc2b019f82324dab69b2e0d6a057d477f84a3d9f96753ac6",
+        "producer": {
+          "kind": "reviewed-lesson-admission-planner"
+        },
+        "reviewSha256": "e544368297e2fe5ed5a0ad95c5dbadb7fa957cdf94c282a11afa43069cebd544",
+        "roundIndex": 39,
+        "schema": "agentlab.maintainer_skill_refresh_round.v1",
+        "tables": {
+          "processSkillsSha256": "6cfa7218f4f4e7808d908f92b3eca1bbb60801eacb726a3003c71668e32381a9",
+          "programFactsSha256": "9fa612663ca5653e8df61071a005e62ff6630aae6b99a18e518f766170703293",
+          "scopeSkillsSha256": "9faf87778708c0bc9acf6522ac1c0b1358e1845139da4f2949348d7285e51953"
+        }
+      }
+    },
+    "maintainer_skills": {
+      "key": "lesson-skill-abilitystage-application-context-semantic-controls",
+      "row": {
+        "assetClass": "reusable-knowledge",
+        "automaticPromotion": false,
+        "body": "For a configuration-lifecycle task, bind the selected module entry and actual stage source. Independently observe creation, application-context environment registration, language change, color-mode change and destruction. Require the accepted source to pass and wrong-entry/wrong-event mutations to fail their declared intended checks. Read raw worker observations rather than trusting startup completion or producer booleans. These verified controls cover only the recorded operator-dispatch source seam; separately calibrate actual framework delivery, ArkTS/HAP, exact emulator API and ohosTest before qualifying the task.",
+        "factIds": [
+          "lesson-fact-abilitystage-application-context-semantic-controls"
+        ],
+        "id": "lesson-skill-abilitystage-application-context-semantic-controls",
+        "lessonSource": {
+          "lessonFileDigest": "f14cf6f505d3eaede540ad02200ea6d14fa2351699185d33ec3f6967f91c3bdd",
+          "lessonId": "lesson-abilitystage-application-context-semantic-controls",
+          "repository": "agentlabstage-48eb54481017",
+          "revision": "3a9d8a4fc7a720e13741da1b70f3bc96c2636568",
+          "tablePrefix": "data/"
+        },
+        "methodDigest": "a70d6d7d7db82589415e8a4019e99cc3454510da6b22a3eaaea0f13af2526c3d",
+        "methodRevision": "bece477a916807ec344a00f5b00f8e0966e3d0e9",
+        "methodSkillId": "agentlab-experiment-learning",
+        "objectId": "lesson-abilitystage-application-context-semantic-controls",
+        "ownershipPlane": "target-operations",
+        "repositoryId": "guide-snippets",
+        "role": "maintenance",
+        "skillLayer": "method",
+        "sourceLessonExportDigest": "f14cf6f505d3eaede540ad02200ea6d14fa2351699185d33ec3f6967f91c3bdd",
+        "sourceLessonId": "lesson-abilitystage-application-context-semantic-controls",
+        "sourceRevision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+        "stage": "calibration",
+        "title": "A startup-only observation does not establish configuration delivery through the selected stage"
+      }
+    },
+    "program_facts": {
+      "key": "lesson-fact-abilitystage-application-context-semantic-controls",
+      "row": {
+        "assetClass": "reusable-knowledge",
+        "automaticPromotion": false,
+        "cause": "At the controlled source seam, wrong module entry or environment event registration prevents the expected creation or configuration observations",
+        "change": "Calibrate creation, application-context registration, independent language/color changes and destruction with separate positive and wrong-entry/wrong-event controls",
+        "id": "lesson-fact-abilitystage-application-context-semantic-controls",
+        "kind": "verified-lesson",
+        "lessonSource": {
+          "lessonFileDigest": "f14cf6f505d3eaede540ad02200ea6d14fa2351699185d33ec3f6967f91c3bdd",
+          "lessonId": "lesson-abilitystage-application-context-semantic-controls",
+          "repository": "agentlabstage-48eb54481017",
+          "revision": "3a9d8a4fc7a720e13741da1b70f3bc96c2636568",
+          "tablePrefix": "data/"
+        },
+        "methodDigest": "a70d6d7d7db82589415e8a4019e99cc3454510da6b22a3eaaea0f13af2526c3d",
+        "methodRevision": "bece477a916807ec344a00f5b00f8e0966e3d0e9",
+        "methodSkillId": "agentlab-experiment-learning",
+        "ownershipPlane": "target-operations",
+        "phenomenon": "A startup-only observation does not establish configuration delivery through the selected stage",
+        "qualification": {
+          "boundary": "independently reconstructed recorded host seam",
+          "caseQualified": false,
+          "harmonyBuildQualified": false,
+          "harmonyRuntimeQualified": false,
+          "producerAuthenticated": false,
+          "uiQualified": false
+        },
+        "repositoryId": "guide-snippets",
+        "scope": "recorded-abilitystage-application-context-source-seam",
+        "sourceLessonExportDigest": "f14cf6f505d3eaede540ad02200ea6d14fa2351699185d33ec3f6967f91c3bdd",
+        "sourceLessonId": "lesson-abilitystage-application-context-semantic-controls",
+        "sourceRevision": "71bbb3916625c8d9a370b7a1989b3a7f82090525",
+        "validationIds": [
+          "stage-48eb544810172d462f406829ab67a6a32941a60c1f8fbfbc76dd6cca4f3eb1a2-lesson-e544368297e2fe5ed5a0ad95c5dbadb7fa957cdf94c282a11afa43069cebd544-validation"
+        ]
+      }
+    }
+  }
+}

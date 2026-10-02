@@ -1,0 +1,46 @@
+{
+  "schema": "agentlab.shadow_case_construction_plan.v1",
+  "candidateId": "shadow-case-rdb-preference-telemetry-pipeline",
+  "candidateSha256": "bc676978abcfb563f8d12616075ba05a8cd727a4cc25f24c2d8271002eef3dd9",
+  "requiredImplementationPaths": [
+    {
+      "path": "common/src/main/ets/trackmanager/TrackManager.ets",
+      "reason": "Recheck fulfilled boolean versus rejection, the exact failed-tick row-limit boundary and snapshot-to-delete ordering. Separate observed behavior from the candidate's intended success-only contract; do not claim source intent or runtime qualification."
+    },
+    {
+      "path": "common/src/main/ets/storagemanager/rdb/TrackTable.ets",
+      "reason": "Bind full-table deletion, sequence reset, null/absent roundtrip and whether deletion can distinguish acknowledged rows from rows inserted after the query snapshot."
+    },
+    {
+      "path": "common/src/main/ets/storagemanager/rdb/RdbStore.ets",
+      "reason": "Bind actual asynchronous taskpool query/insert/delete and error handling rather than inferring storage visibility or ordering from TrackManager."
+    }
+  ],
+  "requiredOraclePaths": [
+    {
+      "path": "common/src/main/ets/trackmanager/TrackService.ets",
+      "reason": "Inspect the original Promise<boolean> true-resolving upload placeholder. Establish what fulfilled false and rejection can mean, and the controlled seam needed for independent checks; this is an Oracle dependency, not an existing test."
+    },
+    {
+      "path": "common/src/main/ets/model/TrackModel.ets",
+      "reason": "Bind actual uploaded model composition and row schema without substituting reference implementations."
+    }
+  ],
+  "runtimeRequirements": [
+    {
+      "id": "harmony-emulator-persistence",
+      "description": "Build, install and execute on the candidate's declared HarmonyOS NEXT phone emulator with AppStorage, RDB, UIObserver and Hypium test reachability independently verified. Host dependency seams do not qualify real storage or framework behavior; no serial or physical-device dependency.",
+      "status": "unqualified",
+      "evidence": []
+    },
+    {
+      "id": "async-upload-retention-contract",
+      "description": "Independently review intended success, failed-tick threshold and interleaved-insert retention semantics before constructing calibrated accepted and wrong implementations. Do not infer business success solely from Promise fulfillment or freeze implementation characterization as scoring.",
+      "status": "unqualified",
+      "evidence": []
+    }
+  ],
+  "oracleExecution": {"status": "unqualified", "evidence": []},
+  "wrongVariantCalibration": {"status": "unqualified", "evidence": [], "requiredCount": 2, "executedCount": 0},
+  "automaticPromotion": false
+}

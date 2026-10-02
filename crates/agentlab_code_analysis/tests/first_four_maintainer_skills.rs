@@ -117,7 +117,20 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
     let facts = rows(&baseline.join("program_facts.jsonl"));
     let refresh_rounds = rows(&baseline.join("maintainer_skill_refresh_rounds.jsonl"));
     let generation_rounds = rows(&baseline.join("case_generation_rounds.jsonl"));
-    assert_eq!(skills.len(), 12);
+    assert_eq!(
+        skills
+            .values()
+            .filter(|skill| skill["skillLayer"] == "instance")
+            .count(),
+        12
+    );
+    assert_eq!(
+        skills
+            .values()
+            .filter(|skill| skill["skillLayer"] == "method")
+            .count(),
+        1
+    );
     assert!(facts.len() >= 24);
     assert!(refresh_rounds.len() >= 5);
     assert!(!generation_rounds.is_empty());
@@ -130,11 +143,45 @@ fn first_four_cut_is_revision_bound_link_complete_and_tamper_evident() {
 
     let mut stages_by_repository: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     for (skill_id, skill) in &skills {
-        assert_eq!(skill["skillLayer"], "instance", "{skill_id}");
         assert_eq!(skill["ownershipPlane"], "target-operations", "{skill_id}");
         let repository_id = skill["repositoryId"].as_str().unwrap();
         let revision = repositories.get(repository_id).unwrap();
         assert_eq!(skill["sourceRevision"].as_str().unwrap(), revision);
+        if skill["skillLayer"] == "method" {
+            assert_eq!(skill["stage"], "calibration");
+            assert_eq!(skill["automaticPromotion"], false);
+            assert_eq!(skill["methodSkillId"], "agentlab-experiment-learning");
+            assert_eq!(
+                skill["methodDigest"],
+                digest(&method_at_revision(
+                    &root,
+                    skill["methodRevision"].as_str().unwrap(),
+                    "skills/agentlab-experiment-learning/SKILL.md"
+                ))
+            );
+            let bound = ids(skill, "factIds");
+            assert_eq!(bound.len(), 1);
+            let fact = &facts[&bound[0]];
+            assert_eq!(fact["kind"], "verified-lesson");
+            assert_eq!(fact["repositoryId"], repository_id);
+            assert_eq!(fact["sourceRevision"].as_str().unwrap(), revision);
+            assert_eq!(fact["lessonSource"], skill["lessonSource"]);
+            assert_eq!(
+                fact["sourceLessonExportDigest"],
+                skill["sourceLessonExportDigest"]
+            );
+            for key in [
+                "caseQualified",
+                "harmonyBuildQualified",
+                "harmonyRuntimeQualified",
+                "uiQualified",
+                "producerAuthenticated",
+            ] {
+                assert_eq!(fact["qualification"][key], false);
+            }
+            continue;
+        }
+        assert_eq!(skill["skillLayer"], "instance", "{skill_id}");
         stages_by_repository
             .entry(repository_id.to_owned())
             .or_default()
