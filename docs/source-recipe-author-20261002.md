@@ -23,6 +23,12 @@ A direct pinned Pi library check preserved two messages and the original ID
 across migration. Neither local check proves a successful live corrected design,
 wire-history delivery or semantic convergence. Overall maturity remains 63%.
 
+PR #189's original-head public validation (`37037914805`, job `110940590039`)
+refused the legacy launcher fixture: its mocked successful turn produced no
+session file and still asserted the old root-level path. Update that fixture to
+emit matching retained/native session headers and assert qualified continuity;
+do not weaken the production gate or discard the original failed CI receipt.
+
 ## Bounded same-session design correction
 
 The first real design-first Action `37034048478` ran method
