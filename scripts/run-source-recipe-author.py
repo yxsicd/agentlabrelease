@@ -152,6 +152,8 @@ def main():
     p.add_argument('--reasoning-effort', choices=('default', 'none', 'low', 'medium', 'high', 'max'), default='low',
                    help='default omits reasoning_effort; it does not request disabled thinking')
     p.add_argument('--gateway-timeout-seconds', type=int, choices=range(30, 181), default=180)
+    p.add_argument('--max-output-tokens', type=int, choices=(8192, 16384), default=16384,
+                   help='Explicit constructor token ceiling, independent of gateway wall time')
     p.add_argument('--thinking-type', choices=('default', 'enabled', 'disabled'), default='default',
                    help='Explicit provider thinking.type policy; default omits this independent field')
     p.add_argument('--response-format', choices=('default', 'json-object'), default='default',
@@ -204,6 +206,7 @@ def main():
         thinking_type=None if args.thinking_type == 'default' else args.thinking_type,
         response_format='json_object' if args.response_format == 'json-object' else None,
         api=args.api,
+        max_output_tokens=args.max_output_tokens,
     )
     context = {key: request[key] for key in (
         'scope', 'source', 'sourceFiles', 'semanticFacts', 'selectedGap')}

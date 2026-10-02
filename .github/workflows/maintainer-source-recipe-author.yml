@@ -22,11 +22,17 @@ on:
         type: choice
         options: [default, none, low, medium, high, max]
       gateway_timeout_seconds:
-        description: Absolute response budget for executable verifier construction; no transport retries
+        description: Absolute upstream wall-time limit; independent of output token ceiling
         default: '180'
         required: true
         type: choice
         options: ['60', '120', '180']
+      max_output_tokens:
+        description: Constructor output token ceiling; includes provider reasoning tokens where applicable
+        default: '16384'
+        required: true
+        type: choice
+        options: ['8192', '16384']
       thinking_type:
         description: Provider-supported thinking.type; default omits the independent field
         default: default
@@ -84,6 +90,7 @@ jobs:
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
       CONSTRUCTION_REASONING_EFFORT: ${{ inputs.reasoning_effort }}
       CONSTRUCTION_GATEWAY_TIMEOUT: ${{ inputs.gateway_timeout_seconds }}
+      CONSTRUCTION_MAX_OUTPUT_TOKENS: ${{ inputs.max_output_tokens }}
       CONSTRUCTION_THINKING_TYPE: ${{ inputs.thinking_type }}
       CONSTRUCTION_RESPONSE_FORMAT: ${{ inputs.response_format }}
       CONSTRUCTION_API: ${{ inputs.api }}
@@ -204,6 +211,7 @@ jobs:
             --pi "$GITHUB_WORKSPACE/scripts/run-pi-in-docker.py" \
             --reasoning-effort "$CONSTRUCTION_REASONING_EFFORT" \
             --gateway-timeout-seconds "$CONSTRUCTION_GATEWAY_TIMEOUT" \
+            --max-output-tokens "$CONSTRUCTION_MAX_OUTPUT_TOKENS" \
             --thinking-type "$CONSTRUCTION_THINKING_TYPE" \
             --response-format "$CONSTRUCTION_RESPONSE_FORMAT" \
             --api "$CONSTRUCTION_API" --design-revisions "$CONSTRUCTION_DESIGN_REVISIONS" "${revision_args[@]}"
