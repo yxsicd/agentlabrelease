@@ -498,7 +498,7 @@ fn lifecycle_worker_executes_owned_zero_id_recreation_and_retry_behavior() {
     std::fs::create_dir(&dir).unwrap();
     let compiler = dir.join("compiler.cjs");
     // JavaScript-only protocol fixture, not TypeScript/Harmony qualification.
-    let compiler_bytes = b"module.exports={ModuleKind:{CommonJS:1},ScriptTarget:{ES2022:9},DiagnosticCategory:{Error:1},transpileModule(source){return{outputText:source,diagnostics:[]}}};";
+    let compiler_bytes = b"module.exports={ModuleKind:{CommonJS:1},ScriptTarget:{ES2022:9},DiagnosticCategory:{Error:1},flattenDiagnosticMessageText(message){return message},transpileModule(source){return{outputText:source,diagnostics:source.includes('SYNTAX_REJECTED')?[{category:1,code:1128,file:{text:source},start:source.length-1,length:1,messageText:'Declaration or statement expected.'}]:source.includes('UNBOUND_COMPILER')?[{category:1,code:5107,messageText:'Compiler configuration error'}]:[]}}};";
     std::fs::write(&compiler, compiler_bytes).unwrap();
     let mut support = profile["supportFields"].clone();
     support["compilerSha256"] = json!(digest(compiler_bytes));
@@ -530,6 +530,16 @@ exports.default = class extends require('@kit.AbilityKit').AbilityStage {
 "#;
     for (id, source, intended_failure) in [
         ("valid", valid.to_string(), None),
+        (
+            "syntax-rejected",
+            format!("{valid}// SYNTAX_REJECTED\n}}"),
+            Some("destroy-zero"),
+        ),
+        (
+            "unbound-compiler",
+            format!("{valid}// UNBOUND_COMPILER"),
+            Some("destroy-zero"),
+        ),
         (
             "zero-skipped",
             valid.replace("if (this.id !== undefined) {", "if (this.id) {"),
@@ -567,6 +577,12 @@ exports.default = class extends require('@kit.AbilityKit').AbilityStage {
             .arg(&compiler)
             .output()
             .unwrap();
+        if id == "unbound-compiler" {
+            assert!(!result.status.success());
+            assert!(String::from_utf8_lossy(&result.stderr).contains("Unbound compiler diagnostic"));
+            assert!(result.stdout.is_empty());
+            continue;
+        }
         assert!(
             result.status.success(),
             "{id}: {}",
@@ -597,6 +613,13 @@ exports.default = class extends require('@kit.AbilityKit').AbilityStage {
         match intended_failure {
             None => assert!(failed.is_empty(), "{failed:?}"),
             Some(check) => assert!(failed.contains(&check), "{id}: {failed:?}"),
+        }
+        if id == "syntax-rejected" {
+            assert_eq!(failed.len(), checks.len());
+            for observed in actual["observations"].as_array().unwrap() {
+                assert_eq!(observed["actual"]["sourceRejected"], true);
+                assert_eq!(observed["actual"]["diagnostics"][0]["code"], 1128);
+            }
         }
     }
 }

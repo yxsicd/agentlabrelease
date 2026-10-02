@@ -64,6 +64,13 @@ container receipts, then run the independent runtime consumer against actual
 inspect/probe records before accepting the run. A launcher report alone is not
 independent validation; portable artifact readback and live-path validation are
 separate capabilities.
+When a completed participant submits syntactically invalid source, retain exact
+source-bound compiler diagnostics as rejected task observations and route them
+through the existing bounded repair feedback. Do not classify every nonzero
+worker exit as Agent failure: compiler configuration, unbound diagnostics,
+unsupported imports/loaders and container failures remain infrastructure errors.
+Validate frozen inputs before emitting a source rejection and retain all check
+IDs; a rejection cannot bypass calibration or make any behavior check pass.
 For repository transfer, retain the shared controller and grading protocol,
 change reviewed profile data and select an explicit framework adapter. Freeze
 state-transition checks including create, release, recreate and failure retry;
