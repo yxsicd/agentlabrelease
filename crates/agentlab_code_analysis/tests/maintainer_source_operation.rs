@@ -71,6 +71,72 @@ else:
     assert!(receipt_root.is_dir());
     fs::remove_dir_all(directory).unwrap();
 }
+
+#[test]
+fn source_recipe_completion_rejects_partial_gateway_even_with_process_success() {
+    let directory = std::env::temp_dir().join(format!(
+        "source-recipe-completion-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&directory).unwrap();
+    let code = r#"
+import hashlib, importlib.util, json, os
+from pathlib import Path
+spec = importlib.util.spec_from_file_location('recipe_author', os.environ['AUTHOR_SCRIPT'])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+root = Path(os.environ['TEST_EVIDENCE'])
+(root/'gateway').mkdir()
+status_path = root/'gateway/0001.status.json'
+good = dict(status=200, outcome='completed', semanticComplete=True, upstreamEof=True,
+            upstreamDeadlineExceeded=False, streamError=None, clientDisconnected=False)
+def check(status, accepted):
+    if status is not None:
+        status_path.write_text(json.dumps(status))
+    try:
+        module.require_complete_gateway_capture(root)
+    except ValueError as error:
+        assert not accepted, str(error)
+    else:
+        assert accepted, 'incomplete capture passed'
+    report = json.loads((root/'construction-completion.json').read_bytes())
+    assert report['complete'] == accepted
+    assert report['automaticPromotion'] is False and report['authorityWritePerformed'] is False
+    if status is not None:
+        assert report['gatewayExchanges'][0]['sha256'] == hashlib.sha256(status_path.read_bytes()).hexdigest()
+check(None, False)
+check(good, True)
+for change in [dict(semanticComplete=False), dict(upstreamEof=False),
+               dict(upstreamDeadlineExceeded=True), dict(clientDisconnected=True),
+               dict(streamError={'message':'failed'}), dict(status=500),
+               dict(outcome='upstream_deadline_exceeded')]:
+    check(dict(good, **change), False)
+check(dict(good, upstreamEof=False, semanticComplete=False,
+           outcome='upstream_deadline_exceeded', upstreamDeadlineExceeded=True), False)
+check(good, True)
+(root/'gateway/0002.status.json').write_text(json.dumps(dict(good, semanticComplete=False)))
+check(good, False)
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "AUTHOR_SCRIPT",
+            root().join("scripts/run-source-recipe-author.py"),
+        )
+        .env("TEST_EVIDENCE", &directory)
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    fs::remove_dir_all(directory).unwrap();
+}
 fn fixture() -> (PathBuf, Value, Value, Value) {
     static SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let dir = std::env::temp_dir().canonicalize().unwrap().join(format!(

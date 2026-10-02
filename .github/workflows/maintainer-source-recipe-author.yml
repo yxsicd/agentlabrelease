@@ -78,6 +78,7 @@ jobs:
               '--author-policy',output/'policy.json','--output',output/'request.json')
           PY
       - name: Contain construction Agent without source or host evaluator mounts
+        id: contain
         run: |
           mkdir "$RUNNER_TEMP/recipe-case" "$RUNNER_TEMP/recipe-docker-config"
           printf '{"schema":"agentlab.blind_case_participant_bundle.v1","sourceOnly":true,"automaticPromotion":false}\n' > "$RUNNER_TEMP/recipe-case/manifest.json"
@@ -101,6 +102,7 @@ jobs:
             --output "$RUNNER_TEMP/recipe-author/agent" --gate target/debug/agentlab-maintainer-skill-flywheel \
             --pi "$GITHUB_WORKSPACE/scripts/run-pi-in-docker.py"
       - name: Independently validate recorded participant isolation
+        if: always() && steps.contain.outcome == 'success'
         run: |
           cmp "$RUNNER_TEMP/recipe-runtime.json" "$RUNNER_TEMP/recipe-author/runtime-inputs/config.json"
           python3 scripts/validate-participant-runtime.py --config "$RUNNER_TEMP/recipe-author/runtime-inputs/config.json" \

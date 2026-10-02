@@ -761,3 +761,11 @@ dispatch: the shared contained launcher resolves it strictly. A missing director
 is a pre-model infrastructure failure, not a failed semantic proposal. Preserve
 that lifecycle and original stderr; repair operator preparation rather than
 weakening runtime gates or retrying an unchanged launch.
+
+Before accepting a source-verifier proposal, require the original gateway
+exchanges to show semantic completion and clean EOF without deadline, stream
+error or disconnect. A zero-exit participant may still contain only truncated
+thinking; classify that as incomplete transport, not a completed analysis eligible
+for format finalization. Fixed-context construction may use provider no-reasoning
+mode without relaxing source, control or review gates. Validate contained runtime
+receipts even when proposal production fails after containment preparation.
