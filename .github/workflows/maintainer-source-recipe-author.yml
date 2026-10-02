@@ -39,6 +39,12 @@ on:
         required: true
         type: choice
         options: [default, json-object]
+      api:
+        description: Exact provider wire protocol; catalog identity does not imply protocol compatibility
+        default: openai-completions
+        required: true
+        type: choice
+        options: [openai-completions, openai-responses]
 permissions:
   contents: read
 concurrency:
@@ -58,6 +64,7 @@ jobs:
       CONSTRUCTION_GATEWAY_TIMEOUT: ${{ inputs.gateway_timeout_seconds }}
       CONSTRUCTION_THINKING_TYPE: ${{ inputs.thinking_type }}
       CONSTRUCTION_RESPONSE_FORMAT: ${{ inputs.response_format }}
+      CONSTRUCTION_API: ${{ inputs.api }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_TABLEGIT_MCP_URL: ${{ vars.AGENTLAB_TABLEGIT_MCP_URL }}
       AGENTLAB_TABLEGIT_PERSON_ID: ${{ vars.AGENTLAB_TABLEGIT_PERSON_ID }}
@@ -132,7 +139,8 @@ jobs:
             --reasoning-effort "$CONSTRUCTION_REASONING_EFFORT" \
             --gateway-timeout-seconds "$CONSTRUCTION_GATEWAY_TIMEOUT" \
             --thinking-type "$CONSTRUCTION_THINKING_TYPE" \
-            --response-format "$CONSTRUCTION_RESPONSE_FORMAT"
+            --response-format "$CONSTRUCTION_RESPONSE_FORMAT" \
+            --api "$CONSTRUCTION_API"
       - name: Independently validate recorded participant isolation
         if: always() && steps.contain.outcome == 'success'
         run: |
