@@ -64,9 +64,9 @@ preflight whose preparation file changed during execution is superseded, not
 claimed as a correctly method-bound round. The final preparation must complete
 with unchanged method/input bytes before Action dispatch.
 
-Overall flywheel maturity remains 54% until actual participant repair/feedback
-advances the automatic loop. The scoped calibration is runtime evidence, not a
-substitute for that acceptance or a new full flywheel round.
+At the calibration-only checkpoint, overall flywheel maturity remained 54%.
+Scoped controls alone were not a substitute for actual participant repair or a
+new full flywheel round.
 
 ## First real Action dispatch
 
@@ -81,3 +81,30 @@ This is a Harness initialization failure, not participant inability. The adapter
 now creates its own fresh receipt root, and the Rust adapter protocol regression
 checks its existence and ownership before constructing the participant. A new
 trusted main dispatch is still required to validate the complete real path.
+
+## Recorded real repair and independent readback
+
+After PR 158, main `dc7191c3350c13389e6c259e7351d26c048e8daa` ran
+[36970530565](https://github.com/yxsicd/agentlabrelease/actions/runs/36970530565)
+successfully. One real unguided Pi/GLM attempt completed in 58,232 ms, with four
+completed Gateway exchanges and no transport retries. The submitted source
+SHA256 is `10cc6197ff0d672d90d089da6ca607d4d64eca897bd6ddff3fef170a38517852`.
+Its actual edit guards record deletion on the fulfilled upload result; the
+separate contained worker completed in 785 ms and all six frozen checks passed.
+The independent Rust CLI consumed the downloaded attempt contract/capture and
+returned `review-agent-outcome`; author-completion readback independently passed.
+The original baseline failure and all calibration controls remain retained.
+
+This proves a scoped real submission-to-behavior-verdict path, not a failed
+attempt followed by a model-owned repair: the first attempt already passed.
+Knowledge guidance benefit, cross-repository transfer, ArkTS/Harmony/RDB/emulator
+acceptance, formal SessionFS restoration and automatic authority admission remain
+unproven. Overall maturity is now 56% (+2 for the real repair evidence), an
+engineering estimate rather than a measured completion fraction.
+
+Artifact review found runtime inspect/probe records but not their bound non-secret
+runtime configuration. The next Action archives exact configuration, blind-case
+manifest and locked Pi dependency metadata outside participant mounts and invokes
+the existing independent runtime validator on every recorded attempt. This
+live-path validator is not a portable replay consumer. Its added Action step
+still needs fresh main execution; no historical validation result is fabricated.

@@ -87,6 +87,10 @@ jobs:
             --pi-runtime "$RUNNER_TEMP/behavior-pi" --case-input "$RUNNER_TEMP/behavior-participant-case" \
             --forbid "$GITHUB_WORKSPACE" --forbid "$EVIDENCE_ROOT" \
             --output "$RUNNER_TEMP/behavior-participant-runtime.json"
+          mkdir "$EVIDENCE_ROOT/participant-runtime-inputs"
+          cp "$RUNNER_TEMP/behavior-participant-runtime.json" "$EVIDENCE_ROOT/participant-runtime-inputs/config.json"
+          cp "$RUNNER_TEMP/behavior-participant-case/manifest.json" "$EVIDENCE_ROOT/participant-runtime-inputs/manifest.json"
+          cp "$RUNNER_TEMP/behavior-pi/package-lock.json" "$EVIDENCE_ROOT/participant-runtime-inputs/package-lock.json"
           python3 - <<'PY'
           import hashlib,json,os
           from pathlib import Path
@@ -116,6 +120,28 @@ jobs:
           result=json.loads((Path(os.environ['EVIDENCE_ROOT'])/'attempts/loop-result.json').read_bytes())
           assert result['status']=='recorded-attempt-passed', result['status']
           assert result['qualified'] is False and result['automaticPromotion'] is False
+          PY
+      - name: Independently validate actual participant runtime records
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,subprocess,sys
+          from pathlib import Path
+          root=Path(os.environ['EVIDENCE_ROOT'])
+          config=Path(os.environ['RUNNER_TEMP'])/'behavior-participant-runtime.json'
+          archived=root/'participant-runtime-inputs/config.json'
+          assert config.read_bytes()==archived.read_bytes(), 'runtime config archive differs'
+          result=json.loads((root/'attempts/loop-result.json').read_bytes())
+          assert result['attempts'], 'no completed attempt to validate'
+          for attempt in result['attempts']:
+              directory=root/'attempts'/f"attempt-{attempt['attempt']}"
+              subprocess.run([sys.executable,'scripts/validate-participant-runtime.py',
+                  '--config',str(archived),
+                  '--receipt-root',str(directory/'participant-evidence/runtime'),
+                  '--workspace',str(directory/'participant-workspace'),
+                  '--participant-state',str(directory/'participant-state'),
+                  '--label','author-calibration',
+                  '--output',str(directory/'runtime-validation.json')],check=True)
           PY
       - name: Preserve complete scoped capture including failures
         if: always()
