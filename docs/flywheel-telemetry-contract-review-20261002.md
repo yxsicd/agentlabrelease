@@ -164,3 +164,40 @@ Release occurred. Source publication remains subject to PR checks.
 
 Overall maturity remains54%. This recovery removes a real downstream mechanical
 blocker; it does not turn the failed Action into an automatic closed-loop pass.
+
+## Frozen-demand host-seam calibration
+
+The retained parent candidate already requires deletion only after an upload
+resolves true. Its original value digest remains
+`bc676978abcfb563f8d12616075ba05a8cd727a4cc25f24c2d8271002eef3dd9`.
+This is a declared task demand, not proof of the upstream author's intent.
+An independent operator calibration freezes that demand before executing six
+controlled scenarios: empty, true, false, rejection below/at/above the limit.
+The original source fails only fulfilled-false. Two different valid in-memory
+reference transforms pass all six checks. Three meaningful wrong transforms
+(delete-before-upload, unconditional failure deletion and inclusive threshold)
+fail intended checks. All six workers terminate normally; failures are behavioral
+verdicts, not loader or infrastructure errors.
+
+The runner reuses the exact byte-pinned diagnostic kernel and TypeScript compiler;
+it verifies the frozen candidate and original source capture before dispatch.
+Each worker retains submitted source, raw stdout, duration and source digests.
+The separate audit reconstructs all36 recorded checks from the immutable success
+and failure truth table, verifies source bytes and worker stdout, and does not
+trust producer booleans as qualification. Audit is recorded-content verification,
+not another execution or producer authentication.
+The retained calibration receipt SHA256 is
+`f6a083b31d21bf6580da71e3b830706871807a486cdb5361ceb7a1025aae19c8`;
+the separate audit method SHA256 is
+`030e39235837ae5781f238161b172efe8df06df90f28555f48d71d3d2dcb0f72`.
+
+Raw evidence remains outside Release Git under
+`.artifacts/flywheel-action-continuation-20261001/code-workshop-telemetry-source/`.
+The calibration executes original type-erased TrackManager bodies against
+controlled in-memory store/upload/timer interfaces, not TrackTable/RDB/taskpool,
+actual upload service, Hypium or Harmony. Concurrent insertion has no established
+task expectation and remains unscored characterization. Operator reference
+transforms are not an Agent repair. No formal qualification receipt, authority
+write, cross-repository automatic closure or Release is claimed. Maturity stays54%.
+Next: connect source-bound autonomous authoring, execution and behavioral repair
+to this mechanism without adding repository-specific branches to the shared loop.

@@ -49,6 +49,16 @@ not model learning, authenticated Agent completion or platform qualification.
 Keep reviewed command adapters separate from security isolation and trusted
 Gateway capture; generic scheduling alone does not provide either boundary.
 
+An explicit frozen task demand can define new behavior even when the repository's
+original intent is unknown. Bind that demand before calibration and distinguish
+task-baseline failure from a claim of a defect in the upstream project. Require
+structurally different valid controls as well as meaningful wrong controls, all
+under unchanged predicates. Keep behavior with no established task expectation
+as unscored characterization; do not silently add it to the Oracle after seeing
+the baseline. Partial host-seam calibration leaves the full task's runtime and
+uncovered observables unqualified until the Agent execution/feedback loop proves
+them separately.
+
 Before spending runtime budget on a reused test, inspect its pinned source body,
 assertions and failure branches. A test name, `done()` callback or normal exit
 does not establish the expected behavior. Independently inject success and
