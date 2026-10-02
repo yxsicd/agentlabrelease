@@ -399,6 +399,8 @@ class Participant:
 
     def _run_turn(self, command, project, env, label, lifecycle, timeout_seconds=420,
                   tool_call_limit=None, require_completed_tool_call=True):
+        lifecycle['participantBudgetSeconds'] = timeout_seconds
+        lifecycle['participantBudgetScope'] = 'native-process-watchdog'
         def terminate(process):
             import signal
             os.killpg(process.pid, signal.SIGTERM)

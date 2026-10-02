@@ -443,8 +443,75 @@ pub fn consumption(evidence: &Path, packet_bytes: &[u8]) -> Result<Value, String
         intent["selectedSkills"] == json!(selected),
         "consumption selection differs",
     )?;
+    let (completed, lifecycle_bytes) = recorded_exchanges(evidence, &prompt_bytes, &intent)?;
+    Ok(
+        json!({"schema":"agentlab.maintainer_guidance_consumption.v1",
+        "packetSha256":digest(packet_bytes),"promptSha256":digest(&prompt_bytes),
+        "intentSha256":digest(&intent_bytes),"lifecycleSha256":digest(&lifecycle_bytes),
+        "knowledgeAuthority":packet["knowledgeAuthority"],"selectedSkills":selected,
+        "completedGuidanceExchanges":completed,"agentConsumptionVerified":true,
+        "producerAuthenticated":false,"learningBenefitVerified":false,"caseQualified":false,
+        "authorityWritePerformed":false,"automaticPromotion":false}),
+    )
+}
+
+/// Completion of a recorded unguided author, not proof of guidance absence in all context.
+pub fn completion(evidence: &Path, request_bytes: &[u8]) -> Result<Value, String> {
+    let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
+    need(
+        request["guidanceMode"] == "unguided" && request.get("maintainerGuidance").is_none(),
+        "unguided author request contains guidance or differs",
+    )?;
+    let prompt_bytes = read(evidence, "author-calibration-prompt.txt")?;
+    let intent_bytes = read(evidence, "author-completion-intent.json")?;
+    let intent: Value = serde_json::from_slice(&intent_bytes).map_err(|e| e.to_string())?;
+    need(
+        intent["schema"] == "agentlab.author_completion_intent.v1"
+            && intent["requestSha256"] == digest(request_bytes)
+            && intent["promptSha256"] == digest(&prompt_bytes)
+            && intent["participantBudgetSeconds"]
+                .as_u64()
+                .is_some_and(|n| n > 0)
+            && intent["guidanceProvided"] == false,
+        "author completion intent differs",
+    )?;
+    text(&intent["participantIdentity"], "model")?;
+    text(&intent["participantIdentity"], "providerRoute")?;
+    let (completed, lifecycle_bytes) = recorded_exchanges(evidence, &prompt_bytes, &intent)?;
+    Ok(
+        json!({"schema":"agentlab.author_completion.v1","requestSha256":digest(request_bytes),
+        "promptSha256":digest(&prompt_bytes),"intentSha256":digest(&intent_bytes),
+        "lifecycleSha256":digest(&lifecycle_bytes),"completedExchanges":completed,
+        "participantBudgetSeconds":intent["participantBudgetSeconds"],
+        "authorCompletionVerified":true,"guidanceProvided":false,"guidanceAbsenceVerified":false,
+        "producerAuthenticated":false,"learningBenefitVerified":false,"caseQualified":false,
+        "authorityWritePerformed":false,"automaticPromotion":false}),
+    )
+}
+
+fn recorded_exchanges(
+    evidence: &Path,
+    prompt_bytes: &[u8],
+    intent: &Value,
+) -> Result<(Vec<Value>, Vec<u8>), String> {
+    text(&intent["participantIdentity"], "model")?;
+    text(&intent["participantIdentity"], "providerRoute")?;
+    let prompt = std::str::from_utf8(prompt_bytes).map_err(|e| e.to_string())?;
+    need(
+        !prompt.trim().is_empty()
+            && read(evidence, "author-calibration-prompt.txt")? == prompt_bytes,
+        "consumption actual turn prompt differs",
+    )?;
     let lifecycle_bytes = read(evidence, "author-calibration-lifecycle.json")?;
     let lifecycle: Value = serde_json::from_slice(&lifecycle_bytes).map_err(|e| e.to_string())?;
+    if let Some(budget) = intent.get("participantBudgetSeconds") {
+        need(
+            budget.as_u64().is_some_and(|n| n > 0)
+                && lifecycle["participantBudgetSeconds"] == *budget
+                && lifecycle["participantBudgetScope"] == "native-process-watchdog",
+            "consumption participant budget differs",
+        )?;
+    }
     need(
         lifecycle["label"] == "author-calibration"
             && lifecycle["captureAuthority"] == "operator"
@@ -576,13 +643,5 @@ pub fn consumption(evidence: &Path, packet_bytes: &[u8]) -> Result<Value, String
         "consumption final exchange incomplete or no longer bound to the full guidance prompt",
     )?;
     completed.sort_by_key(|r| r["exchangeId"].as_str().unwrap().to_owned());
-    Ok(
-        json!({"schema":"agentlab.maintainer_guidance_consumption.v1",
-        "packetSha256":digest(packet_bytes),"promptSha256":digest(&prompt_bytes),
-        "intentSha256":digest(&intent_bytes),"lifecycleSha256":digest(&lifecycle_bytes),
-        "knowledgeAuthority":packet["knowledgeAuthority"],"selectedSkills":selected,
-        "completedGuidanceExchanges":completed,"agentConsumptionVerified":true,
-        "producerAuthenticated":false,"learningBenefitVerified":false,"caseQualified":false,
-        "authorityWritePerformed":false,"automaticPromotion":false}),
-    )
+    Ok((completed, lifecycle_bytes))
 }

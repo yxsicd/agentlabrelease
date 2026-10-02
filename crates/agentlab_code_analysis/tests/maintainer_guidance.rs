@@ -68,6 +68,12 @@ fn bounded_author_repair_uses_real_gates_and_preserves_rejections() {
         "review-drift",
         "request-drift",
         "guidance-drift",
+        "unguided-success",
+        "unguided-exhausted",
+        "unguided-wire-failure",
+        "unguided-source-drift",
+        "budget-drift",
+        "unguided-budget-drift",
     ] {
         let f = Fixture::new("portable-repair-source");
         let packet = f.bind(&f.selection).unwrap();
@@ -85,9 +91,16 @@ fn bounded_author_repair_uses_real_gates_and_preserves_rejections() {
             sources.push(json!({"repositoryId":"portable-repair-source","revision":"a".repeat(40),
                 "path":path,"workspacePath":path,"sha256":digest(raw.as_bytes()),"bytes":raw.len()}));
         }
-        let request = json!({"schema":"agentlab.stage_calibration_authoring_request.v1","automaticPromotion":false,
+        let mut request = json!({"schema":"agentlab.stage_calibration_authoring_request.v1","automaticPromotion":false,
             "stageContext":{"candidateId":"portable-candidate","candidateSha256":"b".repeat(64),"sourceRevision":"a".repeat(40),"modulePath":"module.json5"},
             "sources":sources,"maintainerGuidance":packet});
+        if mode.starts_with("unguided-") {
+            request
+                .as_object_mut()
+                .unwrap()
+                .remove("maintainerGuidance");
+            request["guidanceMode"] = json!("unguided");
+        }
         fs::write(
             f.root.join("authoring-request.json"),
             serde_json::to_vec(&request).unwrap(),
@@ -97,7 +110,7 @@ fn bounded_author_repair_uses_real_gates_and_preserves_rejections() {
 import importlib.util,json,sys,hashlib,types
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('author',sys.argv[1]);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
-mode=sys.argv[2];raw=Path('authoring-request.json').read_bytes();request=json.loads(raw)
+mode=sys.argv[2].removeprefix('unguided-');raw=Path('authoring-request.json').read_bytes();request=json.loads(raw)
 proposal={**request['stageContext'],'schema':'agentlab.harmony_stage_control_contract.v1','reviewed':False,
  'createMarker':'created','destroyMarker':'destroyed','registrationMarker':'registered','configurationPrefix':'config: ','eventName':'environment',
  'configurations':[{'id':'initial','language':'en','colorMode':0},{'id':'language','language':'zh','colorMode':0},{'id':'color','language':'zh','colorMode':1}],
@@ -120,6 +133,7 @@ class Participant:
   final=b'{"role":"assistant","content":[]}'
   (e/'author-calibration-final-assistant-message.json').write_bytes(final)
   (e/'author-calibration-lifecycle.json').write_text(json.dumps({'label':'author-calibration','captureAuthority':'operator','exitCode':0,'timedOut':False,
+   'participantBudgetSeconds':419 if mode=='budget-drift' else 420,'participantBudgetScope':'native-process-watchdog',
    'finalAssistantMessagePresent':True,'finalAssistantMessageSha256':hashlib.sha256(final).hexdigest()}))
   g=e/'gateway';g.mkdir();(g/'0001.upstream-request.json').write_text(json.dumps({'model':self.model,'providerId':self.route,'stream':True,'messages':[{'role':'user','content':[{'type':'text','text':prompt}]}]}))
   response=b'data: {"choices":[{"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n'
@@ -136,7 +150,7 @@ m.run_author(module,'fixture-pi',request,raw,prompt,Path.cwd()/'participant-evid
 first=Path('draft/proposed-stage-contract.json').read_bytes()
 try:m.validate_and_repair(module,'fixture-pi',request,raw,Path('authoring-request.json'),Path('draft'))
 except (ValueError,RuntimeError) as error:
- assert mode!='success',str(error)+' '+str(list(Path('participant-evidence').glob('*stderr.log')) and Path('participant-evidence/consumption-stderr.log').read_text())
+ assert mode!='success',str(error)+' '+''.join(p.read_text() for p in Path('participant-evidence').glob('*stderr.log'))
  if mode=='prior-drift':assert 'previous rejected attempt changed' in str(error)
 else:assert mode=='success'
 assert count==(2 if mode in ('success','exhausted','prior-drift') else 1),count
@@ -151,6 +165,19 @@ if mode=='success':
  assert [a['validatorExitCode'] for a in manifest['attempts']]==[1,0]
  assert manifest['attempts'][0]['proposalSha256']==hashlib.sha256(first).hexdigest()
  assert json.loads(Path('participant-evidence-repair/content-validation.json').read_bytes())['semanticExecutionVerified'] is False
+ if request.get('guidanceMode')=='unguided':
+  assert not Path('participant-evidence/guidance-prompt.txt').exists()
+  assert not Path('participant-evidence-repair/guidance-consumption-intent.json').exists()
+  receipt=json.loads(Path('participant-evidence-repair/completion-validation.json').read_bytes())
+  assert receipt['authorCompletionVerified'] is True and receipt['guidanceProvided'] is False
+  assert receipt['guidanceAbsenceVerified'] is False and receipt['learningBenefitVerified'] is False
+  import os
+  for index,change in enumerate(({'guidanceMode':'guided'},{'maintainerGuidance':{}})):
+   changed={**request,**change};path=Path('changed-request-'+str(index)+'.json');path.write_text(json.dumps(changed))
+   output=Path('must-not-exist-'+str(index)+'.json')
+   result=m.gate(Path(os.environ['AGENTLAB_FLYWHEEL_TOOL']),Path('participant-evidence-repair'),'changed-'+str(index),
+    ['--verify-author-completion','--participant-evidence','participant-evidence-repair','--author-request',str(path),'--output',str(output)])
+   assert result.returncode!=0 and not output.exists()
 # This is an adapter fixture with actual Rust gates, not real Agent learning evidence.
 "#]).arg(repo.join("examples/multi-repo-case/pi-calibration-author.py")).arg(mode)
             .env("AGENTLAB_FLYWHEEL_TOOL", env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
