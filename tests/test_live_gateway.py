@@ -77,6 +77,12 @@ class GatewayCaptureTests(unittest.TestCase):
 
                     def capture(command, project, environment, label, lifecycle):
                         captured.update(command=command, environment=environment)
+                        # A successful native turn must retain its session and
+                        # report that same identity, even in a launcher fixture.
+                        session = Path(command[command.index('--session') + 1])
+                        header = {'type': 'session', 'id': 'fixture-session', 'cwd': str(project)}
+                        session.write_text(json.dumps(header) + '\n')
+                        (evidence / f'{label}-events.jsonl').write_text(json.dumps(header) + '\n')
 
                     with patch.object(participant, '_run_turn', side_effect=capture):
                         participant.turn('sandbox-stage', root, prompt='fixture prompt')
@@ -91,7 +97,10 @@ class GatewayCaptureTests(unittest.TestCase):
                 )
                 self.assertNotIn('AGENTLAB_LM_GATEWAY_KEY', environment)
                 session = captured['command'][captured['command'].index('--session') + 1]
-                self.assertEqual(Path(session), root / 'state/pi-session.jsonl')
+                self.assertEqual(Path(session), root / 'state/sessions/operator/pi-session.jsonl')
+                continuity = json.loads((evidence / 'sandbox-stage-lifecycle.json').read_bytes())['sessionContinuity']
+                self.assertTrue(continuity['qualified'])
+                self.assertEqual(continuity['sessionIdAfter'], 'fixture-session')
 
     def test_failed_participant_retains_actual_source_and_lifecycle(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ,

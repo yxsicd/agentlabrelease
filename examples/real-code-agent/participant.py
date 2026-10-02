@@ -317,7 +317,20 @@ class Participant:
         if requirement: prompt += '\nAdditional requirement: '+requirement
         (self.evidence / f'{label}-prompt.txt').write_text(prompt)
         runtime_config = os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG')
-        session_path = self.state / 'pi-session.jsonl' if runtime_config else self.evidence / 'pi-session.jsonl'
+        # Pi migrates *.jsonl directly under PI_CODING_AGENT_DIR on startup.
+        # A second invocation of that old path would silently create a new session.
+        session_path = self.state / 'sessions/operator/pi-session.jsonl' if runtime_config else self.evidence / 'pi-session.jsonl'
+        session_path.parent.mkdir(parents=True, exist_ok=True)
+        session_before = session_path.read_bytes() if session_path.is_file() else b''
+        session_id_before = None
+        if self.implementation == 'pi' and session_before:
+            header = json.loads(session_before.splitlines()[0])
+            if header.get('type') != 'session' or not header.get('id'):
+                raise RuntimeError(f'{label}: invalid retained Pi session header')
+            session_id_before = header['id']
+        expected_session_id = getattr(self, '_retained_pi_session_id', None)
+        if expected_session_id and session_id_before != expected_session_id:
+            raise RuntimeError(f'{label}: retained Pi session missing or identity changed before dispatch')
         command = [self.binary, '--print', '--mode', 'json', '--provider', 'agentlab-ci',
                    '--model', self.model, '--thinking', 'off', '--no-extensions',
                    '--no-skills', '--no-context-files',
@@ -354,6 +367,10 @@ class Participant:
                      'providerReasoningEffort': self.active_reasoning_effort,
                      'transportRetryLimit': transport_retry_limit,
                      'requireCompletedToolCall': require_completed_tool_call}
+        if self.implementation == 'pi':
+            lifecycle['sessionContinuity'] = dict(sessionIdBefore=session_id_before,
+                inputBytes=len(session_before), inputSha256=hashlib.sha256(session_before).hexdigest(),
+                qualified=False)
         if tool_call_limit is not None:
             if not isinstance(tool_call_limit, int) or tool_call_limit < 1:
                 raise ValueError('tool_call_limit must be a positive integer')
@@ -374,6 +391,20 @@ class Participant:
             if not require_completed_tool_call:
                 run_options['require_completed_tool_call'] = False
             turn_result = self._run_turn(command, project, env, label, lifecycle, **run_options)
+            if self.implementation == 'pi':
+                session_after = session_path.read_bytes()
+                header = json.loads(session_after.splitlines()[0])
+                events = [json.loads(line) for line in
+                          (self.evidence / f'{label}-events.jsonl').read_bytes().splitlines() if line.strip()]
+                native_ids = [event.get('id') for event in events if event.get('type') == 'session']
+                if (header.get('type') != 'session' or not header.get('id')
+                        or native_ids != [header['id']]
+                        or (session_id_before and header['id'] != session_id_before)
+                        or not session_after.startswith(session_before)):
+                    raise RuntimeError(f'{label}: Pi session continuity failed after dispatch')
+                self._retained_pi_session_id = header['id']
+                lifecycle['sessionContinuity'].update(sessionIdAfter=header['id'],
+                    outputSha256=hashlib.sha256(session_after).hexdigest(), qualified=True)
         except RuntimeError as error:
             turn_error = error
         finally:
