@@ -313,6 +313,19 @@ calibration or guidance benefit. Preserve those complete worker observations and
 give them to the next author round; negative controls alone cannot qualify an
 Oracle that rejects the valid baseline.
 
+The guidance author Action now defaults semantic_controls=true: after content
+validation it independently diagnoses unchanged reviewed=false controls, using
+retained source inventory and the pinned type-erasure compiler. One shared
+repair_limit covers content or behavior repair, not one allowance per validator.
+Completed but rejected baseline/negative checks send actual logs, registrations,
+failed IDs and the original proposal to one fresh Agent attempt. Infrastructure,
+capture/source drift and changed diagnostic method/compiler remain terminal.
+Preserve per-attempt diagnostic bytes/digests and stop after the shared allowance;
+passing this diagnostic never changes review, knowledge authority or formal case
+qualification. Adapter regression exercises real Node workers and Rust content/
+wire gates in both prompt treatments; real Agent semantic repair still requires
+its own captured run before reporting a completed behavioral feedback loop.
+
 A full regression run exposed intermittent emulator boot-failure cleanup. A
 deterministic delayed-launcher control reproduced the race: stop ran first,
 then the outstanding launcher completed startup. Quiesce and reap the exact

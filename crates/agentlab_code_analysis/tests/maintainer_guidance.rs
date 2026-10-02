@@ -80,6 +80,13 @@ fn bounded_author_repair_uses_real_gates_and_preserves_rejections() {
         "unguided-transport-retry-sidecar",
         "transport-retry-symlink",
         "unguided-transport-retry-symlink",
+        "semantic-success",
+        "unguided-semantic-success",
+        "semantic-exhausted",
+        "unguided-semantic-exhausted",
+        "semantic-infrastructure",
+        "semantic-zero",
+        "unguided-semantic-zero",
     ] {
         let f = Fixture::new("portable-repair-source");
         let packet = f.bind(&f.selection).unwrap();
@@ -89,13 +96,30 @@ fn bounded_author_repair_uses_real_gates_and_preserves_rejections() {
         )
         .unwrap();
         let mut sources = Vec::new();
-        for (path, raw) in [
-            ("module.json5", "entry=Stage"),
-            ("Stage.ets", "on('environment')"),
-        ] {
+        let semantic = mode.contains("semantic-");
+        let files = if semantic {
+            vec![("module.json5", r#"{"module":{"srcEntry":"./Stage.ets"}}"#),
+                ("Stage.ets", "const {AbilityStage}=require('@kit.AbilityKit');exports.default=class extends AbilityStage {onCreate(){console.info('created');const app=this.context.getApplicationContext();app.on('environment',{onConfigurationUpdated(c){console.info('config: '+JSON.stringify(c));}});console.info('registered');}onDestroy(){console.info('destroyed');}}"),
+                ("Alternate.ets", "const {AbilityStage}=require('@kit.AbilityKit');exports.default=class extends AbilityStage {};")]
+        } else {
+            vec![
+                ("module.json5", "entry=Stage"),
+                ("Stage.ets", "on('environment')"),
+            ]
+        };
+        for (path, raw) in files {
             fs::write(f.root.join(path), raw).unwrap();
-            sources.push(json!({"repositoryId":"portable-repair-source","revision":"a".repeat(40),
-                "path":path,"workspacePath":path,"sha256":digest(raw.as_bytes()),"bytes":raw.len()}));
+            let oid = Command::new("git")
+                .arg("hash-object")
+                .arg(f.root.join(path))
+                .output()
+                .unwrap();
+            assert!(oid.status.success());
+            sources.push(
+                json!({"repositoryId":"portable-repair-source","revision":"a".repeat(40),
+                "path":path,"workspacePath":path,"sha256":digest(raw.as_bytes()),"bytes":raw.len(),
+                "gitBlobOid":String::from_utf8(oid.stdout).unwrap().trim()}),
+            );
         }
         let mut request = json!({"schema":"agentlab.stage_calibration_authoring_request.v1","automaticPromotion":false,
             "stageContext":{"candidateId":"portable-candidate","candidateSha256":"b".repeat(64),"sourceRevision":"a".repeat(40),"modulePath":"module.json5"},
@@ -117,6 +141,7 @@ import importlib.util,json,sys,hashlib,types
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('author',sys.argv[1]);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 mode=sys.argv[2].removeprefix('unguided-');raw=Path('authoring-request.json').read_bytes();request=json.loads(raw)
+semantic=mode.startswith('semantic-');mode=mode.removeprefix('semantic-')
 proposal={**request['stageContext'],'schema':'agentlab.harmony_stage_control_contract.v1','reviewed':False,
  'createMarker':'created','destroyMarker':'destroyed','registrationMarker':'registered','configurationPrefix':'config: ','eventName':'environment',
  'configurations':[{'id':'initial','language':'en','colorMode':0},{'id':'language','language':'zh','colorMode':0},{'id':'color','language':'zh','colorMode':1}],
@@ -132,7 +157,11 @@ class Participant:
   count+=1;out=Path('draft' if count==1 else 'draft-repair');out.mkdir()
   assert transport_retry_limit==0
   value=json.loads(json.dumps(proposal))
-  if count==1 or mode=='exhausted':value['configurations'][0]['id']='stage-created'
+  if not semantic and (count==1 or mode=='exhausted'):value['configurations'][0]['id']='stage-created'
+  if semantic and (count==1 or mode=='exhausted'):value['configurationPrefix']='wrong-prefix: '
+  if semantic and mode=='infrastructure':value['variants'][1]['to']="environment';throw Error('unsupported')//"
+  if semantic and count==2:
+   assert 'stage semantic controls rejected:' in prompt and 'failedChecks' in prompt and 'config: ' in prompt
   if mode=='identity-drift':value['candidateId']='different-candidate'
   if mode=='review-drift':value['reviewed']=True
   (out/'proposed-stage-contract.json').write_text(json.dumps(value))
@@ -173,7 +202,10 @@ if mode in ('success','exhausted','prior-drift'):
  assert manifest['transportRetryLimit']==0 and manifest['maximumParticipantBudgetSeconds']==840
  assert manifest['latestAttempt']=='repair'
 if mode=='success':
- assert [a['validatorExitCode'] for a in manifest['attempts']]==[1,0]
+ assert [a['validatorExitCode'] for a in manifest['attempts']]==([0,0] if semantic else [1,0])
+ if semantic:
+  assert [a['semanticSeamCalibrationPassed'] for a in manifest['attempts']]==[False,True]
+  assert json.loads(Path('participant-evidence/semantic-diagnostic.json').read_bytes())['diagnosticOnly'] is True
  assert manifest['attempts'][0]['proposalSha256']==hashlib.sha256(first).hexdigest()
  assert json.loads(Path('participant-evidence-repair/content-validation.json').read_bytes())['semanticExecutionVerified'] is False
  if request.get('guidanceMode')=='unguided':
@@ -194,8 +226,11 @@ if mode=='success':
 "#]).arg(repo.join("examples/multi-repo-case/pi-calibration-author.py")).arg(mode)
             .env("AGENTLAB_FLYWHEEL_TOOL", env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
             .env("AGENTLAB_GUIDANCE_PACKET_PATH", f.root.join("packet.json"))
-            .env("AGENTLAB_AUTHOR_REPAIR_LIMIT", if mode == "zero" { "0" } else { "1" })
+            .env("AGENTLAB_AUTHOR_REPAIR_LIMIT", if mode.ends_with("zero") { "0" } else { "1" })
             .env("AGENTLAB_LM_GATEWAY_URL", "http://fixture.invalid")
+            .env("AGENTLAB_AUTHOR_SEMANTIC_CONTROLS", if semantic { "true" } else { "false" })
+            .env("AGENTLAB_STAGE_DIAGNOSTIC_SCRIPT", repo.join("scripts/calibrate-harmony-stage-controls.cjs"))
+            .env_remove("AGENTLAB_STAGE_COMPILER")
             .output().unwrap();
         assert!(
             result.status.success(),
