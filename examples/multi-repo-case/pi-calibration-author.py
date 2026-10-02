@@ -46,7 +46,9 @@ This is a trusted-source host-dispatch AbilityStage/ApplicationContext seam, not
 The contract must use schema agentlab.harmony_stage_control_contract.v1 and reviewed=false. Bind candidateId, candidateSha256, sourceRevision and modulePath exactly to stageContext: {json.dumps(context, sort_keys=True)}.
 Use these remaining contract fields only: createMarker, destroyMarker, registrationMarker, configurationPrefix, eventName, configurations, variants. Derive concrete values from the supplied source; do not invent registrations or log markers.
 Each configuration has id, language, colorMode. Begin with an initial configuration, then change language and colorMode independently, one dimension per transition. Check IDs are stage-created, stage-destroyed, application-environment-registration and the configuration ids.
+colorMode must be a JSON integer, never labels such as light/dark. The baseline is implicit: do not add a baseline variant.
 Each variant has id, path, from, to, expectedFailedChecks. Use at least two distinct meaningful wrong variants with exact one-occurrence source replacements, including wrong entry binding and wrong environment registration. A wrong entry must select another supplied existing stage, not a missing file. Declare the intended failed checks from observed semantics. Preserve the original accepted source as a passing baseline.
+from and to are literal source-text snippets at path, not file paths; from must appear exactly once and to must differ. Every variant must declare nonempty known failed-check IDs.
 Keep all source paths repository-relative. Do not execute authored code, install dependencies, access network, claim review, or promote any case. This output is only a review-required proposal; the operator independently executes and judges controls later. Finish after writing the JSON file.
 """
 

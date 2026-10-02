@@ -26,6 +26,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let output = PathBuf::from(value(&args, "--output")?);
     if args
         .iter()
+        .any(|arg| arg == "--validate-stage-author-proposal")
+    {
+        let receipt = agentlab_code_analysis::maintainer_guidance::stage_proposal(
+            &PathBuf::from(value(&args, "--source-workspace")?),
+            &fs::read(value(&args, "--author-request")?)?,
+            &fs::read(value(&args, "--proposal")?)?,
+        )?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        file.write_all(&serde_json::to_vec_pretty(&receipt)?)?;
+        file.write_all(b"\n")?;
+        println!(
+            "{}",
+            serde_json::json!({"proposalContentValid":true,"semanticExecutionVerified":false})
+        );
+        return Ok(());
+    }
+    if args
+        .iter()
         .any(|arg| arg == "--verify-guidance-consumption")
     {
         let receipt = agentlab_code_analysis::maintainer_guidance::consumption(

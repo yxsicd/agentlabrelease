@@ -189,6 +189,206 @@ pub fn bind(knowledge: &Path, request_bytes: &[u8]) -> Result<Value, String> {
         "agentConsumptionVerified":false,"learningBenefitVerified":false}))
 }
 
+/// Validate an unreviewed author's source-bound proposal without executing it.
+pub fn stage_proposal(
+    workspace: &Path,
+    request_bytes: &[u8],
+    proposal_bytes: &[u8],
+) -> Result<Value, String> {
+    let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
+    let proposal: Value = serde_json::from_slice(proposal_bytes).map_err(|e| e.to_string())?;
+    need(
+        request["schema"] == "agentlab.stage_calibration_authoring_request.v1"
+            && request["automaticPromotion"] == false,
+        "stage proposal request differs",
+    )?;
+    let keys: BTreeSet<&str> = [
+        "schema",
+        "reviewed",
+        "candidateId",
+        "candidateSha256",
+        "sourceRevision",
+        "modulePath",
+        "createMarker",
+        "destroyMarker",
+        "registrationMarker",
+        "configurationPrefix",
+        "eventName",
+        "configurations",
+        "variants",
+    ]
+    .into_iter()
+    .collect();
+    need(
+        proposal
+            .as_object()
+            .is_some_and(|o| o.keys().map(String::as_str).collect::<BTreeSet<_>>() == keys)
+            && proposal["schema"] == "agentlab.harmony_stage_control_contract.v1"
+            && proposal["reviewed"] == false,
+        "stage proposal schema or review boundary differs",
+    )?;
+    for key in [
+        "candidateId",
+        "candidateSha256",
+        "sourceRevision",
+        "modulePath",
+    ] {
+        text(&proposal, key)?;
+        need(
+            proposal[key] == request["stageContext"][key],
+            "stage proposal identity differs",
+        )?;
+    }
+    need(
+        hex(text(&proposal, "sourceRevision")?, 40) && hex(text(&proposal, "candidateSha256")?, 64),
+        "stage proposal revision invalid",
+    )?;
+    for key in [
+        "createMarker",
+        "destroyMarker",
+        "registrationMarker",
+        "configurationPrefix",
+        "eventName",
+    ] {
+        text(&proposal, key)?;
+    }
+    let configs = proposal["configurations"]
+        .as_array()
+        .filter(|a| a.len() >= 3)
+        .ok_or("stage proposal configurations absent")?;
+    let mut checks: BTreeSet<String> = [
+        "stage-created",
+        "stage-destroyed",
+        "application-environment-registration",
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect();
+    let mut dimensions = BTreeSet::new();
+    for (i, config) in configs.iter().enumerate() {
+        need(
+            config.as_object().is_some_and(|o| o.len() == 3) && config["colorMode"].is_i64(),
+            "stage proposal colorMode must be integer",
+        )?;
+        text(config, "language")?;
+        need(
+            checks.insert(text(config, "id")?.to_owned()),
+            "stage proposal check IDs collide",
+        )?;
+        if i > 0 {
+            let changed: Vec<_> = ["language", "colorMode"]
+                .into_iter()
+                .filter(|k| config[*k] != configs[i - 1][*k])
+                .collect();
+            need(
+                changed.len() == 1,
+                "stage proposal transitions must change one dimension",
+            )?;
+            dimensions.insert(changed[0]);
+        }
+    }
+    need(
+        dimensions.len() == 2,
+        "stage proposal must vary both configuration dimensions",
+    )?;
+    let sources = request["sources"]
+        .as_array()
+        .filter(|a| !a.is_empty())
+        .ok_or("stage proposal source inventory absent")?;
+    let mut originals = BTreeMap::new();
+    let safe = |s: &str| {
+        !s.contains('\\')
+            && !s.is_empty()
+            && Path::new(s)
+                .components()
+                .all(|c| matches!(c, std::path::Component::Normal(_)))
+            && s.split('/').all(|c| !c.is_empty() && c != "." && c != "..")
+    };
+    for source in sources {
+        let path = text(source, "path")?;
+        let file = text(source, "workspacePath")?;
+        need(
+            safe(path) && safe(file) && source["revision"] == proposal["sourceRevision"],
+            "stage proposal source path or revision differs",
+        )?;
+        let mut current = workspace.to_path_buf();
+        for component in Path::new(file).components() {
+            current.push(component);
+            need(
+                !fs::symlink_metadata(&current)
+                    .map_err(|e| e.to_string())?
+                    .file_type()
+                    .is_symlink(),
+                "stage proposal source symlink",
+            )?;
+        }
+        let bytes = read(workspace, file)?;
+        need(
+            source["sha256"] == digest(&bytes)
+                && source["bytes"].as_u64() == Some(bytes.len() as u64),
+            "stage proposal source bytes changed",
+        )?;
+        let original = String::from_utf8(bytes).map_err(|e| e.to_string())?;
+        need(
+            originals.insert(path.to_owned(), original).is_none(),
+            "stage proposal duplicate source path",
+        )?;
+    }
+    need(
+        originals.contains_key(text(&proposal, "modulePath")?),
+        "stage proposal module not supplied",
+    )?;
+    let variants = proposal["variants"]
+        .as_array()
+        .filter(|a| a.len() >= 2)
+        .ok_or("stage proposal requires two wrong variants")?;
+    let mut ids = BTreeSet::from(["baseline".to_owned()]);
+    let mut edits = BTreeSet::new();
+    for variant in variants {
+        need(
+            variant.as_object().is_some_and(|o| o.len() == 5)
+                && ids.insert(text(variant, "id")?.to_owned()),
+            "stage proposal variant ID or shape invalid",
+        )?;
+        let path = text(variant, "path")?;
+        let from = text(variant, "from")?;
+        let to = variant["to"]
+            .as_str()
+            .ok_or("stage proposal replacement absent")?;
+        need(
+            from != to && edits.insert((path, from, to)),
+            "stage proposal empty or duplicate mutation",
+        )?;
+        let original = originals
+            .get(path)
+            .ok_or("stage proposal mutation path not supplied")?;
+        need(
+            original.match_indices(from).count() == 1,
+            "stage proposal replacement must match source exactly once",
+        )?;
+        let failed = variant["expectedFailedChecks"]
+            .as_array()
+            .filter(|a| !a.is_empty())
+            .ok_or("stage proposal intended failures absent")?;
+        let mut seen = BTreeSet::new();
+        for check in failed {
+            let id = check
+                .as_str()
+                .ok_or("stage proposal failure check invalid")?;
+            need(
+                checks.contains(id) && seen.insert(id),
+                "stage proposal failure check unknown or duplicate",
+            )?;
+        }
+    }
+    Ok(
+        json!({"schema":"agentlab.stage_author_proposal_validation.v1","requestSha256":digest(request_bytes),
+        "proposalSha256":digest(proposal_bytes),"candidateId":proposal["candidateId"],"sourceRevision":proposal["sourceRevision"],
+        "sourceFilesVerified":originals.len(),"wrongVariantsBound":variants.len(),"proposalContentValid":true,
+        "reviewed":false,"semanticExecutionVerified":false,"caseQualified":false,"learningBenefitVerified":false,"automaticPromotion":false}),
+    )
+}
+
 /// Independently check the complete guidance-bearing operator proxy exchange.
 /// This proves recorded transmission/completion, not producer authenticity or benefit.
 pub fn consumption(evidence: &Path, packet_bytes: &[u8]) -> Result<Value, String> {
