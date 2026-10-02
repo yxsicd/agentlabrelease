@@ -55,6 +55,11 @@ on:
         default: ''
         required: false
         type: string
+      design_first:
+        description: Validate scenario expectations and exact source transformations before code generation
+        default: true
+        required: true
+        type: boolean
 permissions:
   contents: read
   actions: read
@@ -78,6 +83,7 @@ jobs:
       CONSTRUCTION_API: ${{ inputs.api }}
       REVISION_PARENT_RUN: ${{ inputs.revision_parent_run }}
       REVISION_FEEDBACK: ${{ inputs.revision_feedback }}
+      CONSTRUCTION_DESIGN_FIRST: ${{ inputs.design_first }}
       AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
       AGENTLAB_TABLEGIT_MCP_URL: ${{ vars.AGENTLAB_TABLEGIT_MCP_URL }}
       AGENTLAB_TABLEGIT_PERSON_ID: ${{ vars.AGENTLAB_TABLEGIT_PERSON_ID }}
@@ -183,6 +189,9 @@ jobs:
           if test -f "$RUNNER_TEMP/recipe-author/revision-request.json"; then
             revision_args=(--revision-request "$RUNNER_TEMP/recipe-author/revision-request.json")
           fi
+          if test "$CONSTRUCTION_DESIGN_FIRST" = true; then
+            revision_args+=(--design-first)
+          fi
           python3 scripts/run-source-recipe-author.py --request "$RUNNER_TEMP/recipe-author/request.json" \
             --output "$RUNNER_TEMP/recipe-author/agent" --gate target/debug/agentlab-maintainer-skill-flywheel \
             --pi "$GITHUB_WORKSPACE/scripts/run-pi-in-docker.py" \
@@ -195,11 +204,17 @@ jobs:
         if: always() && steps.contain.outcome == 'success'
         run: |
           cmp "$RUNNER_TEMP/recipe-runtime.json" "$RUNNER_TEMP/recipe-author/runtime-inputs/config.json"
+          labels=()
+          for label in source-recipe-design source-recipe-author; do
+            if test -f "$RUNNER_TEMP/recipe-author/runtime-receipts/$label.json"; then
+              labels+=(--label "$label")
+            fi
+          done
           python3 scripts/validate-participant-runtime.py --config "$RUNNER_TEMP/recipe-author/runtime-inputs/config.json" \
             --receipt-root "$RUNNER_TEMP/recipe-author/runtime-receipts" \
             --workspace "$RUNNER_TEMP/recipe-author/agent/workspace" \
             --participant-state "$RUNNER_TEMP/recipe-author/agent/participant-state" \
-            --label source-recipe-author --output "$RUNNER_TEMP/recipe-author/runtime-validation.json"
+            "${labels[@]}" --output "$RUNNER_TEMP/recipe-author/runtime-validation.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

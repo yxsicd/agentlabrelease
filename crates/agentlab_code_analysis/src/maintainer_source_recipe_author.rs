@@ -406,8 +406,245 @@ pub fn check_revision(current_bytes: &[u8], packet_bytes: &[u8]) -> Result<Value
     )
 }
 
+/// Static source correction before code generation; this does not establish semantic truth.
+pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String> {
+    need(
+        request_bytes.len() <= 512 * 1024 && design_bytes.len() <= 64 * 1024,
+        "recipe design input budget",
+    )?;
+    let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
+    let design: Value = serde_json::from_slice(design_bytes).map_err(|e| e.to_string())?;
+    need(
+        request["schema"] == "agentlab.source_recipe_author_request.v1"
+            && request["reviewed"] == false
+            && request["automaticPromotion"] == false,
+        "recipe design request identity",
+    )?;
+    need(
+        prepare(
+            Path::new(text(&request, "knowledgeDirectory")?),
+            Path::new(text(&request, "sourceWorktree")?),
+            text(&request, "repositorySelector")?,
+            &serde_json::to_vec(&request["policy"]).map_err(|e| e.to_string())?,
+        )? == request,
+        "recipe design request no longer reproduces",
+    )?;
+    need(
+        design.as_object().is_some_and(|o| o.len() == 7)
+            && design["schema"] == "agentlab.source_recipe_design.v1"
+            && design["scopeSkillId"] == request["scope"]["id"]
+            && text(&design, "invariant")?.len() <= 2048
+            && design["limitations"].as_array().is_some_and(|a| {
+                (2..=8).contains(&a.len())
+                    && a.iter()
+                        .all(|v| v.as_str().is_some_and(|s| !s.is_empty() && s.len() <= 1024))
+            }),
+        "recipe design schema/scope",
+    )?;
+    let scenarios = design["scenarios"]
+        .as_array()
+        .filter(|a| (1..=8).contains(&a.len()))
+        .ok_or("recipe design scenario budget")?;
+    let mut expected = serde_json::Map::new();
+    for scenario in scenarios {
+        let id = text(scenario, "id")?;
+        need(
+            scenario.as_object().is_some_and(|o| o.len() == 4)
+                && id.len() <= 64
+                && !id.contains(['/', '~'])
+                && !expected.contains_key(id)
+                && scenario["initialState"].is_object()
+                && scenario["inputs"].is_object()
+                && scenario["expectedObservations"].is_object(),
+            "recipe design scenario contract",
+        )?;
+        expected.insert(id.into(), scenario["expectedObservations"].clone());
+    }
+    let expected = Value::Object(expected);
+    let checks = design["checks"]
+        .as_array()
+        .filter(|a| !a.is_empty() && a.len() <= 64)
+        .ok_or("recipe design check budget")?;
+    let mut check_ids = BTreeSet::new();
+    for check in checks {
+        need(
+            check.as_object().is_some_and(|o| o.len() == 3)
+                && check_ids.insert(text(check, "id")?)
+                && check.get("expected").is_some()
+                && expected
+                    .pointer(text(check, "pointer")?)
+                    .is_some_and(|v| v == &check["expected"]),
+            "recipe design checks differ from scenario observations",
+        )?;
+    }
+    let files = request["sourceFiles"]
+        .as_array()
+        .ok_or("recipe design inventory")?;
+    let original = files
+        .iter()
+        .filter_map(|f| {
+            Some((
+                f["path"].as_str()?.to_string(),
+                f["content"].as_str()?.to_string(),
+            ))
+        })
+        .collect::<std::collections::BTreeMap<_, _>>();
+    let controls = design["controls"]
+        .as_array()
+        .filter(|a| (4..=8).contains(&a.len()))
+        .ok_or("recipe design control budget")?;
+    let original_sha = digest(&serde_json::to_vec(&original).map_err(|e| e.to_string())?);
+    let mut names = BTreeSet::new();
+    let mut variants = BTreeSet::new();
+    let (mut baselines, mut references, mut wrongs) = (0, 0, 0);
+    let mut results = Vec::new();
+    for control in controls {
+        let id = text(control, "id")?;
+        need(
+            control.as_object().is_some_and(|o| o.len() == 4) && id.len() <= 64 && names.insert(id),
+            "recipe design control contract",
+        )?;
+        let failures = control["expectedFailedCheckIds"]
+            .as_array()
+            .ok_or("recipe design failure array")?;
+        let mut failed_ids = BTreeSet::new();
+        need(
+            failures.iter().all(|v| {
+                v.as_str()
+                    .is_some_and(|s| check_ids.contains(s) && failed_ids.insert(s))
+            }),
+            "recipe design unknown/duplicate failed check",
+        )?;
+        let edits = control["edits"]
+            .as_array()
+            .filter(|a| a.len() <= 4)
+            .ok_or("recipe design edit budget")?;
+        match control["role"].as_str() {
+            Some("baseline") => {
+                baselines += 1;
+                need(edits.is_empty(), "recipe design baseline edits")?;
+            }
+            Some("reference") => {
+                references += 1;
+                need(
+                    !edits.is_empty() && failures.is_empty(),
+                    "recipe design invalid reference",
+                )?;
+            }
+            Some("wrong") => {
+                wrongs += 1;
+                need(
+                    !edits.is_empty() && !failures.is_empty(),
+                    "recipe design vacuous wrong",
+                )?;
+            }
+            _ => return Err("recipe design unknown role".into()),
+        }
+        let mut transformed = original.clone();
+        let mut edit_receipts = Vec::new();
+        for edit in edits {
+            need(
+                edit.as_object().is_some_and(|o| o.len() == 3),
+                "recipe design edit fields",
+            )?;
+            let path = text(edit, "path")?;
+            let before = text(edit, "before")?;
+            let after = edit["after"].as_str().ok_or("recipe design replacement")?;
+            need(
+                before.len() <= 16384 && after.len() <= 16384 && before != after,
+                "recipe design edit size/no-change",
+            )?;
+            let body = transformed
+                .get_mut(path)
+                .ok_or("recipe design edit requires loaded owned source")?;
+            need(
+                body.matches(before).count() == 1,
+                "recipe design edit must match exactly once",
+            )?;
+            *body = body.replacen(before, after, 1);
+            edit_receipts
+                .push(json!({"path":path,"matchCount":1,"resultSha256":digest(body.as_bytes())}));
+        }
+        let variant = digest(&serde_json::to_vec(&transformed).map_err(|e| e.to_string())?);
+        need(
+            control["role"] == "baseline"
+                || (variant != original_sha && variants.insert(variant.clone())),
+            "recipe design unchanged or duplicate variant",
+        )?;
+        results.push(json!({"id":id,"sourceVariantSha256":variant,"edits":edit_receipts}));
+    }
+    need(
+        baselines == 1 && references >= 2 && wrongs >= 1,
+        "recipe design control roles",
+    )?;
+    Ok(
+        json!({"schema":"agentlab.source_recipe_design_validation.v1",
+        "requestSha256":digest(request_bytes),"designSha256":digest(design_bytes),"controls":results,
+        "staticSourceCorrection":true,"semanticQualified":false,"reviewed":false,
+        "executionPerformed":false,"authorityWritePerformed":false,"automaticPromotion":false}),
+    )
+}
+
+fn check_design_proposal(
+    request_bytes: &[u8],
+    proposal_bytes: &[u8],
+    design_bytes: &[u8],
+) -> Result<Value, String> {
+    need(
+        proposal_bytes.len() <= 256 * 1024,
+        "recipe author proposal budget",
+    )?;
+    let validation = design(request_bytes, design_bytes)?;
+    let d: Value = serde_json::from_slice(design_bytes).map_err(|e| e.to_string())?;
+    let p: Value = serde_json::from_slice(proposal_bytes).map_err(|e| e.to_string())?;
+    let controls=d["controls"].as_array().unwrap().iter().map(|c|
+        json!({"id":c["id"],"role":c["role"],"expectedFailedCheckIds":c["expectedFailedCheckIds"]})).collect::<Vec<_>>();
+    need(
+        p["contract"]["checks"] == d["checks"] && p["contract"]["controls"] == json!(controls),
+        "recipe proposal changed frozen design contract",
+    )?;
+    need(
+        d["controls"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|c| c["edits"].as_array().unwrap())
+            .all(|edit| {
+                p["sourcePaths"]
+                    .as_array()
+                    .is_some_and(|paths| paths.contains(&edit["path"]))
+            }),
+        "recipe proposal omitted designed source",
+    )?;
+    Ok(validation)
+}
+
+pub fn stage_with_design(
+    request_bytes: &[u8],
+    proposal_bytes: &[u8],
+    design_bytes: &[u8],
+    output: &Path,
+) -> Result<Value, String> {
+    let validation = check_design_proposal(request_bytes, proposal_bytes, design_bytes)?;
+    stage_inner(
+        request_bytes,
+        proposal_bytes,
+        output,
+        Some((design_bytes, &validation)),
+    )
+}
+
 /// Serialize a bounded, unreviewed proposal. No executable controls are spawned.
 pub fn stage(request_bytes: &[u8], proposal_bytes: &[u8], output: &Path) -> Result<Value, String> {
+    stage_inner(request_bytes, proposal_bytes, output, None)
+}
+
+fn stage_inner(
+    request_bytes: &[u8],
+    proposal_bytes: &[u8],
+    output: &Path,
+    design: Option<(&[u8], &Value)>,
+) -> Result<Value, String> {
     need(
         request_bytes.len() <= 512 * 1024 && proposal_bytes.len() <= 256 * 1024,
         "recipe author proposal budget",
@@ -572,9 +809,16 @@ pub fn stage(request_bytes: &[u8], proposal_bytes: &[u8], output: &Path) -> Resu
         &request["scope"],
         Path::new(text(&request, "sourceWorktree")?),
     )?;
-    let receipt = json!({"schema":"agentlab.source_recipe_author_stage.v1","requestSha256":digest(request_bytes),"proposalSha256":digest(proposal_bytes),
+    let mut receipt = json!({"schema":"agentlab.source_recipe_author_stage.v1","requestSha256":digest(request_bytes),"proposalSha256":digest(proposal_bytes),
         "recipeSha256":digest(&pretty(&recipe)?),"scopeSkillId":request["scope"]["id"],"reviewed":false,"executionPerformed":false,"authorityWritePerformed":false,
         "nextAction":"independently-review-verifier-semantics-and-execution-policy","automaticPromotion":false});
+    if let Some((bytes, validation)) = design {
+        let validation_bytes = pretty(validation)?;
+        write(&output.join("design.json"), bytes)?;
+        write(&output.join("design-validation.json"), &validation_bytes)?;
+        receipt["designSha256"] = json!(digest(bytes));
+        receipt["designValidationSha256"] = json!(digest(&validation_bytes));
+    }
     write(&output.join("stage-receipt.json"), &pretty(&receipt)?)?;
     Ok(receipt)
 }
@@ -611,6 +855,17 @@ pub fn approve(
         )? == request,
         "recipe author stale review request",
     )?;
+    if receipt.get("designSha256").is_some() {
+        let bytes = read(&stage.join("design.json"), 64 * 1024)?;
+        let validation = check_design_proposal(&request_bytes, &proposal_bytes, &bytes)?;
+        let stored = read(&stage.join("design-validation.json"), 128 * 1024)?;
+        need(
+            receipt["designSha256"] == digest(&bytes)
+                && receipt["designValidationSha256"] == digest(&stored)
+                && stored == pretty(&validation)?,
+            "recipe author reviewed design bytes differ",
+        )?;
+    }
     let mut recipe: Value = serde_json::from_slice(&recipe_bytes).map_err(|e| e.to_string())?;
     need(
         recipe["reviewed"] == false,

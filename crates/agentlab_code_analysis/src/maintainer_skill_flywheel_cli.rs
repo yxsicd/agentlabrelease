@@ -24,6 +24,19 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|a| a == "--validate-source-recipe-design") {
+        let receipt = agentlab_code_analysis::maintainer_source_recipe_author::design(
+            &fs::read(value(&args, "--author-request")?)?,
+            &fs::read(value(&args, "--design")?)?,
+        )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&receipt)?)?;
+        println!("{}", serde_json::to_string(&receipt)?);
+        return Ok(());
+    }
     if args
         .iter()
         .any(|a| a == "--prepare-source-recipe-revision" || a == "--check-source-recipe-revision")
@@ -85,11 +98,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
     if args.iter().any(|a| a == "--stage-source-recipe-proposal") {
-        let receipt = agentlab_code_analysis::maintainer_source_recipe_author::stage(
-            &fs::read(value(&args, "--author-request")?)?,
-            &fs::read(value(&args, "--proposal")?)?,
-            &output,
-        )?;
+        let request = fs::read(value(&args, "--author-request")?)?;
+        let proposal = fs::read(value(&args, "--proposal")?)?;
+        let receipt = if let Some(path) = optional(&args, "--design") {
+            agentlab_code_analysis::maintainer_source_recipe_author::stage_with_design(
+                &request,
+                &proposal,
+                &fs::read(path)?,
+                &output,
+            )?
+        } else {
+            agentlab_code_analysis::maintainer_source_recipe_author::stage(
+                &request, &proposal, &output,
+            )?
+        };
         println!("{}", serde_json::to_string(&receipt)?);
         return Ok(());
     }

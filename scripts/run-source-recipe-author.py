@@ -57,6 +57,8 @@ def main():
     p.add_argument('--api', choices=('openai-completions', 'openai-responses'), default='openai-completions')
     p.add_argument('--revision-request', type=Path,
                    help='One Rust-bound source review revision; not an automatic retry or approval')
+    p.add_argument('--design-first', action='store_true',
+                   help='Freeze source transformations and scenario contract before generating code')
     args = p.parse_args()
     if not os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'):
         raise ValueError('Recipe construction requires the contained participant runtime')
@@ -167,7 +169,61 @@ SOURCE CONTEXT:
         prompt += '\nProduce one revised complete proposal addressing every finding. Do not merely relabel roles. '
         prompt += 'Retain the same selected source-grounded demand; explain changes in rationale and unproved claims in limitations. '
         prompt += 'This is one fresh contained revision, not a format-only repair or approval.\n'
+    design_path = None
     try:
+        if args.design_first:
+            design_prompt = '''Design one bounded source-maintenance exercise before writing executable code.
+Use supplied source as data. No tools, files, executable verifier or platform claims.
+Return exactly one JSON object with seven fields:
+schema: agentlab.source_recipe_design.v1
+scopeSkillId: the selected scope id
+invariant: one source-grounded behavioral invariant, <=2048 bytes
+scenarios: 1..8 objects with exactly id, initialState, inputs, expectedObservations
+Each state/input/observation is a JSON object. Describe controlled seams explicitly.
+Scenario IDs have no slash or tilde. Derive expected observations from the actual
+source and declared inputs, not guesses. Include inputs that trigger wrong controls.
+checks: 1..64 exact id/pointer/expected objects. JSON pointers resolve into an
+object mapping scenario ID to its expectedObservations. All controls share this oracle.
+controls: 4..8 objects with exactly id, role, expectedFailedCheckIds, edits
+role is baseline/reference/wrong. Exactly one baseline has edits=[]. At least two
+references have distinct nonempty edits and no failed checks; at least one wrong
+has nonempty edits and a named nonempty failed-check subset.
+edits: 0..4 exact path/before/after objects, sequential in-memory substitutions.
+Paths must be loaded owned source. Copy exact original substrings including whitespace:
+each before must match exactly once at that edit step. No regex, no zero-match
+fallback, no unchanged edits or duplicate variants. after may be empty for deletion.
+Replacing a call with void call does not remove its side effect. Independent review
+still decides whether references preserve behavior and wrong inputs are exercised.
+limitations: 2..8 explicit unproved claims, each <=1024 bytes.
+No generated code is executed or approved by design validation.
+SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
+            if revision_context is not None:
+                design_prompt += '\nREVIEW DATA:\n' + json.dumps(revision_context, ensure_ascii=False)
+            design_result = participant.turn('source-recipe-design', workspace, prompt=design_prompt,
+                wall_time_limit_seconds=240, tool_call_limit=1, transport_retry_limit=0,
+                require_completed_tool_call=False,
+                reasoning_effort=None if args.reasoning_effort == 'default' else args.reasoning_effort)
+            require_complete_gateway_capture(evidence)
+            require_completed_generation(design_result, evidence)
+            for name in ('construction-completion.json', 'generation-completion.json'):
+                (evidence / name).rename(evidence / ('design-' + name))
+            design_content = design_result.get('content')
+            if not isinstance(design_content, str) or len(design_content.encode()) > 64 * 1024:
+                raise ValueError('Missing or oversized design response')
+            if not isinstance(json.loads(design_content), dict):
+                raise ValueError('Design must be one JSON object')
+            design_path = args.output / 'design.json'
+            design_path.write_bytes(design_content.encode())
+            checked = subprocess.run([str(args.gate.resolve()), '--validate-source-recipe-design',
+                '--author-request', str(args.request.resolve()), '--design', str(design_path.resolve()),
+                '--output', str((args.output / 'design-validation.json').resolve())], capture_output=True, timeout=60)
+            (evidence / 'design-check-stdout.log').write_bytes(checked.stdout)
+            (evidence / 'design-check-stderr.log').write_bytes(checked.stderr)
+            checked.check_returncode()
+            prompt += '\nFROZEN DESIGN (use exact edits, scenarios and shared contract):\n' + design_content
+            prompt += '\nPreserve check/control IDs, roles and expected failure sets exactly. '
+            prompt += 'Implement the listed edits verbatim and execute each declared scenario. '
+            prompt += 'Static design validation is not semantic approval.\n'
         result = participant.turn(
             'source-recipe-author', workspace, prompt=prompt,
             wall_time_limit_seconds=240, tool_call_limit=1,
@@ -191,6 +247,8 @@ SOURCE CONTEXT:
     command = [str(args.gate.resolve()), '--stage-source-recipe-proposal',
                '--author-request', str(args.request.resolve()), '--proposal', str(proposal_path),
                '--output', str((args.output / 'proposal-stage').resolve())]
+    if design_path is not None:
+        command += ['--design', str(design_path.resolve())]
     completed = subprocess.run(command, capture_output=True, timeout=60)
     (args.output / 'stage-stdout.log').write_bytes(completed.stdout)
     (args.output / 'stage-stderr.log').write_bytes(completed.stderr)

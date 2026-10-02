@@ -1,5 +1,72 @@
 # Gap-selected source verifier construction
 
+## Design before verifier code
+
+`--design-first` splits a contained construction into two bounded turns: design,
+then code only after native Rust source correction passes. The Action enables
+this by default; historical direct launcher calls remain opt-in. Each turn keeps
+zero transport retries and its own completion/generation captures. Both runtime
+receipt labels are independently validated, including a design-only failure.
+This is not a semantic retry or a promised two-round convergence.
+
+The first turn returns `agentlab.source_recipe_design.v1`, with exactly schema,
+scopeSkillId, invariant, scenarios, checks, controls and limitations. Scenarios
+have id, initialState, inputs and expectedObservations. Shared checks resolve
+into the object mapping scenario IDs to declared expected observations. Controls
+have id, role, expectedFailedCheckIds and edits. Every edit is path/before/after,
+using a loaded owned source and one exact sequential substring substitution.
+One unchanged baseline, at least two text-distinct nonempty references and one
+nonempty wrong variant are required. These text distinctions do not prove valid
+semantics or meaningful behavioral discrimination.
+
+`--validate-source-recipe-design --author-request REQUEST --design DESIGN
+--output RECEIPT` re-prepares the exact current request, applies edits only to
+in-memory source copies, rejects zero/multiple matches, no-change/duplicate
+variants, unloaded paths, invalid failure sets and inconsistent expected pointers.
+It executes no generated code and labels semanticQualified=false. The code turn
+must retain frozen check/control identities and expected values. Staging with
+`--design` rechecks that contract and requires every edited path in sourcePaths;
+the stage receipt binds original design and validation bytes. Explicit review
+recomputes those bindings and rejects missing or changed evidence.
+
+Static correction cannot prove that the emitted verifier implements the edits,
+that scenario inputs really trigger a wrong branch, or that reference changes
+preserve behavior. Independent source review and qualified control execution
+remain mandatory. Local arbitrary-source regressions prove refusal and lineage,
+not a real accepted design or approved verifier. Overall maturity remains 63%.
+
+## Live reviewed-feedback consumption, still rejected semantics
+
+PR #186 merged as `96b4f9dd985cfadae9cfea9083444cb9d11244a6` after all
+applicable checks passed. Action `37030787122` consumed five source-grounded
+review findings bound to original Action `37027636128`. Original artifact
+download, revision preparation and independent pre-dispatch admission succeeded.
+The contained Agent's native Responses capture completed in 9262 ms with clean
+EOF, semantic completion and no stream error. Strict JSON and Rust staging
+passed; independent filesystem, network and external-credential isolation passed.
+This proves real feedback delivery and unreviewed proposal production, not
+semantic correction or approved execution.
+
+Independent review rejects the revised verifier. Reference and wrong-gate
+transformations still target six-space indentation where the source uses four;
+the no-upload transformation targets eight spaces where the source uses six.
+They throw before observations rather than exercise the declared controls.
+Moreover, `void this.uploadPushToken()` still calls upload and is not suppression.
+After the denied scenario the state remains disabled; the second scenario only
+changes requestReject=false, so it follows request-success and log-info before
+token/post rather than the claimed already-enabled sequence. Frozen expectations
+and declared failure sets therefore do not follow the actual controlled inputs.
+No generated control was approved or executed; the successful Action is not a
+qualified maintenance result. Overall maturity remains 63%; formal cases and
+complete business cycles remain zero.
+
+Next producer gap: validate the scenario/observation contract and exact source
+transformations before emitting a full verifier, then route source-grounded
+feedback through a bounded reviewed chain. The current one-revision adapter
+refuses nested revisions; it cannot yet demonstrate iterative convergence.
+Preserve this rejected child and original lineage rather than editing the child
+or silently treating it as another original construction.
+
 ## Bounded review feedback producer
 
 The Rust `--prepare-source-recipe-revision` mode takes `--author-request` for
