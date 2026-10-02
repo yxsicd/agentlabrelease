@@ -862,3 +862,15 @@ and changing a permission outcome does not establish an already-enabled state.
 Keep scenario input, source branch, raw observation and frozen expectation aligned.
 Retain rejected children and report the revision-chain limit explicitly; never
 reset a child to an original generation to bypass that limit.
+
+Before executable verifier synthesis, consider the design-first producer to
+separate scenario/oracle judgment from code generation. Freeze declared inputs,
+expected observations, shared checks and exact in-memory source edits. Use the
+Rust gate to reject nonexistent or ambiguous edits, unchanged/duplicate variants,
+unloaded paths and inconsistent pointers before spending a code-generation turn.
+Bind the resulting design to staging and reverify it at explicit review. Static
+substring and contract consistency are not program-semantic proof: review the
+actual emitted verifier against the design, then execute qualified controls.
+Keep both contained-turn receipts even when the first phase fails; never count
+a design validation, text difference or two-turn launch as a productive scope
+transition, calibrated case or completed business cycle.

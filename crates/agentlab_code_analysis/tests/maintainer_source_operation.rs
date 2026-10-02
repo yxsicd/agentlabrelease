@@ -164,7 +164,8 @@ with tempfile.TemporaryDirectory() as d:
         (2, ['--reasoning-effort','default'], None,180,None),
         (3, ['--reasoning-effort','default','--thinking-type','disabled','--response-format','json-object'],None,180,'disabled'),
         (4, ['--api','openai-responses','--reasoning-effort','none','--response-format','json-object'],'none',180,None),
-        (5, ['--revision-request',str(revision_path)],'low',180,None)]:
+        (5, ['--revision-request',str(revision_path)],'low',180,None),
+        (6, ['--design-first'],'low',180,None)]:
         seen = {}
         class FakeParticipant:
             def __init__(self, evidence, state, binary, gateway, model, **options):
@@ -172,9 +173,10 @@ with tempfile.TemporaryDirectory() as d:
                 self.evidence = evidence
             def turn(self, label, workspace, **options):
                 seen['turn'] = options
+                seen.setdefault('labels',[]).append(label)
                 gateway = self.evidence/'gateway'
-                gateway.mkdir()
-                (gateway/'0001.status.json').write_text(json.dumps(dict(status=200,
+                gateway.mkdir(exist_ok=True)
+                (gateway/f'{len(seen["labels"]):04d}.status.json').write_text(json.dumps(dict(status=200,
                     outcome='completed',semanticComplete=True,upstreamEof=True,
                     streamError=None,clientDisconnected=False)))
                 return {'content':'{}','message':{'stopReason':'stop'}}
@@ -198,7 +200,12 @@ with tempfile.TemporaryDirectory() as d:
         assert seen['turn']['reasoning_effort'] == effort
         assert seen['turn']['transport_retry_limit'] == 0
         assert seen['closed'] is True
-        assert stage.call_count == (2 if index==5 else 1)
+        assert stage.call_count == (2 if index in (5,6) else 1)
+        if index==6:
+            assert seen['labels']==['source-recipe-design','source-recipe-author']
+            assert '--validate-source-recipe-design' in stage.call_args_list[0][0][0]
+            assert '--design' in stage.call_args[0][0]
+            assert (root/str(index)/'evidence/design-generation-completion.json').exists()
         if index==5:
             assert '--check-source-recipe-revision' in stage.call_args_list[0][0][0]
             assert json.loads((root/str(index)/'revision-request.json').read_bytes()) == revision_packet
@@ -216,6 +223,18 @@ with tempfile.TemporaryDirectory() as d:
         else: raise AssertionError('rejected revision dispatched')
         dispatch.assert_not_called()
     assert not (root/'rejected-revision/proposal.json').exists()
+    argv = ['author','--request',str(request),'--output',str(root/'rejected-design'),
+            '--gate','/unexecuted-fixture-gate','--pi','/unexecuted-fixture-pi','--design-first']
+    with patch.dict(os.environ,env), patch.object(sys,'argv',argv), \
+         patch.object(module.importlib.util,'spec_from_file_location',return_value=fake_spec), \
+         patch.object(module.importlib.util,'module_from_spec',return_value=SimpleNamespace(Participant=FakeParticipant)), \
+         patch.object(module.subprocess,'run',return_value=failure):
+        seen={}
+        try: module.main()
+        except subprocess.CalledProcessError: pass
+        else: raise AssertionError('rejected design continued')
+        assert seen['labels']==['source-recipe-design'] and seen['closed'] is True
+    assert not (root/'rejected-design/proposal.json').exists()
 "#;
     let result = Command::new("python3")
         .args(["-c", code])
@@ -831,6 +850,80 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
             {"id":"wrong","role":"wrong","expectedFailedCheckIds":["value"]}]}});
     let request_bytes = serde_json::to_vec(&request).unwrap();
     let proposal_bytes = serde_json::to_vec(&proposal).unwrap();
+    let body = request["sourceFiles"][0]["content"].as_str().unwrap();
+    let design = json!({"schema":"agentlab.source_recipe_design.v1","scopeSkillId":"scope-arbitrary",
+        "invariant":"Preserve the selected state value.","limitations":["No runtime proof","No semantic approval"],
+        "scenarios":[{"id":"state","initialState":{"value":1},"inputs":{"operation":"read"},"expectedObservations":{"value":1}}],
+        "checks":[{"id":"value","pointer":"/state/value","expected":1}],
+        "controls":[
+            {"id":"baseline","role":"baseline","expectedFailedCheckIds":[],"edits":[]},
+            {"id":"reference","role":"reference","expectedFailedCheckIds":[],"edits":[{"path":"src/state.json","before":body,"after":format!("{body}\n")}]},
+            {"id":"alternative","role":"reference","expectedFailedCheckIds":[],"edits":[{"path":"src/state.json","before":body,"after":format!("{body}\t")}]},
+            {"id":"wrong","role":"wrong","expectedFailedCheckIds":["value"],"edits":[{"path":"src/state.json","before":body,"after":"{\"value\":0}"}]}]});
+    let design_bytes = serde_json::to_vec(&design).unwrap();
+    let checked = author::design(&request_bytes, &design_bytes).unwrap();
+    assert_eq!(checked["semanticQualified"], false);
+    assert_eq!(checked["executionPerformed"], false);
+    assert_eq!(checked["controls"][1]["edits"][0]["matchCount"], 1);
+    assert_eq!(
+        fs::read_to_string(dir.join("source/src/state.json")).unwrap(),
+        body
+    );
+    for index in 0..9 {
+        let mut bad = design.clone();
+        match index {
+            0 => bad["controls"][1]["edits"][0]["before"] = json!("nonexistent indentation"),
+            1 => bad["controls"][1]["edits"][0]["before"] = json!("\""),
+            2 => bad["controls"][1]["edits"][0]["after"] = json!(body),
+            3 => bad["controls"][2]["edits"] = bad["controls"][1]["edits"].clone(),
+            4 => bad["controls"][1]["edits"][0]["path"] = json!("src/unloaded.json"),
+            5 => bad["controls"][1]["edits"][0]["path"] = json!("other/state.json"),
+            6 => bad["checks"][0]["expected"] = json!(2),
+            7 => bad["checks"][0]["pointer"] = json!("/state/value/length"),
+            _ => bad["controls"][3]["expectedFailedCheckIds"] = json!([]),
+        }
+        assert!(
+            author::design(&request_bytes, &serde_json::to_vec(&bad).unwrap()).is_err(),
+            "accepted bad design {index}"
+        );
+    }
+    let designed_stage = dir.join("designed-stage");
+    assert!(author::stage_with_design(
+        &request_bytes,
+        &proposal_bytes,
+        &design_bytes,
+        &designed_stage
+    )
+    .is_err());
+    assert!(!designed_stage.exists());
+    let mut designed_proposal = proposal.clone();
+    designed_proposal["contract"]["checks"] = design["checks"].clone();
+    author::stage_with_design(
+        &request_bytes,
+        &serde_json::to_vec(&designed_proposal).unwrap(),
+        &design_bytes,
+        &designed_stage,
+    )
+    .unwrap();
+    assert_eq!(
+        fs::read(designed_stage.join("design.json")).unwrap(),
+        design_bytes
+    );
+    let validation_path = designed_stage.join("design-validation.json");
+    let original_validation = fs::read(&validation_path).unwrap();
+    let mut changed_validation = original_validation.clone();
+    changed_validation.push(b' ');
+    fs::write(&validation_path, &changed_validation).unwrap();
+    let changed_output = dir.join("tampered-design-approval.json");
+    assert!(author::approve(
+        &designed_stage,
+        &digest(&fs::read(designed_stage.join("proposal.json")).unwrap()),
+        true,
+        &changed_output
+    )
+    .is_err());
+    assert!(!changed_output.exists());
+    fs::write(&validation_path, &original_validation).unwrap();
     let feedback = json!({"schema":"agentlab.source_recipe_review_feedback.v1",
         "parentRequestSha256":digest(&request_bytes),"parentProposalSha256":digest(&proposal_bytes),
         "reviewed":true,"reviewer":"independent-fixture-review","verdict":"revise","automaticPromotion":false,
