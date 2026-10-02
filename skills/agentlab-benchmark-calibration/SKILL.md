@@ -35,6 +35,16 @@ axes; none substitutes for an explicitly required exact runtime version. A
 host's device permissions, cold boot and HDC connection qualify environment
 availability only, not application behavior or complete case calibration.
 
+An operation ID is a transient execution handle, not a durable evidence archive.
+If historical operation lookup is unavailable, recover retained raw files through
+the exact target peer, compare their original byte lengths/digests, and reconstruct
+the observations before scheduling repeated work. For UI captures, select the
+declared application/page owner and unique observable nodes inside it; an unrelated
+window's matching text cannot satisfy the Oracle. Keep unsupported formats and
+unrecovered build/patch/command captures as explicit gaps. Raw readback does not
+authenticate the historical producer or qualify a new runtime execution. See
+[the retained-evidence audit](../../docs/flywheel-retained-calibration-readback-20261003.md).
+
 Use the task's actual expected baseline: a bug-fix case may fail before the patch; an extension case may pass old tests but fail new demand checks. Reference passes and targeted wrong-boundary/lost-history variants should fail the intended checks. Save complete output and exact identities in `evaluation_cases` calibration rows, with analysis evidence in `program_facts`.
 
 For repository-independent diagnostic repair, use the
