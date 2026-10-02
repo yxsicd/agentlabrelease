@@ -909,7 +909,7 @@ exports.PushServiceManager = class {
       if (!notification.isNotificationEnabledSync()) await notification.requestEnableNotification(context);
       const pushToken = await push.getToken();
       await service.postPushToken({pushToken});
-    } catch (error) {}
+    } catch (error) { require('../util/Logger').default.error('push', error); }
   }
 };
 "#;
@@ -927,8 +927,43 @@ exports.PushServiceManager = class {
         ("syntax", format!("{valid}// SYNTAX_REJECTED"), None),
         ("answer", valid.to_owned(), None),
         ("bad-input", format!("{valid}// SYNTAX_REJECTED"), None),
+        (
+            "logged-failure",
+            valid.to_owned(),
+            Some(
+                json!({"settledCalls":1,"unhandled":0,"payloads":["token-0"],"failureObserved":true}),
+            ),
+        ),
+        (
+            "silent-failure",
+            valid.replace(".default.error(", ".default.info("),
+            Some(
+                json!({"settledCalls":1,"unhandled":0,"payloads":["token-0"],"failureObserved":false}),
+            ),
+        ),
+        (
+            "wrong-payload",
+            valid.replace("{pushToken}", "{pushToken:'wrong-token'}"),
+            Some(
+                json!({"token":2,"post":2,"settledCalls":3,"unhandled":0,"payloads":["wrong-token","wrong-token"],"failureObserved":false}),
+            ),
+        ),
+        (
+            "token-pending",
+            valid.to_owned(),
+            Some(json!({"token":1,"post":0,"settledCalls":0})),
+        ),
     ] {
         let mut check = json!({"id":"retry","input":{"mode":"retry-success"}});
+        if id == "logged-failure" || id == "silent-failure" {
+            check["input"] = json!({"mode":"post-failure","observe":"outcome"});
+        }
+        if id == "wrong-payload" {
+            check["input"]["observe"] = json!("outcome");
+        }
+        if id == "token-pending" {
+            check["input"]["mode"] = json!("token-pending");
+        }
         if id == "answer" {
             check["expected"] = json!({"passed":true});
         }

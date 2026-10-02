@@ -248,6 +248,13 @@ IDs/inputs; retain references and independent comparison outside that container.
 Validate every input before executing source or returning syntax rejection.
 Identical control verdicts across this boundary qualify adapter compatibility,
 not complete Oracle coverage or a new Agent outcome.
+Do not assert demanded payload correctness inside a host seam by throwing into
+submitted code: its catch handler can hide the violation and the observer changes
+the behavior being measured. Record bounded payload values for independent checks.
+Grade failure visibility separately from rejection containment, with a clean
+success control; silent catch-and-resolve can satisfy containment alone. Hold
+each demanded asynchronous stage independently before claiming single-flight
+coverage. Freeze additive predicates in a successor cut and preserve old results.
 For navigation outcome extensions, validate stack and animation behavior as well
 as success/failure returns. A wrong push-for-replace variant can pass return tests
 while corrupting the stack. Source-verifying a caller is not implementing or

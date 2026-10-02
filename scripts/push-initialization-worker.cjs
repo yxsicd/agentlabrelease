@@ -6,7 +6,7 @@ const request = JSON.parse(fs.readFileSync(process.argv[2]));
 const support = JSON.parse(fs.readFileSync(process.argv[3]));
 const compilerPath = process.argv[4];
 const modes = new Set(['denied','check-throws','pending','post-failure','concurrent',
-  'retry-success','retry-post-failure','retry-token-failure','permission-pending']);
+  'retry-success','retry-post-failure','retry-token-failure','permission-pending','token-pending']);
 if (request.schema !== 'agentlab.behavior_executor_request.v1' ||
     typeof request.submittedSource !== 'string' ||
     sha(request.submittedSource) !== request.submittedSourceSha256 ||
@@ -21,7 +21,9 @@ if (!Array.isArray(request.checks) || request.checks.length < 1 || request.check
 for (const check of request.checks) {
   if (typeof check.id !== 'string' || !check.id ||
       Object.keys(check).some(key => !['id','input'].includes(key)) ||
-      !check.input || Object.keys(check.input).length !== 1 || !modes.has(check.input.mode))
+      !check.input || Object.keys(check.input).some(key => !['mode','observe'].includes(key)) ||
+      !modes.has(check.input.mode) ||
+      (Object.hasOwn(check.input,'observe') && check.input.observe !== 'outcome'))
     throw Error('Unsupported push input or evaluator expectations');
 }
 const ts = require(compilerPath);
@@ -38,8 +40,9 @@ const deferred = () => { let resolve,reject; const promise = new Promise((a,b) =
 const tick = () => new Promise(resolve => setImmediate(resolve));
 async function observe(check) {
   if (rejection) return {id:check.id,input:check.input,actual:rejection};
-  const mode=check.input.mode, postGate=deferred(), permissionGate=deferred();
-  let token=0,post=0,requests=0,settledCalls=0,phase=0,unhandled=0;
+  const mode=check.input.mode, postGate=deferred(), permissionGate=deferred(), tokenGate=deferred();
+  let token=0,post=0,requests=0,settledCalls=0,phase=0,unhandled=0,errorLogs=0,rejectedCalls=0;
+  const payloads=[];
   const listener=() => {unhandled++;};
   process.on('unhandledRejection',listener);
   try {
@@ -49,13 +52,15 @@ async function observe(check) {
         if(mode==='check-throws') throw {message:'check-failed'};
         return !['denied','permission-pending'].includes(mode);
       },requestEnableNotification(){requests++;return mode==='denied' ? Promise.reject({message:'permission-denied'}) : permissionGate.promise;}}},
-      '@kit.PushKit':{pushService:{getToken(){token++;return mode==='retry-token-failure' && phase===0 ? Promise.reject({message:'token-failed'}) : Promise.resolve('token-'+phase);}}},
-      '../util/Logger':{__esModule:true,default:{info(){},error(){}}},
+      '@kit.PushKit':{pushService:{getToken(){token++;
+        if(mode==='token-pending' && phase===0) return tokenGate.promise;
+        return mode==='retry-token-failure' && phase===0 ? Promise.reject({message:'token-failed'}) : Promise.resolve('token-'+phase);}}},
+      '../util/Logger':{__esModule:true,default:{info(){},error(){errorLogs++;}}},
       './PushService':{PushService:{postPushToken(params){
         post++;
-        // Preserved calibration-0 boundary: malformed payload remains an
-        // unsupported observation, not a falsely qualified behavioral verdict.
-        if(params.pushToken !== 'token-'+phase) throw Error('Unsupported token payload');
+        // Observe submitted values without throwing into (and changing) source
+        // failure handling. The independent contract decides payload correctness.
+        payloads.push(typeof params?.pushToken === 'string' ? params.pushToken : null);
         return phase===0 ? postGate.promise : Promise.resolve(true);
       }}}
     };
@@ -71,13 +76,14 @@ async function observe(check) {
     const start=() => {
       const promise=vm.runInContext('manager.initPushServiceManager({});',context,{timeout:1000});
       if(!promise || typeof promise.then !== 'function') throw Error('Unsupported initialization return');
-      promise.then(() => {settledCalls++;},() => {settledCalls++;});
+      promise.then(() => {settledCalls++;},() => {settledCalls++;rejectedCalls++;});
     };
-    const concurrent=['concurrent','retry-success','retry-post-failure','retry-token-failure','permission-pending'].includes(mode);
+    const concurrent=['concurrent','retry-success','retry-post-failure','retry-token-failure','permission-pending','token-pending'].includes(mode);
     start();if(concurrent) start();await tick();await tick();
     let actual;
     if(mode==='pending') actual={pending:settledCalls===0,post};
     else if(mode==='concurrent') actual={token,post,settledCalls};
+    else if(mode==='token-pending') actual={token,post,settledCalls};
     else if(mode==='permission-pending') actual={requests,token,settledCalls};
     else if(mode==='denied'||mode==='check-throws') actual={token,post,settledCalls,unhandled};
     else {
@@ -87,7 +93,8 @@ async function observe(check) {
       if(mode.startsWith('retry-')) {phase=1;start();await tick();await tick();actual={token,post,settledCalls,unhandled};}
       else actual={settledCalls,unhandled};
     }
-    postGate.resolve(true);permissionGate.resolve();await tick();await tick();
+    if(check.input.observe==='outcome') actual={...actual,payloads:payloads.slice(),failureObserved:errorLogs>0||rejectedCalls>0};
+    postGate.resolve(true);permissionGate.resolve();tokenGate.resolve('token-0');await tick();await tick();
     return {id:check.id,input:check.input,actual};
   } finally {process.removeListener('unhandledRejection',listener);}
 }

@@ -2,6 +2,30 @@
 
 ## Push initialization adapter checkpoint
 
+The successor `push-contained-calibration-2` retains all nine previous checks
+and adds independently held token acquisition, post-failure visibility and
+token payload checks. Error logging or a rejected initialization is an explicit
+operator-selected failure channel; a successful retry sequence must not report
+failure. This interpretation remains subject to independent task review. The
+worker records payloads instead of throwing into submitted catch handlers. Eight
+normal-exit containers produced 96 observations: both valid strategies passed,
+and silent failure and incorrect token controls failed named outcome checks.
+Baseline failed ten checks. Independent Rust readback selected
+`execute-agent-attempt`, with `qualified:false`.
+
+Successor contract/capture/feedback SHA256s respectively are
+`5137c1b744c32587f9b748a874ca293e94976ddab68beee31d3a0554a6f40163`,
+`9dd00490f9e746a709396252194e7d70f18fa3e68e51d249938f8f3a085f58a0`,
+and `3de05323b86081d7432cfefb4de5b558487f17a202f1d116c83a9f3d613e83e7`.
+The prior worker bytes remain as `worker-frozen.cjs` in calibration-1, matching
+its original descriptor digest. No historical input or verdict was rewritten.
+Maturity remains 64%: this closes three diagnostic Oracle gaps, not automatic
+case production/admission, an assessed participant or platform qualification.
+Singleton/export/return violations and unsupported imports still need explicit
+task-versus-infrastructure routing review before formal qualification.
+
+### Retained first contained cut
+
 `scripts/push-initialization-worker.cjs` accepts the existing executor request
 protocol and the existing network-disabled Docker launcher. It executes the
 submitted PushServiceManager module with explicit permission/token/post seams,
