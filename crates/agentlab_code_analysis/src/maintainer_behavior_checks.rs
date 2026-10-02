@@ -135,19 +135,48 @@ pub fn lesson_assets(
         "code":"maintainer_behavior_checks::verify","inputSha256":digest(capture_bytes),"result":feedback}),
     );
     let mut control_ids = Vec::new();
-    for control in controls.iter().filter(|c| c["role"] != "agent-attempt") {
-        let id = format!("{run}-control-{}", digest(text(control, "id")?.as_bytes()));
-        control_ids.push(id.clone());
-        put(
-            "calibration_controls",
-            json!({"id":id,"variant":control["id"],"role":control["role"],"completed":true,
+    let mut attempt_ids = Vec::new();
+    for control in controls {
+        let is_attempt = control["role"] == "agent-attempt";
+        let id = format!(
+            "{run}-{}-{}",
+            if is_attempt { "attempt" } else { "control" },
+            digest(text(control, "id")?.as_bytes())
+        );
+        if is_attempt {
+            attempt_ids.push(id.clone());
+            let declaration = contract["controls"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|row| row["id"] == control["id"])
+                .unwrap();
+            put(
+                "attempts",
+                json!({"id":id,"kind":"recorded-behavior-attempt","variant":control["id"],
+                "candidateId":candidate["id"],"repositoryId":repository,"sourceRevision":candidate["sourceRevision"],
+                "submittedSourceSha256":declaration["submittedSourceSha256"],
+                "behaviorPassed":control["failedCheckIds"].as_array().unwrap().is_empty(),
+                "failedCheckIds":control["failedCheckIds"],"capturePath":"behavior-capture.json",
+                "captureSha256":digest(capture_bytes),"contractSha256":digest(contract_bytes),
+                "stdoutSha256":control["stdoutSha256"],"participantCompletionVerified":false,
+                "producerAuthenticated":false,"qualified":false}),
+            );
+        } else {
+            control_ids.push(id.clone());
+            put(
+                "calibration_controls",
+                json!({"id":id,"variant":control["id"],"role":control["role"],"completed":true,
             "observedVerdict":if control["failedCheckIds"].as_array().unwrap().is_empty(){"accept"}else{"reject"},
             "capturePath":"behavior-capture.json","captureSha256":digest(capture_bytes),"stdoutSha256":control["stdoutSha256"]}),
-        );
+            );
+        }
         for check in control["checks"].as_array().unwrap() {
             put(
                 "checks",
-                json!({"id":format!("{id}-check-{}",digest(text(check,"id")?.as_bytes())),"controlId":id,
+                json!({"id":format!("{id}-check-{}",digest(text(check,"id")?.as_bytes())),
+                "controlId":if is_attempt {Value::Null}else{json!(id)},
+                "attemptId":if is_attempt {json!(id)}else{Value::Null},
                 "variant":control["id"],"check":check["id"],"passed":check["passed"],"capturePath":"behavior-capture.json",
                 "captureSha256":digest(capture_bytes),"authority":"independently-reconstructed-frozen-check"}),
             );
@@ -166,7 +195,7 @@ pub fn lesson_assets(
         "lesson_evidence",
         json!({"id":evidence,"lessonId":review["id"],"kind":"reconstructed-behavior-controls",
         "capturePath":"behavior-capture.json","captureSha256":digest(capture_bytes),"reviewPath":"lesson-review.json",
-        "reviewSha256":digest(review_bytes),"controlIds":control_ids}),
+        "reviewSha256":digest(review_bytes),"controlIds":control_ids,"attemptIds":attempt_ids}),
     );
     put(
         "lesson_validations",

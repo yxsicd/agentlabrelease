@@ -345,6 +345,92 @@ fn rejects_changed_contract_identity_and_duplicate_valid_sources() {
 }
 
 #[test]
+fn lesson_exports_passing_and_rejected_attempts_without_calibration_or_identity_claims() {
+    let (mut contract, mut capture) = fixture();
+    let candidate = json!({"id":"generic-task","repositoryId":"another-repository","sourceRevision":"b".repeat(40)});
+    let candidate_bytes = serde_json::to_vec(&candidate).unwrap();
+    contract["candidateSha256"] = json!(digest(&candidate_bytes));
+    capture["candidateSha256"] = contract["candidateSha256"].clone();
+    for (name, failing) in [("attempt-pass", false), ("attempt-reject", true)] {
+        contract["controls"].as_array_mut().unwrap().push(json!({"id":name,"role":"agent-attempt","submittedSourceSha256":digest(name.as_bytes()),"expectedFailedCheckIds":[]}));
+        let mut worker = capture["workers"][1].clone();
+        worker["id"] = json!(name);
+        capture["workers"].as_array_mut().unwrap().push(worker);
+        let index = capture["workers"].as_array().unwrap().len() - 1;
+        modify(&mut capture, index, |raw| {
+            raw["id"] = json!(name);
+            raw["submittedSource"] = json!(name);
+            raw["submittedSourceSha256"] = json!(digest(name.as_bytes()));
+            if failing {
+                raw["observations"][1]["actual"] = json!({"cleared":false});
+            }
+        });
+    }
+    let contract_bytes = serde_json::to_vec(&contract).unwrap();
+    capture["contractSha256"] = json!(digest(&contract_bytes));
+    let capture_bytes = serde_json::to_vec(&capture).unwrap();
+    let review = json!({"schema":"agentlab.behavior_lesson_review.v1","reviewed":true,"automaticPromotion":false,
+        "candidateSha256":digest(&candidate_bytes),"sourceRevision":candidate["sourceRevision"],
+        "contractSha256":digest(&contract_bytes),"captureSha256":digest(&capture_bytes),
+        "id":"review","scope":"seam","reviewerId":"operator","phenomenon":"observed",
+        "cause":"reviewed interpretation","change":"retain outcomes","factId":"fact","skillId":"skill",
+        "body":"Preserve rejected outcomes.","skillStage":"evaluation"});
+    let build = || {
+        agentlab_code_analysis::maintainer_behavior_checks::lesson_assets(
+            &candidate_bytes,
+            &contract_bytes,
+            &capture_bytes,
+            &serde_json::to_vec(&review).unwrap(),
+        )
+        .unwrap()
+    };
+    let tables = build();
+    assert_eq!(tables, build());
+    assert_eq!(tables["calibration_controls"].len(), 5);
+    assert_eq!(tables["attempts"].len(), 2);
+    assert_eq!(tables["checks"].len(), 14);
+    for attempt in tables["attempts"].values() {
+        let passing = attempt["variant"] == "attempt-pass";
+        assert_eq!(attempt["behaviorPassed"], passing);
+        assert_eq!(
+            attempt["submittedSourceSha256"],
+            digest(attempt["variant"].as_str().unwrap().as_bytes())
+        );
+        for field in [
+            "participantCompletionVerified",
+            "producerAuthenticated",
+            "qualified",
+        ] {
+            assert_eq!(attempt[field], false);
+        }
+        let checks: Vec<_> = tables["checks"]
+            .values()
+            .filter(|row| row["attemptId"] == attempt["id"])
+            .collect();
+        assert_eq!(checks.len(), 2);
+        assert!(checks.iter().all(|row| row["controlId"].is_null()));
+        assert_eq!(
+            checks.iter().filter(|row| row["passed"] == false).count(),
+            if passing { 0 } else { 1 }
+        );
+    }
+    assert_eq!(
+        tables["experiment_lessons"]["review"]["promotionContract"]["expected"]
+            .as_object()
+            .unwrap()
+            .len(),
+        5
+    );
+    assert_eq!(
+        tables["lesson_evidence"].values().next().unwrap()["attemptIds"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+}
+
+#[test]
 fn agent_outcomes_retain_every_frozen_check_and_select_behavioral_repair() {
     let (mut contract, mut capture) = fixture();
     contract["controls"].as_array_mut().unwrap().push(json!({"id":"agent","role":"agent-attempt","submittedSourceSha256":digest(b"agent subject"),"expectedFailedCheckIds":[]}));

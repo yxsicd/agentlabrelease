@@ -2,6 +2,23 @@
 
 ## Push initialization adapter checkpoint
 
+### Structured actual-attempt feedback
+
+The behavior lesson consumer now exports actual submissions as `attempts`, with
+checks linked by attemptId and null controlId; calibration controls stay separate.
+Passing and rejected attempts retain source/stdout/contract/capture identities.
+Calibration validation expectations do not include participant outcomes. Completion,
+producer authentication and formal qualification remain false at this boundary.
+
+Reconstruction of the retained real `push-agent-loop-pO1Bz0gH/attempts-2/attempt-0`
+into fresh `lesson-assets-attempt-projection-1` produced one attempt and twelve
+passing attempt checks, alongside unchanged eight controls and ninety-six
+calibration checks. All four raw input files are byte-identical to the prior
+export. No participant or worker reran. The consumer digest creates a new
+projection identity, not another physical execution. This closes typed outcome
+loss during export; committed admission and next-cut consumption remain pending.
+Overall maturity remains 64%; no full business cycle is claimed.
+
 ### Recorded real source attempt
 
 External `.artifacts/push-agent-loop-pO1Bz0gH/attempts-2` executed the unchanged

@@ -80,3 +80,11 @@ raw bytes; separately prove the evidence bundle's durable availability.
 Test with real SWE/Harmony evidence plus a small public synthetic fixture. Prove
 joins, context changes/history, tool errors, raw-file reconstruction and stable
 repeat import, not only successful archival. Preserve release qualification gates.
+
+Behavior lesson exports keep actual submissions in `attempts` and link their
+typed checks by attemptId, separately from calibration_controls/controlId. Retain
+both passing and rejected attempts, source/stdout/capture identities and raw bytes;
+do not substitute the calibration verdict map for participant outcomes. Re-export
+retained evidence with a changed consumer into a fresh directory: the new run
+identity is a projection version, not another execution. Behavior-only reconstruction
+does not verify participant completion, authenticate its producer or qualify a case.
