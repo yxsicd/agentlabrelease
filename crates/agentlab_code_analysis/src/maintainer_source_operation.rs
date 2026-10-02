@@ -11,6 +11,17 @@ use std::{
     process::Command,
 };
 
+const METHOD_FILE_BYTES: usize = 16 * 1024 * 1024;
+const METHOD_TOTAL_BYTES: usize = 32 * 1024 * 1024;
+
+fn method_bytes(path: &Path, remaining: &mut usize) -> Result<Vec<u8>, String> {
+    let bytes = read(path, METHOD_FILE_BYTES.min(*remaining))?;
+    *remaining = remaining
+        .checked_sub(bytes.len())
+        .ok_or("source operation method total budget")?;
+    Ok(bytes)
+}
+
 fn need(ok: bool, message: &str) -> Result<(), String> {
     if ok {
         Ok(())
@@ -253,9 +264,14 @@ fn verify_inputs(recipe: &Value, source: &Path) -> Result<(), String> {
             "source operation Git Blob differs",
         )?;
     }
+    let mut remaining = METHOD_TOTAL_BYTES;
     for method in recipe["methodInputs"].as_array().unwrap() {
         need(
-            method["sha256"] == digest(&read(Path::new(text(method, "path")?), 4 * 1024 * 1024)?),
+            method["sha256"]
+                == digest(&method_bytes(
+                    Path::new(text(method, "path")?),
+                    &mut remaining,
+                )?),
             "source operation method bytes drift",
         )?;
     }
@@ -361,6 +377,7 @@ pub fn execute(
         )?;
     }
     let mut captures = Vec::new();
+    let mut remaining = METHOD_TOTAL_BYTES;
     for (i, method) in recipe["methodInputs"]
         .as_array()
         .unwrap()
@@ -370,7 +387,7 @@ pub fn execute(
         save(
             out,
             &format!("method-{i}.original"),
-            &read(Path::new(text(method, "path")?), 4 * 1024 * 1024)?,
+            &method_bytes(Path::new(text(method, "path")?), &mut remaining)?,
         )?;
     }
     let result = (|| -> Result<(), String> {
@@ -447,6 +464,7 @@ pub fn qualify(root: &Path, execution_sha: &str) -> Result<Value, String> {
             "source operation original source differs",
         )?;
     }
+    let mut remaining = METHOD_TOTAL_BYTES;
     for (i, method) in recipe["methodInputs"]
         .as_array()
         .unwrap()
@@ -455,9 +473,9 @@ pub fn qualify(root: &Path, execution_sha: &str) -> Result<Value, String> {
     {
         need(
             method["sha256"]
-                == digest(&read(
+                == digest(&method_bytes(
                     &root.join(format!("method-{i}.original")),
-                    4 * 1024 * 1024,
+                    &mut remaining,
                 )?),
             "source operation original method differs",
         )?;
