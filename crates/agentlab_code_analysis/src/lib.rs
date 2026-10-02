@@ -20,6 +20,7 @@ pub mod maintainer_operation_stage;
 pub mod maintainer_semantic_round;
 pub mod maintainer_skill_flywheel;
 pub mod maintainer_source_operation;
+pub mod maintainer_source_operation_loop;
 pub mod maintainer_stage_feedback;
 extern "C" {
     fn tree_sitter_agentlab_arkts() -> *const ();
