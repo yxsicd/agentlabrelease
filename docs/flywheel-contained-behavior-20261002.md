@@ -188,3 +188,37 @@ compiler diagnostics as explicit rejected observations for the unchanged checks,
 so ordinary bounded repair can consume them. Unbound compiler/configuration,
 loader and container failures still stop as infrastructure. Original expectations
 are unchanged; successful execution of a later repair remains required.
+
+## Independently verified second-repository execution
+
+After PR 162, main `ead54de204a2891412df152bfcecef8b2358116a` ran
+[36975892849](https://github.com/yxsicd/agentlabrelease/actions/runs/36975892849)
+successfully. The guide-snippets participant completed once: 42,319 ms native
+process time, 42,766 ms adapter time, four completed low-policy exchanges,
+zero transport retries and submitted source SHA256
+`906d7be1c7b93c8925253150c5a1dd3e4544695bb795c385c1b414118963ba5b`.
+The separate executor completed in 504 ms; all six frozen lifecycle checks passed.
+Downloaded contract/capture reconstruction independently returned
+`review-agent-outcome`; independent author-completion replay passed.
+The Action's runtime consumer passed the declared Docker filesystem, credential
+and network policy. Its archived runtime configuration retains SHA256
+`9c51dec47ace71edcd9061e3c49cb688ef202e7f2b41c4d9953596b014291bf1`.
+
+This is a real second-repository submission-to-verdict path through the shared
+controller, preparation and capture protocol, with a separately selected reviewed
+ApplicationContext adapter. It is not automatic adapter discovery or arbitrary
+repository evaluation. The first attempt passed; no failure-feedback repair was
+exercised. The previous malformed submission remains a separate failed run, not
+this run's predecessor attempt. Lower-policy completion does not establish causal
+policy benefit. Neither run used maintainer guidance, so no Skills benefit follows.
+Overall maturity is 58% (+2 for verified two-repository execution), an engineering
+estimate; full automatic knowledge feedback, repeated real learning rounds,
+formal Harmony/ohosTest/emulator and broader transfer remain incomplete.
+
+The next highest-value integration is fixed-cut maintainer guidance on the
+behavior-repair path, currently hardcoded unguided. Reuse the existing knowledge
+selection/binding and raw-exchange consumer: bind exact source applicability and
+request identity, preserve guidance outside evaluator/reference mounts, and use
+the same checks, model/policy and budgets for unguided/guided arms. A consumption
+receipt alone must not become learning benefit. Evidence admission and a later
+knowledge cut remain explicit, independent of the current frozen assessment.
