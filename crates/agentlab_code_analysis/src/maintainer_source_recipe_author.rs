@@ -362,6 +362,17 @@ pub fn stage(request_bytes: &[u8], proposal_bytes: &[u8], output: &Path) -> Resu
         .as_array()
         .filter(|a| (4..=8).contains(&a.len()))
         .ok_or("recipe author controls")?;
+    for control in controls {
+        need(
+            control.as_object().is_some_and(|o| o.len() == 3)
+                && control.get("id").is_some_and(Value::is_string)
+                && matches!(control["role"].as_str(), Some("baseline" | "reference" | "wrong"))
+                && control["expectedFailedCheckIds"]
+                    .as_array()
+                    .is_some_and(|ids| ids.iter().all(Value::is_string)),
+            "recipe author control must contain exactly id, role (baseline/reference/wrong) and expectedFailedCheckIds string array",
+        )?;
+    }
     need(
         controls.iter().filter(|c| c["role"] == "reference").count() >= 2,
         "recipe author alternative-valid control required",

@@ -833,3 +833,10 @@ completed status, no error/incomplete details and clean EOF; a created event,
 HTTP 200, DONE marker or rate-limit error is not successful generation. Preserve
 the original rate-limit attempt and validate a later explicit bounded probe,
 not hidden retries. Small probe success still does not qualify full construction.
+
+Expose exact enum values in construction contracts, not just prose descriptions
+of control roles. Reject unknown roles or malformed failure arrays before staging
+files. A schema correction cannot repair semantic defects: independently verify
+that reference IDs select distinct valid implementations, source transformations
+match their intended body, and input states actually exercise every wrong control.
+An unchanged source or an untriggered mutation cannot prove discrimination.

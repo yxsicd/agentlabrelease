@@ -105,6 +105,8 @@ Each check MUST be an object, not a string/check name, for example
 {{"id":"observed-count","pointer":"/count","expected":1}}.
 stdout contains raw state/counts/events; expected values live only in contract.checks.
 controls: 4..8 objects with exactly id, role, expectedFailedCheckIds
+role is exactly one of "baseline", "reference", "wrong", never descriptive prose.
+For example {{"id":"valid-alternative","role":"reference","expectedFailedCheckIds":[]}}.
 Every control emits the same observation shape and is checked against the same
 frozen contract.checks. Reference controls MUST have expectedFailedCheckIds=[].
 Wrong controls MUST have a nonempty exact subset of those shared check IDs.
@@ -120,6 +122,11 @@ Both valid alternatives must preserve the chosen invariant; deleting a required
 operation or duplicating a side effect is not a valid reference merely because
 it has a reference label. Ensure each in-memory transformation actually matches
 the supplied source and every observation executes that transformed source body.
+Every reference ID must select a distinct valid implementation, not silently reuse
+the baseline. Every wrong ID must select an actual behavioral change. Reject a
+transformation that matches zero locations rather than falling back to unchanged
+source. Exercise the input/state that exposes each wrong control: a disabled-state
+mutation cannot be distinguished by running only successful enablement scenarios.
 Do not grade source spelling, hashes, regex matches or unchanged original text
 as a substitute for behavior. Identity hashes are already the operator's job.
 The operator binds commands to a pinned Node executable. Your verifier receives
