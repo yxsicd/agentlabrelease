@@ -77,6 +77,11 @@ state-transition checks including create, release, recreate and failure retry;
 test boundary identifiers from the task demand and preserve unrelated callbacks.
 Different valid strategies may satisfy the same observable contract. Calibrating
 a second adapter is not yet a real participant transfer or knowledge benefit.
+After real transfer, report which controller/capture components were reused and
+which reviewed semantic adapter remained operator-supplied. Passing tasks on two
+adapters does not establish automatic adapter discovery or Skills improvement.
+Measure knowledge treatment with equal task checks, model/policy and budgets;
+do not count separate first-attempt successes as failure-feedback learning.
 
 An explicit frozen task demand can define new behavior even when the repository's
 original intent is unknown. Bind that demand before calibration and distinguish
