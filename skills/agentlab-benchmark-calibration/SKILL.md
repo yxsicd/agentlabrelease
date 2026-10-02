@@ -37,6 +37,18 @@ availability only, not application behavior or complete case calibration.
 
 Use the task's actual expected baseline: a bug-fix case may fail before the patch; an extension case may pass old tests but fail new demand checks. Reference passes and targeted wrong-boundary/lost-history variants should fail the intended checks. Save complete output and exact identities in `evaluation_cases` calibration rows, with analysis evidence in `program_facts`.
 
+For repository-independent diagnostic repair, use the
+[bounded behavior controller](../../docs/flywheel-behavior-loop-20261002.md).
+Freeze checks and calibration first; adapters execute submitted source while
+Rust independently compares actual values with those frozen expectations.
+Deliver failure feedback to a new bounded attempt without replacing earlier
+checks, and stop on infrastructure failure, unchanged failed source or budget.
+Distinct calibration controls do not require an Agent to avoid a legitimate
+accepted source. Deterministic adapter regressions prove controller mechanics,
+not model learning, authenticated Agent completion or platform qualification.
+Keep reviewed command adapters separate from security isolation and trusted
+Gateway capture; generic scheduling alone does not provide either boundary.
+
 An explicit frozen task demand can define new behavior even when the repository's
 original intent is unknown. Bind that demand before calibration and distinguish
 task-baseline failure from a claim of a defect in the upstream project. Require

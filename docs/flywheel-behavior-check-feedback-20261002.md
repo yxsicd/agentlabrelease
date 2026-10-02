@@ -28,7 +28,9 @@ contract bytes and the same execution identities, plus a `workers` array. Each
 worker has its declared `id` and an `execution` containing normal `exitCode:0`,
 `timedOut:false`, positive bounded integer `durationMs`, original `stdout` and
 `stdoutSha256`. Stdout is JSON containing `id`, original/submitted source digests,
-exact `submittedSource` bytes and one observation per frozen check. Observations
+exact `submittedSource` bytes and one observation per frozen check. Calibration
+sources must be distinct; an Agent attempt may match an accepted source.
+Observations
 have `id`, exact `input` and `actual`. Producer `expected`/`passed` fields do not
 control scoring: the Rust consumer recomputes exact JSON equality with the frozen
 contract. Missing inputs (including missing versus explicit null), repeated or
