@@ -885,3 +885,14 @@ counts explicit (zero to two), validate every actual contained-turn receipt, and
 stop code generation when exhausted. Correcting one static error does not settle
 other source or oracle defects; independently review the resulting design and
 verifier before execution or knowledge admission.
+
+Verify native context continuity before attributing a failed revision to semantic
+reasoning. Reusing a Participant or the same path is not proof of session reuse:
+participant startup migration can move that file and silently create a fresh
+session at its old path. Keep sessions outside migration-scanned state roots,
+bind pre-turn history bytes and native IDs, and reject missing/replaced established
+sessions before dispatch or changed history/IDs after execution. Inspect the
+actual next upstream input for source, prior proposal and feedback before claiming
+delivery; local file continuity alone does not prove wire-context delivery. Retain
+the original failed exchange. A provider prompt rejection and a proven history
+loss are separate observations unless further evidence establishes causality.

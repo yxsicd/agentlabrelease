@@ -23,6 +23,77 @@ fn root() -> PathBuf {
 }
 
 #[test]
+fn contained_pi_turns_preserve_history_and_refuse_missing_or_replaced_sessions() {
+    let code = r#"
+import importlib.util, json, os, tempfile
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
+spec=importlib.util.spec_from_file_location('participant',os.environ['PARTICIPANT_SCRIPT'])
+module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+with tempfile.TemporaryDirectory() as directory:
+    root=Path(directory);state=root/'state';state.mkdir();evidence=root/'evidence';evidence.mkdir()
+    workspace=root/'workspace';workspace.mkdir()
+    p=module.Participant.__new__(module.Participant)
+    p.state=state;p.evidence=evidence;p.binary='/synthetic/pi';p.model='fixture'
+    p.implementation='pi';p.reasoning_effort=None;p.server=SimpleNamespace(server_port=12345)
+    observed=[]
+    def run(command,project,env,label,lifecycle,**options):
+        # Reproduce pinned Pi startup migration of agent-root JSONL files.
+        for old in state.glob('*.jsonl'):
+            target=state/'sessions/--workspace--'/old.name;target.parent.mkdir(parents=True,exist_ok=True)
+            old.rename(target)
+        path=Path(command[command.index('--session')+1])
+        old=path.read_bytes() if path.exists() else b''
+        observed.append(old)
+        header={'type':'session','id':'stable-session','cwd':'/workspace'}
+        if not old: old=(json.dumps(header)+'\n').encode()
+        path.write_bytes(old+(json.dumps({'type':'message','message':{'role':'user','content':command[-1]}})+'\n').encode())
+        (evidence/f'{label}-events.jsonl').write_text(json.dumps(header)+'\n')
+        return {'complete':True}
+    p._run_turn=run
+    with patch.dict(os.environ,{'AGENTLAB_PARTICIPANT_RUNTIME_CONFIG':'synthetic',
+        'AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT':str(root/'receipts'),'DOCKER_CONFIG':str(root/'docker')}):
+        p.turn('first',workspace,prompt='pinned-source-context',require_completed_tool_call=False,transport_retry_limit=0)
+        p.turn('correction',workspace,prompt='exact-validator-feedback',require_completed_tool_call=False,transport_retry_limit=0)
+        assert b'pinned-source-context' in observed[1]
+        path=state/'sessions/operator/pi-session.jsonl'
+        original=path.read_bytes()
+        receipt=json.loads((evidence/'correction-lifecycle.json').read_bytes())['sessionContinuity']
+        assert receipt['qualified'] and receipt['sessionIdBefore']==receipt['sessionIdAfter']=='stable-session'
+        for damage in ['missing','identity']:
+            if damage=='missing':path.unlink()
+            else:path.write_text(json.dumps({'type':'session','id':'replacement'})+'\n')
+            try:p.turn(damage,workspace,prompt='must-not-dispatch',transport_retry_limit=0)
+            except RuntimeError as error:assert 'before dispatch' in str(error)
+            else:raise AssertionError('damaged history dispatched')
+            assert len(observed)==2
+            path.write_bytes(original)
+        def reset(*args,**kwargs):
+            path.write_text(json.dumps({'type':'session','id':'replacement'})+'\n')
+            (evidence/'reset-events.jsonl').write_text(json.dumps({'type':'session','id':'replacement'})+'\n')
+        p._run_turn=reset
+        try:p.turn('reset',workspace,prompt='feedback',transport_retry_limit=0)
+        except RuntimeError as error:assert 'continuity failed' in str(error)
+        else:raise AssertionError('silent session reset qualified')
+        assert not json.loads((evidence/'reset-lifecycle.json').read_bytes())['sessionContinuity']['qualified']
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "PARTICIPANT_SCRIPT",
+            root().join("examples/real-code-agent/participant.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
 fn source_recipe_operator_prepares_strict_runtime_receipt_directory() {
     let directory = std::env::temp_dir().join(format!(
         "source-recipe-runtime-root-{}-{}",

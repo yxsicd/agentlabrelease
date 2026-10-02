@@ -1,5 +1,28 @@
 # Gap-selected source verifier construction
 
+## Native session continuity
+
+Action `37036840911` ran method `17d6f7c4b1d75743845db340d0740de5cc87d14c`
+with two allowed design corrections. The original design completed in 10070 ms,
+then failed scenario/check consistency. The first correction returned HTTP 400
+`invalid_prompt`; code generation never started. Independent isolation passed.
+Original captures show only the correction prompt in the second upstream input,
+not the source prompt or prior assistant design. The two native session IDs
+differ. Pi 0.73.1 startup migrates JSONL files directly under its agent directory
+into its sessions tree; our next invocation reopened the now-missing old path
+and created a new session. This establishes lost history, not the provider's
+precise reason for rejecting the prompt.
+
+Contained Pi now uses a session file below `sessions/operator`, outside the root
+migration scan. The operator binds pre-turn bytes/digest and session ID, checks
+post-turn history-prefix preservation and native event identity, and refuses a
+missing/replaced established session before dispatch. Lifecycle receipts retain
+the continuity result without credentials. Local Rust-driven regressions cover
+two-turn history, startup migration, missing/replaced sessions and silent reset.
+A direct pinned Pi library check preserved two messages and the original ID
+across migration. Neither local check proves a successful live corrected design,
+wire-history delivery or semantic convergence. Overall maturity remains 63%.
+
 ## Bounded same-session design correction
 
 The first real design-first Action `37034048478` ran method
