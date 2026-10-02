@@ -13,13 +13,29 @@ if (request.schema !== 'agentlab.behavior_executor_request.v1' ||
 const ts = require(compilerPath);
 const transformed = ts.transpileModule(request.submittedSource, {fileName:'AbilityStage.ts', reportDiagnostics:true,
   compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}});
-if (transformed.diagnostics.some(d => d.category === ts.DiagnosticCategory.Error)) throw Error('Unsupported source');
+const sourceErrors = transformed.diagnostics.filter(d => d.category === ts.DiagnosticCategory.Error);
+// Only compiler diagnostics bound to submitted bytes are task observations.
+// Compiler/configuration errors and unsupported loaders remain infrastructure failures.
+if (sourceErrors.some(d => !d.file || d.file.text !== request.submittedSource ||
+    !Number.isInteger(d.code) || !Number.isInteger(d.start) || d.start < 0 ||
+    d.start > request.submittedSource.length)) throw Error('Unbound compiler diagnostic');
+const rejection = sourceErrors.length ? {sourceRejected:true,diagnostics:sourceErrors.map(d => ({
+  code:d.code,start:d.start,length:d.length,
+  message:ts.flattenDiagnosticMessageText(d.messageText,'\n')
+}))} : null;
 
 async function observe(check) {
   const input = check.input;
   if (!Number.isInteger(input.firstCallbackId) || input.firstCallbackId < 0 || input.firstCallbackId > 65535 ||
       ![0,1].includes(input.failedRegistrations) || !Array.isArray(input.actions) ||
       input.actions.length < 1 || input.actions.length > 32) throw Error('Unsupported lifecycle input');
+  for (const action of input.actions) {
+    if (!(action.op==='create' || action.op==='destroy' ||
+        (action.op==='configuration' && typeof action.language==='string' && action.language.length<=32 && [0,1].includes(action.colorMode)) ||
+        (action.op==='memory' && Number.isInteger(action.level) && action.level>=0 && action.level<=5)))
+      throw Error('Unsupported lifecycle action');
+  }
+  if (rejection) return {id:check.id,input,actual:rejection};
   let next = input.firstCallbackId, failures = input.failedRegistrations, invalidOffCalls = 0;
   const subscriptions = new Map(), logs = [];
   function ownerContext(owner) {

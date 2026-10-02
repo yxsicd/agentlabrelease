@@ -173,3 +173,18 @@ selected low-policy run will record that request value in trusted Gateway captur
 and completion intent. Its provider support/effect and outcome still require
 actual execution; no improvement is inferred from the configuration change.
 Overall maturity remains 56% until new valid transfer evidence is obtained.
+
+The explicit low-policy run
+[36974668035](https://github.com/yxsicd/agentlabrelease/actions/runs/36974668035)
+at `1bd819553849d176525ea7a2b8c6f77771ccd604` completed four exchanges and
+the native participant in 43,246 ms. It changed source to SHA256
+`4806e03c1f4be40db817b5ff03dc15d73fb41971b4ee55178516d0581876d1f7`.
+The submitted class has an extra closing brace. The pinned TypeScript worker
+rejected it, but the adapter classified that source error as infrastructure and
+stopped before feedback. The original capture and source remain outside Git.
+This establishes a completed source submission, not passing behavior, causal
+policy improvement or guidance benefit. The next method cut returns source-bound
+compiler diagnostics as explicit rejected observations for the unchanged checks,
+so ordinary bounded repair can consume them. Unbound compiler/configuration,
+loader and container failures still stop as infrastructure. Original expectations
+are unchanged; successful execution of a later repair remains required.
