@@ -201,6 +201,7 @@ if mode in ('success','exhausted','prior-drift'):
  assert manifest['nativeSessionRestored'] is False and manifest['automaticPromotion'] is False
  assert manifest['transportRetryLimit']==0 and manifest['maximumParticipantBudgetSeconds']==840
  assert manifest['latestAttempt']=='repair'
+ if mode!='prior-drift':assert manifest['attempts'][-1]['proposalChangedFromRejected'] == (mode=='success')
 if mode=='success':
  assert [a['validatorExitCode'] for a in manifest['attempts']]==([0,0] if semantic else [1,0])
  if semantic:

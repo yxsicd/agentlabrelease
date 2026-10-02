@@ -326,6 +326,18 @@ qualification. Adapter regression exercises real Node workers and Rust content/
 wire gates in both prompt treatments; real Agent semantic repair still requires
 its own captured run before reporting a completed behavioral feedback loop.
 
+Real run 36954883454 at method 6c4cb4ae exercised behavior feedback: the first
+47-second attempt passed content but rejected valid registration; the fresh
+62-second attempt received the complete failure and original proposal, then
+produced identical proposal bytes and failed the same baseline check. Both
+completed under verified zero-retry budgets and all six diagnostic workers exited
+normally. This proves bounded feedback orchestration, not successful repair or
+learning. Distinguish attempt count from changed proposals and improved outcomes.
+Define marker fields by their evaluator meaning (actual emitted log predicates,
+not source call expressions), and tell repair authors to resolve observed behavior
+failures as well as shape errors. Keep that generic contract separate from
+instance-specific correct marker values; do not operator-repair the failed draft.
+
 A full regression run exposed intermittent emulator boot-failure cleanup. A
 deterministic delayed-launcher control reproduced the race: stop ran first,
 then the outstanding launcher completed startup. Quiesce and reap the exact
