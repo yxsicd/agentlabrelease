@@ -20,6 +20,10 @@ Automatic recipe production and workflow routing remain separate missing produce
 - source: repositoryId, repository URL, exact revision;
 - sourceInputs: one to sixteen owned relative paths with sha256 and gitBlobOid;
 - methodInputs: one to eight absolute file paths with sha256;
+- method dependencies: at most 16 MiB per file and 32 MiB combined, including
+  verifier code, compiler libraries and external context. The same limits apply
+  before every command, during original-byte retention and independent replay
+  qualification; source inputs retain their separate 4 MiB per-file limit;
 - checks: one to 64 unique id/pointer/expected triples; pointer is a JSON pointer
   into the control's original JSON stdout and expected is a frozen JSON value;
 - controls: three to eight unique safe IDs, with role baseline/reference/wrong,

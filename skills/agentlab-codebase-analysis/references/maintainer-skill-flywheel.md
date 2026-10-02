@@ -714,6 +714,13 @@ not full scope coverage, formal platform tests or a complete flywheel round.
 Keep its distinct source-maintenance fact kind and explicit reviewed selection;
 do not relabel it as a build receipt or claim automatic recipe generation.
 
+Pin the complete verifier dependency set, including compiler libraries and
+cross-boundary context used by the reviewed method. Such context is not owned
+source coverage. Retain dependencies with both per-file and combined byte limits
+and apply identical limits before execution and during independent qualification.
+A dependency-budget refusal is an infrastructure gap: preserve it and correct
+the bounded capability, never omit the dependency binding to obtain a pass.
+
 Before treating a remote operation gain as reusable knowledge, independently
 qualify its original capture on the receiving host and reassess its portable
 candidate without the producer's checkout. Compare original receipt/report bytes,

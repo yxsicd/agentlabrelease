@@ -126,6 +126,53 @@ fn run(dir: &Path, before: &Value, recipe: &Value, name: &str) -> Result<Value, 
     )
 }
 #[test]
+fn pinned_large_method_dependencies_are_portable_but_bounded() {
+    let (dir, skill, before, mut recipe) = fixture();
+    let dependency = dir.join("compiler-dependency.bin");
+    let bytes = vec![b'x'; 5 * 1024 * 1024];
+    fs::write(&dependency, &bytes).unwrap();
+    recipe["methodInputs"].as_array_mut().unwrap().push(json!({
+        "path":dependency,"sha256":digest(&bytes)
+    }));
+    run(&dir, &before, &recipe, "large-capture").unwrap();
+    let execution_bytes = fs::read(dir.join("large-capture/execution-receipt.json")).unwrap();
+    let qualification = qualify(&dir.join("large-capture"), &digest(&execution_bytes)).unwrap();
+    assert_eq!(
+        recorded(&qualification, &skill).unwrap()["status"],
+        "verified"
+    );
+    assert_eq!(
+        fs::read(dir.join("large-capture/method-1.original")).unwrap(),
+        bytes
+    );
+    fs::write(&dependency, vec![b'x'; 17 * 1024 * 1024]).unwrap();
+    recipe["methodInputs"][1]["sha256"] = json!(digest(&fs::read(&dependency).unwrap()));
+    assert!(run(&dir, &before, &recipe, "oversized-file").is_err());
+    assert!(!dir.join("oversized-file").exists());
+    // Individually legal dependencies must not exceed the total retained budget.
+    recipe["methodInputs"].as_array_mut().unwrap().truncate(1);
+    for (i, mib) in [12, 12, 9].into_iter().enumerate() {
+        let path = dir.join(format!("dependency-{i}.bin"));
+        let bytes = vec![b'y'; mib * 1024 * 1024];
+        fs::write(&path, &bytes).unwrap();
+        recipe["methodInputs"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({"path":path,"sha256":digest(&bytes)}));
+    }
+    assert!(run(&dir, &before, &recipe, "oversized-total").is_err());
+    assert!(!dir.join("oversized-total").exists());
+    // The receiving verifier applies the same file bound to retained originals.
+    fs::write(
+        dir.join("large-capture/method-1.original"),
+        vec![b'x'; 17 * 1024 * 1024],
+    )
+    .unwrap();
+    assert!(qualify(&dir.join("large-capture"), &digest(&execution_bytes)).is_err());
+    fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
 fn real_controls_recompute_checks_and_advance_only_the_bound_scope() {
     let (dir, skill, before, recipe) = fixture();
     let execution = run(&dir, &before, &recipe, "capture").unwrap();
