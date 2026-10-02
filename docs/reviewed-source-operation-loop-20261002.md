@@ -14,6 +14,34 @@ code-workshop persistence/telemetry scope and returned
 selected-source-operation-recipe-required with zero productive operation rounds.
 This is a real routing-gap receipt, not a target execution or authority gain.
 
+## Fresh target execution after recipe enrollment
+
+On HW Linux, method commit `f482974ee3fd66d85742a3f6e148078ecb858449`
+executed the exact same published cut with an explicitly reviewed telemetry
+recipe against clean target revision `7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6`.
+The first attempt rejected a compiler dependency above the old 4 MiB method-file
+budget before control execution; that failure remains retained. The correction
+keeps complete dependencies bounded to 16 MiB per file and 32 MiB combined.
+
+The fresh loop produced one candidate operation round: strict maintenance
+readiness advanced from 3 to 4 while structural/program/semantic totals stayed
+489/46/41. Six original/reference/alternative/wrong controls exercised six frozen
+checks. The second iteration consumed that staged cut and selected
+`skill-scope-code-workshop-common-platform-services`, then stopped with
+`selected-source-operation-recipe-required`. It did not reuse telemetry or
+substitute another enrolled scope. The operation completed with exit 0 and
+`review-required`, not convergence or a completed business cycle.
+
+Execution receipt SHA256:
+`3d2b41fc05636c6e62f24ffbe0491a0176093a1e2be8dbf684e184f0b41402af`.
+Candidate qualification SHA256:
+`f74bf8a6beb80e7002505bd9151cf193809484d8ea3fe69e0849a572ea2049ed`.
+The recorded task's boolean-success demand is a reviewed exercise contract,
+not proof of an upstream defect: upload/storage/timer seams remain controlled.
+No assessed Agent, Harmony/RDB runtime, authority transaction or formal case
+was produced. Overall maturity remains 63%; authoritative readiness remains 3
+until the separate reviewed admission and exact committed-cut readback succeed.
+
 Run the Rust CLI with `--execute-source-operation-loop --knowledge ABS_CUT
 --operation-catalog ABS_CATALOG --iterations 1..3 --output FRESH_ABS_DIRECTORY`.
 It first verifies the exact initial knowledge-cut digest and all five table
