@@ -48,6 +48,13 @@ accepted source. Deterministic adapter regressions prove controller mechanics,
 not model learning, authenticated Agent completion or platform qualification.
 Keep reviewed command adapters separate from security isolation and trusted
 Gateway capture; generic scheduling alone does not provide either boundary.
+For generated source, use an explicitly contained executor and keep evaluator
+references outside participant mounts. The
+[contained Action recipe](../../docs/flywheel-contained-behavior-20261002.md)
+uses exact source/Blob and compiler/image identities, preserving frozen checks
+before execution. Pin preparation method bytes before lengthy acquisition and
+reject mid-round changes; hashing the final file alone can misidentify the code
+that actually ran. Preserve acquisition failures separately from subject verdicts.
 
 An explicit frozen task demand can define new behavior even when the repository's
 original intent is unknown. Bind that demand before calibration and distinguish

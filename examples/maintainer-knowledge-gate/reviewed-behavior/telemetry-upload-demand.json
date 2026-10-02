@@ -1,0 +1,36 @@
+{
+  "schema": "agentlab.reviewed_behavior_profile.v1",
+  "reviewed": true,
+  "automaticPromotion": false,
+  "candidateId": "shadow-case-rdb-preference-telemetry-pipeline",
+  "candidateSha256": "bc676978abcfb563f8d12616075ba05a8cd727a4cc25f24c2d8271002eef3dd9",
+  "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "originalSourcePath": "common/src/main/ets/trackmanager/TrackManager.ets",
+  "sources": [
+    {"path": "common/src/main/ets/trackmanager/TrackManager.ets", "sha256": "912048981ec553e7c4cbc87bea4420f323b3152a6e3790212551f1515b096e34", "gitBlobOid": "f08fe1b07eeacf265e9ba446190e337a76a529fd"},
+    {"path": "common/src/main/ets/model/TrackModel.ets", "sha256": "a54929bf185a3802c84d4e69f4f699a00657da4292d0a8f3af3f81497e2c396e", "gitBlobOid": "9edc9ee35f6dbacaf238d0b94bbbb4c505cfdfea"}
+  ],
+  "taskDemand": "For the declared reporting tick, an empty cache must not post or clear. A fulfilled true upload must clear; fulfilled false must retain cached records. A rejected upload must retain records at or below the original 1000-record threshold and clear only above it. Preserve other behavior and source imports. This is a new frozen task demand, not a claim of an upstream defect. Assessment covers only controlled upload/retention host seams, not RDB, Harmony framework or the full telemetry candidate.",
+  "workerPath": "scripts/upload-retention-worker.cjs",
+  "compilerSha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675",
+  "workerDeadlineMs": 15000,
+  "supportFields": {"adapter": "upload-retention-host-seam-v1"},
+  "supportSources": [{"path": "common/src/main/ets/model/TrackModel.ets", "contentKey": "modelSource", "shaKey": "modelSourceSha256"}],
+  "checks": [
+    {"id":"empty","input":{"count":0,"upload":"true"},"expected":[0,0,0]},
+    {"id":"fulfilled-true","input":{"count":1,"upload":"true"},"expected":[1,1,0]},
+    {"id":"fulfilled-false","input":{"count":1,"upload":"false"},"expected":[1,0,1]},
+    {"id":"reject-below-limit","input":{"count":1,"upload":"reject"},"expected":[1,0,1]},
+    {"id":"reject-at-limit","input":{"count":1000,"upload":"reject"},"expected":[1,0,1000]},
+    {"id":"reject-above-limit","input":{"count":1001,"upload":"reject"},"expected":[1,1,0]}
+  ],
+  "controls": [
+    {"id":"baseline","role":"baseline","edits":[],"expectedFailedCheckIds":["fulfilled-false"]},
+    {"id":"reference","role":"accepted","edits":[{"from":"TrackService.postTrackData(cachedData).then(async () => {","to":"TrackService.postTrackData(cachedData).then(async (success: boolean) => {\n            if (success !== true) { return; }"}],"expectedFailedCheckIds":[]},
+    {"id":"alternative-valid","role":"accepted","edits":[{"from":"TrackService.postTrackData(cachedData).then(async () => {","to":"TrackService.postTrackData(cachedData).then(async (success: boolean) => {\n            if (success === false) { return; }"}],"expectedFailedCheckIds":[]},
+    {"id":"delete-before-upload","role":"wrong","edits":[{"from":"TrackService.postTrackData(cachedData).then(async () => {","to":"TrackService.postTrackData(cachedData).then(async (success: boolean) => {\n            if (success !== true) { return; }"},{"from":"          TrackService.postTrackData(cachedData)","to":"          TrackManager.trackTable.deleteTrackData();\n          TrackService.postTrackData(cachedData)"}],"expectedFailedCheckIds":["reject-below-limit"]},
+    {"id":"failure-path-overreach","role":"wrong","edits":[{"from":"TrackService.postTrackData(cachedData).then(async () => {","to":"TrackService.postTrackData(cachedData).then(async (success: boolean) => {\n            if (success !== true) { return; }"},{"from":"if (res.length > MAX_LIMIT)","to":"if (res.length >= 0)"}],"expectedFailedCheckIds":["reject-at-limit"]},
+    {"id":"inclusive-threshold","role":"wrong","edits":[{"from":"TrackService.postTrackData(cachedData).then(async () => {","to":"TrackService.postTrackData(cachedData).then(async (success: boolean) => {\n            if (success !== true) { return; }"},{"from":"if (res.length > MAX_LIMIT)","to":"if (res.length >= MAX_LIMIT)"}],"expectedFailedCheckIds":["reject-at-limit"]}
+  ]
+}
