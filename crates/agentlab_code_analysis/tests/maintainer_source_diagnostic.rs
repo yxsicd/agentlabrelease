@@ -262,8 +262,22 @@ fn suite_fixture() -> PathBuf {
 }
 
 fn suite_fixture_with_wrong_count(wrongs: usize) -> PathBuf {
+    suite_fixture_with_binding(wrongs, None)
+}
+
+fn suite_fixture_with_binding(wrongs: usize, binding: Option<&Value>) -> PathBuf {
     let base = fixture();
     let stage = base.join("stage");
+    if let Some(binding) = binding {
+        let mut request: Value =
+            serde_json::from_slice(&fs::read(stage.join("request.json")).unwrap()).unwrap();
+        request["source"] = binding["source"].clone();
+        request["scope"]["repositoryId"] = binding["source"]["repositoryId"].clone();
+        request["scope"]["sourceRevision"] = binding["source"]["revision"].clone();
+        request["knowledgeCutSha256"] = binding["cutSha256"].clone();
+        request["authorityRevision"] = binding["revision"].clone();
+        file(&stage.join("request.json"), &request);
+    }
     let mut controls = json!([
         {"id":"baseline","role":"baseline","edits":[],"expectedFailedCheckIds":[]},
         {"id":"valid-a","role":"reference","edits":[{"path":"unit.js","before":"{}","after":"{a:1}"}],"expectedFailedCheckIds":[]},
@@ -298,6 +312,7 @@ fn suite_fixture_with_wrong_count(wrongs: usize) -> PathBuf {
     let mut receipt: Value =
         serde_json::from_slice(&fs::read(stage.join("stage-receipt.json")).unwrap()).unwrap();
     for (name, key) in [
+        ("request.json", "requestSha256"),
         ("design.json", "designSha256"),
         ("design-runtime.cjs", "designRuntimeSha256"),
     ] {
@@ -323,8 +338,8 @@ fn suite_fixture_with_wrong_count(wrongs: usize) -> PathBuf {
             id,
         )
         .unwrap();
-        let actual =
-            json!({"scenario":{"value":if id.starts_with("wrong") {8} else {7},"nullable":null}});
+        let disagrees = binding.is_some_and(|b| b["fixtureDisagreement"] == true);
+        let actual = json!({"scenario":{"value":if id.starts_with("wrong") && !disagrees {8} else {7},"nullable":null}});
         let capture = captured_inputs(&inputs, &inputs.join("contained-input-fixture"), 0, actual);
         let report = feedback(&inputs, &capture, &inputs.join("feedback.json")).unwrap();
         rows.push(json!({"controlId":id,"role":if index==0 {"baseline"} else if id.starts_with("wrong") {"wrong"} else {"reference"},"recovery":index==ids.len()-1,
@@ -332,11 +347,99 @@ fn suite_fixture_with_wrong_count(wrongs: usize) -> PathBuf {
     }
     file(
         &suite.join("result.json"),
-        &json!({"schema":"agentlab.source_recipe_control_suite_result.v1","status":"declarations-matched",
+        &json!({"schema":"agentlab.source_recipe_control_suite_result.v1","status":if rows.iter().all(|r|r["declarationMatched"]==true){"declarations-matched"}else{"review-declaration-mismatch"},
         "attempts":rows,"designSha256":receipt["designSha256"],"diagnosticOnly":true,"qualified":false,"semanticQualified":false,
         "authorityWritePerformed":false,"automaticPromotion":false}),
     );
     base
+}
+
+#[test]
+fn business_returns_original_source_suite_without_wrapping_or_fresh_execution_claims() {
+    for disagrees in [false, true] {
+        let knowledge = root()
+            .join("examples/maintainer-knowledge-gate/first-four")
+            .canonicalize()
+            .unwrap();
+        let cut_bytes = fs::read(knowledge.join("maintainer-knowledge-cut.json")).unwrap();
+        let cut: Value = serde_json::from_slice(&cut_bytes).unwrap();
+        let source = cut["repositories"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["id"] == "code-workshop")
+            .unwrap();
+        let binding = json!({"fixtureDisagreement":disagrees,"source":{"repositoryId":source["id"],"revision":source["revision"]},
+        "cutSha256":digest(&cut_bytes),"revision":cut["tableGitAuthority"]["revision"]});
+        let base = suite_fixture_with_binding(1, Some(&binding));
+        let capture = json!({"stageDirectory":base.join("stage"),"suiteDirectory":base.join("suite"),
+        "stageReceiptSha256":digest(&fs::read(base.join("stage/stage-receipt.json")).unwrap()),
+        "suiteResultSha256":digest(&fs::read(base.join("suite/result.json")).unwrap())});
+        let mut state = json!({"schema":"agentlab.flywheel_business_state.v1","automaticPromotion":false,
+        "repositoryId":source["id"],"sourceRevision":source["revision"],"candidateId":"scope",
+        "knowledge":{"directory":knowledge,"cutSha256":binding["cutSha256"],"revision":binding["revision"]},
+        "guidanceMode":"reviewed-bootstrap","bootstrapReview":{"reviewed":true,"knowledgeCutSha256":binding["cutSha256"]},
+        "sourceSuiteCapture":capture});
+        let invoke = |state: &Value, stage: &str, round: u64, name: &str| {
+            let path = base.join(format!("{name}-state.json"));
+            file(&path, state);
+            let out = base.join(name);
+            fs::create_dir(&out).unwrap();
+            let request = json!({"schema":"agentlab.flywheel_stage_request.v1","automaticPromotion":false,
+            "stage":stage,"round":round,"inputState":{"path":path,"sha256":digest(&fs::read(&path).unwrap())}});
+            let result = agentlab_code_analysis::maintainer_flywheel_business::run(
+                &serde_json::to_vec(&request).unwrap(),
+                &out,
+            )
+            .unwrap();
+            (result, out)
+        };
+        let (case, case_out) = invoke(&state, "case-execution", 0, "case");
+        assert_eq!(case["status"], "completed");
+        let report: Value =
+            serde_json::from_slice(&fs::read(case_out.join("business/report.json")).unwrap())
+                .unwrap();
+        assert_eq!(report["freshExecutionPerformed"], false);
+        assert_eq!(report["formalCaseQualified"], false);
+        assert_eq!(report["taskPassed"], !disagrees);
+        state = serde_json::from_slice(&fs::read(case_out.join("business/state.json")).unwrap())
+            .unwrap();
+        let (returned, out) = invoke(&state, "evidence-return", 0, "return");
+        assert_eq!(returned["status"], "review-required");
+        let returned_report: Value =
+            serde_json::from_slice(&fs::read(out.join("business/report.json")).unwrap()).unwrap();
+        assert_eq!(returned_report["observationExported"], true);
+        assert_eq!(returned_report["lessonCreated"], false);
+        assert_eq!(returned_report["authorityWritePerformed"], false);
+        assert_eq!(returned_report["taskPassed"], !disagrees);
+        assert_eq!(
+            fs::read(out.join("business/observations/source-suite/result.json")).unwrap(),
+            fs::read(base.join("suite/result.json")).unwrap()
+        );
+        assert!(!out
+            .join("business/observations/behavior-capture.json")
+            .exists());
+        for (name, mut changed, stage, round) in [
+            ("round", state.clone(), "evidence-return", 1),
+            ("scope", state.clone(), "evidence-return", 0),
+            ("digest", state.clone(), "evidence-return", 0),
+            ("ambiguous", state.clone(), "case-execution", 0),
+        ] {
+            if name == "scope" {
+                changed["candidateId"] = json!("borrowed");
+            }
+            if name == "digest" {
+                changed["sourceSuiteCapture"]["suiteResultSha256"] = json!("0".repeat(64));
+            }
+            if name == "ambiguous" {
+                changed["behaviorExecution"] = json!({});
+            }
+            let (result, out) = invoke(&changed, stage, round, name);
+            assert_eq!(result["status"], "rejected");
+            assert!(!out.join("business/observations").exists());
+        }
+        fs::remove_dir_all(base).unwrap();
+    }
 }
 
 #[test]

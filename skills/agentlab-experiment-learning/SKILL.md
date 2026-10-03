@@ -163,6 +163,13 @@ publication. This automatic operational handoff neither creates a lesson nor
 admits knowledge. A cloud run on an older method needs a separate retained-byte
 export; local replay is not proof the cloud producer performed that handoff.
 
+Business cycles accept sourceSuiteCapture directly rather than manufacturing
+legacy behavior files. Bind original stage/suite digests, source/scope/knowledge
+and current round, then reconstruct again at return. Retained capture replay is
+not fresh execution or case generation. Native observations can use the existing
+revision-fenced persistence adapter, while source-suite reviewed admission remains
+an explicit separate binding gap; never substitute unrelated behavior lessons.
+
 The ordinary `--plan-observation-import` / `--verify-observation-import` gates
 also accept original source-suite observation and reviewed-lesson exports.
 Reconstruct all rows from the retained suite and optional review, preserving the
