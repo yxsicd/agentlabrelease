@@ -34,6 +34,18 @@ application is only a host candidate until its connection is verified. Refresh
 the relevant configuration/test-owner Skills rather than broadening a behavior
 scope's ownership or treating uninspected paths as absent.
 
+For cross-scope construction gaps, use the Rust
+`--prepare-construction-context --knowledge ABSOLUTE_CUT --source-worktree
+ABSOLUTE_CHECKOUT --repository ID --context-path PATH --output FRESH_PACKET`,
+repeating the path option for explicitly reviewed non-secret inputs. It checks
+all five table digests, clean source/origin/revision, unique scope ownership and
+regular UTF-8 Git Blobs, then retains original text and per-file hashes under
+bounded byte limits. Root context covers direct root files, not every child.
+Use the returned owner IDs for focused analysis; the packet neither updates
+knowledge nor grants edits. Later facts and successor construction inputs still
+need their existing admission gates. Unchanged reordered selection must reproduce
+the same packet; raw source packets stay in the operator artifact archive.
+
 Build knowledge through repeated evidence rounds, not a single repository read.
 First freeze the structural scope catalog, then bind revision-matched program
 facts, assess universal evidence dimensions, and use the resulting gap queue to

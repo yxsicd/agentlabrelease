@@ -24,6 +24,31 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|a| a == "--prepare-construction-context") {
+        let paths = args
+            .windows(2)
+            .filter(|w| w[0] == "--context-path")
+            .map(|w| w[1].clone())
+            .collect::<Vec<_>>();
+        let report = agentlab_code_analysis::maintainer_construction_context::prepare(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &PathBuf::from(value(&args, "--source-worktree")?),
+            &value(&args, "--repository")?,
+            &paths,
+        )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&report)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"schema":report["schema"],
+            "selectedFileCount":report["selectedFiles"].as_array().unwrap().len(),
+            "ownerScopeSkillIds":report["ownerScopeSkillIds"],"qualified":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--feedback-partial-calibration") {
         let previous = optional(&args, "--previous-feedback-plan")
             .map(fs::read)

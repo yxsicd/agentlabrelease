@@ -1,0 +1,50 @@
+{
+  "schema": "agentlab.construction_context_replay_summary.v1",
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "knowledgeRevision": "da9a10a8049b138738d05aae9b2d47710b6b9a7d",
+  "producerInputs": {
+    "crates/agentlab_code_analysis/src/maintainer_construction_context.rs": "c5606345fc00cc2429756bd5165947e3d260ca9cbd983ccb7638690d4722bbda",
+    "crates/agentlab_code_analysis/src/maintainer_skill_flywheel_cli.rs": "62ba42c1b34c5a23d21e6b332038580e2bd4c3cf3bf880fd45537c192ff2e801"
+  },
+  "packetSha256": "d76402a9368a4b132ba484e4a20c831b33dc0e62d5e143f54e3f9892b63ee9c1",
+  "selectedFileCount": 9,
+  "selectedByteCount": 13227,
+  "ownerScopeSkillIds": [
+    "skill-scope-code-workshop-componentlibrary-framework",
+    "skill-scope-code-workshop-componentlibrary-verification",
+    "skill-scope-code-workshop-products-phone",
+    "skill-scope-code-workshop-root"
+  ],
+  "reorderedRepeatByteIdentical": true,
+  "sourceCheckoutUnchanged": true,
+  "contextTests": {"passed": 3, "failed": 0, "negativeScenarios": 18},
+  "adjacentRegressionTests": {"operationCasePassed": 7, "runtimeRoutingPassed": 1},
+  "runtimePreflight": {
+    "rawReceiptSha256": "0237ceb11928ed327854ae65fa18220626a6697561e3061a73aa9d81a47999d9",
+    "peerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+    "routeDecision": "peer_direct",
+    "operationId": "exec-0000000000000237",
+    "exitCode": 0,
+    "hdcVersion": "3.2.0f",
+    "connectedTargetsObservation": "[Empty]",
+    "imageMetadataApiVersion": "26",
+    "imageMetadataVersion": "7.0.0.107",
+    "emulatorPackageMetadataVersion": "26.0.0.400",
+    "applicationBuildSdkCompatibilityQualified": false,
+    "emulatorBootQualified": false
+  },
+  "remainingActions": [
+    "Consume the read-only packet in focused owner-scope analysis; this preparation does not yet automate that dispatch or create accepted program facts",
+    "Verify installable host wiring and explicit test/host edit ownership before creating successor construction inputs",
+    "Qualify actual build SDK and emulator connection, then run independent baseline/reference/wrong-variant ohosTest calibration",
+    "Admit verified feedback into a later knowledge cut and demonstrate multiple complete automatic rounds and cross-repository transfer"
+  ],
+  "grantsEditablePaths": false,
+  "semanticQualified": false,
+  "executionQualified": false,
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "completeAutomaticBusinessLoops": 0,
+  "overallMaturityEstimatePercent": 68,
+  "verificationBoundary": "Native exact-context preparation and one real routed environment probe only. Original source packets and remote operation responses remain in the private operator artifact archive. File ownership, metadata versions and passing fixtures do not establish semantic understanding, a booted emulator, runnable host, calibrated case or completed business loop. The remote missing-rg attempt is retained separately from the successful fallback discovery."
+}
