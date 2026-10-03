@@ -233,6 +233,33 @@ jobs:
             --workspace "$RUNNER_TEMP/recipe-author/agent/workspace" \
             --participant-state "$RUNNER_TEMP/recipe-author/agent/participant-state" \
             "${labels[@]}" --output "$RUNNER_TEMP/recipe-author/runtime-validation.json"
+      - name: Diagnose unchanged generated verifier baseline in a separate container
+        if: inputs.design_first
+        run: |
+          compiler="$RUNNER_TEMP/recipe-compiler/node_modules/typescript/lib/typescript.js"
+          diagnostic="$RUNNER_TEMP/recipe-author/baseline-diagnostic"
+          image_id=$(docker image inspect node:24.19.0-bookworm-slim --format '{{.Id}}')
+          target/release/agentlab-maintainer-skill-flywheel --prepare-source-recipe-diagnostic \
+            --stage "$RUNNER_TEMP/recipe-author/agent/proposal-stage" --typescript "$compiler" \
+            --worker "$GITHUB_WORKSPACE/scripts/source-recipe-diagnostic-worker.cjs" \
+            --image-id "$image_id" --output "$diagnostic"
+          cd "$diagnostic"
+          execution_exit=0
+          python3 "$GITHUB_WORKSPACE/scripts/run-contained-behavior-worker.py" \
+            "$diagnostic/descriptor.json" "$diagnostic/request.json" \
+            > launcher-stdout.log 2> launcher-stderr.log || execution_exit=$?
+          # One fresh invocation owns exactly one capture; never pick an old/latest file.
+          captures=("$diagnostic"/contained-input-*)
+          test "${#captures[@]}" -eq 1
+          "$GITHUB_WORKSPACE/target/release/agentlab-maintainer-skill-flywheel" \
+            --feedback-source-recipe-diagnostic --diagnostic-inputs "$diagnostic" \
+            --worker-capture "${captures[0]}" --output "$diagnostic/feedback.json"
+          test "$execution_exit" -eq 0
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          assert json.loads(Path('feedback.json').read_bytes())['baselinePassed'] is True
+          PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

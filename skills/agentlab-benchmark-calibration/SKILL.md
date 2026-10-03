@@ -250,7 +250,14 @@ a rejected implementation or a failed behavior check. Retain the failure for
 Agent-owned repair without editing the draft, expanding failed-check declarations
 or resetting an exhausted review budget. A compatible compiler digest with a
 different Node/architecture remains a new diagnostic environment, not historical
-runtime equivalence. See [the original-verifier execution checkpoint](../../docs/flywheel-design-feedback-20261003.md#unchanged-original-verifier-execution).
+runtime equivalence. Use the Rust `--prepare-source-recipe-diagnostic` and
+`--feedback-source-recipe-diagnostic` bridge with the existing contained launcher;
+normal exit still requires independent frozen-check comparison. The constructor
+Action invokes this diagnostic after staging a design-first proposal and retains
+failures, but does not automatically feed them into another Agent turn. Baseline
+success alone leaves independent references, wrong controls and review unproved.
+See [the original-verifier execution checkpoint](../../docs/flywheel-design-feedback-20261003.md#unchanged-original-verifier-execution)
+and its native diagnostic continuation for commands and supported boundaries.
 
 To avoid refetching an entire repository for retained-source diagnostics, the same
 runner accepts --source-binding FILE and --source-workspace DIR instead of
