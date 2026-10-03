@@ -184,6 +184,13 @@ regressions establish feedback mechanics, not successful model correction or
 semantic qualification.
 
 After static correction succeeds, review executable source contracts separately.
+For the compiler-backed frozen-runtime protocol, the explicit
+`fromCompilerInvocation(process.argv)` entry loads the supplied compiler at
+argument four; it does not search for dependencies or repair legacy null callers.
+Keep text/JSON-only invocation separate and retain dependency identity checking
+in the outer executor. After feedback fixes a scenario, also trace newly added
+requirements to the exact tested body: a real successor borrowed a nearby UI
+builder's styling requirement for a code generator that never emitted it.
 Match explicit import-map keys to original specifiers, including relative depth.
 For each mutation, trace every scenario through both the changed operation and
 later operations skipped by an early exception; a mutation may fail more checks

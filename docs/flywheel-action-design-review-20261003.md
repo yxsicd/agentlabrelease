@@ -40,3 +40,46 @@ review is an explicit request to revise and cannot approve a semantic Oracle.
 The new design and any generated verifier remain unreviewed until independently
 reviewed and calibrated. Rejection remains terminal; this helper adds no network
 retry, budget reset, automatic knowledge promotion or authority write.
+
+## Real reviewed child
+
+[Run 37130206085](https://github.com/yxsicd/agentlabrelease/actions/runs/37130206085)
+ran main 0c7d619f5eed9f85e56a41f55e6aa20de148604c. Native review admission
+matched the exact parent request/design and review SHA256
+ddf18a18f01aa7268fe419d679bd1d6035a13d9f6d6344a28545384e055511a2.
+All four original observed/requiredChange texts occurred in the actual upstream
+request. Design completed in 67976ms and code in 137096ms, both with semantic
+terminal and EOF. Static design admission, frozen proposal staging and independent
+participant isolation passed. This is actual review transmission and construction,
+not automatic semantic review or proof of general feedback benefit.
+
+Source review confirms the original invalid-parse baseline now restores true and
+processes Checkbox; wrong-invert-parse no longer declares untouched S1 failure,
+and wrong-drop-catch includes the later-attribute and exception observations.
+The verifier computes text membership from actual outputs without changing the
+frozen contract. However, the successor introduces a width requirement belonging
+to a separate UI builder, and wrong-invert-parse still omits the changed S3 value.
+These source findings independently reject semantic approval.
+
+Baseline diagnostic executed the unchanged submitted verifier but produced no
+observations: it explicitly passed null for the compiler and failed with
+`explicit compiler required`. Native feedback records
+verifier-execution-infrastructure-failure, maximumRepairs=0 and no wrong controls.
+Do not count this as product failure or reopen the exhausted review child.
+Design SHA256: 5fd11acf4a0b01002af1420ae3013655a696ad0d9fdb10594fb8a4928898dd0f.
+Proposal SHA256: dafdd2c7038c113a1824ef5a3c7bc95c7ec8f386bc9331e6a5f80dd2077d10e8.
+
+The runtime now offers explicit `fromCompilerInvocation(argv)` for the supplied
+compiler-backed protocol. It reads source/control/compiler from arguments 2/3/4,
+requires an absolute compiler path and its necessary API, then uses the unchanged
+frozen-source/module executor. It does not discover compilers or silently repair
+old null calls. The outer executor remains responsible for dependency identity;
+this helper does not independently authenticate compiler bytes or provenance.
+Future constructor guidance supplies this initializer; legacy text/JSON callers
+remain separate. Old captures and generated code remain unchanged.
+
+Local Rust-hosted runtime regressions cover the initializer, real TypeScript
+module plumbing, invalid/missing compiler arguments, source-byte rejection and
+unchanged legacy-null rejection. These tests do not prove that a fresh Agent uses
+the entry correctly, or that its design/verifier is semantically sound. Overall
+maturity remains 72%; qualified complete business loops remain zero.

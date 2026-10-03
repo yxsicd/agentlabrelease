@@ -106,3 +106,17 @@ module.exports = function createRuntime(sourceRoot, controlId, compiler) {
   }
   return Object.freeze({source, loadModule, createSeams});
 };
+
+// Explicit convenience entry for the pinned compiler invocation protocol.
+// No discovery, implicit fallback or repair of a verifier calling the legacy API.
+module.exports.fromCompilerInvocation = function fromCompilerInvocation(argv) {
+  if (!Array.isArray(argv) || argv.length < 5 ||
+      [2, 3, 4].some(i => typeof argv[i] !== 'string' || !argv[i]))
+    throw new Error('compiler invocation requires source root, control ID and pinned compiler argument');
+  if (!path.isAbsolute(argv[4])) throw new Error('compiler argument must be an absolute pinned path');
+  const compiler = require(argv[4]);
+  if (!compiler || typeof compiler.createSourceFile !== 'function' ||
+      typeof compiler.transpileModule !== 'function')
+    throw new Error('compiler argument lacks required compiler API');
+  return module.exports(argv[2], argv[3], compiler);
+};
