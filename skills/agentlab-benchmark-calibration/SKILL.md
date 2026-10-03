@@ -241,6 +241,17 @@ diagnostic Action binds the contract to the selected candidate value and source;
 its semantic controls stay separate from the original startup feedback and from
 formal construction-plan qualification. See [the lifecycle evidence](../../docs/flywheel-lifecycle-calibration-20261001.md).
 
+For an unreviewed generated verifier, diagnose the unchanged accepted baseline
+inside a contained executor before spending budget on its wrong controls. Bind
+the original verifier, frozen runtime and retained source inventory; distinguish
+recorded source reconstruction from restoring the original runner. An unbound
+import before observation output is a verifier-adapter execution failure, not
+a rejected implementation or a failed behavior check. Retain the failure for
+Agent-owned repair without editing the draft, expanding failed-check declarations
+or resetting an exhausted review budget. A compatible compiler digest with a
+different Node/architecture remains a new diagnostic environment, not historical
+runtime equivalence. See [the original-verifier execution checkpoint](../../docs/flywheel-design-feedback-20261003.md#unchanged-original-verifier-execution).
+
 To avoid refetching an entire repository for retained-source diagnostics, the same
 runner accepts --source-binding FILE and --source-workspace DIR instead of
 --source-repo. Verify every retained inventory row's revision, relative paths,

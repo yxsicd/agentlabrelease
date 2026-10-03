@@ -200,3 +200,61 @@ check comparison because its runner-bound paths are absent on this machine.
 No real-sample parent-check rejection was obtained. Preserve that portability
 gap separately from the successful native fixture gates; do not rewrite the
 original request or claim that its original environment was restored.
+
+## Unchanged original verifier execution
+
+A subsequent local diagnostic actually executed Action 37112721400's unchanged
+`controls.cjs` against its `ctrl-baseline`, using the existing contained worker
+launcher. The original request, proposal, design and generated runtime all matched
+their stage-receipt digests before preparation and again after execution.
+The verifier SHA256 is
+`2e566beaa38c98d13f5c3e2f95d95f27d2468b3c20b1e9c4187967fab37b322b`.
+The runtime's literal manifest was parsed as data on the host, not executed there;
+its scenarios/controls and source files matched the retained originals. Source
+bytes, sizes, SHA256s and Git Blob OIDs were checked inside the container before
+the unchanged verifier ran. This restores recorded selected source bytes, not
+the original Git checkout, commit ancestry or GitHub runner environment.
+
+The exact cached Docker image was
+`sha256:2fe369e969550cde8e867afc3fe370b260140cab4a23d467074295b42163d553`,
+Linux arm64 Node v24.21.0. TypeScript matched the original dependency SHA256
+`3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675`.
+The changed Node/architecture is explicit: no historical runtime equivalence is
+claimed. The reviewed descriptor approves only the operator transport adapter;
+the submitted verifier remains unreviewed and diagnostic-only.
+
+The worker exited **1** after **1060 ms**, without timeout or log-budget overflow.
+Raw stdout was empty. Raw stderr failed before the first behavior observation:
+
+```text
+Error: unbound import: ../../../viewmodel/CommonDescriptor
+```
+
+The original verifier instead maps `../../../../viewmodel/CommonDescriptor`.
+This confirms the earlier source-review finding as an actual verifier-adapter
+execution failure. No wrong controls were executed, no behavior checks have
+verdicts, and the downstream mutation-attribution findings remain source review,
+not observed control results. Do not interpret this infrastructure-class failure
+as a killed mutation or a defect in the accepted application implementation.
+
+Before draft execution, the operator worker recorded only loopback network
+interfaces, no Docker socket, zero effective capabilities, no-new-privileges and
+read-only root/input mounts. The launcher requested network none, dropped all
+capabilities and bounded CPU/memory/process/log/time resources. Cleanup exited
+zero and an exact subsequent container lookup reported no such object. These are
+scoped command/probe observations, not formal independent isolation qualification.
+The process receipt SHA256 is
+`cb6df86a39d6306bc8d8905b913e9358b5ff13b35ae4f7433cee347887ac56e0`.
+Full raw logs, transport scripts, manifests and digest-bound analysis remain in
+external `.artifacts/flywheel-original-verifier-diagnostic-zeEDum`; no private
+capture or participant state is published here.
+
+The operator preparation initially compared JSON serialization order rather than
+JSON object meaning and stopped before creating inputs or launching Docker.
+Only that operator comparison was corrected using deep equality; all original
+Agent/runtime/source bytes remained unchanged. This is a diagnostic transport
+repair, not Agent success. The exhausted Action 37113211051 review budget was not
+reset, and no new model turn, authority write, knowledge admission or qualified
+case occurred. Next work is Agent-owned verifier repair followed by independent
+baseline and complete control calibration. Overall maturity remains **72%**;
+accepted complete automatic business loops remain **0**.
