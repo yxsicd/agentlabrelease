@@ -18,6 +18,19 @@ Do not count cascaded failures as independent Oracle coverage. Preserve the froz
 checks during calibration, restore the reference and verify recovery; any cleanup
 repair creates a successor test cut requiring fresh positive and negative controls.
 
+Inspect the installed framework's failure-path hook order, not just hook names.
+The retained Hypium 1.0.19 async runner calls afterEach in the same try block as
+the test body; a thrown assertion can skip it. For independent UI test scenarios,
+establish and verify clean state before the next test as well as after success.
+Use an explicit close action for a non-autoCancel overlay instead of assuming
+Back closes it. Preserve all behavioral predicates and compare the same mutation
+before/after the cleanup successor, followed by a byte-restored positive control.
+Do not reset between phases of one stateful long-horizon scenario or generalize
+this hook behavior to an uninspected framework version. Keep skipped-hook and
+cleanup failures separate from independent product failures.
+See [the controlled UI isolation sequence](../../docs/flywheel-ui-isolation-calibration-20261003.md)
+for the preserved failed attempt, same-mutation comparison and recovery boundary.
+
 An evidence file's existence and matching digest do not qualify its contents.
 Construction-readiness uses recorded `agentlab.shadow_case_qualification.v1`
 receipts: bind candidate ID/digest, source revision, source-set and knowledge-cut
