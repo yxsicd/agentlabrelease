@@ -23,6 +23,16 @@ at least two distinct wrong sources. Baseline/wrong controls declare intended
 failed checks; accepted controls declare none. Optional `agent-attempt` controls
 are recorded outcomes, not authenticated Agent identity.
 
+Wrong controls must now fail exactly their frozen declared check set. A control
+that kills the intended behavior but additionally fails another check is retained
+with calibration false and `review-unexpected-control-failures`, not dispatched
+to an Agent. This is an attribution gap, not proof that the extra failure is a
+cleanup cascade. Missing intended failures retain the existing Oracle/control
+repair route. Deliberate multi-failure controls remain supported when declared
+in the frozen contract; do not rewrite the original contract after observing a
+failure. The ordinary bounded behavior loop consumes this same gate before any
+participant dispatch, and lesson construction rejects uncalibrated captures.
+
 The capture schema is `agentlab.behavior_worker_capture.v1`. It binds the exact
 contract bytes and the same execution identities, plus a `workers` array. Each
 worker has its declared `id` and an `execution` containing normal `exitCode:0`,

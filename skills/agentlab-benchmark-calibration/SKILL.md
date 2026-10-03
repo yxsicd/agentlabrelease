@@ -18,6 +18,13 @@ Do not count cascaded failures as independent Oracle coverage. Preserve the froz
 checks during calibration, restore the reference and verify recovery; any cleanup
 repair creates a successor test cut requiring fresh positive and negative controls.
 
+The generic frozen-behavior consumer requires a wrong control's observed failed
+check set to equal its declared set before scheduling an Agent attempt. Additional
+failures route to `review-unexpected-control-failures`; retain them without
+assuming whether their cause is cleanup, another defect or an incomplete design.
+Do not expand expectations after observing a failure merely to pass this gate.
+A genuinely intended multi-failure control needs an explicit frozen declaration.
+
 Inspect the installed framework's failure-path hook order, not just hook names.
 The retained Hypium 1.0.19 async runner calls afterEach in the same try block as
 the test body; a thrown assertion can skip it. For independent UI test scenarios,

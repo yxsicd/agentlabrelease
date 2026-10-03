@@ -448,6 +448,7 @@ pub fn verify(contract_bytes: &[u8], capture_bytes: &[u8]) -> Result<Value, Stri
     let mut baseline_matches = false;
     let mut accepted_pass = true;
     let mut wrong_discriminate = true;
+    let mut wrong_isolated = true;
     let mut agent_passed = None;
     for worker in workers {
         let id = text(worker, "id")?;
@@ -519,18 +520,26 @@ pub fn verify(contract_bytes: &[u8], capture_bytes: &[u8]) -> Result<Value, Stri
         match text(control, "role")? {
             "baseline" => baseline_matches = failures == intended,
             "accepted" => accepted_pass &= failures.is_empty(),
-            "wrong" => wrong_discriminate &= intended.is_subset(&failures),
+            "wrong" => {
+                wrong_discriminate &= intended.is_subset(&failures);
+                // A killed mutation with additional failures is not isolated
+                // calibration. Preserve its observations without scheduling an
+                // Agent against a possibly contaminated test sequence.
+                wrong_isolated &= failures.is_subset(&intended);
+            }
             _ => agent_passed = Some(agent_passed.unwrap_or(true) && failures.is_empty()),
         }
         results.push(json!({"id":id,"role":control["role"],"failedCheckIds":failures,"checks":reconstructed,"stdoutSha256":execution["stdoutSha256"]}));
     }
-    let calibrated = baseline_matches && accepted_pass && wrong_discriminate;
+    let calibrated = baseline_matches && accepted_pass && wrong_discriminate && wrong_isolated;
     let next_action = if !baseline_matches {
         "review-task-baseline"
     } else if !accepted_pass {
         "repair-valid-controls"
     } else if !wrong_discriminate {
         "repair-oracle-or-wrong-controls"
+    } else if !wrong_isolated {
+        "review-unexpected-control-failures"
     } else {
         match agent_passed {
             None => "execute-agent-attempt",

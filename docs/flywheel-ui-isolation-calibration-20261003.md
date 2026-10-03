@@ -78,3 +78,20 @@ one long-horizon scenario, which would erase the state being tested. Next work
 must automate reviewed control construction/dispatch and source/patch admission,
 extend uncalibrated observables, and connect formal qualification to the complete
 execution/feedback loop rather than repeat these original captures.
+
+## Executable method follow-up
+
+The generic frozen-behavior consumer previously accepted a wrong control when
+its intended failures were merely a subset of all observed failures. It now
+requires equality before allowing the ordinary behavior controller to dispatch
+an Agent. Extra failures remain visible and route to
+`review-unexpected-control-failures`; missing intended failures keep the existing
+Oracle/control repair route. This does not infer that every extra failure is a
+cleanup cascade. Explicitly frozen multi-failure controls remain supported.
+
+Rust regressions demonstrate that an extra failure blocks dispatch before an
+output directory is created, and that a digest-bound lesson review cannot admit
+such a capture. Original raw captures and historical contracts are unchanged.
+This is a generic consumer/controller correction inspired by the real isolation
+experiment, not a new emulator execution, automatic control producer or accepted
+business loop. Overall maturity remains **70%**.
