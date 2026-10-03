@@ -168,7 +168,12 @@ legacy behavior files. Bind original stage/suite digests, source/scope/knowledge
 and current round, then reconstruct again at return. Retained capture replay is
 not fresh execution or case generation. Native observations can use the existing
 revision-fenced persistence adapter, while source-suite reviewed admission remains
-an explicit separate binding gap; never substitute unrelated behavior lessons.
+subject to exact current-suite binding; never substitute unrelated behavior lessons.
+For reviewed admission, compare the native current observation inventory and every
+listed raw file plus candidate bytes against the lesson source before ordinary
+lesson staging/committed-return gates. Inventory hashes alone cannot establish
+raw identity. Missing review stops review-required; matching source bytes do not
+authenticate the reviewer, validate the Oracle or establish remote commitment.
 
 The ordinary `--plan-observation-import` / `--verify-observation-import` gates
 also accept original source-suite observation and reviewed-lesson exports.

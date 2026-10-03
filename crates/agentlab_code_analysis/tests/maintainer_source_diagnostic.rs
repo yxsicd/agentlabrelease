@@ -419,6 +419,64 @@ fn business_returns_original_source_suite_without_wrapping_or_fresh_execution_cl
         assert!(!out
             .join("business/observations/behavior-capture.json")
             .exists());
+        // Exact current source bytes reach the ordinary admission gate. They
+        // lack a reviewed committed lesson, so this must still reject there.
+        // Changed historical lesson bytes stop earlier at the binding gate.
+        let lesson_source = out.join("business/observations");
+        for (name, changed_file, expected_error) in [
+            ("unreviewed-lesson", None, None),
+            (
+                "borrowed-inventory",
+                Some("source-suite-inputs.json"),
+                Some("inventory borrows"),
+            ),
+            (
+                "borrowed-worker",
+                Some("source-suite/control-0/contained-input-fixture/worker-stdout.log"),
+                Some("raw bytes borrow"),
+            ),
+            (
+                "borrowed-candidate",
+                Some("candidate.json"),
+                Some("candidate differs"),
+            ),
+        ] {
+            let changed_path = changed_file.map(|p| lesson_source.join(p));
+            let original = changed_path.as_ref().map(|p| fs::read(p).unwrap());
+            if let Some(path) = &changed_path {
+                fs::write(path, b"{}").unwrap();
+            }
+            let mut reviewed_state = state.clone();
+            reviewed_state["lessonAdmission"] = json!({"proposalDirectory":knowledge,
+                "lessonSourceDirectory":lesson_source,"lessonId":"suite-lesson"});
+            let (result, output) = invoke(&reviewed_state, "evidence-return", 0, name);
+            assert_eq!(
+                result["status"],
+                if changed_file.is_none() {
+                    "review-required"
+                } else {
+                    "rejected"
+                }
+            );
+            let rejection: Value =
+                serde_json::from_slice(&fs::read(output.join("business/report.json")).unwrap())
+                    .unwrap();
+            assert!(!output.join("business/staged-admission").exists());
+            if changed_file.is_none() {
+                assert_eq!(rejection["gap"], "reviewed-source-suite-lesson-required");
+                continue;
+            }
+            let error = rejection["error"].as_str().unwrap();
+            if let Some(expected) = expected_error {
+                assert!(error.contains(expected), "{error}");
+            } else {
+                assert!(!error.contains("business source lesson"), "{error}");
+            }
+            assert!(!output.join("business/staged-admission").exists());
+            if let Some(path) = changed_path {
+                fs::write(path, original.unwrap()).unwrap();
+            }
+        }
         for (name, mut changed, stage, round) in [
             ("round", state.clone(), "evidence-return", 1),
             ("scope", state.clone(), "evidence-return", 0),

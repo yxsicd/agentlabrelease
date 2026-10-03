@@ -73,9 +73,13 @@ the original format through the ordinary observation exporter; complete declarat
 disagreements preserve taskPassed=false. The existing observationPersistence
 adapter can consume that native export and independently reconstruct readback.
 No behavior capture wrapper, reviewed lesson, knowledge admission or automatic
-promotion is fabricated. With lessonAdmission supplied, this lane stops at
-reviewed-source-suite-admission-binding-required until the corresponding original
-reviewed-source binding is implemented.
+promotion is fabricated. With lessonAdmission supplied, bind the exact current
+native inventory, every listed raw file and candidate bytes to lessonSourceDirectory
+before ordinary lesson staging and committed-return validation. Original suite
+reconstruction occurs before that comparison. Missing lesson-review.json stops at
+reviewed-source-suite-lesson-required. Valid reviewed inputs still require the
+existing review reconstruction, committed source provenance, fixed-baseline
+knowledge delta and full assessment gates; byte agreement is not semantic approval.
 
 Retained real Action 37156735569 was replayed locally through both business stages
 in external flywheel-source-budget-successor-ucrL3x/business-case-replay and
@@ -87,6 +91,22 @@ redispatched. This validates native result handoff, not fresh automatic cycles.
 Overall maturity remains 74%; accepted complete automatic business rounds remain
 zero. Regression fixtures cover matched/disagreeing outcomes, cross-round reuse,
 scope/digest drift and ambiguous input lanes without weakening original suite gates.
+
+The follow-up binding regression exercises exact unreviewed input and altered
+inventory, worker stdout and candidate files. Exact unreviewed input stops for
+review; altered source stops before staging. Real retained 37156735569 execution
+also rejects the previously committed 37147845918 lesson at the inventory-binding
+gate, rather than admitting old evidence as this round's lesson. External captures
+current-unreviewed-replay and borrowed-reviewed-replay retain the initial results;
+the initial missing-review replay reported a generic missing-file rejection.
+The follow-up explicitly names that review gap without modifying those originals.
+These are retained-byte local validations with no model/worker rerun or authority
+write. Successful business admission of a newly reviewed source-suite lesson and
+full automatic remote knowledge return remain unverified.
+Fresh local current-unreviewed-replay-v2 reuses the same request and original
+capture, exits 0 and stops review-required at reviewed-source-suite-lesson-required.
+No original failure receipt was rewritten. All 32 Rust business/source-diagnostic/
+knowledge-gate tests passed, plus formatting, Skill and Release checksum checks.
 
 ## Local operational checkpoint
 

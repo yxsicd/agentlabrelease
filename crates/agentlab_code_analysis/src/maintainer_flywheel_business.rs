@@ -183,6 +183,30 @@ fn source_suite_capture(
     let report = crate::maintainer_source_diagnostic::reconstruct_suite(&stage, &suite)?;
     Ok((stage, suite, report))
 }
+
+fn bind_source_suite_lesson(original: &Path, source: &Path) -> Result<(), String> {
+    let inventory_bytes = read(&original.join("source-suite-inputs.json"))?;
+    need(
+        read(&source.join("source-suite-inputs.json"))? == inventory_bytes,
+        "business source lesson inventory borrows another execution",
+    )?;
+    let inventory: Value = serde_json::from_slice(&inventory_bytes).map_err(|e| e.to_string())?;
+    for entry in inventory["files"]
+        .as_array()
+        .ok_or("business source inventory absent")?
+    {
+        let name = text(entry, "path")?;
+        let path = absolute(&json!({"path":source.join(name)}), "path")?;
+        need(
+            read(&path)? == read(&original.join(name))?,
+            "business source lesson raw bytes borrow another execution",
+        )?;
+    }
+    need(
+        read(&source.join("candidate.json"))? == read(&original.join("candidate.json"))?,
+        "business source lesson candidate differs",
+    )
+}
 fn recorded_outcome(result: &Value) -> Result<bool, String> {
     let passed = result["status"] == "recorded-attempt-passed";
     need(
@@ -503,6 +527,7 @@ fn evaluate(
             }
             let case_bytes = bound(case_ref)?;
             let case: Value = serde_json::from_slice(&case_bytes).map_err(|e| e.to_string())?;
+            let mut source_observation = None;
             need(
                 state.get("sourceSuiteCapture").is_some()
                     == (case["schema"] == "agentlab.flywheel_source_suite_execution.v1"),
@@ -522,9 +547,6 @@ fn evaluate(
                         && case["taskPassed"] == (report["status"] == "declarations-matched"),
                     "business source suite reconstructed outcome differs",
                 )?;
-                if state.get("lessonAdmission").is_some() {
-                    return Ok(gap("reviewed-source-suite-admission-binding-required"));
-                }
                 let destination = out.join("observations");
                 let manifest = crate::maintainer_source_suite_lesson::export(
                     &stage,
@@ -532,31 +554,36 @@ fn evaluate(
                     None,
                     &destination,
                 )?;
-                let persistence = if let Some(config) = state.get("observationPersistence") {
-                    persist_observations(config, &packet, &destination, out)?
-                } else {
-                    Value::Null
-                };
-                return Ok((
-                    "review-required",
-                    json!({
-                        "schema":"agentlab.flywheel_observation_return.v1",
-                        "sourceFormat":"agentlab.source_recipe_control_suite_result.v1",
-                        "export":{"directory":destination,"manifestSha256":digest(&read(&destination.join("export.json"))?)},
-                        "tables":manifest["tables"],"observationExported":true,"lessonCreated":false,
-                        "persistence":persistence,"taskPassed":case["taskPassed"],
-                        "gap":if persistence.is_null(){"operational-persistence-and-reviewed-knowledge-delta-required"}else{"reviewed-knowledge-delta-required"},
-                        "qualified":false,"authorityWritePerformed":!persistence.is_null() && persistence["noChange"]==false,
-                        "automaticPromotion":false
-                    }),
-                ));
+                if state.get("lessonAdmission").is_none() {
+                    let persistence = if let Some(config) = state.get("observationPersistence") {
+                        persist_observations(config, &packet, &destination, out)?
+                    } else {
+                        Value::Null
+                    };
+                    return Ok((
+                        "review-required",
+                        json!({
+                            "schema":"agentlab.flywheel_observation_return.v1",
+                            "sourceFormat":"agentlab.source_recipe_control_suite_result.v1",
+                            "export":{"directory":destination,"manifestSha256":digest(&read(&destination.join("export.json"))?)},
+                            "tables":manifest["tables"],"observationExported":true,"lessonCreated":false,
+                            "persistence":persistence,"taskPassed":case["taskPassed"],
+                            "gap":if persistence.is_null(){"operational-persistence-and-reviewed-knowledge-delta-required"}else{"reviewed-knowledge-delta-required"},
+                            "qualified":false,"authorityWritePerformed":!persistence.is_null() && persistence["noChange"]==false,
+                            "automaticPromotion":false
+                        }),
+                    ));
+                }
+                source_observation = Some(destination);
             }
-            need(
-                case["schema"] == "agentlab.flywheel_behavior_execution.v1"
-                    && case["round"] == *round
-                    && case["taskPassed"].is_boolean(),
-                "business case evidence schema differs",
-            )?;
+            if source_observation.is_none() {
+                need(
+                    case["schema"] == "agentlab.flywheel_behavior_execution.v1"
+                        && case["round"] == *round
+                        && case["taskPassed"].is_boolean(),
+                    "business case evidence schema differs",
+                )?;
+            }
             let Some(admission) = state.get("lessonAdmission") else {
                 let Some(candidate_ref) = state["behaviorExecution"].get("candidate") else {
                     return Ok(gap(
@@ -608,15 +635,22 @@ fn evaluate(
             };
             let proposal = absolute(admission, "proposalDirectory")?;
             let source = absolute(admission, "lessonSourceDirectory")?;
-            for (key, file) in [
-                ("contract", "behavior-contract.json"),
-                ("capture", "behavior-capture.json"),
-            ] {
-                let original = bound(&case["latestAttemptEvidence"][key])?;
-                need(
-                    read(&source.join(file))? == original,
-                    "business lesson borrows another execution capture",
-                )?;
+            if let Some(original) = source_observation {
+                bind_source_suite_lesson(&original, &source)?;
+                if !source.join("lesson-review.json").exists() {
+                    return Ok(gap("reviewed-source-suite-lesson-required"));
+                }
+            } else {
+                for (key, file) in [
+                    ("contract", "behavior-contract.json"),
+                    ("capture", "behavior-capture.json"),
+                ] {
+                    let original = bound(&case["latestAttemptEvidence"][key])?;
+                    need(
+                        read(&source.join(file))? == original,
+                        "business lesson borrows another execution capture",
+                    )?;
+                }
             }
             // The existing gate reconstructs original raw evidence and typed
             // tables. Staging does not write or authenticate remote authority.
