@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import http.server
+import hashlib
 import argparse
 import json
 import os
@@ -70,9 +71,15 @@ def main():
                 '{"name":"agentlab-runtime-smoke","lockfileVersion":3,"packages":{}}\n'
             )
             pi = runtime / "node_modules/.bin/pi"
+            prompt = ('complete UTF-8 source context 源码\n' * 10000).encode()
+            prompt_sha = hashlib.sha256(prompt).hexdigest()
             pi.write_text(
-                "#!/bin/sh\n"
-                "printf '%s\\n' '{\"type\":\"tool_execution_end\",\"result\":{\"isError\":false}}'\n"
+                "#!/usr/bin/env node\n"
+                "const fs=require('fs'),crypto=require('crypto');\n"
+                "const raw=fs.readFileSync(0);\n"
+                "const digest=crypto.createHash('sha256').update(raw).digest('hex');\n"
+                f"if(digest!=={json.dumps(prompt_sha)}) process.exit(81);\n"
+                "console.log(JSON.stringify({type:'tool_execution_end',result:{isError:false},stdinSha256:digest}));\n"
             )
             pi.chmod(0o755)
             (case_input / "manifest.json").write_text(
@@ -127,17 +134,23 @@ def main():
                 AGENTLAB_PARTICIPANT_RUNTIME_LABEL="smoke",
                 AGENTLAB_OPERATOR_GATEWAY_PORT=str(server.server_port),
             )
-            completed = run(
+            completed = subprocess.run([
                 str(ROOT / "scripts/run-pi-in-docker.py"),
                 "--print",
                 "--session",
-                str(state / "session.jsonl"),
-                "smoke",
+                str(state / "session.jsonl")],
                 cwd=workspace,
                 env=environment,
                 capture_output=True,
-                text=True,
+                input=prompt,
             )
+            if completed.returncode:
+                args.output.mkdir(parents=True)
+                shutil.copy2(config, args.output / 'runtime.json')
+                shutil.copytree(receipts, args.output / 'receipts')
+                (args.output / 'stdout.log').write_bytes(completed.stdout)
+                (args.output / 'stderr.log').write_bytes(completed.stderr)
+                raise RuntimeError(f'Runtime smoke failed with exit {completed.returncode}; evidence retained at {args.output}')
             validation_path = root / "validation.json"
             run(
                 "python3",
@@ -178,7 +191,9 @@ def main():
             summary = {
                 "schema": "agentlab.participant_runtime_isolation_smoke.v1",
                 "ok": True,
-                "participantStdout": completed.stdout.strip(),
+                "participantStdout": completed.stdout.decode('utf-8').strip(),
+                "promptStdinBytes": len(prompt),
+                "promptStdinSha256": prompt_sha,
                 "imageId": validation["imageId"],
                 "filesystemIsolationQualified": True,
                 "externalCredentialIsolationQualified": True,

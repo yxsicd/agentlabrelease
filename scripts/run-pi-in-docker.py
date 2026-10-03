@@ -288,7 +288,7 @@ def main():
         name = f"agentlab-{re.sub(r'[^a-z0-9_.-]', '-', label.lower())}-{uuid.uuid4().hex[:12]}"
         created = subprocess.run(
             [
-                "docker", "create", "--name", name, *base[:-1],
+                "docker", "create", "--interactive", "--name", name, *base[:-1],
                 "--entrypoint", "/runtime/node_modules/.bin/pi", base[-1],
                 *arguments,
             ],
@@ -323,7 +323,7 @@ def main():
         receipt["relayInspectSha256"] = digest(relay_inspect_path)
         receipt["networkInspectSha256"] = digest(network_inspect_path)
         write_json(receipt_path, receipt)
-        start_process = subprocess.Popen(["docker", "start", "-a", container_id])
+        start_process = subprocess.Popen(["docker", "start", "-a", "-i", container_id])
         return_code = start_process.wait()
         final_inspect = subprocess.run(["docker", "inspect", container_id], check=True, capture_output=True)
         final_path = receipt_root / f"{label}.container-final.json"
