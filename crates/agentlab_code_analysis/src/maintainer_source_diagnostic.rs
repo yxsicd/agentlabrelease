@@ -183,13 +183,7 @@ fn prepare_selected(
         )?;
     }
     let runtime = std::str::from_utf8(&originals[3]).map_err(|e| e.to_string())?;
-    let literal = runtime
-        .lines()
-        .next()
-        .and_then(|s| s.strip_prefix("const manifest = "))
-        .and_then(|s| s.strip_suffix(';'))
-        .ok_or("diagnostic runtime manifest missing")?;
-    let manifest: Value = serde_json::from_str(literal).map_err(|e| e.to_string())?;
+    let manifest = crate::maintainer_source_recipe_author::runtime_manifest(runtime)?;
     need(
         manifest["scenarios"] == design["scenarios"] && manifest["controls"] == design["controls"],
         "diagnostic runtime design differs",
@@ -413,15 +407,7 @@ pub fn reconstruct_suite(stage: &Path, suite: &Path) -> Result<Value, String> {
         &originals[2],
     )?;
     let runtime = std::str::from_utf8(&originals[3]).map_err(|e| e.to_string())?;
-    let manifest: Value = serde_json::from_str(
-        runtime
-            .lines()
-            .next()
-            .and_then(|s| s.strip_prefix("const manifest = "))
-            .and_then(|s| s.strip_suffix(';'))
-            .ok_or("suite runtime manifest missing")?,
-    )
-    .map_err(|e| e.to_string())?;
+    let manifest = crate::maintainer_source_recipe_author::runtime_manifest(runtime)?;
     need(
         result["designSha256"] == digest(&originals[2])
             && proposal["contract"]["checks"] == design["checks"]

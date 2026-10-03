@@ -1210,6 +1210,8 @@ pub fn verifier_interface(request_bytes: &[u8], design_bytes: &[u8]) -> Result<V
             "loadModuleReturns":"CommonJS exports; explicitly construct exported classes",
             "initialStatePointerBase":"scenario.initialState, not scenarioInputs packet",
             "initialStateObservation":"actual source state; mismatch must stop before tested operation",
+            "initialFieldsObservation":"assertInitialFields(scenarioId, actualInstance, '/fields') reads selected own data properties; never pass expected state as actual",
+            "initialStateValueShape":"assertInitialState actual is the selected subtree value, not a wrapper object; setup metadata is not observed state",
             "initialStatePointerInventory":"root and top-level only; nested RFC6901 pointers remain supported"},
         "scenarios":scenarios,
         "semanticQualified":false,"executionPerformed":false,
@@ -1393,6 +1395,26 @@ pub fn stage_with_loop_intent(
     )
 }
 
+/// Decode only the generated manifest header, without evaluating JavaScript.
+/// Retain old literal captures as historical data; new headers preserve JSON keys.
+pub(crate) fn runtime_manifest(runtime: &str) -> Result<Value, String> {
+    let literal = runtime
+        .lines()
+        .next()
+        .and_then(|s| s.strip_prefix("const manifest = "))
+        .and_then(|s| s.strip_suffix(';'))
+        .ok_or("runtime manifest header missing")?;
+    if let Some(encoded) = literal
+        .strip_prefix("JSON.parse(")
+        .and_then(|s| s.strip_suffix(')'))
+    {
+        let json: String = serde_json::from_str(encoded).map_err(|e| e.to_string())?;
+        serde_json::from_str(&json).map_err(|e| e.to_string())
+    } else {
+        serde_json::from_str(literal).map_err(|e| e.to_string())
+    }
+}
+
 fn design_runtime(
     request: &Value,
     proposal: &Value,
@@ -1415,9 +1437,11 @@ fn design_runtime(
         .collect::<Result<_, _>>()?;
     let manifest = json!({"files":files,"controls":design["controls"],
         "scenarios":if design["schema"] == "agentlab.source_recipe_design.v2" { design["scenarios"].clone() } else { json!([]) }});
+    // Preserve JSON keys such as __proto__; an object literal has different semantics.
+    let encoded = serde_json::to_string(&manifest).map_err(|e| e.to_string())?;
     let mut bytes = format!(
-        "const manifest = {};\n",
-        serde_json::to_string(&manifest).map_err(|e| e.to_string())?
+        "const manifest = JSON.parse({});\n",
+        serde_json::to_string(&encoded).map_err(|e| e.to_string())?
     )
     .into_bytes();
     bytes.extend_from_slice(include_bytes!("source_design_runtime.cjs"));
