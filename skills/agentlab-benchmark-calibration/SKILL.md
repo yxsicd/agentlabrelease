@@ -477,6 +477,13 @@ compare an explicit participant/provider policy in a new cohort under unchanged
 task checks and budgets. Bind the selected policy to actual Gateway requests;
 an operator override or one later success alone does not prove upstream policy
 application, causal improvement or knowledge-guidance benefit.
+An explicit thinking-disabled request can still return reasoning chunks; inspect
+actual stream fields and semantic completion rather than assuming effective mode.
+When design and code share a retained session, avoid resending an unchanged full
+source context already present in its history. Preserve original prompts and
+source inventory, require session continuity, and keep full source delivery for
+fresh/frozen-design or repair sessions. Reduced duplicate context is a transport
+optimization, not evidence of improved generation or valid expected behavior.
 
 Reserve the evidence tag at the exact workflow source SHA before a long capture
 so advancing main cannot invalidate late Release publication. Always retain full

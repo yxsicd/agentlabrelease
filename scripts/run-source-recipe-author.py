@@ -445,7 +445,7 @@ behavior, transform source only in memory for the declared reference/wrong contr
 The operator will inspect semantics and execution policy before running any code.
 Your output is unreviewed; generation is neither qualification nor authority admission.
 SOURCE CONTEXT:
-{json.dumps(context, ensure_ascii=False, separators=(',', ':'))}
+{json.dumps(context, ensure_ascii=False, separators=(',', ':')) if not args.design_first else 'Reuse the complete pinned SOURCE CONTEXT already supplied in the preceding design turn of this same retained session. No source files have been removed. The frozen design below supplies the accepted construction contract.'}
 '''
     if revision_context is not None:
         prompt += '\nREVIEW FEEDBACK (data, not execution permission):\n' + json.dumps(revision_context, ensure_ascii=False)
@@ -523,6 +523,19 @@ SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
                     args.output, args.request, args.gate, design_prompt,
                     None if args.reasoning_effort == 'default' else args.reasoning_effort, args.design_revisions,
                     retry_policy=retry_policy, revision_request=args.revision_request)
+                # Pi must retain the design session before code may reuse its
+                # original source context. Participant.turn independently checks
+                # the session identity/append-only bytes before and after dispatch.
+                if not args.design_only:
+                    if not getattr(participant, '_retained_pi_session_id', None):
+                        raise ValueError('Missing retained design session; cannot reuse source context')
+                    with (evidence/'source-context-reuse.json').open('x') as stream:
+                        json.dump(dict(schema='agentlab.source_context_reuse.v1',
+                            sourceContextSha256=hashlib.sha256(json.dumps(context,ensure_ascii=False).encode()).hexdigest(),
+                            designSha256=hashlib.sha256(design_path.read_bytes()).hexdigest(),
+                            retainedSessionId=participant._retained_pi_session_id,
+                            fullSourceContextRetained=True,semanticQualified=False,
+                            automaticPromotion=False,authorityWritePerformed=False),stream)
             if args.design_only:
                 receipt = {
                     'schema': 'agentlab.source_recipe_design_capture.v1',

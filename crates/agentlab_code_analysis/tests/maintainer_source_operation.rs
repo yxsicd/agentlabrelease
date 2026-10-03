@@ -446,7 +446,7 @@ with tempfile.TemporaryDirectory() as d:
     root = Path(d)
     request = root/'request.json'
     request.write_text(json.dumps(dict(schema='agentlab.source_recipe_author_request.v1',
-        scope={'id':'arbitrary-scope'}, source={}, sourceFiles=[], semanticFacts=[],
+        scope={'id':'arbitrary-scope'}, source={}, sourceFiles=[{'content':'complete-source-context-sentinel'}], semanticFacts=[],
         selectedGap={}, policy={'methodDependencies':[]})))
     revision_path = root/'revision.json'
     revision_packet = {'schema':'agentlab.source_recipe_revision_request.v1',
@@ -481,7 +481,8 @@ with tempfile.TemporaryDirectory() as d:
         (12, ['--design-first','--revision-request',str(scenario_revision_path)],'low',180,None),
         (13, ['--frozen-design',str(parent_design),'--frozen-design-sha256',
               hashlib.sha256(parent_design.read_bytes()).hexdigest(),
-              '--revision-request',str(scenario_revision_path)],'low',180,None)]:
+              '--revision-request',str(scenario_revision_path)],'low',180,None),
+        (14, ['--design-first'],'low',180,None)]:
         seen = {}
         class FakeParticipant:
             def __init__(self, evidence, state, binary, gateway, model, **options):
@@ -492,7 +493,9 @@ with tempfile.TemporaryDirectory() as d:
                 assert policy['retry']['enabled'] is False
                 assert policy['retry']['maxRetries']==0 and policy['retry']['provider']['maxRetries']==0
                 seen['turn'] = options
+                seen.setdefault('prompts',[]).append(options['prompt'])
                 seen.setdefault('labels',[]).append(label)
+                if index!=14:self._retained_pi_session_id='fixture-retained-design-session'
                 gateway = self.evidence/'gateway'
                 gateway.mkdir(exist_ok=True)
                 (gateway/f'{len(seen["labels"]):04d}.status.json').write_text(json.dumps(dict(status=200,
@@ -516,6 +519,14 @@ with tempfile.TemporaryDirectory() as d:
              patch.object(module.importlib.util,'spec_from_file_location',return_value=fake_spec), \
              patch.object(module.importlib.util,'module_from_spec',return_value=SimpleNamespace(Participant=FakeParticipant)), \
              patch.object(module.subprocess,'run',side_effect=successful_gate) as stage:
+            if index==14:
+                try:module.main()
+                except ValueError as error:assert 'Missing retained design session' in str(error)
+                else:raise AssertionError('Missing session dispatched code without its original context')
+                assert seen['labels']==['source-recipe-design']
+                assert not (root/str(index)/'proposal.json').exists()
+                assert (root/str(index)/'design.json').exists()
+                continue
             module.main()
         assert seen['constructor']['gateway_timeout_seconds'] == deadline
         assert seen['constructor']['max_output_tokens']==(8192 if index==7 else 16384)
@@ -532,6 +543,7 @@ with tempfile.TemporaryDirectory() as d:
             assert (root/str(index)/'revision-request.json').read_bytes()==scenario_revision_path.read_bytes()
         if index in (8,9):
             assert seen['labels']==['source-recipe-design']
+            assert not (root/str(index)/'evidence/source-context-reuse.json').exists()
             receipt=json.loads((root/str(index)/'design-capture.json').read_bytes())
             assert receipt['reviewRequired'] is True and receipt['semanticQualified'] is False
             assert receipt['verifierGenerationPerformed'] is False
@@ -545,11 +557,24 @@ with tempfile.TemporaryDirectory() as d:
             continue
         if index in (6,12):
             assert seen['labels']==['source-recipe-design','source-recipe-author']
+            assert 'complete-source-context-sentinel' in seen['prompts'][0]
+            assert 'complete-source-context-sentinel' not in seen['prompts'][1]
+            assert 'FROZEN DESIGN' in seen['prompts'][1]
+            reuse=json.loads((root/str(index)/'evidence/source-context-reuse.json').read_bytes())
+            assert reuse['retainedSessionId']=='fixture-retained-design-session'
+            assert reuse['fullSourceContextRetained'] is True and reuse['semanticQualified'] is False
+            if index==6:
+                supplied=json.loads(seen['prompts'][0].split('SOURCE CONTEXT:\n',1)[1])
+                original=json.loads(request.read_bytes())
+                assert supplied=={key:original[key] for key in ('scope','source','sourceFiles','semanticFacts','selectedGap')}
+                assert reuse['sourceContextSha256']==hashlib.sha256(json.dumps(supplied,ensure_ascii=False).encode()).hexdigest()
             assert '--validate-source-recipe-design' in stage.call_args_list[2 if index==12 else 0][0][0]
             assert '--design' in stage.call_args[0][0]
             assert (root/str(index)/'evidence/design-0-generation-completion.json').exists()
         if index in (10,11,13):
             assert seen['labels']==['source-recipe-author']
+            assert 'complete-source-context-sentinel' in seen['prompts'][0]
+            assert not (root/str(index)/'evidence/source-context-reuse.json').exists()
             assert '--validate-source-recipe-design' in stage.call_args_list[0][0][0]
             assert '--design' in stage.call_args[0][0]
             assert (root/str(index)/'design.json').read_bytes()==parent_design.read_bytes()
