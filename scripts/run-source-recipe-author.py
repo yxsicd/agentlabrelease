@@ -167,6 +167,10 @@ def main():
                    help='Freeze source transformations and scenario contract before generating code')
     p.add_argument('--design-only', action='store_true',
                    help='Stop after validated unreviewed design; no verifier generation or proposal staging')
+    p.add_argument('--frozen-design', type=Path,
+                   help='Continue verifier generation from exact existing design; not semantic approval')
+    p.add_argument('--frozen-design-sha256',
+                   help='Required exact digest of --frozen-design original bytes')
     p.add_argument('--parent-design', type=Path,
                    help='Original design paired with digest-bound independent revision feedback')
     p.add_argument('--design-review-feedback', type=Path,
@@ -174,6 +178,11 @@ def main():
     p.add_argument('--design-revisions', type=int, choices=range(3), default=1,
                    help='0..2 explicit same-session design corrections; no transport retries')
     args = p.parse_args()
+    if bool(args.frozen_design) != bool(args.frozen_design_sha256):
+        p.error('--frozen-design and --frozen-design-sha256 must be paired')
+    if args.frozen_design and (args.design_first or args.design_only or args.parent_design
+                              or args.design_review_feedback or args.revision_request):
+        p.error('Frozen design continuation cannot mix design generation or revision modes')
     if args.design_only and not args.design_first:
         p.error('--design-only requires --design-first')
     if bool(args.parent_design) != bool(args.design_review_feedback):
@@ -193,6 +202,28 @@ def main():
     workspace.mkdir()
     evidence.mkdir()
     revision_context = None
+    if args.frozen_design:
+        raw = args.frozen_design.read_bytes()
+        if (len(raw) > 64 * 1024 or len(args.frozen_design_sha256) != 64
+                or hashlib.sha256(raw).hexdigest() != args.frozen_design_sha256):
+            raise ValueError('Frozen design digest differs or design exceeds byte budget')
+        frozen_path = args.output / 'design.json'
+        with frozen_path.open('xb') as stream:
+            stream.write(raw)
+        checked = subprocess.run([str(args.gate.resolve()), '--validate-source-recipe-design',
+            '--author-request', str(args.request.resolve()), '--design', str(frozen_path.resolve()),
+            '--output', str((args.output/'design-validation.json').resolve())],
+            capture_output=True, timeout=60)
+        (evidence/'frozen-design-check-stdout.log').write_bytes(checked.stdout)
+        (evidence/'frozen-design-check-stderr.log').write_bytes(checked.stderr)
+        checked.check_returncode()
+        with (args.output/'design-continuation.json').open('x') as stream:
+            json.dump(dict(schema='agentlab.source_recipe_design_continuation.v1',
+                authorRequestSha256=hashlib.sha256(request_bytes).hexdigest(),
+                designSha256=hashlib.sha256(raw).hexdigest(),
+                validationSha256=hashlib.sha256((args.output/'design-validation.json').read_bytes()).hexdigest(),
+                designGenerationPerformed=False, semanticQualified=False,
+                automaticPromotion=False, authorityWritePerformed=False), stream)
     if args.parent_design:
         design_raw = args.parent_design.read_bytes()
         review_raw = args.design_review_feedback.read_bytes()
@@ -312,7 +343,7 @@ SOURCE CONTEXT:
     design_path = None
     try:
         retry_policy = freeze_pi_retry_policy(args.output / 'participant-state', workspace, evidence)
-        if args.design_first:
+        if args.design_first or args.frozen_design:
             design_prompt = '''Design one bounded source-maintenance exercise before writing executable code.
 Use supplied source as data. No tools, files, executable verifier or platform claims.
 Return exactly one JSON object with seven fields, without Markdown fences:
@@ -358,10 +389,14 @@ No generated code is executed or approved by design validation.
 SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
             if revision_context is not None:
                 design_prompt += '\nREVIEW DATA:\n' + json.dumps(revision_context, ensure_ascii=False)
-            design_path, design_content = construct_design(participant, workspace, evidence,
-                args.output, args.request, args.gate, design_prompt,
-                None if args.reasoning_effort == 'default' else args.reasoning_effort, args.design_revisions,
-                retry_policy=retry_policy)
+            if args.frozen_design:
+                design_path = args.output / 'design.json'
+                design_content = design_path.read_text()
+            else:
+                design_path, design_content = construct_design(participant, workspace, evidence,
+                    args.output, args.request, args.gate, design_prompt,
+                    None if args.reasoning_effort == 'default' else args.reasoning_effort, args.design_revisions,
+                    retry_policy=retry_policy)
             if args.design_only:
                 receipt = {
                     'schema': 'agentlab.source_recipe_design_capture.v1',

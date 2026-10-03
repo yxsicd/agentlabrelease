@@ -384,7 +384,7 @@ with tempfile.TemporaryDirectory() as directory:
 #[test]
 fn source_recipe_dispatch_uses_explicit_constructor_limits_without_retry() {
     let code = r#"
-import importlib.util, json, os, sys, tempfile
+import hashlib, importlib.util, json, os, sys, tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -416,7 +416,9 @@ with tempfile.TemporaryDirectory() as d:
         (7, ['--max-output-tokens','8192'],'low',180,None),
         (8, ['--design-first','--design-only'],'low',180,None),
         (9, ['--design-first','--design-only','--parent-design',str(parent_design),
-             '--design-review-feedback',str(design_feedback)],'low',180,None)]:
+             '--design-review-feedback',str(design_feedback)],'low',180,None),
+        (10, ['--frozen-design',str(parent_design),'--frozen-design-sha256',
+              hashlib.sha256(parent_design.read_bytes()).hexdigest()],'low',180,None)]:
         seen = {}
         class FakeParticipant:
             def __init__(self, evidence, state, binary, gateway, model, **options):
@@ -460,7 +462,7 @@ with tempfile.TemporaryDirectory() as d:
         assert seen['turn']['reasoning_effort'] == effort
         assert seen['turn']['transport_retry_limit'] == 0
         assert seen['closed'] is True
-        assert stage.call_count == (2 if index in (5,6,9) else 1)
+        assert stage.call_count == (2 if index in (5,6,9,10) else 1)
         if index in (8,9):
             assert seen['labels']==['source-recipe-design']
             receipt=json.loads((root/str(index)/'design-capture.json').read_bytes())
@@ -479,6 +481,14 @@ with tempfile.TemporaryDirectory() as d:
             assert '--validate-source-recipe-design' in stage.call_args_list[0][0][0]
             assert '--design' in stage.call_args[0][0]
             assert (root/str(index)/'evidence/design-0-generation-completion.json').exists()
+        if index==10:
+            assert seen['labels']==['source-recipe-author']
+            assert '--validate-source-recipe-design' in stage.call_args_list[0][0][0]
+            assert '--design' in stage.call_args[0][0]
+            assert (root/str(index)/'design.json').read_bytes()==parent_design.read_bytes()
+            receipt=json.loads((root/str(index)/'design-continuation.json').read_bytes())
+            assert receipt['designGenerationPerformed'] is False and receipt['semanticQualified'] is False
+            assert receipt['designSha256']==hashlib.sha256(parent_design.read_bytes()).hexdigest()
         if index==5:
             assert '--check-source-recipe-revision' in stage.call_args_list[0][0][0]
             assert json.loads((root/str(index)/'revision-request.json').read_bytes()) == revision_packet
@@ -516,6 +526,31 @@ with tempfile.TemporaryDirectory() as d:
         else: raise AssertionError('rejected design continued')
         assert seen['labels']==['source-recipe-design'] and seen['closed'] is True
     assert not (root/'rejected-design/proposal.json').exists()
+    for suffix, extra in [('digest',['--frozen-design',str(parent_design),'--frozen-design-sha256','0'*64]),
+                          ('pair',['--frozen-design',str(parent_design)]),
+                          ('mixed',['--frozen-design',str(parent_design),'--frozen-design-sha256','0'*64,'--design-first'])]:
+        argv=['author','--request',str(request),'--output',str(root/('rejected-frozen-'+suffix)),
+              '--gate','/unexecuted-fixture-gate','--pi','/unexecuted-fixture-pi',*extra]
+        with patch.dict(os.environ,env), patch.object(sys,'argv',argv), \
+             patch.object(module.importlib.util,'spec_from_file_location') as dispatch, \
+             patch.object(module.subprocess,'run') as gate:
+            try: module.main()
+            except (ValueError,SystemExit): pass
+            else: raise AssertionError('Invalid frozen continuation accepted')
+            dispatch.assert_not_called()
+            gate.assert_not_called()
+    argv=['author','--request',str(request),'--output',str(root/'rejected-frozen-source'),
+          '--gate','/unexecuted-fixture-gate','--pi','/unexecuted-fixture-pi',
+          '--frozen-design',str(parent_design),'--frozen-design-sha256',
+          hashlib.sha256(parent_design.read_bytes()).hexdigest()]
+    with patch.dict(os.environ,env), patch.object(sys,'argv',argv), \
+         patch.object(module.importlib.util,'spec_from_file_location') as dispatch, \
+         patch.object(module.subprocess,'run',return_value=failure):
+        try: module.main()
+        except subprocess.CalledProcessError: pass
+        else: raise AssertionError('Rejected frozen source dispatched')
+        dispatch.assert_not_called()
+    assert not (root/'rejected-frozen-source/proposal.json').exists()
 "#;
     let result = Command::new("python3")
         .args(["-c", code])

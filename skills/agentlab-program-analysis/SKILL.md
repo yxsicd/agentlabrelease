@@ -103,6 +103,14 @@ their returned values: trace each edited control rather than inferring impact
 from the unmodified call graph. Controlled source probes are diagnostic evidence,
 not admitted Oracles, Agent evaluations or platform execution.
 
+After reviewing a retained design, use `--frozen-design` paired with its exact
+`--frozen-design-sha256` to continue verifier generation without another design
+model call. The constructor preserves original design bytes and revalidates
+them against the current reproducible author request before participant dispatch.
+Do not mix this continuation with design/proposal revision modes. This freezes
+the intended contract, not approval: independently inspect and calibrate generated
+code before execution qualification or knowledge promotion.
+
 Separate modification ownership from read-only source context. A construction
 Oracle may inspect a path outside its editable responsibility only when the
 candidate explicitly lists it as context, a bound fact cites its exact Blob,
