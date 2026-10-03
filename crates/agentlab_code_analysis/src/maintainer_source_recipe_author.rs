@@ -356,9 +356,10 @@ pub fn revision(
         "recipe revision parent proposal scope",
     )?;
     need(
-        review.as_object().is_some_and(|o| o.len() == 8)
-            && review["schema"] == "agentlab.source_recipe_review_feedback.v1"
-            && review["parentRequestSha256"] == digest(parent_bytes)
+        review.as_object().is_some_and(|o| {
+            (review["schema"] == "agentlab.source_recipe_review_feedback.v1" && o.len() == 8)
+                || (review["schema"] == "agentlab.source_recipe_review_feedback.v2" && o.len() == 9)
+        }) && review["parentRequestSha256"] == digest(parent_bytes)
             && review["parentProposalSha256"] == digest(proposal_bytes)
             && review["reviewed"] == true
             && review["verdict"] == "revise"
@@ -395,6 +396,7 @@ pub fn revision(
             "recipe revision finding requires loaded owned source",
         )?;
     }
+    reviewed_checks(&proposal, &review)?;
     Ok(
         json!({"schema":"agentlab.source_recipe_revision_request.v1", "revisionIndex":1,
         "currentRequestSha256":digest(current_bytes),
@@ -403,6 +405,108 @@ pub fn revision(
         "reviewOriginal":std::str::from_utf8(review_bytes).map_err(|e|e.to_string())?,
         "reviewSha256":digest(review_bytes), "reviewed":false,
         "automaticPromotion":false,"executionPerformed":false,"authorityWritePerformed":false}),
+    )
+}
+
+fn check_map(checks: &Value) -> Result<std::collections::BTreeMap<String, Value>, String> {
+    let rows = checks
+        .as_array()
+        .filter(|a| (1..=64).contains(&a.len()))
+        .ok_or("recipe revision protected checks budget")?;
+    let mut map = std::collections::BTreeMap::new();
+    for check in rows {
+        let id = text(check, "id")?;
+        need(
+            check.as_object().is_some_and(|o| o.len() == 3)
+                && check.get("expected").is_some()
+                && text(check, "pointer")?.starts_with('/')
+                && map.insert(id.to_owned(), check.clone()).is_none(),
+            "recipe revision protected check shape/duplicate",
+        )?;
+    }
+    Ok(map)
+}
+
+/// Review assertions authorize exact check edits, not their semantic truth.
+fn reviewed_checks(proposal: &Value, review: &Value) -> Result<Value, String> {
+    let mut checks = check_map(&proposal["contract"]["checks"])?;
+    if review["schema"] == "agentlab.source_recipe_review_feedback.v2" {
+        let changes = review["checkChanges"]
+            .as_array()
+            .filter(|a| (1..=64).contains(&a.len()))
+            .ok_or("recipe revision explicit check changes budget")?;
+        let mut seen = BTreeSet::new();
+        for change in changes {
+            let id = text(change, "id")?;
+            need(
+                change.as_object().is_some_and(|o| o.len() == 4)
+                    && seen.insert(id)
+                    && change.get("before").is_some()
+                    && change.get("after").is_some()
+                    && change["before"] != change["after"]
+                    && review["findings"].as_array().is_some_and(|findings| {
+                        findings.iter().any(|f| {
+                            f["id"] == change["findingId"] && change["findingId"].is_string()
+                        })
+                    }),
+                "recipe revision explicit check change/finding",
+            )?;
+            need(
+                checks.get(id).cloned().unwrap_or(Value::Null) == change["before"],
+                "recipe revision check change before differs from parent",
+            )?;
+            if change["after"].is_null() {
+                checks.remove(id);
+            } else {
+                let replacement = check_map(&json!([change["after"]]))?;
+                need(
+                    replacement.contains_key(id),
+                    "recipe revision check change id differs",
+                )?;
+                checks.insert(id.to_owned(), change["after"].clone());
+            }
+        }
+    }
+    let result = Value::Array(checks.into_values().collect());
+    check_map(&result)?;
+    Ok(result)
+}
+
+pub fn check_revision_output(
+    current_bytes: &[u8],
+    packet_bytes: &[u8],
+    output_bytes: &[u8],
+    is_design: bool,
+) -> Result<Value, String> {
+    need(
+        output_bytes.len() <= if is_design { 64 * 1024 } else { 256 * 1024 },
+        "recipe revision output budget",
+    )?;
+    let admission = check_revision(current_bytes, packet_bytes)?;
+    let packet: Value = serde_json::from_slice(packet_bytes).map_err(|e| e.to_string())?;
+    let proposal: Value = serde_json::from_str(text(&packet, "parentProposalOriginal")?)
+        .map_err(|e| e.to_string())?;
+    let review: Value =
+        serde_json::from_str(text(&packet, "reviewOriginal")?).map_err(|e| e.to_string())?;
+    let output: Value = serde_json::from_slice(output_bytes).map_err(|e| e.to_string())?;
+    let expected = check_map(&reviewed_checks(&proposal, &review)?)?;
+    let actual = check_map(if is_design {
+        &output["checks"]
+    } else {
+        &output["contract"]["checks"]
+    })?;
+    let ids: BTreeSet<_> = expected.keys().chain(actual.keys()).collect();
+    for id in ids {
+        need(expected.get(id) == actual.get(id),
+            &format!("recipe design checks differ from reviewed parent contract at check {id}; retain exact id/pointer/expected unless an exact v2 checkChanges entry authorizes the change"))?;
+    }
+    Ok(
+        json!({"schema":"agentlab.source_recipe_revision_output_admission.v1",
+        "revisionPacketSha256":admission["revisionPacketSha256"],"outputSha256":digest(output_bytes),
+        "protectedChecksSha256":digest(&serde_json::to_vec(&expected).map_err(|e|e.to_string())?),
+        "checkCount":expected.len(),"outputKind":if is_design {"design"} else {"proposal"},
+        "reviewerIdentityAuthenticated":false,"semanticQualified":false,"executionPerformed":false,
+        "authorityWritePerformed":false,"automaticPromotion":false}),
     )
 }
 
@@ -855,12 +959,32 @@ pub fn stage_with_design(
         proposal_bytes,
         output,
         Some((design_bytes, &validation)),
+        None,
     )
 }
 
 /// Serialize a bounded, unreviewed proposal. No executable controls are spawned.
 pub fn stage(request_bytes: &[u8], proposal_bytes: &[u8], output: &Path) -> Result<Value, String> {
-    stage_inner(request_bytes, proposal_bytes, output, None)
+    stage_inner(request_bytes, proposal_bytes, output, None, None)
+}
+
+pub fn stage_with_revision(
+    request_bytes: &[u8],
+    proposal_bytes: &[u8],
+    design_bytes: Option<&[u8]>,
+    packet_bytes: &[u8],
+    output: &Path,
+) -> Result<Value, String> {
+    let validation = design_bytes
+        .map(|d| check_design_proposal(request_bytes, proposal_bytes, d))
+        .transpose()?;
+    stage_inner(
+        request_bytes,
+        proposal_bytes,
+        output,
+        design_bytes.zip(validation.as_ref()),
+        Some(packet_bytes),
+    )
 }
 
 fn design_runtime(
@@ -899,7 +1023,16 @@ fn stage_inner(
     proposal_bytes: &[u8],
     output: &Path,
     design: Option<(&[u8], &Value)>,
+    revision: Option<&[u8]>,
 ) -> Result<Value, String> {
+    let revision_validation = revision
+        .map(|packet| {
+            if let Some((bytes, _)) = design {
+                check_revision_output(request_bytes, packet, bytes, true)?;
+            }
+            check_revision_output(request_bytes, packet, proposal_bytes, false)
+        })
+        .transpose()?;
     need(
         request_bytes.len() <= 512 * 1024 && proposal_bytes.len() <= 256 * 1024,
         "recipe author proposal budget",
@@ -1096,6 +1229,16 @@ fn stage_inner(
         receipt["designValidationSha256"] = json!(digest(&validation_bytes));
         receipt["designRuntimeSha256"] = json!(digest(runtime.as_ref().unwrap()));
     }
+    if let Some(packet) = revision {
+        let validation = pretty(revision_validation.as_ref().unwrap())?;
+        write(&output.join("revision-request.json"), packet)?;
+        write(
+            &output.join("revision-contract-validation.json"),
+            &validation,
+        )?;
+        receipt["revisionPacketSha256"] = json!(digest(packet));
+        receipt["revisionContractValidationSha256"] = json!(digest(&validation));
+    }
     write(&output.join("stage-receipt.json"), &pretty(&receipt)?)?;
     Ok(receipt)
 }
@@ -1132,6 +1275,26 @@ pub fn approve(
         )? == request,
         "recipe author stale review request",
     )?;
+    if receipt.get("revisionPacketSha256").is_some() || stage.join("revision-request.json").exists()
+    {
+        let packet = read(&stage.join("revision-request.json"), 2 * 1024 * 1024)?;
+        let validation = check_revision_output(&request_bytes, &packet, &proposal_bytes, false)?;
+        let stored = read(&stage.join("revision-contract-validation.json"), 128 * 1024)?;
+        need(
+            receipt["revisionPacketSha256"] == digest(&packet)
+                && receipt["revisionContractValidationSha256"] == digest(&stored)
+                && stored == pretty(&validation)?,
+            "recipe author reviewed parent contract bytes differ",
+        )?;
+        if receipt.get("designSha256").is_some() {
+            check_revision_output(
+                &request_bytes,
+                &packet,
+                &read(&stage.join("design.json"), 64 * 1024)?,
+                true,
+            )?;
+        }
+    }
     if receipt.get("designSha256").is_some() {
         let bytes = read(&stage.join("design.json"), 64 * 1024)?;
         let validation = check_design_proposal(&request_bytes, &proposal_bytes, &bytes)?;

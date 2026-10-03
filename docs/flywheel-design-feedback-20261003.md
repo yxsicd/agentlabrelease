@@ -41,3 +41,102 @@ feedback admission. Raw remote bytes remain unpreserved; reusable knowledge did
 not change, and no next round consumed these observations. Complete raw archival,
 admitted useful knowledge, automatic next-round consumption, productive repeated
 rounds and cross-repository benefit remain explicit gaps.
+
+## Fresh real correction and separate semantic rejection
+
+PR204 merged at c09df3b24758284ef366fd0a59747bfad8c51117 after all
+applicable checks passed. Local full cargo package tests exited zero. Fresh
+[Action 37112721400](https://github.com/yxsicd/agentlabrelease/actions/runs/37112721400)
+completed in 5m35s on that exact main revision with the same model/policy and
+one design correction. Initial design was rejected at
+`/scenarios/4/inputs/seams/json-parse/outcomes/0`; the revision passed static
+validation. Original upstream request 0002 contains the precise error. Native
+session continuity retained the same ID and qualified history. All three
+Gateway exchanges completed semantically with clean EOF and no stream error;
+independent filesystem, network and external-credential isolation passed.
+
+Original request SHA256 is
+e6c86e30cd0bc360669f77f602a6143e0bd524fe4916f15faf465457a44d803a;
+revised design SHA256 is
+b57d5809a374cb2016a89aa2a6e4ec4d03b1688cf9f4155b96a49eba2eb8934e;
+proposal SHA256 is
+552a4c268b850978410ad06c9b44e96b02d2659e8282c0f05f3bdd6df0e40f81.
+Artifact 11271110564 is 2603954 bytes, archive SHA256
+d791a999a827a8c4483a14cabb20c8d9f1731d7115cd7d5f0a76f5fd8b16cc3d.
+Original private captures remain outside Release.
+
+Independent source review rejected semantic execution: an import-map key differs
+from the original relative specifier; removing a catch skips the later color
+assignment and omits that check from declared failures; deleting the color
+assignment affects two scenarios, not only one. A reference only adds an erased
+type annotation, not a distinct executable strategy. These are source-grounded
+review findings, not observed generated-code execution verdicts. No generated
+verifier was approved or executed, and no knowledge was admitted.
+
+Four exact-parent-bound findings were dispatched through the existing sole
+review-child workflow as
+[Action 37113211051](https://github.com/yxsicd/agentlabrelease/actions/runs/37113211051).
+Original artifacts and failed designs
+remain unchanged. Generic construction guidance now includes downstream
+exception effects, all-scenario failure attribution, exact import mappings and
+executable rather than merely text-distinct references. This producer update
+does not modify the already-dispatched child's frozen method.
+
+Maturity remains 72%: real static correction is now demonstrated, but semantic
+correction, fresh qualified maintenance, automatic admission/consumption and
+complete productive loops remain unproven.
+
+## Sole review child failed; parent demand must remain distinct
+
+Action 37113211051 completed with failure. The initial design exceeded the
+scenario budget; its one correction then returned ten limitations, exceeding
+the unchanged 2..8 limit. Both turns completed and independent isolation passed;
+no code turn, approved verifier or operation execution occurred. Artifact
+11271210942 is 1820565 bytes, archive SHA256
+328cfe4804e3f62c10edd893b5bb85899b46d1ae18c850e6407f08abd4330ea0.
+
+Rejected corrected-design SHA256 is
+e950f0bfe06f5a5126c9d734e89a9bcf6066a4af49bccb109b0b973302469c55.
+Source review finds corrected mutation failure declarations and executable
+references, but also an incorrect normal-path observation: after the original
+catch returns, the next attribute is still applied; the child instead expects
+the default color and an unapplied third attribute. Wrong-control behavior was
+transferred into baseline expectations. Fixing serialization budgets cannot
+qualify this design. No rejected bytes were repaired and the review-chain budget
+was not reset. Producer/Skill guidance now explicitly separates these paths;
+an enforced parent-check gate and explicit reviewed-oracle revision protocol
+remain implementation gaps, not capabilities supplied by that prose.
+
+## Native parent-check admission (successor implementation)
+
+Proposal-review revisions now protect the complete parent check set. Legacy v1
+feedback preserves every exact id/pointer/expected object (order is immaterial).
+The author invokes `--validate-source-recipe-revision-output --author-request
+REQUEST --revision-request PACKET --design DESIGN --output RECEIPT` before the
+ordinary static design gate on every bounded attempt. A mismatch is repairable
+within the existing budget, not silently normalized or authorized by prose.
+Frozen-design continuations receive the same gate before participant creation.
+
+The optional v2 feedback has the original eight v1 fields plus `checkChanges`.
+Each of 1..64 entries has exactly id, before, after and findingId. Before must
+equal the original parent check (null for addition); after is the same-ID exact
+check or null for removal. The finding must belong to the digest-bound reviewed
+source findings. Duplicate/no-op/borrowed changes, malformed checks and an empty
+final oracle reject. These are explicit operator assertions, not authenticated
+reviewers or proof that weakening a check is legitimate.
+
+Final proposal staging passes `--revision-request PACKET` to the native CLI.
+It rechecks both proposal and optional design before creating output, retains
+the original packet and exact contract admission, and binds both digests in the
+stage receipt. Operator approval reconstructs them again; missing, changed or
+nonreproducible parent evidence refuses approval. Non-revision constructors and
+historical stages remain supported. Design-review-only feedback is a distinct
+lane; this gate does not silently infer a proposal parent there.
+
+Regression coverage includes unauthorized id/pointer/value changes, both output
+kinds, a real CLI rejection without a receipt, staging/approval and tampered
+parent evidence, and explicit reviewed replacements/additions plus invalid
+finding/before/ID/duplicate/empty-oracle changes. Input scenarios and source
+semantics still require independent review: equal checks cannot prove equal
+scenario inputs or a useful Oracle. No new model run, control execution,
+knowledge admission or full loop follows from these native gates.

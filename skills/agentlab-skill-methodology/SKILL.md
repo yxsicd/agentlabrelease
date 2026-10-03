@@ -156,3 +156,25 @@ rejected originals and unchanged admission rules; do not fill in Agent output
 or move expected results into dependency inputs to obtain a pass. Diagnostic
 regressions establish feedback mechanics, not successful model correction or
 semantic qualification.
+
+After static correction succeeds, review executable source contracts separately.
+Match explicit import-map keys to original specifiers, including relative depth.
+For each mutation, trace every scenario through both the changed operation and
+later operations skipped by an early exception; a mutation may fail more checks
+than its named target scenario. Record those findings before executing a reviewed
+successor, not by expanding expectations after observing failures. Distinct
+source text is insufficient for independent valid controls when only comments,
+whitespace or erased type annotations differ. A live corrected design plus
+unreviewed staging proves bounded construction, not maintenance qualification.
+When review corrects mutation failure attribution, preserve the original baseline
+demands unless independent review explicitly rejects that oracle. A wrong-control
+exception may skip later updates; that does not mean the normal caught-exception
+path skips them. Compare parent and successor checks before execution. Prompt
+guidance alone is not an enforced parent-contract gate or semantic convergence proof.
+For proposal-review revisions, use the native parent-check admission in the
+linked checkpoint: v1 protects all parent checks; v2 permits only explicitly
+reviewed exact before/after changes tied to source-grounded findings. Revalidate
+the retained parent packet and admission on final staging and operator approval.
+This protects check identity/values, not scenario input equivalence, reviewer
+authentication or the correctness of a deliberately reviewed Oracle change.
+See the [design feedback checkpoint](../../docs/flywheel-design-feedback-20261003.md).

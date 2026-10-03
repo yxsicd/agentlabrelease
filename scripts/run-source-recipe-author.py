@@ -69,7 +69,7 @@ def require_pi_retry_policy(state, workspace, expected):
 
 
 def construct_design(participant, workspace, evidence, output, request, gate, prompt, effort, revisions,
-                     retry_policy=None):
+                     retry_policy=None, revision_request=None):
     if type(revisions) is not int or not 0 <= revisions <= 2:
         raise ValueError('Design revision budget must be 0..2')
     attempts = []
@@ -102,9 +102,20 @@ def construct_design(participant, workspace, evidence, output, request, gate, pr
         except (json.JSONDecodeError, ValueError) as failure:
             error = str(failure)
         if error is None:
-            checked = subprocess.run([str(gate.resolve()), '--validate-source-recipe-design',
+            commands = []
+            if revision_request is not None:
+                commands.append(('parent', [str(gate.resolve()), '--validate-source-recipe-revision-output',
+                    '--author-request', str(request.resolve()), '--revision-request', str(revision_request.resolve()),
+                    '--design', str(path.resolve()), '--output', str((output/f'design-parent-validation-{index}.json').resolve())]))
+            commands.append(('design', [str(gate.resolve()), '--validate-source-recipe-design',
                 '--author-request', str(request.resolve()), '--design', str(path.resolve()),
-                '--output', str(validation_path.resolve())], capture_output=True, timeout=60)
+                '--output', str(validation_path.resolve())]))
+            for kind, command in commands:
+                checked = subprocess.run(command, capture_output=True, timeout=60)
+                (evidence / f'design-{index}-{kind}-stdout.log').write_bytes(checked.stdout)
+                (evidence / f'design-{index}-{kind}-stderr.log').write_bytes(checked.stderr)
+                if checked.returncode:
+                    break
             (evidence / f'design-{index}-check-stdout.log').write_bytes(checked.stdout)
             (evidence / f'design-{index}-check-stderr.log').write_bytes(checked.stderr)
             exit_code = checked.returncode
@@ -307,6 +318,11 @@ def main():
         packet = json.loads(raw)
         revision_context = {'parentProposal': json.loads(packet['parentProposalOriginal']),
                             'review': json.loads(packet['reviewOriginal'])}
+        if args.frozen_design:
+            subprocess.run([str(args.gate.resolve()), '--validate-source-recipe-revision-output',
+                '--author-request', str(args.request.resolve()), '--revision-request', str(args.revision_request.resolve()),
+                '--design', str((args.output/'design.json').resolve()),
+                '--output', str((args.output/'frozen-design-parent-validation.json').resolve())], check=True, timeout=60)
     # No source checkout, evaluator, host policy files or external credentials
     # are mounted into the participant; all source context is pinned in prompt.
     module_path = Path(__file__).resolve().parents[1] / 'examples/real-code-agent/participant.py'
@@ -393,6 +409,9 @@ SOURCE CONTEXT:
         prompt += '\nProduce one revised complete proposal addressing every finding. Do not merely relabel roles. '
         prompt += 'Retain the same selected source-grounded demand; explain changes in rationale and unproved claims in limitations. '
         prompt += 'This is one fresh contained revision, not a format-only repair or approval.\n'
+        prompt += 'Review of wrong-control failure sets does not authorize changing baseline expected values. '
+        prompt += 'Keep the original demanded checks unless exact v2 checkChanges authorize specific replacements, additions or removals. '
+        prompt += 'Do not transfer a wrong control\'s skipped operations into the accepted implementation\'s expected observations.\n'
     design_path = None
     try:
         retry_policy = freeze_pi_retry_policy(args.output / 'participant-state', workspace, evidence)
@@ -423,6 +442,9 @@ source and declared inputs, not guesses. Include inputs that trigger wrong contr
 Trace the actual changed branch for every declared wrong-control failure. An earlier
 exception can bypass that branch, leaving observations unchanged; do not include
 such a check in the expected failure set merely because it is an error scenario.
+Also trace all later operations skipped by an uncaught exception: unchanged state
+can fail additional checks after the mutated operation. Review each mutation
+against every scenario, not only the scenario whose name resembles the mutation.
 checks: 1..64 exact id/pointer/expected objects. JSON pointers resolve into an
 object mapping scenario ID to its expectedObservations. All controls share this oracle.
 controls: 4..8 objects with exactly id, role, expectedFailedCheckIds, edits
@@ -430,7 +452,8 @@ Control IDs are 1..64 ASCII alphanumeric/hyphen characters only; no underscores.
 role is baseline/reference/wrong. Exactly one baseline has edits=[]. At least two
 references have distinct nonempty edits and no failed checks; at least one wrong
 has nonempty edits and a named nonempty failed-check subset.
-References must have distinct executable implementations, not only comments or whitespace.
+References must have distinct executable implementations, not only comments,
+whitespace or type annotations erased by the pinned compiler.
 edits: 0..4 exact path/before/after objects, sequential in-memory substitutions.
 Paths must be loaded owned source. Copy exact original substrings including whitespace:
 each before must match exactly once at that edit step. No regex, no zero-match
@@ -442,6 +465,9 @@ No generated code is executed or approved by design validation.
 SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
             if revision_context is not None:
                 design_prompt += '\nREVIEW DATA:\n' + json.dumps(revision_context, ensure_ascii=False)
+                design_prompt += '\nSeparate original accepted observations from wrong-control counterfactuals. '
+                design_prompt += 'Correcting a declared failure set is not permission to weaken the original demand. '
+                design_prompt += 'Preserve original check IDs, pointers and expected values except exact v2 checkChanges entries authorized by review. Prose findings alone do not authorize check changes.\n'
             if args.frozen_design:
                 design_path = args.output / 'design.json'
                 design_content = design_path.read_text()
@@ -449,7 +475,7 @@ SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
                 design_path, design_content = construct_design(participant, workspace, evidence,
                     args.output, args.request, args.gate, design_prompt,
                     None if args.reasoning_effort == 'default' else args.reasoning_effort, args.design_revisions,
-                    retry_policy=retry_policy)
+                    retry_policy=retry_policy, revision_request=args.revision_request)
             if args.design_only:
                 receipt = {
                     'schema': 'agentlab.source_recipe_design_capture.v1',
@@ -475,6 +501,8 @@ runtime.source(relativePath) returns the actual selected, transformed source tex
 runtime.loadModule(relativePath, imports, globals) transpiles that text in memory
 and returns CommonJS exports in a fresh context on every call. imports maps exact
 source import specifiers to explicit controlled seams; absent imports fail closed.
+Copy import specifiers verbatim from the loaded source, including relative depth;
+do not infer directory traversal from a similarly named module.
 For each scenario call const seams=runtime.createSeams(scenarioId). Map the declared
 seams.functions[id] into the source's imported dependency objects without rewriting
 their outcomes. The helper supplies frozen per-call outcomes and captures calls.
@@ -510,6 +538,8 @@ exports and require are reserved. The helper is not a sandbox or oracle approval
                '--output', str((args.output / 'proposal-stage').resolve())]
     if design_path is not None:
         command += ['--design', str(design_path.resolve())]
+    if args.revision_request:
+        command += ['--revision-request', str(args.revision_request.resolve())]
     completed = subprocess.run(command, capture_output=True, timeout=60)
     (args.output / 'stage-stdout.log').write_bytes(completed.stdout)
     (args.output / 'stage-stderr.log').write_bytes(completed.stderr)
