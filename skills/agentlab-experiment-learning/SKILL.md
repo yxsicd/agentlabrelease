@@ -159,6 +159,10 @@ Review scenario consumption as well as scenario preservation. Trace each initial
 state, ordered action/input and dependency outcome to its execution point in the
 verifier. An equivalent explicitly bound adapter is acceptable, but a second
 hardcoded action inventory does not prove consumption of the frozen input records.
+For newly generated source verifiers, `runtime.scenarioInputs(id)` provides fresh
+copies of initialState and inputs without Oracle/check answers. It does not apply
+initial state or prove that the verifier consumed the packet. Historical captures
+keep their original runtime bytes; do not rewrite them to use a newer helper.
 Keep the tested method distinct from its external dependencies; an unused seam
 for the method itself is not evidence that the method was exercised through that
 seam. Report unused declarations and unverified initial-state assumptions before
