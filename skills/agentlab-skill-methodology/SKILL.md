@@ -106,6 +106,15 @@ verify complete committed knowledge and operational-source readbacks, select the
 admitted guidance explicitly, and retire prior executable inputs before scheduling
 new work. State advancement is not fresh analysis, model consumption or benefit.
 
+For maintenance verification, an exact-cut reviewed source-operation catalog can
+let the business runner select the next actual capability gap and execute its
+matching recipe. Do not substitute another responsibility's recipe when the
+selected recipe is absent. Keep captured evidence, direct execution and catalog
+selection mutually exclusive. Requalify the fresh capture independently and
+retain the resulting knowledge candidate separately from committed active
+knowledge. Source-only qualification does not grant build, runtime, performance
+or full-loop acceptance; catalog selection is not automatic recipe generation.
+
 Keep original method bytes and analysis projection identity when revalidating older
 evidence after a tool upgrade. Record the current validator separately and compare
 all reconstructed semantic results; do not rewrite historical rows to match current

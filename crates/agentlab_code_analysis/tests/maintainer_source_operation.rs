@@ -1742,6 +1742,91 @@ async function observe(control,scenario){
 }
 
 #[test]
+fn business_selects_fresh_operation_without_promoting_candidate_or_borrowing_recipe() {
+    let (dir, mut catalog) = loop_fixture();
+    let knowledge = dir.join("knowledge");
+    let cut_path = knowledge.join("maintainer-knowledge-cut.json");
+    let mut cut: Value = serde_json::from_slice(&fs::read(&cut_path).unwrap()).unwrap();
+    let inventory = b"arbitrary\n";
+    fs::write(knowledge.join("source-set.txt"), inventory).unwrap();
+    cut["sourceSetSha256"] = json!(digest(inventory));
+    cut["tableGitAuthority"]["repo"] = json!("fixture-knowledge");
+    let cut_bytes = serde_json::to_vec_pretty(&cut).unwrap();
+    fs::write(&cut_path, &cut_bytes).unwrap();
+    catalog["knowledgeCutSha256"] = json!(digest(&cut_bytes));
+    let state = json!({"schema":"agentlab.flywheel_business_state.v1","automaticPromotion":false,
+        "repositoryId":"arbitrary","sourceRevision":cut["repositories"][0]["revision"],
+        "knowledge":{"directory":knowledge,"cutSha256":digest(&cut_bytes),"revision":cut["tableGitAuthority"]["revision"]},
+        "guidanceMode":"reviewed-bootstrap","bootstrapReview":{"reviewed":true,"knowledgeCutSha256":digest(&cut_bytes)}});
+    let execute = |name: &str, catalog: &Value, conflicting: bool| {
+        let catalog_bytes = serde_json::to_vec(catalog).unwrap();
+        let catalog_path = dir.join(format!("{name}-catalog.json"));
+        fs::write(&catalog_path, &catalog_bytes).unwrap();
+        let mut input = state.clone();
+        input["operationCatalog"] = json!({"path":catalog_path,"sha256":digest(&catalog_bytes)});
+        if conflicting {
+            input["operationExecution"] = json!({});
+        }
+        let bytes = serde_json::to_vec(&input).unwrap();
+        let path = dir.join(format!("{name}-state.json"));
+        fs::write(&path, &bytes).unwrap();
+        let output = dir.join(name);
+        fs::create_dir(&output).unwrap();
+        let request = json!({"schema":"agentlab.flywheel_stage_request.v1","round":0,
+            "stage":"maintenance-verification","automaticPromotion":false,
+            "inputState":{"path":path,"sha256":digest(&bytes)}});
+        let result = agentlab_code_analysis::maintainer_flywheel_business::run(
+            &serde_json::to_vec(&request).unwrap(),
+            &output,
+        )
+        .unwrap();
+        let report: Value =
+            serde_json::from_slice(&fs::read(output.join("business/report.json")).unwrap())
+                .unwrap();
+        (result, report, output)
+    };
+    let (result, report, _) = execute("selected", &catalog, false);
+    assert_eq!(result["status"], "completed", "{report}");
+    assert_eq!(report["automaticSelectionPerformed"], true);
+    assert_eq!(report["freshOperationExecuted"], true);
+    assert_eq!(report["selection"]["productiveOperationRounds"], 1);
+    assert_eq!(report["selection"]["authorityWritePerformed"], false);
+    assert_eq!(report["selection"]["closedLoopQualified"], false);
+    assert_eq!(report["qualificationScope"]["sourceMaintenance"], true);
+    assert_eq!(report["qualificationScope"]["runtime"], false);
+    assert!(PathBuf::from(report["operationKnowledgeCandidate"].as_str().unwrap()).exists());
+    assert_eq!(fs::read(&cut_path).unwrap(), cut_bytes);
+    for (name, field, value) in [
+        ("foreign", "repositorySelector", json!("foreign")),
+        ("stale", "knowledgeCutSha256", json!("0".repeat(64))),
+    ] {
+        let mut bad = catalog.clone();
+        bad[field] = value;
+        let (result, _, output) = execute(name, &bad, false);
+        assert_eq!(result["status"], "rejected");
+        assert!(!output
+            .join("business/selected-operation/iteration-1/capture")
+            .exists());
+    }
+    let (result, _, output) = execute("conflicting", &catalog, true);
+    assert_eq!(result["status"], "rejected");
+    assert!(!output.join("business/selected-operation").exists());
+    catalog["entries"] = json!([catalog["entries"][1].clone()]);
+    let (result, report, output) = execute("missing", &catalog, false);
+    assert_eq!(result["status"], "review-required");
+    assert_eq!(report["freshOperationExecuted"], false);
+    assert_eq!(
+        report["selection"]["gap"]["code"],
+        "selected-source-operation-recipe-required"
+    );
+    assert!(!output
+        .join("business/selected-operation/iteration-1/capture")
+        .exists());
+    assert_eq!(fs::read(&cut_path).unwrap(), cut_bytes);
+    fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
 fn reviewed_loop_replans_distinct_scopes_and_retains_portable_parent_chain() {
     let (dir, catalog) = loop_fixture();
     let output = dir.join("loop");

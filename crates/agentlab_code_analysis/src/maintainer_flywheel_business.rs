@@ -326,11 +326,55 @@ fn evaluate(
         }
         "maintenance-verification" => {
             need(
-                !(state.get("operationCapture").is_some()
-                    && state.get("operationExecution").is_some()),
-                "business operation capture and execution are mutually exclusive",
+                ["operationCapture", "operationExecution", "operationCatalog"]
+                    .iter()
+                    .filter(|key| state.get(**key).is_some())
+                    .count()
+                    <= 1,
+                "business operation capture, execution and catalog are mutually exclusive",
             )?;
-            let report = if state.get("operationExecution").is_some() {
+            let report = if let Some(reference) = state.get("operationCatalog") {
+                let bytes = bound(reference)?;
+                let catalog: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+                need(
+                    catalog["repositorySelector"] == state["repositoryId"],
+                    "business operation catalog must select the current repository",
+                )?;
+                let output = out.join("selected-operation");
+                let result =
+                    crate::maintainer_source_operation_loop::execute(&base, &bytes, 1, &output)?;
+                if result["status"] == "failed" {
+                    return Err(format!(
+                        "business selected source operation failed: {}",
+                        result["gap"]
+                    ));
+                }
+                if result["productiveOperationRounds"] == 0 {
+                    return Ok((
+                        "review-required",
+                        json!({"schema":"agentlab.flywheel_operation_selection.v1",
+                        "selection":result,"automaticSelectionPerformed":true,"freshOperationExecuted":false,
+                        "authorityWritePerformed":false,"qualified":false}),
+                    ));
+                }
+                need(
+                    result["productiveOperationRounds"] == 1,
+                    "business operation catalog exceeded one selected operation",
+                )?;
+                let capture = output.join("iteration-1/capture");
+                let receipt_sha = digest(&read(&capture.join("execution-receipt.json"))?);
+                let mut report =
+                    crate::maintainer_source_operation::qualify(&capture, &receipt_sha)?;
+                report["automaticSelectionPerformed"] = json!(true);
+                report["freshOperationExecuted"] = json!(true);
+                report["selection"] = result;
+                report["executionCapture"] =
+                    json!({"directory":capture,"executionReceiptSha256":receipt_sha});
+                // This candidate is independently staged, not active knowledge.
+                report["operationKnowledgeCandidate"] =
+                    report["selection"]["finalCandidateSnapshot"].clone();
+                report
+            } else if state.get("operationExecution").is_some() {
                 execute_operation(&base, state, out)?
             } else if let Some(operation) = state.get("operationCapture") {
                 let mut report = maintainer_operation_qualification::qualify(
@@ -605,6 +649,7 @@ pub fn run(request_bytes: &[u8], output: &Path) -> Result<Value, String> {
             "stageEvidence",
             "operationExecution",
             "operationCapture",
+            "operationCatalog",
             "behaviorExecution",
             "lessonAdmission",
             "observationPersistence",
