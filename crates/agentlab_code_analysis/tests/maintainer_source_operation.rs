@@ -660,7 +660,8 @@ with tempfile.TemporaryDirectory() as d:
               '--revision-request',str(scenario_revision_path)],'low',180,None),
         (14, ['--design-first'],'low',180,None),
         (15, ['--design-first','--code-gateway-timeout-seconds','240'],'low',180,None),
-        (16, ['--design-first'],'low',180,None)]:
+        (16, ['--design-first'],'low',180,None),
+        (17, ['--design-first'],'low',180,None)]:
         request_data=json.loads(request.read_bytes())
         request_data['policy']['methodDependencies']=[{'path':'/fixture/compiler.js','sha256':'a'*64}] if index==16 else []
         request.write_text(json.dumps(request_data))
@@ -697,6 +698,9 @@ with tempfile.TemporaryDirectory() as d:
         def successful_gate(command,**_):
             if '--validate-source-recipe-design' in command:
                 Path(command[command.index('--output')+1]).write_text('{"semanticQualified":false}')
+            if '--prepare-source-verifier-interface' in command:
+                if index==17:return subprocess.CompletedProcess(command,29,b'',b'interface source request drift')
+                Path(command[command.index('--output')+1]).write_text('{"schema":"agentlab.source_verifier_interface.v1","packetSentinel":"exact-interface-bytes"}')
             return subprocess.CompletedProcess([],0,b'',b'')
         with patch.dict(os.environ,env), patch.object(sys,'argv',argv), \
              patch.object(module.importlib.util,'spec_from_file_location',return_value=fake_spec), \
@@ -709,6 +713,15 @@ with tempfile.TemporaryDirectory() as d:
                 assert seen['labels']==['source-recipe-design']
                 assert not (root/str(index)/'proposal.json').exists()
                 assert (root/str(index)/'design.json').exists()
+                continue
+            if index==17:
+                try:module.main()
+                except subprocess.CalledProcessError as error:assert error.returncode==29
+                else:raise AssertionError('Failed native interface dispatched verifier generation')
+                assert seen['labels']==['source-recipe-design'] and seen['closed'] is True
+                assert not (root/str(index)/'verifier-interface.json').exists()
+                assert not (root/str(index)/'proposal.json').exists()
+                assert (root/str(index)/'evidence/verifier-interface-stderr.log').read_bytes()==b'interface source request drift'
                 continue
             module.main()
         assert seen['constructor']['gateway_timeout_seconds'] == deadline
@@ -727,7 +740,16 @@ with tempfile.TemporaryDirectory() as d:
         if index==15:
             assert seen['deadlines']==[180,240]
             assert seen['turn']['wall_time_limit_seconds']==300
-        assert stage.call_count == (4 if index in (11,12,13) else 3 if index==9 else 2 if index in (5,6,10,15,16) else 1)
+        interface_expected = index in (6,10,11,12,13,15,16)
+        assert stage.call_count == (4 if index in (11,12,13) else 3 if index==9 else 2 if index in (5,6,10,15,16) else 1) + int(interface_expected)
+        if interface_expected:
+            packet=(root/str(index)/'verifier-interface.json').read_bytes()
+            assert packet.decode() in seen['turn']['prompt']
+            assert hashlib.sha256(packet).hexdigest() in seen['turn']['prompt']
+            assert 'Preserve baseline behavior; transform source only in memory' not in seen['turn']['prompt']
+            assert (root/str(index)/'evidence/verifier-interface-stderr.log').exists()
+        else:
+            assert not (root/str(index)/'verifier-interface.json').exists()
         if index==16:
             assert 'createRuntime.fromCompilerInvocation(process.argv)' in seen['turn']['prompt']
             assert 'compilerOrNull' not in seen['turn']['prompt']
@@ -1736,6 +1758,69 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
             {"id":"wrong","role":"wrong","expectedFailedCheckIds":["value"],"edits":[{"path":"src/state.json","before":body,"after":"{\"value\":0}"}]}]});
     let design_bytes = serde_json::to_vec(&design).unwrap();
     let checked = author::design(&request_bytes, &design_bytes).unwrap();
+    let interface = author::verifier_interface(&request_bytes, &design_bytes).unwrap();
+    assert_eq!(interface["requestSha256"], digest(&request_bytes));
+    assert_eq!(interface["designSha256"], digest(&design_bytes));
+    assert_eq!(
+        interface["allowedLoadedSourcePaths"],
+        json!(["src/state.json", "src/unloaded.json"])
+    );
+    assert_eq!(
+        interface["scenarios"][0]["initialStateTopLevelPointers"],
+        json!(["", "/value"])
+    );
+    assert_eq!(
+        interface["runtime"]["controlTransformationOwner"],
+        "operator-frozen-runtime"
+    );
+    assert_eq!(
+        interface["runtime"]["initialStatePointerBase"],
+        "scenario.initialState, not scenarioInputs packet"
+    );
+    assert_eq!(
+        interface["invocation"]["runtimeArgvIndex"],
+        4 + request["policy"]["methodDependencies"]
+            .as_array()
+            .unwrap()
+            .len()
+    );
+    assert!(interface["scenarios"][0]
+        .get("expectedObservations")
+        .is_none());
+    assert_eq!(interface["semanticQualified"], false);
+    let mut escaped_state = design.clone();
+    escaped_state["scenarios"][0]["initialState"] = json!({"a/b~c":{},"":null});
+    let escaped_interface =
+        author::verifier_interface(&request_bytes, &serde_json::to_vec(&escaped_state).unwrap())
+            .unwrap();
+    assert_eq!(
+        escaped_interface["scenarios"][0]["initialStateTopLevelPointers"],
+        json!(["", "/", "/a~1b~0c"])
+    );
+    let interface_request = dir.join("interface-request.json");
+    let interface_design = dir.join("interface-design.json");
+    let interface_output = dir.join("interface.json");
+    fs::write(&interface_request, &request_bytes).unwrap();
+    fs::write(&interface_design, &design_bytes).unwrap();
+    let command = || {
+        let mut c = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"));
+        c.arg("--prepare-source-verifier-interface")
+            .arg("--author-request")
+            .arg(&interface_request)
+            .arg("--design")
+            .arg(&interface_design)
+            .arg("--output")
+            .arg(&interface_output);
+        c
+    };
+    assert!(command().output().unwrap().status.success());
+    let original_interface = fs::read(&interface_output).unwrap();
+    assert_eq!(
+        serde_json::from_slice::<Value>(&original_interface).unwrap(),
+        interface
+    );
+    assert!(!command().output().unwrap().status.success());
+    assert_eq!(fs::read(&interface_output).unwrap(), original_interface);
     // A real constructor repeated abbreviated scenario pointers after receiving
     // only a generic mismatch. Diagnose the exact rejected field without repair.
     let mut missing_pointer = design.clone();
@@ -1756,6 +1841,11 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     .is_ok());
     let mut mismatched_value = design.clone();
     mismatched_value["checks"][0]["expected"] = json!(2);
+    assert!(author::verifier_interface(
+        &request_bytes,
+        &serde_json::to_vec(&mismatched_value).unwrap()
+    )
+    .is_err());
     let error = author::design(
         &request_bytes,
         &serde_json::to_vec(&mismatched_value).unwrap(),
