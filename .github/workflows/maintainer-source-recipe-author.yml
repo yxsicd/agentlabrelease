@@ -27,6 +27,12 @@ on:
         required: true
         type: choice
         options: ['60', '120', '180']
+      code_gateway_timeout_seconds:
+        description: Code-only observation cohort; inherit preserves existing deadlines, 240 needs measured late content evidence
+        default: inherit
+        required: true
+        type: choice
+        options: [inherit, '180', '240']
       max_output_tokens:
         description: Constructor output token ceiling; includes provider reasoning tokens where applicable
         default: '16384'
@@ -88,7 +94,7 @@ jobs:
   construct:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: ${{ inputs.code_gateway_timeout_seconds == '240' && 25 || 20 }}
     env:
       KNOWLEDGE: examples/maintainer-knowledge-gate/first-four
       REPOSITORY_SELECTOR: ${{ inputs.repository }}
@@ -96,6 +102,7 @@ jobs:
       AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
       CONSTRUCTION_REASONING_EFFORT: ${{ inputs.reasoning_effort }}
       CONSTRUCTION_GATEWAY_TIMEOUT: ${{ inputs.gateway_timeout_seconds }}
+      CONSTRUCTION_CODE_GATEWAY_TIMEOUT: ${{ inputs.code_gateway_timeout_seconds }}
       CONSTRUCTION_MAX_OUTPUT_TOKENS: ${{ inputs.max_output_tokens }}
       CONSTRUCTION_THINKING_TYPE: ${{ inputs.thinking_type }}
       CONSTRUCTION_RESPONSE_FORMAT: ${{ inputs.response_format }}
@@ -227,6 +234,9 @@ jobs:
           fi
           if test -f "$RUNNER_TEMP/recipe-author/diagnostic-loop-intent.json"; then
             revision_args+=(--diagnostic-loop-intent "$RUNNER_TEMP/recipe-author/diagnostic-loop-intent.json")
+          fi
+          if test "$CONSTRUCTION_CODE_GATEWAY_TIMEOUT" != inherit; then
+            revision_args+=(--code-gateway-timeout-seconds "$CONSTRUCTION_CODE_GATEWAY_TIMEOUT")
           fi
           python3 scripts/run-source-recipe-author.py --request "$RUNNER_TEMP/recipe-author/request.json" \
             --output "$RUNNER_TEMP/recipe-author/agent" --gate target/release/agentlab-maintainer-skill-flywheel \

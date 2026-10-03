@@ -166,7 +166,7 @@ def construct_proposal(participant, workspace, evidence, output, prompt, effort,
         label = 'source-recipe-author' if index == 0 else 'source-recipe-author-format-revision-1'
         require_pi_retry_policy(output / 'participant-state', workspace, retry_policy)
         result = participant.turn(label, workspace, prompt=next_prompt,
-            wall_time_limit_seconds=240, tool_call_limit=1, transport_retry_limit=0,
+            wall_time_limit_seconds=max(240, getattr(participant, 'gateway_timeout_seconds', 180)+60), tool_call_limit=1, transport_retry_limit=0,
             require_completed_tool_call=False, reasoning_effort=effort)
         require_complete_gateway_capture(evidence)
         require_completed_generation(result, evidence)
@@ -215,6 +215,8 @@ def main():
     p.add_argument('--reasoning-effort', choices=('default', 'none', 'low', 'medium', 'high', 'max'), default='low',
                    help='default omits reasoning_effort; it does not request disabled thinking')
     p.add_argument('--gateway-timeout-seconds', type=int, choices=range(30, 181), default=180)
+    p.add_argument('--code-gateway-timeout-seconds', type=int, choices=(180, 240),
+                   help='Explicit code-only deadline; omitted inherits design deadline. No transport retries.')
     p.add_argument('--max-output-tokens', type=int, choices=(8192, 16384), default=16384,
                    help='Explicit constructor token ceiling, independent of gateway wall time')
     p.add_argument('--thinking-type', choices=('default', 'enabled', 'disabled'), default='default',
@@ -381,6 +383,14 @@ def main():
         api=args.api,
         max_output_tokens=args.max_output_tokens,
     )
+    code_deadline = args.code_gateway_timeout_seconds or args.gateway_timeout_seconds
+    with (evidence/'generation-policy.json').open('x') as stream:
+        json.dump(dict(schema='agentlab.source_recipe_generation_policy.v1',
+            designGatewayTimeoutSeconds=args.gateway_timeout_seconds,
+            codeGatewayTimeoutSeconds=code_deadline,
+            codeParticipantWallTimeSeconds=max(240, code_deadline+60),
+            transportRetryLimit=0, semanticQualified=False,
+            automaticPromotion=False, authorityWritePerformed=False), stream)
     context = {key: request[key] for key in (
         'scope', 'source', 'sourceFiles', 'semanticFacts', 'selectedGap')}
     dependency_count = len(request['policy']['methodDependencies'])
@@ -594,6 +604,7 @@ exports and require are reserved. The helper is not a sandbox or oracle approval
                 'replace product bodies with guessed behavior. Infrastructure failure is not a '
                 'behavior verdict. Return one full successor proposal, not a patch. '
                 'No review, qualification or promotion follows from this correction.\n')
+        participant.gateway_timeout_seconds = code_deadline
         proposal = construct_proposal(participant, workspace, evidence, args.output, prompt,
             None if args.reasoning_effort == 'default' else args.reasoning_effort,
             args.proposal_format_revisions, retry_policy)

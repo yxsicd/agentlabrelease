@@ -95,6 +95,9 @@ def main():
             ('gateway-timeout-seconds','CONSTRUCTION_GATEWAY_TIMEOUT'),('max-output-tokens','CONSTRUCTION_MAX_OUTPUT_TOKENS'),
             ('thinking-type','CONSTRUCTION_THINKING_TYPE'),('response-format','CONSTRUCTION_RESPONSE_FORMAT'),('api','CONSTRUCTION_API')]:
             command += ['--'+option,os.environ[name]]
+        code_deadline = os.environ.get('CONSTRUCTION_CODE_GATEWAY_TIMEOUT', 'inherit')
+        if code_deadline != 'inherit':
+            command += ['--code-gateway-timeout-seconds', code_deadline]
         with (repair/'author-stdout.log').open('xb') as out, (repair/'author-stderr.log').open('xb') as err:
             generated=subprocess.run(command,env=env,stdout=out,stderr=err,timeout=360)
         # Independently validate even a failed/partial generation; never replace

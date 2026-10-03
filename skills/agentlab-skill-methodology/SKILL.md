@@ -160,6 +160,12 @@ Keep-alive bytes are not model output; an unobserved stage is null, not zero.
 These timings locate waiting versus observed output, not provider queue or compute
 causality. Provider-created timestamps and model catalogs cannot replace arrival
 measurements or demonstrate that a reasoning policy was honored.
+If code text starts near the observed deadline, test a separately
+recorded code-phase budget rather than extending every stage. Keep design limits,
+repair counts, transport retry policy and semantic admission unchanged; propagate
+the selected budget to bounded code repairs. A longer deadline is a controlled
+completion experiment, not a speed improvement. Compare useful completed output
+and total cost before making it the default.
 
 For bounded design correction, return the failing scenario's JSON pointer and
 the exact required shape, not only a generic contract label. A real constructor

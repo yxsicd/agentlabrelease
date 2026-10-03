@@ -482,11 +482,13 @@ with tempfile.TemporaryDirectory() as d:
         (13, ['--frozen-design',str(parent_design),'--frozen-design-sha256',
               hashlib.sha256(parent_design.read_bytes()).hexdigest(),
               '--revision-request',str(scenario_revision_path)],'low',180,None),
-        (14, ['--design-first'],'low',180,None)]:
+        (14, ['--design-first'],'low',180,None),
+        (15, ['--design-first','--code-gateway-timeout-seconds','240'],'low',180,None)]:
         seen = {}
         class FakeParticipant:
             def __init__(self, evidence, state, binary, gateway, model, **options):
                 seen['constructor'] = options
+                self.gateway_timeout_seconds = options['gateway_timeout_seconds']
                 self.evidence = evidence
             def turn(self, label, workspace, **options):
                 policy=json.loads((workspace.parent/'participant-state/settings.json').read_bytes())
@@ -495,6 +497,7 @@ with tempfile.TemporaryDirectory() as d:
                 seen['turn'] = options
                 seen.setdefault('prompts',[]).append(options['prompt'])
                 seen.setdefault('labels',[]).append(label)
+                seen.setdefault('deadlines',[]).append(self.gateway_timeout_seconds)
                 if index!=14:self._retained_pi_session_id='fixture-retained-design-session'
                 gateway = self.evidence/'gateway'
                 gateway.mkdir(exist_ok=True)
@@ -536,7 +539,15 @@ with tempfile.TemporaryDirectory() as d:
         assert seen['turn']['reasoning_effort'] == effort
         assert seen['turn']['transport_retry_limit'] == 0
         assert seen['closed'] is True
-        assert stage.call_count == (4 if index in (11,12,13) else 2 if index in (5,6,9,10) else 1)
+        assert seen['deadlines'][-1] == (240 if index==15 else deadline)
+        generation_policy=json.loads((root/str(index)/'evidence/generation-policy.json').read_bytes())
+        assert generation_policy['designGatewayTimeoutSeconds']==deadline
+        assert generation_policy['codeGatewayTimeoutSeconds']==(240 if index==15 else deadline)
+        assert generation_policy['transportRetryLimit']==0
+        if index==15:
+            assert seen['deadlines']==[180,240]
+            assert seen['turn']['wall_time_limit_seconds']==300
+        assert stage.call_count == (4 if index in (11,12,13) else 2 if index in (5,6,9,10,15) else 1)
         if index in (12,13):
             assert 'preserved-scenario-inputs' in seen['turn']['prompt']
             assert '--revision-request' in stage.call_args[0][0]
@@ -951,7 +962,8 @@ try:
             evidence=root/str(index);evidence.mkdir()
             with patch.dict(os.environ,{'AGENTLAB_LM_GATEWAY_KEY':'synthetic-only-key'}):
                 p=module.Participant(evidence,root/f'state-{index}','/bin/true',
-                    f'http://127.0.0.1:{server.server_port}','arbitrary',api=api)
+                    f'http://127.0.0.1:{server.server_port}','arbitrary',api=api,
+                    gateway_timeout_seconds=240 if index==0 else 180)
             try:
                 req=urllib.request.Request(f'http://127.0.0.1:{p.server.server_port}'+p.api_path,
                     data=json.dumps({'stream':True}).encode())
@@ -973,6 +985,10 @@ try:
             if has_reason:assert t['firstProtocolEvent']>t['firstBodyBytes']
             if has_text:assert t['firstContentDelta']>t['firstReasoningDelta']
             if index in (3,4):assert t['firstProtocolEvent'] is None
+        for invalid in (241, 240.0, True):
+            try:module.Participant(root,root/'invalid-budget','/bin/true','http://localhost','arbitrary',gateway_timeout_seconds=invalid)
+            except ValueError:pass
+            else:raise AssertionError('invalid deadline accepted')
 finally:server.shutdown();server.server_close();thread.join()
 "#;
     let result = Command::new("python3")
@@ -2827,6 +2843,10 @@ with tempfile.TemporaryDirectory() as directory:
         assert command[command.index('--design-revisions')+1]=='0'
         assert command[command.index('--request')+1]==str(root/'request.json')
         assert command[command.index('--reasoning-effort')+1]=='low'
+        if scenario=='two-repairs':
+          assert command[command.index('--code-gateway-timeout-seconds')+1]=='240'
+        else:assert '--code-gateway-timeout-seconds' not in command
+        assert command[command.index('--gateway-timeout-seconds')+1]=='180'
         assert kwargs['env']['AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT']==str(root/f'code-repair-{len(authors)}/runtime-receipts')
         d=output()/'proposal-stage';d.mkdir(parents=True);(d/'design.json').write_bytes(design)
         return subprocess.CompletedProcess(command,1 if scenario=='partial' else 0)
@@ -2839,6 +2859,7 @@ with tempfile.TemporaryDirectory() as directory:
     env={'CONSTRUCTION_REASONING_EFFORT':'low','CONSTRUCTION_GATEWAY_TIMEOUT':'180','CONSTRUCTION_MAX_OUTPUT_TOKENS':'16384',
       'CONSTRUCTION_THINKING_TYPE':'default','CONSTRUCTION_RESPONSE_FORMAT':'default','CONSTRUCTION_API':'openai-completions',
       'AGENTLAB_PARTICIPANT_RUNTIME_CONFIG':'fixture'}
+    env['CONSTRUCTION_CODE_GATEWAY_TIMEOUT']='240' if scenario=='two-repairs' else 'inherit'
     with patch.object(module.subprocess,'run',side_effect=run),patch.object(sys,'argv',argv),patch.dict(os.environ,env),patch.object(Path,'resolve',lambda p,strict=False:p):
       try:module.main()
       except (ValueError,subprocess.CalledProcessError):assert scenario not in ['baseline','repair','two-repairs']
