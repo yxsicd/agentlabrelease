@@ -94,6 +94,14 @@ nested pointers remain supported. Preserve its bytes in generation evidence.
 In design-first/frozen-design mode, transformation belongs only to the operator
 runtime; do not carry legacy self-transformation instructions into that mode.
 This packet is interface data, not proof of model compliance or semantic truth.
+Keep construction/path descriptors separate from concrete observable initial
+state. For source instances, declare relevant own data values in initialState.fields
+and call assertInitialFields(scenarioId, actualInstance) after construction and
+before the tested operation; it reads fields rather than copying expectations.
+Missing own fields, accessors and mismatches fail closed. For other state, use an
+explicit source observation with assertInitialState: actual must be the selected
+subtree value, not a wrapper. Neither helper authenticates an instance or proves
+state coverage; copied expected objects cannot establish source initialization.
 
 Use the constructor's `--design-first --design-only` mode when a new behavior
 surface needs independent semantic review before verifier generation. The retained

@@ -494,6 +494,13 @@ scopeSkillId: the selected scope id
 invariant: one source-grounded behavioral invariant, <=2048 bytes
 scenarios: 1..8 objects with exactly id, initialState, inputs, expectedObservations
 Each state/input/observation is a JSON object. inputs.seams is an object (0..32 entries).
+initialState describes concrete source-observable pre-operation values, not a file
+path or construction instruction. For a class instance use initialState.fields
+with the relevant own data fields and exact JSON-compatible constructor values,
+for example {"fields":{"count":0}}. Keep file/class/setup descriptors in inputs
+instead. Select fields from the actual source; do not invent values or overwrite
+constructor state to make it match. Non-field state may use another source-derived
+JSON subtree and an explicit observation adapter. Disclose unobservable state.
 Put executable actions, their ordered arguments and other caller inputs in inputs,
 not only in prose or expectedObservations. Seams model external dependencies,
 not the tested method. A method's return is observed from actual source execution.
@@ -619,6 +626,14 @@ actualObservedState, pointer), where pointer is an RFC6901 path into initialStat
 source instance. The helper throws on missing pointers, non-JSON values or mismatch.
 For initialState={{"fields":{{"count":0}}}}, the pointer is '/fields', NOT
 '/initialState/fields'. The pointer is relative to initialState, not the packet.
+The actual argument is the selected VALUE, not an object wrapping that value.
+For source instance own data fields, prefer runtime.assertInitialFields(scenarioId,
+instance, '/fields') after construction and before calling the tested operation.
+It reads declared field names directly from the actual instance and returns the
+observed projection; missing fields, accessors or mismatches fail closed. It never
+uses frozen expected values as observations or writes them into the instance.
+Do not pass scenarioInputs.initialState as the instance or copy it into actual.
+File/class/construction descriptions are metadata, not observed source state.
 Let that failure escape before calling the tested method; an ungraded match:false
 output flag is not verification. Never initialize observed fields from expectations.
 runtime.loadModule(relativePath, imports, globals) transpiles that text in memory
@@ -626,6 +641,8 @@ and returns CommonJS exports in a fresh context on every call. imports maps exac
 source import specifiers to explicit controlled seams; absent imports fail closed.
 Exports are not a class instance: if loaded source exports class Subject,
 const mod=runtime.loadModule(path, imports, globals); const instance=new mod.Subject();
+For the frozen initialState.fields contract, call
+runtime.assertInitialFields(scenarioId, instance) immediately after this construction.
 Observe instance fields and invoke instance methods, not properties of mod.
 Copy import specifiers verbatim from the loaded source, including relative depth;
 do not infer directory traversal from a similarly named module.

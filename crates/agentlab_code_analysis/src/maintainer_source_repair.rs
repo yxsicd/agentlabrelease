@@ -277,17 +277,9 @@ fn check_depth(request_bytes: &[u8], packet_bytes: &[u8], depth: usize) -> Resul
             && support["compilerSha256"] == request["policy"]["methodDependencies"][0]["sha256"],
         "construction repair execution/source binding differs",
     )?;
-    let manifest: Value = serde_json::from_str(
-        support["runtimeSource"]
-            .as_str()
-            .unwrap()
-            .lines()
-            .next()
-            .and_then(|s| s.strip_prefix("const manifest = "))
-            .and_then(|s| s.strip_suffix(';'))
-            .ok_or("construction repair runtime manifest missing")?,
-    )
-    .map_err(|e| e.to_string())?;
+    let manifest = crate::maintainer_source_recipe_author::runtime_manifest(
+        support["runtimeSource"].as_str().unwrap(),
+    )?;
     let paths = parent["sourcePaths"]
         .as_array()
         .ok_or("construction repair selected paths missing")?;

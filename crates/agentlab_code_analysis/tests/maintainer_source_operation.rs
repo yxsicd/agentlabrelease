@@ -87,13 +87,19 @@ fn frozen_initial_state_assertion_rejects_source_mismatch_before_operation() {
     let manifest = json!({
         "files":[{"path":"state.js","sha256":digest(source.as_bytes()),"content":source}],
         "controls":[{"id":"baseline","edits":[]},{"id":"wrong","edits":[{"path":"state.js","before":"this.count=0","after":"this.count=1"}]}],
-        "scenarios":[{"id":"state","initialState":{"fields":{"count":0,"called":false},"a/b":{"~key":[null,{}]}},"inputs":{"seams":{}}}]
+        "scenarios":[{"id":"state","initialState":{"fields":{"count":0,"called":false},"a/b":{"~key":[null,{}]}},"inputs":{"seams":{}}},
+            {"id":"metadata","initialState":{"file":"state.js","freshInstance":"new Subject()"},"inputs":{"seams":{}}},
+            {"id":"empty","initialState":{"fields":{}},"inputs":{"seams":{}}},
+            {"id":"array","initialState":{"fields":[]},"inputs":{"seams":{}}},
+            {"id":"scalar","initialState":{"fields":0},"inputs":{"seams":{}}},
+            {"id":"special","initialState":{"a/b":{"~fields":{"__proto__":7,"value":{"items":[null,1]}}}},"inputs":{"seams":{}}}]
     });
     let runtime = dir.join("initial-state-runtime.cjs");
     fs::write(
         &runtime,
         format!(
-            "const manifest={manifest};\n{}",
+            "const manifest=JSON.parse({});\n{}",
+            serde_json::to_string(&manifest.to_string()).unwrap(),
             include_str!("../src/source_design_runtime.cjs")
         ),
     )
@@ -103,6 +109,31 @@ const assert=require('assert'),create=require(process.argv[1]);
 const compiler={ScriptTarget:{ES2020:1},ScriptKind:{TS:1},ModuleKind:{CommonJS:1},DiagnosticCategory:{Error:1},createSourceFile:()=>({parseDiagnostics:[]}),transpileModule:t=>({outputText:t,diagnostics:[]})};
 const baseline=create(process.argv[2],'baseline',compiler);
 const good=new (baseline.loadModule('state.js').Subject)();
+const observed=baseline.assertInitialFields('state',good);
+assert.equal(observed.count,0);assert.equal(observed.called,false);
+assert.equal(Object.getPrototypeOf(observed),null);
+assert.equal(good.called,false);
+assert.equal(Object.hasOwn(good,'extra'),false);
+const inherited=Object.create({count:0,called:false});
+assert.throws(()=>baseline.assertInitialFields('state',inherited),/own data property/);
+let getterCalls=0;
+const accessor={called:false};Object.defineProperty(accessor,'count',{get(){getterCalls++;return 0}});
+assert.throws(()=>baseline.assertInitialFields('state',accessor),/own data property/);
+assert.equal(getterCalls,0);
+assert.throws(()=>baseline.assertInitialFields('state',{}),/own data property/);
+assert.throws(()=>baseline.assertInitialFields('state',null),/actual source instance/);
+assert.throws(()=>baseline.assertInitialFields('state',[]),/actual source instance/);
+assert.throws(()=>baseline.assertInitialFields('state',{count:undefined,called:false}),/non-JSON/);
+for(const id of ['empty','array','scalar'])
+ assert.throws(()=>baseline.assertInitialFields(id,good),/nonempty object/);
+assert.throws(()=>baseline.assertInitialFields('metadata',good),/missing initial state pointer/);
+assert.throws(()=>baseline.assertInitialFields('metadata',good,''),/own data property/);
+// Reproduce the real failed wrapper-versus-leaf invocation without repairing it.
+assert.throws(()=>baseline.assertInitialState('metadata',{file:'state.js'},'/file'),/observed initial state differs/);
+const special=Object.create(null);special.value={items:[null,1]};
+Object.defineProperty(special,'__proto__',{value:7,enumerable:true});
+const specialObserved=baseline.assertInitialFields('special',special,'/a~1b/~0fields');
+assert.equal(specialObserved.__proto__,7);assert.equal(Object.getPrototypeOf(specialObserved),null);
 baseline.assertInitialState('state',{called:good.called,count:good.count},'/fields');
 assert.equal(good.run(),0);
 baseline.assertInitialState('state',0,'/fields/count');
@@ -120,11 +151,14 @@ for(const bad of [undefined,NaN,Infinity,()=>0,new Date(),new Map()])
 assert.throws(()=>baseline.assertInitialState('state',{count:0,called:false,extra:1},'/fields'),/observed initial state differs/);
 const packet=baseline.scenarioInputs('state');packet.initialState.fields.count=99;
 baseline.assertInitialState('state',{count:0,called:false},'/fields');
+baseline.assertInitialFields('state',new (baseline.loadModule('state.js').Subject)());
 const wrong=create(process.argv[2],'wrong',compiler);
 const changed=wrong.source('state.js');
 assert.equal(changed.includes('this.count=0'),false);assert.equal(changed.split('this.count=1').length,2);
 const bad=new (wrong.loadModule('state.js').Subject)();
 assert.equal(bad.count,1);
+assert.throws(()=>{wrong.assertInitialFields('state',bad);bad.run()},/observed initial state differs/);
+assert.equal(bad.called,false);assert.equal(bad.count,1);
 assert.throws(()=>{wrong.assertInitialState('state',{count:bad.count,called:bad.called},'/fields');bad.run()},/observed initial state differs/);
 assert.equal(bad.called,false);
 assert.equal(wrong.source('state.js'),changed);
@@ -1777,6 +1811,10 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
         interface["runtime"]["initialStatePointerBase"],
         "scenario.initialState, not scenarioInputs packet"
     );
+    assert!(interface["runtime"]["initialFieldsObservation"]
+        .as_str()
+        .unwrap()
+        .contains("actualInstance"));
     assert_eq!(
         interface["invocation"]["runtimeArgvIndex"],
         4 + request["policy"]["methodDependencies"]
@@ -2162,6 +2200,7 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     .is_err());
     let mut seam_design = design.clone();
     seam_design["schema"] = json!("agentlab.source_recipe_design.v2");
+    seam_design["scenarios"][0]["initialState"]["fields"] = json!({"__proto__":7,"value":1});
     seam_design["scenarios"][0]["inputs"]["seams"] = json!({
         "independent": {"outcomes":[{"kind":"return","value":{"value":1}},
             {"kind":"resolve","value":2}],"repeatLast":true},
@@ -2233,6 +2272,13 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     let seam_probe = r#"
 const assert=require('assert');
 const runtime=require(process.argv[1])(process.argv[2],'baseline',null);
+const packet=runtime.scenarioInputs('state');
+assert.equal(Object.hasOwn(packet.initialState.fields,'__proto__'),true);
+assert.equal(packet.initialState.fields.__proto__,7);
+const actual=Object.create(null);actual.value=JSON.parse(runtime.source('src/state.json')).value;
+Object.defineProperty(actual,'__proto__',{value:7,enumerable:true});
+assert.equal(runtime.assertInitialFields('state',actual).__proto__,7);
+actual.value=0;assert.throws(()=>runtime.assertInitialFields('state',actual),/observed initial state differs/);
 (async()=>{
   const a=runtime.createSeams('state'), b=runtime.createSeams('state');
   const input={value:1}; const returned=a.functions.independent(input);

@@ -69,9 +69,7 @@ module.exports = function createRuntime(sourceRoot, controlId, compiler) {
     // Fresh data, not the Oracle: mutation cannot alter the manifest or seams.
     return JSON.parse(JSON.stringify({initialState: scenario.initialState, inputs: scenario.inputs}));
   }
-  function assertInitialState(scenarioId, actual, pointer = '') {
-    // The verifier selects a source-observable subtree, not an expected output.
-    // Assertion failure must escape before invoking the method under test.
+  function initialStateAt(scenarioId, pointer) {
     let expected = scenarioInputs(scenarioId).initialState;
     if (typeof pointer !== 'string' || (pointer && !pointer.startsWith('/')) ||
         /~(?![01])/u.test(pointer)) throw new Error('invalid initial state pointer');
@@ -81,6 +79,12 @@ module.exports = function createRuntime(sourceRoot, controlId, compiler) {
           !Object.hasOwn(expected, key)) throw new Error('missing initial state pointer');
       expected = expected[key];
     }
+    return expected;
+  }
+  function assertInitialState(scenarioId, actual, pointer = '') {
+    // The verifier selects a source-observable subtree, not an expected output.
+    // Assertion failure must escape before invoking the method under test.
+    const expected = initialStateAt(scenarioId, pointer);
     function canonical(value) {
       if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
       if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -100,6 +104,24 @@ module.exports = function createRuntime(sourceRoot, controlId, compiler) {
     }
     if (JSON.stringify(canonical(actual)) !== JSON.stringify(canonical(expected)))
       throw new Error('observed initial state differs: ' + scenarioId + ' ' + pointer);
+  }
+  function assertInitialFields(scenarioId, instance, pointer = '/fields') {
+    // Expected keys select the observation, never supply observed values.
+    // Only own data properties: do not execute accessors or silently use a prototype.
+    const expected = initialStateAt(scenarioId, pointer);
+    if (!expected || Object.prototype.toString.call(expected) !== '[object Object]' ||
+        !Object.keys(expected).length) throw new Error('initial fields require a nonempty object');
+    if (!instance || typeof instance !== 'object' || Array.isArray(instance))
+      throw new Error('initial fields require an actual source instance');
+    const observed = Object.create(null);
+    for (const key of Object.keys(expected)) {
+      const descriptor = Object.getOwnPropertyDescriptor(instance, key);
+      if (!descriptor || !Object.hasOwn(descriptor, 'value'))
+        throw new Error('initial field must be an own data property: ' + key);
+      Object.defineProperty(observed, key, {value: descriptor.value, enumerable: true});
+    }
+    assertInitialState(scenarioId, observed, pointer);
+    return observed;
   }
   function createSeams(scenarioId) {
     const scenario = (manifest.scenarios || []).find(s => s.id === scenarioId);
@@ -142,7 +164,7 @@ module.exports = function createRuntime(sourceRoot, controlId, compiler) {
         if (violations.size) throw new Error([...violations].join('; '));
       }});
   }
-  return Object.freeze({source, loadModule, scenarioInputs, assertInitialState, createSeams});
+  return Object.freeze({source, loadModule, scenarioInputs, assertInitialState, assertInitialFields, createSeams});
 };
 
 // Explicit convenience entry for the pinned compiler invocation protocol.
