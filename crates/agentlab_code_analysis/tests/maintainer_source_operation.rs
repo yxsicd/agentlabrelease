@@ -418,7 +418,10 @@ with tempfile.TemporaryDirectory() as d:
         (9, ['--design-first','--design-only','--parent-design',str(parent_design),
              '--design-review-feedback',str(design_feedback)],'low',180,None),
         (10, ['--frozen-design',str(parent_design),'--frozen-design-sha256',
-              hashlib.sha256(parent_design.read_bytes()).hexdigest()],'low',180,None)]:
+              hashlib.sha256(parent_design.read_bytes()).hexdigest()],'low',180,None),
+        (11, ['--frozen-design',str(parent_design),'--frozen-design-sha256',
+              hashlib.sha256(parent_design.read_bytes()).hexdigest(),
+              '--revision-request',str(revision_path)],'low',180,None)]:
         seen = {}
         class FakeParticipant:
             def __init__(self, evidence, state, binary, gateway, model, **options):
@@ -462,7 +465,7 @@ with tempfile.TemporaryDirectory() as d:
         assert seen['turn']['reasoning_effort'] == effort
         assert seen['turn']['transport_retry_limit'] == 0
         assert seen['closed'] is True
-        assert stage.call_count == (2 if index in (5,6,9,10) else 1)
+        assert stage.call_count == (3 if index==11 else 2 if index in (5,6,9,10) else 1)
         if index in (8,9):
             assert seen['labels']==['source-recipe-design']
             receipt=json.loads((root/str(index)/'design-capture.json').read_bytes())
@@ -481,7 +484,7 @@ with tempfile.TemporaryDirectory() as d:
             assert '--validate-source-recipe-design' in stage.call_args_list[0][0][0]
             assert '--design' in stage.call_args[0][0]
             assert (root/str(index)/'evidence/design-0-generation-completion.json').exists()
-        if index==10:
+        if index in (10,11):
             assert seen['labels']==['source-recipe-author']
             assert '--validate-source-recipe-design' in stage.call_args_list[0][0][0]
             assert '--design' in stage.call_args[0][0]
@@ -489,6 +492,10 @@ with tempfile.TemporaryDirectory() as d:
             receipt=json.loads((root/str(index)/'design-continuation.json').read_bytes())
             assert receipt['designGenerationPerformed'] is False and receipt['semanticQualified'] is False
             assert receipt['designSha256']==hashlib.sha256(parent_design.read_bytes()).hexdigest()
+            if index==11:
+                assert '--check-source-recipe-revision' in stage.call_args_list[1][0][0]
+                assert 'grounded-feedback' in seen['turn']['prompt']
+                assert (root/str(index)/'revision-request.json').read_bytes()==revision_path.read_bytes()
         if index==5:
             assert '--check-source-recipe-revision' in stage.call_args_list[0][0][0]
             assert json.loads((root/str(index)/'revision-request.json').read_bytes()) == revision_packet

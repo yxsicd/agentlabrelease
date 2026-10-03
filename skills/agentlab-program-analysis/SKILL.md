@@ -107,7 +107,10 @@ After reviewing a retained design, use `--frozen-design` paired with its exact
 `--frozen-design-sha256` to continue verifier generation without another design
 model call. The constructor preserves original design bytes and revalidates
 them against the current reproducible author request before participant dispatch.
-Do not mix this continuation with design/proposal revision modes. This freezes
+Do not mix this continuation with design regeneration or design-review revision.
+A digest-bound `--revision-request` may revise verifier code while retaining the
+same frozen design; both native preflights must pass before participant dispatch.
+This freezes
 the intended contract, not approval: independently inspect and calibrate generated
 code before execution qualification or knowledge promotion.
 

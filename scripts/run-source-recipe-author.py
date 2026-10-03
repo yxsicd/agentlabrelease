@@ -233,8 +233,8 @@ def main():
     if bool(args.frozen_design) != bool(args.frozen_design_sha256):
         p.error('--frozen-design and --frozen-design-sha256 must be paired')
     if args.frozen_design and (args.design_first or args.design_only or args.parent_design
-                              or args.design_review_feedback or args.revision_request):
-        p.error('Frozen design continuation cannot mix design generation or revision modes')
+                              or args.design_review_feedback):
+        p.error('Frozen design continuation cannot mix design generation or design revision modes')
     if args.design_only and not args.design_first:
         p.error('--design-only requires --design-first')
     if bool(args.parent_design) != bool(args.design_review_feedback):
