@@ -548,6 +548,194 @@ fn suite_lesson_review(export: &Path) -> Value {
 }
 
 #[test]
+fn source_review_artifact_transport_rejects_unsafe_members_and_ignores_sessions() {
+    let base = fixture();
+    let script = base.join("artifact-transport-fixture.py");
+    fs::write(&script, r#"
+import importlib.util,stat,sys,warnings,zipfile
+from pathlib import Path
+repo,base=sys.argv[1:];base=Path(base)
+spec=importlib.util.spec_from_file_location('acquisition',Path(repo)/'scripts/acquire-source-suite-review-input.py')
+module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+archive=base/'good.zip'
+with zipfile.ZipFile(archive,'w') as z:
+    z.writestr('observation-export/source-stage/request.json','original bytes')
+    z.writestr('agent/participant-state/session.json','not reviewer instructions')
+module.extract_observations(archive,base/'selected')
+for name in ['traversal','absolute','backslash','duplicate','symlink','missing']:
+    archive=base/(name+'.zip')
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        with zipfile.ZipFile(archive,'w') as z:
+            if name!='missing':z.writestr('observation-export/valid.json','original')
+            if name=='traversal':z.writestr('observation-export/../../escape','bad')
+            if name=='absolute':z.writestr('/escape','bad')
+            if name=='backslash':z.writestr('observation-export\\escape','bad')
+            if name=='duplicate':z.writestr('observation-export/valid.json','second')
+            if name=='symlink':
+                info=zipfile.ZipInfo('observation-export/link');info.create_system=3
+                info.external_attr=(stat.S_IFLNK|0o777)<<16;z.writestr(info,'../escape')
+            if name=='missing':z.writestr('agent/session.json','not observations')
+    try:module.extract_observations(archive,base/('selected-'+name))
+    except ValueError:pass
+    else:raise AssertionError(name+' accepted')
+    assert not (base/('selected-'+name)).exists()
+"#).unwrap();
+    let result = Command::new("python3")
+        .arg(&script)
+        .arg(root())
+        .arg(&base)
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert_eq!(
+        fs::read(base.join("selected/source-stage/request.json")).unwrap(),
+        b"original bytes"
+    );
+    assert!(!base.join("selected/agent").exists());
+    assert!(!base.join("escape").exists());
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
+fn isolated_review_transport_uses_native_gates_and_preserves_original_rejections() {
+    use agentlab_code_analysis::{
+        maintainer_source_review as reviewer, maintainer_source_suite_lesson as lesson,
+    };
+    let base = suite_fixture_with_wrong_count(2);
+    let observation = base.join("transport-observations");
+    lesson::export(&base.join("stage"), &base.join("suite"), None, &observation).unwrap();
+    let rubric = json!({"schema":"agentlab.prospective_source_quality_review.v1", "repositoryAgnostic":true,
+        "frozenBeforeDispatch":true,"verdicts":["pass","fail","unverified"],
+        "criteria":[{"id":"provenance","requirement":"Independent identity.","evidence":"Original Git capture."}]});
+    let rubric_path = base.join("transport-rubric.json");
+    file(&rubric_path, &rubric);
+    let packet = reviewer::prepare(&observation, &fs::read(&rubric_path).unwrap()).unwrap();
+    let mut response = json!({"schema":"agentlab.independent_source_suite_review_response.v1",
+        "reviewerId":"synthetic-transport-fixture","reviewRequestSha256":digest(&serde_json::to_vec(&packet).unwrap()),
+        "qualityRubricSha256":packet["qualityRubricSha256"],"reviewBindings":packet["reviewBindings"],
+        "automaticPromotion":false,"verdict":"unverified","unresolvedFindings":["Fixture cannot authenticate source."],
+        "lessonReview":null,"criterionReviews":[{"id":"provenance","verdict":"unverified",
+            "rationale":"No independent source authentication.","evidence":[]}]});
+    for (key, declared) in [
+        ("scenarioReviews", "scenarios"),
+        ("checkReviews", "checks"),
+        ("controlReviews", "controls"),
+    ] {
+        response[key] = json!(packet["design"][declared].as_array().unwrap().iter()
+            .map(|r| json!({"id":r["id"],"accepted":null,"rationale":"Not semantically reviewed in transport fixture.","sourceEvidence":[]}))
+            .collect::<Vec<_>>());
+    }
+    file(&base.join("fixture-response.json"), &response);
+    let fixture = base.join("review-transport-fixture.py");
+    fs::write(&fixture, r#"
+import argparse,hashlib,importlib.util,json,os,sys
+from pathlib import Path
+repo,base,mode=sys.argv[1:];base=Path(base)
+spec=importlib.util.spec_from_file_location('review_transport',Path(repo)/'scripts/run-source-suite-review.py')
+module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+def put(path,value):path.write_text(json.dumps(value))
+class FixtureParticipant:
+    @staticmethod
+    def process_budget_seconds(wall):return 420
+    def __init__(self,evidence,state,binary,gateway,model,**kwargs):
+        self.evidence=evidence;self.model=model;self.route=kwargs['route'];state.mkdir();(evidence/'gateway').mkdir()
+        assert kwargs['api']=='openai-completions' and kwargs['response_format']=='json_object'
+    def turn(self,label,workspace,**kwargs):
+        assert label=='source-suite-review' and not list(workspace.iterdir())
+        assert kwargs['transport_retry_limit']==0 and not kwargs['require_completed_tool_call']
+        prompt=kwargs['prompt'];assert 'fixture-external-secret' not in prompt
+        text=(base/'fixture-response.json').read_text() if mode=='valid' else 'not JSON'
+        (self.evidence/(label+'-prompt.txt')).write_text(prompt)
+        put(self.evidence/'gateway/1.upstream-request.json',dict(model=self.model,providerId=self.route,stream=False,
+            messages=[dict(role='user',content=prompt)]))
+        raw=json.dumps(dict(choices=[dict(index=0,message=dict(role='assistant',content=text),finish_reason='stop')])).encode()
+        (self.evidence/'gateway/1.response').write_bytes(raw)
+        put(self.evidence/'gateway/1.status.json',dict(exchangeId='1',durationMs=1,status=200,upstreamEof=True,
+            semanticComplete=True,outcome='completed',streamError=None,responseBytes=len(raw)))
+        final=self.evidence/(label+'-final-assistant-message.json')
+        put(final,dict(role='assistant',stopReason='stop',content=[dict(type='text',text=text)]))
+        put(self.evidence/(label+'-lifecycle.json'),dict(label=label,captureAuthority='operator',exitCode=0,timedOut=False,
+            finalAssistantMessagePresent=True,participantBudgetSeconds=420,participantBudgetScope='native-process-watchdog',
+            transportRetryLimit=0,finalAssistantMessageSha256=hashlib.sha256(final.read_bytes()).hexdigest()))
+        return dict(content=text)
+args=argparse.Namespace(source=base/'transport-observations',rubric=base/'transport-rubric.json',output=base/('review-'+mode),
+    gate=Path(os.environ['FIXTURE_NATIVE_GATE']),pi=Path('/fixture/pi'),gateway_timeout_seconds=240,
+    thinking_type='disabled',reasoning_effort='default',max_output_tokens=16384)
+module.run(args,participant_class=FixtureParticipant)
+"#).unwrap();
+    let repo = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+    let invoke = |mode: &str| {
+        Command::new("python3")
+            .arg(&fixture)
+            .arg(repo)
+            .arg(&base)
+            .arg(mode)
+            .env(
+                "FIXTURE_NATIVE_GATE",
+                env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"),
+            )
+            .env(
+                "AGENTLAB_PARTICIPANT_RUNTIME_CONFIG",
+                base.join("fixture-runtime.json"),
+            )
+            .env(
+                "AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT",
+                base.join(format!("runtime-{mode}")),
+            )
+            .env("AGENTLAB_LM_GATEWAY_URL", "http://fixture.invalid")
+            .env("AGENTLAB_LM_GATEWAY_KEY", "fixture-external-secret")
+            .env("AGENTLAB_MODEL", "fixture")
+            .env("AGENTLAB_PROVIDER_ROUTE", "fixture")
+            .output()
+            .unwrap()
+    };
+    let valid = invoke("valid");
+    assert!(
+        valid.status.success(),
+        "{}",
+        String::from_utf8_lossy(&valid.stderr)
+    );
+    let report: Value =
+        serde_json::from_slice(&fs::read(base.join("review-valid/validation.json")).unwrap())
+            .unwrap();
+    assert_eq!(report["verdict"], "unverified");
+    assert_eq!(report["recordedCompletionVerified"], true);
+    assert_eq!(report["qualified"], false);
+    let original = fs::read(base.join("review-valid/response.json")).unwrap();
+    assert_eq!(
+        original,
+        fs::read(base.join("fixture-response.json")).unwrap()
+    );
+    assert!(!invoke("valid").status.success());
+    assert_eq!(
+        original,
+        fs::read(base.join("review-valid/response.json")).unwrap()
+    );
+    assert!(!invoke("invalid").status.success());
+    assert_eq!(
+        fs::read(base.join("review-invalid/response.json")).unwrap(),
+        b"not JSON"
+    );
+    let failed: Value = serde_json::from_slice(
+        &fs::read(base.join("review-invalid/transport-receipt.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(failed["completed"], false);
+    assert!(!base.join("review-invalid/validation.json").exists());
+    assert!(!base.join("review-valid/lesson.json").exists());
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
 fn independent_review_response_retains_negative_feedback_without_promoting() {
     use agentlab_code_analysis::{
         maintainer_source_review as reviewer, maintainer_source_suite_lesson as lesson,

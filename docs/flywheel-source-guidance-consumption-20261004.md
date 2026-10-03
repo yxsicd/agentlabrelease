@@ -423,3 +423,53 @@ external flywheel-review-response-LlSj55/reviewer-prompt.txt. Earlier prepared
 packets and original evidence remain unchanged. No reviewer was dispatched and
 no new knowledge was admitted. Local suites pass 24 source-diagnostic, three
 observation-store and 15 guidance tests; Release/Skill/format/diff validation pass.
+
+## Isolated review transport and Action
+
+The main-only Maintainer independent source suite review Action has read-only
+contents/actions permissions and consumes exact source_run, source_artifact,
+source_revision, artifact_sha256, rubric and rubric_sha256 inputs. Enrollment
+retains the reviewer method/model/provider/budgets before inference. Source
+metadata must identify the completed main workflow_dispatch constructor workflow
+path and method SHA, with the artifact ID/name/run/head linkage and original ZIP
+digest. No latest selection, source worker rerun or knowledge writer is used.
+The acquirer preserves original API responses/ZIP and extracts only the native
+observation-export members, not the source author's session as reviewer context.
+Traversal, duplicate names, symlinks, encrypted/nonregular files and compressed/
+expanded budgets are checked before extraction. Rust reconstructs the selected
+complete original export before participant installation or model budget.
+
+The thin run-source-suite-review.py adapter uses the existing contained Pi
+participant/operator Gateway. Source, evaluator, original sessions and external
+credentials are not mounted. Native preparation supplies the complete packet and
+canonical prompt. One fresh state/workspace and declared native watchdog use
+zero transport retries and no correction allowance. Original final text is saved
+without JSON rewriting or fence removal, then checked by native recorded review
+completion. All complete verdicts are preserved; a completed rejection or missing
+evidence is not an infrastructure failure and is never a knowledge admission.
+Malformed/capture failures retain original response/logs/terminal receipt. The
+independent runtime validator runs separately, and all artifacts are uploaded on
+success or failure. No automatic promotion or next-round scheduling is claimed.
+
+Native response instructions now spell out the existing accepted lesson schema,
+bindings, text limits and unchanged review inventories instead of assuming a
+reviewer knows an unpublished nested contract. Earlier prepared prompt/request
+bytes are retained rather than rewritten to reflect these newer instructions.
+
+Rust-led transport regressions exercise actual native subprocess gates with a
+synthetic participant, preserving an original unverified response and malformed
+rejection, zero-retry policy and exclusive capture root. Archive controls prove
+exact selected bytes and reject unsafe members before extraction. These fixtures
+are not real model runs. Local suites pass 26 diagnostic, three observation-store
+and 15 guidance tests, plus actionlint for the real workflow expression contexts.
+
+Actual download through this acquirer recovered run 37160192475 / artifact
+11287487074 at e64a95a72edb0acf2ce739583602e98c0fe5d2b4, original ZIP SHA256
+9f536688a802fd9405c92d59daa4bc91bd678be97bd81e67e31ea3bee606c8c8. Downloaded
+observations pass current native preparation with request-file SHA256
+73077a1eb662c8e1e44f65615b5bc4cee370fa544f24ec0eeaba360848c35437, external
+flywheel-review-action-7LJa37. This is acquisition/reconstruction, not reviewer
+inference or Git-source authentication. Next deliver the Action on main, dispatch
+one exact enrolled review, then preserve its actual verdict before ordinary
+lesson/admission/return integration. Maturity remains 74%; complete automatic
+five-stage loops zero.
