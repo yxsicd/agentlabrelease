@@ -39,9 +39,189 @@ fn relative(path: &str) -> bool {
     !path.is_empty()
         && !path.starts_with('/')
         && !path.contains(['\\', '\0', '\n', '\r'])
+        && !path.contains(':')
         && path
             .split('/')
             .all(|v| !v.is_empty() && v != "." && v != "..")
+}
+
+/// Explicit construction edit selections, separate from read-only context.
+/// This binds scope ownership and source preconditions, not semantic readiness
+/// or permission to execute edits. Successor admission must consume this packet.
+pub fn prepare_edit_boundary(
+    base: &Path,
+    source: &Path,
+    repository_id: &str,
+    selection_bytes: &[u8],
+) -> Result<Value, String> {
+    need(
+        selection_bytes.len() <= 64 * 1024,
+        "edit selection exceeds budget",
+    )?;
+    let selection: Value = serde_json::from_slice(selection_bytes).map_err(|e| e.to_string())?;
+    need(
+        selection["schema"] == "agentlab.case_edit_selection.v1",
+        "edit selection schema differs",
+    )?;
+    let edits = selection["edits"]
+        .as_array()
+        .ok_or("edit selections absent")?;
+    need(
+        !edits.is_empty() && edits.len() <= 32,
+        "edit selection requires 1..32 paths",
+    )?;
+    let mut paths = BTreeSet::new();
+    let mut anchors = BTreeSet::new();
+    for edit in edits {
+        let path = edit["path"].as_str().ok_or("edit path absent")?;
+        let anchor = edit["anchorPath"].as_str().ok_or("edit anchor absent")?;
+        need(
+            relative(path) && relative(anchor) && paths.insert(path),
+            "edit path unsafe or duplicate",
+        )?;
+        need(
+            ["modify", "create"].contains(&edit["mode"].as_str().unwrap_or("")),
+            "edit mode unsupported",
+        )?;
+        need(
+            edit["ownerScopeSkillId"]
+                .as_str()
+                .is_some_and(|s| !s.is_empty()),
+            "edit owner absent",
+        )?;
+        need(
+            edit["reason"]
+                .as_str()
+                .is_some_and(|s| !s.trim().is_empty() && s.chars().count() <= 1000),
+            "edit reason absent or oversized",
+        )?;
+        if edit["mode"] == "modify" {
+            need(
+                path == anchor,
+                "modified file must be its own exact source anchor",
+            )?;
+        }
+        anchors.insert(anchor.to_owned());
+    }
+    let anchors: Vec<_> = anchors.into_iter().collect();
+    let context = prepare(base, source, repository_id, &anchors)?;
+    let scope_bytes = read(&base.join("maintainer_scope_skills.jsonl"))?;
+    let scopes: Vec<Value> = std::str::from_utf8(&scope_bytes)
+        .map_err(|e| e.to_string())?
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(serde_json::from_str)
+        .collect::<Result<_, _>>()
+        .map_err(|e| e.to_string())?;
+    let revision = context["repository"]["revision"].as_str().unwrap();
+    let mut entries = Vec::new();
+    for edit in edits {
+        let path = edit["path"].as_str().unwrap();
+        let anchor = context["selectedFiles"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|f| f["path"] == edit["anchorPath"])
+            .ok_or("edit anchor not loaded")?;
+        let owners: Vec<_> = scopes
+            .iter()
+            .filter(|s| s["repositoryId"] == repository_id && owns(s, path))
+            .collect();
+        need(
+            owners.len() == 1,
+            "edit target requires exactly one owning scope",
+        )?;
+        let owner = owners[0];
+        need(
+            owner["id"] == edit["ownerScopeSkillId"] && anchor["ownerScopeSkillId"] == owner["id"],
+            "edit target or anchor owner differs",
+        )?;
+        need(
+            owner["sourceRevision"] == revision
+                && owner["repository"] == context["repository"]["repository"],
+            "edit target source differs",
+        )?;
+        let mut expected = json!({"kind":"existing-regular-blob","gitBlobOid":anchor["gitBlobOid"],"sha256":anchor["sha256"]});
+        if edit["mode"] == "create" {
+            // Check every tracked ancestor: a missing leaf below a symlink,
+            // submodule or file is not a valid new source location.
+            let parts: Vec<_> = path.split('/').collect();
+            for n in 1..=parts.len() {
+                let prefix = parts[..n].join("/");
+                let tree = git(source, &["ls-tree", "-z", revision, "--", &prefix])?;
+                if n == parts.len() {
+                    need(tree.is_empty(), "created edit path already tracked")?;
+                } else if !tree.is_empty() {
+                    let text = std::str::from_utf8(&tree).map_err(|e| e.to_string())?;
+                    need(
+                        text.starts_with("040000 tree "),
+                        "created edit path has non-directory ancestor",
+                    )?;
+                }
+            }
+            // Ignored/untracked files are not visible in the committed Tree.
+            for (n, prefix) in (1..=parts.len()).map(|n| (n, parts[..n].join("/"))) {
+                match fs::symlink_metadata(source.join(prefix)) {
+                    Ok(meta) => need(
+                        n < parts.len() && meta.is_dir() && !meta.file_type().is_symlink(),
+                        "created edit path obstructed in checkout",
+                    )?,
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(e) => return Err(e.to_string()),
+                }
+            }
+            expected = json!({"kind":"absent-at-source-revision"});
+        }
+        entries.push(
+            json!({"path":path,"mode":edit["mode"],"ownerScopeSkillId":owner["id"],
+            "anchorPath":edit["anchorPath"],"anchorGitBlobOid":anchor["gitBlobOid"],
+            "reason":edit["reason"],"precondition":expected}),
+        );
+    }
+    entries.sort_by(|a, b| a["path"].as_str().cmp(&b["path"].as_str()));
+    need(
+        prepare(base, source, repository_id, &anchors)? == context
+            && read(&base.join("maintainer_scope_skills.jsonl"))? == scope_bytes,
+        "edit source or knowledge changed during preparation",
+    )?;
+    Ok(json!({"schema":"agentlab.case_edit_boundary_packet.v1",
+        "repository":context["repository"],"knowledgeCutSha256":context["knowledgeCutSha256"],
+        "tableGitRevision":context["tableGitRevision"],"selectionSha256":digest(selection_bytes),
+        "selectionUtf8":std::str::from_utf8(selection_bytes).map_err(|e| e.to_string())?,
+        "sourceContext":context,"edits":entries,"status":"bound-construction-edit-selection",
+        "grantsEditablePaths":false,"automaticPromotion":false,"authorityWritePerformed":false,
+        "formalCaseQualified":false,"calibrationInherited":false,
+        "boundary":"Operator-selected scope-owned construction paths only; not executable edit authority. Bind this packet to a successor request and independently qualify host, oracle and controls before execution."}))
+}
+
+/// Consumers reconstruct against the pinned checkout and knowledge cut; a
+/// self-declared packet hash or embedded owner context is not sufficient.
+pub fn validate_edit_boundary(
+    base: &Path,
+    source: &Path,
+    packet_bytes: &[u8],
+) -> Result<Value, String> {
+    need(
+        packet_bytes.len() <= 1024 * 1024,
+        "edit boundary packet exceeds budget",
+    )?;
+    let packet: Value = serde_json::from_slice(packet_bytes).map_err(|e| e.to_string())?;
+    let repository = packet["repository"]["id"]
+        .as_str()
+        .ok_or("edit packet repository absent")?;
+    let selection = packet["selectionUtf8"]
+        .as_str()
+        .ok_or("edit packet original selection absent")?;
+    let expected = prepare_edit_boundary(base, source, repository, selection.as_bytes())?;
+    need(
+        packet == expected,
+        "edit boundary packet differs from reconstructed source selection",
+    )?;
+    Ok(
+        json!({"schema":"agentlab.case_edit_boundary_validation.v1", "packetSha256":digest(packet_bytes),
+        "editCount":expected["edits"].as_array().unwrap().len(),"status":"bound-construction-edit-selection",
+        "grantsEditablePaths":false,"formalCaseQualified":false,"automaticPromotion":false}),
+    )
 }
 fn owns(scope: &Value, path: &str) -> bool {
     let prefix = |boundary: &str| path == boundary || path.starts_with(&format!("{boundary}/"));

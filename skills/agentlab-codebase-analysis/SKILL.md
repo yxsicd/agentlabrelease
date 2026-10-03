@@ -71,6 +71,22 @@ knowledge nor grants edits. Later facts and successor construction inputs still
 need their existing admission gates. Unchanged reordered selection must reproduce
 the same packet; raw source packets stay in the operator artifact archive.
 
+For proposed cross-scope host/test changes, prepare a separate Rust
+`--prepare-construction-edit-boundary` packet with the same knowledge/source/repository
+options and `--edit-selection ABSOLUTE_JSON --output FRESH_PACKET`. The selection
+schema is `agentlab.case_edit_selection.v1`; each `edits` entry declares `path`,
+`mode` (`modify` or `create`), `ownerScopeSkillId`, `anchorPath` and `reason`.
+Modification anchors are the target's exact source Blob. Creation anchors are
+existing files of the same owner; the new target must independently match that
+owner's selectors and be absent from the source Tree and checkout. An exact-file
+selector never authorizes a new sibling. Keep this bound selection separate from
+read-only context and executable edit authority, and carry its digest into the
+successor construction input. It does not update the parent candidate, establish
+host integration or inherit oracle/calibration qualification.
+Consumers can reconstruct it with `--validate-construction-edit-boundary`, the
+same knowledge/source options and `--edit-boundary ABSOLUTE_PACKET --output FRESH`;
+do not trust only embedded owners or the producer's declared digest.
+
 The v2 context packet also carries committed owner-scope analysis facts with
 their original value digests and limitations. Only same-source facts with a
 selected exact Blob match are included; stale/unmatched analyses are reported

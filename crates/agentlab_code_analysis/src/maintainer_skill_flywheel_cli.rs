@@ -24,6 +24,24 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|a| a == "--prepare-construction-edit-boundary" || a == "--validate-construction-edit-boundary") {
+        let report = if args.iter().any(|a| a == "--validate-construction-edit-boundary") {
+            agentlab_code_analysis::maintainer_construction_context::validate_edit_boundary(
+                &PathBuf::from(value(&args, "--knowledge")?),
+                &PathBuf::from(value(&args, "--source-worktree")?),
+                &fs::read(value(&args, "--edit-boundary")?)?,
+            )?
+        } else { agentlab_code_analysis::maintainer_construction_context::prepare_edit_boundary(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &PathBuf::from(value(&args, "--source-worktree")?),
+            &value(&args, "--repository")?,
+            &fs::read(value(&args, "--edit-selection")?)?,
+        )? };
+        OpenOptions::new().write(true).create_new(true).open(output)?
+            .write_all(&serde_json::to_vec_pretty(&report)?)?;
+        println!("{}", serde_json::json!({"schema":report["schema"],"qualified":false}));
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--prepare-harmony-build-plan") {
         let module = value(&args, "--build-module")?;
         let report = agentlab_code_analysis::harmony_build_plan::prepare(

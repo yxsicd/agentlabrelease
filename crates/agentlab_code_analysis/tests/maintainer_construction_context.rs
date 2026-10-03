@@ -1,4 +1,7 @@
-use agentlab_code_analysis::{digest, maintainer_construction_context::prepare};
+use agentlab_code_analysis::{
+    digest,
+    maintainer_construction_context::{prepare, prepare_edit_boundary, validate_edit_boundary},
+};
 use serde_json::{json, Value};
 use std::{
     fs,
@@ -15,6 +18,141 @@ struct Fixture {
     revision: String,
 }
 static NEXT_FIXTURE: AtomicU64 = AtomicU64::new(0);
+fn edit_selection() -> Value {
+    json!({"schema":"agentlab.case_edit_selection.v1","edits":[
+        {"path":"pkg/main.rs","anchorPath":"pkg/main.rs","mode":"modify","ownerScopeSkillId":"implementation","reason":"implement the behavior contract"},
+        {"path":"pkg/tests/new.rs","anchorPath":"pkg/tests/check.rs","mode":"create","ownerScopeSkillId":"verification","reason":"add independent behavioral checks"}
+    ]})
+}
+
+#[test]
+fn construction_edits_bind_exact_existing_and_new_paths_without_implicit_grants() {
+    let f = Fixture::new();
+    let selection = edit_selection();
+    let bytes = serde_json::to_vec(&selection).unwrap();
+    let packet = prepare_edit_boundary(&f.knowledge, &f.source, "arbitrary", &bytes).unwrap();
+    assert_eq!(packet["selectionSha256"], digest(&bytes));
+    assert_eq!(
+        packet["selectionUtf8"],
+        std::str::from_utf8(&bytes).unwrap()
+    );
+    assert_eq!(
+        packet["edits"][0]["precondition"]["gitBlobOid"],
+        git(&f.source, &["rev-parse", "HEAD:pkg/main.rs"])
+    );
+    assert_eq!(
+        packet["edits"][1]["precondition"]["kind"],
+        "absent-at-source-revision"
+    );
+    assert_eq!(packet["grantsEditablePaths"], false);
+    assert_eq!(packet["calibrationInherited"], false);
+    assert_eq!(
+        packet,
+        prepare_edit_boundary(&f.knowledge, &f.source, "arbitrary", &bytes).unwrap()
+    );
+    assert!(!f.source.join("pkg/tests/new.rs").exists());
+    assert!(git(&f.source, &["status", "--porcelain"]).is_empty());
+    let packet_bytes = serde_json::to_vec(&packet).unwrap();
+    let validation = validate_edit_boundary(&f.knowledge, &f.source, &packet_bytes).unwrap();
+    assert_eq!(validation["packetSha256"], digest(&packet_bytes));
+    for field in [
+        "knowledgeCutSha256",
+        "selectionSha256",
+        "grantsEditablePaths",
+    ] {
+        let mut forged = packet.clone();
+        forged[field] = json!("forged");
+        assert!(validate_edit_boundary(
+            &f.knowledge,
+            &f.source,
+            &serde_json::to_vec(&forged).unwrap()
+        )
+        .is_err());
+    }
+    let mut widened = packet.clone();
+    widened["edits"][1]["path"] = json!("pkg/tests/extra.rs");
+    assert!(validate_edit_boundary(
+        &f.knowledge,
+        &f.source,
+        &serde_json::to_vec(&widened).unwrap()
+    )
+    .is_err());
+}
+
+#[test]
+fn edit_selection_rejects_borrowed_owners_exact_file_widening_and_obstructions() {
+    for scenario in [
+        "owner",
+        "anchor-owner",
+        "exact-widening",
+        "duplicate",
+        "traversal",
+        "drive-path",
+        "already-tracked",
+        "modify-anchor",
+        "mode",
+        "ignored-target",
+        "symlink-parent",
+        "overlap",
+        "stale",
+        "foreign-repo",
+    ] {
+        let f = Fixture::new();
+        let mut selection = edit_selection();
+        match scenario {
+            "owner" => selection["edits"][1]["ownerScopeSkillId"] = json!("implementation"),
+            "anchor-owner" => selection["edits"][1]["anchorPath"] = json!("pkg/main.rs"),
+            "exact-widening" => selection["edits"][1]["path"] = json!("pkg/new.rs"),
+            "duplicate" => {
+                let copy = selection["edits"][0].clone();
+                selection["edits"].as_array_mut().unwrap().push(copy);
+            }
+            "traversal" => selection["edits"][1]["path"] = json!("pkg/tests/../new.rs"),
+            "drive-path" => selection["edits"][1]["path"] = json!("C:/new.rs"),
+            "already-tracked" => selection["edits"][1]["path"] = json!("pkg/tests/check.rs"),
+            "modify-anchor" => selection["edits"][0]["anchorPath"] = json!("pkg/tests/check.rs"),
+            "mode" => selection["edits"][1]["mode"] = json!("delete"),
+            "ignored-target" => {
+                git(&f.source, &["config", "core.excludesfile", "/dev/null"]);
+                fs::write(f.source.join(".git/info/exclude"), "pkg/tests/new.rs\n").unwrap();
+                fs::write(f.source.join("pkg/tests/new.rs"), "existing ignored data").unwrap();
+            }
+            "symlink-parent" => {
+                #[cfg(unix)]
+                {
+                    fs::write(f.source.join(".git/info/exclude"), "pkg/tests/link\n").unwrap();
+                    std::os::unix::fs::symlink("..", f.source.join("pkg/tests/link")).unwrap();
+                    selection["edits"][1]["path"] = json!("pkg/tests/link/new.rs");
+                }
+                #[cfg(not(unix))]
+                {
+                    continue;
+                }
+            }
+            "overlap" => f.scopes(|s| {
+                let mut copy = s[2].clone();
+                copy["id"] = json!("other");
+                s.push(copy);
+            }),
+            "stale" => f.scopes(|s| s[2]["sourceRevision"] = json!("a".repeat(40))),
+            "foreign-repo" => {
+                selection["edits"][1]["ownerScopeSkillId"] = json!("unrelated-repo-owner")
+            }
+            _ => unreachable!(),
+        }
+        assert!(
+            prepare_edit_boundary(
+                &f.knowledge,
+                &f.source,
+                "arbitrary",
+                &serde_json::to_vec(&selection).unwrap()
+            )
+            .is_err(),
+            "{scenario}"
+        );
+        assert!(!f.source.join("pkg/tests/new.rs").exists() || scenario == "ignored-target");
+    }
+}
 fn git(root: &Path, args: &[&str]) -> String {
     let result = Command::new("git")
         .args(args)
