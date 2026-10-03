@@ -75,6 +75,14 @@ checks are not independent coverage dimensions. Keep missing dependency source
 context distinct from an omitted runtime export binding; one does not prove the
 cause or repair of the other.
 
+The frozen source runtime owns control transformations: source() and loadModule()
+already consume the selected edits. Do not apply the design's edits a second time
+in generated verifiers. For initialization claims, compare source-observed state
+with the relevant frozen initialState subtree through assertInitialState; allow
+mismatches to fail before the tested operation. An ungraded match flag cannot
+establish verification. Choosing that subtree still requires source review, and
+the helper neither establishes complete state coverage nor approves an Oracle.
+
 Use the constructor's `--design-first --design-only` mode when a new behavior
 surface needs independent semantic review before verifier generation. The retained
 design/validation digests bind an unreviewed draft, not an approved Oracle. Review
