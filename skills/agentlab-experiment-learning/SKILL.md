@@ -155,6 +155,23 @@ unexercised controls or swallowed dependency validation cannot be promoted by
 manufacturing accept records. Keep the existing operational persistence, committed
 readback, explicit promotion and fixed-baseline knowledge admission boundaries.
 
+Review scenario consumption as well as scenario preservation. Trace each initial
+state, ordered action/input and dependency outcome to its execution point in the
+verifier. An equivalent explicitly bound adapter is acceptable, but a second
+hardcoded action inventory does not prove consumption of the frozen input records.
+Keep the tested method distinct from its external dependencies; an unused seam
+for the method itself is not evidence that the method was exercised through that
+seam. Report unused declarations and unverified initial-state assumptions before
+lesson admission, even when all control verdicts match.
+
+A frozen dependency return supplies the declared value; it need not invoke a real
+dependency callback passed as an argument. Inspect the runtime implementation
+before claiming real parser, storage or framework behavior. Controlled returns
+can qualify the caller's handling of those returns without qualifying the real
+dependency or input validity. Reject an interpretation that claims both without
+evidence. Keep rejected original suites intact and use a reviewed successor for
+design/verifier correction, not retrospective edits or invented accept records.
+
 Before admission, require nonempty passing validations belonging to the selected
 lesson, and reject target identities already present in the baseline. Existing
 guidance updates need a separate reviewed delta, never implicit replacement by
