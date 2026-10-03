@@ -72,7 +72,7 @@ real flywheel passes over all four repositories:
 | Targeted semantic and executable operation evidence | 480 | 13 | 6 | 2 |
 
 The latest strict independent assessment covers all 489 structural scopes: 46 are
-program-bound, 41 are semantic-ready, and 4 are maintenance-ready. Maintenance
+program-bound, 41 are semantic-ready, and 6 are maintenance-ready. Maintenance
 readiness still does not automatically approve an evaluation case: independent
 Oracle review and case promotion remain separate gates. The current gap queue
 retains 443 program-unbound scopes and drives the next targeted round.
@@ -104,9 +104,9 @@ This is one more reviewed operation-evidence transition, not another completed
 business cycle, automatic recipe generation or formal platform qualification.
 
 The publication now includes committed knowledge cut
-`262b9a819e57abd7d6313c08b18c29c06f79045e`: 15 process/method Skills,
-489 scope Skills, 67 program facts, 45 refresh records and no formal cases.
-This includes the reviewed platform-services operation and Push behavior lesson.
+`da9a10a8049b138738d05aae9b2d47710b6b9a7d`: 15 process/method Skills,
+489 scope Skills, 68 program facts, 46 refresh records and no formal cases.
+This includes the reviewed platform-services and Dialog operations and Push behavior lesson.
 The latter explicitly does not claim Harmony build/runtime qualification or
 measured learning benefit. Original assessed table bytes and receipt/assessment
 dependencies are retained; historical downstream candidates remain bound to
