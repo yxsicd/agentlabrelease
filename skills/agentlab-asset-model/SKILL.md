@@ -152,3 +152,10 @@ Resolve literal table paths from evidence/contracts: knowledge root paths and an
 operational namespace prefix need not match. A rejected guessed path does not
 prove an instance outage. See the [fresh Action checkpoint](../../docs/flywheel-main-action-checkpoint-20261003.md)
 for the separate execution, export and authority boundaries.
+
+When ancestry and exact table readbacks prove ordinary forward advancement,
+catch up the consumer publication rather than rewinding authority. Reassess the
+portable snapshot with its original parent assessment and verify referenced
+receipt bytes before selecting new work. A new plan proves input freshness, not
+operation execution or a completed round. See the
+[knowledge publication checkpoint](../../docs/flywheel-current-knowledge-publication-20261003.md).
