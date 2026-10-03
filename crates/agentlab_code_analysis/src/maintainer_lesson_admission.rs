@@ -69,7 +69,36 @@ pub fn stage(
     expected_revision: &str,
     output: &Path,
 ) -> Result<Value, String> {
-    let plan = prepare(base, proposal, source, lesson_id, expected_revision)?;
+    stage_with_method(
+        base,
+        proposal,
+        source,
+        lesson_id,
+        expected_revision,
+        output,
+        None,
+    )
+}
+
+/// A historical method body remains an explicit frozen input. Its bytes bind
+/// the proposed methodDigest; its declared Git revision is not authenticated.
+pub(crate) fn stage_with_method(
+    base: &Path,
+    proposal: &Path,
+    source: &Path,
+    lesson_id: &str,
+    expected_revision: &str,
+    output: &Path,
+    method_source: Option<&[u8]>,
+) -> Result<Value, String> {
+    let plan = prepare_with_method(
+        base,
+        proposal,
+        source,
+        lesson_id,
+        expected_revision,
+        method_source,
+    )?;
     let durable = crate::maintainer_flywheel_plan::latest_assessment(base)?;
     let prior_bytes = read(
         base,
@@ -141,6 +170,9 @@ pub fn stage(
         Ok(())
     }
     collect(base, base, &mut files)?;
+    if let Some(bytes) = method_source {
+        files.insert("reviewed-method-source.md".into(), bytes.to_vec());
+    }
     need(
         files.values().map(Vec::len).sum::<usize>() <= 64 * 1024 * 1024,
         "lesson stage snapshot budget exceeded",
@@ -275,6 +307,24 @@ pub fn prepare(
     lesson_id: &str,
     expected_revision: &str,
 ) -> Result<Value, String> {
+    prepare_with_method(base, proposal, source, lesson_id, expected_revision, None)
+}
+
+fn prepare_with_method(
+    base: &Path,
+    proposal: &Path,
+    source: &Path,
+    lesson_id: &str,
+    expected_revision: &str,
+    method_source: Option<&[u8]>,
+) -> Result<Value, String> {
+    let method = method_source.unwrap_or(include_bytes!(
+        "../../../skills/agentlab-experiment-learning/SKILL.md"
+    ));
+    need(
+        !method.is_empty() && method.len() <= 256 * 1024,
+        "admission method source budget",
+    )?;
     let cut_bytes = read(base, "maintainer-knowledge-cut.json")?;
     let cut: Value = serde_json::from_slice(&cut_bytes).map_err(|e| e.to_string())?;
     need(
@@ -350,12 +400,31 @@ pub fn prepare(
     let candidate: Value = serde_json::from_slice(&candidate_bytes).map_err(|e| e.to_string())?;
     let review_bytes = read(source, "lesson-review.json")?;
     let review: Value = serde_json::from_slice(&review_bytes).map_err(|e| e.to_string())?;
+    let mut projection = Value::Null;
     let expected = if review["schema"] == "agentlab.behavior_lesson_review.v1" {
-        crate::maintainer_behavior_checks::lesson_assets(
+        let original_analysis = rows(&read(source, "analysis_records.jsonl")?)?;
+        need(
+            original_analysis.len() == 1,
+            "admission original analysis ambiguous",
+        )?;
+        let analysis = original_analysis.values().next().unwrap();
+        need(
+            analysis["kind"] == "raw-behavior-reconstruction"
+                && analysis["code"] == "maintainer_behavior_checks::verify",
+            "admission original analyzer unsupported",
+        )?;
+        let original_consumer = analysis["consumerSourceSha256"]
+            .as_str()
+            .ok_or("admission projection identity absent")?;
+        projection = json!({"declaredOriginalConsumerSha256":original_consumer,
+            "currentConsumerSha256":digest(include_bytes!("maintainer_behavior_checks.rs")),
+            "originalProducerAuthenticated":false,"currentSemanticReconstructionRequired":true});
+        crate::maintainer_behavior_checks::lesson_assets_for_projection(
             &candidate_bytes,
             &read(source, "behavior-contract.json")?,
             &read(source, "behavior-capture.json")?,
             &review_bytes,
+            original_consumer,
         )?
     } else {
         let capture = read(source, "stage-calibration.json")?;
@@ -436,10 +505,7 @@ pub fn prepare(
                     && row["lessonSource"] == lineage
                     && row["methodSkillId"] == "agentlab-experiment-learning"
                     && oid(&row["methodRevision"])
-                    && row["methodDigest"]
-                        == digest(include_bytes!(
-                            "../../../skills/agentlab-experiment-learning/SKILL.md"
-                        )),
+                    && row["methodDigest"] == digest(method),
                 "admission proposed lesson lineage differs",
             )?;
             if table == "maintainer_skills" {
@@ -506,7 +572,9 @@ pub fn prepare(
         "repository":cut["tableGitAuthority"]["repo"],"expectedRevision":expected_revision,
         "baselineKnowledgeCutSha256":digest(&cut_bytes),"sourceExportSha256":digest(&read(source,"export.json")?),
         "automaticPromotion":false,"authorityWritePerformed":false,"qualified":false,
-        "assessmentReused":true,"sourceCommitAuthenticated":false,"tables":additions,"requiredFollowUp":["verify declared source cut through committed remote readback","validate staged full knowledge cut before authority transaction","atomic committed readback",
+        "assessmentReused":true,"sourceCommitAuthenticated":false,"projectionRevalidation":projection,
+        "methodSourceSha256":digest(method),"historicalMethodSourceProvided":method_source.is_some(),"methodCommitAuthenticated":false,
+        "tables":additions,"requiredFollowUp":["verify declared source cut through committed remote readback","validate staged full knowledge cut before authority transaction","atomic committed readback",
         "export and independently validate new knowledge cut","verify downstream guidance consumption","measure next-round benefit"]}),
     )
 }

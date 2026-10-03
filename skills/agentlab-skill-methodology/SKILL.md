@@ -98,3 +98,16 @@ in the instance, then explicitly promote scope-bound verified knowledge. Public
 Action exports the candidate from committed TableGit and proves active knowledge
 is unchanged; maintenance imports/exports accepted candidates before source Git
 publication. Improvements also become executable regressions where applicable.
+
+For a first round without applicable experience, use explicitly reviewed bootstrap
+state rather than borrowing another repository's lesson. For later rounds, follow
+[committed lesson continuation](../../docs/flywheel-committed-lesson-continuation-20261003.md):
+verify complete committed knowledge and operational-source readbacks, select the
+admitted guidance explicitly, and retire prior executable inputs before scheduling
+new work. State advancement is not fresh analysis, model consumption or benefit.
+
+Keep original method bytes and analysis projection identity when revalidating older
+evidence after a tool upgrade. Record the current validator separately and compare
+all reconstructed semantic results; do not rewrite historical rows to match current
+IDs or substitute the current method for a frozen historical one. Hash agreement
+does not authenticate the declared Git revision or original producer.
