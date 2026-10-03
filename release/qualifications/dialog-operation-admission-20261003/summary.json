@@ -1,0 +1,37 @@
+{
+  "schema": "agentlab.dialog_operation_admission_summary.v1",
+  "methodRevision": "15237a6c05224dde8f032200d1a38c1ab5e44f35",
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "authority": {
+    "instanceId": "cbgroomtpc",
+    "repository": "agentlabtablegit",
+    "parentRevision": "262b9a819e57abd7d6313c08b18c29c06f79045e",
+    "revision": "da9a10a8049b138738d05aae9b2d47710b6b9a7d",
+    "transactionId": "79caff47-c417-42d5-bad6-945f8ad32b47",
+    "insertedRows": 2,
+    "changedExistingRows": 0,
+    "deletedRows": 0,
+    "exactFiveTableReadback": true,
+    "cleanHeadBeforeAndAfter": true,
+    "gitRemoteReplicationVerified": false
+  },
+  "operationFactId": "operation-source-4b2cb3be35f734969ccb5cb151ceaa2f4465c5cb4a93d4059b84cb5fe54a5bc5",
+  "refreshRoundId": "operation-round-46-source-loop-1",
+  "knowledgeCutSha256": "1f4f4ccfc09313ee426a63edc3f4e2be86dd0f3ec12ebb7385ddb3729ff3ece3",
+  "assessmentSha256": "767089647aa281c6bccc3a593c9d9839bae5b7d490dfffeb8f37cfd700aceeef",
+  "maintenanceReadyCount": 6,
+  "construction": {
+    "inputPacketSha256": "89f30d0171c6cbd0c58589a76c2853b9c566a184b09a5370d8ba082a873af56b",
+    "shadowRequestSha256": "bf8dda79528aef221b517616d577f726137d5b4ab02ae37a39f85c22e0bc3881",
+    "inputPreparationExitCode": 0,
+    "shadowPreparationExitCode": 0,
+    "runtimeTarget": "harmony-emulator",
+    "participantExecuted": false,
+    "caseCalibrationInherited": false,
+    "formalCaseQualified": false
+  },
+  "automaticPromotion": false,
+  "completeAutomaticBusinessLoops": 0,
+  "overallMaturityEstimatePercent": 68,
+  "verificationBoundary": "Observed operator-driven atomic authority admission and local Rust construction-input preparation. Raw transaction/readback and original operation sidecars remain in the operator artifact archive, not embedded in this summary. No automatic review, full business loop, task calibration, emulator execution, guidance benefit or cross-repository transfer is established."
+}
