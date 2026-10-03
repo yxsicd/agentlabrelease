@@ -66,6 +66,14 @@ real mapping/helper behavior without guessing dependencies. Larger responsibilit
 retain bounded anchor context and require explicit decomposition or context refresh.
 Binary bodies remain unloaded. Additional context is not semantic verification,
 permission to modify another responsibility, or evidence of platform execution.
+For control failure attribution, trace field writes through the particular branch
+that emits each checked observable. A changed internal field may never reach one
+scenario's returned output; do not declare all scenarios failed merely because
+they execute that write. Preserve source-correct original oracles and revise an
+incorrect failure set through explicit review. Whole-object and overlapping leaf
+checks are not independent coverage dimensions. Keep missing dependency source
+context distinct from an omitted runtime export binding; one does not prove the
+cause or repair of the other.
 
 Use the constructor's `--design-first --design-only` mode when a new behavior
 surface needs independent semantic review before verifier generation. The retained
