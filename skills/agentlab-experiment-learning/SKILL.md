@@ -223,6 +223,16 @@ agreement. Recorded context separation is not filesystem isolation or provider
 authentication. Quote membership is not semantic support; full completion still
 does not grant knowledge authority, formal-case acceptance or measured benefit.
 
+The main-only `maintainer-source-suite-review.yml` consumes one explicit completed
+source Action run/artifact/method commit and predeclared ZIP/rubric digests. Its
+fresh contained reviewer uses the existing operator Gateway and canonical native
+prompt, not the constructor session or an operator-corrected reply. Preserve the
+original response on schema/capture rejection; do not restart an exhausted review
+or infer acceptance from workflow success. A valid reject/unverified verdict is
+completed feedback with no lesson or knowledge write. Require the separate native
+completion and runtime-isolation receipts before reporting actual independent
+execution. The Action does not perform lesson admission or schedule a next round.
+
 The ordinary `--plan-observation-import` / `--verify-observation-import` gates
 also accept original source-suite observation and reviewed-lesson exports.
 Reconstruct all rows from the retained suite and optional review, preserving the

@@ -1,0 +1,172 @@
+name: Maintainer independent source suite review
+on:
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: Exact completed constructor Action run; never latest
+        required: true
+        type: string
+      source_artifact:
+        description: Exact unreviewed-source-recipe artifact ID belonging to source_run
+        required: true
+        type: string
+      source_revision:
+        description: Exact constructor method Git commit
+        required: true
+        type: string
+      artifact_sha256:
+        description: Original ZIP SHA256 frozen before reviewer dispatch
+        required: true
+        type: string
+      rubric:
+        description: Complete repository-agnostic prospective_source_quality_review.v1 JSON
+        required: true
+        type: string
+      rubric_sha256:
+        description: Exact rubric input bytes SHA256; freeze declaration is not authentication
+        required: true
+        type: string
+      model:
+        default: glm-5.3-flash
+        required: true
+        type: string
+      provider_route:
+        default: glm
+        required: true
+        type: string
+      reasoning_effort:
+        default: default
+        required: true
+        type: choice
+        options: [default, none, low, medium, high, max]
+      thinking_type:
+        default: disabled
+        required: true
+        type: choice
+        options: [default, enabled, disabled]
+      gateway_timeout_seconds:
+        default: '240'
+        required: true
+        type: choice
+        options: ['180', '240']
+      max_output_tokens:
+        default: '16384'
+        required: true
+        type: choice
+        options: ['8192', '16384']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: maintainer-source-suite-review-${{ inputs.source_run }}
+  cancel-in-progress: false
+jobs:
+  review:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      REVIEW_SOURCE_RUN: ${{ inputs.source_run }}
+      REVIEW_SOURCE_ARTIFACT: ${{ inputs.source_artifact }}
+      REVIEW_SOURCE_REVISION: ${{ inputs.source_revision }}
+      REVIEW_ARTIFACT_SHA256: ${{ inputs.artifact_sha256 }}
+      REVIEW_RUBRIC: ${{ inputs.rubric }}
+      REVIEW_RUBRIC_SHA256: ${{ inputs.rubric_sha256 }}
+      AGENTLAB_MODEL: ${{ inputs.model }}
+      AGENTLAB_PROVIDER_ROUTE: ${{ inputs.provider_route }}
+      REVIEW_REASONING_EFFORT: ${{ inputs.reasoning_effort }}
+      REVIEW_THINKING_TYPE: ${{ inputs.thinking_type }}
+      REVIEW_GATEWAY_TIMEOUT: ${{ inputs.gateway_timeout_seconds }}
+      REVIEW_MAX_OUTPUT_TOKENS: ${{ inputs.max_output_tokens }}
+      AGENTLAB_LM_GATEWAY_URL: ${{ vars.AGENTLAB_LM_GATEWAY_URL || 'https://llm-m4dd.de.yxsbase.win' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Freeze exact review enrollment before model budget
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,re
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])/'source-suite-review';root.mkdir()
+          raw=os.environ['REVIEW_RUBRIC'].encode()
+          assert len(raw)<=128*1024 and re.fullmatch('[0-9a-f]{64}',os.environ['REVIEW_RUBRIC_SHA256'])
+          assert hashlib.sha256(raw).hexdigest()==os.environ['REVIEW_RUBRIC_SHA256']
+          with (root/'rubric.json').open('xb') as f:f.write(raw)
+          enrollment=dict(schema='agentlab.independent_source_suite_review_enrollment.v1',
+              methodRevision=os.environ['GITHUB_SHA'],sourceRun=os.environ['REVIEW_SOURCE_RUN'],
+              sourceArtifact=os.environ['REVIEW_SOURCE_ARTIFACT'],sourceMethodRevision=os.environ['REVIEW_SOURCE_REVISION'],
+              artifactSha256=os.environ['REVIEW_ARTIFACT_SHA256'],rubricSha256=os.environ['REVIEW_RUBRIC_SHA256'],
+              model=os.environ['AGENTLAB_MODEL'],providerRoute=os.environ['AGENTLAB_PROVIDER_ROUTE'],
+              reasoningEffort=os.environ['REVIEW_REASONING_EFFORT'],thinkingType=os.environ['REVIEW_THINKING_TYPE'],
+              gatewayTimeoutSeconds=int(os.environ['REVIEW_GATEWAY_TIMEOUT']),maxOutputTokens=int(os.environ['REVIEW_MAX_OUTPUT_TOKENS']),
+              maximumReviewerAttempts=1,transportRetryLimit=0,automaticPromotion=False,authorityWritePerformed=False,qualified=False)
+          with (root/'enrollment.json').open('x') as f:json.dump(enrollment,f,indent=2)
+          PY
+      - name: Acquire only the exact original source Action artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/acquire-source-suite-review-input.py --repository "$GITHUB_REPOSITORY" \
+            --run "$REVIEW_SOURCE_RUN" --artifact "$REVIEW_SOURCE_ARTIFACT" \
+            --source-revision "$REVIEW_SOURCE_REVISION" --artifact-sha256 "$REVIEW_ARTIFACT_SHA256" \
+            --output "$RUNNER_TEMP/source-suite-review/source"
+      - name: Reconstruct original evidence before installing or dispatching reviewer
+        run: |
+          cargo build --locked --release -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel
+          target/release/agentlab-maintainer-skill-flywheel --prepare-source-suite-review \
+            --source "$RUNNER_TEMP/source-suite-review/source/observations" \
+            --quality-rubric "$RUNNER_TEMP/source-suite-review/rubric.json" \
+            --output "$RUNNER_TEMP/source-suite-review/preflight.json"
+      - name: Install the pinned replaceable participant runtime
+        run: |
+          mkdir "$RUNNER_TEMP/review-pi"
+          cp examples/real-code-agent/participant/package*.json "$RUNNER_TEMP/review-pi/"
+          npm ci --prefix "$RUNNER_TEMP/review-pi" --no-audit --no-fund
+          docker pull node:24.19.0-bookworm-slim
+      - name: Contain fresh reviewer without constructor, source or host mounts
+        id: contain
+        run: |
+          mkdir "$RUNNER_TEMP/review-case" "$RUNNER_TEMP/review-docker-config"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])
+          (root/'review-case/manifest.json').write_text(json.dumps(dict(schema='agentlab.blind_case_participant_bundle.v1',reviewOnly=True,automaticPromotion=False)))
+          (root/'review-docker-config/config.json').write_text('{"auths":{}}')
+          PY
+          image_id=$(docker image inspect node:24.19.0-bookworm-slim --format '{{.Id}}')
+          python3 scripts/prepare-participant-runtime.py --image "$image_id" --pi-runtime "$RUNNER_TEMP/review-pi" \
+            --case-input "$RUNNER_TEMP/review-case" --forbid "$GITHUB_WORKSPACE" \
+            --forbid "$RUNNER_TEMP/source-suite-review" --output "$RUNNER_TEMP/review-runtime.json"
+          mkdir "$RUNNER_TEMP/source-suite-review/runtime-inputs"
+          cp "$RUNNER_TEMP/review-runtime.json" "$RUNNER_TEMP/source-suite-review/runtime-inputs/config.json"
+          cp "$RUNNER_TEMP/review-case/manifest.json" "$RUNNER_TEMP/source-suite-review/runtime-inputs/manifest.json"
+          cp "$RUNNER_TEMP/review-pi/package-lock.json" "$RUNNER_TEMP/source-suite-review/runtime-inputs/package-lock.json"
+      - name: Capture one independent reviewer and reconstruct original response
+        env:
+          AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
+          AGENTLAB_PARTICIPANT_RUNTIME_CONFIG: ${{ runner.temp }}/review-runtime.json
+          AGENTLAB_PARTICIPANT_RUNTIME_RECEIPT_ROOT: ${{ runner.temp }}/source-suite-review/runtime-receipts
+          DOCKER_CONFIG: ${{ runner.temp }}/review-docker-config
+        run: |
+          python3 scripts/run-source-suite-review.py --source "$RUNNER_TEMP/source-suite-review/source/observations" \
+            --rubric "$RUNNER_TEMP/source-suite-review/rubric.json" --output "$RUNNER_TEMP/source-suite-review/agent" \
+            --gate target/release/agentlab-maintainer-skill-flywheel --pi "$GITHUB_WORKSPACE/scripts/run-pi-in-docker.py" \
+            --reasoning-effort "$REVIEW_REASONING_EFFORT" --thinking-type "$REVIEW_THINKING_TYPE" \
+            --gateway-timeout-seconds "$REVIEW_GATEWAY_TIMEOUT" --max-output-tokens "$REVIEW_MAX_OUTPUT_TOKENS"
+      - name: Independently validate recorded reviewer isolation
+        if: always() && steps.contain.outcome == 'success'
+        run: |
+          cmp "$RUNNER_TEMP/review-runtime.json" "$RUNNER_TEMP/source-suite-review/runtime-inputs/config.json"
+          python3 scripts/validate-participant-runtime.py --config "$RUNNER_TEMP/source-suite-review/runtime-inputs/config.json" \
+            --receipt-root "$RUNNER_TEMP/source-suite-review/runtime-receipts" \
+            --workspace "$RUNNER_TEMP/source-suite-review/agent/workspace" \
+            --participant-state "$RUNNER_TEMP/source-suite-review/agent/participant-state" \
+            --label source-suite-review --output "$RUNNER_TEMP/source-suite-review/runtime-validation.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: independent-source-suite-review-${{ github.run_id }}
+          path: ${{ runner.temp }}/source-suite-review
+          if-no-files-found: error
+          retention-days: 14
+          include-hidden-files: true
