@@ -15,6 +15,71 @@ KNOWLEDGE = ROOT / "examples/maintainer-knowledge-gate/first-four"
 
 
 class CaseGenerationShadowTest(unittest.TestCase):
+    def successor_fixture(self):
+        import hashlib
+        request = self.request()
+        request["schema"] = "agentlab.operation_case_shadow_request.v1"
+        request.pop("loopReceiptSha256")
+        request["operationInputsSha256"] = "3" * 64
+        request["policy"]["caseCalibrationInherited"] = False
+        context = {"selectedFiles":[{"path":"verification/existing.test", "gitBlobOid":"a"*40,
+                                     "contentUtf8":"existing independent test"}]}
+        edit = {"edits":[{"path":request["fact"]["evidence"][0]["path"]},
+                         {"path":"verification/new.test"}], "sourceContext":context}
+        bound = {"schema":"agentlab.shadow_case_successor_inputs.v1", "calibrationInherited":False,
+                 "formalCaseQualified":False,"automaticPromotion":False,"parentCandidateId":"shadow-case-parent-example",
+                 "sourceContext":context,"editBoundary":edit,"bindings":{"operationInputsSha256":"3"*64,"runtimeTarget":"harmony-emulator"}}
+        for key, raw, value in [("parentRequestSha256","parentRequestUtf8", {}),
+                               ("parentProposalSha256","parentProposalUtf8", {}),
+                               ("reviewSha256","reviewUtf8", {}), ("contextSha256","contextUtf8",context),
+                               ("editBoundarySha256","editBoundaryUtf8",edit)]:
+            bound[raw] = json.dumps(value)
+            bound["bindings"][key] = hashlib.sha256(bound[raw].encode()).hexdigest()
+        request["successorConstruction"] = bound
+        request["candidateScopeSkillIds"] = [request["scope"]["id"], "verification-owner"]
+        return request
+
+    def test_successor_proposal_consumes_explicit_paths_and_preserves_parent_lineage(self):
+        request = self.successor_fixture()
+        proposal = self.proposal(request)
+        proposal["scopeSkillIds"] = request["candidateScopeSkillIds"]
+        proposal["editablePaths"] = ["verification/new.test"]
+        proposal["contextPaths"] = ["verification/existing.test"]
+        retained = MODULE.validate_proposal(request, proposal)
+        self.assertEqual(retained["lineage"]["parentCandidateId"], "shadow-case-parent-example")
+        self.assertEqual(retained["lineage"]["editBoundarySha256"], request["successorConstruction"]["bindings"]["editBoundarySha256"])
+        self.assertEqual(retained["oracleHypothesis"]["status"], "hypothesis-unqualified")
+        proposal["editablePaths"] = ["verification/unselected.test"]
+        with self.assertRaisesRegex(ValueError, "not selected"):
+            MODULE.validate_proposal(request, proposal)
+        request["successorConstruction"]["contextUtf8"] += " "
+        with self.assertRaisesRegex(ValueError, "digest differs"):
+            MODULE.request_origin(request)
+
+    def test_successor_dispatch_requires_native_preflight_and_excludes_draft_revision(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        import subprocess
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            request_file = root / "request.json"
+            MODULE.write_json(request_file, self.successor_fixture())
+            args = SimpleNamespace(request=request_file, source=root, output=root/"attempt",
+                                   flywheel_tool=Path("/native/flywheel"), knowledge=root, operation_inputs=root/"inputs.json")
+            with patch.dict(MODULE.os.environ, {}, clear=True), patch.object(MODULE.subprocess, "run") as native, patch.object(MODULE, "run_agent_inner") as dispatch:
+                MODULE.run_agent(args)
+                self.assertIn("--validate-operation-case-successor", native.call_args.args[0])
+                self.assertTrue(native.call_args.kwargs["check"])
+                dispatch.assert_called_once_with(args)
+            args.output = root / "failed-attempt"
+            with patch.object(MODULE.subprocess, "run", side_effect=subprocess.CalledProcessError(1,"native")), patch.object(MODULE, "run_agent_inner") as dispatch:
+                with self.assertRaises(subprocess.CalledProcessError):
+                    MODULE.run_agent(args)
+                dispatch.assert_not_called()
+            args.revision_request = root / "revision.json"
+            with self.assertRaisesRegex(ValueError, "exclusive"):
+                MODULE.run_agent(args)
+
     def test_participant_options_keep_defaults_and_explicit_configuration(self):
         from types import SimpleNamespace
         self.assertEqual(MODULE.participant_options(SimpleNamespace()),
@@ -74,6 +139,14 @@ class CaseGenerationShadowTest(unittest.TestCase):
             self.assertEqual(MODULE.load(template), original)
             self.assertIn(str(source.resolve()), config["forbiddenHostPaths"])
             self.assertEqual(config["imageId"], original["imageId"])
+            context_item = {"path":"unselected.ts","gitBlobOid":git("rev-parse","HEAD:unselected.ts"),
+                            "contentUtf8":(source / "unselected.ts").read_text()}
+            request["successorConstruction"] = {"sourceContext":{"selectedFiles":[context_item]},
+                                                  "editBoundary":{"sourceContext":{"selectedFiles":[]}}}
+            with_context = MODULE.prepare_isolated_source(request, source, root / "context-attempt", template)
+            context_case = Path(MODULE.load(with_context)["caseInputRoot"])
+            self.assertEqual((context_case / "source/unselected.ts").read_bytes(), (source / "unselected.ts").read_bytes())
+            self.assertFalse((context_case / "source/.git").exists())
             with self.assertRaises(FileExistsError):
                 MODULE.prepare_isolated_source(request, source, output, template)
             request["fact"]["evidence"][0]["gitBlobOid"] = "0"*40

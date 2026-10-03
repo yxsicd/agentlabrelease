@@ -288,10 +288,50 @@ def request_origin(request: dict) -> dict:
         require(isinstance(digest, str) and SHA256.fullmatch(digest), "operation inputs digest invalid")
         require(request.get("policy", {}).get("caseCalibrationInherited") is False,
                 "maintenance proof cannot inherit case calibration")
-        return {"operationInputsSha256": digest}
+        origin = {"operationInputsSha256": digest}
+        if "successorConstruction" in request:
+            bound = request["successorConstruction"]
+            require(bound.get("schema") == "agentlab.shadow_case_successor_inputs.v1"
+                    and bound.get("calibrationInherited") is False
+                    and bound.get("formalCaseQualified") is False
+                    and bound.get("automaticPromotion") is False, "invalid successor construction boundary")
+            for key, raw in (("parentRequestSha256", "parentRequestUtf8"),
+                             ("parentProposalSha256", "parentProposalUtf8"), ("reviewSha256", "reviewUtf8"),
+                             ("contextSha256", "contextUtf8"), ("editBoundarySha256", "editBoundaryUtf8")):
+                require(isinstance(bound.get(raw), str)
+                        and hashlib.sha256(bound[raw].encode()).hexdigest() == bound["bindings"].get(key),
+                        "successor original input digest differs")
+            require(json.loads(bound["contextUtf8"]) == bound["sourceContext"]
+                    and json.loads(bound["editBoundaryUtf8"]) == bound["editBoundary"],
+                    "successor parsed construction inputs differ")
+            require(bound["bindings"].get("operationInputsSha256") == digest
+                    and bound["bindings"].get("runtimeTarget") == request["policy"].get("runtimeTarget"),
+                    "successor operation or runtime binding differs")
+            origin.update({"parentCandidateId": bound["parentCandidateId"], **bound["bindings"]})
+        return origin
     require(request.get("schema") == "agentlab.case_generation_shadow_request.v1", "bad shadow request")
     require("operationInputsSha256" not in request, "semantic loop request borrows operation lineage")
     return {"loopReceiptSha256": request["loopReceiptSha256"]}
+
+
+def constructor_evidence(request: dict) -> list[dict]:
+    evidence = list(request["fact"].get("evidence", []))
+    bound = request.get("successorConstruction")
+    if bound:
+        for context in (bound["sourceContext"], bound["editBoundary"]["sourceContext"]):
+            for item in context["selectedFiles"]:
+                prior = next((row for row in evidence if row["path"] == item["path"]), None)
+                require(prior is None or prior["gitBlobOid"] == item["gitBlobOid"],
+                        "successor context contradicts semantic Blob")
+                if prior is None:
+                    evidence.append(item)
+    return evidence
+
+
+def constructor_source_bytes(source: Path, item: dict) -> bytes:
+    # Native preflight binds context text to committed Blobs even for sparse
+    # checkouts; avoid requiring an unrelated full checkout projection.
+    return item["contentUtf8"].encode() if "contentUtf8" in item else (source / item["path"]).read_bytes()
 
 
 def verify_fact_source(request: dict, source: Path) -> None:
@@ -302,7 +342,7 @@ def verify_fact_source(request: dict, source: Path) -> None:
             "source checkout revision differs")
     require(not subprocess.check_output(["git", "-C", str(source), "status", "--porcelain"], text=True),
             "source checkout is dirty before construction")
-    evidence = request["fact"].get("evidence")
+    evidence = constructor_evidence(request)
     require(isinstance(evidence, list) and evidence, "semantic source evidence absent")
     seen = set()
     for item in evidence:
@@ -316,9 +356,10 @@ def verify_fact_source(request: dict, source: Path) -> None:
         for part in path.parts:
             current = current / part
             require(not current.is_symlink(), "semantic source symlink rejected")
-        require(current.is_file() and current.stat().st_size <= 16 * 1024 * 1024,
+        require("contentUtf8" in item or current.is_file() and current.stat().st_size <= 16 * 1024 * 1024,
                 "semantic source is not a bounded file")
-        data = current.read_bytes()
+        data = constructor_source_bytes(source, item)
+        require(len(data) <= 16 * 1024 * 1024, "constructor source exceeds budget")
         blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
         committed = subprocess.check_output(["git", "-C", str(source), "rev-parse", f"{revision}:{relative}"], text=True).strip()
         require(blob == committed == item.get("gitBlobOid"), "semantic source Blob differs")
@@ -334,9 +375,9 @@ def prepare_isolated_source(request: dict, source: Path, output: Path, template:
     case = output / "case-input"
     case.mkdir(parents=True, exist_ok=False)
     inventory = []
-    for item in request["fact"]["evidence"]:
+    for item in constructor_evidence(request):
         relative = item["path"]
-        data = (source / relative).read_bytes()
+        data = constructor_source_bytes(source, item)
         require(hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
                 == item["gitBlobOid"], "projected source Blob differs")
         target = case / "source" / relative
@@ -363,7 +404,19 @@ def prepare_isolated_source(request: dict, source: Path, output: Path, template:
 
 def run_agent(args) -> None:
     revision = getattr(args, "revision_request", None)
-    if revision is not None:
+    successor = "successorConstruction" in load(args.request)
+    require(not (revision is not None and successor), "draft revision and successor are exclusive")
+    if successor:
+        require(all(getattr(args, name, None) is not None
+                    for name in ("flywheel_tool", "knowledge", "operation_inputs")),
+                "successor requires native tool, knowledge and operation inputs")
+        args.output.mkdir(parents=True, exist_ok=False)
+        subprocess.run([str(args.flywheel_tool), "--validate-operation-case-successor",
+                        "--knowledge", str(args.knowledge), "--operation-inputs", str(args.operation_inputs),
+                        "--source-worktree", str(args.source.resolve(strict=True)),
+                        "--shadow-request", str(args.request),
+                        "--output", str(args.output / "successor-validation.json")], check=True)
+    elif revision is not None:
         require(all(getattr(args, name, None) is not None
                     for name in ("flywheel_tool", "knowledge", "operation_inputs")),
                 "shadow revision requires native tool, knowledge and operation inputs")
@@ -414,6 +467,10 @@ def run_agent_inner(args) -> None:
     evidence.mkdir()
     shutil.copy2(args.request, workspace / "shadow-request.json")
     frozen_request_sha = file_digest(workspace / "shadow-request.json")
+    successor = request.get("successorConstruction")
+    if successor:
+        require(frozen_request_sha == load(args.output / "successor-validation.json")["requestSha256"],
+                "successor request changed after native preflight")
     revision = getattr(args, "revision_request", None)
     if revision is not None:
         shutil.copy2(revision, args.output / "revision-request.json")
@@ -466,6 +523,8 @@ The required framework is a proposed test contract, not evidence that the reposi
 """
     if revision is not None:
         prompt += "\nRevise the retained proposal rather than sampling an unrelated task. Address every finding, preserving request identity and unqualified status. Review is not an approved Oracle. Original rejected proposal bytes:\n" + bound["parentProposalUtf8"] + "\nExact source-review feedback:\n" + bound["reviewUtf8"]
+    if successor:
+        prompt += "\nConstruct an additive successor of the retained parent, not an unrelated sample. The earlier selected-scope-only path instructions are replaced for this successor by these exact boundaries: scopeSkillIds must equal " + json.dumps(request["candidateScopeSkillIds"]) + ". editablePaths may use only successorConstruction.editBoundary.edits paths, including explicitly selected create paths; contextPaths may use only loaded constructor source paths and must remain disjoint. All source is still read-only during hypothesis construction. Inspect the bound ownerKnowledge and preserve its limitations; no build, runtime or calibration proof is inherited. Address every review finding. Exact parent proposal:\n" + successor["parentProposalUtf8"] + "\nExact review:\n" + successor["reviewUtf8"]
     try:
         participant.turn("shadow-case-constructor", workspace, prompt=prompt,
                          wall_time_limit_seconds=720, transport_retry_limit=0)
@@ -510,7 +569,8 @@ def validate_proposal(request: dict, proposal: dict) -> dict:
     require(proposal["repositoryId"] == fact["repositoryId"], "shadow repository differs")
     require(proposal["sourceRevision"] == fact["sourceRevision"] and SHA1.fullmatch(proposal["sourceRevision"]),
             "shadow revision differs")
-    require(proposal["scopeSkillIds"] == fact["scopeSkillIds"] == [scope["id"]], "shadow scope binding differs")
+    require(fact["scopeSkillIds"] == [scope["id"]]
+            and proposal["scopeSkillIds"] == request.get("candidateScopeSkillIds", fact["scopeSkillIds"]), "shadow scope binding differs")
     require(proposal["factIds"] == [fact["id"]], "shadow fact binding differs")
     require(isinstance(proposal["title"], str)
             and TITLE_MIN_LENGTH <= len(proposal["title"]) <= TITLE_MAX_LENGTH,
@@ -522,9 +582,15 @@ def validate_proposal(request: dict, proposal: dict) -> dict:
     editable = strings(proposal["editablePaths"], "editablePaths", *EDITABLE_PATHS_LIMITS)
     context = strings(proposal["contextPaths"], "contextPaths", *CONTEXT_PATHS_LIMITS)
     evidence_paths = {row["path"] for row in fact.get("evidence", []) if isinstance(row, dict)}
-    require(set(editable + context).issubset(evidence_paths), "shadow paths are not fact evidence")
+    if "successorConstruction" in request:
+        allowed_edits = {row["path"] for row in request["successorConstruction"]["editBoundary"]["edits"]}
+        require(set(editable).issubset(allowed_edits), "successor editable path not selected")
+        require(set(context).issubset({row["path"] for row in constructor_evidence(request)}),
+                "successor context path not loaded")
+    else:
+        require(set(editable + context).issubset(evidence_paths), "shadow paths are not fact evidence")
     require(not set(editable).intersection(context), "editable and context paths overlap")
-    require(all(scope_owns_path(scope, path) for path in editable),
+    require("successorConstruction" in request or all(scope_owns_path(scope, path) for path in editable),
             "editable path escapes the selected scope")
     oracle = proposal["oracleHypothesis"]
     require(isinstance(oracle, dict) and set(oracle) == {
@@ -585,7 +651,7 @@ def build_round(request: dict, rounds_before: list[dict], candidate_id: str,
         ],
         "coverage": {
             "repositoryIds": [request["repository"]["id"]],
-            "scopeSkillCount": 1,
+            "scopeSkillCount": len(request.get("candidateScopeSkillIds", fact["scopeSkillIds"])),
             "behaviorReadyBefore": before["semanticReadyCount"],
             "behaviorReadyAfter": after["semanticReadyCount"],
             "oracleReadyBefore": oracle_count,

@@ -83,6 +83,23 @@ before dispatch. Each fresh attempt receives the original proposal and feedback,
 keeps them unchanged, and disables transport retries. This is a revision input
 handoff, not successful semantic repair, calibrated-case admission or a full loop.
 
+For an operation-origin candidate requiring new cross-scope evidence or host/test
+paths, use `--prepare-operation-case-successor` with `--knowledge`,
+`--source-worktree`, `--operation-inputs`, `--runtime-target`, the original
+`--parent-request`/`--parent-proposal`, `--review-feedback`, exact
+`--construction-context`, separately selected `--edit-boundary` and a fresh output.
+Native reconstruction binds the parent bytes, review, committed context and
+edit ownership; it does not authenticate an operator review or inherit calibration.
+The constructor consumes this request through `run-agent` with `--flywheel-tool`,
+`--knowledge` and `--operation-inputs`, without `--revision-request`. Its native
+preflight must pass before dispatch. Isolated projection includes the selected
+context and edit anchors; newly created targets remain absent until implementation.
+Output scope IDs must match the successor's declared owners, editable paths must
+be explicitly selected and context paths must be loaded. Keep source read-only
+while proposing; semantic admission, actual host integration and independent
+behavioral calibration remain separate gates. This bounded embedded-input handoff
+is not proof of an indefinite multi-round lineage or downstream benefit.
+
 The shadow constructor accepts explicit `--reasoning-effort` and
 `--max-output-tokens` through the existing captured participant adapter; defaults
 remain unchanged. Consult the selected provider's supported values, freeze source,

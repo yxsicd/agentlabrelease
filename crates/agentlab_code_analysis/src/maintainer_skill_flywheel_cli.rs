@@ -24,6 +24,23 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|a| a == "--prepare-operation-case-successor" || a == "--validate-operation-case-successor") {
+        let base = PathBuf::from(value(&args, "--knowledge")?);
+        let source = PathBuf::from(value(&args, "--source-worktree")?);
+        let inputs = fs::read(value(&args, "--operation-inputs")?)?;
+        let report = if args.iter().any(|a| a == "--validate-operation-case-successor") {
+            agentlab_code_analysis::maintainer_operation_case::validate_successor_request(
+                &base, &source, &inputs, &fs::read(value(&args, "--shadow-request")?)?)?
+        } else {
+            agentlab_code_analysis::maintainer_operation_case::successor_request(&base, &source, &inputs,
+                &value(&args, "--runtime-target")?, &fs::read(value(&args, "--parent-request")?)?,
+                &fs::read(value(&args, "--parent-proposal")?)?, &fs::read(value(&args, "--review-feedback")?)?,
+                &fs::read(value(&args, "--construction-context")?)?, &fs::read(value(&args, "--edit-boundary")?)?)?
+        };
+        OpenOptions::new().write(true).create_new(true).open(output)?.write_all(&serde_json::to_vec_pretty(&report)?)?;
+        println!("{}", serde_json::json!({"schema":report["schema"],"candidateId":report["candidateId"],"qualified":false}));
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--prepare-construction-edit-boundary" || a == "--validate-construction-edit-boundary") {
         let report = if args.iter().any(|a| a == "--validate-construction-edit-boundary") {
             agentlab_code_analysis::maintainer_construction_context::validate_edit_boundary(
