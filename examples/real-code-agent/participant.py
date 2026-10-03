@@ -46,8 +46,8 @@ class Participant:
             raise ValueError('thinking_type must be omitted, enabled or disabled')
         self.thinking_type = thinking_type
         if (not isinstance(gateway_timeout_seconds, int)
-                or not 30 <= gateway_timeout_seconds <= 180):
-            raise ValueError('gateway_timeout_seconds must be from 30 through 180')
+                or not 30 <= gateway_timeout_seconds <= 240):
+            raise ValueError('gateway_timeout_seconds must be from 30 through 240')
         self.implementation = implementation
         self.evidence = evidence
         self.state = state
