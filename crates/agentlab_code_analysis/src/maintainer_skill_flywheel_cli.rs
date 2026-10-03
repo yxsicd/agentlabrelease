@@ -24,6 +24,75 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|a| {
+        a == "--prepare-source-recipe-loop-intent" || a == "--check-source-recipe-loop-intent"
+    }) {
+        let request = fs::read(value(&args, "--author-request")?)?;
+        let result = if args
+            .iter()
+            .any(|a| a == "--check-source-recipe-loop-intent")
+        {
+            agentlab_code_analysis::maintainer_source_repair::check_loop_intent(
+                &request,
+                &fs::read(value(&args, "--diagnostic-loop-intent")?)?,
+            )?
+        } else {
+            agentlab_code_analysis::maintainer_source_repair::loop_intent(
+                &request,
+                value(&args, "--maximum-repairs")?.parse()?,
+            )?
+        };
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?;
+        file.write_all(&serde_json::to_vec_pretty(&result)?)?;
+        file.write_all(b"\n")?;
+        println!("{}", serde_json::to_string(&result)?);
+        return Ok(());
+    }
+    if args
+        .iter()
+        .any(|a| a == "--prepare-source-recipe-diagnostic-repair")
+    {
+        let packet = agentlab_code_analysis::maintainer_source_repair::prepare(
+            &PathBuf::from(value(&args, "--stage")?),
+            &PathBuf::from(value(&args, "--diagnostic-inputs")?),
+            &PathBuf::from(value(&args, "--worker-capture")?),
+            value(&args, "--maximum-repairs")?.parse()?,
+            &output,
+        )?;
+        println!("{}", serde_json::to_string(&packet)?);
+        return Ok(());
+    }
+    if args.iter().any(|a| {
+        a == "--check-source-recipe-diagnostic-repair"
+            || a == "--validate-source-recipe-diagnostic-repair-output"
+    }) {
+        let request = fs::read(value(&args, "--author-request")?)?;
+        let packet = fs::read(value(&args, "--diagnostic-repair")?)?;
+        let result = if args
+            .iter()
+            .any(|a| a == "--validate-source-recipe-diagnostic-repair-output")
+        {
+            agentlab_code_analysis::maintainer_source_repair::check_output(
+                &request,
+                &packet,
+                &fs::read(value(&args, "--proposal")?)?,
+                &fs::read(value(&args, "--design")?)?,
+            )?
+        } else {
+            agentlab_code_analysis::maintainer_source_repair::check(&request, &packet)?
+        };
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?;
+        file.write_all(&serde_json::to_vec_pretty(&result)?)?;
+        file.write_all(b"\n")?;
+        println!("{}", serde_json::to_string(&result)?);
+        return Ok(());
+    }
     if args
         .iter()
         .any(|a| a == "--feedback-source-recipe-diagnostic")
@@ -479,7 +548,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.iter().any(|a| a == "--stage-source-recipe-proposal") {
         let request = fs::read(value(&args, "--author-request")?)?;
         let proposal = fs::read(value(&args, "--proposal")?)?;
-        let receipt = if let Some(path) = optional(&args, "--revision-request") {
+        let receipt = if let Some(path) = optional(&args, "--diagnostic-repair") {
+            if optional(&args, "--revision-request").is_some() {
+                return Err("review revision cannot mix automatic repair".into());
+            }
+            agentlab_code_analysis::maintainer_source_recipe_author::stage_with_diagnostic_repair(
+                &request,
+                &proposal,
+                &fs::read(value(&args, "--design")?)?,
+                &fs::read(path)?,
+                &output,
+            )?
+        } else if let Some(path) = optional(&args, "--diagnostic-loop-intent") {
+            if optional(&args, "--revision-request").is_some() {
+                return Err("review child cannot reset loop intent".into());
+            }
+            agentlab_code_analysis::maintainer_source_recipe_author::stage_with_loop_intent(
+                &request,
+                &proposal,
+                &fs::read(value(&args, "--design")?)?,
+                &fs::read(path)?,
+                &output,
+            )?
+        } else if let Some(path) = optional(&args, "--revision-request") {
             let design = optional(&args, "--design").map(fs::read).transpose()?;
             agentlab_code_analysis::maintainer_source_recipe_author::stage_with_revision(
                 &request,

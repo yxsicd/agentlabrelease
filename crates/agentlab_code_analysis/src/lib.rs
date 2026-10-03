@@ -32,6 +32,7 @@ pub mod maintainer_source_diagnostic;
 pub mod maintainer_source_operation;
 pub mod maintainer_source_operation_loop;
 pub mod maintainer_source_recipe_author;
+pub mod maintainer_source_repair;
 pub mod maintainer_stage_feedback;
 extern "C" {
     fn tree_sitter_agentlab_arkts() -> *const ();

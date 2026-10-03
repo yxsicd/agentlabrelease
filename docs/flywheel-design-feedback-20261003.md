@@ -337,3 +337,107 @@ qualified case or knowledge feedback loop. Overall maturity remains **72%** and
 accepted complete automatic business loops remain **0**. The next high-value
 boundary is bounded Agent consumption of actual execution feedback followed by
 independent baseline/reference/wrong-control calibration under frozen demands.
+
+## Real Action baseline failure and bounded compiler review
+
+PR208 passed applicable CI and merged at
+`5c6cd429eb4cebfcec4ffe66b61cdfbd50dc35be`. Fresh root
+[Action37118830490](https://github.com/yxsicd/agentlabrelease/actions/runs/37118830490)
+passed live knowledge admission, construction/staging and independent recorded
+participant isolation. Its actual contained baseline diagnostic failed: exit 1,
+206 ms, no timeout or log-budget overflow, empty stdout, cleanup exit 0.
+The unchanged generated verifier called
+`createRuntime(process.argv[2],process.argv[3],null)` despite the supplied pinned
+compiler at argv4. The original runtime rejected the first selected ETS module
+with `explicit compiler required`. This is an author-verifier interface failure,
+not a rejected behavior check or an upstream defect. The original prompt already
+described the compiler binding; repetition alone does not prove compliance.
+
+Retained raw capture is outside the public repository under operator artifact
+root `flywheel-baseline-main-action-XHaALB`. Original process SHA256 is
+`a44d44d55e82d27855c9360bcd72ccd2ce17eb647f5c344bc2aeadb8c4f578bf`;
+stderr SHA256 is
+`64b51e437fc2447ab8c49a9e1ab6d4f6ffffba6abd7ee4bff59d5432857bb7e8`.
+
+A v3 independent interface-repair review binds original request
+`e6c86e30cd0bc360669f77f602a6143e0bd524fe4916f15faf465457a44d803a`,
+proposal `9b3d97c9e16bd1032717419919d8ce376463d065f5bc73cfbad5bb3c4c6fea3e`
+and design `42b6bf115733ac34ee47033303caf78625efcbc4450222f7b4c4ca26f43bdabc`.
+It has empty checkChanges/scenarioChanges and authorizes interface repair only.
+[Action37119711878](https://github.com/yxsicd/agentlabrelease/actions/runs/37119711878)
+was dispatched as this parent's bounded child under the same model/policy/budgets
+and exact source main. It does not reset the exhausted older child37113211051.
+Dispatch is not proof of revision admission, correction or baseline success;
+record terminal evidence separately. The review remains operator-supplied,
+so this is not automatic diagnostic-to-repair orchestration. Overall maturity
+remains 72%, with zero accepted complete automatic business loops.
+
+### Compiler child terminal evidence
+
+Action37119711878 completed with failure. The parent review was admitted, the
+proposal was staged and independent participant isolation passed. The Agent now
+loads `require(process.argv[4])` and passes that module to `createRuntime`.
+All 26 checks, five complete scenarios and five control declarations remain equal
+to the parent, independently compared after artifact readback. The frozen runtime
+digest remains `a473c358931d5f7fbd5ef9b05f51950fc0949d6a7cdac51f7fda1b4ea6893a88`.
+Contained execution proceeded past compiler binding, then failed with
+`ReferenceError: Observed is not defined` while loading RatingDescriptor. It
+exited 1 in 560 ms, with empty stdout, no timeout/log overflow and cleanup exit 0.
+Process SHA256 is
+`a5009b728db9d183d198981a98efc18ad1e6a22fe5a41c1229e7d9d2930a277a`;
+stderr SHA256 is
+`8bc7ba01f3bfa802ffb0254905a43864341560a78edc4de89fe9ef8a20603329`.
+The current native feedback consumer reconstructed the retained capture with no
+new execution and reproduced the original diagnostic classification/digests.
+
+This proves an actual model-owned interface correction, not baseline success,
+behavior calibration, automatic feedback, a qualified case or a complete round.
+The child's budget is now exhausted and is not extended for the decorator error.
+
+## Fresh-root bounded diagnostic code repair
+
+The reusable next capability explicitly separates **code-only diagnostic repair**
+from the existing source-grounded independent review revision. Neither grants
+semantic review or automatic promotion. New workflow input `code_revisions`
+defaults to zero and accepts only 0, 1 or 2. Positive budgets require a fresh
+design-first root and are frozen in a native request-bound intent before the
+first model turn. Initial staging retains that intent; legacy roots lacking it
+and reviewed children cannot reset their old budgets into the new mechanism.
+
+After initial participant isolation validation, the thin diagnostic scheduler
+uses the existing network-disabled Docker executor. For an eligible completed
+failure, Rust preserves/reconstructs original request, proposal, exact design,
+stage receipt, execution inputs/support, process and full UTF-8 logs into a
+bounded repair packet. It checks cross-bindings, recorded isolation/cleanup and
+budget lineage before another model turn. Timeout, oversized logs, launch/signal
+failure, missing capture, uncertain cleanup, successful baseline, changed budget
+or stale/changed source request stop rather than retry. Unsupported non-UTF8 logs
+remain raw retained evidence but cannot use this prompt adapter.
+
+A fresh contained constructor receives the original proposal and independently
+reconstructed diagnostics as data. It consumes the exact frozen design instead
+of generating a new one. Staging requires unchanged complete checks, control
+declarations and ordered sourcePaths, byte-identical design and changed verifier
+source. Design validation and source-policy preflight remain in the original
+native staging path. Every successor retains its repair packet and output
+admission; both diagnostic preparation and independent operator approval recheck
+that lineage. The second repair retains the first packet and inherits its maximum;
+there is no third repair or index reset. The current controller requires cleanup
+exit zero and does not spend model budget on an ambiguous already-removed-container
+cleanup status.
+
+The script writes fresh per-attempt observations and preserves each stage/capture.
+Each repair has separate participant state and runtime receipts; Gateway policy,
+model and budgets are forwarded unchanged, with no design-generation or transport
+retry. Independent isolation validation follows each generation. Baseline pass
+selects the final unreviewed stage only; full control calibration, semantic review,
+authority admission and knowledge benefit remain mandatory separate gates.
+
+Rust regressions cover frozen output/lineage rejection, two-round inheritance,
+legacy and changed budget rejection, raw-log drift, transport/cleanup failures,
+real-source staging and revalidation. A Rust-hosted thin-launcher regression
+exercises zero/one/two repairs, exhausted/native-stopped/partial/failed-isolation
+paths and refuses to restart an existing loop. These use declared fixtures,
+not real Agent convergence or Docker qualification of the new whole loop.
+Overall maturity remains **72%**, with zero accepted complete automatic loops;
+fresh real automatic-loop Action acceptance is still required.
