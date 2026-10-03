@@ -259,7 +259,8 @@ pub fn shadow_request(base: &Path, inputs: &[u8], runtime: &str) -> Result<Value
         "candidateId":format!("shadow-case-operation-{}",digest(inputs)),
         "policy":{"candidateLimit":1,"constructionMode":"shadow","candidateGateRequired":true,
             "independentOracleRequired":true,"wrongVariantCalibrationRequired":true,
-            "runtimeTarget":runtime,"externalHardwareAllowed":false,"physicalDeviceFallbackAllowed":false,
+            "runtimeTarget":runtime,"oracleFramework":if runtime == "harmony-emulator" {"ohosTest"} else {"repository-test"},
+            "externalHardwareAllowed":false,"physicalDeviceFallbackAllowed":false,
             "shadowEligible":true,"blockers":[],"caseCalibrationInherited":false},
         "output":"shadow-case-proposal.json"}))
 }

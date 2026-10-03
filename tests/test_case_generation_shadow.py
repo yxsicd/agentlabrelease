@@ -15,6 +15,22 @@ KNOWLEDGE = ROOT / "examples/maintainer-knowledge-gate/first-four"
 
 
 class CaseGenerationShadowTest(unittest.TestCase):
+    def test_declared_framework_tracks_runtime_not_existing_test_inventory(self):
+        request = self.request()
+        request["scope"]["testEntrypoints"] = []
+        request["policy"]["oracleFramework"] = "ohosTest"
+        proposal = self.proposal(request)
+        proposal["oracleHypothesis"]["framework"] = "ohosTest"
+        MODULE.validate_proposal(request, proposal)
+        proposal["oracleHypothesis"]["framework"] = "repository-test"
+        with self.assertRaisesRegex(ValueError, "framework differs"):
+            MODULE.validate_proposal(request, proposal)
+        request["policy"]["runtimeTarget"] = "repository-test"
+        with self.assertRaisesRegex(ValueError, "conflicts with runtime"):
+            MODULE.oracle_framework(request["policy"], request["scope"])
+        request["policy"]["oracleFramework"] = "repository-test"
+        self.assertEqual(MODULE.oracle_framework(request["policy"], request["scope"]), "repository-test")
+
     def test_isolated_source_projection_is_exact_fresh_and_revision_bound(self):
         import hashlib
         import subprocess

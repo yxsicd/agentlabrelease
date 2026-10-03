@@ -51,6 +51,16 @@ New proposals retain the runtime target and canonical request-value SHA in
 lineage so later consumers can distinguish routing cuts without rewriting
 historical candidates. The value digest is not the original request-file SHA.
 
+Fresh shadow requests declare `oracleFramework` from their runtime contract:
+`ohosTest` on the Harmony emulator, `repository-test` on the host repository
+lane. An empty test inventory is a harness-construction gap, not evidence for
+a different framework. Retained requests keep their historical inference and
+bytes; regenerate a new request rather than relabeling a completed proposal.
+Independent source review must separate old-instance field cleanup from resource
+leak claims, single-change negative controls from confounded mutations, and an
+evolving implementation task from several unrelated smoke tests. Shape validity
+and isolated Agent completion do not establish these semantic properties.
+
 After focused knowledge refresh, derive a stable successor candidate instead of
 rewriting the original candidate or construction plan. Bind the parent candidate
 ID/value digest, parent knowledge cut, refreshed fact digest and refresh receipt

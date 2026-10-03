@@ -181,6 +181,16 @@ def runtime_target(policy: dict, scope: dict) -> str:
     return target
 
 
+def oracle_framework(policy: dict, scope: dict) -> str:
+    target = runtime_target(policy, scope)
+    if "oracleFramework" in policy:
+        expected = "ohosTest" if target == "harmony-emulator" else "repository-test"
+        require(policy["oracleFramework"] == expected, "shadow Oracle framework conflicts with runtime")
+        return expected
+    # Retained requests bind the old inference; never silently rewrite their cuts.
+    return "ohosTest" if any("ohosTest" in p for p in scope.get("testEntrypoints", [])) else "repository-test"
+
+
 def select_iteration(loop_receipt: dict, facts: dict[str, dict], existing: list[dict]) -> tuple[dict, dict]:
     iterations = loop_receipt.get("iterations")
     require(isinstance(iterations, list) and iterations, "bounded loop has no completed iterations")
@@ -259,6 +269,7 @@ def prepare(args) -> None:
             "independentOracleRequired": True,
             "wrongVariantCalibrationRequired": True,
             "runtimeTarget": getattr(args, "runtime_target", "harmony-emulator"),
+            "oracleFramework": "ohosTest" if getattr(args, "runtime_target", "harmony-emulator") == "harmony-emulator" else "repository-test",
             "externalHardwareAllowed": False,
             "physicalDeviceFallbackAllowed": False,
             "shadowEligible": not external_hardware_blockers(scope, fact),
@@ -393,7 +404,7 @@ def run_agent_inner(args) -> None:
     )
     scope = request["scope"]
     fact = request["fact"]
-    framework = "ohosTest" if any("ohosTest" in path for path in scope.get("testEntrypoints", [])) else "repository-test"
+    framework = oracle_framework(request["policy"], scope)
     environment_instruction = (
         "The complete functional Oracle must be executable on a HarmonyOS emulator with no physical-device fallback and no attached USB, serial, or other external hardware; name the emulator image/device type in requiredEnvironment."
         if target == "harmony-emulator" else
@@ -415,6 +426,7 @@ The object must have exactly these fields:
 
 Give at least two observables and two meaningful wrong variants. {environment_instruction} Validate every field type against the exact shape above, and parse the completed JSON once before finishing. The Oracle remains operator-owned: do not include a gold patch, claim build/runtime success, or claim approval. Use only paths present in the fact evidence. Prefer a mechanism supported by the semantic interpretation rather than a generic build task.
 An existing test name, done() callback, or successful runner exit is not a behavior assertion. If proposing reuse of an existing test, inspect its actual assertions and error branches at the pinned source; if the necessary test source is not in fact evidence, record that knowledge gap instead of inventing support. Require independently controlled success/failure checks before runtime calibration. A swallowed failure is an Oracle defect, while an unsupported adapter, timeout, or build fault is infrastructure failure, never a killed wrong variant. Define each wrong variant as one meaningful semantic change; do not assume a cosmetic rename is invalid. Record these as unresolved qualification requirements, not completed experiments.
+The required framework is a proposed test contract, not evidence that the repository already contains that test harness. Missing entrypoints are construction gaps, not permission to select an incompatible runner. Distinguish mutations to an old instance's fields from effects on a freshly constructed instance; source assignment alone does not prove a resource leak, runtime cleanup, or causal discrimination. Staged demands must describe one evolving implementation task rather than independent baseline smoke-test descriptions.
 """
     try:
         participant.turn("shadow-case-constructor", workspace, prompt=prompt,
@@ -474,7 +486,7 @@ def validate_proposal(request: dict, proposal: dict) -> dict:
     require(isinstance(oracle, dict) and set(oracle) == {
         "framework", "observables", "requiredEnvironment", "wrongVariants", "status",
     }, "oracle hypothesis fields differ")
-    expected_framework = "ohosTest" if any("ohosTest" in path for path in scope.get("testEntrypoints", [])) else "repository-test"
+    expected_framework = oracle_framework(request["policy"], scope)
     require(oracle["framework"] == expected_framework, "oracle framework differs")
     require(oracle["status"] == "hypothesis-unqualified", "oracle status overclaims qualification")
     strings(oracle["observables"], "oracle observables", *OBSERVABLES_LIMITS)

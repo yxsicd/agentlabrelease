@@ -82,6 +82,9 @@ fn constructor_translation_reverifies_bytes_and_preserves_operation_origin() {
     assert!(request.get("loopReceiptSha256").is_none());
     assert_eq!(request["fact"], packet["semanticFact"]);
     assert_eq!(request["policy"]["caseCalibrationInherited"], false);
+    assert_eq!(request["policy"]["oracleFramework"], "ohosTest");
+    let host = shadow_request(&base, &bytes, "repository-test").unwrap();
+    assert_eq!(host["policy"]["oracleFramework"], "repository-test");
     assert_eq!(
         request,
         shadow_request(&base, &bytes, "harmony-emulator").unwrap()
