@@ -327,8 +327,8 @@ section=workflow.split('      - name: Bind one reviewed revision to original con
 body=section.split('        run: |\n',1)[1].split('      - name:',1)[0]
 script=textwrap.dedent(body).split("python3 - <<'PY'\n",1)[1].rsplit('\nPY',1)[0]
 with tempfile.TemporaryDirectory() as directory:
-    for has_design in (False,True):
-        root=Path(directory)/str(has_design);(root/'recipe-author').mkdir(parents=True)
+    for mode,has_design in [('legacy-no-design',False),('legacy-design',True),('design-review',True)]:
+        root=Path(directory)/mode;(root/'recipe-author').mkdir(parents=True)
         commands=[]
         def run(command,**kwargs):
             commands.append(command)
@@ -337,14 +337,21 @@ with tempfile.TemporaryDirectory() as directory:
                 if has_design:(parent/'agent/design.json').write_text('original-parent-design')
             return subprocess.CompletedProcess(command,0)
         info=json.dumps(dict(workflowName='Maintainer source recipe construction',event='workflow_dispatch',status='completed')).encode()
-        env=dict(RUNNER_TEMP=str(root),REVISION_PARENT_RUN='123',GITHUB_REPOSITORY='arbitrary/repo',REVISION_FEEDBACK='review-original')
+        feedback=json.dumps({'schema':'agentlab.source_recipe_design_review.v1' if mode=='design-review' else 'fixture-proposal-review'})
+        env=dict(RUNNER_TEMP=str(root),REVISION_PARENT_RUN='123',GITHUB_REPOSITORY='arbitrary/repo',REVISION_FEEDBACK=feedback)
         with patch.dict(os.environ,env),patch.object(subprocess,'check_output',return_value=info),patch.object(subprocess,'run',side_effect=run):
-            exec(compile(script,'workflow-revision-step','exec'),{})
+            try:exec(compile(script,'workflow-revision-step','exec'),{})
+            except SystemExit as e:assert mode=='design-review' and e.code==0
         command=commands[-1]
-        assert '--prepare-source-recipe-revision' in command
-        assert ('--parent-design' in command)==has_design
-        if has_design:assert Path(command[command.index('--parent-design')+1]).read_text()=='original-parent-design'
-        assert (root/'recipe-author/review-feedback.json').read_text()=='review-original'
+        if mode=='design-review':
+            assert command[:2]==['python3','scripts/prepare-source-design-review.py']
+            assert command[command.index('--parent')+1]==str(root/'recipe-parent')
+            assert '--prepare-source-recipe-revision' not in command
+        else:
+            assert '--prepare-source-recipe-revision' in command
+            assert ('--parent-design' in command)==has_design
+            if has_design:assert Path(command[command.index('--parent-design')+1]).read_text()=='original-parent-design'
+        assert (root/'recipe-author/review-feedback.json').read_text()==feedback
 "#;
     let result = Command::new("python3")
         .args(["-c", code])
@@ -2885,6 +2892,58 @@ with tempfile.TemporaryDirectory() as directory:
         .env(
             "LOOP_SCRIPT",
             root().join("scripts/run-source-recipe-diagnostic-loop.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
+fn action_design_review_preserves_parent_bytes_and_refuses_changed_or_child_inputs() {
+    let code = r#"
+import importlib.util,os,subprocess,tempfile
+from pathlib import Path
+from unittest.mock import patch
+spec=importlib.util.spec_from_file_location('review',os.environ['REVIEW_SCRIPT'])
+m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+with tempfile.TemporaryDirectory() as directory:
+  for mode in ['pass','request-change','revision-child','review-child','repair-child','native-failure','design-race','existing']:
+    root=Path(directory)/mode;root.mkdir();parent=root/'parent';(parent/'agent').mkdir(parents=True)
+    request=root/'request.json';request.write_bytes(b'{"exact":"original"}\n');(parent/'request.json').write_bytes(request.read_bytes())
+    design=parent/'agent/design.json';design.write_bytes(b'{"original":"design"}\n');original=design.read_bytes()
+    feedback=root/'feedback.json';feedback.write_bytes(b'{"review":"bound"}')
+    output=root/'output';output.mkdir();calls=[]
+    if mode=='request-change':request.write_bytes(b'{"changed":true}')
+    children={'revision-child':'revision-request.json','review-child':'design-review-feedback.json','repair-child':'diagnostic-repair.json'}
+    if mode in children:(parent/'agent'/children[mode]).write_bytes(b'{}')
+    if mode=='existing':(output/'review-parent-admission.json').write_bytes(b'{}')
+    def run(command,**kw):
+      calls.append(command);assert '--validate-source-design-review' in command
+      assert command[command.index('--author-request')+1]==str(request)
+      assert command[command.index('--design')+1]==str(design)
+      assert command[command.index('--review-feedback')+1]==str(feedback)
+      assert kw=={'check':True,'timeout':60}
+      if mode=='native-failure':raise subprocess.CalledProcessError(1,command)
+      if mode=='design-race':design.write_bytes(b'{"changed":true}')
+    with patch.object(m.subprocess,'run',side_effect=run):
+      try:m.prepare(Path('/fixture/gate'),request,parent,feedback,output)
+      except (ValueError,FileExistsError,subprocess.CalledProcessError):assert mode!='pass'
+      else:assert mode=='pass'
+    if mode=='pass':
+      assert (output/'review-parent-design.json').read_bytes()==original
+      assert design.read_bytes()==original
+    else:assert not (output/'review-parent-design.json').exists()
+    assert len(calls)==(1 if mode in ['pass','native-failure','design-race'] else 0)
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "REVIEW_SCRIPT",
+            root().join("scripts/prepare-source-design-review.py"),
         )
         .output()
         .unwrap();

@@ -209,4 +209,12 @@ successor design at staging and revalidate it at approval. Check-only legacy
 packets cannot establish scenario preservation, and equal design records cannot
 prove the generated verifier actually interprets them correctly. These gates do
 not authenticate reviewers or establish a reviewed Oracle's semantic truth.
+When a completed code turn is rejected for changing frozen checks, first review
+the design's source semantics. If the design is wrong, use an explicit
+source-bound design-review successor rather than teaching code to emit false
+expectations or weakening contract preservation. The Action accepts the existing
+design-review schema through its parent/review inputs and revalidates unchanged
+original request bytes before inference; reviewed children cannot reopen this
+lane. This transports operator findings, not automatic semantic review or proof
+that the successor fixed them.
 See the [design feedback checkpoint](../../docs/flywheel-design-feedback-20261003.md).
