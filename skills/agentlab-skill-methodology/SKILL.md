@@ -146,6 +146,15 @@ claiming exact model consumption. Transport regression and isolation smoke alone
 do not qualify a real construction or completed business round.
 See the [prompt transport checkpoint](../../docs/flywheel-prompt-transport-20261003.md).
 
+When reusing source context across design and code turns, verify the actual
+upstream history retains the complete original source message and the new turn
+does not duplicate it; a reuse receipt alone is insufficient. Report request
+volume separately from generation completion and latency. A real reduced-context
+code turn still reached its deadline with reasoning only: transport savings do
+not establish provider-policy effectiveness, useful code or a successful loop.
+Retain a validated design as unreviewed evidence, not semantic approval or a
+license to reset an exhausted repair budget.
+
 For bounded design correction, return the failing scenario's JSON pointer and
 the exact required shape, not only a generic contract label. A real constructor
 repeated an empty named seam after one correction despite initial schema guidance.
