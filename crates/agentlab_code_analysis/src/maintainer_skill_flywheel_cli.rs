@@ -397,11 +397,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &fs::read(value(&args, "--revision-request")?)?,
             )?
         } else {
-            agentlab_code_analysis::maintainer_source_recipe_author::revision(
+            let parent_design = optional(&args, "--parent-design")
+                .map(fs::read)
+                .transpose()?;
+            agentlab_code_analysis::maintainer_source_recipe_author::revision_with_design(
                 &current,
                 &fs::read(value(&args, "--parent-author-request")?)?,
                 &fs::read(value(&args, "--proposal")?)?,
                 &fs::read(value(&args, "--review-feedback")?)?,
+                parent_design.as_deref(),
             )?
         };
         OpenOptions::new()

@@ -317,6 +317,51 @@ check(good, False)
 }
 
 #[test]
+fn workflow_revision_forwards_retained_parent_design_without_downgrading() {
+    let code = r#"
+import json,os,subprocess,tempfile,textwrap
+from pathlib import Path
+from unittest.mock import patch
+workflow=Path(os.environ['WORKFLOW']).read_text()
+section=workflow.split('      - name: Bind one reviewed revision to original constructor evidence\n',1)[1]
+body=section.split('        run: |\n',1)[1].split('      - name:',1)[0]
+script=textwrap.dedent(body).split("python3 - <<'PY'\n",1)[1].rsplit('\nPY',1)[0]
+with tempfile.TemporaryDirectory() as directory:
+    for has_design in (False,True):
+        root=Path(directory)/str(has_design);(root/'recipe-author').mkdir(parents=True)
+        commands=[]
+        def run(command,**kwargs):
+            commands.append(command)
+            if command[:3]==['gh','run','download']:
+                parent=Path(command[command.index('--dir')+1]);(parent/'agent').mkdir(parents=True)
+                if has_design:(parent/'agent/design.json').write_text('original-parent-design')
+            return subprocess.CompletedProcess(command,0)
+        info=json.dumps(dict(workflowName='Maintainer source recipe construction',event='workflow_dispatch',status='completed')).encode()
+        env=dict(RUNNER_TEMP=str(root),REVISION_PARENT_RUN='123',GITHUB_REPOSITORY='arbitrary/repo',REVISION_FEEDBACK='review-original')
+        with patch.dict(os.environ,env),patch.object(subprocess,'check_output',return_value=info),patch.object(subprocess,'run',side_effect=run):
+            exec(compile(script,'workflow-revision-step','exec'),{})
+        command=commands[-1]
+        assert '--prepare-source-recipe-revision' in command
+        assert ('--parent-design' in command)==has_design
+        if has_design:assert Path(command[command.index('--parent-design')+1]).read_text()=='original-parent-design'
+        assert (root/'recipe-author/review-feedback.json').read_text()=='review-original'
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "WORKFLOW",
+            root().join(".github/workflows/maintainer-source-recipe-author.yml"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
 fn bounded_design_correction_retains_failures_and_stops_on_drift_or_partial_transport() {
     let code = r#"
 import importlib.util,json,os,subprocess,tempfile
@@ -404,11 +449,17 @@ with tempfile.TemporaryDirectory() as d:
         scope={'id':'arbitrary-scope'}, source={}, sourceFiles=[], semanticFacts=[],
         selectedGap={}, policy={'methodDependencies':[]})))
     revision_path = root/'revision.json'
-    revision_packet = {'parentProposalOriginal':json.dumps({'scopeSkillId':'arbitrary-scope'}),
+    revision_packet = {'schema':'agentlab.source_recipe_revision_request.v1',
+                       'parentProposalOriginal':json.dumps({'scopeSkillId':'arbitrary-scope'}),
                        'reviewOriginal':json.dumps({'findings':[{'id':'grounded-feedback'}]})}
     revision_path.write_text(json.dumps(revision_packet))
     parent_design=root/'parent-design.json'
     parent_design.write_text('{"schema":"agentlab.source_recipe_design.v2"}')
+    scenario_revision_path=root/'scenario-revision.json'
+    scenario_revision_path.write_text(json.dumps(dict(revision_packet,
+        schema='agentlab.source_recipe_revision_request.v2',
+        parentDesignOriginal=json.dumps({'schema':'agentlab.source_recipe_design.v2',
+            'scenarios':[{'id':'preserved-scenario-inputs'}]}))))
     design_feedback=root/'design-feedback.json'
     design_feedback.write_text('{"findings":[{"id":"grounded-design-review"}]}')
     for index, extra, effort, deadline, thinking in [(0, [], 'low', 180, None),
@@ -426,7 +477,11 @@ with tempfile.TemporaryDirectory() as d:
               hashlib.sha256(parent_design.read_bytes()).hexdigest()],'low',180,None),
         (11, ['--frozen-design',str(parent_design),'--frozen-design-sha256',
               hashlib.sha256(parent_design.read_bytes()).hexdigest(),
-              '--revision-request',str(revision_path)],'low',180,None)]:
+              '--revision-request',str(revision_path)],'low',180,None),
+        (12, ['--design-first','--revision-request',str(scenario_revision_path)],'low',180,None),
+        (13, ['--frozen-design',str(parent_design),'--frozen-design-sha256',
+              hashlib.sha256(parent_design.read_bytes()).hexdigest(),
+              '--revision-request',str(scenario_revision_path)],'low',180,None)]:
         seen = {}
         class FakeParticipant:
             def __init__(self, evidence, state, binary, gateway, model, **options):
@@ -470,7 +525,11 @@ with tempfile.TemporaryDirectory() as d:
         assert seen['turn']['reasoning_effort'] == effort
         assert seen['turn']['transport_retry_limit'] == 0
         assert seen['closed'] is True
-        assert stage.call_count == (4 if index==11 else 2 if index in (5,6,9,10) else 1)
+        assert stage.call_count == (4 if index in (11,12,13) else 2 if index in (5,6,9,10) else 1)
+        if index in (12,13):
+            assert 'preserved-scenario-inputs' in seen['turn']['prompt']
+            assert '--revision-request' in stage.call_args[0][0]
+            assert (root/str(index)/'revision-request.json').read_bytes()==scenario_revision_path.read_bytes()
         if index in (8,9):
             assert seen['labels']==['source-recipe-design']
             receipt=json.loads((root/str(index)/'design-capture.json').read_bytes())
@@ -484,12 +543,12 @@ with tempfile.TemporaryDirectory() as d:
                 assert 'grounded-design-review' in seen['turn']['prompt']
                 assert json.loads((root/str(index)/'parent-design.json').read_bytes())==json.loads(parent_design.read_bytes())
             continue
-        if index==6:
+        if index in (6,12):
             assert seen['labels']==['source-recipe-design','source-recipe-author']
-            assert '--validate-source-recipe-design' in stage.call_args_list[0][0][0]
+            assert '--validate-source-recipe-design' in stage.call_args_list[2 if index==12 else 0][0][0]
             assert '--design' in stage.call_args[0][0]
             assert (root/str(index)/'evidence/design-0-generation-completion.json').exists()
-        if index in (10,11):
+        if index in (10,11,13):
             assert seen['labels']==['source-recipe-author']
             assert '--validate-source-recipe-design' in stage.call_args_list[0][0][0]
             assert '--design' in stage.call_args[0][0]
@@ -528,6 +587,16 @@ with tempfile.TemporaryDirectory() as d:
         else: raise AssertionError('rejected revision dispatched')
         dispatch.assert_not_called()
     assert not (root/'rejected-revision/proposal.json').exists()
+    argv = ['author','--request',str(request),'--output',str(root/'missing-successor-design'),
+            '--gate','/unexecuted-fixture-gate','--pi','/unexecuted-fixture-pi',
+            '--revision-request',str(scenario_revision_path)]
+    with patch.dict(os.environ,env), patch.object(sys,'argv',argv), \
+         patch.object(module.subprocess,'run',side_effect=successful_gate), \
+         patch.object(module.importlib.util,'spec_from_file_location') as dispatch:
+        try: module.main()
+        except ValueError as error: assert 'Parent scenario protection requires' in str(error)
+        else: raise AssertionError('scenario revision without design dispatched')
+        dispatch.assert_not_called()
     argv = ['author','--request',str(request),'--output',str(root/'rejected-design'),
             '--gate','/unexecuted-fixture-gate','--pi','/unexecuted-fixture-pi','--design-first']
     with patch.dict(os.environ,env), patch.object(sys,'argv',argv), \
@@ -1737,6 +1806,306 @@ const runtime=require(process.argv[1])(process.argv[2],'baseline',null);
     )
     .is_err());
     assert!(!rejected_approval.exists());
+    let scenario_proposal_bytes = serde_json::to_vec(&seam_proposal).unwrap();
+    let mut scenario_review = feedback.clone();
+    scenario_review["schema"] = json!("agentlab.source_recipe_review_feedback.v3");
+    scenario_review["parentProposalSha256"] = json!(digest(&scenario_proposal_bytes));
+    scenario_review["parentDesignSha256"] = json!(digest(&seam_design_bytes));
+    scenario_review["checkChanges"] = json!([]);
+    scenario_review["scenarioChanges"] = json!([]);
+    let scenario_packet = author::revision_with_design(
+        &request_bytes,
+        &request_bytes,
+        &scenario_proposal_bytes,
+        &serde_json::to_vec(&scenario_review).unwrap(),
+        Some(&seam_design_bytes),
+    )
+    .unwrap();
+    let scenario_packet_bytes = serde_json::to_vec(&scenario_packet).unwrap();
+    let scenario_request_path = dir.join("scenario-request.json");
+    let scenario_proposal_path = dir.join("scenario-proposal.json");
+    let scenario_design_path = dir.join("scenario-parent-design.json");
+    let scenario_review_path = dir.join("scenario-review.json");
+    let scenario_packet_path = dir.join("scenario-cli-packet.json");
+    fs::write(&scenario_request_path, &request_bytes).unwrap();
+    fs::write(&scenario_proposal_path, &scenario_proposal_bytes).unwrap();
+    fs::write(&scenario_design_path, &seam_design_bytes).unwrap();
+    fs::write(
+        &scenario_review_path,
+        serde_json::to_vec(&scenario_review).unwrap(),
+    )
+    .unwrap();
+    let cli_packet = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+        .arg("--prepare-source-recipe-revision")
+        .arg("--author-request")
+        .arg(&scenario_request_path)
+        .arg("--parent-author-request")
+        .arg(&scenario_request_path)
+        .arg("--proposal")
+        .arg(&scenario_proposal_path)
+        .arg("--parent-design")
+        .arg(&scenario_design_path)
+        .arg("--review-feedback")
+        .arg(&scenario_review_path)
+        .arg("--output")
+        .arg(&scenario_packet_path)
+        .output()
+        .unwrap();
+    assert!(
+        cli_packet.status.success(),
+        "{}",
+        String::from_utf8_lossy(&cli_packet.stderr)
+    );
+    assert_eq!(
+        serde_json::from_slice::<Value>(&fs::read(&scenario_packet_path).unwrap()).unwrap(),
+        scenario_packet
+    );
+    assert_eq!(
+        scenario_packet["schema"],
+        "agentlab.source_recipe_revision_request.v2"
+    );
+    let scenario_admission = author::check_revision_output(
+        &request_bytes,
+        &scenario_packet_bytes,
+        &seam_design_bytes,
+        true,
+    )
+    .unwrap();
+    assert_eq!(scenario_admission["scenarioInputsValidated"], true);
+    assert_eq!(scenario_admission["semanticQualified"], false);
+    assert_eq!(
+        author::check_revision_output(
+            &request_bytes,
+            &scenario_packet_bytes,
+            &scenario_proposal_bytes,
+            false,
+        )
+        .unwrap()["scenarioInputsValidated"],
+        false
+    );
+    let missing_design_stage = dir.join("scenario-parent-without-design");
+    assert!(author::stage_with_revision(
+        &request_bytes,
+        &scenario_proposal_bytes,
+        None,
+        &scenario_packet_bytes,
+        &missing_design_stage
+    )
+    .is_err());
+    assert!(!missing_design_stage.exists());
+    for field in ["initialState", "inputs", "expectedObservations"] {
+        let mut drifted = seam_design.clone();
+        drifted["scenarios"][0][field]["unauthorized"] = json!(true);
+        let rejected_stage = dir.join(format!("scenario-drift-{field}"));
+        let error = author::check_revision_output(
+            &request_bytes,
+            &scenario_packet_bytes,
+            &serde_json::to_vec(&drifted).unwrap(),
+            true,
+        )
+        .unwrap_err();
+        assert!(error.contains("reviewed parent at scenario state"));
+        assert!(author::stage_with_revision(
+            &request_bytes,
+            &scenario_proposal_bytes,
+            Some(&serde_json::to_vec(&drifted).unwrap()),
+            &scenario_packet_bytes,
+            &rejected_stage
+        )
+        .is_err());
+        assert!(!rejected_stage.exists());
+    }
+    let mut changed_seams = seam_design.clone();
+    changed_seams["scenarios"][0]["inputs"]["seams"]["independent"]["outcomes"]
+        .as_array_mut()
+        .unwrap()
+        .reverse();
+    assert!(author::check_revision_output(
+        &request_bytes,
+        &scenario_packet_bytes,
+        &serde_json::to_vec(&changed_seams).unwrap(),
+        true
+    )
+    .is_err());
+    let mut changed_schema = seam_design.clone();
+    changed_schema["schema"] = json!("agentlab.source_recipe_design.v1");
+    assert!(author::check_revision_output(
+        &request_bytes,
+        &scenario_packet_bytes,
+        &serde_json::to_vec(&changed_schema).unwrap(),
+        true
+    )
+    .is_err());
+    let mut incomplete_scenario = seam_design.clone();
+    incomplete_scenario["scenarios"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("inputs");
+    assert!(author::check_revision_output(
+        &request_bytes,
+        &scenario_packet_bytes,
+        &serde_json::to_vec(&incomplete_scenario).unwrap(),
+        true
+    )
+    .unwrap_err()
+    .starts_with("recipe design scenario parent-protection output"));
+    let mut additional_scenario = seam_design["scenarios"][0].clone();
+    additional_scenario["id"] = json!("additional");
+    let mut expanded_design = seam_design.clone();
+    expanded_design["scenarios"]
+        .as_array_mut()
+        .unwrap()
+        .push(additional_scenario.clone());
+    let mut additive_scenario_review = scenario_review.clone();
+    additive_scenario_review["scenarioChanges"] = json!([{"id":"additional","before":null,
+        "after":additional_scenario,"findingId":"distinct-references"}]);
+    let expanded_packet = author::revision_with_design(
+        &request_bytes,
+        &request_bytes,
+        &scenario_proposal_bytes,
+        &serde_json::to_vec(&additive_scenario_review).unwrap(),
+        Some(&seam_design_bytes),
+    )
+    .unwrap();
+    assert!(author::check_revision_output(
+        &request_bytes,
+        &serde_json::to_vec(&expanded_packet).unwrap(),
+        &serde_json::to_vec(&expanded_design).unwrap(),
+        true
+    )
+    .is_ok());
+    let mut reordered_design = expanded_design.clone();
+    reordered_design["scenarios"]
+        .as_array_mut()
+        .unwrap()
+        .reverse();
+    assert!(author::check_revision_output(
+        &request_bytes,
+        &serde_json::to_vec(&expanded_packet).unwrap(),
+        &serde_json::to_vec(&reordered_design).unwrap(),
+        true
+    )
+    .unwrap_err()
+    .contains("scenario sequence differs"));
+    let expanded_design_bytes = serde_json::to_vec(&expanded_design).unwrap();
+    let mut removal_review = scenario_review.clone();
+    removal_review["parentDesignSha256"] = json!(digest(&expanded_design_bytes));
+    removal_review["scenarioChanges"] = json!([{"id":"additional","before":additional_scenario,
+        "after":null,"findingId":"distinct-references"}]);
+    let removal_packet = author::revision_with_design(
+        &request_bytes,
+        &request_bytes,
+        &scenario_proposal_bytes,
+        &serde_json::to_vec(&removal_review).unwrap(),
+        Some(&expanded_design_bytes),
+    )
+    .unwrap();
+    assert!(author::check_revision_output(
+        &request_bytes,
+        &serde_json::to_vec(&removal_packet).unwrap(),
+        &seam_design_bytes,
+        true
+    )
+    .is_ok());
+    let mut tampered_packet = scenario_packet.clone();
+    tampered_packet["parentDesignOriginal"] = json!("{}");
+    assert!(author::check_revision(
+        &request_bytes,
+        &serde_json::to_vec(&tampered_packet).unwrap()
+    )
+    .is_err());
+    let scenario_stage = dir.join("scenario-protected-stage");
+    author::stage_with_revision(
+        &request_bytes,
+        &scenario_proposal_bytes,
+        Some(&seam_design_bytes),
+        &scenario_packet_bytes,
+        &scenario_stage,
+    )
+    .unwrap();
+    author::approve(
+        &scenario_stage,
+        &digest(&scenario_proposal_bytes),
+        true,
+        &dir.join("scenario-protected-approved.json"),
+    )
+    .unwrap();
+    fs::write(
+        scenario_stage.join("design.json"),
+        serde_json::to_vec(&changed_seams).unwrap(),
+    )
+    .unwrap();
+    let scenario_tampered_approval = dir.join("scenario-tampered-approval.json");
+    assert!(author::approve(
+        &scenario_stage,
+        &digest(&scenario_proposal_bytes),
+        true,
+        &scenario_tampered_approval
+    )
+    .is_err());
+    assert!(!scenario_tampered_approval.exists());
+    let mut authorized_design = seam_design.clone();
+    authorized_design["scenarios"][0]["inputs"]["reviewedSetting"] = json!(2);
+    scenario_review["scenarioChanges"] = json!([{"id":"state",
+        "before":seam_design["scenarios"][0], "after":authorized_design["scenarios"][0],
+        "findingId":"distinct-references"}]);
+    let authorized_packet = author::revision_with_design(
+        &request_bytes,
+        &request_bytes,
+        &scenario_proposal_bytes,
+        &serde_json::to_vec(&scenario_review).unwrap(),
+        Some(&seam_design_bytes),
+    )
+    .unwrap();
+    assert!(author::check_revision_output(
+        &request_bytes,
+        &serde_json::to_vec(&authorized_packet).unwrap(),
+        &serde_json::to_vec(&authorized_design).unwrap(),
+        true
+    )
+    .is_ok());
+    for field in ["before", "id", "findingId"] {
+        let mut bad = scenario_review.clone();
+        bad["scenarioChanges"][0][field] = json!("borrowed");
+        assert!(author::revision_with_design(
+            &request_bytes,
+            &request_bytes,
+            &scenario_proposal_bytes,
+            &serde_json::to_vec(&bad).unwrap(),
+            Some(&seam_design_bytes)
+        )
+        .is_err());
+    }
+    let mut remove_all = scenario_review.clone();
+    remove_all["scenarioChanges"][0]["after"] = Value::Null;
+    assert!(author::revision_with_design(
+        &request_bytes,
+        &request_bytes,
+        &scenario_proposal_bytes,
+        &serde_json::to_vec(&remove_all).unwrap(),
+        Some(&seam_design_bytes)
+    )
+    .is_err());
+    let duplicate = scenario_review["scenarioChanges"][0].clone();
+    scenario_review["scenarioChanges"]
+        .as_array_mut()
+        .unwrap()
+        .push(duplicate);
+    assert!(author::revision_with_design(
+        &request_bytes,
+        &request_bytes,
+        &scenario_proposal_bytes,
+        &serde_json::to_vec(&scenario_review).unwrap(),
+        Some(&seam_design_bytes)
+    )
+    .is_err());
+    assert!(author::revision(
+        &request_bytes,
+        &request_bytes,
+        &scenario_proposal_bytes,
+        &serde_json::to_vec(&scenario_review).unwrap()
+    )
+    .is_err());
     for field in ["id", "pointer", "expected"] {
         let mut drifted = proposal.clone();
         drifted["contract"]["checks"][0][field] = json!("changed");

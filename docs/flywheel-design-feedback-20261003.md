@@ -140,3 +140,63 @@ finding/before/ID/duplicate/empty-oracle changes. Input scenarios and source
 semantics still require independent review: equal checks cannot prove equal
 scenario inputs or a useful Oracle. No new model run, control execution,
 knowledge admission or full loop follows from these native gates.
+
+## Exact parent scenario protection
+
+For a design-first parent, `--prepare-source-recipe-revision` now accepts
+`--parent-design FILE`. It requires `agentlab.source_recipe_review_feedback.v3`:
+the original eight v1 fields plus parentDesignSha256, checkChanges and
+scenarioChanges. checkChanges may contain 0..64 entries and scenarioChanges
+0..8; empty arrays preserve the corresponding complete parent set. Each scenario
+change has exactly id, before, after and findingId, with exact original before
+bytes interpreted as JSON, the same-ID replacement after, null for addition or
+removal, and a finding from this source-bound review. No-op, duplicate, borrowed
+before/ID/finding and empty final scenario sets reject. The existing nonempty
+check, scenario and total byte budgets remain unchanged.
+
+The parent design must statically validate against the current reproducible
+source/knowledge context and match the original proposal's checks and controls.
+The emitted v2 revision packet retains parentDesignOriginal and its SHA256;
+packet admission reconstructs the complete binding. Design admission preserves
+the parent schema and every full scenario record, including initialState,
+inputs and expectedObservations. Preserve existing scenario order, replace
+reviewed scenarios in place, append reviewed additions and remove only reviewed
+scenarios. This protocol does not authorize reordering existing scenarios;
+independence of their runtime state has not been established. Static design validation
+still independently checks proposed observations and controls.
+
+The Action forwards any retained parent `agent/design.json` automatically;
+it does not silently downgrade to check-only review if that design exists.
+The producer includes the parent design in review context and refuses v2
+revision packets without design-first or frozen-design continuation. Native
+staging requires a successor design, and approval rechecks its retained bytes.
+Proposal-only admission explicitly reports scenarioInputsValidated=false:
+proposal contracts do not contain scenario inputs. Legacy packets remain
+check-only, and design-review-only feedback remains a separate lane.
+
+This is recorded contract preservation, not correct interpretation by an
+arbitrary generated verifier, semantic convergence, reviewer authentication,
+knowledge admission or a complete flywheel. The original real rejected child
+is not rerun and its revision allowance remains exhausted. Maturity remains
+72%, with zero accepted complete automatic business loops.
+
+Local package tests completed with exit zero; all 22 source-operation integration
+tests passed. Coverage includes the actual CLI preparation path, preservation of
+all three scenario fields and dependency sequence order, reviewed scenario
+replacement/addition/removal, rejection of reordered existing scenarios, missing
+successor designs, malformed outputs and tampered retained design evidence.
+The actual workflow's parent-binding Python step was executed with a transport
+fixture to verify it forwards an existing parent design without downgrading;
+this is wiring coverage, not a real Action review child.
+
+Workflow lint initially failed with actionlint v1.7.7's old ten-input ceiling.
+[GitHub raised the ceiling to 25](https://github.blog/changelog/2025-12-04-actions-workflow-dispatch-workflows-now-support-25-inputs/),
+and [actionlint v1.7.10 supports it](https://github.com/rhysd/actionlint/releases/tag/v1.7.10).
+All three selected construction/behavior/guidance workflows passed the pinned
+v1.7.10 checker. The normal CI gate now includes the construction workflow.
+
+The earlier local replay of original Action 37113211051 bytes failed before
+check comparison because its runner-bound paths are absent on this machine.
+No real-sample parent-check rejection was obtained. Preserve that portability
+gap separately from the successful native fixture gates; do not rewrite the
+original request or claim that its original environment was restored.

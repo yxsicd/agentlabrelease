@@ -57,7 +57,7 @@ on:
         required: false
         type: string
       revision_feedback:
-        description: Exact digest-bound review JSON; paired with revision_parent_run, never an approval
+        description: Exact digest-bound review JSON; v3 with parentDesignSha256/checkChanges/scenarioChanges for design-first parents; never approval
         default: ''
         required: false
         type: string
@@ -173,10 +173,13 @@ jobs:
           assert not (parent/'agent/revision-request.json').exists(),'Only one revision from an original construction is supported'
           review=output/'review-feedback.json'
           with review.open('x') as f:f.write(os.environ['REVISION_FEEDBACK'])
-          subprocess.run(['target/release/agentlab-maintainer-skill-flywheel','--prepare-source-recipe-revision',
+          args=['target/release/agentlab-maintainer-skill-flywheel','--prepare-source-recipe-revision',
               '--author-request',str(output/'request.json'),'--parent-author-request',str(parent/'request.json'),
               '--proposal',str(parent/'agent/proposal.json'),'--review-feedback',str(review),
-              '--output',str(output/'revision-request.json')],check=True)
+              '--output',str(output/'revision-request.json')]
+          parent_design=parent/'agent/design.json'
+          if parent_design.exists():args+=['--parent-design',str(parent_design)]
+          subprocess.run(args,check=True)
           PY
       - name: Contain construction Agent without source or host evaluator mounts
         id: contain

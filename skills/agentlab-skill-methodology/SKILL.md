@@ -175,6 +175,12 @@ For proposal-review revisions, use the native parent-check admission in the
 linked checkpoint: v1 protects all parent checks; v2 permits only explicitly
 reviewed exact before/after changes tied to source-grounded findings. Revalidate
 the retained parent packet and admission on final staging and operator approval.
-This protects check identity/values, not scenario input equivalence, reviewer
-authentication or the correctness of a deliberately reviewed Oracle change.
+When an original design exists, bind its exact bytes using a v3 review and v2
+revision packet. Preserve complete scenario records by default, including initial
+state, ordered inputs/dependency outcomes and expected observations; authorize
+changes only through exact source-finding-bound scenarioChanges. Require the
+successor design at staging and revalidate it at approval. Check-only legacy
+packets cannot establish scenario preservation, and equal design records cannot
+prove the generated verifier actually interprets them correctly. These gates do
+not authenticate reviewers or establish a reviewed Oracle's semantic truth.
 See the [design feedback checkpoint](../../docs/flywheel-design-feedback-20261003.md).
