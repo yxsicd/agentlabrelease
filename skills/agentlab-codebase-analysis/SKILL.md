@@ -30,7 +30,13 @@ independently from behavioral coverage: a registered template assertion is not
 an Oracle for the selected responsibility. Library output, test output and host
 application output may have different build contracts. Bind SDK requirements,
 exports and host dependencies to their actual configuration Blobs; a sibling
-application is only a host candidate until its connection is verified. Refresh
+application is only a host candidate until its connection is verified.
+Trace local package dependencies transitively and verify an actual import/use
+edge before proposing a new host: absence of a direct dependency does not prove
+absence of a host. Inspect lifecycle initialization of shared UI/context state
+separately from the dependency graph. A success callback that seeds state is a
+source contract, not proof that initialization completed before a test action;
+runtime readiness and failure paths still need explicit observation. Refresh
 the relevant configuration/test-owner Skills rather than broadening a behavior
 scope's ownership or treating uninspected paths as absent.
 
