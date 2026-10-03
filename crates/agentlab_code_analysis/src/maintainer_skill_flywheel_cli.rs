@@ -107,6 +107,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     if args
         .iter()
+        .any(|a| a == "--prepare-source-recipe-control-diagnostic")
+    {
+        let receipt = agentlab_code_analysis::maintainer_source_diagnostic::prepare_control(
+            &PathBuf::from(value(&args, "--stage")?),
+            &PathBuf::from(value(&args, "--typescript")?),
+            &PathBuf::from(value(&args, "--worker")?),
+            &value(&args, "--image-id")?,
+            &output,
+            &value(&args, "--control-id")?,
+        )?;
+        println!("{}", serde_json::to_string(&receipt)?);
+        return Ok(());
+    }
+    if args
+        .iter()
         .any(|a| a == "--prepare-source-recipe-diagnostic")
     {
         let receipt = agentlab_code_analysis::maintainer_source_diagnostic::prepare(

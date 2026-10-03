@@ -62,6 +62,29 @@ pub fn prepare(
     image: &str,
     output: &Path,
 ) -> Result<Value, String> {
+    prepare_selected(stage, compiler, worker, image, output, None)
+}
+
+/// Diagnostic execution of one frozen control. Never a code-repair input or approval.
+pub fn prepare_control(
+    stage: &Path,
+    compiler: &Path,
+    worker: &Path,
+    image: &str,
+    output: &Path,
+    control_id: &str,
+) -> Result<Value, String> {
+    prepare_selected(stage, compiler, worker, image, output, Some(control_id))
+}
+
+fn prepare_selected(
+    stage: &Path,
+    compiler: &Path,
+    worker: &Path,
+    image: &str,
+    output: &Path,
+    control_id: Option<&str>,
+) -> Result<Value, String> {
     need(!output.exists(), "diagnostic output exists")?;
     need(
         image.starts_with("sha256:")
@@ -219,6 +242,42 @@ pub fn prepare(
         "diagnostic baseline invalid",
     )?;
     text(baselines[0], "id")?;
+    let selected = if let Some(id) = control_id {
+        let matches: Vec<_> = controls.iter().filter(|c| c["id"] == id).collect();
+        need(matches.len() == 1, "diagnostic control absent or ambiguous")?;
+        matches[0]
+    } else {
+        baselines[0]
+    };
+    let role = text(selected, "role")?;
+    need(
+        crate::maintainer_source_operation::valid_control_id(text(selected, "id")?),
+        "diagnostic control id invalid",
+    )?;
+    let failures = selected["expectedFailedCheckIds"]
+        .as_array()
+        .ok_or("diagnostic expected failures missing")?;
+    let mut declared = BTreeSet::new();
+    for failure in failures {
+        let id = failure.as_str().ok_or("diagnostic failure id invalid")?;
+        need(
+            ids.contains(id) && declared.insert(id),
+            "diagnostic failure id unknown or duplicate",
+        )?;
+    }
+    need(
+        match role {
+            "baseline" => failures.is_empty() && selected["edits"] == json!([]),
+            "reference" => {
+                failures.is_empty() && selected["edits"].as_array().is_some_and(|e| !e.is_empty())
+            }
+            "wrong" => {
+                !failures.is_empty() && selected["edits"].as_array().is_some_and(|e| !e.is_empty())
+            }
+            _ => false,
+        },
+        "diagnostic control declaration invalid",
+    )?;
     let compiler_bytes = read(compiler, 16 * 1024 * 1024)?;
     let dependencies = request["policy"]["methodDependencies"]
         .as_array()
@@ -232,8 +291,11 @@ pub fn prepare(
         worker_bytes == include_bytes!("../../../scripts/source-recipe-diagnostic-worker.cjs"),
         "diagnostic worker differs from reviewed method",
     )?;
-    let execution_request = json!({"schema":"agentlab.behavior_executor_request.v1","id":format!("source-recipe-baseline-{}",digest(&originals[1])),"submittedSource":verifier,"submittedSourceSha256":digest(verifier.as_bytes())});
-    let support = json!({"schema":"agentlab.source_recipe_diagnostic_support.v1","compilerSha256":digest(&compiler_bytes),"runtimeSource":runtime,"runtimeSha256":digest(&originals[3]),"files":files,"controlId":baselines[0]["id"]});
+    let execution_request = json!({"schema":"agentlab.behavior_executor_request.v1","id":if control_id.is_some() {format!("source-recipe-control-{}-{}",text(selected,"id")?,digest(&originals[1]))} else {format!("source-recipe-baseline-{}",digest(&originals[1]))},"submittedSource":verifier,"submittedSourceSha256":digest(verifier.as_bytes())});
+    let mut support = json!({"schema":"agentlab.source_recipe_diagnostic_support.v1","compilerSha256":digest(&compiler_bytes),"runtimeSource":runtime,"runtimeSha256":digest(&originals[3]),"files":files,"controlId":selected["id"]});
+    if control_id.is_some() {
+        support["selectedControl"] = selected.clone();
+    }
     fs::create_dir(output).map_err(|e| e.to_string())?;
     let output = output.canonicalize().map_err(|e| e.to_string())?;
     write(&output.join("request.json"), &execution_request)?;
@@ -243,9 +305,15 @@ pub fn prepare(
         "workerPath":worker.canonicalize().map_err(|e|e.to_string())?,"workerSha256":digest(&worker_bytes),"compilerPath":compiler.canonicalize().map_err(|e|e.to_string())?,"compilerSha256":digest(&compiler_bytes),
         "supportPath":output.join("support.json"),"supportSha256":digest(&read(&output.join("support.json"),4*1024*1024)?)});
     write(&output.join("descriptor.json"), &descriptor)?;
-    let intent = json!({"schema":"agentlab.source_recipe_diagnostic_intent.v1","originalStageReceipt":receipt,"source":request["source"],"controlId":baselines[0]["id"],"checks":design["checks"],
+    let mut intent = json!({"schema":"agentlab.source_recipe_diagnostic_intent.v1","originalStageReceipt":receipt,"source":request["source"],"controlId":selected["id"],"checks":design["checks"],
         "requestSha256":digest(&read(&output.join("request.json"),256*1024)?),"descriptorSha256":digest(&read(&output.join("descriptor.json"),65536)?),
         "diagnosticOnly":true,"verifierReviewed":false,"qualified":false,"revisionAuthenticated":false,"runtimeEquivalentToOriginal":false,"automaticPromotion":false,"authorityWritePerformed":false,"executionPerformed":false});
+    if control_id.is_some() {
+        intent["schema"] = json!("agentlab.source_recipe_control_diagnostic_intent.v1");
+        intent["controlRole"] = selected["role"].clone();
+        intent["expectedFailedCheckIds"] = selected["expectedFailedCheckIds"].clone();
+        intent["supportSha256"] = descriptor["supportSha256"].clone();
+    }
     write(&output.join("intent.json"), &intent)?;
     Ok(intent)
 }
@@ -258,13 +326,31 @@ pub fn feedback(inputs: &Path, capture: &Path, output: &Path) -> Result<Value, S
         read(&capture.join("request.json"), 256 * 1024)? == request_bytes,
         "diagnostic capture request differs",
     )?;
-    let report = reconstruct(
+    let intent: Value = serde_json::from_slice(&intent_bytes).map_err(|e| e.to_string())?;
+    let control = intent["schema"] == "agentlab.source_recipe_control_diagnostic_intent.v1";
+    if control {
+        let support: Value =
+            serde_json::from_slice(&read(&inputs.join("support.json"), 4 * 1024 * 1024)?)
+                .map_err(|e| e.to_string())?;
+        need(
+            intent["supportSha256"]
+                == digest(&read(&inputs.join("support.json"), 4 * 1024 * 1024)?)
+                && support["controlId"] == intent["controlId"]
+                && support["selectedControl"]["id"] == intent["controlId"]
+                && support["selectedControl"]["role"] == intent["controlRole"]
+                && support["selectedControl"]["expectedFailedCheckIds"]
+                    == intent["expectedFailedCheckIds"],
+            "diagnostic selected control binding differs",
+        )?;
+    }
+    let report = reconstruct_selected(
         &intent_bytes,
         &request_bytes,
         &read(&inputs.join("descriptor.json"), 65536)?,
         &read(&capture.join("process.json"), 65536)?,
         &read(&capture.join("worker-stdout.log"), 1024 * 1024)?,
         &read(&capture.join("worker-stderr.log"), 1024 * 1024)?,
+        control,
     )?;
     write(output, &report)?;
     Ok(report)
@@ -279,9 +365,34 @@ pub(crate) fn reconstruct(
     stdout: &[u8],
     stderr: &[u8],
 ) -> Result<Value, String> {
+    reconstruct_selected(
+        intent_bytes,
+        request_bytes,
+        descriptor_bytes,
+        process_bytes,
+        stdout,
+        stderr,
+        false,
+    )
+}
+
+fn reconstruct_selected(
+    intent_bytes: &[u8],
+    request_bytes: &[u8],
+    descriptor_bytes: &[u8],
+    process_bytes: &[u8],
+    stdout: &[u8],
+    stderr: &[u8],
+    control: bool,
+) -> Result<Value, String> {
     let intent: Value = serde_json::from_slice(&intent_bytes).map_err(|e| e.to_string())?;
     need(
-        intent["schema"] == "agentlab.source_recipe_diagnostic_intent.v1"
+        intent["schema"]
+            == if control {
+                "agentlab.source_recipe_control_diagnostic_intent.v1"
+            } else {
+                "agentlab.source_recipe_diagnostic_intent.v1"
+            }
             && intent["diagnosticOnly"] == true
             && intent["qualified"] == false
             && intent["verifierReviewed"] == false,
@@ -341,6 +452,38 @@ pub(crate) fn reconstruct(
         }
     }
     let baseline_passed = normal && checks.iter().all(|c| c["passed"] == true);
+    if control {
+        need(
+            intent["supportSha256"] == descriptor["supportSha256"],
+            "diagnostic control support differs",
+        )?;
+        let expected = intent["expectedFailedCheckIds"]
+            .as_array()
+            .ok_or("diagnostic control failure set missing")?;
+        let expected_set: BTreeSet<_> = expected
+            .iter()
+            .map(|v| v.as_str().ok_or("diagnostic failure id invalid"))
+            .collect::<Result<_, _>>()?;
+        let failed: BTreeSet<_> = checks
+            .iter()
+            .filter(|c| c["passed"] != true)
+            .map(|c| c["id"].as_str().unwrap())
+            .collect();
+        let matches = normal && failed == expected_set;
+        return Ok(
+            json!({"schema":"agentlab.source_recipe_control_diagnostic_feedback.v1",
+            "intentSha256":digest(intent_bytes),"processSha256":digest(process_bytes),"stdoutSha256":digest(stdout),"stderrSha256":digest(stderr),
+            "controlId":intent["controlId"],"controlRole":intent["controlRole"],"expectedFailedCheckIds":expected,
+            "observedFailedCheckIds":if normal {json!(failed)} else {Value::Null},"missingExpectedFailureIds":if normal {json!(expected_set.difference(&failed).collect::<Vec<_>>())} else {Value::Null},
+            "unexpectedFailedCheckIds":if normal {json!(failed.difference(&expected_set).collect::<Vec<_>>())} else {Value::Null},
+            "classification":if !normal {"verifier-execution-infrastructure-failure"} else if matches {"control-declaration-matched"} else {"control-declaration-mismatch"},
+            "executionCompleted":normal,"declarationMatched":matches,"checks":checks,
+            "exitCode":process["exitCode"],"timedOut":process["timedOut"],"logBudgetExceeded":process["logBudgetExceeded"],
+            "diagnosticOnly":true,"qualified":false,"semanticQualified":false,"formalIsolationQualified":false,
+            "automaticPromotion":false,"authorityWritePerformed":false,
+            "nextAction":if !normal {"review-verifier-execution-failure"} else if matches {"independent-semantic-review-and-reference-recovery"} else {"review-control-failure-attribution-without-changing-expectations"}}),
+        );
+    }
     let report = json!({"schema":"agentlab.source_recipe_diagnostic_feedback.v1","intentSha256":digest(&intent_bytes),"processSha256":digest(&process_bytes),"stdoutSha256":digest(&stdout),"stderrSha256":digest(&stderr),
         "classification":if !normal {"verifier-execution-infrastructure-failure"} else if baseline_passed {"baseline-observations-passed"} else {"baseline-observations-rejected"},
         "exitCode":process["exitCode"],"timedOut":process["timedOut"],"logBudgetExceeded":process["logBudgetExceeded"],"baselinePassed":baseline_passed,"checks":checks,

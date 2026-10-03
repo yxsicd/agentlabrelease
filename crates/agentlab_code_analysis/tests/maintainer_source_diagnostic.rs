@@ -75,6 +75,158 @@ fn prepared(base: &Path) -> Value {
     )
     .unwrap()
 }
+
+fn control_fixture(role: &str, failures: Value) -> PathBuf {
+    let base = fixture();
+    let stage = base.join("stage");
+    let mut design: Value =
+        serde_json::from_slice(&fs::read(stage.join("design.json")).unwrap()).unwrap();
+    design["controls"].as_array_mut().unwrap().push(json!({"id":"selected","role":role,
+        "edits":[{"path":"unit.js","from":"module.exports={};","to":"module.exports={changed:true};"}],
+        "expectedFailedCheckIds":failures}));
+    file(&stage.join("design.json"), &design);
+    let runtime = fs::read_to_string(stage.join("design-runtime.cjs")).unwrap();
+    let mut manifest: Value = serde_json::from_str(
+        runtime
+            .lines()
+            .next()
+            .unwrap()
+            .strip_prefix("const manifest = ")
+            .unwrap()
+            .strip_suffix(';')
+            .unwrap(),
+    )
+    .unwrap();
+    manifest["controls"] = design["controls"].clone();
+    fs::write(
+        stage.join("design-runtime.cjs"),
+        format!("const manifest = {manifest};\nmodule.exports=()=>({{}});"),
+    )
+    .unwrap();
+    let mut receipt: Value =
+        serde_json::from_slice(&fs::read(stage.join("stage-receipt.json")).unwrap()).unwrap();
+    receipt["designSha256"] = json!(digest(&fs::read(stage.join("design.json")).unwrap()));
+    receipt["designRuntimeSha256"] =
+        json!(digest(&fs::read(stage.join("design-runtime.cjs")).unwrap()));
+    file(&stage.join("stage-receipt.json"), &receipt);
+    base
+}
+
+fn prepared_control(base: &Path) -> Value {
+    agentlab_code_analysis::maintainer_source_diagnostic::prepare_control(
+        &base.join("stage"),
+        &base.join("compiler.js"),
+        &root().join("scripts/source-recipe-diagnostic-worker.cjs"),
+        &format!("sha256:{}", "a".repeat(64)),
+        &base.join("inputs"),
+        "selected",
+    )
+    .unwrap()
+}
+
+#[test]
+fn control_diagnostics_compare_exact_failure_sets_without_approval() {
+    for (actual, matched, missing, unexpected) in [
+        (
+            json!({"scenario":{"value":8,"nullable":null}}),
+            true,
+            json!([]),
+            json!([]),
+        ),
+        (
+            json!({"scenario":{"value":7,"nullable":null}}),
+            false,
+            json!(["answer"]),
+            json!([]),
+        ),
+        (
+            json!({"scenario":{"value":8}}),
+            false,
+            json!([]),
+            json!(["nullable"]),
+        ),
+    ] {
+        let base = control_fixture("wrong", json!(["answer"]));
+        let intent = prepared_control(&base);
+        assert_eq!(
+            intent["schema"],
+            "agentlab.source_recipe_control_diagnostic_intent.v1"
+        );
+        let capture = captured(&base, 0, actual);
+        let result = feedback(&base.join("inputs"), &capture, &base.join("feedback.json")).unwrap();
+        assert_eq!(result["declarationMatched"], matched);
+        assert_eq!(result["missingExpectedFailureIds"], missing);
+        assert_eq!(result["unexpectedFailedCheckIds"], unexpected);
+        assert_eq!(result["qualified"], false);
+        assert_eq!(result["semanticQualified"], false);
+        assert!(result.get("baselinePassed").is_none());
+    }
+}
+
+#[test]
+fn control_execution_failure_is_not_a_killed_wrong_implementation() {
+    let base = control_fixture("wrong", json!(["answer"]));
+    prepared_control(&base);
+    let capture = captured(&base, 1, json!({}));
+    let result = feedback(&base.join("inputs"), &capture, &base.join("feedback.json")).unwrap();
+    assert_eq!(result["executionCompleted"], false);
+    assert_eq!(result["declarationMatched"], false);
+    assert_eq!(result["observedFailedCheckIds"], Value::Null);
+    assert_eq!(result["missingExpectedFailureIds"], Value::Null);
+    assert_eq!(result["checks"], json!([]));
+}
+
+#[test]
+fn accepted_control_is_checked_and_declaration_drift_is_rejected() {
+    let base = control_fixture("reference", json!([]));
+    prepared_control(&base);
+    let capture = captured(&base, 0, json!({"scenario":{"value":7,"nullable":null}}));
+    let result = feedback(&base.join("inputs"), &capture, &base.join("feedback.json")).unwrap();
+    assert_eq!(result["declarationMatched"], true);
+    let path = base.join("inputs/intent.json");
+    let mut intent: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    intent["expectedFailedCheckIds"] = json!(["answer"]);
+    file(&path, &intent);
+    assert!(feedback(&base.join("inputs"), &capture, &base.join("drift.json")).is_err());
+    assert!(!base.join("drift.json").exists());
+}
+
+#[test]
+fn unknown_or_invalid_control_cannot_launch() {
+    for (role, failures) in [
+        ("wrong", json!([])),
+        ("wrong", json!(["missing"])),
+        ("wrong", json!(["answer", "answer"])),
+        ("reference", json!(["answer"])),
+        ("unknown", json!([])),
+    ] {
+        let base = control_fixture(role, failures);
+        assert!(
+            agentlab_code_analysis::maintainer_source_diagnostic::prepare_control(
+                &base.join("stage"),
+                &base.join("compiler.js"),
+                &root().join("scripts/source-recipe-diagnostic-worker.cjs"),
+                &format!("sha256:{}", "a".repeat(64)),
+                &base.join("inputs"),
+                "selected"
+            )
+            .is_err()
+        );
+        assert!(!base.join("inputs").exists());
+    }
+    let base = fixture();
+    assert!(
+        agentlab_code_analysis::maintainer_source_diagnostic::prepare_control(
+            &base.join("stage"),
+            &base.join("compiler.js"),
+            &root().join("scripts/source-recipe-diagnostic-worker.cjs"),
+            &format!("sha256:{}", "a".repeat(64)),
+            &base.join("inputs"),
+            "missing"
+        )
+        .is_err()
+    );
+}
 fn captured(base: &Path, code: i32, observations: Value) -> PathBuf {
     let inputs = base.join("inputs");
     let capture = base.join("capture");
@@ -204,6 +356,36 @@ fn actual_cli_prepares_portable_inputs() {
         String::from_utf8_lossy(&result.stderr)
     );
     assert!(base.join("inputs/intent.json").exists());
+}
+
+#[test]
+fn actual_cli_selects_frozen_control_with_separate_intent_schema() {
+    let base = control_fixture("wrong", json!(["answer"]));
+    let result = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+        .args(["--prepare-source-recipe-control-diagnostic", "--stage"])
+        .arg(base.join("stage"))
+        .args(["--control-id", "selected", "--typescript"])
+        .arg(base.join("compiler.js"))
+        .arg("--worker")
+        .arg(root().join("scripts/source-recipe-diagnostic-worker.cjs"))
+        .arg("--image-id")
+        .arg(format!("sha256:{}", "a".repeat(64)))
+        .arg("--output")
+        .arg(base.join("inputs"))
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let intent: Value =
+        serde_json::from_slice(&fs::read(base.join("inputs/intent.json")).unwrap()).unwrap();
+    assert_eq!(intent["controlId"], "selected");
+    assert_eq!(
+        intent["schema"],
+        "agentlab.source_recipe_control_diagnostic_intent.v1"
+    );
 }
 
 #[test]
