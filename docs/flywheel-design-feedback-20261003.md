@@ -620,3 +620,43 @@ frozen-design support is not yet an Action continuation contract; any extension
 must bind exact parent request/design/source and preserve attempt lineage and
 budgets. No old run is resumed or granted new repair budget by this observation.
 Overall maturity remains **72%**, complete accepted automatic loops **zero**.
+
+## Alternate model deadline and proxy arrival observability
+
+The authenticated live Gateway catalog lists `mimo-v2.6-flash`; its deployed
+catalog maps it to `opencode-go` native Chat. Fresh Action
+[37125792619](https://github.com/yxsicd/agentlabrelease/actions/runs/37125792619)
+used the same `bc823939` source, task selector, token ceiling, deadline and
+design/code budgets, changing the constructor model/route and omitting both
+thinking and reasoning-effort fields. This independent cohort did not reuse
+the earlier accepted design and is not a matched model-quality experiment.
+
+The actual captured upstream request confirms those identities and omissions.
+Initial design returned HTTP200 but reached its response-body deadline at
+180016ms with 156057 response bytes, 6358 reasoning_content characters, zero
+content characters, no finish/DONE and no EOF. Response SHA256 is
+`cd12c74bae1a43dde1ec66f5de50d9a664e098b0faf137c0b9f1cf7ce06a05e8`;
+status SHA256 is
+`897a81af1bf69756f24f6319d6a482cb1a43b84b45ac8160fb972b428684d030`.
+There are 32 leading keep-alive comments before the first data event. Provider
+event-created time is not our measured arrival time and cannot establish queue
+latency. Independent isolation passed; no design was validated and no code,
+baseline or automatic diagnostic repair ran. Preserve the originals outside
+public source; do not retry this exhausted exchange as if it never happened.
+
+The proxy now records additive `upstreamTimingsMs` from a monotonic upstream
+dispatch origin: responseHeaders, firstBodyBytes, firstProtocolEvent,
+firstReasoningDelta, firstContentDelta and firstSemanticTerminal. Null means
+not observed. Comments, malformed JSON, empty content and role-only events do
+not become reasoning or text arrivals. Both native/canonical Chat reasoning
+delta keys and Responses reasoning/text delta types are observed. These are
+proxy read/parser observations, not provider queue or model-compute attribution.
+The absolute deadline, raw capture bytes and semantic completion predicates
+remain unchanged; non-streaming bodies do not invent delta timings.
+
+Rust-driven real HTTP transport regressions cover complete Chat and Responses,
+reasoning-only EOF, role-only events, comments/malformed data and empty bodies;
+they assert stage ordering, absent/null distinctions and exact raw bytes.
+Existing bounded header/body-drip deadline regressions remain applicable. Fresh
+production timing evidence is still required before attributing the bottleneck.
+Overall maturity remains **72%**; complete accepted automatic loops **zero**.

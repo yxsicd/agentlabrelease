@@ -167,7 +167,19 @@ class Participant:
                 request = urllib.request.Request(owner.gateway + self.path, data=upstream,
                           headers={'Authorization': 'Bearer ' + owner.key,
                                    'Content-Type': 'application/json'}, method='POST')
-                upstream_deadline = time.monotonic() + owner.gateway_timeout_seconds
+                upstream_started = time.monotonic()
+                upstream_deadline = upstream_started + owner.gateway_timeout_seconds
+                # Arrival timings observed at this proxy, not provider queue or
+                # model compute attribution. Null means not observed, not zero.
+                timings = dict.fromkeys(('responseHeaders', 'firstBodyBytes',
+                    'firstProtocolEvent', 'firstReasoningDelta', 'firstContentDelta',
+                    'firstSemanticTerminal'))
+                receipt['upstreamTimingsMs'] = timings
+
+                def mark_arrival(name):
+                    if timings[name] is None:
+                        timings[name] = round((time.monotonic()-upstream_started)*1000)
+
                 opened = concurrent.futures.Future()
 
                 def open_upstream():
@@ -210,6 +222,7 @@ class Participant:
                         receipt['clientDisconnected'] = True
                     return
                 with response:
+                    mark_arrival('responseHeaders')
                     receipt['status'] = response.status
                     try:
                         self.send_response(response.status)
@@ -225,22 +238,41 @@ class Participant:
                                 return
                             data = line[5:].strip()
                             if data == b'[DONE]' and owner.api == 'openai-completions':
+                                mark_arrival('firstProtocolEvent')
+                                mark_arrival('firstSemanticTerminal')
                                 receipt['semanticComplete'] = True
                                 return
                             try:
                                 event = json.loads(data)
+                                if not isinstance(event, dict):
+                                    return
+                                mark_arrival('firstProtocolEvent')
                                 if event.get('error'):
                                     receipt['streamError'] = event['error']
                                 if owner.api == 'openai-responses':
                                     kind = event.get('type')
+                                    if isinstance(event.get('delta'), str) and event['delta']:
+                                        if kind in ('response.reasoning_text.delta', 'response.reasoning_summary_text.delta'):
+                                            mark_arrival('firstReasoningDelta')
+                                        elif kind == 'response.output_text.delta':
+                                            mark_arrival('firstContentDelta')
                                     result = event.get('response', {})
                                     if kind == 'response.completed' and result.get('status') == 'completed' and not result.get('error') and not result.get('incomplete_details'):
                                         receipt['semanticComplete'] = True
                                     elif kind in ('error', 'response.failed', 'response.incomplete'):
                                         receipt['streamError'] = result.get('error') or result.get('incomplete_details') or event.get('error') or event
-                                elif any(isinstance(c.get('finish_reason'), str)
-                                         for c in event.get('choices', [])):
-                                    receipt['semanticComplete'] = True
+                                else:
+                                    for choice in event.get('choices', []):
+                                        delta = choice.get('delta') or {}
+                                        if any(isinstance(delta.get(key), str) and delta[key]
+                                               for key in ('reasoning', 'reasoning_content')):
+                                            mark_arrival('firstReasoningDelta')
+                                        if isinstance(delta.get('content'), str) and delta['content']:
+                                            mark_arrival('firstContentDelta')
+                                        if isinstance(choice.get('finish_reason'), str):
+                                            receipt['semanticComplete'] = True
+                                if receipt['semanticComplete']:
+                                    mark_arrival('firstSemanticTerminal')
                             except (ValueError, TypeError):
                                 pass
 
@@ -262,6 +294,7 @@ class Participant:
                                     observe_semantic_line(semantic_buffer)
                                 receipt.update(upstreamEof=True, outcome=('stream_error' if receipt['streamError'] else 'completed' if receipt['semanticComplete'] or not wire.get('stream') else 'incomplete_stream'))
                                 break
+                            mark_arrival('firstBodyBytes')
                             semantic_buffer += chunk
                             lines = semantic_buffer.split(b'\n')
                             semantic_buffer = lines.pop()

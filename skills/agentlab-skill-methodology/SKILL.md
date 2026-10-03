@@ -154,6 +154,12 @@ code turn still reached its deadline with reasoning only: transport savings do
 not establish provider-policy effectiveness, useful code or a successful loop.
 Retain a validated design as unreviewed evidence, not semantic approval or a
 license to reset an exhausted repair budget.
+For incomplete generation, separate proxy-observed response-header/body arrival,
+first parsed protocol event, first reasoning/text delta and semantic terminal.
+Keep-alive bytes are not model output; an unobserved stage is null, not zero.
+These timings locate waiting versus observed output, not provider queue or compute
+causality. Provider-created timestamps and model catalogs cannot replace arrival
+measurements or demonstrate that a reasoning policy was honored.
 
 For bounded design correction, return the failing scenario's JSON pointer and
 the exact required shape, not only a generic contract label. A real constructor

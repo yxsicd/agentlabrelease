@@ -595,7 +595,7 @@ class MaintainerSkillAgentFlywheelTest(unittest.TestCase):
         self.assertIn('len(proposal["interpretation"]) <= 1800', source)
         self.assertIn("gateway_timeout_seconds=60", source)
         participant = (ROOT / "examples/real-code-agent/participant.py").read_text()
-        self.assertIn("upstream_deadline = time.monotonic()", participant)
+        self.assertIn("upstream_deadline = upstream_started + owner.gateway_timeout_seconds", participant)
         self.assertIn("upstreamDeadlineExceeded=True", participant)
         self.assertIn("operator has already verified HEAD", source)
         self.assertIn("Do not spend", source)
