@@ -366,3 +366,60 @@ This removes manual reviewer-packet assembly; it does not implement reviewer
 inference or automatic promotion. Overall maturity remains 74%, complete automatic
 business loops zero. Next connect independent isolated reviewer execution and
 raw-wire-bound response validation, then existing native lesson export/return.
+
+## Independent response and recorded-completion gates
+
+The response contract is independent_source_suite_review_response.v1, not a
+producer success flag. `--validate-source-suite-review-response --source
+OBSERVATION_EXPORT --quality-rubric RUBRIC --review-response RESPONSE --output
+NEW_FILE` re-prepares the complete original packet and binds its compact native
+JSON digest, original review hashes and rubric. It requires each frozen criterion
+and each scenario/check/control exactly once. Criteria use pass/fail/unverified;
+inventory accepted=true/false/null has the same meaning. Aggregate precedence is
+reject, then unverified, then accept. Pass/fail require quotations into original
+request strings or loaded source. Missing evidence may remain unverified; it
+must not be manufactured into acceptance. Quotes are membership-checked, not
+semantically certified.
+
+Nonaccept responses retain nonempty unresolvedFindings and lessonReview=null.
+Accept requires no unresolved findings and a complete existing
+source_suite_lesson_review.v1 in lessonReview. Its reviewer and item inventories
+must match, and the existing native source-suite lesson gate must reconstruct it.
+Neither outcome writes knowledge or authenticates an evaluator.
+
+`--prepare-source-suite-review-prompt` writes canonical complete instructions and
+evidence without truncation. Use one fresh source-suite-review participant with
+no tools, no constructor session and zero transport retries. The retained
+review-intent.json uses independent_source_suite_review_intent.v1 with
+reviewRequestSha256, qualityRubricSha256, promptSha256, participantBudgetSeconds,
+transportRetryLimit=0 and participantIdentity model/providerRoute/
+providerReasoningEffort. The actual native watchdog must equal the declared budget.
+
+`--verify-source-suite-review-completion` additionally takes --participant-evidence.
+It reuses the native captured-prompt/lifecycle/gateway gate under the distinct
+review label, requires exactly one upstream request and no assistant/tool/prior
+user history, then reconstructs original response text. Streaming requires DONE
+and finish_reason=stop, not length/tool termination. Final-assistant text must
+equal upstream text; parsed response JSON must equal the submitted response.
+Responses with altered presentation whitespace retain their own response digest;
+this is JSON-content agreement, not byte equality of presentation. Original
+wire/status/response/lifecycle digests remain bound. Context separation is only
+what these recordings demonstrate, not filesystem isolation, provider or operator
+authentication, or semantic correctness.
+
+Local regressions cover accepted/unverified/rejected content, incomplete/duplicate
+inventories, binding drift, fabricated quotes, contradictory aggregate verdict,
+promotion claims, output overwrite and synthetic captured-wire negatives for
+truncation, prior context, budget drift, edited final message, incomplete status,
+retry and tools. These fixture captures are not an actual independent Agent review.
+Next connect a fresh isolated reviewer transport/Action and run it on retained
+real evidence, preserving rejection and missing-provenance outcomes before normal
+lesson return. Overall maturity remains 74%; accepted full automatic loops zero.
+
+Actual retained 37160192475 evidence also prepares the new complete canonical
+prompt: 266574 bytes, SHA256
+fb2a289135fc84637f40c68e29b92b03f7269ee48812993818c2fb081cfa8907,
+external flywheel-review-response-LlSj55/reviewer-prompt.txt. Earlier prepared
+packets and original evidence remain unchanged. No reviewer was dispatched and
+no new knowledge was admitted. Local suites pass 24 source-diagnostic, three
+observation-store and 15 guidance tests; Release/Skill/format/diff validation pass.

@@ -548,6 +548,294 @@ fn suite_lesson_review(export: &Path) -> Value {
 }
 
 #[test]
+fn independent_review_response_retains_negative_feedback_without_promoting() {
+    use agentlab_code_analysis::{
+        maintainer_source_review as reviewer, maintainer_source_suite_lesson as lesson,
+    };
+    let base = suite_fixture_with_wrong_count(2);
+    let observation = base.join("response-observations");
+    lesson::export(&base.join("stage"), &base.join("suite"), None, &observation).unwrap();
+    let rubric = json!({"schema":"agentlab.prospective_source_quality_review.v1",
+        "repositoryAgnostic":true,"frozenBeforeDispatch":true,"verdicts":["pass","fail","unverified"],
+        "criteria":[{"id":"semantics","requirement":"Trace source.","evidence":"Original source."},
+            {"id":"provenance","requirement":"Independent identity.","evidence":"Original capture."}]});
+    let rubric_bytes = serde_json::to_vec(&rubric).unwrap();
+    let packet = reviewer::prepare(&observation, &rubric_bytes).unwrap();
+    let review = suite_lesson_review(&observation);
+    let mut response = json!({"schema":"agentlab.independent_source_suite_review_response.v1",
+        "reviewerId":review["reviewerId"],"reviewRequestSha256":digest(&serde_json::to_vec(&packet).unwrap()),
+        "qualityRubricSha256":packet["qualityRubricSha256"],"reviewBindings":packet["reviewBindings"],
+        "automaticPromotion":false,"verdict":"accept","unresolvedFindings":[],"lessonReview":review,
+        "scenarioReviews":review["scenarioReviews"],"checkReviews":review["checkReviews"],"controlReviews":review["controlReviews"],
+        "criterionReviews":[{"id":"semantics","verdict":"pass","rationale":"Fixture membership only.",
+            "evidence":[{"pointer":"/originalSourceFiles/0/content","quote":"module.exports"}]},
+            {"id":"provenance","verdict":"pass","rationale":"Fixture, not real authentication.",
+            "evidence":[{"pointer":"/originalSourceFiles/0/content","quote":"module.exports"}]}]});
+    let validate = |r: &Value| {
+        reviewer::validate_response(&observation, &rubric_bytes, &serde_json::to_vec(r).unwrap())
+    };
+    let accepted = validate(&response).unwrap();
+    assert_eq!(accepted["verdict"], "accept");
+    assert_eq!(accepted["lessonContentVerified"], true);
+    assert_eq!(accepted["reviewerExecuted"], false);
+    assert_eq!(accepted["quotationClaimSupportVerified"], false);
+    assert_eq!(accepted["qualified"], false);
+    for change in [
+        "binding",
+        "rubric",
+        "duplicate",
+        "missing",
+        "quote",
+        "pointer",
+        "lesson",
+        "finding",
+        "promotion",
+        "extra",
+    ] {
+        let mut bad = response.clone();
+        match change {
+            "binding" => bad["reviewRequestSha256"] = json!("wrong"),
+            "rubric" => bad["qualityRubricSha256"] = json!("wrong"),
+            "duplicate" => {
+                let row = bad["criterionReviews"][0].clone();
+                bad["criterionReviews"].as_array_mut().unwrap().push(row);
+            }
+            "missing" => {
+                bad["checkReviews"].as_array_mut().unwrap().pop();
+            }
+            "quote" => {
+                bad["criterionReviews"][0]["evidence"][0]["quote"] = json!("fabricated evidence")
+            }
+            "pointer" => bad["criterionReviews"][0]["evidence"][0]["pointer"] = json!("/absent"),
+            "lesson" => bad["lessonReview"]["reviewerId"] = json!("other"),
+            "finding" => bad["unresolvedFindings"] = json!(["Unresolved contradiction"]),
+            "promotion" => bad["automaticPromotion"] = json!(true),
+            "extra" => bad["qualified"] = json!(true),
+            _ => unreachable!(),
+        }
+        assert!(validate(&bad).is_err(), "{change}");
+    }
+    response["criterionReviews"][1]["verdict"] = json!("unverified");
+    response["criterionReviews"][1]["evidence"] = json!([]);
+    response["verdict"] = json!("unverified");
+    response["lessonReview"] = Value::Null;
+    response["unresolvedFindings"] = json!(["Independent source authentication missing."]);
+    assert_eq!(validate(&response).unwrap()["verdict"], "unverified");
+    let mut contradiction = response.clone();
+    contradiction["verdict"] = json!("accept");
+    assert!(validate(&contradiction).is_err());
+    response["checkReviews"][0]["accepted"] = json!(false);
+    response["verdict"] = json!("reject");
+    let rejected = validate(&response).unwrap();
+    assert_eq!(rejected["lessonContentVerified"], false);
+    response["lessonReview"] = review.clone();
+    assert!(validate(&response).is_err());
+    response["lessonReview"] = Value::Null;
+    response["checkReviews"][0]["accepted"] = Value::Null;
+    response["checkReviews"][0]["sourceEvidence"] = json!([]);
+    response["verdict"] = json!("unverified");
+    assert!(validate(&response).is_ok());
+    let mut absent = response.clone();
+    absent["checkReviews"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("accepted");
+    assert!(validate(&absent).is_err());
+    let rubric_file = base.join("review-rubric.json");
+    let response_file = base.join("review-response.json");
+    let output = base.join("validated-response.json");
+    file(&rubric_file, &rubric);
+    file(&response_file, &response);
+    let invoke = || {
+        Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .args(["--validate-source-suite-review-response", "--source"])
+            .arg(&observation)
+            .arg("--quality-rubric")
+            .arg(&rubric_file)
+            .arg("--review-response")
+            .arg(&response_file)
+            .arg("--output")
+            .arg(&output)
+            .output()
+            .unwrap()
+    };
+    let result = invoke();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert_eq!(
+        serde_json::from_slice::<Value>(&fs::read(&output).unwrap()).unwrap(),
+        validate(&response).unwrap()
+    );
+    let retained = fs::read(&output).unwrap();
+    assert!(!invoke().status.success());
+    assert_eq!(fs::read(&output).unwrap(), retained);
+    assert!(!observation.join("review.json").exists());
+    // Synthetic transport exercises native gates; this is not a real reviewer run.
+    let evidence = base.join("review-participant");
+    fs::create_dir_all(evidence.join("gateway")).unwrap();
+    let prompt = reviewer::prompt(&observation, &rubric_bytes).unwrap();
+    fs::write(evidence.join("source-suite-review-prompt.txt"), &prompt).unwrap();
+    let intent = json!({"schema":"agentlab.independent_source_suite_review_intent.v1",
+        "reviewRequestSha256":packet["reviewBindings"]["requestSha256"],
+        "qualityRubricSha256":packet["qualityRubricSha256"],"promptSha256":digest(&prompt),
+        "participantBudgetSeconds":420,"transportRetryLimit":0,
+        "participantIdentity":{"model":"fixture","providerRoute":"fixture","providerReasoningEffort":null}});
+    let mut intent = intent;
+    intent["reviewRequestSha256"] = json!(digest(&serde_json::to_vec(&packet).unwrap()));
+    file(&evidence.join("review-intent.json"), &intent);
+    let wire = json!({"model":"fixture","providerId":"fixture","stream":true,
+        "messages":[{"role":"system","content":"Fixture adapter."},{"role":"user","content":String::from_utf8(prompt).unwrap()}]});
+    file(&evidence.join("gateway/1.upstream-request.json"), &wire);
+    let response_text = serde_json::to_string(&response).unwrap();
+    let upstream = format!(
+        "data: {}\n\ndata: [DONE]\n\n",
+        json!({"choices":[{"index":0,"delta":{"content":response_text},"finish_reason":"stop"}]})
+    );
+    fs::write(evidence.join("gateway/1.response"), &upstream).unwrap();
+    let status = json!({"exchangeId":"1","durationMs":1,"status":200,"upstreamEof":true,
+        "semanticComplete":true,"outcome":"completed","streamError":null,"responseBytes":upstream.len()});
+    file(&evidence.join("gateway/1.status.json"), &status);
+    let final_message = json!({"role":"assistant","stopReason":"stop","content":[{"type":"text","text":response_text}]});
+    file(
+        &evidence.join("source-suite-review-final-assistant-message.json"),
+        &final_message,
+    );
+    let lifecycle = json!({"label":"source-suite-review","captureAuthority":"operator","exitCode":0,
+        "timedOut":false,"finalAssistantMessagePresent":true,"participantBudgetSeconds":420,
+        "participantBudgetScope":"native-process-watchdog","transportRetryLimit":0,
+        "finalAssistantMessageSha256":digest(&fs::read(evidence.join("source-suite-review-final-assistant-message.json")).unwrap())});
+    file(
+        &evidence.join("source-suite-review-lifecycle.json"),
+        &lifecycle,
+    );
+    let complete = || {
+        reviewer::verify_completion(
+            &observation,
+            &rubric_bytes,
+            &evidence,
+            &serde_json::to_vec(&response).unwrap(),
+        )
+    };
+    let completed = complete().unwrap();
+    assert_eq!(completed["recordedCompletionVerified"], true);
+    assert_eq!(completed["verdict"], "unverified");
+    assert_eq!(completed["reviewerAuthenticated"], false);
+    assert_eq!(completed["qualified"], false);
+    let completion_output = base.join("review-completion.json");
+    let cli = Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+        .args(["--verify-source-suite-review-completion", "--source"])
+        .arg(&observation)
+        .arg("--quality-rubric")
+        .arg(&rubric_file)
+        .arg("--review-response")
+        .arg(&response_file)
+        .arg("--participant-evidence")
+        .arg(&evidence)
+        .arg("--output")
+        .arg(&completion_output)
+        .output()
+        .unwrap();
+    assert!(
+        cli.status.success(),
+        "{}",
+        String::from_utf8_lossy(&cli.stderr)
+    );
+    assert_eq!(
+        serde_json::from_slice::<Value>(&fs::read(&completion_output).unwrap()).unwrap(),
+        completed
+    );
+    for change in [
+        "truncated",
+        "context",
+        "budget",
+        "edited-final",
+        "incomplete",
+        "retry",
+        "tool",
+    ] {
+        match change {
+            "truncated" => {
+                let changed = upstream.replace("\"stop\"", "\"length\"");
+                fs::write(evidence.join("gateway/1.response"), &changed).unwrap();
+                let mut changed_status = status.clone();
+                changed_status["responseBytes"] = json!(changed.len());
+                file(&evidence.join("gateway/1.status.json"), &changed_status);
+            }
+            "context" => {
+                let mut v = wire.clone();
+                v["messages"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(json!({"role":"assistant","content":"Prior constructor answer"}));
+                file(&evidence.join("gateway/1.upstream-request.json"), &v);
+            }
+            "budget" => {
+                let mut v = lifecycle.clone();
+                v["participantBudgetSeconds"] = json!(300);
+                file(&evidence.join("source-suite-review-lifecycle.json"), &v);
+            }
+            "edited-final" => {
+                let mut v = final_message.clone();
+                v["content"][0]["text"] = json!("{}");
+                file(
+                    &evidence.join("source-suite-review-final-assistant-message.json"),
+                    &v,
+                );
+                let mut l = lifecycle.clone();
+                l["finalAssistantMessageSha256"] = json!(digest(
+                    &fs::read(evidence.join("source-suite-review-final-assistant-message.json"))
+                        .unwrap()
+                ));
+                file(&evidence.join("source-suite-review-lifecycle.json"), &l);
+            }
+            "incomplete" => {
+                let mut v = status.clone();
+                v["semanticComplete"] = json!(false);
+                file(&evidence.join("gateway/1.status.json"), &v);
+            }
+            "retry" => file(
+                &evidence.join("source-suite-review-transport-retry.json"),
+                &json!({}),
+            ),
+            "tool" => {
+                let changed = format!(
+                    "data: {}\n\ndata: [DONE]\n\n",
+                    json!({"choices":[{"index":0,"delta":{"content":response_text,"tool_calls":[]},"finish_reason":"stop"}]})
+                );
+                fs::write(evidence.join("gateway/1.response"), &changed).unwrap();
+                let mut v = status.clone();
+                v["responseBytes"] = json!(changed.len());
+                file(&evidence.join("gateway/1.status.json"), &v);
+            }
+            _ => unreachable!(),
+        }
+        assert!(complete().is_err(), "{change}");
+        fs::write(evidence.join("gateway/1.response"), &upstream).unwrap();
+        file(&evidence.join("gateway/1.upstream-request.json"), &wire);
+        file(&evidence.join("gateway/1.status.json"), &status);
+        file(
+            &evidence.join("source-suite-review-final-assistant-message.json"),
+            &final_message,
+        );
+        file(
+            &evidence.join("source-suite-review-lifecycle.json"),
+            &lifecycle,
+        );
+        if evidence
+            .join("source-suite-review-transport-retry.json")
+            .exists()
+        {
+            fs::remove_file(evidence.join("source-suite-review-transport-retry.json")).unwrap();
+        }
+    }
+    assert!(complete().is_ok());
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
 fn independent_review_request_reconstructs_originals_and_never_preapproves() {
     use agentlab_code_analysis::{
         maintainer_source_review as reviewer, maintainer_source_suite_lesson as lesson,

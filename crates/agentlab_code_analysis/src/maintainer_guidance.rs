@@ -756,7 +756,7 @@ fn recorded_exchanges(
     recorded_exchanges_for_turn(evidence, prompt_bytes, intent, "author-calibration", &[])
 }
 
-fn recorded_exchanges_for_turn(
+pub(crate) fn recorded_exchanges_for_turn(
     evidence: &Path,
     prompt_bytes: &[u8],
     intent: &Value,
