@@ -50,6 +50,11 @@ fn frozen_runtime_preserves_module_bindings_and_refuses_implicit_imports() {
         ),
     )
     .unwrap();
+    let invocation_compiler = dir.join("invocation-compiler.cjs");
+    fs::write(&invocation_compiler,
+        "module.exports={ScriptTarget:{ES2020:1},ScriptKind:{TS:1},ModuleKind:{CommonJS:1},DiagnosticCategory:{Error:1},createSourceFile:()=>({parseDiagnostics:[]}),transpileModule:t=>({outputText:t,diagnostics:[]})};").unwrap();
+    let invalid_compiler = dir.join("invalid-compiler.cjs");
+    fs::write(&invalid_compiler, "module.exports={};").unwrap();
     // Identity compiler double isolates CommonJS plumbing; real compiler qualification
     // is a separate experiment, not inferred from this fixture.
     let script = r#"
@@ -65,6 +70,20 @@ assert.throws(()=>runtime.loadModule('unit.ts',{}),/unbound import/);
 assert.throws(()=>runtime.loadModule('unit.ts',seams,{exports:{}}),/reserved module binding/);
 const wrong=require(process.argv[1])(process.argv[2],'wrong',compiler);
 assert.equal(wrong.loadModule('unit.ts',seams).run().value,'$&');assert.equal(calls,3);
+const create=require(process.argv[1]);
+const invocation=['node','verifier',process.argv[2],'baseline',process.argv[3]||process.argv[4]];
+const bound=create.fromCompilerInvocation(invocation);
+assert.equal(bound.loadModule('unit.ts',seams).run().value,7);
+assert.equal(create.fromCompilerInvocation([...invocation.slice(0,3),'wrong',invocation[4]]).loadModule('unit.ts',seams).run().value,'$&');
+assert.throws(()=>create.fromCompilerInvocation(null),/compiler invocation requires/);
+assert.throws(()=>create.fromCompilerInvocation(['node','verifier',process.argv[2],'baseline']),/compiler invocation requires/);
+assert.throws(()=>create.fromCompilerInvocation([...invocation.slice(0,4),'relative-compiler.cjs']),/absolute pinned path/);
+assert.throws(()=>create.fromCompilerInvocation([...invocation.slice(0,4),process.argv[5]]),/lacks required compiler API/);
+assert.throws(()=>create(process.argv[2],'baseline',null).loadModule('unit.ts',seams),/explicit compiler required/);
+assert.throws(()=>create.fromCompilerInvocation([...invocation.slice(0,3),'unknown',invocation[4]]),/unknown frozen control/);
+assert.throws(()=>create.fromCompilerInvocation([...invocation.slice(0,4),process.argv[4]+'.missing']),/Cannot find module/);
+require('fs').appendFileSync(require('path').join(process.argv[2],'unit.ts'),'\n// changed bytes');
+assert.throws(()=>create.fromCompilerInvocation(invocation),/frozen source differs/);
 console.log('module-plumbing-pass');
 "#;
     let result = Command::new(node)
@@ -73,6 +92,8 @@ console.log('module-plumbing-pass');
         .arg(&runtime)
         .arg(&source_root)
         .arg(&compiler_path)
+        .arg(&invocation_compiler)
+        .arg(&invalid_compiler)
         .output()
         .unwrap();
     assert!(
@@ -490,7 +511,11 @@ with tempfile.TemporaryDirectory() as d:
               hashlib.sha256(parent_design.read_bytes()).hexdigest(),
               '--revision-request',str(scenario_revision_path)],'low',180,None),
         (14, ['--design-first'],'low',180,None),
-        (15, ['--design-first','--code-gateway-timeout-seconds','240'],'low',180,None)]:
+        (15, ['--design-first','--code-gateway-timeout-seconds','240'],'low',180,None),
+        (16, ['--design-first'],'low',180,None)]:
+        request_data=json.loads(request.read_bytes())
+        request_data['policy']['methodDependencies']=[{'path':'/fixture/compiler.js','sha256':'a'*64}] if index==16 else []
+        request.write_text(json.dumps(request_data))
         seen = {}
         class FakeParticipant:
             def __init__(self, evidence, state, binary, gateway, model, **options):
@@ -554,7 +579,13 @@ with tempfile.TemporaryDirectory() as d:
         if index==15:
             assert seen['deadlines']==[180,240]
             assert seen['turn']['wall_time_limit_seconds']==300
-        assert stage.call_count == (4 if index in (11,12,13) else 2 if index in (5,6,9,10,15) else 1)
+        assert stage.call_count == (4 if index in (11,12,13) else 2 if index in (5,6,9,10,15,16) else 1)
+        if index==16:
+            assert 'createRuntime.fromCompilerInvocation(process.argv)' in seen['turn']['prompt']
+            assert 'compilerOrNull' not in seen['turn']['prompt']
+        if index in (6,10):
+            assert 'No compiler is supplied in this invocation' in seen['turn']['prompt']
+            assert 'const runtime=createRuntime(process.argv[2],process.argv[3],null)' in seen['turn']['prompt']
         if index in (12,13):
             assert 'preserved-scenario-inputs' in seen['turn']['prompt']
             assert '--revision-request' in stage.call_args[0][0]

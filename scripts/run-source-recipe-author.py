@@ -430,6 +430,9 @@ of observed outputs. Do not print hardcoded verdicts or pass fields, and do not 
 the baseline with a hand-written imitation of the source.
 Describe the original source behavior accurately before defining the maintenance
 demand. Do not infer ordering, return types or member names from semantic prose.
+Trace each checked observable to its exact owning source body and reachable inputs.
+Nearby renderers, callers and generators may have different contracts; do not copy
+a neighbor's output requirement into the tested body without a source-grounded path.
 Both valid alternatives must preserve the chosen invariant; deleting a required
 operation or duplicating a side effect is not a valid reference merely because
 it has a reference label. Ensure each in-memory transformation actually matches
@@ -562,11 +565,15 @@ SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
                 return
             prompt += '\nFROZEN DESIGN (use exact edits, scenarios and shared contract):\n' + design_content
             prompt += '\nPreserve check/control IDs, roles and expected failure sets exactly. '
+            runtime_initialization = (
+                'const runtime=createRuntime.fromCompilerInvocation(process.argv);\n'
+                'This explicit entry loads the pinned compiler at process.argv[4]; do not pass null.\n'
+                if dependency_count else
+                'const runtime=createRuntime(process.argv[2],process.argv[3],null);\n'
+                'No compiler is supplied in this invocation; use runtime.source for text/JSON only.\n')
             prompt += f'''The operator supplies a frozen generic runtime at process.argv[{4 + dependency_count}].
 Use const createRuntime=require(process.argv[{4 + dependency_count}]);
-const runtime=createRuntime(process.argv[2],process.argv[3],compilerOrNull);
-Set compilerOrNull=require(process.argv[4]) only when a pinned TypeScript compiler
-dependency is present; otherwise pass null and use runtime.source for text/JSON.
+{runtime_initialization}
 runtime.source(relativePath) returns the actual selected, transformed source text.
 runtime.loadModule(relativePath, imports, globals) transpiles that text in memory
 and returns CommonJS exports in a fresh context on every call. imports maps exact
