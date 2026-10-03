@@ -499,3 +499,42 @@ Fresh policy Action
 [37122124335](https://github.com/yxsicd/agentlabrelease/actions/runs/37122124335)
 was dispatched on the same `6cceb81` source with that explicit change; its result
 is pending, not an automatic-repair acceptance claim.
+
+## Completed explicit policy cohort and duplicate-context reduction
+
+Action37122124335 completed with failure in 8m29s. All three actual upstream
+requests carried `thinking.type=disabled` and `reasoning_effort=low`, but all
+three still returned reasoning chunks. The initial design exchange completed
+in 163425ms; its static check/observation mismatch was corrected by a completed
+67900ms design revision. The accepted unreviewed design has 18 checks, five
+scenarios and seven controls; its exact 12553 bytes have SHA256
+`3c2b1a4ca7b1c904bfb40e624fca7becb8d739d45b602615a9bfbd41649967a8`.
+Its independently reconstructed static validation is not semantic approval.
+The verifier exchange hit the response-body deadline at 180046ms, retaining
+25307 reasoning characters and 3518 content characters without completion.
+Response SHA256 is
+`0ae6b38fbbc54e612ec195e9da50be2afde81f7acc5865deee5df3b54011fdf1`;
+status SHA256 is
+`23f98da51a789058f212ea01267e70d4bfb71c4caca395761103ee5a4dd5725f`.
+Independent isolation passed. No proposal was staged; baseline diagnosis and
+automatic code repair were not exercised. The earlier pending observation stays
+historical; this section records its terminal successor evidence.
+
+The captured verifier request contains 342090 characters when summing the JSON
+encoding of each message's content. Its history already retained the complete
+147372-character design user message; the new 164133-character code user message
+repeated the same full source context. The runner now retains source only in
+that design history, then supplies verifier instructions and the byte-frozen
+accepted design without duplicating source. It refuses reuse without a retained
+Pi session identity; the existing Participant still enforces identity and
+append-only session bytes before/after each turn. Full original request and
+design prompts remain captured, with a source-context digest/reuse observation.
+This does not remove source files or change checks, controls, budgets or provider
+policy. Fresh/frozen-design and diagnostic-repair sessions retain full source
+delivery. Regression coverage checks complete original context, frozen design
+delivery, full-context fresh continuations and rejection of missing sessions.
+
+This is a context transport optimization, not proven latency reduction or
+successful generation. Retaining a validated design for an explicitly separate
+future code-generation attempt remains a useful next capability, not implemented
+by this change. Maturity remains **72%**, complete automatic business loops zero.
