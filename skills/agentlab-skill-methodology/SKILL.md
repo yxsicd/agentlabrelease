@@ -156,3 +156,14 @@ rejected originals and unchanged admission rules; do not fill in Agent output
 or move expected results into dependency inputs to obtain a pass. Diagnostic
 regressions establish feedback mechanics, not successful model correction or
 semantic qualification.
+
+After static correction succeeds, review executable source contracts separately.
+Match explicit import-map keys to original specifiers, including relative depth.
+For each mutation, trace every scenario through both the changed operation and
+later operations skipped by an early exception; a mutation may fail more checks
+than its named target scenario. Record those findings before executing a reviewed
+successor, not by expanding expectations after observing failures. Distinct
+source text is insufficient for independent valid controls when only comments,
+whitespace or erased type annotations differ. A live corrected design plus
+unreviewed staging proves bounded construction, not maintenance qualification.
+See the [design feedback checkpoint](../../docs/flywheel-design-feedback-20261003.md).

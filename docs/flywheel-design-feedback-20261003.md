@@ -41,3 +41,47 @@ feedback admission. Raw remote bytes remain unpreserved; reusable knowledge did
 not change, and no next round consumed these observations. Complete raw archival,
 admitted useful knowledge, automatic next-round consumption, productive repeated
 rounds and cross-repository benefit remain explicit gaps.
+
+## Fresh real correction and separate semantic rejection
+
+PR204 merged at c09df3b24758284ef366fd0a59747bfad8c51117 after all
+applicable checks passed. Local full cargo package tests exited zero. Fresh
+[Action 37112721400](https://github.com/yxsicd/agentlabrelease/actions/runs/37112721400)
+completed in 5m35s on that exact main revision with the same model/policy and
+one design correction. Initial design was rejected at
+`/scenarios/4/inputs/seams/json-parse/outcomes/0`; the revision passed static
+validation. Original upstream request 0002 contains the precise error. Native
+session continuity retained the same ID and qualified history. All three
+Gateway exchanges completed semantically with clean EOF and no stream error;
+independent filesystem, network and external-credential isolation passed.
+
+Original request SHA256 is
+e6c86e30cd0bc360669f77f602a6143e0bd524fe4916f15faf465457a44d803a;
+revised design SHA256 is
+b57d5809a374cb2016a89aa2a6e4ec4d03b1688cf9f4155b96a49eba2eb8934e;
+proposal SHA256 is
+552a4c268b850978410ad06c9b44e96b02d2659e8282c0f05f3bdd6df0e40f81.
+Artifact 11271110564 is 2603954 bytes, archive SHA256
+d791a999a827a8c4483a14cabb20c8d9f1731d7115cd7d5f0a76f5fd8b16cc3d.
+Original private captures remain outside Release.
+
+Independent source review rejected semantic execution: an import-map key differs
+from the original relative specifier; removing a catch skips the later color
+assignment and omits that check from declared failures; deleting the color
+assignment affects two scenarios, not only one. A reference only adds an erased
+type annotation, not a distinct executable strategy. These are source-grounded
+review findings, not observed generated-code execution verdicts. No generated
+verifier was approved or executed, and no knowledge was admitted.
+
+Four exact-parent-bound findings were dispatched through the existing sole
+review-child workflow as
+[Action 37113211051](https://github.com/yxsicd/agentlabrelease/actions/runs/37113211051).
+Its result is pending at this checkpoint. Original artifacts and failed designs
+remain unchanged. Generic construction guidance now includes downstream
+exception effects, all-scenario failure attribution, exact import mappings and
+executable rather than merely text-distinct references. This producer update
+does not modify the already-dispatched child's frozen method.
+
+Maturity remains 72%: real static correction is now demonstrated, but semantic
+correction, fresh qualified maintenance, automatic admission/consumption and
+complete productive loops remain unproven.

@@ -423,6 +423,9 @@ source and declared inputs, not guesses. Include inputs that trigger wrong contr
 Trace the actual changed branch for every declared wrong-control failure. An earlier
 exception can bypass that branch, leaving observations unchanged; do not include
 such a check in the expected failure set merely because it is an error scenario.
+Also trace all later operations skipped by an uncaught exception: unchanged state
+can fail additional checks after the mutated operation. Review each mutation
+against every scenario, not only the scenario whose name resembles the mutation.
 checks: 1..64 exact id/pointer/expected objects. JSON pointers resolve into an
 object mapping scenario ID to its expectedObservations. All controls share this oracle.
 controls: 4..8 objects with exactly id, role, expectedFailedCheckIds, edits
@@ -430,7 +433,8 @@ Control IDs are 1..64 ASCII alphanumeric/hyphen characters only; no underscores.
 role is baseline/reference/wrong. Exactly one baseline has edits=[]. At least two
 references have distinct nonempty edits and no failed checks; at least one wrong
 has nonempty edits and a named nonempty failed-check subset.
-References must have distinct executable implementations, not only comments or whitespace.
+References must have distinct executable implementations, not only comments,
+whitespace or type annotations erased by the pinned compiler.
 edits: 0..4 exact path/before/after objects, sequential in-memory substitutions.
 Paths must be loaded owned source. Copy exact original substrings including whitespace:
 each before must match exactly once at that edit step. No regex, no zero-match
@@ -475,6 +479,8 @@ runtime.source(relativePath) returns the actual selected, transformed source tex
 runtime.loadModule(relativePath, imports, globals) transpiles that text in memory
 and returns CommonJS exports in a fresh context on every call. imports maps exact
 source import specifiers to explicit controlled seams; absent imports fail closed.
+Copy import specifiers verbatim from the loaded source, including relative depth;
+do not infer directory traversal from a similarly named module.
 For each scenario call const seams=runtime.createSeams(scenarioId). Map the declared
 seams.functions[id] into the source's imported dependency objects without rewriting
 their outcomes. The helper supplies frozen per-call outcomes and captures calls.
