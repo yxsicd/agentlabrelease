@@ -31,13 +31,13 @@
   "schema": "agentlab.maintainer_knowledge_cut.v1",
   "sourceSetSha256": "88310ecd6a5ace0c7393c7981b8f9ba9103afff41133b71d0b84e951e95f24a6",
   "tableGitAuthority": {
-    "repo": "agentlabtablegit",
-    "revision": "da9a10a8049b138738d05aae9b2d47710b6b9a7d",
     "exportedBy": {
-      "kind": "operator-replay",
+      "kind": "operator-native-admission",
       "repository": "yxsicd/agentlabrelease",
-      "runId": "dialog-operation-admission-20261003"
-    }
+      "runId": "rating-source-suite-reviewed-admission-20261003-v2"
+    },
+    "repo": "agentlabtablegit",
+    "revision": "b5a07f1b120555eb0a44a659b802f809ac45761e"
   },
   "tables": {
     "evaluationCases": {
@@ -50,15 +50,15 @@
     },
     "maintainerSkillRefreshRounds": {
       "path": "maintainer_skill_refresh_rounds.jsonl",
-      "sha256": "851cfd0934a093391c05303d0b906f9ab6d4f5d9028ed9ef5b9aacd62303b079"
+      "sha256": "8a33c10138765cda7e566ca1d215ba901156461b812cb5b9b0a5487476b76af0"
     },
     "maintainerSkills": {
       "path": "maintainer_skills.jsonl",
-      "sha256": "8ca945709be5f446639aa811ef15c7d35cb10a94a131fdd2ed19924e32539ba7"
+      "sha256": "38b41e7294f61984814504cb789349d00c4bb3a54655d7ba7e69aac4eb9be343"
     },
     "programFacts": {
       "path": "program_facts.jsonl",
-      "sha256": "4e0f246ff2d647b1c81d274f900f504f87bab76f52ed4f16ed07ab3446a7e377"
+      "sha256": "a75d5299e64d55144b11735458922bcbf0eac435c79714be6f8567310d5cc102"
     }
   }
 }

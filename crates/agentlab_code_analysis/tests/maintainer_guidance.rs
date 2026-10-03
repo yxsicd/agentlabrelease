@@ -18,6 +18,39 @@ struct Fixture {
 static FIXTURE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 #[test]
+fn published_rating_guidance_rebinds_committed_rows_without_claiming_consumption() {
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let knowledge = repo.join("examples/maintainer-knowledge-gate/first-four");
+    let guidance = repo.join("examples/maintainer-knowledge-gate/reviewed-guidance");
+    let selection = fs::read(guidance.join("rating-convert-selection-b5a07f1b.json")).unwrap();
+    let published: Value =
+        serde_json::from_slice(&fs::read(guidance.join("rating-convert-b5a07f1b.json")).unwrap())
+            .unwrap();
+    let packet = bind(&knowledge, &selection).unwrap();
+    assert_eq!(packet, published);
+    assert_eq!(packet["guidance"].as_array().unwrap().len(), 1);
+    assert_eq!(packet["agentConsumptionVerified"], false);
+    assert_eq!(packet["learningBenefitVerified"], false);
+    assert_eq!(packet["authorityWritePerformed"], false);
+    assert_eq!(packet["guidance"][0]["skill"]["stage"], "calibration");
+    assert!(!packet["guidance"][0]["skill"]["body"]
+        .as_str()
+        .unwrap()
+        .is_empty());
+    for change in ["cut", "stage", "source", "row"] {
+        let mut changed: Value = serde_json::from_slice(&selection).unwrap();
+        match change {
+            "cut" => changed["knowledgeRevision"] = json!("0".repeat(40)),
+            "stage" => changed["stage"] = json!("repository-analysis"),
+            "source" => changed["sources"][0]["sourceRevision"] = json!("0".repeat(40)),
+            "row" => changed["skills"][0]["rowSha256"] = json!("0".repeat(64)),
+            _ => unreachable!(),
+        }
+        assert!(bind(&knowledge, &serde_json::to_vec(&changed).unwrap()).is_err());
+    }
+}
+
+#[test]
 fn reviewed_real_repair_seed_preserves_original_bytes_and_execution_limits() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../examples/maintainer-knowledge-gate/reviewed-guidance");
