@@ -223,6 +223,18 @@ snapshot can fail fixed-cut preflight even when the live knowledge commit passed
 See the [real knowledge-admission checkpoint](../../docs/flywheel-rating-knowledge-admission-20261003.md);
 its selected packet is not proof of actual next-round consumption or benefit.
 
+For multi-round committed return, distinguish operational history from the full
+knowledge cut. Read each operational table completely at the selected committed
+revision and require every selected export row to match exactly; unrelated earlier
+rounds may remain in the same table. Reject missing/changed selected rows, duplicate
+keys, incomplete pages and revision drift. All five knowledge tables still require
+whole-table equality with the reconstructed admission stage. A selected-row check
+must not replace complete remote capture or original raw-suite reconstruction.
+If a confirmed atomic admission is followed by a readback transport failure,
+retain the commit receipt and recover with writes forbidden at that exact revision.
+Do not replay the writer. Preserve missing portable sidecars as an exporter gap;
+only a separate copy may add the exact inventory bound by the original cut hash.
+
 Review scenario consumption as well as scenario preservation. Trace each initial
 state, ordered action/input and dependency outcome to its execution point in the
 verifier. An equivalent explicitly bound adapter is acceptable, but a second
