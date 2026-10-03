@@ -11,6 +11,13 @@ metadata:
 
 Validate the benchmark independently from the assessed Agent. Check source/environment reproducibility, baseline behavior, a reference implementation, meaningful wrong implementations and regressions across turns. Successful compilation alone is not functional correctness.
 
+For stateful UI negative controls, retain per-test failure locations and distinguish
+the intended semantic failure from later failures caused by residual UI state.
+A passing reference does not prove cleanup after an early assertion failure.
+Do not count cascaded failures as independent Oracle coverage. Preserve the frozen
+checks during calibration, restore the reference and verify recovery; any cleanup
+repair creates a successor test cut requiring fresh positive and negative controls.
+
 An evidence file's existence and matching digest do not qualify its contents.
 Construction-readiness uses recorded `agentlab.shadow_case_qualification.v1`
 receipts: bind candidate ID/digest, source revision, source-set and knowledge-cut

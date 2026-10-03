@@ -71,6 +71,14 @@ After refreshing the supporting facts, create separate successor inputs and
 calibrate the actual host/test combination. Keep a passing proposal-shape check
 separate from this source review and from baseline/wrong-variant execution.
 
+For a new cross-module host, inspect both the library export surface and the
+importing module's dependency declaration. A dependency available through another
+module does not establish that the new host import resolves. Select missing
+manifest edits explicitly before implementation. Compile the actual host and
+standard-test source before mutation calibration; helper syntax accepted by a
+host language seam may be rejected by the target compiler. Keep these construction
+diagnostics separate from behavior failures and preserve the original failed cut.
+
 During construction, separate source build/compatible SDK, installed build tools
 and observed runtime-image versions; require equality only when the task or
 compatibility evidence establishes it. Packaging conventions do not establish a
