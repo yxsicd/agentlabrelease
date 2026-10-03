@@ -166,11 +166,19 @@ def main():
                    help='Freeze source transformations and scenario contract before generating code')
     p.add_argument('--design-only', action='store_true',
                    help='Stop after validated unreviewed design; no verifier generation or proposal staging')
+    p.add_argument('--parent-design', type=Path,
+                   help='Original design paired with digest-bound independent revision feedback')
+    p.add_argument('--design-review-feedback', type=Path,
+                   help='Reviewed findings requesting revision, not semantic approval')
     p.add_argument('--design-revisions', type=int, choices=range(3), default=1,
                    help='0..2 explicit same-session design corrections; no transport retries')
     args = p.parse_args()
     if args.design_only and not args.design_first:
         p.error('--design-only requires --design-first')
+    if bool(args.parent_design) != bool(args.design_review_feedback):
+        p.error('--parent-design and --design-review-feedback must be paired')
+    if args.parent_design and (not args.design_first or args.revision_request):
+        p.error('Design review requires --design-first and cannot mix proposal revision')
     if not os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'):
         raise ValueError('Recipe construction requires the contained participant runtime')
     request_bytes = args.request.read_bytes()
@@ -184,6 +192,22 @@ def main():
     workspace.mkdir()
     evidence.mkdir()
     revision_context = None
+    if args.parent_design:
+        design_raw = args.parent_design.read_bytes()
+        review_raw = args.design_review_feedback.read_bytes()
+        if len(design_raw) > 64 * 1024 or len(review_raw) > 16 * 1024:
+            raise ValueError('Oversized design review input')
+        checked = subprocess.run([str(args.gate.resolve()), '--validate-source-design-review',
+            '--author-request', str(args.request.resolve()), '--design', str(args.parent_design.resolve()),
+            '--review-feedback', str(args.design_review_feedback.resolve()),
+            '--output', str((args.output/'design-review-admission.json').resolve())],
+            capture_output=True, timeout=60)
+        (evidence/'design-review-check-stdout.log').write_bytes(checked.stdout)
+        (evidence/'design-review-check-stderr.log').write_bytes(checked.stderr)
+        checked.check_returncode()
+        (args.output/'parent-design.json').write_bytes(design_raw)
+        (args.output/'design-review-feedback.json').write_bytes(review_raw)
+        revision_context = {'parentDesign': json.loads(design_raw), 'review': json.loads(review_raw)}
     if args.revision_request:
         raw = args.revision_request.read_bytes()
         if len(raw) > 2 * 1024 * 1024:

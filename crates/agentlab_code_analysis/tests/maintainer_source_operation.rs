@@ -402,6 +402,10 @@ with tempfile.TemporaryDirectory() as d:
     revision_packet = {'parentProposalOriginal':json.dumps({'scopeSkillId':'arbitrary-scope'}),
                        'reviewOriginal':json.dumps({'findings':[{'id':'grounded-feedback'}]})}
     revision_path.write_text(json.dumps(revision_packet))
+    parent_design=root/'parent-design.json'
+    parent_design.write_text('{"schema":"agentlab.source_recipe_design.v2"}')
+    design_feedback=root/'design-feedback.json'
+    design_feedback.write_text('{"findings":[{"id":"grounded-design-review"}]}')
     for index, extra, effort, deadline, thinking in [(0, [], 'low', 180, None),
         (1, ['--reasoning-effort','high','--gateway-timeout-seconds','120'], 'high',120,None),
         (2, ['--reasoning-effort','default'], None,180,None),
@@ -410,7 +414,9 @@ with tempfile.TemporaryDirectory() as d:
         (5, ['--revision-request',str(revision_path)],'low',180,None),
         (6, ['--design-first'],'low',180,None),
         (7, ['--max-output-tokens','8192'],'low',180,None),
-        (8, ['--design-first','--design-only'],'low',180,None)]:
+        (8, ['--design-first','--design-only'],'low',180,None),
+        (9, ['--design-first','--design-only','--parent-design',str(parent_design),
+             '--design-review-feedback',str(design_feedback)],'low',180,None)]:
         seen = {}
         class FakeParticipant:
             def __init__(self, evidence, state, binary, gateway, model, **options):
@@ -454,8 +460,8 @@ with tempfile.TemporaryDirectory() as d:
         assert seen['turn']['reasoning_effort'] == effort
         assert seen['turn']['transport_retry_limit'] == 0
         assert seen['closed'] is True
-        assert stage.call_count == (2 if index in (5,6) else 1)
-        if index==8:
+        assert stage.call_count == (2 if index in (5,6,9) else 1)
+        if index in (8,9):
             assert seen['labels']==['source-recipe-design']
             receipt=json.loads((root/str(index)/'design-capture.json').read_bytes())
             assert receipt['reviewRequired'] is True and receipt['semanticQualified'] is False
@@ -463,6 +469,10 @@ with tempfile.TemporaryDirectory() as d:
             assert receipt['executionPerformed'] is False
             assert not (root/str(index)/'proposal.json').exists()
             assert '--validate-source-recipe-design' in stage.call_args[0][0]
+            if index==9:
+                assert '--validate-source-design-review' in stage.call_args_list[0][0][0]
+                assert 'grounded-design-review' in seen['turn']['prompt']
+                assert json.loads((root/str(index)/'parent-design.json').read_bytes())==json.loads(parent_design.read_bytes())
             continue
         if index==6:
             assert seen['labels']==['source-recipe-design','source-recipe-author']
@@ -1277,6 +1287,54 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     assert_eq!(checked["semanticQualified"], false);
     assert_eq!(checked["executionPerformed"], false);
     assert_eq!(checked["controls"][1]["edits"][0]["matchCount"], 1);
+    let design_bytes = serde_json::to_vec(&design).unwrap();
+    let review = json!({"schema":"agentlab.source_recipe_design_review.v1",
+        "parentRequestSha256":digest(&request_bytes),"parentDesignSha256":digest(&design_bytes),
+        "reviewed":true,"verdict":"revise","reviewer":"independent-fixture-review","automaticPromotion":false,
+        "findings":[{"id":"source-shape","sourcePaths":["src/state.json"],
+            "observed":"Draft needs an independent shape review.","requiredChange":"Match actual source return values."}]});
+    let admission = author::design_review(
+        &request_bytes,
+        &design_bytes,
+        &serde_json::to_vec(&review).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(admission["semanticQualified"], false);
+    assert_eq!(admission["revisionRequested"], true);
+    for field in [
+        "parentRequestSha256",
+        "parentDesignSha256",
+        "reviewed",
+        "verdict",
+        "automaticPromotion",
+    ] {
+        let mut bad = review.clone();
+        bad[field] = json!("forged");
+        assert!(author::design_review(
+            &request_bytes,
+            &design_bytes,
+            &serde_json::to_vec(&bad).unwrap()
+        )
+        .is_err());
+    }
+    for path in ["other/state.json", "src/missing.json", "../src/state.json"] {
+        let mut bad = review.clone();
+        bad["findings"][0]["sourcePaths"] = json!([path]);
+        assert!(author::design_review(
+            &request_bytes,
+            &design_bytes,
+            &serde_json::to_vec(&bad).unwrap()
+        )
+        .is_err());
+    }
+    let mut changed_request = request.clone();
+    changed_request["source"]["revision"] = json!("0".repeat(40));
+    assert!(author::design_review(
+        &serde_json::to_vec(&changed_request).unwrap(),
+        &design_bytes,
+        &serde_json::to_vec(&review).unwrap()
+    )
+    .is_err());
     let mut seam_design = design.clone();
     seam_design["schema"] = json!("agentlab.source_recipe_design.v2");
     seam_design["scenarios"][0]["inputs"]["seams"] = json!({

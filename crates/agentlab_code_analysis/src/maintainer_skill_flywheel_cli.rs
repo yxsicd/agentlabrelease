@@ -112,6 +112,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
+    if args.iter().any(|a| a == "--validate-source-design-review") {
+        let receipt = agentlab_code_analysis::maintainer_source_recipe_author::design_review(
+            &fs::read(value(&args, "--author-request")?)?,
+            &fs::read(value(&args, "--design")?)?,
+            &fs::read(value(&args, "--review-feedback")?)?,
+        )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&receipt)?)?;
+        println!("{}", serde_json::to_string(&receipt)?);
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--validate-source-recipe-design") {
         let receipt = agentlab_code_analysis::maintainer_source_recipe_author::design(
             &fs::read(value(&args, "--author-request")?)?,

@@ -429,6 +429,79 @@ pub fn check_revision(current_bytes: &[u8], packet_bytes: &[u8]) -> Result<Value
     )
 }
 
+/// Bind independent semantic findings to a reproducible draft before new inference.
+/// A reviewed request to revise is not approval of either design or executable code.
+pub fn design_review(
+    request_bytes: &[u8],
+    design_bytes: &[u8],
+    review_bytes: &[u8],
+) -> Result<Value, String> {
+    need(
+        request_bytes.len() <= 512 * 1024
+            && design_bytes.len() <= 64 * 1024
+            && review_bytes.len() <= 16 * 1024,
+        "design review input budget",
+    )?;
+    let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
+    need(
+        prepare(
+            Path::new(text(&request, "knowledgeDirectory")?),
+            Path::new(text(&request, "sourceWorktree")?),
+            text(&request, "repositorySelector")?,
+            &serde_json::to_vec(&request["policy"]).map_err(|e| e.to_string())?,
+        )? == request,
+        "design review request no longer reproduces",
+    )?;
+    design(request_bytes, design_bytes)?;
+    let review: Value = serde_json::from_slice(review_bytes).map_err(|e| e.to_string())?;
+    need(
+        review.as_object().is_some_and(|o| o.len() == 8)
+            && review["schema"] == "agentlab.source_recipe_design_review.v1"
+            && review["parentRequestSha256"] == digest(request_bytes)
+            && review["parentDesignSha256"] == digest(design_bytes)
+            && review["reviewed"] == true
+            && review["verdict"] == "revise"
+            && review["automaticPromotion"] == false
+            && text(&review, "reviewer")?.len() <= 128,
+        "design review feedback binding",
+    )?;
+    let findings = review["findings"]
+        .as_array()
+        .filter(|a| !a.is_empty() && a.len() <= 8)
+        .ok_or("design review findings budget")?;
+    let mut ids = BTreeSet::new();
+    for finding in findings {
+        need(
+            finding.as_object().is_some_and(|o| o.len() == 4)
+                && ids.insert(text(finding, "id")?)
+                && text(finding, "id")?.len() <= 64
+                && text(finding, "observed")?.len() <= 1024
+                && text(finding, "requiredChange")?.len() <= 1024,
+            "design review finding contract",
+        )?;
+        let paths = finding["sourcePaths"]
+            .as_array()
+            .filter(|a| !a.is_empty() && a.len() <= 4)
+            .ok_or("design review finding paths")?;
+        need(
+            paths.iter().all(|path| {
+                request["sourceFiles"].as_array().is_some_and(|files| {
+                    files
+                        .iter()
+                        .any(|f| path.is_string() && f["path"] == *path && f["content"].is_string())
+                })
+            }),
+            "design review finding requires loaded owned source",
+        )?;
+    }
+    Ok(
+        json!({"schema":"agentlab.source_recipe_design_review_admission.v1",
+        "authorRequestSha256":digest(request_bytes),"parentDesignSha256":digest(design_bytes),
+        "reviewSha256":digest(review_bytes),"revisionRequested":true,"semanticQualified":false,
+        "executionPerformed":false,"authorityWritePerformed":false,"automaticPromotion":false}),
+    )
+}
+
 /// Static source correction before code generation; this does not establish semantic truth.
 fn frozen_seams(inputs: &Value) -> Result<(), String> {
     let seams = inputs["seams"]

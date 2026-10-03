@@ -76,6 +76,14 @@ prove those semantics. Preserve complete design failures and partial generation
 captures. A generation deadline is not permission to stage incomplete output or
 to treat isolation validation as behavioral qualification.
 
+For a design-level revision, pair `--parent-design` with
+`--design-review-feedback` and retain `--design-first --design-only`. Rust binds
+the original request/design hashes, checks that the source/knowledge request still
+reproduces, and limits findings to loaded owned paths before model dispatch.
+Feedback requests revision; it cannot approve the parent or successor. This path
+does not require inventing a completed verifier proposal after an earlier code
+generation failure. Keep design feedback separate from executable-proposal review.
+
 Separate modification ownership from read-only source context. A construction
 Oracle may inspect a path outside its editable responsibility only when the
 candidate explicitly lists it as context, a bound fact cites its exact Blob,
