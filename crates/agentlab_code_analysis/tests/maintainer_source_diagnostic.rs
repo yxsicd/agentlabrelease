@@ -548,6 +548,122 @@ fn suite_lesson_review(export: &Path) -> Value {
 }
 
 #[test]
+fn independent_review_request_reconstructs_originals_and_never_preapproves() {
+    use agentlab_code_analysis::{
+        maintainer_source_review as reviewer, maintainer_source_suite_lesson as lesson,
+    };
+    let base = suite_fixture_with_wrong_count(2);
+    let observation = base.join("review-observations");
+    lesson::export(&base.join("stage"), &base.join("suite"), None, &observation).unwrap();
+    let rubric = json!({"schema":"agentlab.prospective_source_quality_review.v1",
+        "repositoryAgnostic":true,"frozenBeforeDispatch":true,"verdicts":["pass","fail","unverified"],
+        "criteria":[{"id":"independent-semantics","requirement":"Trace original source and expected behavior.","evidence":"Complete source and raw controls."}]});
+    let rubric_bytes = serde_json::to_vec(&rubric).unwrap();
+    let packet = reviewer::prepare(&observation, &rubric_bytes).unwrap();
+    let original_request: Value =
+        serde_json::from_slice(&fs::read(observation.join("source-stage/request.json")).unwrap())
+            .unwrap();
+    assert_eq!(packet["source"], original_request["source"]);
+    assert_eq!(
+        packet["originalSourceFiles"],
+        original_request["sourceFiles"]
+    );
+    assert_eq!(packet["qualityRubricSha256"], digest(&rubric_bytes));
+    assert_eq!(packet["reviewPreparedOnly"], true);
+    assert_eq!(packet["reviewerExecuted"], false);
+    assert_eq!(packet["semanticQualified"], false);
+    assert_eq!(packet["reviewed"], false);
+    assert_eq!(packet["authorityWritePerformed"], false);
+    assert_eq!(
+        packet["reconstructedSuite"]["acceptedReferenceRecoveryReconstructed"],
+        true
+    );
+    assert!(!packet["rawWorkerEvidence"].as_array().unwrap().is_empty());
+    assert!(packet.get("maintainerGuidance").is_none());
+    let input = base.join("rubric.json");
+    file(&input, &rubric);
+    let output = base.join("independent-request.json");
+    let invoke = || {
+        Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .arg("--prepare-source-suite-review")
+            .arg("--source")
+            .arg(&observation)
+            .arg("--quality-rubric")
+            .arg(&input)
+            .arg("--output")
+            .arg(&output)
+            .output()
+            .unwrap()
+    };
+    let result = invoke();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert_eq!(
+        serde_json::from_slice::<Value>(&fs::read(&output).unwrap()).unwrap(),
+        packet
+    );
+    let retained = fs::read(&output).unwrap();
+    assert!(!invoke().status.success());
+    assert_eq!(fs::read(&output).unwrap(), retained);
+    for change in ["duplicate", "missing", "verdict", "specific"] {
+        let mut bad = rubric.clone();
+        match change {
+            "duplicate" => {
+                let row = bad["criteria"][0].clone();
+                bad["criteria"].as_array_mut().unwrap().push(row);
+            }
+            "missing" => {
+                bad["criteria"][0]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("evidence");
+            }
+            "verdict" => bad["verdicts"] = json!(["pass", "fail"]),
+            "specific" => bad["repositoryAgnostic"] = json!(false),
+            _ => unreachable!(),
+        }
+        assert!(
+            reviewer::prepare(&observation, &serde_json::to_vec(&bad).unwrap()).is_err(),
+            "{change}"
+        );
+    }
+    let reviewed = base.join("already-reviewed");
+    lesson::export(
+        &base.join("stage"),
+        &base.join("suite"),
+        Some(&serde_json::to_vec(&suite_lesson_review(&observation)).unwrap()),
+        &reviewed,
+    )
+    .unwrap();
+    assert!(reviewer::prepare(&reviewed, &rubric_bytes)
+        .unwrap_err()
+        .contains("without a prior lesson review"));
+    let checks_path = observation.join("checks.jsonl");
+    let mut checks: Vec<Value> = fs::read_to_string(&checks_path)
+        .unwrap()
+        .lines()
+        .map(|s| serde_json::from_str(s).unwrap())
+        .collect();
+    checks[0]["passed"] = json!(!checks[0]["passed"].as_bool().unwrap());
+    let raw = checks
+        .iter()
+        .map(|r| serde_json::to_string(r).unwrap() + "\n")
+        .collect::<String>();
+    fs::write(&checks_path, &raw).unwrap();
+    let manifest_path = observation.join("export.json");
+    let mut manifest: Value = serde_json::from_slice(&fs::read(&manifest_path).unwrap()).unwrap();
+    manifest["tables"]["checks"]["sha256"] = json!(digest(raw.as_bytes()));
+    file(&manifest_path, &manifest);
+    assert!(reviewer::prepare(&observation, &rubric_bytes)
+        .unwrap_err()
+        .contains("raw reconstruction"));
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
 fn source_suite_import_reconstructs_observations_lessons_and_historical_projection() {
     use agentlab_code_analysis::{
         maintainer_observation_store as store, maintainer_source_suite_lesson as lesson,

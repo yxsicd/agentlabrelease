@@ -400,6 +400,11 @@ pub fn verify(
     )
 }
 
+/// Verify complete original rows and raw evidence without mutation or compression.
+pub fn reconstructed_source_binding(root: &Path) -> Result<Value, String> {
+    source(root).map(|(_, binding)| binding)
+}
+
 /// Describe the native-selected archive without exposing file bodies in context.
 pub fn archive_descriptor(root: &Path) -> Result<Value, String> {
     let (tables, binding) = source(root)?;

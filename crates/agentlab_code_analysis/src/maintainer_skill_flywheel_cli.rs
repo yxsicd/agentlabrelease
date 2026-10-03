@@ -817,6 +817,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
+    if args
+        .iter()
+        .any(|arg| arg == "--prepare-source-suite-review")
+    {
+        let report = agentlab_code_analysis::maintainer_source_review::prepare(
+            &PathBuf::from(value(&args, "--source")?),
+            &fs::read(value(&args, "--quality-rubric")?)?,
+        )?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        file.write_all(&serde_json::to_vec_pretty(&report)?)?;
+        file.write_all(b"\n")?;
+        println!(
+            "{}",
+            serde_json::json!({"reviewPreparedOnly":true,"reviewerExecuted":false,"qualified":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|arg| {
         arg == "--export-source-suite-lesson" || arg == "--export-source-suite-observation"
     }) {
