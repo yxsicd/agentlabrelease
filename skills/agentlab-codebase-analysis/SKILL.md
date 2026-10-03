@@ -44,10 +44,14 @@ Resolve build tools from existing composition/toolchain receipts before declarin
 them absent from PATH or a bounded search. Revalidate their current entrypoints
 and SDK metadata, then inspect the exact module/target task registration. A tool
 version, successful help/task listing or successful initialization does not prove
-the requested build task exists. If both host and library expose only setup
-tasks, investigate shared project/plugin initialization before attributing the
-failure to one module's output type. Keep historical build qualification separate
-from a fresh build, which needs terminal logs and a newly bound output artifact.
+the requested build task exists. Check whether task discovery includes lazy
+registrations before interpreting a setup-only listing as missing tasks. Resolve
+the supported task from the owning module's output type and plugin contract;
+library device-test packaging need not use the application packaging task.
+Keep historical build qualification separate from a fresh build, which needs
+terminal logs and a newly bound output artifact. A successful build may skip
+signing: qualify package identity, signing and installation independently before
+claiming executable tests. Generated test scaffolding is not behavioral coverage.
 
 For cross-scope construction gaps, use the Rust
 `--prepare-construction-context --knowledge ABSOLUTE_CUT --source-worktree

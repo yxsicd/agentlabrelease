@@ -1,0 +1,87 @@
+{
+  "schema": "agentlab.library_standard_test_observation.v1",
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "methodBaseRevision": "1158db7",
+  "peerId": "lgw_60b9b37d14c4447f919196105a1a8b8a",
+  "routeDecision": "peer_direct",
+  "rawArchiveSha256": "a5eca444aa95d1bf6bedc0df9c40b6b313d896deee3efaf8bac8610e99672665",
+  "cleanupArchiveSha256": "0c2ced0d06562b3cc2d6cefe761c365dfd7b1831a2f54e993f71a0ba34181568",
+  "correctionOf": "hwlinux-build-task-discovery-20261003",
+  "correction": "Setup-only task listing did not prove missing registration: the vendor task container uses lazy registration. The HAR device-test task differs from the HAP application task. Historical diagnostics remain unchanged.",
+  "libraryTestBuild": {
+    "operationId": "exec-000000000000025b",
+    "module": "componentlibrary@ohosTest",
+    "task": "genOnDeviceTestHap",
+    "exitCode": 0,
+    "durationMs": 8412,
+    "signingSkipped": true,
+    "signingQualified": false
+  },
+  "artifacts": {
+    "app": {
+      "path": "products/phone/build/default/outputs/default/phone-default-unsigned.hap",
+      "sha256": "b24e6bd128a75e738f7811448cf025791209c8cb6e8bb8f769229c19f040c1ff",
+      "installOperationId": "exec-0000000000000261",
+      "installExitCode": 0,
+      "nativeInstallSuccessObserved": true
+    },
+    "test": {
+      "path": "features/componentlibrary/build/default/outputs/ohosTest/componentlibrary-ohosTest-unsigned.hap",
+      "sha256": "3a5eabba41136e87ef2f93552a815ad991b3b20492b1329b4d4e64fac7840e13",
+      "installOperationId": "exec-0000000000000262",
+      "installExitCode": 0,
+      "nativeInstallSuccessObserved": true
+    }
+  },
+  "packageIdentity": {
+    "bundle": "com.huawei.hmos.sample",
+    "testModule": "componentlibrary_test",
+    "moduleType": "feature",
+    "compileSdkVersion": "6.1.1.125",
+    "minAPIVersion": 60100023,
+    "targetAPIVersion": 60101024
+  },
+  "nativeTest": {
+    "operationId": "exec-0000000000000263",
+    "target": "127.0.0.1:5555",
+    "framework": "instrument-test-ohosTest-hypium",
+    "runner": "OpenHarmonyTestRunner",
+    "processExitCode": 0,
+    "nativeFinalCode": 0,
+    "total": 1,
+    "pass": 1,
+    "failure": 0,
+    "error": 0,
+    "ignore": 0,
+    "existingNativeReportParserPassed": true,
+    "behavioralCaseQualified": false,
+    "testMeaning": "Existing ActsAbilityTest assertContain template, not dialog behavior or a generated candidate"
+  },
+  "sourceCheckoutCleanAfterBuild": true,
+  "deviceVerificationSettingsChanged": false,
+  "cleanup": {
+    "startOperationId": "exec-000000000000025e",
+    "terminal": true,
+    "timedOut": true,
+    "durationMs": 180003,
+    "explicitStopOperationId": "exec-0000000000000264",
+    "explicitStopSucceeded": false,
+    "explicitStopObservation": "Exit zero but stderr says emulator does not exist; not a successful-stop receipt",
+    "postStopTargetOperationId": "exec-0000000000000265",
+    "postStopTargetsEmpty": true,
+    "processLifetimeIsNotBootLatency": true
+  },
+  "remainingGaps": [
+    "The generic source-standard runner still hardcodes the application packaging task; output-type-bound dispatch and host binding need implementation",
+    "Unsigned installation is observed only on this existing emulator configuration, not signing qualification or fleet portability",
+    "Generated behavioral tests, correct references and discriminating wrong controls remain unexecuted",
+    "No automatic authority promotion, complete business loop, multi-round benefit or cross-repository transfer is established"
+  ],
+  "automaticPromotion": false,
+  "authorityWritePerformed": false,
+  "formalCaseQualified": false,
+  "completeAutomaticBusinessLoops": 0,
+  "overallMaturityEstimatePercent": 69,
+  "maturityChangeBasis": "One point for a real library device-test build, exact artifact binding, two native install successes and parsed Hypium completion; not a business-loop acceptance",
+  "verificationBoundary": "Operator-driven build/install/template-test evidence only. Raw captures remain in the operator artifact archive. This summary neither authenticates independent review nor substitutes template success for an executable generated case. Earlier phone build completion was observed, but its operation lookup is now missing; no new phone build terminal receipt is fabricated."
+}
