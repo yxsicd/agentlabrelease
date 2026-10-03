@@ -135,8 +135,15 @@ jobs:
           PY
       - name: Exact live knowledge admission before model budget
         run: |
+          mkdir -p "$RUNNER_TEMP/recipe-author"
+          preflight_status=0
           python3 scripts/maintainer-skill-tablegit.py preflight --base "$KNOWLEDGE" \
-            --receipt "$RUNNER_TEMP/recipe-author/authority-preflight.json"
+            --receipt "$RUNNER_TEMP/recipe-author/authority-preflight.json" \
+            > "$RUNNER_TEMP/recipe-author/authority-preflight-stdout.log" \
+            2> "$RUNNER_TEMP/recipe-author/authority-preflight-stderr.log" || preflight_status=$?
+          cat "$RUNNER_TEMP/recipe-author/authority-preflight-stdout.log"
+          cat "$RUNNER_TEMP/recipe-author/authority-preflight-stderr.log" >&2
+          exit "$preflight_status"
       - name: Build native producer and isolated runtime
         run: |
           cargo build --locked --release -p agentlab_code_analysis --bin agentlab-maintainer-skill-flywheel

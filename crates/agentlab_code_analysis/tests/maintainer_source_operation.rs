@@ -23,6 +23,61 @@ fn root() -> PathBuf {
 }
 
 #[test]
+fn source_action_preflight_keeps_failure_bytes_without_admission_or_retry() {
+    let workflow =
+        fs::read_to_string(root().join(".github/workflows/maintainer-source-recipe-author.yml"))
+            .unwrap();
+    let body = workflow
+        .split("      - name: Exact live knowledge admission before model budget\n")
+        .nth(1)
+        .unwrap()
+        .split("      - name:")
+        .next()
+        .unwrap()
+        .split("        run: |\n")
+        .nth(1)
+        .unwrap();
+    let script = body
+        .lines()
+        .map(|line| line.strip_prefix("          ").unwrap_or(line))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let dir = std::env::temp_dir().join(format!(
+        "source-preflight-capture-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir_all(dir.join("scripts")).unwrap();
+    fs::write(dir.join("scripts/maintainer-skill-tablegit.py"),
+        "import sys\nfrom pathlib import Path\np=Path('invocations')\np.write_text(p.read_text()+'call\\n' if p.exists() else 'call\\n')\nsys.stdout.buffer.write(b'partial read\\n')\nsys.stderr.buffer.write(b'table_query: Request timed out\\n')\nsys.exit(17)\n").unwrap();
+    let result = Command::new("bash")
+        .args(["-e", "-c", &script])
+        .current_dir(&dir)
+        .env("RUNNER_TEMP", &dir)
+        .env("KNOWLEDGE", "unused-frozen-cut")
+        .output()
+        .unwrap();
+    assert_eq!(result.status.code(), Some(17));
+    assert_eq!(fs::read(dir.join("invocations")).unwrap(), b"call\n");
+    let capture = dir.join("recipe-author");
+    assert_eq!(
+        fs::read(capture.join("authority-preflight-stdout.log")).unwrap(),
+        b"partial read\n"
+    );
+    assert_eq!(
+        fs::read(capture.join("authority-preflight-stderr.log")).unwrap(),
+        b"table_query: Request timed out\n"
+    );
+    assert_eq!(result.stdout, b"partial read\n");
+    assert_eq!(result.stderr, b"table_query: Request timed out\n");
+    assert!(!capture.join("authority-preflight.json").exists());
+    fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
 fn frozen_runtime_preserves_module_bindings_and_refuses_implicit_imports() {
     let (dir, _) = loop_fixture();
     let recipe: Value =
