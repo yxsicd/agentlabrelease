@@ -225,3 +225,9 @@ original request bytes before inference; reviewed children cannot reopen this
 lane. This transports operator findings, not automatic semantic review or proof
 that the successor fixed them.
 See the [design feedback checkpoint](../../docs/flywheel-design-feedback-20261003.md).
+For exact design-review successors, use `source_recipe_design_review.v2` with
+explicit checkChanges and scenarioChanges arrays (empty means preserve all).
+Every edit binds exact before/after records to an existing source-bound finding.
+The authoring gate, final stage, approval and portable diagnostic reader reconsume
+the original review; legacy v1 remains prose-only and cannot establish preservation.
+Equal frozen records still do not prove correct verifier execution or Oracle truth.

@@ -120,6 +120,12 @@ fn prepare_selected(
     let request: Value = serde_json::from_slice(&originals[0]).map_err(|e| e.to_string())?;
     let proposal: Value = serde_json::from_slice(&originals[1]).map_err(|e| e.to_string())?;
     let design: Value = serde_json::from_slice(&originals[2]).map_err(|e| e.to_string())?;
+    crate::maintainer_source_recipe_author::check_staged_design_review(
+        stage,
+        &receipt,
+        &originals[0],
+        &originals[2],
+    )?;
     if receipt.get("diagnosticRepairPacketSha256").is_some()
         || stage.join("diagnostic-repair.json").exists()
     {
@@ -400,6 +406,12 @@ pub fn reconstruct_suite(stage: &Path, suite: &Path) -> Result<Value, String> {
     let design: Value = serde_json::from_slice(&originals[2]).map_err(|e| e.to_string())?;
     let proposal: Value = serde_json::from_slice(&originals[1]).map_err(|e| e.to_string())?;
     let author_request: Value = serde_json::from_slice(&originals[0]).map_err(|e| e.to_string())?;
+    crate::maintainer_source_recipe_author::check_staged_design_review(
+        stage,
+        &receipt,
+        &originals[0],
+        &originals[2],
+    )?;
     let runtime = std::str::from_utf8(&originals[3]).map_err(|e| e.to_string())?;
     let manifest: Value = serde_json::from_str(
         runtime

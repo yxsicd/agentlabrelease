@@ -458,6 +458,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
+    if args
+        .iter()
+        .any(|a| a == "--validate-source-design-review-output")
+    {
+        let receipt =
+            agentlab_code_analysis::maintainer_source_recipe_author::check_design_review_output(
+                &fs::read(value(&args, "--author-request")?)?,
+                &fs::read(value(&args, "--parent-design")?)?,
+                &fs::read(value(&args, "--review-feedback")?)?,
+                &fs::read(value(&args, "--design")?)?,
+            )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&receipt)?)?;
+        println!("{}", serde_json::to_string(&receipt)?);
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--validate-source-design-review") {
         let receipt = agentlab_code_analysis::maintainer_source_recipe_author::design_review(
             &fs::read(value(&args, "--author-request")?)?,
@@ -575,7 +594,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.iter().any(|a| a == "--stage-source-recipe-proposal") {
         let request = fs::read(value(&args, "--author-request")?)?;
         let proposal = fs::read(value(&args, "--proposal")?)?;
-        let receipt = if let Some(path) = optional(&args, "--diagnostic-repair") {
+        let parent = optional(&args, "--parent-design");
+        let review = optional(&args, "--design-review-feedback");
+        if parent.is_some() != review.is_some() {
+            return Err("design review requires paired parent and feedback".into());
+        }
+        let receipt = if let (Some(parent), Some(review)) = (parent, review) {
+            if optional(&args, "--diagnostic-repair").is_some()
+                || optional(&args, "--revision-request").is_some()
+            {
+                return Err("design review cannot mix repair or proposal revision".into());
+            }
+            let intent = optional(&args, "--diagnostic-loop-intent")
+                .map(fs::read)
+                .transpose()?;
+            agentlab_code_analysis::maintainer_source_recipe_author::stage_with_design_review(
+                &request,
+                &proposal,
+                &fs::read(value(&args, "--design")?)?,
+                &fs::read(parent)?,
+                &fs::read(review)?,
+                intent.as_deref(),
+                &output,
+            )?
+        } else if let Some(path) = optional(&args, "--diagnostic-repair") {
             if optional(&args, "--revision-request").is_some() {
                 return Err("review revision cannot mix automatic repair".into());
             }

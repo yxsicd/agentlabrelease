@@ -63,7 +63,7 @@ on:
         required: false
         type: string
       revision_feedback:
-        description: Exact review JSON; source_recipe_design_review.v1 for design correction, or proposal review v3 with explicit check/scenario changes; never approval
+        description: Exact review JSON; design_review.v2 protects checks/scenarios (legacy v1 is prose-only), or proposal review v3; never approval
         default: ''
         required: false
         type: string
@@ -130,7 +130,7 @@ jobs:
               assert run.isascii() and run.isdigit() and 0<len(run)<=20 and int(run)>0
               assert len(feedback.encode())<=16384
               assert isinstance(json.loads(feedback),dict)
-              if json.loads(feedback).get('schema')=='agentlab.source_recipe_design_review.v1':
+              if json.loads(feedback).get('schema') in ('agentlab.source_recipe_design_review.v1','agentlab.source_recipe_design_review.v2'):
                   assert os.environ['CONSTRUCTION_DESIGN_FIRST']=='true','Design review requires design-first'
           PY
       - name: Exact live knowledge admission before model budget
@@ -192,7 +192,7 @@ jobs:
           assert not (parent/'agent/revision-request.json').exists(),'Only one revision from an original construction is supported'
           review=output/'review-feedback.json'
           with review.open('x') as f:f.write(os.environ['REVISION_FEEDBACK'])
-          if json.loads(review.read_bytes()).get('schema')=='agentlab.source_recipe_design_review.v1':
+          if json.loads(review.read_bytes()).get('schema') in ('agentlab.source_recipe_design_review.v1','agentlab.source_recipe_design_review.v2'):
               subprocess.run(['python3','scripts/prepare-source-design-review.py',
                   '--gate','target/release/agentlab-maintainer-skill-flywheel',
                   '--request',str(output/'request.json'),'--parent',str(parent),

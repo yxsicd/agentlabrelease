@@ -69,7 +69,7 @@ def require_pi_retry_policy(state, workspace, expected):
 
 
 def construct_design(participant, workspace, evidence, output, request, gate, prompt, effort, revisions,
-                     retry_policy=None, revision_request=None):
+                     retry_policy=None, revision_request=None, design_review=None):
     if type(revisions) is not int or not 0 <= revisions <= 2:
         raise ValueError('Design revision budget must be 0..2')
     attempts = []
@@ -103,6 +103,12 @@ def construct_design(participant, workspace, evidence, output, request, gate, pr
             error = str(failure)
         if error is None:
             commands = []
+            if design_review is not None:
+                parent, review = design_review
+                commands.append(('review', [str(gate.resolve()), '--validate-source-design-review-output',
+                    '--author-request', str(request.resolve()), '--parent-design', str(parent.resolve()),
+                    '--review-feedback', str(review.resolve()), '--design', str(path.resolve()),
+                    '--output', str((output/f'design-review-output-{index}.json').resolve())]))
             if revision_request is not None:
                 commands.append(('parent', [str(gate.resolve()), '--validate-source-recipe-revision-output',
                     '--author-request', str(request.resolve()), '--revision-request', str(revision_request.resolve()),
@@ -531,6 +537,8 @@ SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
                 design_prompt += 'Preserve original check IDs, pointers and expected values except exact v2/v3 checkChanges entries authorized by review. Prose findings alone do not authorize check changes.\n'
                 if 'parentProposal' in revision_context and 'parentDesign' in revision_context:
                     design_prompt += 'Preserve the parent schema and complete scenario records, including initial state, ordered inputs, dependency sequences and expected observations, except exact v3 scenarioChanges authorized by review. Prose alone is not authorization.\n'
+                if revision_context['review'].get('schema') == 'agentlab.source_recipe_design_review.v2':
+                    design_prompt += 'Preserve all parent checks and complete ordered scenarios except exact checkChanges/scenarioChanges before/after/findingId entries. Prose findings alone authorize neither.\n'
             if args.frozen_design:
                 design_path = args.output / 'design.json'
                 design_content = design_path.read_text()
@@ -538,7 +546,9 @@ SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
                 design_path, design_content = construct_design(participant, workspace, evidence,
                     args.output, args.request, args.gate, design_prompt,
                     None if args.reasoning_effort == 'default' else args.reasoning_effort, args.design_revisions,
-                    retry_policy=retry_policy, revision_request=args.revision_request)
+                    retry_policy=retry_policy, revision_request=args.revision_request,
+                    design_review=((args.output/'parent-design.json', args.output/'design-review-feedback.json')
+                                   if args.parent_design else None))
                 # Pi must retain the design session before code may reuse its
                 # original source context. Participant.turn independently checks
                 # the session identity/append-only bytes before and after dispatch.
@@ -638,6 +648,9 @@ exports and require are reserved. The helper is not a sandbox or oracle approval
         command += ['--design', str(design_path.resolve())]
     if args.revision_request:
         command += ['--revision-request', str(args.revision_request.resolve())]
+    if args.parent_design:
+        command += ['--parent-design', str((args.output/'parent-design.json').resolve()),
+                    '--design-review-feedback', str((args.output/'design-review-feedback.json').resolve())]
     if args.diagnostic_repair:
         command += ['--diagnostic-repair', str(args.diagnostic_repair.resolve())]
     if args.diagnostic_loop_intent:
