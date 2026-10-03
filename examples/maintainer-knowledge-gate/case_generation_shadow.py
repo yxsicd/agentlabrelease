@@ -503,8 +503,14 @@ def run_agent_inner(args) -> None:
         if target == "harmony-emulator" else
         "The complete functional Oracle must use the pinned repository's test runner in a controlled host or container, without external hardware or physical-device fallback; name the required runner and environment in requiredEnvironment."
     )
+    source_instruction = (
+        "Use the primary semantic fact and the successor's explicitly bound owner scopes. "
+        "Use only loaded constructor source paths for context and explicitly selected edit paths for changes."
+        if successor else
+        f"Use only scope {scope['id']} and semantic fact {fact['id']}. Use only paths present in the fact evidence."
+    )
     prompt = f"""You are constructing one shadow evaluation-case hypothesis, not assessing an Agent.
-Read shadow-request.json and the exact read-only source/ checkout. Use only scope {scope['id']} and semantic fact {fact['id']}.
+Read shadow-request.json and the exact read-only source/ checkout. {source_instruction}
 Write exactly one JSON object to shadow-case-proposal.json. Do not modify source/ or the request.
 
 The object must have exactly these fields:
@@ -517,14 +523,15 @@ The object must have exactly these fields:
 - status: shadow-proposal
 - automaticPromotion: false
 
-Give at least two observables and two meaningful wrong variants. {environment_instruction} Validate every field type against the exact shape above, and parse the completed JSON once before finishing. The Oracle remains operator-owned: do not include a gold patch, claim build/runtime success, or claim approval. Use only paths present in the fact evidence. Prefer a mechanism supported by the semantic interpretation rather than a generic build task.
+Give at least two observables and two meaningful wrong variants. {environment_instruction} Validate every field type against the exact shape above, and parse the completed JSON once before finishing. The Oracle remains operator-owned: do not include a gold patch, claim build/runtime success, or claim approval. Prefer a mechanism supported by the semantic interpretation rather than a generic build task.
+Keep source build-target/compatible SDK, installed build tools, and observed runtime-image versions as distinct axes. Do not require identical versions without an explicit task constraint or compatibility evidence. Likewise, do not invent a signing requirement from a packaging convention: identify the required install policy and retain unsupported signing or installation as a gap, not as a proven prerequisite. Inspect loaded lifecycle entrypoints and initialization/error branches before claiming state initialization is absent. Distinguish missing construction context from missing source behavior, and source-established initialization from runtime readiness or deterministic failure reproduction.
 An existing test name, done() callback, or successful runner exit is not a behavior assertion. If proposing reuse of an existing test, inspect its actual assertions and error branches at the pinned source; if the necessary test source is not in fact evidence, record that knowledge gap instead of inventing support. Require independently controlled success/failure checks before runtime calibration. A swallowed failure is an Oracle defect, while an unsupported adapter, timeout, or build fault is infrastructure failure, never a killed wrong variant. Define each wrong variant as one meaningful semantic change; do not assume a cosmetic rename is invalid. Record these as unresolved qualification requirements, not completed experiments.
 The required framework is a proposed test contract, not evidence that the repository already contains that test harness. Missing entrypoints are construction gaps, not permission to select an incompatible runner. Distinguish mutations to an old instance's fields from effects on a freshly constructed instance; source assignment alone does not prove a resource leak, runtime cleanup, or causal discrimination. Staged demands must describe one evolving implementation task rather than independent baseline smoke-test descriptions.
 """
     if revision is not None:
         prompt += "\nRevise the retained proposal rather than sampling an unrelated task. Address every finding, preserving request identity and unqualified status. Review is not an approved Oracle. Original rejected proposal bytes:\n" + bound["parentProposalUtf8"] + "\nExact source-review feedback:\n" + bound["reviewUtf8"]
     if successor:
-        prompt += "\nConstruct an additive successor of the retained parent, not an unrelated sample. The earlier selected-scope-only path instructions are replaced for this successor by these exact boundaries: scopeSkillIds must equal " + json.dumps(request["candidateScopeSkillIds"]) + ". editablePaths may use only successorConstruction.editBoundary.edits paths, including explicitly selected create paths; contextPaths may use only loaded constructor source paths and must remain disjoint. All source is still read-only during hypothesis construction. Inspect the bound ownerKnowledge and preserve its limitations; no build, runtime or calibration proof is inherited. Address every review finding. Exact parent proposal:\n" + successor["parentProposalUtf8"] + "\nExact review:\n" + successor["reviewUtf8"]
+        prompt += "\nConstruct an additive successor of the retained parent, not an unrelated sample. scopeSkillIds must equal " + json.dumps(request["candidateScopeSkillIds"]) + ". editablePaths may use only successorConstruction.editBoundary.edits paths, including explicitly selected create paths; contextPaths may use only loaded constructor source paths and must remain disjoint. All source is still read-only during hypothesis construction. Inspect the bound ownerKnowledge and preserve its limitations; no build, runtime or calibration proof is inherited. Address every review finding. Exact parent proposal:\n" + successor["parentProposalUtf8"] + "\nExact review:\n" + successor["reviewUtf8"]
     try:
         participant.turn("shadow-case-constructor", workspace, prompt=prompt,
                          wall_time_limit_seconds=720, transport_retry_limit=0)

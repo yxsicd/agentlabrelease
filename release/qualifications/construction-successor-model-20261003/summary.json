@@ -1,0 +1,24 @@
+{
+  "schema": "agentlab.construction_successor_model_observation.v1",
+  "methodRevision": "7d4aa1796a2d36f0becfd726ed9d7d35383cc711",
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "requestSha256": "5c81999a235fedbf7e60a3c37ab2246e3841fc8c1b127d25b60aa7d38e74e730",
+  "proposalSha256": "3c37a913fd3f7df63e92142f864575bae73e4dc3b466b204376ca451159af2b3",
+  "lifecycleSha256": "779938940dcb7655bfef2bbba1eff23316bb27f9497284bde7b2259da6d7a141",
+  "independentRuntimeValidationSha256": "fdc52785382c00f6b77bd8f2acebfa05db90893fbdf73cc7b3d644704fae9d83",
+  "execution": {"exitCode": 0, "durationMs": 187199, "completedToolCalls": 19, "completeGatewayExchanges": 20},
+  "runtimeIsolation": {"filesystem": true, "externalCredential": true, "networkEgress": true},
+  "review": {
+    "verdict": "revision-required",
+    "correctionsObserved": ["HAR is distinct from installable host/test HAPs", "Source SDK API 23/24 replaces unsupported API 12 assumption", "Existing template is not dialog behavior coverage", "Cross-scope host/test edit ownership is explicit"],
+    "remainingGaps": ["Build SDK and runtime image versions are conflated", "Mandatory signed packaging lacks evidence", "Loaded context omitted the existing UI_CONTEXT initialization chain", "Host route/import integration is unresolved", "Behavior checks and semantic wrong controls have not executed"]
+  },
+  "formalCaseQualified": false,
+  "targetSourceModified": false,
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "completeAutomaticBusinessLoops": 0,
+  "overallMaturityEstimatePercent": 69,
+  "maturityChangeBasis": "Real captured construction and independent isolation validation are now observed; no calibrated behavioral case or accepted feedback loop is established.",
+  "verificationBoundary": "Public receipt summary only. Original controlled captures remain in the operator archive. Shape validity and participant completion do not qualify source feasibility, behavioral discrimination or full-loop benefit."
+}

@@ -71,6 +71,16 @@ After refreshing the supporting facts, create separate successor inputs and
 calibrate the actual host/test combination. Keep a passing proposal-shape check
 separate from this source review and from baseline/wrong-variant execution.
 
+During construction, separate source build/compatible SDK, installed build tools
+and observed runtime-image versions; require equality only when the task or
+compatibility evidence establishes it. Packaging conventions do not establish a
+mandatory signing policy. Inspect the selected lifecycle initialization and
+error branches before declaring state seeding absent. If that source was omitted
+from the input, replenish the context rather than converting the omission into
+a repository defect. Source-established initialization still does not prove
+runtime readiness or a deterministic missing-state test. Retain those remaining
+gaps and verify them through the actual behavioral executor.
+
 For a rejected, unpublished operation-origin draft, prepare
 `--prepare-shadow-case-revision` with the committed knowledge, operation inputs,
 current shadow request, original parent request/proposal and source-review feedback.
