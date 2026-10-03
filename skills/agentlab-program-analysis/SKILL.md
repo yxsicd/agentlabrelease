@@ -123,6 +123,15 @@ JSON object with an invalid proposal contract goes to the existing native gate,
 not this format loop. Frozen seam call records expose arguments, not return
 values: absent record fields cannot establish undefined source behavior.
 
+Use the optimized native producer for operational construction and calibration,
+not a debug executable by default. Full-cut reassessment and repeated executable
+hashing can dominate the fixed native-gate deadline. Compare retained input,
+design-validation and helper digests when measuring build-profile changes; do not
+skip identity checks, cache an unbound verdict or restart a completed Agent to
+recover a static-stage timeout. Keep original timeout evidence and recover only
+the same frozen output with a fresh native-stage destination. Faster gates do
+not certify behavioral benefit or an automatic end-to-end recovery.
+
 Separate modification ownership from read-only source context. A construction
 Oracle may inspect a path outside its editable responsibility only when the
 candidate explicitly lists it as context, a bound fact cites its exact Blob,
