@@ -184,6 +184,15 @@ unique row coverage. Do not use presentation-redacted responses for exact row
 comparison: replacing a profile name can also alter legitimate code identifiers.
 See the [binding checkpoint](../../docs/flywheel-committed-export-binding-20261003.md).
 
+Give every concurrent readback its own capture identity, reserved before dispatch;
+do not name evidence from a shared latest-request counter after response arrival.
+Serializing complete paged queries is a valid bounded transport alternative.
+Retain terminal pre-write failures and verify dispatch state before a successor.
+After admission, export the verified committed cut for consumers: an older Release
+snapshot can fail fixed-cut preflight even when the live knowledge commit passed.
+See the [real knowledge-admission checkpoint](../../docs/flywheel-rating-knowledge-admission-20261003.md);
+its selected packet is not proof of actual next-round consumption or benefit.
+
 Review scenario consumption as well as scenario preservation. Trace each initial
 state, ordered action/input and dependency outcome to its execution point in the
 verifier. An equivalent explicitly bound adapter is acceptable, but a second

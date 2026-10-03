@@ -1,0 +1,79 @@
+{
+  "agentConsumptionVerified": false,
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "guidance": [
+    {
+      "applicabilityReason": "Reviewed selection for a subsequent calibration-authoring task exercising RatingDescriptor.convert at this exact source cut: preserve original field initialization, consume frozen scenario attributes, and expose explicit decorator/dependency seams. This is not permission to reuse old captures, alter task scoring, apply calibration guidance to unrelated semantic analysis, or claim Harmony qualification or learning benefit.",
+      "bodySha256": "8347e5c5344a9c78e2249a33b5cb05bab66566bd690afdaf3b11d6a8ca3272ac",
+      "facts": [
+        {
+          "id": "fact-rating-convert-source-seam-37147845918",
+          "qualification": {
+            "boundary": "reviewed interpretation of independently reconstructed source-suite controls",
+            "caseQualified": false,
+            "harmonyBuildQualified": false,
+            "harmonyRuntimeQualified": false,
+            "learningBenefitVerified": false,
+            "producerAuthenticated": false,
+            "reviewerAuthenticated": false,
+            "uiQualified": false
+          },
+          "rowSha256": "618c9afe3910d26f4b07fb5e3bae1f1a7631728e6e8af48334aee3e337cc38ae"
+        }
+      ],
+      "rowSha256": "a868813ab6635123f3ccfa04aa19bc03ed919efd871004a65522d55831d282ad",
+      "skill": {
+        "assetClass": "reusable-knowledge",
+        "automaticPromotion": false,
+        "body": "Calibrate RatingDescriptor.convert against the exact frozen source under declared controlled defaults and an identity Observed decorator. Construct a fresh instance for each scenario and assert rating=0, indicator=false, stars=5, stepSize=0.5 and starStyle=false from actual own fields before convert. Read attributes from scenarioInputs, not a duplicated action list. Observe actual post-call fields and undefined return; encode actual NaN as a disclosed tagged value. Retain passing behavior-preserving variants, wrong rating assignment, wrong indicator comparison and wrong stars assignment with exact failure sets and reference recovery. This evidence qualifies only the four tested source-seam scenarios, not real decorators, parent/mapping implementations, framework rendering, Harmony build/runtime or a formal Agent case. The real automatic verifier repair fixed a missing global without changing the design; it does not establish guidance benefit, automatic knowledge return or cross-repository generalization.",
+        "factIds": [
+          "fact-rating-convert-source-seam-37147845918"
+        ],
+        "id": "skill-rating-convert-calibration-37147845918",
+        "lessonSource": {
+          "lessonFileDigest": "5085fdaadfd87e4eae3ecab6dff6999272822c0060c916f684551514478d143d",
+          "lessonId": "lesson-rating-convert-source-seam-37147845918",
+          "repository": "agentlabsourcesuite-37147845918",
+          "revision": "9dbe415dbfc44acedeed3b639a661c60149ac9b3",
+          "tablePrefix": "assets/observations/source-suite/"
+        },
+        "methodDigest": "5a71f2018cc28ff4bab37b0fe260a947cb4f3f285ad9e386ebbe61d6de7160f0",
+        "methodRevision": "daf5b25471cee89240864ad5ad63e2a5c4df3fca",
+        "methodSkillId": "agentlab-experiment-learning",
+        "objectId": "lesson-rating-convert-source-seam-37147845918",
+        "ownershipPlane": "target-operations",
+        "repositoryId": "code-workshop",
+        "role": "maintenance",
+        "skillLayer": "method",
+        "sourceLessonExportDigest": "5085fdaadfd87e4eae3ecab6dff6999272822c0060c916f684551514478d143d",
+        "sourceLessonId": "lesson-rating-convert-source-seam-37147845918",
+        "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+        "stage": "calibration",
+        "title": "The first generated verifier lacked the Observed global and exited before checks. One native-bound automatic repair added an explicit identity decorator and preserved the complete request, design and contract. Independent execution then matched fourteen checks across seven controls plus reference recovery."
+      }
+    }
+  ],
+  "knowledgeAuthority": {
+    "exportedBy": {
+      "kind": "operator-native-admission",
+      "repository": "yxsicd/agentlabrelease",
+      "runId": "rating-source-suite-reviewed-admission-20261003-v2"
+    },
+    "repo": "agentlabtablegit",
+    "revision": "b5a07f1b120555eb0a44a659b802f809ac45761e"
+  },
+  "knowledgeCutSha256": "9b76c003ed009bf2fdeb915f0d99b4a656b44cd2dc496c4d7016b95e2333eaa2",
+  "learningBenefitVerified": false,
+  "remoteCommitAuthenticated": false,
+  "reviewerAuthenticated": false,
+  "schema": "agentlab.maintainer_guidance_packet.v1",
+  "selectionSha256": "096546e13f851659d3dcbab980d35f73d69cec3a8e03fd5f8577818685d7ef47",
+  "sources": [
+    {
+      "repositoryId": "code-workshop",
+      "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+    }
+  ],
+  "stage": "calibration"
+}
