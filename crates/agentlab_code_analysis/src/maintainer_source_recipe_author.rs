@@ -1171,6 +1171,60 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
     )
 }
 
+/// Bind mechanical verifier interfaces to an independently validated design.
+/// This supplies no expected observations and grants no execution or approval.
+pub fn verifier_interface(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String> {
+    design(request_bytes, design_bytes)?;
+    let request: Value = serde_json::from_slice(request_bytes).map_err(|e| e.to_string())?;
+    let plan: Value = serde_json::from_slice(design_bytes).map_err(|e| e.to_string())?;
+    let loaded: BTreeSet<_> = request["sourceFiles"]
+        .as_array()
+        .ok_or("verifier interface source inventory")?
+        .iter()
+        .filter(|file| file["content"].is_string())
+        .map(|file| text(file, "path").map(str::to_owned))
+        .collect::<Result<_, _>>()?;
+    let dependencies = request["policy"]["methodDependencies"]
+        .as_array()
+        .ok_or("verifier interface method dependencies")?
+        .len();
+    let pointer = |key: &str| format!("/{}", key.replace('~', "~0").replace('/', "~1"));
+    let scenarios: Vec<_> = plan["scenarios"].as_array().unwrap().iter().map(|scenario| {
+        let mut pointers = vec![String::new()];
+        pointers.extend(scenario["initialState"].as_object().unwrap().keys().map(|key| pointer(key)));
+        json!({"id":scenario["id"],"initialStateTopLevelPointers":pointers,
+            "inputTopLevelPointers":scenario["inputs"].as_object().unwrap().keys().map(|key|pointer(key)).collect::<Vec<_>>()})
+    }).collect();
+    let result = json!({
+        "schema":"agentlab.source_verifier_interface.v1",
+        "requestSha256":digest(request_bytes),"designSha256":digest(design_bytes),
+        "runtimeSourceSha256":digest(include_bytes!("source_design_runtime.cjs")),
+        "scopeSkillId":request["scope"]["id"],
+        "allowedLoadedSourcePaths":loaded,
+        "sourcePathSelection":"only loaded paths actually read; import seams do not load implementation files",
+        "invocation":{"sourceRootArgvIndex":2,"controlIdArgvIndex":3,
+            "runtimeArgvIndex":4+dependencies,"methodDependencyArgvStart":4,
+            "compilerInvocationRequired":dependencies>0},
+        "runtime":{"controlTransformationOwner":"operator-frozen-runtime",
+            "sourceReturns":"already transformed source; do not reapply edits",
+            "loadModuleReturns":"CommonJS exports; explicitly construct exported classes",
+            "initialStatePointerBase":"scenario.initialState, not scenarioInputs packet",
+            "initialStateObservation":"actual source state; mismatch must stop before tested operation",
+            "initialStatePointerInventory":"root and top-level only; nested RFC6901 pointers remain supported"},
+        "scenarios":scenarios,
+        "semanticQualified":false,"executionPerformed":false,
+        "automaticPromotion":false,"authorityWritePerformed":false
+    });
+    need(
+        serde_json::to_vec(&result)
+            .map_err(|e| e.to_string())?
+            .len()
+            <= 64 * 1024,
+        "verifier interface packet budget",
+    )?;
+    Ok(result)
+}
+
 fn check_design_proposal(
     request_bytes: &[u8],
     proposal_bytes: &[u8],

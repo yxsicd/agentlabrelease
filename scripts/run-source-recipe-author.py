@@ -400,6 +400,11 @@ def main():
     context = {key: request[key] for key in (
         'scope', 'source', 'sourceFiles', 'semanticFacts', 'selectedGap')}
     dependency_count = len(request['policy']['methodDependencies'])
+    transformation_policy = (
+        'The operator frozen runtime selects and applies every control transformation. '
+        'Your verifier reads/executes that transformed body without applying edits itself.'
+        if args.design_first or args.frozen_design else
+        'Preserve baseline behavior; transform source only in memory for the declared reference/wrong controls.')
     prompt = f'''You are a source-maintenance verifier construction Agent, not an assessed Agent.
 Create a meaningful bounded maintenance exercise for this selected operation gap.
 Choose one source-grounded invariant and return its compact verifier immediately;
@@ -461,8 +466,7 @@ compiler. Execute actual source bodies with controlled external seams as needed;
 retain state/events so stdout is one JSON object with independent observations.
 Never execute child processes, network requests, or any filesystem writes/deletes,
 including temporary compiler output. Compile and evaluate entirely in memory.
-Preserve baseline
-behavior, transform source only in memory for the declared reference/wrong controls.
+{transformation_policy}
 The operator will inspect semantics and execution policy before running any code.
 Your output is unreviewed; generation is neither qualification nor authority admission.
 SOURCE CONTEXT:
@@ -578,7 +582,18 @@ SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
                     json.dump(receipt, stream)
                 print(json.dumps(receipt))
                 return
-            prompt += '\nFROZEN DESIGN (use exact edits, scenarios and shared contract):\n' + design_content
+            interface_path = args.output / 'verifier-interface.json'
+            interface = subprocess.run([str(args.gate.resolve()),
+                '--prepare-source-verifier-interface', '--author-request', str(args.request.resolve()),
+                '--design', str(design_path.resolve()), '--output', str(interface_path.resolve())],
+                capture_output=True, timeout=60)
+            (evidence/'verifier-interface-stdout.log').write_bytes(interface.stdout)
+            (evidence/'verifier-interface-stderr.log').write_bytes(interface.stderr)
+            interface.check_returncode()
+            interface_content = interface_path.read_text()
+            prompt += ('\nFROZEN VERIFIER INTERFACE (operator data, not semantic approval), SHA256='
+                + hashlib.sha256(interface_path.read_bytes()).hexdigest() + ':\n' + interface_content)
+            prompt += '\nFROZEN DESIGN (operator runtime applies exact edits; verifier consumes scenarios and shared contract):\n' + design_content
             prompt += '\nPreserve check/control IDs, roles and expected failure sets exactly. '
             runtime_initialization = (
                 'const runtime=createRuntime.fromCompilerInvocation(process.argv);\n'

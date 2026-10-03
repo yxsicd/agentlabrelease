@@ -87,6 +87,13 @@ Its pointer is relative to initialState (for example /fields, not
 instantiate the source-exported class explicitly before observing fields or calls.
 Keep proposal sourcePaths limited to loaded implementation bodies; binding an
 import specifier to a controlled seam does not load that dependency's source.
+Before verifier generation, use the Rust-produced source_verifier_interface.v1
+packet bound to the exact request and validated design. It enumerates allowed
+loaded paths, argument positions and initial-state-relative top-level pointers;
+nested pointers remain supported. Preserve its bytes in generation evidence.
+In design-first/frozen-design mode, transformation belongs only to the operator
+runtime; do not carry legacy self-transformation instructions into that mode.
+This packet is interface data, not proof of model compliance or semantic truth.
 
 Use the constructor's `--design-first --design-only` mode when a new behavior
 surface needs independent semantic review before verifier generation. The retained
