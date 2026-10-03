@@ -1455,6 +1455,55 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
             {"id":"wrong","role":"wrong","expectedFailedCheckIds":["value"],"edits":[{"path":"src/state.json","before":body,"after":"{\"value\":0}"}]}]});
     let design_bytes = serde_json::to_vec(&design).unwrap();
     let checked = author::design(&request_bytes, &design_bytes).unwrap();
+    // A real constructor repeated abbreviated scenario pointers after receiving
+    // only a generic mismatch. Diagnose the exact rejected field without repair.
+    let mut missing_pointer = design.clone();
+    missing_pointer["scenarios"][0]["id"] = json!("state-long-name");
+    let error = author::design(
+        &request_bytes,
+        &serde_json::to_vec(&missing_pointer).unwrap(),
+    )
+    .unwrap_err();
+    assert!(error.contains("/checks/0/pointer"));
+    assert!(error.contains("/state/value") && error.contains("state-long-name"));
+    assert!(error.contains("does not resolve"));
+    missing_pointer["checks"][0]["pointer"] = json!("/state-long-name/value");
+    assert!(author::design(
+        &request_bytes,
+        &serde_json::to_vec(&missing_pointer).unwrap()
+    )
+    .is_ok());
+    let mut mismatched_value = design.clone();
+    mismatched_value["checks"][0]["expected"] = json!(2);
+    let error = author::design(
+        &request_bytes,
+        &serde_json::to_vec(&mismatched_value).unwrap(),
+    )
+    .unwrap_err();
+    assert!(error.contains("/checks/0/expected"));
+    assert!(error.contains("check expected 2") && error.contains("declares 1"));
+    mismatched_value["scenarios"][0]["expectedObservations"]["value"] = json!("界".repeat(1000));
+    let error = author::design(
+        &request_bytes,
+        &serde_json::to_vec(&mismatched_value).unwrap(),
+    )
+    .unwrap_err();
+    assert!(error.contains("[truncated]") && error.len() < 2000);
+    let mut escaped = design.clone();
+    escaped["scenarios"][0]["expectedObservations"] = json!({"a/b~c":1});
+    escaped["checks"][0]["pointer"] = json!("/state/a~1b~0c");
+    assert!(author::design(&request_bytes, &serde_json::to_vec(&escaped).unwrap()).is_ok());
+    // Null is a present value, unlike an unresolved pointer.
+    let mut nullable = design.clone();
+    nullable["scenarios"][0]["expectedObservations"]["value"] = Value::Null;
+    nullable["checks"][0]["expected"] = Value::Null;
+    assert!(author::design(&request_bytes, &serde_json::to_vec(&nullable).unwrap()).is_ok());
+    nullable["scenarios"][0]["expectedObservations"] = json!({});
+    assert!(
+        author::design(&request_bytes, &serde_json::to_vec(&nullable).unwrap())
+            .unwrap_err()
+            .contains("does not resolve")
+    );
     // Control IDs share the executor grammar; scenario/check identifiers do not.
     for id in [
         "".to_owned(),

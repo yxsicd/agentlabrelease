@@ -149,6 +149,11 @@ See the [prompt transport checkpoint](../../docs/flywheel-prompt-transport-20261
 For bounded design correction, return the failing scenario's JSON pointer and
 the exact required shape, not only a generic contract label. A real constructor
 repeated an empty named seam after one correction despite initial schema guidance.
+Distinguish an unresolved check pointer from a mismatched expected value. Report
+the check index, exact pointer and available scenario IDs: a constructor kept
+abbreviated IDs after generic feedback and changed business expectations instead.
+For resolved mismatches, show bounded declared values without silently correcting
+either side or treating internal consistency as semantic truth.
 Distinguish controlled external dependency outcomes from the tested method and
 its expected observations: no external dependencies may use an empty seam
 inventory, but a declared dependency needs its frozen outcome sequence. Keep

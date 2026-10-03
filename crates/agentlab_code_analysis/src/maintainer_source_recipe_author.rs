@@ -947,16 +947,34 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
         .filter(|a| !a.is_empty() && a.len() <= 64)
         .ok_or("recipe design check budget")?;
     let mut check_ids = BTreeSet::new();
-    for check in checks {
+    let diagnostic_value = |value: &Value| {
+        let rendered = value.to_string();
+        if rendered.chars().count() > 256 {
+            format!(
+                "{}...[truncated]",
+                rendered.chars().take(256).collect::<String>()
+            )
+        } else {
+            rendered
+        }
+    };
+    for (check_index, check) in checks.iter().enumerate() {
         need(
             check.as_object().is_some_and(|o| o.len() == 3)
                 && check_ids.insert(text(check, "id")?)
-                && check.get("expected").is_some()
-                && expected
-                    .pointer(text(check, "pointer")?)
-                    .is_some_and(|v| v == &check["expected"]),
-            "recipe design checks differ from scenario observations",
+                && check.get("expected").is_some(),
+            &format!("recipe design check fields at /checks/{check_index}: required exactly unique id, pointer and expected"),
         )?;
+        let pointer = text(check, "pointer")?;
+        let actual = expected.pointer(pointer).ok_or_else(|| {
+            format!("recipe design check pointer at /checks/{check_index}/pointer: check {} pointer {} does not resolve into scenario expectedObservations; available scenario IDs {}; use exact scenario IDs, not abbreviations. This is a pointer failure, not permission to change expected values.",
+                diagnostic_value(&check["id"]), diagnostic_value(&check["pointer"]),
+                serde_json::to_string(&expected.as_object().unwrap().keys().collect::<Vec<_>>()).unwrap())
+        })?;
+        need(actual == &check["expected"], &format!(
+            "recipe design check expected at /checks/{check_index}/expected: check {} pointer {} has check expected {} but scenario expectedObservations declares {}; retain originals and review consistency, not semantic approval",
+            diagnostic_value(&check["id"]), diagnostic_value(&check["pointer"]),
+            diagnostic_value(&check["expected"]), diagnostic_value(actual)))?;
     }
     let files = request["sourceFiles"]
         .as_array()
