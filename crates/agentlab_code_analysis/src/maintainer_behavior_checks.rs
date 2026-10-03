@@ -16,6 +16,7 @@ pub fn lesson_assets(
         contract_bytes,
         capture_bytes,
         Some(review_bytes),
+        None,
     )
 }
 
@@ -26,7 +27,27 @@ pub fn observation_assets(
     contract_bytes: &[u8],
     capture_bytes: &[u8],
 ) -> Result<BTreeMap<String, BTreeMap<String, Value>>, String> {
-    assets(candidate_bytes, contract_bytes, capture_bytes, None)
+    assets(candidate_bytes, contract_bytes, capture_bytes, None, None)
+}
+
+/// Preserve a committed projection's declared analyzer identity while the
+/// CURRENT checker recomputes every semantic result. Admission must compare
+/// all reconstructed rows and retain its current validator identity separately.
+pub(crate) fn lesson_assets_for_projection(
+    candidate: &[u8],
+    contract: &[u8],
+    capture: &[u8],
+    review: &[u8],
+    consumer: &str,
+) -> Result<BTreeMap<String, BTreeMap<String, Value>>, String> {
+    require(
+        consumer.len() == 64
+            && consumer
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
+        "behavior historical projection identity invalid",
+    )?;
+    assets(candidate, contract, capture, Some(review), Some(consumer))
 }
 
 /// A fresh, portable operational export; no review or authority mutation.
@@ -57,6 +78,7 @@ fn assets(
     contract_bytes: &[u8],
     capture_bytes: &[u8],
     reviewed: Option<&[u8]>,
+    projection_consumer: Option<&str>,
 ) -> Result<BTreeMap<String, BTreeMap<String, Value>>, String> {
     let review_bytes = reviewed.unwrap_or(b"null");
     require(
@@ -138,7 +160,8 @@ fn assets(
         )?;
     }
     let controls = feedback["controls"].as_array().unwrap();
-    let consumer = digest(include_bytes!("maintainer_behavior_checks.rs"));
+    let current_consumer = digest(include_bytes!("maintainer_behavior_checks.rs"));
+    let consumer = projection_consumer.unwrap_or(&current_consumer);
     let run = format!(
         "behavior-{}",
         digest(

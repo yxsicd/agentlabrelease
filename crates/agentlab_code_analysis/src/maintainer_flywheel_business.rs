@@ -89,8 +89,10 @@ fn knowledge(state: &Value) -> Result<(PathBuf, Value, Value), String> {
     )?;
     let cut: Value = serde_json::from_slice(&cut_bytes).map_err(|e| e.to_string())?;
     need(
-        cut["automaticPromotion"] == false,
-        "business knowledge automatic promotion forbidden",
+        cut["schema"] == "agentlab.maintainer_knowledge_cut.v1"
+            && cut["automaticPromotion"] == false
+            && cut.get("staging").is_none(),
+        "business requires committed knowledge without automatic promotion",
     )?;
     need(
         cut["sourceSetSha256"] == digest(&read(&base.join("source-set.txt"))?),
@@ -100,7 +102,49 @@ fn knowledge(state: &Value) -> Result<(PathBuf, Value, Value), String> {
         state["knowledge"]["revision"] == cut["tableGitAuthority"]["revision"],
         "business knowledge revision differs",
     )?;
-    let packet = maintainer_guidance::bind(&base, &bound(&state["guidanceSelection"])?)?;
+    let packet = if state["guidanceMode"] == "reviewed-bootstrap" {
+        need(
+            state["bootstrapReview"]["reviewed"] == true
+                && state["bootstrapReview"]["knowledgeCutSha256"] == digest(&cut_bytes)
+                && state.get("guidanceSelection").is_none(),
+            "business bootstrap requires exact review and no declared guidance",
+        )?;
+        need(
+            cut["repositories"].as_array().is_some_and(|repos| {
+                repos.iter().any(|r| {
+                    r["id"] == state["repositoryId"] && r["revision"] == state["sourceRevision"]
+                })
+            }),
+            "business bootstrap source absent from knowledge cut",
+        )?;
+        for (key, table) in [
+            ("maintainerSkills", "maintainer_skills"),
+            ("maintainerScopeSkills", "maintainer_scope_skills"),
+            ("programFacts", "program_facts"),
+            (
+                "maintainerSkillRefreshRounds",
+                "maintainer_skill_refresh_rounds",
+            ),
+            ("evaluationCases", "evaluation_cases"),
+        ] {
+            let name = format!("{table}.jsonl");
+            need(
+                cut["tables"][key]
+                    == json!({"path":name,"sha256":digest(&read(&base.join(&name))?)}),
+                "business bootstrap table binding differs",
+            )?;
+        }
+        json!({"schema":"agentlab.maintainer_guidance_packet.v1","guidance":[],"bootstrap":true,
+            "knowledgeCutSha256":digest(&cut_bytes),"knowledgeAuthority":cut["tableGitAuthority"],
+            "sources":[{"repositoryId":state["repositoryId"],"sourceRevision":state["sourceRevision"]}],
+            "automaticPromotion":false,"agentConsumptionVerified":false})
+    } else {
+        need(
+            state.get("guidanceMode").is_none() || state["guidanceMode"] == "selected",
+            "business guidance mode unsupported",
+        )?;
+        maintainer_guidance::bind(&base, &bound(&state["guidanceSelection"])?)?
+    };
     need(
         packet["sources"]
             == json!([{"repositoryId":state["repositoryId"],"sourceRevision":state["sourceRevision"]}]),
@@ -442,14 +486,55 @@ fn evaluate(
             }
             // The existing gate reconstructs original raw evidence and typed
             // tables. Staging does not write or authenticate remote authority.
-            let staged = maintainer_lesson_admission::stage(
+            let method_source = admission.get("methodSource").map(bound).transpose()?;
+            let staged = maintainer_lesson_admission::stage_with_method(
                 &base,
                 &proposal,
                 &source,
                 text(admission, "lessonId")?,
                 text(&state["knowledge"], "revision")?,
                 &out.join("staged-admission"),
+                method_source.as_deref(),
             )?;
+            if let Some(returned) = admission.get("committedReturn") {
+                need(
+                    returned["reviewed"] == true,
+                    "business knowledge return requires review",
+                )?;
+                let next_base = absolute(&returned["knowledge"], "directory")?;
+                let verification = crate::maintainer_lesson_return::verify(
+                    &out.join("staged-admission"),
+                    &source,
+                    &next_base,
+                    &bound(&returned["readback"])?,
+                );
+                let verification = verification?;
+                let mut next_state = state.clone();
+                next_state["knowledge"] = returned["knowledge"].clone();
+                next_state["guidanceSelection"] = returned["guidanceSelection"].clone();
+                next_state["guidanceMode"] = json!("selected");
+                next_state
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("bootstrapReview");
+                let (_, _, next_packet) = knowledge(&next_state)?;
+                // Force an explicit applicable selection of the newly admitted
+                // lesson, not merely a new cut hash with unchanged guidance.
+                let added = load_admitted_skill(&out.join("staged-admission"))?;
+                need(
+                    next_packet["guidance"]
+                        .as_array()
+                        .is_some_and(|rows| rows.iter().any(|r| r["skill"]["id"] == added)),
+                    "business returned guidance omits admitted lesson",
+                )?;
+                return Ok((
+                    "completed",
+                    json!({"schema":"agentlab.flywheel_committed_lesson_return.v1",
+                    "stage":staged,"verification":verification,"nextKnowledge":returned["knowledge"],
+                    "nextGuidanceSelection":returned["guidanceSelection"],"guidanceBoundForNextRound":true,
+                    "authorityWritePerformed":false,"formalCaseQualified":false,"qualified":false}),
+                ));
+            }
             Ok((
                 "review-required",
                 json!({"schema":"agentlab.flywheel_lesson_staging.v1","stage":staged,
@@ -458,6 +543,12 @@ fn evaluate(
         }
         _ => Err("business stage unsupported".into()),
     }
+}
+
+fn load_admitted_skill(stage: &Path) -> Result<Value, String> {
+    let plan: Value = serde_json::from_slice(&read(&stage.join("lesson-admission-plan.json"))?)
+        .map_err(|e| e.to_string())?;
+    Ok(plan["tables"]["maintainer_skills"]["key"].clone())
 }
 
 /// Run within the coordinator's already-created stage directory. Business gate
@@ -496,6 +587,35 @@ pub fn run(request_bytes: &[u8], output: &Path) -> Result<Value, String> {
         ),
     };
     let report_bytes = save(&out.join("report.json"), &report)?;
+    if stage == "evidence-return"
+        && status == "completed"
+        && report["schema"] == "agentlab.flywheel_committed_lesson_return.v1"
+    {
+        state["knowledge"] = report["nextKnowledge"].clone();
+        state["guidanceSelection"] = report["nextGuidanceSelection"].clone();
+        state["guidanceMode"] = json!("selected");
+        state
+            .as_object_mut()
+            .ok_or("business state invalid")?
+            .remove("bootstrapReview");
+        state["priorRoundEvidence"] = state["stageEvidence"].clone();
+        // Old executable inputs are not next-round work. Reusing them would
+        // repeat the same task and let an old admission masquerade as a loop.
+        for key in [
+            "stageEvidence",
+            "operationExecution",
+            "operationCapture",
+            "behaviorExecution",
+            "lessonAdmission",
+            "observationPersistence",
+            "candidateId",
+        ] {
+            state
+                .as_object_mut()
+                .ok_or("business state invalid")?
+                .remove(key);
+        }
+    }
     if state.get("stageEvidence").is_none() {
         state["stageEvidence"] = json!({});
     }
@@ -698,16 +818,37 @@ pub fn prepare(
         "business preparation paths must be absolute",
     )?;
     let selection_bytes = read(selection)?;
-    let packet = maintainer_guidance::bind(base, &selection_bytes)?;
+    let selected: Value = serde_json::from_slice(&selection_bytes).map_err(|e| e.to_string())?;
+    let bootstrap = selected["schema"] == "agentlab.flywheel_bootstrap_selection.v1";
+    let cut_bytes = read(&base.join("maintainer-knowledge-cut.json"))?;
+    let cut: Value = serde_json::from_slice(&cut_bytes).map_err(|e| e.to_string())?;
+    let packet = if bootstrap {
+        need(
+            selected["reviewed"] == true
+                && selected["automaticPromotion"] == false
+                && selected["knowledgeCutSha256"] == digest(&cut_bytes)
+                && selected["knowledgeRevision"] == cut["tableGitAuthority"]["revision"]
+                && selected.get("skills").is_none(),
+            "business bootstrap selection invalid",
+        )?;
+        json!({"sources":selected["sources"],"knowledgeAuthority":cut["tableGitAuthority"]})
+    } else {
+        maintainer_guidance::bind(base, &selection_bytes)?
+    };
     let sources = packet["sources"]
         .as_array()
         .filter(|a| a.len() == 1)
         .ok_or("business adapter requires one explicitly selected source")?;
-    let cut_bytes = read(&base.join("maintainer-knowledge-cut.json"))?;
     let mut state = json!({"schema":"agentlab.flywheel_business_state.v1","automaticPromotion":false,
         "repositoryId":sources[0]["repositoryId"],"sourceRevision":sources[0]["sourceRevision"],
         "knowledge":{"directory":base,"cutSha256":digest(&cut_bytes),"revision":packet["knowledgeAuthority"]["revision"]},
         "guidanceSelection":{"path":selection,"sha256":digest(&selection_bytes)}});
+    if bootstrap {
+        state.as_object_mut().unwrap().remove("guidanceSelection");
+        state["guidanceMode"] = json!("reviewed-bootstrap");
+        state["bootstrapReview"] = json!({"reviewed":true,"knowledgeCutSha256":digest(&cut_bytes),
+            "selection":{"path":selection,"sha256":digest(&selection_bytes)}});
+    }
     knowledge(&state)?;
     let mut immutable = Vec::new();
     for file in [

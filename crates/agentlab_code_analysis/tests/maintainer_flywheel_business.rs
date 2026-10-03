@@ -48,6 +48,56 @@ fn selected(directory: &Path) -> (PathBuf, PathBuf) {
     (knowledge, selection)
 }
 #[test]
+fn reviewed_bootstrap_starts_a_repository_without_borrowing_another_repository_lesson() {
+    let directory = temp();
+    let knowledge = root().join("examples/maintainer-knowledge-gate/first-four");
+    let bytes = fs::read(knowledge.join("maintainer-knowledge-cut.json")).unwrap();
+    let cut: Value = serde_json::from_slice(&bytes).unwrap();
+    let source = cut["repositories"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["id"] == "hms-cordova-iap")
+        .unwrap();
+    let selection = directory.join("bootstrap.json");
+    let mut request = json!({"schema":"agentlab.flywheel_bootstrap_selection.v1","reviewed":true,
+        "automaticPromotion":false,"knowledgeCutSha256":digest(&bytes),"knowledgeRevision":cut["tableGitAuthority"]["revision"],
+        "sources":[{"repositoryId":source["id"],"sourceRevision":source["revision"]}]});
+    fs::write(&selection, serde_json::to_vec(&request).unwrap()).unwrap();
+    let prepared = prepare(
+        &knowledge,
+        &selection,
+        Path::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel")),
+        true,
+        &directory.join("prepared"),
+    )
+    .unwrap();
+    let recipe = fs::read(prepared["recipePath"].as_str().unwrap()).unwrap();
+    let result = maintainer_flywheel_cycles::execute(&recipe, &directory.join("capture")).unwrap();
+    assert_eq!(result["completedRounds"], 0);
+    assert_eq!(result["status"], "review-required");
+    let report: Value = serde_json::from_slice(
+        &fs::read(directory.join("capture/round-0-repository-understanding/business/report.json"))
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(report["guidancePacket"]["bootstrap"], true);
+    assert_eq!(report["guidancePacket"]["guidance"], json!([]));
+    request["reviewed"] = json!(false);
+    fs::write(&selection, serde_json::to_vec(&request).unwrap()).unwrap();
+    assert!(prepare(
+        &knowledge,
+        &selection,
+        Path::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel")),
+        true,
+        &directory.join("unreviewed")
+    )
+    .is_err());
+    assert!(!directory.join("unreviewed").exists());
+    fs::remove_dir_all(directory).unwrap();
+}
+
+#[test]
 fn published_cut_runs_real_business_gates_and_preserves_missing_operation_boundary() {
     let directory = temp();
     let (knowledge, selection) = selected(&directory);
