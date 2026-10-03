@@ -176,6 +176,18 @@ dependency or input validity. Reject an interpretation that claims both without
 evidence. Keep rejected original suites intact and use a reviewed successor for
 design/verifier correction, not retrospective edits or invented accept records.
 
+Constructor-state verification is not field initialization: compare actual source
+state with the declared initial state and enforce that verdict before actions.
+Overwriting fields to expected defaults, or computing an unused match flag, can
+hide an invalid constructor/import adapter. Check every imported value actually
+constructed by loaded source, not only the default-key constant.
+When correction must preserve full parent scenarios, use the exact scenario-change
+admission rather than the legacy design-review lane's prose alone. A real child
+kept every check/control while changing initial state and observations. Retain that
+rejection without reopening its exhausted allowance. See the
+[durable evidence checkpoint](../../docs/flywheel-durable-source-evidence-20261003.md)
+for the separate completed archival and failed correction boundaries.
+
 Before admission, require nonempty passing validations belonging to the selected
 lesson, and reject target identities already present in the baseline. Existing
 guidance updates need a separate reviewed delta, never implicit replacement by
