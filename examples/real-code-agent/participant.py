@@ -2,6 +2,7 @@
 import http.server
 import base64
 import concurrent.futures
+import contextlib
 import hashlib
 import json
 import os
@@ -325,7 +326,8 @@ class Participant:
                   'The independent operator compiles and evaluates the actual files afterwards. '
                   'Briefly describe your change when done.')
         if requirement: prompt += '\nAdditional requirement: '+requirement
-        (self.evidence / f'{label}-prompt.txt').write_text(prompt)
+        prompt_path = self.evidence / f'{label}-prompt.txt'
+        prompt_path.write_text(prompt)
         runtime_config = os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG')
         # Pi migrates *.jsonl directly under PI_CODING_AGENT_DIR on startup.
         # A second invocation of that old path would silently create a new session.
@@ -355,6 +357,11 @@ class Participant:
             if wall_time_limit_seconds is not None:
                 command += ['--wall-time-limit-seconds',str(wall_time_limit_seconds)]
             command.append(prompt)
+        # Linux limits each argv string independently of the total ARG_MAX.
+        # Pinned Pi accepts piped input; keep large source context off argv.
+        prompt_stdin = self.implementation == 'pi' and len(prompt.encode('utf-8')) > 65536
+        if prompt_stdin:
+            command.pop()
         # Only the operator-side proxy has the external credential.
         env = {k: os.environ[k] for k in ('PATH', 'LANG', 'LC_ALL', 'TMPDIR') if k in os.environ}
         env.update(HOME=str(self.state.parent), PI_CODING_AGENT_DIR=str(self.state))
@@ -377,6 +384,11 @@ class Participant:
                      'providerReasoningEffort': self.active_reasoning_effort,
                      'transportRetryLimit': transport_retry_limit,
                      'requireCompletedToolCall': require_completed_tool_call}
+        lifecycle['promptTransport'] = {
+            'kind': 'stdin-file' if prompt_stdin else 'argv',
+            'bytes': len(prompt.encode('utf-8')),
+            'sha256': hashlib.sha256(prompt.encode('utf-8')).hexdigest(),
+        }
         if self.implementation == 'pi':
             lifecycle['sessionContinuity'] = dict(sessionIdBefore=session_id_before,
                 inputBytes=len(session_before), inputSha256=hashlib.sha256(session_before).hexdigest(),
@@ -393,6 +405,8 @@ class Participant:
         turn_result = None
         try:
             run_options = {}
+            if prompt_stdin:
+                run_options['stdin_path'] = prompt_path
             if wall_time_limit_seconds is not None:
                 run_options['timeout_seconds'] = max(420, wall_time_limit_seconds + 60)
                 lifecycle['supervisorTimeoutSeconds'] = run_options['timeout_seconds']
@@ -472,7 +486,7 @@ class Participant:
         return turn_result
 
     def _run_turn(self, command, project, env, label, lifecycle, timeout_seconds=420,
-                  tool_call_limit=None, require_completed_tool_call=True):
+                  tool_call_limit=None, require_completed_tool_call=True, stdin_path=None):
         lifecycle['participantBudgetSeconds'] = timeout_seconds
         lifecycle['participantBudgetScope'] = 'native-process-watchdog'
         def terminate(process):
@@ -485,10 +499,12 @@ class Participant:
                 process.wait()
 
         events_path = self.evidence / f'{label}-events.jsonl'
-        with (self.evidence / f'{label}-events.jsonl').open('wb') as out, \
+        with contextlib.ExitStack() as streams, \
+             (self.evidence / f'{label}-events.jsonl').open('wb') as out, \
              (self.evidence / f'{label}-stderr.log').open('wb') as err:
+            stdin = streams.enter_context(Path(stdin_path).open('rb')) if stdin_path else subprocess.DEVNULL
             process = subprocess.Popen(command, cwd=project, env=env, stdout=out, stderr=err,
-                                       stdin=subprocess.DEVNULL, start_new_session=True)
+                                       stdin=stdin, start_new_session=True)
             deadline = time.monotonic() + timeout_seconds
             while True:
                 started_tools = 0

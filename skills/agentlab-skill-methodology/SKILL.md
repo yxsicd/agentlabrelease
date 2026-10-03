@@ -135,3 +135,13 @@ and another a monolithic runtime. Measure representative byte volumes. Prefer
 optimizing the hashing dependency over weakening identity checks, caching by
 metadata, skipping negative controls or blindly extending deadlines. Preserve
 known-digest and changed-byte regressions; local timing is not cloud acceptance.
+
+For source-rich authoring, distinguish process argument limits from model context
+limits. A pre-launch E2BIG is infrastructure failure, not Agent inability. Preserve
+the complete prompt and use a supported file/stdin transport rather than trimming
+source to make dispatch pass. Verify exact UTF-8 bytes through the actual launcher
+and container stdin path; bind the original prompt digest in lifecycle evidence.
+Pinned Pi trims outer stdin whitespace, so verify captured request content before
+claiming exact model consumption. Transport regression and isolation smoke alone
+do not qualify a real construction or completed business round.
+See the [prompt transport checkpoint](../../docs/flywheel-prompt-transport-20261003.md).
