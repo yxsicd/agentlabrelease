@@ -507,6 +507,96 @@ fn source_suite_import_reconstructs_observations_lessons_and_historical_projecti
 }
 
 #[test]
+fn source_suite_raw_archive_recovers_exact_export_and_rejects_partial_or_changed_chunks() {
+    use agentlab_code_analysis::{
+        maintainer_observation_store as store, maintainer_source_suite_lesson as lesson,
+    };
+    let base = suite_fixture_with_wrong_count(2);
+    let source = base.join("archive-source");
+    lesson::export(&base.join("stage"), &base.join("suite"), None, &source).unwrap();
+    fs::write(source.join("unowned-private-home"), b"must not be archived").unwrap();
+    let descriptor = store::archive_descriptor(&source).unwrap();
+    let encode = |v: &Value| serde_json::to_vec(v).unwrap();
+    let manifest: Value =
+        serde_json::from_slice(&fs::read(source.join("export.json")).unwrap()).unwrap();
+    let mut tables: serde_json::Map<String, Value> = manifest["tables"]
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(|name| {
+            (
+                name.clone(),
+                json!({"revision":"a".repeat(40),"dirty":false,"truncated":false,"rows":[]}),
+            )
+        })
+        .collect();
+    tables.insert(
+        "raw_archive_chunks".into(),
+        json!({"revision":"a".repeat(40),"dirty":false,"truncated":false,"rows":[]}),
+    );
+    let baseline = json!({"schema":"agentlab.observation_store_snapshot.v1","repository":"operation","revision":"a".repeat(40),"tablePrefix":"data/","tables":tables});
+    let dest = json!({"schema":"agentlab.observation_store_destination.v1","reviewed":true,"automaticPromotion":false,"preserveRawFiles":true,"repository":"operation","knowledgeRepository":"knowledge","expectedRevision":"a".repeat(40),"tablePrefix":"data/","transactionId":"a1122026-1003-4a11-8811-221190128101"});
+    let planned = store::plan(&source, &encode(&baseline), &encode(&dest)).unwrap();
+    assert_eq!(planned["source"]["rawArchive"], descriptor["rawArchive"]);
+    assert_eq!(
+        planned,
+        store::plan(&source, &encode(&baseline), &encode(&dest)).unwrap()
+    );
+    let after_tables:serde_json::Map<String,Value>=planned["expectedTables"].as_object().unwrap().iter().map(|(name,rows)|(name.clone(),json!({"revision":"e".repeat(40),"dirty":false,"truncated":false,"rows":rows.as_object().unwrap().iter().map(|(key,row)|json!({"key":key,"row":row})).collect::<Vec<_>>()}))).collect();
+    let after = json!({"schema":"agentlab.observation_store_snapshot.v1","repository":"operation","revision":"e".repeat(40),"tablePrefix":"data/","tables":after_tables});
+    let receipt = json!({"repo":"operation","revision":"e".repeat(40),"previous_revision":"a".repeat(40),"outcome":"applied","conflicts":[]});
+    assert_eq!(
+        store::verify(
+            &source,
+            &encode(&planned),
+            &encode(&receipt),
+            &encode(&after),
+            &encode(&baseline)
+        )
+        .unwrap()["remoteRawBytesPreserved"],
+        true
+    );
+    let out = base.join("recovered-export");
+    let recovery = store::recover(&encode(&planned), &encode(&after), &out).unwrap();
+    assert_eq!(recovery["allFileBytesVerified"], true);
+    for entry in descriptor["rawArchive"]["files"].as_array().unwrap() {
+        let name = entry["path"].as_str().unwrap();
+        assert_eq!(
+            fs::read(source.join(name)).unwrap(),
+            fs::read(out.join(name)).unwrap()
+        );
+    }
+    assert!(!out.join("unowned-private-home").exists());
+    assert_eq!(
+        planned,
+        store::plan(&out, &encode(&baseline), &encode(&dest)).unwrap()
+    );
+    assert!(store::recover(&encode(&planned), &encode(&after), &out).is_err());
+    let mut next = dest.clone();
+    next["expectedRevision"] = receipt["revision"].clone();
+    assert!(store::plan(&out, &encode(&after), &encode(&next)).unwrap()["transaction"].is_null());
+    for mode in ["missing", "changed", "ordinal", "dirty"] {
+        let mut bad = after.clone();
+        match mode {
+            "missing" => {
+                bad["tables"]["raw_archive_chunks"]["rows"]
+                    .as_array_mut()
+                    .unwrap()
+                    .pop();
+            }
+            "changed" => bad["tables"]["raw_archive_chunks"]["rows"][0]["row"]["hex"] = json!("00"),
+            "ordinal" => {
+                bad["tables"]["raw_archive_chunks"]["rows"][0]["row"]["ordinal"] = json!(999)
+            }
+            _ => bad["tables"]["raw_archive_chunks"]["dirty"] = json!(true),
+        }
+        let rejected = base.join(format!("reject-{mode}"));
+        assert!(store::recover(&encode(&planned), &encode(&bad), &rejected).is_err());
+        assert!(!rejected.exists());
+    }
+}
+
+#[test]
 fn source_suite_observation_and_reviewed_lesson_preserve_original_evidence() {
     use agentlab_code_analysis::maintainer_source_suite_lesson as lesson;
     let base = suite_fixture_with_wrong_count(2);

@@ -77,6 +77,7 @@ async function main() {
   const manifest=JSON.parse(fs.readFileSync(path.join(request.sourceDirectory,'export.json')));
   const names=Object.keys(manifest.tables).sort();
   const destination=request.destination;
+  if(destination.preserveRawFiles===true) names.push('raw_archive_chunks');
   async function snapshot(revision) {
     const tables={};
     for(const name of names) tables[name]=await business('read','table.query','table_query',{
@@ -107,6 +108,14 @@ async function main() {
   save('committed.json',await snapshot(receipt.revision));
   const verified=native('--verify-observation-import',['--plan',path.join(root,'plan.json'),'--commit-receipt',path.join(root,'commit-receipt.json'),'--remote-snapshot',path.join(root,'committed.json'),'--baseline-snapshot',path.join(root,'baseline.json')],'verification.json');
   save('result.json',verified);
+  if(destination.preserveRawFiles===true) {
+    assert.equal(sha(fs.readFileSync(request.flywheelTool)),request.flywheelToolSha256);
+    const recovered=spawnSync(request.flywheelTool,['--recover-observation-export','--plan',path.join(root,'plan.json'),'--remote-snapshot',path.join(root,'committed.json'),'--output',path.join(root,'recovered-export')],{encoding:'utf8',timeout:60000,env:{PATH:'/usr/bin:/bin'}});
+    fs.writeFileSync(path.join(root,'recovery.stdout'),recovered.stdout||'',{flag:'wx'});
+    fs.writeFileSync(path.join(root,'recovery.stderr'),recovered.stderr||'',{flag:'wx'});
+    assert.equal(recovered.status,0,'Committed raw export recovery rejected');
+    save('recovery.json',JSON.parse(recovered.stdout));
+  }
   console.log(JSON.stringify(verified));
 }
 main().catch(()=>{console.error('Observation import stopped; retain partial evidence and reconcile any saved transaction intent.');process.exitCode=1;});

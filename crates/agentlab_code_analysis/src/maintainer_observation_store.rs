@@ -5,9 +5,12 @@ use serde_json::{json, Value};
 use std::{
     collections::BTreeMap,
     fs,
+    io::Write,
     path::{Component, Path},
 };
 type Tables = BTreeMap<String, BTreeMap<String, Value>>;
+#[path = "maintainer_observation_archive.rs"]
+mod archive;
 fn need(ok: bool, message: &str) -> Result<(), String> {
     if ok {
         Ok(())
@@ -223,8 +226,23 @@ fn snapshot(
 }
 /// Existing tables only: no provisioning, upserts, deletes or knowledge writes.
 pub fn plan(root: &Path, remote: &[u8], destination: &[u8]) -> Result<Value, String> {
-    let (local, source_binding) = source(root)?;
+    let (mut local, mut source_binding) = source(root)?;
     let destination: Value = serde_json::from_slice(destination).map_err(|e| e.to_string())?;
+    if let Some(selected) = destination.get("preserveRawFiles") {
+        need(
+            selected.is_boolean(),
+            "observation raw preservation selection invalid",
+        )?;
+        if selected == true {
+            need(
+                source_binding["captureKind"] == "source-suite",
+                "raw preservation currently requires reconstructed source suite",
+            )?;
+            let (rows, binding) = archive::prepare(root, &local)?;
+            local.insert("raw_archive_chunks".into(), rows);
+            source_binding["rawArchive"] = binding;
+        }
+    }
     need(
         destination["schema"] == "agentlab.observation_store_destination.v1"
             && destination["reviewed"] == true
@@ -284,6 +302,15 @@ pub fn plan(root: &Path, remote: &[u8], destination: &[u8]) -> Result<Value, Str
             groups.push(json!({"path":format!("{prefix}{name}"),"operations":operations}));
         }
     }
+    if destination["preserveRawFiles"] == true {
+        need(
+            serde_json::to_vec(&groups)
+                .map_err(|e| e.to_string())?
+                .len()
+                <= 1024 * 1024,
+            "observation raw archive single transaction budget exceeded",
+        )?;
+    }
     Ok(
         json!({"schema":"agentlab.observation_store_plan.v1","source":source_binding,"destination":destination,
         "insertedRows":inserted,"expectedTables":expected,"automaticPromotion":false,
@@ -315,7 +342,13 @@ pub fn verify(
         rebuilt == plan,
         "observation plan differs from original baseline reconstruction",
     )?;
-    let (local, binding) = source(root)?;
+    let (mut local, mut binding) = source(root)?;
+    let raw_preserved = plan["destination"]["preserveRawFiles"] == true;
+    if raw_preserved {
+        let (rows, raw_binding) = archive::prepare(root, &local)?;
+        local.insert("raw_archive_chunks".into(), rows);
+        binding["rawArchive"] = raw_binding;
+    }
     need(
         binding == plan["source"],
         "observation source changed after planning",
@@ -350,6 +383,9 @@ pub fn verify(
         observed == expected,
         "observation committed rows differ; prior rows must be preserved",
     )?;
+    if raw_preserved {
+        archive::reconstruct(&binding["rawArchive"], &observed["raw_archive_chunks"])?;
+    }
     if plan["transaction"].is_null() {
         need(
             receipt["revision"] == plan["destination"]["expectedRevision"],
@@ -360,6 +396,81 @@ pub fn verify(
         json!({"schema":"agentlab.observation_store_readback.v1","repository":plan["destination"]["repository"],"revision":receipt["revision"],
         "planSha256":digest(plan_bytes),"allRowsExact":true,"noChange":plan["transaction"].is_null(),"insertedRows":plan["insertedRows"],
         "rowSelection":{"kind":"runId","runId":local["runs"].keys().next()},
-        "remoteRawBytesPreserved":false,"reusableKnowledgeChanged":false,"nextRoundConsumed":false,"qualified":false,"automaticPromotion":false}),
+        "remoteRawBytesPreserved":raw_preserved,"reusableKnowledgeChanged":false,"nextRoundConsumed":false,"qualified":false,"automaticPromotion":false}),
+    )
+}
+
+/// Describe the native-selected archive without exposing file bodies in context.
+pub fn archive_descriptor(root: &Path) -> Result<Value, String> {
+    let (tables, binding) = source(root)?;
+    need(
+        binding["captureKind"] == "source-suite",
+        "raw archive requires reconstructed source suite",
+    )?;
+    let (rows, raw) = archive::prepare(root, &tables)?;
+    Ok(json!({"definition":archive::definition(),"rawArchive":raw,"rowCount":rows.len()}))
+}
+
+/// Restore only validated immutable remote bytes into an exclusively new directory.
+/// This does not authenticate the plan or claim a remote revision was freshly read.
+pub fn recover(plan_bytes: &[u8], remote_bytes: &[u8], out: &Path) -> Result<Value, String> {
+    let plan: Value = serde_json::from_slice(plan_bytes).map_err(|e| e.to_string())?;
+    let remote: Value = serde_json::from_slice(remote_bytes).map_err(|e| e.to_string())?;
+    need(
+        plan["schema"] == "agentlab.observation_store_plan.v1"
+            && plan["destination"]["preserveRawFiles"] == true
+            && plan["automaticPromotion"] == false,
+        "archive recovery plan invalid",
+    )?;
+    let expected: Tables =
+        serde_json::from_value(plan["expectedTables"].clone()).map_err(|e| e.to_string())?;
+    let observed = snapshot(
+        &remote,
+        &plan["destination"]["repository"],
+        &remote["revision"],
+        &plan["destination"]["tablePrefix"],
+        &expected,
+    )?;
+    need(
+        observed == expected,
+        "archive recovery rows differ from planned complete snapshot",
+    )?;
+    let files = archive::reconstruct(
+        &plan["source"]["rawArchive"],
+        observed
+            .get("raw_archive_chunks")
+            .ok_or("archive table absent")?,
+    )?;
+    for parent in out
+        .parent()
+        .ok_or("archive output parent absent")?
+        .ancestors()
+    {
+        if !parent.as_os_str().is_empty() {
+            need(
+                !fs::symlink_metadata(parent)
+                    .map_err(|e| e.to_string())?
+                    .file_type()
+                    .is_symlink(),
+                "archive output parent symlink",
+            )?;
+        }
+    }
+    fs::create_dir(out).map_err(|e| e.to_string())?;
+    for (name, bytes) in &files {
+        let target = out.join(name);
+        fs::create_dir_all(target.parent().unwrap()).map_err(|e| e.to_string())?;
+        std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(target)
+            .map_err(|e| e.to_string())?
+            .write_all(bytes)
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(
+        json!({"schema":"agentlab.observation_export_recovery.v1","repository":remote["repository"],"revision":remote["revision"],
+        "archiveId":plan["source"]["rawArchive"]["archiveId"],"fileCount":files.len(),"allFileBytesVerified":true,
+        "remoteAuthenticated":false,"qualified":false,"automaticPromotion":false}),
     )
 }
