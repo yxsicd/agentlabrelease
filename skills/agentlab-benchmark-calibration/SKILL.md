@@ -323,6 +323,19 @@ before execution, or reconcile the exact existing request-bound capture rather
 than rerunning a successful worker after a lookup failure. Real retained controls
 matched their declarations after two Agent-owned baseline repairs, but used a
 different local Node/architecture; preserve that separate diagnostic environment.
+Before downstream review, use `--validate-source-recipe-control-suite --stage STAGE
+--suite SUITE --output NEW_READBACK` to reconstruct every raw control capture and
+the accepted-reference recovery against the original stage. The scheduler calls
+this native consumer after a complete sequence. It rejects omitted/extra controls,
+borrowed stages, changed raw output and copied recovery records; recorded-byte
+consistency is not producer authentication, semantic approval or knowledge admission.
+A real cloud suite passed baseline and earlier controls, then an exact mutation
+introduced a second switch default clause and stopped before observations.
+Review mutation validity against the complete original body, not only its edited
+fragment. Keep this as invalid-control construction evidence, not an upstream
+defect or a killed wrong implementation. Preserve the partial run and route a
+source-bound design successor through the existing review lane; do not rewrite
+old mutations, failed-check declarations or expectations to make that run pass.
 See [the control diagnostic checkpoint](../../docs/flywheel-control-diagnostics-20261003.md).
 
 Consume `agentlab.harmony_stage_control_calibration.v2` with the Rust
