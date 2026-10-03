@@ -176,3 +176,30 @@ profile construction, source/patch authentication, knowledge admission,
 participant integration or a complete autonomous flywheel. Next, admit an
 explicit successor source/knowledge cut for the new host/test facts, repair
 failure cleanup in a successor test cut and rerun its controls before assessment.
+
+## Construction-binding correction
+
+The preceding proposed source-refresh step was too broad: new test and host
+targets are intentionally absent at the original source revision. Requiring their
+old-source facts creates an unsatisfiable refresh loop. The optional native
+`--bind-construction-paths` gate now reconstructs the original edit packet against
+the clean pinned checkout and knowledge cut, then checks candidate source, packet
+digest, selected editable paths and owners. Existing targets retain source-Blob
+preconditions; created targets retain absence preconditions. Construction binding
+does not change `factEvidenceBound`, semantic readiness or formal qualification.
+
+The ordinary batch supports reviewed profiles under
+`AGENTLAB_CONSTRUCTION_BINDING_ROOT/profiles/<candidateId>.json`, with only schema
+`agentlab.construction_path_binding_profile.v1`, reviewed=true, candidateId and
+absolute sourceWorktree/editBoundary fields. Missing profiles preserve the prior
+route. Supplied invalid profiles fail; no source or packet is inferred.
+
+Controlled `flywheel-construction-binding-NseNZyis/batch1` consumed the retained
+dialog candidate and original packet. Individual assessment cleared five path
+blockers and retained all six qualification blockers. Formal routing and the
+partial native-log consumer completed; scoped work now targets missing controls
+and isolation rather than the impossible source refresh. However, final batch
+summary rejected the isolated projection with `downstream parent absent`.
+No successful batch, authority admission, repeat-batch guard or new runtime
+execution is claimed. Preserve this failed batch rather than inventing parent
+rows or disabling digest-bound lineage. Overall maturity remains **69%**.

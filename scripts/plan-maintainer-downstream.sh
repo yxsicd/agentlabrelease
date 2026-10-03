@@ -21,9 +21,25 @@ while IFS= read -r plan; do
   [[ "$id" =~ ^[A-Za-z0-9_.-]+$ ]] || { echo 'Unsafe candidate id' >&2; exit 1; }
   test ! -e "$output/$id"
   mkdir "$output/$id"
-  python3 examples/maintainer-knowledge-gate/shadow_construction_readiness.py \
-    --knowledge "$knowledge" --candidate-id "$id" --plan "$plan" \
-    --evidence-root "$evidence_root" --output "$output/$id/readiness.json"
+  readiness_command=(python3 examples/maintainer-knowledge-gate/shadow_construction_readiness.py
+    --knowledge "$knowledge" --candidate-id "$id" --plan "$plan"
+    --evidence-root "$evidence_root" --output "$output/$id/readiness.json")
+  # Explicit construction selection, independently reconstructed by the native gate.
+  if [[ -n "${AGENTLAB_CONSTRUCTION_BINDING_ROOT:-}" ]]; then
+    binding_profile="$AGENTLAB_CONSTRUCTION_BINDING_ROOT/profiles/$id.json"
+    if [[ -e "$binding_profile" || -L "$binding_profile" ]]; then
+      test -f "$binding_profile" && test ! -L "$binding_profile"
+      jq -e --arg id "$id" '
+        keys == ["candidateId","editBoundary","reviewed","schema","sourceWorktree"] and
+        .schema == "agentlab.construction_path_binding_profile.v1" and
+        .reviewed == true and .candidateId == $id and
+        (.sourceWorktree | type == "string" and startswith("/")) and
+        (.editBoundary | type == "string" and startswith("/"))' "$binding_profile" >/dev/null
+      readiness_command+=(--source-worktree "$(jq -er .sourceWorktree "$binding_profile")"
+        --edit-boundary "$(jq -er .editBoundary "$binding_profile")" --flywheel-tool "$router")
+    fi
+  fi
+  "${readiness_command[@]}"
   command=("$router" --plan-downstream --readiness "$output/$id/readiness.json" --output "$output/$id/next-actions.json")
   if [[ -n "$previous" && -f "$previous/$id/next-actions.json" ]]; then
     command+=(--previous-plan "$previous/$id/next-actions.json")

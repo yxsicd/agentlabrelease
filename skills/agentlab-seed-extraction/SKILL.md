@@ -164,6 +164,19 @@ profiles retain the normal formal route; never interpret their absence as proof
 that no historical experiment exists. Follow the calibration Skill to consume
 and scope that evidence before spending another diagnostic turn.
 
+Distinguish planned construction targets from source facts. An absent new host or
+test cannot acquire an old-commit Blob through repeated knowledge refresh. When
+the candidate already binds an explicit edit-boundary packet, opt in through
+`AGENTLAB_CONSTRUCTION_BINDING_ROOT/profiles/<candidateId>.json` (schema
+`agentlab.construction_path_binding_profile.v1`, reviewed=true, exact candidateId,
+absolute sourceWorktree and editBoundary). Rust reconstructs the packet against
+the clean pinned source and knowledge cut, verifying selected owners, existing
+anchors and absent create targets. This binds construction inputs only; absent
+targets remain non-facts and Oracle/runtime/calibration gates remain independent.
+Do not move the benchmark baseline to the reference implementation to obtain
+missing source facts. Keep full parent candidate/value-digest lineage in a batch:
+a partial projection may pass individual gates and still fail batch admission.
+
 When replacing an invalid raw knowledge export with a reviewed snapshot, reconcile
 independently retained candidate and generation-round records too. Verify their
 original value digests and parent-round link before restoring them; keep original

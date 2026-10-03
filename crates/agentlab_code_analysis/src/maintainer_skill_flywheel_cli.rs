@@ -98,6 +98,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
+    if args.iter().any(|a| a == "--bind-construction-paths") {
+        let report = agentlab_code_analysis::maintainer_construction_context::bind_candidate_paths(
+            &PathBuf::from(value(&args, "--knowledge")?),
+            &PathBuf::from(value(&args, "--source-worktree")?),
+            &fs::read(value(&args, "--edit-boundary")?)?,
+            &fs::read(value(&args, "--candidate")?)?,
+        )?;
+        OpenOptions::new().write(true).create_new(true).open(output)?
+            .write_all(&serde_json::to_vec_pretty(&report)?)?;
+        println!("{}", serde_json::json!({"schema":report["schema"],"qualified":false}));
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--feedback-partial-calibration") {
         let previous = optional(&args, "--previous-feedback-plan")
             .map(fs::read)

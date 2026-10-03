@@ -1,6 +1,8 @@
 use agentlab_code_analysis::{
     digest,
-    maintainer_construction_context::{prepare, prepare_edit_boundary, validate_edit_boundary},
+    maintainer_construction_context::{
+        bind_candidate_paths, prepare, prepare_edit_boundary, validate_edit_boundary,
+    },
 };
 use serde_json::{json, Value};
 use std::{
@@ -23,6 +25,106 @@ fn edit_selection() -> Value {
         {"path":"pkg/main.rs","anchorPath":"pkg/main.rs","mode":"modify","ownerScopeSkillId":"implementation","reason":"implement the behavior contract"},
         {"path":"pkg/tests/new.rs","anchorPath":"pkg/tests/check.rs","mode":"create","ownerScopeSkillId":"verification","reason":"add independent behavioral checks"}
     ]})
+}
+
+#[test]
+fn candidate_construction_binding_preserves_absence_and_rejects_borrowed_inputs() {
+    let f = Fixture::new();
+    let packet = prepare_edit_boundary(
+        &f.knowledge,
+        &f.source,
+        "arbitrary",
+        &serde_json::to_vec(&edit_selection()).unwrap(),
+    )
+    .unwrap();
+    let bytes = serde_json::to_vec(&packet).unwrap();
+    let candidate = json!({"schema":"agentlab.shadow_case_candidate.v1",
+        "id":"candidate","status":"shadow-proposal","automaticPromotion":false,
+        "repositoryId":"arbitrary","sourceRevision":f.revision,
+        "knowledgeCutSha256":packet["knowledgeCutSha256"],
+        "lineage":{"editBoundarySha256":digest(&bytes)},
+        "scopeSkillIds":["implementation","verification"],
+        "editablePaths":["pkg/main.rs","pkg/tests/new.rs"]});
+    let bind = |c: &Value| {
+        bind_candidate_paths(
+            &f.knowledge,
+            &f.source,
+            &bytes,
+            &serde_json::to_vec(c).unwrap(),
+        )
+    };
+    let result = bind(&candidate).unwrap();
+    assert_eq!(result, bind(&candidate).unwrap());
+    assert_eq!(result["paths"][0]["targetSourceExists"], true);
+    assert_eq!(result["paths"][1]["targetSourceExists"], false);
+    assert_eq!(
+        result["paths"][1]["precondition"]["kind"],
+        "absent-at-source-revision"
+    );
+    for field in [
+        "qualified",
+        "automaticPromotion",
+        "authorityWritePerformed",
+        "grantsEditablePaths",
+        "calibrationInherited",
+    ] {
+        assert_eq!(result[field], false);
+    }
+    for scenario in [
+        "source",
+        "knowledge",
+        "packet",
+        "owner",
+        "unselected",
+        "duplicate",
+    ] {
+        let mut forged = candidate.clone();
+        match scenario {
+            "source" => forged["sourceRevision"] = json!("a".repeat(40)),
+            "knowledge" => forged["knowledgeCutSha256"] = json!("b".repeat(64)),
+            "packet" => forged["lineage"]["editBoundarySha256"] = json!("c".repeat(64)),
+            "owner" => forged["scopeSkillIds"] = json!(["implementation"]),
+            "unselected" => forged["editablePaths"] = json!(["pkg/tests/extra.rs"]),
+            "duplicate" => forged["editablePaths"] = json!(["pkg/main.rs", "pkg/main.rs"]),
+            _ => unreachable!(),
+        }
+        assert!(bind(&forged).is_err(), "{scenario}");
+    }
+    assert!(!f.source.join("pkg/tests/new.rs").exists());
+    assert!(git(&f.source, &["status", "--porcelain"]).is_empty());
+    let packet_path = f.root.join("edit-packet.json");
+    let candidate_path = f.root.join("candidate.json");
+    let output_path = f.root.join("path-binding.json");
+    fs::write(&packet_path, &bytes).unwrap();
+    fs::write(&candidate_path, serde_json::to_vec(&candidate).unwrap()).unwrap();
+    let command = || {
+        Command::new(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .arg("--bind-construction-paths")
+            .arg("--knowledge")
+            .arg(&f.knowledge)
+            .arg("--source-worktree")
+            .arg(&f.source)
+            .arg("--edit-boundary")
+            .arg(&packet_path)
+            .arg("--candidate")
+            .arg(&candidate_path)
+            .arg("--output")
+            .arg(&output_path)
+            .output()
+            .unwrap()
+    };
+    let run = command();
+    assert!(
+        run.status.success(),
+        "{}",
+        String::from_utf8_lossy(&run.stderr)
+    );
+    let retained = fs::read(&output_path).unwrap();
+    assert_eq!(serde_json::from_slice::<Value>(&retained).unwrap(), result);
+    assert!(!command().status.success());
+    assert_eq!(fs::read(&output_path).unwrap(), retained);
+    fs::write(f.source.join("pkg/tests/new.rs"), "obstructed").unwrap();
+    assert!(bind(&candidate).is_err());
 }
 
 #[test]

@@ -223,6 +223,76 @@ pub fn validate_edit_boundary(
         "grantsEditablePaths":false,"formalCaseQualified":false,"automaticPromotion":false}),
     )
 }
+/// Bind planned construction paths without pretending absent targets are source
+/// facts. The original packet is independently reconstructed before use.
+pub fn bind_candidate_paths(
+    base: &Path,
+    source: &Path,
+    packet_bytes: &[u8],
+    candidate_bytes: &[u8],
+) -> Result<Value, String> {
+    need(
+        candidate_bytes.len() <= 1024 * 1024,
+        "path-binding candidate exceeds budget",
+    )?;
+    let validation = validate_edit_boundary(base, source, packet_bytes)?;
+    let packet: Value = serde_json::from_slice(packet_bytes).map_err(|e| e.to_string())?;
+    let candidate: Value = serde_json::from_slice(candidate_bytes).map_err(|e| e.to_string())?;
+    need(
+        candidate["schema"] == "agentlab.shadow_case_candidate.v1"
+            && candidate["automaticPromotion"] == false
+            && candidate["status"] == "shadow-proposal",
+        "path-binding candidate schema/status differs",
+    )?;
+    need(
+        candidate["repositoryId"] == packet["repository"]["id"]
+            && candidate["sourceRevision"] == packet["repository"]["revision"]
+            && candidate["knowledgeCutSha256"] == packet["knowledgeCutSha256"]
+            && candidate["lineage"]["editBoundarySha256"] == digest(packet_bytes),
+        "path-binding candidate source/knowledge/selection differs",
+    )?;
+    let paths = candidate["editablePaths"]
+        .as_array()
+        .ok_or("path-binding editable paths absent")?;
+    need(
+        !paths.is_empty() && paths.len() <= 32,
+        "path-binding editable path count invalid",
+    )?;
+    let owners = candidate["scopeSkillIds"]
+        .as_array()
+        .ok_or("path-binding candidate owners absent")?;
+    let edits = packet["edits"].as_array().unwrap();
+    let mut seen = BTreeSet::new();
+    let mut bindings = Vec::new();
+    for path in paths {
+        let name = path.as_str().ok_or("path-binding editable path invalid")?;
+        need(
+            relative(name) && seen.insert(name),
+            "path-binding path unsafe or duplicate",
+        )?;
+        let edit = edits
+            .iter()
+            .find(|e| e["path"] == *path)
+            .ok_or("path-binding path not selected")?;
+        need(
+            owners.contains(&edit["ownerScopeSkillId"]),
+            "path-binding owner absent from candidate",
+        )?;
+        bindings.push(json!({"path":name,"mode":edit["mode"],"ownerScopeSkillId":edit["ownerScopeSkillId"],
+            "anchorPath":edit["anchorPath"],"anchorGitBlobOid":edit["anchorGitBlobOid"],"precondition":edit["precondition"],
+            "constructionSelectionBound":true,"targetSourceExists":edit["mode"] == "modify"}));
+    }
+    Ok(
+        json!({"schema":"agentlab.case_construction_path_binding.v1",
+        "candidateId":candidate["id"],"candidateSha256":digest(&serde_json::to_vec(&candidate).map_err(|e| e.to_string())?),
+        "sourceRevision":candidate["sourceRevision"],"knowledgeCutSha256":candidate["knowledgeCutSha256"],
+        "editBoundarySha256":digest(packet_bytes),"validation":validation,"paths":bindings,
+        "qualified":false,"automaticPromotion":false,"authorityWritePerformed":false,
+        "grantsEditablePaths":false,"calibrationInherited":false,
+        "boundary":"Source-verified construction selection only. Created targets remain absent source, not facts. No implementation, semantic, build, runtime, calibration or case admission."}),
+    )
+}
+
 fn owns(scope: &Value, path: &str) -> bool {
     let prefix = |boundary: &str| path == boundary || path.starts_with(&format!("{boundary}/"));
     if let Some(selectors) = scope["ownershipSelectors"].as_array() {
