@@ -1,0 +1,33 @@
+{
+  "schema": "agentlab.construction_successor_feedback_observation.v1",
+  "methodRevision": "02857b4c0260b798365578a105a3e843aeec7250",
+  "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6",
+  "requestSha256": "15ba22e7860b03722c98932904e2f29247f66dadf8b243d74f9e71744c1c0efc",
+  "proposalSha256": "55f8e0c0da0ca91a19ba4da019ffbe0d0475b63047c83d6b2d332c5aa322a645",
+  "lifecycleSha256": "ea1b1267db8e0f2f86c8c05dab75d418f3b6529114f105a53004d4db7646c993",
+  "independentRuntimeValidationSha256": "1253a273c06be338a45209ba01bf563786aa51cc9658ddb3ac0b6c6095c668be",
+  "execution": {"exitCode": 0, "durationMs": 252835, "completedToolCalls": 29, "completeGatewayExchanges": 30, "toolErrors": 0, "nativeParseErrors": 0},
+  "proposalShapePassed": true,
+  "runtimeIsolation": {"filesystem": true, "externalCredential": true, "networkEgress": true},
+  "sourceReview": {
+    "correctionsObserved": ["Source-established UI_CONTEXT initialization chain replaces the absence claim", "Exact build-SDK/guest-image equality is no longer invented", "Mandatory signing is replaced by an unqualified installation-policy requirement"],
+    "remainingGaps": ["Host route and library imports need actual integration", "Standard behavioral test is not implemented or executed", "Dismissal and transition probes require independent calibration", "Missing-context setup and cleanup remain unverified"]
+  },
+  "nextIntegrationInputs": {
+    "selectedEditPaths": 7,
+    "editBoundarySha256": "3987bb4af27b4fcb60b808a8b1d1ab0bf61d5d43684ce0c2e963d12842233cb8",
+    "independentEditValidationSha256": "7f5fc530bb549e6f19a43cdfcb52061cc87b76a942baab3a2c968fa4873d088c",
+    "selectedContextFiles": 18,
+    "contextSha256": "31dc0b3881f7e4c4f781be5d80b2feea3dcefae318b8183ff0d03c43257e5f6f",
+    "integrationImplemented": false
+  },
+  "measurementBoundary": "Observed review-target corrections only. Method, context and review changed together, so this is not a causal paired guidance-benefit or speed experiment. Construction took longer than the retained parent (252835 vs 187199 ms).",
+  "formalCaseQualified": false,
+  "targetSourceModified": false,
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "completeAutomaticBusinessLoops": 0,
+  "overallMaturityEstimatePercent": 69,
+  "maturityChangeBasis": "Retained feedback reached a real next constructor and specific source claims improved, but no generated behavioral calibration or automatic business-loop acceptance exists.",
+  "verificationBoundary": "Public summary references exact original operator-held captures. Shape, isolation and source-review results do not qualify runtime behavior, calibrated wrong controls, formal case admission or cross-repository transfer."
+}
