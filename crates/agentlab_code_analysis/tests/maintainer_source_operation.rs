@@ -1469,6 +1469,13 @@ fn authored_recipe_is_gap_selected_unreviewed_and_only_executes_after_exact_revi
     });
     let seam_design_bytes = serde_json::to_vec(&seam_design).unwrap();
     assert!(author::design(&request_bytes, &seam_design_bytes).is_ok());
+    let mut empty_named = seam_design.clone();
+    empty_named["scenarios"][0]["inputs"]["seams"] = json!({"tested-method":{}});
+    let failure =
+        author::design(&request_bytes, &serde_json::to_vec(&empty_named).unwrap()).unwrap_err();
+    assert!(failure.starts_with("recipe design scenario seam fields"));
+    assert!(failure.contains("/scenarios/0/inputs/seams/tested-method"));
+    assert!(failure.contains("inputs.seams={}"));
     for index in 0..8 {
         let mut bad = seam_design.clone();
         match index {

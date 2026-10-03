@@ -145,3 +145,14 @@ Pinned Pi trims outer stdin whitespace, so verify captured request content befor
 claiming exact model consumption. Transport regression and isolation smoke alone
 do not qualify a real construction or completed business round.
 See the [prompt transport checkpoint](../../docs/flywheel-prompt-transport-20261003.md).
+
+For bounded design correction, return the failing scenario's JSON pointer and
+the exact required shape, not only a generic contract label. A real constructor
+repeated an empty named seam after one correction despite initial schema guidance.
+Distinguish controlled external dependency outcomes from the tested method and
+its expected observations: no external dependencies may use an empty seam
+inventory, but a declared dependency needs its frozen outcome sequence. Keep
+rejected originals and unchanged admission rules; do not fill in Agent output
+or move expected results into dependency inputs to obtain a pass. Diagnostic
+regressions establish feedback mechanics, not successful model correction or
+semantic qualification.
