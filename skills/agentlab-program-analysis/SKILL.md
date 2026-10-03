@@ -111,6 +111,15 @@ Do not mix this continuation with design/proposal revision modes. This freezes
 the intended contract, not approval: independently inspect and calibrate generated
 code before execution qualification or knowledge promotion.
 
+For complete constructor responses rejected only by strict JSON parsing, an
+explicit `--proposal-format-revisions 1` permits one same-session protocol
+correction. Preserve every original response and completion receipt. Do not strip
+Markdown fences into an accepted proposal, retry incomplete/truncated transport,
+reset the budget, or treat a repaired format as source-semantic approval. A valid
+JSON object with an invalid proposal contract goes to the existing native gate,
+not this format loop. Frozen seam call records expose arguments, not return
+values: absent record fields cannot establish undefined source behavior.
+
 Separate modification ownership from read-only source context. A construction
 Oracle may inspect a path outside its editable responsibility only when the
 candidate explicitly lists it as context, a bound fact cites its exact Blob,

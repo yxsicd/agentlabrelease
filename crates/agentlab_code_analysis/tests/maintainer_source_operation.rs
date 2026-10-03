@@ -568,6 +568,76 @@ with tempfile.TemporaryDirectory() as d:
 }
 
 #[test]
+fn proposal_format_correction_retains_original_and_stops_on_incomplete_or_drift() {
+    let code = r#"
+import importlib.util, json, os, tempfile
+from pathlib import Path
+spec=importlib.util.spec_from_file_location('author',os.environ['AUTHOR_SCRIPT'])
+module=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+with tempfile.TemporaryDirectory() as d:
+    for name in ['recover','exhaust','incomplete','truncated','drift','semantic']:
+        output=Path(d)/name
+        output.mkdir()
+        workspace=output/'workspace'; workspace.mkdir()
+        evidence=output/'evidence'; evidence.mkdir()
+        policy=module.freeze_pi_retry_policy(output/'participant-state',workspace,evidence)
+        labels=[]; prompts=[]
+        class Participant:
+            def turn(self,label,workspace,**options):
+                labels.append(label); prompts.append(options['prompt'])
+                assert options['transport_retry_limit']==0
+                gateway=evidence/'gateway'; gateway.mkdir(exist_ok=True)
+                complete=name!='incomplete'
+                (gateway/f'{len(labels):04d}.status.json').write_text(json.dumps(dict(
+                    status=200,outcome='completed' if complete else 'incomplete',
+                    semanticComplete=complete,upstreamEof=complete,streamError=None,clientDisconnected=False)))
+                if name=='drift': (output/'participant-state/settings.json').write_text('{}')
+                content='```json\n{"contract":{"checks":[]}}\n```'
+                if len(labels)>1 and name=='recover': content='{"contract":{"checks":[]}}'
+                if name=='semantic': content='{"invalidSchemaButValidJson":true}'
+                return dict(content=content,message={'stopReason':'length' if name=='truncated' else 'stop'})
+        try:
+            result=module.construct_proposal(Participant(),workspace,evidence,output,
+                'frozen initial construction','low',1,policy)
+            assert name in ['recover','semantic']
+            if name=='recover': assert result=={'contract':{'checks':[]}}
+            else: assert result=={'invalidSchemaButValidJson':True}
+        except ValueError:
+            assert name not in ['recover','semantic']
+        expected=2 if name in ['recover','exhaust'] else 1
+        assert len(labels)==expected
+        assert not (output/'proposal.json').exists() and not (output/'proposal-stage').exists()
+        if name not in ['incomplete','truncated']:
+            ledger=json.loads((output/'proposal-attempts.json').read_bytes())
+            assert len(ledger['attempts'])==expected
+            assert ledger['semanticQualified'] is False and ledger['automaticPromotion'] is False
+            if name!='semantic':
+                assert ledger['attempts'][0]['accepted'] is False
+                assert (output/'proposal-attempt-0.txt').read_text().startswith('```json')
+        else: assert not (output/'proposal-attempts.json').exists()
+        if expected==2:
+            assert labels[-1]=='source-recipe-author-format-revision-1'
+            assert 'Preserve' in prompts[-1] and 'format-only' in prompts[-1]
+            assert (evidence/'proposal-0-generation-completion.json').exists()
+            assert (evidence/'proposal-1-generation-completion.json').exists()
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "AUTHOR_SCRIPT",
+            root().join("scripts/run-source-recipe-author.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
 fn source_recipe_rejects_token_truncation_even_after_clean_gateway_eof() {
     let code = r#"
 import importlib.util, json, os, tempfile
