@@ -1,0 +1,4 @@
+code-workshop=https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git@7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6
+guide-snippets=https://gitcode.com/HarmonyOS_Samples/guide-snippets.git@71bbb3916625c8d9a370b7a1989b3a7f82090525
+harmony-iap-client=https://gitcode.com/HarmonyOS_Samples/iapkit-sample-clientdemo-arkts.git@59260e2b0f9663be2d35288f4f339b8ce60ae5a3
+hms-cordova-iap=https://github.com/HMS-Core/hms-cordova-plugin.git@8c51815f27f2cb2dea925a6a25db7f522a6e79b9

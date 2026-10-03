@@ -1,0 +1,23 @@
+{
+  "advancedScopeIds": [],
+  "after": {
+    "maintenanceReadyCount": 6,
+    "programBoundCount": 46,
+    "scopeSkillCount": 489,
+    "semanticReadyCount": 41,
+    "structuralReadyCount": 489
+  },
+  "assessmentSha256": "d81e7f3b0f5509a2dca40fe47a5236eaea67651f245efb85039c9a0af7883139",
+  "before": {
+    "maintenanceReadyCount": 6,
+    "programBoundCount": 46,
+    "scopeSkillCount": 489,
+    "semanticReadyCount": 41,
+    "structuralReadyCount": 489
+  },
+  "beforeAssessmentSha256": "b1f57dbc3fc6a855dba2205fb80b3cc7e16c3f6f42703e91afa30d864d8da1a6",
+  "countsAsMaturityGain": false,
+  "decision": "review-proposed-lesson-knowledge",
+  "schema": "agentlab.maintainer_lesson_stage_result.v1",
+  "strictOperationEvidencePolicy": true
+}

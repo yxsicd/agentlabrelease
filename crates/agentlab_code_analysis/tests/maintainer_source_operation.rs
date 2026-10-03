@@ -23,6 +23,62 @@ fn root() -> PathBuf {
 }
 
 #[test]
+fn source_action_accepts_explicit_checked_in_cuts_and_rejects_path_escape() {
+    let workflow =
+        fs::read_to_string(root().join(".github/workflows/maintainer-source-recipe-author.yml"))
+            .unwrap();
+    let body = workflow
+        .split("      - name: Validate explicit revision input pairing\n")
+        .nth(1)
+        .unwrap()
+        .split("      - name:")
+        .next()
+        .unwrap()
+        .split("        run: |\n")
+        .nth(1)
+        .unwrap();
+    let script = body
+        .lines()
+        .map(|line| line.strip_prefix("          ").unwrap_or(line))
+        .collect::<Vec<_>>()
+        .join("\n");
+    for (directory, accepted) in [
+        ("examples/maintainer-knowledge-gate/first-four", true),
+        (
+            "examples/maintainer-knowledge-gate/cuts/4bba501a1dffbdbeef05b759584fef70b090f292",
+            true,
+        ),
+        ("", false),
+        ("/tmp", false),
+        ("../agentlabrelease", false),
+        (
+            "examples/../examples/maintainer-knowledge-gate/first-four",
+            false,
+        ),
+        ("examples\\maintainer-knowledge-gate", false),
+        ("examples/maintainer-knowledge-gate/missing-cut", false),
+    ] {
+        let result = Command::new("bash")
+            .args(["-e", "-c", &script])
+            .current_dir(root())
+            .env("KNOWLEDGE", directory)
+            .env("REVISION_PARENT_RUN", "")
+            .env("REVISION_FEEDBACK", "")
+            .env("CONSTRUCTION_CODE_REVISIONS", "0")
+            .env("AGENTLAB_SOURCE_GUIDANCE_SELECTION", "")
+            .env("CONSTRUCTION_DESIGN_FIRST", "true")
+            .output()
+            .unwrap();
+        assert_eq!(
+            result.status.success(),
+            accepted,
+            "directory={directory}: {}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+    }
+}
+
+#[test]
 fn source_action_preflight_keeps_failure_bytes_without_admission_or_retry() {
     let workflow =
         fs::read_to_string(root().join(".github/workflows/maintainer-source-recipe-author.yml"))

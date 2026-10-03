@@ -464,6 +464,27 @@ fn published_rating_guidance_rebinds_committed_rows_without_claiming_consumption
 }
 
 #[test]
+fn published_successor_cut_binds_new_lesson_without_rewriting_historical_guidance() {
+    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let knowledge = repo
+        .join("examples/maintainer-knowledge-gate/cuts/4bba501a1dffbdbeef05b759584fef70b090f292");
+    let selection = fs::read(repo.join("examples/maintainer-knowledge-gate/reviewed-guidance/rating-convert-source-recipe-selection-4bba501a.json")).unwrap();
+    let packet = bind(&knowledge, &selection).unwrap();
+    assert_eq!(packet["guidance"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        packet["guidance"][0]["skill"]["id"],
+        "skill-rating-convert-string-corpus-37156735569"
+    );
+    assert_eq!(packet["agentConsumptionVerified"], false);
+    assert_eq!(packet["learningBenefitVerified"], false);
+    assert!(bind(
+        &repo.join("examples/maintainer-knowledge-gate/first-four"),
+        &selection
+    )
+    .is_err());
+}
+
+#[test]
 fn reviewed_real_repair_seed_preserves_original_bytes_and_execution_limits() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../examples/maintainer-knowledge-gate/reviewed-guidance");

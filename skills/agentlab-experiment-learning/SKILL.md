@@ -234,6 +234,11 @@ If a confirmed atomic admission is followed by a readback transport failure,
 retain the commit receipt and recover with writes forbidden at that exact revision.
 Do not replay the writer. Preserve missing portable sidecars as an exporter gap;
 only a separate copy may add the exact inventory bound by the original cut hash.
+When publishing a successor for an existing constructor, verify the workflow can
+select that exact cut rather than assuming its fixed default follows live HEAD.
+Keep historical selections bound to historical snapshots. Pass one explicit
+checked-in directory through preflight, planning, authoring and guidance binding;
+reject path escape and mismatched selections before spending model budget.
 
 Review scenario consumption as well as scenario preservation. Trace each initial
 state, ordered action/input and dependency outcome to its execution point in the

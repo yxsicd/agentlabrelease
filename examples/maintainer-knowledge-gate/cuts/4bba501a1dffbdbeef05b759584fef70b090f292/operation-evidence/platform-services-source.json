@@ -1,0 +1,501 @@
+{
+  "authorityWritePerformed": false,
+  "automaticPromotion": false,
+  "execution": {
+    "authorityWritePerformed": false,
+    "automaticPromotion": false,
+    "beforeAssessmentSha256": "6038430761b4987aa4de3efffe100884a6670e4c2feb410c54c59dd13081a286",
+    "captures": [
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs",
+            "/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source",
+            "baseline",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/opt/homebrew/Cellar/node/26.5.1/bin/node",
+          "programSha256": "32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025",
+          "timeoutMs": 30000
+        },
+        "durationMs": 173,
+        "exitCode": 0,
+        "label": "baseline",
+        "pid": 77141,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "baseline.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 1191,
+          "complete": true,
+          "path": "baseline.stdout",
+          "sha256": "50f3594dcc6b7063ec950bf228c6a3b755c31f089275ef496028726e9f0f90bf"
+        },
+        "termination": "completed"
+      },
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs",
+            "/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source",
+            "strict-enabled-condition",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/opt/homebrew/Cellar/node/26.5.1/bin/node",
+          "programSha256": "32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025",
+          "timeoutMs": 30000
+        },
+        "durationMs": 173,
+        "exitCode": 0,
+        "label": "strict-enabled-condition",
+        "pid": 77171,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "strict-enabled-condition.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 1191,
+          "complete": true,
+          "path": "strict-enabled-condition.stdout",
+          "sha256": "50f3594dcc6b7063ec950bf228c6a3b755c31f089275ef496028726e9f0f90bf"
+        },
+        "termination": "completed"
+      },
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs",
+            "/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source",
+            "explicit-success-promise",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/opt/homebrew/Cellar/node/26.5.1/bin/node",
+          "programSha256": "32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025",
+          "timeoutMs": 30000
+        },
+        "durationMs": 177,
+        "exitCode": 0,
+        "label": "explicit-success-promise",
+        "pid": 77211,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "explicit-success-promise.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 1191,
+          "complete": true,
+          "path": "explicit-success-promise.stdout",
+          "sha256": "50f3594dcc6b7063ec950bf228c6a3b755c31f089275ef496028726e9f0f90bf"
+        },
+        "termination": "completed"
+      },
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs",
+            "/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source",
+            "invert-enabled-branch",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/opt/homebrew/Cellar/node/26.5.1/bin/node",
+          "programSha256": "32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025",
+          "timeoutMs": 30000
+        },
+        "durationMs": 193,
+        "exitCode": 0,
+        "label": "invert-enabled-branch",
+        "pid": 77241,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "invert-enabled-branch.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 1196,
+          "complete": true,
+          "path": "invert-enabled-branch.stdout",
+          "sha256": "43c093bfae2f245cb64641f906b6c1bf43c38879ed46be49e1864283998f6c94"
+        },
+        "termination": "completed"
+      },
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs",
+            "/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source",
+            "treat-request-failure-as-success",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/opt/homebrew/Cellar/node/26.5.1/bin/node",
+          "programSha256": "32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025",
+          "timeoutMs": 30000
+        },
+        "durationMs": 156,
+        "exitCode": 0,
+        "label": "treat-request-failure-as-success",
+        "pid": 77271,
+        "status": "successful",
+        "stderr": {
+          "bytes": 0,
+          "complete": true,
+          "path": "treat-request-failure-as-success.stderr",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 1273,
+          "complete": true,
+          "path": "treat-request-failure-as-success.stdout",
+          "sha256": "965d95aab5fce45e8a974d9dc96f98db9de447be7d4309593bb27988330cd136"
+        },
+        "termination": "completed"
+      }
+    ],
+    "error": null,
+    "qualified": false,
+    "recipeSha256": "41a3170dcb01c6fdd96f0f166c78f52dd1ed13ac73ea1e29b4904e317fe91388",
+    "schema": "agentlab.maintainer_source_operation_execution.v1",
+    "scopeSha256": "d261ad2cdb7ee550313a98deeb4fbf3a57dff2703c501308a2dcb4a96d255196",
+    "scopeSkillId": "skill-scope-code-workshop-common-platform-services",
+    "source": {
+      "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+      "repositoryId": "code-workshop",
+      "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+    },
+    "status": "successful"
+  },
+  "executionOriginal": "{\n  \"authorityWritePerformed\": false,\n  \"automaticPromotion\": false,\n  \"beforeAssessmentSha256\": \"6038430761b4987aa4de3efffe100884a6670e4c2feb410c54c59dd13081a286\",\n  \"captures\": [\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs\",\n          \"/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source\",\n          \"baseline\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/homebrew/Cellar/node/26.5.1/bin/node\",\n        \"programSha256\": \"32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025\",\n        \"timeoutMs\": 30000\n      },\n      \"durationMs\": 173,\n      \"exitCode\": 0,\n      \"label\": \"baseline\",\n      \"pid\": 77141,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"baseline.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 1191,\n        \"complete\": true,\n        \"path\": \"baseline.stdout\",\n        \"sha256\": \"50f3594dcc6b7063ec950bf228c6a3b755c31f089275ef496028726e9f0f90bf\"\n      },\n      \"termination\": \"completed\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs\",\n          \"/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source\",\n          \"strict-enabled-condition\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/homebrew/Cellar/node/26.5.1/bin/node\",\n        \"programSha256\": \"32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025\",\n        \"timeoutMs\": 30000\n      },\n      \"durationMs\": 173,\n      \"exitCode\": 0,\n      \"label\": \"strict-enabled-condition\",\n      \"pid\": 77171,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"strict-enabled-condition.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 1191,\n        \"complete\": true,\n        \"path\": \"strict-enabled-condition.stdout\",\n        \"sha256\": \"50f3594dcc6b7063ec950bf228c6a3b755c31f089275ef496028726e9f0f90bf\"\n      },\n      \"termination\": \"completed\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs\",\n          \"/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source\",\n          \"explicit-success-promise\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/homebrew/Cellar/node/26.5.1/bin/node\",\n        \"programSha256\": \"32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025\",\n        \"timeoutMs\": 30000\n      },\n      \"durationMs\": 177,\n      \"exitCode\": 0,\n      \"label\": \"explicit-success-promise\",\n      \"pid\": 77211,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"explicit-success-promise.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 1191,\n        \"complete\": true,\n        \"path\": \"explicit-success-promise.stdout\",\n        \"sha256\": \"50f3594dcc6b7063ec950bf228c6a3b755c31f089275ef496028726e9f0f90bf\"\n      },\n      \"termination\": \"completed\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs\",\n          \"/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source\",\n          \"invert-enabled-branch\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/homebrew/Cellar/node/26.5.1/bin/node\",\n        \"programSha256\": \"32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025\",\n        \"timeoutMs\": 30000\n      },\n      \"durationMs\": 193,\n      \"exitCode\": 0,\n      \"label\": \"invert-enabled-branch\",\n      \"pid\": 77241,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"invert-enabled-branch.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 1196,\n        \"complete\": true,\n        \"path\": \"invert-enabled-branch.stdout\",\n        \"sha256\": \"43c093bfae2f245cb64641f906b6c1bf43c38879ed46be49e1864283998f6c94\"\n      },\n      \"termination\": \"completed\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs\",\n          \"/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source\",\n          \"treat-request-failure-as-success\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/homebrew/Cellar/node/26.5.1/bin/node\",\n        \"programSha256\": \"32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025\",\n        \"timeoutMs\": 30000\n      },\n      \"durationMs\": 156,\n      \"exitCode\": 0,\n      \"label\": \"treat-request-failure-as-success\",\n      \"pid\": 77271,\n      \"status\": \"successful\",\n      \"stderr\": {\n        \"bytes\": 0,\n        \"complete\": true,\n        \"path\": \"treat-request-failure-as-success.stderr\",\n        \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"stdout\": {\n        \"bytes\": 1273,\n        \"complete\": true,\n        \"path\": \"treat-request-failure-as-success.stdout\",\n        \"sha256\": \"965d95aab5fce45e8a974d9dc96f98db9de447be7d4309593bb27988330cd136\"\n      },\n      \"termination\": \"completed\"\n    }\n  ],\n  \"error\": null,\n  \"qualified\": false,\n  \"recipeSha256\": \"41a3170dcb01c6fdd96f0f166c78f52dd1ed13ac73ea1e29b4904e317fe91388\",\n  \"schema\": \"agentlab.maintainer_source_operation_execution.v1\",\n  \"scopeSha256\": \"d261ad2cdb7ee550313a98deeb4fbf3a57dff2703c501308a2dcb4a96d255196\",\n  \"scopeSkillId\": \"skill-scope-code-workshop-common-platform-services\",\n  \"source\": {\n    \"repository\": \"https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git\",\n    \"repositoryId\": \"code-workshop\",\n    \"revision\": \"7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6\"\n  },\n  \"status\": \"successful\"\n}",
+  "executionReceiptSha256": "ec67a5783bf7e6073d064e6c96cf44a99703fe7edd51224f800d9ab8a84b7ea7",
+  "qualificationScope": {
+    "build": false,
+    "performance": false,
+    "runtime": false,
+    "sourceMaintenance": true,
+    "tests": false
+  },
+  "recipe": {
+    "automaticPromotion": false,
+    "checks": [
+      {
+        "expected": {
+          "calls": [
+            {
+              "args": [],
+              "seam": "notification.isEnabled"
+            },
+            {
+              "args": [],
+              "seam": "push.getToken"
+            },
+            {
+              "args": [
+                {
+                  "pushToken": "token-enabled"
+                }
+              ],
+              "seam": "push.postToken"
+            }
+          ],
+          "forbiddenCalls": [
+            "notification.requestEnable"
+          ],
+          "result": {
+            "kind": "resolve-undefined"
+          }
+        },
+        "id": "check-enabled-upload",
+        "pointer": "/enabled-upload"
+      },
+      {
+        "expected": {
+          "calls": [
+            {
+              "args": [],
+              "seam": "notification.isEnabled"
+            },
+            {
+              "args": [
+                {
+                  "context": "ctx"
+                }
+              ],
+              "seam": "notification.requestEnable"
+            },
+            {
+              "args": [],
+              "seam": "push.getToken"
+            },
+            {
+              "args": [
+                {
+                  "pushToken": "token-requested"
+                }
+              ],
+              "seam": "push.postToken"
+            }
+          ],
+          "forbiddenCalls": [],
+          "result": {
+            "kind": "resolve-undefined"
+          }
+        },
+        "id": "check-request-upload",
+        "pointer": "/request-upload"
+      },
+      {
+        "expected": {
+          "calls": [
+            {
+              "args": [],
+              "seam": "notification.isEnabled"
+            },
+            {
+              "args": [
+                {
+                  "context": "ctx"
+                }
+              ],
+              "seam": "notification.requestEnable"
+            }
+          ],
+          "forbiddenCalls": [
+            "push.getToken",
+            "push.postToken"
+          ],
+          "result": {
+            "kind": "resolve-undefined"
+          }
+        },
+        "id": "check-request-fails",
+        "pointer": "/request-fails"
+      },
+      {
+        "expected": {
+          "calls": [
+            {
+              "args": [],
+              "seam": "notification.isEnabled"
+            }
+          ],
+          "forbiddenCalls": [
+            "notification.requestEnable",
+            "push.getToken",
+            "push.postToken"
+          ],
+          "result": {
+            "kind": "resolve-undefined"
+          }
+        },
+        "id": "check-enabled-check-throws",
+        "pointer": "/enabled-check-throws"
+      },
+      {
+        "expected": {
+          "calls": [
+            {
+              "args": [],
+              "seam": "notification.isEnabled"
+            },
+            {
+              "args": [],
+              "seam": "push.getToken"
+            }
+          ],
+          "forbiddenCalls": [
+            "notification.requestEnable",
+            "push.postToken"
+          ],
+          "result": {
+            "kind": "resolve-undefined"
+          }
+        },
+        "id": "check-token-fails",
+        "pointer": "/token-fails"
+      }
+    ],
+    "controls": [
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs",
+            "/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source",
+            "baseline",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/opt/homebrew/Cellar/node/26.5.1/bin/node",
+          "programSha256": "32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025",
+          "timeoutMs": 30000
+        },
+        "expectedFailedCheckIds": [],
+        "id": "baseline",
+        "role": "baseline"
+      },
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs",
+            "/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source",
+            "strict-enabled-condition",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/opt/homebrew/Cellar/node/26.5.1/bin/node",
+          "programSha256": "32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025",
+          "timeoutMs": 30000
+        },
+        "expectedFailedCheckIds": [],
+        "id": "strict-enabled-condition",
+        "role": "reference"
+      },
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs",
+            "/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source",
+            "explicit-success-promise",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/opt/homebrew/Cellar/node/26.5.1/bin/node",
+          "programSha256": "32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025",
+          "timeoutMs": 30000
+        },
+        "expectedFailedCheckIds": [],
+        "id": "explicit-success-promise",
+        "role": "reference"
+      },
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs",
+            "/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source",
+            "invert-enabled-branch",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/opt/homebrew/Cellar/node/26.5.1/bin/node",
+          "programSha256": "32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025",
+          "timeoutMs": 30000
+        },
+        "expectedFailedCheckIds": [
+          "check-enabled-upload",
+          "check-request-upload",
+          "check-request-fails",
+          "check-enabled-check-throws",
+          "check-token-fails"
+        ],
+        "id": "invert-enabled-branch",
+        "role": "wrong"
+      },
+      {
+        "command": {
+          "args": [
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs",
+            "/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source",
+            "treat-request-failure-as-success",
+            "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+            "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs"
+          ],
+          "cwd": ".",
+          "program": "/opt/homebrew/Cellar/node/26.5.1/bin/node",
+          "programSha256": "32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025",
+          "timeoutMs": 30000
+        },
+        "expectedFailedCheckIds": [
+          "check-request-fails"
+        ],
+        "id": "treat-request-failure-as-success",
+        "role": "wrong"
+      }
+    ],
+    "methodInputs": [
+      {
+        "path": "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs",
+        "sha256": "72f1d6619be1afb4871fd5bc74505137acbbae7741d50b6b93ad23d239039a2c"
+      },
+      {
+        "path": "/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js",
+        "sha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675"
+      },
+      {
+        "path": "/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs",
+        "sha256": "18aaf92c7a6949fe22939147995193cde7d40eb3db130281f511799dc87bce04"
+      }
+    ],
+    "operationKind": "source-only",
+    "reviewed": true,
+    "schema": "agentlab.maintainer_source_operation_recipe.v1",
+    "scopeSkillId": "skill-scope-code-workshop-common-platform-services",
+    "source": {
+      "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+      "repositoryId": "code-workshop",
+      "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+    },
+    "sourceInputs": [
+      {
+        "gitBlobOid": "2fdb138c97d9e0282292c0af3d80ce2b41553a00",
+        "path": "common/src/main/ets/pushservice/PushServiceManager.ets",
+        "sha256": "a0e5ab5f07d94ac2b0181ef19995f38abd0e08550b33445273c6d9047c513e1c"
+      }
+    ]
+  },
+  "recipeOriginal": "{\n  \"automaticPromotion\": false,\n  \"checks\": [\n    {\n      \"expected\": {\n        \"calls\": [\n          {\n            \"args\": [],\n            \"seam\": \"notification.isEnabled\"\n          },\n          {\n            \"args\": [],\n            \"seam\": \"push.getToken\"\n          },\n          {\n            \"args\": [\n              {\n                \"pushToken\": \"token-enabled\"\n              }\n            ],\n            \"seam\": \"push.postToken\"\n          }\n        ],\n        \"forbiddenCalls\": [\n          \"notification.requestEnable\"\n        ],\n        \"result\": {\n          \"kind\": \"resolve-undefined\"\n        }\n      },\n      \"id\": \"check-enabled-upload\",\n      \"pointer\": \"/enabled-upload\"\n    },\n    {\n      \"expected\": {\n        \"calls\": [\n          {\n            \"args\": [],\n            \"seam\": \"notification.isEnabled\"\n          },\n          {\n            \"args\": [\n              {\n                \"context\": \"ctx\"\n              }\n            ],\n            \"seam\": \"notification.requestEnable\"\n          },\n          {\n            \"args\": [],\n            \"seam\": \"push.getToken\"\n          },\n          {\n            \"args\": [\n              {\n                \"pushToken\": \"token-requested\"\n              }\n            ],\n            \"seam\": \"push.postToken\"\n          }\n        ],\n        \"forbiddenCalls\": [],\n        \"result\": {\n          \"kind\": \"resolve-undefined\"\n        }\n      },\n      \"id\": \"check-request-upload\",\n      \"pointer\": \"/request-upload\"\n    },\n    {\n      \"expected\": {\n        \"calls\": [\n          {\n            \"args\": [],\n            \"seam\": \"notification.isEnabled\"\n          },\n          {\n            \"args\": [\n              {\n                \"context\": \"ctx\"\n              }\n            ],\n            \"seam\": \"notification.requestEnable\"\n          }\n        ],\n        \"forbiddenCalls\": [\n          \"push.getToken\",\n          \"push.postToken\"\n        ],\n        \"result\": {\n          \"kind\": \"resolve-undefined\"\n        }\n      },\n      \"id\": \"check-request-fails\",\n      \"pointer\": \"/request-fails\"\n    },\n    {\n      \"expected\": {\n        \"calls\": [\n          {\n            \"args\": [],\n            \"seam\": \"notification.isEnabled\"\n          }\n        ],\n        \"forbiddenCalls\": [\n          \"notification.requestEnable\",\n          \"push.getToken\",\n          \"push.postToken\"\n        ],\n        \"result\": {\n          \"kind\": \"resolve-undefined\"\n        }\n      },\n      \"id\": \"check-enabled-check-throws\",\n      \"pointer\": \"/enabled-check-throws\"\n    },\n    {\n      \"expected\": {\n        \"calls\": [\n          {\n            \"args\": [],\n            \"seam\": \"notification.isEnabled\"\n          },\n          {\n            \"args\": [],\n            \"seam\": \"push.getToken\"\n          }\n        ],\n        \"forbiddenCalls\": [\n          \"notification.requestEnable\",\n          \"push.postToken\"\n        ],\n        \"result\": {\n          \"kind\": \"resolve-undefined\"\n        }\n      },\n      \"id\": \"check-token-fails\",\n      \"pointer\": \"/token-fails\"\n    }\n  ],\n  \"controls\": [\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs\",\n          \"/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source\",\n          \"baseline\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/homebrew/Cellar/node/26.5.1/bin/node\",\n        \"programSha256\": \"32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025\",\n        \"timeoutMs\": 30000\n      },\n      \"expectedFailedCheckIds\": [],\n      \"id\": \"baseline\",\n      \"role\": \"baseline\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs\",\n          \"/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source\",\n          \"strict-enabled-condition\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/homebrew/Cellar/node/26.5.1/bin/node\",\n        \"programSha256\": \"32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025\",\n        \"timeoutMs\": 30000\n      },\n      \"expectedFailedCheckIds\": [],\n      \"id\": \"strict-enabled-condition\",\n      \"role\": \"reference\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs\",\n          \"/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source\",\n          \"explicit-success-promise\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/homebrew/Cellar/node/26.5.1/bin/node\",\n        \"programSha256\": \"32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025\",\n        \"timeoutMs\": 30000\n      },\n      \"expectedFailedCheckIds\": [],\n      \"id\": \"explicit-success-promise\",\n      \"role\": \"reference\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs\",\n          \"/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source\",\n          \"invert-enabled-branch\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/homebrew/Cellar/node/26.5.1/bin/node\",\n        \"programSha256\": \"32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025\",\n        \"timeoutMs\": 30000\n      },\n      \"expectedFailedCheckIds\": [\n        \"check-enabled-upload\",\n        \"check-request-upload\",\n        \"check-request-fails\",\n        \"check-enabled-check-throws\",\n        \"check-token-fails\"\n      ],\n      \"id\": \"invert-enabled-branch\",\n      \"role\": \"wrong\"\n    },\n    {\n      \"command\": {\n        \"args\": [\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs\",\n          \"/Users/youxianshi/code/.artifacts/recipe-author-preflight-fmX1Bs/source\",\n          \"treat-request-failure-as-success\",\n          \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n          \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs\"\n        ],\n        \"cwd\": \".\",\n        \"program\": \"/opt/homebrew/Cellar/node/26.5.1/bin/node\",\n        \"programSha256\": \"32d01dcba604f99bf508f5e6e9ff77dc31369fff5130faba9303ea375caac025\",\n        \"timeoutMs\": 30000\n      },\n      \"expectedFailedCheckIds\": [\n        \"check-request-fails\"\n      ],\n      \"id\": \"treat-request-failure-as-success\",\n      \"role\": \"wrong\"\n    }\n  ],\n  \"methodInputs\": [\n    {\n      \"path\": \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/controls.cjs\",\n      \"sha256\": \"72f1d6619be1afb4871fd5bc74505137acbbae7741d50b6b93ad23d239039a2c\"\n    },\n    {\n      \"path\": \"/Users/youxianshi/code/.artifacts/flywheel-stage-compiler-kn1Toi/node_modules/typescript/lib/typescript.js\",\n      \"sha256\": \"3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675\"\n    },\n    {\n      \"path\": \"/Users/youxianshi/code/.artifacts/source-recipe-action-37056552180-tPc9gy/local-proposal-stage/design-runtime.cjs\",\n      \"sha256\": \"18aaf92c7a6949fe22939147995193cde7d40eb3db130281f511799dc87bce04\"\n    }\n  ],\n  \"operationKind\": \"source-only\",\n  \"reviewed\": true,\n  \"schema\": \"agentlab.maintainer_source_operation_recipe.v1\",\n  \"scopeSkillId\": \"skill-scope-code-workshop-common-platform-services\",\n  \"source\": {\n    \"repository\": \"https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git\",\n    \"repositoryId\": \"code-workshop\",\n    \"revision\": \"7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6\"\n  },\n  \"sourceInputs\": [\n    {\n      \"gitBlobOid\": \"2fdb138c97d9e0282292c0af3d80ce2b41553a00\",\n      \"path\": \"common/src/main/ets/pushservice/PushServiceManager.ets\",\n      \"sha256\": \"a0e5ab5f07d94ac2b0181ef19995f38abd0e08550b33445273c6d9047c513e1c\"\n    }\n  ]\n}\n",
+  "schema": "agentlab.maintainer_scope_source_qualification.v1",
+  "scopeOriginal": "{\"assetClass\":\"reusable-knowledge\",\"automaticPromotion\":false,\"buildEntrypoints\":[],\"codeLineCount\":3880,\"coverage\":\"all tracked files selected by this scope are assigned exactly once\",\"documentedPurpose\":null,\"documentedTitle\":null,\"evidence\":[{\"gitBlobOid\":\"7030f39b70c0f00a616f9530b73def8625c755c3\",\"path\":\"common/src/main/ets/accountservice/AccountService.ets\"},{\"gitBlobOid\":\"d0de20ca7f7cbff89e8b1cd2efcf4ad61c4bc2e7\",\"path\":\"common/src/main/ets/util/Logger.ets\"}],\"externalDependencies\":[\"@hms.hds.hdsBaseComponent\",\"@kit.AbilityKit\",\"@kit.AccountKit\",\"@kit.AppGalleryKit\",\"@kit.ArkData\",\"@kit.ArkGraphics2D\",\"@kit.ArkTS\",\"@kit.ArkUI\",\"@kit.ArkWeb\",\"@kit.BasicServicesKit\",\"@kit.CoreFileKit\",\"@kit.ImageKit\",\"@kit.NetworkKit\",\"@kit.NotificationKit\",\"@kit.PerformanceAnalysisKit\",\"@kit.PushKit\",\"@kit.SensorServiceKit\",\"@kit.ShareKit\",\"@kit.UIDesignKit\",\"@ohos/hvigor-ohos-plugin\",\"@ohos/hypium\",\"@ohos/imageknife\",\"env.json\"],\"externalDependencyCount\":23,\"id\":\"skill-scope-code-workshop-common-platform-services\",\"kind\":\"composite-responsibility\",\"languages\":{\"ets\":39},\"ownershipPlane\":\"target-operations\",\"ownershipSelectors\":[{\"path\":\"common/src/main/ets/accountservice\",\"type\":\"prefix\"},{\"path\":\"common/src/main/ets/pushservice\",\"type\":\"prefix\"},{\"path\":\"common/src/main/ets/updateservice\",\"type\":\"prefix\"},{\"path\":\"common/src/main/ets/util\",\"type\":\"prefix\"}],\"pathBoundary\":\"common\",\"repository\":\"https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git\",\"repositoryId\":\"code-workshop\",\"responsibility\":\"Maintain account, push, application-update, and reusable platform utility adapters exposed by the common module.\",\"schema\":\"agentlab.maintainer_scope_skill.v1\",\"skillLayer\":\"instance\",\"sourceFileCount\":39,\"sourceRevision\":\"7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6\",\"sourceTreeOid\":\"ab156e6aa2fc9c64f400ee119e142fded5573271\",\"stage\":\"repository-scope\",\"status\":\"source-supported\",\"strategy\":\"harmony-multi-product-modules\",\"testEntrypoints\":[],\"testFileCount\":0,\"trackedFileCount\":39}",
+  "scopeSkillId": "skill-scope-code-workshop-common-platform-services",
+  "source": {
+    "repository": "https://gitcode.com/HarmonyOS_Samples/sample_in_harmonyos.git",
+    "repositoryId": "code-workshop",
+    "revision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"
+  },
+  "status": "qualified",
+  "streams": [
+    {
+      "stderr": "",
+      "stdout": "{\"enabled-upload\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"push.getToken\",\"args\":[]},{\"seam\":\"push.postToken\",\"args\":[{\"pushToken\":\"token-enabled\"}]}],\"forbiddenCalls\":[\"notification.requestEnable\"]},\"request-upload\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"notification.requestEnable\",\"args\":[{\"context\":\"ctx\"}]},{\"seam\":\"push.getToken\",\"args\":[]},{\"seam\":\"push.postToken\",\"args\":[{\"pushToken\":\"token-requested\"}]}],\"forbiddenCalls\":[]},\"request-fails\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"notification.requestEnable\",\"args\":[{\"context\":\"ctx\"}]}],\"forbiddenCalls\":[\"push.getToken\",\"push.postToken\"]},\"enabled-check-throws\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]}],\"forbiddenCalls\":[\"notification.requestEnable\",\"push.getToken\",\"push.postToken\"]},\"token-fails\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"push.getToken\",\"args\":[]}],\"forbiddenCalls\":[\"notification.requestEnable\",\"push.postToken\"]}}"
+    },
+    {
+      "stderr": "",
+      "stdout": "{\"enabled-upload\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"push.getToken\",\"args\":[]},{\"seam\":\"push.postToken\",\"args\":[{\"pushToken\":\"token-enabled\"}]}],\"forbiddenCalls\":[\"notification.requestEnable\"]},\"request-upload\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"notification.requestEnable\",\"args\":[{\"context\":\"ctx\"}]},{\"seam\":\"push.getToken\",\"args\":[]},{\"seam\":\"push.postToken\",\"args\":[{\"pushToken\":\"token-requested\"}]}],\"forbiddenCalls\":[]},\"request-fails\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"notification.requestEnable\",\"args\":[{\"context\":\"ctx\"}]}],\"forbiddenCalls\":[\"push.getToken\",\"push.postToken\"]},\"enabled-check-throws\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]}],\"forbiddenCalls\":[\"notification.requestEnable\",\"push.getToken\",\"push.postToken\"]},\"token-fails\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"push.getToken\",\"args\":[]}],\"forbiddenCalls\":[\"notification.requestEnable\",\"push.postToken\"]}}"
+    },
+    {
+      "stderr": "",
+      "stdout": "{\"enabled-upload\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"push.getToken\",\"args\":[]},{\"seam\":\"push.postToken\",\"args\":[{\"pushToken\":\"token-enabled\"}]}],\"forbiddenCalls\":[\"notification.requestEnable\"]},\"request-upload\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"notification.requestEnable\",\"args\":[{\"context\":\"ctx\"}]},{\"seam\":\"push.getToken\",\"args\":[]},{\"seam\":\"push.postToken\",\"args\":[{\"pushToken\":\"token-requested\"}]}],\"forbiddenCalls\":[]},\"request-fails\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"notification.requestEnable\",\"args\":[{\"context\":\"ctx\"}]}],\"forbiddenCalls\":[\"push.getToken\",\"push.postToken\"]},\"enabled-check-throws\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]}],\"forbiddenCalls\":[\"notification.requestEnable\",\"push.getToken\",\"push.postToken\"]},\"token-fails\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"push.getToken\",\"args\":[]}],\"forbiddenCalls\":[\"notification.requestEnable\",\"push.postToken\"]}}"
+    },
+    {
+      "stderr": "",
+      "stdout": "{\"enabled-upload\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]}],\"forbiddenCalls\":[\"notification.requestEnable\",\"push.getToken\",\"push.postToken\"]},\"request-upload\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"notification.requestEnable\",\"args\":[{\"context\":\"ctx\"}]}],\"forbiddenCalls\":[\"push.getToken\",\"push.postToken\"]},\"request-fails\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"notification.requestEnable\",\"args\":[{\"context\":\"ctx\"}]},{\"seam\":\"push.getToken\",\"args\":[]},{\"seam\":\"push.postToken\",\"args\":[{\"pushToken\":\"token-after-request-failure\"}]}],\"forbiddenCalls\":[]},\"enabled-check-throws\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"push.getToken\",\"args\":[]},{\"seam\":\"push.postToken\",\"args\":[{\"pushToken\":\"token-after-check-failure\"}]}],\"forbiddenCalls\":[\"notification.requestEnable\"]},\"token-fails\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]}],\"forbiddenCalls\":[\"notification.requestEnable\",\"push.getToken\",\"push.postToken\"]}}"
+    },
+    {
+      "stderr": "",
+      "stdout": "{\"enabled-upload\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"push.getToken\",\"args\":[]},{\"seam\":\"push.postToken\",\"args\":[{\"pushToken\":\"token-enabled\"}]}],\"forbiddenCalls\":[\"notification.requestEnable\"]},\"request-upload\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"notification.requestEnable\",\"args\":[{\"context\":\"ctx\"}]},{\"seam\":\"push.getToken\",\"args\":[]},{\"seam\":\"push.postToken\",\"args\":[{\"pushToken\":\"token-requested\"}]}],\"forbiddenCalls\":[]},\"request-fails\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"notification.requestEnable\",\"args\":[{\"context\":\"ctx\"}]},{\"seam\":\"push.getToken\",\"args\":[]},{\"seam\":\"push.postToken\",\"args\":[{\"pushToken\":\"token-after-request-failure\"}]}],\"forbiddenCalls\":[]},\"enabled-check-throws\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]}],\"forbiddenCalls\":[\"notification.requestEnable\",\"push.getToken\",\"push.postToken\"]},\"token-fails\":{\"result\":{\"kind\":\"resolve-undefined\"},\"calls\":[{\"seam\":\"notification.isEnabled\",\"args\":[]},{\"seam\":\"push.getToken\",\"args\":[]}],\"forbiddenCalls\":[\"notification.requestEnable\",\"push.postToken\"]}}"
+    }
+  ],
+  "verificationBoundary": "Reviewed source-maintenance controls and retained bytes; no authenticated producer, full scope coverage, formal tests, framework runtime or Agent qualification."
+}
