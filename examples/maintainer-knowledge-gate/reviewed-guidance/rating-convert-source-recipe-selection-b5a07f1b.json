@@ -1,0 +1,19 @@
+{
+  "schema": "agentlab.maintainer_guidance_selection.v1",
+  "automaticPromotion": false,
+  "knowledgeCutSha256": "9b76c003ed009bf2fdeb915f0d99b4a656b44cd2dc496c4d7016b95e2333eaa2",
+  "knowledgeRevision": "b5a07f1b120555eb0a44a659b802f809ac45761e",
+  "stage": "calibration",
+  "sources": [{"repositoryId": "code-workshop", "sourceRevision": "7aa95cac4eca15e39fc6638cdf1de7db6fb70ad6"}],
+  "skills": [{
+    "id": "skill-rating-convert-calibration-37147845918",
+    "rowSha256": "a868813ab6635123f3ccfa04aa19bc03ed919efd871004a65522d55831d282ad",
+    "objectId": "lesson-rating-convert-source-seam-37147845918",
+    "applicabilityReason": "This reviewed subsequent source-recipe construction task targets RatingDescriptor.convert at the exact source cut covered by the admitted lesson. Guidance is calibration evidence with explicit dependency and runtime limits, not approval of a generated Oracle, an upstream bug claim or demonstrated benefit."
+  }],
+  "sourceRecipeTarget": {
+    "scopeSkillId": "skill-scope-code-workshop-componentlibrary-input-display",
+    "sourcePaths": ["features/componentlibrary/src/main/ets/componentdetailview/rating/viewmodel/RatingDescriptor.ets"],
+    "demand": "Construct a bounded source-grounded calibration exercise for RatingDescriptor.convert, with source-derived behavior and distinct behavior-preserving and meaningful wrong controls."
+  }
+}
