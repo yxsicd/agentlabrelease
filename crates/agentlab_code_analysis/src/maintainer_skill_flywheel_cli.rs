@@ -373,6 +373,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
+    if args.iter().any(|a| a == "--describe-observation-archive") {
+        let result = agentlab_code_analysis::maintainer_observation_store::archive_descriptor(
+            &PathBuf::from(value(&args, "--source")?),
+        )?;
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&result)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"rowCount":result["rowCount"],"qualified":false})
+        );
+        return Ok(());
+    }
+    if args.iter().any(|a| a == "--recover-observation-export") {
+        let result = agentlab_code_analysis::maintainer_observation_store::recover(
+            &fs::read(value(&args, "--plan")?)?,
+            &fs::read(value(&args, "--remote-snapshot")?)?,
+            &output,
+        )?;
+        println!("{}", serde_json::to_string(&result)?);
+        return Ok(());
+    }
     if args
         .iter()
         .any(|a| a == "--plan-observation-import" || a == "--verify-observation-import")

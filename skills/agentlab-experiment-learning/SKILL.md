@@ -167,6 +167,14 @@ Real source-suite import and unchanged repeat are recorded in the
 [committed-row checkpoint](../../docs/flywheel-source-suite-committed-rows-20261003.md).
 Keep file identities distinct from remotely preserved file bytes; assigning a
 remote revision to a local export does not prove a complete committed lesson cut.
+For native-selected source-suite files, explicit destination preserveRawFiles=true
+adds immutable raw_archive_chunks to the same insert/readback gate. Provision its
+definition from `--describe-observation-archive`; recover the original export with
+`--recover-observation-export` and compare reconstruction before promotion. The
+bounded archive does not include surrounding Agent homes or full repair captures.
+See the [raw-recovery checkpoint](../../docs/flywheel-raw-evidence-recovery-20261003.md)
+for budgets and the real committed recovery; neither recovery nor unchanged repeat
+establishes automatic review, knowledge admission or a later-round benefit.
 
 Review scenario consumption as well as scenario preservation. Trace each initial
 state, ordered action/input and dependency outcome to its execution point in the
