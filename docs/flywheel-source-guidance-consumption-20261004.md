@@ -233,3 +233,7 @@ reviewed-business-admission-v2 uses an explicit methodSource reference, reconstr
 the unchanged committed suite, exits 0 and reaches the same atomic/readback boundary.
 Use only that successor staged cut for later knowledge admission. Method recipe
 revision and current business-validator revision are separate identities.
+After rebuilding the native validator with the updated method Skill,
+reviewed-business-admission-v3 replays the same v2 request with explicit historical
+bytes. It exits 0 and reproduces the exact v2 report digest
+6a7a60e2055950361c8ebf4cb98cd83f7e7200c55e37d75473d298aa46aa0bdd.
