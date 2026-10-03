@@ -155,6 +155,15 @@ unexercised controls or swallowed dependency validation cannot be promoted by
 manufacturing accept records. Keep the existing operational persistence, committed
 readback, explicit promotion and fixed-baseline knowledge admission boundaries.
 
+The ordinary `--plan-observation-import` / `--verify-observation-import` gates
+also accept original source-suite observation and reviewed-lesson exports.
+Reconstruct all rows from the retained suite and optional review, preserving the
+declared historical analyzer identity while recording the current validator.
+Do not wrap this format in behavior captures or import rehashed analytical rows
+without raw reconstruction. The importer plans inserts into existing operational
+tables only; raw-file archival remains separate and its readback explicitly does
+not claim remote raw-byte preservation, promotion or next-round consumption.
+
 Review scenario consumption as well as scenario preservation. Trace each initial
 state, ordered action/input and dependency outcome to its execution point in the
 verifier. An equivalent explicitly bound adapter is acceptable, but a second

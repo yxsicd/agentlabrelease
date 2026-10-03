@@ -65,9 +65,69 @@ fn stable_uuid(bytes: &[u8]) -> String {
 }
 fn source(root: &Path) -> Result<(Tables, Value), String> {
     let candidate = file(root, "candidate.json")?;
-    let contract = file(root, "behavior-contract.json")?;
-    let capture = file(root, "behavior-capture.json")?;
-    let expected = observation_assets(&candidate, &contract, &capture)?;
+    // Presence includes dangling symlinks: malformed inputs must not silently
+    // select a different producer format.
+    let present = |name: &str| -> Result<bool, String> {
+        match fs::symlink_metadata(root.join(name)) {
+            Ok(_) => Ok(true),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+            Err(e) => Err(e.to_string()),
+        }
+    };
+    let source_suite = present("source-suite-inputs.json")?;
+    let (expected, mut binding) = if source_suite {
+        need(
+            !present("behavior-contract.json")? && !present("behavior-capture.json")?,
+            "observation capture formats ambiguous",
+        )?;
+        let inventory = file(root, "source-suite-inputs.json")?;
+        let review = if present("lesson-review.json")? {
+            Some(file(root, "lesson-review.json")?)
+        } else {
+            None
+        };
+        let analysis_bytes = file(root, "analysis_records.jsonl")?;
+        let analyses: Vec<Value> = analysis_bytes
+            .split(|b| *b == b'\n')
+            .filter(|l| !l.iter().all(u8::is_ascii_whitespace))
+            .map(serde_json::from_slice)
+            .collect::<Result<_, _>>()
+            .map_err(|e| e.to_string())?;
+        need(
+            analyses.len() == 1,
+            "observation source suite analyzer ambiguous",
+        )?;
+        let analysis = &analyses[0];
+        need(
+            analysis["kind"] == "raw-source-suite-reconstruction"
+                && analysis["code"] == "maintainer_source_suite_lesson::assets",
+            "observation source suite analyzer unsupported",
+        )?;
+        let consumer = analysis["consumerSourceSha256"]
+            .as_str()
+            .ok_or("observation source suite projection absent")?;
+        let tables =
+            crate::maintainer_source_suite_lesson::assets(root, review.as_deref(), Some(consumer))?;
+        (
+            tables,
+            json!({"captureKind":"source-suite","candidateSha256":digest(&candidate),
+            "inputInventorySha256":digest(&inventory),"reviewSha256":review.as_deref().map(digest),
+            "projectionRevalidation":{"declaredOriginalConsumerSha256":consumer,
+                "currentConsumerSha256":crate::maintainer_source_suite_lesson::current_consumer_digest(),
+                "originalProducerAuthenticated":false,"currentSemanticReconstructionRequired":true}}),
+        )
+    } else {
+        need(
+            !present("lesson-review.json")?,
+            "reviewed behavior lesson import unsupported",
+        )?;
+        let contract = file(root, "behavior-contract.json")?;
+        let capture = file(root, "behavior-capture.json")?;
+        (
+            observation_assets(&candidate, &contract, &capture)?,
+            json!({"candidateSha256":digest(&candidate),"contractSha256":digest(&contract),"captureSha256":digest(&capture)}),
+        )
+    };
     let manifest_bytes = file(root, "export.json")?;
     let manifest: Value = serde_json::from_slice(&manifest_bytes).map_err(|e| e.to_string())?;
     need(
@@ -108,10 +168,8 @@ fn source(root: &Path) -> Result<(Tables, Value), String> {
             "observation rows differ from raw reconstruction",
         )?;
     }
-    Ok((
-        expected,
-        json!({"manifestSha256":digest(&manifest_bytes),"candidateSha256":digest(&candidate),"contractSha256":digest(&contract),"captureSha256":digest(&capture)}),
-    ))
+    binding["manifestSha256"] = json!(digest(&manifest_bytes));
+    Ok((expected, binding))
 }
 fn snapshot(
     value: &Value,
