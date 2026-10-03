@@ -108,6 +108,9 @@ def main():
         selectedStage=result['selectedStage'], designSha256=hashlib.sha256(design_bytes).hexdigest(),
         attempts=rows, diagnosticOnly=True, qualified=False, semanticQualified=False,
         automaticPromotion=False, authorityWritePerformed=False))
+    subprocess.run([str(gate), '--validate-source-recipe-control-suite', '--stage', str(stage),
+        '--suite', str(suite), '--output', str(suite/'readback.json')],
+        check=True, timeout=60, stdout=subprocess.DEVNULL)
     if not matched:
         raise ValueError('Frozen declaration mismatch; review without rewriting expectations')
 

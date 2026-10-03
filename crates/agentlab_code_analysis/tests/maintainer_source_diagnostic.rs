@@ -230,6 +230,9 @@ fn unknown_or_invalid_control_cannot_launch() {
 fn captured(base: &Path, code: i32, observations: Value) -> PathBuf {
     let inputs = base.join("inputs");
     let capture = base.join("capture");
+    captured_inputs(&inputs, &capture, code, observations)
+}
+fn captured_inputs(inputs: &Path, capture: &Path, code: i32, observations: Value) -> PathBuf {
     fs::create_dir(&capture).unwrap();
     let request: Value =
         serde_json::from_slice(&fs::read(inputs.join("request.json")).unwrap()).unwrap();
@@ -251,7 +254,156 @@ fn captured(base: &Path, code: i32, observations: Value) -> PathBuf {
         &capture.join("process.json"),
         &json!({"schema":"agentlab.contained_behavior_process.v1","requestSha256":digest(&fs::read(inputs.join("request.json")).unwrap()),"descriptorSha256":digest(&fs::read(inputs.join("descriptor.json")).unwrap()),"imageId":format!("sha256:{}","a".repeat(64)),"exitCode":code,"timedOut":false,"logBudgetExceeded":false,"stdoutSha256":digest(&stdout),"stderrSha256":digest(stderr)}),
     );
-    capture
+    capture.to_path_buf()
+}
+
+fn suite_fixture() -> PathBuf {
+    let base = fixture();
+    let stage = base.join("stage");
+    let controls = json!([
+        {"id":"baseline","role":"baseline","edits":[],"expectedFailedCheckIds":[]},
+        {"id":"valid-a","role":"reference","edits":[{"path":"unit.js","before":"{}","after":"{a:1}"}],"expectedFailedCheckIds":[]},
+        {"id":"valid-b","role":"reference","edits":[{"path":"unit.js","before":"{}","after":"{b:1}"}],"expectedFailedCheckIds":[]},
+        {"id":"wrong","role":"wrong","edits":[{"path":"unit.js","before":"{}","after":"{wrong:1}"}],"expectedFailedCheckIds":["answer"]}
+    ]);
+    let mut design: Value =
+        serde_json::from_slice(&fs::read(stage.join("design.json")).unwrap()).unwrap();
+    design["controls"] = controls.clone();
+    file(&stage.join("design.json"), &design);
+    let runtime = fs::read_to_string(stage.join("design-runtime.cjs")).unwrap();
+    let mut manifest: Value = serde_json::from_str(
+        runtime
+            .lines()
+            .next()
+            .unwrap()
+            .strip_prefix("const manifest = ")
+            .unwrap()
+            .strip_suffix(';')
+            .unwrap(),
+    )
+    .unwrap();
+    manifest["controls"] = controls.clone();
+    fs::write(
+        stage.join("design-runtime.cjs"),
+        format!("const manifest = {manifest};\nmodule.exports=()=>({{}});"),
+    )
+    .unwrap();
+    let mut receipt: Value =
+        serde_json::from_slice(&fs::read(stage.join("stage-receipt.json")).unwrap()).unwrap();
+    for (name, key) in [
+        ("design.json", "designSha256"),
+        ("design-runtime.cjs", "designRuntimeSha256"),
+    ] {
+        receipt[key] = json!(digest(&fs::read(stage.join(name)).unwrap()));
+    }
+    file(&stage.join("stage-receipt.json"), &receipt);
+    let suite = base.join("suite");
+    fs::create_dir(&suite).unwrap();
+    let mut rows = Vec::new();
+    for (index, id) in ["baseline", "valid-a", "valid-b", "wrong", "valid-a"]
+        .iter()
+        .enumerate()
+    {
+        let inputs = suite.join(format!("control-{index}"));
+        agentlab_code_analysis::maintainer_source_diagnostic::prepare_control(
+            &stage,
+            &base.join("compiler.js"),
+            &root().join("scripts/source-recipe-diagnostic-worker.cjs"),
+            &format!("sha256:{}", "a".repeat(64)),
+            &inputs,
+            id,
+        )
+        .unwrap();
+        let actual = json!({"scenario":{"value":if *id=="wrong" {8} else {7},"nullable":null}});
+        let capture = captured_inputs(&inputs, &inputs.join("contained-input-fixture"), 0, actual);
+        let report = feedback(&inputs, &capture, &inputs.join("feedback.json")).unwrap();
+        rows.push(json!({"controlId":id,"role":if index==0 {"baseline"} else if *id=="wrong" {"wrong"} else {"reference"},"recovery":index==4,
+            "feedbackSha256":digest(&fs::read(inputs.join("feedback.json")).unwrap()),"classification":report["classification"],"declarationMatched":report["declarationMatched"]}));
+    }
+    file(
+        &suite.join("result.json"),
+        &json!({"schema":"agentlab.source_recipe_control_suite_result.v1","status":"declarations-matched",
+        "attempts":rows,"designSha256":receipt["designSha256"],"diagnosticOnly":true,"qualified":false,"semanticQualified":false,
+        "authorityWritePerformed":false,"automaticPromotion":false}),
+    );
+    base
+}
+
+#[test]
+fn suite_readback_reconstructs_every_control_and_recovery_without_approval() {
+    let base = suite_fixture();
+    let result = agentlab_code_analysis::maintainer_source_diagnostic::validate_suite(
+        &base.join("stage"),
+        &base.join("suite"),
+        &base.join("readback.json"),
+    )
+    .unwrap();
+    assert_eq!(result["completeInventoryReconstructed"], true);
+    assert_eq!(result["controlCount"], 4);
+    assert_eq!(result["controls"].as_array().unwrap().len(), 5);
+    assert_eq!(result["acceptedReferenceRecoveryReconstructed"], true);
+    assert_eq!(result["qualified"], false);
+    assert_eq!(result["producerAuthenticated"], false);
+}
+
+#[test]
+fn suite_readback_rejects_omissions_forged_summary_and_borrowed_capture() {
+    for mode in [
+        "missing-row",
+        "false-summary",
+        "wrong-recovery",
+        "raw-drift",
+        "extra-control",
+        "borrowed-source",
+        "copied-recovery",
+    ] {
+        let base = suite_fixture();
+        let suite = base.join("suite");
+        let result_path = suite.join("result.json");
+        let mut result: Value = serde_json::from_slice(&fs::read(&result_path).unwrap()).unwrap();
+        match mode {
+            "missing-row" => {
+                result["attempts"].as_array_mut().unwrap().pop();
+            }
+            "false-summary" => result["status"] = json!("review-declaration-mismatch"),
+            "wrong-recovery" => result["attempts"][4]["controlId"] = json!("valid-b"),
+            "raw-drift" => {
+                fs::write(
+                    suite.join("control-3/contained-input-fixture/worker-stdout.log"),
+                    "{}",
+                )
+                .unwrap();
+            }
+            "extra-control" => {
+                fs::create_dir(suite.join("control-99")).unwrap();
+            }
+            "borrowed-source" => {
+                let p = suite.join("control-1/intent.json");
+                let mut v: Value = serde_json::from_slice(&fs::read(&p).unwrap()).unwrap();
+                v["source"] = json!({"revision":"2".repeat(40)});
+                file(&p, &v);
+            }
+            "copied-recovery" => {
+                fs::copy(
+                    suite.join("control-1/contained-input-fixture/process.json"),
+                    suite.join("control-4/contained-input-fixture/process.json"),
+                )
+                .unwrap();
+            }
+            _ => unreachable!(),
+        }
+        file(&result_path, &result);
+        assert!(
+            agentlab_code_analysis::maintainer_source_diagnostic::validate_suite(
+                &base.join("stage"),
+                &suite,
+                &base.join("readback.json")
+            )
+            .is_err(),
+            "{mode}"
+        );
+        assert!(!base.join("readback.json").exists());
+    }
 }
 #[test]
 fn portable_preparation_does_not_dereference_original_runner_paths_or_grant_approval() {

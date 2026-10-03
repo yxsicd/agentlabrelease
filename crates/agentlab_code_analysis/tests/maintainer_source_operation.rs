@@ -2943,7 +2943,7 @@ spec=importlib.util.spec_from_file_location('suite',os.environ['SUITE_SCRIPT'])
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 with tempfile.TemporaryDirectory() as directory:
   for mode in ['pass','mismatch','infra','prelaunch','baseline-rejected','stage-drift','request-drift','traversal']:
-    root=Path(directory)/mode;root.mkdir();stage=root/'agent/proposal-stage';stage.mkdir(parents=True)
+    root=(Path(directory)/mode).resolve();root.mkdir();stage=root/'agent/proposal-stage';stage.mkdir(parents=True)
     (root/'gate').write_text('fixture');(root/'compiler').write_text('fixture')
     (root/'request.json').write_text('{}');(stage/'request.json').write_text('{}')
     receipt={'receipt':'bound'};(stage/'stage-receipt.json').write_text(json.dumps(receipt))
@@ -2971,6 +2971,9 @@ with tempfile.TemporaryDirectory() as directory:
         assert Path(command[-1]).parent==d
         if mode!='prelaunch':(d/'contained-input-owned').mkdir()
         return subprocess.CompletedProcess(command,1 if mode=='infra' else 0)
+      elif '--validate-source-recipe-control-suite' in command:
+        assert command[command.index('--suite')+1]==str(root/'control-suite')
+        output().write_text(json.dumps({'diagnosticOnly':True,'qualified':False}))
       else:
         assert '--feedback-source-recipe-diagnostic' in command
         if output().name=='baseline-admission.json':output().write_text(json.dumps({'baselinePassed':mode!='baseline-rejected'}))

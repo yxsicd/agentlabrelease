@@ -95,6 +95,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     if args
         .iter()
+        .any(|a| a == "--validate-source-recipe-control-suite")
+    {
+        let receipt = agentlab_code_analysis::maintainer_source_diagnostic::validate_suite(
+            &PathBuf::from(value(&args, "--stage")?),
+            &PathBuf::from(value(&args, "--suite")?),
+            &output,
+        )?;
+        println!("{}", serde_json::to_string(&receipt)?);
+        return Ok(());
+    }
+    if args
+        .iter()
         .any(|a| a == "--feedback-source-recipe-diagnostic")
     {
         let receipt = agentlab_code_analysis::maintainer_source_diagnostic::feedback(

@@ -109,3 +109,42 @@ Rust-hosted scheduler regression covers success, mismatches, infrastructure and
 pre-launch faults, rejected baseline, request/stage drift, path traversal and
 exclusive rerun rejection. Overall maturity remains 73%; a fresh cloud suite run,
 independent admission, next-round consumption and cross-repository transfer remain.
+
+## Independent complete-suite readback
+
+The Rust `--validate-source-recipe-control-suite --stage STAGE --suite SUITE
+--output NEW_READBACK` entry reconstructs each capture against the original staged
+request, design, verifier and runtime. It requires the entire frozen inventory
+in order and a final execution of the first accepted reference, verifies stored
+feedback against raw process/output/error bytes, and derives the aggregate verdict.
+It rejects missing/extra controls, stage borrowing, altered logs and duplicate
+process records. Distinct process bytes do not authenticate fresh execution.
+The thin scheduler invokes this consumer before reporting suite completion.
+
+Readback of the retained local suite reconstructed all six controls and reference
+recovery with `declarations-matched`. Original suite result SHA256 is
+0390d3ec074f754d55df64c394484adcbf4354bf572f8d40cf5380b75cda6462.
+This reused captured evidence without another worker run. Regression captures
+are synthetic; they establish consumer rejection mechanics, not real execution.
+The result explicitly leaves semantic qualification, producer authentication,
+authority writes and automatic promotion false.
+
+## Fresh cloud suite: invalid final mutation
+
+[Action 37134019575](https://github.com/yxsicd/agentlabrelease/actions/runs/37134019575)
+ran main 76a381af2e9fdd245411f0d319a27d80bf47d3e7 and failed. The generated
+verifier passed baseline on its first attempt without code repair. Baseline,
+two accepted references and two wrong controls then matched their declarations.
+The final wrong control replaced a backgroundColor case with `default: break;`
+in a switch already containing a default clause. Node v24.19.0 reported
+`SyntaxError: More than one default clause in switch statement` before producing
+behavior observations. No recovery or complete suite result followed; original
+captures were uploaded and retained.
+
+This is invalid-control construction, not a killed wrong implementation or an
+upstream product defect. Baseline success does not validate all mutation source.
+Review the complete original body and use the existing source-bound design-review
+successor lane; preserve old edits, predicates and failure declarations. Native
+complete readback cannot accept this partial sequence. Overall maturity remains
+73%, with zero accepted complete automatic business loops. Independent semantic
+review, knowledge admission, useful next-round consumption and transfer remain.

@@ -320,6 +320,12 @@ fn prepare_selected(
 
 /// Reconstruct actual output without treating launcher exit zero as a behavior verdict.
 pub fn feedback(inputs: &Path, capture: &Path, output: &Path) -> Result<Value, String> {
+    let report = reconstruct_capture(inputs, capture)?;
+    write(output, &report)?;
+    Ok(report)
+}
+
+fn reconstruct_capture(inputs: &Path, capture: &Path) -> Result<Value, String> {
     let intent_bytes = read(&inputs.join("intent.json"), 128 * 1024)?;
     let request_bytes = read(&inputs.join("request.json"), 256 * 1024)?;
     need(
@@ -352,8 +358,183 @@ pub fn feedback(inputs: &Path, capture: &Path, output: &Path) -> Result<Value, S
         &read(&capture.join("worker-stderr.log"), 1024 * 1024)?,
         control,
     )?;
-    write(output, &report)?;
     Ok(report)
+}
+
+/// Independently reconstruct the entire portable diagnostic suite, not authority admission.
+pub fn validate_suite(stage: &Path, suite: &Path, output: &Path) -> Result<Value, String> {
+    let original = read(&suite.join("result.json"), 128 * 1024)?;
+    let result: Value = serde_json::from_slice(&original).map_err(|e| e.to_string())?;
+    need(
+        result["schema"] == "agentlab.source_recipe_control_suite_result.v1"
+            && result["diagnosticOnly"] == true
+            && result["qualified"] == false
+            && result["semanticQualified"] == false
+            && result["automaticPromotion"] == false
+            && result["authorityWritePerformed"] == false,
+        "suite diagnostic boundary differs",
+    )?;
+    let receipt: Value = serde_json::from_slice(&read(&stage.join("stage-receipt.json"), 65536)?)
+        .map_err(|e| e.to_string())?;
+    let mut originals = Vec::new();
+    for (name, field, limit) in [
+        ("request.json", "requestSha256", 512 * 1024),
+        ("proposal.json", "proposalSha256", 256 * 1024),
+        ("design.json", "designSha256", 64 * 1024),
+        ("design-runtime.cjs", "designRuntimeSha256", 1024 * 1024),
+    ] {
+        let bytes = read(&stage.join(name), limit)?;
+        need(
+            receipt[field] == digest(&bytes),
+            "suite original stage digest differs",
+        )?;
+        originals.push(bytes);
+    }
+    let design: Value = serde_json::from_slice(&originals[2]).map_err(|e| e.to_string())?;
+    let proposal: Value = serde_json::from_slice(&originals[1]).map_err(|e| e.to_string())?;
+    let author_request: Value = serde_json::from_slice(&originals[0]).map_err(|e| e.to_string())?;
+    let runtime = std::str::from_utf8(&originals[3]).map_err(|e| e.to_string())?;
+    let manifest: Value = serde_json::from_str(
+        runtime
+            .lines()
+            .next()
+            .and_then(|s| s.strip_prefix("const manifest = "))
+            .and_then(|s| s.strip_suffix(';'))
+            .ok_or("suite runtime manifest missing")?,
+    )
+    .map_err(|e| e.to_string())?;
+    need(
+        result["designSha256"] == digest(&originals[2])
+            && proposal["contract"]["checks"] == design["checks"]
+            && manifest["controls"] == design["controls"]
+            && manifest["scenarios"] == design["scenarios"]
+            && read(&stage.join("controls.cjs"), 128 * 1024)?
+                == text(&proposal, "verifierSource")?.as_bytes(),
+        "suite frozen design or verifier differs",
+    )?;
+    let controls = design["controls"]
+        .as_array()
+        .filter(|a| (4..=16).contains(&a.len()))
+        .ok_or("suite controls missing")?;
+    let mut ids = BTreeSet::new();
+    need(
+        controls.iter().all(|c| {
+            c["id"].as_str().is_some_and(|id| ids.insert(id))
+                && matches!(c["role"].as_str(), Some("baseline" | "reference" | "wrong"))
+        }) && controls.iter().filter(|c| c["role"] == "baseline").count() == 1
+            && controls.iter().filter(|c| c["role"] == "reference").count() >= 2
+            && controls.iter().any(|c| c["role"] == "wrong"),
+        "suite complete control inventory differs",
+    )?;
+    let reference = controls.iter().find(|c| c["role"] == "reference").unwrap();
+    let rows = result["attempts"]
+        .as_array()
+        .ok_or("suite attempts missing")?;
+    need(
+        rows.len() == controls.len() + 1,
+        "suite incomplete or duplicate recovery",
+    )?;
+    let directories: BTreeSet<_> = fs::read_dir(suite)
+        .map_err(|e| e.to_string())?
+        .map(|e| e.map(|e| e.file_name().to_string_lossy().into_owned()))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .filter(|n| n.starts_with("control-"))
+        .collect();
+    need(
+        directories == (0..rows.len()).map(|i| format!("control-{i}")).collect(),
+        "suite control directories differ",
+    )?;
+    let mut reports = Vec::new();
+    let mut observed_captures = BTreeSet::new();
+    for (index, row) in rows.iter().enumerate() {
+        let selected = controls.get(index).unwrap_or(reference);
+        let recovery = index == controls.len();
+        need(
+            row["controlId"] == selected["id"]
+                && row["role"] == selected["role"]
+                && row["recovery"] == recovery,
+            "suite schedule or accepted-reference recovery differs",
+        )?;
+        let directory = suite.join(format!("control-{index}"));
+        let captures: Vec<_> = fs::read_dir(&directory)
+            .map_err(|e| e.to_string())?
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                e.file_name()
+                    .to_string_lossy()
+                    .starts_with("contained-input-")
+            })
+            .map(|e| e.path())
+            .collect();
+        need(
+            captures.len() == 1,
+            "suite owned capture absent or ambiguous",
+        )?;
+        let intent: Value =
+            serde_json::from_slice(&read(&directory.join("intent.json"), 128 * 1024)?)
+                .map_err(|e| e.to_string())?;
+        let support: Value =
+            serde_json::from_slice(&read(&directory.join("support.json"), 4 * 1024 * 1024)?)
+                .map_err(|e| e.to_string())?;
+        let execution_request: Value =
+            serde_json::from_slice(&read(&directory.join("request.json"), 256 * 1024)?)
+                .map_err(|e| e.to_string())?;
+        need(
+            intent["originalStageReceipt"] == receipt
+                && intent["checks"] == design["checks"]
+                && intent["controlId"] == selected["id"]
+                && support["selectedControl"] == *selected
+                && support["runtimeSource"] == runtime
+                && support["files"] == manifest["files"]
+                && intent["source"] == author_request["source"]
+                && execution_request["submittedSource"] == proposal["verifierSource"]
+                && execution_request["submittedSourceSha256"]
+                    == digest(text(&proposal, "verifierSource")?.as_bytes()),
+            "suite control borrowed from different stage",
+        )?;
+        let report = reconstruct_capture(&directory, &captures[0])?;
+        need(
+            report["executionCompleted"] == true,
+            "suite incomplete infrastructure execution",
+        )?;
+        let stored = read(&directory.join("feedback.json"), 128 * 1024)?;
+        need(
+            row["feedbackSha256"] == digest(&stored)
+                && serde_json::from_slice::<Value>(&stored).map_err(|e| e.to_string())? == report
+                && row["classification"] == report["classification"]
+                && row["declarationMatched"] == report["declarationMatched"],
+            "suite stored feedback differs from raw capture",
+        )?;
+        // Fresh executions must have different raw process receipts, not copied prior captures.
+        need(
+            observed_captures.insert(text(&report, "processSha256")?.to_owned()),
+            "suite duplicate execution capture",
+        )?;
+        reports.push(report);
+    }
+    let matched = reports
+        .iter()
+        .all(|r| r["executionCompleted"] == true && r["declarationMatched"] == true);
+    need(
+        result["status"]
+            == if matched {
+                "declarations-matched"
+            } else {
+                "review-declaration-mismatch"
+            },
+        "suite aggregate verdict differs",
+    )?;
+    let reconstructed = json!({"schema":"agentlab.source_recipe_control_suite_readback.v1",
+        "suiteResultSha256":digest(&original),"designSha256":digest(&originals[2]),
+        "proposalSha256":digest(&originals[1]),"status":result["status"],"completeInventoryReconstructed":true,
+        "controlCount":controls.len(),"acceptedReferenceRecoveryReconstructed":true,"controls":reports,
+        "diagnosticOnly":true,"qualified":false,"semanticQualified":false,"producerAuthenticated":false,
+        "authorityWritePerformed":false,"automaticPromotion":false,
+        "nextAction":if matched {"independent-semantic-review-and-knowledge-admission"} else {"review-frozen-declaration-disagreement"}});
+    write(output, &reconstructed)?;
+    Ok(reconstructed)
 }
 
 /// Shared retained-byte reconstruction for diagnostics and bounded construction repair.
