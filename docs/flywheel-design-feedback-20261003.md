@@ -573,3 +573,50 @@ errors retain the existing repairable design-check prefix and original captures.
 The generic lesson is maintained in the methodology Skill, not hardcoded to a
 repository. Maturity remains **72%**, complete automatic business loops **zero**;
 fresh Agent correction and subsequent business acceptance remain required.
+
+## First real context-reuse capture after precise diagnostics
+
+PR212 merged as `bc8239391d8718f91551730569c0efda77bc6e6a` after all
+applicable CI checks passed. Fresh Action
+[37124840677](https://github.com/yxsicd/agentlabrelease/actions/runs/37124840677)
+retained the preceding omitted-effort/disabled-thinking policy and design/code
+budgets. It failed after 7m56s; exact live knowledge admission, source preparation,
+pre-generation budget binding and independent participant isolation passed.
+
+The initial design completed in 160429ms and passed static validation without
+correction. Its original SHA256 is
+`2aec480254a45783c10ebc992c6cffb17b6c1af78886f1c17dc8993d83e4a861`;
+validation SHA256 is
+`5d55bf44bb2ce7fa186d1c038a8de3c8ae6f3fba00e8cac88dca2a153be17f60`.
+No precise check-error feedback was exercised, so this is not proof that the
+new diagnostics improved Agent correction or that the design is semantically
+correct. The accepted design remains unreviewed.
+
+The actual code upstream request retains the complete original design user
+message byte-for-byte at the parsed message level. JSON-encoded message-content
+lengths are system2321, originalUser147372, designAssistant14549 and
+newCodeUser22154, totaling 186396 characters. The new code message carries the
+reuse marker and does not repeat the full original user message. The separate
+reuse receipt binds source-context and design digests and retained session ID.
+This establishes actual context reuse, not only fixture behavior. The earlier
+342090-character code request had a different design and correction history;
+their totals are descriptive, not a matched latency or quality experiment.
+
+Both captured upstream requests omit reasoning_effort and carry
+thinking.type=disabled, yet both responses contain reasoning chunks. Design
+returned 19543 reasoning characters and 13369 content characters with stop/DONE.
+Code returned 28929 reasoning characters, zero content, no finish/DONE and a
+response-body deadline at 180064ms. Code response SHA256 is
+`70f1925cfd1606be96c6631aa03968baf0f7409d87e06b592a3b7a41d8f93ad4`;
+status SHA256 is
+`e6b3280e2dfc21b948400c0da8c36737b6094d01d5b15d1ea0818522686684f6`.
+No proposal was staged and no baseline, automatic code repair or control
+calibration ran. Do not salvage partial output or claim a completed verifier.
+
+Original artifacts are retained outside the public repository. Next work should
+address completed generation and explicit bounded stage continuation rather than
+blindly repeat policy-field toggles or rerun repository understanding. Local
+frozen-design support is not yet an Action continuation contract; any extension
+must bind exact parent request/design/source and preserve attempt lineage and
+budgets. No old run is resumed or granted new repair budget by this observation.
+Overall maturity remains **72%**, complete accepted automatic loops **zero**.
