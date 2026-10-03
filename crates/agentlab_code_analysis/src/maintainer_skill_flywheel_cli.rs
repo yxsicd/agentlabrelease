@@ -24,6 +24,36 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|a| a == "--reconcile-control-declarations" || a == "--validate-control-declaration-reference") {
+        let profile = fs::read(value(&args, "--profile")?)?;
+        let reference = fs::read(value(&args, "--control-reference")?)?;
+        let report = agentlab_code_analysis::maintainer_control_declarations::reconcile(
+            &profile, &reference, &fs::read(value(&args, "--source-bytes")?)?,
+        )?;
+        if args.iter().any(|a| a == "--validate-control-declaration-reference") {
+            let parsed: serde_json::Value = serde_json::from_slice(&profile)?;
+            if parsed["controlDeclarationReference"]["sha256"] != agentlab_code_analysis::digest(&reference)
+                || !report["corrections"].as_array().unwrap().is_empty() {
+                return Err("control declaration reference differs from profile".into());
+            }
+            let parent = fs::read(value(&args, "--parent-profile")?)?;
+            if parsed["controlDeclarationReference"]["parentProfile"]["sha256"] != agentlab_code_analysis::digest(&parent) {
+                return Err("control declaration parent profile differs".into());
+            }
+            let proposal = agentlab_code_analysis::maintainer_control_declarations::reconcile(
+                &parent, &reference, &fs::read(value(&args, "--source-bytes")?)?,
+            )?;
+            let mut projection = parsed.clone();
+            projection.as_object_mut().unwrap().remove("controlDeclarationReference");
+            projection["reviewed"] = serde_json::json!(false);
+            if projection != proposal["proposedProfile"] {
+                return Err("control declaration successor changed other profile fields".into());
+            }
+        }
+        OpenOptions::new().write(true).create_new(true).open(output)?.write_all(&serde_json::to_vec_pretty(&report)?)?;
+        println!("{}", serde_json::json!({"correctionCount":report["corrections"].as_array().unwrap().len(),"qualified":false}));
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--prepare-operation-case-successor" || a == "--validate-operation-case-successor") {
         let base = PathBuf::from(value(&args, "--knowledge")?);
         let source = PathBuf::from(value(&args, "--source-worktree")?);

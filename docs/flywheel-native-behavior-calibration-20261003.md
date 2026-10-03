@@ -93,3 +93,53 @@ are deterministic controller tests, not learning, cross-repository transfer or
 formal full-loop acceptance. Next review incomplete real control declarations,
 exercise the contained Action, and adapt the same orchestration boundary to
 source-bound emulator builds without substituting this host seam for that gate.
+
+## Declaration provenance reconciliation
+
+Overall maturity is now an engineering estimate of **71%**, from 70%, for a
+generic source-bound reconciliation path plus fresh actual-source verification
+that removes this calibration blocker. Accepted complete automatic business
+loops remain **0**; this is not measured Agent benefit or a cloud Action verdict.
+
+The earlier committed source-operation receipt already declared the full failure
+sets. A subsequent diagnostic projection narrowed delete-before-upload to one
+check; the published behavior profile also narrowed failure-path-overreach to one.
+The additional failures were not independent proof of UI contamination: this
+adapter creates a fresh TrackManager module/context for each scenario. The prior
+recipe declares all five delete-before-upload failures and both failure-path-
+overreach failures. Its exact source variant SHA256s match the profile edits.
+
+`--reconcile-control-declarations --profile FILE --control-reference FILE
+--source-bytes FILE --output NEW_FILE` reuses the recorded source-operation
+consumer to reconstruct original recipe/execution/scope bytes and raw streams.
+It matches repository/revision, original source, check IDs/expected values,
+control roles and exact-match edited variant SHA256s. Corrections come from the
+prior **declared contract**, not the new observed failure set. The proposal is
+reviewed=false and preserves parent/reference/source digests. Producer identity,
+input interpretation, semantic intent and commit ancestry still require review.
+
+The reviewed successor is
+`examples/maintainer-knowledge-gate/reviewed-behavior/telemetry-upload-demand-declarations-v2.json`.
+The old profile remains unchanged. Its controlDeclarationReference pins the
+reference and parent profile paths/SHA256s. Normal preparation invokes
+`--validate-control-declaration-reference` with those files and newly acquired
+source bytes. The successor must equal the parent's reconstructed proposal
+apart from reviewed=true and reference metadata. Checks, inputs, task identity,
+budgets, source edits and adapter selection cannot change through this route.
+Reference/parent files are committed-path selected and pinned through execution.
+The Action default now selects this successor; a fresh cloud run is not yet proven.
+
+Synthetic arbitrary-repository Rust regressions exercise changed role/source/
+variant/predicate, corrupt originals, and the public validator's refusal of changed
+inputs or candidate identity even when expected values still match. These fixtures
+do not authenticate a producer. Fresh native execution of six real source variants
+and reference recovery returns execute-agent-attempt for both matrices and
+calibration-passed, qualified=false. Original rejected captures remain retained.
+No emulator or participant execution was performed by this new host-seam run.
+
+Artifacts: `flywheel-control-declaration-EafswUEe`; successor contract SHA256:
+`74bd5e70f9be91aeb81b463ff146675d619624011a81e8c057d5a8b8723d9df5`.
+This run separately retains producer binary, worker, compiler and support bytes;
+observed runtime is Node v26.5.1. Next verify a fresh contained participant run
+and evidence return, then emulator orchestration and cross-repository multi-round
+benefit rather than counting this one scoped calibration as a complete loop.

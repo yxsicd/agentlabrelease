@@ -60,6 +60,20 @@ for(const row of profile.sources){
  requireOk(!originals.has(row.path),'Repeated source');originals.set(row.path,bytes.toString('utf8'));
 }
 const original=originals.get(profile.originalSourcePath);requireOk(typeof original==='string','Original source missing');
+const declarationDependencies=[];
+if(profile.controlDeclarationReference){
+ const binding=profile.controlDeclarationReference;
+ requireOk(process.argv.includes('--flywheel-tool'),'Declaration reconciliation requires the native validator');
+ for(const row of [binding,binding.parentProfile]){
+  requireOk(row&&safe(row.path),'Declaration reference path unsafe');
+  run('git',['ls-files','--error-unmatch','--',row.path],root);
+  const file=path.join(root,row.path);requireOk(sha(fs.readFileSync(file))===row.sha256,'Declaration reference bytes differ');
+  declarationDependencies.push(file);
+ }
+ run(fs.realpathSync(option('--flywheel-tool')),['--validate-control-declaration-reference','--profile',profilePath,
+  '--control-reference',path.join(root,binding.path),'--parent-profile',path.join(root,binding.parentProfile.path),
+  '--source-bytes',path.join(source,profile.originalSourcePath),'--output',path.join(out,'control-declaration-validation.json')],out,30000);
+}
 requireOk(sha(fs.readFileSync(compiler))===profile.compilerSha256,'Compiler differs');
 const support={...profile.supportFields,compilerSha256:profile.compilerSha256};
 for(const row of profile.supportSources){
@@ -91,6 +105,7 @@ const adapter=path.join(root,'examples/real-code-agent/behavior-participant.py')
 const command=args=>({program:python,programSha256:sha(fs.readFileSync(python)),args,cwd:'.',timeoutMs:180000});
 const executorCommand=command([launcher,descriptorPath,'{request}']);executorCommand.timeoutMs=profile.workerDeadlineMs;
 const immutable=[profilePath,candidatesPath,compiler,supportPath,descriptorPath,worker,launcher,adapter,path.join(root,'examples/real-code-agent/participant.py')];
+immutable.push(...declarationDependencies);
 let captureBytes;
 if(process.argv.includes('--flywheel-tool')){
  const tool=fs.realpathSync(option('--flywheel-tool')),toolBytes=fs.readFileSync(tool);

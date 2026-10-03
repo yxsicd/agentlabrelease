@@ -34,6 +34,16 @@ original control declarations when a real run exposes additional failures and
 review attribution before issuing a successor contract. A successful host seam
 does not restore or qualify a Git workspace, UI state or emulator runtime.
 
+When additional failures appear, first compare earlier declared contracts and
+their exact control-source bytes. A translation may have lost failure IDs; do
+not infer contamination or rebuild expectations from the latest verdict alone.
+Use the native declaration reconciliation/validation path linked above when the
+prior recorded source-operation format is supported. Preserve old profiles and
+require a reviewed, parent-bound successor with unchanged checks, inputs, task,
+source edits and budgets. Recorded-content reconstruction does not prove input
+interpretation, intent, ancestry or producer identity. Normal preparation must
+validate and pin the reference/parent, not merely trust a reconciliation label.
+
 Inspect the installed framework's failure-path hook order, not just hook names.
 The retained Hypium 1.0.19 async runner calls afterEach in the same try block as
 the test body; a thrown assertion can skip it. For independent UI test scenarios,

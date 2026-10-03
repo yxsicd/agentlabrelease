@@ -4,7 +4,7 @@ on:
     inputs:
       profile:
         description: Committed reviewed profile; no external executable recipe
-        default: examples/maintainer-knowledge-gate/reviewed-behavior/telemetry-upload-demand.json
+        default: examples/maintainer-knowledge-gate/reviewed-behavior/telemetry-upload-demand-declarations-v2.json
         required: true
         type: string
       maximum_attempts:
