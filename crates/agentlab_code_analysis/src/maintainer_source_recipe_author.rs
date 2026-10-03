@@ -503,31 +503,36 @@ pub fn design_review(
 }
 
 /// Static source correction before code generation; this does not establish semantic truth.
-fn frozen_seams(inputs: &Value) -> Result<(), String> {
+fn frozen_seams(inputs: &Value, scenario_index: usize) -> Result<(), String> {
+    let root = format!("/scenarios/{scenario_index}/inputs/seams");
     let seams = inputs["seams"]
         .as_object()
         .filter(|s| s.len() <= 32)
-        .ok_or("recipe design scenario seam inventory")?;
+        .ok_or_else(|| format!("recipe design scenario seam inventory at {root}: required object with 0..32 entries"))?;
     for (id, seam) in seams {
+        let pointer = format!("{root}/{}", id.replace('~', "~0").replace('/', "~1"));
         need(
             !id.is_empty() && id.len() <= 128,
-            "recipe design scenario seam id",
+            &format!("recipe design scenario seam id at {pointer}: required nonempty ID within 128 bytes"),
         )?;
         need(
             seam.as_object().is_some_and(|s| s.len() == 2) && seam["repeatLast"].is_boolean(),
-            "recipe design scenario seam fields",
+            &format!("recipe design scenario seam fields at {pointer}: required exactly outcomes and repeatLast; repeatLast must be boolean. Seams describe controlled external dependencies, not the tested method or its expected result. If no external seams are needed, use inputs.seams={{}} instead of an empty named seam."),
         )?;
         let outcomes = seam["outcomes"]
             .as_array()
             .filter(|s| (1..=16).contains(&s.len()))
-            .ok_or("recipe design scenario seam outcomes")?;
-        for outcome in outcomes {
-            let fields = outcome
-                .as_object()
-                .ok_or("recipe design scenario seam outcome object")?;
-            let kind = outcome["kind"]
-                .as_str()
-                .ok_or("recipe design scenario seam outcome kind")?;
+            .ok_or_else(|| format!("recipe design scenario seam outcomes at {pointer}/outcomes: required array with 1..16 entries"))?;
+        for (index, outcome) in outcomes.iter().enumerate() {
+            let location = format!("{pointer}/outcomes/{index}");
+            let fields = outcome.as_object().ok_or_else(|| {
+                format!("recipe design scenario seam outcome object at {location}: required object")
+            })?;
+            let kind = outcome["kind"].as_str().ok_or_else(|| {
+                format!(
+                    "recipe design scenario seam outcome kind at {location}/kind: required string"
+                )
+            })?;
             let undefined = matches!(kind, "return-undefined" | "resolve-undefined");
             need(
                 matches!(
@@ -540,11 +545,59 @@ fn frozen_seams(inputs: &Value) -> Result<(), String> {
                         | "resolve-undefined"
                 ) && fields.len() == if undefined { 1 } else { 2 }
                     && (undefined || fields.contains_key("value")),
-                "recipe design scenario seam outcome kind/value",
+                &format!("recipe design scenario seam outcome kind/value at {location}: required exactly kind and value for return/resolve/throw/reject, or only kind for return-undefined/resolve-undefined"),
             )?;
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod seam_feedback_tests {
+    use super::*;
+
+    #[test]
+    fn empty_named_seam_retains_rejection_and_locates_repair() {
+        // Structure retained from real Action 37111329948; no source-specific oracle.
+        let error = frozen_seams(&json!({"seams":{"tested-method":{}}}), 3).unwrap_err();
+        assert!(error.starts_with("recipe design scenario seam fields"));
+        assert!(error.contains("/scenarios/3/inputs/seams/tested-method"));
+        assert!(error.contains("exactly outcomes and repeatLast"));
+        assert!(error.contains("inputs.seams={}"));
+        assert!(frozen_seams(&json!({"seams":{}}), 3).is_ok());
+    }
+
+    #[test]
+    fn dependency_sequences_keep_exact_contract() {
+        for kind in ["return", "resolve", "throw", "reject"] {
+            let valid = json!({"seams":{"dependency":{"repeatLast":false,"outcomes":[{"kind":kind,"value":null}]}}});
+            assert!(frozen_seams(&valid, 0).is_ok());
+            let mut invalid = valid.clone();
+            invalid["seams"]["dependency"]["repeatLast"] = json!("false");
+            assert!(frozen_seams(&invalid, 0).is_err());
+            invalid = valid.clone();
+            invalid["seams"]["dependency"]["outcomes"][0] = json!({"kind":kind});
+            assert!(frozen_seams(&invalid, 0)
+                .unwrap_err()
+                .contains("/outcomes/0"));
+        }
+        for kind in ["return-undefined", "resolve-undefined"] {
+            let mut input =
+                json!({"seams":{"dependency":{"repeatLast":true,"outcomes":[{"kind":kind}]}}});
+            assert!(frozen_seams(&input, 0).is_ok());
+            input["seams"]["dependency"]["outcomes"][0]["value"] = Value::Null;
+            assert!(frozen_seams(&input, 0).is_err());
+        }
+    }
+
+    #[test]
+    fn feedback_escapes_json_pointer_and_rejects_extra_fields() {
+        let input = json!({"seams":{"dep/~":{"repeatLast":false,"outcomes":[],"extra":true}}});
+        let error = frozen_seams(&input, 2).unwrap_err();
+        assert!(error.contains("/scenarios/2/inputs/seams/dep~1~0"));
+        let input = json!({"seams":{"dep":{"repeatLast":false,"outcomes":[]}}});
+        assert!(frozen_seams(&input, 2).unwrap_err().contains("1..16"));
+    }
 }
 
 pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String> {
@@ -614,7 +667,7 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
         .filter(|a| (1..=8).contains(&a.len()))
         .ok_or("recipe design scenario budget")?;
     let mut expected = serde_json::Map::new();
-    for scenario in scenarios {
+    for (scenario_index, scenario) in scenarios.iter().enumerate() {
         let id = text(scenario, "id")?;
         need(
             scenario.as_object().is_some_and(|o| o.len() == 4)
@@ -627,7 +680,7 @@ pub fn design(request_bytes: &[u8], design_bytes: &[u8]) -> Result<Value, String
             "recipe design scenario contract",
         )?;
         if design["schema"] == "agentlab.source_recipe_design.v2" {
-            frozen_seams(&scenario["inputs"])?;
+            frozen_seams(&scenario["inputs"], scenario_index)?;
         }
         expected.insert(id.into(), scenario["expectedObservations"].clone());
     }
