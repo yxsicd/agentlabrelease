@@ -91,6 +91,18 @@ an explicit observation representation, not an illegal literal or a source rewri
 to null. Constructor lookup sequences and real method argument shapes are execution
 inputs, not facts established by prose descriptions of initial state.
 
+Before negative calibration, execute unchanged source and behavior-preserving
+controls against the frozen scenario/check contract. A baseline check failure
+invalidates that contract even if a wrong control matches its declared failure
+set; do not count inherited baseline failures as mutation detection. Retain raw
+initialized state, emitted results and ordered seam arguments separately from
+expected values. Re-derive contradicted expectations from source causality in a
+new reviewed design cut, preserving the original failure. With shared sequential
+seams, an edit that removes a lookup may shift later consumers without changing
+their returned values: trace each edited control rather than inferring impact
+from the unmodified call graph. Controlled source probes are diagnostic evidence,
+not admitted Oracles, Agent evaluations or platform execution.
+
 Separate modification ownership from read-only source context. A construction
 Oracle may inspect a path outside its editable responsibility only when the
 candidate explicitly lists it as context, a bound fact cites its exact Blob,
