@@ -163,6 +163,10 @@ Do not wrap this format in behavior captures or import rehashed analytical rows
 without raw reconstruction. The importer plans inserts into existing operational
 tables only; raw-file archival remains separate and its readback explicitly does
 not claim remote raw-byte preservation, promotion or next-round consumption.
+Real source-suite import and unchanged repeat are recorded in the
+[committed-row checkpoint](../../docs/flywheel-source-suite-committed-rows-20261003.md).
+Keep file identities distinct from remotely preserved file bytes; assigning a
+remote revision to a local export does not prove a complete committed lesson cut.
 
 Review scenario consumption as well as scenario preservation. Trace each initial
 state, ordered action/input and dependency outcome to its execution point in the
