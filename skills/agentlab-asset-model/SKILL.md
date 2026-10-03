@@ -144,3 +144,11 @@ receipt dependencies, before spending another Agent budget. Preserve assessed
 raw bytes and historical candidate bindings; equivalent canonical rows do not
 repair missing sidecars. A pushed branch is not the default-branch consumer:
 confirm the merged cut and its admission check before claiming the loop unblocked.
+
+If live committed HEAD differs from a retained cut, separately test exact-cut
+readability before calling it data loss. Preserve both identities and reconcile
+history and table contents; an accessible historical cut is not current authority.
+Resolve literal table paths from evidence/contracts: knowledge root paths and an
+operational namespace prefix need not match. A rejected guessed path does not
+prove an instance outage. See the [fresh Action checkpoint](../../docs/flywheel-main-action-checkpoint-20261003.md)
+for the separate execution, export and authority boundaries.
