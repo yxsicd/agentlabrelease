@@ -409,7 +409,8 @@ with tempfile.TemporaryDirectory() as d:
         (4, ['--api','openai-responses','--reasoning-effort','none','--response-format','json-object'],'none',180,None),
         (5, ['--revision-request',str(revision_path)],'low',180,None),
         (6, ['--design-first'],'low',180,None),
-        (7, ['--max-output-tokens','8192'],'low',180,None)]:
+        (7, ['--max-output-tokens','8192'],'low',180,None),
+        (8, ['--design-first','--design-only'],'low',180,None)]:
         seen = {}
         class FakeParticipant:
             def __init__(self, evidence, state, binary, gateway, model, **options):
@@ -454,6 +455,15 @@ with tempfile.TemporaryDirectory() as d:
         assert seen['turn']['transport_retry_limit'] == 0
         assert seen['closed'] is True
         assert stage.call_count == (2 if index in (5,6) else 1)
+        if index==8:
+            assert seen['labels']==['source-recipe-design']
+            receipt=json.loads((root/str(index)/'design-capture.json').read_bytes())
+            assert receipt['reviewRequired'] is True and receipt['semanticQualified'] is False
+            assert receipt['verifierGenerationPerformed'] is False
+            assert receipt['executionPerformed'] is False
+            assert not (root/str(index)/'proposal.json').exists()
+            assert '--validate-source-recipe-design' in stage.call_args[0][0]
+            continue
         if index==6:
             assert seen['labels']==['source-recipe-design','source-recipe-author']
             assert '--validate-source-recipe-design' in stage.call_args_list[0][0][0]
@@ -464,6 +474,14 @@ with tempfile.TemporaryDirectory() as d:
             assert json.loads((root/str(index)/'revision-request.json').read_bytes()) == revision_packet
         assert '--stage-source-recipe-proposal' in stage.call_args[0][0]
         assert json.loads((root/str(index)/'proposal.json').read_bytes()) == {}
+    argv = ['author','--request',str(request),'--output',str(root/'invalid-design-only'),
+            '--gate','/unexecuted-fixture-gate','--pi','/unexecuted-fixture-pi','--design-only']
+    with patch.object(sys,'argv',argv), patch.object(module.importlib.util,'spec_from_file_location') as dispatch:
+        try: module.main()
+        except SystemExit as failure: assert failure.code==2
+        else: raise AssertionError('Unpaired design-only dispatch was accepted')
+        dispatch.assert_not_called()
+        assert not (root/'invalid-design-only').exists()
     argv = ['author','--request',str(request),'--output',str(root/'rejected-revision'),
             '--gate','/unexecuted-fixture-gate','--pi','/unexecuted-fixture-pi',
             '--revision-request',str(revision_path)]

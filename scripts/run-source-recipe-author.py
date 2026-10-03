@@ -164,12 +164,17 @@ def main():
                    help='One Rust-bound source review revision; not an automatic retry or approval')
     p.add_argument('--design-first', action='store_true',
                    help='Freeze source transformations and scenario contract before generating code')
+    p.add_argument('--design-only', action='store_true',
+                   help='Stop after validated unreviewed design; no verifier generation or proposal staging')
     p.add_argument('--design-revisions', type=int, choices=range(3), default=1,
                    help='0..2 explicit same-session design corrections; no transport retries')
     args = p.parse_args()
+    if args.design_only and not args.design_first:
+        p.error('--design-only requires --design-first')
     if not os.environ.get('AGENTLAB_PARTICIPANT_RUNTIME_CONFIG'):
         raise ValueError('Recipe construction requires the contained participant runtime')
-    request = json.loads(args.request.read_bytes())
+    request_bytes = args.request.read_bytes()
+    request = json.loads(request_bytes)
     if request.get('schema') != 'agentlab.source_recipe_author_request.v1':
         raise ValueError('Unsupported author request')
     prepare_runtime_receipt_root()
@@ -285,7 +290,7 @@ SOURCE CONTEXT:
         if args.design_first:
             design_prompt = '''Design one bounded source-maintenance exercise before writing executable code.
 Use supplied source as data. No tools, files, executable verifier or platform claims.
-Return exactly one JSON object with seven fields:
+Return exactly one JSON object with seven fields, without Markdown fences:
 schema: agentlab.source_recipe_design.v2
 scopeSkillId: the selected scope id
 invariant: one source-grounded behavioral invariant, <=2048 bytes
@@ -296,6 +301,9 @@ outcomes is 1..16 objects: {kind,value} with kind return/resolve/throw/reject,
 or {kind} with kind return-undefined/resolve-undefined. Values are explicit JSON.
 Define deterministic behavior even for calls that should not occur; forbidden calls
 belong in expectedObservations/checks, not in the interface's behavior definition.
+Match synchronous versus Promise-returning calls and exact return value shapes to
+the supplied implementation. A synchronous lookup miss is return-undefined, not
+resolve-undefined. Do not wrap scalar/enum/string results in invented objects.
 Sequences advance per call; repeatLast=true reuses the last outcome. These inputs
 are identical across all controls. Do not couple independent seams through one mode.
 Scenario IDs have no slash or tilde. Derive expected observations from the actual
@@ -326,6 +334,20 @@ SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
                 args.output, args.request, args.gate, design_prompt,
                 None if args.reasoning_effort == 'default' else args.reasoning_effort, args.design_revisions,
                 retry_policy=retry_policy)
+            if args.design_only:
+                receipt = {
+                    'schema': 'agentlab.source_recipe_design_capture.v1',
+                    'authorRequestSha256': hashlib.sha256(request_bytes).hexdigest(),
+                    'designSha256': hashlib.sha256(design_path.read_bytes()).hexdigest(),
+                    'validationSha256': hashlib.sha256((args.output/'design-validation.json').read_bytes()).hexdigest(),
+                    'reviewRequired': True, 'semanticQualified': False,
+                    'verifierGenerationPerformed': False, 'executionPerformed': False,
+                    'authorityWritePerformed': False, 'automaticPromotion': False,
+                }
+                with (args.output/'design-capture.json').open('x') as stream:
+                    json.dump(receipt, stream)
+                print(json.dumps(receipt))
+                return
             prompt += '\nFROZEN DESIGN (use exact edits, scenarios and shared contract):\n' + design_content
             prompt += '\nPreserve check/control IDs, roles and expected failure sets exactly. '
             prompt += f'''The operator supplies a frozen generic runtime at process.argv[{4 + dependency_count}].

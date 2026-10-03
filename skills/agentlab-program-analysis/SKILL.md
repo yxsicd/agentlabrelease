@@ -67,6 +67,15 @@ retain bounded anchor context and require explicit decomposition or context refr
 Binary bodies remain unloaded. Additional context is not semantic verification,
 permission to modify another responsibility, or evidence of platform execution.
 
+Use the constructor's `--design-first --design-only` mode when a new behavior
+surface needs independent semantic review before verifier generation. The retained
+design/validation digests bind an unreviewed draft, not an approved Oracle. Review
+source-derived return shapes, synchronous versus Promise seams, initialization,
+and the actual branch affected by each wrong control; structural validation cannot
+prove those semantics. Preserve complete design failures and partial generation
+captures. A generation deadline is not permission to stage incomplete output or
+to treat isolation validation as behavioral qualification.
+
 Separate modification ownership from read-only source context. A construction
 Oracle may inspect a path outside its editable responsibility only when the
 candidate explicitly lists it as context, a bound fact cites its exact Blob,
