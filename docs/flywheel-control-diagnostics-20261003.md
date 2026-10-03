@@ -148,3 +148,26 @@ successor lane; preserve old edits, predicates and failure declarations. Native
 complete readback cannot accept this partial sequence. Overall maturity remains
 73%, with zero accepted complete automatic business loops. Independent semantic
 review, knowledge admission, useful next-round consumption and transfer remain.
+
+## Source-review findings beyond execution matches
+
+Inspection of run 37134019575's unchanged design and verifier found that
+ref-fontweight-local changes only the fontWeight branch, while none of the five
+scenario attribute inventories invokes that branch. Its passing capture is valid
+as a recorded outcome, but does not establish exercised alternative behavior.
+The verifier's makeSeams catches all createSeams/assertWithinBudget exceptions,
+checks before direct descriptor execution, and never uses the returned seam
+functions or observations. The design labels the tested conversion methods as
+seams rather than controlled external dependencies. The runtime budget helper
+checks recorded violations, not whether declared outcomes were consumed.
+
+These are source-inspection findings, not newly executed controls or proof that
+observed descriptor values are false. They prevent semantic approval from being
+inferred from complete declaration matches. The already dispatched mutation-only
+design successor, run 37135470540 at a16080fd7eba449bb0635280c71dbe3fde27e748,
+does not retroactively include these findings in its enrollment. Inspect its
+actual returned bytes separately; retain the additional findings before any
+lesson/case admission. Overall maturity remains 73%; complete automatic loops
+remain zero. Current lesson admission recognizes stage and behavior evidence,
+not the new source-control-suite format; do not disguise suite evidence as an
+older capture to bypass independent reconstruction and review.
