@@ -4,6 +4,7 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::Command,
+    sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -13,6 +14,7 @@ struct Fixture {
     knowledge: PathBuf,
     revision: String,
 }
+static NEXT_FIXTURE: AtomicU64 = AtomicU64::new(0);
 fn git(root: &Path, args: &[&str]) -> String {
     let result = Command::new("git")
         .args(args)
@@ -29,12 +31,13 @@ fn git(root: &Path, args: &[&str]) -> String {
 impl Fixture {
     fn new() -> Self {
         let root = std::env::temp_dir().canonicalize().unwrap().join(format!(
-            "agentlab-context-{}-{}",
+            "agentlab-context-{}-{}-{}",
             std::process::id(),
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
-                .as_nanos()
+                .as_nanos(),
+            NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed)
         ));
         let source = root.join("source");
         let knowledge = root.join("knowledge");
@@ -286,4 +289,66 @@ fn context_cli_refuses_to_replace_a_retained_packet() {
     let bytes = fs::read(&output).unwrap();
     assert!(!run().status.success());
     assert_eq!(bytes, fs::read(output).unwrap());
+}
+
+#[test]
+fn existing_owner_knowledge_is_carried_without_requalification_or_stale_borrowing() {
+    let f = Fixture::new();
+    let oid = git(&f.source, &["rev-parse", "HEAD:pkg/main.rs"]);
+    let valid = json!({"id":"known-analysis","kind":"analysis","repositoryId":"arbitrary",
+        "sourceRevision":f.revision,"scopeSkillIds":["implementation"],
+        "evidence":[{"path":"pkg/main.rs","gitBlobOid":oid}],
+        "interpretation":"Existing maintenance contract, not a new experiment.",
+        "limitations":["No independent runtime execution has been performed."]});
+    let mut stale = valid.clone();
+    stale["id"] = json!("stale-analysis");
+    stale["sourceRevision"] = json!("a".repeat(40));
+    let mut wrong_blob = valid.clone();
+    wrong_blob["id"] = json!("wrong-blob");
+    wrong_blob["evidence"][0]["gitBlobOid"] = json!("b".repeat(40));
+    let mut partial = valid.clone();
+    partial["id"] = json!("partial-analysis");
+    partial["evidence"].as_array_mut().unwrap().push(json!({"path":"pkg/tests/check.rs","gitBlobOid":git(&f.source,&["rev-parse","HEAD:pkg/tests/check.rs"])}));
+    let rows = [valid.clone(), stale, wrong_blob, partial];
+    let bytes = rows
+        .iter()
+        .map(|r| serde_json::to_string(r).unwrap() + "\n")
+        .collect::<String>();
+    fs::write(f.knowledge.join("program_facts.jsonl"), &bytes).unwrap();
+    let cut_path = f.knowledge.join("maintainer-knowledge-cut.json");
+    let mut cut: Value = serde_json::from_slice(&fs::read(&cut_path).unwrap()).unwrap();
+    cut["tables"]["programFacts"]["sha256"] = json!(digest(bytes.as_bytes()));
+    fs::write(cut_path, serde_json::to_vec(&cut).unwrap()).unwrap();
+    let packet = prepare(
+        &f.knowledge,
+        &f.source,
+        "arbitrary",
+        &["pkg/main.rs".into()],
+    )
+    .unwrap();
+    assert_eq!(
+        packet["schema"],
+        "agentlab.case_construction_context_packet.v2"
+    );
+    let knowledge = &packet["ownerKnowledge"][0];
+    assert_eq!(knowledge["scopeSkill"]["id"], "implementation");
+    let facts = knowledge["analysisFacts"].as_array().unwrap();
+    assert_eq!(facts.len(), 2);
+    assert_eq!(facts[0]["fact"], valid);
+    assert_eq!(
+        facts[0]["factValueSha256"],
+        digest(&serde_json::to_vec(&valid).unwrap())
+    );
+    assert_eq!(facts[0]["allFactEvidenceLoaded"], true);
+    assert_eq!(facts[0]["semanticRequalified"], false);
+    assert_eq!(
+        facts[1]["unloadedEvidencePaths"],
+        json!(["pkg/tests/check.rs"])
+    );
+    assert_eq!(facts[1]["allFactEvidenceLoaded"], false);
+    assert_eq!(
+        knowledge["excludedAnalysisFacts"].as_array().unwrap().len(),
+        2
+    );
+    assert_eq!(packet["authorityWritePerformed"], false);
 }

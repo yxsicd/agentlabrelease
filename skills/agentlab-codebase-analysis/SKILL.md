@@ -46,6 +46,16 @@ knowledge nor grants edits. Later facts and successor construction inputs still
 need their existing admission gates. Unchanged reordered selection must reproduce
 the same packet; raw source packets stay in the operator artifact archive.
 
+The v2 context packet also carries committed owner-scope analysis facts with
+their original value digests and limitations. Only same-source facts with a
+selected exact Blob match are included; stale/unmatched analyses are reported
+separately. `allFactEvidenceLoaded` and `unloadedEvidencePaths` distinguish a
+complete source check from partially loaded context. Neither is new semantic
+qualification. Inspect this existing knowledge before spending another analysis
+turn: a relevant fact omitted from construction is an input-selection gap, not
+evidence that its Maintainer Skill needs rebuilding. Repeated conclusions are
+not a productive refresh, and a changed prompt is not measured downstream benefit.
+
 Build knowledge through repeated evidence rounds, not a single repository read.
 First freeze the structural scope catalog, then bind revision-matched program
 facts, assess universal evidence dimensions, and use the resulting gap queue to

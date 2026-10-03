@@ -45,6 +45,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "{}",
             serde_json::json!({"schema":report["schema"],
             "selectedFileCount":report["selectedFiles"].as_array().unwrap().len(),
+            "analysisFactCount":report["ownerKnowledge"].as_array().unwrap().iter()
+                .map(|owner| owner["analysisFacts"].as_array().unwrap().len()).sum::<usize>(),
             "ownerScopeSkillIds":report["ownerScopeSkillIds"],"qualified":false})
         );
         return Ok(());

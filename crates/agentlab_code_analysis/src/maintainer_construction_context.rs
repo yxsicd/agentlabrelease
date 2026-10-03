@@ -245,6 +245,58 @@ pub fn prepare(
             "ownerScopeSkillId":scope["id"],"access":"read-only","contentUtf8":content}),
         );
     }
+    let mut owner_knowledge = Vec::new();
+    let mut knowledge_bytes = 0usize;
+    for owner in &owners {
+        let mut analysis_facts = Vec::new();
+        let mut excluded = Vec::new();
+        for fact in tables["programFacts"].values().filter(|fact| {
+            fact["kind"] == "analysis"
+                && fact["scopeSkillIds"]
+                    .as_array()
+                    .is_some_and(|ids| ids.iter().any(|id| id == owner))
+        }) {
+            let evidence = fact["evidence"].as_array();
+            let matched = evidence
+                .map(|rows| {
+                    rows.iter()
+                        .filter(|row| {
+                            entries.iter().any(|entry| {
+                                entry["path"] == row["path"]
+                                    && entry["gitBlobOid"] == row["gitBlobOid"]
+                            })
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+            if fact["repositoryId"] != repository_id
+                || fact["sourceRevision"] != revision
+                || matched.is_empty()
+            {
+                excluded.push(json!({"factId":fact["id"],"reason":"source-identity-or-selected-Blob-binding-missing"}));
+                continue;
+            }
+            let bytes = serde_json::to_vec(fact).map_err(|e| e.to_string())?;
+            knowledge_bytes += bytes.len();
+            need(
+                bytes.len() <= 64 * 1024
+                    && knowledge_bytes <= 256 * 1024
+                    && analysis_facts.len() < 8,
+                "context analysis fact budget exceeded",
+            )?;
+            let unloaded = evidence
+                .unwrap()
+                .iter()
+                .filter(|row| !matched.contains(row))
+                .map(|row| row["path"].clone())
+                .collect::<Vec<_>>();
+            analysis_facts.push(json!({"fact":fact,"factValueSha256":digest(&bytes),
+                "selectedEvidenceMatched":matched,"unloadedEvidencePaths":unloaded,
+                "allFactEvidenceLoaded":unloaded.is_empty(),"semanticRequalified":false}));
+        }
+        owner_knowledge.push(json!({"scopeSkill":tables["maintainerScopeSkills"][owner],
+            "analysisFacts":analysis_facts,"excludedAnalysisFacts":excluded}));
+    }
     need(
         git(source, &["rev-parse", "HEAD"])? == head
             && git(source, &["status", "--porcelain"])?.is_empty(),
@@ -261,11 +313,12 @@ pub fn prepare(
         )?;
     }
     Ok(
-        json!({"schema":"agentlab.case_construction_context_packet.v1", "repository":repository,
+        json!({"schema":"agentlab.case_construction_context_packet.v2", "repository":repository,
         "knowledgeCutSha256":digest(&cut_bytes),"tableGitRevision":authority,"ownerScopeSkillIds":owners,
         "selectedFiles":entries,"selectedByteCount":total,"selectionPolicy":"operator-explicit-paths",
+        "ownerKnowledge":owner_knowledge,"selectedAnalysisFactBytes":knowledge_bytes,
         "automaticPromotion":false,"authorityWritePerformed":false,"semanticQualified":false,
         "executionQualified":false,"grantsEditablePaths":false,
-        "boundary":"Exact read-only source context only. Owner IDs route focused analysis; they do not establish semantic truth, source authenticity, an approved host, operation readiness or case qualification. Bind later accepted facts and successor inputs separately."}),
+        "boundary":"Exact read-only source and committed owner-scope analysis context only. Preserve original fact limitations and unloaded evidence; selected Blob matches do not requalify semantics, source authenticity, an approved host, operation readiness or case qualification. Reuse applicable knowledge before refreshing it. Bind later accepted facts and successor inputs separately."}),
     )
 }
