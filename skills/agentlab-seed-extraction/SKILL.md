@@ -73,6 +73,15 @@ before dispatch. Each fresh attempt receives the original proposal and feedback,
 keeps them unchanged, and disables transport retries. This is a revision input
 handoff, not successful semantic repair, calibrated-case admission or a full loop.
 
+The shadow constructor accepts explicit `--reasoning-effort` and
+`--max-output-tokens` through the existing captured participant adapter; defaults
+remain unchanged. Consult the selected provider's supported values, freeze source,
+task, feedback and deadlines, then inspect the actual upstream request before
+attributing a timing change to configuration. Keep incomplete terminal streams and
+missing proposals as transport/construction failures, not semantic repair results.
+A faster completed draft still needs independent review and calibration; historical
+runs with different method cuts are exploratory controls, not a causal paired test.
+
 After focused knowledge refresh, derive a stable successor candidate instead of
 rewriting the original candidate or construction plan. Bind the parent candidate
 ID/value digest, parent knowledge cut, refreshed fact digest and refresh receipt

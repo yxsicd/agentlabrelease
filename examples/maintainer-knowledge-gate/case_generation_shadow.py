@@ -388,6 +388,16 @@ def run_agent(args) -> None:
         os.environ["AGENTLAB_PARTICIPANT_RUNTIME_CONFIG"] = template
 
 
+def participant_options(args) -> dict:
+    effort = getattr(args, "reasoning_effort", "default")
+    require(effort in ("default", "low", "medium", "high", "max"), "invalid constructor reasoning effort")
+    tokens = getattr(args, "max_output_tokens", None)
+    require(tokens is None or type(tokens) is int and tokens in (8192, 16384),
+            "invalid constructor output token bound")
+    return {"reasoning_effort": None if effort == "default" else effort,
+            "max_output_tokens": tokens}
+
+
 def run_agent_inner(args) -> None:
     request = load(args.request)
     request_origin(request)
@@ -426,7 +436,7 @@ def run_agent_inner(args) -> None:
     spec.loader.exec_module(module)
     participant = module.Participant(
         evidence, args.output / "participant-state", args.pi, args.gateway, args.model,
-        route=args.provider_route, implementation="pi",
+        route=args.provider_route, implementation="pi", **participant_options(args),
     )
     scope = request["scope"]
     fact = request["fact"]
@@ -670,6 +680,8 @@ def main() -> None:
     command.add_argument("--gateway", required=True)
     command.add_argument("--model", required=True)
     command.add_argument("--provider-route", required=True)
+    command.add_argument("--reasoning-effort", choices=["default", "low", "medium", "high", "max"], default="default")
+    command.add_argument("--max-output-tokens", type=int, choices=[8192, 16384])
     command.add_argument("--revision-request", type=Path)
     command.add_argument("--flywheel-tool", type=Path)
     command.add_argument("--knowledge", type=Path)

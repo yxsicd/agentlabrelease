@@ -15,6 +15,17 @@ KNOWLEDGE = ROOT / "examples/maintainer-knowledge-gate/first-four"
 
 
 class CaseGenerationShadowTest(unittest.TestCase):
+    def test_participant_options_keep_defaults_and_explicit_configuration(self):
+        from types import SimpleNamespace
+        self.assertEqual(MODULE.participant_options(SimpleNamespace()),
+                         {"reasoning_effort":None, "max_output_tokens":None})
+        self.assertEqual(MODULE.participant_options(SimpleNamespace(reasoning_effort="low", max_output_tokens=16384)),
+                         {"reasoning_effort":"low", "max_output_tokens":16384})
+        for args in [SimpleNamespace(reasoning_effort="unknown"),
+                     SimpleNamespace(max_output_tokens=True), SimpleNamespace(max_output_tokens=8193)]:
+            with self.assertRaises(ValueError):
+                MODULE.participant_options(args)
+
     def test_declared_framework_tracks_runtime_not_existing_test_inventory(self):
         request = self.request()
         request["scope"]["testEntrypoints"] = []
