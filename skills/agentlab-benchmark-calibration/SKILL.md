@@ -311,9 +311,13 @@ versus declared failed-check sets, retaining missing expected failures and unexp
 failures separately. Execution faults have no observed failure set and never kill
 a wrong control. A declaration match remains diagnostic-only: inspect source
 semantics, run every distinct valid/wrong control and accepted-reference recovery,
-then perform independent admission. This entry does not automatically schedule
-the complete suite or promote knowledge; the constructor Action still stops at
-its baseline diagnostic. The contained launcher places captures below cwd, not
+then perform independent admission. The thin `run-source-recipe-control-suite.py`
+scheduler reconstructs the selected baseline capture, verifies root/stage request
+identity, executes the complete frozen inventory and a fresh accepted-reference
+recovery. The design-first constructor Action invokes it after baseline success.
+Mismatches retain all control diagnostics for review; infrastructure faults stop
+without hidden retries. An existing suite cannot restart, and neither suite
+completion nor reference recovery promotes knowledge. The contained launcher places captures below cwd, not
 automatically below the request directory: set cwd to the exclusive input directory
 before execution, or reconcile the exact existing request-bound capture rather
 than rerunning a successful worker after a lookup failure. Real retained controls

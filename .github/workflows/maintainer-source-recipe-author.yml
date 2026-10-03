@@ -286,6 +286,14 @@ jobs:
           python3 scripts/run-source-recipe-diagnostic-loop.py \
             --root "$RUNNER_TEMP/recipe-author" --gate target/release/agentlab-maintainer-skill-flywheel \
             --compiler "$compiler" --image-id "$image_id" --maximum-repairs "$CONSTRUCTION_CODE_REVISIONS"
+      - name: Diagnose complete frozen control suite and fresh accepted-reference recovery
+        if: inputs.design_first
+        run: |
+          compiler="$RUNNER_TEMP/recipe-compiler/node_modules/typescript/lib/typescript.js"
+          image_id=$(docker image inspect node:24.19.0-bookworm-slim --format '{{.Id}}')
+          python3 scripts/run-source-recipe-control-suite.py \
+            --root "$RUNNER_TEMP/recipe-author" --gate target/release/agentlab-maintainer-skill-flywheel \
+            --compiler "$compiler" --image-id "$image_id"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

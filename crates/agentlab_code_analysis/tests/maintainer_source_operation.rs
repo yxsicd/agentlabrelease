@@ -2934,6 +2934,87 @@ with tempfile.TemporaryDirectory() as directory:
 }
 
 #[test]
+fn control_suite_schedules_all_controls_and_reference_recovery_without_retries() {
+    let code = r#"
+import importlib.util,json,os,subprocess,sys,tempfile
+from pathlib import Path
+from unittest.mock import patch
+spec=importlib.util.spec_from_file_location('suite',os.environ['SUITE_SCRIPT'])
+m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+with tempfile.TemporaryDirectory() as directory:
+  for mode in ['pass','mismatch','infra','prelaunch','baseline-rejected','stage-drift','request-drift','traversal']:
+    root=Path(directory)/mode;root.mkdir();stage=root/'agent/proposal-stage';stage.mkdir(parents=True)
+    (root/'gate').write_text('fixture');(root/'compiler').write_text('fixture')
+    (root/'request.json').write_text('{}');(stage/'request.json').write_text('{}')
+    receipt={'receipt':'bound'};(stage/'stage-receipt.json').write_text(json.dumps(receipt))
+    controls=[{'id':'base','role':'baseline'},{'id':'valid-one','role':'reference'},
+      {'id':'valid-two','role':'reference'},{'id':'wrong','role':'wrong'}]
+    (stage/'design.json').write_text(json.dumps({'controls':controls}))
+    baseline=root/'baseline';baseline.mkdir();(baseline/'contained-input-original').mkdir()
+    (baseline/'intent.json').write_text(json.dumps({'originalStageReceipt':receipt}))
+    result={'schema':'agentlab.source_recipe_diagnostic_loop_result.v1','status':'baseline-passed',
+      'selectedStage':'agent/proposal-stage','attempts':[{'stage':'agent/proposal-stage','baselinePassed':True,'diagnostic':'baseline'}]}
+    if mode=='traversal':result['selectedStage']='../borrowed'
+    if mode=='stage-drift':(stage/'stage-receipt.json').write_text('{}')
+    if mode=='request-drift':(stage/'request.json').write_text('{"changed":true}')
+    (root/'diagnostic-loop-result.json').write_text(json.dumps(result))
+    selected=[];workers=[];calls=[]
+    def run(command,**kwargs):
+      calls.append(command)
+      assert not any('author.py' in str(x) or 'repair' in str(x) for x in command)
+      def output():return Path(command[command.index('--output')+1])
+      if '--prepare-source-recipe-control-diagnostic' in command:
+        selected.append(command[command.index('--control-id')+1]);d=output();d.mkdir()
+        (d/'descriptor.json').write_text('{}');(d/'request.json').write_text('{}')
+      elif any(str(x).endswith('run-contained-behavior-worker.py') for x in command):
+        d=Path(kwargs['cwd']);workers.append(d)
+        assert Path(command[-1]).parent==d
+        if mode!='prelaunch':(d/'contained-input-owned').mkdir()
+        return subprocess.CompletedProcess(command,1 if mode=='infra' else 0)
+      else:
+        assert '--feedback-source-recipe-diagnostic' in command
+        if output().name=='baseline-admission.json':output().write_text(json.dumps({'baselinePassed':mode!='baseline-rejected'}))
+        else:output().write_text(json.dumps({'classification':'fixture','declarationMatched':mode!='mismatch',
+          'executionCompleted':mode!='infra'}))
+      return subprocess.CompletedProcess(command,0)
+    argv=['suite','--root',str(root),'--gate',str(root/'gate'),'--compiler',str(root/'compiler'),'--image-id','sha256:'+'a'*64]
+    with patch.object(m.subprocess,'run',side_effect=run),patch.object(sys,'argv',argv):
+      try:m.main()
+      except (ValueError,FileExistsError):assert mode!='pass'
+      else:assert mode=='pass'
+    if mode in ['pass','mismatch']:
+      assert selected==['base','valid-one','valid-two','wrong','valid-one']
+      final=json.loads((root/'control-suite/result.json').read_bytes())
+      assert final['qualified'] is False and final['semanticQualified'] is False
+      assert final['attempts'][-1]['recovery'] is True
+      assert final['status']==('declarations-matched' if mode=='pass' else 'review-declaration-mismatch')
+    else:
+      assert not (root/'control-suite/result.json').exists()
+      assert len(selected)==(1 if mode in ['infra','prelaunch'] else 0)
+    if (root/'control-suite').exists():
+      before=len(calls)
+      with patch.object(m.subprocess,'run',side_effect=run),patch.object(sys,'argv',argv):
+        try:m.main()
+        except FileExistsError:pass
+        else:raise AssertionError('existing suite restarted')
+      assert len(calls)==before
+"#;
+    let result = Command::new("python3")
+        .args(["-c", code])
+        .env(
+            "SUITE_SCRIPT",
+            root().join("scripts/run-source-recipe-control-suite.py"),
+        )
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+}
+
+#[test]
 fn action_design_review_preserves_parent_bytes_and_refuses_changed_or_child_inputs() {
     let code = r#"
 import importlib.util,os,subprocess,tempfile

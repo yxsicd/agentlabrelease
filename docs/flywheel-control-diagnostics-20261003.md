@@ -1,10 +1,9 @@
 # Frozen source-control diagnostic entry
 
 Overall maturity is 73% (engineering estimate), with zero accepted complete
-automatic business loops. The constructor Action currently returns after a
-passing baseline: it does not execute the full frozen control matrix or admit
-knowledge. This change adds the native execution-input and readback entry needed
-for that next integration, not a claim that the full integration exists.
+automatic business loops. The native entry initially extended a constructor that
+returned after baseline. The suite integration below adds full frozen-control
+diagnostic scheduling, not semantic approval or knowledge admission.
 
 Use the same exact staged design, verifier, runtime, compiler and contained worker:
 
@@ -39,9 +38,9 @@ Local Rust regressions cover matched controls, surviving wrong controls, additio
 failures, accepted controls, infrastructure faults, declaration drift, absent and
 invalid control selection alongside the prior baseline/repair regressions. Synthetic
 capture reconstruction is not real container or generated-Agent calibration.
-Next integration must execute all frozen controls and a fresh accepted-reference
-recovery, preserve disagreements for source-bound review, and only then connect
-independent admission and later-round consumption.
+The suite below adds complete frozen-control execution and reference recovery.
+Full business acceptance still requires source-bound review, independent admission
+and later-round consumption.
 
 ## Real bounded repair and retained-control execution
 
@@ -80,7 +79,33 @@ invocations set cwd to the exclusive input directory. Keep this launcher detail
 in scheduling integration and preserve the initial collection failure.
 
 The +1 estimate reflects demonstrated Agent-owned bounded repair and real generic
-control diagnostics. The Action still stops at baseline, control selection here
+control diagnostics. That Action stopped at baseline, control selection here
 was operator-scheduled, and no knowledge promotion or later-round benefit occurred.
 JSON parse and the decorator are explicit host seams; Harmony framework delivery,
 ArkTS/HAP/emulator execution and full scope coverage remain unqualified.
+
+## Automatic suite integration
+
+`scripts/run-source-recipe-control-suite.py` now consumes the successful baseline
+loop's selected stage. It independently reconstructs the retained baseline with
+Rust, verifies the original stage receipt and root request, then schedules the
+entire frozen control inventory plus a new execution of the first accepted
+reference. Each control has a new contained capture directory; Rust compares its
+actual failure set. The design-first Action invokes this scheduler after baseline
+diagnostics. It does not call a model, extend a repair budget, change a predicate,
+write authority or approve semantics.
+
+Declaration disagreements are retained through the complete suite and recovery
+before reporting review-required failure. Infrastructure failure stops immediately
+after capturing available feedback. An existing suite directory fails closed:
+observation timeout cannot restart an uncertain suite. Frozen design bytes are
+checked again before completion; partial sequences never emit a complete result.
+
+The actual local scheduler invocation on retained run 37131931224 completed all
+six declared controls and ref-01 recovery. Every declaration matched, including
+the same three wrong-control failure sets above. This uses the already recorded
+local Node/image identity, not a cloud workflow acceptance or historical restore.
+Rust-hosted scheduler regression covers success, mismatches, infrastructure and
+pre-launch faults, rejected baseline, request/stage drift, path traversal and
+exclusive rerun rejection. Overall maturity remains 73%; a fresh cloud suite run,
+independent admission, next-round consumption and cross-repository transfer remain.
