@@ -1455,7 +1455,7 @@ fn stage_inner(
         .ok_or("recipe author selected source paths")?;
     let mut seen = BTreeSet::new();
     let mut source_inputs = Vec::new();
-    for path in paths {
+    for (index, path) in paths.iter().enumerate() {
         let path = path.as_str().ok_or("recipe author source path")?;
         need(seen.insert(path), "recipe author duplicate source")?;
         let file = request["sourceFiles"]
@@ -1463,10 +1463,13 @@ fn stage_inner(
             .ok_or("recipe author inventory")?
             .iter()
             .find(|f| f["path"] == path)
-            .ok_or("recipe author unowned source")?;
+            .ok_or_else(|| format!(
+                "recipe author unowned source at sourcePaths[{index}]: {}; select only paths present in sourceFiles; an import seam does not load its implementation",
+                serde_json::to_string(&path.chars().take(256).collect::<String>()).unwrap()
+            ))?;
         need(
             file["content"].is_string(),
-            "recipe author requested source needs explicit context expansion",
+            &format!("recipe author requested source needs explicit context expansion at sourcePaths[{index}]: {}", serde_json::to_string(&path.chars().take(256).collect::<String>()).unwrap()),
         )?;
         source_inputs
             .push(json!({"path":path,"sha256":file["sha256"],"gitBlobOid":file["gitBlobOid"]}));
