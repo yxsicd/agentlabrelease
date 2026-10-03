@@ -106,6 +106,13 @@ lesson/reviewer/knowledge-target rows. Retain failed calibration as failed;
 malformed or incomplete worker captures remain rejected. Review and promotion
 are later independent gates, not prerequisites for preserving valid observations.
 
+Connect completed behavior-loop attempts to that exporter in the ordinary Action,
+including normally completed rejected tasks. The thin loop transport rechecks
+frozen inputs and reconstructs each stored feedback through Rust before exporting
+every attempt separately. Preserve raw captures when an incomplete loop cannot
+export; do not infer task failure from missing terminal data. Observation exports
+create no lesson and perform no remote persistence or knowledge admission.
+
 When an execution repository contains several runs, distinguish a whole-table
 export from an explicit runId selection at a committed cut. Record the selection
 predicate and compare exactly those rows; a newly appended run's counts cannot

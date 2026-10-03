@@ -134,6 +134,7 @@ jobs:
           path.write_text(json.dumps(recipe,indent=2)+'\n')
           PY
       - name: Execute captured real participant and bounded behavior repair
+        id: behavior_execution
         # The existing launcher independently probes forbidden paths/network.
         env:
           AGENTLAB_LM_GATEWAY_KEY: ${{ secrets.AGENTLAB_LM_GATEWAY_KEY }}
@@ -174,6 +175,16 @@ jobs:
                   '--label','author-calibration',
                   '--output',str(directory/'runtime-validation.json')],check=True)
           PY
+      - name: Export completed passing or rejected attempts as operational observations
+        if: ${{ always() && steps.behavior_execution.outcome != 'skipped' }}
+        run: |
+          set -euo pipefail
+          candidate_id=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(process.argv[1])).candidateId)' "$PROFILE")
+          node scripts/export-behavior-loop-observations.cjs \
+            --attempts "$EVIDENCE_ROOT/attempts" --candidates "$CANDIDATE_CORPUS" \
+            --candidate-id "$candidate_id" \
+            --flywheel-tool "$GITHUB_WORKSPACE/target/debug/agentlab-maintainer-skill-flywheel" \
+            --output "$EVIDENCE_ROOT/operational-observations"
       - name: Preserve complete scoped capture including failures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
