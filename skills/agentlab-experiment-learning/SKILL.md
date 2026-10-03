@@ -181,6 +181,12 @@ state with the declared initial state and enforce that verdict before actions.
 Overwriting fields to expected defaults, or computing an unused match flag, can
 hide an invalid constructor/import adapter. Check every imported value actually
 constructed by loaded source, not only the default-key constant.
+An eligible missing-global diagnostic may drive a pre-budgeted verifier repair,
+but keep the decorator or framework binding explicit: an identity adapter only
+qualifies the declared source-method seam, not the real framework behavior.
+Verify unchanged request/design/check/control bytes and actual initial-state reads,
+then reconstruct all positive/negative controls and reference recovery. A scoped
+lesson export after operator review is not automatic knowledge return or benefit.
 When correction must preserve full parent scenarios, use the exact scenario-change
 admission rather than the legacy design-review lane's prose alone. A real child
 kept every check/control while changing initial state and observations. Retain that
