@@ -567,6 +567,46 @@ fn source_suite_raw_archive_recovers_exact_export_and_rejects_partial_or_changed
         );
     }
     assert!(!out.join("unowned-private-home").exists());
+    let bound = base.join("bound-export");
+    let bound_report = store::bind_committed_export(
+        &out,
+        &encode(&planned),
+        &encode(&receipt),
+        &encode(&after),
+        &encode(&baseline),
+        &bound,
+    )
+    .unwrap();
+    assert_eq!(bound_report["revision"], receipt["revision"]);
+    assert_eq!(
+        fs::read(bound.join("original-export.json")).unwrap(),
+        fs::read(source.join("export.json")).unwrap()
+    );
+    let bound_manifest: Value =
+        serde_json::from_slice(&fs::read(bound.join("export.json")).unwrap()).unwrap();
+    assert_eq!(bound_manifest["repository"], "operation");
+    assert_eq!(bound_manifest["revision"], receipt["revision"]);
+    assert_eq!(bound_manifest["tablePrefix"], "data/");
+    assert_eq!(bound_manifest["tables"], manifest["tables"]);
+    for name in manifest["tables"].as_object().unwrap().keys() {
+        assert_eq!(
+            fs::read(bound.join(format!("{name}.jsonl"))).unwrap(),
+            fs::read(source.join(format!("{name}.jsonl"))).unwrap()
+        );
+    }
+    let mut invalid_receipt = receipt.clone();
+    invalid_receipt["revision"] = json!("f".repeat(40));
+    let rejected = base.join("rejected-bound-export");
+    assert!(store::bind_committed_export(
+        &out,
+        &encode(&planned),
+        &encode(&invalid_receipt),
+        &encode(&after),
+        &encode(&baseline),
+        &rejected
+    )
+    .is_err());
+    assert!(!rejected.exists());
     assert_eq!(
         planned,
         store::plan(&out, &encode(&baseline), &encode(&dest)).unwrap()

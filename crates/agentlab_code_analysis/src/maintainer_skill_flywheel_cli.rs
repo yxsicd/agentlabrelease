@@ -399,6 +399,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     if args
         .iter()
+        .any(|a| a == "--bind-committed-observation-export")
+    {
+        let result = agentlab_code_analysis::maintainer_observation_store::bind_committed_export(
+            &PathBuf::from(value(&args, "--source")?),
+            &fs::read(value(&args, "--plan")?)?,
+            &fs::read(value(&args, "--commit-receipt")?)?,
+            &fs::read(value(&args, "--remote-snapshot")?)?,
+            &fs::read(value(&args, "--baseline-snapshot")?)?,
+            &output,
+        )?;
+        println!("{}", serde_json::to_string(&result)?);
+        return Ok(());
+    }
+    if args
+        .iter()
         .any(|a| a == "--plan-observation-import" || a == "--verify-observation-import")
     {
         let source = PathBuf::from(value(&args, "--source")?);

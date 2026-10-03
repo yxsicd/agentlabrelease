@@ -161,8 +161,8 @@ Reconstruct all rows from the retained suite and optional review, preserving the
 declared historical analyzer identity while recording the current validator.
 Do not wrap this format in behavior captures or import rehashed analytical rows
 without raw reconstruction. The importer plans inserts into existing operational
-tables only; raw-file archival remains separate and its readback explicitly does
-not claim remote raw-byte preservation, promotion or next-round consumption.
+tables only. Without explicit raw preservation, readback does not claim remote
+raw-byte preservation; neither mode grants promotion or next-round consumption.
 Real source-suite import and unchanged repeat are recorded in the
 [committed-row checkpoint](../../docs/flywheel-source-suite-committed-rows-20261003.md).
 Keep file identities distinct from remotely preserved file bytes; assigning a
@@ -175,6 +175,14 @@ bounded archive does not include surrounding Agent homes or full repair captures
 See the [raw-recovery checkpoint](../../docs/flywheel-raw-evidence-recovery-20261003.md)
 for budgets and the real committed recovery; neither recovery nor unchanged repeat
 establishes automatic review, knowledge admission or a later-round benefit.
+Use `--bind-committed-observation-export` only after native raw preservation and
+complete transaction readback. It retains original-export.json byte-exact and
+adds verified source repository/revision/prefix in a fresh publication manifest;
+ordinary lesson promotion/admission then reconstructs the unchanged raw suite.
+For large knowledge cuts, retain fixed-revision sorted pages and prove complete
+unique row coverage. Do not use presentation-redacted responses for exact row
+comparison: replacing a profile name can also alter legitimate code identifiers.
+See the [binding checkpoint](../../docs/flywheel-committed-export-binding-20261003.md).
 
 Review scenario consumption as well as scenario preservation. Trace each initial
 state, ordered action/input and dependency outcome to its execution point in the

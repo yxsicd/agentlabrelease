@@ -115,6 +115,12 @@ async function main() {
     fs.writeFileSync(path.join(root,'recovery.stderr'),recovered.stderr||'',{flag:'wx'});
     assert.equal(recovered.status,0,'Committed raw export recovery rejected');
     save('recovery.json',JSON.parse(recovered.stdout));
+    assert.equal(sha(fs.readFileSync(request.flywheelTool)),request.flywheelToolSha256);
+    const bound=spawnSync(request.flywheelTool,['--bind-committed-observation-export','--source',path.join(root,'recovered-export'),'--plan',path.join(root,'plan.json'),'--commit-receipt',path.join(root,'commit-receipt.json'),'--remote-snapshot',path.join(root,'committed.json'),'--baseline-snapshot',path.join(root,'baseline.json'),'--output',path.join(root,'committed-export')],{encoding:'utf8',timeout:60000,env:{PATH:'/usr/bin:/bin'}});
+    fs.writeFileSync(path.join(root,'committed-export.stdout'),bound.stdout||'',{flag:'wx'});
+    fs.writeFileSync(path.join(root,'committed-export.stderr'),bound.stderr||'',{flag:'wx'});
+    assert.equal(bound.status,0,'Committed export binding rejected');
+    save('committed-export.json',JSON.parse(bound.stdout));
   }
   console.log(JSON.stringify(verified));
 }
