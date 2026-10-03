@@ -441,3 +441,35 @@ paths and refuses to restart an existing loop. These use declared fixtures,
 not real Agent convergence or Docker qualification of the new whole loop.
 Overall maturity remains **72%**, with zero accepted complete automatic loops;
 fresh real automatic-loop Action acceptance is still required.
+
+## Independent boundary-value review during fresh automatic acceptance
+
+PR209 merged as `6cceb81a0b8acd08668a0ae985cdff6515de21ad` after all
+applicable CI checks passed. Fresh-root Action
+[37121754008](https://github.com/yxsicd/agentlabrelease/actions/runs/37121754008)
+uses that exact source with `design_first=true`, one design correction and two
+pre-generation code-repair allowances. This does not reset either older root's
+exhausted review budget. Dispatch intent and original captures remain outside
+the public source repository. No fresh terminal result is claimed here.
+
+Independent inspection of retained child Action37119711878's design found a
+separate semantic error: scenario `rating-convert-unknown-values` supplies an
+empty string for `stars`, but declares `fields.stars.present=false` and states
+that `Number('')` is NaN. Its check `chk-unknown-stars-nan` requires that absence
+flag. The retained source uses `Number(attribute.currentValue) ?? default`;
+an empty string converts to zero, which is not nullish. A direct local Node
+language probe returned `numberEmpty=0` and `numberAbcIsNaN=true`. This probe
+does not execute or qualify the repository, the retained verifier or a platform.
+
+The finding rejects this historical expectation, not the whole source behavior.
+NaN and missing values also need distinguishable observable encodings. A verifier
+can pass an incorrect Oracle by emitting expectations instead of source values;
+even a successful baseline therefore needs independent semantic review and
+meaningful controls. Do not change old files or authorize semantic changes in
+the code-only repair path. Inspect the fresh design on completion; any repeated
+contradiction requires a source-grounded reviewed successor, not budget reset or
+post-hoc operator edits. This general lesson is retained in the calibration Skill.
+
+Overall maturity remains **72%**; complete accepted automatic business loops
+remain **zero**. Real automatic repair, complete control calibration, useful
+knowledge feedback and cross-repository reuse still require evidence.

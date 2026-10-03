@@ -277,6 +277,14 @@ A real reviewed child repaired the compiler binding while preserving all origina
 checks/scenarios/controls, then failed at an absent decorator global. Inspect the
 whole supplied runtime interface, including dependency imports and declared
 globals, rather than assuming the first fixed error completes the environment.
+Before admitting a generated design, independently check boundary-value
+expectations and their observation encoding. A retained design mislabeled empty
+string numeric conversion as NaN; the actual language result is zero. Distinguish
+non-finite numbers from missing fields rather than collapsing both into an absence
+flag. Schema validity and preserving a frozen check do not establish its truth.
+If source-grounded review rejects an expectation, retain the old design and use
+the existing explicit reviewed successor path; code-only repair must not hide the
+contradiction by emitting the expected value instead of observing actual source.
 Do not remove decorators from submitted source to hide unsupported platform
 behavior; any controlled seam needs an explicit scope limitation and calibration.
 See [the original-verifier execution checkpoint](../../docs/flywheel-design-feedback-20261003.md#unchanged-original-verifier-execution)
