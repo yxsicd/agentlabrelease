@@ -82,6 +82,11 @@ with the relevant frozen initialState subtree through assertInitialState; allow
 mismatches to fail before the tested operation. An ungraded match flag cannot
 establish verification. Choosing that subtree still requires source review, and
 the helper neither establishes complete state coverage nor approves an Oracle.
+Its pointer is relative to initialState (for example /fields, not
+/initialState/fields). loadModule returns exports, not a constructed instance;
+instantiate the source-exported class explicitly before observing fields or calls.
+Keep proposal sourcePaths limited to loaded implementation bodies; binding an
+import specifier to a controlled seam does not load that dependency's source.
 
 Use the constructor's `--design-first --design-only` mode when a new behavior
 surface needs independent semantic review before verifier generation. The retained

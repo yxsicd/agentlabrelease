@@ -413,6 +413,8 @@ fences, commentary, undefined literals, comments or trailing commas:
 schema: "agentlab.source_recipe_author_proposal.v1"
 scopeSkillId: "{request['scope']['id']}"
 sourcePaths: 1..16 exact owned paths from sourceFiles with non-null content that the verifier actually reads
+Do not list unloaded import implementations merely because you bind their import
+specifier to a controlled seam. A declared import is not a loaded source file.
 verifierSource: one self-contained CommonJS JavaScript program, <=128 KiB
 rationale: a concrete maintenance demand, its source-grounded invariant and why checks distinguish repairs
 limitations: 2..8 explicit unproved claims
@@ -600,11 +602,16 @@ For source-observed initialization use runtime.assertInitialState(scenarioId,
 actualObservedState, pointer), where pointer is an RFC6901 path into initialState
 (empty string means the whole initialState). Read actual fields from the fresh
 source instance. The helper throws on missing pointers, non-JSON values or mismatch.
+For initialState={{"fields":{{"count":0}}}}, the pointer is '/fields', NOT
+'/initialState/fields'. The pointer is relative to initialState, not the packet.
 Let that failure escape before calling the tested method; an ungraded match:false
 output flag is not verification. Never initialize observed fields from expectations.
 runtime.loadModule(relativePath, imports, globals) transpiles that text in memory
 and returns CommonJS exports in a fresh context on every call. imports maps exact
 source import specifiers to explicit controlled seams; absent imports fail closed.
+Exports are not a class instance: if loaded source exports class Subject,
+const mod=runtime.loadModule(path, imports, globals); const instance=new mod.Subject();
+Observe instance fields and invoke instance methods, not properties of mod.
 Copy import specifiers verbatim from the loaded source, including relative depth;
 do not infer directory traversal from a similarly named module.
 For each scenario call const seams=runtime.createSeams(scenarioId). Map the declared

@@ -3020,12 +3020,15 @@ const runtime=require(process.argv[1])(process.argv[2],'baseline',null);
     assert!(!dir.join("unloaded-stage").exists());
     bad = proposal.clone();
     bad["sourcePaths"] = json!(["other/state.json"]);
-    assert!(author::stage(
+    let path_error = author::stage(
         &request_bytes,
         &serde_json::to_vec(&bad).unwrap(),
-        &dir.join("unowned-stage")
+        &dir.join("unowned-stage"),
     )
-    .is_err());
+    .unwrap_err();
+    assert!(path_error.contains("sourcePaths[0]"));
+    assert!(path_error.contains("other/state.json"));
+    assert!(path_error.contains("import seam does not load its implementation"));
     assert!(!dir.join("unowned-stage").exists());
     let mut bad = request.clone();
     bad["sourceFiles"][0]["content"] = json!("forged");
