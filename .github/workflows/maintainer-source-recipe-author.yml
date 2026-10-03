@@ -63,7 +63,7 @@ on:
         required: false
         type: string
       revision_feedback:
-        description: Exact digest-bound review JSON; v3 with parentDesignSha256/checkChanges/scenarioChanges for design-first parents; never approval
+        description: Exact review JSON; source_recipe_design_review.v1 for design correction, or proposal review v3 with explicit check/scenario changes; never approval
         default: ''
         required: false
         type: string
@@ -130,6 +130,8 @@ jobs:
               assert run.isascii() and run.isdigit() and 0<len(run)<=20 and int(run)>0
               assert len(feedback.encode())<=16384
               assert isinstance(json.loads(feedback),dict)
+              if json.loads(feedback).get('schema')=='agentlab.source_recipe_design_review.v1':
+                  assert os.environ['CONSTRUCTION_DESIGN_FIRST']=='true','Design review requires design-first'
           PY
       - name: Exact live knowledge admission before model budget
         run: |
@@ -190,6 +192,12 @@ jobs:
           assert not (parent/'agent/revision-request.json').exists(),'Only one revision from an original construction is supported'
           review=output/'review-feedback.json'
           with review.open('x') as f:f.write(os.environ['REVISION_FEEDBACK'])
+          if json.loads(review.read_bytes()).get('schema')=='agentlab.source_recipe_design_review.v1':
+              subprocess.run(['python3','scripts/prepare-source-design-review.py',
+                  '--gate','target/release/agentlab-maintainer-skill-flywheel',
+                  '--request',str(output/'request.json'),'--parent',str(parent),
+                  '--feedback',str(review),'--output',str(output)],check=True)
+              raise SystemExit(0)
           args=['target/release/agentlab-maintainer-skill-flywheel','--prepare-source-recipe-revision',
               '--author-request',str(output/'request.json'),'--parent-author-request',str(parent/'request.json'),
               '--proposal',str(parent/'agent/proposal.json'),'--review-feedback',str(review),
@@ -228,6 +236,10 @@ jobs:
           revision_args=()
           if test -f "$RUNNER_TEMP/recipe-author/revision-request.json"; then
             revision_args=(--revision-request "$RUNNER_TEMP/recipe-author/revision-request.json")
+          fi
+          if test -f "$RUNNER_TEMP/recipe-author/review-parent-design.json"; then
+            revision_args+=(--parent-design "$RUNNER_TEMP/recipe-author/review-parent-design.json" \
+              --design-review-feedback "$RUNNER_TEMP/recipe-author/review-feedback.json")
           fi
           if test "$CONSTRUCTION_DESIGN_FIRST" = true; then
             revision_args+=(--design-first)
