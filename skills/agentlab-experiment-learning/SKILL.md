@@ -334,6 +334,10 @@ freeze an independent common quality/check rubric before comparative dispatch,
 not each constructor's self-generated checks as its own benefit score.
 Do not rename these captures to the legacy stage-author layout or use an
 unsupported wire protocol after spending model budget.
+Derive the declared participant budget from the launcher's actual native-process
+watchdog policy, not the provider deadline or the requested Agent wall-time hint.
+A real source turn declared 300 seconds while the launcher enforced 420; retain
+that rejection and correct future declarations without rewriting the old intent.
 
 For bounded cross-stage scheduling, the Rust `--execute-flywheel-cycles` command
 uses the [cycle adapter protocol](../../docs/flywheel-bounded-cycles-20261002.md).

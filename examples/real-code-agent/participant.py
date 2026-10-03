@@ -26,6 +26,11 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class Participant:
+    @staticmethod
+    def process_budget_seconds(wall_time_limit_seconds=None):
+        """The actual native-process watchdog policy, not the provider deadline."""
+        return 420 if wall_time_limit_seconds is None else max(420, wall_time_limit_seconds + 60)
+
     def __init__(self, evidence, state, binary, gateway, model, route='glm', implementation='pi', reasoning_effort=None,
                  gateway_timeout_seconds=180, thinking_type=None, response_format=None,
                  api='openai-completions', max_output_tokens=None):
@@ -441,7 +446,7 @@ class Participant:
             if prompt_stdin:
                 run_options['stdin_path'] = prompt_path
             if wall_time_limit_seconds is not None:
-                run_options['timeout_seconds'] = max(420, wall_time_limit_seconds + 60)
+                run_options['timeout_seconds'] = self.process_budget_seconds(wall_time_limit_seconds)
                 lifecycle['supervisorTimeoutSeconds'] = run_options['timeout_seconds']
             if tool_call_limit is not None:
                 run_options['tool_call_limit'] = tool_call_limit

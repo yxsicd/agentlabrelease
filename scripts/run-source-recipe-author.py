@@ -101,7 +101,8 @@ def construct_design(participant, workspace, evidence, output, request, gate, pr
         label = 'source-recipe-design' if index == 0 else f'source-recipe-design-revision-{index}'
         if retry_policy is not None:
             require_pi_retry_policy(output / 'participant-state', workspace, retry_policy)
-        turn_prompt = guidance_prompt(next_prompt, guidance, guidance_mode, evidence, label, effort, 240)
+        turn_prompt = guidance_prompt(next_prompt, guidance, guidance_mode, evidence, label, effort,
+                                     participant.process_budget_seconds(240) if guidance is not None else 240)
         result = participant.turn(label, workspace, prompt=turn_prompt,
             wall_time_limit_seconds=240, tool_call_limit=1, transport_retry_limit=0,
             require_completed_tool_call=False, reasoning_effort=effort)
@@ -196,10 +197,11 @@ def construct_proposal(participant, workspace, evidence, output, prompt, effort,
     for index in range(revisions + 1):
         label = 'source-recipe-author' if index == 0 else 'source-recipe-author-format-revision-1'
         require_pi_retry_policy(output / 'participant-state', workspace, retry_policy)
+        wall_limit = max(240, getattr(participant, 'gateway_timeout_seconds', 180)+60)
         turn_prompt = guidance_prompt(next_prompt, guidance, guidance_mode, evidence, label, effort,
-                                     max(240, getattr(participant, 'gateway_timeout_seconds', 180)+60))
+                                     participant.process_budget_seconds(wall_limit) if guidance is not None else wall_limit)
         result = participant.turn(label, workspace, prompt=turn_prompt,
-            wall_time_limit_seconds=max(240, getattr(participant, 'gateway_timeout_seconds', 180)+60), tool_call_limit=1, transport_retry_limit=0,
+            wall_time_limit_seconds=wall_limit, tool_call_limit=1, transport_retry_limit=0,
             require_completed_tool_call=False, reasoning_effort=effort)
         require_complete_gateway_capture(evidence)
         require_completed_generation(result, evidence)
@@ -452,6 +454,8 @@ def main():
             designGatewayTimeoutSeconds=args.gateway_timeout_seconds,
             codeGatewayTimeoutSeconds=code_deadline,
             codeParticipantWallTimeSeconds=max(240, code_deadline+60),
+            designNativeProcessBudgetSeconds=participant.process_budget_seconds(240) if guidance is not None else None,
+            codeNativeProcessBudgetSeconds=participant.process_budget_seconds(max(240, code_deadline+60)) if guidance is not None else None,
             transportRetryLimit=0, semanticQualified=False,
             automaticPromotion=False, authorityWritePerformed=False), stream)
     context = {key: request[key] for key in (

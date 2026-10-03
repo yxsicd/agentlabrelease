@@ -99,3 +99,41 @@ score. An initial guided/unguided construction pair can qualify transmission and
 integration while still leaving comparative semantic quality unverified.
 Source-suite business-return binding, complete automated productive rounds,
 cross-repository transfer and Harmony/ohosTest execution remain separate gaps.
+
+## First real guided integration: budget mismatch (37155387036)
+
+PR237 merged at adeb2ea4270c56d3efc585d5e6021658d05109d1 after all applicable
+checks passed. The fresh main Action 37155387036 passed live b5a07f1b knowledge
+preflight, exact source preparation and participant containment. Both design and
+code turns completed. Code lifecycle records 74244ms, exit 0, no timeout and
+transportRetryLimit=0. The original second upstream request contains the exact
+32511-byte code prompt and its selected guidance packet. The unreviewed design
+contains seven scenarios, twelve checks and six controls (baseline, two references,
+three wrong variants). Their semantic validity and execution remain unverified.
+
+The independent consumption gate rejected participant budget drift: intent=300
+seconds, actual native-process watchdog=420 seconds. Local replay of the unchanged
+capture reproduced this rejection. This is constructor/launcher integration
+failure, not model timeout or established Agent task failure. Do not rewrite the
+old intent, issue a corrected passing receipt on those bytes, reopen this root's
+repair allowance or declare guidance benefit. A separate local staging attempt
+also stopped for unavailable original cloud policy paths; it did not execute or
+qualify the generated verifier.
+
+Full original failure evidence is retained outside Release at
+flywheel-guided-source-37155387036-5X097T/capture. GitHub artifact 11285441708 is
+1691753 bytes with archive SHA256
+67d655ceb172f419f8be32e1ab35025b4d533fe6007b98346beb183d9fa5934e.
+
+The correction exposes the existing Participant.process_budget_seconds policy
+and uses that same function both for actual dispatch and future source guidance
+intents. It preserves the existing max(420, requestedWallTime+60) watchdog and
+provider deadlines; it does not increase the runtime budget. Generation policy
+separates native watchdog from wall-time hints. Constructor format-repair fixtures
+check both treatments' pre-dispatch intents against the shared native policy;
+a real local subprocess fixture confirms the launcher's recorded watchdog.
+Fresh main execution remains required after delivery. Maturity stays 74%, with
+zero accepted complete automatic business loops.
+Correction validation passed 90 Rust tests across the same five suites, transport
+syntax, Skill validation, formatting and Release checksum/link checks. The native
+budget-mismatch regression still rejects drift; the old real capture still fails.
