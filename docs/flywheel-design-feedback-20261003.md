@@ -450,7 +450,7 @@ applicable CI checks passed. Fresh-root Action
 uses that exact source with `design_first=true`, one design correction and two
 pre-generation code-repair allowances. This does not reset either older root's
 exhausted review budget. Dispatch intent and original captures remain outside
-the public source repository. No fresh terminal result is claimed here.
+the public source repository. The terminal result is retained below.
 
 Independent inspection of retained child Action37119711878's design found a
 separate semantic error: scenario `rating-convert-unknown-values` supplies an
@@ -473,3 +473,29 @@ post-hoc operator edits. This general lesson is retained in the calibration Skil
 Overall maturity remains **72%**; complete accepted automatic business loops
 remain **zero**. Real automatic repair, complete control calibration, useful
 knowledge feedback and cross-repository reuse still require evidence.
+
+Action37121754008 completed with failure before design validation, proposal
+staging or baseline diagnostics. The exact-cut knowledge admission, source
+preparation, pre-generation budget binding and independent runtime isolation
+passed. The Gateway returned HTTP200 but ended at the 180-second response-body
+deadline (`durationMs=180016`, `semanticComplete=false`, `upstreamEof=false`).
+Its 1,355,925 response bytes contain 6,202 choice chunks, 27,944 reasoning
+characters, zero content characters and no finish reason or DONE frame. Original
+response SHA256 is
+`a115aeadef89d2c79bab960338077d4a98c3747c99a2c23554ad2563168c58e8`;
+status SHA256 is
+`029134d8351215ef6ad2d5c091538648164028ca6aeff1e840a90b66fdb5e387`.
+This is incomplete provider generation, not an admitted bad design, verifier
+failure or exercised automatic code-repair round. The old Oracle finding remains
+historical; no fresh design exists to compare with it.
+
+The next explicit policy cohort uses `thinking_type=disabled` while keeping the
+same task selector, model, reasoning-effort setting, token ceiling, deadlines and
+design/code budgets. Preserve this interrupted run and record a new intent before
+dispatch. Inspect the actual upstream request and terminal capture rather than
+assuming the provider honors the field. This experiment cannot establish a
+general causal benefit from a single successful result.
+Fresh policy Action
+[37122124335](https://github.com/yxsicd/agentlabrelease/actions/runs/37122124335)
+was dispatched on the same `6cceb81` source with that explicit change; its result
+is pending, not an automatic-repair acceptance claim.
