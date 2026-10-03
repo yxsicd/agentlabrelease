@@ -337,3 +337,37 @@ qualified case or knowledge feedback loop. Overall maturity remains **72%** and
 accepted complete automatic business loops remain **0**. The next high-value
 boundary is bounded Agent consumption of actual execution feedback followed by
 independent baseline/reference/wrong-control calibration under frozen demands.
+
+## Real Action baseline failure and bounded compiler review
+
+PR208 passed applicable CI and merged at
+`5c6cd429eb4cebfcec4ffe66b61cdfbd50dc35be`. Fresh root
+[Action37118830490](https://github.com/yxsicd/agentlabrelease/actions/runs/37118830490)
+passed live knowledge admission, construction/staging and independent recorded
+participant isolation. Its actual contained baseline diagnostic failed: exit 1,
+206 ms, no timeout or log-budget overflow, empty stdout, cleanup exit 0.
+The unchanged generated verifier called
+`createRuntime(process.argv[2],process.argv[3],null)` despite the supplied pinned
+compiler at argv4. The original runtime rejected the first selected ETS module
+with `explicit compiler required`. This is an author-verifier interface failure,
+not a rejected behavior check or an upstream defect. The original prompt already
+described the compiler binding; repetition alone does not prove compliance.
+
+Retained raw capture is outside the public repository under operator artifact
+root `flywheel-baseline-main-action-XHaALB`. Original process SHA256 is
+`a44d44d55e82d27855c9360bcd72ccd2ce17eb647f5c344bc2aeadb8c4f578bf`;
+stderr SHA256 is
+`64b51e437fc2447ab8c49a9e1ab6d4f6ffffba6abd7ee4bff59d5432857bb7e8`.
+
+A v3 independent interface-repair review binds original request
+`e6c86e30cd0bc360669f77f602a6143e0bd524fe4916f15faf465457a44d803a`,
+proposal `9b3d97c9e16bd1032717419919d8ce376463d065f5bc73cfbad5bb3c4c6fea3e`
+and design `42b6bf115733ac34ee47033303caf78625efcbc4450222f7b4c4ca26f43bdabc`.
+It has empty checkChanges/scenarioChanges and authorizes interface repair only.
+[Action37119711878](https://github.com/yxsicd/agentlabrelease/actions/runs/37119711878)
+was dispatched as this parent's bounded child under the same model/policy/budgets
+and exact source main. It does not reset the exhausted older child37113211051.
+Dispatch is not proof of revision admission, correction or baseline success;
+record terminal evidence separately. The review remains operator-supplied,
+so this is not automatic diagnostic-to-repair orchestration. Overall maturity
+remains 72%, with zero accepted complete automatic business loops.

@@ -256,6 +256,14 @@ normal exit still requires independent frozen-check comparison. The constructor
 Action invokes this diagnostic after staging a design-first proposal and retains
 failures, but does not automatically feed them into another Agent turn. Baseline
 success alone leaves independent references, wrong controls and review unproved.
+When a generated verifier fails before any observations, compare its runtime
+constructor and dependency arguments with the exact supplied adapter API before
+changing task expectations. A real author passed null despite receiving an
+explicit pinned compiler and compiler-binding prompt. More prose is not evidence
+of compliance. Route the captured interface failure through a parent-bound review
+revision with unchanged checks/scenarios; the Agent owns the successor code.
+Do not silently inject a missing compiler, execute repaired source on the host,
+or treat the generated verifier's startup error as an upstream product defect.
 See [the original-verifier execution checkpoint](../../docs/flywheel-design-feedback-20261003.md#unchanged-original-verifier-execution)
 and its native diagnostic continuation for commands and supported boundaries.
 
