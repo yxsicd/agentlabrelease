@@ -289,3 +289,46 @@ guidance binding. This does not silently update frozen experiments or bypass
 exact live-revision admission. Publication on a branch is not main availability;
 only dispatch after its CI-gated merge. No model was run by publication validation,
 and neither benefit nor a complete automatic round is claimed. Maturity remains 74%.
+
+## Real committed-feedback consumption: 37160192475
+
+PR244 merged as e64a95a72edb0acf2ce739583602e98c0fe5d2b4 after all applicable
+checks passed. One fresh main dispatch explicitly selected the versioned 4bba501a
+cut and the newly admitted skill-rating-convert-string-corpus-37156735569.
+Run 37160192475 completed successfully. Live fixed-cut preflight passed before
+model budget. The independent quality rubric was frozen before dispatch; this
+is a single guided integration, not an equal-policy benefit comparison.
+
+Original artifact 11287487074 is 2651280 bytes, ZIP SHA256
+9f536688a802fd9405c92d59daa4bc91bd678be97bd81e67e31ea3bee606c8c8.
+Retained captures remain outside Release under flywheel-successor-consumption-9tNqvm.
+Native replays of both initial and repaired original prompt/request/terminal/
+lifecycle captures exit 0 with agentConsumptionVerified=true and
+authorCompletionVerified=true, learningBenefitVerified=false. The selected new
+Skill body and original knowledge/source bindings are verified, not only Skill IDs.
+
+The first verifier failed before behavior on an unbound RatingAttributeMapping
+import. One pre-budgeted Agent repair fixed exact import bindings without changing
+the frozen five scenarios/ten checks/six controls. Design, initial code and repair
+processes took 92476, 45099 and 34646 ms, each with native budget 420 seconds,
+transportRetryLimit=0, exit 0 and no timeout. Independent suite reconstruction
+matches baseline, two references and three wrong controls plus fresh first-reference
+recovery. Producer and local observation exports are byte-identical. No model or
+workers were redispatched by those replays.
+
+Manual retained-source review confirms actual own-field assertions before convert,
+scenarioInputs consumption and declared string-input behavior. References preserve
+this corpus; wrong parseFloat, exact-case starStyle and parseInt variants fail the
+exact declared IDs. Framework/parent/map/decorator behavior remains controlled.
+Undefined return is observed but not checked, a disclosed Oracle-coverage limit.
+The stronger rubric provenance criterion remains unverified: byte-level replay
+does not independently repeat Git-source authentication. No automatic semantic
+review, knowledge admission for this new run, formal case or benefit is claimed.
+
+Review of the earlier 37156735569 interpretation found two starStyle review quotes
+that instead cite the stars assignment. Original records and committed knowledge
+were not changed; a separate finding preserves this attribution defect. Source
+membership alone is not claim support. Overall maturity remains 74%, complete
+automatic five-stage business loops zero. Next: close independent review/provenance,
+persist this new operational evidence, and automate review-to-return orchestration
+rather than indefinitely repeating this successful target.
