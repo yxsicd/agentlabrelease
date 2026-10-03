@@ -40,6 +40,15 @@ runtime readiness and failure paths still need explicit observation. Refresh
 the relevant configuration/test-owner Skills rather than broadening a behavior
 scope's ownership or treating uninspected paths as absent.
 
+Resolve build tools from existing composition/toolchain receipts before declaring
+them absent from PATH or a bounded search. Revalidate their current entrypoints
+and SDK metadata, then inspect the exact module/target task registration. A tool
+version, successful help/task listing or successful initialization does not prove
+the requested build task exists. If both host and library expose only setup
+tasks, investigate shared project/plugin initialization before attributing the
+failure to one module's output type. Keep historical build qualification separate
+from a fresh build, which needs terminal logs and a newly bound output artifact.
+
 For cross-scope construction gaps, use the Rust
 `--prepare-construction-context --knowledge ABSOLUTE_CUT --source-worktree
 ABSOLUTE_CHECKOUT --repository ID --context-path PATH --output FRESH_PACKET`,
