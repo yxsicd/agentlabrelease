@@ -304,11 +304,28 @@ pub fn revision(
     proposal_bytes: &[u8],
     review_bytes: &[u8],
 ) -> Result<Value, String> {
+    revision_with_design(
+        current_bytes,
+        parent_bytes,
+        proposal_bytes,
+        review_bytes,
+        None,
+    )
+}
+
+pub fn revision_with_design(
+    current_bytes: &[u8],
+    parent_bytes: &[u8],
+    proposal_bytes: &[u8],
+    review_bytes: &[u8],
+    parent_design_bytes: Option<&[u8]>,
+) -> Result<Value, String> {
     need(
         current_bytes.len() <= 512 * 1024
             && parent_bytes.len() <= 512 * 1024
             && proposal_bytes.len() <= 256 * 1024
-            && review_bytes.len() <= 16 * 1024,
+            && review_bytes.len() <= 16 * 1024
+            && parent_design_bytes.is_none_or(|bytes| bytes.len() <= 64 * 1024),
         "recipe revision input budget",
     )?;
     let current: Value = serde_json::from_slice(current_bytes).map_err(|e| e.to_string())?;
@@ -359,6 +376,8 @@ pub fn revision(
         review.as_object().is_some_and(|o| {
             (review["schema"] == "agentlab.source_recipe_review_feedback.v1" && o.len() == 8)
                 || (review["schema"] == "agentlab.source_recipe_review_feedback.v2" && o.len() == 9)
+                || (review["schema"] == "agentlab.source_recipe_review_feedback.v3"
+                    && o.len() == 11)
         }) && review["parentRequestSha256"] == digest(parent_bytes)
             && review["parentProposalSha256"] == digest(proposal_bytes)
             && review["reviewed"] == true
@@ -397,15 +416,33 @@ pub fn revision(
         )?;
     }
     reviewed_checks(&proposal, &review)?;
-    Ok(
-        json!({"schema":"agentlab.source_recipe_revision_request.v1", "revisionIndex":1,
+    let mut packet = json!({"schema":"agentlab.source_recipe_revision_request.v1", "revisionIndex":1,
         "currentRequestSha256":digest(current_bytes),
         "parentRequestOriginal":std::str::from_utf8(parent_bytes).map_err(|e|e.to_string())?,
         "parentProposalOriginal":std::str::from_utf8(proposal_bytes).map_err(|e|e.to_string())?,
         "reviewOriginal":std::str::from_utf8(review_bytes).map_err(|e|e.to_string())?,
         "reviewSha256":digest(review_bytes), "reviewed":false,
-        "automaticPromotion":false,"executionPerformed":false,"authorityWritePerformed":false}),
-    )
+        "automaticPromotion":false,"executionPerformed":false,"authorityWritePerformed":false});
+    if let Some(bytes) = parent_design_bytes {
+        need(
+            review["schema"] == "agentlab.source_recipe_review_feedback.v3"
+                && review["parentDesignSha256"] == digest(bytes),
+            "recipe revision parent design review binding",
+        )?;
+        check_design_proposal(current_bytes, proposal_bytes, bytes)?;
+        let parent_design: Value = serde_json::from_slice(bytes).map_err(|e| e.to_string())?;
+        reviewed_scenarios(&parent_design, &review)?;
+        packet["schema"] = json!("agentlab.source_recipe_revision_request.v2");
+        packet["parentDesignOriginal"] =
+            json!(std::str::from_utf8(bytes).map_err(|e| e.to_string())?);
+        packet["parentDesignSha256"] = json!(digest(bytes));
+    } else {
+        need(
+            review["schema"] != "agentlab.source_recipe_review_feedback.v3",
+            "recipe revision v3 review requires original parent design",
+        )?;
+    }
+    Ok(packet)
 }
 
 fn check_map(checks: &Value) -> Result<std::collections::BTreeMap<String, Value>, String> {
@@ -430,10 +467,20 @@ fn check_map(checks: &Value) -> Result<std::collections::BTreeMap<String, Value>
 /// Review assertions authorize exact check edits, not their semantic truth.
 fn reviewed_checks(proposal: &Value, review: &Value) -> Result<Value, String> {
     let mut checks = check_map(&proposal["contract"]["checks"])?;
-    if review["schema"] == "agentlab.source_recipe_review_feedback.v2" {
+    if matches!(
+        review["schema"].as_str(),
+        Some(
+            "agentlab.source_recipe_review_feedback.v2"
+                | "agentlab.source_recipe_review_feedback.v3"
+        )
+    ) {
         let changes = review["checkChanges"]
             .as_array()
-            .filter(|a| (1..=64).contains(&a.len()))
+            .filter(|a| {
+                a.len() <= 64
+                    && (review["schema"] == "agentlab.source_recipe_review_feedback.v3"
+                        || !a.is_empty())
+            })
             .ok_or("recipe revision explicit check changes budget")?;
         let mut seen = BTreeSet::new();
         for change in changes {
@@ -472,6 +519,77 @@ fn reviewed_checks(proposal: &Value, review: &Value) -> Result<Value, String> {
     Ok(result)
 }
 
+fn scenario_map(scenarios: &Value) -> Result<std::collections::BTreeMap<String, Value>, String> {
+    let rows = scenarios
+        .as_array()
+        .filter(|a| (1..=8).contains(&a.len()))
+        .ok_or("recipe revision protected scenarios budget")?;
+    let mut map = std::collections::BTreeMap::new();
+    for scenario in rows {
+        let id = text(scenario, "id")?;
+        need(
+            scenario.as_object().is_some_and(|o| o.len() == 4)
+                && id.len() <= 64
+                && !id.contains(['/', '~'])
+                && scenario["initialState"].is_object()
+                && scenario["inputs"].is_object()
+                && scenario["expectedObservations"].is_object()
+                && map.insert(id.to_owned(), scenario.clone()).is_none(),
+            "recipe revision protected scenario shape/duplicate",
+        )?;
+    }
+    Ok(map)
+}
+
+fn reviewed_scenarios(parent_design: &Value, review: &Value) -> Result<Value, String> {
+    let mut scenarios = scenario_map(&parent_design["scenarios"])?;
+    let mut ordered = parent_design["scenarios"].as_array().unwrap().clone();
+    let changes = review["scenarioChanges"]
+        .as_array()
+        .filter(|a| a.len() <= 8)
+        .ok_or("recipe revision explicit scenario changes budget")?;
+    let mut seen = BTreeSet::new();
+    for change in changes {
+        let id = text(change, "id")?;
+        need(
+            change.as_object().is_some_and(|o| o.len() == 4)
+                && seen.insert(id)
+                && change.get("before").is_some()
+                && change.get("after").is_some()
+                && change["before"] != change["after"]
+                && review["findings"].as_array().is_some_and(|findings| {
+                    findings
+                        .iter()
+                        .any(|f| f["id"] == change["findingId"] && change["findingId"].is_string())
+                }),
+            "recipe revision explicit scenario change/finding",
+        )?;
+        need(
+            scenarios.get(id).cloned().unwrap_or(Value::Null) == change["before"],
+            "recipe revision scenario change before differs from parent",
+        )?;
+        if change["after"].is_null() {
+            scenarios.remove(id);
+            ordered.retain(|scenario| scenario["id"] != id);
+        } else {
+            let replacement = scenario_map(&json!([change["after"]]))?;
+            need(
+                replacement.contains_key(id),
+                "recipe revision scenario change id differs",
+            )?;
+            scenarios.insert(id.to_owned(), change["after"].clone());
+            if let Some(index) = ordered.iter().position(|scenario| scenario["id"] == id) {
+                ordered[index] = change["after"].clone();
+            } else {
+                ordered.push(change["after"].clone());
+            }
+        }
+    }
+    let result = Value::Array(ordered);
+    scenario_map(&result)?;
+    Ok(result)
+}
+
 pub fn check_revision_output(
     current_bytes: &[u8],
     packet_bytes: &[u8],
@@ -494,20 +612,50 @@ pub fn check_revision_output(
         &output["checks"]
     } else {
         &output["contract"]["checks"]
-    })?;
+    })
+    .map_err(|e| format!("recipe design checks parent-protection output: {e}"))?;
     let ids: BTreeSet<_> = expected.keys().chain(actual.keys()).collect();
     for id in ids {
         need(expected.get(id) == actual.get(id),
-            &format!("recipe design checks differ from reviewed parent contract at check {id}; retain exact id/pointer/expected unless an exact v2 checkChanges entry authorizes the change"))?;
+            &format!("recipe design checks differ from reviewed parent contract at check {id}; retain exact id/pointer/expected unless an exact v2/v3 checkChanges entry authorizes the change"))?;
     }
-    Ok(
-        json!({"schema":"agentlab.source_recipe_revision_output_admission.v1",
+    let mut receipt = json!({"schema":"agentlab.source_recipe_revision_output_admission.v1",
         "revisionPacketSha256":admission["revisionPacketSha256"],"outputSha256":digest(output_bytes),
         "protectedChecksSha256":digest(&serde_json::to_vec(&expected).map_err(|e|e.to_string())?),
         "checkCount":expected.len(),"outputKind":if is_design {"design"} else {"proposal"},
         "reviewerIdentityAuthenticated":false,"semanticQualified":false,"executionPerformed":false,
-        "authorityWritePerformed":false,"automaticPromotion":false}),
-    )
+        "authorityWritePerformed":false,"automaticPromotion":false});
+    if packet["schema"] == "agentlab.source_recipe_revision_request.v2" {
+        let parent_design: Value = serde_json::from_str(text(&packet, "parentDesignOriginal")?)
+            .map_err(|e| e.to_string())?;
+        let ordered_scenarios = reviewed_scenarios(&parent_design, &review)?;
+        let expected_scenarios = scenario_map(&ordered_scenarios)?;
+        if is_design {
+            need(
+                output["schema"] == parent_design["schema"],
+                "recipe design schema differs from reviewed parent design",
+            )?;
+            let actual_scenarios = scenario_map(&output["scenarios"])
+                .map_err(|e| format!("recipe design scenario parent-protection output: {e}"))?;
+            let ids: BTreeSet<_> = expected_scenarios
+                .keys()
+                .chain(actual_scenarios.keys())
+                .collect();
+            for id in ids {
+                need(expected_scenarios.get(id) == actual_scenarios.get(id),
+                    &format!("recipe design scenario differs from reviewed parent at scenario {id}; retain exact initialState/inputs/expectedObservations unless an exact v3 scenarioChanges entry authorizes the change"))?;
+            }
+            need(output["scenarios"] == ordered_scenarios,
+                "recipe design scenario sequence differs from reviewed parent; preserve existing scenario order, append reviewed additions and remove only reviewed scenarios")?;
+        }
+        receipt["parentDesignSha256"] = packet["parentDesignSha256"].clone();
+        receipt["protectedScenariosSha256"] = json!(digest(
+            &serde_json::to_vec(&ordered_scenarios).map_err(|e| e.to_string())?
+        ));
+        receipt["scenarioCount"] = json!(expected_scenarios.len());
+        receipt["scenarioInputsValidated"] = json!(is_design);
+    }
+    Ok(receipt)
 }
 
 pub fn check_revision(current_bytes: &[u8], packet_bytes: &[u8]) -> Result<Value, String> {
@@ -517,11 +665,16 @@ pub fn check_revision(current_bytes: &[u8], packet_bytes: &[u8]) -> Result<Value
     )?;
     let packet: Value = serde_json::from_slice(packet_bytes).map_err(|e| e.to_string())?;
     need(
-        revision(
+        revision_with_design(
             current_bytes,
             text(&packet, "parentRequestOriginal")?.as_bytes(),
             text(&packet, "parentProposalOriginal")?.as_bytes(),
             text(&packet, "reviewOriginal")?.as_bytes(),
+            if packet["schema"] == "agentlab.source_recipe_revision_request.v2" {
+                Some(text(&packet, "parentDesignOriginal")?.as_bytes())
+            } else {
+                None
+            },
         )? == packet,
         "recipe revision packet differs",
     )?;
@@ -1027,6 +1180,15 @@ fn stage_inner(
 ) -> Result<Value, String> {
     let revision_validation = revision
         .map(|packet| {
+            need(
+                packet.len() <= 2 * 1024 * 1024,
+                "recipe revision packet budget",
+            )?;
+            let value: Value = serde_json::from_slice(packet).map_err(|e| e.to_string())?;
+            need(
+                value["schema"] != "agentlab.source_recipe_revision_request.v2" || design.is_some(),
+                "recipe revision parent scenario protection requires successor design",
+            )?;
             if let Some((bytes, _)) = design {
                 check_revision_output(request_bytes, packet, bytes, true)?;
             }
@@ -1278,6 +1440,12 @@ pub fn approve(
     if receipt.get("revisionPacketSha256").is_some() || stage.join("revision-request.json").exists()
     {
         let packet = read(&stage.join("revision-request.json"), 2 * 1024 * 1024)?;
+        let packet_value: Value = serde_json::from_slice(&packet).map_err(|e| e.to_string())?;
+        need(
+            packet_value["schema"] != "agentlab.source_recipe_revision_request.v2"
+                || receipt.get("designSha256").is_some(),
+            "recipe revision parent scenario protection requires retained successor design",
+        )?;
         let validation = check_revision_output(&request_bytes, &packet, &proposal_bytes, false)?;
         let stored = read(&stage.join("revision-contract-validation.json"), 128 * 1024)?;
         need(

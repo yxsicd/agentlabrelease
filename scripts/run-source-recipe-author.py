@@ -318,6 +318,10 @@ def main():
         packet = json.loads(raw)
         revision_context = {'parentProposal': json.loads(packet['parentProposalOriginal']),
                             'review': json.loads(packet['reviewOriginal'])}
+        if packet['schema'] == 'agentlab.source_recipe_revision_request.v2':
+            if not (args.design_first or args.frozen_design):
+                raise ValueError('Parent scenario protection requires design-first or frozen-design continuation')
+            revision_context['parentDesign'] = json.loads(packet['parentDesignOriginal'])
         if args.frozen_design:
             subprocess.run([str(args.gate.resolve()), '--validate-source-recipe-revision-output',
                 '--author-request', str(args.request.resolve()), '--revision-request', str(args.revision_request.resolve()),
@@ -410,8 +414,10 @@ SOURCE CONTEXT:
         prompt += 'Retain the same selected source-grounded demand; explain changes in rationale and unproved claims in limitations. '
         prompt += 'This is one fresh contained revision, not a format-only repair or approval.\n'
         prompt += 'Review of wrong-control failure sets does not authorize changing baseline expected values. '
-        prompt += 'Keep the original demanded checks unless exact v2 checkChanges authorize specific replacements, additions or removals. '
+        prompt += 'Keep the original demanded checks unless exact v2/v3 checkChanges authorize specific replacements, additions or removals. '
         prompt += 'Do not transfer a wrong control\'s skipped operations into the accepted implementation\'s expected observations.\n'
+        if 'parentDesign' in revision_context:
+            prompt += 'Preserve the parent design schema and every complete scenario, including initialState, inputs and dependency outcome sequences, and expectedObservations, except exact v3 scenarioChanges authorized by review. Preserve existing scenario order; append reviewed additions and remove only reviewed scenarios.\n'
     design_path = None
     try:
         retry_policy = freeze_pi_retry_policy(args.output / 'participant-state', workspace, evidence)
@@ -467,7 +473,9 @@ SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
                 design_prompt += '\nREVIEW DATA:\n' + json.dumps(revision_context, ensure_ascii=False)
                 design_prompt += '\nSeparate original accepted observations from wrong-control counterfactuals. '
                 design_prompt += 'Correcting a declared failure set is not permission to weaken the original demand. '
-                design_prompt += 'Preserve original check IDs, pointers and expected values except exact v2 checkChanges entries authorized by review. Prose findings alone do not authorize check changes.\n'
+                design_prompt += 'Preserve original check IDs, pointers and expected values except exact v2/v3 checkChanges entries authorized by review. Prose findings alone do not authorize check changes.\n'
+                if 'parentProposal' in revision_context and 'parentDesign' in revision_context:
+                    design_prompt += 'Preserve the parent schema and complete scenario records, including initial state, ordered inputs, dependency sequences and expected observations, except exact v3 scenarioChanges authorized by review. Prose alone is not authorization.\n'
             if args.frozen_design:
                 design_path = args.output / 'design.json'
                 design_content = design_path.read_text()
