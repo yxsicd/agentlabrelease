@@ -401,7 +401,30 @@ fn prepare_with_method(
     let review_bytes = read(source, "lesson-review.json")?;
     let review: Value = serde_json::from_slice(&review_bytes).map_err(|e| e.to_string())?;
     let mut projection = Value::Null;
-    let expected = if review["schema"] == "agentlab.behavior_lesson_review.v1" {
+    let expected = if review["schema"] == "agentlab.source_suite_lesson_review.v1" {
+        let original_analysis = rows(&read(source, "analysis_records.jsonl")?)?;
+        need(
+            original_analysis.len() == 1,
+            "admission source suite analyzer ambiguous",
+        )?;
+        let analysis = original_analysis.values().next().unwrap();
+        need(
+            analysis["kind"] == "raw-source-suite-reconstruction"
+                && analysis["code"] == "maintainer_source_suite_lesson::assets",
+            "admission source suite analyzer unsupported",
+        )?;
+        let original_consumer = analysis["consumerSourceSha256"]
+            .as_str()
+            .ok_or("admission source suite projection absent")?;
+        projection = json!({"declaredOriginalConsumerSha256":original_consumer,
+            "currentConsumerSha256":crate::maintainer_source_suite_lesson::current_consumer_digest(),
+            "originalProducerAuthenticated":false,"currentSemanticReconstructionRequired":true});
+        crate::maintainer_source_suite_lesson::assets(
+            source,
+            Some(&review_bytes),
+            Some(original_consumer),
+        )?
+    } else if review["schema"] == "agentlab.behavior_lesson_review.v1" {
         let original_analysis = rows(&read(source, "analysis_records.jsonl")?)?;
         need(
             original_analysis.len() == 1,

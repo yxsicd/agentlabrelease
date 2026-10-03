@@ -363,6 +363,13 @@ fn reconstruct_capture(inputs: &Path, capture: &Path) -> Result<Value, String> {
 
 /// Independently reconstruct the entire portable diagnostic suite, not authority admission.
 pub fn validate_suite(stage: &Path, suite: &Path, output: &Path) -> Result<Value, String> {
+    let reconstructed = reconstruct_suite(stage, suite)?;
+    write(output, &reconstructed)?;
+    Ok(reconstructed)
+}
+
+/// Side-effect-free consumer shared by readback and reviewed lesson admission.
+pub fn reconstruct_suite(stage: &Path, suite: &Path) -> Result<Value, String> {
     let original = read(&suite.join("result.json"), 128 * 1024)?;
     let result: Value = serde_json::from_slice(&original).map_err(|e| e.to_string())?;
     need(
@@ -533,7 +540,6 @@ pub fn validate_suite(stage: &Path, suite: &Path, output: &Path) -> Result<Value
         "diagnosticOnly":true,"qualified":false,"semanticQualified":false,"producerAuthenticated":false,
         "authorityWritePerformed":false,"automaticPromotion":false,
         "nextAction":if matched {"independent-semantic-review-and-knowledge-admission"} else {"review-frozen-declaration-disagreement"}});
-    write(output, &reconstructed)?;
     Ok(reconstructed)
 }
 
