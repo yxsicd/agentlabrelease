@@ -40,7 +40,11 @@ fn frozen_runtime_preserves_module_bindings_and_refuses_implicit_imports() {
     };
     fs::write(source_root.join("unit.ts"), source).unwrap();
     let manifest = json!({"files":[{"path":"unit.ts","sha256":digest(source.as_bytes()),"content":source}],
-        "controls":[{"id":"baseline","edits":[]},{"id":"wrong","edits":[{"path":"unit.ts","before":"seam.fetch()","after":"'$&'"}]}]});
+        "controls":[{"id":"baseline","edits":[]},{"id":"wrong","edits":[{"path":"unit.ts","before":"seam.fetch()","after":"'$&'"}]}],
+        "scenarios":[{"id":"input-driven","initialState":{"count":0},
+            "inputs":{"actions":[{"operation":"run"},{"operation":"run"}],
+                "seams":{"fetch":{"outcomes":[{"kind":"return","value":7}],"repeatLast":true}}},
+            "expectedObservations":{"count":2}}]});
     let runtime = dir.join("runtime.cjs");
     fs::write(
         &runtime,
@@ -66,10 +70,25 @@ const runtime=require(process.argv[1])(process.argv[2],'baseline',compiler);
 let calls=0;const seams={'explicit-seam':{fetch(){calls++;return 7}}};
 const a=runtime.loadModule('unit.ts',seams),b=runtime.loadModule('unit.ts',seams);
 assert.equal(a.run().count,1);assert.equal(a.run().count,2);assert.equal(b.run().count,1);assert.equal(calls,3);
+const packet=runtime.scenarioInputs('input-driven');
+assert.deepStrictEqual(Object.keys(packet).sort(),['initialState','inputs']);
+assert.equal(packet.expectedObservations,undefined);
+const inputModule=runtime.loadModule('unit.ts',seams);
+const values=packet.inputs.actions.map(action=>{assert.equal(action.operation,'run');return inputModule.run().count});
+assert.deepStrictEqual(values,[1,2]);assert.equal(calls,5);
+packet.initialState.count=900;packet.inputs.actions.pop();
+packet.inputs.seams.fetch.outcomes[0].value=999;
+const fresh=runtime.scenarioInputs('input-driven');
+assert.equal(fresh.initialState.count,0);assert.equal(fresh.inputs.actions.length,2);
+let callbackCalls=0;
+assert.equal(runtime.createSeams('input-driven').functions.fetch('input',()=>{callbackCalls++;return 999}),7);
+assert.equal(callbackCalls,0);
+assert.deepStrictEqual(require(process.argv[1])(process.argv[2],'wrong',compiler).scenarioInputs('input-driven'),fresh);
+assert.throws(()=>runtime.scenarioInputs('missing'),/unknown frozen input scenario/);
 assert.throws(()=>runtime.loadModule('unit.ts',{}),/unbound import/);
 assert.throws(()=>runtime.loadModule('unit.ts',seams,{exports:{}}),/reserved module binding/);
 const wrong=require(process.argv[1])(process.argv[2],'wrong',compiler);
-assert.equal(wrong.loadModule('unit.ts',seams).run().value,'$&');assert.equal(calls,3);
+assert.equal(wrong.loadModule('unit.ts',seams).run().value,'$&');assert.equal(calls,5);
 const create=require(process.argv[1]);
 const invocation=['node','verifier',process.argv[2],'baseline',process.argv[3]||process.argv[4]];
 const bound=create.fromCompilerInvocation(invocation);

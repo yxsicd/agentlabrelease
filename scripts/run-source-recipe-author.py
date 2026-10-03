@@ -482,6 +482,9 @@ scopeSkillId: the selected scope id
 invariant: one source-grounded behavioral invariant, <=2048 bytes
 scenarios: 1..8 objects with exactly id, initialState, inputs, expectedObservations
 Each state/input/observation is a JSON object. inputs.seams is an object (0..32 entries).
+Put executable actions, their ordered arguments and other caller inputs in inputs,
+not only in prose or expectedObservations. Seams model external dependencies,
+not the tested method. A method's return is observed from actual source execution.
 Use strict JSON values: no undefined literals, comments, trailing commas or fences.
 Represent absent-value observations explicitly (for example a presence flag),
 without changing the source's actual undefined behavior to null.
@@ -575,6 +578,11 @@ SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
 Use const createRuntime=require(process.argv[{4 + dependency_count}]);
 {runtime_initialization}
 runtime.source(relativePath) returns the actual selected, transformed source text.
+runtime.scenarioInputs(scenarioId) returns a fresh JSON copy of exactly initialState
+and inputs from the frozen scenario, without expectedObservations or check answers.
+Read ordered actions/arguments from this packet; do not create a second hardcoded
+scenario action inventory. Apply declared initial state through a source-supported
+adapter or verify it against the actual constructed state; it is not auto-applied.
 runtime.loadModule(relativePath, imports, globals) transpiles that text in memory
 and returns CommonJS exports in a fresh context on every call. imports maps exact
 source import specifiers to explicit controlled seams; absent imports fail closed.
@@ -583,6 +591,8 @@ do not infer directory traversal from a similarly named module.
 For each scenario call const seams=runtime.createSeams(scenarioId). Map the declared
 seams.functions[id] into the source's imported dependency objects without rewriting
 their outcomes. The helper supplies frozen per-call outcomes and captures calls.
+Return outcomes supply the frozen value directly; they do not invoke callbacks
+passed as seam arguments. Do not claim real dependency behavior from a stub result.
 After the scenario call seams.assertWithinBudget(), then use seams.observations()
 for raw chronological calls. A source catch cannot hide an exhausted input sequence.
 Call records contain seam and args only, not result or resultKind. Observe actual

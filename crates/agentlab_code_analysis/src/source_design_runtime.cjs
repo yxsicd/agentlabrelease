@@ -63,6 +63,12 @@ module.exports = function createRuntime(sourceRoot, controlId, compiler) {
       {timeout: 1000});
     return module.exports;
   }
+  function scenarioInputs(scenarioId) {
+    const scenario = (manifest.scenarios || []).find(s => s.id === scenarioId);
+    if (!scenario) throw new Error('unknown frozen input scenario');
+    // Fresh data, not the Oracle: mutation cannot alter the manifest or seams.
+    return JSON.parse(JSON.stringify({initialState: scenario.initialState, inputs: scenario.inputs}));
+  }
   function createSeams(scenarioId) {
     const scenario = (manifest.scenarios || []).find(s => s.id === scenarioId);
     if (!scenario) throw new Error('unknown frozen seam scenario');
@@ -104,7 +110,7 @@ module.exports = function createRuntime(sourceRoot, controlId, compiler) {
         if (violations.size) throw new Error([...violations].join('; '));
       }});
   }
-  return Object.freeze({source, loadModule, createSeams});
+  return Object.freeze({source, loadModule, scenarioInputs, createSeams});
 };
 
 // Explicit convenience entry for the pinned compiler invocation protocol.
