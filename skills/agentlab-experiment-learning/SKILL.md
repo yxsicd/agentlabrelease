@@ -208,6 +208,21 @@ freeze is not authenticated. Preparation does not execute a reviewer: require
 an independently captured reviewer turn, native response reconstruction and the
 existing lesson/admission/readback gates before counting automatic review or return.
 
+For reviewer response and capture contracts, read the independent-review section
+of the [source-guidance checkpoint](../../docs/flywheel-source-guidance-consumption-20261004.md).
+Use native `--prepare-source-suite-review-prompt` rather than operator-written
+instructions. `--validate-source-suite-review-response` reconstructs the request,
+rubric and full item inventories; fail takes precedence over missing evidence.
+Rejected/unverified feedback is retained without a lesson. All-pass responses
+must also pass the existing source-suite lesson gate, never bypass admission.
+Content validation alone is not reviewer execution. Require
+`--verify-source-suite-review-completion` against a fresh source-suite-review
+capture: one complete zero-retry exchange, exact prompt/model/budget, no prior
+constructor/reviewer history, and original upstream/final-assistant response
+agreement. Recorded context separation is not filesystem isolation or provider
+authentication. Quote membership is not semantic support; full completion still
+does not grant knowledge authority, formal-case acceptance or measured benefit.
+
 The ordinary `--plan-observation-import` / `--verify-observation-import` gates
 also accept original source-suite observation and reviewed-lesson exports.
 Reconstruct all rows from the retained suite and optional review, preserving the

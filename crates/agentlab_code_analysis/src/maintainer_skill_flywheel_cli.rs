@@ -817,10 +817,62 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
-    if args
-        .iter()
-        .any(|arg| arg == "--prepare-source-suite-review")
-    {
+    if args.iter().any(|arg| {
+        arg == "--validate-source-suite-review-response"
+            || arg == "--verify-source-suite-review-completion"
+    }) {
+        let source = PathBuf::from(value(&args, "--source")?);
+        let rubric = fs::read(value(&args, "--quality-rubric")?)?;
+        let response = fs::read(value(&args, "--review-response")?)?;
+        let report = if args
+            .iter()
+            .any(|arg| arg == "--verify-source-suite-review-completion")
+        {
+            agentlab_code_analysis::maintainer_source_review::verify_completion(
+                &source,
+                &rubric,
+                &PathBuf::from(value(&args, "--participant-evidence")?),
+                &response,
+            )?
+        } else {
+            agentlab_code_analysis::maintainer_source_review::validate_response(
+                &source, &rubric, &response,
+            )?
+        };
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&output)?;
+        file.write_all(&serde_json::to_vec_pretty(&report)?)?;
+        file.write_all(b"\n")?;
+        println!(
+            "{}",
+            serde_json::json!({"verdict":report["verdict"],"responseContentVerified":true,"qualified":false})
+        );
+        return Ok(());
+    }
+    if args.iter().any(|arg| {
+        arg == "--prepare-source-suite-review" || arg == "--prepare-source-suite-review-prompt"
+    }) {
+        if args
+            .iter()
+            .any(|arg| arg == "--prepare-source-suite-review-prompt")
+        {
+            let prompt = agentlab_code_analysis::maintainer_source_review::prompt(
+                &PathBuf::from(value(&args, "--source")?),
+                &fs::read(value(&args, "--quality-rubric")?)?,
+            )?;
+            let mut file = OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&output)?;
+            file.write_all(&prompt)?;
+            println!(
+                "{}",
+                serde_json::json!({"promptPreparedOnly":true,"reviewerExecuted":false,"qualified":false})
+            );
+            return Ok(());
+        }
         let report = agentlab_code_analysis::maintainer_source_review::prepare(
             &PathBuf::from(value(&args, "--source")?),
             &fs::read(value(&args, "--quality-rubric")?)?,
