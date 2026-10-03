@@ -362,6 +362,20 @@ def prepare_isolated_source(request: dict, source: Path, output: Path, template:
 
 
 def run_agent(args) -> None:
+    revision = getattr(args, "revision_request", None)
+    if revision is not None:
+        require(all(getattr(args, name, None) is not None
+                    for name in ("flywheel_tool", "knowledge", "operation_inputs")),
+                "shadow revision requires native tool, knowledge and operation inputs")
+        args.output.mkdir(parents=True, exist_ok=False)
+        subprocess.run([str(args.flywheel_tool), "--validate-shadow-case-revision",
+                        "--knowledge", str(args.knowledge), "--operation-inputs", str(args.operation_inputs),
+                        "--shadow-request", str(args.request), "--revision-request", str(revision),
+                        "--output", str(args.output / "revision-validation.json")], check=True)
+    else:
+        require(not any(getattr(args, name, None) is not None
+                        for name in ("flywheel_tool", "knowledge", "operation_inputs")),
+                "shadow revision dependencies require a revision request")
     template = os.environ.get("AGENTLAB_PARTICIPANT_RUNTIME_CONFIG")
     if not template:
         return run_agent_inner(args)
@@ -389,6 +403,18 @@ def run_agent_inner(args) -> None:
     workspace.mkdir(parents=True)
     evidence.mkdir()
     shutil.copy2(args.request, workspace / "shadow-request.json")
+    frozen_request_sha = file_digest(workspace / "shadow-request.json")
+    revision = getattr(args, "revision_request", None)
+    if revision is not None:
+        shutil.copy2(revision, args.output / "revision-request.json")
+        bound = load(args.output / "revision-request.json")
+        require(file_digest(args.output / "revision-request.json")
+                == load(args.output / "revision-validation.json")["revisionRequestSha256"],
+                "shadow revision changed after preflight")
+        require(frozen_request_sha == load(args.output / "revision-validation.json")["currentRequestSha256"],
+                "shadow request changed after revision preflight")
+        (workspace / "parent-proposal.json").write_text(bound["parentProposalUtf8"], encoding="utf-8")
+        (workspace / "review-feedback.json").write_text(bound["reviewUtf8"], encoding="utf-8")
     source_link = workspace / "source"
     # Host absolute paths are intentionally absent in the isolated namespace.
     source_link.symlink_to(Path("/agentlab/case/source")
@@ -428,6 +454,8 @@ Give at least two observables and two meaningful wrong variants. {environment_in
 An existing test name, done() callback, or successful runner exit is not a behavior assertion. If proposing reuse of an existing test, inspect its actual assertions and error branches at the pinned source; if the necessary test source is not in fact evidence, record that knowledge gap instead of inventing support. Require independently controlled success/failure checks before runtime calibration. A swallowed failure is an Oracle defect, while an unsupported adapter, timeout, or build fault is infrastructure failure, never a killed wrong variant. Define each wrong variant as one meaningful semantic change; do not assume a cosmetic rename is invalid. Record these as unresolved qualification requirements, not completed experiments.
 The required framework is a proposed test contract, not evidence that the repository already contains that test harness. Missing entrypoints are construction gaps, not permission to select an incompatible runner. Distinguish mutations to an old instance's fields from effects on a freshly constructed instance; source assignment alone does not prove a resource leak, runtime cleanup, or causal discrimination. Staged demands must describe one evolving implementation task rather than independent baseline smoke-test descriptions.
 """
+    if revision is not None:
+        prompt += "\nRevise the retained proposal rather than sampling an unrelated task. Address every finding, preserving request identity and unqualified status. Review is not an approved Oracle. Original rejected proposal bytes:\n" + bound["parentProposalUtf8"] + "\nExact source-review feedback:\n" + bound["reviewUtf8"]
     try:
         participant.turn("shadow-case-constructor", workspace, prompt=prompt,
                          wall_time_limit_seconds=720, transport_retry_limit=0)
@@ -435,6 +463,12 @@ The required framework is a proposed test contract, not evidence that the reposi
         participant.close()
         source_link.unlink(missing_ok=True)
     proposal = workspace / "shadow-case-proposal.json"
+    require(file_digest(workspace / "shadow-request.json") == frozen_request_sha,
+            "Agent modified the frozen shadow request")
+    if revision is not None:
+        require((workspace / "parent-proposal.json").read_bytes() == bound["parentProposalUtf8"].encode()
+                and (workspace / "review-feedback.json").read_bytes() == bound["reviewUtf8"].encode(),
+                "Agent modified retained revision inputs")
     require(proposal.is_file() and not proposal.is_symlink(), "Agent did not produce a shadow proposal")
     shutil.copy2(proposal, args.output / "shadow-case-proposal.json")
     status = subprocess.check_output(["git", "-C", str(source_root), "status", "--porcelain"], text=True)
@@ -636,6 +670,10 @@ def main() -> None:
     command.add_argument("--gateway", required=True)
     command.add_argument("--model", required=True)
     command.add_argument("--provider-route", required=True)
+    command.add_argument("--revision-request", type=Path)
+    command.add_argument("--flywheel-tool", type=Path)
+    command.add_argument("--knowledge", type=Path)
+    command.add_argument("--operation-inputs", type=Path)
     command.set_defaults(handler=run_agent)
     command = commands.add_parser("record-success")
     command.add_argument("--request", type=Path, required=True)

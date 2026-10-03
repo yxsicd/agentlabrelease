@@ -61,6 +61,18 @@ leak claims, single-change negative controls from confounded mutations, and an
 evolving implementation task from several unrelated smoke tests. Shape validity
 and isolated Agent completion do not establish these semantic properties.
 
+For a rejected, unpublished operation-origin draft, prepare
+`--prepare-shadow-case-revision` with the committed knowledge, operation inputs,
+current shadow request, original parent request/proposal and source-review feedback.
+Rust reproduces the current request, preserves parent identity except the explicit
+framework-policy correction, and bounds findings to the semantic source evidence.
+The packet retains original UTF-8 bytes and digests, not an approved replacement.
+Pass it to `case_generation_shadow.py run-agent --revision-request` together with
+`--flywheel-tool`, `--knowledge` and `--operation-inputs`; native revalidation runs
+before dispatch. Each fresh attempt receives the original proposal and feedback,
+keeps them unchanged, and disables transport retries. This is a revision input
+handoff, not successful semantic repair, calibrated-case admission or a full loop.
+
 After focused knowledge refresh, derive a stable successor candidate instead of
 rewriting the original candidate or construction plan. Bind the parent candidate
 ID/value digest, parent knowledge cut, refreshed fact digest and refresh receipt

@@ -77,6 +77,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
         return Ok(());
     }
+    if args
+        .iter()
+        .any(|a| a == "--prepare-shadow-case-revision" || a == "--validate-shadow-case-revision")
+    {
+        let base = PathBuf::from(value(&args, "--knowledge")?);
+        let inputs = fs::read(value(&args, "--operation-inputs")?)?;
+        let current = fs::read(value(&args, "--shadow-request")?)?;
+        let result = if args.iter().any(|a| a == "--validate-shadow-case-revision") {
+            agentlab_code_analysis::maintainer_operation_case::validate_revision_request(
+                &base,
+                &inputs,
+                &current,
+                &fs::read(value(&args, "--revision-request")?)?,
+            )?
+        } else {
+            agentlab_code_analysis::maintainer_operation_case::revision_request(
+                &base,
+                &inputs,
+                &current,
+                &fs::read(value(&args, "--parent-request")?)?,
+                &fs::read(value(&args, "--parent-proposal")?)?,
+                &fs::read(value(&args, "--review-feedback")?)?,
+            )?
+        };
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output)?
+            .write_all(&serde_json::to_vec_pretty(&result)?)?;
+        println!(
+            "{}",
+            serde_json::json!({"schema":result["schema"],"qualified":false})
+        );
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--prepare-operation-case-shadow") {
         let request = agentlab_code_analysis::maintainer_operation_case::shadow_request(
             &PathBuf::from(value(&args, "--knowledge")?),

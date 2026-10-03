@@ -264,3 +264,160 @@ pub fn shadow_request(base: &Path, inputs: &[u8], runtime: &str) -> Result<Value
             "shadowEligible":true,"blockers":[],"caseCalibrationInherited":false},
         "output":"shadow-case-proposal.json"}))
 }
+
+/// Bind rejected shadow bytes and source-scoped review to a reproducible request.
+/// Framework-policy correction is explicit; source/knowledge identity cannot drift.
+pub fn revision_request(
+    base: &Path,
+    inputs: &[u8],
+    current: &[u8],
+    parent_request: &[u8],
+    parent_proposal: &[u8],
+    review: &[u8],
+) -> Result<Value, String> {
+    for bytes in [current, parent_request, parent_proposal, review] {
+        need(
+            bytes.len() <= 64 * 1024,
+            "shadow revision input exceeds budget",
+        )?;
+    }
+    let decode = |bytes: &[u8]| serde_json::from_slice::<Value>(bytes).map_err(|e| e.to_string());
+    let now = decode(current)?;
+    let runtime = now["policy"]["runtimeTarget"]
+        .as_str()
+        .ok_or("revision runtime absent")?;
+    need(
+        now == shadow_request(base, inputs, runtime)?,
+        "revision current request differs from committed evidence",
+    )?;
+    let parent = decode(parent_request)?;
+    let mut old_projection = parent.clone();
+    let mut new_projection = now.clone();
+    for value in [&mut old_projection, &mut new_projection] {
+        value["policy"]
+            .as_object_mut()
+            .ok_or("revision policy absent")?
+            .remove("oracleFramework");
+    }
+    need(
+        old_projection == new_projection,
+        "revision parent source or knowledge identity differs",
+    )?;
+    let proposal = decode(parent_proposal)?;
+    need(
+        proposal.get("lineage").is_none(),
+        "published shadow candidates require a successor, not draft revision",
+    )?;
+    need(
+        proposal["schema"] == "agentlab.shadow_case_candidate.v1"
+            && proposal["status"] == "shadow-proposal"
+            && proposal["automaticPromotion"] == false,
+        "revision parent proposal qualification differs",
+    )?;
+    need(
+        proposal["id"] == parent["candidateId"]
+            && proposal["repositoryId"] == parent["repository"]["id"]
+            && proposal["sourceRevision"] == parent["repository"]["revision"]
+            && proposal["scopeSkillIds"] == parent["fact"]["scopeSkillIds"]
+            && proposal["factIds"] == json!([parent["fact"]["id"]]),
+        "revision parent proposal identity differs",
+    )?;
+    let feedback = decode(review)?;
+    need(
+        feedback["schema"] == "agentlab.operator_shadow_source_review.v1"
+            && feedback["verdict"] == "revision-required"
+            && feedback["automaticPromotion"] == false
+            && feedback["formalCaseQualified"] == false
+            && feedback["runtimeQualified"] == false,
+        "revision feedback cannot approve or qualify",
+    )?;
+    need(
+        feedback["proposalSha256"] == digest(parent_proposal)
+            && feedback["requestSha256"] == digest(parent_request)
+            && feedback["sourceRevision"] == parent["repository"]["revision"],
+        "revision feedback byte binding differs",
+    )?;
+    let findings = feedback["findings"]
+        .as_array()
+        .ok_or("revision findings absent")?;
+    need(
+        !findings.is_empty() && findings.len() <= 8,
+        "revision findings outside budget",
+    )?;
+    let evidence = parent["fact"]["evidence"]
+        .as_array()
+        .ok_or("revision source evidence absent")?;
+    let mut ids = std::collections::BTreeSet::new();
+    for finding in findings {
+        let id = finding["id"].as_str().ok_or("revision finding id absent")?;
+        need(
+            !id.is_empty() && id.len() <= 100 && ids.insert(id),
+            "revision finding id invalid or duplicate",
+        )?;
+        for field in ["observation", "requestedRevision"] {
+            let text = finding[field]
+                .as_str()
+                .ok_or("revision finding text absent")?;
+            need(
+                !text.trim().is_empty() && text.len() <= 2000,
+                "revision finding text outside budget",
+            )?;
+        }
+        let paths = finding["sourcePaths"]
+            .as_array()
+            .ok_or("revision finding source paths absent")?;
+        need(
+            paths.len() <= evidence.len()
+                && paths.iter().all(|p| {
+                    p.as_str().is_some_and(|s| !s.is_empty())
+                        && evidence.iter().any(|e| e["path"] == *p)
+                }),
+            "revision finding borrows unbound source",
+        )?;
+    }
+    let utf8 = |bytes: &[u8]| {
+        std::str::from_utf8(bytes)
+            .map(str::to_owned)
+            .map_err(|e| e.to_string())
+    };
+    Ok(json!({"schema":"agentlab.shadow_case_revision_request.v1",
+        "currentRequestSha256":digest(current),"parentRequestSha256":digest(parent_request),
+        "parentProposalSha256":digest(parent_proposal),"reviewSha256":digest(review),
+        "parentRequestUtf8":utf8(parent_request)?,"parentProposalUtf8":utf8(parent_proposal)?,"reviewUtf8":utf8(review)?,
+        "candidateId":now["candidateId"],"sourceRevision":now["repository"]["revision"],
+        "automaticPromotion":false,"formalCaseQualified":false,
+        "verificationBoundary":"Binds review and retained bytes; does not authenticate reviewer, approve semantics, qualify execution or prove repair benefit."}))
+}
+
+pub fn validate_revision_request(
+    base: &Path,
+    inputs: &[u8],
+    current: &[u8],
+    packet: &[u8],
+) -> Result<Value, String> {
+    need(packet.len() <= 256 * 1024, "revision packet exceeds budget")?;
+    let value: Value = serde_json::from_slice(packet).map_err(|e| e.to_string())?;
+    let raw = |key: &str| {
+        value[key]
+            .as_str()
+            .map(str::as_bytes)
+            .ok_or("revision original bytes absent")
+    };
+    let expected = revision_request(
+        base,
+        inputs,
+        current,
+        raw("parentRequestUtf8")?,
+        raw("parentProposalUtf8")?,
+        raw("reviewUtf8")?,
+    )?;
+    need(
+        value == expected,
+        "revision packet differs from reconstructed bindings",
+    )?;
+    Ok(
+        json!({"schema":"agentlab.shadow_case_revision_validation.v1","revisionRequestSha256":digest(packet),
+        "currentRequestSha256":digest(current),"parentProposalSha256":expected["parentProposalSha256"],
+        "reviewSha256":expected["reviewSha256"],"status":"bound-revision-inputs","formalCaseQualified":false,"automaticPromotion":false}),
+    )
+}
