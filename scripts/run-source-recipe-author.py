@@ -588,11 +588,20 @@ SOURCE CONTEXT:\n''' + json.dumps(context, ensure_ascii=False)
 Use const createRuntime=require(process.argv[{4 + dependency_count}]);
 {runtime_initialization}
 runtime.source(relativePath) returns the actual selected, transformed source text.
+The operator runtime ALREADY applies this control's frozen edits exactly once.
+Do not reapply design.controls[*].edits, build a second EDITS map, or pass a manually
+modified source string to loadModule. loadModule consumes runtime.source internally.
 runtime.scenarioInputs(scenarioId) returns a fresh JSON copy of exactly initialState
 and inputs from the frozen scenario, without expectedObservations or check answers.
 Read ordered actions/arguments from this packet; do not create a second hardcoded
 scenario action inventory. Apply declared initial state through a source-supported
 adapter or verify it against the actual constructed state; it is not auto-applied.
+For source-observed initialization use runtime.assertInitialState(scenarioId,
+actualObservedState, pointer), where pointer is an RFC6901 path into initialState
+(empty string means the whole initialState). Read actual fields from the fresh
+source instance. The helper throws on missing pointers, non-JSON values or mismatch.
+Let that failure escape before calling the tested method; an ungraded match:false
+output flag is not verification. Never initialize observed fields from expectations.
 runtime.loadModule(relativePath, imports, globals) transpiles that text in memory
 and returns CommonJS exports in a fresh context on every call. imports maps exact
 source import specifiers to explicit controlled seams; absent imports fail closed.

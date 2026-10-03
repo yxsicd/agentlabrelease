@@ -78,6 +78,76 @@ fn source_action_preflight_keeps_failure_bytes_without_admission_or_retry() {
 }
 
 #[test]
+fn frozen_initial_state_assertion_rejects_source_mismatch_before_operation() {
+    let (dir, _) = loop_fixture();
+    let source_root = dir.join("initial-state-source");
+    fs::create_dir(&source_root).unwrap();
+    let source = "exports.Subject=class { constructor(){this.count=0;this.called=false} run(){this.called=true;return this.count} };";
+    fs::write(source_root.join("state.js"), source).unwrap();
+    let manifest = json!({
+        "files":[{"path":"state.js","sha256":digest(source.as_bytes()),"content":source}],
+        "controls":[{"id":"baseline","edits":[]},{"id":"wrong","edits":[{"path":"state.js","before":"this.count=0","after":"this.count=1"}]}],
+        "scenarios":[{"id":"state","initialState":{"fields":{"count":0,"called":false},"a/b":{"~key":[null,{}]}},"inputs":{"seams":{}}}]
+    });
+    let runtime = dir.join("initial-state-runtime.cjs");
+    fs::write(
+        &runtime,
+        format!(
+            "const manifest={manifest};\n{}",
+            include_str!("../src/source_design_runtime.cjs")
+        ),
+    )
+    .unwrap();
+    let script = r#"
+const assert=require('assert'),create=require(process.argv[1]);
+const compiler={ScriptTarget:{ES2020:1},ScriptKind:{TS:1},ModuleKind:{CommonJS:1},DiagnosticCategory:{Error:1},createSourceFile:()=>({parseDiagnostics:[]}),transpileModule:t=>({outputText:t,diagnostics:[]})};
+const baseline=create(process.argv[2],'baseline',compiler);
+const good=new (baseline.loadModule('state.js').Subject)();
+baseline.assertInitialState('state',{called:good.called,count:good.count},'/fields');
+assert.equal(good.run(),0);
+baseline.assertInitialState('state',0,'/fields/count');
+baseline.assertInitialState('state',[null,{}],'/a~1b/~0key');
+baseline.assertInitialState('state',null,'/a~1b/~0key/0');
+baseline.assertInitialState('state',{},'/a~1b/~0key/1');
+baseline.assertInitialState('state',{'a/b':{'~key':[null,{}]},fields:{called:false,count:0}});
+assert.throws(()=>baseline.assertInitialState('state',[],'/a~1b/~0key/1'),/observed initial state differs/);
+assert.throws(()=>baseline.assertInitialState('state',null,'/missing'),/missing initial state pointer/);
+assert.throws(()=>baseline.assertInitialState('state',0,'/fields/~bad'),/invalid initial state pointer/);
+assert.throws(()=>baseline.assertInitialState('state',0,'fields'),/invalid initial state pointer/);
+assert.throws(()=>baseline.assertInitialState('missing',{}),/unknown frozen input scenario/);
+for(const bad of [undefined,NaN,Infinity,()=>0,new Date(),new Map()])
+ assert.throws(()=>baseline.assertInitialState('state',bad,'/fields/count'),/non-JSON/);
+assert.throws(()=>baseline.assertInitialState('state',{count:0,called:false,extra:1},'/fields'),/observed initial state differs/);
+const packet=baseline.scenarioInputs('state');packet.initialState.fields.count=99;
+baseline.assertInitialState('state',{count:0,called:false},'/fields');
+const wrong=create(process.argv[2],'wrong',compiler);
+const changed=wrong.source('state.js');
+assert.equal(changed.includes('this.count=0'),false);assert.equal(changed.split('this.count=1').length,2);
+const bad=new (wrong.loadModule('state.js').Subject)();
+assert.equal(bad.count,1);
+assert.throws(()=>{wrong.assertInitialState('state',{count:bad.count,called:bad.called},'/fields');bad.run()},/observed initial state differs/);
+assert.equal(bad.called,false);
+assert.equal(wrong.source('state.js'),changed);
+console.log('initial-state-and-single-transformation-pass');
+"#;
+    let result = Command::new("node")
+        .args(["-e", script])
+        .arg(&runtime)
+        .arg(&source_root)
+        .output()
+        .unwrap();
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&result.stdout).trim(),
+        "initial-state-and-single-transformation-pass"
+    );
+}
+
+#[test]
 fn frozen_runtime_preserves_module_bindings_and_refuses_implicit_imports() {
     let (dir, _) = loop_fixture();
     let recipe: Value =

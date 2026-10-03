@@ -69,6 +69,38 @@ module.exports = function createRuntime(sourceRoot, controlId, compiler) {
     // Fresh data, not the Oracle: mutation cannot alter the manifest or seams.
     return JSON.parse(JSON.stringify({initialState: scenario.initialState, inputs: scenario.inputs}));
   }
+  function assertInitialState(scenarioId, actual, pointer = '') {
+    // The verifier selects a source-observable subtree, not an expected output.
+    // Assertion failure must escape before invoking the method under test.
+    let expected = scenarioInputs(scenarioId).initialState;
+    if (typeof pointer !== 'string' || (pointer && !pointer.startsWith('/')) ||
+        /~(?![01])/u.test(pointer)) throw new Error('invalid initial state pointer');
+    for (const token of pointer === '' ? [] : pointer.slice(1).split('/')) {
+      const key = token.replace(/~1/g, '/').replace(/~0/g, '~');
+      if (expected === null || typeof expected !== 'object' ||
+          !Object.hasOwn(expected, key)) throw new Error('missing initial state pointer');
+      expected = expected[key];
+    }
+    function canonical(value) {
+      if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+      if (Array.isArray(value)) {
+        const result = [];
+        for (let i = 0; i < value.length; i++) {
+          if (!Object.hasOwn(value, i)) throw new Error('non-JSON observed initial state');
+          result.push(canonical(value[i]));
+        }
+        return {array: result};
+      }
+      if (value && Object.prototype.toString.call(value) === '[object Object]') {
+        // Entry arrays avoid __proto__ mutation and disregard property order.
+        return {object: Object.keys(value).sort().map(key => [key, canonical(value[key])])};
+      }
+      throw new Error('non-JSON observed initial state');
+    }
+    if (JSON.stringify(canonical(actual)) !== JSON.stringify(canonical(expected)))
+      throw new Error('observed initial state differs: ' + scenarioId + ' ' + pointer);
+  }
   function createSeams(scenarioId) {
     const scenario = (manifest.scenarios || []).find(s => s.id === scenarioId);
     if (!scenario) throw new Error('unknown frozen seam scenario');
@@ -110,7 +142,7 @@ module.exports = function createRuntime(sourceRoot, controlId, compiler) {
         if (violations.size) throw new Error([...violations].join('; '));
       }});
   }
-  return Object.freeze({source, loadModule, scenarioInputs, createSeams});
+  return Object.freeze({source, loadModule, scenarioInputs, assertInitialState, createSeams});
 };
 
 // Explicit convenience entry for the pinned compiler invocation protocol.
