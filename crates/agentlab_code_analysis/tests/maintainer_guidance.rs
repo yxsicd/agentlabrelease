@@ -167,6 +167,21 @@ fn source_guidance_consumption_rebinds_inputs_and_preserves_original_capture_lay
     assert_eq!(receipt["agentConsumptionVerified"], true);
     assert_eq!(receipt["learningBenefitVerified"], false);
     assert!(!evidence.join("author-calibration-lifecycle.json").exists());
+    let mut budget_drift = lifecycle.clone();
+    budget_drift["participantBudgetSeconds"] = json!(420);
+    fs::write(
+        evidence.join("source-recipe-author-lifecycle.json"),
+        serde_json::to_vec(&budget_drift).unwrap(),
+    )
+    .unwrap();
+    assert!(source_recipe_completion(&evidence, &packet_bytes)
+        .unwrap_err()
+        .contains("budget differs"));
+    fs::write(
+        evidence.join("source-recipe-author-lifecycle.json"),
+        serde_json::to_vec(&lifecycle).unwrap(),
+    )
+    .unwrap();
     let incomplete_final =
         serde_json::to_vec(&json!({"role":"assistant","stopReason":"length"})).unwrap();
     let mut rehashed_lifecycle = lifecycle.clone();
@@ -343,9 +358,15 @@ import importlib.util,json,os,sys,hashlib
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('source_author',sys.argv[1]);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 root=Path(sys.argv[2]);packet=json.loads((root/'source-packet.json').read_bytes())
+adapter_path=Path(sys.argv[1]).resolve().parents[1]/'examples/real-code-agent/participant.py'
+adapter_spec=importlib.util.spec_from_file_location('native_participant',adapter_path)
+adapter=importlib.util.module_from_spec(adapter_spec);adapter_spec.loader.exec_module(adapter)
+budget=adapter.Participant.process_budget_seconds(300)
+assert budget==420 and adapter.Participant.process_budget_seconds(240)==420
+assert adapter.Participant.process_budget_seconds()==420 and adapter.Participant.process_budget_seconds(600)==660
 guided=root/'guided';unguided=root/'unguided';guided.mkdir();unguided.mkdir()
-g=m.guidance_prompt('fixed complete source context',packet,'guided',guided,'source-recipe-author',None,240)
-u=m.guidance_prompt('fixed complete source context',packet,'unguided',unguided,'source-recipe-author',None,240)
+g=m.guidance_prompt('fixed complete source context',packet,'guided',guided,'source-recipe-author',None,budget)
+u=m.guidance_prompt('fixed complete source context',packet,'unguided',unguided,'source-recipe-author',None,budget)
 target=packet['sourceRecipeBinding']['target'];body=packet['guidance'][0]['skill']['body']
 assert json.dumps(target,ensure_ascii=False) in g and json.dumps(target,ensure_ascii=False) in u
 assert body in g and body not in u
@@ -353,10 +374,38 @@ assert json.loads(g.splitlines()[-1])==packet
 for directory,prompt,mode in [(guided,g,'guided'),(unguided,u,'unguided')]:
  intent=json.loads((directory/'source-recipe-author-guidance-consumption-intent.json').read_bytes())
  assert intent['promptSha256']==hashlib.sha256(prompt.encode()).hexdigest()
- assert intent['guidanceMode']==mode and intent['participantBudgetSeconds']==240 and intent['transportRetryLimit']==0
+ assert intent['guidanceMode']==mode and intent['participantBudgetSeconds']==budget and intent['transportRetryLimit']==0
  assert intent['agentConsumptionVerified'] is False and intent['learningBenefitVerified'] is False
  assert bool(intent['selectedSkills'])==(mode=='guided')
  assert intent['authorRequestSha256']==packet['sourceRecipeBinding']['authorRequestSha256']
+native=root/'native';native.mkdir()
+p=adapter.Participant.__new__(adapter.Participant);p.evidence=native;p.implementation='pi'
+lifecycle={'timedOut':False}
+event={'type':'message_end','message':{'role':'assistant','stopReason':'stop','content':[{'type':'text','text':'fixture only'}]}}
+result=p._run_turn([sys.executable,'-c','print('+repr(json.dumps(event))+')'],native,{},'budget-fixture',lifecycle,
+ timeout_seconds=budget,require_completed_tool_call=False)
+assert result['content']=='fixture only' and lifecycle['exitCode']==0
+assert lifecycle['participantBudgetSeconds']==budget and lifecycle['participantBudgetScope']=='native-process-watchdog'
+class CapturingParticipant:
+ process_budget_seconds=staticmethod(adapter.Participant.process_budget_seconds)
+ gateway_timeout_seconds=240
+ def __init__(self,evidence):self.evidence=evidence;self.labels=[]
+ def turn(self,label,workspace,**options):
+  self.labels.append(label)
+  intent=json.loads((self.evidence/(label+'-guidance-consumption-intent.json')).read_bytes())
+  assert options['wall_time_limit_seconds']==300 and options['transport_retry_limit']==0
+  assert intent['participantBudgetSeconds']==self.process_budget_seconds(options['wall_time_limit_seconds'])==420
+  gateway=self.evidence/'gateway';gateway.mkdir(exist_ok=True)
+  (gateway/f'{len(self.labels):04d}.status.json').write_text(json.dumps(dict(status=200,
+   outcome='completed',semanticComplete=True,upstreamEof=True,streamError=None,clientDisconnected=False)))
+  return {'content':'```json\n{}\n```' if len(self.labels)==1 else '{}','message':{'stopReason':'stop'}}
+for mode in ['guided','unguided']:
+ output=root/('constructor-'+mode);output.mkdir();workspace=output/'workspace';workspace.mkdir();evidence=output/'evidence';evidence.mkdir()
+ retry=m.freeze_pi_retry_policy(output/'participant-state',workspace,evidence)
+ p=CapturingParticipant(evidence)
+ assert m.construct_proposal(p,workspace,evidence,output,'fixed source',None,1,retry,guidance=packet,guidance_mode=mode)=={}
+ assert p.labels==['source-recipe-author','source-recipe-author-format-revision-1']
+ assert (output/'proposal-attempt-0.txt').read_text()=='```json\n{}\n```'
 assert m.guidance_prompt('ordinary unmodified path',None,'guided',guided,'unused',None,240)=='ordinary unmodified path'
 try:m.guidance_prompt('must-not-overwrite',packet,'guided',guided,'source-recipe-author',None,240)
 except FileExistsError:pass
