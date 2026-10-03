@@ -52,6 +52,12 @@ Keep historical build qualification separate from a fresh build, which needs
 terminal logs and a newly bound output artifact. A successful build may skip
 signing: qualify package identity, signing and installation independently before
 claiming executable tests. Generated test scaffolding is not behavioral coverage.
+Automate this selection from parsed source registrations and output types, not
+directory-name guesses or operator-selected task strings. Bind the configuration
+bytes used by the planner to the executor's frozen source set. Build the declared
+installable host and device-test output separately, stop on either build failure,
+and check test evidence inside the selected module rather than borrowing a sibling's
+framework. Host packaging is not proof of runtime navigation or case calibration.
 
 For cross-scope construction gaps, use the Rust
 `--prepare-construction-context --knowledge ABSOLUTE_CUT --source-worktree

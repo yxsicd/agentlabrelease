@@ -24,6 +24,18 @@ fn optional(args: &[String], name: &str) -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let output = PathBuf::from(value(&args, "--output")?);
+    if args.iter().any(|a| a == "--prepare-harmony-build-plan") {
+        let module = value(&args, "--build-module")?;
+        let report = agentlab_code_analysis::harmony_build_plan::prepare(
+            &PathBuf::from(value(&args, "--project-root")?), &module,
+            &optional(&args, "--host-module").unwrap_or(module.clone()),
+            &value(&args, "--product")?, &value(&args, "--build-mode")?,
+        )?;
+        OpenOptions::new().write(true).create_new(true).open(output)?
+            .write_all(&serde_json::to_vec_pretty(&report)?)?;
+        println!("{}", serde_json::json!({"schema":report["schema"],"outputType":report["outputType"],"qualified":false}));
+        return Ok(());
+    }
     if args.iter().any(|a| a == "--prepare-construction-context") {
         let paths = args
             .windows(2)

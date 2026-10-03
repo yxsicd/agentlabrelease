@@ -16,7 +16,7 @@ SCRIPT = ROOT / "scripts/run-harmony-assessed-standard-test.py"
 SOURCE_EXECUTOR = r'''#!/usr/bin/env python3
 import argparse, hashlib, json, os, pathlib
 p=argparse.ArgumentParser()
-for name in ("project-root","case-id","source-set-sha256","hvigorw","build-module","product","build-mode","app-hap","test-hap","build-timeout-seconds","hdc","target","bundle","test-module","runner","timeout-seconds","case-timeout-ms","output-dir"):
+for name in ("project-root","case-id","source-set-sha256","hvigorw","build-planner","build-module","product","build-mode","app-hap","test-hap","build-timeout-seconds","hdc","target","bundle","test-module","runner","timeout-seconds","case-timeout-ms","output-dir","host-module"):
     p.add_argument("--"+name)
 p.add_argument("--test-class"); a=p.parse_args(); out=pathlib.Path(a.output_dir); out.mkdir(parents=True)
 status=os.environ.get("STANDARD_SOURCE_STATUS","passed"); passed=status == "passed"
@@ -57,7 +57,7 @@ class HarmonyAssessedStandardTestTests(unittest.TestCase):
             "buildReceipt": {"path": str(self.build), "sha256": digest(self.build)},
             "projectRoot": str(self.build_root / "project"),
             "sourceExecutor": {"path": str(self.executor), "sha256": digest(self.executor)},
-            "configuration": {"hvigorw": str(self.tool), "buildModule": "entry", "appHap": "app.hap",
+            "configuration": {"hvigorw": str(self.tool), "buildPlanner": str(self.tool), "buildModule": "entry", "appHap": "app.hap",
                               "testHap": "test.hap", "target": "device", "bundle": "com.example",
                               "testModule": "entry_test"},
             "automaticPromotion": False,
