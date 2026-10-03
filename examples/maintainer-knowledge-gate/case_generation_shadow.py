@@ -307,7 +307,13 @@ def request_origin(request: dict) -> dict:
             require(bound["bindings"].get("operationInputsSha256") == digest
                     and bound["bindings"].get("runtimeTarget") == request["policy"].get("runtimeTarget"),
                     "successor operation or runtime binding differs")
-            origin.update({"parentCandidateId": bound["parentCandidateId"], **bound["bindings"]})
+            # Native packets retain their historical field name. The parent is
+            # an unadmitted proposal, not a stored candidate supersession edge.
+            parent_id = bound["parentCandidateId"]
+            require(SAFE_ID.fullmatch(parent_id) is not None
+                    and json.loads(bound["parentProposalUtf8"]).get("id") == parent_id,
+                    "successor parent proposal identity differs")
+            origin.update({"parentProposalId": parent_id, **bound["bindings"]})
         return origin
     require(request.get("schema") == "agentlab.case_generation_shadow_request.v1", "bad shadow request")
     require("operationInputsSha256" not in request, "semantic loop request borrows operation lineage")

@@ -203,3 +203,32 @@ summary rejected the isolated projection with `downstream parent absent`.
 No successful batch, authority admission, repeat-batch guard or new runtime
 execution is claimed. Preserve this failed batch rather than inventing parent
 rows or disabling digest-bound lineage. Overall maturity remains **69%**.
+
+## Draft-provenance correction and ordinary batch replay
+
+Inspection of the retained constructor inputs showed a second structural issue:
+the operation successor's parent is an unadmitted proposal, not a stored candidate
+with a candidate-value digest. Fresh enrichment now emits `parentProposalId` and
+the original input digests. The native input packet stays byte-identical; its old
+internal `parentCandidateId` label is not changed. The candidate schema explicitly
+separates the two parent roles. Rust rejects mixed roles or missing draft digests;
+draft provenance never suppresses another stored candidate's scheduling.
+
+The original request and proposal were replayed under the current validator into
+`flywheel-construction-binding-NseNZyis/current-method`, not overwritten in the
+historical projection. Historical candidate value digest `0ad1b86b...` and current
+replay digest `70bccf85...` are separately recorded. The isolated construction plan
+and reviewed partial profile were explicitly rebound and remain unqualified.
+An initial profile used a plan-value digest rather than the required file-byte
+digest; the consumer rejected it. Both failed batches remain retained.
+
+After correcting that profile, ordinary `batch3` completed with no knowledge
+blockers and all six qualification blockers preserved. It reconstructed the
+original positive, wrong and recovery observations and selected missing control
+work. `batch4` repeated the same entrypoint with `batch3` as predecessor: formal
+and partial active cohorts became empty and both routes awaited new evidence.
+This closes the actual local ordinary batch wiring for this controlled replay,
+not cross-Action history, active TableGit admission, automatic control execution
+or a new physical experiment. Overall maturity remains **69%**; complete accepted
+automatic business loops remain zero. Next work must qualify construction and
+calibration producers rather than spend another turn re-consuming these captures.

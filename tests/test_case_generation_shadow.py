@@ -30,7 +30,7 @@ class CaseGenerationShadowTest(unittest.TestCase):
                  "formalCaseQualified":False,"automaticPromotion":False,"parentCandidateId":"shadow-case-parent-example",
                  "sourceContext":context,"editBoundary":edit,"bindings":{"operationInputsSha256":"3"*64,"runtimeTarget":"harmony-emulator"}}
         for key, raw, value in [("parentRequestSha256","parentRequestUtf8", {}),
-                               ("parentProposalSha256","parentProposalUtf8", {}),
+                               ("parentProposalSha256","parentProposalUtf8", {"id":"shadow-case-parent-example"}),
                                ("reviewSha256","reviewUtf8", {}), ("contextSha256","contextUtf8",context),
                                ("editBoundarySha256","editBoundaryUtf8",edit)]:
             bound[raw] = json.dumps(value)
@@ -46,7 +46,8 @@ class CaseGenerationShadowTest(unittest.TestCase):
         proposal["editablePaths"] = ["verification/new.test"]
         proposal["contextPaths"] = ["verification/existing.test"]
         retained = MODULE.validate_proposal(request, proposal)
-        self.assertEqual(retained["lineage"]["parentCandidateId"], "shadow-case-parent-example")
+        self.assertEqual(retained["lineage"]["parentProposalId"], "shadow-case-parent-example")
+        self.assertNotIn("parentCandidateId", retained["lineage"])
         self.assertEqual(retained["lineage"]["editBoundarySha256"], request["successorConstruction"]["bindings"]["editBoundarySha256"])
         self.assertEqual(retained["oracleHypothesis"]["status"], "hypothesis-unqualified")
         proposal["editablePaths"] = ["verification/unselected.test"]

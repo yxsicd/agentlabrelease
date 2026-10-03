@@ -38,14 +38,22 @@
       "additionalProperties": false,
       "oneOf": [{"required": ["loopReceiptSha256"]}, {"required": ["operationInputsSha256"]}],
       "dependentRequired": {
-        "parentCandidateId": ["parentCandidateSha256", "parentKnowledgeCutSha256", "refreshedFactSha256", "focusedRefreshReceiptSha256"]
+        "parentCandidateId": ["parentCandidateSha256", "parentKnowledgeCutSha256", "refreshedFactSha256", "focusedRefreshReceiptSha256"],
+        "parentProposalId": ["operationInputsSha256", "parentRequestSha256", "parentProposalSha256", "reviewSha256", "contextSha256", "editBoundarySha256", "shadowRequestValueSha256", "runtimeTarget"]
       },
+      "not": {"required": ["parentCandidateId", "parentProposalId"]},
       "properties": {
         "loopReceiptSha256": { "$ref": "#/$defs/sha256" },
         "operationInputsSha256": { "$ref": "#/$defs/sha256" },
         "focusedRefreshReceiptSha256": { "$ref": "#/$defs/sha256" },
         "parentCandidateId": { "type": "string", "pattern": "^shadow-case-[a-z0-9-]{8,140}$" },
         "parentCandidateSha256": { "$ref": "#/$defs/sha256" },
+        "parentProposalId": { "type": "string", "pattern": "^shadow-case-[a-z0-9-]{8,140}$" },
+        "parentRequestSha256": { "$ref": "#/$defs/sha256" },
+        "parentProposalSha256": { "$ref": "#/$defs/sha256" },
+        "reviewSha256": { "$ref": "#/$defs/sha256" },
+        "contextSha256": { "$ref": "#/$defs/sha256" },
+        "editBoundarySha256": { "$ref": "#/$defs/sha256" },
         "parentKnowledgeCutSha256": { "$ref": "#/$defs/sha256" },
         "refreshedFactSha256": { "$ref": "#/$defs/sha256" },
         "shadowRequestValueSha256": { "$ref": "#/$defs/sha256" },

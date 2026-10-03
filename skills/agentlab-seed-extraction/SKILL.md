@@ -177,6 +177,17 @@ Do not move the benchmark baseline to the reference implementation to obtain
 missing source facts. Keep full parent candidate/value-digest lineage in a batch:
 a partial projection may pass individual gates and still fail batch admission.
 
+Keep draft revision provenance distinct from stored-candidate supersession.
+Operation constructor parents are unadmitted proposals: emitted lineage uses
+`parentProposalId` plus original request/proposal/review/context/edit-boundary
+digests. Historical native input packets retain their original field names and
+bytes. Only `parentCandidateId` with an exact stored parent-value digest denotes
+a candidate supersession edge; draft provenance must not suppress candidate
+scheduling. After a method correction, retain historical output separately and
+label any current-method replay, including both candidate-value digests. Rebind
+an isolated unqualified plan/profile explicitly; never reuse the historical
+candidate or plan digest or count replay as a new Agent/runtime observation.
+
 When replacing an invalid raw knowledge export with a reviewed snapshot, reconcile
 independently retained candidate and generation-round records too. Verify their
 original value digests and parent-round link before restoring them; keep original
