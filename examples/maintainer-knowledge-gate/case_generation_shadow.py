@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -312,7 +313,57 @@ def verify_fact_source(request: dict, source: Path) -> None:
         require(blob == committed == item.get("gitBlobOid"), "semantic source Blob differs")
 
 
+def prepare_isolated_source(request: dict, source: Path, output: Path, template: Path) -> Path:
+    """Rebind the existing isolated runtime to exactly the semantic source bytes."""
+    require(template.is_file() and not template.is_symlink(), "runtime template must be a regular file")
+    config = load(template)
+    require(config.get("schema") == "agentlab.participant_docker_runtime.v1"
+            and config.get("executor") == "docker", "unsupported isolated runtime")
+    verify_fact_source(request, source)
+    case = output / "case-input"
+    case.mkdir(parents=True, exist_ok=False)
+    inventory = []
+    for item in request["fact"]["evidence"]:
+        relative = item["path"]
+        data = (source / relative).read_bytes()
+        require(hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+                == item["gitBlobOid"], "projected source Blob differs")
+        target = case / "source" / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+        inventory.append({**item, "sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)})
+    verify_fact_source(request, source)
+    write_json(case / "manifest.json", {
+        "schema": "agentlab.shadow_constructor_source_input.v1",
+        "requestValueSha256": value_digest(request),
+        "sourceRevision": request["repository"]["revision"],
+        "files": inventory,
+        "automaticQualification": False,
+    })
+    config["caseInputRoot"] = str(case.resolve())
+    config["participantManifestSha256"] = file_digest(case / "manifest.json")
+    config["forbiddenHostPaths"] = list(dict.fromkeys([
+        *config.get("forbiddenHostPaths", []), str(source.resolve()),
+    ]))
+    runtime = output / "runtime-config.json"
+    write_json(runtime, config)
+    return runtime
+
+
 def run_agent(args) -> None:
+    template = os.environ.get("AGENTLAB_PARTICIPANT_RUNTIME_CONFIG")
+    if not template:
+        return run_agent_inner(args)
+    runtime = prepare_isolated_source(load(args.request), args.source.resolve(strict=True),
+                                      args.output, Path(template))
+    os.environ["AGENTLAB_PARTICIPANT_RUNTIME_CONFIG"] = str(runtime.resolve())
+    try:
+        return run_agent_inner(args)
+    finally:
+        os.environ["AGENTLAB_PARTICIPANT_RUNTIME_CONFIG"] = template
+
+
+def run_agent_inner(args) -> None:
     request = load(args.request)
     request_origin(request)
     require(request["policy"].get("shadowEligible") is True,
@@ -328,7 +379,10 @@ def run_agent(args) -> None:
     evidence.mkdir()
     shutil.copy2(args.request, workspace / "shadow-request.json")
     source_link = workspace / "source"
-    source_link.symlink_to(source_root, target_is_directory=True)
+    # Host absolute paths are intentionally absent in the isolated namespace.
+    source_link.symlink_to(Path("/agentlab/case/source")
+                          if os.environ.get("AGENTLAB_PARTICIPANT_RUNTIME_CONFIG")
+                          else source_root, target_is_directory=True)
     participant_path = Path(__file__).resolve().parents[1] / "real-code-agent" / "participant.py"
     spec = importlib.util.spec_from_file_location("agentlab_participant", participant_path)
     module = importlib.util.module_from_spec(spec)
@@ -363,7 +417,8 @@ Give at least two observables and two meaningful wrong variants. {environment_in
 An existing test name, done() callback, or successful runner exit is not a behavior assertion. If proposing reuse of an existing test, inspect its actual assertions and error branches at the pinned source; if the necessary test source is not in fact evidence, record that knowledge gap instead of inventing support. Require independently controlled success/failure checks before runtime calibration. A swallowed failure is an Oracle defect, while an unsupported adapter, timeout, or build fault is infrastructure failure, never a killed wrong variant. Define each wrong variant as one meaningful semantic change; do not assume a cosmetic rename is invalid. Record these as unresolved qualification requirements, not completed experiments.
 """
     try:
-        participant.turn("shadow-case-constructor", workspace, prompt=prompt, wall_time_limit_seconds=720)
+        participant.turn("shadow-case-constructor", workspace, prompt=prompt,
+                         wall_time_limit_seconds=720, transport_retry_limit=0)
     finally:
         participant.close()
         source_link.unlink(missing_ok=True)

@@ -15,6 +15,45 @@ KNOWLEDGE = ROOT / "examples/maintainer-knowledge-gate/first-four"
 
 
 class CaseGenerationShadowTest(unittest.TestCase):
+    def test_isolated_source_projection_is_exact_fresh_and_revision_bound(self):
+        import hashlib
+        import subprocess
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "checkout"
+            source.mkdir()
+            def git(*args):
+                return subprocess.check_output(["git", "-C", str(source), *args], text=True).strip()
+            git("init", "-q")
+            (source / "unit.ts").write_text("export const value = 1;\n")
+            (source / "unselected.ts").write_text("not constructor context\n")
+            git("add", ".")
+            git("-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "fixture")
+            request = {"repository":{"revision":git("rev-parse", "HEAD")},
+                       "fact":{"evidence":[{"path":"unit.ts", "gitBlobOid":git("rev-parse", "HEAD:unit.ts")}]}}
+            template = root / "template.json"
+            original = {"schema":"agentlab.participant_docker_runtime.v1", "executor":"docker",
+                        "caseInputRoot":"old-input", "participantManifestSha256":"0"*64,
+                        "forbiddenHostPaths":["/operator/private"], "imageId":"sha256:"+"1"*64}
+            template.write_text(json.dumps(original))
+            output = root / "attempt"
+            runtime = MODULE.prepare_isolated_source(request, source, output, template)
+            config = MODULE.load(runtime)
+            case = Path(config["caseInputRoot"])
+            self.assertEqual((case / "source/unit.ts").read_bytes(), (source / "unit.ts").read_bytes())
+            self.assertFalse((case / "source/unselected.ts").exists())
+            self.assertFalse((case / "source/.git").exists())
+            self.assertEqual(config["participantManifestSha256"], hashlib.sha256((case / "manifest.json").read_bytes()).hexdigest())
+            self.assertEqual(MODULE.load(template), original)
+            self.assertIn(str(source.resolve()), config["forbiddenHostPaths"])
+            self.assertEqual(config["imageId"], original["imageId"])
+            with self.assertRaises(FileExistsError):
+                MODULE.prepare_isolated_source(request, source, output, template)
+            request["fact"]["evidence"][0]["gitBlobOid"] = "0"*40
+            with self.assertRaisesRegex(ValueError, "Blob differs"):
+                MODULE.prepare_isolated_source(request, source, root / "bad-attempt", template)
+            self.assertFalse((root / "bad-attempt").exists())
+
     def test_operation_origin_retains_distinct_lineage_without_semantic_gain(self):
         request = self.request()
         request["schema"] = "agentlab.operation_case_shadow_request.v1"
