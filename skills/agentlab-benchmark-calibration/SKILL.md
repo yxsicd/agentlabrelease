@@ -336,6 +336,15 @@ fragment. Keep this as invalid-control construction evidence, not an upstream
 defect or a killed wrong implementation. Preserve the partial run and route a
 source-bound design successor through the existing review lane; do not rewrite
 old mutations, failed-check declarations or expectations to make that run pass.
+Inspect whether each claimed alternative-valid implementation's changed operation
+is exercised by the frozen scenario inputs. A retained reference changed only a
+fontWeight branch that no scenario invoked; different source bytes and a passing
+baseline did not establish exercised alternative behavior. Also inspect the
+verifier's interpretation of declared dependencies: creating seam functions without
+using them, or swallowing their validation errors, cannot prove the frozen seam
+contract was executed. Keep source-review findings separate from observed control
+values and require their resolution before semantic admission. Do not rewrite an
+already dispatched mutation-only successor to claim it resolves these other gaps.
 See [the control diagnostic checkpoint](../../docs/flywheel-control-diagnostics-20261003.md).
 
 Consume `agentlab.harmony_stage_control_calibration.v2` with the Rust
