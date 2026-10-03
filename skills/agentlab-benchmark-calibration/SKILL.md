@@ -302,6 +302,25 @@ diagnosticOnly and the Rust reviewed-stage consumer rejects them, even if their
 controls pass. Baseline failures are evidence for Agent-owned repair, not permission
 to change predicates as the operator or admit a case.
 
+For a staged source recipe, the native `--prepare-source-recipe-control-diagnostic`
+entry selects one exact frozen `--control-id` using the same contained worker as
+baseline diagnostics. Reconstruct its capture with `--feedback-source-recipe-diagnostic`.
+The separate control-intent schema binds the selected role and declared failure
+set; it cannot enter the baseline-only code-repair protocol. Require exact observed
+versus declared failed-check sets, retaining missing expected failures and unexpected
+failures separately. Execution faults have no observed failure set and never kill
+a wrong control. A declaration match remains diagnostic-only: inspect source
+semantics, run every distinct valid/wrong control and accepted-reference recovery,
+then perform independent admission. This entry does not automatically schedule
+the complete suite or promote knowledge; the constructor Action still stops at
+its baseline diagnostic. The contained launcher places captures below cwd, not
+automatically below the request directory: set cwd to the exclusive input directory
+before execution, or reconcile the exact existing request-bound capture rather
+than rerunning a successful worker after a lookup failure. Real retained controls
+matched their declarations after two Agent-owned baseline repairs, but used a
+different local Node/architecture; preserve that separate diagnostic environment.
+See [the control diagnostic checkpoint](../../docs/flywheel-control-diagnostics-20261003.md).
+
 Consume `agentlab.harmony_stage_control_calibration.v2` with the Rust
 `--feedback-stage-calibration` CLI before routing follow-up work. Supply the exact
 candidate, downstream plan, contract, raw receipt digest and optional prior feedback.
