@@ -880,6 +880,96 @@ fn loop_output_for_adapter() -> std::path::PathBuf {
     ))
 }
 
+#[cfg(unix)]
+#[test]
+fn action_transport_exports_actual_failed_and_passing_attempts_without_lessons() {
+    use std::{fs, process::Command};
+    let root = loop_output_for_adapter();
+    fs::create_dir(&root).unwrap();
+    let root = root.canonicalize().unwrap();
+    let candidate = json!({"id":"generic-task","repositoryId":"arbitrary-project","sourceRevision":"b".repeat(40)});
+    let candidate_bytes = serde_json::to_vec(&candidate).unwrap();
+    fs::write(root.join("candidates.jsonl"), &candidate_bytes).unwrap();
+    let (contract, capture, recipe) = loop_fixture(false, false);
+    let mut contract: Value = serde_json::from_slice(&contract).unwrap();
+    let mut capture: Value = serde_json::from_slice(&capture).unwrap();
+    let mut recipe: Value = serde_json::from_slice(&recipe).unwrap();
+    contract["candidateSha256"] = json!(digest(&candidate_bytes));
+    let contract = serde_json::to_vec(&contract).unwrap();
+    capture["candidateSha256"] = json!(digest(&candidate_bytes));
+    capture["contractSha256"] = json!(digest(&contract));
+    let capture = serde_json::to_vec(&capture).unwrap();
+    recipe["contractSha256"] = json!(digest(&contract));
+    recipe["captureSha256"] = json!(digest(&capture));
+    agentlab_code_analysis::maintainer_behavior_loop::execute(
+        &contract,
+        &capture,
+        &serde_json::to_vec(&recipe).unwrap(),
+        &root.join("attempts"),
+    )
+    .unwrap();
+    let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../scripts/export-behavior-loop-observations.cjs");
+    let invoke = |output: &str| {
+        Command::new("node")
+            .arg(&script)
+            .arg("--attempts")
+            .arg(root.join("attempts"))
+            .arg("--candidates")
+            .arg(root.join("candidates.jsonl"))
+            .args(["--candidate-id", "generic-task", "--flywheel-tool"])
+            .arg(env!("CARGO_BIN_EXE_agentlab-maintainer-skill-flywheel"))
+            .arg("--output")
+            .arg(root.join(output))
+            .output()
+            .unwrap()
+    };
+    let result = invoke("observations");
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let index: Value =
+        serde_json::from_slice(&fs::read(root.join("observations/export-index.json")).unwrap())
+            .unwrap();
+    assert_eq!(index["exports"].as_array().unwrap().len(), 2);
+    assert_eq!(index["remotePersistenceVerified"], false);
+    assert_eq!(index["lessonCreated"], false);
+    for n in 0..2 {
+        let out = root.join(format!("observations/attempt-{n}"));
+        assert!(!out.join("experiment_lessons.jsonl").exists());
+        let attempts = fs::read_to_string(out.join("attempts.jsonl")).unwrap();
+        let row: Value = serde_json::from_str(attempts.trim()).unwrap();
+        assert_eq!(row["behaviorPassed"], n == 1);
+        assert_eq!(
+            fs::read(out.join("behavior-capture.json")).unwrap(),
+            fs::read(root.join(format!("attempts/attempt-{n}/attempt-capture.json"))).unwrap()
+        );
+    }
+    assert!(!invoke("observations").status.success());
+    assert!(invoke("repeat").status.success());
+    assert_eq!(
+        fs::read(root.join("observations/export-index.json")).unwrap(),
+        fs::read(root.join("repeat/export-index.json")).unwrap()
+    );
+    let path = root.join("attempts/attempt-0/feedback.json");
+    fs::write(path, b"{}").unwrap();
+    assert!(!invoke("changed").status.success());
+    assert!(!root.join("changed").exists());
+    fs::rename(
+        root.join("attempts/loop-result.json"),
+        root.join("retained-loop-result.json"),
+    )
+    .unwrap();
+    let incomplete = invoke("incomplete");
+    assert!(incomplete.status.success());
+    let status: Value = serde_json::from_slice(&incomplete.stdout).unwrap();
+    assert_eq!(status["observationExported"], false);
+    assert!(!root.join("incomplete").exists());
+    fs::remove_dir_all(root).unwrap();
+}
+
 #[test]
 fn contained_worker_rejects_unreviewed_or_changed_input_before_runtime() {
     let script = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
