@@ -54,7 +54,7 @@ authenticate the historical producer or qualify a new runtime execution. See
 
 Use `--feedback-partial-calibration` to reconstruct reviewed retained observations
 before planning scoped follow-up. Its profile declares source/candidate/plan
-bindings, runtime observations, JSON-pointer or attribute-tree selectors, shared
+bindings, runtime observations, JSON-pointer, attribute-tree or named Hypium-test selectors, shared
 checks, accepted/wrong control expectations and missing controls. The consumer
 checks exact peer-directed file envelopes and raw bytes; a missing/ambiguous
 observable is a readback failure, not a killed wrong implementation. It preserves
@@ -62,6 +62,14 @@ formal gate actions separately and never infers build, mutation or runtime
 attestation from observed values. Consume `scopedActions` only within their declared
 runtime; equal owned evidence suppresses duplicate scoped work, not unrelated
 formal qualification. See [the partial consumer](../../docs/flywheel-partial-calibration-consumer-20261003.md).
+
+For retained Instrument Test command logs, select `hypium-native-test` by class
+and test name rather than reading aggregate pass counts as behavior coverage.
+The supported lane reconstructs matching start/completion records and reconciles
+the native summary/final code; incomplete, error or ambiguous reports stop
+readback. Keep cascaded test failures explicit in reviewed control expectations
+and missing-isolation work. Source/build identities still require independent
+admission: named recorded outcomes cannot bind new host/test facts by themselves.
 
 Use the task's actual expected baseline: a bug-fix case may fail before the patch; an extension case may pass old tests but fail new demand checks. Reference passes and targeted wrong-boundary/lost-history variants should fail the intended checks. Save complete output and exact identities in `evaluation_cases` calibration rows, with analysis evidence in `program_facts`.
 

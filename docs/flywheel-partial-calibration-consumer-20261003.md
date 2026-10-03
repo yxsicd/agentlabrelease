@@ -3,8 +3,8 @@
 The Rust `maintainer_partial_calibration` consumer reconstructs retained JSON
 observations using reviewed profile data. Repository names, application identity,
 check names, expectations and missing controls are not built into the consumer.
-Its two explicitly supported extraction adapters are JSON Pointer and attribute
-trees with a unique owner and unique owned node. Unsupported formats are errors,
+Its explicitly supported extraction adapters are JSON Pointer, attribute
+trees with a unique owner/node, and named Hypium native tests. Unsupported formats are errors,
 not silent qualification or evidence of an Agent failure.
 
 This capability closes the operator-only readback step from
@@ -58,6 +58,15 @@ provided by this optional local lane.
   the expected value is null. An `attribute-tree` selector contains nonempty
   scalar `owner`/`node` attribute maps and a `field`. The raw tree uses
   `attributes` and `children`. Selection never searches an unrelated owner.
+- A `hypium-native-test` selector contains `class` and `test`, selecting an
+  exact named result (`passed` or `failed`) from an original Instrument Test
+  command-log JSON with `stdout`, `stderr`, `exitCode` and `timedOut`. The lane
+  supports status 1/start, 0/pass and -2/assertion failure, one native summary
+  and one final code. Matching start/completion, unique names/ordinals and
+  consistent nonempty final counts are required. Process errors, incomplete
+  reports, error/ignored tests and unsupported aggregate-report markers fail
+  extraction, never count as killed implementations. No owner attributes are
+  accepted. This is recorded native test status, not independent UI measurement.
 - `controls` declare unique IDs, `role:accepted|wrong`, explicit
   `expectedFailedCheckIds`, and one observation for every phase. An accepted
   control expects no failures; a wrong control expects named failing checks.
@@ -125,3 +134,45 @@ The optional lane still requires a reviewed profile and retained captures. It
 does not discover historical evidence automatically, wire cross-Action capture
 history, persist new observations to TableGit, dispatch the missing control or
 prove the guidance improves an Agent. Those remain business-loop gaps.
+
+## Native dialog capture integration checkpoint
+
+The named Hypium adapter consumed the original command-log contents from real
+dialog runs 6, 7, 8 and 10 reported in
+[the runtime calibration](flywheel-real-dialog-controls-20261003.md).
+It reconstructs two accepted observation controls and two rejected observation
+controls with matching reviewed failure sets. Run 8's later context failure is
+explicitly retained as a possible cascade, not independent semantic coverage.
+The run-9 log, despite HDC process exit zero, is rejected with
+`partial Hypium final summary absent`; no feedback output is created.
+
+This consumer checkpoint used an isolated, unadmitted planning projection. The
+retained constructor proposal was reconstructed using its original request and
+the existing proposal validator; an operator-declared construction plan kept
+Oracle, all five required wrong variants and runtime requirements unqualified.
+No active TableGit row, released knowledge snapshot or historical proposal changed.
+The source revision remains the original candidate base; the derived reference
+commit/source-set is declared separately in the reviewed runtime profile. These
+declarations do not authenticate the tested source or its mutation lineage.
+
+The ordinary independent readiness assessor detected five path-binding blockers:
+new standard-test source, test registration and the new host page are not bound
+in the retained candidate's program facts (two paths also block Oracle binding).
+The Rust consumer preserves the exact `focused-knowledge-refresh` action rather
+than treating runtime green as admission. Repeating the final same-evidence
+input produces `awaiting-new-evidence` and `schedulingAllowed:false`, with formal
+gate actions unchanged. The remaining UI isolation and uncovered behavior stay
+in the reviewed profile; knowledge repair takes scheduling priority.
+
+Private controlled artifacts are retained under `flywheel-native-feedback-k5jAGTm5`:
+original-content readback envelopes, proposal-derived candidate, construction
+plan, independently assessed readiness, reviewed profile, final feedback/repeat,
+and the interrupted-log rejection. Public source contains protocol code and
+arbitrary Rust fixtures, not these raw runtime captures.
+
+Overall maturity remains approximately **69%**. This closes named native-log
+consumption and duplicate-work suppression for reviewed captures, not automatic
+profile construction, source/patch authentication, knowledge admission,
+participant integration or a complete autonomous flywheel. Next, admit an
+explicit successor source/knowledge cut for the new host/test facts, repair
+failure cleanup in a successor test cut and rerun its controls before assessment.
