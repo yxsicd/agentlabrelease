@@ -127,3 +127,11 @@ invoke them; an existing local target directory can hide a clean-runner dependen
 failure. Preserve those real planner checks rather than skipping them or replacing
 them with success fixtures. Formatting and dependency-order repairs improve
 delivery reliability, not semantic coverage or completed flywheel-round counts.
+
+When a clean-runner gate exceeds its budget, inspect the individual test and a
+completed comparison run before calling it a hang. Repeated exact-byte executable
+hashing can dominate debug builds, especially when one platform has a small loader
+and another a monolithic runtime. Measure representative byte volumes. Prefer
+optimizing the hashing dependency over weakening identity checks, caching by
+metadata, skipping negative controls or blindly extending deadlines. Preserve
+known-digest and changed-byte regressions; local timing is not cloud acceptance.
